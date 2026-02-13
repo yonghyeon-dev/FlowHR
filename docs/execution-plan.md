@@ -26,10 +26,11 @@ Completed:
 - Golden fixtures (`GC-001` to `GC-005`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
+- Production environment baseline is prepared (`FLOWHR_PAYROLL_DEDUCTIONS_V1=false`).
 
 Open gaps:
 
-- Production runtime rollout for `FLOWHR_PAYROLL_DEDUCTIONS_V1` is not automated yet.
+- Production hosting platform variable sync (if runtime is outside GitHub Actions) is not enforced yet.
 
 ## 2) Priority Roadmap
 
@@ -93,6 +94,7 @@ Tasks:
 4. Add spec-to-runtime drift check for table names and migration IDs. (Completed: 2026-02-13)
 5. Implement payroll Phase 2 runtime path (`preview-with-deductions`) behind feature flag. (Completed: 2026-02-13)
 6. Enable staging CI with schema isolation checks and phase2 flag smoke validation. (Completed: 2026-02-13)
+7. Prepare production phase2 flag baseline and runbook. (Completed: 2026-02-13)
 
 Definition of Done:
 
@@ -126,11 +128,11 @@ Request template:
 ## 5) Inputs Needed From You (Conditional)
 
 1. To proceed with payroll Phase 2:
-   - Configure production runtime variable `FLOWHR_PAYROLL_DEDUCTIONS_V1` rollout order
+   - Confirm production hosting platform (GitHub Actions vs external) for runtime env sync
 
 ## 6) Immediate Next Actions
 
 Without additional input, the next executable step is:
 
 1. run phased rollout for `FLOWHR_PAYROLL_DEDUCTIONS_V1` by consumer validation order,
-2. connect production deployment platform env/flag controls to the same rollout policy.
+2. set production runtime flag to `true` after final consumer validation window.
