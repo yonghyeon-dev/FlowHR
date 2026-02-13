@@ -169,6 +169,21 @@ jobs:
             exit 1
           fi
 
+      - name: Validate staging feature flag value
+        env:
+          STAGING_PAYROLL_DEDUCTIONS_FLAG: ${{ vars.FLOWHR_PAYROLL_DEDUCTIONS_V1 || 'false' }}
+        run: |
+          value="$(echo -n "$STAGING_PAYROLL_DEDUCTIONS_FLAG" | tr '[:upper:]' '[:lower:]' | xargs)"
+          case "$value" in
+            true|false|1|0|yes|no|on|off)
+              echo "FLOWHR_PAYROLL_DEDUCTIONS_V1=$value"
+              ;;
+            *)
+              echo "::error::FLOWHR_PAYROLL_DEDUCTIONS_V1 must be one of true,false,1,0,yes,no,on,off"
+              exit 1
+              ;;
+          esac
+
       - name: Validate staging URL format
         env:
           STAGING_DATABASE_URL: ${{ secrets.FLOWHR_STAGING_DATABASE_URL }}
@@ -230,6 +245,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_STAGING_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_STAGING_SERVICE_ROLE_KEY }}
           FLOWHR_DATA_ACCESS: prisma
+          FLOWHR_PAYROLL_DEDUCTIONS_V1: ${{ vars.FLOWHR_PAYROLL_DEDUCTIONS_V1 || 'false' }}
         run: |
           npx prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
           DROP SCHEMA IF EXISTS "staging" CASCADE;
@@ -238,3 +254,4 @@ jobs:
           npm run prisma:validate --if-present
           npm run prisma:migrate:deploy --if-present
           npm run test:e2e:prisma --if-present
+          npm run test:e2e:prisma:phase2-flag --if-present

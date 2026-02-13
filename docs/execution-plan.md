@@ -25,11 +25,11 @@ Completed:
   - memory/prisma e2e coverage
 - Golden fixtures (`GC-001` to `GC-005`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
-- Staging Prisma integration is opt-in (default OFF) with schema isolation guardrails.
+- Staging Prisma integration is enabled with schema isolation guardrails.
 
 Open gaps:
 
-- Staging integration is disabled by default; continuous validation is not active until explicitly enabled.
+- Production runtime rollout for `FLOWHR_PAYROLL_DEDUCTIONS_V1` is not automated yet.
 
 ## 2) Priority Roadmap
 
@@ -92,7 +92,7 @@ Tasks:
 3. Define payroll Phase 2 contract set (deductions/tax) and non-breaking migration path. (Completed: 2026-02-13)
 4. Add spec-to-runtime drift check for table names and migration IDs. (Completed: 2026-02-13)
 5. Implement payroll Phase 2 runtime path (`preview-with-deductions`) behind feature flag. (Completed: 2026-02-13)
-6. Enable staging CI only when needed (`FLOWHR_ENABLE_STAGING_CI=true`) and keep schema isolation checks green.
+6. Enable staging CI with schema isolation checks and phase2 flag smoke validation. (Completed: 2026-02-13)
 
 Definition of Done:
 
@@ -125,16 +125,12 @@ Request template:
 
 ## 5) Inputs Needed From You (Conditional)
 
-1. To enable staging CI:
-   - Repository variable: `FLOWHR_ENABLE_STAGING_CI=true`
-   - Five `FLOWHR_STAGING_*` secrets
-
-2. To proceed with payroll Phase 2:
-   - Configure rollout policy for enabling `FLOWHR_PAYROLL_DEDUCTIONS_V1` in staging/prod
+1. To proceed with payroll Phase 2:
+   - Configure production runtime variable `FLOWHR_PAYROLL_DEDUCTIONS_V1` rollout order
 
 ## 6) Immediate Next Actions
 
 Without additional input, the next executable step is:
 
-1. enable staging CI with guarded secrets when staging DB is ready,
-2. run phased rollout for `FLOWHR_PAYROLL_DEDUCTIONS_V1` by consumer validation order.
+1. run phased rollout for `FLOWHR_PAYROLL_DEDUCTIONS_V1` by consumer validation order,
+2. connect production deployment platform env/flag controls to the same rollout policy.

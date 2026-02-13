@@ -93,6 +93,10 @@ Main-branch push runs Prisma-backed route e2e only when repository variable
 - `FLOWHR_STAGING_ANON_KEY`
 - `FLOWHR_STAGING_SERVICE_ROLE_KEY`
 
+Optional staging environment variable:
+
+- `FLOWHR_PAYROLL_DEDUCTIONS_V1` (`true|false`) for phase2 runtime rollout validation.
+
 Details: `docs/staging-secrets.md`
 
 ## Current API Surface (MVP)
