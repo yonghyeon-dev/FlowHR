@@ -7,7 +7,7 @@ import { calculateGrossPay, splitPayableMinutes, workedMinutes } from "@/lib/pay
 import { writeAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
-  const actor = readActor(request);
+  const actor = await readActor(request);
   if (!actor || !hasAnyRole(actor, ["admin", "payroll_operator"])) {
     return fail(403, "payroll preview requires admin or payroll_operator role");
   }

@@ -10,7 +10,7 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const actor = readActor(request);
+  const actor = await readActor(request);
   if (!actor) {
     return fail(401, "missing or invalid actor context");
   }

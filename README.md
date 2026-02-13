@@ -17,6 +17,8 @@ Important:
 
 - `DATABASE_URL` is for Prisma runtime (session pooler).
 - `DIRECT_URL` is for Prisma migrations (direct DB endpoint).
+- API routes resolve actor context from Supabase JWT bearer token.
+- Development fallback: `x-actor-role` and `x-actor-id` headers are accepted only outside production.
 
 ## Local Run
 
