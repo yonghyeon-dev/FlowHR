@@ -52,6 +52,7 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 - For API route tests without database, set `FLOWHR_DATA_ACCESS=memory`.
 - For Prisma-backed route smoke test, run `npm run test:e2e:prisma` with DB env set.
 - Payroll phase2 preview endpoint is gated by `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`.
+- Payroll deduction profile mode is additionally gated by `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=true`.
 
 ## Domain Event Publication Adapter
 
@@ -106,6 +107,7 @@ Production rollout: `docs/production-rollout.md`
   - `POST /api/attendance/records`
   - `PATCH /api/attendance/records/{recordId}`
   - `POST /api/attendance/records/{recordId}/approve`
+  - `POST /api/attendance/records/{recordId}/reject`
 - Payroll:
   - `POST /api/payroll/runs/preview`
   - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`)
@@ -122,5 +124,5 @@ Production rollout: `docs/production-rollout.md`
 ## Payroll Phase 2 Contract Artifacts
 
 - Work item: `work-items/WI-0005-payroll-phase2-deductions-tax-contract.md`
-- Contract: `specs/payroll/contract.yaml` (v1.1.0)
+- Contract: `specs/payroll/contract.yaml` (v1.2.0)
 - Compatibility matrix: `specs/payroll/phase2-compatibility-matrix.md`

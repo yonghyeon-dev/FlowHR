@@ -96,8 +96,8 @@ async function requireEditableRecord(
   if (!canMutateAttendance(context.actor, existing.employeeId)) {
     throw new ServiceError(403, "insufficient permissions");
   }
-  if (existing.state === "APPROVED") {
-    throw new ServiceError(409, "approved attendance cannot be edited");
+  if (existing.state !== "PENDING") {
+    throw new ServiceError(409, "only pending attendance can be edited");
   }
 
   return existing;
@@ -185,6 +185,52 @@ export async function approveAttendanceRecord(
     payload: {
       employeeId: record.employeeId,
       approvedAt: record.approvedAt?.toISOString() ?? null
+    }
+  });
+
+  return record;
+}
+
+export async function rejectAttendanceRecord(
+  context: ServiceContext,
+  recordId: string
+): Promise<AttendanceRecordEntity> {
+  if (!context.actor || !hasAnyRole(context.actor, ["admin", "manager"])) {
+    throw new ServiceError(403, "rejection requires admin or manager role");
+  }
+
+  const existing = await context.dataAccess.attendance.findById(recordId);
+  if (!existing) {
+    throw new ServiceError(404, "attendance record not found");
+  }
+  if (existing.state !== "PENDING") {
+    throw new ServiceError(409, "only pending attendance can be rejected");
+  }
+
+  const record = await context.dataAccess.attendance.update(recordId, {
+    state: "REJECTED",
+    approvedAt: null,
+    approvedBy: null
+  });
+  await context.dataAccess.audit.append({
+    action: "attendance.rejected",
+    entityType: "AttendanceRecord",
+    entityId: record.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: record.employeeId
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "attendance.rejected.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "AttendanceRecord",
+    entityId: record.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: record.employeeId
     }
   });
 

@@ -47,6 +47,9 @@ async function run() {
   const attendanceApproveRoute = await import(
     "../../src/app/api/attendance/records/[recordId]/approve/route.ts"
   );
+  const attendanceRejectRoute = await import(
+    "../../src/app/api/attendance/records/[recordId]/reject/route.ts"
+  );
   const payrollPreviewRoute = await import("../../src/app/api/payroll/runs/preview/route.ts");
   const payrollConfirmRoute = await import(
     "../../src/app/api/payroll/runs/[runId]/confirm/route.ts"
@@ -107,6 +110,52 @@ async function run() {
     { params: Promise.resolve({ recordId: createdRecord.id }) } as RouteContext<{ recordId: string }>
   );
   assert.equal(duplicateApproveResponse.status, 409, "duplicate attendance approval should be rejected");
+
+  const rejectedCreateResponse = await attendanceCreateRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/attendance/records",
+      {
+        employeeId: "EMP-1001",
+        checkInAt: "2026-02-03T09:00:00+09:00",
+        checkOutAt: "2026-02-03T18:00:00+09:00",
+        breakMinutes: 60,
+        isHoliday: false
+      },
+      actorHeaders("employee", "EMP-1001")
+    )
+  );
+  assert.equal(rejectedCreateResponse.status, 201, "second attendance creation should succeed");
+  const rejectedCreateBody = (await readJson(rejectedCreateResponse)) as {
+    record: { id: string; state: string };
+  };
+  assert.equal(rejectedCreateBody.record.state, "PENDING");
+
+  const rejectResponse = await attendanceRejectRoute.POST(
+    new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
+      method: "POST",
+      headers: actorHeaders("manager", "MGR-1")
+    }),
+    { params: Promise.resolve({ recordId: rejectedCreateBody.record.id }) } as RouteContext<{
+      recordId: string;
+    }>
+  );
+  assert.equal(rejectResponse.status, 200, "manager should reject attendance");
+  const rejectBody = (await readJson(rejectResponse)) as {
+    record: { state: string };
+  };
+  assert.equal(rejectBody.record.state, "REJECTED");
+
+  const duplicateRejectResponse = await attendanceRejectRoute.POST(
+    new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
+      method: "POST",
+      headers: actorHeaders("manager", "MGR-1")
+    }),
+    { params: Promise.resolve({ recordId: rejectedCreateBody.record.id }) } as RouteContext<{
+      recordId: string;
+    }>
+  );
+  assert.equal(duplicateRejectResponse.status, 409, "duplicate attendance rejection should be rejected");
 
   const previewResponse = await payrollPreviewRoute.POST(
     jsonRequest(
@@ -169,6 +218,8 @@ async function run() {
   assert.deepEqual(getMemoryAuditActions(), [
     "attendance.recorded",
     "attendance.approved",
+    "attendance.recorded",
+    "attendance.rejected",
     "payroll.calculated",
     "payroll.confirmed"
   ]);
@@ -177,6 +228,8 @@ async function run() {
     [
       "attendance.recorded.v1",
       "attendance.approved.v1",
+      "attendance.recorded.v1",
+      "attendance.rejected.v1",
       "payroll.calculated.v1",
       "payroll.confirmed.v1"
     ]

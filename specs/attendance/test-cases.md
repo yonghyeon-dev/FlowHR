@@ -9,8 +9,9 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 1. Create attendance record within same business day.
 2. Update attendance before approval.
 3. Approve correction by manager role.
-4. Reject unauthorized approval attempt.
-5. Emit approval event once for final state.
+4. Reject attendance by manager role and verify exclusion from payroll aggregation.
+5. Reject unauthorized approval/rejection attempt.
+6. Emit final-state event once (`approved` or `rejected`).
 
 ## Boundary and Accuracy Cases
 

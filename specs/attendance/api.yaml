@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Attendance API
-  version: 1.0.0
+  version: 1.1.0
 paths:
   /attendance/records:
     post:
@@ -33,3 +33,15 @@ paths:
       responses:
         "200":
           description: Approved
+  /attendance/records/{recordId}/reject:
+    post:
+      summary: Reject attendance record or correction
+      parameters:
+        - in: path
+          name: recordId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rejected

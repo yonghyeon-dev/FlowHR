@@ -1,10 +1,10 @@
 owner: attendance-agent
-version: 1.0.1
+version: 1.1.0
 scope:
   in:
     - attendance record create/update
-    - correction approval flow
-    - approved attendance event publication
+    - correction approval/rejection flow
+    - approved/rejected attendance event publication
   out:
     - payroll tax and deduction
     - physical device protocol integration
@@ -18,7 +18,7 @@ api:
     - role: employee
       permission: create own attendance record
     - role: manager
-      permission: approve correction within assigned org
+      permission: approve/reject correction within assigned org
   endpoints:
     - method: POST
       path: /attendance/records
@@ -29,12 +29,17 @@ api:
     - method: POST
       path: /attendance/records/{recordId}/approve
       description: Approve attendance record or correction.
+    - method: POST
+      path: /attendance/records/{recordId}/reject
+      description: Reject attendance record or correction.
   events:
     published:
       - name: attendance.recorded.v1
         description: Emitted when attendance record is created.
       - name: attendance.approved.v1
         description: Emitted when attendance is approved and payable.
+      - name: attendance.rejected.v1
+        description: Emitted when attendance is rejected and excluded from payroll aggregation.
       - name: attendance.corrected.v1
         description: Emitted when correction is approved.
     consumed:
@@ -50,11 +55,14 @@ db_changes:
   notes: Expand-contract pattern for future attendance payload updates.
 invariants:
   - An approved attendance record cannot be silently overwritten.
+  - A rejected attendance record cannot transition directly to approved.
+  - Rejected attendance record is excluded from payroll aggregation.
   - Attendance timestamps are interpreted in Asia/Seoul.
-  - Approved attendance emits exactly one approval event per final state.
+  - Approved/rejected attendance emits exactly one final state event.
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
+    - Unauthorized rejection could omit payable minutes.
   payroll_accuracy:
     - Incorrect overnight boundary handling can misclassify payable minutes.
   legal:
@@ -65,10 +73,11 @@ test_plan:
     - correction state transition validation
   integration:
     - create record to approve flow
+    - create record to reject flow
   regression:
     - replay GC-001, GC-002, GC-003, GC-005
   authorization:
-    - manager-only approval check
+    - manager-only approval/rejection check
   payroll_accuracy:
     - approved minutes match aggregation contract
 observability:
@@ -76,9 +85,11 @@ observability:
     - attendance.recorded
     - attendance.corrected
     - attendance.approved
+    - attendance.rejected
   metrics:
     - attendance_approval_latency_ms
     - attendance_correction_count
+    - attendance_rejection_count
   logs:
     - authorization denied logs for attendance approval
 rollout:
@@ -91,9 +102,10 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "New attendance contract for WI-0001. No existing consumer break expected."
+consumer_impact: "Contract v1.1.0 adds non-breaking attendance rejection endpoint and event."
 references:
   - specs/common/time-and-payroll-rules.md
+  - work-items/WI-0009-attendance-rejection-flow.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent
