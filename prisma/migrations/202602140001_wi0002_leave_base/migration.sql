@@ -1,20 +1,38 @@
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'LeaveType') THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'LeaveType'
+      AND n.nspname = current_schema()
+  ) THEN
     CREATE TYPE "LeaveType" AS ENUM ('ANNUAL', 'SICK', 'UNPAID');
   END IF;
 END $$;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'LeaveRequestState') THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'LeaveRequestState'
+      AND n.nspname = current_schema()
+  ) THEN
     CREATE TYPE "LeaveRequestState" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CANCELED');
   END IF;
 END $$;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'LeaveDecisionAction') THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'LeaveDecisionAction'
+      AND n.nspname = current_schema()
+  ) THEN
     CREATE TYPE "LeaveDecisionAction" AS ENUM ('APPROVED', 'REJECTED', 'CANCELED');
   END IF;
 END $$;
