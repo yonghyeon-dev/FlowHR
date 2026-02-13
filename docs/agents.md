@@ -9,6 +9,12 @@ This document defines the initial multi-agent structure for a 2-person team and 
 3. Payroll Agent
 4. QA Agent
 
+## Identity Model
+
+- Default: one GitHub account, multiple agent personas.
+- Persona separation is enforced by artifacts and checklists, not separate Git identities.
+- If team grows, map personas to dedicated reviewers/teams.
+
 ## Role Definitions
 
 ### Orchestrator

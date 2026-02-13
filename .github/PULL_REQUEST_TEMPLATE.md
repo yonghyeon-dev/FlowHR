@@ -14,7 +14,7 @@
   - [ ] ADR added (required for breaking/cross-domain/security-impacting change), or
   - [ ] Not required with reason.
 - [ ] QA Spec Gate and Code Gate checks are completed.
-- [ ] No merge before QA approval.
+- [ ] QA persona review completed (checklist evidence attached).
 
 ## Quality Gate Evidence
 

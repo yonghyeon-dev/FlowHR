@@ -15,7 +15,7 @@ Completed:
 
 Open gaps:
 
-- `CODEOWNERS` placeholders must be replaced with real users/teams.
+- Branch protection must be aligned for 1-person persona-based operation.
 - Application runtime is not bootstrapped yet (backend/db/test runner).
 - Golden fixtures are validated structurally but not yet executed by business logic tests.
 
@@ -27,13 +27,13 @@ Objective: Make policy violations unmergeable.
 
 Tasks:
 
-1. Replace `CODEOWNERS` placeholders with real identities.
+1. Keep single-owner `CODEOWNERS` mapping and document persona-based review rule.
 2. Validate branch protection settings against policy document.
 3. Add README section for contribution flow and PR gate expectations.
 
 Definition of Done:
 
-- Code owner review is enforceable in PRs.
+- PR flow works in 1-person mode without policy bypass.
 - Required checks are blocking merges.
 - Team can follow one documented merge flow.
 
@@ -129,19 +129,16 @@ Request template:
 
 ## 5) Minimal Inputs Needed From You
 
-1. CODEOWNERS actual identities  
-Format: `orchestrator=<user/team>, qa=<user/team>`
-
-2. Backend framework choice  
+1. Backend framework choice  
 Format: `stack=nestjs` or `stack=express`
 
-3. DB connection target for local dev  
+2. DB connection target for local dev  
 Format: `db=postgres://...` (or `docker-compose` preferred)
 
 ## 6) Immediate Next Actions After Inputs
 
-Once you provide the 3 inputs above, I will directly:
+Once you provide the 2 inputs above, I will directly:
 
-1. update `CODEOWNERS` with real identities,
+1. keep governance in single-operator persona mode,
 2. bootstrap backend runtime and Prisma,
 3. implement WI-0001 API skeleton with tests wired to CI.

@@ -28,6 +28,7 @@ Legend:
 
 ## Merge Policy Summary
 
-- PRs touching `/specs`, `/contracts`, `/qa`, `/.github` require Orchestrator and QA approval.
+- Single-operator default: persona-based sign-off (Orchestrator checklist + QA checklist evidence) in one PR.
+- Multi-reviewer mode (optional): PRs touching `/specs`, `/contracts`, `/qa`, `/.github` require Orchestrator and QA approvals.
 - QA gate veto blocks merge unless break-glass is activated.
 - Break-glass requires process in `docs/break-glass.md`.
