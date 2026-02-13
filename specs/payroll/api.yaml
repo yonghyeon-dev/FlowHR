@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.1.0
+  version: 1.2.0
 paths:
   /payroll/runs/preview:
     post:
@@ -11,7 +11,7 @@ paths:
           description: Preview generated
   /payroll/runs/preview-with-deductions:
     post:
-      summary: Create payroll preview with deduction and tax components (phase2)
+      summary: Create payroll preview with deduction and tax components (manual/profile mode)
       responses:
         "200":
           description: Deduction preview generated
@@ -27,3 +27,26 @@ paths:
       responses:
         "200":
           description: Payroll run confirmed
+  /payroll/deduction-profiles/{profileId}:
+    get:
+      summary: Read deduction profile
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deduction profile returned
+    put:
+      summary: Create or update deduction profile
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deduction profile upserted

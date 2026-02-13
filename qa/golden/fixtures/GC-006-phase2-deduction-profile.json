@@ -1,0 +1,49 @@
+{
+  "id": "GC-006",
+  "description": "Phase2 deduction profile mode preview with deterministic net pay trace",
+  "inputs": {
+    "employee_id": "E-1006",
+    "check_in": "2026-02-11T09:00:00+09:00",
+    "check_out": "2026-02-11T18:00:00+09:00",
+    "break_minutes": 60,
+    "is_holiday": false,
+    "hourly_rate_krw": 15000,
+    "multipliers": {
+      "regular": 1.0,
+      "overtime": 1.5,
+      "night": 1.5,
+      "holiday": 1.5
+    },
+    "deduction_profile": {
+      "profile_id": "DP-KR-STD",
+      "profile_version": 3,
+      "withholding_rate": 0.03,
+      "social_insurance_rate": 0.045,
+      "fixed_other_deduction_krw": 2000
+    }
+  },
+  "expected": {
+    "payable_minutes": {
+      "regular": 480,
+      "overtime": 0,
+      "night": 0,
+      "holiday": 0
+    },
+    "gross_pay_krw": 120000,
+    "phase2": {
+      "mode": "profile",
+      "withholdingTaxKrw": 3600,
+      "socialInsuranceKrw": 5400,
+      "otherDeductionsKrw": 2000,
+      "totalDeductionsKrw": 11000,
+      "netPayKrw": 109000
+    },
+    "audit_events": [
+      "payroll.deduction_profile.updated",
+      "attendance.recorded",
+      "attendance.approved",
+      "payroll.deductions_calculated",
+      "payroll.confirmed"
+    ]
+  }
+}

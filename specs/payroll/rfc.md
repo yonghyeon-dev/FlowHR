@@ -1,8 +1,8 @@
-# Payroll RFC (WI-0001 + WI-0005 Contract)
+# Payroll RFC (WI-0001 + WI-0005 + WI-0006 Contract)
 
 ## Goal
 
-Provide payroll gross pay preview based on attendance aggregates and define phase2 deduction/tax contract expansion.
+Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, and deduction profile auto-calculation mode.
 
 ## Key Decisions
 
@@ -10,6 +10,7 @@ Provide payroll gross pay preview based on attendance aggregates and define phas
 - Input source is approved attendance events and projections.
 - Contract includes audit and deterministic recalculation invariants.
 - Phase2 deduction/tax path is feature-flagged and additive-only.
+- WI-0006 introduces profile-mode deduction calculation with versioned trace metadata.
 
 ## Non-Goals
 

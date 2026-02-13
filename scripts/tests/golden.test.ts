@@ -77,6 +77,14 @@ for (const file of files) {
     expected: {
       payable_minutes: Record<string, number>;
       gross_pay_krw: number;
+      phase2?: {
+        mode: "manual" | "profile";
+        withholdingTaxKrw: number;
+        socialInsuranceKrw: number;
+        otherDeductionsKrw: number;
+        totalDeductionsKrw: number;
+        netPayKrw: number;
+      };
     };
   };
 
@@ -95,6 +103,22 @@ for (const file of files) {
     `payable minutes mismatch for fixture ${payload.id}`
   );
   assert.equal(gross, payload.expected.gross_pay_krw, `gross pay mismatch for fixture ${payload.id}`);
+
+  if (payload.expected.phase2) {
+    const phase2 = payload.expected.phase2;
+    const expectedTotal =
+      phase2.withholdingTaxKrw + phase2.socialInsuranceKrw + phase2.otherDeductionsKrw;
+    assert.equal(
+      phase2.totalDeductionsKrw,
+      expectedTotal,
+      `phase2 total deductions mismatch for fixture ${payload.id}`
+    );
+    assert.equal(
+      phase2.netPayKrw,
+      payload.expected.gross_pay_krw - phase2.totalDeductionsKrw,
+      `phase2 net pay mismatch for fixture ${payload.id}`
+    );
+  }
 }
 
 console.log(`golden.test passed (${files.length} fixtures)`);

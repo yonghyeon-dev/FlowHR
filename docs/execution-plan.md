@@ -23,7 +23,11 @@ Completed:
   - accrual settlement API and duplicate-year guard
   - carry-over policy fields and migration
   - memory/prisma e2e coverage
-- Golden fixtures (`GC-001` to `GC-005`) are validated in CI and executable tests.
+- WI-0006 deduction profile runtime contract is drafted:
+  - payroll contract v1.2.0 with profile mode and API/event/db deltas
+  - ADR-0002 and WI-0006 template finalized
+  - golden scenario `GC-006` defined
+- Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
 - Production runtime flag is active (`FLOWHR_PAYROLL_DEDUCTIONS_V1=true`) on GitHub env and Vercel.
@@ -99,6 +103,7 @@ Tasks:
 9. Add production auth smoke workflow and run validation. (Completed: 2026-02-13)
 10. Add phase2 health monitor + rollback automation workflows. (Completed: 2026-02-13)
 11. Add weekly scheduled rollback dry-run rehearsal. (Completed: 2026-02-13)
+12. Draft WI-0006 deduction profile contract + ADR + golden baseline. (Completed: 2026-02-13)
 
 Definition of Done:
 
@@ -139,4 +144,5 @@ Request template:
 Without additional input, the next executable step is:
 
 1. observe the next scheduled rollback dry-run result and keep it green,
-2. connect `FLOWHR_ALERT_SLACK_WEBHOOK` to receive workflow failure alerts.
+2. connect `FLOWHR_ALERT_SLACK_WEBHOOK` to receive workflow failure alerts,
+3. implement WI-0006 runtime (profile CRUD + profile mode preview path).
