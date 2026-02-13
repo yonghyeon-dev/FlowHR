@@ -108,6 +108,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+
+      - name: Install dependencies for golden tests
+        run: |
+          if [ -f package.json ]; then
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+          else
+            echo "No package.json found. Skipping npm install."
+          fi
       - run: |
           if [ -f package.json ]; then
             npm run test:golden --if-present

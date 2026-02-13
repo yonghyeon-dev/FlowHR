@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node -e \"console.log('unit tests are not implemented yet')\"",
-    "test:integration": "node -e \"console.log('integration tests are not implemented yet')\"",
-    "test:golden": "node scripts/tests/golden-smoke.mjs",
+    "test": "tsx scripts/tests/unit.test.ts",
+    "test:integration": "tsx scripts/tests/integration.test.ts",
+    "test:golden": "tsx scripts/tests/golden.test.ts",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",
@@ -31,6 +32,7 @@
     "eslint": "^9.20.0",
     "eslint-config-next": "^15.1.7",
     "prisma": "^6.3.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
 }
