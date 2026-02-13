@@ -35,6 +35,10 @@ Completed:
   - single-screen flow execution for attendance/payroll/leave/profile APIs
   - API response log panel for manual verification
   - mobile-compatible layout and build validation
+- WI-0008 state transition hardening is implemented:
+  - duplicate attendance approval blocked (409)
+  - duplicate payroll confirmation blocked (409)
+  - memory/prisma e2e assertions added
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -116,6 +120,7 @@ Tasks:
 13. Implement WI-0006 runtime (profile CRUD + profile mode preview path). (Completed: 2026-02-13)
 14. Implement WI-0007 MVP operations console on `/`. (Completed: 2026-02-13)
 15. Sync production profile flag baseline to Vercel and re-verify production smoke. (Completed: 2026-02-13)
+16. Add WI-0008 duplicate transition guard for approval/confirmation flows. (Completed: 2026-02-13)
 
 Definition of Done:
 

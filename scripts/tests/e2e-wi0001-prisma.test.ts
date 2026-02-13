@@ -88,6 +88,15 @@ async function run() {
     );
     assert.equal(approveResponse.status, 200, "attendance approve should succeed");
 
+    const duplicateApproveResponse = await attendanceApproveRoute.POST(
+      new Request(`http://localhost/api/attendance/records/${createdRecordId}/approve`, {
+        method: "POST",
+        headers: actorHeaders("manager", managerId)
+      }),
+      { params: Promise.resolve({ recordId: createdRecordId }) } as RouteContext<{ recordId: string }>
+    );
+    assert.equal(duplicateApproveResponse.status, 409, "duplicate attendance approval should be rejected");
+
     const previewResponse = await payrollPreviewRoute.POST(
       jsonRequest(
         "POST",
@@ -131,6 +140,15 @@ async function run() {
     assert.equal(confirmResponse.status, 200, "payroll confirmation should succeed");
     const confirmBody = await readJson<{ run: { state: string } }>(confirmResponse);
     assert.equal(confirmBody.run.state, "CONFIRMED");
+
+    const duplicateConfirmResponse = await payrollConfirmRoute.POST(
+      new Request(`http://localhost/api/payroll/runs/${createdRunId}/confirm`, {
+        method: "POST",
+        headers: actorHeaders("payroll_operator", payrollId)
+      }),
+      { params: Promise.resolve({ runId: createdRunId }) } as RouteContext<{ runId: string }>
+    );
+    assert.equal(duplicateConfirmResponse.status, 409, "duplicate payroll confirmation should be rejected");
 
     const auditActions = await prisma.auditLog.findMany({
       where: {

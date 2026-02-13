@@ -156,6 +156,9 @@ export async function approveAttendanceRecord(
   if (!existing) {
     throw new ServiceError(404, "attendance record not found");
   }
+  if (existing.state !== "PENDING") {
+    throw new ServiceError(409, "only pending attendance can be approved");
+  }
 
   const record = await context.dataAccess.attendance.update(recordId, {
     state: "APPROVED",

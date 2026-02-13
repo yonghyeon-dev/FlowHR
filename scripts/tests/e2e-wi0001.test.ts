@@ -99,6 +99,15 @@ async function run() {
   };
   assert.equal(approveBody.record.state, "APPROVED");
 
+  const duplicateApproveResponse = await attendanceApproveRoute.POST(
+    new Request(`http://localhost/api/attendance/records/${createdRecord.id}/approve`, {
+      method: "POST",
+      headers: actorHeaders("manager", "MGR-1")
+    }),
+    { params: Promise.resolve({ recordId: createdRecord.id }) } as RouteContext<{ recordId: string }>
+  );
+  assert.equal(duplicateApproveResponse.status, 409, "duplicate attendance approval should be rejected");
+
   const previewResponse = await payrollPreviewRoute.POST(
     jsonRequest(
       "POST",
@@ -147,6 +156,15 @@ async function run() {
     run: { state: string };
   };
   assert.equal(confirmBody.run.state, "CONFIRMED");
+
+  const duplicateConfirmResponse = await payrollConfirmRoute.POST(
+    new Request(`http://localhost/api/payroll/runs/${previewBody.run.id}/confirm`, {
+      method: "POST",
+      headers: actorHeaders("payroll_operator", "PAY-1")
+    }),
+    { params: Promise.resolve({ runId: previewBody.run.id }) } as RouteContext<{ runId: string }>
+  );
+  assert.equal(duplicateConfirmResponse.status, 409, "duplicate payroll confirmation should be rejected");
 
   assert.deepEqual(getMemoryAuditActions(), [
     "attendance.recorded",
