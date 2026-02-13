@@ -52,6 +52,13 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 - For API route tests without database, set `FLOWHR_DATA_ACCESS=memory`.
 - For Prisma-backed route smoke test, run `npm run test:e2e:prisma` with DB env set.
 
+## Domain Event Publication Adapter
+
+- Service layer emits contract event names (`*.v1`) through `DomainEventPublisher`.
+- Default runtime publisher is no-op (`FLOWHR_EVENT_PUBLISHER` unset or `noop`).
+- For local verification, set `FLOWHR_EVENT_PUBLISHER=memory`.
+- Current adapter is in-process only (no external event bus transport yet).
+
 ## Role Claim Governance
 
 - Canonical role claim: `app_metadata.role` (`docs/role-claims.md`).

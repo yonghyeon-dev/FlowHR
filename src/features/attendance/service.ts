@@ -5,6 +5,8 @@ import type {
   DataAccess,
   UpdateAttendanceRecordInput
 } from "@/features/shared/data-access";
+import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
+import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
 
 type CreateAttendanceInput = {
@@ -27,7 +29,12 @@ type UpdateAttendanceInput = {
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
+  eventPublisher?: DomainEventPublisher;
 };
+
+function getEventPublisher(context: ServiceContext): DomainEventPublisher {
+  return context.eventPublisher ?? getRuntimeDomainEventPublisher();
+}
 
 export async function createAttendanceRecord(
   context: ServiceContext,
@@ -51,6 +58,17 @@ export async function createAttendanceRecord(
 
   await context.dataAccess.audit.append({
     action: "attendance.recorded",
+    entityType: "AttendanceRecord",
+    entityId: record.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: record.employeeId
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "attendance.recorded.v1",
+    occurredAt: new Date().toISOString(),
     entityType: "AttendanceRecord",
     entityId: record.id,
     actorRole: context.actor.role,
@@ -111,6 +129,17 @@ export async function updateAttendanceRecord(
     actorId: context.actor!.id,
     payload: input
   });
+  await getEventPublisher(context).publish({
+    name: "attendance.corrected.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "AttendanceRecord",
+    entityId: record.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      ...input
+    }
+  });
 
   return record;
 }
@@ -141,6 +170,18 @@ export async function approveAttendanceRecord(
     actorId: context.actor.id,
     payload: {
       employeeId: record.employeeId
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "attendance.approved.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "AttendanceRecord",
+    entityId: record.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: record.employeeId,
+      approvedAt: record.approvedAt?.toISOString() ?? null
     }
   });
 

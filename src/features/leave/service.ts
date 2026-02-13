@@ -6,6 +6,8 @@ import type {
   LeaveRequestEntity,
   LeaveType
 } from "@/features/shared/data-access";
+import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
+import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
 
 const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -15,7 +17,12 @@ const DEFAULT_GRANTED_DAYS = 15;
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
+  eventPublisher?: DomainEventPublisher;
 };
+
+function getEventPublisher(context: ServiceContext): DomainEventPublisher {
+  return context.eventPublisher ?? getRuntimeDomainEventPublisher();
+}
 
 type CreateLeaveRequestInput = {
   employeeId: string;
@@ -136,6 +143,21 @@ export async function createLeaveRequest(
       days
     }
   });
+  await getEventPublisher(context).publish({
+    name: "leave.requested.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "LeaveRequest",
+    entityId: request.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: request.employeeId,
+      leaveType: request.leaveType,
+      startDate: request.startDate.toISOString(),
+      endDate: request.endDate.toISOString(),
+      days
+    }
+  });
 
   return request;
 }
@@ -235,6 +257,20 @@ export async function approveLeaveRequest(
       leaveType: request.leaveType
     }
   });
+  await getEventPublisher(context).publish({
+    name: "leave.approved.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "LeaveRequest",
+    entityId: request.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: request.employeeId,
+      leaveType: request.leaveType,
+      days: request.days,
+      remainingDays: balance.remainingDays
+    }
+  });
 
   return { request, balance };
 }
@@ -271,6 +307,18 @@ export async function rejectLeaveRequest(
 
   await context.dataAccess.audit.append({
     action: "leave.rejected",
+    entityType: "LeaveRequest",
+    entityId: request.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: request.employeeId,
+      reason
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "leave.rejected.v1",
+    occurredAt: new Date().toISOString(),
     entityType: "LeaveRequest",
     entityId: request.id,
     actorRole: context.actor.role,
@@ -320,6 +368,18 @@ export async function cancelLeaveRequest(
 
   await context.dataAccess.audit.append({
     action: "leave.canceled",
+    entityType: "LeaveRequest",
+    entityId: request.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: request.employeeId,
+      reason: reason ?? null
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "leave.canceled.v1",
+    occurredAt: new Date().toISOString(),
     entityType: "LeaveRequest",
     entityId: request.id,
     actorRole: context.actor.role,

@@ -27,7 +27,7 @@ Open gaps:
 
 - Leave accrual/carry-over policy engine is not implemented yet.
 - Payroll Phase 2 (deductions/tax/remittance) remains out of scope.
-- Contracts describe published domain events (`*.v1`), but runtime currently persists audit logs only (no event bus adapter yet).
+- Domain event publication adapter exists (`noop`/`memory`), but external transport integration is not implemented yet.
 - Staging integration is disabled by default; continuous validation is not active until explicitly enabled.
 
 ## 2) Priority Roadmap
@@ -86,7 +86,7 @@ Objective: close functional/operational gaps before broader rollout.
 
 Tasks:
 
-1. Add explicit event publication adapter (or formally constrain contract semantics to audit-only until event bus exists).
+1. Add external transport adapter for domain events (current implementation is in-process `noop`/`memory` only).
 2. Implement leave accrual/carry-over settlement policy (WI-0003).
 3. Define payroll Phase 2 contract set (deductions/tax) and non-breaking migration path.
 4. Add spec-to-runtime drift check for table names and migration IDs.
@@ -138,5 +138,5 @@ Request template:
 Without additional input, the next executable step is:
 
 1. create WI-0003 (leave accrual/carry-over) contract/test-case artifacts,
-2. add event publication adapter interface (no-op default, contract-visible),
-3. add drift check for spec/work-item/prisma naming consistency in CI.
+2. add drift check for spec/work-item/prisma naming consistency in CI,
+3. define external domain-event transport rollout plan and fallback policy.

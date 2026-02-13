@@ -8,6 +8,7 @@ runtimeEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
 runtimeEnv.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
 runtimeEnv.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/postgres";
 runtimeEnv.DIRECT_URL ??= "postgresql://postgres:postgres@localhost:5432/postgres";
+runtimeEnv.FLOWHR_EVENT_PUBLISHER = "memory";
 
 type JsonPayload = Record<string, unknown>;
 
@@ -39,6 +40,9 @@ async function run() {
   const { resetMemoryDataAccess, getMemoryAuditActions } = await import(
     "../../src/features/shared/memory-data-access.ts"
   );
+  const { resetRuntimeMemoryDomainEvents, getRuntimeMemoryDomainEvents } = await import(
+    "../../src/features/shared/runtime-domain-event-publisher.ts"
+  );
   const attendanceCreateRoute = await import("../../src/app/api/attendance/records/route.ts");
   const attendanceApproveRoute = await import(
     "../../src/app/api/attendance/records/[recordId]/approve/route.ts"
@@ -49,6 +53,7 @@ async function run() {
   );
 
   resetMemoryDataAccess();
+  resetRuntimeMemoryDomainEvents();
 
   const createResponse = await attendanceCreateRoute.POST(
     jsonRequest(
@@ -149,6 +154,15 @@ async function run() {
     "payroll.calculated",
     "payroll.confirmed"
   ]);
+  assert.deepEqual(
+    getRuntimeMemoryDomainEvents().map((event) => event.name),
+    [
+      "attendance.recorded.v1",
+      "attendance.approved.v1",
+      "payroll.calculated.v1",
+      "payroll.confirmed.v1"
+    ]
+  );
 }
 
 run()

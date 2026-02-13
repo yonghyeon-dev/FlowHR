@@ -8,6 +8,7 @@ runtimeEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
 runtimeEnv.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
 runtimeEnv.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/postgres";
 runtimeEnv.DIRECT_URL ??= "postgresql://postgres:postgres@localhost:5432/postgres";
+runtimeEnv.FLOWHR_EVENT_PUBLISHER = "memory";
 
 type RouteContext<TParams extends Record<string, string>> = {
   params: Promise<TParams>;
@@ -37,6 +38,9 @@ async function run() {
   const { resetMemoryDataAccess, getMemoryAuditActions } = await import(
     "../../src/features/shared/memory-data-access.ts"
   );
+  const { resetRuntimeMemoryDomainEvents, getRuntimeMemoryDomainEvents } = await import(
+    "../../src/features/shared/runtime-domain-event-publisher.ts"
+  );
   const leaveCreateRoute = await import("../../src/app/api/leave/requests/route.ts");
   const leaveUpdateRoute = await import("../../src/app/api/leave/requests/[requestId]/route.ts");
   const leaveApproveRoute = await import(
@@ -47,6 +51,7 @@ async function run() {
   const leaveBalanceRoute = await import("../../src/app/api/leave/balances/[employeeId]/route.ts");
 
   resetMemoryDataAccess();
+  resetRuntimeMemoryDomainEvents();
 
   const employeeId = "EMP-LEAVE-1001";
   const otherEmployeeId = "EMP-LEAVE-2002";
@@ -227,6 +232,18 @@ async function run() {
     "leave.balance_read"
   ]) {
     assert.ok(actions.includes(action), `expected audit action ${action}`);
+  }
+
+  for (const eventName of [
+    "leave.requested.v1",
+    "leave.approved.v1",
+    "leave.rejected.v1",
+    "leave.canceled.v1"
+  ]) {
+    assert.ok(
+      getRuntimeMemoryDomainEvents().some((event) => event.name === eventName),
+      `expected domain event ${eventName}`
+    );
   }
 }
 
