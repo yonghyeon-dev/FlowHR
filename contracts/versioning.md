@@ -42,3 +42,4 @@ CI must fail when:
 - Required contract fields are missing.
 - `contract.yaml` version and sibling `api.yaml` `info.version` do not match.
 - sibling `api.yaml` is missing or `info.version` is not valid SemVer.
+- `api.yaml` changes without sibling `contract.yaml` change/version bump.
