@@ -8,7 +8,7 @@
 
 ## Migration
 
-- `2026021401_leave_base`
+- `202602140001_wi0002_leave_base`
 
 ## Compatibility
 

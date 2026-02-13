@@ -17,9 +17,9 @@ Completed:
 
 Open gaps:
 
-- Leave request/approval runtime implementation is not yet delivered.
-- Role claim backfill/enforcement is not yet run in target Supabase project.
-- Staging Prisma integration job requires repository secrets to be configured.
+- Role claim backfill/enforcement apply mode is not yet executed in target project.
+- Staging Prisma integration job is configured but requires repository secrets.
+- Leave accrual policy and carry-over settlement remain out of scope.
 
 ## 2) Priority Roadmap
 
@@ -114,12 +114,14 @@ Objective: Prepare next domain slice and tighten auth/runtime operations.
 Tasks:
 
 1. Add WI-0002 leave request/approval contract-first artifacts.
-2. Add role-claim backfill/enforcement script for Supabase users.
-3. Add staging Prisma-backed route integration job in CI.
+2. Implement WI-0002 leave runtime API/service/store with audit traces.
+3. Add role-claim backfill/enforcement script for Supabase users.
+4. Add staging Prisma-backed route integration job in CI.
 
 Definition of Done:
 
 - WI-0002 work item + leave contract/API/DB/test-case docs exist.
+- Leave API route e2e passes for memory and Prisma-backed modes.
 - `app_metadata.role` governance can be dry-run/applied/enforced by script.
 - Main-branch push can run Prisma integration test when staging secrets exist.
 

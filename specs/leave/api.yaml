@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.0.0
+  version: 1.1.0
 paths:
   /leave/requests:
     post:
@@ -45,6 +45,18 @@ paths:
       responses:
         "200":
           description: Rejected
+  /leave/requests/{requestId}/cancel:
+    post:
+      summary: Cancel pending leave request
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Canceled
   /leave/balances/{employeeId}:
     get:
       summary: Read leave balance for employee

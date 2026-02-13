@@ -49,7 +49,7 @@ Without a contract-first leave slice, role abuse and balance miscalculation risk
   - `leave_approvals`
   - `leave_balances_projection`
 - Planned migration IDs:
-  - `2026021401_leave_base`
+  - `202602140001_wi0002_leave_base`
 - Backward compatibility:
   - additive schema only for initial rollout
 
@@ -60,6 +60,7 @@ Without a contract-first leave slice, role abuse and balance miscalculation risk
   - `PATCH /leave/requests/{requestId}`
   - `POST /leave/requests/{requestId}/approve`
   - `POST /leave/requests/{requestId}/reject`
+  - `POST /leave/requests/{requestId}/cancel`
   - `GET /leave/balances/{employeeId}`
 - Published events:
   - `leave.requested.v1`

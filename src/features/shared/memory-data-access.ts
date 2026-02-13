@@ -2,14 +2,19 @@ import type {
   AppendAuditLogInput,
   AttendanceRecordEntity,
   DataAccess,
-  PayrollRunEntity,
+  LeaveBalanceEntity,
+  LeaveRequestEntity,
   UpdateAttendanceRecordInput,
-  UpdatePayrollRunInput
+  UpdateLeaveRequestInput,
+  UpdatePayrollRunInput,
+  PayrollRunEntity
 } from "@/features/shared/data-access";
 
 type MemoryState = {
   sequence: number;
   attendance: Map<string, AttendanceRecordEntity>;
+  leaveRequests: Map<string, LeaveRequestEntity>;
+  leaveBalances: Map<string, LeaveBalanceEntity>;
   payroll: Map<string, PayrollRunEntity>;
   audit: Array<AppendAuditLogInput & { createdAt: Date }>;
 };
@@ -18,6 +23,8 @@ function createState(): MemoryState {
   return {
     sequence: 1,
     attendance: new Map<string, AttendanceRecordEntity>(),
+    leaveRequests: new Map<string, LeaveRequestEntity>(),
+    leaveBalances: new Map<string, LeaveBalanceEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     audit: []
   };
@@ -42,6 +49,26 @@ function cloneAttendance(entity: AttendanceRecordEntity): AttendanceRecordEntity
     checkOutAt: entity.checkOutAt ? cloneDate(entity.checkOutAt) : null,
     approvedAt: entity.approvedAt ? cloneDate(entity.approvedAt) : null,
     createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneLeaveRequest(entity: LeaveRequestEntity): LeaveRequestEntity {
+  return {
+    ...entity,
+    startDate: cloneDate(entity.startDate),
+    endDate: cloneDate(entity.endDate),
+    approvedAt: entity.approvedAt ? cloneDate(entity.approvedAt) : null,
+    rejectedAt: entity.rejectedAt ? cloneDate(entity.rejectedAt) : null,
+    canceledAt: entity.canceledAt ? cloneDate(entity.canceledAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneLeaveBalance(entity: LeaveBalanceEntity): LeaveBalanceEntity {
+  return {
+    ...entity,
     updatedAt: cloneDate(entity.updatedAt)
   };
 }
@@ -71,6 +98,29 @@ function updateAttendanceEntity(
     state: input.state ?? existing.state,
     approvedAt: input.approvedAt !== undefined ? input.approvedAt : existing.approvedAt,
     approvedBy: input.approvedBy !== undefined ? input.approvedBy : existing.approvedBy,
+    updatedAt: new Date()
+  };
+}
+
+function updateLeaveRequestEntity(
+  existing: LeaveRequestEntity,
+  input: UpdateLeaveRequestInput
+): LeaveRequestEntity {
+  return {
+    ...existing,
+    leaveType: input.leaveType ?? existing.leaveType,
+    startDate: input.startDate ?? existing.startDate,
+    endDate: input.endDate ?? existing.endDate,
+    days: input.days ?? existing.days,
+    reason: input.reason !== undefined ? input.reason : existing.reason,
+    state: input.state ?? existing.state,
+    decisionReason: input.decisionReason !== undefined ? input.decisionReason : existing.decisionReason,
+    approvedAt: input.approvedAt !== undefined ? input.approvedAt : existing.approvedAt,
+    approvedBy: input.approvedBy !== undefined ? input.approvedBy : existing.approvedBy,
+    rejectedAt: input.rejectedAt !== undefined ? input.rejectedAt : existing.rejectedAt,
+    rejectedBy: input.rejectedBy !== undefined ? input.rejectedBy : existing.rejectedBy,
+    canceledAt: input.canceledAt !== undefined ? input.canceledAt : existing.canceledAt,
+    canceledBy: input.canceledBy !== undefined ? input.canceledBy : existing.canceledBy,
     updatedAt: new Date()
   };
 }
@@ -138,6 +188,116 @@ export const memoryDataAccess: DataAccess = {
       }
       rows.sort((a, b) => a.checkInAt.getTime() - b.checkInAt.getTime());
       return rows;
+    }
+  },
+
+  leave: {
+    async create(input) {
+      const now = new Date();
+      const request: LeaveRequestEntity = {
+        id: nextId("LR"),
+        employeeId: input.employeeId,
+        leaveType: input.leaveType,
+        startDate: cloneDate(input.startDate),
+        endDate: cloneDate(input.endDate),
+        days: input.days,
+        reason: input.reason ?? null,
+        state: "PENDING",
+        decisionReason: null,
+        approvedAt: null,
+        approvedBy: null,
+        rejectedAt: null,
+        rejectedBy: null,
+        canceledAt: null,
+        canceledBy: null,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.leaveRequests.set(request.id, request);
+      return cloneLeaveRequest(request);
+    },
+
+    async findById(id) {
+      const request = state.leaveRequests.get(id);
+      return request ? cloneLeaveRequest(request) : null;
+    },
+
+    async update(id, input) {
+      const existing = state.leaveRequests.get(id);
+      if (!existing) {
+        throw new Error(`leave request not found: ${id}`);
+      }
+      const updated = updateLeaveRequestEntity(existing, input);
+      state.leaveRequests.set(id, updated);
+      return cloneLeaveRequest(updated);
+    },
+
+    async findOverlappingActiveRequests(input) {
+      const rows: LeaveRequestEntity[] = [];
+      for (const request of state.leaveRequests.values()) {
+        if (request.employeeId !== input.employeeId) {
+          continue;
+        }
+        if (request.state !== "PENDING" && request.state !== "APPROVED") {
+          continue;
+        }
+        if (input.excludeRequestId && request.id === input.excludeRequestId) {
+          continue;
+        }
+        const overlaps = request.startDate <= input.endDate && request.endDate >= input.startDate;
+        if (overlaps) {
+          rows.push(cloneLeaveRequest(request));
+        }
+      }
+      rows.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+      return rows;
+    },
+
+    async appendDecision(input) {
+      state.audit.push({
+        action: `leave.decision.${input.action.toLowerCase()}`,
+        entityType: "LeaveApproval",
+        entityId: input.requestId,
+        actorRole: input.actorRole,
+        actorId: input.actorId,
+        payload: {
+          action: input.action,
+          reason: input.reason ?? null
+        },
+        createdAt: new Date()
+      });
+    }
+  },
+
+  leaveBalance: {
+    async ensure(employeeId, defaultGrantedDays) {
+      const existing = state.leaveBalances.get(employeeId);
+      if (existing) {
+        return cloneLeaveBalance(existing);
+      }
+
+      const now = new Date();
+      const created: LeaveBalanceEntity = {
+        employeeId,
+        grantedDays: defaultGrantedDays,
+        usedDays: 0,
+        remainingDays: defaultGrantedDays,
+        updatedAt: now
+      };
+      state.leaveBalances.set(employeeId, created);
+      return cloneLeaveBalance(created);
+    },
+
+    async applyUsage(input) {
+      const current = await this.ensure(input.employeeId, input.defaultGrantedDays);
+      const next: LeaveBalanceEntity = {
+        ...current,
+        usedDays: current.usedDays + input.usedDaysDelta,
+        remainingDays: current.grantedDays - (current.usedDays + input.usedDaysDelta),
+        updatedAt: new Date()
+      };
+      state.leaveBalances.set(input.employeeId, next);
+      return cloneLeaveBalance(next);
     }
   },
 

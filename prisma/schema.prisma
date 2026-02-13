@@ -23,6 +23,50 @@ model AttendanceRecord {
   updatedAt    DateTime @updatedAt
 }
 
+model LeaveRequest {
+  id             String           @id @default(cuid())
+  employeeId     String
+  leaveType      LeaveType        @default(ANNUAL)
+  startDate      DateTime
+  endDate        DateTime
+  days           Int
+  reason         String?
+  state          LeaveRequestState @default(PENDING)
+  decisionReason String?
+  approvedAt     DateTime?
+  approvedBy     String?
+  rejectedAt     DateTime?
+  rejectedBy     String?
+  canceledAt     DateTime?
+  canceledBy     String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  approvals      LeaveApproval[]
+
+  @@index([employeeId, state, startDate, endDate])
+}
+
+model LeaveApproval {
+  id        String             @id @default(cuid())
+  requestId String
+  action    LeaveDecisionAction
+  actorId   String
+  actorRole String
+  reason    String?
+  createdAt DateTime           @default(now())
+  request   LeaveRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+}
+
+model LeaveBalanceProjection {
+  employeeId   String   @id
+  grantedDays  Int      @default(15)
+  usedDays     Int      @default(0)
+  remainingDays Int     @default(15)
+  updatedAt    DateTime @updatedAt
+}
+
 model PayrollRun {
   id                String   @id @default(cuid())
   employeeId        String?
@@ -55,6 +99,25 @@ enum AttendanceState {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  UNPAID
+}
+
+enum LeaveRequestState {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELED
+}
+
+enum LeaveDecisionAction {
+  APPROVED
+  REJECTED
+  CANCELED
 }
 
 enum PayrollState {
