@@ -19,6 +19,15 @@ type PreviewPayrollInput = {
   multipliers: Multipliers;
 };
 
+type PreviewPayrollWithDeductionsInput = PreviewPayrollInput & {
+  deductions: {
+    withholdingTaxKrw: number;
+    socialInsuranceKrw: number;
+    otherDeductionsKrw: number;
+    breakdown?: Record<string, number>;
+  };
+};
+
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
@@ -38,6 +47,27 @@ type PreviewPayrollResult = {
   };
 };
 
+type PreviewPayrollWithDeductionsResult = {
+  run: PayrollRunEntity;
+  summary: {
+    sourceRecordCount: number;
+    totals: PayableMinutes;
+    grossPayKrw: number;
+    withholdingTaxKrw: number;
+    socialInsuranceKrw: number;
+    otherDeductionsKrw: number;
+    totalDeductionsKrw: number;
+    netPayKrw: number;
+    deductionBreakdown: Record<string, unknown>;
+  };
+};
+
+type PayrollComputation = {
+  recordsCount: number;
+  totals: PayableMinutes;
+  grossPayKrw: number;
+};
+
 const emptyTotals: PayableMinutes = {
   regular: 0,
   overtime: 0,
@@ -45,18 +75,39 @@ const emptyTotals: PayableMinutes = {
   holiday: 0
 };
 
-export async function previewPayroll(
-  context: ServiceContext,
-  input: PreviewPayrollInput
-): Promise<PreviewPayrollResult> {
-  if (!context.actor || !hasAnyRole(context.actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(403, "payroll preview requires admin or payroll_operator role");
+function requirePayrollOperator(actor: Actor | null, action: "preview" | "confirm") {
+  if (!actor || !hasAnyRole(actor, ["admin", "payroll_operator"])) {
+    throw new ServiceError(403, `payroll ${action} requires admin or payroll_operator role`);
   }
-  if (input.periodEnd <= input.periodStart) {
+}
+
+function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
+  if (periodEnd <= periodStart) {
     throw new ServiceError(400, "periodEnd must be after periodStart");
   }
+}
 
-  const records = await context.dataAccess.attendance.listApprovedInPeriod({
+function toKrwInteger(value: number, fieldName: string) {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new ServiceError(400, `${fieldName} must be a non-negative integer`);
+  }
+  return value;
+}
+
+function isPayrollDeductionsEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_DEDUCTIONS_V1 ?? process.env.PAYROLL_DEDUCTIONS_V1 ?? "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+async function calculatePayrollComputation(
+  dataAccess: DataAccess,
+  input: PreviewPayrollInput
+): Promise<PayrollComputation> {
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+
+  const records = await dataAccess.attendance.listApprovedInPeriod({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
     employeeId: input.employeeId
@@ -82,27 +133,40 @@ export async function previewPayroll(
   }
 
   const grossPayKrw = calculateGrossPay(totals, input.hourlyRateKrw, input.multipliers);
+  return {
+    recordsCount: records.length,
+    totals,
+    grossPayKrw
+  };
+}
+
+export async function previewPayroll(
+  context: ServiceContext,
+  input: PreviewPayrollInput
+): Promise<PreviewPayrollResult> {
+  requirePayrollOperator(context.actor, "preview");
+  const computed = await calculatePayrollComputation(context.dataAccess, input);
   const run = await context.dataAccess.payroll.create({
     employeeId: input.employeeId,
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
-    grossPayKrw,
-    sourceRecordCount: records.length
+    grossPayKrw: computed.grossPayKrw,
+    sourceRecordCount: computed.recordsCount
   });
 
   await context.dataAccess.audit.append({
     action: "payroll.calculated",
     entityType: "PayrollRun",
     entityId: run.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
     payload: {
       periodStart: input.periodStart.toISOString(),
       periodEnd: input.periodEnd.toISOString(),
       employeeId: input.employeeId,
-      sourceRecordCount: records.length,
-      totals,
-      grossPayKrw
+      sourceRecordCount: computed.recordsCount,
+      totals: computed.totals,
+      grossPayKrw: computed.grossPayKrw
     }
   });
   await getEventPublisher(context).publish({
@@ -110,24 +174,134 @@ export async function previewPayroll(
     occurredAt: new Date().toISOString(),
     entityType: "PayrollRun",
     entityId: run.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
     payload: {
       periodStart: input.periodStart.toISOString(),
       periodEnd: input.periodEnd.toISOString(),
       employeeId: input.employeeId ?? null,
-      sourceRecordCount: records.length,
-      totals,
-      grossPayKrw
+      sourceRecordCount: computed.recordsCount,
+      totals: computed.totals,
+      grossPayKrw: computed.grossPayKrw
     }
   });
 
   return {
     run,
     summary: {
-      sourceRecordCount: records.length,
-      totals,
-      grossPayKrw
+      sourceRecordCount: computed.recordsCount,
+      totals: computed.totals,
+      grossPayKrw: computed.grossPayKrw
+    }
+  };
+}
+
+export async function previewPayrollWithDeductions(
+  context: ServiceContext,
+  input: PreviewPayrollWithDeductionsInput
+): Promise<PreviewPayrollWithDeductionsResult> {
+  requirePayrollOperator(context.actor, "preview");
+  if (!isPayrollDeductionsEnabled()) {
+    throw new ServiceError(409, "payroll_deductions_v1 feature flag is disabled");
+  }
+
+  const computed = await calculatePayrollComputation(context.dataAccess, input);
+
+  const withholdingTaxKrw = toKrwInteger(input.deductions.withholdingTaxKrw, "withholdingTaxKrw");
+  const socialInsuranceKrw = toKrwInteger(
+    input.deductions.socialInsuranceKrw,
+    "socialInsuranceKrw"
+  );
+  const otherDeductionsKrw = toKrwInteger(
+    input.deductions.otherDeductionsKrw,
+    "otherDeductionsKrw"
+  );
+
+  const additionalBreakdown: Record<string, number> = {};
+  for (const [name, amount] of Object.entries(input.deductions.breakdown ?? {})) {
+    additionalBreakdown[name] = toKrwInteger(amount, `deductions.breakdown.${name}`);
+  }
+
+  const totalDeductionsKrw = withholdingTaxKrw + socialInsuranceKrw + otherDeductionsKrw;
+  const netPayKrw = computed.grossPayKrw - totalDeductionsKrw;
+  const deductionBreakdown: Record<string, unknown> = {
+    withholdingTaxKrw,
+    socialInsuranceKrw,
+    otherDeductionsKrw,
+    ...(Object.keys(additionalBreakdown).length > 0 ? { additional: additionalBreakdown } : {})
+  };
+
+  const run = await context.dataAccess.payroll.create({
+    employeeId: input.employeeId,
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    grossPayKrw: computed.grossPayKrw,
+    withholdingTaxKrw,
+    socialInsuranceKrw,
+    otherDeductionsKrw,
+    totalDeductionsKrw,
+    netPayKrw,
+    deductionBreakdown,
+    sourceRecordCount: computed.recordsCount
+  });
+
+  await context.dataAccess.audit.append({
+    action: "payroll.deductions_calculated",
+    entityType: "PayrollRun",
+    entityId: run.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      employeeId: input.employeeId,
+      sourceRecordCount: computed.recordsCount,
+      totals: computed.totals,
+      grossPayKrw: computed.grossPayKrw,
+      withholdingTaxKrw,
+      socialInsuranceKrw,
+      otherDeductionsKrw,
+      totalDeductionsKrw,
+      netPayKrw,
+      deductionBreakdown
+    }
+  });
+
+  await getEventPublisher(context).publish({
+    name: "payroll.deductions.calculated.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "PayrollRun",
+    entityId: run.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      employeeId: input.employeeId ?? null,
+      sourceRecordCount: computed.recordsCount,
+      totals: computed.totals,
+      grossPayKrw: computed.grossPayKrw,
+      withholdingTaxKrw,
+      socialInsuranceKrw,
+      otherDeductionsKrw,
+      totalDeductionsKrw,
+      netPayKrw,
+      deductionBreakdown
+    }
+  });
+
+  return {
+    run,
+    summary: {
+      sourceRecordCount: computed.recordsCount,
+      totals: computed.totals,
+      grossPayKrw: computed.grossPayKrw,
+      withholdingTaxKrw,
+      socialInsuranceKrw,
+      otherDeductionsKrw,
+      totalDeductionsKrw,
+      netPayKrw,
+      deductionBreakdown
     }
   };
 }
@@ -136,9 +310,7 @@ export async function confirmPayrollRun(
   context: ServiceContext,
   runId: string
 ): Promise<PayrollRunEntity> {
-  if (!context.actor || !hasAnyRole(context.actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(403, "payroll confirm requires admin or payroll_operator role");
-  }
+  requirePayrollOperator(context.actor, "confirm");
 
   const run = await context.dataAccess.payroll.findById(runId);
   if (!run) {
@@ -148,23 +320,23 @@ export async function confirmPayrollRun(
   const confirmed = await context.dataAccess.payroll.update(runId, {
     state: "CONFIRMED",
     confirmedAt: new Date(),
-    confirmedBy: context.actor.id
+    confirmedBy: context.actor!.id
   });
 
   await context.dataAccess.audit.append({
     action: "payroll.confirmed",
     entityType: "PayrollRun",
     entityId: confirmed.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id
   });
   await getEventPublisher(context).publish({
     name: "payroll.confirmed.v1",
     occurredAt: new Date().toISOString(),
     entityType: "PayrollRun",
     entityId: confirmed.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
     payload: {
       confirmedAt: confirmed.confirmedAt?.toISOString() ?? null
     }

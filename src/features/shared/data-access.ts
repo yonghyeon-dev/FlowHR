@@ -26,6 +26,12 @@ export type PayrollRunEntity = {
   periodEnd: Date;
   state: PayrollState;
   grossPayKrw: number;
+  withholdingTaxKrw: number | null;
+  socialInsuranceKrw: number | null;
+  otherDeductionsKrw: number | null;
+  totalDeductionsKrw: number | null;
+  netPayKrw: number | null;
+  deductionBreakdown: Record<string, unknown> | null;
   sourceRecordCount: number;
   confirmedAt: Date | null;
   confirmedBy: string | null;
@@ -88,6 +94,12 @@ export type CreatePayrollRunInput = {
   periodStart: Date;
   periodEnd: Date;
   grossPayKrw: number;
+  withholdingTaxKrw?: number | null;
+  socialInsuranceKrw?: number | null;
+  otherDeductionsKrw?: number | null;
+  totalDeductionsKrw?: number | null;
+  netPayKrw?: number | null;
+  deductionBreakdown?: Record<string, unknown> | null;
   sourceRecordCount: number;
 };
 

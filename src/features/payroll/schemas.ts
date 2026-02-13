@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defaultMultipliers } from "@/lib/payroll-rules";
 
 const isoDateTime = z.string().datetime({ offset: true });
+const nonNegativeInteger = z.number().int().min(0);
 
 export const previewPayrollSchema = z.object({
   periodStart: isoDateTime,
@@ -16,4 +17,13 @@ export const previewPayrollSchema = z.object({
       holiday: z.number().positive()
     })
     .default(defaultMultipliers)
+});
+
+export const previewPayrollWithDeductionsSchema = previewPayrollSchema.extend({
+  deductions: z.object({
+    withholdingTaxKrw: nonNegativeInteger,
+    socialInsuranceKrw: nonNegativeInteger,
+    otherDeductionsKrw: nonNegativeInteger.default(0),
+    breakdown: z.record(nonNegativeInteger).optional()
+  })
 });

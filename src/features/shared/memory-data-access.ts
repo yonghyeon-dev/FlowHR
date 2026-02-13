@@ -42,6 +42,10 @@ function cloneDate(value: Date) {
   return new Date(value.getTime());
 }
 
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function cloneAttendance(entity: AttendanceRecordEntity): AttendanceRecordEntity {
   return {
     ...entity,
@@ -78,6 +82,7 @@ function clonePayroll(entity: PayrollRunEntity): PayrollRunEntity {
     ...entity,
     periodStart: cloneDate(entity.periodStart),
     periodEnd: cloneDate(entity.periodEnd),
+    deductionBreakdown: entity.deductionBreakdown ? cloneJson(entity.deductionBreakdown) : null,
     confirmedAt: entity.confirmedAt ? cloneDate(entity.confirmedAt) : null,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
@@ -331,6 +336,12 @@ export const memoryDataAccess: DataAccess = {
         periodEnd: cloneDate(input.periodEnd),
         state: "PREVIEWED",
         grossPayKrw: input.grossPayKrw,
+        withholdingTaxKrw: input.withholdingTaxKrw ?? null,
+        socialInsuranceKrw: input.socialInsuranceKrw ?? null,
+        otherDeductionsKrw: input.otherDeductionsKrw ?? null,
+        totalDeductionsKrw: input.totalDeductionsKrw ?? null,
+        netPayKrw: input.netPayKrw ?? null,
+        deductionBreakdown: input.deductionBreakdown ? cloneJson(input.deductionBreakdown) : null,
         sourceRecordCount: input.sourceRecordCount,
         confirmedAt: null,
         confirmedBy: null,
