@@ -132,9 +132,10 @@ jobs:
               labels: ["incident", "rollback", "phase2"]
             });
 
-      - name: Notify Slack on failure
+      - name: Notify alert webhook on failure
         if: ${{ failure() }}
         env:
+          FLOWHR_ALERT_DISCORD_WEBHOOK: ${{ secrets.FLOWHR_ALERT_DISCORD_WEBHOOK }}
           FLOWHR_ALERT_SLACK_WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
           FLOWHR_ALERT_TITLE: "[FlowHR] payroll-phase2-rollback failed"
           FLOWHR_ALERT_WORKFLOW: "payroll-phase2-rollback"

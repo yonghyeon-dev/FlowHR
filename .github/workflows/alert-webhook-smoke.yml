@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       message:
-        description: "Optional custom title for Slack smoke notification"
+        description: "Optional custom title for webhook smoke notification"
         required: false
         type: string
 
@@ -24,8 +24,9 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Send Slack smoke notification
+      - name: Send webhook smoke notification
         env:
+          FLOWHR_ALERT_DISCORD_WEBHOOK: ${{ secrets.FLOWHR_ALERT_DISCORD_WEBHOOK }}
           FLOWHR_ALERT_SLACK_WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
           FLOWHR_ALERT_REQUIRE_WEBHOOK: "true"
           FLOWHR_ALERT_TITLE: ${{ inputs.message || '[FlowHR] alert-webhook-smoke' }}
