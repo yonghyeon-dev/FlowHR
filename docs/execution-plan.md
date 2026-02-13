@@ -31,6 +31,10 @@ Completed:
   - deduction profile GET/PUT API and audit/event emission
   - phase2 preview `manual/profile` mode with profile trace persistence
   - memory/prisma e2e coverage added
+- WI-0007 MVP operations console is implemented:
+  - single-screen flow execution for attendance/payroll/leave/profile APIs
+  - API response log panel for manual verification
+  - mobile-compatible layout and build validation
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -109,6 +113,7 @@ Tasks:
 11. Add weekly scheduled rollback dry-run rehearsal. (Completed: 2026-02-13)
 12. Draft WI-0006 deduction profile contract + ADR + golden baseline. (Completed: 2026-02-13)
 13. Implement WI-0006 runtime (profile CRUD + profile mode preview path). (Completed: 2026-02-13)
+14. Implement WI-0007 MVP operations console on `/`. (Completed: 2026-02-13)
 
 Definition of Done:
 
