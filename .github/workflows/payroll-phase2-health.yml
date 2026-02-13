@@ -74,10 +74,14 @@ jobs:
             });
 
       - name: Notify Slack on failure
-        if: ${{ failure() && secrets.FLOWHR_ALERT_SLACK_WEBHOOK != '' }}
+        if: ${{ failure() }}
         env:
           WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
         run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "FLOWHR_ALERT_SLACK_WEBHOOK not configured; skip Slack notification."
+            exit 0
+          fi
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           payload="{\"text\":\"[FlowHR] payroll-phase2-health failed: ${run_url}\"}"
           curl -X POST -H "Content-type: application/json" --data "$payload" "$WEBHOOK"
