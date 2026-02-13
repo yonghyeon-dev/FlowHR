@@ -9,7 +9,7 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
-  const actor = readActor(request);
+  const actor = await readActor(request);
   if (!actor || !hasAnyRole(actor, ["admin", "manager"])) {
     return fail(403, "approval requires admin or manager role");
   }

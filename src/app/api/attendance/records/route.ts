@@ -6,7 +6,7 @@ import { fail, ok } from "@/lib/http";
 import { writeAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
-  const actor = readActor(request);
+  const actor = await readActor(request);
   if (!actor) {
     return fail(401, "missing or invalid actor context");
   }
