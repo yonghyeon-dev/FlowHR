@@ -32,3 +32,17 @@ Allowed role values:
 
 - Existing users should be backfilled to `app_metadata.role`.
 - After migration stabilization, legacy fallbacks can be removed via ADR.
+
+## Backfill and Enforcement Commands
+
+- Dry-run preview:
+  - `npm run roles:backfill:dry`
+- Apply backfill:
+  - `npm run roles:backfill:apply`
+- Enforce canonical claims (non-zero exit when violations exist):
+  - `npm run roles:claims:enforce`
+
+Required environment variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`)
+- `SUPABASE_SERVICE_ROLE_KEY`

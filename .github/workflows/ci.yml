@@ -130,3 +130,59 @@ jobs:
           else
             echo "No package.json found. Skipping test:golden."
           fi
+
+  staging-prisma-integration:
+    runs-on: ubuntu-latest
+    needs:
+      - quality-gates
+      - golden-regression
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check staging secret availability
+        id: staging_secrets
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.FLOWHR_STAGING_DATABASE_URL }}
+          STAGING_DIRECT_URL: ${{ secrets.FLOWHR_STAGING_DIRECT_URL }}
+        run: |
+          if [ -z "$STAGING_DATABASE_URL" ] || [ -z "$STAGING_DIRECT_URL" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Staging DB secrets are not configured. Skipping Prisma integration job."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node
+        if: ${{ steps.staging_secrets.outputs.available == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        if: ${{ steps.staging_secrets.outputs.available == 'true' }}
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Prisma deploy and route-level e2e (staging)
+        if: ${{ steps.staging_secrets.outputs.available == 'true' }}
+        env:
+          DATABASE_URL: ${{ secrets.FLOWHR_STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.FLOWHR_STAGING_DIRECT_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          FLOWHR_DATA_ACCESS: prisma
+        run: |
+          npm run prisma:validate --if-present
+          npm run prisma:migrate:deploy --if-present
+          npm run test:e2e:prisma --if-present
+
+      - name: Staging integration skipped notice
+        if: ${{ steps.staging_secrets.outputs.available != 'true' }}
+        run: echo "Staging integration skipped because required secrets are not set."

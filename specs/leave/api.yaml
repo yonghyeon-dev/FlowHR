@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: FlowHR Leave API
+  version: 1.0.0
+paths:
+  /leave/requests:
+    post:
+      summary: Create leave request
+      responses:
+        "201":
+          description: Created
+  /leave/requests/{requestId}:
+    patch:
+      summary: Update pending leave request
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+  /leave/requests/{requestId}/approve:
+    post:
+      summary: Approve leave request
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved
+  /leave/requests/{requestId}/reject:
+    post:
+      summary: Reject leave request
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rejected
+  /leave/balances/{employeeId}:
+    get:
+      summary: Read leave balance for employee
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Leave balance snapshot

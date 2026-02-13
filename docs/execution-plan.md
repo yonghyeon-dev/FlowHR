@@ -12,12 +12,14 @@ Completed:
 - Initial vertical slice artifacts (`WI-0001`, attendance/payroll contracts and test cases).
 - Branch protection on `main` applied via GitHub API.
 - Agent model document created (`docs/agents.md`).
+- WI-0001 service-layer refactor and route-level e2e gate merged.
+- Canonical Supabase role claim policy documented (`app_metadata.role`).
 
 Open gaps:
 
-- Branch protection must be aligned for 1-person persona-based operation.
-- Application runtime is not bootstrapped yet (backend/db/test runner).
-- Golden fixtures are validated structurally but not yet executed by business logic tests.
+- Leave request/approval runtime implementation is not yet delivered.
+- Role claim backfill/enforcement is not yet run in target Supabase project.
+- Staging Prisma integration job requires repository secrets to be configured.
 
 ## 2) Priority Roadmap
 
@@ -104,6 +106,22 @@ Definition of Done:
 - Golden regression passes in CI.
 - WI-0001 integration test passes.
 - Merge approved without policy bypass.
+
+## P5. Leave and Identity Hardening (Current)
+
+Objective: Prepare next domain slice and tighten auth/runtime operations.
+
+Tasks:
+
+1. Add WI-0002 leave request/approval contract-first artifacts.
+2. Add role-claim backfill/enforcement script for Supabase users.
+3. Add staging Prisma-backed route integration job in CI.
+
+Definition of Done:
+
+- WI-0002 work item + leave contract/API/DB/test-case docs exist.
+- `app_metadata.role` governance can be dry-run/applied/enforced by script.
+- Main-branch push can run Prisma integration test when staging secrets exist.
 
 ## 3) Workstream Ownership
 
