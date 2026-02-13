@@ -1,16 +1,11 @@
-import { prisma } from "@/lib/prisma";
 import { createAttendanceSchema } from "@/features/attendance/schemas";
+import { createAttendanceRecord } from "@/features/attendance/service";
+import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
+import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
-import { canMutateAttendance } from "@/lib/permissions";
 import { fail, ok } from "@/lib/http";
-import { writeAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
-  const actor = await readActor(request);
-  if (!actor) {
-    return fail(401, "missing or invalid actor context");
-  }
-
   let payload: unknown;
   try {
     payload = await request.json();
@@ -23,30 +18,26 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  if (!canMutateAttendance(actor, parsed.data.employeeId)) {
-    return fail(403, "insufficient permissions");
+  try {
+    const record = await createAttendanceRecord(
+      {
+        actor: await readActor(request),
+        dataAccess: getRuntimeDataAccess()
+      },
+      {
+        employeeId: parsed.data.employeeId,
+        checkInAt: new Date(parsed.data.checkInAt),
+        checkOutAt: parsed.data.checkOutAt ? new Date(parsed.data.checkOutAt) : null,
+        breakMinutes: parsed.data.breakMinutes,
+        isHoliday: parsed.data.isHoliday,
+        notes: parsed.data.notes
+      }
+    );
+    return ok({ record }, 201);
+  } catch (error) {
+    if (isServiceError(error)) {
+      return fail(error.status, error.message, error.details);
+    }
+    throw error;
   }
-
-  const record = await prisma.attendanceRecord.create({
-    data: {
-      employeeId: parsed.data.employeeId,
-      checkInAt: new Date(parsed.data.checkInAt),
-      checkOutAt: parsed.data.checkOutAt ? new Date(parsed.data.checkOutAt) : null,
-      breakMinutes: parsed.data.breakMinutes,
-      isHoliday: parsed.data.isHoliday,
-      notes: parsed.data.notes
-    }
-  });
-
-  await writeAuditLog(prisma, {
-    action: "attendance.recorded",
-    entityType: "AttendanceRecord",
-    entityId: record.id,
-    actor,
-    payload: {
-      employeeId: record.employeeId
-    }
-  });
-
-  return ok({ record }, 201);
 }
