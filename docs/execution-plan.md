@@ -59,6 +59,10 @@ Completed:
   - notifier payload/guard/failure paths covered by `ops-alert-webhook.test.ts`
   - `test:integration` now includes alert webhook regression test
   - CI quality gate blocks notifier regression before merge
+- WI-0015 event governance traceability check is implemented:
+  - `check_traceability.py` now validates runtime/contract/data-ownership event alignment
+  - runtime event names must be represented in contracts and ownership matrix
+  - invalid/unknown published event names are blocked by CI
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -146,6 +150,7 @@ Tasks:
 19. Unify Slack failure notifications and add manual alert webhook smoke workflow. (Completed: 2026-02-13)
 20. Add Discord-compatible alert webhook path with Slack fallback. (Completed: 2026-02-13)
 21. Add alert webhook regression tests and include them in integration gate. (Completed: 2026-02-13)
+22. Add runtime-contract-ownership event traceability checks to governance gate. (Completed: 2026-02-13)
 
 Definition of Done:
 

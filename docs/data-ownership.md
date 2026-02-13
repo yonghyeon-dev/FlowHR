@@ -13,8 +13,8 @@ Exception:
 
 | Domain | Owned Tables | Published Events | Allowed Reads |
 | --- | --- | --- | --- |
-| Attendance | `AttendanceRecord` | `attendance.recorded.v1`, `attendance.corrected.v1`, `attendance.approved.v1` | Own tables, event projections |
-| Payroll | `PayrollRun` | `payroll.calculated.v1`, `payroll.confirmed.v1`, `payroll.deductions.calculated.v1` | Own tables, attendance projections only |
+| Attendance | `AttendanceRecord` | `attendance.recorded.v1`, `attendance.corrected.v1`, `attendance.approved.v1`, `attendance.rejected.v1` | Own tables, event projections |
+| Payroll | `PayrollRun` | `payroll.calculated.v1`, `payroll.confirmed.v1`, `payroll.deductions.calculated.v1`, `payroll.deduction_profile.updated.v1` | Own tables, attendance projections only |
 | Leave | `LeaveRequest`, `LeaveApproval`, `LeaveBalanceProjection` | `leave.requested.v1`, `leave.approved.v1`, `leave.rejected.v1`, `leave.canceled.v1`, `leave.accrual.settled.v1` | Own tables, attendance/payroll read-model only |
 | Platform (Shared) | `AuditLog` | none | Read-only for operations and audits |
 | Orchestrator (Process) | none (artifact-driven process) | `workitem.assigned` | Aggregated operational projections |
