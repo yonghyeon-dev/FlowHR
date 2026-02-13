@@ -110,7 +110,7 @@ Production rollout: `docs/production-rollout.md`
   - `POST /api/attendance/records/{recordId}/reject`
 - Payroll:
   - `POST /api/payroll/runs/preview`
-  - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`)
+  - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, profile mode optional `expectedProfileVersion`)
   - `POST /api/payroll/runs/{runId}/confirm`
 - Leave:
   - `POST /api/leave/requests`
@@ -124,5 +124,5 @@ Production rollout: `docs/production-rollout.md`
 ## Payroll Phase 2 Contract Artifacts
 
 - Work item: `work-items/WI-0005-payroll-phase2-deductions-tax-contract.md`
-- Contract: `specs/payroll/contract.yaml` (v1.2.0)
+- Contract: `specs/payroll/contract.yaml` (v1.3.0)
 - Compatibility matrix: `specs/payroll/phase2-compatibility-matrix.md`
