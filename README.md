@@ -50,6 +50,14 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 
 - Default runtime uses Prisma.
 - For API route tests without database, set `FLOWHR_DATA_ACCESS=memory`.
+- For Prisma-backed route smoke test, run `npm run test:e2e:prisma` with DB env set.
+
+## Role Claim Governance
+
+- Canonical role claim: `app_metadata.role` (`docs/role-claims.md`).
+- Backfill preview: `npm run roles:backfill:dry`
+- Backfill apply: `npm run roles:backfill:apply`
+- Enforcement check: `npm run roles:claims:enforce`
 
 ## Contribution Flow
 
@@ -58,3 +66,10 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 3. Implement code and tests
 4. Open PR with checklist evidence
 5. Merge only after required CI checks pass
+
+## Staging Prisma Integration (CI)
+
+Main-branch push can run Prisma-backed route e2e when these repository secrets are configured:
+
+- `FLOWHR_STAGING_DATABASE_URL`
+- `FLOWHR_STAGING_DIRECT_URL`
