@@ -8,6 +8,14 @@ from typing import Dict, List
 REQUIRED_ROOT_KEYS = ["id", "description", "inputs", "expected"]
 REQUIRED_EXPECTED_KEYS = ["payable_minutes", "gross_pay_krw", "audit_events"]
 REQUIRED_MINUTE_BUCKETS = ["regular", "overtime", "night", "holiday"]
+PHASE2_KEYS = [
+    "mode",
+    "withholdingTaxKrw",
+    "socialInsuranceKrw",
+    "otherDeductionsKrw",
+    "totalDeductionsKrw",
+    "netPayKrw",
+]
 
 
 def validate_fixture(path: pathlib.Path, seen_ids: set) -> List[str]:
@@ -60,6 +68,26 @@ def validate_fixture(path: pathlib.Path, seen_ids: set) -> List[str]:
         for idx, event in enumerate(audit_events):
             if not isinstance(event, str) or not event.strip():
                 errors.append(f"{path}: expected.audit_events[{idx}] must be non-empty string")
+
+    phase2 = expected.get("phase2")
+    if phase2 is not None:
+        if not isinstance(phase2, Dict):
+            errors.append(f"{path}: expected.phase2 must be an object when provided")
+        else:
+            for key in PHASE2_KEYS:
+                if key not in phase2:
+                    errors.append(f"{path}: expected.phase2 missing key '{key}'")
+
+            mode = phase2.get("mode")
+            if mode not in ("manual", "profile"):
+                errors.append(f"{path}: expected.phase2.mode must be 'manual' or 'profile'")
+
+            for key in PHASE2_KEYS:
+                if key == "mode":
+                    continue
+                value = phase2.get(key)
+                if not isinstance(value, int) or value < 0:
+                    errors.append(f"{path}: expected.phase2.{key} must be non-negative integer")
 
     return errors
 

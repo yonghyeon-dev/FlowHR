@@ -1,11 +1,12 @@
 # Production Rollout: Payroll Phase2 Flag
 
-Target flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1`
+Target flags: `FLOWHR_PAYROLL_DEDUCTIONS_V1`, `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1`
 
 ## Current Baseline
 
 - GitHub environment `production`: created.
 - `FLOWHR_PAYROLL_DEDUCTIONS_V1=true` in `production` environment.
+- `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` (planned WI-0006 runtime gate).
 - External runtime sync completed on Vercel project `flowhr`.
 
 ## Rollout Policy
@@ -13,6 +14,7 @@ Target flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1`
 1. Keep `false` while legacy consumers still rely on gross-only flow.
 2. Move to canary (`true`) only after staging CI and consumer checks pass.
 3. If issue occurs, immediately revert to `false`.
+4. Keep `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` until WI-0006 runtime tests pass.
 
 ## CLI Commands
 
@@ -107,5 +109,6 @@ Workflow: `.github/workflows/payroll-phase2-rollback.yml`
 ## Rollback
 
 1. Set `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`.
-2. Re-run production smoke/integration workflow if available.
-3. Keep gross-only endpoint (`/api/payroll/runs/preview`) as fallback path.
+2. Set `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` when profile mode rollout starts.
+3. Re-run production smoke/integration workflow if available.
+4. Keep gross-only endpoint (`/api/payroll/runs/preview`) as fallback path.

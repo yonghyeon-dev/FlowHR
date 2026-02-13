@@ -54,6 +54,15 @@ This document is the shared source of truth for attendance-to-payroll calculatio
 - Net pay: `grossPayKrw - totalDeductionsKrw`.
 - Final amounts remain whole KRW integers.
 
+## WI-0006 Deduction Profile Rules (Contract)
+
+- Deduction calculation mode:
+  - `manual`: use caller-provided deduction values.
+  - `profile`: derive deduction values from versioned deduction profile.
+- Profile mode must persist `deductionProfileId` and `deductionProfileVersion` on payroll run trace.
+- All deduction components must be non-negative KRW integers after rounding.
+- Net pay must not be negative; if deductions exceed gross pay, request is rejected.
+
 ## Calculation Priority
 
 1. Validate attendance record state (approved vs pending/canceled).

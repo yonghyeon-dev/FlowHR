@@ -70,23 +70,38 @@ model LeaveBalanceProjection {
 }
 
 model PayrollRun {
-  id                String   @id @default(cuid())
-  employeeId        String?
-  periodStart       DateTime
-  periodEnd         DateTime
-  state             PayrollState @default(PREVIEWED)
-  grossPayKrw       Int
-  withholdingTaxKrw Int?
-  socialInsuranceKrw Int?
-  otherDeductionsKrw Int?
-  totalDeductionsKrw Int?
-  netPayKrw         Int?
-  deductionBreakdown Json?
-  sourceRecordCount Int      @default(0)
-  confirmedAt       DateTime?
-  confirmedBy       String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  employeeId             String?
+  periodStart            DateTime
+  periodEnd              DateTime
+  state                  PayrollState @default(PREVIEWED)
+  grossPayKrw            Int
+  withholdingTaxKrw      Int?
+  socialInsuranceKrw     Int?
+  otherDeductionsKrw     Int?
+  totalDeductionsKrw     Int?
+  netPayKrw              Int?
+  deductionBreakdown     Json?
+  deductionProfileId     String?
+  deductionProfileVersion Int?
+  sourceRecordCount      Int      @default(0)
+  confirmedAt            DateTime?
+  confirmedBy            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model DeductionProfile {
+  id                     String   @id
+  name                   String
+  version                Int
+  mode                   String
+  withholdingRate        Decimal? @db.Decimal(5, 4)
+  socialInsuranceRate    Decimal? @db.Decimal(5, 4)
+  fixedOtherDeductionKrw Int      @default(0)
+  active                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
 
 model AuditLog {

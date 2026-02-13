@@ -1,13 +1,14 @@
 owner: payroll-agent
-version: 1.1.0
+version: 1.2.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
     - payroll run trace and audit logging
     - deduction and tax contract artifacts for phase 2 rollout
+    - deduction profile policy and profile-mode preview
   out:
-    - country-specific tax engine implementation
-    - external remittance
+    - country-specific legal tax engine implementation
+    - external remittance and filing
     - bank transfer execution
 entities:
   - name: PayrollPeriod
@@ -16,10 +17,12 @@ entities:
     description: Payroll computation run with status and source snapshot.
   - name: PayrollItem
     description: Per-employee gross pay components.
+  - name: DeductionProfile
+    description: Versioned deduction policy (rate/fixed components) for auto calculation mode.
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview and confirm run
+      permission: run payroll preview, manage deduction profile, and confirm run
     - role: admin
       permission: full payroll operations
   endpoints:
@@ -28,10 +31,16 @@ api:
       description: Generate payroll gross pay preview for a period.
     - method: POST
       path: /payroll/runs/preview-with-deductions
-      description: Generate payroll preview with deduction and tax components (phase2).
+      description: Generate payroll preview with deduction and tax components (manual/profile mode).
     - method: POST
       path: /payroll/runs/{runId}/confirm
       description: Confirm a payroll run.
+    - method: GET
+      path: /payroll/deduction-profiles/{profileId}
+      description: Read deduction profile definition and current version.
+    - method: PUT
+      path: /payroll/deduction-profiles/{profileId}
+      description: Create or update deduction profile for auto calculation mode.
   events:
     published:
       - name: payroll.calculated.v1
@@ -40,6 +49,8 @@ api:
         description: Emitted when payroll run is confirmed.
       - name: payroll.deductions.calculated.v1
         description: Emitted when deduction/tax preview is calculated.
+      - name: payroll.deduction_profile.updated.v1
+        description: Emitted when deduction profile configuration changes.
     consumed:
       - name: attendance.approved.v1
         description: Approved attendance aggregate input.
@@ -53,45 +64,55 @@ db_changes:
       description: Extend PayrollRun and add AuditLog for payroll traceability.
     - id: 202602140003_payroll_phase2_contract_base
       description: Add additive deduction and net-pay trace fields to PayrollRun.
+    - id: 202602140004_payroll_phase2_deduction_profile
+      description: Add DeductionProfile table and profile trace columns on PayrollRun.
   backward_compatible: true
-  notes: Phase2 extends payroll payload with additive nullable deduction fields.
+  notes: Phase2 adds optional profile-based deduction calculation while keeping manual mode.
 invariants:
   - Gross pay is deterministic for same inputs and rules.
   - Net pay equals gross pay minus total deductions when phase2 fields are populated.
+  - Profile-mode preview must persist profile ID and version trace.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
 risk:
   permissions:
+    - Unauthorized deduction profile mutation can impact payroll outcomes.
     - Unauthorized payroll run confirmation can lock wrong results.
   payroll_accuracy:
     - Misapplied overtime/night/holiday multipliers affect compensation.
     - Miscalculated deduction aggregation affects net pay accuracy.
+    - Stale deduction profile version can produce incorrect net pay.
   legal:
     - Payroll trace must support audit and dispute resolution.
 test_plan:
   unit:
     - gross pay calculator with multiplier rules
-    - deduction and net-pay aggregation formula
+    - manual/profile mode deduction and net-pay aggregation formula
     - rounding behavior for KRW totals
   integration:
     - consume attendance.approved and produce payroll preview
     - preview-with-deductions and confirm flow
+    - deduction profile CRUD and authorization checks
   regression:
-    - replay GC-001 through GC-005 fixtures
+    - replay GC-001 through GC-006 fixtures
   authorization:
-    - payroll_operator role enforcement
+    - payroll_operator role enforcement for preview/confirm/profile APIs
   payroll_accuracy:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
 observability:
   audit_events:
     - payroll.calculated
+    - payroll.preview_with_deductions.failed
     - payroll.deductions_calculated
+    - payroll.deduction_profile.updated
     - payroll.confirmed
   metrics:
     - payroll_run_duration_ms
     - payroll_recalculation_count
     - payroll_deductions_preview_latency_ms
+    - payroll_deduction_profile_calc_latency_ms
+    - payroll_deduction_profile_miss_count
   logs:
     - payroll calculation error with run ID context
 rollout:
@@ -100,16 +121,21 @@ rollout:
       default: "off"
     - name: payroll_deductions_v1
       default: "off"
+    - name: payroll_deduction_profile_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_deductions_v1 and fallback to gross-only preview path
+  strategy: disable payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Phase2 contract adds non-breaking deduction/net-pay fields and a feature-flagged preview endpoint."
+consumer_impact: "Contract v1.2.0 adds non-breaking deduction profile endpoints and profile-mode metadata for phase2 preview."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
+  - specs/payroll/deduction-profile.md
+  - work-items/WI-0006-payroll-phase2-deduction-policy-runtime.md
+  - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent
   qa_owner: qa-agent
