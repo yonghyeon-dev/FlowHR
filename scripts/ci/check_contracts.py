@@ -20,6 +20,7 @@ except Exception:
 
 SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 CONTRACT_FILE_RE = re.compile(r"(^|/)contract\.ya?ml$")
+API_FILE_RE = re.compile(r"(^|/)api\.ya?ml$")
 SCHEMA_PATH = pathlib.Path("contracts/contract.schema.json")
 
 
@@ -123,7 +124,7 @@ def lint_contract_file(path: pathlib.Path, validator: Draft202012Validator) -> L
     return errors
 
 
-def get_changed_contract_paths(base: str, head: str) -> List[str]:
+def get_changed_spec_paths(base: str, head: str) -> List[str]:
     code, out, err = git_output(
         ["git", "diff", "--name-status", "--diff-filter=ACMR", base, head, "--", "specs"]
     )
@@ -143,10 +144,16 @@ def get_changed_contract_paths(base: str, head: str) -> List[str]:
         else:
             continue
 
-        candidate = candidate.replace("\\", "/")
-        if CONTRACT_FILE_RE.search(candidate):
-            changed.append(candidate)
+        changed.append(candidate.replace("\\", "/"))
     return changed
+
+
+def get_changed_contract_paths(base: str, head: str) -> List[str]:
+    return [path for path in get_changed_spec_paths(base, head) if CONTRACT_FILE_RE.search(path)]
+
+
+def get_changed_api_paths(base: str, head: str) -> List[str]:
+    return [path for path in get_changed_spec_paths(base, head) if API_FILE_RE.search(path)]
 
 
 def git_show(sha: str, path: str) -> Optional[str]:
@@ -204,6 +211,31 @@ def check_versioning(base: str, head: str, changed_paths: List[str]) -> List[str
     return errors
 
 
+def check_api_contract_coupling(
+    base: str, head: str, changed_contract_paths: List[str], changed_api_paths: List[str]
+) -> List[str]:
+    errors: List[str] = []
+    changed_contract_set = set(changed_contract_paths)
+
+    for api_path in changed_api_paths:
+        contract_path = f"{pathlib.PurePosixPath(api_path).parent.as_posix()}/contract.yaml"
+        if contract_path in changed_contract_set:
+            continue
+
+        old_api = git_show(base, api_path)
+        new_api = git_show(head, api_path)
+
+        if old_api == new_api:
+            continue
+
+        errors.append(
+            f"{api_path}: api.yaml changed between {base[:7]} and {head[:7]} "
+            f"without sibling contract.yaml change/version bump"
+        )
+
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Lint FlowHR contract files (YAML+schema) and versioning rules."
@@ -230,14 +262,21 @@ def main() -> int:
     if args.base and args.head:
         try:
             changed_paths = get_changed_contract_paths(args.base, args.head)
+            changed_api_paths = get_changed_api_paths(args.base, args.head)
         except RuntimeError as exc:
             errors.append(str(exc))
             changed_paths = []
+            changed_api_paths = []
 
         if changed_paths:
             errors.extend(check_versioning(args.base, args.head, changed_paths))
         else:
             print("No changed contract.yaml files between provided SHAs.")
+
+        if changed_api_paths:
+            errors.extend(check_api_contract_coupling(args.base, args.head, changed_paths, changed_api_paths))
+        else:
+            print("No changed api.yaml files between provided SHAs.")
     else:
         print("Versioning diff check skipped (base/head not provided).")
 

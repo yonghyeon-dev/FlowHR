@@ -75,6 +75,10 @@ Completed:
   - `check_contracts.py` requires sibling `api.yaml` for each domain contract
   - `api.yaml` `info.version` must follow SemVer
   - contract/API version mismatch now fails governance gate
+- WI-0019 API/contract coupling gate is implemented:
+  - changed `api.yaml` now requires sibling `contract.yaml` change in diff checks
+  - API-only spec changes are blocked until contract/version update is included
+  - versioning policy now documents API/contract coupling enforcement
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -166,6 +170,7 @@ Tasks:
 23. Add WI-0016 rejection reason traceability in reject API/audit/event and e2e tests. (Completed: 2026-02-13)
 24. Add WI-0017 reject payload validation guard regression coverage. (Completed: 2026-02-13)
 25. Add WI-0018 contract/API version alignment check to contract governance gate. (Completed: 2026-02-13)
+26. Add WI-0019 API/contract coupling check for API-only spec changes. (Completed: 2026-02-13)
 
 Definition of Done:
 
