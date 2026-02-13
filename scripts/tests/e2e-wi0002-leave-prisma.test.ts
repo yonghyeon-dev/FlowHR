@@ -54,6 +54,7 @@ async function run() {
   const leaveRejectRoute = await import("../../src/app/api/leave/requests/[requestId]/reject/route.ts");
   const leaveCancelRoute = await import("../../src/app/api/leave/requests/[requestId]/cancel/route.ts");
   const leaveBalanceRoute = await import("../../src/app/api/leave/balances/[employeeId]/route.ts");
+  const leaveAccrualSettleRoute = await import("../../src/app/api/leave/accrual/settle/route.ts");
 
   try {
     const createResponse = await leaveCreateRoute.POST(
@@ -123,6 +124,39 @@ async function run() {
     );
     assert.equal(balanceBody.balance.usedDays, 2);
     assert.equal(balanceBody.balance.remainingDays, 13);
+
+    const settleResponse = await leaveAccrualSettleRoute.POST(
+      jsonRequest(
+        "POST",
+        "/api/leave/accrual/settle",
+        {
+          employeeId,
+          year: 2027
+        },
+        actorHeaders("payroll_operator", payrollOperatorId)
+      )
+    );
+    assert.equal(settleResponse.status, 200, "payroll operator should settle leave accrual");
+    const settleBody = await readJson<{
+      balance: { grantedDays: number; usedDays: number; remainingDays: number; carryOverDays: number };
+    }>(settleResponse);
+    assert.equal(settleBody.balance.grantedDays, 20);
+    assert.equal(settleBody.balance.usedDays, 0);
+    assert.equal(settleBody.balance.remainingDays, 20);
+    assert.equal(settleBody.balance.carryOverDays, 5);
+
+    const duplicateSettleResponse = await leaveAccrualSettleRoute.POST(
+      jsonRequest(
+        "POST",
+        "/api/leave/accrual/settle",
+        {
+          employeeId,
+          year: 2027
+        },
+        actorHeaders("payroll_operator", payrollOperatorId)
+      )
+    );
+    assert.equal(duplicateSettleResponse.status, 409, "duplicate accrual settle should be rejected");
 
     const rejectCreateResponse = await leaveCreateRoute.POST(
       jsonRequest(
@@ -202,7 +236,8 @@ async function run() {
       "leave.approved",
       "leave.rejected",
       "leave.canceled",
-      "leave.balance_read"
+      "leave.balance_read",
+      "leave.accrual_settled"
     ]) {
       assert.ok(
         auditActions.some((entry: { action: string }) => entry.action === action),

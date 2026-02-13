@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.1.0
+  version: 1.2.0
 paths:
   /leave/requests:
     post:
@@ -69,3 +69,9 @@ paths:
       responses:
         "200":
           description: Leave balance snapshot
+  /leave/accrual/settle:
+    post:
+      summary: Settle annual leave accrual and carry-over
+      responses:
+        "200":
+          description: Accrual settled

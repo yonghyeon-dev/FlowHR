@@ -1,12 +1,12 @@
-owner: attendance-agent
-version: 1.1.0
+owner: leave-agent
+version: 1.2.0
 scope:
   in:
     - leave request create/update/cancel flow
     - leave approve/reject flow with audit trace
     - leave balance read model contract
+    - annual leave accrual and carry-over settlement
   out:
-    - leave accrual and carry-over settlement
     - external calendar synchronization
 entities:
   - name: LeaveRequest
@@ -14,13 +14,15 @@ entities:
   - name: LeaveApproval
     description: Approval or rejection decision record with actor and reason.
   - name: LeaveBalanceProjection
-    description: Read model of granted, used, and remaining leave days.
+    description: Read model of granted, used, remaining, and carry-over leave days.
 api:
   auth:
     - role: employee
       permission: create/update own pending leave request
     - role: manager
       permission: approve or reject leave requests within scope
+    - role: payroll_operator
+      permission: settle leave accrual cycle and read leave balances
     - role: admin
       permission: full leave operations
   endpoints:
@@ -42,6 +44,9 @@ api:
     - method: GET
       path: /leave/balances/{employeeId}
       description: Retrieve leave balance snapshot.
+    - method: POST
+      path: /leave/accrual/settle
+      description: Settle annual leave accrual and carry-over for an employee.
   events:
     published:
       - name: leave.requested.v1
@@ -52,6 +57,8 @@ api:
         description: Emitted when leave request is rejected.
       - name: leave.canceled.v1
         description: Emitted when pending leave is canceled.
+      - name: leave.accrual.settled.v1
+        description: Emitted when annual accrual settlement is applied.
     consumed:
       - name: employee.profile.updated.v1
         description: Employee org/profile metadata updates.
@@ -59,59 +66,73 @@ db_changes:
   migrations:
     - id: 202602140001_wi0002_leave_base
       description: Create leave requests, approvals, and balance projection tables.
+    - id: 202602140002_wi0003_leave_accrual
+      description: Add carry-over and accrual settlement trace fields to LeaveBalanceProjection.
   backward_compatible: true
-  notes: Additive columns only in initial leave rollout.
+  notes: Additive schema change. Existing balance rows default carry-over to 0.
 invariants:
   - Final leave decisions are immutable and auditable.
   - Employee can mutate only own pending request.
   - Approved leave state is consumable for attendance/payroll downstream.
+  - Same employee/year accrual settlement cannot be applied more than once.
+  - Carry-over days are capped by policy and never negative.
 risk:
   permissions:
-    - Unauthorized approval can alter payroll and staffing plans.
+    - Unauthorized approval or accrual settlement can alter payroll and staffing plans.
   payroll_accuracy:
-    - Paid leave misclassification can distort gross-pay totals.
+    - Paid leave misclassification or incorrect carry-over cap can distort gross-pay totals.
   legal:
     - Leave decision history must be retained for dispute/audit handling.
 test_plan:
   unit:
     - leave state transition guard validation
     - leave date normalization by Asia/Seoul
+    - accrual settlement carry-over cap calculation
   integration:
     - create/update/approve leave flow
     - reject flow with reason and audit
+    - accrual settlement with duplicate-year protection
   regression:
     - overlap detection and boundary-date regressions
+    - leave balance continuity after yearly settlement
   authorization:
     - employee self-service boundary check
     - manager/admin approval check
+    - payroll_operator/admin-only accrual settlement check
   payroll_accuracy:
     - approved paid leave classification for payroll consumer compatibility
+    - carry-over cap and yearly reset rules
 observability:
   audit_events:
     - leave.requested
     - leave.approved
     - leave.rejected
     - leave.canceled
+    - leave.accrual_settled
   metrics:
     - leave_approval_latency_ms
     - leave_request_rejection_rate
+    - leave_accrual_settlement_count
   logs:
     - leave authorization denied with actor role
+    - leave accrual duplicate-year rejection logs
 rollout:
   feature_flags:
     - name: leave_request_v1
       default: "off"
     - name: leave_approval_v1
       default: "off"
+    - name: leave_accrual_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable leave flags and route to manual approval process
+  strategy: disable leave flags and route accrual settlement to manual operations
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "WI-0002 implementation adds cancel endpoint and leave balance projection behavior."
+consumer_impact: "WI-0003 adds accrual settlement endpoint and leave balance fields without breaking existing consumers."
 references:
   - specs/common/time-and-payroll-rules.md
 approval:
-  spec_owner: attendance-agent
+  spec_owner: leave-agent
   qa_owner: qa-agent

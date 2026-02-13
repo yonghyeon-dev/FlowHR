@@ -14,6 +14,7 @@
 - Attendance record created/updated/deleted.
 - Approval actions (submit/approve/reject/cancel).
 - Payroll calculation executed/confirmed.
+- Leave accrual settlement applied/rejected.
 - Authorization and role change actions.
 
 ## Payroll and Timekeeping Risks
@@ -22,6 +23,7 @@
 - Overtime, night, holiday multipliers.
 - Rounding effects on payable amount.
 - Retroactive correction and recalculation.
+- Leave carry-over cap misapplication and duplicate-year settlement.
 
 ## Migration Safety Risks
 

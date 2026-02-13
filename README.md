@@ -104,3 +104,4 @@ Details: `docs/staging-secrets.md`
   - `POST /api/leave/requests/{requestId}/reject`
   - `POST /api/leave/requests/{requestId}/cancel`
   - `GET /api/leave/balances/{employeeId}`
+  - `POST /api/leave/accrual/settle`

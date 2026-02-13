@@ -60,11 +60,13 @@ model LeaveApproval {
 }
 
 model LeaveBalanceProjection {
-  employeeId   String   @id
-  grantedDays  Int      @default(15)
-  usedDays     Int      @default(0)
-  remainingDays Int     @default(15)
-  updatedAt    DateTime @updatedAt
+  employeeId      String   @id
+  grantedDays     Int      @default(15)
+  usedDays        Int      @default(0)
+  remainingDays   Int      @default(15)
+  carryOverDays   Int      @default(0)
+  lastAccrualYear Int?
+  updatedAt       DateTime @updatedAt
 }
 
 model PayrollRun {

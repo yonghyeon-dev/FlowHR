@@ -27,3 +27,10 @@ export const rejectLeaveRequestSchema = z.object({
 export const cancelLeaveRequestSchema = z.object({
   reason: z.string().min(1).max(1000).optional()
 });
+
+export const settleLeaveAccrualSchema = z.object({
+  employeeId: z.string().min(1),
+  year: z.number().int().min(2000).max(9999),
+  annualGrantDays: z.number().int().positive().optional(),
+  carryOverCapDays: z.number().int().min(0).optional()
+});
