@@ -1,0 +1,71 @@
+name: production-auth-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Optional production base URL override"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve base URL
+        env:
+          INPUT_BASE_URL: ${{ inputs.base_url }}
+          DEFAULT_BASE_URL: ${{ vars.FLOWHR_PRODUCTION_BASE_URL }}
+        run: |
+          selected="$INPUT_BASE_URL"
+          if [ -z "$selected" ]; then
+            selected="$DEFAULT_BASE_URL"
+          fi
+          if [ -z "$selected" ]; then
+            echo "::error::Missing base URL. Set workflow input base_url or vars.FLOWHR_PRODUCTION_BASE_URL."
+            exit 1
+          fi
+          echo "SMOKE_BASE_URL=$selected" >> "$GITHUB_ENV"
+
+      - name: Validate required production secrets
+        env:
+          PRODUCTION_SUPABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_SUPABASE_URL }}
+          PRODUCTION_ANON_KEY: ${{ secrets.FLOWHR_PRODUCTION_ANON_KEY }}
+          PRODUCTION_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_PRODUCTION_SERVICE_ROLE_KEY }}
+          PRODUCTION_DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          PRODUCTION_DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
+        run: |
+          missing=()
+          for key in PRODUCTION_SUPABASE_URL PRODUCTION_ANON_KEY PRODUCTION_SERVICE_ROLE_KEY PRODUCTION_DATABASE_URL PRODUCTION_DIRECT_URL; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required production secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Run production auth smoke
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_PRODUCTION_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_PRODUCTION_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
+        run: npm run test:smoke:production-auth --if-present

@@ -46,6 +46,28 @@ Vercel sync status:
 - Framework preset is controlled by `vercel.json` (`nextjs`)
 - Production env `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`
 
+## Production Auth Smoke (GitHub Actions)
+
+Manual workflow: `.github/workflows/production-auth-smoke.yml`
+
+Required production environment variable:
+
+- `FLOWHR_PRODUCTION_BASE_URL` (example: `https://flowhr-two.vercel.app`)
+
+Required production environment secrets:
+
+- `FLOWHR_PRODUCTION_SUPABASE_URL`
+- `FLOWHR_PRODUCTION_ANON_KEY`
+- `FLOWHR_PRODUCTION_SERVICE_ROLE_KEY`
+- `FLOWHR_PRODUCTION_DATABASE_URL`
+- `FLOWHR_PRODUCTION_DIRECT_URL`
+
+Run command:
+
+```bash
+gh workflow run production-auth-smoke.yml -R yonghyeon-dev/FlowHR
+```
+
 ## Rollback
 
 1. Set `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`.
