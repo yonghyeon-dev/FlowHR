@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.0.0
+version: 1.0.1
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -40,8 +40,10 @@ api:
         description: Correction-triggered recalculation input.
 db_changes:
   migrations:
-    - id: 2026021302_payroll_base
-      description: Create payroll periods, runs, and payroll items tables.
+    - id: 202602130001_init_wi0001
+      description: Create PayrollRun base table.
+    - id: 202602130002_wi0001_api_extensions
+      description: Extend PayrollRun and add AuditLog for payroll traceability.
   backward_compatible: true
   notes: Additive columns for future deduction components.
 invariants:
