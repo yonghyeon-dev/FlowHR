@@ -1,0 +1,114 @@
+name: payroll-phase2-rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_phrase:
+        description: "Type ROLLBACK_PHASE2 to continue"
+        required: true
+        type: string
+      deploy_vercel:
+        description: "Also sync Vercel flag and deploy production"
+        required: true
+        default: true
+        type: boolean
+      dry_run:
+        description: "Validate workflow only (no flag mutation/deploy)"
+        required: true
+        default: false
+        type: boolean
+      reason:
+        description: "Rollback reason"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate confirmation phrase
+        env:
+          PHRASE: ${{ inputs.confirm_phrase }}
+        run: |
+          if [ "$PHRASE" != "ROLLBACK_PHASE2" ]; then
+            echo "::error::Invalid confirm phrase. Expected ROLLBACK_PHASE2"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Disable GitHub production phase2 flag
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh variable set FLOWHR_PAYROLL_DEDUCTIONS_V1 --env production --body "false" -R "${{ github.repository }}"
+
+      - name: Setup Node for Vercel sync
+        if: ${{ inputs.deploy_vercel && !inputs.dry_run }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Sync Vercel flag and deploy production
+        if: ${{ inputs.deploy_vercel && !inputs.dry_run }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE || 'yh-devs-projects' }}
+          VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME || 'flowhr' }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::Missing production secret VERCEL_TOKEN"
+            exit 1
+          fi
+          npx vercel@latest link --yes --project "$VERCEL_PROJECT_NAME" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+          echo "false" | npx vercel@latest env add FLOWHR_PAYROLL_DEDUCTIONS_V1 production --force --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+          npx vercel@latest deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+
+      - name: Write summary
+        run: |
+          {
+            echo "## Payroll Phase2 Rollback Result";
+            echo "";
+            echo "- Dry run: ${{ inputs.dry_run }}";
+            echo "- GitHub production flag target: FLOWHR_PAYROLL_DEDUCTIONS_V1=false";
+            echo "- Vercel deploy executed: ${{ inputs.deploy_vercel }}";
+            echo "- Reason: ${{ inputs.reason || 'n/a' }}";
+            echo "- Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}";
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create issue on failure
+        if: ${{ failure() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `[rollback] payroll phase2 rollback failed (${context.runNumber})`;
+            const body = [
+              "Payroll phase2 rollback workflow failed.",
+              "",
+              `- Run: ${runUrl}`,
+              `- Reason: ${context.payload.inputs?.reason || "n/a"}`
+            ].join("\n");
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ["incident", "rollback", "phase2"]
+            });
+
+      - name: Notify Slack on failure
+        if: ${{ failure() && secrets.FLOWHR_ALERT_SLACK_WEBHOOK != '' }}
+        env:
+          WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
+        run: |
+          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          payload="{\"text\":\"[FlowHR] payroll-phase2-rollback failed: ${run_url}\"}"
+          curl -X POST -H "Content-type: application/json" --data "$payload" "$WEBHOOK"

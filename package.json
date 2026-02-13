@@ -17,6 +17,7 @@
     "test:e2e:prisma:leave": "tsx scripts/tests/e2e-wi0002-leave-prisma.test.ts",
     "test:golden": "tsx scripts/tests/golden.test.ts",
     "test:smoke:production-auth": "tsx scripts/tests/production-auth-smoke.test.ts",
+    "health:payroll:phase2": "tsx scripts/ops/payroll-phase2-health-report.ts",
     "roles:backfill:dry": "node scripts/supabase/backfill-role-claims.mjs --dry-run",
     "roles:backfill:apply": "node scripts/supabase/backfill-role-claims.mjs --apply",
     "roles:claims:enforce": "node scripts/supabase/backfill-role-claims.mjs --enforce",

@@ -189,6 +189,7 @@ async function run() {
   assert.deepEqual(getMemoryAuditActions(), [
     "attendance.recorded",
     "attendance.approved",
+    "payroll.preview_with_deductions.failed",
     "payroll.deductions_calculated",
     "payroll.confirmed"
   ]);

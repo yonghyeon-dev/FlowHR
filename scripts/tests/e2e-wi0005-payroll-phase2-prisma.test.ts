@@ -181,7 +181,13 @@ async function run() {
     });
     assert.deepEqual(
       auditActions.map((row: { action: string }) => row.action),
-      ["attendance.recorded", "attendance.approved", "payroll.deductions_calculated", "payroll.confirmed"]
+      [
+        "attendance.recorded",
+        "attendance.approved",
+        "payroll.preview_with_deductions.failed",
+        "payroll.deductions_calculated",
+        "payroll.confirmed"
+      ]
     );
   } finally {
     await prisma.auditLog.deleteMany({

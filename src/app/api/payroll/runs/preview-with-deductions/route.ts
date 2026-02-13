@@ -5,6 +5,10 @@ import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
+function shouldAuditPreviewFailure(status: number) {
+  return status === 403 || status === 409;
+}
+
 export async function POST(request: Request) {
   let payload: unknown;
   try {
@@ -18,11 +22,14 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
+  const actor = await readActor(request);
+  const dataAccess = getRuntimeDataAccess();
+
   try {
     const result = await previewPayrollWithDeductions(
       {
-        actor: await readActor(request),
-        dataAccess: getRuntimeDataAccess()
+        actor,
+        dataAccess
       },
       {
         periodStart: new Date(parsed.data.periodStart),
@@ -41,6 +48,22 @@ export async function POST(request: Request) {
     return ok(result);
   } catch (error) {
     if (isServiceError(error)) {
+      if (shouldAuditPreviewFailure(error.status)) {
+        try {
+          await dataAccess.audit.append({
+            action: "payroll.preview_with_deductions.failed",
+            entityType: "PayrollRun",
+            actorRole: actor?.role ?? "system",
+            actorId: actor?.id ?? undefined,
+            payload: {
+              status: error.status,
+              message: error.message
+            }
+          });
+        } catch {
+          // Do not block response path by telemetry write failure.
+        }
+      }
       return fail(error.status, error.message, error.details);
     }
     throw error;

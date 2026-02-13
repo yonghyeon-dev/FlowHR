@@ -30,7 +30,7 @@ Completed:
 
 Open gaps:
 
-- Automated production auth smoke for phase2 endpoint is not implemented yet.
+- Automated rollback drill execution (scheduled rehearsal) is not in place yet.
 
 ## 2) Priority Roadmap
 
@@ -96,6 +96,8 @@ Tasks:
 6. Enable staging CI with schema isolation checks and phase2 flag smoke validation. (Completed: 2026-02-13)
 7. Prepare production phase2 flag baseline and runbook. (Completed: 2026-02-13)
 8. Sync external production runtime flag to Vercel (`flowhr`) and deploy. (Completed: 2026-02-13)
+9. Add production auth smoke workflow and run validation. (Completed: 2026-02-13)
+10. Add phase2 health monitor + rollback automation workflows. (Completed: 2026-02-13)
 
 Definition of Done:
 
@@ -129,11 +131,11 @@ Request template:
 ## 5) Inputs Needed From You (Conditional)
 
 1. To proceed with payroll Phase 2:
-   - Confirm production auth-smoke method for protected payroll endpoints
+   - Confirm rollback drill cadence and on-call ownership
 
 ## 6) Immediate Next Actions
 
 Without additional input, the next executable step is:
 
-1. add production auth smoke path for protected payroll endpoints,
-2. monitor phase2 runtime metrics/audit events and keep rollback command ready.
+1. run weekly rollback drill using `payroll-phase2-rollback` (with Vercel sync),
+2. connect `FLOWHR_ALERT_SLACK_WEBHOOK` to receive workflow failure alerts.
