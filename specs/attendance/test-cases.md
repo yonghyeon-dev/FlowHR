@@ -13,12 +13,14 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 5. Reject unauthorized approval/rejection attempt.
 6. Emit final-state event once (`approved` or `rejected`).
 7. Rejection reason is preserved in audit/event payload when provided.
+8. Reject API returns `400` for invalid JSON body and oversized reason payload.
 
 ## Boundary and Accuracy Cases
 
 1. Overnight shift crossing midnight is mapped using 04:00 workday boundary.
 2. Minute rounding behavior matches common SSoT rules.
 3. Correction after initial approval creates auditable recalculation signal.
+4. Reject reason length `> 500` is blocked and does not create audit/event side effects.
 
 ## Regression Linkage
 

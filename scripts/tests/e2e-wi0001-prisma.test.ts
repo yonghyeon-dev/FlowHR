@@ -121,6 +121,36 @@ async function run() {
     );
     assert.equal(rejectedCreateBody.record.state, "PENDING");
 
+    const invalidJsonRejectResponse = await attendanceRejectRoute.POST(
+      new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
+        method: "POST",
+        headers: actorHeaders("manager", managerId),
+        body: "{"
+      }),
+      { params: Promise.resolve({ recordId: rejectedCreateBody.record.id }) } as RouteContext<{
+        recordId: string;
+      }>
+    );
+    assert.equal(invalidJsonRejectResponse.status, 400, "invalid reject JSON should be rejected");
+    const invalidJsonRejectBody = await readJson<{ error: string }>(invalidJsonRejectResponse);
+    assert.equal(invalidJsonRejectBody.error, "invalid JSON body");
+
+    const invalidPayloadRejectResponse = await attendanceRejectRoute.POST(
+      new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
+        method: "POST",
+        headers: actorHeaders("manager", managerId),
+        body: JSON.stringify({
+          reason: "x".repeat(501)
+        })
+      }),
+      { params: Promise.resolve({ recordId: rejectedCreateBody.record.id }) } as RouteContext<{
+        recordId: string;
+      }>
+    );
+    assert.equal(invalidPayloadRejectResponse.status, 400, "oversized reject reason should be rejected");
+    const invalidPayloadRejectBody = await readJson<{ error: string }>(invalidPayloadRejectResponse);
+    assert.equal(invalidPayloadRejectBody.error, "invalid payload");
+
     const rejectResponse = await attendanceRejectRoute.POST(
       new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
         method: "POST",
