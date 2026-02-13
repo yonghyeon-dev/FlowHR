@@ -2,13 +2,19 @@
 
 ## Planned Tables
 
-- `leave_requests`
-- `leave_approvals`
-- `leave_balances_projection`
+- `LeaveRequest`
+- `LeaveApproval`
+- `LeaveBalanceProjection`
 
 ## Migration
 
 - `202602140001_wi0002_leave_base`
+- `202602140002_wi0003_leave_accrual`
+
+## WI-0003 Additive Columns
+
+- `LeaveBalanceProjection.carryOverDays` (int, default 0)
+- `LeaveBalanceProjection.lastAccrualYear` (int, nullable)
 
 ## Compatibility
 

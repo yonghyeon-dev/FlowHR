@@ -7,7 +7,8 @@ export const domainEventNames = [
   "leave.requested.v1",
   "leave.approved.v1",
   "leave.rejected.v1",
-  "leave.canceled.v1"
+  "leave.canceled.v1",
+  "leave.accrual.settled.v1"
 ] as const;
 
 export type DomainEventName = (typeof domainEventNames)[number];

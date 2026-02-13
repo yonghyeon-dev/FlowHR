@@ -63,6 +63,8 @@ function toLeaveBalanceEntity(record: {
   grantedDays: number;
   usedDays: number;
   remainingDays: number;
+  carryOverDays: number;
+  lastAccrualYear: number | null;
   updatedAt: Date;
 }): LeaveBalanceEntity {
   return record;
@@ -242,7 +244,9 @@ const leaveBalance: LeaveBalanceStore = {
         employeeId,
         grantedDays: defaultGrantedDays,
         usedDays: 0,
-        remainingDays: defaultGrantedDays
+        remainingDays: defaultGrantedDays,
+        carryOverDays: 0,
+        lastAccrualYear: null
       }
     });
     return toLeaveBalanceEntity(created);
@@ -258,6 +262,30 @@ const leaveBalance: LeaveBalanceStore = {
       data: {
         usedDays,
         remainingDays
+      }
+    });
+    return toLeaveBalanceEntity(updated);
+  },
+
+  async settleAccrual(input: {
+    employeeId: string;
+    year: number;
+    annualGrantDays: number;
+    carryOverCapDays: number;
+    defaultGrantedDays: number;
+  }) {
+    const current = await leaveBalance.ensure(input.employeeId, input.defaultGrantedDays);
+    const carryOverDays = Math.min(input.carryOverCapDays, Math.max(0, current.remainingDays));
+    const grantedDays = input.annualGrantDays + carryOverDays;
+
+    const updated = await prisma.leaveBalanceProjection.update({
+      where: { employeeId: input.employeeId },
+      data: {
+        grantedDays,
+        usedDays: 0,
+        remainingDays: grantedDays,
+        carryOverDays,
+        lastAccrualYear: input.year
       }
     });
     return toLeaveBalanceEntity(updated);

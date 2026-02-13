@@ -282,6 +282,8 @@ export const memoryDataAccess: DataAccess = {
         grantedDays: defaultGrantedDays,
         usedDays: 0,
         remainingDays: defaultGrantedDays,
+        carryOverDays: 0,
+        lastAccrualYear: null,
         updatedAt: now
       };
       state.leaveBalances.set(employeeId, created);
@@ -294,6 +296,24 @@ export const memoryDataAccess: DataAccess = {
         ...current,
         usedDays: current.usedDays + input.usedDaysDelta,
         remainingDays: current.grantedDays - (current.usedDays + input.usedDaysDelta),
+        updatedAt: new Date()
+      };
+      state.leaveBalances.set(input.employeeId, next);
+      return cloneLeaveBalance(next);
+    },
+
+    async settleAccrual(input) {
+      const current = await this.ensure(input.employeeId, input.defaultGrantedDays);
+      const carryOverDays = Math.min(input.carryOverCapDays, Math.max(0, current.remainingDays));
+      const grantedDays = input.annualGrantDays + carryOverDays;
+
+      const next: LeaveBalanceEntity = {
+        ...current,
+        grantedDays,
+        usedDays: 0,
+        remainingDays: grantedDays,
+        carryOverDays,
+        lastAccrualYear: input.year,
         updatedAt: new Date()
       };
       state.leaveBalances.set(input.employeeId, next);

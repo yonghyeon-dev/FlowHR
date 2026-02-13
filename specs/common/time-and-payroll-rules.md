@@ -39,6 +39,14 @@ This document is the shared source of truth for attendance-to-payroll calculatio
   - first 480 minutes => holiday multiplier
   - beyond 480 minutes => holiday * overtime combined multiplier
 
+## WI-0003 Leave Accrual Rules
+
+- Yearly accrual settlement actor: `admin` or `payroll_operator`.
+- Default annual grant: `15` days.
+- Default carry-over cap: `5` days.
+- Carry-over formula: `min(max(remainingDays, 0), carryOverCapDays)`.
+- Duplicate settlement for same employee/year is rejected.
+
 ## Calculation Priority
 
 1. Validate attendance record state (approved vs pending/canceled).

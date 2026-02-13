@@ -58,6 +58,8 @@ export type LeaveBalanceEntity = {
   grantedDays: number;
   usedDays: number;
   remainingDays: number;
+  carryOverDays: number;
+  lastAccrualYear: number | null;
   updatedAt: Date;
 };
 
@@ -172,6 +174,13 @@ export interface LeaveBalanceStore {
   applyUsage(input: {
     employeeId: string;
     usedDaysDelta: number;
+    defaultGrantedDays: number;
+  }): Promise<LeaveBalanceEntity>;
+  settleAccrual(input: {
+    employeeId: string;
+    year: number;
+    annualGrantDays: number;
+    carryOverCapDays: number;
     defaultGrantedDays: number;
   }): Promise<LeaveBalanceEntity>;
 }

@@ -49,6 +49,7 @@ async function run() {
   const leaveRejectRoute = await import("../../src/app/api/leave/requests/[requestId]/reject/route.ts");
   const leaveCancelRoute = await import("../../src/app/api/leave/requests/[requestId]/cancel/route.ts");
   const leaveBalanceRoute = await import("../../src/app/api/leave/balances/[employeeId]/route.ts");
+  const leaveAccrualSettleRoute = await import("../../src/app/api/leave/accrual/settle/route.ts");
 
   resetMemoryDataAccess();
   resetRuntimeMemoryDomainEvents();
@@ -154,6 +155,52 @@ async function run() {
   );
   assert.equal(deniedBalanceResponse.status, 403, "other employee should not read target balance");
 
+  const settleResponse = await leaveAccrualSettleRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/leave/accrual/settle",
+      {
+        employeeId,
+        year: 2027
+      },
+      actorHeaders("payroll_operator", "PAY-LEAVE-1")
+    )
+  );
+  assert.equal(settleResponse.status, 200, "payroll operator should settle leave accrual");
+  const settleBody = await readJson<{
+    balance: { grantedDays: number; usedDays: number; remainingDays: number; carryOverDays: number };
+  }>(settleResponse);
+  assert.equal(settleBody.balance.grantedDays, 20);
+  assert.equal(settleBody.balance.usedDays, 0);
+  assert.equal(settleBody.balance.remainingDays, 20);
+  assert.equal(settleBody.balance.carryOverDays, 5);
+
+  const duplicateSettleResponse = await leaveAccrualSettleRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/leave/accrual/settle",
+      {
+        employeeId,
+        year: 2027
+      },
+      actorHeaders("payroll_operator", "PAY-LEAVE-1")
+    )
+  );
+  assert.equal(duplicateSettleResponse.status, 409, "duplicate accrual settle should be rejected");
+
+  const unauthorizedSettleResponse = await leaveAccrualSettleRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/leave/accrual/settle",
+      {
+        employeeId,
+        year: 2028
+      },
+      actorHeaders("employee", employeeId)
+    )
+  );
+  assert.equal(unauthorizedSettleResponse.status, 403, "employee should not settle leave accrual");
+
   const rejectCreateResponse = await leaveCreateRoute.POST(
     jsonRequest(
       "POST",
@@ -229,7 +276,8 @@ async function run() {
     "leave.approved",
     "leave.rejected",
     "leave.canceled",
-    "leave.balance_read"
+    "leave.balance_read",
+    "leave.accrual_settled"
   ]) {
     assert.ok(actions.includes(action), `expected audit action ${action}`);
   }
@@ -238,7 +286,8 @@ async function run() {
     "leave.requested.v1",
     "leave.approved.v1",
     "leave.rejected.v1",
-    "leave.canceled.v1"
+    "leave.canceled.v1",
+    "leave.accrual.settled.v1"
   ]) {
     assert.ok(
       getRuntimeMemoryDomainEvents().some((event) => event.name === eventName),

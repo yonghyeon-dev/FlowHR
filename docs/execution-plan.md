@@ -19,13 +19,16 @@ Completed:
   - request/update/approve/reject/cancel
   - leave balance read model
   - memory/prisma e2e coverage
+- WI-0003 leave accrual/carry-over settlement is implemented:
+  - accrual settlement API and duplicate-year guard
+  - carry-over policy fields and migration
+  - memory/prisma e2e coverage
 - Golden fixtures (`GC-001` to `GC-005`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is opt-in (default OFF) with schema isolation guardrails.
 
 Open gaps:
 
-- Leave accrual/carry-over policy engine is not implemented yet.
 - Payroll Phase 2 (deductions/tax/remittance) remains out of scope.
 - Domain event publication adapter exists (`noop`/`memory`), but external transport integration is not implemented yet.
 - Staging integration is disabled by default; continuous validation is not active until explicitly enabled.
@@ -87,7 +90,7 @@ Objective: close functional/operational gaps before broader rollout.
 Tasks:
 
 1. Add external transport adapter for domain events (current implementation is in-process `noop`/`memory` only).
-2. Implement leave accrual/carry-over settlement policy (WI-0003).
+2. Implement leave accrual/carry-over settlement policy (WI-0003). (Completed: 2026-02-13)
 3. Define payroll Phase 2 contract set (deductions/tax) and non-breaking migration path.
 4. Add spec-to-runtime drift check for table names and migration IDs. (Completed: 2026-02-13)
 5. Enable staging CI only when needed (`FLOWHR_ENABLE_STAGING_CI=true`) and keep schema isolation checks green.
@@ -130,13 +133,10 @@ Request template:
 2. To proceed with payroll Phase 2:
    - Policy decisions for deductions/tax scope and rollout boundary
 
-3. To proceed with leave accrual engine:
-   - Accrual/carry-over policy defaults (or explicit placeholder policy approval)
-
 ## 6) Immediate Next Actions
 
 Without additional input, the next executable step is:
 
-1. create WI-0003 (leave accrual/carry-over) contract/test-case artifacts,
-2. add drift check for spec/work-item/prisma naming consistency in CI,
-3. define external domain-event transport rollout plan and fallback policy.
+1. define external domain-event transport rollout plan and fallback policy,
+2. create payroll Phase 2 (deductions/tax) contract artifacts and compatibility matrix,
+3. enable staging CI with guarded secrets when staging DB is ready.

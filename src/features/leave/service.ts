@@ -13,6 +13,7 @@ import { ServiceError } from "@/features/shared/service-error";
 const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_GRANTED_DAYS = 15;
+const DEFAULT_CARRY_OVER_CAP_DAYS = 5;
 
 type ServiceContext = {
   actor: Actor | null;
@@ -37,6 +38,13 @@ type UpdateLeaveRequestInput = {
   startDate?: Date;
   endDate?: Date;
   reason?: string;
+};
+
+type SettleLeaveAccrualInput = {
+  employeeId: string;
+  year: number;
+  annualGrantDays?: number;
+  carryOverCapDays?: number;
 };
 
 function isMutator(actor: Actor, employeeId: string) {
@@ -412,6 +420,75 @@ export async function readLeaveBalance(
     actorRole: context.actor.role,
     actorId: context.actor.id
   });
+  return balance;
+}
+
+export async function settleLeaveAccrual(
+  context: ServiceContext,
+  input: SettleLeaveAccrualInput
+): Promise<LeaveBalanceEntity> {
+  if (!context.actor || !hasAnyRole(context.actor, ["admin", "payroll_operator"])) {
+    throw new ServiceError(403, "leave accrual settle requires admin or payroll_operator role");
+  }
+
+  const annualGrantDays = input.annualGrantDays ?? DEFAULT_GRANTED_DAYS;
+  const carryOverCapDays = input.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS;
+  if (!Number.isInteger(input.year) || input.year < 2000 || input.year > 9999) {
+    throw new ServiceError(400, "year must be a valid 4-digit year");
+  }
+  if (!Number.isInteger(annualGrantDays) || annualGrantDays <= 0) {
+    throw new ServiceError(400, "annualGrantDays must be a positive integer");
+  }
+  if (!Number.isInteger(carryOverCapDays) || carryOverCapDays < 0) {
+    throw new ServiceError(400, "carryOverCapDays must be a non-negative integer");
+  }
+
+  const current = await context.dataAccess.leaveBalance.ensure(input.employeeId, DEFAULT_GRANTED_DAYS);
+  if (current.lastAccrualYear !== null && current.lastAccrualYear >= input.year) {
+    throw new ServiceError(409, "leave accrual already settled for the same or newer year");
+  }
+
+  const balance = await context.dataAccess.leaveBalance.settleAccrual({
+    employeeId: input.employeeId,
+    year: input.year,
+    annualGrantDays,
+    carryOverCapDays,
+    defaultGrantedDays: DEFAULT_GRANTED_DAYS
+  });
+
+  await context.dataAccess.audit.append({
+    action: "leave.accrual_settled",
+    entityType: "LeaveBalanceProjection",
+    entityId: input.employeeId,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      year: input.year,
+      annualGrantDays,
+      carryOverCapDays,
+      carryOverAppliedDays: balance.carryOverDays,
+      grantedDays: balance.grantedDays,
+      remainingDays: balance.remainingDays
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "leave.accrual.settled.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "LeaveBalanceProjection",
+    entityId: input.employeeId,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      employeeId: input.employeeId,
+      year: input.year,
+      annualGrantDays,
+      carryOverCapDays,
+      carryOverAppliedDays: balance.carryOverDays,
+      grantedDays: balance.grantedDays,
+      remainingDays: balance.remainingDays
+    }
+  });
+
   return balance;
 }
 
