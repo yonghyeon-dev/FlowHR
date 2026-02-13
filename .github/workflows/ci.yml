@@ -171,12 +171,12 @@ jobs:
             echo "::error::FLOWHR_STAGING_SUPABASE_URL must match https://<project-ref>.supabase.co"
             exit 1
           fi
-          if [[ "$STAGING_DATABASE_URL" != postgresql://* ]]; then
-            echo "::error::FLOWHR_STAGING_DATABASE_URL must be a PostgreSQL connection string"
+          if [[ ! "$STAGING_DATABASE_URL" =~ ^postgres(ql)?:// ]]; then
+            echo "::error::FLOWHR_STAGING_DATABASE_URL must start with postgres:// or postgresql://"
             exit 1
           fi
-          if [[ "$STAGING_DIRECT_URL" != postgresql://* ]]; then
-            echo "::error::FLOWHR_STAGING_DIRECT_URL must be a PostgreSQL connection string"
+          if [[ ! "$STAGING_DIRECT_URL" =~ ^postgres(ql)?:// ]]; then
+            echo "::error::FLOWHR_STAGING_DIRECT_URL must start with postgres:// or postgresql://"
             exit 1
           fi
           if [[ "$STAGING_DATABASE_URL" != *"schema=staging"* ]]; then
