@@ -3,6 +3,7 @@ export type LeaveType = "ANNUAL" | "SICK" | "UNPAID";
 export type LeaveRequestState = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveDecisionAction = "APPROVED" | "REJECTED" | "CANCELED";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
+export type DeductionProfileMode = "manual" | "profile";
 
 export type AttendanceRecordEntity = {
   id: string;
@@ -32,9 +33,24 @@ export type PayrollRunEntity = {
   totalDeductionsKrw: number | null;
   netPayKrw: number | null;
   deductionBreakdown: Record<string, unknown> | null;
+  deductionProfileId: string | null;
+  deductionProfileVersion: number | null;
   sourceRecordCount: number;
   confirmedAt: Date | null;
   confirmedBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type DeductionProfileEntity = {
+  id: string;
+  name: string;
+  version: number;
+  mode: DeductionProfileMode;
+  withholdingRate: number | null;
+  socialInsuranceRate: number | null;
+  fixedOtherDeductionKrw: number;
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -100,6 +116,8 @@ export type CreatePayrollRunInput = {
   totalDeductionsKrw?: number | null;
   netPayKrw?: number | null;
   deductionBreakdown?: Record<string, unknown> | null;
+  deductionProfileId?: string | null;
+  deductionProfileVersion?: number | null;
   sourceRecordCount: number;
 };
 
@@ -107,6 +125,16 @@ export type UpdatePayrollRunInput = {
   state?: PayrollState;
   confirmedAt?: Date | null;
   confirmedBy?: string | null;
+};
+
+export type UpsertDeductionProfileInput = {
+  id: string;
+  name: string;
+  mode: DeductionProfileMode;
+  withholdingRate: number | null;
+  socialInsuranceRate: number | null;
+  fixedOtherDeductionKrw: number;
+  active: boolean;
 };
 
 export type CreateLeaveRequestInput = {
@@ -168,6 +196,11 @@ export interface PayrollStore {
   update(id: string, input: UpdatePayrollRunInput): Promise<PayrollRunEntity>;
 }
 
+export interface DeductionProfileStore {
+  findById(id: string): Promise<DeductionProfileEntity | null>;
+  upsert(input: UpsertDeductionProfileInput): Promise<DeductionProfileEntity>;
+}
+
 export interface LeaveStore {
   create(input: CreateLeaveRequestInput): Promise<LeaveRequestEntity>;
   findById(id: string): Promise<LeaveRequestEntity | null>;
@@ -206,5 +239,6 @@ export type DataAccess = {
   leave: LeaveStore;
   leaveBalance: LeaveBalanceStore;
   payroll: PayrollStore;
+  deductionProfiles: DeductionProfileStore;
   audit: AuditStore;
 };

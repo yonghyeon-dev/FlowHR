@@ -8,6 +8,8 @@ import type {
   CreateLeaveRequestInput,
   CreatePayrollRunInput,
   DataAccess,
+  DeductionProfileEntity,
+  DeductionProfileStore,
   LeaveBalanceEntity,
   LeaveBalanceStore,
   LeaveRequestEntity,
@@ -15,6 +17,7 @@ import type {
   PayrollRunEntity,
   PayrollStore,
   RecordLeaveDecisionInput,
+  UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput
@@ -84,6 +87,8 @@ function toPayrollEntity(record: {
   totalDeductionsKrw: number | null;
   netPayKrw: number | null;
   deductionBreakdown: unknown | null;
+  deductionProfileId: string | null;
+  deductionProfileVersion: number | null;
   sourceRecordCount: number;
   confirmedAt: Date | null;
   confirmedBy: string | null;
@@ -98,6 +103,39 @@ function toPayrollEntity(record: {
       !Array.isArray(record.deductionBreakdown)
         ? (record.deductionBreakdown as Record<string, unknown>)
         : null
+  };
+}
+
+function decimalToNumber(value: Prisma.Decimal | null): number | null {
+  if (value === null) {
+    return null;
+  }
+  return Number(value);
+}
+
+function toDeductionProfileEntity(record: {
+  id: string;
+  name: string;
+  version: number;
+  mode: string;
+  withholdingRate: Prisma.Decimal | null;
+  socialInsuranceRate: Prisma.Decimal | null;
+  fixedOtherDeductionKrw: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): DeductionProfileEntity {
+  return {
+    id: record.id,
+    name: record.name,
+    version: record.version,
+    mode: record.mode === "manual" ? "manual" : "profile",
+    withholdingRate: decimalToNumber(record.withholdingRate),
+    socialInsuranceRate: decimalToNumber(record.socialInsuranceRate),
+    fixedOtherDeductionKrw: record.fixedOtherDeductionKrw,
+    active: record.active,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt
   };
 }
 
@@ -326,6 +364,8 @@ const payroll: PayrollStore = {
             : input.deductionBreakdown === null
               ? Prisma.JsonNull
               : (input.deductionBreakdown as Prisma.InputJsonValue),
+        deductionProfileId: input.deductionProfileId ?? null,
+        deductionProfileVersion: input.deductionProfileVersion ?? null,
         sourceRecordCount: input.sourceRecordCount
       }
     });
@@ -352,6 +392,47 @@ const payroll: PayrollStore = {
   }
 };
 
+const deductionProfiles: DeductionProfileStore = {
+  async findById(id: string) {
+    const profile = await prisma.deductionProfile.findUnique({
+      where: { id }
+    });
+    return profile ? toDeductionProfileEntity(profile) : null;
+  },
+
+  async upsert(input: UpsertDeductionProfileInput) {
+    const profile = await prisma.deductionProfile.upsert({
+      where: { id: input.id },
+      create: {
+        id: input.id,
+        name: input.name,
+        version: 1,
+        mode: input.mode,
+        withholdingRate:
+          input.withholdingRate === null ? null : new Prisma.Decimal(input.withholdingRate),
+        socialInsuranceRate:
+          input.socialInsuranceRate === null ? null : new Prisma.Decimal(input.socialInsuranceRate),
+        fixedOtherDeductionKrw: input.fixedOtherDeductionKrw,
+        active: input.active
+      },
+      update: {
+        name: input.name,
+        mode: input.mode,
+        withholdingRate:
+          input.withholdingRate === null ? null : new Prisma.Decimal(input.withholdingRate),
+        socialInsuranceRate:
+          input.socialInsuranceRate === null ? null : new Prisma.Decimal(input.socialInsuranceRate),
+        fixedOtherDeductionKrw: input.fixedOtherDeductionKrw,
+        active: input.active,
+        version: {
+          increment: 1
+        }
+      }
+    });
+    return toDeductionProfileEntity(profile);
+  }
+};
+
 const audit: AuditStore = {
   async append(input) {
     await prisma.auditLog.create({
@@ -372,5 +453,6 @@ export const prismaDataAccess: DataAccess = {
   leave,
   leaveBalance,
   payroll,
+  deductionProfiles,
   audit
 };
