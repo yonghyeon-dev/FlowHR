@@ -97,6 +97,29 @@ def lint_contract_file(path: pathlib.Path, validator: Draft202012Validator) -> L
     if not isinstance(data.get("breaking_changes"), bool):
         errors.append(f"{path}: breaking_changes must be boolean")
 
+    api_path = path.parent / "api.yaml"
+    if not api_path.exists():
+        errors.append(f"{path}: missing sibling api.yaml file")
+    else:
+        try:
+            api_content = read_text(api_path)
+            api_data = load_yaml(api_content, str(api_path))
+        except ValueError as exc:
+            errors.append(str(exc))
+        else:
+            info = api_data.get("info")
+            if not isinstance(info, dict):
+                errors.append(f"{api_path}: missing 'info' object")
+            else:
+                api_version = info.get("version")
+                if not isinstance(api_version, str) or not SEMVER_RE.match(api_version):
+                    errors.append(f"{api_path}: info.version must match SemVer (X.Y.Z)")
+                elif isinstance(version, str) and SEMVER_RE.match(version) and api_version != version:
+                    errors.append(
+                        f"{path}: version mismatch with {api_path} "
+                        f"(contract={version}, api={api_version})"
+                    )
+
     return errors
 
 

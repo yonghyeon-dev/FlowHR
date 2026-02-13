@@ -71,6 +71,10 @@ Completed:
   - reject API invalid JSON and oversized reason paths are covered by memory/prisma e2e
   - invalid reject payloads are asserted as `400` without audit/event side effects
   - attendance contract/test-cases include validation guard expectations
+- WI-0018 contract/API version alignment gate is implemented:
+  - `check_contracts.py` requires sibling `api.yaml` for each domain contract
+  - `api.yaml` `info.version` must follow SemVer
+  - contract/API version mismatch now fails governance gate
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -161,6 +165,7 @@ Tasks:
 22. Add runtime-contract-ownership event traceability checks to governance gate. (Completed: 2026-02-13)
 23. Add WI-0016 rejection reason traceability in reject API/audit/event and e2e tests. (Completed: 2026-02-13)
 24. Add WI-0017 reject payload validation guard regression coverage. (Completed: 2026-02-13)
+25. Add WI-0018 contract/API version alignment check to contract governance gate. (Completed: 2026-02-13)
 
 Definition of Done:
 

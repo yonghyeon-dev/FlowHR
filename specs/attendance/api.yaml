@@ -36,7 +36,7 @@ paths:
   /attendance/records/{recordId}/reject:
     post:
       summary: Reject attendance record or correction (optional reason)
-      description: Optional JSON body `{ \"reason\": string }` can be provided for audit/event trace.
+      description: 'Optional JSON body `{"reason": string}` can be provided for audit/event trace.'
       parameters:
         - in: path
           name: recordId

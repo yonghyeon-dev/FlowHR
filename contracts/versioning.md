@@ -40,3 +40,5 @@ CI must fail when:
 - `contract.yaml` changes without a version bump.
 - `breaking_changes: true` and MAJOR does not increase.
 - Required contract fields are missing.
+- `contract.yaml` version and sibling `api.yaml` `info.version` do not match.
+- sibling `api.yaml` is missing or `info.version` is not valid SemVer.
