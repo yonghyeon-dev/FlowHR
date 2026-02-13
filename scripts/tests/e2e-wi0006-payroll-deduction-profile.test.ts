@@ -108,6 +108,26 @@ async function run() {
   const upsertBody = await readJson<{ profile: { version: number } }>(upsertResponse);
   assert.equal(upsertBody.profile.version, 1);
 
+  const secondUpsertResponse = await deductionProfileRoute.PUT(
+    jsonRequest(
+      "PUT",
+      `/api/payroll/deduction-profiles/${profileId}`,
+      {
+        name: "KR Standard Payroll Profile v2",
+        mode: "profile",
+        withholdingRate: 0.031,
+        socialInsuranceRate: 0.045,
+        fixedOtherDeductionKrw: 2000,
+        active: true
+      },
+      actorHeaders("payroll_operator", "PAY-2601")
+    ),
+    { params: Promise.resolve({ profileId }) } as RouteContext<{ profileId: string }>
+  );
+  assert.equal(secondUpsertResponse.status, 200, "second deduction profile upsert should succeed");
+  const secondUpsertBody = await readJson<{ profile: { version: number } }>(secondUpsertResponse);
+  assert.equal(secondUpsertBody.profile.version, 2);
+
   const getProfileResponse = await deductionProfileRoute.GET(
     new Request(`http://localhost/api/payroll/deduction-profiles/${profileId}`, {
       method: "GET",
@@ -116,6 +136,28 @@ async function run() {
     { params: Promise.resolve({ profileId }) } as RouteContext<{ profileId: string }>
   );
   assert.equal(getProfileResponse.status, 200, "deduction profile read should succeed");
+  const getProfileBody = await readJson<{ profile: { version: number } }>(getProfileResponse);
+  assert.equal(getProfileBody.profile.version, 2);
+
+  const staleVersionPreviewResponse = await payrollPreviewWithDeductionsRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/payroll/runs/preview-with-deductions",
+      {
+        periodStart: "2026-02-01T00:00:00+09:00",
+        periodEnd: "2026-02-28T23:59:59+09:00",
+        employeeId: "EMP-2601",
+        hourlyRateKrw: 12000,
+        deductionMode: "profile",
+        profileId,
+        expectedProfileVersion: 1
+      },
+      actorHeaders("payroll_operator", "PAY-2601")
+    )
+  );
+  assert.equal(staleVersionPreviewResponse.status, 409, "stale profile version should be rejected");
+  const staleVersionBody = await readJson<{ error: string }>(staleVersionPreviewResponse);
+  assert.equal(staleVersionBody.error, "deduction profile version mismatch");
 
   const previewResponse = await payrollPreviewWithDeductionsRoute.POST(
     jsonRequest(
@@ -127,7 +169,8 @@ async function run() {
         employeeId: "EMP-2601",
         hourlyRateKrw: 12000,
         deductionMode: "profile",
-        profileId
+        profileId,
+        expectedProfileVersion: 2
       },
       actorHeaders("payroll_operator", "PAY-2601")
     )
@@ -151,12 +194,12 @@ async function run() {
 
   assert.equal(previewBody.summary.deductionMode, "profile");
   assert.equal(previewBody.summary.profileId, profileId);
-  assert.equal(previewBody.summary.profileVersion, 1);
+  assert.equal(previewBody.summary.profileVersion, 2);
   assert.equal(previewBody.summary.grossPayKrw, 96000);
-  assert.equal(previewBody.summary.totalDeductionsKrw, 9200);
-  assert.equal(previewBody.summary.netPayKrw, 86800);
+  assert.equal(previewBody.summary.totalDeductionsKrw, 9296);
+  assert.equal(previewBody.summary.netPayKrw, 86704);
   assert.equal(previewBody.run.deductionProfileId, profileId);
-  assert.equal(previewBody.run.deductionProfileVersion, 1);
+  assert.equal(previewBody.run.deductionProfileVersion, 2);
 
   const confirmResponse = await payrollConfirmRoute.POST(
     new Request(`http://localhost/api/payroll/runs/${previewBody.run.id}/confirm`, {
@@ -171,7 +214,9 @@ async function run() {
     "attendance.recorded",
     "attendance.approved",
     "payroll.deduction_profile.updated",
+    "payroll.deduction_profile.updated",
     "payroll.deduction_profile.read",
+    "payroll.preview_with_deductions.failed",
     "payroll.deductions_calculated",
     "payroll.confirmed"
   ]);
@@ -180,6 +225,7 @@ async function run() {
     [
       "attendance.recorded.v1",
       "attendance.approved.v1",
+      "payroll.deduction_profile.updated.v1",
       "payroll.deduction_profile.updated.v1",
       "payroll.deductions.calculated.v1",
       "payroll.confirmed.v1"

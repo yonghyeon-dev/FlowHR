@@ -13,6 +13,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 5. Run deduction/tax preview with feature flag for phase2 contract path.
 6. Create/update deduction profile and read latest profile by ID.
 7. Run deduction/tax preview in `profile` mode without explicit deduction values.
+8. Reject profile-mode preview when `expectedProfileVersion` is stale.
 
 ## Accuracy Cases
 
@@ -22,6 +23,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 4. `totalDeductionsKrw` equals sum of deduction components.
 5. `netPayKrw` equals `grossPayKrw - totalDeductionsKrw`.
 6. Profile-mode calculation stores profile ID/version trace and remains deterministic.
+7. Profile-mode stale version guard returns deterministic `409` mismatch error.
 
 ## Regression Linkage
 

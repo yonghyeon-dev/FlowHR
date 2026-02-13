@@ -32,6 +32,7 @@ type ManualDeductions = {
 type ProfileDeductions = {
   deductionMode: "profile";
   profileId: string;
+  expectedProfileVersion?: number;
 };
 
 type PreviewPayrollWithDeductionsInput = PreviewPayrollInput & (ManualDeductions | ProfileDeductions);
@@ -288,6 +289,12 @@ export async function previewPayrollWithDeductions(
     }
     if (profile.mode !== "profile") {
       throw new ServiceError(409, "deduction profile mode is not profile");
+    }
+    if (
+      input.expectedProfileVersion !== undefined &&
+      input.expectedProfileVersion !== profile.version
+    ) {
+      throw new ServiceError(409, "deduction profile version mismatch");
     }
 
     const withholdingRate = toRateNumber(profile.withholdingRate, "withholdingRate") ?? 0;

@@ -36,9 +36,11 @@ Rounding follows `specs/common/time-and-payroll-rules.md`.
 - Profile-mode preview persists:
   - `deductionProfileId`
   - `deductionProfileVersion`
+- Profile-mode preview may include optional `expectedProfileVersion` request field for optimistic version guard.
 
 ## Validation Rules
 
 - Reject when any calculated deduction component is negative.
 - Reject when `netPayKrw < 0`.
 - Reject when profile is inactive.
+- Reject when `expectedProfileVersion` is provided and does not match the current profile version.

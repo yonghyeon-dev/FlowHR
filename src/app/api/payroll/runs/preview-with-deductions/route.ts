@@ -35,7 +35,8 @@ export async function POST(request: Request) {
             hourlyRateKrw: parsed.data.hourlyRateKrw,
             multipliers: parsed.data.multipliers,
             deductionMode: "profile" as const,
-            profileId: parsed.data.profileId!
+            profileId: parsed.data.profileId!,
+            expectedProfileVersion: parsed.data.expectedProfileVersion
           }
         : {
             periodStart: new Date(parsed.data.periodStart),

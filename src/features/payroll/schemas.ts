@@ -31,6 +31,7 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
   .extend({
     deductionMode: z.enum(["manual", "profile"]).default("manual"),
     profileId: z.string().min(1).optional(),
+    expectedProfileVersion: z.number().int().positive().optional(),
     deductions: manualDeductionsSchema.optional()
   })
   .superRefine((value, ctx) => {
@@ -46,6 +47,13 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
         code: z.ZodIssueCode.custom,
         path: ["profileId"],
         message: "profileId is required when deductionMode is profile"
+      });
+    }
+    if (value.deductionMode === "manual" && value.expectedProfileVersion !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expectedProfileVersion"],
+        message: "expectedProfileVersion is supported only when deductionMode is profile"
       });
     }
   });
