@@ -5,7 +5,8 @@ Target flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1`
 ## Current Baseline
 
 - GitHub environment `production`: created.
-- `FLOWHR_PAYROLL_DEDUCTIONS_V1=false` in `production` environment.
+- `FLOWHR_PAYROLL_DEDUCTIONS_V1=true` in `production` environment.
+- External runtime sync completed on Vercel project `flowhr`.
 
 ## Rollout Policy
 
@@ -37,6 +38,13 @@ gh variable list --env production -R yonghyeon-dev/FlowHR
 
 This GitHub environment variable affects workflows that bind `environment: production`.
 If production runtime is hosted outside GitHub Actions (for example Vercel/Render), set the same flag there too.
+
+Vercel sync status:
+
+- Project: `yh-devs-projects/flowhr`
+- Production URL: `https://flowhr-two.vercel.app`
+- Framework preset is controlled by `vercel.json` (`nextjs`)
+- Production env `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`
 
 ## Rollback
 

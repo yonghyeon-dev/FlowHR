@@ -26,11 +26,11 @@ Completed:
 - Golden fixtures (`GC-001` to `GC-005`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
-- Production environment baseline is prepared (`FLOWHR_PAYROLL_DEDUCTIONS_V1=false`).
+- Production runtime flag is active (`FLOWHR_PAYROLL_DEDUCTIONS_V1=true`) on GitHub env and Vercel.
 
 Open gaps:
 
-- Production hosting platform variable sync (if runtime is outside GitHub Actions) is not enforced yet.
+- Automated production auth smoke for phase2 endpoint is not implemented yet.
 
 ## 2) Priority Roadmap
 
@@ -95,6 +95,7 @@ Tasks:
 5. Implement payroll Phase 2 runtime path (`preview-with-deductions`) behind feature flag. (Completed: 2026-02-13)
 6. Enable staging CI with schema isolation checks and phase2 flag smoke validation. (Completed: 2026-02-13)
 7. Prepare production phase2 flag baseline and runbook. (Completed: 2026-02-13)
+8. Sync external production runtime flag to Vercel (`flowhr`) and deploy. (Completed: 2026-02-13)
 
 Definition of Done:
 
@@ -128,11 +129,11 @@ Request template:
 ## 5) Inputs Needed From You (Conditional)
 
 1. To proceed with payroll Phase 2:
-   - Confirm production hosting platform (GitHub Actions vs external) for runtime env sync
+   - Confirm production auth-smoke method for protected payroll endpoints
 
 ## 6) Immediate Next Actions
 
 Without additional input, the next executable step is:
 
-1. run phased rollout for `FLOWHR_PAYROLL_DEDUCTIONS_V1` by consumer validation order,
-2. set production runtime flag to `true` after final consumer validation window.
+1. add production auth smoke path for protected payroll endpoints,
+2. monitor phase2 runtime metrics/audit events and keep rollback command ready.
