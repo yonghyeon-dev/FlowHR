@@ -428,3 +428,11 @@ export function resetMemoryDataAccess() {
 export function getMemoryAuditActions() {
   return state.audit.map((entry) => entry.action);
 }
+
+export function getMemoryAuditEntries() {
+  return state.audit.map((entry) => ({
+    ...entry,
+    payload: entry.payload ? cloneJson(entry.payload) : undefined,
+    createdAt: cloneDate(entry.createdAt)
+  }));
+}

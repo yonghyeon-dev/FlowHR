@@ -7,6 +7,7 @@ Deliver attendance contract and API behavior needed for the first vertical slice
 ## Key Decisions
 
 - Contract-first schema and approval/rejection flow.
+- Optional rejection reason is captured for audit and event traceability.
 - Event publication after approval/rejection to feed payroll aggregation.
 - Time normalization delegated to common SSoT rules.
 

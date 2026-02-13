@@ -37,7 +37,7 @@ type RouteContext<TParams extends Record<string, string>> = {
 };
 
 async function run() {
-  const { resetMemoryDataAccess, getMemoryAuditActions } = await import(
+  const { resetMemoryDataAccess, getMemoryAuditActions, getMemoryAuditEntries } = await import(
     "../../src/features/shared/memory-data-access.ts"
   );
   const { resetRuntimeMemoryDomainEvents, getRuntimeMemoryDomainEvents } = await import(
@@ -134,7 +134,10 @@ async function run() {
   const rejectResponse = await attendanceRejectRoute.POST(
     new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
       method: "POST",
-      headers: actorHeaders("manager", "MGR-1")
+      headers: actorHeaders("manager", "MGR-1"),
+      body: JSON.stringify({
+        reason: "manual correction mismatch"
+      })
     }),
     { params: Promise.resolve({ recordId: rejectedCreateBody.record.id }) } as RouteContext<{
       recordId: string;
@@ -214,6 +217,13 @@ async function run() {
     { params: Promise.resolve({ runId: previewBody.run.id }) } as RouteContext<{ runId: string }>
   );
   assert.equal(duplicateConfirmResponse.status, 409, "duplicate payroll confirmation should be rejected");
+
+  const rejectedAuditEntry = getMemoryAuditEntries().find((entry) => entry.action === "attendance.rejected");
+  assert.ok(rejectedAuditEntry, "attendance.rejected audit entry should exist");
+  assert.deepEqual(rejectedAuditEntry.payload, {
+    employeeId: "EMP-1001",
+    reason: "manual correction mismatch"
+  });
 
   assert.deepEqual(getMemoryAuditActions(), [
     "attendance.recorded",

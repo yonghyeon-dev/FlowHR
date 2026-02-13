@@ -124,7 +124,10 @@ async function run() {
     const rejectResponse = await attendanceRejectRoute.POST(
       new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
         method: "POST",
-        headers: actorHeaders("manager", managerId)
+        headers: actorHeaders("manager", managerId),
+        body: JSON.stringify({
+          reason: "manual correction mismatch"
+        })
       }),
       { params: Promise.resolve({ recordId: rejectedCreateBody.record.id }) } as RouteContext<{
         recordId: string;
@@ -216,6 +219,20 @@ async function run() {
         "payroll.confirmed"
       ]
     );
+
+    const rejectedAuditLog = await prisma.auditLog.findFirst({
+      where: {
+        createdAt: { gte: startedAt },
+        action: "attendance.rejected",
+        actorId: managerId
+      },
+      select: { payload: true }
+    });
+    assert.ok(rejectedAuditLog, "attendance.rejected audit payload should exist");
+    assert.deepEqual(rejectedAuditLog?.payload, {
+      employeeId,
+      reason: "manual correction mismatch"
+    });
   } finally {
     await prisma.auditLog.deleteMany({
       where: {

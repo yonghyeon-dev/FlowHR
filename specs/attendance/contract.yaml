@@ -1,9 +1,10 @@
 owner: attendance-agent
-version: 1.1.0
+version: 1.2.0
 scope:
   in:
     - attendance record create/update
     - correction approval/rejection flow
+    - rejection reason capture in audit/event payload
     - approved/rejected attendance event publication
   out:
     - payroll tax and deduction
@@ -31,7 +32,7 @@ api:
       description: Approve attendance record or correction.
     - method: POST
       path: /attendance/records/{recordId}/reject
-      description: Reject attendance record or correction.
+      description: Reject attendance record or correction with optional reason payload.
   events:
     published:
       - name: attendance.recorded.v1
@@ -39,7 +40,7 @@ api:
       - name: attendance.approved.v1
         description: Emitted when attendance is approved and payable.
       - name: attendance.rejected.v1
-        description: Emitted when attendance is rejected and excluded from payroll aggregation.
+        description: Emitted when attendance is rejected and excluded from payroll aggregation; includes optional reason.
       - name: attendance.corrected.v1
         description: Emitted when correction is approved.
     consumed:
@@ -74,6 +75,7 @@ test_plan:
   integration:
     - create record to approve flow
     - create record to reject flow
+    - reject flow with reason payload trace
   regression:
     - replay GC-001, GC-002, GC-003, GC-005
   authorization:
@@ -102,10 +104,11 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.1.0 adds non-breaking attendance rejection endpoint and event."
+consumer_impact: "Contract v1.2.0 adds non-breaking optional rejection reason payload for attendance reject flow."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0009-attendance-rejection-flow.md
+  - work-items/WI-0016-attendance-rejection-reason.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent
