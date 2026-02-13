@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type {
   AttendanceRecordEntity,
@@ -77,13 +78,27 @@ function toPayrollEntity(record: {
   periodEnd: Date;
   state: "PREVIEWED" | "CONFIRMED";
   grossPayKrw: number;
+  withholdingTaxKrw: number | null;
+  socialInsuranceKrw: number | null;
+  otherDeductionsKrw: number | null;
+  totalDeductionsKrw: number | null;
+  netPayKrw: number | null;
+  deductionBreakdown: unknown | null;
   sourceRecordCount: number;
   confirmedAt: Date | null;
   confirmedBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): PayrollRunEntity {
-  return record;
+  return {
+    ...record,
+    deductionBreakdown:
+      record.deductionBreakdown &&
+      typeof record.deductionBreakdown === "object" &&
+      !Array.isArray(record.deductionBreakdown)
+        ? (record.deductionBreakdown as Record<string, unknown>)
+        : null
+  };
 }
 
 const attendance: AttendanceStore = {
@@ -300,6 +315,17 @@ const payroll: PayrollStore = {
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
         grossPayKrw: input.grossPayKrw,
+        withholdingTaxKrw: input.withholdingTaxKrw ?? null,
+        socialInsuranceKrw: input.socialInsuranceKrw ?? null,
+        otherDeductionsKrw: input.otherDeductionsKrw ?? null,
+        totalDeductionsKrw: input.totalDeductionsKrw ?? null,
+        netPayKrw: input.netPayKrw ?? null,
+        deductionBreakdown:
+          input.deductionBreakdown === undefined
+            ? undefined
+            : input.deductionBreakdown === null
+              ? Prisma.JsonNull
+              : (input.deductionBreakdown as Prisma.InputJsonValue),
         sourceRecordCount: input.sourceRecordCount
       }
     });

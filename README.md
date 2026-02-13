@@ -51,6 +51,7 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 - Default runtime uses Prisma.
 - For API route tests without database, set `FLOWHR_DATA_ACCESS=memory`.
 - For Prisma-backed route smoke test, run `npm run test:e2e:prisma` with DB env set.
+- Payroll phase2 preview endpoint is gated by `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`.
 
 ## Domain Event Publication Adapter
 
@@ -102,6 +103,7 @@ Details: `docs/staging-secrets.md`
   - `POST /api/attendance/records/{recordId}/approve`
 - Payroll:
   - `POST /api/payroll/runs/preview`
+  - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`)
   - `POST /api/payroll/runs/{runId}/confirm`
 - Leave:
   - `POST /api/leave/requests`
