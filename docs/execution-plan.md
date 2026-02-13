@@ -30,7 +30,7 @@ Completed:
 
 Open gaps:
 
-- Automated rollback drill execution (scheduled rehearsal) is not in place yet.
+- `FLOWHR_ALERT_SLACK_WEBHOOK` is not connected yet (failure alerts are GitHub issue-only right now).
 
 ## 2) Priority Roadmap
 
@@ -98,6 +98,7 @@ Tasks:
 8. Sync external production runtime flag to Vercel (`flowhr`) and deploy. (Completed: 2026-02-13)
 9. Add production auth smoke workflow and run validation. (Completed: 2026-02-13)
 10. Add phase2 health monitor + rollback automation workflows. (Completed: 2026-02-13)
+11. Add weekly scheduled rollback dry-run rehearsal. (Completed: 2026-02-13)
 
 Definition of Done:
 
@@ -131,11 +132,11 @@ Request template:
 ## 5) Inputs Needed From You (Conditional)
 
 1. To proceed with payroll Phase 2:
-   - Confirm rollback drill cadence and on-call ownership
+   - Provide Slack webhook for workflow failure alerts (optional but recommended)
 
 ## 6) Immediate Next Actions
 
 Without additional input, the next executable step is:
 
-1. run weekly rollback drill using `payroll-phase2-rollback` (with Vercel sync),
+1. observe the next scheduled rollback dry-run result and keep it green,
 2. connect `FLOWHR_ALERT_SLACK_WEBHOOK` to receive workflow failure alerts.

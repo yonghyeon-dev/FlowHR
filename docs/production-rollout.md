@@ -92,8 +92,9 @@ Tunable production environment variables:
 
 Workflow: `.github/workflows/payroll-phase2-rollback.yml`
 
-- Manual trigger only (`workflow_dispatch`).
-- Requires confirmation phrase `ROLLBACK_PHASE2`.
+- Manual trigger (`workflow_dispatch`) + weekly scheduled rehearsal (`Monday 00:30 UTC`).
+- Manual execution requires confirmation phrase `ROLLBACK_PHASE2`.
+- Scheduled execution is forced `dry_run=true` and `deploy_vercel=false`.
 - Supports `dry_run=true` for rehearsal without mutating flags.
 - Always sets GitHub production variable:
   - `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`
