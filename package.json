@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx scripts/tests/unit.test.ts",
     "test:integration": "tsx scripts/tests/integration.test.ts",
+    "test:e2e": "tsx scripts/tests/e2e-wi0001.test.ts",
     "test:golden": "tsx scripts/tests/golden.test.ts",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
