@@ -89,7 +89,7 @@ Tasks:
 1. Add external transport adapter for domain events (current implementation is in-process `noop`/`memory` only).
 2. Implement leave accrual/carry-over settlement policy (WI-0003).
 3. Define payroll Phase 2 contract set (deductions/tax) and non-breaking migration path.
-4. Add spec-to-runtime drift check for table names and migration IDs.
+4. Add spec-to-runtime drift check for table names and migration IDs. (Completed: 2026-02-13)
 5. Enable staging CI only when needed (`FLOWHR_ENABLE_STAGING_CI=true`) and keep schema isolation checks green.
 
 Definition of Done:

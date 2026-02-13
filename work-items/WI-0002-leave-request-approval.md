@@ -45,9 +45,9 @@ Without a contract-first leave slice, role abuse and balance miscalculation risk
 ## Data Changes (Tables and Migrations)
 
 - Planned tables:
-  - `leave_requests`
-  - `leave_approvals`
-  - `leave_balances_projection`
+  - `LeaveRequest`
+  - `LeaveApproval`
+  - `LeaveBalanceProjection`
 - Planned migration IDs:
   - `202602140001_wi0002_leave_base`
 - Backward compatibility:
