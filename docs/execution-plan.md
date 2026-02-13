@@ -176,4 +176,4 @@ Request template:
 Without additional input, the next executable step is:
 
 1. observe the next scheduled rollback dry-run result and keep it green,
-2. connect `FLOWHR_ALERT_SLACK_WEBHOOK` to receive workflow failure alerts.
+2. set `FLOWHR_ALERT_SLACK_WEBHOOK` in production secrets and re-run `alert-webhook-smoke` to verify delivery.
