@@ -80,6 +80,8 @@ jobs:
       - name: Migration smoke
         run: |
           if [ -f prisma/schema.prisma ]; then
+            export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
+            export DIRECT_URL="postgresql://postgres:postgres@localhost:5432/postgres"
             npx prisma validate
             npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > /tmp/migration.sql
           else

@@ -129,16 +129,16 @@ Request template:
 
 ## 5) Minimal Inputs Needed From You
 
-1. Backend framework choice  
-Format: `stack=nestjs` or `stack=express`
+1. Supabase keys  
+Format: `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 
-2. DB connection target for local dev  
-Format: `db=postgres://...` (or `docker-compose` preferred)
+2. Database password fill-in  
+Format: replace `YOUR-PASSWORD` in `.env.local` for `DATABASE_URL` and `DIRECT_URL`
 
 ## 6) Immediate Next Actions After Inputs
 
 Once you provide the 2 inputs above, I will directly:
 
 1. keep governance in single-operator persona mode,
-2. bootstrap backend runtime and Prisma,
+2. run first Prisma migration and generate client,
 3. implement WI-0001 API skeleton with tests wired to CI.
