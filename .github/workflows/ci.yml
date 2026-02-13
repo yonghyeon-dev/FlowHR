@@ -73,6 +73,7 @@ jobs:
           if [ -f package.json ]; then
             npm test --if-present
             npm run test:integration --if-present
+            npm run test:e2e --if-present
           else
             echo "No package.json found. Skipping tests."
           fi

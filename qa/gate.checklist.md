@@ -13,6 +13,7 @@
 ## Code Gate (Before Merge)
 
 - [ ] Unit and integration tests pass.
+- [ ] WI-0001 e2e flow test passes (record -> approve -> payroll preview).
 - [ ] Regression checks pass, including golden fixtures.
 - [ ] Lint/type checks pass.
 - [ ] Migration smoke check passes (or marked N/A with reason).
