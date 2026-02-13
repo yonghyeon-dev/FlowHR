@@ -63,6 +63,10 @@ Completed:
   - `check_traceability.py` now validates runtime/contract/data-ownership event alignment
   - runtime event names must be represented in contracts and ownership matrix
   - invalid/unknown published event names are blocked by CI
+- WI-0016 attendance rejection reason traceability is implemented:
+  - reject API accepts optional `reason` payload with schema validation
+  - `attendance.rejected` audit/event payload now preserves rejection reason
+  - memory/prisma WI-0001 e2e asserts rejection reason traceability
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -151,6 +155,7 @@ Tasks:
 20. Add Discord-compatible alert webhook path with Slack fallback. (Completed: 2026-02-13)
 21. Add alert webhook regression tests and include them in integration gate. (Completed: 2026-02-13)
 22. Add runtime-contract-ownership event traceability checks to governance gate. (Completed: 2026-02-13)
+23. Add WI-0016 rejection reason traceability in reject API/audit/event and e2e tests. (Completed: 2026-02-13)
 
 Definition of Done:
 

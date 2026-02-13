@@ -18,3 +18,7 @@ export const updateAttendanceSchema = z.object({
   isHoliday: z.boolean().optional(),
   notes: z.string().max(1000).optional()
 });
+
+export const rejectAttendanceSchema = z.object({
+  reason: z.string().min(1).max(500).optional()
+});

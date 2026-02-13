@@ -193,7 +193,8 @@ export async function approveAttendanceRecord(
 
 export async function rejectAttendanceRecord(
   context: ServiceContext,
-  recordId: string
+  recordId: string,
+  reason?: string
 ): Promise<AttendanceRecordEntity> {
   if (!context.actor || !hasAnyRole(context.actor, ["admin", "manager"])) {
     throw new ServiceError(403, "rejection requires admin or manager role");
@@ -219,7 +220,8 @@ export async function rejectAttendanceRecord(
     actorRole: context.actor.role,
     actorId: context.actor.id,
     payload: {
-      employeeId: record.employeeId
+      employeeId: record.employeeId,
+      reason: reason ?? null
     }
   });
   await getEventPublisher(context).publish({
@@ -230,7 +232,8 @@ export async function rejectAttendanceRecord(
     actorRole: context.actor.role,
     actorId: context.actor.id,
     payload: {
-      employeeId: record.employeeId
+      employeeId: record.employeeId,
+      reason: reason ?? null
     }
   });
 
