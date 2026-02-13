@@ -18,7 +18,7 @@ Completed:
 Open gaps:
 
 - Role claim backfill/enforcement apply mode is not yet executed in target project.
-- Staging Prisma integration now requires five staging secrets and separate Supabase project hygiene.
+- Staging Prisma integration now requires five staging secrets and strict `schema=staging` isolation in DB URLs.
 - Leave accrual policy and carry-over settlement remain out of scope.
 
 ## 2) Priority Roadmap
