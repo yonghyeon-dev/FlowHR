@@ -36,3 +36,5 @@ gh variable set FLOWHR_PAYROLL_DEDUCTIONS_V1 --env staging --body "true"
 - `gh variable list --env staging` should include `FLOWHR_PAYROLL_DEDUCTIONS_V1`.
 - `FLOWHR_STAGING_DATABASE_URL` and `FLOWHR_STAGING_DIRECT_URL` must include `schema=staging`.
 - When `FLOWHR_ENABLE_STAGING_CI=true`, `staging-prisma-integration` must run and pass on `main` push.
+
+For production phase2 rollout, follow `docs/production-rollout.md`.

@@ -98,6 +98,7 @@ Optional staging environment variable:
 - `FLOWHR_PAYROLL_DEDUCTIONS_V1` (`true|false`) for phase2 runtime rollout validation.
 
 Details: `docs/staging-secrets.md`
+Production rollout: `docs/production-rollout.md`
 
 ## Current API Surface (MVP)
 
