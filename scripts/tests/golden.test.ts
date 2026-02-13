@@ -4,8 +4,7 @@ import path from "node:path";
 import {
   calculateGrossPay,
   defaultMultipliers,
-  splitPayableMinutes,
-  workedMinutes
+  derivePayableMinutes
 } from "../../src/lib/payroll-rules.ts";
 
 type AnyObject = Record<string, unknown>;
@@ -75,24 +74,27 @@ for (const file of files) {
   const payload = JSON.parse(fs.readFileSync(path.join(fixtureDir, file), "utf8")) as {
     id: string;
     inputs: AnyObject;
-    expected: { gross_pay_krw: number };
+    expected: {
+      payable_minutes: Record<string, number>;
+      gross_pay_krw: number;
+    };
   };
 
   const input = resolveInput(payload.inputs);
-  const worked = workedMinutes(input.checkInAt, input.checkOutAt, input.breakMinutes);
-  const split = splitPayableMinutes(worked, input.isHoliday);
+  const split = derivePayableMinutes(
+    input.checkInAt,
+    input.checkOutAt,
+    input.breakMinutes,
+    input.isHoliday
+  );
   const gross = calculateGrossPay(split, input.hourlyRate, input.multipliers);
 
-  // Current WI-0001 calculator is validated exactly for non-night base cases.
-  if (["GC-001", "GC-003", "GC-005"].includes(payload.id)) {
-    assert.equal(
-      gross,
-      payload.expected.gross_pay_krw,
-      `gross pay mismatch for fixture ${payload.id}`
-    );
-  } else {
-    assert.ok(gross > 0, `gross pay should be positive for fixture ${payload.id}`);
-  }
+  assert.deepEqual(
+    split,
+    payload.expected.payable_minutes,
+    `payable minutes mismatch for fixture ${payload.id}`
+  );
+  assert.equal(gross, payload.expected.gross_pay_krw, `gross pay mismatch for fixture ${payload.id}`);
 }
 
 console.log(`golden.test passed (${files.length} fixtures)`);

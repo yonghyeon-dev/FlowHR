@@ -3,7 +3,7 @@ import { previewPayrollSchema } from "@/features/payroll/schemas";
 import { readActor } from "@/lib/actor";
 import { hasAnyRole } from "@/lib/permissions";
 import { fail, ok } from "@/lib/http";
-import { calculateGrossPay, splitPayableMinutes, workedMinutes } from "@/lib/payroll-rules";
+import { calculateGrossPay, derivePayableMinutes } from "@/lib/payroll-rules";
 import { writeAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
@@ -47,8 +47,12 @@ export async function POST(request: Request) {
     if (!record.checkOutAt) {
       continue;
     }
-    const worked = workedMinutes(record.checkInAt, record.checkOutAt, record.breakMinutes);
-    const splitted = splitPayableMinutes(worked, record.isHoliday);
+    const splitted = derivePayableMinutes(
+      record.checkInAt,
+      record.checkOutAt,
+      record.breakMinutes,
+      record.isHoliday
+    );
     totals = {
       regular: totals.regular + splitted.regular,
       overtime: totals.overtime + splitted.overtime,

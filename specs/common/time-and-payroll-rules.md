@@ -31,6 +31,14 @@ This document is the shared source of truth for attendance-to-payroll calculatio
   - Calculate each pay component in KRW.
   - Round final gross amount to whole KRW.
 
+## WI-0001 Premium Rules
+
+- Night category (MVP): `00:00` to `03:59:59` local time.
+- Night minutes above 180 minutes are treated as night+overtime premium.
+- Holiday minutes:
+  - first 480 minutes => holiday multiplier
+  - beyond 480 minutes => holiday * overtime combined multiplier
+
 ## Calculation Priority
 
 1. Validate attendance record state (approved vs pending/canceled).
