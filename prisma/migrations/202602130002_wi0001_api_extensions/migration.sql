@@ -1,13 +1,25 @@
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'AttendanceState') THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'AttendanceState'
+      AND n.nspname = current_schema()
+  ) THEN
     CREATE TYPE "AttendanceState" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
   END IF;
 END $$;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PayrollState') THEN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'PayrollState'
+      AND n.nspname = current_schema()
+  ) THEN
     CREATE TYPE "PayrollState" AS ENUM ('PREVIEWED', 'CONFIRMED');
   END IF;
 END $$;
