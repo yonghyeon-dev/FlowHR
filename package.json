@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types scripts/tests/unit.test.ts",
-    "test:integration": "node --experimental-strip-types scripts/tests/integration.test.ts",
-    "test:golden": "node --experimental-strip-types scripts/tests/golden.test.ts",
+    "test": "tsx scripts/tests/unit.test.ts",
+    "test:integration": "tsx scripts/tests/integration.test.ts",
+    "test:golden": "tsx scripts/tests/golden.test.ts",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
@@ -32,6 +32,7 @@
     "eslint": "^9.20.0",
     "eslint-config-next": "^15.1.7",
     "prisma": "^6.3.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
 }
