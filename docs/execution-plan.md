@@ -55,6 +55,10 @@ Completed:
   - notifier supports Discord and Slack webhook payloads
   - production workflows read `FLOWHR_ALERT_DISCORD_WEBHOOK` first, then Slack fallback
   - webhook smoke gate validates configured alert channel regardless of provider
+- WI-0014 alert webhook regression tests are implemented:
+  - notifier payload/guard/failure paths covered by `ops-alert-webhook.test.ts`
+  - `test:integration` now includes alert webhook regression test
+  - CI quality gate blocks notifier regression before merge
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -63,7 +67,7 @@ Completed:
 
 Open gaps:
 
-- `FLOWHR_ALERT_DISCORD_WEBHOOK` (or Slack fallback) secret value must be configured in production environment.
+- none blocking for current MVP+ hardening scope
 
 ## 2) Priority Roadmap
 
@@ -141,6 +145,7 @@ Tasks:
 18. Add WI-0010 profile-mode expected version guard for deduction preview. (Completed: 2026-02-13)
 19. Unify Slack failure notifications and add manual alert webhook smoke workflow. (Completed: 2026-02-13)
 20. Add Discord-compatible alert webhook path with Slack fallback. (Completed: 2026-02-13)
+21. Add alert webhook regression tests and include them in integration gate. (Completed: 2026-02-13)
 
 Definition of Done:
 
@@ -174,11 +179,11 @@ Request template:
 ## 5) Inputs Needed From You (Conditional)
 
 1. To proceed with payroll Phase 2:
-   - Provide Discord or Slack webhook for workflow failure alerts (optional but recommended)
+   - no additional mandatory input right now
 
 ## 6) Immediate Next Actions
 
 Without additional input, the next executable step is:
 
 1. observe the next scheduled rollback dry-run result and keep it green,
-2. set `FLOWHR_ALERT_DISCORD_WEBHOOK` (or Slack fallback) in production secrets and re-run `alert-webhook-smoke` to verify delivery.
+2. monitor weekly rollback rehearsal and respond to issue/Discord alerts if any fail.
