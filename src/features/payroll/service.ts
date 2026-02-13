@@ -433,6 +433,9 @@ export async function confirmPayrollRun(
   if (!run) {
     throw new ServiceError(404, "payroll run not found");
   }
+  if (run.state !== "PREVIEWED") {
+    throw new ServiceError(409, "only previewed payroll run can be confirmed");
+  }
 
   const confirmed = await context.dataAccess.payroll.update(runId, {
     state: "CONFIRMED",
