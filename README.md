@@ -57,7 +57,13 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 - Service layer emits contract event names (`*.v1`) through `DomainEventPublisher`.
 - Default runtime publisher is no-op (`FLOWHR_EVENT_PUBLISHER` unset or `noop`).
 - For local verification, set `FLOWHR_EVENT_PUBLISHER=memory`.
-- Current adapter is in-process only (no external event bus transport yet).
+- External HTTP transport mode:
+  - `FLOWHR_EVENT_PUBLISHER=http`
+  - `FLOWHR_EVENT_HTTP_URL=https://...`
+  - optional `FLOWHR_EVENT_HTTP_TOKEN`
+  - optional `FLOWHR_EVENT_HTTP_TIMEOUT_MS` (default `3000`)
+  - optional `FLOWHR_EVENT_HTTP_RETRY_COUNT` (default `2`)
+  - optional `FLOWHR_EVENT_HTTP_FAIL_OPEN` (default `true`)
 
 ## Role Claim Governance
 
