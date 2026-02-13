@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model AttendanceRecord {
+  id           String   @id @default(cuid())
+  employeeId   String
+  checkInAt    DateTime
+  checkOutAt   DateTime?
+  breakMinutes Int      @default(0)
+  state        AttendanceState @default(PENDING)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PayrollRun {
+  id          String   @id @default(cuid())
+  periodStart DateTime
+  periodEnd   DateTime
+  state       PayrollState @default(PREVIEWED)
+  grossPayKrw Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum AttendanceState {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PayrollState {
+  PREVIEWED
+  CONFIRMED
+}
