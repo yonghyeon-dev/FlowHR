@@ -6,8 +6,8 @@ Deliver attendance contract and API behavior needed for the first vertical slice
 
 ## Key Decisions
 
-- Contract-first schema and approval flow.
-- Event publication after approval to feed payroll aggregation.
+- Contract-first schema and approval/rejection flow.
+- Event publication after approval/rejection to feed payroll aggregation.
 - Time normalization delegated to common SSoT rules.
 
 ## Non-Goals

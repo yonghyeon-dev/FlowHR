@@ -39,6 +39,10 @@ Completed:
   - duplicate attendance approval blocked (409)
   - duplicate payroll confirmation blocked (409)
   - memory/prisma e2e assertions added
+- WI-0009 attendance rejection flow is implemented:
+  - `POST /attendance/records/{recordId}/reject` added for admin/manager
+  - rejected attendance excluded from payroll aggregation path
+  - memory/prisma e2e assertions added
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -121,6 +125,7 @@ Tasks:
 14. Implement WI-0007 MVP operations console on `/`. (Completed: 2026-02-13)
 15. Sync production profile flag baseline to Vercel and re-verify production smoke. (Completed: 2026-02-13)
 16. Add WI-0008 duplicate transition guard for approval/confirmation flows. (Completed: 2026-02-13)
+17. Add WI-0009 attendance rejection flow and payroll exclusion regression coverage. (Completed: 2026-02-13)
 
 Definition of Done:
 
