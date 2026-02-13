@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.2.0
+version: 1.2.1
 scope:
   in:
     - attendance record create/update
@@ -72,10 +72,13 @@ test_plan:
   unit:
     - timestamp normalization by timezone
     - correction state transition validation
+    - rejection reason schema boundary (max 500 chars)
   integration:
     - create record to approve flow
     - create record to reject flow
     - reject flow with reason payload trace
+    - reject flow invalid JSON body returns 400
+    - reject flow oversized reason payload returns 400
   regression:
     - replay GC-001, GC-002, GC-003, GC-005
   authorization:
@@ -104,11 +107,12 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.2.0 adds non-breaking optional rejection reason payload for attendance reject flow."
+consumer_impact: "Contract v1.2.1 clarifies non-breaking reject payload validation (`invalid JSON`/`invalid payload` with 400)."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0009-attendance-rejection-flow.md
   - work-items/WI-0016-attendance-rejection-reason.md
+  - work-items/WI-0017-attendance-reject-validation-guards.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent
