@@ -8,6 +8,11 @@
 - `FLOWHR_STAGING_ANON_KEY`
 - `FLOWHR_STAGING_SERVICE_ROLE_KEY`
 
+## Execution Toggle
+
+- Staging CI is `OFF` by default.
+- Enable only when needed by setting repository variable `FLOWHR_ENABLE_STAGING_CI=true`.
+
 ## Setup Rule
 
 - Use the same FlowHR Supabase project but force `schema=staging` for all staging DB URLs.

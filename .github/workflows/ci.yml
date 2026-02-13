@@ -137,7 +137,7 @@ jobs:
     needs:
       - quality-gates
       - golden-regression
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.FLOWHR_ENABLE_STAGING_CI == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
