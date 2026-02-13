@@ -133,6 +133,7 @@ jobs:
 
   staging-prisma-integration:
     runs-on: ubuntu-latest
+    environment: staging
     needs:
       - quality-gates
       - golden-regression
@@ -141,27 +142,50 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check staging secret availability
-        id: staging_secrets
+      - name: Validate required staging secrets
         env:
           STAGING_DATABASE_URL: ${{ secrets.FLOWHR_STAGING_DATABASE_URL }}
           STAGING_DIRECT_URL: ${{ secrets.FLOWHR_STAGING_DIRECT_URL }}
+          STAGING_SUPABASE_URL: ${{ secrets.FLOWHR_STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_STAGING_ANON_KEY }}
+          STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_STAGING_SERVICE_ROLE_KEY }}
         run: |
-          if [ -z "$STAGING_DATABASE_URL" ] || [ -z "$STAGING_DIRECT_URL" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Staging DB secrets are not configured. Skipping Prisma integration job."
-          else
-            echo "available=true" >> "$GITHUB_OUTPUT"
+          missing=()
+          for key in STAGING_DATABASE_URL STAGING_DIRECT_URL STAGING_SUPABASE_URL STAGING_SUPABASE_ANON_KEY STAGING_SUPABASE_SERVICE_ROLE_KEY; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required staging secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Validate staging URL format
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.FLOWHR_STAGING_DATABASE_URL }}
+          STAGING_DIRECT_URL: ${{ secrets.FLOWHR_STAGING_DIRECT_URL }}
+          STAGING_SUPABASE_URL: ${{ secrets.FLOWHR_STAGING_SUPABASE_URL }}
+        run: |
+          if [[ "$STAGING_SUPABASE_URL" != https://*.supabase.co ]]; then
+            echo "::error::FLOWHR_STAGING_SUPABASE_URL must match https://<project-ref>.supabase.co"
+            exit 1
+          fi
+          if [[ "$STAGING_DATABASE_URL" != postgresql://* ]]; then
+            echo "::error::FLOWHR_STAGING_DATABASE_URL must be a PostgreSQL connection string"
+            exit 1
+          fi
+          if [[ "$STAGING_DIRECT_URL" != postgresql://* ]]; then
+            echo "::error::FLOWHR_STAGING_DIRECT_URL must be a PostgreSQL connection string"
+            exit 1
           fi
 
       - name: Setup Node
-        if: ${{ steps.staging_secrets.outputs.available == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Install dependencies
-        if: ${{ steps.staging_secrets.outputs.available == 'true' }}
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -170,19 +194,14 @@ jobs:
           fi
 
       - name: Prisma deploy and route-level e2e (staging)
-        if: ${{ steps.staging_secrets.outputs.available == 'true' }}
         env:
           DATABASE_URL: ${{ secrets.FLOWHR_STAGING_DATABASE_URL }}
           DIRECT_URL: ${{ secrets.FLOWHR_STAGING_DIRECT_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
-          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FLOWHR_STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_STAGING_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_STAGING_SERVICE_ROLE_KEY }}
           FLOWHR_DATA_ACCESS: prisma
         run: |
           npm run prisma:validate --if-present
           npm run prisma:migrate:deploy --if-present
           npm run test:e2e:prisma --if-present
-
-      - name: Staging integration skipped notice
-        if: ${{ steps.staging_secrets.outputs.available != 'true' }}
-        run: echo "Staging integration skipped because required secrets are not set."
