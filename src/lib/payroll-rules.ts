@@ -34,6 +34,7 @@ function overlapMinutesInWindow(
   windowStartHour: number,
   windowEndHour: number
 ) {
+  const seoulOffsetMs = 9 * 60 * 60 * 1000;
   let cursor = new Date(checkInAt.getTime());
   let minutes = 0;
 
@@ -42,7 +43,8 @@ function overlapMinutesInWindow(
     if (next > checkOutAt) {
       break;
     }
-    const hour = cursor.getHours();
+    const seoulHour = new Date(cursor.getTime() + seoulOffsetMs).getUTCHours();
+    const hour = seoulHour;
     const inWindow = windowStartHour <= hour && hour < windowEndHour;
     if (inWindow) {
       minutes += 1;
