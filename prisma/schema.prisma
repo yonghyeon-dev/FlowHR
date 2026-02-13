@@ -14,19 +14,41 @@ model AttendanceRecord {
   checkInAt    DateTime
   checkOutAt   DateTime?
   breakMinutes Int      @default(0)
+  isHoliday    Boolean  @default(false)
+  notes        String?
   state        AttendanceState @default(PENDING)
+  approvedAt   DateTime?
+  approvedBy   String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
 model PayrollRun {
-  id          String   @id @default(cuid())
-  periodStart DateTime
-  periodEnd   DateTime
-  state       PayrollState @default(PREVIEWED)
-  grossPayKrw Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  employeeId        String?
+  periodStart       DateTime
+  periodEnd         DateTime
+  state             PayrollState @default(PREVIEWED)
+  grossPayKrw       Int
+  sourceRecordCount Int      @default(0)
+  confirmedAt       DateTime?
+  confirmedBy       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  actorRole  String
+  actorId    String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
 }
 
 enum AttendanceState {
