@@ -1,0 +1,36 @@
+name: alert-webhook-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Optional custom title for Slack smoke notification"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Send Slack smoke notification
+        env:
+          FLOWHR_ALERT_SLACK_WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
+          FLOWHR_ALERT_REQUIRE_WEBHOOK: "true"
+          FLOWHR_ALERT_TITLE: ${{ inputs.message || '[FlowHR] alert-webhook-smoke' }}
+          FLOWHR_ALERT_WORKFLOW: "alert-webhook-smoke"
+          FLOWHR_ALERT_RUN_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          FLOWHR_ALERT_REF: ${{ github.ref }}
+          FLOWHR_ALERT_TRIGGER: ${{ github.event_name }}
+        run: node scripts/ops/notify-slack-failure.mjs

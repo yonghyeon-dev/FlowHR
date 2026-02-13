@@ -47,6 +47,10 @@ Completed:
   - profile-mode preview accepts optional `expectedProfileVersion`
   - stale profile version requests are blocked with `409`
   - memory/prisma e2e assertions added
+- WI-0011 alert workflow hardening is implemented:
+  - Slack failure notifications unified via `scripts/ops/notify-slack-failure.mjs`
+  - production failure workflows switched from inline curl to common notifier
+  - manual `alert-webhook-smoke` workflow added for webhook connectivity check
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -55,7 +59,7 @@ Completed:
 
 Open gaps:
 
-- `FLOWHR_ALERT_SLACK_WEBHOOK` is not connected yet (failure alerts are GitHub issue-only right now).
+- `FLOWHR_ALERT_SLACK_WEBHOOK` secret value is still not configured in production environment.
 
 ## 2) Priority Roadmap
 
@@ -131,6 +135,7 @@ Tasks:
 16. Add WI-0008 duplicate transition guard for approval/confirmation flows. (Completed: 2026-02-13)
 17. Add WI-0009 attendance rejection flow and payroll exclusion regression coverage. (Completed: 2026-02-13)
 18. Add WI-0010 profile-mode expected version guard for deduction preview. (Completed: 2026-02-13)
+19. Unify Slack failure notifications and add manual alert webhook smoke workflow. (Completed: 2026-02-13)
 
 Definition of Done:
 

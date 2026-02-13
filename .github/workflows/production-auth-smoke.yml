@@ -102,12 +102,10 @@ jobs:
       - name: Notify Slack on failure
         if: ${{ failure() }}
         env:
-          WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
-        run: |
-          if [ -z "$WEBHOOK" ]; then
-            echo "FLOWHR_ALERT_SLACK_WEBHOOK not configured; skip Slack notification."
-            exit 0
-          fi
-          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          payload="{\"text\":\"[FlowHR] production-auth-smoke failed: ${run_url}\"}"
-          curl -X POST -H "Content-type: application/json" --data "$payload" "$WEBHOOK"
+          FLOWHR_ALERT_SLACK_WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
+          FLOWHR_ALERT_TITLE: "[FlowHR] production-auth-smoke failed"
+          FLOWHR_ALERT_WORKFLOW: "production-auth-smoke"
+          FLOWHR_ALERT_RUN_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          FLOWHR_ALERT_REF: ${{ github.ref }}
+          FLOWHR_ALERT_TRIGGER: ${{ github.event_name }}
+        run: node scripts/ops/notify-slack-failure.mjs
