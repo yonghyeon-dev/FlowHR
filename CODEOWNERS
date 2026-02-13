@@ -1,0 +1,7 @@
+# Replace placeholders with actual GitHub users/teams.
+
+/specs/ @flowhr/orchestrator @flowhr/qa
+/contracts/ @flowhr/orchestrator @flowhr/qa
+/qa/ @flowhr/qa
+/.github/ @flowhr/orchestrator @flowhr/qa
+/docs/ @flowhr/orchestrator

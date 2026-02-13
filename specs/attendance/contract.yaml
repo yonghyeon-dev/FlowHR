@@ -1,0 +1,97 @@
+owner: attendance-agent
+version: 1.0.0
+scope:
+  in:
+    - attendance record create/update
+    - correction approval flow
+    - approved attendance event publication
+  out:
+    - payroll tax and deduction
+    - physical device protocol integration
+entities:
+  - name: AttendanceRecord
+    description: Employee time entry with check-in/check-out and state.
+  - name: AttendanceCorrection
+    description: Requested or system-provided correction with approval state.
+api:
+  auth:
+    - role: employee
+      permission: create own attendance record
+    - role: manager
+      permission: approve correction within assigned org
+  endpoints:
+    - method: POST
+      path: /attendance/records
+      description: Create attendance record.
+    - method: PATCH
+      path: /attendance/records/{recordId}
+      description: Update attendance record before approval.
+    - method: POST
+      path: /attendance/records/{recordId}/approve
+      description: Approve attendance record or correction.
+  events:
+    published:
+      - name: attendance.recorded.v1
+        description: Emitted when attendance record is created.
+      - name: attendance.approved.v1
+        description: Emitted when attendance is approved and payable.
+      - name: attendance.corrected.v1
+        description: Emitted when correction is approved.
+    consumed:
+      - name: employee.profile.updated.v1
+        description: Employee metadata changed.
+db_changes:
+  migrations:
+    - id: 2026021301_attendance_base
+      description: Create attendance records, corrections, approvals tables.
+  backward_compatible: true
+  notes: Expand-contract pattern for future attendance payload updates.
+invariants:
+  - An approved attendance record cannot be silently overwritten.
+  - Attendance timestamps are interpreted in Asia/Seoul.
+  - Approved attendance emits exactly one approval event per final state.
+risk:
+  permissions:
+    - Unauthorized approval could alter payroll amount.
+  payroll_accuracy:
+    - Incorrect overnight boundary handling can misclassify payable minutes.
+  legal:
+    - Attendance history must remain auditable.
+test_plan:
+  unit:
+    - timestamp normalization by timezone
+    - correction state transition validation
+  integration:
+    - create record to approve flow
+  regression:
+    - replay GC-001, GC-002, GC-003, GC-005
+  authorization:
+    - manager-only approval check
+  payroll_accuracy:
+    - approved minutes match aggregation contract
+observability:
+  audit_events:
+    - attendance.recorded
+    - attendance.corrected
+    - attendance.approved
+  metrics:
+    - attendance_approval_latency_ms
+    - attendance_correction_count
+  logs:
+    - authorization denied logs for attendance approval
+rollout:
+  feature_flags:
+    - name: attendance_v1
+      default: "off"
+  migration_strategy: expand-contract
+rollback:
+  strategy: disable attendance_v1 and route reads to previous adapter
+  max_recovery_time: 30m
+deprecations: []
+breaking_changes: false
+consumer_impact: "New attendance contract for WI-0001. No existing consumer break expected."
+references:
+  - specs/common/time-and-payroll-rules.md
+approval:
+  spec_owner: attendance-agent
+  qa_owner: qa-agent

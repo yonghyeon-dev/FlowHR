@@ -1,0 +1,37 @@
+{
+  "id": "GC-003",
+  "description": "Late arrival corrected after manager approval",
+  "inputs": {
+    "employee_id": "E-1003",
+    "date": "2026-02-04",
+    "check_in": "2026-02-04T09:40:00+09:00",
+    "check_out": "2026-02-04T18:00:00+09:00",
+    "break_minutes": 60,
+    "approved_correction": {
+      "corrected_check_in": "2026-02-04T09:10:00+09:00",
+      "reason": "transport delay"
+    },
+    "hourly_rate_krw": 11000,
+    "multipliers": {
+      "regular": 1.0,
+      "overtime": 1.5,
+      "night": 1.5,
+      "holiday": 1.5
+    }
+  },
+  "expected": {
+    "payable_minutes": {
+      "regular": 470,
+      "overtime": 0,
+      "night": 0,
+      "holiday": 0
+    },
+    "gross_pay_krw": 86167,
+    "audit_events": [
+      "attendance.recorded",
+      "attendance.corrected",
+      "attendance.approved",
+      "payroll.calculated"
+    ]
+  }
+}

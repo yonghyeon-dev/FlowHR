@@ -1,0 +1,32 @@
+{
+  "id": "GC-001",
+  "description": "Standard daytime shift with no exception",
+  "inputs": {
+    "employee_id": "E-1001",
+    "date": "2026-02-02",
+    "check_in": "2026-02-02T09:00:00+09:00",
+    "check_out": "2026-02-02T18:00:00+09:00",
+    "break_minutes": 60,
+    "hourly_rate_krw": 12000,
+    "multipliers": {
+      "regular": 1.0,
+      "overtime": 1.5,
+      "night": 1.5,
+      "holiday": 1.5
+    }
+  },
+  "expected": {
+    "payable_minutes": {
+      "regular": 480,
+      "overtime": 0,
+      "night": 0,
+      "holiday": 0
+    },
+    "gross_pay_krw": 96000,
+    "audit_events": [
+      "attendance.recorded",
+      "attendance.approved",
+      "payroll.calculated"
+    ]
+  }
+}

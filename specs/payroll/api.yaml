@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: FlowHR Payroll API
+  version: 1.0.0
+paths:
+  /payroll/runs/preview:
+    post:
+      summary: Create payroll gross pay preview
+      responses:
+        "201":
+          description: Preview generated
+  /payroll/runs/{runId}/confirm:
+    post:
+      summary: Confirm payroll run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payroll run confirmed

@@ -1,0 +1,94 @@
+owner: payroll-agent
+version: 1.0.0
+scope:
+  in:
+    - gross pay preview from approved attendance aggregates
+    - payroll run trace and audit logging
+  out:
+    - tax deduction and external remittance
+    - bank transfer execution
+entities:
+  - name: PayrollPeriod
+    description: Payroll cycle boundary and state.
+  - name: PayrollRun
+    description: Payroll computation run with status and source snapshot.
+  - name: PayrollItem
+    description: Per-employee gross pay components.
+api:
+  auth:
+    - role: payroll_operator
+      permission: run payroll preview and confirm run
+    - role: admin
+      permission: full payroll operations
+  endpoints:
+    - method: POST
+      path: /payroll/runs/preview
+      description: Generate payroll gross pay preview for a period.
+    - method: POST
+      path: /payroll/runs/{runId}/confirm
+      description: Confirm a payroll run.
+  events:
+    published:
+      - name: payroll.calculated.v1
+        description: Emitted when gross pay calculation is completed.
+      - name: payroll.confirmed.v1
+        description: Emitted when payroll run is confirmed.
+    consumed:
+      - name: attendance.approved.v1
+        description: Approved attendance aggregate input.
+      - name: attendance.corrected.v1
+        description: Correction-triggered recalculation input.
+db_changes:
+  migrations:
+    - id: 2026021302_payroll_base
+      description: Create payroll periods, runs, and payroll items tables.
+  backward_compatible: true
+  notes: Additive columns for future deduction components.
+invariants:
+  - Gross pay is deterministic for same inputs and rules.
+  - Payroll preview includes source attendance snapshot reference.
+  - Recalculation after correction keeps immutable audit trail.
+risk:
+  permissions:
+    - Unauthorized payroll run confirmation can lock wrong results.
+  payroll_accuracy:
+    - Misapplied overtime/night/holiday multipliers affect compensation.
+  legal:
+    - Payroll trace must support audit and dispute resolution.
+test_plan:
+  unit:
+    - gross pay calculator with multiplier rules
+    - rounding behavior for KRW totals
+  integration:
+    - consume attendance.approved and produce payroll preview
+  regression:
+    - replay GC-001 through GC-005 fixtures
+  authorization:
+    - payroll_operator role enforcement
+  payroll_accuracy:
+    - overtime/night/holiday category payout checks
+observability:
+  audit_events:
+    - payroll.calculated
+    - payroll.confirmed
+  metrics:
+    - payroll_run_duration_ms
+    - payroll_recalculation_count
+  logs:
+    - payroll calculation error with run ID context
+rollout:
+  feature_flags:
+    - name: payroll_preview_v1
+      default: "off"
+  migration_strategy: expand-contract
+rollback:
+  strategy: disable payroll_preview_v1 and use previous payroll reader path
+  max_recovery_time: 30m
+deprecations: []
+breaking_changes: false
+consumer_impact: "Initial payroll gross pay contract for WI-0001. Downstream integrations are not yet enabled."
+references:
+  - specs/common/time-and-payroll-rules.md
+approval:
+  spec_owner: payroll-agent
+  qa_owner: qa-agent

@@ -1,0 +1,32 @@
+{
+  "id": "GC-002",
+  "description": "Overnight shift crossing midnight and mapped by 04:00 workday boundary",
+  "inputs": {
+    "employee_id": "E-1002",
+    "date": "2026-02-03",
+    "check_in": "2026-02-03T22:00:00+09:00",
+    "check_out": "2026-02-04T06:00:00+09:00",
+    "break_minutes": 60,
+    "hourly_rate_krw": 13000,
+    "multipliers": {
+      "regular": 1.0,
+      "overtime": 1.5,
+      "night": 1.5,
+      "holiday": 1.5
+    }
+  },
+  "expected": {
+    "payable_minutes": {
+      "regular": 180,
+      "overtime": 0,
+      "night": 240,
+      "holiday": 0
+    },
+    "gross_pay_krw": 123500,
+    "audit_events": [
+      "attendance.recorded",
+      "attendance.approved",
+      "payroll.calculated"
+    ]
+  }
+}

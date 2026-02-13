@@ -1,0 +1,40 @@
+{
+  "id": "GC-005",
+  "description": "Retroactive attendance update after payroll preview triggers recalculation",
+  "inputs": {
+    "employee_id": "E-1005",
+    "date": "2026-02-10",
+    "original": {
+      "check_in": "2026-02-10T09:00:00+09:00",
+      "check_out": "2026-02-10T18:00:00+09:00",
+      "break_minutes": 60
+    },
+    "retroactive_update": {
+      "check_out": "2026-02-10T19:30:00+09:00",
+      "approved": true
+    },
+    "hourly_rate_krw": 12500,
+    "multipliers": {
+      "regular": 1.0,
+      "overtime": 1.5,
+      "night": 1.5,
+      "holiday": 1.5
+    }
+  },
+  "expected": {
+    "payable_minutes": {
+      "regular": 480,
+      "overtime": 90,
+      "night": 0,
+      "holiday": 0
+    },
+    "gross_pay_krw": 128125,
+    "audit_events": [
+      "attendance.recorded",
+      "payroll.calculated",
+      "attendance.corrected",
+      "attendance.approved",
+      "payroll.calculated"
+    ]
+  }
+}

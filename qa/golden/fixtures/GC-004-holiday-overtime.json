@@ -1,0 +1,33 @@
+{
+  "id": "GC-004",
+  "description": "Holiday work with overtime premium",
+  "inputs": {
+    "employee_id": "E-1004",
+    "date": "2026-02-09",
+    "is_holiday": true,
+    "check_in": "2026-02-09T09:00:00+09:00",
+    "check_out": "2026-02-09T20:00:00+09:00",
+    "break_minutes": 60,
+    "hourly_rate_krw": 14000,
+    "multipliers": {
+      "regular": 1.0,
+      "overtime": 1.5,
+      "night": 1.5,
+      "holiday": 1.5
+    }
+  },
+  "expected": {
+    "payable_minutes": {
+      "regular": 0,
+      "overtime": 120,
+      "night": 0,
+      "holiday": 480
+    },
+    "gross_pay_krw": 231000,
+    "audit_events": [
+      "attendance.recorded",
+      "attendance.approved",
+      "payroll.calculated"
+    ]
+  }
+}

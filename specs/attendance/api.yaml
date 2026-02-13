@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: FlowHR Attendance API
+  version: 1.0.0
+paths:
+  /attendance/records:
+    post:
+      summary: Create attendance record
+      responses:
+        "201":
+          description: Created
+  /attendance/records/{recordId}:
+    patch:
+      summary: Update attendance record before approval
+      parameters:
+        - in: path
+          name: recordId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+  /attendance/records/{recordId}/approve:
+    post:
+      summary: Approve attendance record or correction
+      parameters:
+        - in: path
+          name: recordId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved

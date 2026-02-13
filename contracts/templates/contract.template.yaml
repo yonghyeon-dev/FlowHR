@@ -1,0 +1,76 @@
+owner: domain-agent-name
+version: 1.0.0
+scope:
+  in:
+    - ""
+  out:
+    - ""
+entities:
+  - name: ""
+    description: ""
+api:
+  auth:
+    - role: ""
+      permission: ""
+  endpoints:
+    - method: GET
+      path: /example
+      description: ""
+  events:
+    published:
+      - name: domain.event.v1
+        description: ""
+    consumed:
+      - name: upstream.event.v1
+        description: ""
+db_changes:
+  migrations:
+    - id: 0001_example
+      description: ""
+  backward_compatible: true
+  notes: ""
+invariants:
+  - "Invariant statement"
+risk:
+  permissions:
+    - ""
+  payroll_accuracy:
+    - ""
+  legal:
+    - ""
+test_plan:
+  unit:
+    - ""
+  integration:
+    - ""
+  regression:
+    - ""
+  authorization:
+    - ""
+  payroll_accuracy:
+    - ""
+observability:
+  audit_events:
+    - ""
+  metrics:
+    - ""
+  logs:
+    - ""
+rollout:
+  feature_flags:
+    - name: ""
+      default: "off"
+  migration_strategy: "expand-contract"
+rollback:
+  strategy: ""
+  max_recovery_time: ""
+deprecations:
+  - item: ""
+    sunset_date: ""
+breaking_changes: false
+consumer_impact: "none"
+references:
+  - specs/common/time-and-payroll-rules.md
+approval:
+  spec_owner: ""
+  qa_owner: ""
