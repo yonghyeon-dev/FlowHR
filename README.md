@@ -69,10 +69,15 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 
 ## Staging Prisma Integration (CI)
 
-Main-branch push can run Prisma-backed route e2e when these repository secrets are configured:
+Main-branch push runs Prisma-backed route e2e when these repository secrets are configured:
 
 - `FLOWHR_STAGING_DATABASE_URL`
 - `FLOWHR_STAGING_DIRECT_URL`
+- `FLOWHR_STAGING_SUPABASE_URL`
+- `FLOWHR_STAGING_ANON_KEY`
+- `FLOWHR_STAGING_SERVICE_ROLE_KEY`
+
+Details: `docs/staging-secrets.md`
 
 ## Current API Surface (MVP)
 
