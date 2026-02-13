@@ -3,6 +3,7 @@ import { defaultMultipliers } from "@/lib/payroll-rules";
 
 const isoDateTime = z.string().datetime({ offset: true });
 const nonNegativeInteger = z.number().int().min(0);
+const rate = z.number().min(0).max(1);
 
 export const previewPayrollSchema = z.object({
   periodStart: isoDateTime,
@@ -19,11 +20,41 @@ export const previewPayrollSchema = z.object({
     .default(defaultMultipliers)
 });
 
-export const previewPayrollWithDeductionsSchema = previewPayrollSchema.extend({
-  deductions: z.object({
-    withholdingTaxKrw: nonNegativeInteger,
-    socialInsuranceKrw: nonNegativeInteger,
-    otherDeductionsKrw: nonNegativeInteger.default(0),
-    breakdown: z.record(nonNegativeInteger).optional()
+const manualDeductionsSchema = z.object({
+  withholdingTaxKrw: nonNegativeInteger,
+  socialInsuranceKrw: nonNegativeInteger,
+  otherDeductionsKrw: nonNegativeInteger.default(0),
+  breakdown: z.record(nonNegativeInteger).optional()
+});
+
+export const previewPayrollWithDeductionsSchema = previewPayrollSchema
+  .extend({
+    deductionMode: z.enum(["manual", "profile"]).default("manual"),
+    profileId: z.string().min(1).optional(),
+    deductions: manualDeductionsSchema.optional()
   })
+  .superRefine((value, ctx) => {
+    if (value.deductionMode === "manual" && !value.deductions) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deductions"],
+        message: "deductions is required when deductionMode is manual"
+      });
+    }
+    if (value.deductionMode === "profile" && !value.profileId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["profileId"],
+        message: "profileId is required when deductionMode is profile"
+      });
+    }
+  });
+
+export const upsertDeductionProfileSchema = z.object({
+  name: z.string().min(1),
+  mode: z.enum(["manual", "profile"]).default("profile"),
+  withholdingRate: rate.nullable().default(null),
+  socialInsuranceRate: rate.nullable().default(null),
+  fixedOtherDeductionKrw: nonNegativeInteger.default(0),
+  active: z.boolean().default(true)
 });

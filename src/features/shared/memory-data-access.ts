@@ -2,8 +2,10 @@ import type {
   AppendAuditLogInput,
   AttendanceRecordEntity,
   DataAccess,
+  DeductionProfileEntity,
   LeaveBalanceEntity,
   LeaveRequestEntity,
+  UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput,
@@ -16,6 +18,7 @@ type MemoryState = {
   leaveRequests: Map<string, LeaveRequestEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
   payroll: Map<string, PayrollRunEntity>;
+  deductionProfiles: Map<string, DeductionProfileEntity>;
   audit: Array<AppendAuditLogInput & { createdAt: Date }>;
 };
 
@@ -26,6 +29,7 @@ function createState(): MemoryState {
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
+    deductionProfiles: new Map<string, DeductionProfileEntity>(),
     audit: []
   };
 }
@@ -84,6 +88,14 @@ function clonePayroll(entity: PayrollRunEntity): PayrollRunEntity {
     periodEnd: cloneDate(entity.periodEnd),
     deductionBreakdown: entity.deductionBreakdown ? cloneJson(entity.deductionBreakdown) : null,
     confirmedAt: entity.confirmedAt ? cloneDate(entity.confirmedAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneDeductionProfile(entity: DeductionProfileEntity): DeductionProfileEntity {
+  return {
+    ...entity,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -342,6 +354,8 @@ export const memoryDataAccess: DataAccess = {
         totalDeductionsKrw: input.totalDeductionsKrw ?? null,
         netPayKrw: input.netPayKrw ?? null,
         deductionBreakdown: input.deductionBreakdown ? cloneJson(input.deductionBreakdown) : null,
+        deductionProfileId: input.deductionProfileId ?? null,
+        deductionProfileVersion: input.deductionProfileVersion ?? null,
         sourceRecordCount: input.sourceRecordCount,
         confirmedAt: null,
         confirmedBy: null,
@@ -365,6 +379,35 @@ export const memoryDataAccess: DataAccess = {
       const updated = updatePayrollEntity(existing, input);
       state.payroll.set(id, updated);
       return clonePayroll(updated);
+    }
+  },
+
+  deductionProfiles: {
+    async findById(id) {
+      const profile = state.deductionProfiles.get(id);
+      return profile ? cloneDeductionProfile(profile) : null;
+    },
+
+    async upsert(input: UpsertDeductionProfileInput) {
+      const existing = state.deductionProfiles.get(input.id);
+      const now = new Date();
+      const nextVersion = existing ? existing.version + 1 : 1;
+
+      const profile: DeductionProfileEntity = {
+        id: input.id,
+        name: input.name,
+        version: nextVersion,
+        mode: input.mode,
+        withholdingRate: input.withholdingRate,
+        socialInsuranceRate: input.socialInsuranceRate,
+        fixedOtherDeductionKrw: input.fixedOtherDeductionKrw,
+        active: input.active,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now
+      };
+
+      state.deductionProfiles.set(profile.id, profile);
+      return cloneDeductionProfile(profile);
     }
   },
 

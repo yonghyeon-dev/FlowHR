@@ -4,6 +4,7 @@ export const domainEventNames = [
   "attendance.approved.v1",
   "payroll.calculated.v1",
   "payroll.deductions.calculated.v1",
+  "payroll.deduction_profile.updated.v1",
   "payroll.confirmed.v1",
   "leave.requested.v1",
   "leave.approved.v1",

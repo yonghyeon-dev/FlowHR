@@ -26,24 +26,38 @@ export async function POST(request: Request) {
   const dataAccess = getRuntimeDataAccess();
 
   try {
+    const serviceInput =
+      parsed.data.deductionMode === "profile"
+        ? {
+            periodStart: new Date(parsed.data.periodStart),
+            periodEnd: new Date(parsed.data.periodEnd),
+            employeeId: parsed.data.employeeId,
+            hourlyRateKrw: parsed.data.hourlyRateKrw,
+            multipliers: parsed.data.multipliers,
+            deductionMode: "profile" as const,
+            profileId: parsed.data.profileId!
+          }
+        : {
+            periodStart: new Date(parsed.data.periodStart),
+            periodEnd: new Date(parsed.data.periodEnd),
+            employeeId: parsed.data.employeeId,
+            hourlyRateKrw: parsed.data.hourlyRateKrw,
+            multipliers: parsed.data.multipliers,
+            deductionMode: "manual" as const,
+            deductions: {
+              withholdingTaxKrw: parsed.data.deductions!.withholdingTaxKrw,
+              socialInsuranceKrw: parsed.data.deductions!.socialInsuranceKrw,
+              otherDeductionsKrw: parsed.data.deductions!.otherDeductionsKrw,
+              breakdown: parsed.data.deductions!.breakdown
+            }
+          };
+
     const result = await previewPayrollWithDeductions(
       {
         actor,
         dataAccess
       },
-      {
-        periodStart: new Date(parsed.data.periodStart),
-        periodEnd: new Date(parsed.data.periodEnd),
-        employeeId: parsed.data.employeeId,
-        hourlyRateKrw: parsed.data.hourlyRateKrw,
-        multipliers: parsed.data.multipliers,
-        deductions: {
-          withholdingTaxKrw: parsed.data.deductions.withholdingTaxKrw,
-          socialInsuranceKrw: parsed.data.deductions.socialInsuranceKrw,
-          otherDeductionsKrw: parsed.data.deductions.otherDeductionsKrw,
-          breakdown: parsed.data.deductions.breakdown
-        }
-      }
+      serviceInput
     );
     return ok(result);
   } catch (error) {

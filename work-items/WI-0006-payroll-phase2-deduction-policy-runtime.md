@@ -116,8 +116,8 @@ For operational stability, payroll operators need a reusable policy profile so d
 
 ## Definition of Done (DoD)
 
-- [ ] Runtime supports profile mode behind feature flag.
-- [ ] Profile CRUD auth and audit coverage implemented.
-- [ ] Required tests pass and golden regression is green.
+- [x] Runtime supports profile mode behind feature flag.
+- [x] Profile CRUD auth and audit coverage implemented.
+- [x] Required tests pass and golden regression is green.
 - [ ] QA Spec Gate and Code Gate are both passed.
-- [ ] ADR linked for profile-mode architecture decision.
+- [x] ADR linked for profile-mode architecture decision.
