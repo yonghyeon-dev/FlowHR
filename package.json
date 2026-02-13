@@ -9,7 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "tsx scripts/tests/unit.test.ts",
-    "test:integration": "tsx scripts/tests/integration.test.ts",
+    "test:integration": "tsx scripts/tests/integration.test.ts && tsx scripts/tests/event-transport-http.test.ts",
     "test:e2e": "tsx scripts/tests/e2e-wi0001.test.ts && tsx scripts/tests/e2e-wi0002-leave.test.ts",
     "test:e2e:leave": "tsx scripts/tests/e2e-wi0002-leave.test.ts",
     "test:e2e:prisma": "tsx scripts/tests/e2e-wi0001-prisma.test.ts && tsx scripts/tests/e2e-wi0002-leave-prisma.test.ts",

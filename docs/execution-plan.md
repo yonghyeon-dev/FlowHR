@@ -30,7 +30,6 @@ Completed:
 Open gaps:
 
 - Payroll Phase 2 (deductions/tax/remittance) remains out of scope.
-- Domain event publication adapter exists (`noop`/`memory`), but external transport integration is not implemented yet.
 - Staging integration is disabled by default; continuous validation is not active until explicitly enabled.
 
 ## 2) Priority Roadmap
@@ -89,7 +88,7 @@ Objective: close functional/operational gaps before broader rollout.
 
 Tasks:
 
-1. Add external transport adapter for domain events (current implementation is in-process `noop`/`memory` only).
+1. Add external transport adapter for domain events (current implementation is in-process `noop`/`memory` only). (Completed: 2026-02-13)
 2. Implement leave accrual/carry-over settlement policy (WI-0003). (Completed: 2026-02-13)
 3. Define payroll Phase 2 contract set (deductions/tax) and non-breaking migration path.
 4. Add spec-to-runtime drift check for table names and migration IDs. (Completed: 2026-02-13)
@@ -137,6 +136,5 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define external domain-event transport rollout plan and fallback policy,
-2. create payroll Phase 2 (deductions/tax) contract artifacts and compatibility matrix,
-3. enable staging CI with guarded secrets when staging DB is ready.
+1. create payroll Phase 2 (deductions/tax) contract artifacts and compatibility matrix,
+2. enable staging CI with guarded secrets when staging DB is ready.
