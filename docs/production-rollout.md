@@ -83,6 +83,7 @@ Workflow: `.github/workflows/payroll-phase2-health.yml`
   - `payroll.confirmed`
 - Tracks `403` / `409` failure ratios for phase2 preview path.
 - Creates GitHub issue on failure and can notify Slack when `FLOWHR_ALERT_SLACK_WEBHOOK` is configured.
+- Slack notification payload is sent via `scripts/ops/notify-slack-failure.mjs`.
 
 Tunable production environment variables:
 
@@ -106,6 +107,20 @@ Workflow: `.github/workflows/payroll-phase2-rollback.yml`
   - uses production vars:
     - `VERCEL_SCOPE` (default `yh-devs-projects`)
     - `VERCEL_PROJECT_NAME` (default `flowhr`)
+
+## Slack Alert Webhook Smoke Check
+
+Workflow: `.github/workflows/alert-webhook-smoke.yml`
+
+- Manual trigger only.
+- Fails fast when `FLOWHR_ALERT_SLACK_WEBHOOK` is missing in production environment secrets.
+- Sends one Slack message to validate webhook connectivity and payload format.
+
+Run command:
+
+```bash
+gh workflow run alert-webhook-smoke.yml -R yonghyeon-dev/FlowHR
+```
 
 ## Rollback
 
