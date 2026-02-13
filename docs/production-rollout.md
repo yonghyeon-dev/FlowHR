@@ -6,7 +6,7 @@ Target flags: `FLOWHR_PAYROLL_DEDUCTIONS_V1`, `FLOWHR_PAYROLL_DEDUCTION_PROFILE_
 
 - GitHub environment `production`: created.
 - `FLOWHR_PAYROLL_DEDUCTIONS_V1=true` in `production` environment.
-- `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` (planned WI-0006 runtime gate).
+- `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` in `production` environment.
 - External runtime sync completed on Vercel project `flowhr`.
 
 ## Rollout Policy
@@ -14,7 +14,7 @@ Target flags: `FLOWHR_PAYROLL_DEDUCTIONS_V1`, `FLOWHR_PAYROLL_DEDUCTION_PROFILE_
 1. Keep `false` while legacy consumers still rely on gross-only flow.
 2. Move to canary (`true`) only after staging CI and consumer checks pass.
 3. If issue occurs, immediately revert to `false`.
-4. Keep `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` until WI-0006 runtime tests pass.
+4. Keep `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` until business sign-off for profile-mode rollout.
 
 ## CLI Commands
 
@@ -47,6 +47,7 @@ Vercel sync status:
 - Production URL: `https://flowhr-two.vercel.app`
 - Framework preset is controlled by `vercel.json` (`nextjs`)
 - Production env `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`
+- Production env `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false`
 
 ## Production Auth Smoke (GitHub Actions)
 
