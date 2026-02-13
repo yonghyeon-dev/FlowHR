@@ -39,6 +39,7 @@ Completed:
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
 - Production runtime flag is active (`FLOWHR_PAYROLL_DEDUCTIONS_V1=true`) on GitHub env and Vercel.
+- Production profile flag baseline is synced (`FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false`) on GitHub env and Vercel.
 
 Open gaps:
 
@@ -114,6 +115,7 @@ Tasks:
 12. Draft WI-0006 deduction profile contract + ADR + golden baseline. (Completed: 2026-02-13)
 13. Implement WI-0006 runtime (profile CRUD + profile mode preview path). (Completed: 2026-02-13)
 14. Implement WI-0007 MVP operations console on `/`. (Completed: 2026-02-13)
+15. Sync production profile flag baseline to Vercel and re-verify production smoke. (Completed: 2026-02-13)
 
 Definition of Done:
 
