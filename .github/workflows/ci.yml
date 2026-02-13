@@ -167,23 +167,36 @@ jobs:
           STAGING_DIRECT_URL: ${{ secrets.FLOWHR_STAGING_DIRECT_URL }}
           STAGING_SUPABASE_URL: ${{ secrets.FLOWHR_STAGING_SUPABASE_URL }}
         run: |
+          normalize_url() {
+            local value="$1"
+            value="${value#DATABASE_URL=}"
+            value="${value#DIRECT_URL=}"
+            value="${value#\"}"
+            value="${value%\"}"
+            value="$(echo -n "$value" | tr -d '\r' | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//')"
+            echo "$value"
+          }
+          NORMALIZED_DB_URL="$(normalize_url "$STAGING_DATABASE_URL")"
+          NORMALIZED_DIRECT_URL="$(normalize_url "$STAGING_DIRECT_URL")"
+          echo "FLOWHR_NORMALIZED_STAGING_DATABASE_URL=$NORMALIZED_DB_URL" >> "$GITHUB_ENV"
+          echo "FLOWHR_NORMALIZED_STAGING_DIRECT_URL=$NORMALIZED_DIRECT_URL" >> "$GITHUB_ENV"
           if [[ "$STAGING_SUPABASE_URL" != https://*.supabase.co ]]; then
             echo "::error::FLOWHR_STAGING_SUPABASE_URL must match https://<project-ref>.supabase.co"
             exit 1
           fi
-          if [[ ! "$STAGING_DATABASE_URL" =~ ^postgres(ql)?:// ]]; then
+          if [[ ! "$NORMALIZED_DB_URL" =~ ^postgres(ql)?:// ]]; then
             echo "::error::FLOWHR_STAGING_DATABASE_URL must start with postgres:// or postgresql://"
             exit 1
           fi
-          if [[ ! "$STAGING_DIRECT_URL" =~ ^postgres(ql)?:// ]]; then
+          if [[ ! "$NORMALIZED_DIRECT_URL" =~ ^postgres(ql)?:// ]]; then
             echo "::error::FLOWHR_STAGING_DIRECT_URL must start with postgres:// or postgresql://"
             exit 1
           fi
-          if [[ "$STAGING_DATABASE_URL" != *"schema=staging"* ]]; then
+          if [[ "$NORMALIZED_DB_URL" != *"schema=staging"* ]]; then
             echo "::error::FLOWHR_STAGING_DATABASE_URL must include schema=staging to prevent prod schema writes"
             exit 1
           fi
-          if [[ "$STAGING_DIRECT_URL" != *"schema=staging"* ]]; then
+          if [[ "$NORMALIZED_DIRECT_URL" != *"schema=staging"* ]]; then
             echo "::error::FLOWHR_STAGING_DIRECT_URL must include schema=staging to prevent prod schema writes"
             exit 1
           fi
@@ -203,8 +216,8 @@ jobs:
 
       - name: Prisma deploy and route-level e2e (staging)
         env:
-          DATABASE_URL: ${{ secrets.FLOWHR_STAGING_DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.FLOWHR_STAGING_DIRECT_URL }}
+          DATABASE_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ env.FLOWHR_NORMALIZED_STAGING_DIRECT_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FLOWHR_STAGING_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_STAGING_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_STAGING_SERVICE_ROLE_KEY }}
