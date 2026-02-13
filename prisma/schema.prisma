@@ -76,6 +76,12 @@ model PayrollRun {
   periodEnd         DateTime
   state             PayrollState @default(PREVIEWED)
   grossPayKrw       Int
+  withholdingTaxKrw Int?
+  socialInsuranceKrw Int?
+  otherDeductionsKrw Int?
+  totalDeductionsKrw Int?
+  netPayKrw         Int?
+  deductionBreakdown Json?
   sourceRecordCount Int      @default(0)
   confirmedAt       DateTime?
   confirmedBy       String?

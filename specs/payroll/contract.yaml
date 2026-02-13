@@ -1,11 +1,13 @@
 owner: payroll-agent
-version: 1.0.1
+version: 1.1.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
     - payroll run trace and audit logging
+    - deduction and tax contract artifacts for phase 2 rollout
   out:
-    - tax deduction and external remittance
+    - country-specific tax engine implementation
+    - external remittance
     - bank transfer execution
 entities:
   - name: PayrollPeriod
@@ -25,6 +27,9 @@ api:
       path: /payroll/runs/preview
       description: Generate payroll gross pay preview for a period.
     - method: POST
+      path: /payroll/runs/preview-with-deductions
+      description: Generate payroll preview with deduction and tax components (phase2).
+    - method: POST
       path: /payroll/runs/{runId}/confirm
       description: Confirm a payroll run.
   events:
@@ -33,6 +38,8 @@ api:
         description: Emitted when gross pay calculation is completed.
       - name: payroll.confirmed.v1
         description: Emitted when payroll run is confirmed.
+      - name: payroll.deductions.calculated.v1
+        description: Emitted when deduction/tax preview is calculated.
     consumed:
       - name: attendance.approved.v1
         description: Approved attendance aggregate input.
@@ -44,10 +51,13 @@ db_changes:
       description: Create PayrollRun base table.
     - id: 202602130002_wi0001_api_extensions
       description: Extend PayrollRun and add AuditLog for payroll traceability.
+    - id: 202602140003_payroll_phase2_contract_base
+      description: Add additive deduction and net-pay trace fields to PayrollRun.
   backward_compatible: true
-  notes: Additive columns for future deduction components.
+  notes: Phase2 extends payroll payload with additive nullable deduction fields.
 invariants:
   - Gross pay is deterministic for same inputs and rules.
+  - Net pay equals gross pay minus total deductions when phase2 fields are populated.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
 risk:
@@ -55,42 +65,51 @@ risk:
     - Unauthorized payroll run confirmation can lock wrong results.
   payroll_accuracy:
     - Misapplied overtime/night/holiday multipliers affect compensation.
+    - Miscalculated deduction aggregation affects net pay accuracy.
   legal:
     - Payroll trace must support audit and dispute resolution.
 test_plan:
   unit:
     - gross pay calculator with multiplier rules
+    - deduction and net-pay aggregation formula
     - rounding behavior for KRW totals
   integration:
     - consume attendance.approved and produce payroll preview
+    - preview-with-deductions and confirm flow
   regression:
     - replay GC-001 through GC-005 fixtures
   authorization:
     - payroll_operator role enforcement
   payroll_accuracy:
     - overtime/night/holiday category payout checks
+    - deduction sum and net-pay deterministic checks
 observability:
   audit_events:
     - payroll.calculated
+    - payroll.deductions_calculated
     - payroll.confirmed
   metrics:
     - payroll_run_duration_ms
     - payroll_recalculation_count
+    - payroll_deductions_preview_latency_ms
   logs:
     - payroll calculation error with run ID context
 rollout:
   feature_flags:
     - name: payroll_preview_v1
       default: "off"
+    - name: payroll_deductions_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_preview_v1 and use previous payroll reader path
+  strategy: disable payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Initial payroll gross pay contract for WI-0001. Downstream integrations are not yet enabled."
+consumer_impact: "Phase2 contract adds non-breaking deduction/net-pay fields and a feature-flagged preview endpoint."
 references:
   - specs/common/time-and-payroll-rules.md
+  - specs/payroll/phase2-compatibility-matrix.md
 approval:
   spec_owner: payroll-agent
   qa_owner: qa-agent

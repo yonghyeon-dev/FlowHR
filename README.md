@@ -111,3 +111,9 @@ Details: `docs/staging-secrets.md`
   - `POST /api/leave/requests/{requestId}/cancel`
   - `GET /api/leave/balances/{employeeId}`
   - `POST /api/leave/accrual/settle`
+
+## Payroll Phase 2 Contract Artifacts
+
+- Work item: `work-items/WI-0005-payroll-phase2-deductions-tax-contract.md`
+- Contract: `specs/payroll/contract.yaml` (v1.1.0)
+- Compatibility matrix: `specs/payroll/phase2-compatibility-matrix.md`

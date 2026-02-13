@@ -1,0 +1,17 @@
+ALTER TABLE "PayrollRun"
+  ADD COLUMN IF NOT EXISTS "withholdingTaxKrw" INTEGER;
+
+ALTER TABLE "PayrollRun"
+  ADD COLUMN IF NOT EXISTS "socialInsuranceKrw" INTEGER;
+
+ALTER TABLE "PayrollRun"
+  ADD COLUMN IF NOT EXISTS "otherDeductionsKrw" INTEGER;
+
+ALTER TABLE "PayrollRun"
+  ADD COLUMN IF NOT EXISTS "totalDeductionsKrw" INTEGER;
+
+ALTER TABLE "PayrollRun"
+  ADD COLUMN IF NOT EXISTS "netPayKrw" INTEGER;
+
+ALTER TABLE "PayrollRun"
+  ADD COLUMN IF NOT EXISTS "deductionBreakdown" JSONB;
