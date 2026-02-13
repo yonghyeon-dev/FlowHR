@@ -73,3 +73,20 @@ Main-branch push can run Prisma-backed route e2e when these repository secrets a
 
 - `FLOWHR_STAGING_DATABASE_URL`
 - `FLOWHR_STAGING_DIRECT_URL`
+
+## Current API Surface (MVP)
+
+- Attendance:
+  - `POST /api/attendance/records`
+  - `PATCH /api/attendance/records/{recordId}`
+  - `POST /api/attendance/records/{recordId}/approve`
+- Payroll:
+  - `POST /api/payroll/runs/preview`
+  - `POST /api/payroll/runs/{runId}/confirm`
+- Leave:
+  - `POST /api/leave/requests`
+  - `PATCH /api/leave/requests/{requestId}`
+  - `POST /api/leave/requests/{requestId}/approve`
+  - `POST /api/leave/requests/{requestId}/reject`
+  - `POST /api/leave/requests/{requestId}/cancel`
+  - `GET /api/leave/balances/{employeeId}`

@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.0.0
+version: 1.1.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -36,6 +36,9 @@ api:
     - method: POST
       path: /leave/requests/{requestId}/reject
       description: Reject leave request with reason.
+    - method: POST
+      path: /leave/requests/{requestId}/cancel
+      description: Cancel pending leave request.
     - method: GET
       path: /leave/balances/{employeeId}
       description: Retrieve leave balance snapshot.
@@ -54,7 +57,7 @@ api:
         description: Employee org/profile metadata updates.
 db_changes:
   migrations:
-    - id: 2026021401_leave_base
+    - id: 202602140001_wi0002_leave_base
       description: Create leave requests, approvals, and balance projection tables.
   backward_compatible: true
   notes: Additive columns only in initial leave rollout.
@@ -106,7 +109,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "New leave contract introduced in WI-0002; no existing API break expected."
+consumer_impact: "WI-0002 implementation adds cancel endpoint and leave balance projection behavior."
 references:
   - specs/common/time-and-payroll-rules.md
 approval:

@@ -4,11 +4,18 @@ import type {
   AttendanceStore,
   AuditStore,
   CreateAttendanceRecordInput,
+  CreateLeaveRequestInput,
   CreatePayrollRunInput,
   DataAccess,
+  LeaveBalanceEntity,
+  LeaveBalanceStore,
+  LeaveRequestEntity,
+  LeaveStore,
   PayrollRunEntity,
   PayrollStore,
+  RecordLeaveDecisionInput,
   UpdateAttendanceRecordInput,
+  UpdateLeaveRequestInput,
   UpdatePayrollRunInput
 } from "@/features/shared/data-access";
 
@@ -26,6 +33,38 @@ function toAttendanceEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): AttendanceRecordEntity {
+  return record;
+}
+
+function toLeaveRequestEntity(record: {
+  id: string;
+  employeeId: string;
+  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  startDate: Date;
+  endDate: Date;
+  days: number;
+  reason: string | null;
+  state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+  decisionReason: string | null;
+  approvedAt: Date | null;
+  approvedBy: string | null;
+  rejectedAt: Date | null;
+  rejectedBy: string | null;
+  canceledAt: Date | null;
+  canceledBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): LeaveRequestEntity {
+  return record;
+}
+
+function toLeaveBalanceEntity(record: {
+  employeeId: string;
+  grantedDays: number;
+  usedDays: number;
+  remainingDays: number;
+  updatedAt: Date;
+}): LeaveBalanceEntity {
   return record;
 }
 
@@ -100,6 +139,131 @@ const attendance: AttendanceStore = {
   }
 };
 
+const leave: LeaveStore = {
+  async create(input: CreateLeaveRequestInput) {
+    const request = await prisma.leaveRequest.create({
+      data: {
+        employeeId: input.employeeId,
+        leaveType: input.leaveType,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        days: input.days,
+        reason: input.reason ?? null
+      }
+    });
+    return toLeaveRequestEntity(request);
+  },
+
+  async findById(id: string) {
+    const request = await prisma.leaveRequest.findUnique({
+      where: { id }
+    });
+    return request ? toLeaveRequestEntity(request) : null;
+  },
+
+  async update(id: string, input: UpdateLeaveRequestInput) {
+    const request = await prisma.leaveRequest.update({
+      where: { id },
+      data: {
+        leaveType: input.leaveType,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        days: input.days,
+        reason: input.reason,
+        state: input.state,
+        decisionReason: input.decisionReason,
+        approvedAt: input.approvedAt,
+        approvedBy: input.approvedBy,
+        rejectedAt: input.rejectedAt,
+        rejectedBy: input.rejectedBy,
+        canceledAt: input.canceledAt,
+        canceledBy: input.canceledBy
+      }
+    });
+    return toLeaveRequestEntity(request);
+  },
+
+  async findOverlappingActiveRequests(input: {
+    employeeId: string;
+    startDate: Date;
+    endDate: Date;
+    excludeRequestId?: string;
+  }) {
+    const requests = await prisma.leaveRequest.findMany({
+      where: {
+        employeeId: input.employeeId,
+        state: {
+          in: ["PENDING", "APPROVED"]
+        },
+        startDate: {
+          lte: input.endDate
+        },
+        endDate: {
+          gte: input.startDate
+        },
+        ...(input.excludeRequestId
+          ? {
+              id: {
+                not: input.excludeRequestId
+              }
+            }
+          : {})
+      },
+      orderBy: { startDate: "asc" }
+    });
+    return requests.map(toLeaveRequestEntity);
+  },
+
+  async appendDecision(input: RecordLeaveDecisionInput) {
+    await prisma.leaveApproval.create({
+      data: {
+        requestId: input.requestId,
+        action: input.action,
+        actorId: input.actorId,
+        actorRole: input.actorRole,
+        reason: input.reason
+      }
+    });
+  }
+};
+
+const leaveBalance: LeaveBalanceStore = {
+  async ensure(employeeId: string, defaultGrantedDays: number) {
+    const existing = await prisma.leaveBalanceProjection.findUnique({
+      where: { employeeId }
+    });
+
+    if (existing) {
+      return toLeaveBalanceEntity(existing);
+    }
+
+    const created = await prisma.leaveBalanceProjection.create({
+      data: {
+        employeeId,
+        grantedDays: defaultGrantedDays,
+        usedDays: 0,
+        remainingDays: defaultGrantedDays
+      }
+    });
+    return toLeaveBalanceEntity(created);
+  },
+
+  async applyUsage(input: { employeeId: string; usedDaysDelta: number; defaultGrantedDays: number }) {
+    const current = await leaveBalance.ensure(input.employeeId, input.defaultGrantedDays);
+    const usedDays = current.usedDays + input.usedDaysDelta;
+    const remainingDays = current.grantedDays - usedDays;
+
+    const updated = await prisma.leaveBalanceProjection.update({
+      where: { employeeId: input.employeeId },
+      data: {
+        usedDays,
+        remainingDays
+      }
+    });
+    return toLeaveBalanceEntity(updated);
+  }
+};
+
 const payroll: PayrollStore = {
   async create(input: CreatePayrollRunInput) {
     const run = await prisma.payrollRun.create({
@@ -151,6 +315,8 @@ const audit: AuditStore = {
 
 export const prismaDataAccess: DataAccess = {
   attendance,
+  leave,
+  leaveBalance,
   payroll,
   audit
 };
