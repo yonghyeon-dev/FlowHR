@@ -159,7 +159,11 @@ async function run() {
     } else {
       assert.deepEqual(
         auditActions.map((row: { action: string }) => row.action),
-        ["attendance.recorded", "attendance.approved"]
+        [
+          "attendance.recorded",
+          "attendance.approved",
+          "payroll.preview_with_deductions.failed"
+        ]
       );
     }
   } finally {

@@ -1,25 +1,16 @@
-name: production-auth-smoke
+name: payroll-phase2-health
 
 on:
   workflow_dispatch:
-    inputs:
-      base_url:
-        description: "Optional production base URL override"
-        required: false
-        type: string
   schedule:
-    - cron: "20 0 * * *"
+    - cron: "15 * * * *"
 
 permissions:
   contents: read
   issues: write
 
-concurrency:
-  group: production-auth-smoke
-  cancel-in-progress: false
-
 jobs:
-  smoke:
+  health:
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -34,31 +25,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve base URL
-        env:
-          INPUT_BASE_URL: ${{ inputs.base_url }}
-          DEFAULT_BASE_URL: ${{ vars.FLOWHR_PRODUCTION_BASE_URL }}
-        run: |
-          selected="$INPUT_BASE_URL"
-          if [ -z "$selected" ]; then
-            selected="$DEFAULT_BASE_URL"
-          fi
-          if [ -z "$selected" ]; then
-            echo "::error::Missing base URL. Set workflow input base_url or vars.FLOWHR_PRODUCTION_BASE_URL."
-            exit 1
-          fi
-          echo "SMOKE_BASE_URL=$selected" >> "$GITHUB_ENV"
-
       - name: Validate required production secrets
         env:
-          PRODUCTION_SUPABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_SUPABASE_URL }}
-          PRODUCTION_ANON_KEY: ${{ secrets.FLOWHR_PRODUCTION_ANON_KEY }}
-          PRODUCTION_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_PRODUCTION_SERVICE_ROLE_KEY }}
           PRODUCTION_DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
           PRODUCTION_DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
         run: |
           missing=()
-          for key in PRODUCTION_SUPABASE_URL PRODUCTION_ANON_KEY PRODUCTION_SERVICE_ROLE_KEY PRODUCTION_DATABASE_URL PRODUCTION_DIRECT_URL; do
+          for key in PRODUCTION_DATABASE_URL PRODUCTION_DIRECT_URL; do
             if [ -z "${!key}" ]; then
               missing+=("$key")
             fi
@@ -68,14 +41,15 @@ jobs:
             exit 1
           fi
 
-      - name: Run production auth smoke
+      - name: Run phase2 health report
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FLOWHR_PRODUCTION_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_PRODUCTION_SERVICE_ROLE_KEY }}
           DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
           DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
-        run: npm run test:smoke:production-auth
+          FLOWHR_PHASE2_HEALTH_WINDOW_HOURS: ${{ vars.FLOWHR_PHASE2_HEALTH_WINDOW_HOURS || '24' }}
+          FLOWHR_PHASE2_HEALTH_MIN_ATTEMPTS: ${{ vars.FLOWHR_PHASE2_HEALTH_MIN_ATTEMPTS || '1' }}
+          FLOWHR_PHASE2_HEALTH_MAX_403_RATIO: ${{ vars.FLOWHR_PHASE2_HEALTH_MAX_403_RATIO || '0.20' }}
+          FLOWHR_PHASE2_HEALTH_MAX_409_RATIO: ${{ vars.FLOWHR_PHASE2_HEALTH_MAX_409_RATIO || '0.20' }}
+        run: npm run health:payroll:phase2 --if-present
 
       - name: Create issue on failure
         if: ${{ failure() }}
@@ -83,9 +57,9 @@ jobs:
         with:
           script: |
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const title = `[production-auth-smoke] failed run ${context.runNumber}`;
+            const title = `[phase2-health] failed run ${context.runNumber}`;
             const body = [
-              "Production authenticated payroll smoke failed.",
+              "Payroll phase2 health workflow failed.",
               "",
               `- Run: ${runUrl}`,
               `- Ref: ${context.ref}`,
@@ -96,7 +70,7 @@ jobs:
               repo: context.repo.repo,
               title,
               body,
-              labels: ["incident", "production", "smoke"]
+              labels: ["incident", "phase2", "ops"]
             });
 
       - name: Notify Slack on failure
@@ -105,5 +79,5 @@ jobs:
           WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
         run: |
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          payload="{\"text\":\"[FlowHR] production-auth-smoke failed: ${run_url}\"}"
+          payload="{\"text\":\"[FlowHR] payroll-phase2-health failed: ${run_url}\"}"
           curl -X POST -H "Content-type: application/json" --data "$payload" "$WEBHOOK"

@@ -49,6 +49,7 @@ Vercel sync status:
 ## Production Auth Smoke (GitHub Actions)
 
 Manual workflow: `.github/workflows/production-auth-smoke.yml`
+Scheduled: daily (`00:20 UTC`)
 
 Required production environment variable:
 
@@ -67,6 +68,40 @@ Run command:
 ```bash
 gh workflow run production-auth-smoke.yml -R yonghyeon-dev/FlowHR
 ```
+
+## Phase2 Health Monitoring (GitHub Actions)
+
+Workflow: `.github/workflows/payroll-phase2-health.yml`
+
+- Runs hourly and can be triggered manually.
+- Reads audit events:
+  - `payroll.deductions_calculated`
+  - `payroll.preview_with_deductions.failed`
+  - `payroll.confirmed`
+- Tracks `403` / `409` failure ratios for phase2 preview path.
+- Creates GitHub issue on failure and can notify Slack when `FLOWHR_ALERT_SLACK_WEBHOOK` is configured.
+
+Tunable production environment variables:
+
+- `FLOWHR_PHASE2_HEALTH_WINDOW_HOURS` (default `24`)
+- `FLOWHR_PHASE2_HEALTH_MIN_ATTEMPTS` (default `1`)
+- `FLOWHR_PHASE2_HEALTH_MAX_403_RATIO` (default `0.20`)
+- `FLOWHR_PHASE2_HEALTH_MAX_409_RATIO` (default `0.20`)
+
+## Rollback Automation (GitHub Actions)
+
+Workflow: `.github/workflows/payroll-phase2-rollback.yml`
+
+- Manual trigger only (`workflow_dispatch`).
+- Requires confirmation phrase `ROLLBACK_PHASE2`.
+- Supports `dry_run=true` for rehearsal without mutating flags.
+- Always sets GitHub production variable:
+  - `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`
+- Optional Vercel sync+deploy (`deploy_vercel=true`):
+  - requires production secret `VERCEL_TOKEN`
+  - uses production vars:
+    - `VERCEL_SCOPE` (default `yh-devs-projects`)
+    - `VERCEL_PROJECT_NAME` (default `flowhr`)
 
 ## Rollback
 
