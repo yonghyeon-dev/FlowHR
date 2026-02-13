@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.0.0
+version: 1.0.1
 scope:
   in:
     - gross pay preview from approved attendance aggregates
