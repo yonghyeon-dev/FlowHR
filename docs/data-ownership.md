@@ -13,10 +13,12 @@ Exception:
 
 | Domain | Owned Tables | Published Events | Allowed Reads |
 | --- | --- | --- | --- |
-| Attendance | `attendance_records`, `attendance_corrections`, `attendance_approvals` | `attendance.recorded`, `attendance.corrected`, `attendance.approved` | Own tables, event projections |
-| Payroll | `payroll_periods`, `payroll_runs`, `payroll_items` | `payroll.calculated`, `payroll.confirmed` | Own tables, attendance projections only |
-| Orchestrator (Process) | `work_items`, `release_decisions` | `workitem.assigned`, `release.approved` | Aggregated operational projections |
-| QA | `qa_gate_results`, `risk_assessments` | `qa.gate.passed`, `qa.gate.failed` | All projection datasets for validation only |
+| Attendance | `AttendanceRecord` | `attendance.recorded.v1`, `attendance.corrected.v1`, `attendance.approved.v1` | Own tables, event projections |
+| Payroll | `PayrollRun` | `payroll.calculated.v1`, `payroll.confirmed.v1` | Own tables, attendance projections only |
+| Leave | `LeaveRequest`, `LeaveApproval`, `LeaveBalanceProjection` | `leave.requested.v1`, `leave.approved.v1`, `leave.rejected.v1`, `leave.canceled.v1` | Own tables, attendance/payroll read-model only |
+| Platform (Shared) | `AuditLog` | none | Read-only for operations and audits |
+| Orchestrator (Process) | none (artifact-driven process) | `workitem.assigned` | Aggregated operational projections |
+| QA | none (artifact-driven process) | `qa.gate.passed`, `qa.gate.failed` | All projection datasets for validation only |
 
 ## Implementation Rules
 

@@ -32,4 +32,4 @@ gh secret set FLOWHR_STAGING_SERVICE_ROLE_KEY -b"<flowhr-service-role-key>"
 
 - `gh secret list` should include all five names.
 - `FLOWHR_STAGING_DATABASE_URL` and `FLOWHR_STAGING_DIRECT_URL` must include `schema=staging`.
-- On `main` push, `staging-prisma-integration` must run (not skip) and pass.
+- When `FLOWHR_ENABLE_STAGING_CI=true`, `staging-prisma-integration` must run and pass on `main` push.

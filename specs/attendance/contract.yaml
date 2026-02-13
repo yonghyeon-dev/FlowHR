@@ -42,8 +42,10 @@ api:
         description: Employee metadata changed.
 db_changes:
   migrations:
-    - id: 2026021301_attendance_base
-      description: Create attendance records, corrections, approvals tables.
+    - id: 202602130001_init_wi0001
+      description: Create AttendanceRecord and PayrollRun base tables.
+    - id: 202602130002_wi0001_api_extensions
+      description: Extend AttendanceRecord with holiday/approval columns and add AuditLog.
   backward_compatible: true
   notes: Expand-contract pattern for future attendance payload updates.
 invariants:

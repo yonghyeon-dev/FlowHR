@@ -1,32 +1,26 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import pathlib
 import re
 import subprocess
 import sys
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+try:
+    import yaml  # type: ignore
+    from jsonschema import Draft202012Validator  # type: ignore
+except Exception:
+    print(
+        "Missing Python dependencies for contract checks. "
+        "Install with: pip install -r scripts/ci/requirements.txt"
+    )
+    sys.exit(2)
 
-REQUIRED_KEYS = [
-    "owner",
-    "version",
-    "scope",
-    "entities",
-    "api",
-    "db_changes",
-    "invariants",
-    "test_plan",
-    "observability",
-    "rollout",
-    "rollback",
-    "breaking_changes",
-    "consumer_impact",
-]
 
 SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
-VERSION_LINE_RE = re.compile(r"(?m)^version:\s*['\"]?([0-9]+\.[0-9]+\.[0-9]+)['\"]?\s*$")
-BREAKING_LINE_RE = re.compile(r"(?m)^breaking_changes:\s*(true|false)\s*$", re.IGNORECASE)
 CONTRACT_FILE_RE = re.compile(r"(^|/)contract\.ya?ml$")
+SCHEMA_PATH = pathlib.Path("contracts/contract.schema.json")
 
 
 def git_output(args: List[str]) -> Tuple[int, str, str]:
@@ -40,46 +34,70 @@ def git_output(args: List[str]) -> Tuple[int, str, str]:
     return proc.returncode, proc.stdout, proc.stderr
 
 
-def parse_version(content: str) -> Optional[str]:
-    match = VERSION_LINE_RE.search(content)
-    if not match:
-        return None
-    return match.group(1).strip()
-
-
-def parse_breaking(content: str) -> Optional[bool]:
-    match = BREAKING_LINE_RE.search(content)
-    if not match:
-        return None
-    return match.group(1).lower() == "true"
-
-
-def lint_contract_file(path: pathlib.Path) -> List[str]:
-    errors: List[str] = []
-    try:
-        content = path.read_text(encoding="utf-8")
-    except Exception as exc:
-        return [f"{path}: failed to read file ({exc})"]
-
-    for key in REQUIRED_KEYS:
-        if not re.search(rf"(?m)^{re.escape(key)}\s*:", content):
-            errors.append(f"{path}: missing required key '{key}'")
-
-    version = parse_version(content)
-    if version is None:
-        errors.append(f"{path}: missing or invalid 'version' field")
-    elif not SEMVER_RE.match(version):
-        errors.append(f"{path}: version '{version}' is not valid SemVer (X.Y.Z)")
-
-    breaking = parse_breaking(content)
-    if breaking is None:
-        errors.append(f"{path}: missing or invalid 'breaking_changes' field (true/false)")
-
-    return errors
-
-
 def major(version: str) -> int:
     return int(version.split(".")[0])
+
+
+def read_text(path: pathlib.Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except Exception as exc:
+        raise ValueError(f"{path}: failed to read file ({exc})") from exc
+
+
+def load_yaml(content: str, label: str) -> Dict[str, Any]:
+    try:
+        parsed = yaml.safe_load(content)
+    except Exception as exc:
+        raise ValueError(f"{label}: invalid YAML ({exc})") from exc
+    if not isinstance(parsed, dict):
+        raise ValueError(f"{label}: root YAML node must be an object")
+    return parsed
+
+
+def load_schema(path: pathlib.Path) -> Draft202012Validator:
+    if not path.exists():
+        raise ValueError(f"{path}: schema file not found")
+
+    try:
+        schema = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise ValueError(f"{path}: invalid JSON schema ({exc})") from exc
+
+    try:
+        return Draft202012Validator(schema)
+    except Exception as exc:
+        raise ValueError(f"{path}: invalid schema definition ({exc})") from exc
+
+
+def format_schema_error(file_label: str, error: Any) -> str:
+    if list(error.path):
+        pointer = ".".join(str(part) for part in error.path)
+        return f"{file_label}: schema violation at '{pointer}': {error.message}"
+    return f"{file_label}: schema violation: {error.message}"
+
+
+def lint_contract_file(path: pathlib.Path, validator: Draft202012Validator) -> List[str]:
+    errors: List[str] = []
+
+    try:
+        content = read_text(path)
+        data = load_yaml(content, str(path))
+    except ValueError as exc:
+        return [str(exc)]
+
+    schema_errors = sorted(validator.iter_errors(data), key=lambda item: list(item.path))
+    for err in schema_errors:
+        errors.append(format_schema_error(str(path), err))
+
+    version = data.get("version")
+    if not isinstance(version, str) or not SEMVER_RE.match(version):
+        errors.append(f"{path}: version must match SemVer (X.Y.Z)")
+
+    if not isinstance(data.get("breaking_changes"), bool):
+        errors.append(f"{path}: breaking_changes must be boolean")
+
+    return errors
 
 
 def get_changed_contract_paths(base: str, head: str) -> List[str]:
@@ -115,6 +133,19 @@ def git_show(sha: str, path: str) -> Optional[str]:
     return out
 
 
+def parse_version_and_breaking(content: str, label: str) -> Tuple[str, bool]:
+    data = load_yaml(content, label)
+    version = data.get("version")
+    breaking = data.get("breaking_changes")
+
+    if not isinstance(version, str) or not SEMVER_RE.match(version):
+        raise ValueError(f"{label}: invalid version (must be X.Y.Z)")
+    if not isinstance(breaking, bool):
+        raise ValueError(f"{label}: breaking_changes must be boolean")
+
+    return version, breaking
+
+
 def check_versioning(base: str, head: str, changed_paths: List[str]) -> List[str]:
     errors: List[str] = []
 
@@ -129,13 +160,11 @@ def check_versioning(base: str, head: str, changed_paths: List[str]) -> List[str
             errors.append(f"{path}: expected file at {head}, but could not read it")
             continue
 
-        old_version = parse_version(old_content)
-        new_version = parse_version(new_content)
-        old_breaking = parse_breaking(old_content)
-        new_breaking = parse_breaking(new_content)
-
-        if old_version is None or new_version is None:
-            errors.append(f"{path}: cannot validate version bump due to invalid version field")
+        try:
+            old_version, _old_breaking = parse_version_and_breaking(old_content, f"{base[:7]}:{path}")
+            new_version, new_breaking = parse_version_and_breaking(new_content, f"{head[:7]}:{path}")
+        except ValueError as exc:
+            errors.append(str(exc))
             continue
 
         if old_version == new_version:
@@ -143,11 +172,7 @@ def check_versioning(base: str, head: str, changed_paths: List[str]) -> List[str
                 f"{path}: contract changed between {base[:7]} and {head[:7]} without version bump"
             )
 
-        if (
-            new_breaking is True
-            and old_breaking is not None
-            and major(new_version) <= major(old_version)
-        ):
+        if new_breaking and major(new_version) <= major(old_version):
             errors.append(
                 f"{path}: breaking_changes=true requires MAJOR bump "
                 f"(old={old_version}, new={new_version})"
@@ -157,19 +182,27 @@ def check_versioning(base: str, head: str, changed_paths: List[str]) -> List[str
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Lint FlowHR contract files and versioning rules.")
+    parser = argparse.ArgumentParser(
+        description="Lint FlowHR contract files (YAML+schema) and versioning rules."
+    )
     parser.add_argument("--base", help="Base git SHA for versioning check")
     parser.add_argument("--head", help="Head git SHA for versioning check")
     args = parser.parse_args()
 
     errors: List[str] = []
 
+    try:
+        validator = load_schema(SCHEMA_PATH)
+    except ValueError as exc:
+        errors.append(str(exc))
+        validator = None  # type: ignore
+
     contract_paths = sorted(pathlib.Path("specs").rglob("contract.yaml"))
     if not contract_paths:
         print("No contract.yaml files found under specs/.")
-    else:
+    elif validator is not None:
         for path in contract_paths:
-            errors.extend(lint_contract_file(path))
+            errors.extend(lint_contract_file(path, validator))
 
     if args.base and args.head:
         try:

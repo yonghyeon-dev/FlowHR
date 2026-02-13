@@ -44,11 +44,12 @@ attendance records must flow into attendance aggregation and then into payroll g
 
 ## Data Changes (Tables and Migrations)
 
-- Attendance tables: `attendance_records`, `attendance_corrections`, `attendance_approvals`.
-- Payroll tables: `payroll_periods`, `payroll_runs`, `payroll_items`.
+- Attendance tables: `AttendanceRecord`.
+- Payroll tables: `PayrollRun`.
+- Shared audit table: `AuditLog`.
 - Migration IDs:
-  - `2026021301_attendance_base`
-  - `2026021302_payroll_base`
+  - `202602130001_init_wi0001`
+  - `202602130002_wi0001_api_extensions`
 
 ## API and Event Changes
 
@@ -58,8 +59,8 @@ attendance records must flow into attendance aggregation and then into payroll g
 - Payroll API:
   - `POST /payroll/runs/preview`
 - Published events:
-  - `attendance.approved`
-  - `payroll.calculated`
+  - `attendance.approved.v1`
+  - `payroll.calculated.v1`
 
 ## Test Plan
 
