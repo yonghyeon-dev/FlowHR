@@ -17,14 +17,20 @@ export type Actor = {
 };
 
 function parseRoleFromUser(user: User): ActorRole {
-  const candidates = [
-    user.app_metadata?.role,
+  // Canonical claim for FlowHR: app_metadata.role
+  const canonicalRole = user.app_metadata?.role;
+  if (typeof canonicalRole === "string" && actorRoles.includes(canonicalRole as ActorRole)) {
+    return canonicalRole as ActorRole;
+  }
+
+  // Temporary compatibility fallback for legacy tokens.
+  const legacyCandidates = [
     user.user_metadata?.role,
     user.app_metadata?.user_role,
     user.user_metadata?.user_role
   ];
 
-  for (const candidate of candidates) {
+  for (const candidate of legacyCandidates) {
     if (typeof candidate === "string" && actorRoles.includes(candidate as ActorRole)) {
       return candidate as ActorRole;
     }

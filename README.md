@@ -18,6 +18,7 @@ Important:
 - `DATABASE_URL` is for Prisma runtime (session pooler).
 - `DIRECT_URL` is for Prisma migrations (direct DB endpoint).
 - API routes resolve actor context from Supabase JWT bearer token.
+- Canonical role claim is `app_metadata.role` (see `docs/role-claims.md`).
 - Development fallback: `x-actor-role` and `x-actor-id` headers are accepted only outside production.
 
 ## Local Run
@@ -44,6 +45,11 @@ supabase db pull
 ```
 
 Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and migration tool.
+
+## Test Data Access Mode
+
+- Default runtime uses Prisma.
+- For API route tests without database, set `FLOWHR_DATA_ACCESS=memory`.
 
 ## Contribution Flow
 
