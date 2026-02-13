@@ -9,9 +9,10 @@ Repository administrators must configure branch protection in GitHub settings.
 ## Required Rules
 
 1. Require pull request before merging.
-2. Require approvals:
-   - minimum 2 approvals for policy-sensitive changes.
-   - enforce `CODEOWNERS` review.
+2. Single-operator default:
+   - required approvals: `0`
+   - rely on required CI checks and QA checklist evidence
+   - optional: enable code-owner review when team has separate reviewers
 3. Require status checks to pass:
    - `contract-governance`
    - `quality-gates`
@@ -29,4 +30,5 @@ Repository administrators must configure branch protection in GitHub settings.
 
 ## Operational Note
 
-CODEOWNERS alone does not block merges unless branch protection enforces code owner review.
+In 1-person operation, persona separation is process-based (Orchestrator/Domain/QA checklists), not account-based.
+If team size grows, increase required approvals and enforce code-owner review.

@@ -42,12 +42,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node
+        if: ${{ hashFiles('package.json') != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: |
-            package-lock.json
 
       - name: Install dependencies (if Node project exists)
         run: |
@@ -103,7 +101,8 @@ jobs:
       - name: Validate golden fixtures
         run: python scripts/ci/check_golden_fixtures.py
 
-      - name: Run golden regression tests (if implemented)
+      - name: Setup Node for golden tests
+        if: ${{ hashFiles('package.json') != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: "20"

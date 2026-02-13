@@ -1,7 +1,8 @@
-# Replace placeholders with actual GitHub users/teams.
+# Default owner mapping.
+# Replace with team handles later if you split Orchestrator/QA.
 
-/specs/ @flowhr/orchestrator @flowhr/qa
-/contracts/ @flowhr/orchestrator @flowhr/qa
-/qa/ @flowhr/qa
-/.github/ @flowhr/orchestrator @flowhr/qa
-/docs/ @flowhr/orchestrator
+/specs/ @yonghyeon-dev
+/contracts/ @yonghyeon-dev
+/qa/ @yonghyeon-dev
+/.github/ @yonghyeon-dev
+/docs/ @yonghyeon-dev
