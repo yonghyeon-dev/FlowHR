@@ -24,6 +24,7 @@
 - Rounding effects on payable amount.
 - Retroactive correction and recalculation.
 - Leave carry-over cap misapplication and duplicate-year settlement.
+- Deduction/tax aggregation mismatch impacting net pay.
 
 ## Migration Safety Risks
 

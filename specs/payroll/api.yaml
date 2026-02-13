@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.0.0
+  version: 1.1.0
 paths:
   /payroll/runs/preview:
     post:
@@ -9,6 +9,12 @@ paths:
       responses:
         "200":
           description: Preview generated
+  /payroll/runs/preview-with-deductions:
+    post:
+      summary: Create payroll preview with deduction and tax components (phase2)
+      responses:
+        "200":
+          description: Deduction preview generated
   /payroll/runs/{runId}/confirm:
     post:
       summary: Confirm payroll run

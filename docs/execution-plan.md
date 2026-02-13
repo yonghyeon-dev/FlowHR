@@ -29,7 +29,7 @@ Completed:
 
 Open gaps:
 
-- Payroll Phase 2 (deductions/tax/remittance) remains out of scope.
+- Payroll Phase 2 runtime implementation (deduction/tax calculation engine) remains out of scope.
 - Staging integration is disabled by default; continuous validation is not active until explicitly enabled.
 
 ## 2) Priority Roadmap
@@ -90,7 +90,7 @@ Tasks:
 
 1. Add external transport adapter for domain events (current implementation is in-process `noop`/`memory` only). (Completed: 2026-02-13)
 2. Implement leave accrual/carry-over settlement policy (WI-0003). (Completed: 2026-02-13)
-3. Define payroll Phase 2 contract set (deductions/tax) and non-breaking migration path.
+3. Define payroll Phase 2 contract set (deductions/tax) and non-breaking migration path. (Completed: 2026-02-13)
 4. Add spec-to-runtime drift check for table names and migration IDs. (Completed: 2026-02-13)
 5. Enable staging CI only when needed (`FLOWHR_ENABLE_STAGING_CI=true`) and keep schema isolation checks green.
 
@@ -136,5 +136,5 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. create payroll Phase 2 (deductions/tax) contract artifacts and compatibility matrix,
+1. implement payroll Phase 2 deduction/tax calculation runtime behind feature flag,
 2. enable staging CI with guarded secrets when staging DB is ready.

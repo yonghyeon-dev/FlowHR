@@ -47,6 +47,13 @@ This document is the shared source of truth for attendance-to-payroll calculatio
 - Carry-over formula: `min(max(remainingDays, 0), carryOverCapDays)`.
 - Duplicate settlement for same employee/year is rejected.
 
+## WI-0005 Payroll Deduction Rules (Contract)
+
+- Phase 2 is additive to WI-0001 gross-pay flow.
+- Total deductions: `withholdingTaxKrw + socialInsuranceKrw + otherDeductionsKrw`.
+- Net pay: `grossPayKrw - totalDeductionsKrw`.
+- Final amounts remain whole KRW integers.
+
 ## Calculation Priority
 
 1. Validate attendance record state (approved vs pending/canceled).
