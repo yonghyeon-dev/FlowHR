@@ -179,6 +179,14 @@ jobs:
             echo "::error::FLOWHR_STAGING_DIRECT_URL must be a PostgreSQL connection string"
             exit 1
           fi
+          if [[ "$STAGING_DATABASE_URL" != *"schema=staging"* ]]; then
+            echo "::error::FLOWHR_STAGING_DATABASE_URL must include schema=staging to prevent prod schema writes"
+            exit 1
+          fi
+          if [[ "$STAGING_DIRECT_URL" != *"schema=staging"* ]]; then
+            echo "::error::FLOWHR_STAGING_DIRECT_URL must include schema=staging to prevent prod schema writes"
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -202,6 +210,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FLOWHR_STAGING_SERVICE_ROLE_KEY }}
           FLOWHR_DATA_ACCESS: prisma
         run: |
+          npx prisma db execute --url "$DATABASE_URL" --stdin <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS "staging";
+          SQL
           npm run prisma:validate --if-present
           npm run prisma:migrate:deploy --if-present
           npm run test:e2e:prisma --if-present
