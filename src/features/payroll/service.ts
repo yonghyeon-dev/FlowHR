@@ -7,6 +7,8 @@ import {
   type PayableMinutes
 } from "@/lib/payroll-rules";
 import type { DataAccess, PayrollRunEntity } from "@/features/shared/data-access";
+import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
+import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
 
 type PreviewPayrollInput = {
@@ -20,7 +22,12 @@ type PreviewPayrollInput = {
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
+  eventPublisher?: DomainEventPublisher;
 };
+
+function getEventPublisher(context: ServiceContext): DomainEventPublisher {
+  return context.eventPublisher ?? getRuntimeDomainEventPublisher();
+}
 
 type PreviewPayrollResult = {
   run: PayrollRunEntity;
@@ -98,6 +105,22 @@ export async function previewPayroll(
       grossPayKrw
     }
   });
+  await getEventPublisher(context).publish({
+    name: "payroll.calculated.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "PayrollRun",
+    entityId: run.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      employeeId: input.employeeId ?? null,
+      sourceRecordCount: records.length,
+      totals,
+      grossPayKrw
+    }
+  });
 
   return {
     run,
@@ -134,6 +157,17 @@ export async function confirmPayrollRun(
     entityId: confirmed.id,
     actorRole: context.actor.role,
     actorId: context.actor.id
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.confirmed.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "PayrollRun",
+    entityId: confirmed.id,
+    actorRole: context.actor.role,
+    actorId: context.actor.id,
+    payload: {
+      confirmedAt: confirmed.confirmedAt?.toISOString() ?? null
+    }
   });
 
   return confirmed;
