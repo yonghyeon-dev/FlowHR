@@ -131,6 +131,51 @@ async function run() {
   };
   assert.equal(rejectedCreateBody.record.state, "PENDING");
 
+  const listSelfResponse = await attendanceCreateRoute.GET(
+    new Request(
+      "http://localhost/api/attendance/records?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00",
+      {
+        method: "GET",
+        headers: actorHeaders("employee", "EMP-1001")
+      }
+    )
+  );
+  assert.equal(listSelfResponse.status, 200, "employee should list own attendance records");
+  const listSelfBody = (await readJson(listSelfResponse)) as {
+    records: Array<{ id: string; employeeId: string; state: string }>;
+  };
+  assert.equal(listSelfBody.records.length, 2, "list should return both records in period");
+  assert.ok(
+    listSelfBody.records.some((record) => record.id === createdRecord.id),
+    "list should include first record"
+  );
+  assert.ok(
+    listSelfBody.records.some((record) => record.id === rejectedCreateBody.record.id),
+    "list should include second record"
+  );
+
+  const listOtherEmployeeDenied = await attendanceCreateRoute.GET(
+    new Request(
+      "http://localhost/api/attendance/records?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00&employeeId=EMP-9999",
+      {
+        method: "GET",
+        headers: actorHeaders("employee", "EMP-1001")
+      }
+    )
+  );
+  assert.equal(listOtherEmployeeDenied.status, 403, "employee cannot list other employee attendance");
+
+  const managerMissingEmployeeId = await attendanceCreateRoute.GET(
+    new Request(
+      "http://localhost/api/attendance/records?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00",
+      {
+        method: "GET",
+        headers: actorHeaders("manager", "MGR-1")
+      }
+    )
+  );
+  assert.equal(managerMissingEmployeeId.status, 400, "manager list query must include employeeId");
+
   const invalidJsonRejectResponse = await attendanceRejectRoute.POST(
     new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
       method: "POST",

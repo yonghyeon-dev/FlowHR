@@ -205,6 +205,24 @@ export const memoryDataAccess: DataAccess = {
       }
       rows.sort((a, b) => a.checkInAt.getTime() - b.checkInAt.getTime());
       return rows;
+    },
+
+    async listInPeriod(input) {
+      const rows: AttendanceRecordEntity[] = [];
+      for (const entity of state.attendance.values()) {
+        if (entity.checkInAt < input.periodStart || entity.checkInAt > input.periodEnd) {
+          continue;
+        }
+        if (input.employeeId && entity.employeeId !== input.employeeId) {
+          continue;
+        }
+        if (input.state && entity.state !== input.state) {
+          continue;
+        }
+        rows.push(cloneAttendance(entity));
+      }
+      rows.sort((a, b) => a.checkInAt.getTime() - b.checkInAt.getTime());
+      return rows;
     }
   },
 

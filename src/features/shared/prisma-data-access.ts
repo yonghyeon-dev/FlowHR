@@ -191,6 +191,26 @@ const attendance: AttendanceStore = {
       orderBy: { checkInAt: "asc" }
     });
     return records.map(toAttendanceEntity);
+  },
+
+  async listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    employeeId?: string;
+    state?: "PENDING" | "APPROVED" | "REJECTED";
+  }) {
+    const records = await prisma.attendanceRecord.findMany({
+      where: {
+        checkInAt: {
+          gte: input.periodStart,
+          lte: input.periodEnd
+        },
+        ...(input.employeeId ? { employeeId: input.employeeId } : {}),
+        ...(input.state ? { state: input.state } : {})
+      },
+      orderBy: { checkInAt: "asc" }
+    });
+    return records.map(toAttendanceEntity);
   }
 };
 
