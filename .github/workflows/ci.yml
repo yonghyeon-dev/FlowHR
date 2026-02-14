@@ -115,6 +115,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -122,7 +124,18 @@ jobs:
           python-version: "3.12"
 
       - name: Validate golden fixtures
-        run: python scripts/ci/check_golden_fixtures.py
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            python scripts/ci/check_golden_fixtures.py --base "$BASE_SHA" --head "$HEAD_SHA"
+          else
+            python scripts/ci/check_golden_fixtures.py
+          fi
+
+      - name: Golden fixture regression tests
+        run: python scripts/ci/test_check_golden_fixtures_regression.py
 
       - name: Setup Node for golden tests
         if: ${{ hashFiles('package.json') != '' }}
