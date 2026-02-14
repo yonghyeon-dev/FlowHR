@@ -57,6 +57,11 @@ async function run() {
   const leaveAccrualSettleRoute = await import("../../src/app/api/leave/accrual/settle/route.ts");
 
   try {
+    await prisma.employee.createMany({
+      data: [{ id: employeeId }, { id: otherEmployeeId }, { id: thirdEmployeeId }],
+      skipDuplicates: true
+    });
+
     const createResponse = await leaveCreateRoute.POST(
       jsonRequest(
         "POST",
@@ -270,6 +275,13 @@ async function run() {
     await prisma.leaveBalanceProjection.deleteMany({
       where: {
         employeeId: {
+          in: [employeeId, otherEmployeeId, thirdEmployeeId]
+        }
+      }
+    });
+    await prisma.employee.deleteMany({
+      where: {
+        id: {
           in: [employeeId, otherEmployeeId, thirdEmployeeId]
         }
       }

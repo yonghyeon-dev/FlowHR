@@ -1,16 +1,18 @@
 # Attendance DB Notes
 
-## Planned Tables
+## Tables
 
-- `attendance_records`
-- `attendance_corrections`
-- `attendance_approvals`
+- `AttendanceRecord`
+  - `employeeId` → `Employee.id` (FK enforced; WI-0035)
+- `AuditLog` (shared; created in WI-0001 migration extensions)
 
-## Migration
+## Migrations
 
-- `2026021301_attendance_base`
+- `202602130001_init_wi0001`
+- `202602130002_wi0001_api_extensions`
+- `202602140006_employee_fk_constraints`
 
 ## Compatibility
 
 - Expand-contract migration style.
-- No cross-domain writes permitted.
+- No cross-domain direct table access. Use API/event/projection.

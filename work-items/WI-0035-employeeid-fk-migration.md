@@ -34,9 +34,16 @@ Attendance/leave/payroll tables currently store `employeeId` as an unvalidated s
 
 ## Data Changes (Tables and Migrations)
 
-- Tables: core domain tables will reference Employee via FK (exact tables TBD)
-- Migration IDs: TBD
-- Backward compatibility plan: expand/contract; temporary dual-write if needed
+- Tables:
+  - `AttendanceRecord` -> `Employee` (FK: employeeId)
+  - `LeaveRequest` -> `Employee` (FK: employeeId)
+  - `LeaveBalanceProjection` -> `Employee` (FK: employeeId, 1:1)
+  - `PayrollRun` -> `Employee` (FK: employeeId, nullable, onDelete: SetNull)
+- Migration IDs:
+  - `202602140006_employee_fk_constraints`
+- Backward compatibility plan:
+  - backfill missing `Employee` rows for any historical employeeId references
+  - then enforce FK constraints
 
 ## API and Event Changes
 

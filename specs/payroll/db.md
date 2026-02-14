@@ -11,6 +11,11 @@
 - `202602130002_wi0001_api_extensions`
 - `202602140003_payroll_phase2_contract_base`
 - `202602140004_payroll_phase2_deduction_profile`
+- `202602140006_employee_fk_constraints`
+
+## Referential Integrity (WI-0035)
+
+- `PayrollRun.employeeId` (nullable) → `Employee.id` (FK enforced when present)
 
 ## Phase 2 Additive Columns (PayrollRun)
 
