@@ -91,6 +91,10 @@ Completed:
   - notifier payload includes optional runbook/break-glass/rollback workflow links
   - production failure workflows pass context link env vars to webhook notifier
   - webhook regression tests verify enriched Slack/Discord payload content
+- WI-0023 PR template regression harness is implemented:
+  - `test_check_pr_template_regression.py` fixes expected PR metadata gate behavior
+  - `contract-governance` now executes PR template regression tests in CI
+  - PR template rule regressions fail pre-merge
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -186,6 +190,7 @@ Tasks:
 27. Add WI-0020 regression tests for contract governance script rules. (Completed: 2026-02-13)
 28. Add WI-0021 PR template compliance checks in governance gate. (Completed: 2026-02-14)
 29. Add WI-0022 alert context link enrichment for failure notifications. (Completed: 2026-02-14)
+30. Add WI-0023 regression tests for PR template compliance gate. (Completed: 2026-02-14)
 
 Definition of Done:
 
