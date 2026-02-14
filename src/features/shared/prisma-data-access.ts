@@ -5,20 +5,27 @@ import type {
   AttendanceStore,
   AuditStore,
   CreateAttendanceRecordInput,
+  CreateEmployeeInput,
   CreateLeaveRequestInput,
+  CreateOrganizationInput,
   CreatePayrollRunInput,
   DataAccess,
   DeductionProfileEntity,
   DeductionProfileStore,
+  EmployeeEntity,
+  EmployeeStore,
   LeaveBalanceEntity,
   LeaveBalanceStore,
   LeaveRequestEntity,
   LeaveStore,
+  OrganizationEntity,
+  OrganizationStore,
   PayrollRunEntity,
   PayrollStore,
   RecordLeaveDecisionInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
+  UpdateEmployeeInput,
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput
 } from "@/features/shared/data-access";
@@ -138,6 +145,99 @@ function toDeductionProfileEntity(record: {
     updatedAt: record.updatedAt
   };
 }
+
+function toOrganizationEntity(record: {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): OrganizationEntity {
+  return record;
+}
+
+function toEmployeeEntity(record: {
+  id: string;
+  organizationId: string | null;
+  name: string | null;
+  email: string | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): EmployeeEntity {
+  return record;
+}
+
+const organizations: OrganizationStore = {
+  async create(input: CreateOrganizationInput) {
+    const record = await prisma.organization.create({
+      data: {
+        name: input.name
+      }
+    });
+    return toOrganizationEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.organization.findUnique({
+      where: { id }
+    });
+    return record ? toOrganizationEntity(record) : null;
+  },
+
+  async list() {
+    const records = await prisma.organization.findMany({
+      orderBy: { createdAt: "asc" }
+    });
+    return records.map(toOrganizationEntity);
+  }
+};
+
+const employees: EmployeeStore = {
+  async create(input: CreateEmployeeInput) {
+    const record = await prisma.employee.create({
+      data: {
+        id: input.id,
+        organizationId:
+          input.organizationId === undefined ? null : input.organizationId,
+        name: input.name === undefined ? null : input.name,
+        email: input.email === undefined ? null : input.email,
+        active: input.active ?? true
+      }
+    });
+    return toEmployeeEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.employee.findUnique({
+      where: { id }
+    });
+    return record ? toEmployeeEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateEmployeeInput) {
+    const record = await prisma.employee.update({
+      where: { id },
+      data: {
+        organizationId: input.organizationId,
+        name: input.name,
+        email: input.email,
+        active: input.active
+      }
+    });
+    return toEmployeeEntity(record);
+  },
+
+  async list(input: { active?: boolean; organizationId?: string }) {
+    const records = await prisma.employee.findMany({
+      where: {
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.organizationId ? { organizationId: input.organizationId } : {})
+      },
+      orderBy: { id: "asc" }
+    });
+    return records.map(toEmployeeEntity);
+  }
+};
 
 const attendance: AttendanceStore = {
   async create(input: CreateAttendanceRecordInput) {
@@ -524,6 +624,8 @@ const audit: AuditStore = {
 };
 
 export const prismaDataAccess: DataAccess = {
+  organizations,
+  employees,
   attendance,
   leave,
   leaveBalance,

@@ -12,9 +12,11 @@ Core HR entities (Employee / Organization) are currently missing from the databa
 
 ### In Scope
 
-- Define `Employee` and `Organization` (or `Tenant`) domain models contract-first.
+- Define `Employee` and `Organization` domain models contract-first.
 - Add Prisma models and migrations for Employee/Organization baseline.
-- Introduce minimal API for admin to create/read Employees (MVP admin-only).
+- Introduce minimal admin-only APIs:
+  - organizations: create/list/get
+  - employees: create/list/get/update
 - Backfill strategy for existing `employeeId` references (pre-work for FK migration WI).
 
 ### Out of Scope
@@ -26,6 +28,7 @@ Core HR entities (Employee / Organization) are currently missing from the databa
 
 1. Admin creates an Employee and receives a stable employee identifier.
 2. Attendance/leave/payroll can reference a real Employee entity (FK-ready).
+3. Employee id is aligned with Supabase authentication (recommended: use `auth.users.id` as Employee.id).
 
 ## Payroll Accuracy and Calculation Rules
 
@@ -39,25 +42,38 @@ Core HR entities (Employee / Organization) are currently missing from the databa
 
 ## Data Changes (Tables and Migrations)
 
-- Tables: add Employee/Organization baseline (exact schema TBD in contract)
-- Migration IDs: TBD
+- Tables: `Organization`, `Employee`
+- Migration IDs: `202602140005_employee_master`
 - Backward compatibility plan: additive first; no breaking FK enforcement in this WI
 
 ## API and Event Changes
 
-- Endpoints: add minimal admin-only Employee CRUD (exact paths TBD in contract)
-- Events published: employee.created (TBD)
+- Endpoints:
+  - `GET /people/organizations`
+  - `POST /people/organizations`
+  - `GET /people/organizations/{organizationId}`
+  - `GET /people/employees`
+  - `POST /people/employees`
+  - `GET /people/employees/{employeeId}`
+  - `PATCH /people/employees/{employeeId}`
+- Events published:
+  - `organization.created.v1`
+  - `employee.created.v1`
+  - `employee.profile.updated.v1`
 - Events consumed: none
 
 ## Test Plan
 
-- Unit: validation for employee creation payload
-- Integration: employee create/read API
+- Unit: validation for org/employee payload and employee update patch rules
+- Integration: org/employee admin-only route behaviors and duplicate create guard
 - Regression: existing attendance/leave/payroll flows remain unchanged
 
 ## Observability and Audit Logging
 
-- Audit events: employee created/updated
+- Audit events:
+  - `organization.created`
+  - `employee.created`
+  - `employee.profile.updated`
 - Metrics: not required initially
 - Alert conditions: not required
 
@@ -69,7 +85,7 @@ Core HR entities (Employee / Organization) are currently missing from the databa
 
 ## Definition of Ready (DoR)
 
-- [ ] Employee/Organization contract drafted under `specs/people/` (or similar domain).
+- [ ] Employee/Organization contract drafted under `specs/people/`.
 - [ ] Data ownership boundaries updated.
 
 ## Definition of Done (DoD)
@@ -77,4 +93,5 @@ Core HR entities (Employee / Organization) are currently missing from the databa
 - [ ] Prisma models/migrations merged.
 - [ ] Minimal APIs + tests merged.
 - [ ] Audit logs emitted for master data mutations.
+- [ ] Domain events are published and traceability gate remains green.
 

@@ -1,12 +1,17 @@
 import type {
   AppendAuditLogInput,
   AttendanceRecordEntity,
+  CreateEmployeeInput,
+  CreateOrganizationInput,
   DataAccess,
   DeductionProfileEntity,
+  EmployeeEntity,
   LeaveBalanceEntity,
   LeaveRequestEntity,
+  OrganizationEntity,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
+  UpdateEmployeeInput,
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput,
   PayrollRunEntity
@@ -14,6 +19,8 @@ import type {
 
 type MemoryState = {
   sequence: number;
+  organizations: Map<string, OrganizationEntity>;
+  employees: Map<string, EmployeeEntity>;
   attendance: Map<string, AttendanceRecordEntity>;
   leaveRequests: Map<string, LeaveRequestEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
@@ -25,6 +32,8 @@ type MemoryState = {
 function createState(): MemoryState {
   return {
     sequence: 1,
+    organizations: new Map<string, OrganizationEntity>(),
+    employees: new Map<string, EmployeeEntity>(),
     attendance: new Map<string, AttendanceRecordEntity>(),
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
@@ -101,6 +110,22 @@ function cloneDeductionProfile(entity: DeductionProfileEntity): DeductionProfile
   };
 }
 
+function cloneOrganization(entity: OrganizationEntity): OrganizationEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneEmployee(entity: EmployeeEntity): EmployeeEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
 function updateAttendanceEntity(
   existing: AttendanceRecordEntity,
   input: UpdateAttendanceRecordInput
@@ -152,7 +177,94 @@ function updatePayrollEntity(existing: PayrollRunEntity, input: UpdatePayrollRun
   };
 }
 
+function updateEmployeeEntity(existing: EmployeeEntity, input: UpdateEmployeeInput): EmployeeEntity {
+  return {
+    ...existing,
+    organizationId: input.organizationId !== undefined ? input.organizationId : existing.organizationId,
+    name: input.name !== undefined ? input.name : existing.name,
+    email: input.email !== undefined ? input.email : existing.email,
+    active: input.active !== undefined ? input.active : existing.active,
+    updatedAt: new Date()
+  };
+}
+
 export const memoryDataAccess: DataAccess = {
+  organizations: {
+    async create(input: CreateOrganizationInput) {
+      const now = new Date();
+      const entity: OrganizationEntity = {
+        id: nextId("ORG"),
+        name: input.name,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.organizations.set(entity.id, entity);
+      return cloneOrganization(entity);
+    },
+
+    async findById(id: string) {
+      const entity = state.organizations.get(id);
+      return entity ? cloneOrganization(entity) : null;
+    },
+
+    async list() {
+      const rows: OrganizationEntity[] = [];
+      for (const entity of state.organizations.values()) {
+        rows.push(cloneOrganization(entity));
+      }
+      rows.sort((a, b) => a.id.localeCompare(b.id));
+      return rows;
+    }
+  },
+
+  employees: {
+    async create(input: CreateEmployeeInput) {
+      const now = new Date();
+      const entity: EmployeeEntity = {
+        id: input.id,
+        organizationId:
+          input.organizationId === undefined ? null : input.organizationId,
+        name: input.name === undefined ? null : input.name,
+        email: input.email === undefined ? null : input.email,
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.employees.set(entity.id, entity);
+      return cloneEmployee(entity);
+    },
+
+    async findById(id: string) {
+      const entity = state.employees.get(id);
+      return entity ? cloneEmployee(entity) : null;
+    },
+
+    async update(id: string, input: UpdateEmployeeInput) {
+      const existing = state.employees.get(id);
+      if (!existing) {
+        throw new Error(`employee not found: ${id}`);
+      }
+      const updated = updateEmployeeEntity(existing, input);
+      state.employees.set(id, updated);
+      return cloneEmployee(updated);
+    },
+
+    async list(input) {
+      const rows: EmployeeEntity[] = [];
+      for (const entity of state.employees.values()) {
+        if (input.active !== undefined && entity.active !== input.active) {
+          continue;
+        }
+        if (input.organizationId && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        rows.push(cloneEmployee(entity));
+      }
+      rows.sort((a, b) => a.id.localeCompare(b.id));
+      return rows;
+    }
+  },
+
   attendance: {
     async create(input) {
       const now = new Date();

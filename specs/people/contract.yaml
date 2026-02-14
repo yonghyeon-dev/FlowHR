@@ -1,0 +1,109 @@
+owner: people-agent
+version: 0.1.0
+scope:
+  in:
+    - organization master data (create/read/list)
+    - employee master data (create/read/list/update)
+    - audit logs for all employee/org mutations
+    - domain events for employee/org mutations
+  out:
+    - multi-tenant enforcement (RLS) across core tables (Phase 1 follow-up)
+    - RBAC engine and permission administration UI (Phase 1 follow-up)
+    - attendance/leave/payroll business rules
+entities:
+  - name: Organization
+    description: Company/tenant placeholder entity used for future tenant isolation.
+  - name: Employee
+    description: HR master entity. Canonical id should match Supabase auth user.id (UUID string) for production.
+api:
+  auth:
+    - role: admin
+      permission: manage employees and organizations
+  endpoints:
+    - method: GET
+      path: /people/organizations
+      description: List organizations.
+    - method: POST
+      path: /people/organizations
+      description: Create organization.
+    - method: GET
+      path: /people/organizations/{organizationId}
+      description: Get organization by id.
+    - method: GET
+      path: /people/employees
+      description: List employees (optional filters).
+    - method: POST
+      path: /people/employees
+      description: Create employee (id must be provided; recommended Supabase user.id).
+    - method: GET
+      path: /people/employees/{employeeId}
+      description: Get employee by id.
+    - method: PATCH
+      path: /people/employees/{employeeId}
+      description: Update employee profile fields (admin only).
+  events:
+    published:
+      - name: organization.created.v1
+        description: Emitted when an organization record is created.
+      - name: employee.created.v1
+        description: Emitted when an employee record is created.
+      - name: employee.profile.updated.v1
+        description: Emitted when employee profile metadata is updated (name/email/org/active).
+    consumed: []
+db_changes:
+  migrations:
+    - id: 202602140005_employee_master
+      description: Create Organization and Employee base tables.
+  backward_compatible: true
+  notes: "Additive foundation tables only. No FK enforcement across domains in v0.1."
+invariants:
+  - Employee mutations are admin-only in v0.1.
+  - Employee id is treated as canonical identifier and should match Supabase auth user.id in production.
+  - Organization is a placeholder for future tenant isolation (no RLS enforced by this contract).
+risk:
+  permissions:
+    - Unauthorized employee creation could lead to data integrity issues once FK enforcement is introduced.
+  legal:
+    - Employee PII must be minimized and audited.
+test_plan:
+  unit:
+    - create/update payload validation boundaries (email, name length)
+    - list query filter parsing
+  integration:
+    - organization create/list/get admin-only
+    - employee create/list/get/update admin-only
+    - duplicate employee create returns 409
+  regression:
+    - existing attendance/leave/payroll flows remain unchanged
+  authorization:
+    - non-admin calls are rejected with 403
+  payroll_accuracy:
+    - not applicable
+observability:
+  audit_events:
+    - organization.created
+    - employee.created
+    - employee.profile.updated
+  metrics:
+    - employee_created_count
+    - employee_updated_count
+  logs:
+    - authorization denied logs for people endpoints
+rollout:
+  feature_flags:
+    - name: people_v1
+      default: "off"
+  migration_strategy: expand-contract
+rollback:
+  strategy: disable people_v1 and revert API exposure; data remains for forward-fix
+  max_recovery_time: 30m
+deprecations: []
+breaking_changes: false
+consumer_impact: "People contract v0.1.0 introduces Organization/Employee master data tables and admin-only APIs with audit + domain events."
+references:
+  - work-items/WI-0034-employee-organization-master-model.md
+  - docs/data-ownership.md
+approval:
+  spec_owner: people-agent
+  qa_owner: qa-agent
+
