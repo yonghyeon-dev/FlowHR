@@ -102,12 +102,15 @@ Completed:
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
-- Production runtime flag is active (`FLOWHR_PAYROLL_DEDUCTIONS_V1=true`) on GitHub env and Vercel.
-- Production profile flag baseline is synced (`FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false`) on GitHub env and Vercel.
+- Payroll phase2 health workflow incident noise is reduced (gate skip when Phase2 is disabled, expected 409 classification, incident dedup).
 
 Open gaps:
 
-- none blocking for current MVP+ hardening scope
+- Production foundation items are still missing (tracked in `ROADMAP.md` and Phase 1 WI stubs):
+  - Employee/Organization master data
+  - employeeId referential integrity (FK migration)
+  - RBAC engine (replace hardcoded roles)
+  - multi-tenant isolation (Supabase RLS baseline)
 
 ## 2) Priority Roadmap
 
@@ -159,7 +162,7 @@ Delivered:
 
 Definition of Done: achieved for MVP scope.
 
-## P4. Next Hardening Wave (Next)
+## P4. Hardening Wave (Completed)
 
 Objective: close functional/operational gaps before broader rollout.
 
@@ -203,6 +206,24 @@ Definition of Done:
 - WI-0003 contract + tests are merged.
 - Phase 2 payroll contracts are approved with compatibility strategy.
 - Drift check blocks mismatched docs/spec/runtime identifiers.
+
+## P5. Production Foundation (Next)
+
+Objective: establish production-grade HR SaaS foundations before expanding modules.
+
+Tasks (Phase 1 stubs):
+
+1. `work-items/WI-0034-employee-organization-master-model.md`
+2. `work-items/WI-0035-employeeid-fk-migration.md`
+3. `work-items/WI-0036-rbac-engine-foundation.md`
+4. `work-items/WI-0037-multi-tenant-rls-baseline.md`
+
+Definition of Done:
+
+- Employee/Organization master data exists and is audited.
+- Core domain tables enforce employee integrity (FK).
+- Authorization is RBAC-based (no hardcoded role lists for core APIs).
+- Tenant isolation is enforced at DB level (RLS) for core tables.
 
 ## 3) Workstream Ownership
 

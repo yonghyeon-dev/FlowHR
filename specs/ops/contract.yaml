@@ -1,5 +1,5 @@
 owner: ops-agent
-version: 0.1.3
+version: 0.1.4
 scope:
   in:
     - local developer experience scripts and conventions
@@ -60,7 +60,7 @@ rollback:
   max_recovery_time: 15m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Ops contract v0.1.3 reduces phase2-health false incidents by skipping the gate when Phase2 is disabled and excluding expected 409 failures caused by disabled rollout flags. Incident issue creation is deduplicated into a single open issue via comments."
+consumer_impact: "Ops contract v0.1.4 tracks roadmap/execution-plan alignment and seeds Phase 1 backlog WIs while preserving the phase2-health noise controls introduced in v0.1.3."
 references:
   - work-items/WI-0011-slack-alert-unification.md
   - work-items/WI-0013-discord-alert-webhook-support.md
@@ -69,6 +69,11 @@ references:
   - work-items/WI-0025-local-dev-port-and-local-artifacts.md
   - work-items/WI-0029-console-list-actions.md
   - work-items/WI-0032-payroll-phase2-health-incident-noise.md
+  - work-items/WI-0033-roadmap-phase1-backlog-seeding.md
+  - work-items/WI-0034-employee-organization-master-model.md
+  - work-items/WI-0035-employeeid-fk-migration.md
+  - work-items/WI-0036-rbac-engine-foundation.md
+  - work-items/WI-0037-multi-tenant-rls-baseline.md
   - ROADMAP.md
   - docs/execution-plan.md
   - docs/production-rollout.md

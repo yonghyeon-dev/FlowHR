@@ -1,4 +1,4 @@
-# Ops Test Cases (Contract v0.1.3)
+# Ops Test Cases (Contract v0.1.4)
 
 ## Alert Webhook Smoke (Discord-first, Slack fallback)
 
@@ -24,8 +24,9 @@
 
 ## Roadmap / Planning Artifacts
 
-- `ROADMAP.md` must reflect current merged WI status (e.g., WI-0031 is completed) and Phase 1 priorities.
+- `ROADMAP.md` must reflect current merged WI status (e.g., WI-0032 is completed) and Phase 1 priorities.
 - Roadmap/doc updates must not break contract governance gates.
+- Phase 1 WI stubs exist under `work-items/` and can be expanded contract-first.
 
 ## Payroll Phase2 Health Gate (Noise Control)
 
