@@ -75,6 +75,11 @@ function isFeatureFlagDisabled409(message: string | null, flagName: string): boo
   return message.trim().toLowerCase() === `${flagName} feature flag is disabled`;
 }
 
+function formatTopMessageCounts(input: Record<string, number>, limit: number) {
+  const entries = Object.entries(input).sort((a, b) => b[1] - a[1]);
+  return entries.slice(0, limit).map(([message, count]) => ({ message, count }));
+}
+
 async function run() {
   if (!process.env.DATABASE_URL || !process.env.DIRECT_URL) {
     throw new Error("DATABASE_URL and DIRECT_URL are required");
@@ -134,9 +139,11 @@ async function run() {
     let deductionsCalculated = 0;
     let confirmed = 0;
     let previewFailed403 = 0;
-    let previewFailed409 = 0;
+    let previewFailed409Mismatch = 0;
     let previewFailed409Expected = 0;
+    let previewFailed409Ignored = 0;
     let previewFailedOther = 0;
+    const preview409Messages: Record<string, number> = {};
 
     for (const row of actions) {
       if (row.action === "payroll.deductions_calculated") {
@@ -149,6 +156,9 @@ async function run() {
         if (status === 403) {
           previewFailed403 += 1;
         } else if (status === 409) {
+          const messageKey = message?.trim() || "<missing-message>";
+          preview409Messages[messageKey] = (preview409Messages[messageKey] ?? 0) + 1;
+
           const phase2FlagDisabled = isFeatureFlagDisabled409(
             message,
             "payroll_deductions_v1"
@@ -158,10 +168,22 @@ async function run() {
             "payroll_deduction_profile_v1"
           );
 
-          if ((phase2FlagDisabled && !deductionsEnabled) || (profileFlagDisabled && !profileEnabled)) {
-            previewFailed409Expected += 1;
+          // 409 is often used for business input conflicts. For health gating, we only treat
+          // feature-flag mismatch 409s as gate-relevant signals.
+          if (phase2FlagDisabled) {
+            if (!deductionsEnabled) {
+              previewFailed409Expected += 1;
+            } else {
+              previewFailed409Mismatch += 1;
+            }
+          } else if (profileFlagDisabled) {
+            if (!profileEnabled) {
+              previewFailed409Expected += 1;
+            } else {
+              previewFailed409Mismatch += 1;
+            }
           } else {
-            previewFailed409 += 1;
+            previewFailed409Ignored += 1;
           }
         } else {
           previewFailedOther += 1;
@@ -170,11 +192,21 @@ async function run() {
     }
 
     const previewAttemptsAll =
-      deductionsCalculated + previewFailed403 + previewFailed409 + previewFailed409Expected + previewFailedOther;
+      deductionsCalculated +
+      previewFailed403 +
+      previewFailed409Mismatch +
+      previewFailed409Expected +
+      previewFailed409Ignored +
+      previewFailedOther;
+
     const previewAttemptsForGate =
-      deductionsCalculated + previewFailed403 + previewFailed409 + previewFailedOther;
+      deductionsCalculated + previewFailed403 + previewFailed409Mismatch + previewFailedOther;
+
     const ratio403 = previewAttemptsForGate > 0 ? previewFailed403 / previewAttemptsForGate : 0;
-    const ratio409 = previewAttemptsForGate > 0 ? previewFailed409 / previewAttemptsForGate : 0;
+    const ratio409 =
+      previewAttemptsForGate > 0 ? previewFailed409Mismatch / previewAttemptsForGate : 0;
+
+    const top409Messages = formatTopMessageCounts(preview409Messages, 5);
 
     const report = {
       phase2Enabled: deductionsEnabled,
@@ -187,11 +219,13 @@ async function run() {
       previewAttempts: previewAttemptsAll,
       previewAttemptsForGate,
       previewFailed403,
-      previewFailed409,
+      previewFailed409Mismatch,
       previewFailed409Expected,
+      previewFailed409Ignored,
       previewFailedOther,
       ratio403,
       ratio409,
+      top409Messages,
       thresholds: {
         minAttempts,
         max403Ratio,
@@ -212,11 +246,20 @@ async function run() {
       `- Preview Attempts: ${previewAttemptsAll}`,
       `- Preview Attempts (gate): ${previewAttemptsForGate}`,
       `- Failed 403: ${previewFailed403} (${toPercent(ratio403)})`,
-      `- Failed 409: ${previewFailed409} (${toPercent(ratio409)})`,
+      `- Failed 409 (mismatch): ${previewFailed409Mismatch} (${toPercent(ratio409)})`,
       `- Failed 409 (expected): ${previewFailed409Expected}`,
+      `- Failed 409 (ignored): ${previewFailed409Ignored}`,
       `- Failed Other: ${previewFailedOther}`
     ];
     appendSummary(summaryLines);
+
+    if (top409Messages.length > 0) {
+      appendSummary([
+        "",
+        "### 409 message breakdown (top 5)",
+        ...top409Messages.map((entry) => `- ${entry.count}x: ${entry.message}`)
+      ]);
+    }
 
     if (!deductionsEnabled) {
       appendSummary(["", "- Gate: skipped (FLOWHR_PAYROLL_DEDUCTIONS_V1=false)"]);
@@ -228,7 +271,7 @@ async function run() {
       failedChecks.push(`403 ratio ${toPercent(ratio403)} exceeds ${toPercent(max403Ratio)}`);
     }
     if (previewAttemptsForGate >= minAttempts && ratio409 > max409Ratio) {
-      failedChecks.push(`409 ratio ${toPercent(ratio409)} exceeds ${toPercent(max409Ratio)}`);
+      failedChecks.push(`409 mismatch ratio ${toPercent(ratio409)} exceeds ${toPercent(max409Ratio)}`);
     }
 
     if (failedChecks.length > 0) {

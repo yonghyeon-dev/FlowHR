@@ -1,4 +1,4 @@
-# Ops Test Cases (Contract v0.1.4)
+# Ops Test Cases (Contract v0.1.5)
 
 ## Alert Webhook Smoke (Discord-first, Slack fallback)
 
@@ -33,10 +33,18 @@
 - When `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`, `payroll-phase2-health` must:
   - print a summary including `Gate: skipped (FLOWHR_PAYROLL_DEDUCTIONS_V1=false)`
   - exit successfully (no incident issue, no alert webhook)
+- `409` failures must be classified as:
+  - expected: rollout flag is off, excluded from gate ratio
+  - mismatch: rollout flag is on, included in gate ratio (config mismatch signal)
+  - ignored: any other 409 business-input conflict, excluded from gate ratio but reported for triage
 - When `FLOWHR_PAYROLL_DEDUCTIONS_V1=true` and `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false`, `409` failures with message:
   - `payroll_deduction_profile_v1 feature flag is disabled`
   must be counted as "expected" and excluded from the gate ratio.
-- When `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, unexpected `403/409` ratios above thresholds must fail the workflow.
+- When `FLOWHR_PAYROLL_DEDUCTIONS_V1=true` and `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=true`, `409` failures with message:
+  - `payroll_deduction_profile_v1 feature flag is disabled`
+  must be counted as "mismatch" and included in the gate ratio.
+- When `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, `403` ratio and `409 mismatch` ratio above thresholds must fail the workflow.
+- Step summary must include a `409 message breakdown (top 5)` section when 409s are observed.
 - Incident issue deduplication:
   - If an open `[phase2-health]` issue exists with labels `incident, phase2, ops`, the workflow must add a comment instead of creating a new issue.
 
