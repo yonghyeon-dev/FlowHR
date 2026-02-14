@@ -1,4 +1,4 @@
-# Ops Test Cases (Contract v0.1.0)
+# Ops Test Cases (Contract v0.1.1)
 
 ## Alert Webhook Smoke (Discord-first, Slack fallback)
 
@@ -14,4 +14,11 @@
 ## Local Artifact Hygiene
 
 - `git status` does not show `.devserver.*.log` and `.tmp-*` directories as untracked noise.
+
+## MVP Console List Actions
+
+- Console provides buttons to call list endpoints and shows JSON payload in the log panel:
+  - `GET /api/attendance/records`
+  - `GET /api/leave/requests`
+  - `GET /api/payroll/runs`
 
