@@ -95,6 +95,10 @@ Completed:
   - `test_check_pr_template_regression.py` fixes expected PR metadata gate behavior
   - `contract-governance` now executes PR template regression tests in CI
   - PR template rule regressions fail pre-merge
+- WI-0024 golden change-control gate is implemented:
+  - golden fixture diffs now require linked work item and contract updates
+  - breaking fixture changes (delete/rename/id-change) require ADR update
+  - golden governance regression tests are executed in CI
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -191,6 +195,7 @@ Tasks:
 28. Add WI-0021 PR template compliance checks in governance gate. (Completed: 2026-02-14)
 29. Add WI-0022 alert context link enrichment for failure notifications. (Completed: 2026-02-14)
 30. Add WI-0023 regression tests for PR template compliance gate. (Completed: 2026-02-14)
+31. Add WI-0024 golden fixture change-control gate and regression tests. (Completed: 2026-02-14)
 
 Definition of Done:
 
