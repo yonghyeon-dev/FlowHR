@@ -39,6 +39,9 @@ jobs:
             python scripts/ci/check_contracts.py
           fi
 
+      - name: Contract governance regression tests
+        run: python scripts/ci/test_check_contracts_regression.py
+
       - name: Spec/work-item/runtime traceability checks
         run: python scripts/ci/check_traceability.py
 
