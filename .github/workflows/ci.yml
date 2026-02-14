@@ -34,6 +34,9 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: python scripts/ci/check_pr_template.py
 
+      - name: PR template regression tests
+        run: python scripts/ci/test_check_pr_template_regression.py
+
       - name: Contract lint and versioning checks
         env:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
