@@ -11,11 +11,12 @@ English labels, which makes incident response harder for Korean-first operators.
 
 - When the configured webhook provider is Discord, format alert message labels in Korean.
 - Keep Slack formatting unchanged.
+- Update default alert titles in GitHub workflows to Korean (operators can still override via inputs/env).
 - Update regression tests to lock the Discord payload content expectations.
 
 ### Out of Scope
 
-- Translating titles provided by workflows via environment variables.
+- Translating arbitrary custom titles supplied externally (we only adjust FlowHR workflow defaults).
 - Changing webhook transport, payload schema, or provider detection rules.
 
 ## User Scenarios
@@ -75,4 +76,3 @@ English labels, which makes incident response harder for Korean-first operators.
 - [ ] Discord alert message labels are in Korean.
 - [ ] Slack alert message format is unchanged.
 - [ ] `test:integration` passes.
-
