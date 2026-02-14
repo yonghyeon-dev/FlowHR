@@ -83,6 +83,10 @@ Completed:
   - `test_check_contracts_regression.py` fixes expected behaviors for governance rules
   - CI `contract-governance` job runs regression tests after contract lint/version checks
   - script refactors now fail fast if SemVer/coupling rules regress
+- WI-0021 PR template compliance gate is implemented:
+  - `check_pr_template.py` validates required checklist/work-item/ADR metadata
+  - break-glass trigger usage requires incident/approval/rollback fields
+  - `contract-governance` now enforces PR metadata completeness on pull requests
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -176,6 +180,7 @@ Tasks:
 25. Add WI-0018 contract/API version alignment check to contract governance gate. (Completed: 2026-02-13)
 26. Add WI-0019 API/contract coupling check for API-only spec changes. (Completed: 2026-02-13)
 27. Add WI-0020 regression tests for contract governance script rules. (Completed: 2026-02-13)
+28. Add WI-0021 PR template compliance checks in governance gate. (Completed: 2026-02-14)
 
 Definition of Done:
 

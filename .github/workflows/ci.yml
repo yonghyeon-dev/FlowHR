@@ -28,6 +28,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r scripts/ci/requirements.txt
 
+      - name: PR template compliance checks
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: python scripts/ci/check_pr_template.py
+
       - name: Contract lint and versioning checks
         env:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
