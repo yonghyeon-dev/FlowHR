@@ -1,10 +1,11 @@
 owner: ops-agent
-version: 0.1.2
+version: 0.1.3
 scope:
   in:
     - local developer experience scripts and conventions
     - alert webhook transport support (Discord/Slack compatible)
     - workflow-level smoke checks for alert delivery
+    - phase2 health monitoring guardrails (gate skip + expected failure classification + incident dedup)
     - MVP console verification affordances (list actions)
     - production roadmap and execution plan documentation for Phase 1 prioritization
   out:
@@ -25,13 +26,17 @@ db_changes:
 invariants:
   - Alert webhook support must remain backward compatible (Discord-first, Slack fallback).
   - Dev scripts must not require production secrets.
+  - Phase2 health monitoring must not generate incident noise when Phase2 rollout is disabled.
 test_plan:
   unit:
     - notifier provider auto-detection and required webhook guard
+    - phase2 health report boolean env parsing + expected 409 classification
   integration:
     - alert-webhook-smoke workflow succeeds when webhook is configured
+    - payroll-phase2-health workflow does not fail when FLOWHR_PAYROLL_DEDUCTIONS_V1=false
   regression:
     - ops alert webhook regression tests remain green in CI
+    - phase2 health workflow failures deduplicate into a single open incident issue (comment on existing)
   authorization:
     - production secret mutation remains admin-only
   payroll_accuracy:
@@ -41,17 +46,21 @@ observability:
   metrics:
     - workflow_failure_issue_created
     - alert_webhook_smoke_success
+    - phase2_health_gate_skipped
+    - phase2_health_failed_409_expected
   logs:
     - webhook send result logs for troubleshooting
 rollout:
-  feature_flags: []
+  feature_flags:
+    - FLOWHR_PAYROLL_DEDUCTIONS_V1
+    - FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1
   migration_strategy: none
 rollback:
   strategy: revert workflow/script change and re-run smoke workflow
   max_recovery_time: 15m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Ops contract v0.1.2 adds non-breaking roadmap/execution plan documentation updates to align Phase 1 priorities with current repo state."
+consumer_impact: "Ops contract v0.1.3 reduces phase2-health false incidents by skipping the gate when Phase2 is disabled and excluding expected 409 failures caused by disabled rollout flags. Incident issue creation is deduplicated into a single open issue via comments."
 references:
   - work-items/WI-0011-slack-alert-unification.md
   - work-items/WI-0013-discord-alert-webhook-support.md
@@ -59,8 +68,10 @@ references:
   - work-items/WI-0022-alert-context-links.md
   - work-items/WI-0025-local-dev-port-and-local-artifacts.md
   - work-items/WI-0029-console-list-actions.md
+  - work-items/WI-0032-payroll-phase2-health-incident-noise.md
   - ROADMAP.md
   - docs/execution-plan.md
+  - docs/production-rollout.md
 approval:
   spec_owner: ops-agent
   qa_owner: qa-agent

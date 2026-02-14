@@ -1,4 +1,4 @@
-# Ops Test Cases (Contract v0.1.2)
+# Ops Test Cases (Contract v0.1.3)
 
 ## Alert Webhook Smoke (Discord-first, Slack fallback)
 
@@ -26,4 +26,16 @@
 
 - `ROADMAP.md` must reflect current merged WI status (e.g., WI-0031 is completed) and Phase 1 priorities.
 - Roadmap/doc updates must not break contract governance gates.
+
+## Payroll Phase2 Health Gate (Noise Control)
+
+- When `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`, `payroll-phase2-health` must:
+  - print a summary including `Gate: skipped (FLOWHR_PAYROLL_DEDUCTIONS_V1=false)`
+  - exit successfully (no incident issue, no alert webhook)
+- When `FLOWHR_PAYROLL_DEDUCTIONS_V1=true` and `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false`, `409` failures with message:
+  - `payroll_deduction_profile_v1 feature flag is disabled`
+  must be counted as "expected" and excluded from the gate ratio.
+- When `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, unexpected `403/409` ratios above thresholds must fail the workflow.
+- Incident issue deduplication:
+  - If an open `[phase2-health]` issue exists with labels `incident, phase2, ops`, the workflow must add a comment instead of creating a new issue.
 
