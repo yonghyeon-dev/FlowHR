@@ -143,4 +143,7 @@ jobs:
           FLOWHR_ALERT_REF: ${{ github.ref }}
           FLOWHR_ALERT_TRIGGER: ${{ github.event_name }}
           FLOWHR_ALERT_REASON: ${{ steps.mode.outputs.reason }}
+          FLOWHR_ALERT_RUNBOOK_URL: "https://github.com/${{ github.repository }}/blob/main/docs/production-rollout.md"
+          FLOWHR_ALERT_BREAK_GLASS_URL: "https://github.com/${{ github.repository }}/blob/main/docs/break-glass.md"
+          FLOWHR_ALERT_ROLLBACK_WORKFLOW_URL: "https://github.com/${{ github.repository }}/actions/workflows/payroll-phase2-rollback.yml"
         run: node scripts/ops/notify-slack-failure.mjs
