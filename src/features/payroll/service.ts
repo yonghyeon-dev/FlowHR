@@ -88,6 +88,11 @@ type UpsertDeductionProfileResult = {
   profile: Awaited<ReturnType<DataAccess["deductionProfiles"]["upsert"]>>;
 };
 
+type ListDeductionProfilesInput = {
+  active?: boolean;
+  mode?: "manual" | "profile";
+};
+
 type ListPayrollRunsInput = {
   periodStart: Date;
   periodEnd: Date;
@@ -582,4 +587,15 @@ export async function upsertDeductionProfile(
   });
 
   return { profile };
+}
+
+export async function listDeductionProfiles(
+  context: ServiceContext,
+  input: ListDeductionProfilesInput
+): Promise<DeductionProfileEntity[]> {
+  requireDeductionProfileOperator(context.actor, "read");
+  return await context.dataAccess.deductionProfiles.list({
+    active: input.active,
+    mode: input.mode
+  });
 }

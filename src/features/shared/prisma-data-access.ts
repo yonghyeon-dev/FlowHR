@@ -464,6 +464,17 @@ const deductionProfiles: DeductionProfileStore = {
     return profile ? toDeductionProfileEntity(profile) : null;
   },
 
+  async list(input: { active?: boolean; mode?: "manual" | "profile" }) {
+    const profiles = await prisma.deductionProfile.findMany({
+      where: {
+        ...(input.active === undefined ? {} : { active: input.active }),
+        ...(input.mode ? { mode: input.mode } : {})
+      },
+      orderBy: { id: "asc" }
+    });
+    return profiles.map(toDeductionProfileEntity);
+  },
+
   async upsert(input: UpsertDeductionProfileInput) {
     const profile = await prisma.deductionProfile.upsert({
       where: { id: input.id },

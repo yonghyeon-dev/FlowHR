@@ -74,3 +74,8 @@ export const listPayrollRunsQuerySchema = z.object({
   employeeId: z.string().min(1).optional(),
   state: payrollStateSchema.optional()
 });
+
+export const listDeductionProfilesQuerySchema = z.object({
+  active: z.enum(["true", "false"]).optional(),
+  mode: z.enum(["manual", "profile"]).optional()
+});
