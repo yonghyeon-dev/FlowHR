@@ -93,8 +93,8 @@ The MVP console and future UI need a stable endpoint to validate aggregation out
 
 ## Definition of Done (DoD)
 
-- [ ] Contract/API/test-cases updated with SemVer bump and consumer impact.
-- [ ] Implementation matches contract invariants.
-- [ ] Required unit/e2e tests pass (memory + prisma).
-- [ ] QA Spec Gate and Code Gate are satisfied.
+- [x] Contract/API/test-cases updated with SemVer bump and consumer impact.
+- [x] Implementation matches contract invariants.
+- [x] Required unit/e2e tests pass (memory + prisma).
+- [x] QA Spec Gate and Code Gate are satisfied.
 
