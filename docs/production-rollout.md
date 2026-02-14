@@ -81,17 +81,21 @@ Workflow: `.github/workflows/payroll-phase2-health.yml`
   - `payroll.deductions_calculated`
   - `payroll.preview_with_deductions.failed`
   - `payroll.confirmed`
-- Tracks `403` / `409` failure ratios for phase2 preview path.
+- Tracks `403` failure ratio (authorization) and `409` **mismatch** ratio (feature-flag config mismatch only).
 - Health gate behavior:
   - When `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`, the workflow reports metrics but skips failing the job (no incident noise while phase2 is disabled).
-  - `409` failures caused by disabled rollout flags (e.g. `payroll_deduction_profile_v1 feature flag is disabled`) are counted separately as "expected" when the corresponding flag is off, and excluded from the gate ratio.
+  - `409` failures caused by disabled rollout flags are split into:
+    - expected (flag is off): excluded from gate ratio
+    - mismatch (flag is on): included in gate ratio
+  - Other `409` failures are reported for triage but excluded from gate ratio to reduce false incidents (business input conflicts are not reliable health signals).
+  - Step summary includes a top-5 `409` message breakdown for quick diagnosis.
 - Creates GitHub issue on failure and can notify Discord/Slack when webhook secrets are configured.
 - Webhook notification payload is sent via `scripts/ops/notify-slack-failure.mjs` (Discord/Slack auto-detect).
 
 Tunable production environment variables:
 
 - `FLOWHR_PAYROLL_DEDUCTIONS_V1` (default `false`): gate on/off for phase2 health.
-- `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1` (default `false`): profile-mode gate alignment for expected 409 classification.
+- `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1` (default `false`): profile-mode gate alignment for 409 expected/mismatch classification.
 - `FLOWHR_PHASE2_HEALTH_WINDOW_HOURS` (default `24`)
 - `FLOWHR_PHASE2_HEALTH_MIN_ATTEMPTS` (default `1`)
 - `FLOWHR_PHASE2_HEALTH_MAX_403_RATIO` (default `0.20`)
