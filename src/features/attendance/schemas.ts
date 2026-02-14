@@ -30,3 +30,9 @@ export const listAttendanceQuerySchema = z.object({
   employeeId: z.string().min(1).optional(),
   state: attendanceState.optional()
 });
+
+export const listAttendanceAggregatesQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+  employeeId: z.string().min(1).optional()
+});

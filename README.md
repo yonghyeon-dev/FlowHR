@@ -113,6 +113,7 @@ Production rollout: `docs/production-rollout.md`
 
 - Attendance:
   - `GET /api/attendance/records` (query: `from`, `to`, optional `employeeId`, optional `state`)
+  - `GET /api/attendance/aggregates` (query: `from`, `to`, optional `employeeId`)
   - `POST /api/attendance/records`
   - `PATCH /api/attendance/records/{recordId}`
   - `POST /api/attendance/records/{recordId}/approve`

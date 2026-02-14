@@ -1,9 +1,10 @@
 owner: attendance-agent
-version: 1.3.0
+version: 1.4.0
 scope:
   in:
     - attendance record create/update
     - attendance record list query by period
+    - attendance aggregates query by period
     - correction approval/rejection flow
     - rejection reason capture in audit/event payload
     - approved/rejected attendance event publication
@@ -29,6 +30,9 @@ api:
     - method: GET
       path: /attendance/records
       description: List attendance records filtered by period (from/to) and optional employeeId/state.
+    - method: GET
+      path: /attendance/aggregates
+      description: List attendance aggregates (payable minutes totals) filtered by period (from/to) and optional employeeId.
     - method: POST
       path: /attendance/records
       description: Create attendance record.
@@ -66,6 +70,7 @@ invariants:
   - An approved attendance record cannot be silently overwritten.
   - A rejected attendance record cannot transition directly to approved.
   - Rejected attendance record is excluded from payroll aggregation.
+  - Attendance aggregate totals are derived from approved attendance records only.
   - Attendance timestamps are interpreted in Asia/Seoul.
   - Approved/rejected attendance emits exactly one final state event.
   - Employee attendance list queries are restricted to own employeeId.
@@ -83,6 +88,8 @@ test_plan:
     - correction state transition validation
     - rejection reason schema boundary (max 500 chars)
     - attendance list query parsing and role boundary guards
+    - attendance aggregates query parsing and role boundary guards
+    - attendance aggregates totals are computed from approved records only
   integration:
     - create record to approve flow
     - create record to reject flow
@@ -90,6 +97,7 @@ test_plan:
     - reject flow invalid JSON body returns 400
     - reject flow oversized reason payload returns 400
     - list records by period returns expected rows
+    - list aggregates by period returns expected totals and state counts
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
   regression:
@@ -121,13 +129,14 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.3.0 adds non-breaking attendance record list API (`GET /attendance/records`) with role boundary guards."
+consumer_impact: "Contract v1.4.0 adds non-breaking attendance aggregates API (`GET /attendance/aggregates`) with role boundary guards."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0009-attendance-rejection-flow.md
   - work-items/WI-0016-attendance-rejection-reason.md
   - work-items/WI-0017-attendance-reject-validation-guards.md
   - work-items/WI-0026-attendance-list-api.md
+  - work-items/WI-0031-attendance-aggregates-api.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent
