@@ -45,6 +45,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
           DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
+          FLOWHR_PAYROLL_DEDUCTIONS_V1: ${{ vars.FLOWHR_PAYROLL_DEDUCTIONS_V1 || 'false' }}
+          FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1: ${{ vars.FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1 || 'false' }}
           FLOWHR_PHASE2_HEALTH_WINDOW_HOURS: ${{ vars.FLOWHR_PHASE2_HEALTH_WINDOW_HOURS || '24' }}
           FLOWHR_PHASE2_HEALTH_MIN_ATTEMPTS: ${{ vars.FLOWHR_PHASE2_HEALTH_MIN_ATTEMPTS || '1' }}
           FLOWHR_PHASE2_HEALTH_MAX_403_RATIO: ${{ vars.FLOWHR_PHASE2_HEALTH_MAX_403_RATIO || '0.20' }}
@@ -65,13 +67,30 @@ jobs:
               `- Ref: ${context.ref}`,
               `- Trigger: ${context.eventName}`
             ].join("\n");
-            await github.rest.issues.create({
+            const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title,
-              body,
-              labels: ["incident", "phase2", "ops"]
+              state: "open",
+              labels: "incident,phase2,ops",
+              per_page: 50
             });
+            const openHealth = existing.data.find((issue) => issue.title?.startsWith("[phase2-health]"));
+            if (openHealth) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: openHealth.number,
+                body: body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["incident", "phase2", "ops"]
+              });
+            }
 
       - name: Notify alert webhook on failure
         if: ${{ failure() }}
