@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const isoDateTime = z.string().datetime({ offset: true });
+const attendanceState = z.enum(["PENDING", "APPROVED", "REJECTED"]);
 
 export const createAttendanceSchema = z.object({
   employeeId: z.string().min(1),
@@ -21,4 +22,11 @@ export const updateAttendanceSchema = z.object({
 
 export const rejectAttendanceSchema = z.object({
   reason: z.string().min(1).max(500).optional()
+});
+
+export const listAttendanceQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+  employeeId: z.string().min(1).optional(),
+  state: attendanceState.optional()
 });

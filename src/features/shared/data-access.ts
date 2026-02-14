@@ -188,6 +188,12 @@ export interface AttendanceStore {
     periodEnd: Date;
     employeeId?: string;
   }): Promise<AttendanceRecordEntity[]>;
+  listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    employeeId?: string;
+    state?: AttendanceState;
+  }): Promise<AttendanceRecordEntity[]>;
 }
 
 export interface PayrollStore {

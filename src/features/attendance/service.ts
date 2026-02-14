@@ -26,6 +26,13 @@ type UpdateAttendanceInput = {
   notes?: string;
 };
 
+type ListAttendanceInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId?: string;
+  state?: "PENDING" | "APPROVED" | "REJECTED";
+};
+
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
@@ -238,4 +245,58 @@ export async function rejectAttendanceRecord(
   });
 
   return record;
+}
+
+function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
+  if (periodEnd <= periodStart) {
+    throw new ServiceError(400, "to must be after from");
+  }
+}
+
+export async function listAttendanceRecords(
+  context: ServiceContext,
+  input: ListAttendanceInput
+): Promise<AttendanceRecordEntity[]> {
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+
+  const actor = context.actor;
+  if (actor.role === "employee") {
+    const employeeId = input.employeeId ?? actor.id;
+    if (employeeId !== actor.id) {
+      throw new ServiceError(403, "employee can only list own attendance records");
+    }
+    return await context.dataAccess.attendance.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId,
+      state: input.state
+    });
+  }
+
+  if (actor.role === "manager") {
+    if (!input.employeeId) {
+      throw new ServiceError(400, "employeeId is required for manager list queries");
+    }
+    return await context.dataAccess.attendance.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId: input.employeeId,
+      state: input.state
+    });
+  }
+
+  if (!hasAnyRole(actor, ["admin", "payroll_operator"])) {
+    throw new ServiceError(403, "attendance list requires admin, payroll_operator, manager, or employee");
+  }
+
+  return await context.dataAccess.attendance.listInPeriod({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId,
+    state: input.state
+  });
 }
