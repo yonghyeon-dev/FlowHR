@@ -7,6 +7,21 @@ type NumericEnvOptions = {
   max?: number;
 };
 
+function readBooleanEnv(name: string, defaultValue: boolean): boolean {
+  const raw = process.env[name];
+  if (!raw || !raw.trim()) {
+    return defaultValue;
+  }
+  const value = raw.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(value)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(value)) {
+    return false;
+  }
+  throw new Error(`invalid boolean env ${name}: ${raw}`);
+}
+
 function readNumberEnv(name: string, options: NumericEnvOptions): number {
   const raw = process.env[name];
   if (!raw || !raw.trim()) {
@@ -45,10 +60,30 @@ function readPayloadStatus(payload: unknown): number | null {
   return typeof status === "number" ? status : null;
 }
 
+function readPayloadMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const message = (payload as Record<string, unknown>).message;
+  return typeof message === "string" ? message : null;
+}
+
+function isFeatureFlagDisabled409(message: string | null, flagName: string): boolean {
+  if (!message) {
+    return false;
+  }
+  return message.trim().toLowerCase() === `${flagName} feature flag is disabled`;
+}
+
 async function run() {
   if (!process.env.DATABASE_URL || !process.env.DIRECT_URL) {
     throw new Error("DATABASE_URL and DIRECT_URL are required");
   }
+
+  // These flags are passed from GitHub Actions (environment vars) to decide whether health should gate.
+  // When phase2 is disabled, health still reports metrics but should not page/raise incidents.
+  const deductionsEnabled = readBooleanEnv("FLOWHR_PAYROLL_DEDUCTIONS_V1", false);
+  const profileEnabled = readBooleanEnv("FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1", false);
 
   const hours = readNumberEnv("FLOWHR_PHASE2_HEALTH_WINDOW_HOURS", {
     defaultValue: 24,
@@ -100,6 +135,7 @@ async function run() {
     let confirmed = 0;
     let previewFailed403 = 0;
     let previewFailed409 = 0;
+    let previewFailed409Expected = 0;
     let previewFailedOther = 0;
 
     for (const row of actions) {
@@ -109,30 +145,50 @@ async function run() {
         confirmed += 1;
       } else if (row.action === "payroll.preview_with_deductions.failed") {
         const status = readPayloadStatus(row.payload);
+        const message = readPayloadMessage(row.payload);
         if (status === 403) {
           previewFailed403 += 1;
         } else if (status === 409) {
-          previewFailed409 += 1;
+          const phase2FlagDisabled = isFeatureFlagDisabled409(
+            message,
+            "payroll_deductions_v1"
+          );
+          const profileFlagDisabled = isFeatureFlagDisabled409(
+            message,
+            "payroll_deduction_profile_v1"
+          );
+
+          if ((phase2FlagDisabled && !deductionsEnabled) || (profileFlagDisabled && !profileEnabled)) {
+            previewFailed409Expected += 1;
+          } else {
+            previewFailed409 += 1;
+          }
         } else {
           previewFailedOther += 1;
         }
       }
     }
 
-    const previewAttempts =
+    const previewAttemptsAll =
+      deductionsCalculated + previewFailed403 + previewFailed409 + previewFailed409Expected + previewFailedOther;
+    const previewAttemptsForGate =
       deductionsCalculated + previewFailed403 + previewFailed409 + previewFailedOther;
-    const ratio403 = previewAttempts > 0 ? previewFailed403 / previewAttempts : 0;
-    const ratio409 = previewAttempts > 0 ? previewFailed409 / previewAttempts : 0;
+    const ratio403 = previewAttemptsForGate > 0 ? previewFailed403 / previewAttemptsForGate : 0;
+    const ratio409 = previewAttemptsForGate > 0 ? previewFailed409 / previewAttemptsForGate : 0;
 
     const report = {
+      phase2Enabled: deductionsEnabled,
+      profileEnabled,
       windowHours: hours,
       since: since.toISOString(),
       until: now.toISOString(),
       deductionsCalculated,
       confirmed,
-      previewAttempts,
+      previewAttempts: previewAttemptsAll,
+      previewAttemptsForGate,
       previewFailed403,
       previewFailed409,
+      previewFailed409Expected,
       previewFailedOther,
       ratio403,
       ratio409,
@@ -148,21 +204,30 @@ async function run() {
     const summaryLines = [
       "## Payroll Phase2 Health",
       "",
+      `- Phase2 enabled: ${deductionsEnabled ? "true" : "false"}`,
+      `- Profile enabled: ${profileEnabled ? "true" : "false"}`,
       `- Window: last ${hours}h`,
       `- Deductions Calculated: ${deductionsCalculated}`,
       `- Confirmed: ${confirmed}`,
-      `- Preview Attempts: ${previewAttempts}`,
+      `- Preview Attempts: ${previewAttemptsAll}`,
+      `- Preview Attempts (gate): ${previewAttemptsForGate}`,
       `- Failed 403: ${previewFailed403} (${toPercent(ratio403)})`,
       `- Failed 409: ${previewFailed409} (${toPercent(ratio409)})`,
+      `- Failed 409 (expected): ${previewFailed409Expected}`,
       `- Failed Other: ${previewFailedOther}`
     ];
     appendSummary(summaryLines);
 
+    if (!deductionsEnabled) {
+      appendSummary(["", "- Gate: skipped (FLOWHR_PAYROLL_DEDUCTIONS_V1=false)"]);
+      return;
+    }
+
     const failedChecks: string[] = [];
-    if (previewAttempts >= minAttempts && ratio403 > max403Ratio) {
+    if (previewAttemptsForGate >= minAttempts && ratio403 > max403Ratio) {
       failedChecks.push(`403 ratio ${toPercent(ratio403)} exceeds ${toPercent(max403Ratio)}`);
     }
-    if (previewAttempts >= minAttempts && ratio409 > max409Ratio) {
+    if (previewAttemptsForGate >= minAttempts && ratio409 > max409Ratio) {
       failedChecks.push(`409 ratio ${toPercent(ratio409)} exceeds ${toPercent(max409Ratio)}`);
     }
 
