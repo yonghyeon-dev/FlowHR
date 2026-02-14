@@ -5,6 +5,9 @@ const isoDateTime = z.string().datetime({ offset: true });
 export const leaveTypeValues = ["ANNUAL", "SICK", "UNPAID"] as const;
 const leaveTypeSchema = z.enum(leaveTypeValues);
 
+export const leaveRequestStateValues = ["PENDING", "APPROVED", "REJECTED", "CANCELED"] as const;
+const leaveRequestStateSchema = z.enum(leaveRequestStateValues);
+
 export const createLeaveRequestSchema = z.object({
   employeeId: z.string().min(1),
   leaveType: leaveTypeSchema.default("ANNUAL"),
@@ -33,4 +36,11 @@ export const settleLeaveAccrualSchema = z.object({
   year: z.number().int().min(2000).max(9999),
   annualGrantDays: z.number().int().positive().optional(),
   carryOverCapDays: z.number().int().min(0).optional()
+});
+
+export const listLeaveRequestQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+  employeeId: z.string().min(1).optional(),
+  state: leaveRequestStateSchema.optional()
 });

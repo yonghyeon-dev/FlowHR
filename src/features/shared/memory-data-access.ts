@@ -267,6 +267,25 @@ export const memoryDataAccess: DataAccess = {
       return cloneLeaveRequest(updated);
     },
 
+    async listInPeriod(input) {
+      const rows: LeaveRequestEntity[] = [];
+      for (const request of state.leaveRequests.values()) {
+        const overlaps = request.startDate <= input.periodEnd && request.endDate >= input.periodStart;
+        if (!overlaps) {
+          continue;
+        }
+        if (input.employeeId && request.employeeId !== input.employeeId) {
+          continue;
+        }
+        if (input.state && request.state !== input.state) {
+          continue;
+        }
+        rows.push(cloneLeaveRequest(request));
+      }
+      rows.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+      return rows;
+    },
+
     async findOverlappingActiveRequests(input) {
       const rows: LeaveRequestEntity[] = [];
       for (const request of state.leaveRequests.values()) {

@@ -1,8 +1,9 @@
 owner: leave-agent
-version: 1.2.0
+version: 1.3.0
 scope:
   in:
     - leave request create/update/cancel flow
+    - leave request list query by period overlap
     - leave approve/reject flow with audit trace
     - leave balance read model contract
     - annual leave accrual and carry-over settlement
@@ -18,14 +19,17 @@ entities:
 api:
   auth:
     - role: employee
-      permission: create/update own pending leave request
+      permission: create/update and list own leave requests
     - role: manager
       permission: approve or reject leave requests within scope
     - role: payroll_operator
-      permission: settle leave accrual cycle and read leave balances
+      permission: settle leave accrual cycle, read leave balances, and list leave requests for payroll review
     - role: admin
       permission: full leave operations
   endpoints:
+    - method: GET
+      path: /leave/requests
+      description: List leave requests overlapping a period (from/to) with optional employeeId/state filters.
     - method: POST
       path: /leave/requests
       description: Create leave request.
@@ -76,6 +80,7 @@ invariants:
   - Approved leave state is consumable for attendance/payroll downstream.
   - Same employee/year accrual settlement cannot be applied more than once.
   - Carry-over days are capped by policy and never negative.
+  - Employee leave list queries are restricted to own employeeId.
 risk:
   permissions:
     - Unauthorized approval or accrual settlement can alter payroll and staffing plans.
@@ -88,10 +93,14 @@ test_plan:
     - leave state transition guard validation
     - leave date normalization by Asia/Seoul
     - accrual settlement carry-over cap calculation
+    - leave list query parsing and role boundary guards
   integration:
     - create/update/approve leave flow
     - reject flow with reason and audit
     - accrual settlement with duplicate-year protection
+    - list leave requests by period overlap returns expected rows
+    - employee cross-employee list query is blocked with 403
+    - manager list query requires employeeId (400)
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
@@ -99,6 +108,7 @@ test_plan:
     - employee self-service boundary check
     - manager/admin approval check
     - payroll_operator/admin-only accrual settlement check
+    - employee self-only list boundary check
   payroll_accuracy:
     - approved paid leave classification for payroll consumer compatibility
     - carry-over cap and yearly reset rules
@@ -130,9 +140,10 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "WI-0003 adds accrual settlement endpoint and leave balance fields without breaking existing consumers."
+consumer_impact: "Contract v1.3.0 adds non-breaking leave request list API (`GET /leave/requests`) with role boundary guards."
 references:
   - specs/common/time-and-payroll-rules.md
+  - work-items/WI-0027-leave-list-api.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

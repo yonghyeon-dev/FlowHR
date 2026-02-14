@@ -1,9 +1,38 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.2.0
+  version: 1.3.0
 paths:
   /leave/requests:
+    get:
+      summary: List leave requests overlapping a period
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: employeeId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, CANCELED]
+      responses:
+        "200":
+          description: Requests listed
     post:
       summary: Create leave request
       responses:

@@ -12,6 +12,7 @@ Leave request lifecycle, role authorization, and approved leave output compatibi
 4. Manager rejects request with mandatory reason.
 5. Employee cancels pending request and final state is reflected.
 6. Payroll operator settles yearly leave accrual for employee.
+7. List leave requests by period overlap (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
 
 ## Boundary and Accuracy Cases
 

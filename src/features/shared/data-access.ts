@@ -211,6 +211,12 @@ export interface LeaveStore {
   create(input: CreateLeaveRequestInput): Promise<LeaveRequestEntity>;
   findById(id: string): Promise<LeaveRequestEntity | null>;
   update(id: string, input: UpdateLeaveRequestInput): Promise<LeaveRequestEntity>;
+  listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    employeeId?: string;
+    state?: LeaveRequestState;
+  }): Promise<LeaveRequestEntity[]>;
   findOverlappingActiveRequests(input: {
     employeeId: string;
     startDate: Date;
