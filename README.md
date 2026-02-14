@@ -122,6 +122,9 @@ Production rollout: `docs/production-rollout.md`
   - `POST /api/payroll/runs/preview`
   - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, profile mode optional `expectedProfileVersion`)
   - `POST /api/payroll/runs/{runId}/confirm`
+  - `GET /api/payroll/deduction-profiles` (optional query: `active`, `mode`)
+  - `GET /api/payroll/deduction-profiles/{profileId}`
+  - `PUT /api/payroll/deduction-profiles/{profileId}`
 - Leave:
   - `GET /api/leave/requests` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/leave/requests`
@@ -135,5 +138,5 @@ Production rollout: `docs/production-rollout.md`
 ## Payroll Phase 2 Contract Artifacts
 
 - Work item: `work-items/WI-0005-payroll-phase2-deductions-tax-contract.md`
-- Contract: `specs/payroll/contract.yaml` (v1.4.0)
+- Contract: `specs/payroll/contract.yaml` (v1.5.0)
 - Compatibility matrix: `specs/payroll/phase2-compatibility-matrix.md`

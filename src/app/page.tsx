@@ -313,6 +313,13 @@ export default function HomePage() {
     );
   }
 
+  async function listDeductionProfiles() {
+    await callApi("공제 프로필 목록 조회", "GET", "/api/payroll/deduction-profiles", {
+      role: "payroll_operator",
+      id: payrollActorId
+    });
+  }
+
   async function listAttendanceRecords() {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
@@ -753,6 +760,9 @@ export default function HomePage() {
             </button>
             <button className="btn btn-secondary" onClick={readDeductionProfile}>
               프로필 조회
+            </button>
+            <button className="btn btn-secondary" onClick={listDeductionProfiles}>
+              프로필 목록
             </button>
           </div>
         </article>

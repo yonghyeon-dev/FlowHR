@@ -446,6 +446,21 @@ export const memoryDataAccess: DataAccess = {
       return profile ? cloneDeductionProfile(profile) : null;
     },
 
+    async list(input) {
+      const rows: DeductionProfileEntity[] = [];
+      for (const profile of state.deductionProfiles.values()) {
+        if (input.active !== undefined && profile.active !== input.active) {
+          continue;
+        }
+        if (input.mode && profile.mode !== input.mode) {
+          continue;
+        }
+        rows.push(cloneDeductionProfile(profile));
+      }
+      rows.sort((a, b) => a.id.localeCompare(b.id));
+      return rows;
+    },
+
     async upsert(input: UpsertDeductionProfileInput) {
       const existing = state.deductionProfiles.get(input.id);
       const now = new Date();

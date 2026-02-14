@@ -211,6 +211,7 @@ export interface PayrollStore {
 export interface DeductionProfileStore {
   findById(id: string): Promise<DeductionProfileEntity | null>;
   upsert(input: UpsertDeductionProfileInput): Promise<DeductionProfileEntity>;
+  list(input: { active?: boolean; mode?: DeductionProfileMode }): Promise<DeductionProfileEntity[]>;
 }
 
 export interface LeaveStore {

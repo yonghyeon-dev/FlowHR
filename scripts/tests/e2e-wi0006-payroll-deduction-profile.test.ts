@@ -51,6 +51,9 @@ async function run() {
   const deductionProfileRoute = await import(
     "../../src/app/api/payroll/deduction-profiles/[profileId]/route.ts"
   );
+  const deductionProfileListRoute = await import(
+    "../../src/app/api/payroll/deduction-profiles/route.ts"
+  );
   const payrollPreviewWithDeductionsRoute = await import(
     "../../src/app/api/payroll/runs/preview-with-deductions/route.ts"
   );
@@ -138,6 +141,44 @@ async function run() {
   assert.equal(getProfileResponse.status, 200, "deduction profile read should succeed");
   const getProfileBody = await readJson<{ profile: { version: number } }>(getProfileResponse);
   assert.equal(getProfileBody.profile.version, 2);
+
+  const listProfilesResponse = await deductionProfileListRoute.GET(
+    new Request("http://localhost/api/payroll/deduction-profiles", {
+      method: "GET",
+      headers: actorHeaders("payroll_operator", "PAY-2601")
+    })
+  );
+  assert.equal(listProfilesResponse.status, 200, "deduction profile list should succeed");
+  const listProfilesBody = await readJson<{
+    profiles: Array<{ id: string; active: boolean; mode: string }>;
+  }>(listProfilesResponse);
+  assert.ok(
+    listProfilesBody.profiles.some((profile) => profile.id === profileId),
+    "profile list should include upserted profile"
+  );
+
+  const listProfilesActiveFilterResponse = await deductionProfileListRoute.GET(
+    new Request("http://localhost/api/payroll/deduction-profiles?active=true&mode=profile", {
+      method: "GET",
+      headers: actorHeaders("payroll_operator", "PAY-2601")
+    })
+  );
+  assert.equal(listProfilesActiveFilterResponse.status, 200, "filtered list should succeed");
+  const filteredBody = await readJson<{
+    profiles: Array<{ id: string; active: boolean; mode: string }>;
+  }>(listProfilesActiveFilterResponse);
+  assert.ok(
+    filteredBody.profiles.every((profile) => profile.active === true && profile.mode === "profile"),
+    "filtered list should return only active profile-mode profiles"
+  );
+
+  const listDeniedResponse = await deductionProfileListRoute.GET(
+    new Request("http://localhost/api/payroll/deduction-profiles", {
+      method: "GET",
+      headers: actorHeaders("employee", "EMP-2601")
+    })
+  );
+  assert.equal(listDeniedResponse.status, 403, "non payroll role should be blocked from listing profiles");
 
   const staleVersionPreviewResponse = await payrollPreviewWithDeductionsRoute.POST(
     jsonRequest(
