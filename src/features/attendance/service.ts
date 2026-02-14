@@ -1,5 +1,6 @@
 import type { Actor } from "@/lib/actor";
 import { canMutateAttendance, hasAnyRole } from "@/lib/permissions";
+import { derivePayableMinutes, type PayableMinutes } from "@/lib/payroll-rules";
 import type {
   AttendanceRecordEntity,
   DataAccess,
@@ -31,6 +32,26 @@ type ListAttendanceInput = {
   periodEnd: Date;
   employeeId?: string;
   state?: "PENDING" | "APPROVED" | "REJECTED";
+};
+
+type ListAttendanceAggregatesInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId?: string;
+};
+
+export type AttendanceAggregate = {
+  employeeId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  counts: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    payable: number;
+  };
+  totals: PayableMinutes;
 };
 
 type ServiceContext = {
@@ -253,6 +274,13 @@ function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
   }
 }
 
+const emptyTotals: PayableMinutes = {
+  regular: 0,
+  overtime: 0,
+  night: 0,
+  holiday: 0
+};
+
 export async function listAttendanceRecords(
   context: ServiceContext,
   input: ListAttendanceInput
@@ -299,4 +327,102 @@ export async function listAttendanceRecords(
     employeeId: input.employeeId,
     state: input.state
   });
+}
+
+export async function listAttendanceAggregates(
+  context: ServiceContext,
+  input: ListAttendanceAggregatesInput
+): Promise<AttendanceAggregate[]> {
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+
+  const actor = context.actor;
+  let employeeId = input.employeeId;
+
+  if (actor.role === "employee") {
+    employeeId = employeeId ?? actor.id;
+    if (employeeId !== actor.id) {
+      throw new ServiceError(403, "employee can only list own attendance aggregates");
+    }
+  } else if (actor.role === "manager") {
+    if (!employeeId) {
+      throw new ServiceError(400, "employeeId is required for manager aggregate queries");
+    }
+  } else if (!hasAnyRole(actor, ["admin", "payroll_operator"])) {
+    throw new ServiceError(
+      403,
+      "attendance aggregates require admin, payroll_operator, manager, or employee"
+    );
+  }
+
+  const records = await context.dataAccess.attendance.listInPeriod({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId
+  });
+
+  const aggregates = new Map<string, AttendanceAggregate>();
+
+  function ensureAggregate(targetEmployeeId: string): AttendanceAggregate {
+    const existing = aggregates.get(targetEmployeeId);
+    if (existing) {
+      return existing;
+    }
+
+    const created: AttendanceAggregate = {
+      employeeId: targetEmployeeId,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      counts: {
+        total: 0,
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        payable: 0
+      },
+      totals: { ...emptyTotals }
+    };
+    aggregates.set(targetEmployeeId, created);
+    return created;
+  }
+
+  if (employeeId) {
+    ensureAggregate(employeeId);
+  }
+
+  for (const record of records) {
+    const aggregate = ensureAggregate(record.employeeId);
+
+    aggregate.counts.total += 1;
+    if (record.state === "PENDING") {
+      aggregate.counts.pending += 1;
+    } else if (record.state === "APPROVED") {
+      aggregate.counts.approved += 1;
+    } else {
+      aggregate.counts.rejected += 1;
+    }
+
+    if (record.state !== "APPROVED" || !record.checkOutAt) {
+      continue;
+    }
+
+    aggregate.counts.payable += 1;
+    const split = derivePayableMinutes(
+      record.checkInAt,
+      record.checkOutAt,
+      record.breakMinutes,
+      record.isHoliday
+    );
+    aggregate.totals = {
+      regular: aggregate.totals.regular + split.regular,
+      overtime: aggregate.totals.overtime + split.overtime,
+      night: aggregate.totals.night + split.night,
+      holiday: aggregate.totals.holiday + split.holiday
+    };
+  }
+
+  return Array.from(aggregates.values()).sort((a, b) => a.employeeId.localeCompare(b.employeeId));
 }

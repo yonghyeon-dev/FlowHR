@@ -15,6 +15,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 7. Rejection reason is preserved in audit/event payload when provided.
 8. Reject API returns `400` for invalid JSON body and oversized reason payload.
 9. List attendance records by period (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
+10. List attendance aggregates by period (`from`/`to`) with role boundary guards and verify totals are derived from approved records only.
 
 ## Boundary and Accuracy Cases
 

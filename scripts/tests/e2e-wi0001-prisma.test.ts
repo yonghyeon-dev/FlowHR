@@ -53,6 +53,7 @@ async function run() {
   const attendanceRejectRoute = await import(
     "../../src/app/api/attendance/records/[recordId]/reject/route.ts"
   );
+  const attendanceAggregatesRoute = await import("../../src/app/api/attendance/aggregates/route.ts");
   const payrollPreviewRoute = await import("../../src/app/api/payroll/runs/preview/route.ts");
   const payrollConfirmRoute = await import(
     "../../src/app/api/payroll/runs/[runId]/confirm/route.ts"
@@ -175,6 +176,72 @@ async function run() {
       }>
     );
     assert.equal(duplicateRejectResponse.status, 409, "duplicate attendance rejection should be rejected");
+
+    const aggregatesSelfDefaultResponse = await attendanceAggregatesRoute.GET(
+      new Request(
+        "http://localhost/api/attendance/aggregates?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00",
+        {
+          method: "GET",
+          headers: actorHeaders("employee", employeeId)
+        }
+      )
+    );
+    assert.equal(aggregatesSelfDefaultResponse.status, 200, "employee aggregates should succeed");
+    const aggregatesSelfBody = await readJson<{
+      aggregates: Array<{
+        employeeId: string;
+        counts: { total: number; pending: number; approved: number; rejected: number; payable: number };
+        totals: { regular: number; overtime: number; night: number; holiday: number };
+      }>;
+    }>(aggregatesSelfDefaultResponse);
+    assert.equal(aggregatesSelfBody.aggregates.length, 1, "should return one aggregate for employee default");
+    assert.equal(aggregatesSelfBody.aggregates[0]?.employeeId, employeeId);
+    assert.deepEqual(aggregatesSelfBody.aggregates[0]?.totals, {
+      regular: 480,
+      overtime: 0,
+      night: 0,
+      holiday: 0
+    });
+    assert.deepEqual(aggregatesSelfBody.aggregates[0]?.counts, {
+      total: 2,
+      pending: 0,
+      approved: 1,
+      rejected: 1,
+      payable: 1
+    });
+
+    const managerAggregatesMissingEmployeeId = await attendanceAggregatesRoute.GET(
+      new Request(
+        "http://localhost/api/attendance/aggregates?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00",
+        {
+          method: "GET",
+          headers: actorHeaders("manager", managerId)
+        }
+      )
+    );
+    assert.equal(
+      managerAggregatesMissingEmployeeId.status,
+      400,
+      "manager aggregates must include employeeId"
+    );
+
+    const aggregatesAllAsPayrollOperator = await attendanceAggregatesRoute.GET(
+      new Request(
+        "http://localhost/api/attendance/aggregates?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00",
+        {
+          method: "GET",
+          headers: actorHeaders("payroll_operator", payrollId)
+        }
+      )
+    );
+    assert.equal(aggregatesAllAsPayrollOperator.status, 200, "payroll operator aggregates should succeed");
+    const aggregatesAllBody = await readJson<{ aggregates: Array<{ employeeId: string }> }>(
+      aggregatesAllAsPayrollOperator
+    );
+    assert.ok(
+      aggregatesAllBody.aggregates.some((aggregate) => aggregate.employeeId === employeeId),
+      "payroll operator aggregates should include employee row"
+    );
 
     const previewResponse = await payrollPreviewRoute.POST(
       jsonRequest(

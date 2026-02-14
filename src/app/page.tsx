@@ -336,6 +336,21 @@ export default function HomePage() {
     );
   }
 
+  async function listAttendanceAggregates() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    await callApi(
+      "근태 집계 조회",
+      "GET",
+      `/api/attendance/aggregates${buildQuery({
+        from,
+        to,
+        employeeId: attendanceEmployeeId
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+  }
+
   async function listLeaveRequests() {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
@@ -532,6 +547,9 @@ export default function HomePage() {
           <div className="actions">
             <button className="btn btn-primary" onClick={listAttendanceRecords}>
               출퇴근 조회
+            </button>
+            <button className="btn btn-secondary" onClick={listAttendanceAggregates}>
+              근태 집계 조회
             </button>
             <button className="btn btn-secondary" onClick={listLeaveRequests}>
               휴가 조회
