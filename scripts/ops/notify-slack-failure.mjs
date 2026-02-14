@@ -66,7 +66,31 @@ async function run() {
   }
   const provider = resolveProvider(webhook.url);
 
-  const title = process.env.FLOWHR_ALERT_TITLE ?? "[FlowHR] workflow failure";
+  const useKoreanLabels = provider === "discord";
+  const labels = useKoreanLabels
+    ? {
+        workflow: "워크플로우",
+        run: "실행",
+        ref: "참조(Ref)",
+        trigger: "트리거",
+        reason: "원인",
+        runbook: "런북",
+        breakGlass: "긴급 머지(break-glass)",
+        rollbackWorkflow: "롤백 워크플로우"
+      }
+    : {
+        workflow: "Workflow",
+        run: "Run",
+        ref: "Ref",
+        trigger: "Trigger",
+        reason: "Reason",
+        runbook: "Runbook",
+        breakGlass: "Break-glass",
+        rollbackWorkflow: "Rollback workflow"
+      };
+
+  const defaultTitle = useKoreanLabels ? "[FlowHR] 워크플로 실패" : "[FlowHR] workflow failure";
+  const title = process.env.FLOWHR_ALERT_TITLE ?? defaultTitle;
   const workflow = process.env.FLOWHR_ALERT_WORKFLOW ?? "unknown-workflow";
   const runUrl = process.env.FLOWHR_ALERT_RUN_URL ?? "";
   const ref = process.env.FLOWHR_ALERT_REF ?? "";
@@ -76,27 +100,27 @@ async function run() {
   const breakGlassUrl = process.env.FLOWHR_ALERT_BREAK_GLASS_URL ?? "";
   const rollbackWorkflowUrl = process.env.FLOWHR_ALERT_ROLLBACK_WORKFLOW_URL ?? "";
 
-  const lines = [title, `- Workflow: ${workflow}`];
+  const lines = [title, `- ${labels.workflow}: ${workflow}`];
   if (runUrl) {
-    lines.push(`- Run: ${runUrl}`);
+    lines.push(`- ${labels.run}: ${runUrl}`);
   }
   if (ref) {
-    lines.push(`- Ref: ${ref}`);
+    lines.push(`- ${labels.ref}: ${ref}`);
   }
   if (trigger) {
-    lines.push(`- Trigger: ${trigger}`);
+    lines.push(`- ${labels.trigger}: ${trigger}`);
   }
   if (reason) {
-    lines.push(`- Reason: ${reason}`);
+    lines.push(`- ${labels.reason}: ${reason}`);
   }
   if (runbookUrl) {
-    lines.push(`- Runbook: ${runbookUrl}`);
+    lines.push(`- ${labels.runbook}: ${runbookUrl}`);
   }
   if (breakGlassUrl) {
-    lines.push(`- Break-glass: ${breakGlassUrl}`);
+    lines.push(`- ${labels.breakGlass}: ${breakGlassUrl}`);
   }
   if (rollbackWorkflowUrl) {
-    lines.push(`- Rollback workflow: ${rollbackWorkflowUrl}`);
+    lines.push(`- ${labels.rollbackWorkflow}: ${rollbackWorkflowUrl}`);
   }
   const message = lines.join("\n");
 

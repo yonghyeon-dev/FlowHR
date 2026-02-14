@@ -126,9 +126,9 @@ async function testDiscordPayloadShape() {
     assert.equal(typeof payload.content, "string", "discord payload should use content field");
     assert.equal(payload.text, undefined, "discord payload should not include slack text field");
     assert.match(String(payload.content), /\[FlowHR\] discord test/);
-    assert.match(String(payload.content), /Runbook: https:\/\/example.com\/runbook/);
-    assert.match(String(payload.content), /Break-glass: https:\/\/example.com\/break-glass/);
-    assert.match(String(payload.content), /Rollback workflow: https:\/\/example.com\/rollback/);
+    assert.match(String(payload.content), /런북: https:\/\/example.com\/runbook/);
+    assert.match(String(payload.content), /긴급 머지\(break-glass\): https:\/\/example.com\/break-glass/);
+    assert.match(String(payload.content), /롤백 워크플로우: https:\/\/example.com\/rollback/);
   } finally {
     await server.close();
   }
