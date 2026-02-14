@@ -7,9 +7,12 @@ import { fail, ok } from "@/lib/http";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+
+  // `+09:00` in query params is commonly decoded as a space. Normalize to preserve ISO offsets.
+  const normalizeOffset = (value: string | null) => (value ? value.replace(/ /g, "+") : value);
   const parsed = listAttendanceQuerySchema.safeParse({
-    from: url.searchParams.get("from"),
-    to: url.searchParams.get("to"),
+    from: normalizeOffset(url.searchParams.get("from")),
+    to: normalizeOffset(url.searchParams.get("to")),
     employeeId: url.searchParams.get("employeeId") ?? undefined,
     state: url.searchParams.get("state") ?? undefined
   });
