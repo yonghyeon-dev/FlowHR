@@ -23,10 +23,18 @@ Important:
 
 ## Local Run
 
+Recommended Node.js version: `20.x` (see `.nvmrc`).
+
 ```bash
 npm install
 npm run prisma:generate
 npm run dev
+```
+
+If you need port `3001` locally:
+
+```bash
+npm run dev:3001
 ```
 
 ## Prisma
