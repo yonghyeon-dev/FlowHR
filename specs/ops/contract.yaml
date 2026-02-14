@@ -1,11 +1,12 @@
 owner: ops-agent
-version: 0.1.1
+version: 0.1.2
 scope:
   in:
     - local developer experience scripts and conventions
     - alert webhook transport support (Discord/Slack compatible)
     - workflow-level smoke checks for alert delivery
     - MVP console verification affordances (list actions)
+    - production roadmap and execution plan documentation for Phase 1 prioritization
   out:
     - business domain rules (attendance/leave/payroll)
 entities: []
@@ -50,7 +51,7 @@ rollback:
   max_recovery_time: 15m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Ops contract v0.1.1 adds non-breaking MVP console list actions for faster runtime verification."
+consumer_impact: "Ops contract v0.1.2 adds non-breaking roadmap/execution plan documentation updates to align Phase 1 priorities with current repo state."
 references:
   - work-items/WI-0011-slack-alert-unification.md
   - work-items/WI-0013-discord-alert-webhook-support.md
@@ -58,6 +59,8 @@ references:
   - work-items/WI-0022-alert-context-links.md
   - work-items/WI-0025-local-dev-port-and-local-artifacts.md
   - work-items/WI-0029-console-list-actions.md
+  - ROADMAP.md
+  - docs/execution-plan.md
 approval:
   spec_owner: ops-agent
   qa_owner: qa-agent

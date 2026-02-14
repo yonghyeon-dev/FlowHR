@@ -1,4 +1,4 @@
-# Ops Test Cases (Contract v0.1.1)
+# Ops Test Cases (Contract v0.1.2)
 
 ## Alert Webhook Smoke (Discord-first, Slack fallback)
 
@@ -21,4 +21,9 @@
   - `GET /api/attendance/records`
   - `GET /api/leave/requests`
   - `GET /api/payroll/runs`
+
+## Roadmap / Planning Artifacts
+
+- `ROADMAP.md` must reflect current merged WI status (e.g., WI-0031 is completed) and Phase 1 priorities.
+- Roadmap/doc updates must not break contract governance gates.
 
