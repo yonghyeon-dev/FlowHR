@@ -1,0 +1,62 @@
+owner: ops-agent
+version: 0.1.0
+scope:
+  in:
+    - local developer experience scripts and conventions
+    - alert webhook transport support (Discord/Slack compatible)
+    - workflow-level smoke checks for alert delivery
+  out:
+    - business domain rules (attendance/leave/payroll)
+entities: []
+api:
+  auth:
+    - role: admin
+      permission: configure GitHub secrets/variables for ops workflows
+  endpoints: []
+  events:
+    published: []
+    consumed: []
+db_changes:
+  migrations: []
+  backward_compatible: true
+  notes: "Ops changes must be additive and reversible; prefer docs + scripts + workflows."
+invariants:
+  - Alert webhook support must remain backward compatible (Discord-first, Slack fallback).
+  - Dev scripts must not require production secrets.
+test_plan:
+  unit:
+    - notifier provider auto-detection and required webhook guard
+  integration:
+    - alert-webhook-smoke workflow succeeds when webhook is configured
+  regression:
+    - ops alert webhook regression tests remain green in CI
+  authorization:
+    - production secret mutation remains admin-only
+  payroll_accuracy:
+    - not applicable
+observability:
+  audit_events: []
+  metrics:
+    - workflow_failure_issue_created
+    - alert_webhook_smoke_success
+  logs:
+    - webhook send result logs for troubleshooting
+rollout:
+  feature_flags: []
+  migration_strategy: none
+rollback:
+  strategy: revert workflow/script change and re-run smoke workflow
+  max_recovery_time: 15m
+deprecations: []
+breaking_changes: false
+consumer_impact: "Ops contract v0.1.0 introduces contract-first coverage for alert delivery and local developer experience tooling."
+references:
+  - work-items/WI-0011-slack-alert-unification.md
+  - work-items/WI-0013-discord-alert-webhook-support.md
+  - work-items/WI-0014-alert-webhook-regression-tests.md
+  - work-items/WI-0022-alert-context-links.md
+  - work-items/WI-0025-local-dev-port-and-local-artifacts.md
+approval:
+  spec_owner: ops-agent
+  qa_owner: qa-agent
+

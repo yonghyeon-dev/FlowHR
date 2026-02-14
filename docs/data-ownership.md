@@ -17,6 +17,7 @@ Exception:
 | Payroll | `PayrollRun` | `payroll.calculated.v1`, `payroll.confirmed.v1`, `payroll.deductions.calculated.v1`, `payroll.deduction_profile.updated.v1` | Own tables, attendance projections only |
 | Leave | `LeaveRequest`, `LeaveApproval`, `LeaveBalanceProjection` | `leave.requested.v1`, `leave.approved.v1`, `leave.rejected.v1`, `leave.canceled.v1`, `leave.accrual.settled.v1` | Own tables, attendance/payroll read-model only |
 | Platform (Shared) | `AuditLog` | none | Read-only for operations and audits |
+| Ops | none | none | Workflow-only (no DB ownership) |
 | Orchestrator (Process) | none (artifact-driven process) | `workitem.assigned` | Aggregated operational projections |
 | QA | none (artifact-driven process) | `qa.gate.passed`, `qa.gate.failed` | All projection datasets for validation only |
 
