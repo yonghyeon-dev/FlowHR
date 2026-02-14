@@ -102,15 +102,19 @@ Completed:
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
-- Payroll phase2 health workflow incident noise is reduced (gate skip when Phase2 is disabled, expected 409 classification, incident dedup).
+- Payroll phase2 health workflow incident noise is reduced (gate skip when Phase2 is disabled, 409 expected/mismatch/ignored classification, incident dedup).
+- WI-0034 employee/org master data is implemented (Organization/Employee tables + People API).
 
 Open gaps:
 
 - Production foundation items are still missing (tracked in `ROADMAP.md` and Phase 1 WI stubs):
-  - Employee/Organization master data
   - employeeId referential integrity (FK migration)
   - RBAC engine (replace hardcoded roles)
   - multi-tenant isolation (Supabase RLS baseline)
+
+Recently delivered:
+
+- Employee/Organization master data baseline exists and is audited (WI-0034).
 
 ## 2) Priority Roadmap
 
@@ -213,10 +217,10 @@ Objective: establish production-grade HR SaaS foundations before expanding modul
 
 Tasks (Phase 1 stubs):
 
-1. `work-items/WI-0034-employee-organization-master-model.md`
-2. `work-items/WI-0035-employeeid-fk-migration.md`
-3. `work-items/WI-0036-rbac-engine-foundation.md`
-4. `work-items/WI-0037-multi-tenant-rls-baseline.md`
+1. (Done) `work-items/WI-0034-employee-organization-master-model.md`
+2. (Next) `work-items/WI-0035-employeeid-fk-migration.md`
+3. (Next) `work-items/WI-0036-rbac-engine-foundation.md`
+4. (Next) `work-items/WI-0037-multi-tenant-rls-baseline.md`
 
 Definition of Done:
 
@@ -256,5 +260,7 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. observe the next scheduled rollback dry-run result and keep it green,
-2. monitor weekly rollback rehearsal and respond to issue/Discord alerts if any fail.
+1. start WI-0035 (employeeId FK migration) contract-first and land it behind safe migration steps,
+2. proceed with WI-0036 (RBAC foundation) to remove hardcoded role checks,
+3. proceed with WI-0037 (multi-tenant RLS baseline) after org/employee scoping is stable,
+4. keep phase2-health and rollback rehearsal workflows green (triage incidents via GitHub issues).
