@@ -50,6 +50,7 @@ async function run() {
   const attendanceRejectRoute = await import(
     "../../src/app/api/attendance/records/[recordId]/reject/route.ts"
   );
+  const payrollRunsRoute = await import("../../src/app/api/payroll/runs/route.ts");
   const payrollPreviewRoute = await import("../../src/app/api/payroll/runs/preview/route.ts");
   const payrollConfirmRoute = await import(
     "../../src/app/api/payroll/runs/[runId]/confirm/route.ts"
@@ -296,6 +297,35 @@ async function run() {
     { params: Promise.resolve({ runId: previewBody.run.id }) } as RouteContext<{ runId: string }>
   );
   assert.equal(duplicateConfirmResponse.status, 409, "duplicate payroll confirmation should be rejected");
+
+  const listRunsResponse = await payrollRunsRoute.GET(
+    new Request(
+      "http://localhost/api/payroll/runs?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00&employeeId=EMP-1001",
+      {
+        method: "GET",
+        headers: actorHeaders("payroll_operator", "PAY-1")
+      }
+    )
+  );
+  assert.equal(listRunsResponse.status, 200, "payroll operator should list payroll runs");
+  const listRunsBody = (await readJson(listRunsResponse)) as {
+    runs: Array<{ id: string; state: string }>;
+  };
+  assert.ok(
+    listRunsBody.runs.some((run) => run.id === previewBody.run.id),
+    "list should include created run"
+  );
+
+  const listRunsDenied = await payrollRunsRoute.GET(
+    new Request(
+      "http://localhost/api/payroll/runs?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00&employeeId=EMP-1001",
+      {
+        method: "GET",
+        headers: actorHeaders("employee", "EMP-1001")
+      }
+    )
+  );
+  assert.equal(listRunsDenied.status, 403, "employee should not list payroll runs");
 
   const rejectedAuditEntry = getMemoryAuditEntries().find((entry) => entry.action === "attendance.rejected");
   assert.ok(rejectedAuditEntry, "attendance.rejected audit entry should exist");

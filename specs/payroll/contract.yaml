@@ -1,9 +1,10 @@
 owner: payroll-agent
-version: 1.3.0
+version: 1.4.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
     - payroll run trace and audit logging
+    - payroll run list query by period
     - deduction and tax contract artifacts for phase 2 rollout
     - deduction profile policy and profile-mode preview
     - profile version expectation guard for deterministic preview
@@ -23,10 +24,13 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview, manage deduction profile, and confirm run
+      permission: run payroll preview, list runs, manage deduction profile, and confirm run
     - role: admin
       permission: full payroll operations
   endpoints:
+    - method: GET
+      path: /payroll/runs
+      description: List payroll runs filtered by period (from/to) and optional employeeId/state.
     - method: POST
       path: /payroll/runs/preview
       description: Generate payroll gross pay preview for a period.
@@ -76,6 +80,7 @@ invariants:
   - Profile-mode preview rejects request when expected profile version mismatches current profile version.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
+  - Payroll run list API is restricted to payroll_operator/admin roles.
 risk:
   permissions:
     - Unauthorized deduction profile mutation can impact payroll outcomes.
@@ -91,15 +96,19 @@ test_plan:
     - gross pay calculator with multiplier rules
     - manual/profile mode deduction and net-pay aggregation formula
     - rounding behavior for KRW totals
+    - payroll run list query parsing and role guard
   integration:
     - consume attendance.approved and produce payroll preview
     - preview-with-deductions and confirm flow
     - deduction profile CRUD and authorization checks
     - profile mode preview rejects stale expected profile version
+    - list payroll runs by period returns expected rows
+    - non-payroll roles are blocked from listing (403)
   regression:
     - replay GC-001 through GC-006 fixtures
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
+    - payroll_operator role enforcement for list API
   payroll_accuracy:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
@@ -132,13 +141,14 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.3.0 adds non-breaking expectedProfileVersion guard for profile-mode deduction preview."
+consumer_impact: "Contract v1.4.0 adds non-breaking payroll run list API (`GET /payroll/runs`) restricted to payroll_operator/admin."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
   - specs/payroll/deduction-profile.md
   - work-items/WI-0006-payroll-phase2-deduction-policy-runtime.md
   - work-items/WI-0010-payroll-profile-version-guard.md
+  - work-items/WI-0028-payroll-run-list-api.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

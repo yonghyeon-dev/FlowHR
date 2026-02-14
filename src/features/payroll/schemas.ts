@@ -4,6 +4,7 @@ import { defaultMultipliers } from "@/lib/payroll-rules";
 const isoDateTime = z.string().datetime({ offset: true });
 const nonNegativeInteger = z.number().int().min(0);
 const rate = z.number().min(0).max(1);
+const payrollStateSchema = z.enum(["PREVIEWED", "CONFIRMED"]);
 
 export const previewPayrollSchema = z.object({
   periodStart: isoDateTime,
@@ -65,4 +66,11 @@ export const upsertDeductionProfileSchema = z.object({
   socialInsuranceRate: rate.nullable().default(null),
   fixedOtherDeductionKrw: nonNegativeInteger.default(0),
   active: z.boolean().default(true)
+});
+
+export const listPayrollRunsQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+  employeeId: z.string().min(1).optional(),
+  state: payrollStateSchema.optional()
 });

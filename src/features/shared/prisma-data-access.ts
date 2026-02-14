@@ -421,6 +421,28 @@ const payroll: PayrollStore = {
     return run ? toPayrollEntity(run) : null;
   },
 
+  async listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    employeeId?: string;
+    state?: "PREVIEWED" | "CONFIRMED";
+  }) {
+    const runs = await prisma.payrollRun.findMany({
+      where: {
+        periodStart: {
+          gte: input.periodStart
+        },
+        periodEnd: {
+          lte: input.periodEnd
+        },
+        ...(input.employeeId ? { employeeId: input.employeeId } : {}),
+        ...(input.state ? { state: input.state } : {})
+      },
+      orderBy: { periodStart: "asc" }
+    });
+    return runs.map(toPayrollEntity);
+  },
+
   async update(id: string, input: UpdatePayrollRunInput) {
     const run = await prisma.payrollRun.update({
       where: { id },

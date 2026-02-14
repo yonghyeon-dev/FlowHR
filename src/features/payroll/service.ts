@@ -88,6 +88,13 @@ type UpsertDeductionProfileResult = {
   profile: Awaited<ReturnType<DataAccess["deductionProfiles"]["upsert"]>>;
 };
 
+type ListPayrollRunsInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId?: string;
+  state?: "PREVIEWED" | "CONFIRMED";
+};
+
 type PayrollComputation = {
   recordsCount: number;
   totals: PayableMinutes;
@@ -101,7 +108,7 @@ const emptyTotals: PayableMinutes = {
   holiday: 0
 };
 
-function requirePayrollOperator(actor: Actor | null, action: "preview" | "confirm") {
+function requirePayrollOperator(actor: Actor | null, action: "preview" | "confirm" | "list") {
   if (!actor || !hasAnyRole(actor, ["admin", "payroll_operator"])) {
     throw new ServiceError(403, `payroll ${action} requires admin or payroll_operator role`);
   }
@@ -470,6 +477,21 @@ export async function confirmPayrollRun(
   });
 
   return confirmed;
+}
+
+export async function listPayrollRuns(
+  context: ServiceContext,
+  input: ListPayrollRunsInput
+): Promise<PayrollRunEntity[]> {
+  requirePayrollOperator(context.actor, "list");
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+
+  return await context.dataAccess.payroll.listInPeriod({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId,
+    state: input.state
+  });
 }
 
 export async function readDeductionProfile(

@@ -408,6 +408,27 @@ export const memoryDataAccess: DataAccess = {
       return run ? clonePayroll(run) : null;
     },
 
+    async listInPeriod(input) {
+      const rows: PayrollRunEntity[] = [];
+      for (const run of state.payroll.values()) {
+        if (run.periodStart < input.periodStart) {
+          continue;
+        }
+        if (run.periodEnd > input.periodEnd) {
+          continue;
+        }
+        if (input.employeeId && run.employeeId !== input.employeeId) {
+          continue;
+        }
+        if (input.state && run.state !== input.state) {
+          continue;
+        }
+        rows.push(clonePayroll(run));
+      }
+      rows.sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+      return rows;
+    },
+
     async update(id, input) {
       const existing = state.payroll.get(id);
       if (!existing) {

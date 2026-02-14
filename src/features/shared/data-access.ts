@@ -200,6 +200,12 @@ export interface PayrollStore {
   create(input: CreatePayrollRunInput): Promise<PayrollRunEntity>;
   findById(id: string): Promise<PayrollRunEntity | null>;
   update(id: string, input: UpdatePayrollRunInput): Promise<PayrollRunEntity>;
+  listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    employeeId?: string;
+    state?: PayrollState;
+  }): Promise<PayrollRunEntity[]>;
 }
 
 export interface DeductionProfileStore {
