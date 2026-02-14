@@ -14,6 +14,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 6. Create/update deduction profile and read latest profile by ID.
 7. Run deduction/tax preview in `profile` mode without explicit deduction values.
 8. Reject profile-mode preview when `expectedProfileVersion` is stale.
+9. List payroll runs by period (`from`/`to`) and verify role guard (payroll_operator/admin only).
 
 ## Accuracy Cases
 
