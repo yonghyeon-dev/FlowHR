@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: FlowHR People API
+  version: 0.1.0
+paths:
+  /people/organizations:
+    get:
+      summary: List organizations
+      responses:
+        "200":
+          description: Organizations listed
+    post:
+      summary: Create organization
+      responses:
+        "201":
+          description: Created
+  /people/organizations/{organizationId}:
+    get:
+      summary: Get organization
+      parameters:
+        - in: path
+          name: organizationId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Organization returned
+        "404":
+          description: Not found
+  /people/employees:
+    get:
+      summary: List employees
+      parameters:
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employees listed
+    post:
+      summary: Create employee
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Duplicate
+  /people/employees/{employeeId}:
+    get:
+      summary: Get employee
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employee returned
+        "404":
+          description: Not found
+    patch:
+      summary: Update employee
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Not found
+

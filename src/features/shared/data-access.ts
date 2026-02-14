@@ -55,6 +55,23 @@ export type DeductionProfileEntity = {
   updatedAt: Date;
 };
 
+export type OrganizationEntity = {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type EmployeeEntity = {
+  id: string;
+  organizationId: string | null;
+  name: string | null;
+  email: string | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type LeaveRequestEntity = {
   id: string;
   employeeId: string;
@@ -137,6 +154,25 @@ export type UpsertDeductionProfileInput = {
   active: boolean;
 };
 
+export type CreateOrganizationInput = {
+  name: string;
+};
+
+export type CreateEmployeeInput = {
+  id: string;
+  organizationId?: string | null;
+  name?: string | null;
+  email?: string | null;
+  active?: boolean;
+};
+
+export type UpdateEmployeeInput = {
+  organizationId?: string | null;
+  name?: string | null;
+  email?: string | null;
+  active?: boolean;
+};
+
 export type CreateLeaveRequestInput = {
   employeeId: string;
   leaveType: LeaveType;
@@ -214,6 +250,19 @@ export interface DeductionProfileStore {
   list(input: { active?: boolean; mode?: DeductionProfileMode }): Promise<DeductionProfileEntity[]>;
 }
 
+export interface OrganizationStore {
+  create(input: CreateOrganizationInput): Promise<OrganizationEntity>;
+  findById(id: string): Promise<OrganizationEntity | null>;
+  list(): Promise<OrganizationEntity[]>;
+}
+
+export interface EmployeeStore {
+  create(input: CreateEmployeeInput): Promise<EmployeeEntity>;
+  findById(id: string): Promise<EmployeeEntity | null>;
+  update(id: string, input: UpdateEmployeeInput): Promise<EmployeeEntity>;
+  list(input: { active?: boolean; organizationId?: string }): Promise<EmployeeEntity[]>;
+}
+
 export interface LeaveStore {
   create(input: CreateLeaveRequestInput): Promise<LeaveRequestEntity>;
   findById(id: string): Promise<LeaveRequestEntity | null>;
@@ -254,6 +303,8 @@ export interface AuditStore {
 }
 
 export type DataAccess = {
+  organizations: OrganizationStore;
+  employees: EmployeeStore;
   attendance: AttendanceStore;
   leave: LeaveStore;
   leaveBalance: LeaveBalanceStore;

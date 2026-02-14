@@ -1,4 +1,7 @@
 export const domainEventNames = [
+  "organization.created.v1",
+  "employee.created.v1",
+  "employee.profile.updated.v1",
   "attendance.recorded.v1",
   "attendance.corrected.v1",
   "attendance.approved.v1",
