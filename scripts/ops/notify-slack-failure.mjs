@@ -72,6 +72,9 @@ async function run() {
   const ref = process.env.FLOWHR_ALERT_REF ?? "";
   const trigger = process.env.FLOWHR_ALERT_TRIGGER ?? "";
   const reason = process.env.FLOWHR_ALERT_REASON ?? "";
+  const runbookUrl = process.env.FLOWHR_ALERT_RUNBOOK_URL ?? "";
+  const breakGlassUrl = process.env.FLOWHR_ALERT_BREAK_GLASS_URL ?? "";
+  const rollbackWorkflowUrl = process.env.FLOWHR_ALERT_ROLLBACK_WORKFLOW_URL ?? "";
 
   const lines = [title, `- Workflow: ${workflow}`];
   if (runUrl) {
@@ -85,6 +88,15 @@ async function run() {
   }
   if (reason) {
     lines.push(`- Reason: ${reason}`);
+  }
+  if (runbookUrl) {
+    lines.push(`- Runbook: ${runbookUrl}`);
+  }
+  if (breakGlassUrl) {
+    lines.push(`- Break-glass: ${breakGlassUrl}`);
+  }
+  if (rollbackWorkflowUrl) {
+    lines.push(`- Rollback workflow: ${rollbackWorkflowUrl}`);
   }
   const message = lines.join("\n");
 

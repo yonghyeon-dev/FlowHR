@@ -87,6 +87,10 @@ Completed:
   - `check_pr_template.py` validates required checklist/work-item/ADR metadata
   - break-glass trigger usage requires incident/approval/rollback fields
   - `contract-governance` now enforces PR metadata completeness on pull requests
+- WI-0022 alert context links are implemented:
+  - notifier payload includes optional runbook/break-glass/rollback workflow links
+  - production failure workflows pass context link env vars to webhook notifier
+  - webhook regression tests verify enriched Slack/Discord payload content
 - Golden fixtures (`GC-001` to `GC-006`) are validated in CI and executable tests.
 - Supabase role claim governance script exists (`dry-run`, `apply`, `enforce`).
 - Staging Prisma integration is enabled with schema isolation guardrails.
@@ -181,6 +185,7 @@ Tasks:
 26. Add WI-0019 API/contract coupling check for API-only spec changes. (Completed: 2026-02-13)
 27. Add WI-0020 regression tests for contract governance script rules. (Completed: 2026-02-13)
 28. Add WI-0021 PR template compliance checks in governance gate. (Completed: 2026-02-14)
+29. Add WI-0022 alert context link enrichment for failure notifications. (Completed: 2026-02-14)
 
 Definition of Done:
 

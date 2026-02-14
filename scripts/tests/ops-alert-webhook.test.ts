@@ -112,7 +112,10 @@ async function testDiscordPayloadShape() {
       FLOWHR_ALERT_WORKFLOW: "ops-alert-webhook-test",
       FLOWHR_ALERT_RUN_URL: "https://example.com/run/discord",
       FLOWHR_ALERT_REF: "refs/heads/main",
-      FLOWHR_ALERT_TRIGGER: "workflow_dispatch"
+      FLOWHR_ALERT_TRIGGER: "workflow_dispatch",
+      FLOWHR_ALERT_RUNBOOK_URL: "https://example.com/runbook",
+      FLOWHR_ALERT_BREAK_GLASS_URL: "https://example.com/break-glass",
+      FLOWHR_ALERT_ROLLBACK_WORKFLOW_URL: "https://example.com/rollback"
     });
 
     assert.equal(result.code, 0, "discord webhook send should succeed");
@@ -123,6 +126,9 @@ async function testDiscordPayloadShape() {
     assert.equal(typeof payload.content, "string", "discord payload should use content field");
     assert.equal(payload.text, undefined, "discord payload should not include slack text field");
     assert.match(String(payload.content), /\[FlowHR\] discord test/);
+    assert.match(String(payload.content), /Runbook: https:\/\/example.com\/runbook/);
+    assert.match(String(payload.content), /Break-glass: https:\/\/example.com\/break-glass/);
+    assert.match(String(payload.content), /Rollback workflow: https:\/\/example.com\/rollback/);
   } finally {
     await server.close();
   }
@@ -138,7 +144,10 @@ async function testSlackPayloadShape() {
       FLOWHR_ALERT_WORKFLOW: "ops-alert-webhook-test",
       FLOWHR_ALERT_RUN_URL: "https://example.com/run/slack",
       FLOWHR_ALERT_REF: "refs/heads/main",
-      FLOWHR_ALERT_TRIGGER: "workflow_dispatch"
+      FLOWHR_ALERT_TRIGGER: "workflow_dispatch",
+      FLOWHR_ALERT_RUNBOOK_URL: "https://example.com/runbook",
+      FLOWHR_ALERT_BREAK_GLASS_URL: "https://example.com/break-glass",
+      FLOWHR_ALERT_ROLLBACK_WORKFLOW_URL: "https://example.com/rollback"
     });
 
     assert.equal(result.code, 0, "slack webhook send should succeed");
@@ -149,6 +158,9 @@ async function testSlackPayloadShape() {
     assert.equal(typeof payload.text, "string", "slack payload should use text field");
     assert.equal(payload.content, undefined, "slack payload should not include discord content field");
     assert.match(String(payload.text), /\[FlowHR\] slack test/);
+    assert.match(String(payload.text), /Runbook: https:\/\/example.com\/runbook/);
+    assert.match(String(payload.text), /Break-glass: https:\/\/example.com\/break-glass/);
+    assert.match(String(payload.text), /Rollback workflow: https:\/\/example.com\/rollback/);
   } finally {
     await server.close();
   }
