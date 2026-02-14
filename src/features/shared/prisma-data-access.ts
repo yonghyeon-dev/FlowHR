@@ -258,6 +258,28 @@ const leave: LeaveStore = {
     return toLeaveRequestEntity(request);
   },
 
+  async listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    employeeId?: string;
+    state?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+  }) {
+    const requests = await prisma.leaveRequest.findMany({
+      where: {
+        startDate: {
+          lte: input.periodEnd
+        },
+        endDate: {
+          gte: input.periodStart
+        },
+        ...(input.employeeId ? { employeeId: input.employeeId } : {}),
+        ...(input.state ? { state: input.state } : {})
+      },
+      orderBy: { startDate: "asc" }
+    });
+    return requests.map(toLeaveRequestEntity);
+  },
+
   async findOverlappingActiveRequests(input: {
     employeeId: string;
     startDate: Date;

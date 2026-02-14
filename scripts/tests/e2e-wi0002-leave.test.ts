@@ -122,6 +122,46 @@ async function run() {
   assert.equal(approveBody.balance.usedDays, 2);
   assert.equal(approveBody.balance.remainingDays, 13);
 
+  const listSelfResponse = await leaveCreateRoute.GET(
+    new Request(
+      "http://localhost/api/leave/requests?from=2026-03-01T00:00:00+09:00&to=2026-03-31T23:59:59+09:00",
+      {
+        method: "GET",
+        headers: actorHeaders("employee", employeeId)
+      }
+    )
+  );
+  assert.equal(listSelfResponse.status, 200, "employee should list own leave requests");
+  const listSelfBody = await readJson<{
+    requests: Array<{ id: string; employeeId: string; state: string }>;
+  }>(listSelfResponse);
+  assert.ok(
+    listSelfBody.requests.some((request) => request.id === createBody.request.id),
+    "list should include created leave request"
+  );
+
+  const listOtherEmployeeDenied = await leaveCreateRoute.GET(
+    new Request(
+      "http://localhost/api/leave/requests?from=2026-03-01T00:00:00+09:00&to=2026-03-31T23:59:59+09:00&employeeId=EMP-OTHER",
+      {
+        method: "GET",
+        headers: actorHeaders("employee", employeeId)
+      }
+    )
+  );
+  assert.equal(listOtherEmployeeDenied.status, 403, "employee cannot list other employee leave");
+
+  const managerMissingEmployeeId = await leaveCreateRoute.GET(
+    new Request(
+      "http://localhost/api/leave/requests?from=2026-03-01T00:00:00+09:00&to=2026-03-31T23:59:59+09:00",
+      {
+        method: "GET",
+        headers: actorHeaders("manager", "MGR-LEAVE-1")
+      }
+    )
+  );
+  assert.equal(managerMissingEmployeeId.status, 400, "manager list query must include employeeId");
+
   const overlapResponse = await leaveCreateRoute.POST(
     jsonRequest(
       "POST",

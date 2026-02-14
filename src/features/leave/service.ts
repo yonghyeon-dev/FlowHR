@@ -47,6 +47,13 @@ type SettleLeaveAccrualInput = {
   carryOverCapDays?: number;
 };
 
+type ListLeaveRequestsInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId?: string;
+  state?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+};
+
 function isMutator(actor: Actor, employeeId: string) {
   if (actor.role === "admin" || actor.role === "manager") {
     return true;
@@ -82,6 +89,12 @@ function calculateLeaveDays(startDate: Date, endDate: Date) {
     throw new ServiceError(400, "leave days must be positive");
   }
   return days;
+}
+
+function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
+  if (periodEnd <= periodStart) {
+    throw new ServiceError(400, "to must be after from");
+  }
 }
 
 async function ensureNoOverlap(
@@ -399,6 +412,54 @@ export async function cancelLeaveRequest(
   });
 
   return request;
+}
+
+export async function listLeaveRequests(
+  context: ServiceContext,
+  input: ListLeaveRequestsInput
+): Promise<LeaveRequestEntity[]> {
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+
+  const actor = context.actor;
+  if (actor.role === "employee") {
+    const employeeId = input.employeeId ?? actor.id;
+    if (employeeId !== actor.id) {
+      throw new ServiceError(403, "employee can only list own leave requests");
+    }
+    return await context.dataAccess.leave.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId,
+      state: input.state
+    });
+  }
+
+  if (actor.role === "manager") {
+    if (!input.employeeId) {
+      throw new ServiceError(400, "employeeId is required for manager list queries");
+    }
+    return await context.dataAccess.leave.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId: input.employeeId,
+      state: input.state
+    });
+  }
+
+  if (!hasAnyRole(actor, ["admin", "payroll_operator"])) {
+    throw new ServiceError(403, "leave list requires admin, payroll_operator, manager, or employee");
+  }
+
+  return await context.dataAccess.leave.listInPeriod({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId,
+    state: input.state
+  });
 }
 
 export async function readLeaveBalance(
