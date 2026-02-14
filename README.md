@@ -112,15 +112,18 @@ Production rollout: `docs/production-rollout.md`
 ## Current API Surface (MVP)
 
 - Attendance:
+  - `GET /api/attendance/records` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/attendance/records`
   - `PATCH /api/attendance/records/{recordId}`
   - `POST /api/attendance/records/{recordId}/approve`
   - `POST /api/attendance/records/{recordId}/reject`
 - Payroll:
+  - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`
   - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, profile mode optional `expectedProfileVersion`)
   - `POST /api/payroll/runs/{runId}/confirm`
 - Leave:
+  - `GET /api/leave/requests` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/leave/requests`
   - `PATCH /api/leave/requests/{requestId}`
   - `POST /api/leave/requests/{requestId}/approve`
@@ -132,5 +135,5 @@ Production rollout: `docs/production-rollout.md`
 ## Payroll Phase 2 Contract Artifacts
 
 - Work item: `work-items/WI-0005-payroll-phase2-deductions-tax-contract.md`
-- Contract: `specs/payroll/contract.yaml` (v1.3.0)
+- Contract: `specs/payroll/contract.yaml` (v1.4.0)
 - Compatibility matrix: `specs/payroll/phase2-compatibility-matrix.md`

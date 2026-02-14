@@ -18,6 +18,10 @@ type ActorContext = {
   id: string;
 };
 
+type AttendanceListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
+type LeaveListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+type PayrollListState = "ALL" | "PREVIEWED" | "CONFIRMED";
+
 function toLocalInputValue(value: Date) {
   const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return adjusted.toISOString().slice(0, 16);
@@ -43,6 +47,18 @@ function coerceNumber(value: string, fallback = 0) {
     return fallback;
   }
   return parsed;
+}
+
+function buildQuery(params: Record<string, string | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value.trim() === "") {
+      continue;
+    }
+    search.set(key, value);
+  }
+  const qs = search.toString();
+  return qs.length > 0 ? `?${qs}` : "";
 }
 
 export default function HomePage() {
@@ -82,6 +98,10 @@ export default function HomePage() {
   const [leaveEndDate, setLeaveEndDate] = useState(firstDayOfMonthLocal());
   const [leaveReason, setLeaveReason] = useState("MVP manual verification");
   const [lastLeaveRequestId, setLastLeaveRequestId] = useState("");
+
+  const [attendanceListState, setAttendanceListState] = useState<AttendanceListState>("ALL");
+  const [leaveListState, setLeaveListState] = useState<LeaveListState>("ALL");
+  const [payrollListState, setPayrollListState] = useState<PayrollListState>("ALL");
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -293,6 +313,58 @@ export default function HomePage() {
     );
   }
 
+  async function listAttendanceRecords() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    await callApi(
+      "출퇴근 기록 조회",
+      "GET",
+      `/api/attendance/records${buildQuery({
+        from,
+        to,
+        employeeId: attendanceEmployeeId,
+        state: attendanceListState === "ALL" ? undefined : attendanceListState
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+  }
+
+  async function listLeaveRequests() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    await callApi(
+      "휴가 요청 조회",
+      "GET",
+      `/api/leave/requests${buildQuery({
+        from,
+        to,
+        employeeId: leaveEmployeeId,
+        state: leaveListState === "ALL" ? undefined : leaveListState
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+  }
+
+  async function listPayrollRuns() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    await callApi(
+      "급여 Run 조회",
+      "GET",
+      `/api/payroll/runs${buildQuery({
+        from,
+        to,
+        employeeId: payrollEmployeeId,
+        state: payrollListState === "ALL" ? undefined : payrollListState
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+  }
+
+  function clearLogs() {
+    setLogs([]);
+  }
+
   async function createLeaveRequest() {
     const { response, body } = await callApi(
       "휴가 요청 생성",
@@ -404,6 +476,63 @@ export default function HomePage() {
               onChange={(event) => setAccessToken(event.target.value)}
             />
           </label>
+        </article>
+
+        <article className="panel">
+          <h2>리스트 조회</h2>
+          <p className="small">
+            조회 기간은 급여 섹션의 <strong>기간 시작/종료</strong> 값을 사용합니다. 직원 ID는 각
+            섹션의 직원 ID 값을 사용합니다.
+          </p>
+          <div className="input-grid">
+            <label>
+              출퇴근 상태
+              <select
+                value={attendanceListState}
+                onChange={(event) => setAttendanceListState(event.target.value as AttendanceListState)}
+              >
+                <option value="ALL">ALL</option>
+                <option value="PENDING">PENDING</option>
+                <option value="APPROVED">APPROVED</option>
+                <option value="REJECTED">REJECTED</option>
+              </select>
+            </label>
+            <label>
+              휴가 상태
+              <select
+                value={leaveListState}
+                onChange={(event) => setLeaveListState(event.target.value as LeaveListState)}
+              >
+                <option value="ALL">ALL</option>
+                <option value="PENDING">PENDING</option>
+                <option value="APPROVED">APPROVED</option>
+                <option value="REJECTED">REJECTED</option>
+                <option value="CANCELED">CANCELED</option>
+              </select>
+            </label>
+            <label>
+              급여 상태
+              <select
+                value={payrollListState}
+                onChange={(event) => setPayrollListState(event.target.value as PayrollListState)}
+              >
+                <option value="ALL">ALL</option>
+                <option value="PREVIEWED">PREVIEWED</option>
+                <option value="CONFIRMED">CONFIRMED</option>
+              </select>
+            </label>
+          </div>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={listAttendanceRecords}>
+              출퇴근 조회
+            </button>
+            <button className="btn btn-secondary" onClick={listLeaveRequests}>
+              휴가 조회
+            </button>
+            <button className="btn btn-secondary" onClick={listPayrollRuns}>
+              급여 Run 조회
+            </button>
+          </div>
         </article>
 
         <article className="panel">
@@ -693,6 +822,11 @@ export default function HomePage() {
             최근 호출 결과를 보여줍니다. 현재 실행 중:{" "}
             <strong>{pendingLabel ? pendingLabel : "없음"}</strong>
           </p>
+          <div className="actions">
+            <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
+              로그 초기화
+            </button>
+          </div>
           <pre>{latestPayload}</pre>
           <ul className="log-list">
             {logs.map((log) => (

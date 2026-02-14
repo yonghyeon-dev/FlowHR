@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
   title: FlowHR Ops API (Workflows and Tooling)
-  version: 0.1.0
+  version: 0.1.1
 paths: {}
 
