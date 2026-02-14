@@ -37,3 +37,7 @@ Each fixture must provide:
   - linked work item
   - contract version bump
   - ADR if behavior is breaking
+- CI enforcement:
+  - `scripts/ci/check_golden_fixtures.py --base <sha> --head <sha>` verifies golden change-control links
+  - fixture changes without work-item/contract updates are blocked
+  - breaking fixture changes (delete/rename/id-change) require ADR update
