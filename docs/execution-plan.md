@@ -107,14 +107,19 @@ Completed:
 
 Open gaps:
 
-- Production foundation items are still missing (tracked in `ROADMAP.md` and Phase 1 WI stubs):
-  - employeeId referential integrity (FK migration)
-  - RBAC engine (replace hardcoded roles)
-  - multi-tenant isolation (Supabase RLS baseline)
+- Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
+  - scheduling templates/recurrence/rotation (current `WorkSchedule` is single-entry planning only)
+  - clock-in input enhancements (GPS/QR/Wi-Fi/device) + enforcement
+  - schedule-to-attendance reconciliation + anomaly detection
+- Web UI and employee self-service are not started (Phase 6).
+- Approvals and e-contract are not started (Phase 5).
 
 Recently delivered:
 
 - Employee/Organization master data baseline exists and is audited (WI-0034).
+- employeeId FK integrity and RBAC foundation are merged (WI-0035, WI-0036).
+- Multi-tenant isolation baseline (Supabase RLS) is merged (WI-0037).
+- Scheduling baseline and overlap guard are merged (WI-0040, WI-0041).
 
 ## 2) Priority Roadmap
 
