@@ -1,5 +1,6 @@
 import type { Actor } from "@/lib/actor";
-import { canMutateAttendance, hasAnyRole } from "@/lib/permissions";
+import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
+import { Permissions } from "@/lib/rbac";
 import { derivePayableMinutes, type PayableMinutes } from "@/lib/payroll-rules";
 import type {
   AttendanceRecordEntity,
@@ -68,12 +69,15 @@ export async function createAttendanceRecord(
   context: ServiceContext,
   input: CreateAttendanceInput
 ): Promise<AttendanceRecordEntity> {
-  if (!context.actor) {
+  const actor = context.actor;
+  if (!actor) {
     throw new ServiceError(401, "missing or invalid actor context");
   }
-  if (!canMutateAttendance(context.actor, input.employeeId)) {
-    throw new ServiceError(403, "insufficient permissions");
-  }
+  await requireOwnOrAny(context, {
+    own: Permissions.attendanceRecordWriteOwn,
+    any: Permissions.attendanceRecordWriteAny,
+    employeeId: input.employeeId
+  });
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -88,8 +92,8 @@ export async function createAttendanceRecord(
     action: "attendance.recorded",
     entityType: "AttendanceRecord",
     entityId: record.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: record.employeeId
     }
@@ -99,8 +103,8 @@ export async function createAttendanceRecord(
     occurredAt: new Date().toISOString(),
     entityType: "AttendanceRecord",
     entityId: record.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: record.employeeId
     }
@@ -121,9 +125,11 @@ async function requireEditableRecord(
   if (!existing) {
     throw new ServiceError(404, "attendance record not found");
   }
-  if (!canMutateAttendance(context.actor, existing.employeeId)) {
-    throw new ServiceError(403, "insufficient permissions");
-  }
+  await requireOwnOrAny(context, {
+    own: Permissions.attendanceRecordWriteOwn,
+    any: Permissions.attendanceRecordWriteAny,
+    employeeId: existing.employeeId
+  });
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be edited");
   }
@@ -176,9 +182,11 @@ export async function approveAttendanceRecord(
   context: ServiceContext,
   recordId: string
 ): Promise<AttendanceRecordEntity> {
-  if (!context.actor || !hasAnyRole(context.actor, ["admin", "manager"])) {
-    throw new ServiceError(403, "approval requires admin or manager role");
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
   }
+  await requirePermission(context, Permissions.attendanceRecordApprove, "approval requires permission");
 
   const existing = await context.dataAccess.attendance.findById(recordId);
   if (!existing) {
@@ -191,14 +199,14 @@ export async function approveAttendanceRecord(
   const record = await context.dataAccess.attendance.update(recordId, {
     state: "APPROVED",
     approvedAt: new Date(),
-    approvedBy: context.actor.id
+    approvedBy: actor.id
   });
   await context.dataAccess.audit.append({
     action: "attendance.approved",
     entityType: "AttendanceRecord",
     entityId: record.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: record.employeeId
     }
@@ -208,8 +216,8 @@ export async function approveAttendanceRecord(
     occurredAt: new Date().toISOString(),
     entityType: "AttendanceRecord",
     entityId: record.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: record.employeeId,
       approvedAt: record.approvedAt?.toISOString() ?? null
@@ -224,9 +232,11 @@ export async function rejectAttendanceRecord(
   recordId: string,
   reason?: string
 ): Promise<AttendanceRecordEntity> {
-  if (!context.actor || !hasAnyRole(context.actor, ["admin", "manager"])) {
-    throw new ServiceError(403, "rejection requires admin or manager role");
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
   }
+  await requirePermission(context, Permissions.attendanceRecordReject, "rejection requires permission");
 
   const existing = await context.dataAccess.attendance.findById(recordId);
   if (!existing) {
@@ -245,8 +255,8 @@ export async function rejectAttendanceRecord(
     action: "attendance.rejected",
     entityType: "AttendanceRecord",
     entityId: record.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: record.employeeId,
       reason: reason ?? null
@@ -257,8 +267,8 @@ export async function rejectAttendanceRecord(
     occurredAt: new Date().toISOString(),
     entityType: "AttendanceRecord",
     entityId: record.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: record.employeeId,
       reason: reason ?? null
@@ -292,7 +302,30 @@ export async function listAttendanceRecords(
   ensureValidPeriod(input.periodStart, input.periodEnd);
 
   const actor = context.actor;
-  if (actor.role === "employee") {
+  const permissions = await resolveActorPermissions(context);
+
+  if (permissions.has(Permissions.attendanceRecordListAny)) {
+    return await context.dataAccess.attendance.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId: input.employeeId,
+      state: input.state
+    });
+  }
+
+  if (permissions.has(Permissions.attendanceRecordListByEmployee)) {
+    if (!input.employeeId) {
+      throw new ServiceError(400, "employeeId is required for manager list queries");
+    }
+    return await context.dataAccess.attendance.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId: input.employeeId,
+      state: input.state
+    });
+  }
+
+  if (permissions.has(Permissions.attendanceRecordListOwn)) {
     const employeeId = input.employeeId ?? actor.id;
     if (employeeId !== actor.id) {
       throw new ServiceError(403, "employee can only list own attendance records");
@@ -305,28 +338,7 @@ export async function listAttendanceRecords(
     });
   }
 
-  if (actor.role === "manager") {
-    if (!input.employeeId) {
-      throw new ServiceError(400, "employeeId is required for manager list queries");
-    }
-    return await context.dataAccess.attendance.listInPeriod({
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      employeeId: input.employeeId,
-      state: input.state
-    });
-  }
-
-  if (!hasAnyRole(actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(403, "attendance list requires admin, payroll_operator, manager, or employee");
-  }
-
-  return await context.dataAccess.attendance.listInPeriod({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    employeeId: input.employeeId,
-    state: input.state
-  });
+  throw new ServiceError(403, "attendance list requires permission");
 }
 
 export async function listAttendanceAggregates(
@@ -341,21 +353,21 @@ export async function listAttendanceAggregates(
 
   const actor = context.actor;
   let employeeId = input.employeeId;
+  const permissions = await resolveActorPermissions(context);
 
-  if (actor.role === "employee") {
+  if (permissions.has(Permissions.attendanceAggregateListAny)) {
+    // optional employeeId filter is allowed
+  } else if (permissions.has(Permissions.attendanceAggregateListByEmployee)) {
+    if (!employeeId) {
+      throw new ServiceError(400, "employeeId is required for manager aggregate queries");
+    }
+  } else if (permissions.has(Permissions.attendanceAggregateListOwn)) {
     employeeId = employeeId ?? actor.id;
     if (employeeId !== actor.id) {
       throw new ServiceError(403, "employee can only list own attendance aggregates");
     }
-  } else if (actor.role === "manager") {
-    if (!employeeId) {
-      throw new ServiceError(400, "employeeId is required for manager aggregate queries");
-    }
-  } else if (!hasAnyRole(actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(
-      403,
-      "attendance aggregates require admin, payroll_operator, manager, or employee"
-    );
+  } else {
+    throw new ServiceError(403, "attendance aggregates require permission");
   }
 
   const records = await context.dataAccess.attendance.listInPeriod({

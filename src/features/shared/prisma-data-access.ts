@@ -22,7 +22,11 @@ import type {
   OrganizationStore,
   PayrollRunEntity,
   PayrollStore,
+  RbacStore,
   RecordLeaveDecisionInput,
+  RoleEntity,
+  RoleWithPermissionsEntity,
+  UpsertRoleInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
   UpdateEmployeeInput,
@@ -167,6 +171,31 @@ function toEmployeeEntity(record: {
   return record;
 }
 
+function toRoleEntity(record: {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): RoleEntity {
+  return record;
+}
+
+function toRoleWithPermissionsEntity(record: {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  permissions: Array<{ permission: string }>;
+}): RoleWithPermissionsEntity {
+  const permissions = record.permissions.map((row) => row.permission).sort((a, b) => a.localeCompare(b));
+  return {
+    ...toRoleEntity(record),
+    permissions
+  };
+}
+
 const organizations: OrganizationStore = {
   async create(input: CreateOrganizationInput) {
     const record = await prisma.organization.create({
@@ -236,6 +265,86 @@ const employees: EmployeeStore = {
       orderBy: { id: "asc" }
     });
     return records.map(toEmployeeEntity);
+  }
+};
+
+const rbac: RbacStore = {
+  async listRoles() {
+    const roles = await prisma.role.findMany({
+      include: {
+        permissions: {
+          select: { permission: true }
+        }
+      },
+      orderBy: { id: "asc" }
+    });
+    return roles.map(toRoleWithPermissionsEntity);
+  },
+
+  async findRoleById(id: string) {
+    const role = await prisma.role.findUnique({
+      where: { id },
+      include: {
+        permissions: {
+          select: { permission: true }
+        }
+      }
+    });
+    return role ? toRoleWithPermissionsEntity(role) : null;
+  },
+
+  async listRolePermissions(roleId: string) {
+    const rows = await prisma.rolePermission.findMany({
+      where: { roleId },
+      select: { permission: true },
+      orderBy: { permission: "asc" }
+    });
+    return rows.map((row) => row.permission);
+  },
+
+  async upsertRole(input: UpsertRoleInput) {
+    const role = await prisma.role.upsert({
+      where: { id: input.id },
+      create: {
+        id: input.id,
+        name: input.name,
+        description: input.description === undefined ? null : input.description
+      },
+      update: {
+        name: input.name,
+        description: input.description === undefined ? null : input.description
+      }
+    });
+
+    await prisma.rolePermission.deleteMany({
+      where: { roleId: role.id }
+    });
+
+    const permissions = (input.permissions ?? [])
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
+    if (permissions.length > 0) {
+      await prisma.rolePermission.createMany({
+        data: permissions.map((permission) => ({
+          roleId: role.id,
+          permission
+        })),
+        skipDuplicates: true
+      });
+    }
+
+    const stored = await prisma.role.findUnique({
+      where: { id: role.id },
+      include: {
+        permissions: {
+          select: { permission: true }
+        }
+      }
+    });
+
+    // stored must exist because upsert succeeded.
+    return toRoleWithPermissionsEntity(stored!);
   }
 };
 
@@ -626,6 +735,7 @@ const audit: AuditStore = {
 export const prismaDataAccess: DataAccess = {
   organizations,
   employees,
+  rbac,
   attendance,
   leave,
   leaveBalance,

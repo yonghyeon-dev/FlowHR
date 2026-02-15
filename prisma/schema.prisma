@@ -31,6 +31,29 @@ model Employee {
   @@index([organizationId, active])
 }
 
+model Role {
+  id          String   @id
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+
+  @@index([name])
+}
+
+model RolePermission {
+  roleId     String
+  permission String
+  createdAt  DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permission])
+  @@index([permission])
+}
+
 model AttendanceRecord {
   id           String   @id @default(cuid())
   employeeId   String
