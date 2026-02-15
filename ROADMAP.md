@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0039)
+### 완료 WI 목록 (WI-0001 ~ WI-0040)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -60,31 +60,33 @@
 | WI-0034 | Employee and Organization Master Model | 핵심 비즈니스 |
 | WI-0035 | employeeId String to FK Migration | 안정성 |
 | WI-0036 | RBAC Engine Foundation | 안정성 |
+| WI-0037 | Multi-Tenant Isolation Baseline (Supabase RLS) | 인프라 |
 | WI-0038 | Phase2 Health 409 Gate Tuning | 운영 |
 | WI-0039 | Discord Alert Korean | 운영 |
+| WI-0040 | Scheduling Baseline (WorkSchedule API) | 핵심 비즈니스 |
 
-### Phase 1 백로그 (초안)
+### 다음 우선순위 (Phase 2 시작)
 
-| WI | 제목 | 카테고리 |
-|----|-------|----------|
-| WI-0037 | Multi-Tenant Isolation Baseline (Supabase RLS) | 인프라 |
+- 근무일정/교대/유연근무 고도화(템플릿/반복/로테이션)
+- 출퇴근 입력 강화(GPS/QR/디바이스/위치 기반)
+- 실시간 근태 현황/이상 탐지(스케줄 대비 출퇴근)
 
 ### 진행 중
 
-- 없음 (WI-0039까지 main에 머지 완료)
+- 없음 (WI-0040까지 main에 머지 완료)
 
 ### 현재 아키텍처
 
 | 항목 | 현재 상태 | 프로덕션 요구 |
 |------|-----------|---------------|
-| DB 모델 | 11개 (Organization/Employee/RBAC 포함; employeeId FK 도입 완료) | 25~30개 |
-| API 엔드포인트 | ~18개 | 100+ |
+| DB 모델 | 12개 (Organization/Employee/RBAC/WorkSchedule 포함; employeeId FK/RLS baseline 적용) | 25~30개 |
+| API 엔드포인트 | ~30개 | 100+ |
 | 인증 | Supabase JWT + 헤더 폴백 + RBAC(permission) | RBAC 엔진 + 테넌트 격리 |
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | 단순 비율 (hourlyRate × multiplier) | 한국 세법 + 4대보험 |
-| UI | MVP 운영 콘솔 (단일 페이지) | 관리자 대시보드 + 직원 포탈 |
+| UI | MVP 운영 콘솔 (단일 페이지; 근무일정 포함) | 관리자 대시보드 + 직원 포탈 |
 | 모바일 | 없음 | 네이티브 앱 (iOS/Android) |
-| 멀티테넌트 | 없음 (단일 테넌트) | 조직별 완전 격리 |
+| 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 
 ---
 
@@ -251,7 +253,7 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 
 ## 5. Phase 상세
 
-### Phase 1: Production Foundation (현재 우선순위)
+### Phase 1: Production Foundation (완료)
 
 **목표**: 1인 운영에서도 안전하게 확장할 수 있도록 인사 마스터/무결성/권한/테넌트 기반을 먼저 고정합니다.
 
@@ -261,7 +263,7 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 | WI-0034 | Done | People 도메인(Organization/Employee) + API + Prisma 모델 |
 | WI-0035 | Done | 기존 `employeeId: string` → `Employee` FK 마이그레이션 |
 | WI-0036 | Done | RBAC 엔진 도입(하드코딩 역할 제거) |
-| WI-0037 | Next | 멀티테넌트 격리 baseline (Supabase RLS) |
+| WI-0037 | Done | 멀티테넌트 격리 baseline (Supabase RLS) |
 
 운영 안정성(상시):
 
@@ -272,8 +274,8 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 **완료 기준 (DoD)**:
 - [x] `Employee`를 참조하는 핵심 도메인 테이블이 FK로 무결성을 보장
 - [x] 하드코딩 역할 체크가 RBAC 엔진으로 전환
-- [ ] 최소 멀티테넌트 격리(앱 레벨 스코프 + RLS baseline)가 적용
-- [ ] 기존 회귀 테스트(WI-0001~0031) 및 거버넌스 게이트가 모두 통과
+- [x] 최소 멀티테넌트 격리(앱 레벨 스코프 + RLS baseline)가 적용
+- [x] 기존 회귀 테스트 및 거버넌스 게이트가 모두 통과
 
 ### Phase 2+ (요약)
 
@@ -303,7 +305,7 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 
 ## 7. 운영 메모
 
-- Staging CI는 기본 `OFF` 입니다. 설정은 `docs/staging-secrets.md`를 따릅니다.
+- Staging CI는 레포 변수 `FLOWHR_ENABLE_STAGING_CI=true`일 때만 동작합니다. 설정은 `docs/staging-secrets.md`를 따릅니다.
 - Phase2 운영 롤아웃/헬스 모니터링은 `docs/production-rollout.md`를 따릅니다.
 
 ---

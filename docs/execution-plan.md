@@ -211,16 +211,16 @@ Definition of Done:
 - Phase 2 payroll contracts are approved with compatibility strategy.
 - Drift check blocks mismatched docs/spec/runtime identifiers.
 
-## P5. Production Foundation (Next)
+## P5. Production Foundation (Done)
 
 Objective: establish production-grade HR SaaS foundations before expanding modules.
 
 Tasks (Phase 1 stubs):
 
 1. (Done) `work-items/WI-0034-employee-organization-master-model.md`
-2. (Next) `work-items/WI-0035-employeeid-fk-migration.md`
-3. (Next) `work-items/WI-0036-rbac-engine-foundation.md`
-4. (Next) `work-items/WI-0037-multi-tenant-rls-baseline.md`
+2. (Done) `work-items/WI-0035-employeeid-fk-migration.md`
+3. (Done) `work-items/WI-0036-rbac-engine-foundation.md`
+4. (Done) `work-items/WI-0037-multi-tenant-rls-baseline.md`
 
 Definition of Done:
 
@@ -228,6 +228,14 @@ Definition of Done:
 - Core domain tables enforce employee integrity (FK).
 - Authorization is RBAC-based (no hardcoded role lists for core APIs).
 - Tenant isolation is enforced at DB level (RLS) for core tables.
+
+## P6. Phase 2 Kickoff (Scheduling)
+
+Objective: establish minimal schedule planning to unlock Phase 2 (shifts/rotations, anomaly detection).
+
+Tasks:
+
+1. (Done) `work-items/WI-0040-scheduling-baseline.md`
 
 ## 3) Workstream Ownership
 
@@ -260,7 +268,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. start WI-0035 (employeeId FK migration) contract-first and land it behind safe migration steps,
-2. proceed with WI-0036 (RBAC foundation) to remove hardcoded role checks,
-3. proceed with WI-0037 (multi-tenant RLS baseline) after org/employee scoping is stable,
-4. keep phase2-health and rollback rehearsal workflows green (triage incidents via GitHub issues).
+1. define Phase 2 scheduling enhancement WI (templates/recurrence/rotation) contract-first,
+2. add schedule update/cancel semantics + audit/event compatibility rules,
+3. implement schedule-to-attendance anomaly signals (late/no-show) as a non-blocking report first.
