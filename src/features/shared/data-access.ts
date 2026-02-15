@@ -20,6 +20,18 @@ export type AttendanceRecordEntity = {
   updatedAt: Date;
 };
 
+export type WorkScheduleEntity = {
+  id: string;
+  employeeId: string;
+  startAt: Date;
+  endAt: Date;
+  breakMinutes: number;
+  isHoliday: boolean;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type PayrollRunEntity = {
   id: string;
   organizationId: string | null;
@@ -134,6 +146,15 @@ export type UpdateAttendanceRecordInput = {
   state?: AttendanceState;
   approvedAt?: Date | null;
   approvedBy?: string | null;
+};
+
+export type CreateWorkScheduleInput = {
+  employeeId: string;
+  startAt: Date;
+  endAt: Date;
+  breakMinutes: number;
+  isHoliday: boolean;
+  notes?: string;
 };
 
 export type CreatePayrollRunInput = {
@@ -258,6 +279,16 @@ export interface AttendanceStore {
   }): Promise<AttendanceRecordEntity[]>;
 }
 
+export interface SchedulingStore {
+  create(input: CreateWorkScheduleInput): Promise<WorkScheduleEntity>;
+  listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    organizationId?: string;
+    employeeId?: string;
+  }): Promise<WorkScheduleEntity[]>;
+}
+
 export interface PayrollStore {
   create(input: CreatePayrollRunInput): Promise<PayrollRunEntity>;
   findById(id: string): Promise<PayrollRunEntity | null>;
@@ -346,6 +377,7 @@ export type DataAccess = {
   employees: EmployeeStore;
   rbac: RbacStore;
   attendance: AttendanceStore;
+  scheduling: SchedulingStore;
   leave: LeaveStore;
   leaveBalance: LeaveBalanceStore;
   payroll: PayrollStore;

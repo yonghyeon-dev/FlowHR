@@ -17,6 +17,11 @@ export const Permissions = {
   attendanceAggregateListByEmployee: "attendance.aggregate.list.by_employee",
   attendanceAggregateListOwn: "attendance.aggregate.list.own",
 
+  schedulingScheduleWriteAny: "scheduling.schedule.write.any",
+  schedulingScheduleListAny: "scheduling.schedule.list.any",
+  schedulingScheduleListByEmployee: "scheduling.schedule.list.by_employee",
+  schedulingScheduleListOwn: "scheduling.schedule.list.own",
+
   leaveRequestWriteAny: "leave.request.write.any",
   leaveRequestWriteOwn: "leave.request.write.own",
   leaveRequestApprove: "leave.request.approve",
@@ -48,6 +53,8 @@ export const defaultRolePermissions: Record<ActorRole, readonly Permission[]> = 
     Permissions.attendanceRecordReject,
     Permissions.attendanceRecordListByEmployee,
     Permissions.attendanceAggregateListByEmployee,
+    Permissions.schedulingScheduleWriteAny,
+    Permissions.schedulingScheduleListByEmployee,
     Permissions.leaveRequestWriteAny,
     Permissions.leaveRequestApprove,
     Permissions.leaveRequestReject,
@@ -57,6 +64,7 @@ export const defaultRolePermissions: Record<ActorRole, readonly Permission[]> = 
   payroll_operator: [
     Permissions.attendanceRecordListAny,
     Permissions.attendanceAggregateListAny,
+    Permissions.schedulingScheduleListAny,
     Permissions.leaveRequestListAny,
     Permissions.leaveBalanceReadAny,
     Permissions.leaveAccrualSettle,
@@ -70,6 +78,7 @@ export const defaultRolePermissions: Record<ActorRole, readonly Permission[]> = 
     Permissions.attendanceRecordWriteOwn,
     Permissions.attendanceRecordListOwn,
     Permissions.attendanceAggregateListOwn,
+    Permissions.schedulingScheduleListOwn,
     Permissions.leaveRequestWriteOwn,
     Permissions.leaveRequestListOwn,
     Permissions.leaveBalanceReadOwn

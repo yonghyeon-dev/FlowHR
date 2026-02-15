@@ -9,6 +9,7 @@ import type {
   CreateLeaveRequestInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
+  CreateWorkScheduleInput,
   DataAccess,
   DeductionProfileEntity,
   DeductionProfileStore,
@@ -26,12 +27,14 @@ import type {
   RecordLeaveDecisionInput,
   RoleEntity,
   RoleWithPermissionsEntity,
+  SchedulingStore,
   UpsertRoleInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
-  UpdatePayrollRunInput
+  UpdatePayrollRunInput,
+  WorkScheduleEntity
 } from "@/features/shared/data-access";
 
 function toAttendanceEntity(record: {
@@ -48,6 +51,20 @@ function toAttendanceEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): AttendanceRecordEntity {
+  return record;
+}
+
+function toWorkScheduleEntity(record: {
+  id: string;
+  employeeId: string;
+  startAt: Date;
+  endAt: Date;
+  breakMinutes: number;
+  isHoliday: boolean;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): WorkScheduleEntity {
   return record;
 }
 
@@ -434,6 +451,44 @@ const attendance: AttendanceStore = {
   }
 };
 
+const scheduling: SchedulingStore = {
+  async create(input: CreateWorkScheduleInput) {
+    const record = await prisma.workSchedule.create({
+      data: {
+        employeeId: input.employeeId,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        breakMinutes: input.breakMinutes,
+        isHoliday: input.isHoliday,
+        notes: input.notes ?? null
+      }
+    });
+    return toWorkScheduleEntity(record);
+  },
+
+  async listInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    organizationId?: string;
+    employeeId?: string;
+  }) {
+    const records = await prisma.workSchedule.findMany({
+      where: {
+        startAt: {
+          lte: input.periodEnd
+        },
+        endAt: {
+          gte: input.periodStart
+        },
+        ...(input.organizationId ? { employee: { organizationId: input.organizationId } } : {}),
+        ...(input.employeeId ? { employeeId: input.employeeId } : {})
+      },
+      orderBy: { startAt: "asc" }
+    });
+    return records.map(toWorkScheduleEntity);
+  }
+};
+
 const leave: LeaveStore = {
   async create(input: CreateLeaveRequestInput) {
     const request = await prisma.leaveRequest.create({
@@ -757,6 +812,7 @@ export const prismaDataAccess: DataAccess = {
   employees,
   rbac,
   attendance,
+  scheduling,
   leave,
   leaveBalance,
   payroll,

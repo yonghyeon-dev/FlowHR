@@ -120,6 +120,9 @@ Production rollout: `docs/production-rollout.md`
   - `PATCH /api/attendance/records/{recordId}`
   - `POST /api/attendance/records/{recordId}/approve`
   - `POST /api/attendance/records/{recordId}/reject`
+- Scheduling:
+  - `GET /api/scheduling/schedules` (query: `from`, `to`, optional `employeeId`)
+  - `POST /api/scheduling/schedules`
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`

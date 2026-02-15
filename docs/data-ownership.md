@@ -16,6 +16,7 @@ Exception:
 | People | `Organization`, `Employee` | `organization.created.v1`, `employee.created.v1`, `employee.profile.updated.v1` | Own tables, read-only via API/event projections |
 | RBAC | `Role`, `RolePermission` | none | Read-only by runtime services for authorization resolution; write via RBAC API (admin only) |
 | Attendance | `AttendanceRecord` | `attendance.recorded.v1`, `attendance.corrected.v1`, `attendance.approved.v1`, `attendance.rejected.v1` | Own tables, event projections |
+| Scheduling | `WorkSchedule` | `scheduling.schedule.assigned.v1` | Own tables, read-only via API/event projections |
 | Payroll | `PayrollRun` | `payroll.calculated.v1`, `payroll.confirmed.v1`, `payroll.deductions.calculated.v1`, `payroll.deduction_profile.updated.v1` | Own tables, attendance projections only |
 | Leave | `LeaveRequest`, `LeaveApproval`, `LeaveBalanceProjection` | `leave.requested.v1`, `leave.approved.v1`, `leave.rejected.v1`, `leave.canceled.v1`, `leave.accrual.settled.v1` | Own tables, attendance/payroll read-model only |
 | Platform (Shared) | `AuditLog` | none | Read-only for operations and audits |

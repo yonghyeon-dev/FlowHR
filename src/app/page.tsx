@@ -37,6 +37,16 @@ function lastDayOfMonthLocal() {
   return toLocalInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 0));
 }
 
+function defaultWorkScheduleStartLocal() {
+  const now = new Date();
+  return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0));
+}
+
+function defaultWorkScheduleEndLocal() {
+  const now = new Date();
+  return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0));
+}
+
 function toIso(value: string) {
   return new Date(value).toISOString();
 }
@@ -75,6 +85,13 @@ export default function HomePage() {
   const [breakMinutes, setBreakMinutes] = useState("60");
   const [isHoliday, setIsHoliday] = useState(false);
   const [lastAttendanceId, setLastAttendanceId] = useState("");
+
+  const [scheduleEmployeeId, setScheduleEmployeeId] = useState("EMP-1001");
+  const [scheduleStartAt, setScheduleStartAt] = useState(defaultWorkScheduleStartLocal());
+  const [scheduleEndAt, setScheduleEndAt] = useState(defaultWorkScheduleEndLocal());
+  const [scheduleBreakMinutes, setScheduleBreakMinutes] = useState("60");
+  const [scheduleIsHoliday, setScheduleIsHoliday] = useState(false);
+  const [scheduleNotes, setScheduleNotes] = useState("");
 
   const [payrollEmployeeId, setPayrollEmployeeId] = useState("EMP-1001");
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
@@ -202,6 +219,23 @@ export default function HomePage() {
       "POST",
       `/api/attendance/records/${lastAttendanceId}/approve`,
       { role: "manager", id: managerActorId }
+    );
+  }
+
+  async function createWorkSchedule() {
+    await callApi(
+      "근무일정 생성",
+      "POST",
+      "/api/scheduling/schedules",
+      { role: "manager", id: managerActorId },
+      {
+        employeeId: scheduleEmployeeId,
+        startAt: toIso(scheduleStartAt),
+        endAt: toIso(scheduleEndAt),
+        breakMinutes: Math.max(0, Math.trunc(coerceNumber(scheduleBreakMinutes))),
+        isHoliday: scheduleIsHoliday,
+        notes: scheduleNotes.trim().length > 0 ? scheduleNotes.trim() : undefined
+      }
     );
   }
 
@@ -350,6 +384,21 @@ export default function HomePage() {
         from,
         to,
         employeeId: attendanceEmployeeId
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+  }
+
+  async function listWorkSchedules() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    await callApi(
+      "근무일정 조회",
+      "GET",
+      `/api/scheduling/schedules${buildQuery({
+        from,
+        to,
+        employeeId: scheduleEmployeeId
       })}`,
       { role: "payroll_operator", id: payrollActorId }
     );
@@ -563,6 +612,9 @@ export default function HomePage() {
             <button className="btn btn-secondary" onClick={listAttendanceAggregates}>
               근태 집계 조회
             </button>
+            <button className="btn btn-secondary" onClick={listWorkSchedules}>
+              근무일정 조회
+            </button>
             <button className="btn btn-secondary" onClick={listLeaveRequests}>
               휴가 조회
             </button>
@@ -631,6 +683,63 @@ export default function HomePage() {
             </button>
             <button className="btn btn-secondary" onClick={approveAttendance} disabled={!lastAttendanceId}>
               기록 승인
+            </button>
+          </div>
+        </article>
+
+        <article className="panel">
+          <h2>근무일정</h2>
+          <div className="input-grid">
+            <label>
+              직원 ID
+              <input value={scheduleEmployeeId} onChange={(event) => setScheduleEmployeeId(event.target.value)} />
+            </label>
+            <label>
+              휴일 근무
+              <select
+                value={scheduleIsHoliday ? "yes" : "no"}
+                onChange={(event) => setScheduleIsHoliday(event.target.value === "yes")}
+              >
+                <option value="no">아니오</option>
+                <option value="yes">예</option>
+              </select>
+            </label>
+            <label>
+              시작 시각
+              <input
+                type="datetime-local"
+                value={scheduleStartAt}
+                onChange={(event) => setScheduleStartAt(event.target.value)}
+              />
+            </label>
+            <label>
+              종료 시각
+              <input
+                type="datetime-local"
+                value={scheduleEndAt}
+                onChange={(event) => setScheduleEndAt(event.target.value)}
+              />
+            </label>
+            <label>
+              휴게 분
+              <input
+                type="number"
+                min={0}
+                value={scheduleBreakMinutes}
+                onChange={(event) => setScheduleBreakMinutes(event.target.value)}
+              />
+            </label>
+            <label>
+              메모
+              <input value={scheduleNotes} onChange={(event) => setScheduleNotes(event.target.value)} />
+            </label>
+          </div>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={createWorkSchedule}>
+              일정 생성
+            </button>
+            <button className="btn btn-secondary" onClick={listWorkSchedules}>
+              일정 조회
             </button>
           </div>
         </article>
