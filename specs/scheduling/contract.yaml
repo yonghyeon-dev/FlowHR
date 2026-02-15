@@ -1,0 +1,88 @@
+owner: scheduling-agent
+version: 0.1.0
+scope:
+  in:
+    - work schedule assignment (planned start/end)
+    - schedule list query by period
+    - tenant-scoped schedule access (RLS baseline + service scoping)
+  out:
+    - recurring schedule templates and rotations
+    - GPS/QR/geofence clock-in enforcement
+    - schedule-to-attendance reconciliation
+entities:
+  - name: WorkSchedule
+    description: Planned work schedule entry for an employee.
+api:
+  auth:
+    - role: employee
+      permission: view own schedules only
+    - role: manager
+      permission: assign and list schedules within tenant (employeeId scoped)
+    - role: admin
+      permission: assign and list schedules without org restriction
+  endpoints:
+    - method: GET
+      path: /scheduling/schedules
+      description: List schedules filtered by period (from/to) and optional employeeId.
+    - method: POST
+      path: /scheduling/schedules
+      description: Create a schedule entry for an employee.
+  events:
+    published:
+      - name: scheduling.schedule.assigned.v1
+        description: Emitted when a schedule entry is created/assigned for an employee.
+    consumed: []
+db_changes:
+  migrations:
+    - id: 202602150003_scheduling_baseline
+      description: Create WorkSchedule table (Employee FK) and enable RLS tenant isolation policies.
+  backward_compatible: true
+  notes: Additive scheduling baseline; no changes to payroll/attendance calculations.
+invariants:
+  - WorkSchedule.employeeId must reference existing Employee.id (FK enforced).
+  - startAt must be strictly before endAt.
+  - Employee schedule list queries are restricted to own employeeId.
+risk:
+  permissions:
+    - Unauthorized schedule access can leak employee working patterns across tenants.
+  payroll_accuracy:
+    - Schedule is informational only for MVP and does not affect payroll calculation.
+  legal:
+    - Schedule changes should remain auditable.
+test_plan:
+  unit:
+    - schedule payload validation boundaries
+  integration:
+    - manager can create schedule; employee cannot
+    - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
+  regression:
+    - none
+  authorization:
+    - permission boundaries for create/list
+  payroll_accuracy:
+    - not applicable
+observability:
+  audit_events:
+    - scheduling.schedule.assigned
+  metrics:
+    - schedule_assign_count (optional)
+  logs:
+    - authorization denied logs for scheduling create/list
+rollout:
+  feature_flags:
+    - name: scheduling_v1
+      default: "off"
+  migration_strategy: expand-contract
+rollback:
+  strategy: disable scheduling_v1 and hide scheduling routes; adjust RLS via break-glass only if required.
+  max_recovery_time: 60m
+deprecations: []
+breaking_changes: false
+consumer_impact: "Introduces WorkSchedule planning entries and schedule list/create APIs (no payroll impact in MVP)."
+references:
+  - specs/common/time-and-payroll-rules.md
+  - work-items/WI-0040-scheduling-baseline.md
+approval:
+  spec_owner: scheduling-agent
+  qa_owner: qa-agent
+

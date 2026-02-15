@@ -1,6 +1,7 @@
 import type {
   AppendAuditLogInput,
   AttendanceRecordEntity,
+  CreateWorkScheduleInput,
   CreateEmployeeInput,
   CreateOrganizationInput,
   DataAccess,
@@ -17,7 +18,8 @@ import type {
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput,
-  PayrollRunEntity
+  PayrollRunEntity,
+  WorkScheduleEntity
 } from "@/features/shared/data-access";
 import { defaultRolePermissions } from "@/lib/rbac";
 
@@ -28,6 +30,7 @@ type MemoryState = {
   roles: Map<string, RoleEntity>;
   rolePermissions: Map<string, Set<string>>;
   attendance: Map<string, AttendanceRecordEntity>;
+  workSchedules: Map<string, WorkScheduleEntity>;
   leaveRequests: Map<string, LeaveRequestEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
   payroll: Map<string, PayrollRunEntity>;
@@ -58,6 +61,7 @@ function createState(): MemoryState {
     roles: new Map<string, RoleEntity>(),
     rolePermissions: new Map<string, Set<string>>(),
     attendance: new Map<string, AttendanceRecordEntity>(),
+    workSchedules: new Map<string, WorkScheduleEntity>(),
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
@@ -90,6 +94,16 @@ function cloneAttendance(entity: AttendanceRecordEntity): AttendanceRecordEntity
     checkInAt: cloneDate(entity.checkInAt),
     checkOutAt: entity.checkOutAt ? cloneDate(entity.checkOutAt) : null,
     approvedAt: entity.approvedAt ? cloneDate(entity.approvedAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneWorkSchedule(entity: WorkScheduleEntity): WorkScheduleEntity {
+  return {
+    ...entity,
+    startAt: cloneDate(entity.startAt),
+    endAt: cloneDate(entity.endAt),
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -441,6 +455,47 @@ export const memoryDataAccess: DataAccess = {
         rows.push(cloneAttendance(entity));
       }
       rows.sort((a, b) => a.checkInAt.getTime() - b.checkInAt.getTime());
+      return rows;
+    }
+  },
+
+  scheduling: {
+    async create(input: CreateWorkScheduleInput) {
+      const now = new Date();
+      const entity: WorkScheduleEntity = {
+        id: nextId("WS"),
+        employeeId: input.employeeId,
+        startAt: cloneDate(input.startAt),
+        endAt: cloneDate(input.endAt),
+        breakMinutes: input.breakMinutes,
+        isHoliday: input.isHoliday,
+        notes: input.notes ?? null,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.workSchedules.set(entity.id, entity);
+      return cloneWorkSchedule(entity);
+    },
+
+    async listInPeriod(input) {
+      const rows: WorkScheduleEntity[] = [];
+      for (const entity of state.workSchedules.values()) {
+        const overlaps = entity.startAt <= input.periodEnd && entity.endAt >= input.periodStart;
+        if (!overlaps) {
+          continue;
+        }
+        if (input.organizationId) {
+          const employee = state.employees.get(entity.employeeId);
+          if (!employee || employee.organizationId !== input.organizationId) {
+            continue;
+          }
+        }
+        if (input.employeeId && entity.employeeId !== input.employeeId) {
+          continue;
+        }
+        rows.push(cloneWorkSchedule(entity));
+      }
+      rows.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
       return rows;
     }
   },
