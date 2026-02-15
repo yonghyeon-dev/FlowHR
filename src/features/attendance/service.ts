@@ -9,6 +9,7 @@ import type {
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
+import { requireEmployeeExists } from "@/features/shared/require-employee";
 import { ServiceError } from "@/features/shared/service-error";
 
 type CreateAttendanceInput = {
@@ -78,6 +79,8 @@ export async function createAttendanceRecord(
     any: Permissions.attendanceRecordWriteAny,
     employeeId: input.employeeId
   });
+
+  await requireEmployeeExists(context.dataAccess, input.employeeId);
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,

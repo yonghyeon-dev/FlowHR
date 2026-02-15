@@ -63,6 +63,8 @@ async function run() {
   let createdRunId: string | null = null;
 
   try {
+    await prisma.employee.create({ data: { id: employeeId } });
+
     const createResponse = await attendanceCreateRoute.POST(
       jsonRequest(
         "POST",
@@ -345,6 +347,9 @@ async function run() {
         employeeId,
         notes: markerNote
       }
+    });
+    await prisma.employee.deleteMany({
+      where: { id: employeeId }
     });
     await prisma.$disconnect();
   }

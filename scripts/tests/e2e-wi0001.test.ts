@@ -37,7 +37,7 @@ type RouteContext<TParams extends Record<string, string>> = {
 };
 
 async function run() {
-  const { resetMemoryDataAccess, getMemoryAuditActions, getMemoryAuditEntries } = await import(
+  const { memoryDataAccess, resetMemoryDataAccess, getMemoryAuditActions, getMemoryAuditEntries } = await import(
     "../../src/features/shared/memory-data-access.ts"
   );
   const { resetRuntimeMemoryDomainEvents, getRuntimeMemoryDomainEvents } = await import(
@@ -59,6 +59,43 @@ async function run() {
 
   resetMemoryDataAccess();
   resetRuntimeMemoryDomainEvents();
+
+  const unknownEmployeeResponse = await attendanceCreateRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/attendance/records",
+      {
+        employeeId: "EMP-UNKNOWN",
+        checkInAt: "2026-02-01T09:00:00+09:00",
+        checkOutAt: "2026-02-01T18:00:00+09:00",
+        breakMinutes: 60,
+        isHoliday: false
+      },
+      actorHeaders("employee", "EMP-UNKNOWN")
+    )
+  );
+  assert.equal(unknownEmployeeResponse.status, 404, "unknown employee attendance create should be rejected");
+  const unknownEmployeeBody = (await readJson(unknownEmployeeResponse)) as { error: string };
+  assert.equal(unknownEmployeeBody.error, "employee not found");
+
+  const unknownPayrollPreviewResponse = await payrollPreviewRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/payroll/runs/preview",
+      {
+        periodStart: "2026-02-01T00:00:00+09:00",
+        periodEnd: "2026-02-28T23:59:59+09:00",
+        employeeId: "EMP-UNKNOWN",
+        hourlyRateKrw: 12000
+      },
+      actorHeaders("payroll_operator", "PAY-1")
+    )
+  );
+  assert.equal(unknownPayrollPreviewResponse.status, 404, "unknown employee payroll preview should be rejected");
+  const unknownPayrollPreviewBody = (await readJson(unknownPayrollPreviewResponse)) as { error: string };
+  assert.equal(unknownPayrollPreviewBody.error, "employee not found");
+
+  await memoryDataAccess.employees.create({ id: "EMP-1001" });
 
   const createResponse = await attendanceCreateRoute.POST(
     jsonRequest(

@@ -9,6 +9,7 @@ import type {
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
+import { requireEmployeeExists } from "@/features/shared/require-employee";
 import { ServiceError } from "@/features/shared/service-error";
 
 const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -120,6 +121,8 @@ export async function createLeaveRequest(
     any: Permissions.leaveRequestWriteAny,
     employeeId: input.employeeId
   });
+
+  await requireEmployeeExists(context.dataAccess, input.employeeId);
 
   const days = calculateLeaveDays(input.startDate, input.endDate);
   await ensureNoOverlap(context, {
@@ -480,6 +483,8 @@ export async function readLeaveBalance(
     throw new ServiceError(403, "insufficient permissions");
   }
 
+  await requireEmployeeExists(context.dataAccess, employeeId);
+
   const balance = await context.dataAccess.leaveBalance.ensure(employeeId, DEFAULT_GRANTED_DAYS);
   await context.dataAccess.audit.append({
     action: "leave.balance_read",
@@ -500,6 +505,8 @@ export async function settleLeaveAccrual(
     throw new ServiceError(401, "missing or invalid actor context");
   }
   await requirePermission(context, Permissions.leaveAccrualSettle, "leave accrual settle requires permission");
+
+  await requireEmployeeExists(context.dataAccess, input.employeeId);
 
   const annualGrantDays = input.annualGrantDays ?? DEFAULT_GRANTED_DAYS;
   const carryOverCapDays = input.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS;

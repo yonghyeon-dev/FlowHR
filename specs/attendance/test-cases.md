@@ -7,15 +7,16 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 ## Functional Cases
 
 1. Create attendance record within same business day.
-2. Update attendance before approval.
-3. Approve correction by manager role.
-4. Reject attendance by manager role with optional reason and verify exclusion from payroll aggregation.
-5. Reject unauthorized approval/rejection attempt.
-6. Emit final-state event once (`approved` or `rejected`).
-7. Rejection reason is preserved in audit/event payload when provided.
-8. Reject API returns `400` for invalid JSON body and oversized reason payload.
-9. List attendance records by period (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
-10. List attendance aggregates by period (`from`/`to`) with role boundary guards and verify totals are derived from approved records only.
+2. Reject attendance create/update when `employeeId` does not exist (404).
+3. Update attendance before approval.
+4. Approve correction by manager role.
+5. Reject attendance by manager role with optional reason and verify exclusion from payroll aggregation.
+6. Reject unauthorized approval/rejection attempt.
+7. Emit final-state event once (`approved` or `rejected`).
+8. Rejection reason is preserved in audit/event payload when provided.
+9. Reject API returns `400` for invalid JSON body and oversized reason payload.
+10. List attendance records by period (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
+11. List attendance aggregates by period (`from`/`to`) with role boundary guards and verify totals are derived from approved records only.
 
 ## Boundary and Accuracy Cases
 

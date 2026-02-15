@@ -7,12 +7,13 @@ Leave request lifecycle, role authorization, and approved leave output compatibi
 ## Functional Cases
 
 1. Employee creates leave request in pending state.
-2. Employee updates pending request before approval.
-3. Manager approves request and audit trail is appended.
-4. Manager rejects request with mandatory reason.
-5. Employee cancels pending request and final state is reflected.
-6. Payroll operator settles yearly leave accrual for employee.
-7. List leave requests by period overlap (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
+2. Reject leave request/accrual actions when `employeeId` does not exist (404).
+3. Employee updates pending request before approval.
+4. Manager approves request and audit trail is appended.
+5. Manager rejects request with mandatory reason.
+6. Employee cancels pending request and final state is reflected.
+7. Payroll operator settles yearly leave accrual for employee.
+8. List leave requests by period overlap (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
 
 ## Boundary and Accuracy Cases
 

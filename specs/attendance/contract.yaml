@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.4.0
+version: 1.4.1
 scope:
   in:
     - attendance record create/update
@@ -64,6 +64,8 @@ db_changes:
       description: Create AttendanceRecord and PayrollRun base tables.
     - id: 202602130002_wi0001_api_extensions
       description: Extend AttendanceRecord with holiday/approval columns and add AuditLog.
+    - id: 202602140006_employee_fk_constraints
+      description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
   backward_compatible: true
   notes: Expand-contract pattern for future attendance payload updates.
 invariants:
@@ -74,6 +76,7 @@ invariants:
   - Attendance timestamps are interpreted in Asia/Seoul.
   - Approved/rejected attendance emits exactly one final state event.
   - Employee attendance list queries are restricted to own employeeId.
+  - AttendanceRecord.employeeId must reference existing Employee.id (FK enforced).
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
@@ -91,6 +94,7 @@ test_plan:
     - attendance aggregates query parsing and role boundary guards
     - attendance aggregates totals are computed from approved records only
   integration:
+    - create record rejects unknown employeeId (404)
     - create record to approve flow
     - create record to reject flow
     - reject flow with reason payload trace
@@ -129,9 +133,10 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.4.0 adds non-breaking attendance aggregates API (`GET /attendance/aggregates`) with role boundary guards."
+consumer_impact: "Contract v1.4.1 enforces attendance employeeId referential integrity (Employee FK) and rejects write paths that reference a non-existent employee."
 references:
   - specs/common/time-and-payroll-rules.md
+  - work-items/WI-0035-employeeid-fk-migration.md
   - work-items/WI-0009-attendance-rejection-flow.md
   - work-items/WI-0016-attendance-rejection-reason.md
   - work-items/WI-0017-attendance-reject-validation-guards.md

@@ -10,6 +10,7 @@ import {
 import type { DataAccess, DeductionProfileEntity, PayrollRunEntity } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
+import { requireEmployeeExists } from "@/features/shared/require-employee";
 import { ServiceError } from "@/features/shared/service-error";
 
 type PreviewPayrollInput = {
@@ -213,6 +214,9 @@ export async function previewPayroll(
   input: PreviewPayrollInput
 ): Promise<PreviewPayrollResult> {
   await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
+  if (input.employeeId) {
+    await requireEmployeeExists(context.dataAccess, input.employeeId);
+  }
   const computed = await calculatePayrollComputation(context.dataAccess, input);
   const run = await context.dataAccess.payroll.create({
     employeeId: input.employeeId,
@@ -271,6 +275,9 @@ export async function previewPayrollWithDeductions(
   await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
   if (!isPayrollDeductionsEnabled()) {
     throw new ServiceError(409, "payroll_deductions_v1 feature flag is disabled");
+  }
+  if (input.employeeId) {
+    await requireEmployeeExists(context.dataAccess, input.employeeId);
   }
 
   const computed = await calculatePayrollComputation(context.dataAccess, input);

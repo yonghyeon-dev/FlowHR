@@ -7,15 +7,16 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 ## Functional Cases
 
 1. Run payroll preview for monthly period with approved attendance data.
-2. Confirm payroll run by payroll operator.
-3. Reject preview request for unauthorized role.
-4. Trigger recalculation when corrected attendance event arrives.
-5. Run deduction/tax preview with feature flag for phase2 contract path.
-6. Create/update deduction profile and read latest profile by ID.
-7. Run deduction/tax preview in `profile` mode without explicit deduction values.
-8. Reject profile-mode preview when `expectedProfileVersion` is stale.
-9. List payroll runs by period (`from`/`to`) and verify role guard (payroll_operator/admin only).
-10. List deduction profiles (optional filters `active`, `mode`) and verify role guard.
+2. Reject payroll preview requests when `employeeId` does not exist (404).
+3. Confirm payroll run by payroll operator.
+4. Reject preview request for unauthorized role.
+5. Trigger recalculation when corrected attendance event arrives.
+6. Run deduction/tax preview with feature flag for phase2 contract path.
+7. Create/update deduction profile and read latest profile by ID.
+8. Run deduction/tax preview in `profile` mode without explicit deduction values.
+9. Reject profile-mode preview when `expectedProfileVersion` is stale.
+10. List payroll runs by period (`from`/`to`) and verify role guard (payroll_operator/admin only).
+11. List deduction profiles (optional filters `active`, `mode`) and verify role guard.
 
 ## Accuracy Cases
 

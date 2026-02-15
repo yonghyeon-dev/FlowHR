@@ -38,7 +38,7 @@ async function readJson<T>(response: Response) {
 }
 
 async function run() {
-  const { resetMemoryDataAccess, getMemoryAuditActions } = await import(
+  const { memoryDataAccess, resetMemoryDataAccess, getMemoryAuditActions } = await import(
     "../../src/features/shared/memory-data-access.ts"
   );
   const { resetRuntimeMemoryDomainEvents, getRuntimeMemoryDomainEvents } = await import(
@@ -61,6 +61,8 @@ async function run() {
 
   resetMemoryDataAccess();
   resetRuntimeMemoryDomainEvents();
+
+  await memoryDataAccess.employees.create({ id: "EMP-2601" });
 
   const createResponse = await attendanceCreateRoute.POST(
     jsonRequest(

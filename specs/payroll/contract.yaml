@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.5.0
+version: 1.5.1
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -75,6 +75,8 @@ db_changes:
       description: Add additive deduction and net-pay trace fields to PayrollRun.
     - id: 202602140004_payroll_phase2_deduction_profile
       description: Add DeductionProfile table and profile trace columns on PayrollRun.
+    - id: 202602140006_employee_fk_constraints
+      description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
   backward_compatible: true
   notes: Phase2 adds optional profile-based deduction calculation while keeping manual mode.
 invariants:
@@ -86,6 +88,7 @@ invariants:
   - Recalculation after correction keeps immutable audit trail.
   - Payroll run list API is restricted to payroll_operator/admin roles.
   - Deduction profile list API is restricted to payroll_operator/admin roles.
+  - PayrollRun.employeeId (when set) must reference existing Employee.id (FK enforced).
 risk:
   permissions:
     - Unauthorized deduction profile mutation can impact payroll outcomes.
@@ -104,6 +107,7 @@ test_plan:
     - payroll run list query parsing and role guard
     - deduction profile list query parsing and role guard
   integration:
+    - payroll preview rejects unknown employeeId (404)
     - consume attendance.approved and produce payroll preview
     - preview-with-deductions and confirm flow
     - deduction profile CRUD and authorization checks
@@ -149,11 +153,12 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.5.0 adds non-breaking deduction profile list API (`GET /payroll/deduction-profiles`) restricted to payroll_operator/admin."
+consumer_impact: "Contract v1.5.1 enforces payroll employeeId referential integrity (Employee FK) and rejects preview requests that reference a non-existent employee."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
   - specs/payroll/deduction-profile.md
+  - work-items/WI-0035-employeeid-fk-migration.md
   - work-items/WI-0006-payroll-phase2-deduction-policy-runtime.md
   - work-items/WI-0010-payroll-profile-version-guard.md
   - work-items/WI-0028-payroll-run-list-api.md
