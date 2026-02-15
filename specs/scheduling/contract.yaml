@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.1.0
+version: 0.1.1
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -41,6 +41,7 @@ db_changes:
 invariants:
   - WorkSchedule.employeeId must reference existing Employee.id (FK enforced).
   - startAt must be strictly before endAt.
+  - WorkSchedule time windows must not overlap for the same employee (back-to-back is allowed).
   - Employee schedule list queries are restricted to own employeeId.
 risk:
   permissions:
@@ -78,10 +79,11 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Introduces WorkSchedule planning entries and schedule list/create APIs (no payroll impact in MVP)."
+consumer_impact: "Adds overlap validation (409) for WorkSchedule create; schedules remain planning-only (no payroll impact in MVP)."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
+  - work-items/WI-0041-scheduling-overlap-guard.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

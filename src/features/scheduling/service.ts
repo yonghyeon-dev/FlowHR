@@ -65,6 +65,21 @@ export async function createWorkSchedule(
 
   const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
 
+  const overlapping = await context.dataAccess.scheduling.listInPeriod({
+    periodStart: input.startAt,
+    periodEnd: input.endAt,
+    organizationId: employee.organizationId ?? undefined,
+    employeeId: input.employeeId
+  });
+  const strictOverlaps = overlapping.filter((existing) => existing.startAt < input.endAt && existing.endAt > input.startAt);
+  if (strictOverlaps.length > 0) {
+    throw new ServiceError(409, "overlapping schedule exists", {
+      employeeId: input.employeeId,
+      overlapCount: strictOverlaps.length,
+      overlappingScheduleIds: strictOverlaps.map((schedule) => schedule.id)
+    });
+  }
+
   const schedule = await context.dataAccess.scheduling.create(toCreateInput(input));
 
   await context.dataAccess.audit.append({
