@@ -68,7 +68,7 @@ export async function createWorkSchedule(
   const overlapping = await context.dataAccess.scheduling.listInPeriod({
     periodStart: input.startAt,
     periodEnd: input.endAt,
-    organizationId: employee.organizationId,
+    organizationId: employee.organizationId ?? undefined,
     employeeId: input.employeeId
   });
   const strictOverlaps = overlapping.filter((existing) => existing.startAt < input.endAt && existing.endAt > input.startAt);
