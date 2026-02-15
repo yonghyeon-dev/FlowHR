@@ -93,6 +93,7 @@ export async function upsertRole(
     action: "rbac.role.upserted",
     entityType: "Role",
     entityId: role.id,
+    organizationId: context.actor!.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: {

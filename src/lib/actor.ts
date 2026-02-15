@@ -14,6 +14,7 @@ export type ActorRole = (typeof actorRoles)[number];
 export type Actor = {
   id: string;
   role: ActorRole;
+  organizationId: string | null;
 };
 
 function parseRoleFromUser(user: User): ActorRole {
@@ -39,6 +40,29 @@ function parseRoleFromUser(user: User): ActorRole {
   return "employee";
 }
 
+function parseOrganizationIdFromUser(user: User): string | null {
+  const candidates = [
+    user.app_metadata?.organization_id,
+    user.app_metadata?.organizationId,
+    user.user_metadata?.organization_id,
+    user.user_metadata?.organizationId,
+    user.app_metadata?.org_id,
+    user.user_metadata?.org_id
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") {
+      continue;
+    }
+    const value = candidate.trim();
+    if (value.length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 function readActorFromHeaders(request: Request): Actor | null {
   const roleValue = request.headers.get("x-actor-role");
   if (!roleValue || !actorRoles.includes(roleValue as ActorRole)) {
@@ -46,7 +70,8 @@ function readActorFromHeaders(request: Request): Actor | null {
   }
   return {
     id: request.headers.get("x-actor-id") ?? "unknown",
-    role: roleValue as ActorRole
+    role: roleValue as ActorRole,
+    organizationId: request.headers.get("x-actor-organization-id")?.trim() || null
   };
 }
 
@@ -69,7 +94,8 @@ export async function readActor(request: Request): Promise<Actor | null> {
     if (!error && data.user) {
       return {
         id: data.user.id,
-        role: parseRoleFromUser(data.user)
+        role: parseRoleFromUser(data.user),
+        organizationId: parseOrganizationIdFromUser(data.user)
       };
     }
   }

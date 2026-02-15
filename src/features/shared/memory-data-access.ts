@@ -405,6 +405,12 @@ export const memoryDataAccess: DataAccess = {
         if (entity.checkInAt < input.periodStart || entity.checkInAt > input.periodEnd) {
           continue;
         }
+        if (input.organizationId) {
+          const employee = state.employees.get(entity.employeeId);
+          if (!employee || employee.organizationId !== input.organizationId) {
+            continue;
+          }
+        }
         if (input.employeeId && entity.employeeId !== input.employeeId) {
           continue;
         }
@@ -419,6 +425,12 @@ export const memoryDataAccess: DataAccess = {
       for (const entity of state.attendance.values()) {
         if (entity.checkInAt < input.periodStart || entity.checkInAt > input.periodEnd) {
           continue;
+        }
+        if (input.organizationId) {
+          const employee = state.employees.get(entity.employeeId);
+          if (!employee || employee.organizationId !== input.organizationId) {
+            continue;
+          }
         }
         if (input.employeeId && entity.employeeId !== input.employeeId) {
           continue;
@@ -480,6 +492,12 @@ export const memoryDataAccess: DataAccess = {
         const overlaps = request.startDate <= input.periodEnd && request.endDate >= input.periodStart;
         if (!overlaps) {
           continue;
+        }
+        if (input.organizationId) {
+          const employee = state.employees.get(request.employeeId);
+          if (!employee || employee.organizationId !== input.organizationId) {
+            continue;
+          }
         }
         if (input.employeeId && request.employeeId !== input.employeeId) {
           continue;
@@ -587,6 +605,7 @@ export const memoryDataAccess: DataAccess = {
       const now = new Date();
       const run: PayrollRunEntity = {
         id: nextId("PR"),
+        organizationId: input.organizationId === undefined ? null : input.organizationId,
         employeeId: input.employeeId ?? null,
         periodStart: cloneDate(input.periodStart),
         periodEnd: cloneDate(input.periodEnd),
@@ -624,6 +643,9 @@ export const memoryDataAccess: DataAccess = {
         if (run.periodEnd > input.periodEnd) {
           continue;
         }
+        if (input.organizationId && run.organizationId !== input.organizationId) {
+          continue;
+        }
         if (input.employeeId && run.employeeId !== input.employeeId) {
           continue;
         }
@@ -656,6 +678,9 @@ export const memoryDataAccess: DataAccess = {
     async list(input) {
       const rows: DeductionProfileEntity[] = [];
       for (const profile of state.deductionProfiles.values()) {
+        if (input.organizationId && profile.organizationId !== input.organizationId) {
+          continue;
+        }
         if (input.active !== undefined && profile.active !== input.active) {
           continue;
         }
@@ -675,6 +700,7 @@ export const memoryDataAccess: DataAccess = {
 
       const profile: DeductionProfileEntity = {
         id: input.id,
+        organizationId: input.organizationId === undefined ? null : input.organizationId,
         name: input.name,
         version: nextVersion,
         mode: input.mode,

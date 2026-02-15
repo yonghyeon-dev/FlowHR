@@ -63,6 +63,7 @@ function buildQuery(params: Record<string, string | undefined>) {
 
 export default function HomePage() {
   const [accessToken, setAccessToken] = useState("");
+  const [organizationId, setOrganizationId] = useState("");
   const [employeeActorId, setEmployeeActorId] = useState("EMP-1001");
   const [managerActorId, setManagerActorId] = useState("MGR-1001");
   const [payrollActorId, setPayrollActorId] = useState("PAY-1001");
@@ -130,6 +131,9 @@ export default function HomePage() {
       } else {
         headers["x-actor-role"] = actor.role;
         headers["x-actor-id"] = actor.id;
+        if (organizationId.trim().length > 0) {
+          headers["x-actor-organization-id"] = organizationId.trim();
+        }
       }
 
       const response = await fetch(path, {
@@ -463,6 +467,14 @@ export default function HomePage() {
         <article className="panel">
           <h2>요청 컨텍스트</h2>
           <div className="input-grid">
+            <label>
+              Organization ID (Tenant)
+              <input
+                value={organizationId}
+                placeholder="예: ORG-00001 (memory) 또는 cuid (prisma)"
+                onChange={(event) => setOrganizationId(event.target.value)}
+              />
+            </label>
             <label>
               Employee Actor ID
               <input

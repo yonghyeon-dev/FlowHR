@@ -15,6 +15,9 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   employees Employee[]
+  payrollRuns PayrollRun[]
+  deductionProfiles DeductionProfile[]
+  auditLogs AuditLog[]
 }
 
 model Employee {
@@ -124,6 +127,8 @@ model LeaveBalanceProjection {
 
 model PayrollRun {
   id                     String   @id @default(cuid())
+  organizationId         String?
+  organization           Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   employeeId             String?
   employee               Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   periodStart            DateTime
@@ -143,10 +148,14 @@ model PayrollRun {
   confirmedBy            String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  @@index([organizationId, periodStart, periodEnd])
 }
 
 model DeductionProfile {
   id                     String   @id
+  organizationId         String?
+  organization           Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   name                   String
   version                Int
   mode                   String
@@ -156,6 +165,8 @@ model DeductionProfile {
   active                 Boolean  @default(true)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  @@index([organizationId, active])
 }
 
 model AuditLog {
@@ -163,6 +174,8 @@ model AuditLog {
   action     String
   entityType String
   entityId   String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   actorRole  String
   actorId    String?
   payload    Json?
@@ -170,6 +183,7 @@ model AuditLog {
 
   @@index([action, createdAt])
   @@index([entityType, entityId])
+  @@index([organizationId, createdAt])
 }
 
 enum AttendanceState {

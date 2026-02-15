@@ -22,6 +22,7 @@ export type AttendanceRecordEntity = {
 
 export type PayrollRunEntity = {
   id: string;
+  organizationId: string | null;
   employeeId: string | null;
   periodStart: Date;
   periodEnd: Date;
@@ -44,6 +45,7 @@ export type PayrollRunEntity = {
 
 export type DeductionProfileEntity = {
   id: string;
+  organizationId: string | null;
   name: string;
   version: number;
   mode: DeductionProfileMode;
@@ -135,6 +137,7 @@ export type UpdateAttendanceRecordInput = {
 };
 
 export type CreatePayrollRunInput = {
+  organizationId?: string | null;
   employeeId?: string;
   periodStart: Date;
   periodEnd: Date;
@@ -158,6 +161,7 @@ export type UpdatePayrollRunInput = {
 
 export type UpsertDeductionProfileInput = {
   id: string;
+  organizationId?: string | null;
   name: string;
   mode: DeductionProfileMode;
   withholdingRate: number | null;
@@ -229,6 +233,7 @@ export type AppendAuditLogInput = {
   action: string;
   entityType: string;
   entityId?: string;
+  organizationId?: string | null;
   actorRole: string;
   actorId?: string;
   payload?: unknown;
@@ -241,11 +246,13 @@ export interface AttendanceStore {
   listApprovedInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    organizationId?: string;
     employeeId?: string;
   }): Promise<AttendanceRecordEntity[]>;
   listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    organizationId?: string;
     employeeId?: string;
     state?: AttendanceState;
   }): Promise<AttendanceRecordEntity[]>;
@@ -258,6 +265,7 @@ export interface PayrollStore {
   listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    organizationId?: string;
     employeeId?: string;
     state?: PayrollState;
   }): Promise<PayrollRunEntity[]>;
@@ -266,7 +274,11 @@ export interface PayrollStore {
 export interface DeductionProfileStore {
   findById(id: string): Promise<DeductionProfileEntity | null>;
   upsert(input: UpsertDeductionProfileInput): Promise<DeductionProfileEntity>;
-  list(input: { active?: boolean; mode?: DeductionProfileMode }): Promise<DeductionProfileEntity[]>;
+  list(input: {
+    organizationId?: string;
+    active?: boolean;
+    mode?: DeductionProfileMode;
+  }): Promise<DeductionProfileEntity[]>;
 }
 
 export interface OrganizationStore {
@@ -296,6 +308,7 @@ export interface LeaveStore {
   listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    organizationId?: string;
     employeeId?: string;
     state?: LeaveRequestState;
   }): Promise<LeaveRequestEntity[]>;

@@ -15,6 +15,7 @@ export async function writeAuditLog(prisma: PrismaClient, input: AuditInput) {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId,
+      organizationId: input.actor.organizationId,
       actorRole: input.actor.role,
       actorId: input.actor.id,
       payload: input.payload as object | undefined

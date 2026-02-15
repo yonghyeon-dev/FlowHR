@@ -9,7 +9,7 @@ import type {
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
-import { requireEmployeeExists } from "@/features/shared/require-employee";
+import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
 
 type CreateAttendanceInput = {
@@ -80,7 +80,11 @@ export async function createAttendanceRecord(
     employeeId: input.employeeId
   });
 
-  await requireEmployeeExists(context.dataAccess, input.employeeId);
+  const employee = await requireEmployeeWithinTenant(
+    context.dataAccess,
+    context.actor,
+    input.employeeId
+  );
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -95,6 +99,7 @@ export async function createAttendanceRecord(
     action: "attendance.recorded",
     entityType: "AttendanceRecord",
     entityId: record.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -128,6 +133,7 @@ async function requireEditableRecord(
   if (!existing) {
     throw new ServiceError(404, "attendance record not found");
   }
+  await requireEmployeeWithinTenant(context.dataAccess, context.actor, existing.employeeId);
   await requireOwnOrAny(context, {
     own: Permissions.attendanceRecordWriteOwn,
     any: Permissions.attendanceRecordWriteAny,
@@ -155,13 +161,19 @@ export async function updateAttendanceRecord(
   recordId: string,
   input: UpdateAttendanceInput
 ): Promise<AttendanceRecordEntity> {
-  await requireEditableRecord(context, recordId);
+  const existing = await requireEditableRecord(context, recordId);
+  const employee = await requireEmployeeWithinTenant(
+    context.dataAccess,
+    context.actor,
+    existing.employeeId
+  );
 
   const record = await context.dataAccess.attendance.update(recordId, toRecordUpdateInput(input));
   await context.dataAccess.audit.append({
     action: "attendance.corrected",
     entityType: "AttendanceRecord",
     entityId: record.id,
+    organizationId: employee.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: input
@@ -195,6 +207,11 @@ export async function approveAttendanceRecord(
   if (!existing) {
     throw new ServiceError(404, "attendance record not found");
   }
+  const employee = await requireEmployeeWithinTenant(
+    context.dataAccess,
+    context.actor,
+    existing.employeeId
+  );
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be approved");
   }
@@ -208,6 +225,7 @@ export async function approveAttendanceRecord(
     action: "attendance.approved",
     entityType: "AttendanceRecord",
     entityId: record.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -245,6 +263,11 @@ export async function rejectAttendanceRecord(
   if (!existing) {
     throw new ServiceError(404, "attendance record not found");
   }
+  const employee = await requireEmployeeWithinTenant(
+    context.dataAccess,
+    context.actor,
+    existing.employeeId
+  );
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be rejected");
   }
@@ -258,6 +281,7 @@ export async function rejectAttendanceRecord(
     action: "attendance.rejected",
     entityType: "AttendanceRecord",
     entityId: record.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -303,6 +327,10 @@ export async function listAttendanceRecords(
   }
 
   ensureValidPeriod(input.periodStart, input.periodEnd);
+  const tenantScope = resolveTenantScope(context.actor);
+  if (tenantScope && input.employeeId) {
+    await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+  }
 
   const actor = context.actor;
   const permissions = await resolveActorPermissions(context);
@@ -311,6 +339,7 @@ export async function listAttendanceRecords(
     return await context.dataAccess.attendance.listInPeriod({
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
+      organizationId: tenantScope ?? undefined,
       employeeId: input.employeeId,
       state: input.state
     });
@@ -323,6 +352,7 @@ export async function listAttendanceRecords(
     return await context.dataAccess.attendance.listInPeriod({
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
+      organizationId: tenantScope ?? undefined,
       employeeId: input.employeeId,
       state: input.state
     });
@@ -336,6 +366,7 @@ export async function listAttendanceRecords(
     return await context.dataAccess.attendance.listInPeriod({
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
+      organizationId: tenantScope ?? undefined,
       employeeId,
       state: input.state
     });
@@ -353,6 +384,10 @@ export async function listAttendanceAggregates(
   }
 
   ensureValidPeriod(input.periodStart, input.periodEnd);
+  const tenantScope = resolveTenantScope(context.actor);
+  if (tenantScope && input.employeeId) {
+    await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+  }
 
   const actor = context.actor;
   let employeeId = input.employeeId;
@@ -376,6 +411,7 @@ export async function listAttendanceAggregates(
   const records = await context.dataAccess.attendance.listInPeriod({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
+    organizationId: tenantScope ?? undefined,
     employeeId
   });
 

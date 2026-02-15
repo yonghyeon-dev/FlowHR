@@ -87,6 +87,7 @@ function toLeaveBalanceEntity(record: {
 
 function toPayrollEntity(record: {
   id: string;
+  organizationId: string | null;
   employeeId: string | null;
   periodStart: Date;
   periodEnd: Date;
@@ -126,6 +127,7 @@ function decimalToNumber(value: Prisma.Decimal | null): number | null {
 
 function toDeductionProfileEntity(record: {
   id: string;
+  organizationId: string | null;
   name: string;
   version: number;
   mode: string;
@@ -138,6 +140,7 @@ function toDeductionProfileEntity(record: {
 }): DeductionProfileEntity {
   return {
     id: record.id,
+    organizationId: record.organizationId,
     name: record.name,
     version: record.version,
     mode: record.mode === "manual" ? "manual" : "profile",
@@ -387,7 +390,12 @@ const attendance: AttendanceStore = {
     return toAttendanceEntity(record);
   },
 
-  async listApprovedInPeriod(input: { periodStart: Date; periodEnd: Date; employeeId?: string }) {
+  async listApprovedInPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    organizationId?: string;
+    employeeId?: string;
+  }) {
     const records = await prisma.attendanceRecord.findMany({
       where: {
         state: "APPROVED",
@@ -395,6 +403,7 @@ const attendance: AttendanceStore = {
           gte: input.periodStart,
           lte: input.periodEnd
         },
+        ...(input.organizationId ? { employee: { organizationId: input.organizationId } } : {}),
         ...(input.employeeId ? { employeeId: input.employeeId } : {})
       },
       orderBy: { checkInAt: "asc" }
@@ -405,6 +414,7 @@ const attendance: AttendanceStore = {
   async listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    organizationId?: string;
     employeeId?: string;
     state?: "PENDING" | "APPROVED" | "REJECTED";
   }) {
@@ -414,6 +424,7 @@ const attendance: AttendanceStore = {
           gte: input.periodStart,
           lte: input.periodEnd
         },
+        ...(input.organizationId ? { employee: { organizationId: input.organizationId } } : {}),
         ...(input.employeeId ? { employeeId: input.employeeId } : {}),
         ...(input.state ? { state: input.state } : {})
       },
@@ -470,6 +481,7 @@ const leave: LeaveStore = {
   async listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    organizationId?: string;
     employeeId?: string;
     state?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
   }) {
@@ -481,6 +493,7 @@ const leave: LeaveStore = {
         endDate: {
           gte: input.periodStart
         },
+        ...(input.organizationId ? { employee: { organizationId: input.organizationId } } : {}),
         ...(input.employeeId ? { employeeId: input.employeeId } : {}),
         ...(input.state ? { state: input.state } : {})
       },
@@ -600,6 +613,7 @@ const payroll: PayrollStore = {
   async create(input: CreatePayrollRunInput) {
     const run = await prisma.payrollRun.create({
       data: {
+        organizationId: input.organizationId === undefined ? null : input.organizationId,
         employeeId: input.employeeId,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
@@ -633,6 +647,7 @@ const payroll: PayrollStore = {
   async listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    organizationId?: string;
     employeeId?: string;
     state?: "PREVIEWED" | "CONFIRMED";
   }) {
@@ -644,6 +659,7 @@ const payroll: PayrollStore = {
         periodEnd: {
           lte: input.periodEnd
         },
+        ...(input.organizationId ? { organizationId: input.organizationId } : {}),
         ...(input.employeeId ? { employeeId: input.employeeId } : {}),
         ...(input.state ? { state: input.state } : {})
       },
@@ -673,9 +689,10 @@ const deductionProfiles: DeductionProfileStore = {
     return profile ? toDeductionProfileEntity(profile) : null;
   },
 
-  async list(input: { active?: boolean; mode?: "manual" | "profile" }) {
+  async list(input: { organizationId?: string; active?: boolean; mode?: "manual" | "profile" }) {
     const profiles = await prisma.deductionProfile.findMany({
       where: {
+        ...(input.organizationId ? { organizationId: input.organizationId } : {}),
         ...(input.active === undefined ? {} : { active: input.active }),
         ...(input.mode ? { mode: input.mode } : {})
       },
@@ -689,6 +706,7 @@ const deductionProfiles: DeductionProfileStore = {
       where: { id: input.id },
       create: {
         id: input.id,
+        organizationId: input.organizationId === undefined ? null : input.organizationId,
         name: input.name,
         version: 1,
         mode: input.mode,
@@ -701,6 +719,7 @@ const deductionProfiles: DeductionProfileStore = {
       },
       update: {
         name: input.name,
+        organizationId: input.organizationId === undefined ? undefined : input.organizationId,
         mode: input.mode,
         withholdingRate:
           input.withholdingRate === null ? null : new Prisma.Decimal(input.withholdingRate),
@@ -724,6 +743,7 @@ const audit: AuditStore = {
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
+        organizationId: input.organizationId === undefined ? null : input.organizationId,
         actorRole: input.actorRole,
         actorId: input.actorId,
         payload: input.payload as object | undefined

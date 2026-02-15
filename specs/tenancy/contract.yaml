@@ -1,0 +1,79 @@
+owner: tenancy-agent
+version: 0.1.0
+scope:
+  in:
+    - tenant identifier model (Organization.id)
+    - Supabase JWT claim mapping for tenant context
+    - application-layer tenant scoping for core APIs
+    - Supabase RLS baseline policies for tenant isolation
+  out:
+    - billing/subscription management
+    - invitations and membership lifecycle UI
+    - multi-region deployments
+entities:
+  - name: Organization
+    description: Tenant boundary. All HR data must be scoped to exactly one Organization.
+  - name: Employee
+    description: Member identity within a tenant. Canonical id aligns with Supabase auth user.id.
+api:
+  auth:
+    - role: system
+      permission: platform-level tenant administration (bypass tenant scope)
+  endpoints: []
+  events:
+    published: []
+    consumed: []
+db_changes:
+  migrations:
+    - id: 202602150002_tenant_rls_baseline
+      description: Add organizationId columns where needed and define Supabase RLS tenant isolation policies.
+  backward_compatible: true
+  notes: "RLS policies are additive. Application tenant scoping is guarded by FLOWHR_TENANCY_V1 (default off)."
+invariants:
+  - Tenant boundary is Organization.id.
+  - When FLOWHR_TENANCY_V1 is enabled, non-system actors must provide tenant context (JWT claim or dev header).
+  - Cross-tenant reads/writes must be rejected (404 preferred for entity lookups).
+risk:
+  permissions:
+    - Mis-scoped tenant checks can cause cross-tenant data exposure.
+  payroll_accuracy:
+    - None
+  legal:
+    - Tenant isolation failure is a critical privacy and compliance risk.
+test_plan:
+  unit:
+    - tenant flag parsing and tenant scope resolution
+  integration:
+    - cross-tenant access is denied for attendance/leave/payroll surfaces when FLOWHR_TENANCY_V1 is enabled
+  regression:
+    - existing e2e flows remain green with FLOWHR_TENANCY_V1 disabled (default)
+  authorization:
+    - system role bypass is allowed (platform operations)
+  payroll_accuracy:
+    - not applicable
+observability:
+  audit_events:
+    - tenant_scoping_applied (optional; implicit via organizationId on AuditLog rows)
+  metrics:
+    - tenant_denial_count (optional)
+  logs:
+    - authorization denied logs include tenant context (when available)
+rollout:
+  feature_flags:
+    - name: tenancy_v1
+      default: "off"
+  migration_strategy: expand-contract
+rollback:
+  strategy: disable tenancy_v1 and (if needed) disable RLS policies via break-glass
+  max_recovery_time: 60m
+deprecations: []
+breaking_changes: false
+consumer_impact: "Adds tenant isolation baseline: tenant claims, optional app scoping (FLOWHR_TENANCY_V1), and Supabase RLS policies."
+references:
+  - work-items/WI-0037-multi-tenant-rls-baseline.md
+  - docs/role-claims.md
+  - docs/data-ownership.md
+approval:
+  spec_owner: tenancy-agent
+  qa_owner: qa-agent
+
