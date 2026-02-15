@@ -123,6 +123,39 @@ async function run() {
   const scheduleCreateBody = (await readJson(scheduleCreateResponse)) as { schedule: { id: string } };
   assert.ok(scheduleCreateBody.schedule.id);
 
+  const overlappingCreate = await scheduleRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/scheduling/schedules",
+      {
+        employeeId: employeeAId,
+        startAt: "2026-02-15T17:00:00+09:00",
+        endAt: "2026-02-15T20:00:00+09:00",
+        breakMinutes: 0,
+        isHoliday: false
+      },
+      managerOrgAHeaders
+    )
+  );
+  assert.equal(overlappingCreate.status, 409, "overlapping schedule create must be rejected");
+
+  const adjacentCreate = await scheduleRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/scheduling/schedules",
+      {
+        employeeId: employeeAId,
+        startAt: "2026-02-15T18:00:00+09:00",
+        endAt: "2026-02-15T22:00:00+09:00",
+        breakMinutes: 0,
+        isHoliday: false,
+        notes: "adjacent schedule"
+      },
+      managerOrgAHeaders
+    )
+  );
+  assert.equal(adjacentCreate.status, 201, "back-to-back schedules should be allowed");
+
   const managerListMissingEmployeeId = await scheduleRoute.GET(
     new Request("http://localhost/api/scheduling/schedules?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00", {
       method: "GET",
@@ -142,7 +175,7 @@ async function run() {
   );
   assert.equal(managerListResponse.status, 200);
   const managerListBody = (await readJson(managerListResponse)) as { schedules: Array<{ employeeId: string }> };
-  assert.equal(managerListBody.schedules.length, 1);
+  assert.equal(managerListBody.schedules.length, 2);
   assert.equal(managerListBody.schedules[0].employeeId, employeeAId);
 
   const employeeHeadersA = actorHeaders("employee", employeeAId, orgA.organization.id);
@@ -154,7 +187,7 @@ async function run() {
   );
   assert.equal(employeeListOwn.status, 200);
   const employeeListOwnBody = (await readJson(employeeListOwn)) as { schedules: Array<{ employeeId: string }> };
-  assert.equal(employeeListOwnBody.schedules.length, 1);
+  assert.equal(employeeListOwnBody.schedules.length, 2);
   assert.equal(employeeListOwnBody.schedules[0].employeeId, employeeAId);
 
   const employeeCrossListDenied = await scheduleRoute.GET(
@@ -168,11 +201,13 @@ async function run() {
   );
   assert.equal(employeeCrossListDenied.status, 404, "cross-tenant schedule lookup should not leak existence");
 
-  const auditActions = getMemoryAuditActions();
-  assert.ok(auditActions.includes("scheduling.schedule.assigned"));
+  const auditActions = getMemoryAuditActions().filter((action) => action === "scheduling.schedule.assigned");
+  assert.equal(auditActions.length, 2);
 
-  const eventNames = getRuntimeMemoryDomainEvents().map((event) => event.name);
-  assert.ok(eventNames.includes("scheduling.schedule.assigned.v1"));
+  const eventNames = getRuntimeMemoryDomainEvents()
+    .map((event) => event.name)
+    .filter((name) => name === "scheduling.schedule.assigned.v1");
+  assert.equal(eventNames.length, 2);
 
   console.log("e2e-wi0040-scheduling.test passed");
 }
