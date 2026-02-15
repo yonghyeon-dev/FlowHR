@@ -1,6 +1,7 @@
 import type { Actor } from "@/lib/actor";
 import { requirePermission } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
+import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import {
   calculateGrossPay,
   derivePayableMinutes,
@@ -10,7 +11,6 @@ import {
 import type { DataAccess, DeductionProfileEntity, PayrollRunEntity } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
-import { requireEmployeeExists } from "@/features/shared/require-employee";
 import { ServiceError } from "@/features/shared/service-error";
 
 type PreviewPayrollInput = {
@@ -172,13 +172,15 @@ function toRateNumber(value: number | null, fieldName: string) {
 
 async function calculatePayrollComputation(
   dataAccess: DataAccess,
-  input: PreviewPayrollInput
+  input: PreviewPayrollInput,
+  tenantScope: string | null
 ): Promise<PayrollComputation> {
   ensureValidPeriod(input.periodStart, input.periodEnd);
 
   const records = await dataAccess.attendance.listApprovedInPeriod({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
+    organizationId: tenantScope ?? undefined,
     employeeId: input.employeeId
   });
 
@@ -214,11 +216,15 @@ export async function previewPayroll(
   input: PreviewPayrollInput
 ): Promise<PreviewPayrollResult> {
   await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
-  if (input.employeeId) {
-    await requireEmployeeExists(context.dataAccess, input.employeeId);
-  }
-  const computed = await calculatePayrollComputation(context.dataAccess, input);
+  const tenantScope = resolveTenantScope(context.actor);
+
+  const employee = input.employeeId
+    ? await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId)
+    : null;
+
+  const computed = await calculatePayrollComputation(context.dataAccess, input, tenantScope);
   const run = await context.dataAccess.payroll.create({
+    organizationId: employee?.organizationId ?? tenantScope ?? null,
     employeeId: input.employeeId,
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
@@ -230,6 +236,7 @@ export async function previewPayroll(
     action: "payroll.calculated",
     entityType: "PayrollRun",
     entityId: run.id,
+    organizationId: run.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: {
@@ -276,11 +283,13 @@ export async function previewPayrollWithDeductions(
   if (!isPayrollDeductionsEnabled()) {
     throw new ServiceError(409, "payroll_deductions_v1 feature flag is disabled");
   }
-  if (input.employeeId) {
-    await requireEmployeeExists(context.dataAccess, input.employeeId);
-  }
 
-  const computed = await calculatePayrollComputation(context.dataAccess, input);
+  const tenantScope = resolveTenantScope(context.actor);
+  const employee = input.employeeId
+    ? await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId)
+    : null;
+
+  const computed = await calculatePayrollComputation(context.dataAccess, input, tenantScope);
   const deductionMode = input.deductionMode;
   let withholdingTaxKrw = 0;
   let socialInsuranceKrw = 0;
@@ -308,6 +317,7 @@ export async function previewPayrollWithDeductions(
     if (!profile) {
       throw new ServiceError(404, "deduction profile not found");
     }
+    ensureTenantMatch(tenantScope, profile.organizationId, "deduction profile not found");
     if (!profile.active) {
       throw new ServiceError(409, "deduction profile is inactive");
     }
@@ -369,6 +379,7 @@ export async function previewPayrollWithDeductions(
   };
 
   const run = await context.dataAccess.payroll.create({
+    organizationId: employee?.organizationId ?? tenantScope ?? null,
     employeeId: input.employeeId,
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
@@ -388,6 +399,7 @@ export async function previewPayrollWithDeductions(
     action: "payroll.deductions_calculated",
     entityType: "PayrollRun",
     entityId: run.id,
+    organizationId: run.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: {
@@ -459,11 +471,13 @@ export async function confirmPayrollRun(
   runId: string
 ): Promise<PayrollRunEntity> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  const tenantScope = resolveTenantScope(context.actor);
 
   const run = await context.dataAccess.payroll.findById(runId);
   if (!run) {
     throw new ServiceError(404, "payroll run not found");
   }
+  ensureTenantMatch(tenantScope, run.organizationId, "payroll run not found");
   if (run.state !== "PREVIEWED") {
     throw new ServiceError(409, "only previewed payroll run can be confirmed");
   }
@@ -478,6 +492,7 @@ export async function confirmPayrollRun(
     action: "payroll.confirmed",
     entityType: "PayrollRun",
     entityId: confirmed.id,
+    organizationId: confirmed.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id
   });
@@ -502,10 +517,12 @@ export async function listPayrollRuns(
 ): Promise<PayrollRunEntity[]> {
   await requirePayrollPermission(context, Permissions.payrollRunList, "list");
   ensureValidPeriod(input.periodStart, input.periodEnd);
+  const tenantScope = resolveTenantScope(context.actor);
 
   return await context.dataAccess.payroll.listInPeriod({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
+    organizationId: tenantScope ?? undefined,
     employeeId: input.employeeId,
     state: input.state
   });
@@ -520,15 +537,18 @@ export async function readDeductionProfile(
     throw new ServiceError(400, "profileId is required");
   }
 
+  const tenantScope = resolveTenantScope(context.actor);
   const profile = await context.dataAccess.deductionProfiles.findById(profileId);
   if (!profile) {
     throw new ServiceError(404, "deduction profile not found");
   }
+  ensureTenantMatch(tenantScope, profile.organizationId, "deduction profile not found");
 
   await context.dataAccess.audit.append({
     action: "payroll.deduction_profile.read",
     entityType: "DeductionProfile",
     entityId: profile.id,
+    organizationId: profile.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id
   });
@@ -548,6 +568,7 @@ export async function upsertDeductionProfile(
     throw new ServiceError(400, "name is required");
   }
 
+  const tenantScope = resolveTenantScope(context.actor);
   const withholdingRate = toRateNumber(input.withholdingRate, "withholdingRate");
   const socialInsuranceRate = toRateNumber(input.socialInsuranceRate, "socialInsuranceRate");
   const fixedOtherDeductionKrw = toKrwInteger(
@@ -557,6 +578,7 @@ export async function upsertDeductionProfile(
 
   const profile = await context.dataAccess.deductionProfiles.upsert({
     id: input.profileId,
+    organizationId: tenantScope ?? null,
     name: input.name,
     mode: input.mode,
     withholdingRate,
@@ -569,6 +591,7 @@ export async function upsertDeductionProfile(
     action: "payroll.deduction_profile.updated",
     entityType: "DeductionProfile",
     entityId: profile.id,
+    organizationId: profile.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: {
@@ -590,6 +613,7 @@ export async function upsertDeductionProfile(
     actorId: context.actor!.id,
     payload: {
       version: profile.version,
+      organizationId: profile.organizationId,
       mode: profile.mode,
       withholdingRate: profile.withholdingRate,
       socialInsuranceRate: profile.socialInsuranceRate,
@@ -606,7 +630,9 @@ export async function listDeductionProfiles(
   input: ListDeductionProfilesInput
 ): Promise<DeductionProfileEntity[]> {
   await requireDeductionProfilePermission(context, Permissions.payrollDeductionProfileRead, "read");
+  const tenantScope = resolveTenantScope(context.actor);
   return await context.dataAccess.deductionProfiles.list({
+    organizationId: tenantScope ?? undefined,
     active: input.active,
     mode: input.mode
   });

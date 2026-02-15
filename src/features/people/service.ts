@@ -1,6 +1,7 @@
 import type { Actor } from "@/lib/actor";
 import { requirePermission } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
+import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
 import type { DataAccess, EmployeeEntity, OrganizationEntity } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
@@ -25,6 +26,10 @@ export async function createOrganization(
   input: { name: string }
 ): Promise<OrganizationEntity> {
   await requirePeoplePermission(context, Permissions.peopleOrganizationsManage, "create organization");
+  const tenantScope = resolveTenantScope(context.actor);
+  if (tenantScope) {
+    throw new ServiceError(403, "organization create is restricted to system role");
+  }
 
   const organization = await context.dataAccess.organizations.create({
     name: input.name
@@ -34,6 +39,7 @@ export async function createOrganization(
     action: "organization.created",
     entityType: "Organization",
     entityId: organization.id,
+    organizationId: organization.id,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: {
@@ -58,7 +64,12 @@ export async function createOrganization(
 
 export async function listOrganizations(context: ServiceContext): Promise<OrganizationEntity[]> {
   await requirePeoplePermission(context, Permissions.peopleOrganizationsManage, "list organizations");
-  return context.dataAccess.organizations.list();
+  const tenantScope = resolveTenantScope(context.actor);
+  if (!tenantScope) {
+    return context.dataAccess.organizations.list();
+  }
+  const organization = await context.dataAccess.organizations.findById(tenantScope);
+  return organization ? [organization] : [];
 }
 
 export async function getOrganization(
@@ -66,6 +77,10 @@ export async function getOrganization(
   input: { organizationId: string }
 ): Promise<OrganizationEntity> {
   await requirePeoplePermission(context, Permissions.peopleOrganizationsManage, "get organization");
+  const tenantScope = resolveTenantScope(context.actor);
+  if (tenantScope && input.organizationId !== tenantScope) {
+    throw new ServiceError(404, "organization not found");
+  }
   const organization = await context.dataAccess.organizations.findById(input.organizationId);
   if (!organization) {
     throw new ServiceError(404, "organization not found");
@@ -84,6 +99,10 @@ export async function createEmployee(
   }
 ): Promise<EmployeeEntity> {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "create employee");
+  const tenantScope = resolveTenantScope(context.actor);
+  if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
+    throw new ServiceError(403, "cross-tenant employee create is not allowed");
+  }
 
   const existing = await context.dataAccess.employees.findById(input.id);
   if (existing) {
@@ -92,7 +111,7 @@ export async function createEmployee(
 
   const employee = await context.dataAccess.employees.create({
     id: input.id,
-    organizationId: input.organizationId,
+    organizationId: tenantScope ?? input.organizationId,
     name: input.name,
     email: input.email,
     active: input.active
@@ -102,6 +121,7 @@ export async function createEmployee(
     action: "employee.created",
     entityType: "Employee",
     entityId: employee.id,
+    organizationId: employee.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: {
@@ -135,7 +155,11 @@ export async function listEmployees(
   input: { active?: boolean; organizationId?: string }
 ): Promise<EmployeeEntity[]> {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "list employees");
-  return context.dataAccess.employees.list(input);
+  const tenantScope = resolveTenantScope(context.actor);
+  return context.dataAccess.employees.list({
+    active: input.active,
+    organizationId: tenantScope ?? input.organizationId
+  });
 }
 
 export async function getEmployee(
@@ -143,10 +167,12 @@ export async function getEmployee(
   input: { employeeId: string }
 ): Promise<EmployeeEntity> {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "get employee");
+  const tenantScope = resolveTenantScope(context.actor);
   const employee = await context.dataAccess.employees.findById(input.employeeId);
   if (!employee) {
     throw new ServiceError(404, "employee not found");
   }
+  ensureTenantMatch(tenantScope, employee.organizationId, "employee not found");
   return employee;
 }
 
@@ -161,14 +187,19 @@ export async function updateEmployee(
   }
 ): Promise<EmployeeEntity> {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "update employee");
+  const tenantScope = resolveTenantScope(context.actor);
 
   const existing = await context.dataAccess.employees.findById(input.employeeId);
   if (!existing) {
     throw new ServiceError(404, "employee not found");
   }
+  ensureTenantMatch(tenantScope, existing.organizationId, "employee not found");
+  if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
+    throw new ServiceError(403, "cross-tenant employee update is not allowed");
+  }
 
   const employee = await context.dataAccess.employees.update(input.employeeId, {
-    organizationId: input.organizationId,
+    organizationId: tenantScope ?? input.organizationId,
     name: input.name,
     email: input.email,
     active: input.active
@@ -178,6 +209,7 @@ export async function updateEmployee(
     action: "employee.profile.updated",
     entityType: "Employee",
     entityId: employee.id,
+    organizationId: employee.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload: {

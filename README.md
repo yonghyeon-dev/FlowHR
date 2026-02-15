@@ -20,6 +20,8 @@ Important:
 - API routes resolve actor context from Supabase JWT bearer token.
 - Canonical role claim is `app_metadata.role` (see `docs/role-claims.md`).
 - Development fallback: `x-actor-role` and `x-actor-id` headers are accepted only outside production.
+- Tenancy (optional): when `FLOWHR_TENANCY_V1=true`, non-production header mode must also include `x-actor-organization-id`.
+  Production JWT should include `app_metadata.organization_id`.
 
 ## Local Run
 

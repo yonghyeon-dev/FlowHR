@@ -28,6 +28,10 @@ prisma/dev.db-journal
 .tmp-contract-governance-tests/
 .tmp-pr-template-tests/
 
+# Python
+__pycache__/
+*.pyc
+
 # OS
 .DS_Store
 Thumbs.db

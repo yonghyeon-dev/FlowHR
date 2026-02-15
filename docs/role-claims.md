@@ -12,6 +12,16 @@ Allowed role values:
 - `payroll_operator`
 - `system`
 
+## Tenant Claim (Organization)
+
+- Canonical tenant claim: `app_metadata.organization_id`
+- Non-prod fallback header (dev tooling only): `x-actor-organization-id`
+
+Runtime rule:
+
+- When `FLOWHR_TENANCY_V1=true`, all non-`system` actors must include a tenant context
+  (JWT claim or header). Missing tenant context returns `401`.
+
 ## Compatibility
 
 - Legacy fallback claims are temporarily accepted:

@@ -9,11 +9,11 @@ import { Permissions } from "../../src/lib/rbac.ts";
 import { memoryDataAccess, resetMemoryDataAccess } from "../../src/features/shared/memory-data-access.ts";
 import { ServiceError } from "../../src/features/shared/service-error.ts";
 
-const admin: Actor = { id: "A-1", role: "admin" };
-const manager: Actor = { id: "M-1", role: "manager" };
-const employee: Actor = { id: "E-1", role: "employee" };
-const otherEmployee: Actor = { id: "E-2", role: "employee" };
-const unknown: Actor = { id: "U-1", role: "unknown" as never };
+const admin: Actor = { id: "A-1", role: "admin", organizationId: null };
+const manager: Actor = { id: "M-1", role: "manager", organizationId: null };
+const employee: Actor = { id: "E-1", role: "employee", organizationId: null };
+const otherEmployee: Actor = { id: "E-2", role: "employee", organizationId: null };
+const unknown: Actor = { id: "U-1", role: "unknown" as never, organizationId: null };
 
 function isServiceErrorWithStatus(status: number) {
   return (error: unknown) => error instanceof ServiceError && error.status === status;

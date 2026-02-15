@@ -9,7 +9,7 @@ import type {
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
-import { requireEmployeeExists } from "@/features/shared/require-employee";
+import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
 
 const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -122,7 +122,7 @@ export async function createLeaveRequest(
     employeeId: input.employeeId
   });
 
-  await requireEmployeeExists(context.dataAccess, input.employeeId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
 
   const days = calculateLeaveDays(input.startDate, input.endDate);
   await ensureNoOverlap(context, {
@@ -144,6 +144,7 @@ export async function createLeaveRequest(
     action: "leave.requested",
     entityType: "LeaveRequest",
     entityId: request.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -184,6 +185,7 @@ export async function updateLeaveRequest(
   }
 
   const existing = await requirePendingRequest(context, requestId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, existing.employeeId);
   await requireOwnOrAny(context, {
     own: Permissions.leaveRequestWriteOwn,
     any: Permissions.leaveRequestWriteAny,
@@ -212,6 +214,7 @@ export async function updateLeaveRequest(
     action: "leave.updated",
     entityType: "LeaveRequest",
     entityId: updated.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -235,7 +238,8 @@ export async function approveLeaveRequest(
   }
   await requirePermission(context, Permissions.leaveRequestApprove, "approval requires permission");
 
-  await requirePendingRequest(context, requestId);
+  const pending = await requirePendingRequest(context, requestId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
     state: "APPROVED",
@@ -265,6 +269,7 @@ export async function approveLeaveRequest(
     action: "leave.approved",
     entityType: "LeaveRequest",
     entityId: request.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -302,7 +307,8 @@ export async function rejectLeaveRequest(
   }
   await requirePermission(context, Permissions.leaveRequestReject, "rejection requires permission");
 
-  await requirePendingRequest(context, requestId);
+  const pending = await requirePendingRequest(context, requestId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
     state: "REJECTED",
@@ -327,6 +333,7 @@ export async function rejectLeaveRequest(
     action: "leave.rejected",
     entityType: "LeaveRequest",
     entityId: request.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -361,6 +368,7 @@ export async function cancelLeaveRequest(
   }
 
   const existing = await requirePendingRequest(context, requestId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, existing.employeeId);
   await requireOwnOrAny(context, {
     own: Permissions.leaveRequestWriteOwn,
     any: Permissions.leaveRequestWriteAny,
@@ -391,6 +399,7 @@ export async function cancelLeaveRequest(
     action: "leave.canceled",
     entityType: "LeaveRequest",
     entityId: request.id,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
@@ -423,6 +432,10 @@ export async function listLeaveRequests(
   }
 
   ensureValidPeriod(input.periodStart, input.periodEnd);
+  const tenantScope = resolveTenantScope(context.actor);
+  if (tenantScope && input.employeeId) {
+    await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+  }
 
   const actor = context.actor;
   const permissions = await resolveActorPermissions(context);
@@ -431,6 +444,7 @@ export async function listLeaveRequests(
     return await context.dataAccess.leave.listInPeriod({
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
+      organizationId: tenantScope ?? undefined,
       employeeId: input.employeeId,
       state: input.state
     });
@@ -443,6 +457,7 @@ export async function listLeaveRequests(
     return await context.dataAccess.leave.listInPeriod({
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
+      organizationId: tenantScope ?? undefined,
       employeeId: input.employeeId,
       state: input.state
     });
@@ -456,6 +471,7 @@ export async function listLeaveRequests(
     return await context.dataAccess.leave.listInPeriod({
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
+      organizationId: tenantScope ?? undefined,
       employeeId,
       state: input.state
     });
@@ -483,13 +499,14 @@ export async function readLeaveBalance(
     throw new ServiceError(403, "insufficient permissions");
   }
 
-  await requireEmployeeExists(context.dataAccess, employeeId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, employeeId);
 
   const balance = await context.dataAccess.leaveBalance.ensure(employeeId, DEFAULT_GRANTED_DAYS);
   await context.dataAccess.audit.append({
     action: "leave.balance_read",
     entityType: "LeaveBalanceProjection",
     entityId: employeeId,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id
   });
@@ -506,7 +523,7 @@ export async function settleLeaveAccrual(
   }
   await requirePermission(context, Permissions.leaveAccrualSettle, "leave accrual settle requires permission");
 
-  await requireEmployeeExists(context.dataAccess, input.employeeId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
 
   const annualGrantDays = input.annualGrantDays ?? DEFAULT_GRANTED_DAYS;
   const carryOverCapDays = input.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS;
@@ -537,6 +554,7 @@ export async function settleLeaveAccrual(
     action: "leave.accrual_settled",
     entityType: "LeaveBalanceProjection",
     entityId: input.employeeId,
+    organizationId: employee.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload: {

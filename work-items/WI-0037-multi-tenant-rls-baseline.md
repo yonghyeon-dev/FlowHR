@@ -35,9 +35,14 @@ FlowHR currently behaves as a single-tenant system. For production SaaS, tenant 
 
 ## Data Changes (Tables and Migrations)
 
-- Tables: add tenantId columns to core tables (exact list TBD)
-- Migration IDs: TBD
-- Backward compatibility plan: add tenantId with default/backfill; enforce RLS after backfill
+- Tenant id: Organization.id (actor claim: app_metadata.organization_id)
+- Tables (RLS enforced): `Organization`, `Employee`, `AttendanceRecord`, `LeaveRequest`, `LeaveApproval`, `LeaveBalanceProjection`, `PayrollRun`, `DeductionProfile`, `AuditLog`
+- Migration IDs: `202602150002_tenant_rls_baseline`
+- Backward compatibility plan:
+  - Additive columns first (PayrollRun.organizationId, DeductionProfile.organizationId, AuditLog.organizationId)
+  - Best-effort backfill for existing rows
+  - App-level enforcement behind feature flag FLOWHR_TENANCY_V1 (default off)
+  - Enable RLS policies (Supabase)
 
 ## API and Event Changes
 
@@ -65,7 +70,7 @@ FlowHR currently behaves as a single-tenant system. For production SaaS, tenant 
 
 ## Definition of Ready (DoR)
 
-- [ ] Tenant model and claim mapping decided.
+- [x] Tenant model and claim mapping decided. (`Organization.id` + `app_metadata.organization_id`)
 - [ ] RLS policy strategy drafted and reviewed.
 
 ## Definition of Done (DoD)
