@@ -97,7 +97,7 @@ jobs:
         env:
           FLOWHR_ALERT_DISCORD_WEBHOOK: ${{ secrets.FLOWHR_ALERT_DISCORD_WEBHOOK }}
           FLOWHR_ALERT_SLACK_WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
-          FLOWHR_ALERT_TITLE: "[FlowHR] payroll-phase2-health failed"
+          FLOWHR_ALERT_TITLE: "[FlowHR] payroll-phase2-health 실패"
           FLOWHR_ALERT_WORKFLOW: "payroll-phase2-health"
           FLOWHR_ALERT_RUN_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           FLOWHR_ALERT_REF: ${{ github.ref }}
