@@ -1,5 +1,6 @@
 import type { Actor } from "@/lib/actor";
-import { hasAnyRole } from "@/lib/permissions";
+import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
+import { Permissions } from "@/lib/rbac";
 import type {
   DataAccess,
   LeaveBalanceEntity,
@@ -8,6 +9,7 @@ import type {
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
+import { requireEmployeeExists } from "@/features/shared/require-employee";
 import { ServiceError } from "@/features/shared/service-error";
 
 const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -53,23 +55,6 @@ type ListLeaveRequestsInput = {
   employeeId?: string;
   state?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 };
-
-function isMutator(actor: Actor, employeeId: string) {
-  if (actor.role === "admin" || actor.role === "manager") {
-    return true;
-  }
-  if (actor.role === "employee") {
-    return actor.id === employeeId;
-  }
-  return false;
-}
-
-function canReadLeaveBalance(actor: Actor, employeeId: string) {
-  if (actor.role === "admin" || actor.role === "manager" || actor.role === "payroll_operator") {
-    return true;
-  }
-  return actor.role === "employee" && actor.id === employeeId;
-}
 
 function toSeoulDayIndex(value: Date) {
   const adjusted = new Date(value.getTime() + SEOUL_OFFSET_MS);
@@ -127,12 +112,17 @@ export async function createLeaveRequest(
   context: ServiceContext,
   input: CreateLeaveRequestInput
 ): Promise<LeaveRequestEntity> {
-  if (!context.actor) {
+  const actor = context.actor;
+  if (!actor) {
     throw new ServiceError(401, "missing or invalid actor context");
   }
-  if (!isMutator(context.actor, input.employeeId)) {
-    throw new ServiceError(403, "insufficient permissions");
-  }
+  await requireOwnOrAny(context, {
+    own: Permissions.leaveRequestWriteOwn,
+    any: Permissions.leaveRequestWriteAny,
+    employeeId: input.employeeId
+  });
+
+  await requireEmployeeExists(context.dataAccess, input.employeeId);
 
   const days = calculateLeaveDays(input.startDate, input.endDate);
   await ensureNoOverlap(context, {
@@ -154,8 +144,8 @@ export async function createLeaveRequest(
     action: "leave.requested",
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       leaveType: request.leaveType,
@@ -169,8 +159,8 @@ export async function createLeaveRequest(
     occurredAt: new Date().toISOString(),
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       leaveType: request.leaveType,
@@ -188,14 +178,17 @@ export async function updateLeaveRequest(
   requestId: string,
   input: UpdateLeaveRequestInput
 ): Promise<LeaveRequestEntity> {
-  if (!context.actor) {
+  const actor = context.actor;
+  if (!actor) {
     throw new ServiceError(401, "missing or invalid actor context");
   }
 
   const existing = await requirePendingRequest(context, requestId);
-  if (!isMutator(context.actor, existing.employeeId)) {
-    throw new ServiceError(403, "insufficient permissions");
-  }
+  await requireOwnOrAny(context, {
+    own: Permissions.leaveRequestWriteOwn,
+    any: Permissions.leaveRequestWriteAny,
+    employeeId: existing.employeeId
+  });
 
   const nextStartDate = input.startDate ?? existing.startDate;
   const nextEndDate = input.endDate ?? existing.endDate;
@@ -219,8 +212,8 @@ export async function updateLeaveRequest(
     action: "leave.updated",
     entityType: "LeaveRequest",
     entityId: updated.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       leaveType: updated.leaveType,
       startDate: updated.startDate.toISOString(),
@@ -236,9 +229,11 @@ export async function approveLeaveRequest(
   context: ServiceContext,
   requestId: string
 ): Promise<{ request: LeaveRequestEntity; balance: LeaveBalanceEntity }> {
-  if (!context.actor || !hasAnyRole(context.actor, ["admin", "manager"])) {
-    throw new ServiceError(403, "approval requires admin or manager role");
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
   }
+  await requirePermission(context, Permissions.leaveRequestApprove, "approval requires permission");
 
   await requirePendingRequest(context, requestId);
   const now = new Date();
@@ -246,7 +241,7 @@ export async function approveLeaveRequest(
     state: "APPROVED",
     decisionReason: null,
     approvedAt: now,
-    approvedBy: context.actor.id,
+    approvedBy: actor.id,
     rejectedAt: null,
     rejectedBy: null,
     canceledAt: null,
@@ -256,8 +251,8 @@ export async function approveLeaveRequest(
   await context.dataAccess.leave.appendDecision({
     requestId: request.id,
     action: "APPROVED",
-    actorId: context.actor.id,
-    actorRole: context.actor.role
+    actorId: actor.id,
+    actorRole: actor.role
   });
 
   const balance = await context.dataAccess.leaveBalance.applyUsage({
@@ -270,8 +265,8 @@ export async function approveLeaveRequest(
     action: "leave.approved",
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       days: request.days,
@@ -283,8 +278,8 @@ export async function approveLeaveRequest(
     occurredAt: new Date().toISOString(),
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       leaveType: request.leaveType,
@@ -301,9 +296,11 @@ export async function rejectLeaveRequest(
   requestId: string,
   reason: string
 ): Promise<LeaveRequestEntity> {
-  if (!context.actor || !hasAnyRole(context.actor, ["admin", "manager"])) {
-    throw new ServiceError(403, "rejection requires admin or manager role");
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
   }
+  await requirePermission(context, Permissions.leaveRequestReject, "rejection requires permission");
 
   await requirePendingRequest(context, requestId);
   const now = new Date();
@@ -313,7 +310,7 @@ export async function rejectLeaveRequest(
     approvedAt: null,
     approvedBy: null,
     rejectedAt: now,
-    rejectedBy: context.actor.id,
+    rejectedBy: actor.id,
     canceledAt: null,
     canceledBy: null
   });
@@ -321,8 +318,8 @@ export async function rejectLeaveRequest(
   await context.dataAccess.leave.appendDecision({
     requestId: request.id,
     action: "REJECTED",
-    actorId: context.actor.id,
-    actorRole: context.actor.role,
+    actorId: actor.id,
+    actorRole: actor.role,
     reason
   });
 
@@ -330,8 +327,8 @@ export async function rejectLeaveRequest(
     action: "leave.rejected",
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       reason
@@ -342,8 +339,8 @@ export async function rejectLeaveRequest(
     occurredAt: new Date().toISOString(),
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       reason
@@ -358,14 +355,17 @@ export async function cancelLeaveRequest(
   requestId: string,
   reason?: string
 ): Promise<LeaveRequestEntity> {
-  if (!context.actor) {
+  const actor = context.actor;
+  if (!actor) {
     throw new ServiceError(401, "missing or invalid actor context");
   }
 
   const existing = await requirePendingRequest(context, requestId);
-  if (!isMutator(context.actor, existing.employeeId)) {
-    throw new ServiceError(403, "insufficient permissions");
-  }
+  await requireOwnOrAny(context, {
+    own: Permissions.leaveRequestWriteOwn,
+    any: Permissions.leaveRequestWriteAny,
+    employeeId: existing.employeeId
+  });
 
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
@@ -376,14 +376,14 @@ export async function cancelLeaveRequest(
     rejectedAt: null,
     rejectedBy: null,
     canceledAt: now,
-    canceledBy: context.actor.id
+    canceledBy: actor.id
   });
 
   await context.dataAccess.leave.appendDecision({
     requestId: request.id,
     action: "CANCELED",
-    actorId: context.actor.id,
-    actorRole: context.actor.role,
+    actorId: actor.id,
+    actorRole: actor.role,
     reason
   });
 
@@ -391,8 +391,8 @@ export async function cancelLeaveRequest(
     action: "leave.canceled",
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       reason: reason ?? null
@@ -403,8 +403,8 @@ export async function cancelLeaveRequest(
     occurredAt: new Date().toISOString(),
     entityType: "LeaveRequest",
     entityId: request.id,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: request.employeeId,
       reason: reason ?? null
@@ -425,7 +425,30 @@ export async function listLeaveRequests(
   ensureValidPeriod(input.periodStart, input.periodEnd);
 
   const actor = context.actor;
-  if (actor.role === "employee") {
+  const permissions = await resolveActorPermissions(context);
+
+  if (permissions.has(Permissions.leaveRequestListAny)) {
+    return await context.dataAccess.leave.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId: input.employeeId,
+      state: input.state
+    });
+  }
+
+  if (permissions.has(Permissions.leaveRequestListByEmployee)) {
+    if (!input.employeeId) {
+      throw new ServiceError(400, "employeeId is required for manager list queries");
+    }
+    return await context.dataAccess.leave.listInPeriod({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId: input.employeeId,
+      state: input.state
+    });
+  }
+
+  if (permissions.has(Permissions.leaveRequestListOwn)) {
     const employeeId = input.employeeId ?? actor.id;
     if (employeeId !== actor.id) {
       throw new ServiceError(403, "employee can only list own leave requests");
@@ -438,48 +461,37 @@ export async function listLeaveRequests(
     });
   }
 
-  if (actor.role === "manager") {
-    if (!input.employeeId) {
-      throw new ServiceError(400, "employeeId is required for manager list queries");
-    }
-    return await context.dataAccess.leave.listInPeriod({
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      employeeId: input.employeeId,
-      state: input.state
-    });
-  }
-
-  if (!hasAnyRole(actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(403, "leave list requires admin, payroll_operator, manager, or employee");
-  }
-
-  return await context.dataAccess.leave.listInPeriod({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    employeeId: input.employeeId,
-    state: input.state
-  });
+  throw new ServiceError(403, "leave list requires permission");
 }
 
 export async function readLeaveBalance(
   context: ServiceContext,
   employeeId: string
 ): Promise<LeaveBalanceEntity> {
-  if (!context.actor) {
+  const actor = context.actor;
+  if (!actor) {
     throw new ServiceError(401, "missing or invalid actor context");
   }
-  if (!canReadLeaveBalance(context.actor, employeeId)) {
+  const permissions = await resolveActorPermissions(context);
+  if (permissions.has(Permissions.leaveBalanceReadAny)) {
+    // ok
+  } else if (permissions.has(Permissions.leaveBalanceReadOwn)) {
+    if (actor.id !== employeeId) {
+      throw new ServiceError(403, "insufficient permissions");
+    }
+  } else {
     throw new ServiceError(403, "insufficient permissions");
   }
+
+  await requireEmployeeExists(context.dataAccess, employeeId);
 
   const balance = await context.dataAccess.leaveBalance.ensure(employeeId, DEFAULT_GRANTED_DAYS);
   await context.dataAccess.audit.append({
     action: "leave.balance_read",
     entityType: "LeaveBalanceProjection",
     entityId: employeeId,
-    actorRole: context.actor.role,
-    actorId: context.actor.id
+    actorRole: actor.role,
+    actorId: actor.id
   });
   return balance;
 }
@@ -488,9 +500,13 @@ export async function settleLeaveAccrual(
   context: ServiceContext,
   input: SettleLeaveAccrualInput
 ): Promise<LeaveBalanceEntity> {
-  if (!context.actor || !hasAnyRole(context.actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(403, "leave accrual settle requires admin or payroll_operator role");
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
   }
+  await requirePermission(context, Permissions.leaveAccrualSettle, "leave accrual settle requires permission");
+
+  await requireEmployeeExists(context.dataAccess, input.employeeId);
 
   const annualGrantDays = input.annualGrantDays ?? DEFAULT_GRANTED_DAYS;
   const carryOverCapDays = input.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS;
@@ -521,8 +537,8 @@ export async function settleLeaveAccrual(
     action: "leave.accrual_settled",
     entityType: "LeaveBalanceProjection",
     entityId: input.employeeId,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       year: input.year,
       annualGrantDays,
@@ -537,8 +553,8 @@ export async function settleLeaveAccrual(
     occurredAt: new Date().toISOString(),
     entityType: "LeaveBalanceProjection",
     entityId: input.employeeId,
-    actorRole: context.actor.role,
-    actorId: context.actor.id,
+    actorRole: actor.role,
+    actorId: actor.id,
     payload: {
       employeeId: input.employeeId,
       year: input.year,

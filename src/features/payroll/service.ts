@@ -1,5 +1,6 @@
 import type { Actor } from "@/lib/actor";
-import { hasAnyRole } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
+import { Permissions, type Permission } from "@/lib/rbac";
 import {
   calculateGrossPay,
   derivePayableMinutes,
@@ -9,6 +10,7 @@ import {
 import type { DataAccess, DeductionProfileEntity, PayrollRunEntity } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
+import { requireEmployeeExists } from "@/features/shared/require-employee";
 import { ServiceError } from "@/features/shared/service-error";
 
 type PreviewPayrollInput = {
@@ -113,16 +115,20 @@ const emptyTotals: PayableMinutes = {
   holiday: 0
 };
 
-function requirePayrollOperator(actor: Actor | null, action: "preview" | "confirm" | "list") {
-  if (!actor || !hasAnyRole(actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(403, `payroll ${action} requires admin or payroll_operator role`);
-  }
+async function requirePayrollPermission(
+  context: ServiceContext,
+  permission: Permission,
+  action: "preview" | "confirm" | "list"
+) {
+  await requirePermission(context, permission, `payroll ${action} requires ${permission}`);
 }
 
-function requireDeductionProfileOperator(actor: Actor | null, action: "read" | "write") {
-  if (!actor || !hasAnyRole(actor, ["admin", "payroll_operator"])) {
-    throw new ServiceError(403, `deduction profile ${action} requires admin or payroll_operator role`);
-  }
+async function requireDeductionProfilePermission(
+  context: ServiceContext,
+  permission: Permission,
+  action: "read" | "write"
+) {
+  await requirePermission(context, permission, `deduction profile ${action} requires ${permission}`);
 }
 
 function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
@@ -207,7 +213,10 @@ export async function previewPayroll(
   context: ServiceContext,
   input: PreviewPayrollInput
 ): Promise<PreviewPayrollResult> {
-  requirePayrollOperator(context.actor, "preview");
+  await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
+  if (input.employeeId) {
+    await requireEmployeeExists(context.dataAccess, input.employeeId);
+  }
   const computed = await calculatePayrollComputation(context.dataAccess, input);
   const run = await context.dataAccess.payroll.create({
     employeeId: input.employeeId,
@@ -263,9 +272,12 @@ export async function previewPayrollWithDeductions(
   context: ServiceContext,
   input: PreviewPayrollWithDeductionsInput
 ): Promise<PreviewPayrollWithDeductionsResult> {
-  requirePayrollOperator(context.actor, "preview");
+  await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
   if (!isPayrollDeductionsEnabled()) {
     throw new ServiceError(409, "payroll_deductions_v1 feature flag is disabled");
+  }
+  if (input.employeeId) {
+    await requireEmployeeExists(context.dataAccess, input.employeeId);
   }
 
   const computed = await calculatePayrollComputation(context.dataAccess, input);
@@ -446,7 +458,7 @@ export async function confirmPayrollRun(
   context: ServiceContext,
   runId: string
 ): Promise<PayrollRunEntity> {
-  requirePayrollOperator(context.actor, "confirm");
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
 
   const run = await context.dataAccess.payroll.findById(runId);
   if (!run) {
@@ -488,7 +500,7 @@ export async function listPayrollRuns(
   context: ServiceContext,
   input: ListPayrollRunsInput
 ): Promise<PayrollRunEntity[]> {
-  requirePayrollOperator(context.actor, "list");
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
   ensureValidPeriod(input.periodStart, input.periodEnd);
 
   return await context.dataAccess.payroll.listInPeriod({
@@ -503,7 +515,7 @@ export async function readDeductionProfile(
   context: ServiceContext,
   profileId: string
 ): Promise<DeductionProfileEntity> {
-  requireDeductionProfileOperator(context.actor, "read");
+  await requireDeductionProfilePermission(context, Permissions.payrollDeductionProfileRead, "read");
   if (!profileId.trim()) {
     throw new ServiceError(400, "profileId is required");
   }
@@ -528,7 +540,7 @@ export async function upsertDeductionProfile(
   context: ServiceContext,
   input: UpsertDeductionProfileInput
 ): Promise<UpsertDeductionProfileResult> {
-  requireDeductionProfileOperator(context.actor, "write");
+  await requireDeductionProfilePermission(context, Permissions.payrollDeductionProfileWrite, "write");
   if (!input.profileId.trim()) {
     throw new ServiceError(400, "profileId is required");
   }
@@ -593,7 +605,7 @@ export async function listDeductionProfiles(
   context: ServiceContext,
   input: ListDeductionProfilesInput
 ): Promise<DeductionProfileEntity[]> {
-  requireDeductionProfileOperator(context.actor, "read");
+  await requireDeductionProfilePermission(context, Permissions.payrollDeductionProfileRead, "read");
   return await context.dataAccess.deductionProfiles.list({
     active: input.active,
     mode: input.mode

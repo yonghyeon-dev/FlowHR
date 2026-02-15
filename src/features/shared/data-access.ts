@@ -72,6 +72,18 @@ export type EmployeeEntity = {
   updatedAt: Date;
 };
 
+export type RoleEntity = {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type RoleWithPermissionsEntity = RoleEntity & {
+  permissions: string[];
+};
+
 export type LeaveRequestEntity = {
   id: string;
   employeeId: string;
@@ -173,6 +185,13 @@ export type UpdateEmployeeInput = {
   active?: boolean;
 };
 
+export type UpsertRoleInput = {
+  id: string;
+  name: string;
+  description?: string | null;
+  permissions: string[];
+};
+
 export type CreateLeaveRequestInput = {
   employeeId: string;
   leaveType: LeaveType;
@@ -263,6 +282,13 @@ export interface EmployeeStore {
   list(input: { active?: boolean; organizationId?: string }): Promise<EmployeeEntity[]>;
 }
 
+export interface RbacStore {
+  listRoles(): Promise<RoleWithPermissionsEntity[]>;
+  findRoleById(id: string): Promise<RoleWithPermissionsEntity | null>;
+  upsertRole(input: UpsertRoleInput): Promise<RoleWithPermissionsEntity>;
+  listRolePermissions(roleId: string): Promise<string[]>;
+}
+
 export interface LeaveStore {
   create(input: CreateLeaveRequestInput): Promise<LeaveRequestEntity>;
   findById(id: string): Promise<LeaveRequestEntity | null>;
@@ -305,6 +331,7 @@ export interface AuditStore {
 export type DataAccess = {
   organizations: OrganizationStore;
   employees: EmployeeStore;
+  rbac: RbacStore;
   attendance: AttendanceStore;
   leave: LeaveStore;
   leaveBalance: LeaveBalanceStore;

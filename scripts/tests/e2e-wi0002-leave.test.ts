@@ -35,7 +35,7 @@ async function readJson<T>(response: Response) {
 }
 
 async function run() {
-  const { resetMemoryDataAccess, getMemoryAuditActions } = await import(
+  const { memoryDataAccess, resetMemoryDataAccess, getMemoryAuditActions } = await import(
     "../../src/features/shared/memory-data-access.ts"
   );
   const { resetRuntimeMemoryDomainEvents, getRuntimeMemoryDomainEvents } = await import(
@@ -56,6 +56,27 @@ async function run() {
 
   const employeeId = "EMP-LEAVE-1001";
   const otherEmployeeId = "EMP-LEAVE-2002";
+
+  const unknownEmployeeResponse = await leaveCreateRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/leave/requests",
+      {
+        employeeId: "EMP-LEAVE-UNKNOWN",
+        leaveType: "ANNUAL",
+        startDate: "2026-03-01T00:00:00+09:00",
+        endDate: "2026-03-01T23:59:59+09:00"
+      },
+      actorHeaders("employee", "EMP-LEAVE-UNKNOWN")
+    )
+  );
+  assert.equal(unknownEmployeeResponse.status, 404, "unknown employee leave create should be rejected");
+  const unknownEmployeeBody = await readJson<{ error: string }>(unknownEmployeeResponse);
+  assert.equal(unknownEmployeeBody.error, "employee not found");
+
+  await memoryDataAccess.employees.create({ id: employeeId });
+  await memoryDataAccess.employees.create({ id: otherEmployeeId });
+  await memoryDataAccess.employees.create({ id: "EMP-LEAVE-3003" });
 
   const createResponse = await leaveCreateRoute.POST(
     jsonRequest(

@@ -27,13 +27,41 @@ model Employee {
   updatedAt      DateTime @updatedAt
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  attendanceRecords AttendanceRecord[]
+  leaveRequests      LeaveRequest[]
+  leaveBalance       LeaveBalanceProjection?
+  payrollRuns        PayrollRun[]
 
   @@index([organizationId, active])
+}
+
+model Role {
+  id          String   @id
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+
+  @@index([name])
+}
+
+model RolePermission {
+  roleId     String
+  permission String
+  createdAt  DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permission])
+  @@index([permission])
 }
 
 model AttendanceRecord {
   id           String   @id @default(cuid())
   employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   checkInAt    DateTime
   checkOutAt   DateTime?
   breakMinutes Int      @default(0)
@@ -49,6 +77,7 @@ model AttendanceRecord {
 model LeaveRequest {
   id             String           @id @default(cuid())
   employeeId     String
+  employee       Employee         @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   leaveType      LeaveType        @default(ANNUAL)
   startDate      DateTime
   endDate        DateTime
@@ -84,6 +113,7 @@ model LeaveApproval {
 
 model LeaveBalanceProjection {
   employeeId      String   @id
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   grantedDays     Int      @default(15)
   usedDays        Int      @default(0)
   remainingDays   Int      @default(15)
@@ -95,6 +125,7 @@ model LeaveBalanceProjection {
 model PayrollRun {
   id                     String   @id @default(cuid())
   employeeId             String?
+  employee               Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   periodStart            DateTime
   periodEnd              DateTime
   state                  PayrollState @default(PREVIEWED)
