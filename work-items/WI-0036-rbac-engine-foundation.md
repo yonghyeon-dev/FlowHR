@@ -40,14 +40,22 @@ Authorization is currently based on a small set of hardcoded roles. For producti
 
 ## Data Changes (Tables and Migrations)
 
-- Tables: roles/permissions tables (exact schema TBD in contract)
-- Migration IDs: TBD
-- Backward compatibility plan: default roles remain available; introduce new engine behind a feature flag if needed
+- Tables:
+  - `Role`
+  - `RolePermission`
+- Migration IDs:
+  - `202602150001_rbac_foundation`
+- Backward compatibility plan:
+  - seed default role-permission mappings matching current behavior
+  - keep legacy role checks behind a feature flag during rollout if needed
 
 ## API and Event Changes
 
-- Endpoints: admin role/permission management (TBD)
-- Events published: role.updated (TBD)
+- Endpoints:
+  - `GET /rbac/roles`
+  - `GET /rbac/roles/{roleId}`
+  - `PUT /rbac/roles/{roleId}`
+- Events published: none (audit only for MVP)
 - Events consumed: none
 
 ## Test Plan

@@ -1,0 +1,53 @@
+openapi: 3.1.0
+info:
+  title: FlowHR RBAC API
+  version: 0.1.0
+paths:
+  /rbac/roles:
+    get:
+      summary: List roles
+      responses:
+        "200":
+          description: Roles listed
+        "401":
+          description: Missing actor context
+        "403":
+          description: Forbidden
+  /rbac/roles/{roleId}:
+    get:
+      summary: Get role by id
+      parameters:
+        - in: path
+          name: roleId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Role returned
+        "401":
+          description: Missing actor context
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    put:
+      summary: Upsert role and permissions
+      parameters:
+        - in: path
+          name: roleId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+        "201":
+          description: Created
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing actor context
+        "403":
+          description: Forbidden
+

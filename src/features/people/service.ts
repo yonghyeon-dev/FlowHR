@@ -1,5 +1,6 @@
 import type { Actor } from "@/lib/actor";
-import { hasAnyRole } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
+import { Permissions, type Permission } from "@/lib/rbac";
 import type { DataAccess, EmployeeEntity, OrganizationEntity } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
@@ -15,17 +16,15 @@ function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
 }
 
-function requirePeopleAdmin(actor: Actor | null, action: string) {
-  if (!actor || !hasAnyRole(actor, ["admin"])) {
-    throw new ServiceError(403, `people ${action} requires admin role`);
-  }
+async function requirePeoplePermission(context: ServiceContext, permission: Permission, action: string) {
+  await requirePermission(context, permission, `people ${action} requires ${permission}`);
 }
 
 export async function createOrganization(
   context: ServiceContext,
   input: { name: string }
 ): Promise<OrganizationEntity> {
-  requirePeopleAdmin(context.actor, "create organization");
+  await requirePeoplePermission(context, Permissions.peopleOrganizationsManage, "create organization");
 
   const organization = await context.dataAccess.organizations.create({
     name: input.name
@@ -58,7 +57,7 @@ export async function createOrganization(
 }
 
 export async function listOrganizations(context: ServiceContext): Promise<OrganizationEntity[]> {
-  requirePeopleAdmin(context.actor, "list organizations");
+  await requirePeoplePermission(context, Permissions.peopleOrganizationsManage, "list organizations");
   return context.dataAccess.organizations.list();
 }
 
@@ -66,7 +65,7 @@ export async function getOrganization(
   context: ServiceContext,
   input: { organizationId: string }
 ): Promise<OrganizationEntity> {
-  requirePeopleAdmin(context.actor, "get organization");
+  await requirePeoplePermission(context, Permissions.peopleOrganizationsManage, "get organization");
   const organization = await context.dataAccess.organizations.findById(input.organizationId);
   if (!organization) {
     throw new ServiceError(404, "organization not found");
@@ -84,7 +83,7 @@ export async function createEmployee(
     active?: boolean;
   }
 ): Promise<EmployeeEntity> {
-  requirePeopleAdmin(context.actor, "create employee");
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "create employee");
 
   const existing = await context.dataAccess.employees.findById(input.id);
   if (existing) {
@@ -135,7 +134,7 @@ export async function listEmployees(
   context: ServiceContext,
   input: { active?: boolean; organizationId?: string }
 ): Promise<EmployeeEntity[]> {
-  requirePeopleAdmin(context.actor, "list employees");
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "list employees");
   return context.dataAccess.employees.list(input);
 }
 
@@ -143,7 +142,7 @@ export async function getEmployee(
   context: ServiceContext,
   input: { employeeId: string }
 ): Promise<EmployeeEntity> {
-  requirePeopleAdmin(context.actor, "get employee");
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "get employee");
   const employee = await context.dataAccess.employees.findById(input.employeeId);
   if (!employee) {
     throw new ServiceError(404, "employee not found");
@@ -161,7 +160,7 @@ export async function updateEmployee(
     active?: boolean;
   }
 ): Promise<EmployeeEntity> {
-  requirePeopleAdmin(context.actor, "update employee");
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "update employee");
 
   const existing = await context.dataAccess.employees.findById(input.employeeId);
   if (!existing) {

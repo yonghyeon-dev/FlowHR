@@ -9,6 +9,9 @@ import type {
   LeaveBalanceEntity,
   LeaveRequestEntity,
   OrganizationEntity,
+  RoleEntity,
+  RoleWithPermissionsEntity,
+  UpsertRoleInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
   UpdateEmployeeInput,
@@ -16,11 +19,14 @@ import type {
   UpdatePayrollRunInput,
   PayrollRunEntity
 } from "@/features/shared/data-access";
+import { defaultRolePermissions } from "@/lib/rbac";
 
 type MemoryState = {
   sequence: number;
   organizations: Map<string, OrganizationEntity>;
   employees: Map<string, EmployeeEntity>;
+  roles: Map<string, RoleEntity>;
+  rolePermissions: Map<string, Set<string>>;
   attendance: Map<string, AttendanceRecordEntity>;
   leaveRequests: Map<string, LeaveRequestEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
@@ -29,11 +35,28 @@ type MemoryState = {
   audit: Array<AppendAuditLogInput & { createdAt: Date }>;
 };
 
+function seedRbacDefaults(target: MemoryState) {
+  const now = new Date();
+  for (const [roleId, permissions] of Object.entries(defaultRolePermissions)) {
+    const role: RoleEntity = {
+      id: roleId,
+      name: roleId,
+      description: "seeded default",
+      createdAt: now,
+      updatedAt: now
+    };
+    target.roles.set(role.id, role);
+    target.rolePermissions.set(role.id, new Set(permissions));
+  }
+}
+
 function createState(): MemoryState {
-  return {
+  const created: MemoryState = {
     sequence: 1,
     organizations: new Map<string, OrganizationEntity>(),
     employees: new Map<string, EmployeeEntity>(),
+    roles: new Map<string, RoleEntity>(),
+    rolePermissions: new Map<string, Set<string>>(),
     attendance: new Map<string, AttendanceRecordEntity>(),
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
@@ -41,6 +64,8 @@ function createState(): MemoryState {
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
     audit: []
   };
+  seedRbacDefaults(created);
+  return created;
 }
 
 let state = createState();
@@ -124,6 +149,24 @@ function cloneEmployee(entity: EmployeeEntity): EmployeeEntity {
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
+}
+
+function cloneRole(entity: RoleEntity): RoleEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function toRoleWithPermissions(entity: RoleEntity, permissions: Set<string> | undefined) {
+  const rows = Array.from(permissions ?? new Set<string>());
+  rows.sort((a, b) => a.localeCompare(b));
+  const result: RoleWithPermissionsEntity = {
+    ...cloneRole(entity),
+    permissions: rows
+  };
+  return result;
 }
 
 function updateAttendanceEntity(
@@ -262,6 +305,58 @@ export const memoryDataAccess: DataAccess = {
       }
       rows.sort((a, b) => a.id.localeCompare(b.id));
       return rows;
+    }
+  },
+
+  rbac: {
+    async listRoles() {
+      const roles: RoleWithPermissionsEntity[] = [];
+      for (const role of state.roles.values()) {
+        roles.push(toRoleWithPermissions(role, state.rolePermissions.get(role.id)));
+      }
+      roles.sort((a, b) => a.id.localeCompare(b.id));
+      return roles;
+    },
+
+    async findRoleById(id: string) {
+      const role = state.roles.get(id);
+      if (!role) {
+        return null;
+      }
+      return toRoleWithPermissions(role, state.rolePermissions.get(id));
+    },
+
+    async listRolePermissions(roleId: string) {
+      const permissions = state.rolePermissions.get(roleId);
+      if (!permissions) {
+        return [];
+      }
+      const rows = Array.from(permissions);
+      rows.sort((a, b) => a.localeCompare(b));
+      return rows;
+    },
+
+    async upsertRole(input: UpsertRoleInput) {
+      const now = new Date();
+      const existing = state.roles.get(input.id);
+      const role: RoleEntity = {
+        id: input.id,
+        name: input.name,
+        description: input.description === undefined ? existing?.description ?? null : input.description,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now
+      };
+
+      const permissions = new Set(
+        (input.permissions ?? [])
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+      );
+
+      state.roles.set(role.id, role);
+      state.rolePermissions.set(role.id, permissions);
+
+      return toRoleWithPermissions(role, permissions);
     }
   },
 

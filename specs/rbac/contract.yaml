@@ -1,0 +1,90 @@
+owner: rbac-agent
+version: 0.1.0
+scope:
+  in:
+    - role-to-permission mapping (RBAC)
+    - admin-only APIs to manage RBAC roles and permissions
+    - permission-based authorization checks for core APIs (attendance/leave/payroll/people)
+    - audit logs for RBAC changes
+  out:
+    - multi-tenant isolation (RLS) enforcement (Phase 1 follow-up)
+    - UI for permission administration
+    - ABAC (attribute-based access control)
+entities:
+  - name: Role
+    description: Canonical role identifier (e.g., admin/manager/employee) with configurable permissions.
+  - name: RolePermission
+    description: Mapping entries that attach permission strings to roles.
+api:
+  auth:
+    - role: admin
+      permission: manage RBAC roles/permissions
+  endpoints:
+    - method: GET
+      path: /rbac/roles
+      description: List roles and their permissions (admin only).
+    - method: GET
+      path: /rbac/roles/{roleId}
+      description: Get a role and its permissions (admin only).
+    - method: PUT
+      path: /rbac/roles/{roleId}
+      description: Create or update a role and replace its permission set (admin only).
+  events:
+    published: []
+    consumed: []
+db_changes:
+  migrations:
+    - id: 202602150001_rbac_foundation
+      description: Create Role/RolePermission tables and seed default roles/permissions.
+  backward_compatible: true
+  notes: "Additive tables + seeded defaults. Existing JWT role claims keep working."
+invariants:
+  - Authorization checks must be permission-based (no hardcoded role lists) for core APIs.
+  - Unknown roles must default to least privilege (no permissions).
+  - RBAC mutations are admin-only and must be audited.
+risk:
+  permissions:
+    - Incorrect role-permission mapping could block business flows or grant unintended access.
+  payroll_accuracy:
+    - none
+  legal:
+    - Authorization and permission changes must be traceable via audit logs.
+test_plan:
+  unit:
+    - permission resolution falls back to safe defaults for unknown roles
+    - permission policy helpers enforce own-vs-any constraints
+  integration:
+    - admin can list and upsert roles
+    - non-admin RBAC mutation is rejected with 403
+  regression:
+    - WI-0001/WI-0002/WI-0005/WI-0006 e2e remain green under default mappings
+  authorization:
+    - core endpoints reject when required permission is removed for a role (smoke case)
+  payroll_accuracy:
+    - not applicable
+observability:
+  audit_events:
+    - rbac.role.upserted
+  metrics:
+    - rbac_role_upsert_count
+  logs:
+    - authorization denied logs for RBAC endpoints
+rollout:
+  feature_flags:
+    - name: rbac_v1
+      default: "off"
+  migration_strategy: expand-contract
+rollback:
+  strategy: disable rbac_v1 and revert to legacy role checks while keeping RBAC tables for forward-fix
+  max_recovery_time: 30m
+deprecations: []
+breaking_changes: false
+consumer_impact: "RBAC contract v0.1.0 introduces role-permission mappings and permission-based authorization for core APIs."
+references:
+  - work-items/WI-0036-rbac-engine-foundation.md
+  - docs/raci.md
+  - docs/data-ownership.md
+approval:
+  spec_owner: rbac-agent
+  qa_owner: qa-agent
+
