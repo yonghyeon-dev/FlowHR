@@ -166,7 +166,7 @@ async function run() {
       }
     )
   );
-  assert.equal(employeeCrossListDenied.status, 403, "employee cannot list another employee schedules");
+  assert.equal(employeeCrossListDenied.status, 404, "cross-tenant schedule lookup should not leak existence");
 
   const auditActions = getMemoryAuditActions();
   assert.ok(auditActions.includes("scheduling.schedule.assigned"));
@@ -181,4 +181,3 @@ run().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
