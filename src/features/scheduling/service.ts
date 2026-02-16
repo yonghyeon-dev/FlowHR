@@ -91,6 +91,14 @@ type AssignRotationInput = {
   templateIds: string[];
 };
 
+type AssignRotationOptimizeInput = {
+  employeeId: string;
+  fromDate: string;
+  toDate: string;
+  templateIds: string[];
+  apply: boolean;
+};
+
 type GeneratedScheduleWindow = {
   date: string;
   templateId: string;
@@ -107,6 +115,22 @@ export type RotationAssignmentResult = {
   toDate: string;
   templateIds: string[];
   matchedDates: string[];
+  createdScheduleIds: string[];
+};
+
+export type RotationOptimizationResult = {
+  employeeId: string;
+  fromDate: string;
+  toDate: string;
+  dryRun: boolean;
+  recommendedStartOffset: number;
+  optimizedTemplateIds: string[];
+  matchedDates: string[];
+  score: {
+    weekdayGap: number;
+    plannedMinutesGap: number;
+    grade: RotationBalanceGrade;
+  };
   createdScheduleIds: string[];
 };
 
@@ -620,6 +644,95 @@ function normalizeTemplateIds(templateIds: string[]) {
     throw new ServiceError(400, "templateIds must not contain duplicates");
   }
   return trimmed;
+}
+
+type RotationOffsetEvaluation = {
+  offset: number;
+  optimizedTemplateIds: string[];
+  weekdayGap: number;
+  plannedMinutesGap: number;
+  grade: RotationBalanceGrade;
+};
+
+function rotateTemplatesByOffset(
+  templates: WorkScheduleTemplateEntity[],
+  offset: number
+): WorkScheduleTemplateEntity[] {
+  if (templates.length === 0) {
+    return [];
+  }
+  const normalizedOffset = ((offset % templates.length) + templates.length) % templates.length;
+  if (normalizedOffset === 0) {
+    return [...templates];
+  }
+  return [...templates.slice(normalizedOffset), ...templates.slice(0, normalizedOffset)];
+}
+
+function buildRotationWindowsForTemplates(
+  templates: WorkScheduleTemplateEntity[],
+  matchedDates: string[]
+) {
+  return matchedDates.map((date, index) => {
+    const template = templates[index % templates.length];
+    const window = buildScheduleWindowFromTemplateDate(template, date);
+    return {
+      date,
+      templateId: template.id,
+      startAt: window.startAt,
+      endAt: window.endAt,
+      breakMinutes: template.breakMinutes,
+      isHoliday: template.isHoliday,
+      notes: template.notes ?? undefined
+    } satisfies GeneratedScheduleWindow;
+  });
+}
+
+function evaluateRotationOffset(
+  existingSchedules: WorkScheduleEntity[],
+  templates: WorkScheduleTemplateEntity[],
+  matchedDates: string[],
+  offset: number
+): RotationOffsetEvaluation {
+  const rotated = rotateTemplatesByOffset(templates, offset);
+  const generatedWindows = buildRotationWindowsForTemplates(rotated, matchedDates);
+
+  const weekdayCounts = new Array<number>(8).fill(0);
+  const weekdayMinutes = new Array<number>(8).fill(0);
+
+  for (const schedule of existingSchedules) {
+    const weekday = weekdayFromKstDateTime(schedule.startAt);
+    weekdayCounts[weekday] += 1;
+    weekdayMinutes[weekday] += plannedMinutesForSchedule(schedule);
+  }
+  for (const window of generatedWindows) {
+    const weekday = weekdayFromKstDateTime(window.startAt);
+    const plannedMinutes = Math.max(
+      0,
+      Math.floor((window.endAt.getTime() - window.startAt.getTime()) / 60_000) - window.breakMinutes
+    );
+    weekdayCounts[weekday] += 1;
+    weekdayMinutes[weekday] += plannedMinutes;
+  }
+
+  const activeWeekdays = [1, 2, 3, 4, 5, 6, 7].filter((weekday) => weekdayCounts[weekday] > 0);
+  const weekdayGap =
+    activeWeekdays.length === 0
+      ? 0
+      : Math.max(...activeWeekdays.map((weekday) => weekdayCounts[weekday])) -
+        Math.min(...activeWeekdays.map((weekday) => weekdayCounts[weekday]));
+  const plannedMinutesGap =
+    activeWeekdays.length === 0
+      ? 0
+      : Math.max(...activeWeekdays.map((weekday) => weekdayMinutes[weekday])) -
+        Math.min(...activeWeekdays.map((weekday) => weekdayMinutes[weekday]));
+
+  return {
+    offset,
+    optimizedTemplateIds: rotated.map((template) => template.id),
+    weekdayGap,
+    plannedMinutesGap,
+    grade: deriveRotationBalanceGrade(weekdayGap, plannedMinutesGap)
+  };
 }
 
 async function requireTemplatesWithinTenant(context: ServiceContext, templateIds: string[]) {
@@ -1267,6 +1380,114 @@ export async function assignWorkScheduleRotation(
     toDate: input.toDate,
     templateIds,
     matchedDates,
+    createdScheduleIds
+  };
+}
+
+export async function optimizeWorkScheduleRotation(
+  context: ServiceContext,
+  input: AssignRotationOptimizeInput
+): Promise<RotationOptimizationResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule rotation optimize requires permission"
+  );
+
+  const templateIds = normalizeTemplateIds(input.templateIds);
+  const templates = await requireTemplatesWithinTenant(context, templateIds);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+
+  for (const template of templates) {
+    if (!employee.organizationId || employee.organizationId !== template.organizationId) {
+      throw new ServiceError(409, "template organization and employee organization must match", {
+        templateId: template.id,
+        employeeId: input.employeeId
+      });
+    }
+  }
+
+  const baseWeekdayKey = weekdaySetKey(templates[0].weekdays);
+  for (const template of templates) {
+    if (weekdaySetKey(template.weekdays) !== baseWeekdayKey) {
+      throw new ServiceError(409, "all rotation templates must share same weekday set", {
+        templateIds
+      });
+    }
+  }
+
+  const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
+  const periodStart = parseDateToKstBase(input.fromDate);
+  const periodEnd = new Date(parseDateToKstBase(input.toDate).getTime() + 24 * 60 * 60 * 1000);
+  const existingSchedules = await listWorkSchedules(context, {
+    periodStart,
+    periodEnd,
+    employeeId: input.employeeId
+  });
+
+  const evaluations = templates.map((_, offset) =>
+    evaluateRotationOffset(existingSchedules, templates, matchedDates, offset)
+  );
+  evaluations.sort((left, right) => {
+    if (left.plannedMinutesGap !== right.plannedMinutesGap) {
+      return left.plannedMinutesGap - right.plannedMinutesGap;
+    }
+    if (left.weekdayGap !== right.weekdayGap) {
+      return left.weekdayGap - right.weekdayGap;
+    }
+    return left.offset - right.offset;
+  });
+  const best = evaluations[0];
+
+  let createdScheduleIds: string[] = [];
+  if (input.apply) {
+    const assigned = await assignWorkScheduleRotation(context, {
+      employeeId: input.employeeId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      templateIds: best.optimizedTemplateIds
+    });
+    createdScheduleIds = assigned.createdScheduleIds;
+  }
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.rotation.optimization.generated",
+    entityType: "WorkSchedule",
+    organizationId: employee.organizationId ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      employeeId: input.employeeId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      templateIds,
+      optimizedTemplateIds: best.optimizedTemplateIds,
+      recommendedStartOffset: best.offset,
+      weekdayGap: best.weekdayGap,
+      plannedMinutesGap: best.plannedMinutesGap,
+      grade: best.grade,
+      dryRun: !input.apply,
+      createdCount: createdScheduleIds.length
+    }
+  });
+
+  return {
+    employeeId: input.employeeId,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    dryRun: !input.apply,
+    recommendedStartOffset: best.offset,
+    optimizedTemplateIds: best.optimizedTemplateIds,
+    matchedDates,
+    score: {
+      weekdayGap: best.weekdayGap,
+      plannedMinutesGap: best.plannedMinutesGap,
+      grade: best.grade
+    },
     createdScheduleIds
   };
 }

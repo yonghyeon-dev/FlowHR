@@ -57,6 +57,18 @@ export const assignScheduleRotationSchema = z.object({
     .refine((ids) => new Set(ids).size === ids.length, "templateIds must not contain duplicates")
 });
 
+export const assignScheduleRotationOptimizeSchema = z.object({
+  employeeId: z.string().min(1),
+  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  templateIds: z
+    .array(z.string().min(1))
+    .min(2)
+    .max(14)
+    .refine((ids) => new Set(ids).size === ids.length, "templateIds must not contain duplicates"),
+  apply: z.boolean().optional().default(false)
+});
+
 export const listWorkScheduleQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

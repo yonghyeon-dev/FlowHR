@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.10.0
+version: 0.11.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -9,6 +9,7 @@ scope:
     - template-based multi-day range assignment
     - rotation sequence assignment with multiple templates
     - rotation balance report (weekday load and planned-minute imbalance, read-only)
+    - rotation optimization endpoint (start-offset evaluation and optional write-back apply)
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
@@ -18,7 +19,7 @@ scope:
     - GPS/QR/geofence clock-in enforcement
     - anomaly-driven automatic payroll or approval enforcement
     - multi-channel escalation policy orchestration
-    - automatic rotation optimizer write-back
+    - multi-employee global fair scheduler
 entities:
   - name: WorkSchedule
     description: Planned work schedule entry for an employee.
@@ -65,6 +66,9 @@ api:
     - method: GET
       path: /scheduling/rotations/balance
       description: Read-only rotation balance report by period with optional employee filter.
+    - method: POST
+      path: /scheduling/rotations/optimize
+      description: Evaluate optimized template order and optionally apply rotation assignment write-back.
     - method: GET
       path: /scheduling/anomalies
       description: Read-only anomaly report by period with optional employee filter.
@@ -110,6 +114,8 @@ invariants:
   - Rotation assignment requires at least two unique template ids.
   - Rotation assignment requires all templates share identical weekday set.
   - Rotation assignment overlap validation is preflighted and must fail with no writes on conflict.
+  - Rotation optimization evaluates all start offsets against existing schedule load and returns one deterministic recommendation.
+  - Rotation optimization with apply=true must reuse rotation assignment invariants and overlap guards.
   - Rotation balance report is read-only and must not update WorkSchedule state.
   - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
@@ -140,6 +146,8 @@ test_plan:
     - rotation assignment rejects mixed weekday sets and conflict causes no partial writes
     - rotation balance report enforces role boundaries (manager employeeId-required; employee own-only)
     - rotation balance report returns grade and weekday load aggregates without mutating schedules
+    - rotation optimization dry-run returns recommended start offset and does not mutate schedules
+    - rotation optimization apply=true creates schedules using optimized template order
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
     - anomaly report with alert flag emits anomaly event/audit when anomalies exist
@@ -151,6 +159,7 @@ test_plan:
     - anomaly report remains available even when alert publication fails
     - anomaly report remains available even when escalation publication fails
     - rotation balance report does not mutate schedules
+    - rotation optimization dry-run does not mutate schedules
   authorization:
     - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/anomaly-report
   payroll_accuracy:
@@ -165,6 +174,7 @@ observability:
     - scheduling.template.range_assigned
     - scheduling.rotation.assigned
     - scheduling.rotation.balance.report.generated
+    - scheduling.rotation.optimization.generated
     - scheduling.anomaly.report.generated
     - scheduling.anomaly.alert.triggered
     - scheduling.anomaly.alert.failed
@@ -181,6 +191,8 @@ observability:
     - schedule_rotation_assign_count (optional)
     - schedule_rotation_assign_created_count (optional)
     - schedule_rotation_balance_report_count (optional)
+    - schedule_rotation_optimization_count (optional)
+    - schedule_rotation_optimization_apply_count (optional)
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
@@ -204,7 +216,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.10.0 adds read-only rotation balance report endpoint (`GET /scheduling/rotations/balance`) for weekday load and planned-minute imbalance analysis. Existing scheduling APIs remain response-compatible."
+consumer_impact: "Contract v0.11.0 adds rotation optimization endpoint (`POST /scheduling/rotations/optimize`) for deterministic start-offset recommendation and optional apply write-back. Existing scheduling APIs remain response-compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -218,6 +230,7 @@ references:
   - work-items/WI-0051-scheduling-anomaly-alert-automation.md
   - work-items/WI-0055-scheduling-anomaly-escalation-policy.md
   - work-items/WI-0057-scheduling-rotation-balance-report.md
+  - work-items/WI-0058-scheduling-rotation-optimization.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

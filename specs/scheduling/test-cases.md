@@ -58,6 +58,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 50. Manager lists rotation balance report for an employee and receives weekday load/planned-minute aggregates with grade/recommendations (200).
 51. Manager rotation balance query without `employeeId` is rejected (400).
 52. Employee can list own rotation balance report only (403 on other employeeId).
+53. Manager rotation optimization dry-run returns recommended start offset, optimized template order, and score payload (201).
+54. Rotation optimization with `apply=true` creates schedules using optimized template order and returns created schedule ids.
+55. Rotation optimization dry-run path does not mutate schedules.
 
 ## Boundary Cases
 
@@ -70,6 +73,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 7. Alert automation failure path does not fail anomaly report response.
 8. Escalation automation failure path does not fail anomaly report response.
 9. Rotation balance report is read-only and does not mutate schedule state.
+10. Rotation optimization evaluate path is deterministic for identical inputs.
 
 ## Regression Linkage
 
@@ -78,6 +82,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.
+- rotation optimization dry-run path does not mutate schedule state.
 
 ## QA Gate Expectations
 
