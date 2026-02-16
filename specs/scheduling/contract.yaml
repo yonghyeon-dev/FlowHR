@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.14.0
+version: 0.15.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -14,6 +14,7 @@ scope:
     - rotation fairness write-back endpoint (tenant-scoped multi-employee apply orchestration)
     - global fairness constraints for multi-employee offset coordination (daily planned-minute gap objective)
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
+    - tenant-level anomaly cockpit dashboard read-model (severity/queue summary)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
     - tenant-scoped schedule access (RLS baseline + service scoping)
@@ -81,6 +82,9 @@ api:
     - method: GET
       path: /scheduling/anomalies
       description: Read-only anomaly report by period with optional employee filter.
+    - method: GET
+      path: /scheduling/anomalies/cockpit
+      description: Read-only tenant-level anomaly cockpit summary with severity distribution and prioritized queue.
   events:
     published:
       - name: scheduling.schedule.assigned.v1
@@ -133,6 +137,8 @@ invariants:
   - Rotation fairness apply must fail with 409 and no writes when configured global threshold is breached.
   - Rotation balance report is read-only and must not update WorkSchedule state.
   - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
+  - Anomaly cockpit report is read-only and must not update WorkSchedule or AttendanceRecord state.
+  - Anomaly cockpit report requires scheduling write-any permission and tenant scope.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.
   - Anomaly escalation automation must not block anomaly report API response.
@@ -171,12 +177,15 @@ test_plan:
     - rotation fairness apply enforces role boundaries (employee denied)
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
+    - anomaly cockpit report returns tenant-level severity summary and prioritized queue for manager/admin roles
+    - anomaly cockpit report enforces role boundaries (employee denied)
     - anomaly report with alert flag emits anomaly event/audit when anomalies exist
     - anomaly report with escalation flag emits escalation event/audit with severity/owner/retry metadata
   regression:
     - template assignment path reuses schedule overlap guard
     - single-date assignment behavior remains unchanged
     - anomaly report does not mutate schedule or attendance states
+    - anomaly cockpit report does not mutate schedule or attendance states
     - anomaly report remains available even when alert publication fails
     - anomaly report remains available even when escalation publication fails
     - rotation balance report does not mutate schedules
@@ -186,6 +195,7 @@ test_plan:
     - rotation fairness apply emits rotation assignment event/audit for each applied employee
   authorization:
     - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/rotation-optimize/rotation-fairness/rotation-fairness-apply/anomaly-report
+    - permission boundaries for anomaly-cockpit read endpoint
   payroll_accuracy:
     - anomaly report is non-blocking and does not change payroll run outputs
 observability:
@@ -202,6 +212,7 @@ observability:
     - scheduling.rotation.fairness.report.generated
     - scheduling.rotation.fairness.applied
     - scheduling.anomaly.report.generated
+    - scheduling.anomaly.cockpit.generated
     - scheduling.anomaly.alert.triggered
     - scheduling.anomaly.alert.failed
     - scheduling.anomaly.escalation.triggered
@@ -223,6 +234,7 @@ observability:
     - schedule_rotation_fairness_apply_count (optional)
     - schedule_rotation_fairness_global_solver_count (optional)
     - schedule_anomaly_report_count (optional)
+    - schedule_anomaly_cockpit_query_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
     - schedule_anomaly_alert_triggered_count (optional)
@@ -245,7 +257,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.14.0 extends fairness report/apply payloads with optional `globalConstraints` and adds global summary output to coordinate multi-employee offsets by daily planned-minute gap objective. Existing scheduling APIs remain backward compatible when `globalConstraints` is omitted."
+consumer_impact: "Contract v0.15.0 adds anomaly cockpit endpoint (`GET /scheduling/anomalies/cockpit`) for tenant-level severity/queue triage while keeping existing anomaly report behavior unchanged. Existing scheduling APIs remain backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -263,6 +275,7 @@ references:
   - work-items/WI-0059-scheduling-rotation-fairness.md
   - work-items/WI-0061-scheduling-fairness-writeback.md
   - work-items/WI-0063-scheduling-global-fairness-constraints.md
+  - work-items/WI-0065-scheduling-anomaly-cockpit-dashboard.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

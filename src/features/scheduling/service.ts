@@ -39,6 +39,13 @@ type ListScheduleAnomaliesInput = {
   lateThresholdMinutes?: number;
 };
 
+type ListScheduleAnomalyCockpitInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  lateThresholdMinutes?: number;
+  topN?: number;
+};
+
 type ListRotationBalanceInput = {
   periodStart: Date;
   periodEnd: Date;
@@ -170,6 +177,41 @@ export type ScheduleAttendanceAnomalyReport = {
   anomalies: ScheduleAttendanceAnomaly[];
 };
 
+export type ScheduleAttendanceAnomalyCockpitReport = {
+  periodStart: Date;
+  periodEnd: Date;
+  lateThresholdMinutes: number;
+  generatedAt: string;
+  counts: {
+    evaluatedSchedules: number;
+    anomalies: number;
+    late: number;
+    noShow: number;
+  };
+  severities: {
+    minor: number;
+    major: number;
+    critical: number;
+  };
+  employees: Array<{
+    employeeId: string;
+    anomalies: number;
+    late: number;
+    noShow: number;
+    severity: AnomalyEscalationSeverity;
+    lastAnomalyAt: Date | null;
+  }>;
+  queue: Array<{
+    scheduleId: string;
+    employeeId: string;
+    anomalyType: ScheduleAttendanceAnomalyType;
+    severity: AnomalyEscalationSeverity;
+    lateMinutes: number | null;
+    scheduleStartAt: Date;
+    recommendedAction: string;
+  }>;
+};
+
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
 export type RotationFairnessGlobalObjective = "MINIMIZE_DAILY_PLANNED_MINUTES_GAP";
 
@@ -275,6 +317,14 @@ function normalizeLateThresholdMinutes(value: number | undefined) {
   const normalized = value ?? 10;
   if (!Number.isInteger(normalized) || normalized < 0 || normalized > 240) {
     throw new ServiceError(400, "lateThresholdMinutes must be an integer in range 0..240");
+  }
+  return normalized;
+}
+
+function normalizeTopN(value: number | undefined) {
+  const normalized = value ?? 20;
+  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 200) {
+    throw new ServiceError(400, "topN must be an integer in range 1..200");
   }
   return normalized;
 }
@@ -398,6 +448,16 @@ function classifyAnomalyEscalationSeverity(
     return "MAJOR";
   }
   return "MINOR";
+}
+
+function anomalyEscalationSeverityWeight(severity: AnomalyEscalationSeverity) {
+  if (severity === "CRITICAL") {
+    return 3;
+  }
+  if (severity === "MAJOR") {
+    return 2;
+  }
+  return 1;
 }
 
 function buildAnomalyEscalationPayload(
@@ -2239,38 +2299,14 @@ function indexAttendanceByEmployee(records: AttendanceRecordEntity[]) {
   return byEmployee;
 }
 
-export async function listScheduleAttendanceAnomalies(
-  context: ServiceContext,
-  input: ListScheduleAnomaliesInput
-): Promise<ScheduleAttendanceAnomalyReport> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  ensureValidPeriod(input.periodStart, input.periodEnd);
-  const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
-
-  // Keep permission model strict by reusing each domain list service:
-  // - scheduling list permissions/tenant rules
-  // - attendance list permissions/tenant rules
-  const schedules = await listWorkSchedules(context, {
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    employeeId: input.employeeId
-  });
-
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  const attendancePeriodStart = new Date(input.periodStart.getTime() - oneDayMs);
-  const attendancePeriodEnd = new Date(input.periodEnd.getTime() + oneDayMs);
-  const attendances = await listAttendanceRecords(context, {
-    periodStart: attendancePeriodStart,
-    periodEnd: attendancePeriodEnd,
-    employeeId: input.employeeId
-  });
+function buildScheduleAttendanceAnomalySet(
+  schedules: WorkScheduleEntity[],
+  attendances: AttendanceRecordEntity[],
+  lateThresholdMinutes: number
+) {
   const attendanceByEmployee = indexAttendanceByEmployee(attendances);
-
   const anomalies: ScheduleAttendanceAnomaly[] = [];
+
   for (const schedule of schedules) {
     const records = attendanceByEmployee.get(schedule.employeeId) ?? [];
     const overlaps = records.filter((record) => attendanceOverlapsSchedule(record, schedule));
@@ -2316,6 +2352,47 @@ export async function listScheduleAttendanceAnomalies(
 
   const lateCount = anomalies.filter((item) => item.anomalyType === "LATE").length;
   const noShowCount = anomalies.length - lateCount;
+  return {
+    anomalies,
+    lateCount,
+    noShowCount
+  };
+}
+
+export async function listScheduleAttendanceAnomalies(
+  context: ServiceContext,
+  input: ListScheduleAnomaliesInput
+): Promise<ScheduleAttendanceAnomalyReport> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+  const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
+
+  // Keep permission model strict by reusing each domain list service:
+  // - scheduling list permissions/tenant rules
+  // - attendance list permissions/tenant rules
+  const schedules = await listWorkSchedules(context, {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId
+  });
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const attendancePeriodStart = new Date(input.periodStart.getTime() - oneDayMs);
+  const attendancePeriodEnd = new Date(input.periodEnd.getTime() + oneDayMs);
+  const attendances = await listAttendanceRecords(context, {
+    periodStart: attendancePeriodStart,
+    periodEnd: attendancePeriodEnd,
+    employeeId: input.employeeId
+  });
+  const { anomalies, lateCount, noShowCount } = buildScheduleAttendanceAnomalySet(
+    schedules,
+    attendances,
+    lateThresholdMinutes
+  );
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.report.generated",
     entityType: "WorkSchedule",
@@ -2367,6 +2444,167 @@ export async function listScheduleAttendanceAnomalies(
       noShow: noShowCount
     },
     anomalies
+  };
+}
+
+function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
+  if (anomaly.anomalyType === "NO_SHOW") {
+    return "출근 확인 및 사유 수집";
+  }
+  if (anomaly.lateMinutes !== null && anomaly.lateMinutes >= 30) {
+    return "지각 원인 확인 및 즉시 에스컬레이션 검토";
+  }
+  return "지각 사유 확인 및 재발 방지 조치";
+}
+
+export async function listScheduleAttendanceAnomalyCockpit(
+  context: ServiceContext,
+  input: ListScheduleAnomalyCockpitInput
+): Promise<ScheduleAttendanceAnomalyCockpitReport> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly cockpit requires permission"
+  );
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+  const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
+  const topN = normalizeTopN(input.topN);
+  const tenantScope = resolveTenantScope(actor);
+
+  const schedules = await context.dataAccess.scheduling.listInPeriod({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    organizationId: tenantScope ?? undefined
+  });
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const attendancePeriodStart = new Date(input.periodStart.getTime() - oneDayMs);
+  const attendancePeriodEnd = new Date(input.periodEnd.getTime() + oneDayMs);
+  const attendances = await context.dataAccess.attendance.listInPeriod({
+    periodStart: attendancePeriodStart,
+    periodEnd: attendancePeriodEnd,
+    organizationId: tenantScope ?? undefined
+  });
+
+  const { anomalies, lateCount, noShowCount } = buildScheduleAttendanceAnomalySet(
+    schedules,
+    attendances,
+    lateThresholdMinutes
+  );
+
+  const anomaliesByEmployee = new Map<string, ScheduleAttendanceAnomaly[]>();
+  for (const anomaly of anomalies) {
+    const rows = anomaliesByEmployee.get(anomaly.employeeId);
+    if (rows) {
+      rows.push(anomaly);
+      continue;
+    }
+    anomaliesByEmployee.set(anomaly.employeeId, [anomaly]);
+  }
+
+  const employees = Array.from(anomaliesByEmployee.entries()).map(([employeeId, rows]) => {
+    const late = rows.filter((row) => row.anomalyType === "LATE").length;
+    const noShow = rows.length - late;
+    const lastAnomalyAt =
+      rows.length === 0
+        ? null
+        : rows.reduce((max, row) =>
+            row.scheduleStartAt.getTime() > max.getTime() ? row.scheduleStartAt : max
+          , rows[0].scheduleStartAt);
+    const severity = classifyAnomalyEscalationSeverity(rows, late, noShow);
+    return {
+      employeeId,
+      anomalies: rows.length,
+      late,
+      noShow,
+      severity,
+      lastAnomalyAt
+    };
+  });
+
+  employees.sort((left, right) => {
+    const bySeverity =
+      anomalyEscalationSeverityWeight(right.severity) - anomalyEscalationSeverityWeight(left.severity);
+    if (bySeverity !== 0) {
+      return bySeverity;
+    }
+    if (left.anomalies !== right.anomalies) {
+      return right.anomalies - left.anomalies;
+    }
+    return left.employeeId.localeCompare(right.employeeId);
+  });
+
+  const severityByEmployee = new Map(employees.map((employee) => [employee.employeeId, employee.severity]));
+  const queue = anomalies
+    .map((anomaly) => ({
+      scheduleId: anomaly.scheduleId,
+      employeeId: anomaly.employeeId,
+      anomalyType: anomaly.anomalyType,
+      severity: severityByEmployee.get(anomaly.employeeId) ?? "MINOR",
+      lateMinutes: anomaly.lateMinutes,
+      scheduleStartAt: anomaly.scheduleStartAt,
+      recommendedAction: anomalyCockpitRecommendedAction(anomaly)
+    }))
+    .sort((left, right) => {
+      const bySeverity =
+        anomalyEscalationSeverityWeight(right.severity) - anomalyEscalationSeverityWeight(left.severity);
+      if (bySeverity !== 0) {
+        return bySeverity;
+      }
+      const byStart = left.scheduleStartAt.getTime() - right.scheduleStartAt.getTime();
+      if (byStart !== 0) {
+        return byStart;
+      }
+      return left.scheduleId.localeCompare(right.scheduleId);
+    })
+    .slice(0, topN);
+
+  const severities = {
+    minor: employees.filter((employee) => employee.severity === "MINOR").length,
+    major: employees.filter((employee) => employee.severity === "MAJOR").length,
+    critical: employees.filter((employee) => employee.severity === "CRITICAL").length
+  };
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.cockpit.generated",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      lateThresholdMinutes,
+      topN,
+      evaluatedSchedules: schedules.length,
+      anomalies: anomalies.length,
+      lateCount,
+      noShowCount,
+      employeeCount: employees.length,
+      severities
+    }
+  });
+
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes,
+    generatedAt: new Date().toISOString(),
+    counts: {
+      evaluatedSchedules: schedules.length,
+      anomalies: anomalies.length,
+      late: lateCount,
+      noShow: noShowCount
+    },
+    severities,
+    employees,
+    queue
   };
 }
 

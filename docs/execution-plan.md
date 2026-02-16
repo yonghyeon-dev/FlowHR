@@ -110,7 +110,7 @@ Open gaps:
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling advanced multi-objective fairness solver (preference/labor-law objective) on top of global-constraint baseline
   - advanced clock-in reputation operations automation (circuit-breaker/retry/adaptive routing) on top of multi-provider baseline
-  - real-time anomaly dashboard and operator cockpit flow (report/alert/escalation baseline merged)
+  - real-time anomaly streaming dashboard and ticket automation on top of cockpit baseline
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -137,6 +137,7 @@ Recently delivered:
 - Attendance dynamic external reputation integration baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED`; WI-0062).
 - Scheduling global fairness constraints baseline is merged via fairness report/apply payload extension (`globalConstraints`; WI-0063).
 - Attendance multi-provider reputation orchestration baseline is merged (`URLS` + aggregation + minimum-success; WI-0064).
+- Scheduling anomaly cockpit dashboard baseline is merged (`GET /scheduling/anomalies/cockpit`; WI-0065).
 
 ## 2) Priority Roadmap
 
@@ -282,6 +283,7 @@ Tasks:
 23. (Done) `work-items/WI-0062-attendance-external-reputation-integration.md`
 24. (Done) `work-items/WI-0063-scheduling-global-fairness-constraints.md`
 25. (Done) `work-items/WI-0064-attendance-multi-provider-reputation-orchestration.md`
+26. (Done) `work-items/WI-0065-scheduling-anomaly-cockpit-dashboard.md`
 
 ## 3) Workstream Ownership
 
@@ -314,6 +316,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines,
+1. define WI for anomaly streaming dashboard and operator ticket automation on top of cockpit baseline,
 2. define WI for advanced fairness optimizer (preference/labor-law multi-objective) on top of global-constraint baseline,
 3. define WI for reputation operations automation (circuit-breaker/retry/adaptive routing) on top of multi-provider baseline.
