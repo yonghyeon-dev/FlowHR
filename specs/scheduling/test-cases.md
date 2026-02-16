@@ -2,7 +2,7 @@
 
 ## Scope
 
-Work schedule CRUD + template assignment behavior with tenant isolation and role boundaries.
+Work schedule CRUD + template assignment + schedule-to-attendance anomaly behavior with tenant isolation and role boundaries.
 
 ## Functional Cases
 
@@ -33,16 +33,23 @@ Work schedule CRUD + template assignment behavior with tenant isolation and role
 25. Reject template assignment when template is from another tenant (404).
 26. Emit domain events `scheduling.template.created.v1`, `scheduling.template.assigned.v1` on successful actions.
 27. Append audit logs `scheduling.template.created`, `scheduling.template.assigned` with tenant context.
+28. Manager lists anomaly report for an employee and receives `LATE`/`NO_SHOW` rows (200).
+29. Manager anomaly query without `employeeId` is rejected (400).
+30. Employee can list own anomaly report only (403 on other employeeId).
+31. Cross-tenant anomaly query for `employeeId` returns 404 (no existence leak).
+32. Append audit log `scheduling.anomaly.report.generated` for successful report reads.
 
 ## Boundary Cases
 
 1. Overnight schedule windows (crossing midnight) are accepted; business-date attribution is future scope.
 2. Break minutes are validated (0..300).
 3. Back-to-back schedules (existing `endAt == new startAt`) are allowed.
+4. `lateThresholdMinutes` query validates integer range (0..240).
 
 ## Regression Linkage
 
 - none
+ - anomaly report is read-only and does not mutate schedule or attendance state.
 
 ## QA Gate Expectations
 

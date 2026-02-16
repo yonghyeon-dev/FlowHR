@@ -2,13 +2,15 @@ import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import type {
+  AttendanceRecordEntity,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   DataAccess,
-  WorkScheduleTemplateEntity,
   UpdateWorkScheduleInput,
+  WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
+import { listAttendanceRecords } from "@/features/attendance/service";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
@@ -27,6 +29,13 @@ type ListScheduleInput = {
   periodStart: Date;
   periodEnd: Date;
   employeeId?: string;
+};
+
+type ListScheduleAnomaliesInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId?: string;
+  lateThresholdMinutes?: number;
 };
 
 type UpdateScheduleInput = {
@@ -53,6 +62,32 @@ type AssignTemplateInput = {
   date: string;
 };
 
+export type ScheduleAttendanceAnomalyType = "LATE" | "NO_SHOW";
+
+export type ScheduleAttendanceAnomaly = {
+  scheduleId: string;
+  employeeId: string;
+  scheduleStartAt: Date;
+  scheduleEndAt: Date;
+  anomalyType: ScheduleAttendanceAnomalyType;
+  lateMinutes: number | null;
+  attendanceRecordId: string | null;
+  checkInAt: Date | null;
+};
+
+export type ScheduleAttendanceAnomalyReport = {
+  periodStart: Date;
+  periodEnd: Date;
+  lateThresholdMinutes: number;
+  counts: {
+    evaluatedSchedules: number;
+    anomalies: number;
+    late: number;
+    noShow: number;
+  };
+  anomalies: ScheduleAttendanceAnomaly[];
+};
+
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
@@ -67,6 +102,14 @@ function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
   if (periodEnd <= periodStart) {
     throw new ServiceError(400, "to must be after from");
   }
+}
+
+function normalizeLateThresholdMinutes(value: number | undefined) {
+  const normalized = value ?? 10;
+  if (!Number.isInteger(normalized) || normalized < 0 || normalized > 240) {
+    throw new ServiceError(400, "lateThresholdMinutes must be an integer in range 0..240");
+  }
+  return normalized;
 }
 
 function toCreateInput(input: CreateScheduleInput): CreateWorkScheduleInput {
@@ -564,5 +607,138 @@ export async function listWorkSchedules(
     organizationId: tenantScope ?? undefined,
     employeeId
   });
+}
+
+function attendanceOverlapsSchedule(
+  attendance: AttendanceRecordEntity,
+  schedule: WorkScheduleEntity
+) {
+  if (attendance.state === "REJECTED") {
+    return false;
+  }
+  const attendanceEnd = attendance.checkOutAt ?? attendance.checkInAt;
+  return attendance.checkInAt <= schedule.endAt && attendanceEnd >= schedule.startAt;
+}
+
+function indexAttendanceByEmployee(records: AttendanceRecordEntity[]) {
+  const byEmployee = new Map<string, AttendanceRecordEntity[]>();
+  for (const record of records) {
+    const rows = byEmployee.get(record.employeeId);
+    if (rows) {
+      rows.push(record);
+      continue;
+    }
+    byEmployee.set(record.employeeId, [record]);
+  }
+  return byEmployee;
+}
+
+export async function listScheduleAttendanceAnomalies(
+  context: ServiceContext,
+  input: ListScheduleAnomaliesInput
+): Promise<ScheduleAttendanceAnomalyReport> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+  const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
+
+  // Keep permission model strict by reusing each domain list service:
+  // - scheduling list permissions/tenant rules
+  // - attendance list permissions/tenant rules
+  const schedules = await listWorkSchedules(context, {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId
+  });
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const attendancePeriodStart = new Date(input.periodStart.getTime() - oneDayMs);
+  const attendancePeriodEnd = new Date(input.periodEnd.getTime() + oneDayMs);
+  const attendances = await listAttendanceRecords(context, {
+    periodStart: attendancePeriodStart,
+    periodEnd: attendancePeriodEnd,
+    employeeId: input.employeeId
+  });
+  const attendanceByEmployee = indexAttendanceByEmployee(attendances);
+
+  const anomalies: ScheduleAttendanceAnomaly[] = [];
+  for (const schedule of schedules) {
+    const records = attendanceByEmployee.get(schedule.employeeId) ?? [];
+    const overlaps = records.filter((record) => attendanceOverlapsSchedule(record, schedule));
+    if (overlaps.length === 0) {
+      anomalies.push({
+        scheduleId: schedule.id,
+        employeeId: schedule.employeeId,
+        scheduleStartAt: schedule.startAt,
+        scheduleEndAt: schedule.endAt,
+        anomalyType: "NO_SHOW",
+        lateMinutes: null,
+        attendanceRecordId: null,
+        checkInAt: null
+      });
+      continue;
+    }
+
+    const earliest = overlaps.reduce((min, current) =>
+      current.checkInAt.getTime() < min.checkInAt.getTime() ? current : min
+    );
+    const lateMinutes = Math.floor((earliest.checkInAt.getTime() - schedule.startAt.getTime()) / 60_000);
+    if (lateMinutes > lateThresholdMinutes) {
+      anomalies.push({
+        scheduleId: schedule.id,
+        employeeId: schedule.employeeId,
+        scheduleStartAt: schedule.startAt,
+        scheduleEndAt: schedule.endAt,
+        anomalyType: "LATE",
+        lateMinutes,
+        attendanceRecordId: earliest.id,
+        checkInAt: earliest.checkInAt
+      });
+    }
+  }
+
+  anomalies.sort((a, b) => {
+    const byStart = a.scheduleStartAt.getTime() - b.scheduleStartAt.getTime();
+    if (byStart !== 0) {
+      return byStart;
+    }
+    return a.scheduleId.localeCompare(b.scheduleId);
+  });
+
+  const lateCount = anomalies.filter((item) => item.anomalyType === "LATE").length;
+  const noShowCount = anomalies.length - lateCount;
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.report.generated",
+    entityType: "WorkSchedule",
+    organizationId: resolveTenantScope(actor) ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      employeeId: input.employeeId ?? null,
+      lateThresholdMinutes,
+      evaluatedSchedules: schedules.length,
+      anomalies: anomalies.length,
+      lateCount,
+      noShowCount
+    }
+  });
+
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes,
+    counts: {
+      evaluatedSchedules: schedules.length,
+      anomalies: anomalies.length,
+      late: lateCount,
+      noShow: noShowCount
+    },
+    anomalies
+  };
 }
 

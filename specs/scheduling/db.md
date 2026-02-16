@@ -13,6 +13,8 @@
 - `202602150003_scheduling_baseline`
 - `202602160001_scheduling_template_recurring`
 
+No additional migration in WI-0045 (anomaly report is read-only).
+
 ## Tenant Isolation
 
 - RLS policies must enforce tenant isolation via `Employee.organizationId`.
@@ -22,4 +24,5 @@
 
 - Expand-contract migration style.
 - No cross-domain direct table access. Use API/event/projection.
+- Schedule anomaly report reads `AttendanceRecord` signals through service/data-access boundaries only.
 
