@@ -109,7 +109,7 @@ Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling rotation balancing/optimization automation (rotation baseline merged)
-  - advanced clock-in policy enforcement (channel trust/device attestation/multi-site geofence) after geofence baseline
+  - advanced clock-in policy enforcement (device attestation/multi-site geofence) after trusted-device baseline
   - anomaly escalation policy and delivery routing (alert automation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
@@ -124,6 +124,7 @@ Recently delivered:
 - Attendance employee GPS policy enforcement baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_GPS_REQUIRED`; WI-0049).
 - Attendance employee geofence policy enforcement baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_GEOFENCE_ENABLED`; WI-0050).
 - Scheduling anomaly alert automation baseline is merged behind feature flag (`FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED`; WI-0051).
+- Attendance trusted device allowlist policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED`; WI-0052).
 
 ## 2) Priority Roadmap
 
@@ -256,6 +257,7 @@ Tasks:
 10. (Done) `work-items/WI-0049-attendance-gps-policy-enforcement.md`
 11. (Done) `work-items/WI-0050-attendance-geofence-policy.md`
 12. (Done) `work-items/WI-0051-scheduling-anomaly-alert-automation.md`
+13. (Done) `work-items/WI-0052-attendance-trusted-device-policy.md`
 
 ## 3) Workstream Ownership
 
@@ -289,5 +291,5 @@ Request template:
 Without additional input, the next executable step is:
 
 1. define WI for rotation balancing/optimization policy contract-first,
-2. define WI for device trust / multi-site geofence policy engine (on top of geofence baseline) contract-first,
+2. define WI for multi-site geofence / device attestation policy engine (on top of trusted-device baseline) contract-first,
 3. define WI for anomaly escalation policy (severity routing/retry/escalation ownership) on top of WI-0051.

@@ -100,6 +100,13 @@ function isAttendanceGeofencePolicyEnabled() {
   );
 }
 
+function isAttendanceTrustedDevicePolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED ??
+      process.env.ATTENDANCE_TRUSTED_DEVICE_ENABLED
+  );
+}
+
 type GeofenceConfig = {
   latitude: number;
   longitude: number;
@@ -115,6 +122,20 @@ function parseNumberEnv(value: string | undefined): number | null {
     return null;
   }
   return parsed;
+}
+
+function parseTrustedDeviceAllowlist() {
+  const raw = process.env.FLOWHR_ATTENDANCE_TRUSTED_DEVICE_IDS ?? "";
+  const values = raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  if (values.length === 0) {
+    throw new ServiceError(500, "attendance trusted device policy is enabled but allowlist is empty");
+  }
+
+  return new Set(values);
 }
 
 function loadGeofenceConfig(): GeofenceConfig {
@@ -250,6 +271,43 @@ function assertGeofencePolicyForUpdate(
   assertGeofenceForCoordinates(nextLatitude, nextLongitude);
 }
 
+function assertTrustedDevicePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceTrustedDevicePolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const deviceId = input.capture?.deviceId?.trim();
+  if (!deviceId) {
+    throw new ServiceError(400, "attendance trusted device policy requires capture deviceId");
+  }
+
+  const trustedDevices = parseTrustedDeviceAllowlist();
+  if (!trustedDevices.has(deviceId)) {
+    throw new ServiceError(400, "attendance capture device is not in trusted device allowlist");
+  }
+}
+
+function assertTrustedDevicePolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceTrustedDevicePolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const nextDeviceId = input.capture?.deviceId !== undefined ? input.capture.deviceId : existing.captureDeviceId;
+  const normalized = nextDeviceId?.trim();
+  if (!normalized) {
+    throw new ServiceError(400, "attendance trusted device policy requires capture deviceId");
+  }
+
+  const trustedDevices = parseTrustedDeviceAllowlist();
+  if (!trustedDevices.has(normalized)) {
+    throw new ServiceError(400, "attendance capture device is not in trusted device allowlist");
+  }
+}
+
 function toCapturePayload(record: AttendanceRecordEntity) {
   return {
     channel: record.captureChannel,
@@ -309,6 +367,7 @@ export async function createAttendanceRecord(
 
   assertGpsCapturePolicyForCreate(actor, input);
   assertGeofencePolicyForCreate(actor, input);
+  assertTrustedDevicePolicyForCreate(actor, input);
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -392,6 +451,7 @@ export async function updateAttendanceRecord(
   const existing = await requireEditableRecord(context, recordId);
   assertGpsCapturePolicyForUpdate(context.actor!, existing, input);
   assertGeofencePolicyForUpdate(context.actor!, existing, input);
+  assertTrustedDevicePolicyForUpdate(context.actor!, existing, input);
   const employee = await requireEmployeeWithinTenant(
     context.dataAccess,
     context.actor,
