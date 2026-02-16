@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - scheduling multi-employee/global fairness write-back orchestration on top of fairness report baseline
+  - scheduling multi-employee/global fairness constraint solver on top of fairness write-back baseline
   - advanced clock-in dynamic external reputation integration on top of signal-fusion baseline
   - real-time anomaly dashboard and operator cockpit flow (report/alert/escalation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
@@ -133,6 +133,7 @@ Recently delivered:
 - Scheduling rotation optimization baseline is merged via evaluate/apply endpoint (`POST /scheduling/rotations/optimize`; WI-0058).
 - Scheduling rotation fairness report baseline is merged via tenant-level read-only endpoint (`POST /scheduling/rotations/fairness`; WI-0059).
 - Attendance anti-spoofing signal-fusion/reputation baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED`; WI-0060).
+- Scheduling fairness write-back orchestration baseline is merged via tenant-level apply endpoint (`POST /scheduling/rotations/fairness/apply`; WI-0061).
 
 ## 2) Priority Roadmap
 
@@ -274,6 +275,7 @@ Tasks:
 19. (Done) `work-items/WI-0058-scheduling-rotation-optimization.md`
 20. (Done) `work-items/WI-0059-scheduling-rotation-fairness.md`
 21. (Done) `work-items/WI-0060-attendance-anti-spoofing-signal-fusion.md`
+22. (Done) `work-items/WI-0061-scheduling-fairness-writeback.md`
 
 ## 3) Workstream Ownership
 
@@ -306,6 +308,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for multi-employee/global fairness write-back orchestration policy (on top of fairness report baseline) contract-first,
+1. define WI for multi-employee/global fairness constraint solver policy (on top of fairness write-back baseline) contract-first,
 2. define WI for dynamic external reputation integration policy engine (on top of signal-fusion baseline) contract-first,
 3. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines.

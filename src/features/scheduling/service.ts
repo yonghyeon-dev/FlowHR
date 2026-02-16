@@ -218,6 +218,23 @@ export type RotationFairnessReport = {
   results: RotationFairnessEmployeeResult[];
 };
 
+export type RotationFairnessApplyResult = {
+  organizationId: string;
+  fromDate: string;
+  toDate: string;
+  templateIds: string[];
+  employeeCount: number;
+  appliedEmployeeCount: number;
+  summary: RotationFairnessReport["summary"];
+  assignments: Array<{
+    employeeId: string;
+    createdScheduleIds: string[];
+  }>;
+  totals: {
+    createdSchedules: number;
+  };
+};
+
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
@@ -921,6 +938,26 @@ async function ensureNoOverlapsForGeneratedWindows(
       }
     }
   }
+}
+
+async function createSchedulesFromGeneratedWindows(
+  context: ServiceContext,
+  employeeId: string,
+  windows: GeneratedScheduleWindow[]
+) {
+  const createdScheduleIds: string[] = [];
+  for (const candidate of windows) {
+    const created = await createWorkSchedule(context, {
+      employeeId,
+      startAt: candidate.startAt,
+      endAt: candidate.endAt,
+      breakMinutes: candidate.breakMinutes,
+      isHoliday: candidate.isHoliday,
+      notes: candidate.notes
+    });
+    createdScheduleIds.push(created.id);
+  }
+  return createdScheduleIds;
 }
 
 function buildScheduleWindowFromTemplateDate(template: WorkScheduleTemplateEntity, dateYmd: string) {
@@ -1710,6 +1747,133 @@ export async function listWorkScheduleRotationFairness(
       grade
     },
     results
+  };
+}
+
+export async function applyWorkScheduleRotationFairness(
+  context: ServiceContext,
+  input: ListRotationFairnessInput
+): Promise<RotationFairnessApplyResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const report = await listWorkScheduleRotationFairness(context, input);
+
+  const assignmentPlans: Array<{
+    employeeId: string;
+    organizationId: string | undefined;
+    templateIds: string[];
+    matchedDates: string[];
+    windows: GeneratedScheduleWindow[];
+  }> = [];
+
+  for (const recommendation of report.results) {
+    const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, recommendation.employeeId);
+    const templates = await requireTemplatesWithinTenant(context, recommendation.optimizedTemplateIds);
+    for (const template of templates) {
+      if (!employee.organizationId || employee.organizationId !== template.organizationId) {
+        throw new ServiceError(409, "template organization and employee organization must match", {
+          templateId: template.id,
+          employeeId: recommendation.employeeId
+        });
+      }
+    }
+    assignmentPlans.push({
+      employeeId: recommendation.employeeId,
+      organizationId: employee.organizationId ?? undefined,
+      templateIds: recommendation.optimizedTemplateIds,
+      matchedDates: recommendation.matchedDates,
+      windows: buildRotationWindowsForTemplates(templates, recommendation.matchedDates)
+    });
+  }
+
+  // Preflight all employees before writing any schedule to reduce partial-apply risk.
+  for (const plan of assignmentPlans) {
+    await ensureNoOverlapsForGeneratedWindows(context, plan.organizationId, plan.employeeId, plan.windows);
+  }
+
+  const assignments: Array<{ employeeId: string; createdScheduleIds: string[] }> = [];
+  for (const plan of assignmentPlans) {
+    const createdScheduleIds = await createSchedulesFromGeneratedWindows(
+      context,
+      plan.employeeId,
+      plan.windows
+    );
+
+    await context.dataAccess.audit.append({
+      action: "scheduling.rotation.assigned",
+      entityType: "WorkSchedule",
+      organizationId: plan.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        employeeId: plan.employeeId,
+        templateIds: plan.templateIds,
+        fromDate: input.fromDate,
+        toDate: input.toDate,
+        matchedDates: plan.matchedDates,
+        createdScheduleIds,
+        createdCount: createdScheduleIds.length
+      }
+    });
+
+    await getEventPublisher(context).publish({
+      name: "scheduling.rotation.assigned.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "WorkSchedule",
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        employeeId: plan.employeeId,
+        templateIds: plan.templateIds,
+        fromDate: input.fromDate,
+        toDate: input.toDate,
+        matchedDates: plan.matchedDates,
+        createdScheduleIds,
+        createdCount: createdScheduleIds.length
+      }
+    });
+
+    assignments.push({
+      employeeId: plan.employeeId,
+      createdScheduleIds
+    });
+  }
+
+  const createdSchedules = assignments.reduce((sum, assignment) => sum + assignment.createdScheduleIds.length, 0);
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.rotation.fairness.applied",
+    entityType: "WorkSchedule",
+    organizationId: report.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      organizationId: report.organizationId,
+      fromDate: report.fromDate,
+      toDate: report.toDate,
+      templateIds: report.templateIds,
+      employeeCount: report.employeeCount,
+      appliedEmployeeCount: assignments.length,
+      createdSchedules,
+      employeeIds: assignments.map((assignment) => assignment.employeeId)
+    }
+  });
+
+  return {
+    organizationId: report.organizationId,
+    fromDate: report.fromDate,
+    toDate: report.toDate,
+    templateIds: report.templateIds,
+    employeeCount: report.employeeCount,
+    appliedEmployeeCount: assignments.length,
+    summary: report.summary,
+    assignments,
+    totals: {
+      createdSchedules
+    }
   };
 }
 
