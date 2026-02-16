@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0041)
+### 완료 WI 목록 (WI-0001 ~ WI-0043)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -65,6 +65,8 @@
 | WI-0039 | Discord Alert Korean | 운영 |
 | WI-0040 | Scheduling Baseline (WorkSchedule API) | 핵심 비즈니스 |
 | WI-0041 | Scheduling Overlap Guard (WorkSchedule) | 안정성 |
+| WI-0042 | Scheduling Update API (WorkSchedule PATCH) | 핵심 비즈니스 |
+| WI-0043 | Scheduling Delete API (WorkSchedule DELETE) | 핵심 비즈니스 |
 
 ### 다음 우선순위 (Phase 2 시작)
 
@@ -74,7 +76,7 @@
 
 ### 진행 중
 
-- 없음 (WI-0041까지 main에 머지 완료)
+- 없음 (WI-0043까지 main에 머지 완료)
 
 ### 현재 아키텍처
 

@@ -119,7 +119,7 @@ Recently delivered:
 - Employee/Organization master data baseline exists and is audited (WI-0034).
 - employeeId FK integrity and RBAC foundation are merged (WI-0035, WI-0036).
 - Multi-tenant isolation baseline (Supabase RLS) is merged (WI-0037).
-- Scheduling baseline and overlap guard are merged (WI-0040, WI-0041).
+- Scheduling CRUD baseline (create/list/update/delete) and overlap guard are merged (WI-0040, WI-0041, WI-0042, WI-0043).
 
 ## 2) Priority Roadmap
 
