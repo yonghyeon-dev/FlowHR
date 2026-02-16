@@ -9,7 +9,9 @@ import type {
   CreateLeaveRequestInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
+  CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
+  UpdateWorkScheduleTemplateInput,
   UpdateWorkScheduleInput,
   DataAccess,
   DeductionProfileEntity,
@@ -35,6 +37,7 @@ import type {
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput,
+  WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
 
@@ -66,6 +69,22 @@ function toWorkScheduleEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): WorkScheduleEntity {
+  return record;
+}
+
+function toWorkScheduleTemplateEntity(record: {
+  id: string;
+  organizationId: string;
+  name: string;
+  startMinute: number;
+  endMinute: number;
+  breakMinutes: number;
+  isHoliday: boolean;
+  weekdays: number[];
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): WorkScheduleTemplateEntity {
   return record;
 }
 
@@ -493,6 +512,62 @@ const scheduling: SchedulingStore = {
       where: { id }
     });
     return toWorkScheduleEntity(record);
+  },
+
+  async createTemplate(input: CreateWorkScheduleTemplateInput) {
+    const record = await prisma.workScheduleTemplate.create({
+      data: {
+        organizationId: input.organizationId,
+        name: input.name,
+        startMinute: input.startMinute,
+        endMinute: input.endMinute,
+        breakMinutes: input.breakMinutes,
+        isHoliday: input.isHoliday,
+        weekdays: input.weekdays,
+        notes: input.notes ?? null
+      }
+    });
+    return toWorkScheduleTemplateEntity(record);
+  },
+
+  async findTemplateById(id: string) {
+    const record = await prisma.workScheduleTemplate.findUnique({
+      where: { id }
+    });
+    return record ? toWorkScheduleTemplateEntity(record) : null;
+  },
+
+  async updateTemplate(id: string, input: UpdateWorkScheduleTemplateInput) {
+    const record = await prisma.workScheduleTemplate.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.startMinute !== undefined ? { startMinute: input.startMinute } : {}),
+        ...(input.endMinute !== undefined ? { endMinute: input.endMinute } : {}),
+        ...(input.breakMinutes !== undefined ? { breakMinutes: input.breakMinutes } : {}),
+        ...(input.isHoliday !== undefined ? { isHoliday: input.isHoliday } : {}),
+        ...(input.weekdays !== undefined ? { weekdays: input.weekdays } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {})
+      }
+    });
+    return toWorkScheduleTemplateEntity(record);
+  },
+
+  async deleteTemplate(id: string) {
+    const record = await prisma.workScheduleTemplate.delete({
+      where: { id }
+    });
+    return toWorkScheduleTemplateEntity(record);
+  },
+
+  async listTemplates(input: { organizationId?: string }) {
+    const records = await prisma.workScheduleTemplate.findMany({
+      where: {
+        ...(input.organizationId ? { organizationId: input.organizationId } : {})
+      },
+      orderBy: [{ name: "asc" }, { createdAt: "asc" }]
+    });
+    return records.map(toWorkScheduleTemplateEntity);
   },
 
   async listInPeriod(input: {

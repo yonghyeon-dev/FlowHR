@@ -1,25 +1,30 @@
 owner: scheduling-agent
-version: 0.3.0
+version: 0.4.0
 scope:
   in:
     - work schedule assignment (planned start/end)
     - schedule list query by period
+    - schedule template creation/list
+    - template-based single-date schedule assignment
     - tenant-scoped schedule access (RLS baseline + service scoping)
   out:
-    - recurring schedule templates and rotations
+    - multi-day bulk recurring generation
+    - rotation auto-planning engine
     - GPS/QR/geofence clock-in enforcement
     - schedule-to-attendance reconciliation
 entities:
   - name: WorkSchedule
     description: Planned work schedule entry for an employee.
+  - name: WorkScheduleTemplate
+    description: Organization-scoped schedule template with weekday and minute-based shift window.
 api:
   auth:
     - role: employee
-      permission: view own schedules only
+      permission: view own schedules only (template create/list/assign denied)
     - role: manager
-      permission: assign/update/delete schedules and list schedules within tenant (employeeId scoped)
+      permission: assign/update/delete schedules, manage templates, and list schedules within tenant
     - role: admin
-      permission: assign/update/delete schedules and list schedules without org restriction
+      permission: assign/update/delete schedules, manage templates, and list schedules within tenant/platform scope
   endpoints:
     - method: GET
       path: /scheduling/schedules
@@ -33,6 +38,15 @@ api:
     - method: DELETE
       path: /scheduling/schedules/{scheduleId}
       description: Delete an existing schedule entry.
+    - method: GET
+      path: /scheduling/templates
+      description: List organization schedule templates.
+    - method: POST
+      path: /scheduling/templates
+      description: Create organization schedule template.
+    - method: POST
+      path: /scheduling/templates/{templateId}/assign
+      description: Assign template to one employee for one date and create WorkSchedule.
   events:
     published:
       - name: scheduling.schedule.assigned.v1
@@ -41,37 +55,47 @@ api:
         description: Emitted when an existing schedule entry is updated.
       - name: scheduling.schedule.deleted.v1
         description: Emitted when an existing schedule entry is deleted.
+      - name: scheduling.template.created.v1
+        description: Emitted when a schedule template is created.
+      - name: scheduling.template.assigned.v1
+        description: Emitted when a schedule is created from a template assignment.
     consumed: []
 db_changes:
   migrations:
     - id: 202602150003_scheduling_baseline
       description: Create WorkSchedule table (Employee FK) and enable RLS tenant isolation policies.
+    - id: 202602160001_scheduling_template_recurring
+      description: Create WorkScheduleTemplate table and enable tenant RLS policies.
   backward_compatible: true
-  notes: Additive scheduling baseline; no changes to payroll/attendance calculations.
+  notes: Additive scheduling template baseline; no changes to payroll/attendance calculations.
 invariants:
   - WorkSchedule.employeeId must reference existing Employee.id (FK enforced).
   - startAt must be strictly before endAt.
   - WorkSchedule time windows must not overlap for the same employee (back-to-back is allowed).
   - Employee schedule list queries are restricted to own employeeId.
+  - WorkScheduleTemplate.startMinute/endMinute must be in range 0..1439 and cannot be equal.
+  - WorkScheduleTemplate.weekdays must contain values in range 1..7.
+  - Template assignment is allowed only when requested date weekday is in template.weekdays.
 risk:
   permissions:
-    - Unauthorized schedule access can leak employee working patterns across tenants.
+    - Unauthorized schedule/template access can leak employee working patterns across tenants.
   payroll_accuracy:
     - Schedule is informational only for MVP and does not affect payroll calculation.
   legal:
-    - Schedule changes should remain auditable.
+    - Schedule/template changes should remain auditable.
 test_plan:
   unit:
-    - schedule payload validation boundaries
+    - schedule/template payload validation boundaries
   integration:
     - manager can create schedule; employee cannot
     - manager can update schedule; employee cannot
     - manager can delete schedule; employee cannot
+    - manager can create/list template and assign template; employee cannot
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
   regression:
-    - none
+    - template assignment path reuses schedule overlap guard
   authorization:
-    - permission boundaries for create/update/delete/list
+    - permission boundaries for create/update/delete/list/template-assign
   payroll_accuracy:
     - not applicable
 observability:
@@ -79,12 +103,16 @@ observability:
     - scheduling.schedule.assigned
     - scheduling.schedule.updated
     - scheduling.schedule.deleted
+    - scheduling.template.created
+    - scheduling.template.assigned
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
     - schedule_delete_count (optional)
+    - schedule_template_create_count (optional)
+    - schedule_template_assign_count (optional)
   logs:
-    - authorization denied logs for scheduling create/list
+    - authorization denied logs for scheduling/template create/list/assign
 rollout:
   feature_flags:
     - name: scheduling_v1
@@ -95,13 +123,14 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds WorkSchedule delete API + delete event; keeps overlap validation (409) on create/update (no payroll impact in MVP)."
+consumer_impact: "Adds schedule template APIs and template-based schedule assignment. Existing schedule overlap guard remains enforced; payroll behavior unchanged."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
   - work-items/WI-0041-scheduling-overlap-guard.md
   - work-items/WI-0042-scheduling-update-api.md
   - work-items/WI-0043-scheduling-delete-api.md
+  - work-items/WI-0044-scheduling-template-recurring-baseline.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

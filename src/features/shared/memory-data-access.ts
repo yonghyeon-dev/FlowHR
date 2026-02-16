@@ -1,8 +1,10 @@
 import type {
   AppendAuditLogInput,
   AttendanceRecordEntity,
+  CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   UpdateWorkScheduleInput,
+  UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
   CreateOrganizationInput,
   DataAccess,
@@ -20,6 +22,7 @@ import type {
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput,
   PayrollRunEntity,
+  WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
 import { defaultRolePermissions } from "@/lib/rbac";
@@ -32,6 +35,7 @@ type MemoryState = {
   rolePermissions: Map<string, Set<string>>;
   attendance: Map<string, AttendanceRecordEntity>;
   workSchedules: Map<string, WorkScheduleEntity>;
+  workScheduleTemplates: Map<string, WorkScheduleTemplateEntity>;
   leaveRequests: Map<string, LeaveRequestEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
   payroll: Map<string, PayrollRunEntity>;
@@ -63,6 +67,7 @@ function createState(): MemoryState {
     rolePermissions: new Map<string, Set<string>>(),
     attendance: new Map<string, AttendanceRecordEntity>(),
     workSchedules: new Map<string, WorkScheduleEntity>(),
+    workScheduleTemplates: new Map<string, WorkScheduleTemplateEntity>(),
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
@@ -105,6 +110,15 @@ function cloneWorkSchedule(entity: WorkScheduleEntity): WorkScheduleEntity {
     ...entity,
     startAt: cloneDate(entity.startAt),
     endAt: cloneDate(entity.endAt),
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneWorkScheduleTemplate(entity: WorkScheduleTemplateEntity): WorkScheduleTemplateEntity {
+  return {
+    ...entity,
+    weekdays: [...entity.weekdays],
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -510,6 +524,73 @@ export const memoryDataAccess: DataAccess = {
       }
       state.workSchedules.delete(id);
       return cloneWorkSchedule(existing);
+    },
+
+    async createTemplate(input: CreateWorkScheduleTemplateInput) {
+      const now = new Date();
+      const entity: WorkScheduleTemplateEntity = {
+        id: nextId("WST"),
+        organizationId: input.organizationId,
+        name: input.name,
+        startMinute: input.startMinute,
+        endMinute: input.endMinute,
+        breakMinutes: input.breakMinutes,
+        isHoliday: input.isHoliday,
+        weekdays: [...input.weekdays],
+        notes: input.notes ?? null,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.workScheduleTemplates.set(entity.id, entity);
+      return cloneWorkScheduleTemplate(entity);
+    },
+
+    async findTemplateById(id: string) {
+      const entity = state.workScheduleTemplates.get(id);
+      return entity ? cloneWorkScheduleTemplate(entity) : null;
+    },
+
+    async updateTemplate(id: string, input: UpdateWorkScheduleTemplateInput) {
+      const existing = state.workScheduleTemplates.get(id);
+      if (!existing) {
+        throw new Error(`work schedule template not found: ${id}`);
+      }
+
+      const updated: WorkScheduleTemplateEntity = {
+        ...existing,
+        name: input.name ?? existing.name,
+        startMinute: input.startMinute ?? existing.startMinute,
+        endMinute: input.endMinute ?? existing.endMinute,
+        breakMinutes: input.breakMinutes ?? existing.breakMinutes,
+        isHoliday: input.isHoliday ?? existing.isHoliday,
+        weekdays: input.weekdays ? [...input.weekdays] : existing.weekdays,
+        notes: input.notes !== undefined ? input.notes : existing.notes,
+        updatedAt: new Date()
+      };
+
+      state.workScheduleTemplates.set(id, updated);
+      return cloneWorkScheduleTemplate(updated);
+    },
+
+    async deleteTemplate(id: string) {
+      const existing = state.workScheduleTemplates.get(id);
+      if (!existing) {
+        throw new Error(`work schedule template not found: ${id}`);
+      }
+      state.workScheduleTemplates.delete(id);
+      return cloneWorkScheduleTemplate(existing);
+    },
+
+    async listTemplates(input: { organizationId?: string }) {
+      const rows: WorkScheduleTemplateEntity[] = [];
+      for (const entity of state.workScheduleTemplates.values()) {
+        if (input.organizationId && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        rows.push(cloneWorkScheduleTemplate(entity));
+      }
+      rows.sort((a, b) => a.name.localeCompare(b.name));
+      return rows;
     },
 
     async listInPeriod(input) {

@@ -2,8 +2,10 @@ import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import type {
+  CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   DataAccess,
+  WorkScheduleTemplateEntity,
   UpdateWorkScheduleInput,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
@@ -33,6 +35,22 @@ type UpdateScheduleInput = {
   breakMinutes?: number;
   isHoliday?: boolean;
   notes?: string;
+};
+
+type CreateTemplateInput = {
+  name: string;
+  startMinute: number;
+  endMinute: number;
+  breakMinutes: number;
+  isHoliday: boolean;
+  weekdays: number[];
+  notes?: string;
+};
+
+type AssignTemplateInput = {
+  templateId: string;
+  employeeId: string;
+  date: string;
 };
 
 type ServiceContext = {
@@ -70,6 +88,70 @@ function toUpdateInput(input: UpdateScheduleInput): UpdateWorkScheduleInput {
     isHoliday: input.isHoliday,
     notes: input.notes
   };
+}
+
+function toTemplateCreateInput(input: CreateTemplateInput, organizationId: string): CreateWorkScheduleTemplateInput {
+  return {
+    organizationId,
+    name: input.name,
+    startMinute: input.startMinute,
+    endMinute: input.endMinute,
+    breakMinutes: input.breakMinutes,
+    isHoliday: input.isHoliday,
+    weekdays: [...input.weekdays],
+    notes: input.notes
+  };
+}
+
+function ensureValidTemplateMinutes(startMinute: number, endMinute: number) {
+  if (startMinute < 0 || startMinute >= 1440 || endMinute < 0 || endMinute >= 1440) {
+    throw new ServiceError(400, "template minute fields must be in range 0..1439");
+  }
+  if (startMinute === endMinute) {
+    throw new ServiceError(400, "startMinute and endMinute cannot be equal");
+  }
+}
+
+function normalizeWeekdays(weekdays: number[]) {
+  const unique = Array.from(new Set(weekdays)).sort((a, b) => a - b);
+  if (unique.length === 0) {
+    throw new ServiceError(400, "weekdays must include at least one day");
+  }
+  if (unique.some((day) => day < 1 || day > 7)) {
+    throw new ServiceError(400, "weekdays must be in range 1..7");
+  }
+  return unique;
+}
+
+function requireTemplateTenantScope(context: ServiceContext) {
+  const tenantScope = resolveTenantScope(context.actor);
+  if (!tenantScope) {
+    throw new ServiceError(400, "template operations require tenant organization scope");
+  }
+  return tenantScope;
+}
+
+function parseDateToKstBase(dateYmd: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateYmd)) {
+    throw new ServiceError(400, "date must follow YYYY-MM-DD");
+  }
+  const base = new Date(`${dateYmd}T00:00:00+09:00`);
+  if (Number.isNaN(base.getTime())) {
+    throw new ServiceError(400, "invalid date");
+  }
+  return base;
+}
+
+function weekdayFromKstDate(dateYmd: string) {
+  const base = parseDateToKstBase(dateYmd);
+  const shiftedToKst = new Date(base.getTime() + 9 * 60 * 60 * 1000);
+  const weekdayJs = shiftedToKst.getUTCDay();
+  return weekdayJs === 0 ? 7 : weekdayJs;
+}
+
+function dateTimeFromKstDateAndMinute(dateYmd: string, minute: number) {
+  const base = parseDateToKstBase(dateYmd);
+  return new Date(base.getTime() + minute * 60_000);
 }
 
 export async function createWorkSchedule(
@@ -280,6 +362,167 @@ export async function deleteWorkSchedule(
   });
 
   return deleted;
+}
+
+async function requireTemplateEntityWithinTenant(
+  context: ServiceContext,
+  templateId: string
+): Promise<WorkScheduleTemplateEntity> {
+  const template = await context.dataAccess.scheduling.findTemplateById(templateId);
+  if (!template) {
+    throw new ServiceError(404, "schedule template not found");
+  }
+
+  const tenantScope = resolveTenantScope(context.actor);
+  if (tenantScope && template.organizationId !== tenantScope) {
+    throw new ServiceError(404, "schedule template not found");
+  }
+
+  return template;
+}
+
+export async function createWorkScheduleTemplate(
+  context: ServiceContext,
+  input: CreateTemplateInput
+): Promise<WorkScheduleTemplateEntity> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(context, Permissions.schedulingScheduleWriteAny, "schedule template create requires permission");
+
+  ensureValidTemplateMinutes(input.startMinute, input.endMinute);
+  const weekdays = normalizeWeekdays(input.weekdays);
+  const organizationId = requireTemplateTenantScope(context);
+
+  const template = await context.dataAccess.scheduling.createTemplate(
+    toTemplateCreateInput({ ...input, weekdays }, organizationId)
+  );
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.template.created",
+    entityType: "WorkScheduleTemplate",
+    entityId: template.id,
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      name: template.name,
+      startMinute: template.startMinute,
+      endMinute: template.endMinute,
+      breakMinutes: template.breakMinutes,
+      isHoliday: template.isHoliday,
+      weekdays: template.weekdays
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "scheduling.template.created.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "WorkScheduleTemplate",
+    entityId: template.id,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      organizationId: template.organizationId,
+      name: template.name,
+      startMinute: template.startMinute,
+      endMinute: template.endMinute,
+      breakMinutes: template.breakMinutes,
+      isHoliday: template.isHoliday,
+      weekdays: template.weekdays
+    }
+  });
+
+  return template;
+}
+
+export async function listWorkScheduleTemplates(context: ServiceContext): Promise<WorkScheduleTemplateEntity[]> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const permissions = await resolveActorPermissions(context);
+  const canList =
+    permissions.has(Permissions.schedulingScheduleWriteAny) || permissions.has(Permissions.schedulingScheduleListAny);
+  if (!canList) {
+    throw new ServiceError(403, "schedule template list requires permission");
+  }
+
+  const organizationId = requireTemplateTenantScope(context);
+  return await context.dataAccess.scheduling.listTemplates({ organizationId });
+}
+
+export async function assignWorkScheduleFromTemplate(
+  context: ServiceContext,
+  input: AssignTemplateInput
+): Promise<WorkScheduleEntity> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(context, Permissions.schedulingScheduleWriteAny, "schedule template assign requires permission");
+
+  const template = await requireTemplateEntityWithinTenant(context, input.templateId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+  if (!employee.organizationId || employee.organizationId !== template.organizationId) {
+    throw new ServiceError(409, "template organization and employee organization must match");
+  }
+
+  const weekday = weekdayFromKstDate(input.date);
+  if (!template.weekdays.includes(weekday)) {
+    throw new ServiceError(409, "template is not active on the requested weekday", {
+      templateId: template.id,
+      requestedWeekday: weekday,
+      templateWeekdays: template.weekdays
+    });
+  }
+
+  const startAt = dateTimeFromKstDateAndMinute(input.date, template.startMinute);
+  let endAt = dateTimeFromKstDateAndMinute(input.date, template.endMinute);
+  if (template.endMinute <= template.startMinute) {
+    endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  const schedule = await createWorkSchedule(context, {
+    employeeId: input.employeeId,
+    startAt,
+    endAt,
+    breakMinutes: template.breakMinutes,
+    isHoliday: template.isHoliday,
+    notes: template.notes ?? undefined
+  });
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.template.assigned",
+    entityType: "WorkScheduleTemplate",
+    entityId: template.id,
+    organizationId: template.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      templateId: template.id,
+      scheduleId: schedule.id,
+      employeeId: schedule.employeeId,
+      date: input.date
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "scheduling.template.assigned.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "WorkScheduleTemplate",
+    entityId: template.id,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      templateId: template.id,
+      scheduleId: schedule.id,
+      employeeId: schedule.employeeId,
+      date: input.date
+    }
+  });
+
+  return schedule;
 }
 
 export async function listWorkSchedules(

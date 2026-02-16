@@ -2,7 +2,7 @@
 
 ## Scope
 
-Work schedule assignment and list behavior with tenant isolation and role boundaries.
+Work schedule CRUD + template assignment behavior with tenant isolation and role boundaries.
 
 ## Functional Cases
 
@@ -26,6 +26,13 @@ Work schedule assignment and list behavior with tenant isolation and role bounda
 18. Manager list query requires `employeeId` (400).
 19. Emit domain events `scheduling.schedule.assigned.v1`, `scheduling.schedule.updated.v1`, `scheduling.schedule.deleted.v1` on successful actions.
 20. Append audit logs `scheduling.schedule.assigned`, `scheduling.schedule.updated`, `scheduling.schedule.deleted` with tenant context when available.
+21. Manager creates a schedule template (201) and lists templates (200).
+22. Employee cannot create/list templates (403).
+23. Manager assigns template to employee for one date (201) and schedule is created.
+24. Reject template assignment when requested date weekday is outside template weekdays (409).
+25. Reject template assignment when template is from another tenant (404).
+26. Emit domain events `scheduling.template.created.v1`, `scheduling.template.assigned.v1` on successful actions.
+27. Append audit logs `scheduling.template.created`, `scheduling.template.assigned` with tenant context.
 
 ## Boundary Cases
 

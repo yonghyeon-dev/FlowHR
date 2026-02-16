@@ -17,6 +17,7 @@ model Organization {
   employees Employee[]
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
+  workScheduleTemplates WorkScheduleTemplate[]
   auditLogs AuditLog[]
 }
 
@@ -91,6 +92,23 @@ model WorkSchedule {
   updatedAt    DateTime @updatedAt
 
   @@index([employeeId, startAt, endAt])
+}
+
+model WorkScheduleTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  startMinute    Int
+  endMinute      Int
+  breakMinutes   Int      @default(0)
+  isHoliday      Boolean  @default(false)
+  weekdays       Int[]
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, name])
 }
 
 model LeaveRequest {

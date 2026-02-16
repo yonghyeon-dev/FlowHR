@@ -32,6 +32,20 @@ export type WorkScheduleEntity = {
   updatedAt: Date;
 };
 
+export type WorkScheduleTemplateEntity = {
+  id: string;
+  organizationId: string;
+  name: string;
+  startMinute: number;
+  endMinute: number;
+  breakMinutes: number;
+  isHoliday: boolean;
+  weekdays: number[];
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type PayrollRunEntity = {
   id: string;
   organizationId: string | null;
@@ -165,6 +179,27 @@ export type UpdateWorkScheduleInput = {
   notes?: string | null;
 };
 
+export type CreateWorkScheduleTemplateInput = {
+  organizationId: string;
+  name: string;
+  startMinute: number;
+  endMinute: number;
+  breakMinutes: number;
+  isHoliday: boolean;
+  weekdays: number[];
+  notes?: string;
+};
+
+export type UpdateWorkScheduleTemplateInput = {
+  name?: string;
+  startMinute?: number;
+  endMinute?: number;
+  breakMinutes?: number;
+  isHoliday?: boolean;
+  weekdays?: number[];
+  notes?: string | null;
+};
+
 export type CreatePayrollRunInput = {
   organizationId?: string | null;
   employeeId?: string;
@@ -292,6 +327,11 @@ export interface SchedulingStore {
   findById(id: string): Promise<WorkScheduleEntity | null>;
   update(id: string, input: UpdateWorkScheduleInput): Promise<WorkScheduleEntity>;
   delete(id: string): Promise<WorkScheduleEntity>;
+  createTemplate(input: CreateWorkScheduleTemplateInput): Promise<WorkScheduleTemplateEntity>;
+  findTemplateById(id: string): Promise<WorkScheduleTemplateEntity | null>;
+  updateTemplate(id: string, input: UpdateWorkScheduleTemplateInput): Promise<WorkScheduleTemplateEntity>;
+  deleteTemplate(id: string): Promise<WorkScheduleTemplateEntity>;
+  listTemplates(input: { organizationId?: string }): Promise<WorkScheduleTemplateEntity[]>;
   listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
