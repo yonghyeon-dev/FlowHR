@@ -209,6 +209,19 @@ function updateAttendanceEntity(
     breakMinutes: input.breakMinutes ?? existing.breakMinutes,
     isHoliday: input.isHoliday ?? existing.isHoliday,
     notes: input.notes !== undefined ? input.notes : existing.notes,
+    captureChannel: input.captureChannel ?? existing.captureChannel,
+    captureDeviceId:
+      input.captureDeviceId !== undefined ? input.captureDeviceId : existing.captureDeviceId,
+    captureIpAddress:
+      input.captureIpAddress !== undefined ? input.captureIpAddress : existing.captureIpAddress,
+    captureLatitude:
+      input.captureLatitude !== undefined ? input.captureLatitude : existing.captureLatitude,
+    captureLongitude:
+      input.captureLongitude !== undefined ? input.captureLongitude : existing.captureLongitude,
+    captureAccuracyMeters:
+      input.captureAccuracyMeters !== undefined
+        ? input.captureAccuracyMeters
+        : existing.captureAccuracyMeters,
     state: input.state ?? existing.state,
     approvedAt: input.approvedAt !== undefined ? input.approvedAt : existing.approvedAt,
     approvedBy: input.approvedBy !== undefined ? input.approvedBy : existing.approvedBy,
@@ -400,6 +413,12 @@ export const memoryDataAccess: DataAccess = {
         breakMinutes: input.breakMinutes,
         isHoliday: input.isHoliday,
         notes: input.notes ?? null,
+        captureChannel: input.captureChannel ?? "MANUAL",
+        captureDeviceId: input.captureDeviceId ?? null,
+        captureIpAddress: input.captureIpAddress ?? null,
+        captureLatitude: input.captureLatitude ?? null,
+        captureLongitude: input.captureLongitude ?? null,
+        captureAccuracyMeters: input.captureAccuracyMeters ?? null,
         state: "PENDING",
         approvedAt: null,
         approvedBy: null,

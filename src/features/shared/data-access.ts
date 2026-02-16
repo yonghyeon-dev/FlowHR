@@ -1,4 +1,5 @@
 export type AttendanceState = "PENDING" | "APPROVED" | "REJECTED";
+export type AttendanceCaptureChannel = "MANUAL" | "GPS" | "QR" | "WIFI" | "DEVICE";
 export type LeaveType = "ANNUAL" | "SICK" | "UNPAID";
 export type LeaveRequestState = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveDecisionAction = "APPROVED" | "REJECTED" | "CANCELED";
@@ -13,6 +14,12 @@ export type AttendanceRecordEntity = {
   breakMinutes: number;
   isHoliday: boolean;
   notes: string | null;
+  captureChannel: AttendanceCaptureChannel;
+  captureDeviceId: string | null;
+  captureIpAddress: string | null;
+  captureLatitude: number | null;
+  captureLongitude: number | null;
+  captureAccuracyMeters: number | null;
   state: AttendanceState;
   approvedAt: Date | null;
   approvedBy: string | null;
@@ -149,6 +156,12 @@ export type CreateAttendanceRecordInput = {
   breakMinutes: number;
   isHoliday: boolean;
   notes?: string;
+  captureChannel?: AttendanceCaptureChannel;
+  captureDeviceId?: string | null;
+  captureIpAddress?: string | null;
+  captureLatitude?: number | null;
+  captureLongitude?: number | null;
+  captureAccuracyMeters?: number | null;
 };
 
 export type UpdateAttendanceRecordInput = {
@@ -157,6 +170,12 @@ export type UpdateAttendanceRecordInput = {
   breakMinutes?: number;
   isHoliday?: boolean;
   notes?: string | null;
+  captureChannel?: AttendanceCaptureChannel;
+  captureDeviceId?: string | null;
+  captureIpAddress?: string | null;
+  captureLatitude?: number | null;
+  captureLongitude?: number | null;
+  captureAccuracyMeters?: number | null;
   state?: AttendanceState;
   approvedAt?: Date | null;
   approvedBy?: string | null;

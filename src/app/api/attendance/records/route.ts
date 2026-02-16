@@ -68,7 +68,17 @@ export async function POST(request: Request) {
         checkOutAt: parsed.data.checkOutAt ? new Date(parsed.data.checkOutAt) : null,
         breakMinutes: parsed.data.breakMinutes,
         isHoliday: parsed.data.isHoliday,
-        notes: parsed.data.notes
+        notes: parsed.data.notes,
+        capture: parsed.data.capture
+          ? {
+              channel: parsed.data.capture.channel,
+              deviceId: parsed.data.capture.deviceId,
+              ipAddress: parsed.data.capture.ipAddress,
+              latitude: parsed.data.capture.latitude,
+              longitude: parsed.data.capture.longitude,
+              accuracyMeters: parsed.data.capture.accuracyMeters
+            }
+          : undefined
       }
     );
     return ok({ record }, 201);

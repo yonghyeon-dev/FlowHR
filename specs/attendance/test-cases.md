@@ -17,6 +17,9 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 9. Reject API returns `400` for invalid JSON body and oversized reason payload.
 10. List attendance records by period (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
 11. List attendance aggregates by period (`from`/`to`) with role boundary guards and verify totals are derived from approved records only.
+12. Create attendance with capture metadata (GPS/QR/WIFI/device) and verify fields are persisted in response.
+13. Update pending attendance capture metadata and verify audit/event trace includes capture fields.
+14. Reject attendance create/update when capture payload is invalid (GPS without coordinates, partial coordinate pair).
 
 ## Boundary and Accuracy Cases
 
@@ -24,6 +27,8 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 2. Minute rounding behavior matches common SSoT rules.
 3. Correction after initial approval creates auditable recalculation signal.
 4. Reject reason length `> 500` is blocked and does not create audit/event side effects.
+5. GPS capture channel without both latitude/longitude is blocked.
+6. Latitude/longitude must be provided as a complete pair or omitted together.
 
 ## Regression Linkage
 

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Attendance API
-  version: 1.4.1
+  version: 1.5.0
 paths:
   /attendance/records:
     get:
@@ -35,6 +35,33 @@ paths:
           description: Records listed
     post:
       summary: Create attendance record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - employeeId
+                - checkInAt
+              properties:
+                employeeId:
+                  type: string
+                checkInAt:
+                  type: string
+                  format: date-time
+                checkOutAt:
+                  type: string
+                  format: date-time
+                breakMinutes:
+                  type: integer
+                isHoliday:
+                  type: boolean
+                notes:
+                  type: string
+                capture:
+                  $ref: "#/components/schemas/AttendanceCaptureCreate"
       responses:
         "201":
           description: Created
@@ -72,6 +99,28 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                checkInAt:
+                  type: string
+                  format: date-time
+                checkOutAt:
+                  type: string
+                  format: date-time
+                breakMinutes:
+                  type: integer
+                isHoliday:
+                  type: boolean
+                notes:
+                  type: string
+                capture:
+                  $ref: "#/components/schemas/AttendanceCaptureUpdate"
       responses:
         "200":
           description: Updated
@@ -114,3 +163,71 @@ paths:
           description: Rejected
         "400":
           description: Invalid JSON body or invalid payload
+components:
+  schemas:
+    AttendanceCaptureChannel:
+      type: string
+      enum: [MANUAL, GPS, QR, WIFI, DEVICE]
+    AttendanceCaptureCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - channel
+      properties:
+        channel:
+          $ref: "#/components/schemas/AttendanceCaptureChannel"
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 120
+        ipAddress:
+          type: string
+          format: ipv4
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        accuracyMeters:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      description: GPS channel requires both latitude and longitude.
+    AttendanceCaptureUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        channel:
+          $ref: "#/components/schemas/AttendanceCaptureChannel"
+        deviceId:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 120
+        ipAddress:
+          type:
+            - string
+            - "null"
+        latitude:
+          type:
+            - number
+            - "null"
+          minimum: -90
+          maximum: 90
+        longitude:
+          type:
+            - number
+            - "null"
+          minimum: -180
+          maximum: 180
+        accuracyMeters:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 10000
+      description: Coordinate fields must be provided as a pair (both numbers or both null).

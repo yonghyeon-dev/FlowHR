@@ -3,6 +3,7 @@ import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/l
 import { Permissions } from "@/lib/rbac";
 import { derivePayableMinutes, type PayableMinutes } from "@/lib/payroll-rules";
 import type {
+  AttendanceCaptureChannel,
   AttendanceRecordEntity,
   DataAccess,
   UpdateAttendanceRecordInput
@@ -19,6 +20,14 @@ type CreateAttendanceInput = {
   breakMinutes: number;
   isHoliday: boolean;
   notes?: string;
+  capture?: {
+    channel: AttendanceCaptureChannel;
+    deviceId?: string;
+    ipAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    accuracyMeters?: number;
+  };
 };
 
 type UpdateAttendanceInput = {
@@ -27,6 +36,14 @@ type UpdateAttendanceInput = {
   breakMinutes?: number;
   isHoliday?: boolean;
   notes?: string;
+  capture?: {
+    channel?: AttendanceCaptureChannel;
+    deviceId?: string | null;
+    ipAddress?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracyMeters?: number | null;
+  };
 };
 
 type ListAttendanceInput = {
@@ -66,6 +83,43 @@ function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
 }
 
+function toCapturePayload(record: AttendanceRecordEntity) {
+  return {
+    channel: record.captureChannel,
+    deviceId: record.captureDeviceId,
+    ipAddress: record.captureIpAddress,
+    latitude: record.captureLatitude,
+    longitude: record.captureLongitude,
+    accuracyMeters: record.captureAccuracyMeters
+  };
+}
+
+function toCreateCaptureInput(input: CreateAttendanceInput["capture"]) {
+  return {
+    captureChannel: input?.channel ?? "MANUAL",
+    captureDeviceId: input?.deviceId ?? null,
+    captureIpAddress: input?.ipAddress ?? null,
+    captureLatitude: input?.latitude ?? null,
+    captureLongitude: input?.longitude ?? null,
+    captureAccuracyMeters: input?.accuracyMeters ?? null
+  };
+}
+
+function toUpdateCaptureInput(input: UpdateAttendanceInput["capture"]) {
+  if (!input) {
+    return {};
+  }
+
+  return {
+    captureChannel: input.channel,
+    captureDeviceId: input.deviceId,
+    captureIpAddress: input.ipAddress,
+    captureLatitude: input.latitude,
+    captureLongitude: input.longitude,
+    captureAccuracyMeters: input.accuracyMeters
+  };
+}
+
 export async function createAttendanceRecord(
   context: ServiceContext,
   input: CreateAttendanceInput
@@ -92,7 +146,8 @@ export async function createAttendanceRecord(
     checkOutAt: input.checkOutAt,
     breakMinutes: input.breakMinutes,
     isHoliday: input.isHoliday,
-    notes: input.notes
+    notes: input.notes,
+    ...toCreateCaptureInput(input.capture)
   });
 
   await context.dataAccess.audit.append({
@@ -103,7 +158,8 @@ export async function createAttendanceRecord(
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
-      employeeId: record.employeeId
+      employeeId: record.employeeId,
+      capture: toCapturePayload(record)
     }
   });
   await getEventPublisher(context).publish({
@@ -114,7 +170,8 @@ export async function createAttendanceRecord(
     actorRole: actor.role,
     actorId: actor.id,
     payload: {
-      employeeId: record.employeeId
+      employeeId: record.employeeId,
+      capture: toCapturePayload(record)
     }
   });
 
@@ -152,7 +209,8 @@ function toRecordUpdateInput(input: UpdateAttendanceInput): UpdateAttendanceReco
     checkOutAt: input.checkOutAt,
     breakMinutes: input.breakMinutes,
     isHoliday: input.isHoliday,
-    notes: input.notes
+    notes: input.notes,
+    ...toUpdateCaptureInput(input.capture)
   };
 }
 

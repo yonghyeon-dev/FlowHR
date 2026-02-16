@@ -49,6 +49,12 @@ function toAttendanceEntity(record: {
   breakMinutes: number;
   isHoliday: boolean;
   notes: string | null;
+  captureChannel: "MANUAL" | "GPS" | "QR" | "WIFI" | "DEVICE";
+  captureDeviceId: string | null;
+  captureIpAddress: string | null;
+  captureLatitude: number | null;
+  captureLongitude: number | null;
+  captureAccuracyMeters: number | null;
   state: "PENDING" | "APPROVED" | "REJECTED";
   approvedAt: Date | null;
   approvedBy: string | null;
@@ -397,7 +403,13 @@ const attendance: AttendanceStore = {
         checkOutAt: input.checkOutAt,
         breakMinutes: input.breakMinutes,
         isHoliday: input.isHoliday,
-        notes: input.notes ?? null
+        notes: input.notes ?? null,
+        captureChannel: input.captureChannel ?? "MANUAL",
+        captureDeviceId: input.captureDeviceId ?? null,
+        captureIpAddress: input.captureIpAddress ?? null,
+        captureLatitude: input.captureLatitude ?? null,
+        captureLongitude: input.captureLongitude ?? null,
+        captureAccuracyMeters: input.captureAccuracyMeters ?? null
       }
     });
     return toAttendanceEntity(record);
@@ -419,6 +431,12 @@ const attendance: AttendanceStore = {
         breakMinutes: input.breakMinutes,
         isHoliday: input.isHoliday,
         notes: input.notes,
+        captureChannel: input.captureChannel,
+        captureDeviceId: input.captureDeviceId,
+        captureIpAddress: input.captureIpAddress,
+        captureLatitude: input.captureLatitude,
+        captureLongitude: input.captureLongitude,
+        captureAccuracyMeters: input.captureAccuracyMeters,
         state: input.state,
         approvedAt: input.approvedAt,
         approvedBy: input.approvedBy
