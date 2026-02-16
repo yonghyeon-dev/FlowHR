@@ -13,6 +13,7 @@ export const domainEventNames = [
   "scheduling.template.assigned.v1",
   "scheduling.template.range_assigned.v1",
   "scheduling.rotation.assigned.v1",
+  "scheduling.anomaly.detected.v1",
   "payroll.calculated.v1",
   "payroll.deductions.calculated.v1",
   "payroll.deduction_profile.updated.v1",

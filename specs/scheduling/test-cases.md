@@ -51,6 +51,8 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 43. Employee cannot call rotation assignment endpoint (403).
 44. Emit domain event `scheduling.rotation.assigned.v1` on successful rotation assignment.
 45. Append audit log `scheduling.rotation.assigned` with template sequence and created count.
+46. When `FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED=true` and anomalies exist, emit `scheduling.anomaly.detected.v1` and append `scheduling.anomaly.alert.triggered` audit log.
+47. When anomaly alert automation is disabled, anomaly report still succeeds and does not emit automation event.
 
 ## Boundary Cases
 
@@ -60,6 +62,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 4. `lateThresholdMinutes` query validates integer range (0..240).
 5. Range assignment supports overnight templates and enforces overlap preflight before writes.
 6. Rotation assignment uses max 62-day window and supports overnight templates.
+7. Alert automation failure path does not fail anomaly report response.
 
 ## Regression Linkage
 

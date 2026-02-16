@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.7.0
+version: 0.8.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -9,11 +9,13 @@ scope:
     - template-based multi-day range assignment
     - rotation sequence assignment with multiple templates
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
+    - anomaly alert automation event emission behind feature flag
     - tenant-scoped schedule access (RLS baseline + service scoping)
   out:
     - rotation balancing/optimization engine
     - GPS/QR/geofence clock-in enforcement
     - anomaly-driven automatic payroll or approval enforcement
+    - multi-channel escalation policy orchestration
 entities:
   - name: WorkSchedule
     description: Planned work schedule entry for an employee.
@@ -76,6 +78,8 @@ api:
         description: Emitted when range assignment creates one or more schedules.
       - name: scheduling.rotation.assigned.v1
         description: Emitted when rotation assignment creates one or more schedules.
+      - name: scheduling.anomaly.detected.v1
+        description: Emitted when anomaly alert automation is enabled and anomalies are detected.
     consumed: []
 db_changes:
   migrations:
@@ -100,11 +104,13 @@ invariants:
   - Rotation assignment overlap validation is preflighted and must fail with no writes on conflict.
   - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
+  - Anomaly alert automation must not block anomaly report API response.
 risk:
   permissions:
     - Unauthorized schedule/template/rotation/anomaly access can leak employee working patterns across tenants.
   payroll_accuracy:
     - Schedule and anomaly report are informational only for MVP and do not affect payroll calculation.
+    - Alert automation side-effects must not alter schedule/attendance/payroll state transitions.
   legal:
     - Schedule/template/anomaly report access should remain auditable.
 test_plan:
@@ -123,10 +129,12 @@ test_plan:
     - rotation assignment rejects mixed weekday sets and conflict causes no partial writes
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
+    - anomaly report with alert flag emits anomaly event/audit when anomalies exist
   regression:
     - template assignment path reuses schedule overlap guard
     - single-date assignment behavior remains unchanged
     - anomaly report does not mutate schedule or attendance states
+    - anomaly report remains available even when alert publication fails
   authorization:
     - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/anomaly-report
   payroll_accuracy:
@@ -141,6 +149,8 @@ observability:
     - scheduling.template.range_assigned
     - scheduling.rotation.assigned
     - scheduling.anomaly.report.generated
+    - scheduling.anomaly.alert.triggered
+    - scheduling.anomaly.alert.failed
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
@@ -154,19 +164,23 @@ observability:
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
+    - schedule_anomaly_alert_triggered_count (optional)
+    - schedule_anomaly_alert_failed_count (optional)
   logs:
     - authorization denied logs for scheduling/template create/list/assign/assign-range/rotation/anomaly
 rollout:
   feature_flags:
     - name: scheduling_v1
       default: "off"
+    - name: FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED
+      default: "false"
   migration_strategy: expand-contract
 rollback:
   strategy: disable scheduling_v1 and hide scheduling routes; adjust RLS via break-glass only if required.
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds rotation assignment API with template sequence support. Existing schedule/template/anomaly APIs and payroll behavior remain unchanged."
+consumer_impact: "Contract v0.8.0 adds optional anomaly alert automation event (`scheduling.anomaly.detected.v1`) behind FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED. Existing scheduling APIs remain response-compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -177,6 +191,7 @@ references:
   - work-items/WI-0045-scheduling-anomaly-report.md
   - work-items/WI-0046-scheduling-template-range-assignment.md
   - work-items/WI-0047-scheduling-rotation-assignment.md
+  - work-items/WI-0051-scheduling-anomaly-alert-automation.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

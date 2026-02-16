@@ -110,7 +110,7 @@ Open gaps:
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling rotation balancing/optimization automation (rotation baseline merged)
   - advanced clock-in policy enforcement (channel trust/device attestation/multi-site geofence) after geofence baseline
-  - anomaly notification/escalation automation (read-only anomaly report baseline merged)
+  - anomaly escalation policy and delivery routing (alert automation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -123,6 +123,7 @@ Recently delivered:
 - Attendance capture channel metadata baseline is merged (GPS/QR/Wi-Fi/device/location metadata on create/update; WI-0048).
 - Attendance employee GPS policy enforcement baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_GPS_REQUIRED`; WI-0049).
 - Attendance employee geofence policy enforcement baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_GEOFENCE_ENABLED`; WI-0050).
+- Scheduling anomaly alert automation baseline is merged behind feature flag (`FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED`; WI-0051).
 
 ## 2) Priority Roadmap
 
@@ -254,6 +255,7 @@ Tasks:
 9. (Done) `work-items/WI-0048-attendance-capture-channel-metadata.md`
 10. (Done) `work-items/WI-0049-attendance-gps-policy-enforcement.md`
 11. (Done) `work-items/WI-0050-attendance-geofence-policy.md`
+12. (Done) `work-items/WI-0051-scheduling-anomaly-alert-automation.md`
 
 ## 3) Workstream Ownership
 
@@ -288,4 +290,4 @@ Without additional input, the next executable step is:
 
 1. define WI for rotation balancing/optimization policy contract-first,
 2. define WI for device trust / multi-site geofence policy engine (on top of geofence baseline) contract-first,
-3. define WI for anomaly signal automation (alerting/escalation) on top of WI-0045 read-only report.
+3. define WI for anomaly escalation policy (severity routing/retry/escalation ownership) on top of WI-0051.
