@@ -83,6 +83,52 @@ function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
 }
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+function isAttendanceGpsPolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_GPS_REQUIRED ?? process.env.ATTENDANCE_GPS_REQUIRED
+  );
+}
+
+function assertGpsCapturePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceGpsPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  if (
+    !input.capture ||
+    input.capture.channel !== "GPS" ||
+    input.capture.latitude === undefined ||
+    input.capture.longitude === undefined
+  ) {
+    throw new ServiceError(400, "attendance capture policy requires GPS channel with coordinates");
+  }
+}
+
+function assertGpsCapturePolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceGpsPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const nextChannel = input.capture?.channel ?? existing.captureChannel;
+  const nextLatitude =
+    input.capture?.latitude !== undefined ? input.capture.latitude : existing.captureLatitude;
+  const nextLongitude =
+    input.capture?.longitude !== undefined ? input.capture.longitude : existing.captureLongitude;
+
+  if (nextChannel !== "GPS" || nextLatitude === null || nextLongitude === null) {
+    throw new ServiceError(400, "attendance capture policy requires GPS channel with coordinates");
+  }
+}
+
 function toCapturePayload(record: AttendanceRecordEntity) {
   return {
     channel: record.captureChannel,
@@ -139,6 +185,8 @@ export async function createAttendanceRecord(
     context.actor,
     input.employeeId
   );
+
+  assertGpsCapturePolicyForCreate(actor, input);
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -220,6 +268,7 @@ export async function updateAttendanceRecord(
   input: UpdateAttendanceInput
 ): Promise<AttendanceRecordEntity> {
   const existing = await requireEditableRecord(context, recordId);
+  assertGpsCapturePolicyForUpdate(context.actor!, existing, input);
   const employee = await requireEmployeeWithinTenant(
     context.dataAccess,
     context.actor,
