@@ -64,6 +64,8 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 56. Manager generates tenant-level rotation fairness report and receives aggregated metrics with per-employee recommendations (200).
 57. Rotation fairness report rejects employee ids outside organization scope (404).
 58. Employee cannot call rotation fairness report endpoint (403).
+59. Manager fairness apply creates schedules for selected employees and returns per-employee created schedule ids (201).
+60. Employee cannot call rotation fairness apply endpoint (403).
 
 ## Boundary Cases
 
@@ -78,6 +80,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 9. Rotation balance report is read-only and does not mutate schedule state.
 10. Rotation optimization evaluate path is deterministic for identical inputs.
 11. Rotation fairness report is deterministic for identical inputs.
+12. Rotation fairness apply preflights overlaps before write-back.
 
 ## Regression Linkage
 
@@ -88,6 +91,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - rotation balance report path does not mutate schedule state.
 - rotation optimization dry-run path does not mutate schedule state.
 - rotation fairness report path does not mutate schedule state.
+- rotation fairness apply emits rotation assignment event/audit per employee.
 
 ## QA Gate Expectations
 

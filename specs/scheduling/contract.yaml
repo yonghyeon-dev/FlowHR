@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.12.0
+version: 0.13.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -11,6 +11,7 @@ scope:
     - rotation balance report (weekday load and planned-minute imbalance, read-only)
     - rotation optimization endpoint (start-offset evaluation and optional write-back apply)
     - rotation fairness report endpoint (tenant-scoped multi-employee optimization summary, read-only)
+    - rotation fairness write-back endpoint (tenant-scoped multi-employee apply orchestration)
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
@@ -20,7 +21,7 @@ scope:
     - GPS/QR/geofence clock-in enforcement
     - anomaly-driven automatic payroll or approval enforcement
     - multi-channel escalation policy orchestration
-    - multi-employee global fair scheduler write-back orchestration
+    - multi-employee global fairness constraint solver (preferences/labor-law objective)
 entities:
   - name: WorkSchedule
     description: Planned work schedule entry for an employee.
@@ -33,7 +34,7 @@ api:
     - role: employee
       permission: view own schedules and own anomaly report only
     - role: manager
-      permission: assign/update/delete schedules, manage templates, assign/optimize/fairness-report rotations, and list employee-scoped anomaly reports within tenant
+      permission: assign/update/delete schedules, manage templates, assign/optimize/fairness-report/fairness-apply rotations, and list employee-scoped anomaly reports within tenant
     - role: admin
       permission: assign/update/delete schedules, manage templates, assign rotation, and list anomalies within tenant/platform scope
   endpoints:
@@ -73,6 +74,9 @@ api:
     - method: POST
       path: /scheduling/rotations/fairness
       description: Read-only tenant-level fairness report aggregating per-employee rotation optimization results.
+    - method: POST
+      path: /scheduling/rotations/fairness/apply
+      description: Apply tenant-level fairness recommendations by writing schedules with optimized template order per employee.
     - method: GET
       path: /scheduling/anomalies
       description: Read-only anomaly report by period with optional employee filter.
@@ -122,6 +126,8 @@ invariants:
   - Rotation optimization with apply=true must reuse rotation assignment invariants and overlap guards.
   - Rotation fairness report must remain read-only and must not write WorkSchedule state.
   - Rotation fairness report must be tenant-scoped and reject cross-tenant organization queries.
+  - Rotation fairness apply must preflight overlap checks for all target employees before writing schedules.
+  - Rotation fairness apply must reuse rotation assignment invariants and emit assignment events per employee.
   - Rotation balance report is read-only and must not update WorkSchedule state.
   - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
@@ -156,6 +162,8 @@ test_plan:
     - rotation optimization apply=true creates schedules using optimized template order
     - rotation fairness report returns aggregated tenant-level metrics and per-employee recommendations without mutating schedules
     - rotation fairness report rejects unknown employee ids in organization scope
+    - rotation fairness apply creates schedules for all selected employees and returns per-employee created schedule ids
+    - rotation fairness apply enforces role boundaries (employee denied)
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
     - anomaly report with alert flag emits anomaly event/audit when anomalies exist
@@ -169,8 +177,9 @@ test_plan:
     - rotation balance report does not mutate schedules
     - rotation optimization dry-run does not mutate schedules
     - rotation fairness report does not mutate schedules
+    - rotation fairness apply emits rotation assignment event/audit for each applied employee
   authorization:
-    - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/rotation-optimize/rotation-fairness/anomaly-report
+    - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/rotation-optimize/rotation-fairness/rotation-fairness-apply/anomaly-report
   payroll_accuracy:
     - anomaly report is non-blocking and does not change payroll run outputs
 observability:
@@ -185,6 +194,7 @@ observability:
     - scheduling.rotation.balance.report.generated
     - scheduling.rotation.optimization.generated
     - scheduling.rotation.fairness.report.generated
+    - scheduling.rotation.fairness.applied
     - scheduling.anomaly.report.generated
     - scheduling.anomaly.alert.triggered
     - scheduling.anomaly.alert.failed
@@ -204,6 +214,7 @@ observability:
     - schedule_rotation_optimization_count (optional)
     - schedule_rotation_optimization_apply_count (optional)
     - schedule_rotation_fairness_report_count (optional)
+    - schedule_rotation_fairness_apply_count (optional)
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
@@ -227,7 +238,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.12.0 adds tenant-level rotation fairness endpoint (`POST /scheduling/rotations/fairness`) that aggregates deterministic per-employee optimization recommendations without mutating schedules. Existing scheduling APIs remain response-compatible."
+consumer_impact: "Contract v0.13.0 adds fairness write-back endpoint (`POST /scheduling/rotations/fairness/apply`) for tenant-scoped multi-employee rotation apply orchestration with overlap preflight. Existing scheduling APIs remain response-compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -243,6 +254,7 @@ references:
   - work-items/WI-0057-scheduling-rotation-balance-report.md
   - work-items/WI-0058-scheduling-rotation-optimization.md
   - work-items/WI-0059-scheduling-rotation-fairness.md
+  - work-items/WI-0061-scheduling-fairness-writeback.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent
