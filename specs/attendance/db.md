@@ -15,6 +15,8 @@
 - `202602140006_employee_fk_constraints`
 - `202602160002_wi0048_attendance_capture_metadata`
 
+No additional migration in WI-0060 (anti-spoofing signal-fusion/reputation is runtime policy behavior only).
+
 ## Compatibility
 
 - Expand-contract migration style.

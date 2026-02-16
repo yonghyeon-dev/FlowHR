@@ -26,6 +26,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 18. When `FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED=true`, employee GPS create/update must match at least one configured site geofence while manager correction path remains allowed.
 19. When `FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED=true`, employee write with missing/mismatched capture attestation token is rejected while mapped device/token pair is accepted.
 20. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED=true`, employee write with risk score above threshold is rejected while low-risk capture payload is accepted and manager correction path remains allowed.
+21. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED=true`, employee write with high-risk device/ip reputation or insufficient signal fusion count is rejected while safe fused payload is accepted.
 
 ## Boundary and Accuracy Cases
 
@@ -41,6 +42,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 10. Multi-site geofence policy feature flag only applies to employee write path and validates configured site list format and radius boundaries.
 11. Device attestation policy feature flag only applies to employee write path and validates configured device/token mapping.
 12. Anti-spoofing policy feature flag only applies to employee write path and validates allowed channel, GPS accuracy, and risk threshold configuration.
+13. Signal-fusion/reputation policy feature flag only applies to employee write path and validates min-signal/reputation-penalty/high-risk-list configuration.
 
 ## Regression Linkage
 

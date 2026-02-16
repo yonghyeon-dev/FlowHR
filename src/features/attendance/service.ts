@@ -147,6 +147,11 @@ type AntiSpoofingPolicyConfig = {
   allowedChannels: Set<AttendanceCaptureChannel>;
   maxGpsAccuracyMeters: number;
   riskThreshold: number;
+  signalFusionEnabled: boolean;
+  minSignals: number;
+  reputationPenalty: number;
+  highRiskDeviceIds: Set<string>;
+  highRiskIpAddresses: Set<string>;
 };
 
 function parseNumberEnv(value: string | undefined): number | null {
@@ -166,6 +171,15 @@ function parseIntegerEnv(value: string | undefined): number | null {
     return null;
   }
   return parsed;
+}
+
+function parseCsvSet(value: string | undefined, normalize?: (token: string) => string) {
+  const tokens = (value ?? "")
+    .split(",")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0)
+    .map((token) => (normalize ? normalize(token) : token));
+  return new Set(tokens);
 }
 
 function parseTrustedDeviceAllowlist() {
@@ -249,6 +263,29 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
     parseIntegerEnv(process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_MAX_GPS_ACCURACY_METERS) ?? 150;
   const riskThreshold =
     parseIntegerEnv(process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_RISK_THRESHOLD) ?? 2;
+  const signalFusionEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED
+  );
+  const minSignals =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_MIN_SIGNALS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_MIN_SIGNALS
+    ) ?? 2;
+  const reputationPenalty =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_REPUTATION_PENALTY ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_REPUTATION_PENALTY
+    ) ?? 2;
+  const highRiskDeviceIds = parseCsvSet(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_DEVICE_IDS ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_DEVICE_IDS
+  );
+  const highRiskIpAddresses = parseCsvSet(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_IPS ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_IPS,
+    (token) => token.toLowerCase()
+  );
 
   if (maxGpsAccuracyMeters <= 0) {
     throw new ServiceError(
@@ -262,11 +299,28 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       "attendance anti-spoofing policy is enabled but risk threshold configuration is invalid"
     );
   }
+  if (minSignals < 1 || minSignals > 4) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but signal fusion min-signals configuration is invalid"
+    );
+  }
+  if (reputationPenalty < 1 || reputationPenalty > 5) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but reputation penalty configuration is invalid"
+    );
+  }
 
   return {
     allowedChannels: allowed,
     maxGpsAccuracyMeters,
-    riskThreshold
+    riskThreshold,
+    signalFusionEnabled,
+    minSignals,
+    reputationPenalty,
+    highRiskDeviceIds,
+    highRiskIpAddresses
   };
 }
 
@@ -587,17 +641,21 @@ function computeAntiSpoofingRiskScore(
   channel: AttendanceCaptureChannel,
   deviceId: string | null | undefined,
   ipAddress: string | null | undefined,
-  accuracyMeters: number | null | undefined
+  accuracyMeters: number | null | undefined,
+  latitude: number | null | undefined,
+  longitude: number | null | undefined
 ) {
   let score = 0;
+  const normalizedDeviceId = deviceId?.trim();
+  const normalizedIpAddress = ipAddress?.trim();
 
   if (!config.allowedChannels.has(channel)) {
     score += 2;
   }
-  if (!deviceId?.trim()) {
+  if (!normalizedDeviceId) {
     score += 1;
   }
-  if (!ipAddress?.trim()) {
+  if (!normalizedIpAddress) {
     score += 1;
   }
   if (
@@ -608,6 +666,42 @@ function computeAntiSpoofingRiskScore(
       accuracyMeters > config.maxGpsAccuracyMeters)
   ) {
     score += 1;
+  }
+
+  if (config.signalFusionEnabled) {
+    let signalCount = 0;
+    if (config.allowedChannels.has(channel)) {
+      signalCount += 1;
+    }
+    if (normalizedDeviceId) {
+      signalCount += 1;
+    }
+    if (normalizedIpAddress) {
+      signalCount += 1;
+    }
+    if (
+      channel === "GPS" &&
+      latitude !== null &&
+      latitude !== undefined &&
+      longitude !== null &&
+      longitude !== undefined &&
+      accuracyMeters !== null &&
+      accuracyMeters !== undefined &&
+      Number.isFinite(accuracyMeters) &&
+      accuracyMeters <= config.maxGpsAccuracyMeters
+    ) {
+      signalCount += 1;
+    }
+
+    if (signalCount < config.minSignals) {
+      score += config.reputationPenalty;
+    }
+    if (normalizedDeviceId && config.highRiskDeviceIds.has(normalizedDeviceId)) {
+      score += config.reputationPenalty;
+    }
+    if (normalizedIpAddress && config.highRiskIpAddresses.has(normalizedIpAddress.toLowerCase())) {
+      score += config.reputationPenalty;
+    }
   }
 
   return score;
@@ -625,7 +719,9 @@ function assertAntiSpoofingPolicyForCreate(actor: Actor, input: CreateAttendance
     channel,
     input.capture?.deviceId,
     input.capture?.ipAddress,
-    input.capture?.accuracyMeters
+    input.capture?.accuracyMeters,
+    input.capture?.latitude,
+    input.capture?.longitude
   );
 
   if (riskScore > config.riskThreshold) {
@@ -651,12 +747,18 @@ function assertAntiSpoofingPolicyForUpdate(
   const nextIpAddress = input.capture?.ipAddress !== undefined ? input.capture.ipAddress : existing.captureIpAddress;
   const nextAccuracy =
     input.capture?.accuracyMeters !== undefined ? input.capture.accuracyMeters : existing.captureAccuracyMeters;
+  const nextLatitude =
+    input.capture?.latitude !== undefined ? input.capture.latitude : existing.captureLatitude;
+  const nextLongitude =
+    input.capture?.longitude !== undefined ? input.capture.longitude : existing.captureLongitude;
   const riskScore = computeAntiSpoofingRiskScore(
     config,
     nextChannel,
     nextDeviceId,
     nextIpAddress,
-    nextAccuracy
+    nextAccuracy,
+    nextLatitude,
+    nextLongitude
   );
 
   if (riskScore > config.riskThreshold) {
