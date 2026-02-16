@@ -69,6 +69,23 @@ export const assignScheduleRotationOptimizeSchema = z.object({
   apply: z.boolean().optional().default(false)
 });
 
+export const listScheduleRotationFairnessSchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  templateIds: z
+    .array(z.string().min(1))
+    .min(2)
+    .max(14)
+    .refine((ids) => new Set(ids).size === ids.length, "templateIds must not contain duplicates"),
+  employeeIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(200)
+    .refine((ids) => new Set(ids).size === ids.length, "employeeIds must not contain duplicates")
+    .optional()
+});
+
 export const listWorkScheduleQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

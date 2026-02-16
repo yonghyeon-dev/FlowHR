@@ -61,6 +61,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 53. Manager rotation optimization dry-run returns recommended start offset, optimized template order, and score payload (201).
 54. Rotation optimization with `apply=true` creates schedules using optimized template order and returns created schedule ids.
 55. Rotation optimization dry-run path does not mutate schedules.
+56. Manager generates tenant-level rotation fairness report and receives aggregated metrics with per-employee recommendations (200).
+57. Rotation fairness report rejects employee ids outside organization scope (404).
+58. Employee cannot call rotation fairness report endpoint (403).
 
 ## Boundary Cases
 
@@ -74,6 +77,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 8. Escalation automation failure path does not fail anomaly report response.
 9. Rotation balance report is read-only and does not mutate schedule state.
 10. Rotation optimization evaluate path is deterministic for identical inputs.
+11. Rotation fairness report is deterministic for identical inputs.
 
 ## Regression Linkage
 
@@ -83,6 +87,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.
 - rotation optimization dry-run path does not mutate schedule state.
+- rotation fairness report path does not mutate schedule state.
 
 ## QA Gate Expectations
 
