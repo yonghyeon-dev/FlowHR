@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.6.0
+version: 0.7.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -7,10 +7,11 @@ scope:
     - schedule template creation/list
     - template-based single-date schedule assignment
     - template-based multi-day range assignment
+    - rotation sequence assignment with multiple templates
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - tenant-scoped schedule access (RLS baseline + service scoping)
   out:
-    - rotation auto-planning engine
+    - rotation balancing/optimization engine
     - GPS/QR/geofence clock-in enforcement
     - anomaly-driven automatic payroll or approval enforcement
 entities:
@@ -25,9 +26,9 @@ api:
     - role: employee
       permission: view own schedules and own anomaly report only
     - role: manager
-      permission: assign/update/delete schedules, manage templates, and list employee-scoped anomaly reports within tenant
+      permission: assign/update/delete schedules, manage templates, assign rotation, and list employee-scoped anomaly reports within tenant
     - role: admin
-      permission: assign/update/delete schedules, manage templates, and list anomalies within tenant/platform scope
+      permission: assign/update/delete schedules, manage templates, assign rotation, and list anomalies within tenant/platform scope
   endpoints:
     - method: GET
       path: /scheduling/schedules
@@ -53,6 +54,9 @@ api:
     - method: POST
       path: /scheduling/templates/{templateId}/assign-range
       description: Assign template to one employee for every matching weekday in date range.
+    - method: POST
+      path: /scheduling/rotations/assign
+      description: Assign schedules by rotating templates over matched weekdays in date range.
     - method: GET
       path: /scheduling/anomalies
       description: Read-only anomaly report by period with optional employee filter.
@@ -70,6 +74,8 @@ api:
         description: Emitted when a schedule is created from a template assignment.
       - name: scheduling.template.range_assigned.v1
         description: Emitted when range assignment creates one or more schedules.
+      - name: scheduling.rotation.assigned.v1
+        description: Emitted when rotation assignment creates one or more schedules.
     consumed: []
 db_changes:
   migrations:
@@ -89,11 +95,14 @@ invariants:
   - Template assignment is allowed only when requested date weekday is in template.weekdays.
   - Range assignment creates schedules only for weekdays included in template.weekdays.
   - Range assignment overlap validation is preflighted and must fail with no writes on conflict.
+  - Rotation assignment requires at least two unique template ids.
+  - Rotation assignment requires all templates share identical weekday set.
+  - Rotation assignment overlap validation is preflighted and must fail with no writes on conflict.
   - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
 risk:
   permissions:
-    - Unauthorized schedule/template/anomaly access can leak employee working patterns across tenants.
+    - Unauthorized schedule/template/rotation/anomaly access can leak employee working patterns across tenants.
   payroll_accuracy:
     - Schedule and anomaly report are informational only for MVP and do not affect payroll calculation.
   legal:
@@ -110,6 +119,8 @@ test_plan:
     - manager can create/list template and assign template; employee cannot
     - manager can assign template across date range in single request
     - range assignment conflict returns 409 with no partial writes
+    - manager can assign rotation using multiple templates across date range
+    - rotation assignment rejects mixed weekday sets and conflict causes no partial writes
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
   regression:
@@ -117,7 +128,7 @@ test_plan:
     - single-date assignment behavior remains unchanged
     - anomaly report does not mutate schedule or attendance states
   authorization:
-    - permission boundaries for create/update/delete/list/template-assign/template-range-assign/anomaly-report
+    - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/anomaly-report
   payroll_accuracy:
     - anomaly report is non-blocking and does not change payroll run outputs
 observability:
@@ -128,6 +139,7 @@ observability:
     - scheduling.template.created
     - scheduling.template.assigned
     - scheduling.template.range_assigned
+    - scheduling.rotation.assigned
     - scheduling.anomaly.report.generated
   metrics:
     - schedule_assign_count (optional)
@@ -137,11 +149,13 @@ observability:
     - schedule_template_assign_count (optional)
     - schedule_template_range_assign_count (optional)
     - schedule_template_range_assign_created_count (optional)
+    - schedule_rotation_assign_count (optional)
+    - schedule_rotation_assign_created_count (optional)
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
   logs:
-    - authorization denied logs for scheduling/template create/list/assign/anomaly
+    - authorization denied logs for scheduling/template create/list/assign/assign-range/rotation/anomaly
 rollout:
   feature_flags:
     - name: scheduling_v1
@@ -152,7 +166,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds template range assignment API and aggregate event for multi-day schedule creation. Existing schedule/template APIs and payroll behavior remain unchanged."
+consumer_impact: "Adds rotation assignment API with template sequence support. Existing schedule/template/anomaly APIs and payroll behavior remain unchanged."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -162,6 +176,7 @@ references:
   - work-items/WI-0044-scheduling-template-recurring-baseline.md
   - work-items/WI-0045-scheduling-anomaly-report.md
   - work-items/WI-0046-scheduling-template-range-assignment.md
+  - work-items/WI-0047-scheduling-rotation-assignment.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

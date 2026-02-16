@@ -15,6 +15,7 @@
 
 No additional migration in WI-0045 (anomaly report is read-only).
 No additional migration in WI-0046 (range assignment is runtime/API behavior only).
+No additional migration in WI-0047 (rotation assignment is runtime/API behavior only).
 
 ## Tenant Isolation
 
@@ -27,4 +28,5 @@ No additional migration in WI-0046 (range assignment is runtime/API behavior onl
 - No cross-domain direct table access. Use API/event/projection.
 - Schedule anomaly report reads `AttendanceRecord` signals through service/data-access boundaries only.
 - Range assignment writes only `WorkSchedule` rows and reuses existing overlap constraints.
+- Rotation assignment writes only `WorkSchedule` rows and reuses existing overlap constraints.
 
