@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - scheduling multi-day recurrence/rotation automation (single-date template assignment only)
+  - scheduling rotation/shift-balancing automation (range assignment baseline merged)
   - clock-in input enhancements (GPS/QR/Wi-Fi/device) + enforcement
   - anomaly notification/escalation automation (read-only anomaly report baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
@@ -119,7 +119,7 @@ Recently delivered:
 - Employee/Organization master data baseline exists and is audited (WI-0034).
 - employeeId FK integrity and RBAC foundation are merged (WI-0035, WI-0036).
 - Multi-tenant isolation baseline (Supabase RLS) is merged (WI-0037).
-- Scheduling CRUD baseline (create/list/update/delete), template assignment baseline, and anomaly read model are merged (WI-0040, WI-0041, WI-0042, WI-0043, WI-0044, WI-0045).
+- Scheduling CRUD baseline (create/list/update/delete), template single/range assignment baseline, and anomaly read model are merged (WI-0040, WI-0041, WI-0042, WI-0043, WI-0044, WI-0045, WI-0046).
 
 ## 2) Priority Roadmap
 
@@ -246,6 +246,7 @@ Tasks:
 4. (Done) `work-items/WI-0043-scheduling-delete-api.md`
 5. (Done) `work-items/WI-0044-scheduling-template-recurring-baseline.md`
 6. (Done) `work-items/WI-0045-scheduling-anomaly-report.md`
+7. (Done) `work-items/WI-0046-scheduling-template-range-assignment.md`
 
 ## 3) Workstream Ownership
 
@@ -278,6 +279,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for multi-day template recurrence/rotation generation contract-first,
+1. define WI for rotation/shift-balancing generation contract-first,
 2. define WI for clock-in channel enhancement (GPS/QR/Wi-Fi/device metadata) contract-first,
 3. define WI for anomaly signal automation (alerting/escalation) on top of WI-0045 read-only report.

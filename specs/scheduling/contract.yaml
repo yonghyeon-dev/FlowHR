@@ -1,15 +1,15 @@
 owner: scheduling-agent
-version: 0.5.0
+version: 0.6.0
 scope:
   in:
     - work schedule assignment (planned start/end)
     - schedule list query by period
     - schedule template creation/list
     - template-based single-date schedule assignment
+    - template-based multi-day range assignment
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - tenant-scoped schedule access (RLS baseline + service scoping)
   out:
-    - multi-day bulk recurring generation
     - rotation auto-planning engine
     - GPS/QR/geofence clock-in enforcement
     - anomaly-driven automatic payroll or approval enforcement
@@ -50,6 +50,9 @@ api:
     - method: POST
       path: /scheduling/templates/{templateId}/assign
       description: Assign template to one employee for one date and create WorkSchedule.
+    - method: POST
+      path: /scheduling/templates/{templateId}/assign-range
+      description: Assign template to one employee for every matching weekday in date range.
     - method: GET
       path: /scheduling/anomalies
       description: Read-only anomaly report by period with optional employee filter.
@@ -65,6 +68,8 @@ api:
         description: Emitted when a schedule template is created.
       - name: scheduling.template.assigned.v1
         description: Emitted when a schedule is created from a template assignment.
+      - name: scheduling.template.range_assigned.v1
+        description: Emitted when range assignment creates one or more schedules.
     consumed: []
 db_changes:
   migrations:
@@ -82,6 +87,8 @@ invariants:
   - WorkScheduleTemplate.startMinute/endMinute must be in range 0..1439 and cannot be equal.
   - WorkScheduleTemplate.weekdays must contain values in range 1..7.
   - Template assignment is allowed only when requested date weekday is in template.weekdays.
+  - Range assignment creates schedules only for weekdays included in template.weekdays.
+  - Range assignment overlap validation is preflighted and must fail with no writes on conflict.
   - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
 risk:
@@ -94,19 +101,23 @@ risk:
 test_plan:
   unit:
     - schedule/template payload validation boundaries
+    - range assignment date-window validation and weekday generation boundaries
     - anomaly threshold and overlap classification boundaries
   integration:
     - manager can create schedule; employee cannot
     - manager can update schedule; employee cannot
     - manager can delete schedule; employee cannot
     - manager can create/list template and assign template; employee cannot
+    - manager can assign template across date range in single request
+    - range assignment conflict returns 409 with no partial writes
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
   regression:
     - template assignment path reuses schedule overlap guard
+    - single-date assignment behavior remains unchanged
     - anomaly report does not mutate schedule or attendance states
   authorization:
-    - permission boundaries for create/update/delete/list/template-assign/anomaly-report
+    - permission boundaries for create/update/delete/list/template-assign/template-range-assign/anomaly-report
   payroll_accuracy:
     - anomaly report is non-blocking and does not change payroll run outputs
 observability:
@@ -116,6 +127,7 @@ observability:
     - scheduling.schedule.deleted
     - scheduling.template.created
     - scheduling.template.assigned
+    - scheduling.template.range_assigned
     - scheduling.anomaly.report.generated
   metrics:
     - schedule_assign_count (optional)
@@ -123,6 +135,8 @@ observability:
     - schedule_delete_count (optional)
     - schedule_template_create_count (optional)
     - schedule_template_assign_count (optional)
+    - schedule_template_range_assign_count (optional)
+    - schedule_template_range_assign_created_count (optional)
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
@@ -138,7 +152,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds schedule anomaly report API (late/no-show). Existing schedule/template APIs and payroll behavior remain unchanged."
+consumer_impact: "Adds template range assignment API and aggregate event for multi-day schedule creation. Existing schedule/template APIs and payroll behavior remain unchanged."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -147,6 +161,7 @@ references:
   - work-items/WI-0043-scheduling-delete-api.md
   - work-items/WI-0044-scheduling-template-recurring-baseline.md
   - work-items/WI-0045-scheduling-anomaly-report.md
+  - work-items/WI-0046-scheduling-template-range-assignment.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

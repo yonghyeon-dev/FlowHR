@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.5.0
+  version: 0.6.0
 paths:
   /scheduling/schedules:
     get:
@@ -126,6 +126,28 @@ paths:
           description: Template not found
         "409":
           description: Template weekday mismatch or overlapping schedule exists
+  /scheduling/templates/{templateId}/assign-range:
+    post:
+      summary: Assign template to employee over date range (matching weekdays only)
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Schedules created from template range assignment
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Template or employee not found in tenant scope
+        "409":
+          description: One or more generated windows overlap existing schedules
   /scheduling/anomalies:
     get:
       summary: List schedule-to-attendance anomalies (read-only)
