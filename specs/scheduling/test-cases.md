@@ -53,6 +53,8 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 45. Append audit log `scheduling.rotation.assigned` with template sequence and created count.
 46. When `FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED=true` and anomalies exist, emit `scheduling.anomaly.detected.v1` and append `scheduling.anomaly.alert.triggered` audit log.
 47. When anomaly alert automation is disabled, anomaly report still succeeds and does not emit automation event.
+48. When `FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED=true` and anomalies exist, emit `scheduling.anomaly.escalated.v1` with severity/owner/retry payload and append `scheduling.anomaly.escalation.triggered` audit log.
+49. When anomaly escalation automation is disabled, anomaly report still succeeds and does not emit escalation event.
 
 ## Boundary Cases
 
@@ -63,6 +65,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 5. Range assignment supports overnight templates and enforces overlap preflight before writes.
 6. Rotation assignment uses max 62-day window and supports overnight templates.
 7. Alert automation failure path does not fail anomaly report response.
+8. Escalation automation failure path does not fail anomaly report response.
 
 ## Regression Linkage
 

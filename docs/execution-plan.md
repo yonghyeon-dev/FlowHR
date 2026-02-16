@@ -110,7 +110,7 @@ Open gaps:
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling rotation balancing/optimization automation (rotation baseline merged)
   - advanced clock-in anti-spoofing policy enforcement (risk scoring/signal fusion) after trusted-device + multi-site geofence + attestation baseline
-  - anomaly escalation policy and delivery routing (alert automation baseline merged)
+  - real-time anomaly dashboard and operator cockpit flow (report/alert/escalation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -127,6 +127,7 @@ Recently delivered:
 - Attendance trusted device allowlist policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED`; WI-0052).
 - Attendance multi-site geofence policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED`; WI-0053).
 - Attendance device attestation policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED`; WI-0054).
+- Scheduling anomaly escalation policy baseline is merged behind feature flag (`FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED`; WI-0055).
 
 ## 2) Priority Roadmap
 
@@ -262,6 +263,7 @@ Tasks:
 13. (Done) `work-items/WI-0052-attendance-trusted-device-policy.md`
 14. (Done) `work-items/WI-0053-attendance-multisite-geofence-policy.md`
 15. (Done) `work-items/WI-0054-attendance-device-attestation-policy.md`
+16. (Done) `work-items/WI-0055-scheduling-anomaly-escalation-policy.md`
 
 ## 3) Workstream Ownership
 
@@ -296,4 +298,4 @@ Without additional input, the next executable step is:
 
 1. define WI for rotation balancing/optimization policy contract-first,
 2. define WI for anti-spoofing signal fusion/risk scoring policy engine (on top of trusted-device + multi-site geofence + attestation baseline) contract-first,
-3. define WI for anomaly escalation policy (severity routing/retry/escalation ownership) on top of WI-0051.
+3. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines.
