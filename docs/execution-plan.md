@@ -109,7 +109,7 @@ Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling multi-employee/global fairness write-back orchestration on top of fairness report baseline
-  - advanced clock-in anti-spoofing signal fusion/external reputation policy after risk-scoring baseline
+  - advanced clock-in dynamic external reputation integration on top of signal-fusion baseline
   - real-time anomaly dashboard and operator cockpit flow (report/alert/escalation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
@@ -132,6 +132,7 @@ Recently delivered:
 - Scheduling rotation balance report baseline is merged via read-only endpoint (`GET /scheduling/rotations/balance`; WI-0057).
 - Scheduling rotation optimization baseline is merged via evaluate/apply endpoint (`POST /scheduling/rotations/optimize`; WI-0058).
 - Scheduling rotation fairness report baseline is merged via tenant-level read-only endpoint (`POST /scheduling/rotations/fairness`; WI-0059).
+- Attendance anti-spoofing signal-fusion/reputation baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED`; WI-0060).
 
 ## 2) Priority Roadmap
 
@@ -272,6 +273,7 @@ Tasks:
 18. (Done) `work-items/WI-0057-scheduling-rotation-balance-report.md`
 19. (Done) `work-items/WI-0058-scheduling-rotation-optimization.md`
 20. (Done) `work-items/WI-0059-scheduling-rotation-fairness.md`
+21. (Done) `work-items/WI-0060-attendance-anti-spoofing-signal-fusion.md`
 
 ## 3) Workstream Ownership
 
@@ -305,5 +307,5 @@ Request template:
 Without additional input, the next executable step is:
 
 1. define WI for multi-employee/global fairness write-back orchestration policy (on top of fairness report baseline) contract-first,
-2. define WI for anti-spoofing signal fusion/external reputation policy engine (on top of risk-scoring baseline) contract-first,
+2. define WI for dynamic external reputation integration policy engine (on top of signal-fusion baseline) contract-first,
 3. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines.

@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0059)
+### 완료 WI 목록 (WI-0001 ~ WI-0060)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -83,11 +83,12 @@
 | WI-0057 | Scheduling Rotation Balance Report Baseline | 핵심 비즈니스 |
 | WI-0058 | Scheduling Rotation Optimization Baseline | 핵심 비즈니스 |
 | WI-0059 | Scheduling Rotation Fairness Report Baseline | 핵심 비즈니스 |
+| WI-0060 | Attendance Anti-Spoofing Signal Fusion Baseline | 핵심 비즈니스 |
 
 ### 다음 우선순위 (Phase 2 진행)
 
 - 근무일정/교대/유연근무 고도화(다직원 글로벌 fairness write-back orchestration/constraint 기반 최적화)
-- 출퇴근 정책 고도화(anti-spoofing signal fusion/외부 평판 연계)
+- 출퇴근 정책 고도화(동적 외부 평판 연동/리스크 인텔리전스)
 - 실시간 근태 현황 고도화(리포트/알림/에스컬레이션 baseline 이후 대시보드)
 
 ### 진행 중
@@ -216,7 +217,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | **인사 마스터** | ✅ 직원/부서/직급/조직도 | ✅ 직원/조직/이력관리 | ⚠️ Organization/Employee 기본 CRUD(WI-0034) + RBAC baseline(WI-0036); Department/Position 미도입 | High |
 | **멀티테넌트** | ✅ 회사별 격리 | ✅ 워크스페이스 격리 | ⚠️ baseline 적용(Supabase RLS + `FLOWHR_TENANCY_V1`, WI-0037) | Critical |
 | **근무일정** | ✅ 교대근무/유연근무 | ✅ 시차출근/재택 | ⚠️ WorkSchedule CRUD + template 단건/다건 + rotation assign/balance/optimize/fairness baseline(WI-0040~0047, WI-0057, WI-0058, WI-0059); 다직원 글로벌 fairness write-back 미도입 | High |
-| **출퇴근** | ✅ GPS/비콘/키오스크 | ✅ GPS/Wi-Fi/QR | ⚠️ 채널 메타데이터 + GPS/지오펜스/다중 사업장/디바이스 allowlist/attestation/anti-spoofing baseline(WI-0048~0056) 완료, signal fusion/외부 평판 연계 미도입 | High |
+| **출퇴근** | ✅ GPS/비콘/키오스크 | ✅ GPS/Wi-Fi/QR | ⚠️ 채널 메타데이터 + GPS/지오펜스/다중 사업장/디바이스 allowlist/attestation/anti-spoofing + signal fusion baseline(WI-0048~0056, WI-0060) 완료, 동적 외부 평판 연계 미도입 | High |
 | **근태 집계** | ✅ 자동 집계/이상 감지 | ✅ 실시간 대시보드 | ⚠️ 집계 조회 API(WI-0031) + anomaly 리포트/알림/에스컬레이션 baseline(WI-0045, WI-0051, WI-0055); 실시간 대시보드 미도입 | High |
 | **휴가 관리** | ✅ 정책 엔진/잔여일 자동계산 | ✅ 자동 부여/소진 추적 | ⚠️ 기본 CRUD만 | Medium |
 | **급여 계산** | ✅ 한국 세법/4대보험/연말정산 | ✅ 급여 시뮬레이션/명세서 | ⚠️ 단순 비율 | Critical |

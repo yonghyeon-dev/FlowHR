@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.11.0
+version: 1.12.0
 scope:
   in:
     - attendance record create/update
@@ -9,7 +9,7 @@ scope:
     - feature-flag based employee multi-site geofence enforcement
     - feature-flag based employee trusted device allowlist enforcement
     - feature-flag based employee device attestation enforcement
-    - feature-flag based employee anti-spoofing risk scoring enforcement
+    - feature-flag based employee anti-spoofing signal-fusion and reputation risk enforcement
     - attendance record list query by period
     - attendance aggregates query by period
     - correction approval/rejection flow
@@ -20,7 +20,7 @@ scope:
     - payroll tax and deduction
     - physical device protocol integration
     - geofence polygon policy engine
-    - anti-spoofing signal fusion engine (beyond baseline risk scoring)
+    - anti-spoofing external reputation provider integration (beyond static risk lists)
     - trusted network policy engine
     - cryptographic device attestation policy engine
 entities:
@@ -98,7 +98,7 @@ invariants:
   - When FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED is enabled, employee attendance create/update GPS coordinates must match at least one configured site geofence.
   - When FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED is enabled, employee attendance create/update must keep effective capture deviceId in trusted allowlist.
   - When FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED is enabled, employee attendance create/update must provide capture attestationToken that matches configured device mapping for effective deviceId.
-  - When FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED is enabled, employee attendance create/update must keep effective capture risk score at or below configured threshold.
+  - When FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED is enabled, employee attendance create/update must keep effective capture risk score (base + signal-fusion + reputation penalties) at or below configured threshold.
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
@@ -112,6 +112,7 @@ risk:
     - Trusted device allowlist misconfiguration can block employee attendance writes when flag is enabled.
     - Device attestation token mapping errors can block employee attendance writes when flag is enabled.
     - Anti-spoofing threshold misconfiguration can block valid employee attendance writes when flag is enabled.
+    - Anti-spoofing signal-fusion/reputation configuration errors can block valid employee attendance writes when flag is enabled.
   legal:
     - Attendance history must remain auditable.
 test_plan:
@@ -128,7 +129,7 @@ test_plan:
     - multi-site geofence site-list parsing and match validation
     - trusted device allowlist parsing and effective deviceId validation
     - device attestation token mapping parsing and effective device/token validation
-    - anti-spoofing risk-score calculation and threshold boundaries
+    - anti-spoofing risk-score (base + signal-fusion + reputation penalties) and threshold boundaries
   integration:
     - create record rejects unknown employeeId (404)
     - create record to approve flow
@@ -157,6 +158,8 @@ test_plan:
     - employee attendance write with mapped attestation token is accepted when device attestation flag is enabled
     - employee attendance write with risk score above threshold is rejected when anti-spoofing flag is enabled
     - employee attendance write with risk score at or below threshold is accepted when anti-spoofing flag is enabled
+    - employee attendance write with high-risk device/ip reputation is rejected when anti-spoofing signal-fusion is enabled
+    - employee attendance write with insufficient trusted signal count is rejected when anti-spoofing signal-fusion is enabled
     - manager correction path remains allowed when anti-spoofing flag is enabled
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
@@ -184,6 +187,7 @@ observability:
     - attendance_trusted_device_reject_count
     - attendance_device_attestation_reject_count
     - attendance_anti_spoofing_reject_count
+    - attendance_anti_spoofing_signal_fusion_reject_count
   logs:
     - authorization denied logs for attendance approval
     - capture metadata validation failure logs for attendance create/update
@@ -203,13 +207,15 @@ rollout:
       default: "false"
     - name: FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED
       default: "false"
+    - name: FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED
+      default: "false"
   migration_strategy: expand-contract
 rollback:
   strategy: disable attendance_v1 and route reads to previous adapter
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.11.0 adds optional employee anti-spoofing risk scoring enforcement behind FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED. Default-off keeps existing behavior; enabled mode rejects employee attendance writes whose effective capture risk score exceeds configured threshold."
+consumer_impact: "Contract v1.12.0 extends anti-spoofing policy with optional signal-fusion and static external reputation penalties behind FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED. Default-off keeps prior behavior; enabled mode can reject employee attendance writes when fused/reputation risk raises effective score above threshold."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -225,6 +231,7 @@ references:
   - work-items/WI-0053-attendance-multisite-geofence-policy.md
   - work-items/WI-0054-attendance-device-attestation-policy.md
   - work-items/WI-0056-attendance-anti-spoofing-policy.md
+  - work-items/WI-0060-attendance-anti-spoofing-signal-fusion.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent
