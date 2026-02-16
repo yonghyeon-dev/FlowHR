@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.15.0
+version: 0.16.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -17,6 +17,7 @@ scope:
     - tenant-level anomaly cockpit dashboard read-model (severity/queue summary)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
+    - anomaly cockpit ticket request automation event emission behind feature flag
     - tenant-scoped schedule access (RLS baseline + service scoping)
   out:
     - rotation balancing/optimization engine
@@ -105,6 +106,8 @@ api:
         description: Emitted when anomaly alert automation is enabled and anomalies are detected.
       - name: scheduling.anomaly.escalated.v1
         description: Emitted when anomaly escalation automation is enabled and anomalies are detected.
+      - name: scheduling.anomaly.ticket.requested.v1
+        description: Emitted when anomaly cockpit ticket automation is enabled and queue entries match severity policy.
     consumed: []
 db_changes:
   migrations:
@@ -142,6 +145,8 @@ invariants:
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.
   - Anomaly escalation automation must not block anomaly report API response.
+  - Anomaly cockpit ticket automation must not block anomaly cockpit API response.
+  - Anomaly cockpit ticket automation emits requests only for queue entries at or above configured severity threshold.
 risk:
   permissions:
     - Unauthorized schedule/template/rotation/anomaly access can leak employee working patterns across tenants.
@@ -149,6 +154,7 @@ risk:
     - Schedule and anomaly report are informational only for MVP and do not affect payroll calculation.
     - Alert automation side-effects must not alter schedule/attendance/payroll state transitions.
     - Escalation automation side-effects must not alter schedule/attendance/payroll state transitions.
+    - Ticket request automation side-effects must not alter schedule/attendance/payroll state transitions.
   legal:
     - Schedule/template/anomaly report access should remain auditable.
 test_plan:
@@ -181,6 +187,8 @@ test_plan:
     - anomaly cockpit report enforces role boundaries (employee denied)
     - anomaly report with alert flag emits anomaly event/audit when anomalies exist
     - anomaly report with escalation flag emits escalation event/audit with severity/owner/retry metadata
+    - anomaly cockpit report with ticket automation flag emits ticket request event/audit when severity policy matches
+    - anomaly cockpit report with ticket automation disabled does not emit ticket request event
   regression:
     - template assignment path reuses schedule overlap guard
     - single-date assignment behavior remains unchanged
@@ -188,6 +196,7 @@ test_plan:
     - anomaly cockpit report does not mutate schedule or attendance states
     - anomaly report remains available even when alert publication fails
     - anomaly report remains available even when escalation publication fails
+    - anomaly cockpit report remains available even when ticket automation publication or config validation fails
     - rotation balance report does not mutate schedules
     - rotation optimization dry-run does not mutate schedules
     - rotation fairness report does not mutate schedules
@@ -217,6 +226,8 @@ observability:
     - scheduling.anomaly.alert.failed
     - scheduling.anomaly.escalation.triggered
     - scheduling.anomaly.escalation.failed
+    - scheduling.anomaly.ticket.requested
+    - scheduling.anomaly.ticket.request.failed
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
@@ -241,6 +252,8 @@ observability:
     - schedule_anomaly_alert_failed_count (optional)
     - schedule_anomaly_escalation_triggered_count (optional)
     - schedule_anomaly_escalation_failed_count (optional)
+    - schedule_anomaly_ticket_request_count (optional)
+    - schedule_anomaly_ticket_request_failed_count (optional)
   logs:
     - authorization denied logs for scheduling/template create/list/assign/assign-range/rotation/anomaly
 rollout:
@@ -251,13 +264,15 @@ rollout:
       default: "false"
     - name: FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED
       default: "false"
+    - name: FLOWHR_SCHEDULING_ANOMALY_TICKET_AUTOMATION_ENABLED
+      default: "false"
   migration_strategy: expand-contract
 rollback:
   strategy: disable scheduling_v1 and hide scheduling routes; adjust RLS via break-glass only if required.
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.15.0 adds anomaly cockpit endpoint (`GET /scheduling/anomalies/cockpit`) for tenant-level severity/queue triage while keeping existing anomaly report behavior unchanged. Existing scheduling APIs remain backward compatible."
+consumer_impact: "Contract v0.16.0 adds cockpit-driven ticket request automation event emission (`scheduling.anomaly.ticket.requested.v1`) behind feature flag while keeping existing scheduling endpoint shapes and anomaly report behavior unchanged."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -276,6 +291,7 @@ references:
   - work-items/WI-0061-scheduling-fairness-writeback.md
   - work-items/WI-0063-scheduling-global-fairness-constraints.md
   - work-items/WI-0065-scheduling-anomaly-cockpit-dashboard.md
+  - work-items/WI-0067-scheduling-anomaly-cockpit-ticket-automation.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

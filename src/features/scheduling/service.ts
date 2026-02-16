@@ -201,15 +201,17 @@ export type ScheduleAttendanceAnomalyCockpitReport = {
     severity: AnomalyEscalationSeverity;
     lastAnomalyAt: Date | null;
   }>;
-  queue: Array<{
-    scheduleId: string;
-    employeeId: string;
-    anomalyType: ScheduleAttendanceAnomalyType;
-    severity: AnomalyEscalationSeverity;
-    lateMinutes: number | null;
-    scheduleStartAt: Date;
-    recommendedAction: string;
-  }>;
+  queue: ScheduleAnomalyCockpitQueueEntry[];
+};
+
+export type ScheduleAnomalyCockpitQueueEntry = {
+  scheduleId: string;
+  employeeId: string;
+  anomalyType: ScheduleAttendanceAnomalyType;
+  severity: AnomalyEscalationSeverity;
+  lateMinutes: number | null;
+  scheduleStartAt: Date;
+  recommendedAction: string;
 };
 
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
@@ -348,6 +350,13 @@ function isSchedulingAnomalyEscalationEnabled() {
   );
 }
 
+function isSchedulingAnomalyTicketAutomationEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_SCHEDULING_ANOMALY_TICKET_AUTOMATION_ENABLED ??
+      process.env.SCHEDULING_ANOMALY_TICKET_AUTOMATION_ENABLED
+  );
+}
+
 function buildAnomalyAlertPayload(
   input: ListScheduleAnomaliesInput,
   lateThresholdMinutes: number,
@@ -458,6 +467,42 @@ function anomalyEscalationSeverityWeight(severity: AnomalyEscalationSeverity) {
     return 2;
   }
   return 1;
+}
+
+function parseAnomalySeverityFromEnv(
+  raw: string | undefined,
+  fallback: AnomalyEscalationSeverity,
+  fieldName: string,
+  contextName: string
+): AnomalyEscalationSeverity {
+  if (raw === undefined) {
+    return fallback;
+  }
+
+  const normalized = raw.trim().toUpperCase();
+  if (normalized === "MINOR" || normalized === "MAJOR" || normalized === "CRITICAL") {
+    return normalized;
+  }
+
+  throw new ServiceError(500, `${contextName} is enabled but ${fieldName} configuration is invalid`);
+}
+
+function parsePositiveIntegerRangeFromEnv(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+  fieldName: string,
+  contextName: string
+): number {
+  if (raw === undefined) {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new ServiceError(500, `${contextName} is enabled but ${fieldName} configuration is invalid`);
+  }
+  return parsed;
 }
 
 function buildAnomalyEscalationPayload(
@@ -617,6 +662,122 @@ async function emitAnomalyEscalationIfEnabled(
       });
     } catch {
       // Non-blocking path: do not fail anomaly report API on escalation side-effects.
+    }
+  }
+}
+
+function buildAnomalyTicketRequestPayload(
+  input: ListScheduleAnomalyCockpitInput,
+  lateThresholdMinutes: number,
+  topN: number,
+  queue: ScheduleAnomalyCockpitQueueEntry[],
+  minSeverity: AnomalyEscalationSeverity,
+  maxPerRun: number
+) {
+  const minSeverityWeight = anomalyEscalationSeverityWeight(minSeverity);
+  const tickets = queue
+    .filter((entry) => anomalyEscalationSeverityWeight(entry.severity) >= minSeverityWeight)
+    .slice(0, maxPerRun)
+    .map((entry) => ({
+      scheduleId: entry.scheduleId,
+      employeeId: entry.employeeId,
+      anomalyType: entry.anomalyType,
+      severity: entry.severity,
+      lateMinutes: entry.lateMinutes,
+      scheduleStartAt: entry.scheduleStartAt.toISOString(),
+      recommendedAction: entry.recommendedAction
+    }));
+
+  return {
+    periodStart: input.periodStart.toISOString(),
+    periodEnd: input.periodEnd.toISOString(),
+    lateThresholdMinutes,
+    topN,
+    minSeverity,
+    maxPerRun,
+    requestedCount: tickets.length,
+    tickets
+  };
+}
+
+async function emitAnomalyCockpitTicketRequestsIfEnabled(
+  context: ServiceContext,
+  actor: Actor,
+  input: ListScheduleAnomalyCockpitInput,
+  lateThresholdMinutes: number,
+  topN: number,
+  queue: ScheduleAnomalyCockpitQueueEntry[]
+) {
+  if (!isSchedulingAnomalyTicketAutomationEnabled() || queue.length === 0) {
+    return;
+  }
+
+  const contextName = "scheduling anomaly ticket automation";
+  const tenantScope = resolveTenantScope(actor) ?? undefined;
+  try {
+    const minSeverity = parseAnomalySeverityFromEnv(
+      process.env.FLOWHR_SCHEDULING_ANOMALY_TICKET_MIN_SEVERITY ??
+        process.env.SCHEDULING_ANOMALY_TICKET_MIN_SEVERITY,
+      "CRITICAL",
+      "FLOWHR_SCHEDULING_ANOMALY_TICKET_MIN_SEVERITY",
+      contextName
+    );
+    const maxPerRun = parsePositiveIntegerRangeFromEnv(
+      process.env.FLOWHR_SCHEDULING_ANOMALY_TICKET_MAX_PER_RUN ??
+        process.env.SCHEDULING_ANOMALY_TICKET_MAX_PER_RUN,
+      20,
+      1,
+      200,
+      "FLOWHR_SCHEDULING_ANOMALY_TICKET_MAX_PER_RUN",
+      contextName
+    );
+    const payload = buildAnomalyTicketRequestPayload(
+      input,
+      lateThresholdMinutes,
+      topN,
+      queue,
+      minSeverity,
+      maxPerRun
+    );
+    if (payload.requestedCount === 0) {
+      return;
+    }
+
+    await getEventPublisher(context).publish({
+      name: "scheduling.anomaly.ticket.requested.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "WorkSchedule",
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+
+    await context.dataAccess.audit.append({
+      action: "scheduling.anomaly.ticket.requested",
+      entityType: "WorkSchedule",
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+  } catch (error) {
+    try {
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.ticket.request.failed",
+        entityType: "WorkSchedule",
+        organizationId: tenantScope,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          periodStart: input.periodStart.toISOString(),
+          periodEnd: input.periodEnd.toISOString(),
+          lateThresholdMinutes,
+          topN,
+          error: error instanceof Error ? error.message : "unknown error"
+        }
+      });
+    } catch {
+      // Non-blocking path: do not fail anomaly cockpit API on ticket side-effects.
     }
   }
 }
@@ -2456,7 +2617,6 @@ function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
   }
   return "지각 사유 확인 및 재발 방지 조치";
 }
-
 export async function listScheduleAttendanceAnomalyCockpit(
   context: ServiceContext,
   input: ListScheduleAnomalyCockpitInput
@@ -2541,7 +2701,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
   });
 
   const severityByEmployee = new Map(employees.map((employee) => [employee.employeeId, employee.severity]));
-  const queue = anomalies
+  const queue: ScheduleAnomalyCockpitQueueEntry[] = anomalies
     .map((anomaly) => ({
       scheduleId: anomaly.scheduleId,
       employeeId: anomaly.employeeId,
@@ -2570,6 +2730,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
     major: employees.filter((employee) => employee.severity === "MAJOR").length,
     critical: employees.filter((employee) => employee.severity === "CRITICAL").length
   };
+  const generatedAt = new Date().toISOString();
 
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.cockpit.generated",
@@ -2587,15 +2748,25 @@ export async function listScheduleAttendanceAnomalyCockpit(
       lateCount,
       noShowCount,
       employeeCount: employees.length,
-      severities
+      severities,
+      generatedAt
     }
   });
+
+  await emitAnomalyCockpitTicketRequestsIfEnabled(
+    context,
+    actor,
+    input,
+    lateThresholdMinutes,
+    topN,
+    queue
+  );
 
   return {
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
     lateThresholdMinutes,
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     counts: {
       evaluatedSchedules: schedules.length,
       anomalies: anomalies.length,
@@ -2607,4 +2778,3 @@ export async function listScheduleAttendanceAnomalyCockpit(
     queue
   };
 }
-
