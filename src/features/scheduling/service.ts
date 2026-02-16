@@ -166,6 +166,13 @@ function isSchedulingAnomalyAlertsEnabled() {
   );
 }
 
+function isSchedulingAnomalyEscalationEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED ??
+      process.env.SCHEDULING_ANOMALY_ESCALATION_ENABLED
+  );
+}
+
 function buildAnomalyAlertPayload(
   input: ListScheduleAnomaliesInput,
   lateThresholdMinutes: number,
@@ -189,6 +196,123 @@ function buildAnomalyAlertPayload(
       anomalyType: anomaly.anomalyType,
       lateMinutes: anomaly.lateMinutes
     }))
+  };
+}
+
+type AnomalyEscalationSeverity = "MINOR" | "MAJOR" | "CRITICAL";
+
+function parsePositiveIntegerEnv(raw: string | undefined, defaultValue: number, fieldName: string): number {
+  if (raw === undefined) {
+    return defaultValue;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new ServiceError(
+      500,
+      `scheduling anomaly escalation policy is enabled but ${fieldName} configuration is invalid`
+    );
+  }
+  return parsed;
+}
+
+function parseAnomalyEscalationRouting() {
+  const raw =
+    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_POLICY ??
+    process.env.SCHEDULING_ANOMALY_ESCALATION_POLICY ??
+    "";
+  const entries = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (entries.length === 0) {
+    throw new ServiceError(
+      500,
+      "scheduling anomaly escalation policy is enabled but routing configuration is empty"
+    );
+  }
+
+  const routing: Partial<Record<AnomalyEscalationSeverity, string>> = {};
+  for (const entry of entries) {
+    const [severityRaw, ownerRaw, ...extra] = entry.split(":");
+    const severity = severityRaw?.trim().toUpperCase() as AnomalyEscalationSeverity;
+    const owner = ownerRaw?.trim() ?? "";
+    if (
+      !severity ||
+      (severity !== "MINOR" && severity !== "MAJOR" && severity !== "CRITICAL") ||
+      !owner ||
+      extra.length > 0
+    ) {
+      throw new ServiceError(
+        500,
+        "scheduling anomaly escalation policy is enabled but routing configuration is invalid"
+      );
+    }
+    routing[severity] = owner;
+  }
+
+  if (!routing.MINOR || !routing.MAJOR || !routing.CRITICAL) {
+    throw new ServiceError(
+      500,
+      "scheduling anomaly escalation policy is enabled but routing configuration is incomplete"
+    );
+  }
+
+  return routing as Record<AnomalyEscalationSeverity, string>;
+}
+
+function classifyAnomalyEscalationSeverity(
+  anomalies: ScheduleAttendanceAnomaly[],
+  lateCount: number,
+  noShowCount: number
+): AnomalyEscalationSeverity {
+  if (noShowCount > 0) {
+    return "CRITICAL";
+  }
+  if (lateCount >= 3 || anomalies.length >= 5) {
+    return "MAJOR";
+  }
+  return "MINOR";
+}
+
+function buildAnomalyEscalationPayload(
+  input: ListScheduleAnomaliesInput,
+  lateThresholdMinutes: number,
+  evaluatedSchedules: number,
+  anomalies: ScheduleAttendanceAnomaly[],
+  lateCount: number,
+  noShowCount: number
+) {
+  const severity = classifyAnomalyEscalationSeverity(anomalies, lateCount, noShowCount);
+  const routing = parseAnomalyEscalationRouting();
+  const retryMaxAttempts = parsePositiveIntegerEnv(
+    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_MAX,
+    3,
+    "FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_MAX"
+  );
+  const retryBackoffSeconds = parsePositiveIntegerEnv(
+    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_BACKOFF_SECONDS,
+    60,
+    "FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_BACKOFF_SECONDS"
+  );
+
+  return {
+    ...buildAnomalyAlertPayload(
+      input,
+      lateThresholdMinutes,
+      evaluatedSchedules,
+      anomalies,
+      lateCount,
+      noShowCount
+    ),
+    escalation: {
+      severity,
+      owner: routing[severity],
+      retry: {
+        maxAttempts: retryMaxAttempts,
+        backoffSeconds: retryBackoffSeconds
+      }
+    }
   };
 }
 
@@ -248,6 +372,66 @@ async function emitAnomalyAlertIfEnabled(
       });
     } catch {
       // Non-blocking path: do not fail anomaly report API on alert side-effects.
+    }
+  }
+}
+
+async function emitAnomalyEscalationIfEnabled(
+  context: ServiceContext,
+  actor: Actor,
+  input: ListScheduleAnomaliesInput,
+  lateThresholdMinutes: number,
+  evaluatedSchedules: number,
+  anomalies: ScheduleAttendanceAnomaly[],
+  lateCount: number,
+  noShowCount: number
+) {
+  if (!isSchedulingAnomalyEscalationEnabled() || anomalies.length === 0) {
+    return;
+  }
+
+  const payload = buildAnomalyEscalationPayload(
+    input,
+    lateThresholdMinutes,
+    evaluatedSchedules,
+    anomalies,
+    lateCount,
+    noShowCount
+  );
+
+  try {
+    await getEventPublisher(context).publish({
+      name: "scheduling.anomaly.escalated.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "WorkSchedule",
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+
+    await context.dataAccess.audit.append({
+      action: "scheduling.anomaly.escalation.triggered",
+      entityType: "WorkSchedule",
+      organizationId: resolveTenantScope(actor) ?? undefined,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+  } catch (error) {
+    try {
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.escalation.failed",
+        entityType: "WorkSchedule",
+        organizationId: resolveTenantScope(actor) ?? undefined,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          ...payload,
+          error: error instanceof Error ? error.message : "unknown error"
+        }
+      });
+    } catch {
+      // Non-blocking path: do not fail anomaly report API on escalation side-effects.
     }
   }
 }
@@ -1200,6 +1384,17 @@ export async function listScheduleAttendanceAnomalies(
   });
 
   await emitAnomalyAlertIfEnabled(
+    context,
+    actor,
+    input,
+    lateThresholdMinutes,
+    schedules.length,
+    anomalies,
+    lateCount,
+    noShowCount
+  );
+
+  await emitAnomalyEscalationIfEnabled(
     context,
     actor,
     input,
