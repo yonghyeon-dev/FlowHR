@@ -291,6 +291,7 @@ export interface SchedulingStore {
   create(input: CreateWorkScheduleInput): Promise<WorkScheduleEntity>;
   findById(id: string): Promise<WorkScheduleEntity | null>;
   update(id: string, input: UpdateWorkScheduleInput): Promise<WorkScheduleEntity>;
+  delete(id: string): Promise<WorkScheduleEntity>;
   listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;

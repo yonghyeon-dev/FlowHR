@@ -17,11 +17,15 @@ Work schedule assignment and list behavior with tenant isolation and role bounda
 9. Reject schedule update when it overlaps another schedule for the same employee (409).
 10. Employee cannot update schedules (403).
 11. Cross-tenant schedule update returns 404 (no existence leak).
-12. List schedules by period (`from`/`to`) returns expected rows.
-13. Employee can list only own schedules (403 when querying other employeeId).
-14. Manager list query requires `employeeId` (400).
-15. Emit domain events `scheduling.schedule.assigned.v1` and `scheduling.schedule.updated.v1` on successful create/update.
-16. Append audit logs `scheduling.schedule.assigned` and `scheduling.schedule.updated` with tenant context when available.
+12. Manager deletes a schedule entry (200).
+13. Reject schedule delete when `scheduleId` does not exist (404).
+14. Employee cannot delete schedules (403).
+15. Cross-tenant schedule delete returns 404 (no existence leak).
+16. List schedules by period (`from`/`to`) returns expected rows.
+17. Employee can list only own schedules (403 when querying other employeeId).
+18. Manager list query requires `employeeId` (400).
+19. Emit domain events `scheduling.schedule.assigned.v1`, `scheduling.schedule.updated.v1`, `scheduling.schedule.deleted.v1` on successful actions.
+20. Append audit logs `scheduling.schedule.assigned`, `scheduling.schedule.updated`, `scheduling.schedule.deleted` with tenant context when available.
 
 ## Boundary Cases
 
