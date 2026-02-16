@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.14.0
+version: 1.15.0
 scope:
   in:
     - attendance record create/update
@@ -12,6 +12,7 @@ scope:
     - feature-flag based employee anti-spoofing signal-fusion and reputation risk enforcement
     - feature-flag based dynamic external reputation integration for anti-spoofing risk scoring
     - feature-flag based multi-provider external reputation orchestration (union/majority + minimum-success)
+    - feature-flag based external reputation provider circuit-breaker (failure threshold/cooldown)
     - attendance record list query by period
     - attendance aggregates query by period
     - correction approval/rejection flow
@@ -22,7 +23,8 @@ scope:
     - payroll tax and deduction
     - physical device protocol integration
     - geofence polygon policy engine
-    - anti-spoofing external reputation circuit-breaker and adaptive routing management
+    - distributed anti-spoofing external reputation circuit-breaker state sharing
+    - adaptive reputation routing and auto-healing operations
     - trusted network policy engine
     - cryptographic device attestation policy engine
 entities:
@@ -103,6 +105,7 @@ invariants:
   - When FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED is enabled, employee attendance create/update must keep effective capture risk score (base + signal-fusion + static/remote reputation penalties) at or below configured threshold.
   - When dynamic external reputation is enabled, remote provider snapshots must satisfy configured aggregation mode (union/majority) before risk penalty is applied.
   - When dynamic external reputation strict mode is enabled, provider minimum-success requirement breach must reject employee attendance writes.
+  - When external reputation circuit-breaker is enabled, providers exceeding failure threshold must be skipped until cooldown expiry.
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
@@ -119,6 +122,7 @@ risk:
     - Anti-spoofing signal-fusion/reputation configuration errors can block valid employee attendance writes when flag is enabled.
     - External reputation provider failure in strict mode can block employee attendance writes when dynamic reputation flag is enabled.
     - Multi-provider reputation aggregation/threshold misconfiguration can over-block or under-block employee attendance writes.
+    - Reputation circuit-breaker threshold/cooldown misconfiguration can over-skip healthy providers and block valid employee writes.
   legal:
     - Attendance history must remain auditable.
 test_plan:
@@ -138,6 +142,7 @@ test_plan:
     - anti-spoofing risk-score (base + signal-fusion + reputation penalties) and threshold boundaries
     - external reputation provider response parsing and fallback/strict-mode boundaries
     - multi-provider reputation aggregation (union/majority) and minimum-success boundaries
+    - circuit-breaker failure-threshold/cooldown boundaries
   integration:
     - create record rejects unknown employeeId (404)
     - create record to approve flow
@@ -171,6 +176,7 @@ test_plan:
     - employee attendance write uses dynamic external reputation list when enabled
     - employee attendance write follows multi-provider aggregation mode (union/majority) when multiple reputation URLs are configured
     - employee attendance write strict mode rejects when provider minimum-success requirement is not met
+    - employee attendance write with circuit-breaker enabled skips open providers during cooldown
     - manager correction path remains allowed when anti-spoofing flag is enabled
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
@@ -202,6 +208,8 @@ observability:
     - attendance_anti_spoofing_external_reputation_reject_count
     - attendance_anti_spoofing_external_reputation_provider_success_count
     - attendance_anti_spoofing_external_reputation_provider_failure_count
+    - attendance_anti_spoofing_external_reputation_circuit_open_count
+    - attendance_anti_spoofing_external_reputation_circuit_skip_count
   logs:
     - authorization denied logs for attendance approval
     - capture metadata validation failure logs for attendance create/update
@@ -231,7 +239,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.14.0 extends dynamic external reputation with multi-provider orchestration (`..._URLS`, aggregation mode, majority threshold, minimum-success). Default-off keeps prior behavior; existing single-provider configuration remains backward compatible."
+consumer_impact: "Contract v1.15.0 extends multi-provider reputation orchestration with optional provider circuit-breaker controls (`..._CIRCUIT_BREAKER_ENABLED`, failure threshold, cooldown). Existing behavior remains backward compatible when breaker is disabled."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -250,6 +258,7 @@ references:
   - work-items/WI-0060-attendance-anti-spoofing-signal-fusion.md
   - work-items/WI-0062-attendance-external-reputation-integration.md
   - work-items/WI-0064-attendance-multi-provider-reputation-orchestration.md
+  - work-items/WI-0066-attendance-reputation-circuit-breaker-operations.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent
