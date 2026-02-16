@@ -25,6 +25,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 17. When `FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED=true`, employee write with missing/untrusted deviceId is rejected while trusted deviceId is accepted.
 18. When `FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED=true`, employee GPS create/update must match at least one configured site geofence while manager correction path remains allowed.
 19. When `FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED=true`, employee write with missing/mismatched capture attestation token is rejected while mapped device/token pair is accepted.
+20. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED=true`, employee write with risk score above threshold is rejected while low-risk capture payload is accepted and manager correction path remains allowed.
 
 ## Boundary and Accuracy Cases
 
@@ -39,6 +40,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 9. Trusted device policy feature flag only applies to employee write path and validates configured allowlist.
 10. Multi-site geofence policy feature flag only applies to employee write path and validates configured site list format and radius boundaries.
 11. Device attestation policy feature flag only applies to employee write path and validates configured device/token mapping.
+12. Anti-spoofing policy feature flag only applies to employee write path and validates allowed channel, GPS accuracy, and risk threshold configuration.
 
 ## Regression Linkage
 

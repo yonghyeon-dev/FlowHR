@@ -123,6 +123,13 @@ function isAttendanceDeviceAttestationPolicyEnabled() {
   );
 }
 
+function isAttendanceAntiSpoofingPolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_ENABLED
+  );
+}
+
 type GeofenceConfig = {
   latitude: number;
   longitude: number;
@@ -136,12 +143,26 @@ type GeofenceSiteConfig = {
   radiusMeters: number;
 };
 
+type AntiSpoofingPolicyConfig = {
+  allowedChannels: Set<AttendanceCaptureChannel>;
+  maxGpsAccuracyMeters: number;
+  riskThreshold: number;
+};
+
 function parseNumberEnv(value: string | undefined): number | null {
   if (value === undefined) {
     return null;
   }
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseIntegerEnv(value: string | undefined): number | null {
+  const parsed = parseNumberEnv(value);
+  if (parsed === null || !Number.isInteger(parsed)) {
     return null;
   }
   return parsed;
@@ -193,6 +214,60 @@ function parseDeviceAttestationMap() {
   }
 
   return mapping;
+}
+
+function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
+  const rawChannels =
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_ALLOWED_CHANNELS ??
+    process.env.ATTENDANCE_ANTI_SPOOFING_ALLOWED_CHANNELS ??
+    "GPS,WIFI,QR";
+  const allowedChannels = rawChannels
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter((value) => value.length > 0);
+
+  const validChannels: AttendanceCaptureChannel[] = ["MANUAL", "GPS", "QR", "WIFI", "DEVICE"];
+  const allowed = new Set<AttendanceCaptureChannel>();
+  for (const channel of allowedChannels) {
+    if (!validChannels.includes(channel as AttendanceCaptureChannel)) {
+      throw new ServiceError(
+        500,
+        "attendance anti-spoofing policy is enabled but allowed channel configuration is invalid"
+      );
+    }
+    allowed.add(channel as AttendanceCaptureChannel);
+  }
+
+  if (allowed.size === 0) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but allowed channel configuration is empty"
+    );
+  }
+
+  const maxGpsAccuracyMeters =
+    parseIntegerEnv(process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_MAX_GPS_ACCURACY_METERS) ?? 150;
+  const riskThreshold =
+    parseIntegerEnv(process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_RISK_THRESHOLD) ?? 2;
+
+  if (maxGpsAccuracyMeters <= 0) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but max GPS accuracy configuration is invalid"
+    );
+  }
+  if (riskThreshold < 0 || riskThreshold > 10) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but risk threshold configuration is invalid"
+    );
+  }
+
+  return {
+    allowedChannels: allowed,
+    maxGpsAccuracyMeters,
+    riskThreshold
+  };
 }
 
 function loadGeofenceConfig(): GeofenceConfig {
@@ -507,6 +582,91 @@ function assertDeviceAttestationForUpdate(
   }
 }
 
+function computeAntiSpoofingRiskScore(
+  config: AntiSpoofingPolicyConfig,
+  channel: AttendanceCaptureChannel,
+  deviceId: string | null | undefined,
+  ipAddress: string | null | undefined,
+  accuracyMeters: number | null | undefined
+) {
+  let score = 0;
+
+  if (!config.allowedChannels.has(channel)) {
+    score += 2;
+  }
+  if (!deviceId?.trim()) {
+    score += 1;
+  }
+  if (!ipAddress?.trim()) {
+    score += 1;
+  }
+  if (
+    channel === "GPS" &&
+    (accuracyMeters === null ||
+      accuracyMeters === undefined ||
+      !Number.isFinite(accuracyMeters) ||
+      accuracyMeters > config.maxGpsAccuracyMeters)
+  ) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function assertAntiSpoofingPolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceAntiSpoofingPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const config = loadAntiSpoofingPolicyConfig();
+  const channel = input.capture?.channel ?? "MANUAL";
+  const riskScore = computeAntiSpoofingRiskScore(
+    config,
+    channel,
+    input.capture?.deviceId,
+    input.capture?.ipAddress,
+    input.capture?.accuracyMeters
+  );
+
+  if (riskScore > config.riskThreshold) {
+    throw new ServiceError(
+      400,
+      `attendance anti-spoofing policy rejected capture payload (risk score ${riskScore} > threshold ${config.riskThreshold})`
+    );
+  }
+}
+
+function assertAntiSpoofingPolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceAntiSpoofingPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const config = loadAntiSpoofingPolicyConfig();
+  const nextChannel = input.capture?.channel ?? existing.captureChannel;
+  const nextDeviceId = input.capture?.deviceId !== undefined ? input.capture.deviceId : existing.captureDeviceId;
+  const nextIpAddress = input.capture?.ipAddress !== undefined ? input.capture.ipAddress : existing.captureIpAddress;
+  const nextAccuracy =
+    input.capture?.accuracyMeters !== undefined ? input.capture.accuracyMeters : existing.captureAccuracyMeters;
+  const riskScore = computeAntiSpoofingRiskScore(
+    config,
+    nextChannel,
+    nextDeviceId,
+    nextIpAddress,
+    nextAccuracy
+  );
+
+  if (riskScore > config.riskThreshold) {
+    throw new ServiceError(
+      400,
+      `attendance anti-spoofing policy rejected capture payload (risk score ${riskScore} > threshold ${config.riskThreshold})`
+    );
+  }
+}
+
 function toCapturePayload(record: AttendanceRecordEntity) {
   return {
     channel: record.captureChannel,
@@ -568,6 +728,7 @@ export async function createAttendanceRecord(
   assertGeofencePolicyForCreate(actor, input);
   assertTrustedDevicePolicyForCreate(actor, input);
   assertDeviceAttestationForCreate(actor, input);
+  assertAntiSpoofingPolicyForCreate(actor, input);
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -653,6 +814,7 @@ export async function updateAttendanceRecord(
   assertGeofencePolicyForUpdate(context.actor!, existing, input);
   assertTrustedDevicePolicyForUpdate(context.actor!, existing, input);
   assertDeviceAttestationForUpdate(context.actor!, existing, input);
+  assertAntiSpoofingPolicyForUpdate(context.actor!, existing, input);
   const employee = await requireEmployeeWithinTenant(
     context.dataAccess,
     context.actor,

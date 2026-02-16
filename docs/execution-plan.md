@@ -109,7 +109,7 @@ Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling rotation balancing/optimization automation (rotation baseline merged)
-  - advanced clock-in anti-spoofing policy enforcement (risk scoring/signal fusion) after trusted-device + multi-site geofence + attestation baseline
+  - advanced clock-in anti-spoofing signal fusion/external reputation policy after risk-scoring baseline
   - real-time anomaly dashboard and operator cockpit flow (report/alert/escalation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
@@ -128,6 +128,7 @@ Recently delivered:
 - Attendance multi-site geofence policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED`; WI-0053).
 - Attendance device attestation policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED`; WI-0054).
 - Scheduling anomaly escalation policy baseline is merged behind feature flag (`FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED`; WI-0055).
+- Attendance anti-spoofing risk scoring baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED`; WI-0056).
 
 ## 2) Priority Roadmap
 
@@ -264,6 +265,7 @@ Tasks:
 14. (Done) `work-items/WI-0053-attendance-multisite-geofence-policy.md`
 15. (Done) `work-items/WI-0054-attendance-device-attestation-policy.md`
 16. (Done) `work-items/WI-0055-scheduling-anomaly-escalation-policy.md`
+17. (Done) `work-items/WI-0056-attendance-anti-spoofing-policy.md`
 
 ## 3) Workstream Ownership
 
@@ -297,5 +299,5 @@ Request template:
 Without additional input, the next executable step is:
 
 1. define WI for rotation balancing/optimization policy contract-first,
-2. define WI for anti-spoofing signal fusion/risk scoring policy engine (on top of trusted-device + multi-site geofence + attestation baseline) contract-first,
+2. define WI for anti-spoofing signal fusion/external reputation policy engine (on top of risk-scoring baseline) contract-first,
 3. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines.
