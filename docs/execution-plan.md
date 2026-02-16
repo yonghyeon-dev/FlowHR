@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - scheduling multi-employee/global fairness constraint solver on top of fairness write-back baseline
+  - scheduling advanced multi-objective fairness solver (preference/labor-law objective) on top of global-constraint baseline
   - advanced clock-in multi-provider reputation orchestration on top of dynamic reputation baseline
   - real-time anomaly dashboard and operator cockpit flow (report/alert/escalation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
@@ -135,6 +135,7 @@ Recently delivered:
 - Attendance anti-spoofing signal-fusion/reputation baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED`; WI-0060).
 - Scheduling fairness write-back orchestration baseline is merged via tenant-level apply endpoint (`POST /scheduling/rotations/fairness/apply`; WI-0061).
 - Attendance dynamic external reputation integration baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED`; WI-0062).
+- Scheduling global fairness constraints baseline is merged via fairness report/apply payload extension (`globalConstraints`; WI-0063).
 
 ## 2) Priority Roadmap
 
@@ -278,6 +279,7 @@ Tasks:
 21. (Done) `work-items/WI-0060-attendance-anti-spoofing-signal-fusion.md`
 22. (Done) `work-items/WI-0061-scheduling-fairness-writeback.md`
 23. (Done) `work-items/WI-0062-attendance-external-reputation-integration.md`
+24. (Done) `work-items/WI-0063-scheduling-global-fairness-constraints.md`
 
 ## 3) Workstream Ownership
 
@@ -310,6 +312,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for multi-employee/global fairness constraint solver policy (on top of fairness write-back baseline) contract-first,
-2. define WI for multi-provider external reputation orchestration policy engine (on top of dynamic reputation baseline) contract-first,
-3. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines.
+1. define WI for multi-provider external reputation orchestration policy engine (on top of dynamic reputation baseline) contract-first,
+2. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines,
+3. define WI for advanced fairness optimizer (preference/labor-law multi-objective) on top of global-constraint baseline.

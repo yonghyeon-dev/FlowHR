@@ -29,7 +29,8 @@ export async function POST(request: Request) {
         fromDate: parsed.data.fromDate,
         toDate: parsed.data.toDate,
         templateIds: parsed.data.templateIds,
-        employeeIds: parsed.data.employeeIds
+        employeeIds: parsed.data.employeeIds,
+        globalConstraints: parsed.data.globalConstraints
       }
     );
     return ok({ result }, 201);

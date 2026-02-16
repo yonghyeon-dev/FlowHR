@@ -69,6 +69,11 @@ export const assignScheduleRotationOptimizeSchema = z.object({
   apply: z.boolean().optional().default(false)
 });
 
+const rotationFairnessGlobalConstraintsSchema = z.object({
+  objective: z.literal("MINIMIZE_DAILY_PLANNED_MINUTES_GAP").optional(),
+  maxDailyPlannedMinutesGap: z.number().int().min(0).max(100_000).optional()
+});
+
 export const listScheduleRotationFairnessSchema = z.object({
   organizationId: z.string().min(1).optional(),
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -83,7 +88,8 @@ export const listScheduleRotationFairnessSchema = z.object({
     .min(1)
     .max(200)
     .refine((ids) => new Set(ids).size === ids.length, "employeeIds must not contain duplicates")
-    .optional()
+    .optional(),
+  globalConstraints: rotationFairnessGlobalConstraintsSchema.optional()
 });
 
 export const listWorkScheduleQuerySchema = z.object({
