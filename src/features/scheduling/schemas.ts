@@ -46,3 +46,10 @@ export const listWorkScheduleQuerySchema = z.object({
   employeeId: z.string().min(1).optional()
 });
 
+export const listScheduleAnomaliesQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+  employeeId: z.string().min(1).optional(),
+  lateThresholdMinutes: z.coerce.number().int().min(0).max(240).optional()
+});
+

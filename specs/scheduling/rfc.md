@@ -3,7 +3,7 @@
 ## Summary
 
 Introduce a `WorkSchedule` + `WorkScheduleTemplate` baseline so managers can assign planned windows and reuse recurring templates.
-This is the foundation for Phase 2 scheduling enhancements (rotations, anomaly detection).
+Add a read-only anomaly report that compares schedules and attendance to signal late/no-show cases.
 
 ## Motivation
 
@@ -41,6 +41,9 @@ This is the foundation for Phase 2 scheduling enhancements (rotations, anomaly d
   - Lists organization templates.
 - `POST /api/scheduling/templates/{templateId}/assign`
   - Creates one `WorkSchedule` from template for given employee/date.
+- `GET /api/scheduling/anomalies?from=...&to=...&employeeId=...`
+  - Returns read-only `LATE`/`NO_SHOW` signals.
+  - Uses `lateThresholdMinutes` query parameter (default 10).
 
 ## Authorization
 
@@ -59,5 +62,5 @@ This is the foundation for Phase 2 scheduling enhancements (rotations, anomaly d
 
 - Multi-day bulk assignment and rotation engine
 - Shift swap requests and approvals
-- Schedule vs attendance anomaly detection
+- anomaly-driven notifications and escalation workflow
 

@@ -1,30 +1,33 @@
 owner: scheduling-agent
-version: 0.4.0
+version: 0.5.0
 scope:
   in:
     - work schedule assignment (planned start/end)
     - schedule list query by period
     - schedule template creation/list
     - template-based single-date schedule assignment
+    - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - tenant-scoped schedule access (RLS baseline + service scoping)
   out:
     - multi-day bulk recurring generation
     - rotation auto-planning engine
     - GPS/QR/geofence clock-in enforcement
-    - schedule-to-attendance reconciliation
+    - anomaly-driven automatic payroll or approval enforcement
 entities:
   - name: WorkSchedule
     description: Planned work schedule entry for an employee.
   - name: WorkScheduleTemplate
     description: Organization-scoped schedule template with weekday and minute-based shift window.
+  - name: AttendanceRecord
+    description: Actual attendance record used as read-only signal input for anomaly detection.
 api:
   auth:
     - role: employee
-      permission: view own schedules only (template create/list/assign denied)
+      permission: view own schedules and own anomaly report only
     - role: manager
-      permission: assign/update/delete schedules, manage templates, and list schedules within tenant
+      permission: assign/update/delete schedules, manage templates, and list employee-scoped anomaly reports within tenant
     - role: admin
-      permission: assign/update/delete schedules, manage templates, and list schedules within tenant/platform scope
+      permission: assign/update/delete schedules, manage templates, and list anomalies within tenant/platform scope
   endpoints:
     - method: GET
       path: /scheduling/schedules
@@ -47,6 +50,9 @@ api:
     - method: POST
       path: /scheduling/templates/{templateId}/assign
       description: Assign template to one employee for one date and create WorkSchedule.
+    - method: GET
+      path: /scheduling/anomalies
+      description: Read-only anomaly report by period with optional employee filter.
   events:
     published:
       - name: scheduling.schedule.assigned.v1
@@ -67,7 +73,7 @@ db_changes:
     - id: 202602160001_scheduling_template_recurring
       description: Create WorkScheduleTemplate table and enable tenant RLS policies.
   backward_compatible: true
-  notes: Additive scheduling template baseline; no changes to payroll/attendance calculations.
+  notes: Additive API/report behavior only; no schema changes after template baseline.
 invariants:
   - WorkSchedule.employeeId must reference existing Employee.id (FK enforced).
   - startAt must be strictly before endAt.
@@ -76,28 +82,33 @@ invariants:
   - WorkScheduleTemplate.startMinute/endMinute must be in range 0..1439 and cannot be equal.
   - WorkScheduleTemplate.weekdays must contain values in range 1..7.
   - Template assignment is allowed only when requested date weekday is in template.weekdays.
+  - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
+  - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
 risk:
   permissions:
-    - Unauthorized schedule/template access can leak employee working patterns across tenants.
+    - Unauthorized schedule/template/anomaly access can leak employee working patterns across tenants.
   payroll_accuracy:
-    - Schedule is informational only for MVP and does not affect payroll calculation.
+    - Schedule and anomaly report are informational only for MVP and do not affect payroll calculation.
   legal:
-    - Schedule/template changes should remain auditable.
+    - Schedule/template/anomaly report access should remain auditable.
 test_plan:
   unit:
     - schedule/template payload validation boundaries
+    - anomaly threshold and overlap classification boundaries
   integration:
     - manager can create schedule; employee cannot
     - manager can update schedule; employee cannot
     - manager can delete schedule; employee cannot
     - manager can create/list template and assign template; employee cannot
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
+    - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
   regression:
     - template assignment path reuses schedule overlap guard
+    - anomaly report does not mutate schedule or attendance states
   authorization:
-    - permission boundaries for create/update/delete/list/template-assign
+    - permission boundaries for create/update/delete/list/template-assign/anomaly-report
   payroll_accuracy:
-    - not applicable
+    - anomaly report is non-blocking and does not change payroll run outputs
 observability:
   audit_events:
     - scheduling.schedule.assigned
@@ -105,14 +116,18 @@ observability:
     - scheduling.schedule.deleted
     - scheduling.template.created
     - scheduling.template.assigned
+    - scheduling.anomaly.report.generated
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
     - schedule_delete_count (optional)
     - schedule_template_create_count (optional)
     - schedule_template_assign_count (optional)
+    - schedule_anomaly_report_count (optional)
+    - schedule_anomaly_late_count (optional)
+    - schedule_anomaly_no_show_count (optional)
   logs:
-    - authorization denied logs for scheduling/template create/list/assign
+    - authorization denied logs for scheduling/template create/list/assign/anomaly
 rollout:
   feature_flags:
     - name: scheduling_v1
@@ -123,7 +138,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds schedule template APIs and template-based schedule assignment. Existing schedule overlap guard remains enforced; payroll behavior unchanged."
+consumer_impact: "Adds schedule anomaly report API (late/no-show). Existing schedule/template APIs and payroll behavior remain unchanged."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -131,7 +146,7 @@ references:
   - work-items/WI-0042-scheduling-update-api.md
   - work-items/WI-0043-scheduling-delete-api.md
   - work-items/WI-0044-scheduling-template-recurring-baseline.md
+  - work-items/WI-0045-scheduling-anomaly-report.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent
-
