@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.3.0
+  version: 0.4.0
 paths:
   /scheduling/schedules:
     get:
@@ -83,4 +83,47 @@ paths:
           description: Insufficient permissions
         "404":
           description: Schedule not found
+  /scheduling/templates:
+    get:
+      summary: List schedule templates
+      responses:
+        "200":
+          description: Templates listed
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+    post:
+      summary: Create schedule template
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/templates/{templateId}/assign:
+    post:
+      summary: Assign template to employee for one date
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Schedule created from template
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Template not found
+        "409":
+          description: Template weekday mismatch or overlapping schedule exists
 

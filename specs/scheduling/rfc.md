@@ -2,8 +2,8 @@
 
 ## Summary
 
-Introduce a minimal `WorkSchedule` domain so managers can assign planned working windows per employee.
-This is the foundation for Phase 2 scheduling enhancements (templates, rotations, anomaly detection).
+Introduce a `WorkSchedule` + `WorkScheduleTemplate` baseline so managers can assign planned windows and reuse recurring templates.
+This is the foundation for Phase 2 scheduling enhancements (rotations, anomaly detection).
 
 ## Motivation
 
@@ -20,6 +20,14 @@ This is the foundation for Phase 2 scheduling enhancements (templates, rotations
 - `isHoliday`
 - `notes` (optional)
 
+`WorkScheduleTemplate`:
+
+- `organizationId` (FK to `Organization.id`)
+- `name`
+- `startMinute`, `endMinute` (0..1439)
+- `weekdays` (1=Mon ... 7=Sun)
+- `breakMinutes`, `isHoliday`, `notes`
+
 ## API
 
 - `POST /api/scheduling/schedules`
@@ -27,22 +35,29 @@ This is the foundation for Phase 2 scheduling enhancements (templates, rotations
   - Emits audit log + domain event.
 - `GET /api/scheduling/schedules?from=...&to=...&employeeId=...`
   - Lists schedules by period.
+- `POST /api/scheduling/templates`
+  - Creates schedule template.
+- `GET /api/scheduling/templates`
+  - Lists organization templates.
+- `POST /api/scheduling/templates/{templateId}/assign`
+  - Creates one `WorkSchedule` from template for given employee/date.
 
 ## Authorization
 
 - Admin: create/list any.
-- Manager: create schedules within tenant; list requires `employeeId`.
-- Employee: list own schedules only.
+- Manager: schedule CRUD + template create/list/assign within tenant.
+- Employee: list own schedules only (template endpoints denied).
 
 ## Tenant Isolation (RLS)
 
 - Enable RLS on `WorkSchedule`.
 - Policy enforces tenant match via `Employee.organizationId`.
+- Enable RLS on `WorkScheduleTemplate` via `organizationId`.
 - `system` role bypass is allowed for platform operations.
 
 ## Future Extensions
 
-- Schedule templates / recurring shifts
+- Multi-day bulk assignment and rotation engine
 - Shift swap requests and approvals
 - Schedule vs attendance anomaly detection
 
