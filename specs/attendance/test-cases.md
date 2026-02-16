@@ -21,6 +21,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 13. Update pending attendance capture metadata and verify audit/event trace includes capture fields.
 14. Reject attendance create/update when capture payload is invalid (GPS without coordinates, partial coordinate pair).
 15. When `FLOWHR_ATTENDANCE_GPS_REQUIRED=true`, employee non-GPS create/update is rejected while manager correction path remains allowed.
+16. When `FLOWHR_ATTENDANCE_GEOFENCE_ENABLED=true`, employee GPS create/update outside configured radius is rejected while manager correction path remains allowed.
 
 ## Boundary and Accuracy Cases
 
@@ -31,6 +32,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 5. GPS capture channel without both latitude/longitude is blocked.
 6. Latitude/longitude must be provided as a complete pair or omitted together.
 7. GPS policy feature flag only applies to employee write path and is ignored when disabled.
+8. Geofence policy feature flag only applies to employee write path and validates configured radius boundary.
 
 ## Regression Linkage
 

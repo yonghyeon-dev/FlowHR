@@ -1,10 +1,11 @@
 owner: attendance-agent
-version: 1.6.0
+version: 1.7.0
 scope:
   in:
     - attendance record create/update
     - capture channel metadata (GPS/QR/WIFI/DEVICE/MANUAL) on attendance create/update
     - feature-flag based employee GPS capture enforcement
+    - feature-flag based employee geofence enforcement
     - attendance record list query by period
     - attendance aggregates query by period
     - correction approval/rejection flow
@@ -14,7 +15,8 @@ scope:
   out:
     - payroll tax and deduction
     - physical device protocol integration
-    - geofence enforcement/anti-spoofing
+    - geofence polygon and multi-site policy engine
+    - anti-spoofing signals
     - trusted network/device attestation policy engine
 entities:
   - name: AttendanceRecord
@@ -87,6 +89,7 @@ invariants:
   - GPS capture channel requires both latitude and longitude.
   - Attendance location coordinates must be stored as a complete pair or omitted together.
   - When FLOWHR_ATTENDANCE_GPS_REQUIRED is enabled, employee attendance create/update must keep effective capture as GPS with coordinates.
+  - When FLOWHR_ATTENDANCE_GEOFENCE_ENABLED is enabled, employee attendance GPS coordinates must be inside configured geofence radius.
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
@@ -95,6 +98,7 @@ risk:
     - Incorrect overnight boundary handling can misclassify payable minutes.
     - Invalid capture metadata should not alter approval/payroll minute flow.
     - GPS policy false positives can block valid employee check-ins when flag is enabled.
+    - Geofence configuration errors can block employee attendance writes when flag is enabled.
   legal:
     - Attendance history must remain auditable.
 test_plan:
@@ -107,6 +111,7 @@ test_plan:
     - attendance aggregates totals are computed from approved records only
     - capture metadata validation (GPS requires coordinate pair)
     - gps policy flag truthy parsing and enforcement boundaries
+    - geofence configuration parsing and distance threshold validation
   integration:
     - create record rejects unknown employeeId (404)
     - create record to approve flow
@@ -120,7 +125,10 @@ test_plan:
     - update pending attendance capture metadata persists new values
     - invalid capture metadata payload returns 400
     - employee manual/QR attendance write is rejected when gps policy flag is enabled
+    - employee gps attendance write outside geofence is rejected when geofence flag is enabled
+    - employee gps attendance write inside geofence is accepted when geofence flag is enabled
     - manager correction path remains allowed when gps policy flag is enabled
+    - manager correction path remains allowed when geofence flag is enabled
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
   regression:
@@ -142,6 +150,7 @@ observability:
     - attendance_rejection_count
     - attendance_capture_channel_count
     - attendance_gps_policy_reject_count
+    - attendance_geofence_reject_count
   logs:
     - authorization denied logs for attendance approval
     - capture metadata validation failure logs for attendance create/update
@@ -151,13 +160,15 @@ rollout:
       default: "off"
     - name: FLOWHR_ATTENDANCE_GPS_REQUIRED
       default: "false"
+    - name: FLOWHR_ATTENDANCE_GEOFENCE_ENABLED
+      default: "false"
   migration_strategy: expand-contract
 rollback:
   strategy: disable attendance_v1 and route reads to previous adapter
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.6.0 adds optional employee GPS capture enforcement behind FLOWHR_ATTENDANCE_GPS_REQUIRED. Default-off keeps existing behavior; enabled mode rejects employee non-GPS attendance writes."
+consumer_impact: "Contract v1.7.0 adds optional employee geofence enforcement behind FLOWHR_ATTENDANCE_GEOFENCE_ENABLED. Default-off keeps existing behavior; enabled mode rejects employee GPS attendance writes outside configured radius."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -168,6 +179,7 @@ references:
   - work-items/WI-0031-attendance-aggregates-api.md
   - work-items/WI-0048-attendance-capture-channel-metadata.md
   - work-items/WI-0049-attendance-gps-policy-enforcement.md
+  - work-items/WI-0050-attendance-geofence-policy.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent
