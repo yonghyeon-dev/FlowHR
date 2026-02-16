@@ -20,6 +20,7 @@ No additional migration in WI-0051 (anomaly alert automation is runtime event/au
 No additional migration in WI-0055 (anomaly escalation automation is runtime event/audit behavior only).
 No additional migration in WI-0057 (rotation balance report is read-only runtime/API behavior only).
 No additional migration in WI-0058 (rotation optimization evaluate/apply is runtime/API behavior only).
+No additional migration in WI-0059 (rotation fairness report is read-only runtime/API behavior only).
 
 ## Tenant Isolation
 

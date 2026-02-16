@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.11.0
+  version: 0.12.0
 paths:
   /scheduling/schedules:
     get:
@@ -212,6 +212,23 @@ paths:
           description: Template or employee not found in tenant scope
         "409":
           description: Template weekday mismatch, organization mismatch, or overlap conflict when apply=true
+  /scheduling/rotations/fairness:
+    post:
+      summary: Generate tenant-level rotation fairness report across employees (read-only)
+      description: Evaluate per-employee rotation optimization recommendations and aggregate fairness metrics for selected employee scope.
+      responses:
+        "200":
+          description: Fairness report generated
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions or cross-tenant fairness query
+        "404":
+          description: Template or employee not found in tenant/organization scope
+        "409":
+          description: Template weekday mismatch or organization mismatch between template and employee
   /scheduling/anomalies:
     get:
       summary: List schedule-to-attendance anomalies (read-only)

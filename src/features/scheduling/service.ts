@@ -6,6 +6,7 @@ import type {
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   DataAccess,
+  EmployeeEntity,
   UpdateWorkScheduleInput,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
@@ -42,6 +43,14 @@ type ListRotationBalanceInput = {
   periodStart: Date;
   periodEnd: Date;
   employeeId?: string;
+};
+
+type ListRotationFairnessInput = {
+  organizationId?: string;
+  fromDate: string;
+  toDate: string;
+  templateIds: string[];
+  employeeIds?: string[];
 };
 
 type UpdateScheduleInput = {
@@ -179,6 +188,34 @@ export type RotationBalanceReport = {
     plannedMinutes: number;
   }>;
   recommendations: string[];
+};
+
+export type RotationFairnessEmployeeResult = {
+  employeeId: string;
+  recommendedStartOffset: number;
+  optimizedTemplateIds: string[];
+  matchedDates: string[];
+  score: {
+    weekdayGap: number;
+    plannedMinutesGap: number;
+    grade: RotationBalanceGrade;
+  };
+};
+
+export type RotationFairnessReport = {
+  organizationId: string;
+  fromDate: string;
+  toDate: string;
+  templateIds: string[];
+  employeeCount: number;
+  summary: {
+    maxWeekdayGap: number;
+    maxPlannedMinutesGap: number;
+    avgWeekdayGap: number;
+    avgPlannedMinutesGap: number;
+    grade: RotationBalanceGrade;
+  };
+  results: RotationFairnessEmployeeResult[];
 };
 
 type ServiceContext = {
@@ -646,12 +683,35 @@ function normalizeTemplateIds(templateIds: string[]) {
   return trimmed;
 }
 
+function normalizeEmployeeIds(employeeIds: string[] | undefined) {
+  if (!employeeIds) {
+    return undefined;
+  }
+  const trimmed = employeeIds.map((value) => value.trim()).filter((value) => value.length > 0);
+  if (trimmed.length === 0) {
+    throw new ServiceError(400, "employeeIds must include at least one employee id when provided");
+  }
+  if (trimmed.length > 200) {
+    throw new ServiceError(400, "employeeIds must not exceed 200 entries");
+  }
+  const unique = new Set(trimmed);
+  if (unique.size !== trimmed.length) {
+    throw new ServiceError(400, "employeeIds must not contain duplicates");
+  }
+  return trimmed;
+}
+
 type RotationOffsetEvaluation = {
   offset: number;
   optimizedTemplateIds: string[];
   weekdayGap: number;
   plannedMinutesGap: number;
   grade: RotationBalanceGrade;
+};
+
+type EmployeeRotationOptimizationEvaluation = {
+  employee: EmployeeEntity;
+  best: RotationOffsetEvaluation;
 };
 
 function rotateTemplatesByOffset(
@@ -746,6 +806,66 @@ async function requireTemplatesWithinTenant(context: ServiceContext, templateIds
 
 function weekdaySetKey(weekdays: number[]) {
   return normalizeWeekdays(weekdays).join(",");
+}
+
+function ensureRotationTemplatesShareWeekdaySet(
+  templates: WorkScheduleTemplateEntity[],
+  templateIds: string[]
+) {
+  const baseWeekdayKey = weekdaySetKey(templates[0].weekdays);
+  for (const template of templates) {
+    if (weekdaySetKey(template.weekdays) !== baseWeekdayKey) {
+      throw new ServiceError(409, "all rotation templates must share same weekday set", {
+        templateIds
+      });
+    }
+  }
+}
+
+async function evaluateBestRotationForEmployee(
+  context: ServiceContext,
+  input: {
+    employee: EmployeeEntity;
+    fromDate: string;
+    toDate: string;
+    templates: WorkScheduleTemplateEntity[];
+    matchedDates: string[];
+  }
+): Promise<EmployeeRotationOptimizationEvaluation> {
+  for (const template of input.templates) {
+    if (!input.employee.organizationId || input.employee.organizationId !== template.organizationId) {
+      throw new ServiceError(409, "template organization and employee organization must match", {
+        templateId: template.id,
+        employeeId: input.employee.id
+      });
+    }
+  }
+
+  const periodStart = parseDateToKstBase(input.fromDate);
+  const periodEnd = new Date(parseDateToKstBase(input.toDate).getTime() + 24 * 60 * 60 * 1000);
+  const existingSchedules = await listWorkSchedules(context, {
+    periodStart,
+    periodEnd,
+    employeeId: input.employee.id
+  });
+
+  const evaluations = input.templates.map((_, offset) =>
+    evaluateRotationOffset(existingSchedules, input.templates, input.matchedDates, offset)
+  );
+  evaluations.sort((left, right) => {
+    if (left.plannedMinutesGap !== right.plannedMinutesGap) {
+      return left.plannedMinutesGap - right.plannedMinutesGap;
+    }
+    if (left.weekdayGap !== right.weekdayGap) {
+      return left.weekdayGap - right.weekdayGap;
+    }
+    return left.offset - right.offset;
+  });
+
+  return {
+    employee: input.employee,
+    best: evaluations[0]
+  };
 }
 
 async function ensureNoOverlapsForGeneratedWindows(
@@ -1401,47 +1521,16 @@ export async function optimizeWorkScheduleRotation(
   const templateIds = normalizeTemplateIds(input.templateIds);
   const templates = await requireTemplatesWithinTenant(context, templateIds);
   const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
-
-  for (const template of templates) {
-    if (!employee.organizationId || employee.organizationId !== template.organizationId) {
-      throw new ServiceError(409, "template organization and employee organization must match", {
-        templateId: template.id,
-        employeeId: input.employeeId
-      });
-    }
-  }
-
-  const baseWeekdayKey = weekdaySetKey(templates[0].weekdays);
-  for (const template of templates) {
-    if (weekdaySetKey(template.weekdays) !== baseWeekdayKey) {
-      throw new ServiceError(409, "all rotation templates must share same weekday set", {
-        templateIds
-      });
-    }
-  }
-
+  ensureRotationTemplatesShareWeekdaySet(templates, templateIds);
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
-  const periodStart = parseDateToKstBase(input.fromDate);
-  const periodEnd = new Date(parseDateToKstBase(input.toDate).getTime() + 24 * 60 * 60 * 1000);
-  const existingSchedules = await listWorkSchedules(context, {
-    periodStart,
-    periodEnd,
-    employeeId: input.employeeId
+  const evaluation = await evaluateBestRotationForEmployee(context, {
+    employee,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    templates,
+    matchedDates
   });
-
-  const evaluations = templates.map((_, offset) =>
-    evaluateRotationOffset(existingSchedules, templates, matchedDates, offset)
-  );
-  evaluations.sort((left, right) => {
-    if (left.plannedMinutesGap !== right.plannedMinutesGap) {
-      return left.plannedMinutesGap - right.plannedMinutesGap;
-    }
-    if (left.weekdayGap !== right.weekdayGap) {
-      return left.weekdayGap - right.weekdayGap;
-    }
-    return left.offset - right.offset;
-  });
-  const best = evaluations[0];
+  const best = evaluation.best;
 
   let createdScheduleIds: string[] = [];
   if (input.apply) {
@@ -1489,6 +1578,138 @@ export async function optimizeWorkScheduleRotation(
       grade: best.grade
     },
     createdScheduleIds
+  };
+}
+
+export async function listWorkScheduleRotationFairness(
+  context: ServiceContext,
+  input: ListRotationFairnessInput
+): Promise<RotationFairnessReport> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule rotation fairness requires permission"
+  );
+
+  const tenantScope = resolveTenantScope(actor);
+  if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
+    throw new ServiceError(403, "cross-tenant fairness report is not allowed");
+  }
+
+  const organizationId = tenantScope ?? input.organizationId;
+  if (!organizationId) {
+    throw new ServiceError(400, "organizationId is required for global fairness queries");
+  }
+
+  const templateIds = normalizeTemplateIds(input.templateIds);
+  const templates = await requireTemplatesWithinTenant(context, templateIds);
+  ensureRotationTemplatesShareWeekdaySet(templates, templateIds);
+  const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
+
+  const allEmployees = await context.dataAccess.employees.list({
+    active: true,
+    organizationId
+  });
+  const requestedEmployeeIds = normalizeEmployeeIds(input.employeeIds);
+  let scopedEmployees = allEmployees;
+  if (requestedEmployeeIds) {
+    const byId = new Map(allEmployees.map((employee) => [employee.id, employee]));
+    const missingEmployeeIds = requestedEmployeeIds.filter((employeeId) => !byId.has(employeeId));
+    if (missingEmployeeIds.length > 0) {
+      throw new ServiceError(404, "employee not found in organization scope", {
+        employeeIds: missingEmployeeIds
+      });
+    }
+    scopedEmployees = requestedEmployeeIds.map((employeeId) => byId.get(employeeId)!);
+  }
+
+  const results: RotationFairnessEmployeeResult[] = [];
+  for (const employee of scopedEmployees) {
+    const evaluation = await evaluateBestRotationForEmployee(context, {
+      employee,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      templates,
+      matchedDates
+    });
+    results.push({
+      employeeId: employee.id,
+      recommendedStartOffset: evaluation.best.offset,
+      optimizedTemplateIds: evaluation.best.optimizedTemplateIds,
+      matchedDates,
+      score: {
+        weekdayGap: evaluation.best.weekdayGap,
+        plannedMinutesGap: evaluation.best.plannedMinutesGap,
+        grade: evaluation.best.grade
+      }
+    });
+  }
+
+  results.sort((left, right) => {
+    if (left.score.plannedMinutesGap !== right.score.plannedMinutesGap) {
+      return right.score.plannedMinutesGap - left.score.plannedMinutesGap;
+    }
+    if (left.score.weekdayGap !== right.score.weekdayGap) {
+      return right.score.weekdayGap - left.score.weekdayGap;
+    }
+    return left.employeeId.localeCompare(right.employeeId);
+  });
+
+  const maxWeekdayGap = results.length === 0 ? 0 : Math.max(...results.map((entry) => entry.score.weekdayGap));
+  const maxPlannedMinutesGap =
+    results.length === 0 ? 0 : Math.max(...results.map((entry) => entry.score.plannedMinutesGap));
+  const avgWeekdayGap =
+    results.length === 0
+      ? 0
+      : Number((results.reduce((sum, entry) => sum + entry.score.weekdayGap, 0) / results.length).toFixed(2));
+  const avgPlannedMinutesGap =
+    results.length === 0
+      ? 0
+      : Number(
+          (results.reduce((sum, entry) => sum + entry.score.plannedMinutesGap, 0) / results.length).toFixed(2)
+        );
+  const grade = deriveRotationBalanceGrade(maxWeekdayGap, maxPlannedMinutesGap);
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.rotation.fairness.report.generated",
+    entityType: "WorkSchedule",
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      organizationId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      templateIds,
+      employeeCount: results.length,
+      maxWeekdayGap,
+      maxPlannedMinutesGap,
+      avgWeekdayGap,
+      avgPlannedMinutesGap,
+      grade,
+      employeeIds: results.map((entry) => entry.employeeId)
+    }
+  });
+
+  return {
+    organizationId,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    templateIds,
+    employeeCount: results.length,
+    summary: {
+      maxWeekdayGap,
+      maxPlannedMinutesGap,
+      avgWeekdayGap,
+      avgPlannedMinutesGap,
+      grade
+    },
+    results
   };
 }
 
