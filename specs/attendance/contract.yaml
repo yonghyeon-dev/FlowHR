@@ -1,19 +1,22 @@
 owner: attendance-agent
-version: 1.4.1
+version: 1.5.0
 scope:
   in:
     - attendance record create/update
+    - capture channel metadata (GPS/QR/WIFI/DEVICE/MANUAL) on attendance create/update
     - attendance record list query by period
     - attendance aggregates query by period
     - correction approval/rejection flow
     - rejection reason capture in audit/event payload
+    - GPS payload validation (coordinate pair requirement)
     - approved/rejected attendance event publication
   out:
     - payroll tax and deduction
     - physical device protocol integration
+    - geofence enforcement/anti-spoofing
 entities:
   - name: AttendanceRecord
-    description: Employee time entry with check-in/check-out and state.
+    description: Employee time entry with check-in/check-out, state, and capture metadata.
   - name: AttendanceCorrection
     description: Requested or system-provided correction with approval state.
 api:
@@ -35,10 +38,10 @@ api:
       description: List attendance aggregates (payable minutes totals) filtered by period (from/to) and optional employeeId.
     - method: POST
       path: /attendance/records
-      description: Create attendance record.
+      description: Create attendance record with optional capture metadata payload.
     - method: PATCH
       path: /attendance/records/{recordId}
-      description: Update attendance record before approval.
+      description: Update attendance record before approval (including capture metadata).
     - method: POST
       path: /attendance/records/{recordId}/approve
       description: Approve attendance record or correction.
@@ -66,6 +69,8 @@ db_changes:
       description: Extend AttendanceRecord with holiday/approval columns and add AuditLog.
     - id: 202602140006_employee_fk_constraints
       description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
+    - id: 202602160002_wi0048_attendance_capture_metadata
+      description: Add attendance capture channel/device/ip/location metadata columns.
   backward_compatible: true
   notes: Expand-contract pattern for future attendance payload updates.
 invariants:
@@ -77,12 +82,15 @@ invariants:
   - Approved/rejected attendance emits exactly one final state event.
   - Employee attendance list queries are restricted to own employeeId.
   - AttendanceRecord.employeeId must reference existing Employee.id (FK enforced).
+  - GPS capture channel requires both latitude and longitude.
+  - Attendance location coordinates must be stored as a complete pair or omitted together.
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
     - Unauthorized rejection could omit payable minutes.
   payroll_accuracy:
     - Incorrect overnight boundary handling can misclassify payable minutes.
+    - Invalid capture metadata should not alter approval/payroll minute flow.
   legal:
     - Attendance history must remain auditable.
 test_plan:
@@ -93,6 +101,7 @@ test_plan:
     - attendance list query parsing and role boundary guards
     - attendance aggregates query parsing and role boundary guards
     - attendance aggregates totals are computed from approved records only
+    - capture metadata validation (GPS requires coordinate pair)
   integration:
     - create record rejects unknown employeeId (404)
     - create record to approve flow
@@ -102,6 +111,9 @@ test_plan:
     - reject flow oversized reason payload returns 400
     - list records by period returns expected rows
     - list aggregates by period returns expected totals and state counts
+    - create attendance with capture metadata persists channel/device/ip/location
+    - update pending attendance capture metadata persists new values
+    - invalid capture metadata payload returns 400
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
   regression:
@@ -121,8 +133,10 @@ observability:
     - attendance_approval_latency_ms
     - attendance_correction_count
     - attendance_rejection_count
+    - attendance_capture_channel_count
   logs:
     - authorization denied logs for attendance approval
+    - capture metadata validation failure logs for attendance create/update
 rollout:
   feature_flags:
     - name: attendance_v1
@@ -133,7 +147,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.4.1 enforces attendance employeeId referential integrity (Employee FK) and rejects write paths that reference a non-existent employee."
+consumer_impact: "Contract v1.5.0 adds optional attendance capture metadata fields (channel/device/ip/location). Existing consumers remain compatible; GPS capture requests now require coordinate pair validation."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -142,6 +156,7 @@ references:
   - work-items/WI-0017-attendance-reject-validation-guards.md
   - work-items/WI-0026-attendance-list-api.md
   - work-items/WI-0031-attendance-aggregates-api.md
+  - work-items/WI-0048-attendance-capture-channel-metadata.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent

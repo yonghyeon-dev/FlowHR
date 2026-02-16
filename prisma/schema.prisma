@@ -72,6 +72,12 @@ model AttendanceRecord {
   breakMinutes Int      @default(0)
   isHoliday    Boolean  @default(false)
   notes        String?
+  captureChannel       AttendanceCaptureChannel @default(MANUAL)
+  captureDeviceId      String?
+  captureIpAddress     String?
+  captureLatitude      Float?
+  captureLongitude     Float?
+  captureAccuracyMeters Int?
   state        AttendanceState @default(PENDING)
   approvedAt   DateTime?
   approvedBy   String?
@@ -224,6 +230,14 @@ enum AttendanceState {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum AttendanceCaptureChannel {
+  MANUAL
+  GPS
+  QR
+  WIFI
+  DEVICE
 }
 
 enum LeaveType {
