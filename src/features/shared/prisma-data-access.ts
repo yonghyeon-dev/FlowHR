@@ -488,6 +488,13 @@ const scheduling: SchedulingStore = {
     return toWorkScheduleEntity(record);
   },
 
+  async delete(id: string) {
+    const record = await prisma.workSchedule.delete({
+      where: { id }
+    });
+    return toWorkScheduleEntity(record);
+  },
+
   async listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;

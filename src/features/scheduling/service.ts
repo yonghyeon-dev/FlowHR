@@ -142,7 +142,8 @@ export async function createWorkSchedule(
 
 async function requireEditableSchedule(
   context: ServiceContext,
-  scheduleId: string
+  scheduleId: string,
+  permissionMessage: string
 ): Promise<WorkScheduleEntity> {
   const actor = context.actor;
   if (!actor) {
@@ -155,7 +156,7 @@ async function requireEditableSchedule(
   }
 
   await requireEmployeeWithinTenant(context.dataAccess, context.actor, existing.employeeId);
-  await requirePermission(context, Permissions.schedulingScheduleWriteAny, "schedule update requires permission");
+  await requirePermission(context, Permissions.schedulingScheduleWriteAny, permissionMessage);
 
   return existing;
 }
@@ -165,7 +166,7 @@ export async function updateWorkSchedule(
   scheduleId: string,
   input: UpdateScheduleInput
 ): Promise<WorkScheduleEntity> {
-  const existing = await requireEditableSchedule(context, scheduleId);
+  const existing = await requireEditableSchedule(context, scheduleId, "schedule update requires permission");
   const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, existing.employeeId);
 
   const startAt = input.startAt ?? existing.startAt;
@@ -235,6 +236,50 @@ export async function updateWorkSchedule(
   });
 
   return updated;
+}
+
+export async function deleteWorkSchedule(
+  context: ServiceContext,
+  scheduleId: string
+): Promise<WorkScheduleEntity> {
+  const existing = await requireEditableSchedule(context, scheduleId, "schedule delete requires permission");
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, existing.employeeId);
+
+  const deleted = await context.dataAccess.scheduling.delete(scheduleId);
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.schedule.deleted",
+    entityType: "WorkSchedule",
+    entityId: deleted.id,
+    organizationId: employee.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      scheduleId: deleted.id,
+      employeeId: deleted.employeeId,
+      startAt: deleted.startAt.toISOString(),
+      endAt: deleted.endAt.toISOString(),
+      breakMinutes: deleted.breakMinutes,
+      isHoliday: deleted.isHoliday
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "scheduling.schedule.deleted.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "WorkSchedule",
+    entityId: deleted.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      employeeId: deleted.employeeId,
+      startAt: deleted.startAt.toISOString(),
+      endAt: deleted.endAt.toISOString(),
+      breakMinutes: deleted.breakMinutes,
+      isHoliday: deleted.isHoliday
+    }
+  });
+
+  return deleted;
 }
 
 export async function listWorkSchedules(

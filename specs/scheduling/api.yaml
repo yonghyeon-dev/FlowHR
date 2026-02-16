@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.2.0
+  version: 0.3.0
 paths:
   /scheduling/schedules:
     get:
@@ -66,4 +66,21 @@ paths:
           description: Schedule not found
         "409":
           description: Overlapping schedule exists
+    delete:
+      summary: Delete schedule
+      parameters:
+        - in: path
+          name: scheduleId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Schedule not found
 

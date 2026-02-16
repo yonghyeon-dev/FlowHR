@@ -503,6 +503,15 @@ export const memoryDataAccess: DataAccess = {
       return cloneWorkSchedule(updated);
     },
 
+    async delete(id: string) {
+      const existing = state.workSchedules.get(id);
+      if (!existing) {
+        throw new Error(`work schedule not found: ${id}`);
+      }
+      state.workSchedules.delete(id);
+      return cloneWorkSchedule(existing);
+    },
+
     async listInPeriod(input) {
       const rows: WorkScheduleEntity[] = [];
       for (const entity of state.workSchedules.values()) {

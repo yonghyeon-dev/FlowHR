@@ -1,5 +1,5 @@
 import { updateWorkScheduleSchema } from "@/features/scheduling/schemas";
-import { updateWorkSchedule } from "@/features/scheduling/service";
+import { deleteWorkSchedule, updateWorkSchedule } from "@/features/scheduling/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
@@ -37,6 +37,25 @@ export async function PATCH(request: Request, context: RouteContext) {
         isHoliday: parsed.data.isHoliday,
         notes: parsed.data.notes
       }
+    );
+    return ok({ schedule });
+  } catch (error) {
+    if (isServiceError(error)) {
+      return fail(error.status, error.message, error.details);
+    }
+    throw error;
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const { scheduleId } = await context.params;
+  try {
+    const schedule = await deleteWorkSchedule(
+      {
+        actor: await readActor(request),
+        dataAccess: getRuntimeDataAccess()
+      },
+      scheduleId
     );
     return ok({ schedule });
   } catch (error) {
