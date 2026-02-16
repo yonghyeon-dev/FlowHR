@@ -152,7 +152,27 @@ type AntiSpoofingPolicyConfig = {
   reputationPenalty: number;
   highRiskDeviceIds: Set<string>;
   highRiskIpAddresses: Set<string>;
+  externalReputationEnabled: boolean;
+  externalReputationProvider: "static" | "remote";
+  externalReputationUrl: string | null;
+  externalReputationTimeoutMs: number;
+  externalReputationCacheTtlSeconds: number;
+  externalReputationStrictMode: boolean;
 };
+
+type AntiSpoofingReputationSnapshot = {
+  highRiskDeviceIds: Set<string>;
+  highRiskIpAddresses: Set<string>;
+  source: "static" | "remote" | "remote-fallback";
+};
+
+type AntiSpoofingReputationCache = {
+  cacheKey: string;
+  expiresAt: number;
+  snapshot: AntiSpoofingReputationSnapshot;
+};
+
+let antiSpoofingReputationCache: AntiSpoofingReputationCache | null = null;
 
 function parseNumberEnv(value: string | undefined): number | null {
   if (value === undefined) {
@@ -180,6 +200,140 @@ function parseCsvSet(value: string | undefined, normalize?: (token: string) => s
     .filter((token) => token.length > 0)
     .map((token) => (normalize ? normalize(token) : token));
   return new Set(tokens);
+}
+
+function parseExternalReputationProvider(value: string | undefined): "static" | "remote" {
+  const normalized = (value ?? "static").trim().toLowerCase();
+  if (normalized === "static" || normalized === "remote") {
+    return normalized;
+  }
+  throw new ServiceError(
+    500,
+    "attendance anti-spoofing policy is enabled but external reputation provider configuration is invalid"
+  );
+}
+
+function resolveReputationCacheKey(config: AntiSpoofingPolicyConfig) {
+  const staticDeviceIds = Array.from(config.highRiskDeviceIds).sort().join(",");
+  const staticIpAddresses = Array.from(config.highRiskIpAddresses).sort().join(",");
+  return [
+    config.externalReputationEnabled ? "1" : "0",
+    config.externalReputationProvider,
+    config.externalReputationUrl ?? "",
+    config.externalReputationStrictMode ? "1" : "0",
+    staticDeviceIds,
+    staticIpAddresses
+  ].join("|");
+}
+
+function parseRemoteReputationPayload(payload: unknown): {
+  highRiskDeviceIds: Set<string>;
+  highRiskIpAddresses: Set<string>;
+} {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("reputation payload must be an object");
+  }
+  const body = payload as Record<string, unknown>;
+  const deviceIdsRaw = body.highRiskDeviceIds ?? body.deviceIds ?? [];
+  const ipAddressesRaw = body.highRiskIpAddresses ?? body.ipAddresses ?? [];
+
+  if (!Array.isArray(deviceIdsRaw) || !Array.isArray(ipAddressesRaw)) {
+    throw new Error("reputation payload arrays are invalid");
+  }
+
+  const highRiskDeviceIds = new Set(
+    deviceIdsRaw
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+  );
+  const highRiskIpAddresses = new Set(
+    ipAddressesRaw
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim().toLowerCase())
+      .filter((value) => value.length > 0)
+  );
+
+  return {
+    highRiskDeviceIds,
+    highRiskIpAddresses
+  };
+}
+
+async function fetchRemoteReputationSnapshot(config: AntiSpoofingPolicyConfig) {
+  const url = config.externalReputationUrl;
+  if (!url) {
+    throw new Error("reputation URL is missing");
+  }
+
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), config.externalReputationTimeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        accept: "application/json"
+      },
+      signal: abortController.signal
+    });
+    if (!response.ok) {
+      throw new Error(`reputation provider responded with status ${response.status}`);
+    }
+    const payload = (await response.json()) as unknown;
+    return parseRemoteReputationPayload(payload);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function resolveAntiSpoofingReputationSnapshot(
+  config: AntiSpoofingPolicyConfig
+): Promise<AntiSpoofingReputationSnapshot> {
+  const baseSnapshot: AntiSpoofingReputationSnapshot = {
+    highRiskDeviceIds: new Set(config.highRiskDeviceIds),
+    highRiskIpAddresses: new Set(config.highRiskIpAddresses),
+    source: "static"
+  };
+
+  if (!config.externalReputationEnabled || config.externalReputationProvider !== "remote") {
+    return baseSnapshot;
+  }
+
+  const now = Date.now();
+  const cacheKey = resolveReputationCacheKey(config);
+  if (
+    antiSpoofingReputationCache &&
+    antiSpoofingReputationCache.cacheKey === cacheKey &&
+    antiSpoofingReputationCache.expiresAt > now
+  ) {
+    return antiSpoofingReputationCache.snapshot;
+  }
+
+  try {
+    const remoteSnapshot = await fetchRemoteReputationSnapshot(config);
+    const mergedSnapshot: AntiSpoofingReputationSnapshot = {
+      highRiskDeviceIds: new Set([...baseSnapshot.highRiskDeviceIds, ...remoteSnapshot.highRiskDeviceIds]),
+      highRiskIpAddresses: new Set([...baseSnapshot.highRiskIpAddresses, ...remoteSnapshot.highRiskIpAddresses]),
+      source: "remote"
+    };
+    antiSpoofingReputationCache = {
+      cacheKey,
+      expiresAt: now + config.externalReputationCacheTtlSeconds * 1000,
+      snapshot: mergedSnapshot
+    };
+    return mergedSnapshot;
+  } catch {
+    if (config.externalReputationStrictMode) {
+      throw new ServiceError(
+        500,
+        "attendance anti-spoofing policy could not load external reputation snapshot"
+      );
+    }
+    return {
+      ...baseSnapshot,
+      source: "remote-fallback"
+    };
+  }
 }
 
 function parseTrustedDeviceAllowlist() {
@@ -286,6 +440,32 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       process.env.ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_IPS,
     (token) => token.toLowerCase()
   );
+  const externalReputationEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED
+  );
+  const externalReputationProvider = parseExternalReputationProvider(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_PROVIDER ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_PROVIDER
+  );
+  const externalReputationUrl =
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URL ??
+    process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URL ??
+    null;
+  const externalReputationTimeoutMs =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_TIMEOUT_MS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_TIMEOUT_MS
+    ) ?? 2000;
+  const externalReputationCacheTtlSeconds =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CACHE_TTL_SECONDS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CACHE_TTL_SECONDS
+    ) ?? 300;
+  const externalReputationStrictMode = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_STRICT_MODE ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_STRICT_MODE
+  );
 
   if (maxGpsAccuracyMeters <= 0) {
     throw new ServiceError(
@@ -311,6 +491,24 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       "attendance anti-spoofing policy is enabled but reputation penalty configuration is invalid"
     );
   }
+  if (externalReputationEnabled && externalReputationProvider === "remote" && !externalReputationUrl?.trim()) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation URL configuration is empty"
+    );
+  }
+  if (externalReputationTimeoutMs < 100 || externalReputationTimeoutMs > 10000) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation timeout configuration is invalid"
+    );
+  }
+  if (externalReputationCacheTtlSeconds < 0 || externalReputationCacheTtlSeconds > 3600) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation cache ttl configuration is invalid"
+    );
+  }
 
   return {
     allowedChannels: allowed,
@@ -320,7 +518,13 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
     minSignals,
     reputationPenalty,
     highRiskDeviceIds,
-    highRiskIpAddresses
+    highRiskIpAddresses,
+    externalReputationEnabled,
+    externalReputationProvider,
+    externalReputationUrl: externalReputationUrl?.trim() || null,
+    externalReputationTimeoutMs,
+    externalReputationCacheTtlSeconds,
+    externalReputationStrictMode
   };
 }
 
@@ -638,6 +842,7 @@ function assertDeviceAttestationForUpdate(
 
 function computeAntiSpoofingRiskScore(
   config: AntiSpoofingPolicyConfig,
+  reputationSnapshot: AntiSpoofingReputationSnapshot,
   channel: AttendanceCaptureChannel,
   deviceId: string | null | undefined,
   ipAddress: string | null | undefined,
@@ -696,10 +901,13 @@ function computeAntiSpoofingRiskScore(
     if (signalCount < config.minSignals) {
       score += config.reputationPenalty;
     }
-    if (normalizedDeviceId && config.highRiskDeviceIds.has(normalizedDeviceId)) {
+    if (normalizedDeviceId && reputationSnapshot.highRiskDeviceIds.has(normalizedDeviceId)) {
       score += config.reputationPenalty;
     }
-    if (normalizedIpAddress && config.highRiskIpAddresses.has(normalizedIpAddress.toLowerCase())) {
+    if (
+      normalizedIpAddress &&
+      reputationSnapshot.highRiskIpAddresses.has(normalizedIpAddress.toLowerCase())
+    ) {
       score += config.reputationPenalty;
     }
   }
@@ -707,15 +915,17 @@ function computeAntiSpoofingRiskScore(
   return score;
 }
 
-function assertAntiSpoofingPolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+async function assertAntiSpoofingPolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
   if (!isAttendanceAntiSpoofingPolicyEnabled() || actor.role !== "employee") {
     return;
   }
 
   const config = loadAntiSpoofingPolicyConfig();
+  const reputationSnapshot = await resolveAntiSpoofingReputationSnapshot(config);
   const channel = input.capture?.channel ?? "MANUAL";
   const riskScore = computeAntiSpoofingRiskScore(
     config,
+    reputationSnapshot,
     channel,
     input.capture?.deviceId,
     input.capture?.ipAddress,
@@ -732,7 +942,7 @@ function assertAntiSpoofingPolicyForCreate(actor: Actor, input: CreateAttendance
   }
 }
 
-function assertAntiSpoofingPolicyForUpdate(
+async function assertAntiSpoofingPolicyForUpdate(
   actor: Actor,
   existing: AttendanceRecordEntity,
   input: UpdateAttendanceInput
@@ -742,6 +952,7 @@ function assertAntiSpoofingPolicyForUpdate(
   }
 
   const config = loadAntiSpoofingPolicyConfig();
+  const reputationSnapshot = await resolveAntiSpoofingReputationSnapshot(config);
   const nextChannel = input.capture?.channel ?? existing.captureChannel;
   const nextDeviceId = input.capture?.deviceId !== undefined ? input.capture.deviceId : existing.captureDeviceId;
   const nextIpAddress = input.capture?.ipAddress !== undefined ? input.capture.ipAddress : existing.captureIpAddress;
@@ -753,6 +964,7 @@ function assertAntiSpoofingPolicyForUpdate(
     input.capture?.longitude !== undefined ? input.capture.longitude : existing.captureLongitude;
   const riskScore = computeAntiSpoofingRiskScore(
     config,
+    reputationSnapshot,
     nextChannel,
     nextDeviceId,
     nextIpAddress,
@@ -830,7 +1042,7 @@ export async function createAttendanceRecord(
   assertGeofencePolicyForCreate(actor, input);
   assertTrustedDevicePolicyForCreate(actor, input);
   assertDeviceAttestationForCreate(actor, input);
-  assertAntiSpoofingPolicyForCreate(actor, input);
+  await assertAntiSpoofingPolicyForCreate(actor, input);
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -916,7 +1128,7 @@ export async function updateAttendanceRecord(
   assertGeofencePolicyForUpdate(context.actor!, existing, input);
   assertTrustedDevicePolicyForUpdate(context.actor!, existing, input);
   assertDeviceAttestationForUpdate(context.actor!, existing, input);
-  assertAntiSpoofingPolicyForUpdate(context.actor!, existing, input);
+  await assertAntiSpoofingPolicyForUpdate(context.actor!, existing, input);
   const employee = await requireEmployeeWithinTenant(
     context.dataAccess,
     context.actor,

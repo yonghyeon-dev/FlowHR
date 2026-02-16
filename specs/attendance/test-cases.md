@@ -27,6 +27,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 19. When `FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED=true`, employee write with missing/mismatched capture attestation token is rejected while mapped device/token pair is accepted.
 20. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED=true`, employee write with risk score above threshold is rejected while low-risk capture payload is accepted and manager correction path remains allowed.
 21. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED=true`, employee write with high-risk device/ip reputation or insufficient signal fusion count is rejected while safe fused payload is accepted.
+22. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED=true`, employee write uses remote reputation high-risk device/ip signals and rejects high-risk payload while manager correction path remains allowed.
 
 ## Boundary and Accuracy Cases
 
@@ -43,6 +44,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 11. Device attestation policy feature flag only applies to employee write path and validates configured device/token mapping.
 12. Anti-spoofing policy feature flag only applies to employee write path and validates allowed channel, GPS accuracy, and risk threshold configuration.
 13. Signal-fusion/reputation policy feature flag only applies to employee write path and validates min-signal/reputation-penalty/high-risk-list configuration.
+14. External reputation integration validates provider mode/URL/timeout/cache/strict-mode configuration and remote payload parsing.
 
 ## Regression Linkage
 
