@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.10.0
+  version: 0.11.0
 paths:
   /scheduling/schedules:
     get:
@@ -195,6 +195,23 @@ paths:
           description: Insufficient permissions
         "404":
           description: Employee not found in tenant scope
+  /scheduling/rotations/optimize:
+    post:
+      summary: Optimize rotation template order and optionally apply assignment
+      description: Evaluate rotation start offsets to minimize weekday/planned-minute imbalance, then optionally write schedules using optimized order.
+      responses:
+        "201":
+          description: Optimization result returned (and schedules created when apply=true)
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Template or employee not found in tenant scope
+        "409":
+          description: Template weekday mismatch, organization mismatch, or overlap conflict when apply=true
   /scheduling/anomalies:
     get:
       summary: List schedule-to-attendance anomalies (read-only)
