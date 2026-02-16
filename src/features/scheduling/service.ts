@@ -78,6 +78,32 @@ export type TemplateRangeAssignmentResult = {
   createdScheduleIds: string[];
 };
 
+type AssignRotationInput = {
+  employeeId: string;
+  fromDate: string;
+  toDate: string;
+  templateIds: string[];
+};
+
+type GeneratedScheduleWindow = {
+  date: string;
+  templateId: string;
+  startAt: Date;
+  endAt: Date;
+  breakMinutes: number;
+  isHoliday: boolean;
+  notes: string | undefined;
+};
+
+export type RotationAssignmentResult = {
+  employeeId: string;
+  fromDate: string;
+  toDate: string;
+  templateIds: string[];
+  matchedDates: string[];
+  createdScheduleIds: string[];
+};
+
 export type ScheduleAttendanceAnomalyType = "LATE" | "NO_SHOW";
 
 export type ScheduleAttendanceAnomaly = {
@@ -218,7 +244,9 @@ function formatKstDateYmd(base: Date) {
   return shifted.toISOString().slice(0, 10);
 }
 
-function enumerateTemplateMatchedDates(fromDate: string, toDate: string, weekdays: number[]) {
+const MAX_TEMPLATE_ASSIGNMENT_RANGE_DAYS = 62;
+
+function enumerateDateRange(fromDate: string, toDate: string, maxDays: number = MAX_TEMPLATE_ASSIGNMENT_RANGE_DAYS) {
   const start = parseDateToKstBase(fromDate);
   const end = parseDateToKstBase(toDate);
   if (end < start) {
@@ -227,25 +255,109 @@ function enumerateTemplateMatchedDates(fromDate: string, toDate: string, weekday
 
   const oneDayMs = 24 * 60 * 60 * 1000;
   const totalDays = Math.floor((end.getTime() - start.getTime()) / oneDayMs) + 1;
-  if (totalDays > 62) {
-    throw new ServiceError(400, "date range too large; maximum is 62 days");
+  if (totalDays > maxDays) {
+    throw new ServiceError(400, `date range too large; maximum is ${maxDays} days`);
   }
 
-  const matched: string[] = [];
+  const dates: string[] = [];
   for (let index = 0; index < totalDays; index += 1) {
     const current = new Date(start.getTime() + index * oneDayMs);
-    const ymd = formatKstDateYmd(current);
-    const weekday = weekdayFromKstDate(ymd);
-    if (weekdays.includes(weekday)) {
-      matched.push(ymd);
-    }
+    dates.push(formatKstDateYmd(current));
   }
 
+  return dates;
+}
+
+function enumerateTemplateMatchedDates(fromDate: string, toDate: string, weekdays: number[]) {
+  const dates = enumerateDateRange(fromDate, toDate);
+  const matched = dates.filter((dateYmd) => weekdays.includes(weekdayFromKstDate(dateYmd)));
   if (matched.length === 0) {
     throw new ServiceError(400, "no dates in range match template weekdays");
   }
-
   return matched;
+}
+
+function normalizeTemplateIds(templateIds: string[]) {
+  const trimmed = templateIds.map((value) => value.trim()).filter((value) => value.length > 0);
+  if (trimmed.length < 2) {
+    throw new ServiceError(400, "templateIds must include at least two template ids for rotation");
+  }
+  if (trimmed.length > 14) {
+    throw new ServiceError(400, "templateIds must not exceed 14 entries");
+  }
+  const unique = new Set(trimmed);
+  if (unique.size !== trimmed.length) {
+    throw new ServiceError(400, "templateIds must not contain duplicates");
+  }
+  return trimmed;
+}
+
+async function requireTemplatesWithinTenant(context: ServiceContext, templateIds: string[]) {
+  const rows: WorkScheduleTemplateEntity[] = [];
+  for (const templateId of templateIds) {
+    const template = await requireTemplateEntityWithinTenant(context, templateId);
+    rows.push(template);
+  }
+  return rows;
+}
+
+function weekdaySetKey(weekdays: number[]) {
+  return normalizeWeekdays(weekdays).join(",");
+}
+
+async function ensureNoOverlapsForGeneratedWindows(
+  context: ServiceContext,
+  organizationId: string | undefined,
+  employeeId: string,
+  windows: GeneratedScheduleWindow[]
+) {
+  if (windows.length === 0) {
+    throw new ServiceError(400, "no schedules generated from requested range");
+  }
+
+  const firstStart = windows.reduce((min, row) =>
+    row.startAt.getTime() < min.getTime() ? row.startAt : min
+  , windows[0].startAt);
+  const lastEnd = windows.reduce((max, row) =>
+    row.endAt.getTime() > max.getTime() ? row.endAt : max
+  , windows[0].endAt);
+  const existing = await context.dataAccess.scheduling.listInPeriod({
+    periodStart: firstStart,
+    periodEnd: lastEnd,
+    organizationId,
+    employeeId
+  });
+
+  for (const candidate of windows) {
+    const overlaps = existing.filter(
+      (current) => current.startAt < candidate.endAt && current.endAt > candidate.startAt
+    );
+    if (overlaps.length > 0) {
+      throw new ServiceError(409, "overlapping schedule exists", {
+        employeeId,
+        templateId: candidate.templateId,
+        date: candidate.date,
+        overlapCount: overlaps.length,
+        overlappingScheduleIds: overlaps.map((schedule) => schedule.id)
+      });
+    }
+  }
+
+  for (let index = 0; index < windows.length; index += 1) {
+    for (let next = index + 1; next < windows.length; next += 1) {
+      const left = windows[index];
+      const right = windows[next];
+      if (left.startAt < right.endAt && left.endAt > right.startAt) {
+        throw new ServiceError(409, "generated schedules overlap within requested range", {
+          employeeId,
+          leftDate: left.date,
+          leftTemplateId: left.templateId,
+          rightDate: right.date,
+          rightTemplateId: right.templateId
+        });
+      }
+    }
+  }
 }
 
 function buildScheduleWindowFromTemplateDate(template: WorkScheduleTemplateEntity, dateYmd: string) {
@@ -641,57 +753,25 @@ export async function assignWorkScheduleRangeFromTemplate(
   }
 
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, template.weekdays);
-  const generatedWindows = matchedDates.map((date) => {
+  const generatedWindows: GeneratedScheduleWindow[] = matchedDates.map((date) => {
     const window = buildScheduleWindowFromTemplateDate(template, date);
     return {
       date,
+      templateId: template.id,
       startAt: window.startAt,
-      endAt: window.endAt
+      endAt: window.endAt,
+      breakMinutes: template.breakMinutes,
+      isHoliday: template.isHoliday,
+      notes: template.notes ?? undefined
     };
   });
 
-  const firstStart = generatedWindows.reduce((min, row) =>
-    row.startAt.getTime() < min.getTime() ? row.startAt : min
-  , generatedWindows[0].startAt);
-  const lastEnd = generatedWindows.reduce((max, row) =>
-    row.endAt.getTime() > max.getTime() ? row.endAt : max
-  , generatedWindows[0].endAt);
-  const existing = await context.dataAccess.scheduling.listInPeriod({
-    periodStart: firstStart,
-    periodEnd: lastEnd,
-    organizationId: employee.organizationId ?? undefined,
-    employeeId: input.employeeId
-  });
-
-  for (const candidate of generatedWindows) {
-    const overlaps = existing.filter(
-      (current) => current.startAt < candidate.endAt && current.endAt > candidate.startAt
-    );
-    if (overlaps.length > 0) {
-      throw new ServiceError(409, "overlapping schedule exists", {
-        templateId: template.id,
-        employeeId: input.employeeId,
-        date: candidate.date,
-        overlapCount: overlaps.length,
-        overlappingScheduleIds: overlaps.map((schedule) => schedule.id)
-      });
-    }
-  }
-
-  for (let index = 0; index < generatedWindows.length; index += 1) {
-    for (let next = index + 1; next < generatedWindows.length; next += 1) {
-      const left = generatedWindows[index];
-      const right = generatedWindows[next];
-      if (left.startAt < right.endAt && left.endAt > right.startAt) {
-        throw new ServiceError(409, "generated schedules overlap within requested range", {
-          templateId: template.id,
-          employeeId: input.employeeId,
-          leftDate: left.date,
-          rightDate: right.date
-        });
-      }
-    }
-  }
+  await ensureNoOverlapsForGeneratedWindows(
+    context,
+    employee.organizationId ?? undefined,
+    input.employeeId,
+    generatedWindows
+  );
 
   const createdScheduleIds: string[] = [];
   for (const candidate of generatedWindows) {
@@ -699,9 +779,9 @@ export async function assignWorkScheduleRangeFromTemplate(
       employeeId: input.employeeId,
       startAt: candidate.startAt,
       endAt: candidate.endAt,
-      breakMinutes: template.breakMinutes,
-      isHoliday: template.isHoliday,
-      notes: template.notes ?? undefined
+      breakMinutes: candidate.breakMinutes,
+      isHoliday: candidate.isHoliday,
+      notes: candidate.notes
     });
     createdScheduleIds.push(created.id);
   }
@@ -746,6 +826,116 @@ export async function assignWorkScheduleRangeFromTemplate(
     employeeId: input.employeeId,
     fromDate: input.fromDate,
     toDate: input.toDate,
+    matchedDates,
+    createdScheduleIds
+  };
+}
+
+export async function assignWorkScheduleRotation(
+  context: ServiceContext,
+  input: AssignRotationInput
+): Promise<RotationAssignmentResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(context, Permissions.schedulingScheduleWriteAny, "schedule rotation assign requires permission");
+
+  const templateIds = normalizeTemplateIds(input.templateIds);
+  const templates = await requireTemplatesWithinTenant(context, templateIds);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+
+  for (const template of templates) {
+    if (!employee.organizationId || employee.organizationId !== template.organizationId) {
+      throw new ServiceError(409, "template organization and employee organization must match", {
+        templateId: template.id,
+        employeeId: input.employeeId
+      });
+    }
+  }
+
+  const baseWeekdayKey = weekdaySetKey(templates[0].weekdays);
+  for (const template of templates) {
+    if (weekdaySetKey(template.weekdays) !== baseWeekdayKey) {
+      throw new ServiceError(409, "all rotation templates must share same weekday set", {
+        templateIds
+      });
+    }
+  }
+
+  const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
+  const generatedWindows: GeneratedScheduleWindow[] = matchedDates.map((date, index) => {
+    const template = templates[index % templates.length];
+    const window = buildScheduleWindowFromTemplateDate(template, date);
+    return {
+      date,
+      templateId: template.id,
+      startAt: window.startAt,
+      endAt: window.endAt,
+      breakMinutes: template.breakMinutes,
+      isHoliday: template.isHoliday,
+      notes: template.notes ?? undefined
+    };
+  });
+
+  await ensureNoOverlapsForGeneratedWindows(
+    context,
+    employee.organizationId ?? undefined,
+    input.employeeId,
+    generatedWindows
+  );
+
+  const createdScheduleIds: string[] = [];
+  for (const candidate of generatedWindows) {
+    const created = await createWorkSchedule(context, {
+      employeeId: input.employeeId,
+      startAt: candidate.startAt,
+      endAt: candidate.endAt,
+      breakMinutes: candidate.breakMinutes,
+      isHoliday: candidate.isHoliday,
+      notes: candidate.notes
+    });
+    createdScheduleIds.push(created.id);
+  }
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.rotation.assigned",
+    entityType: "WorkSchedule",
+    organizationId: employee.organizationId ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      employeeId: input.employeeId,
+      templateIds,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      matchedDates,
+      createdScheduleIds,
+      createdCount: createdScheduleIds.length
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "scheduling.rotation.assigned.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "WorkSchedule",
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      employeeId: input.employeeId,
+      templateIds,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      matchedDates,
+      createdScheduleIds,
+      createdCount: createdScheduleIds.length
+    }
+  });
+
+  return {
+    employeeId: input.employeeId,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    templateIds,
     matchedDates,
     createdScheduleIds
   };

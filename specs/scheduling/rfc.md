@@ -5,6 +5,7 @@
 Introduce a `WorkSchedule` + `WorkScheduleTemplate` baseline so managers can assign planned windows and reuse recurring templates.
 Add a read-only anomaly report that compares schedules and attendance to signal late/no-show cases.
 Add range assignment so managers can generate multiple schedules from one template request.
+Add rotation assignment so managers can apply template sequences over matched weekdays.
 
 ## Motivation
 
@@ -45,6 +46,9 @@ Add range assignment so managers can generate multiple schedules from one templa
 - `POST /api/scheduling/templates/{templateId}/assign-range`
   - Creates multiple `WorkSchedule` rows for matching weekdays in requested date range.
   - Uses overlap preflight to avoid partial writes.
+- `POST /api/scheduling/rotations/assign`
+  - Creates multiple `WorkSchedule` rows by rotating through `templateIds`.
+  - Requires shared weekday set across templates and uses overlap preflight.
 - `GET /api/scheduling/anomalies?from=...&to=...&employeeId=...`
   - Returns read-only `LATE`/`NO_SHOW` signals.
   - Uses `lateThresholdMinutes` query parameter (default 10).
@@ -52,7 +56,7 @@ Add range assignment so managers can generate multiple schedules from one templa
 ## Authorization
 
 - Admin: create/list any.
-- Manager: schedule CRUD + template create/list/assign within tenant.
+- Manager: schedule CRUD + template create/list/assign + rotation assignment within tenant.
 - Employee: list own schedules only (template endpoints denied).
 
 ## Tenant Isolation (RLS)

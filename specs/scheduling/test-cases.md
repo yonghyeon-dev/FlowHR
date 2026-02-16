@@ -2,7 +2,7 @@
 
 ## Scope
 
-Work schedule CRUD + template assignment + schedule-to-attendance anomaly behavior with tenant isolation and role boundaries.
+Work schedule CRUD + template/rotation assignment + schedule-to-attendance anomaly behavior with tenant isolation and role boundaries.
 
 ## Functional Cases
 
@@ -44,6 +44,13 @@ Work schedule CRUD + template assignment + schedule-to-attendance anomaly behavi
 36. Employee cannot call template range assignment endpoint (403).
 37. Emit domain event `scheduling.template.range_assigned.v1` on successful range assignment.
 38. Append audit log `scheduling.template.range_assigned` with created-count and date-range payload.
+39. Manager assigns rotation with multiple templates and creates alternating schedules on matched weekdays (201).
+40. Reject rotation assignment when `templateIds` includes duplicates or fewer than 2 entries (400).
+41. Reject rotation assignment when templates have different weekday sets (409).
+42. Reject rotation assignment when any generated window overlaps existing schedule (409) and no schedules are created.
+43. Employee cannot call rotation assignment endpoint (403).
+44. Emit domain event `scheduling.rotation.assigned.v1` on successful rotation assignment.
+45. Append audit log `scheduling.rotation.assigned` with template sequence and created count.
 
 ## Boundary Cases
 
@@ -52,12 +59,14 @@ Work schedule CRUD + template assignment + schedule-to-attendance anomaly behavi
 3. Back-to-back schedules (existing `endAt == new startAt`) are allowed.
 4. `lateThresholdMinutes` query validates integer range (0..240).
 5. Range assignment supports overnight templates and enforces overlap preflight before writes.
+6. Rotation assignment uses max 62-day window and supports overnight templates.
 
 ## Regression Linkage
 
 - none
 - anomaly report is read-only and does not mutate schedule or attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
+- rotation assignment preflight overlap conflict does not partially create schedules.
 
 ## QA Gate Expectations
 
