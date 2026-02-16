@@ -11,6 +11,14 @@ export const createWorkScheduleSchema = z.object({
   notes: z.string().max(1000).optional()
 });
 
+export const updateWorkScheduleSchema = z.object({
+  startAt: isoDateTime.optional(),
+  endAt: isoDateTime.optional(),
+  breakMinutes: z.number().int().min(0).max(300).optional(),
+  isHoliday: z.boolean().optional(),
+  notes: z.string().max(1000).optional()
+});
+
 export const listWorkScheduleQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

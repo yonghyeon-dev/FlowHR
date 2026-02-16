@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.1.1
+  version: 0.2.0
 paths:
   /scheduling/schedules:
     get:
@@ -42,6 +42,28 @@ paths:
           description: Missing/invalid actor context
         "403":
           description: Insufficient permissions
+        "409":
+          description: Overlapping schedule exists
+  /scheduling/schedules/{scheduleId}:
+    patch:
+      summary: Update schedule
+      parameters:
+        - in: path
+          name: scheduleId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Schedule not found
         "409":
           description: Overlapping schedule exists
 

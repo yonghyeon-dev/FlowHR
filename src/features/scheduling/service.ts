@@ -1,7 +1,12 @@
 import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
-import type { CreateWorkScheduleInput, DataAccess, WorkScheduleEntity } from "@/features/shared/data-access";
+import type {
+  CreateWorkScheduleInput,
+  DataAccess,
+  UpdateWorkScheduleInput,
+  WorkScheduleEntity
+} from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
@@ -20,6 +25,14 @@ type ListScheduleInput = {
   periodStart: Date;
   periodEnd: Date;
   employeeId?: string;
+};
+
+type UpdateScheduleInput = {
+  startAt?: Date;
+  endAt?: Date;
+  breakMinutes?: number;
+  isHoliday?: boolean;
+  notes?: string;
 };
 
 type ServiceContext = {
@@ -41,6 +54,16 @@ function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
 function toCreateInput(input: CreateScheduleInput): CreateWorkScheduleInput {
   return {
     employeeId: input.employeeId,
+    startAt: input.startAt,
+    endAt: input.endAt,
+    breakMinutes: input.breakMinutes,
+    isHoliday: input.isHoliday,
+    notes: input.notes
+  };
+}
+
+function toUpdateInput(input: UpdateScheduleInput): UpdateWorkScheduleInput {
+  return {
     startAt: input.startAt,
     endAt: input.endAt,
     breakMinutes: input.breakMinutes,
@@ -115,6 +138,103 @@ export async function createWorkSchedule(
   });
 
   return schedule;
+}
+
+async function requireEditableSchedule(
+  context: ServiceContext,
+  scheduleId: string
+): Promise<WorkScheduleEntity> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const existing = await context.dataAccess.scheduling.findById(scheduleId);
+  if (!existing) {
+    throw new ServiceError(404, "schedule not found");
+  }
+
+  await requireEmployeeWithinTenant(context.dataAccess, context.actor, existing.employeeId);
+  await requirePermission(context, Permissions.schedulingScheduleWriteAny, "schedule update requires permission");
+
+  return existing;
+}
+
+export async function updateWorkSchedule(
+  context: ServiceContext,
+  scheduleId: string,
+  input: UpdateScheduleInput
+): Promise<WorkScheduleEntity> {
+  const existing = await requireEditableSchedule(context, scheduleId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, existing.employeeId);
+
+  const startAt = input.startAt ?? existing.startAt;
+  const endAt = input.endAt ?? existing.endAt;
+  if (endAt <= startAt) {
+    throw new ServiceError(400, "endAt must be after startAt");
+  }
+
+  const overlapping = await context.dataAccess.scheduling.listInPeriod({
+    periodStart: startAt,
+    periodEnd: endAt,
+    organizationId: employee.organizationId ?? undefined,
+    employeeId: existing.employeeId
+  });
+  const strictOverlaps = overlapping.filter(
+    (schedule) => schedule.id !== scheduleId && schedule.startAt < endAt && schedule.endAt > startAt
+  );
+  if (strictOverlaps.length > 0) {
+    throw new ServiceError(409, "overlapping schedule exists", {
+      scheduleId,
+      employeeId: existing.employeeId,
+      overlapCount: strictOverlaps.length,
+      overlappingScheduleIds: strictOverlaps.map((schedule) => schedule.id)
+    });
+  }
+
+  const updated = await context.dataAccess.scheduling.update(scheduleId, toUpdateInput(input));
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.schedule.updated",
+    entityType: "WorkSchedule",
+    entityId: updated.id,
+    organizationId: employee.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      scheduleId: updated.id,
+      employeeId: updated.employeeId,
+      startAt: updated.startAt.toISOString(),
+      endAt: updated.endAt.toISOString(),
+      breakMinutes: updated.breakMinutes,
+      isHoliday: updated.isHoliday,
+      notes: updated.notes,
+      changed: {
+        startAt: input.startAt ? input.startAt.toISOString() : undefined,
+        endAt: input.endAt ? input.endAt.toISOString() : undefined,
+        breakMinutes: input.breakMinutes,
+        isHoliday: input.isHoliday,
+        notes: input.notes
+      }
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "scheduling.schedule.updated.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "WorkSchedule",
+    entityId: updated.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      employeeId: updated.employeeId,
+      startAt: updated.startAt.toISOString(),
+      endAt: updated.endAt.toISOString(),
+      breakMinutes: updated.breakMinutes,
+      isHoliday: updated.isHoliday
+    }
+  });
+
+  return updated;
 }
 
 export async function listWorkSchedules(
