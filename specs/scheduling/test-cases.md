@@ -66,6 +66,8 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 58. Employee cannot call rotation fairness report endpoint (403).
 59. Manager fairness apply creates schedules for selected employees and returns per-employee created schedule ids (201).
 60. Employee cannot call rotation fairness apply endpoint (403).
+61. Rotation fairness report with `globalConstraints` returns global summary and diversified offset recommendations.
+62. Rotation fairness apply returns 409 with no writes when `maxDailyPlannedMinutesGap` threshold is breached.
 
 ## Boundary Cases
 
@@ -81,6 +83,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 10. Rotation optimization evaluate path is deterministic for identical inputs.
 11. Rotation fairness report is deterministic for identical inputs.
 12. Rotation fairness apply preflights overlaps before write-back.
+13. Rotation fairness global constraint threshold validates integer range (0..100000).
 
 ## Regression Linkage
 
@@ -91,6 +94,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - rotation balance report path does not mutate schedule state.
 - rotation optimization dry-run path does not mutate schedule state.
 - rotation fairness report path does not mutate schedule state.
+- rotation fairness global constraints path remains deterministic for identical inputs.
 - rotation fairness apply emits rotation assignment event/audit per employee.
 
 ## QA Gate Expectations

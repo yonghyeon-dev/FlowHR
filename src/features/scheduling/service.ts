@@ -51,6 +51,7 @@ type ListRotationFairnessInput = {
   toDate: string;
   templateIds: string[];
   employeeIds?: string[];
+  globalConstraints?: RotationFairnessGlobalConstraintsInput;
 };
 
 type UpdateScheduleInput = {
@@ -170,6 +171,23 @@ export type ScheduleAttendanceAnomalyReport = {
 };
 
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
+export type RotationFairnessGlobalObjective = "MINIMIZE_DAILY_PLANNED_MINUTES_GAP";
+
+type RotationFairnessGlobalConstraintsInput = {
+  objective?: RotationFairnessGlobalObjective;
+  maxDailyPlannedMinutesGap?: number;
+};
+
+export type RotationFairnessGlobalSummary = {
+  objective: RotationFairnessGlobalObjective;
+  dailyPlannedMinutesGap: number;
+  maxDailyPlannedMinutesGap: number | null;
+  thresholdBreached: boolean;
+  dailyPlannedMinutes: Array<{
+    date: string;
+    plannedMinutes: number;
+  }>;
+};
 
 export type RotationBalanceReport = {
   periodStart: Date;
@@ -215,6 +233,7 @@ export type RotationFairnessReport = {
     avgPlannedMinutesGap: number;
     grade: RotationBalanceGrade;
   };
+  global: RotationFairnessGlobalSummary | null;
   results: RotationFairnessEmployeeResult[];
 };
 
@@ -226,6 +245,7 @@ export type RotationFairnessApplyResult = {
   employeeCount: number;
   appliedEmployeeCount: number;
   summary: RotationFairnessReport["summary"];
+  global: RotationFairnessGlobalSummary | null;
   assignments: Array<{
     employeeId: string;
     createdScheduleIds: string[];
@@ -632,6 +652,11 @@ function plannedMinutesForSchedule(schedule: WorkScheduleEntity) {
   return Math.max(0, durationMinutes - schedule.breakMinutes);
 }
 
+function plannedMinutesForGeneratedWindow(window: GeneratedScheduleWindow) {
+  const durationMinutes = Math.floor((window.endAt.getTime() - window.startAt.getTime()) / 60_000);
+  return Math.max(0, durationMinutes - window.breakMinutes);
+}
+
 function deriveRotationBalanceGrade(weekdayGap: number, plannedMinutesGap: number): RotationBalanceGrade {
   if (weekdayGap <= 1 && plannedMinutesGap <= 240) {
     return "BALANCED";
@@ -718,16 +743,53 @@ function normalizeEmployeeIds(employeeIds: string[] | undefined) {
   return trimmed;
 }
 
+function normalizeRotationFairnessGlobalConstraints(
+  globalConstraints: RotationFairnessGlobalConstraintsInput | undefined
+):
+  | {
+      objective: RotationFairnessGlobalObjective;
+      maxDailyPlannedMinutesGap: number | null;
+    }
+  | undefined {
+  if (!globalConstraints) {
+    return undefined;
+  }
+
+  const objective = globalConstraints.objective ?? "MINIMIZE_DAILY_PLANNED_MINUTES_GAP";
+  if (objective !== "MINIMIZE_DAILY_PLANNED_MINUTES_GAP") {
+    throw new ServiceError(400, "unsupported global fairness objective");
+  }
+
+  let maxDailyPlannedMinutesGap: number | null = null;
+  if (globalConstraints.maxDailyPlannedMinutesGap !== undefined) {
+    const value = globalConstraints.maxDailyPlannedMinutesGap;
+    if (!Number.isInteger(value) || value < 0 || value > 100_000) {
+      throw new ServiceError(400, "maxDailyPlannedMinutesGap must be integer in range 0..100000");
+    }
+    maxDailyPlannedMinutesGap = value;
+  }
+
+  return {
+    objective,
+    maxDailyPlannedMinutesGap
+  };
+}
+
 type RotationOffsetEvaluation = {
   offset: number;
   optimizedTemplateIds: string[];
   weekdayGap: number;
   plannedMinutesGap: number;
   grade: RotationBalanceGrade;
+  dailyPlannedMinutes: Array<{
+    date: string;
+    plannedMinutes: number;
+  }>;
 };
 
 type EmployeeRotationOptimizationEvaluation = {
   employee: EmployeeEntity;
+  options: RotationOffsetEvaluation[];
   best: RotationOffsetEvaluation;
 };
 
@@ -783,10 +845,7 @@ function evaluateRotationOffset(
   }
   for (const window of generatedWindows) {
     const weekday = weekdayFromKstDateTime(window.startAt);
-    const plannedMinutes = Math.max(
-      0,
-      Math.floor((window.endAt.getTime() - window.startAt.getTime()) / 60_000) - window.breakMinutes
-    );
+    const plannedMinutes = plannedMinutesForGeneratedWindow(window);
     weekdayCounts[weekday] += 1;
     weekdayMinutes[weekday] += plannedMinutes;
   }
@@ -802,13 +861,18 @@ function evaluateRotationOffset(
       ? 0
       : Math.max(...activeWeekdays.map((weekday) => weekdayMinutes[weekday])) -
         Math.min(...activeWeekdays.map((weekday) => weekdayMinutes[weekday]));
+  const dailyPlannedMinutes = generatedWindows.map((window) => ({
+    date: window.date,
+    plannedMinutes: plannedMinutesForGeneratedWindow(window)
+  }));
 
   return {
     offset,
     optimizedTemplateIds: rotated.map((template) => template.id),
     weekdayGap,
     plannedMinutesGap,
-    grade: deriveRotationBalanceGrade(weekdayGap, plannedMinutesGap)
+    grade: deriveRotationBalanceGrade(weekdayGap, plannedMinutesGap),
+    dailyPlannedMinutes
   };
 }
 
@@ -881,7 +945,117 @@ async function evaluateBestRotationForEmployee(
 
   return {
     employee: input.employee,
+    options: evaluations,
     best: evaluations[0]
+  };
+}
+
+function addDailyPlannedMinutes(
+  totals: Map<string, number>,
+  entries: Array<{ date: string; plannedMinutes: number }>
+) {
+  for (const entry of entries) {
+    totals.set(entry.date, (totals.get(entry.date) ?? 0) + entry.plannedMinutes);
+  }
+}
+
+function calculateDailyPlannedMinutesGap(totals: Map<string, number>, matchedDates: string[]) {
+  if (matchedDates.length === 0) {
+    return 0;
+  }
+  const values = matchedDates.map((date) => totals.get(date) ?? 0);
+  return Math.max(...values) - Math.min(...values);
+}
+
+function buildRotationFairnessGlobalSummary(
+  globalConstraints: {
+    objective: RotationFairnessGlobalObjective;
+    maxDailyPlannedMinutesGap: number | null;
+  },
+  totals: Map<string, number>,
+  matchedDates: string[]
+): RotationFairnessGlobalSummary {
+  const dailyPlannedMinutes = matchedDates.map((date) => ({
+    date,
+    plannedMinutes: totals.get(date) ?? 0
+  }));
+  const dailyPlannedMinutesGap = calculateDailyPlannedMinutesGap(totals, matchedDates);
+  const maxDailyPlannedMinutesGap = globalConstraints.maxDailyPlannedMinutesGap;
+  const thresholdBreached =
+    maxDailyPlannedMinutesGap !== null && dailyPlannedMinutesGap > maxDailyPlannedMinutesGap;
+
+  return {
+    objective: globalConstraints.objective,
+    dailyPlannedMinutesGap,
+    maxDailyPlannedMinutesGap,
+    thresholdBreached,
+    dailyPlannedMinutes
+  };
+}
+
+function selectRotationFairnessRecommendations(
+  evaluations: EmployeeRotationOptimizationEvaluation[],
+  matchedDates: string[],
+  globalConstraints:
+    | {
+        objective: RotationFairnessGlobalObjective;
+        maxDailyPlannedMinutesGap: number | null;
+      }
+    | undefined
+): {
+  selectedByEmployeeId: Map<string, RotationOffsetEvaluation>;
+  global: RotationFairnessGlobalSummary | null;
+} {
+  const selectedByEmployeeId = new Map<string, RotationOffsetEvaluation>();
+  if (!globalConstraints) {
+    for (const evaluation of evaluations) {
+      selectedByEmployeeId.set(evaluation.employee.id, evaluation.best);
+    }
+    return {
+      selectedByEmployeeId,
+      global: null
+    };
+  }
+
+  const ordered = [...evaluations].sort((left, right) => left.employee.id.localeCompare(right.employee.id));
+  const totals = new Map<string, number>();
+
+  for (const evaluation of ordered) {
+    let bestOption = evaluation.options[0];
+    let bestGap = Number.POSITIVE_INFINITY;
+    let bestLocalPenalty = Number.POSITIVE_INFINITY;
+
+    for (const option of evaluation.options) {
+      const candidateTotals = new Map(totals);
+      addDailyPlannedMinutes(candidateTotals, option.dailyPlannedMinutes);
+      const gap = calculateDailyPlannedMinutesGap(candidateTotals, matchedDates);
+      const localPenalty = option.plannedMinutesGap * 10 + option.weekdayGap;
+
+      if (gap < bestGap) {
+        bestOption = option;
+        bestGap = gap;
+        bestLocalPenalty = localPenalty;
+        continue;
+      }
+
+      if (gap === bestGap && localPenalty < bestLocalPenalty) {
+        bestOption = option;
+        bestLocalPenalty = localPenalty;
+        continue;
+      }
+
+      if (gap === bestGap && localPenalty === bestLocalPenalty && option.offset < bestOption.offset) {
+        bestOption = option;
+      }
+    }
+
+    selectedByEmployeeId.set(evaluation.employee.id, bestOption);
+    addDailyPlannedMinutes(totals, bestOption.dailyPlannedMinutes);
+  }
+
+  return {
+    selectedByEmployeeId,
+    global: buildRotationFairnessGlobalSummary(globalConstraints, totals, matchedDates)
   };
 }
 
@@ -1665,7 +1839,8 @@ export async function listWorkScheduleRotationFairness(
     scopedEmployees = requestedEmployeeIds.map((employeeId) => byId.get(employeeId)!);
   }
 
-  const results: RotationFairnessEmployeeResult[] = [];
+  const globalConstraints = normalizeRotationFairnessGlobalConstraints(input.globalConstraints);
+  const evaluations: EmployeeRotationOptimizationEvaluation[] = [];
   for (const employee of scopedEmployees) {
     const evaluation = await evaluateBestRotationForEmployee(context, {
       employee,
@@ -1674,18 +1849,24 @@ export async function listWorkScheduleRotationFairness(
       templates,
       matchedDates
     });
-    results.push({
-      employeeId: employee.id,
-      recommendedStartOffset: evaluation.best.offset,
-      optimizedTemplateIds: evaluation.best.optimizedTemplateIds,
+    evaluations.push(evaluation);
+  }
+
+  const selected = selectRotationFairnessRecommendations(evaluations, matchedDates, globalConstraints);
+  const results: RotationFairnessEmployeeResult[] = evaluations.map((evaluation) => {
+    const recommendation = selected.selectedByEmployeeId.get(evaluation.employee.id) ?? evaluation.best;
+    return {
+      employeeId: evaluation.employee.id,
+      recommendedStartOffset: recommendation.offset,
+      optimizedTemplateIds: recommendation.optimizedTemplateIds,
       matchedDates,
       score: {
-        weekdayGap: evaluation.best.weekdayGap,
-        plannedMinutesGap: evaluation.best.plannedMinutesGap,
-        grade: evaluation.best.grade
+        weekdayGap: recommendation.weekdayGap,
+        plannedMinutesGap: recommendation.plannedMinutesGap,
+        grade: recommendation.grade
       }
-    });
-  }
+    };
+  });
 
   results.sort((left, right) => {
     if (left.score.plannedMinutesGap !== right.score.plannedMinutesGap) {
@@ -1729,6 +1910,7 @@ export async function listWorkScheduleRotationFairness(
       avgWeekdayGap,
       avgPlannedMinutesGap,
       grade,
+      global: selected.global,
       employeeIds: results.map((entry) => entry.employeeId)
     }
   });
@@ -1746,6 +1928,7 @@ export async function listWorkScheduleRotationFairness(
       avgPlannedMinutesGap,
       grade
     },
+    global: selected.global,
     results
   };
 }
@@ -1760,6 +1943,13 @@ export async function applyWorkScheduleRotationFairness(
   }
 
   const report = await listWorkScheduleRotationFairness(context, input);
+  if (report.global?.thresholdBreached) {
+    throw new ServiceError(409, "global fairness constraint threshold exceeded", {
+      objective: report.global.objective,
+      dailyPlannedMinutesGap: report.global.dailyPlannedMinutesGap,
+      maxDailyPlannedMinutesGap: report.global.maxDailyPlannedMinutesGap
+    });
+  }
 
   const assignmentPlans: Array<{
     employeeId: string;
@@ -1858,6 +2048,7 @@ export async function applyWorkScheduleRotationFairness(
       employeeCount: report.employeeCount,
       appliedEmployeeCount: assignments.length,
       createdSchedules,
+      global: report.global,
       employeeIds: assignments.map((assignment) => assignment.employeeId)
     }
   });
@@ -1870,6 +2061,7 @@ export async function applyWorkScheduleRotationFairness(
     employeeCount: report.employeeCount,
     appliedEmployeeCount: assignments.length,
     summary: report.summary,
+    global: report.global,
     assignments,
     totals: {
       createdSchedules
