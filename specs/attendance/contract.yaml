@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.13.0
+version: 1.14.0
 scope:
   in:
     - attendance record create/update
@@ -11,6 +11,7 @@ scope:
     - feature-flag based employee device attestation enforcement
     - feature-flag based employee anti-spoofing signal-fusion and reputation risk enforcement
     - feature-flag based dynamic external reputation integration for anti-spoofing risk scoring
+    - feature-flag based multi-provider external reputation orchestration (union/majority + minimum-success)
     - attendance record list query by period
     - attendance aggregates query by period
     - correction approval/rejection flow
@@ -21,7 +22,7 @@ scope:
     - payroll tax and deduction
     - physical device protocol integration
     - geofence polygon policy engine
-    - anti-spoofing external reputation provider hard-fail orchestration and circuit-breaker management
+    - anti-spoofing external reputation circuit-breaker and adaptive routing management
     - trusted network policy engine
     - cryptographic device attestation policy engine
 entities:
@@ -100,6 +101,8 @@ invariants:
   - When FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED is enabled, employee attendance create/update must keep effective capture deviceId in trusted allowlist.
   - When FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED is enabled, employee attendance create/update must provide capture attestationToken that matches configured device mapping for effective deviceId.
   - When FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED is enabled, employee attendance create/update must keep effective capture risk score (base + signal-fusion + static/remote reputation penalties) at or below configured threshold.
+  - When dynamic external reputation is enabled, remote provider snapshots must satisfy configured aggregation mode (union/majority) before risk penalty is applied.
+  - When dynamic external reputation strict mode is enabled, provider minimum-success requirement breach must reject employee attendance writes.
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
@@ -115,6 +118,7 @@ risk:
     - Anti-spoofing threshold misconfiguration can block valid employee attendance writes when flag is enabled.
     - Anti-spoofing signal-fusion/reputation configuration errors can block valid employee attendance writes when flag is enabled.
     - External reputation provider failure in strict mode can block employee attendance writes when dynamic reputation flag is enabled.
+    - Multi-provider reputation aggregation/threshold misconfiguration can over-block or under-block employee attendance writes.
   legal:
     - Attendance history must remain auditable.
 test_plan:
@@ -133,6 +137,7 @@ test_plan:
     - device attestation token mapping parsing and effective device/token validation
     - anti-spoofing risk-score (base + signal-fusion + reputation penalties) and threshold boundaries
     - external reputation provider response parsing and fallback/strict-mode boundaries
+    - multi-provider reputation aggregation (union/majority) and minimum-success boundaries
   integration:
     - create record rejects unknown employeeId (404)
     - create record to approve flow
@@ -164,6 +169,8 @@ test_plan:
     - employee attendance write with high-risk device/ip reputation is rejected when anti-spoofing signal-fusion is enabled
     - employee attendance write with insufficient trusted signal count is rejected when anti-spoofing signal-fusion is enabled
     - employee attendance write uses dynamic external reputation list when enabled
+    - employee attendance write follows multi-provider aggregation mode (union/majority) when multiple reputation URLs are configured
+    - employee attendance write strict mode rejects when provider minimum-success requirement is not met
     - manager correction path remains allowed when anti-spoofing flag is enabled
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
@@ -193,6 +200,8 @@ observability:
     - attendance_anti_spoofing_reject_count
     - attendance_anti_spoofing_signal_fusion_reject_count
     - attendance_anti_spoofing_external_reputation_reject_count
+    - attendance_anti_spoofing_external_reputation_provider_success_count
+    - attendance_anti_spoofing_external_reputation_provider_failure_count
   logs:
     - authorization denied logs for attendance approval
     - capture metadata validation failure logs for attendance create/update
@@ -222,7 +231,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.13.0 extends anti-spoofing policy with optional dynamic external reputation integration behind FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED. Default-off keeps prior behavior; enabled mode can reject employee attendance writes when remote/static reputation risk raises effective score above threshold."
+consumer_impact: "Contract v1.14.0 extends dynamic external reputation with multi-provider orchestration (`..._URLS`, aggregation mode, majority threshold, minimum-success). Default-off keeps prior behavior; existing single-provider configuration remains backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -240,6 +249,7 @@ references:
   - work-items/WI-0056-attendance-anti-spoofing-policy.md
   - work-items/WI-0060-attendance-anti-spoofing-signal-fusion.md
   - work-items/WI-0062-attendance-external-reputation-integration.md
+  - work-items/WI-0064-attendance-multi-provider-reputation-orchestration.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent

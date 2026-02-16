@@ -154,7 +154,10 @@ type AntiSpoofingPolicyConfig = {
   highRiskIpAddresses: Set<string>;
   externalReputationEnabled: boolean;
   externalReputationProvider: "static" | "remote";
-  externalReputationUrl: string | null;
+  externalReputationUrls: string[];
+  externalReputationAggregation: "union" | "majority";
+  externalReputationMajorityThreshold: number | null;
+  externalReputationMinimumSuccess: number;
   externalReputationTimeoutMs: number;
   externalReputationCacheTtlSeconds: number;
   externalReputationStrictMode: boolean;
@@ -163,7 +166,7 @@ type AntiSpoofingPolicyConfig = {
 type AntiSpoofingReputationSnapshot = {
   highRiskDeviceIds: Set<string>;
   highRiskIpAddresses: Set<string>;
-  source: "static" | "remote" | "remote-fallback";
+  source: "static" | "remote" | "remote-multi" | "remote-fallback";
 };
 
 type AntiSpoofingReputationCache = {
@@ -213,13 +216,52 @@ function parseExternalReputationProvider(value: string | undefined): "static" | 
   );
 }
 
+function parseExternalReputationAggregation(value: string | undefined): "union" | "majority" {
+  const normalized = (value ?? "union").trim().toLowerCase();
+  if (normalized === "union" || normalized === "majority") {
+    return normalized;
+  }
+  throw new ServiceError(
+    500,
+    "attendance anti-spoofing policy is enabled but external reputation aggregation configuration is invalid"
+  );
+}
+
+function parseExternalReputationUrls(
+  urlsValue: string | undefined,
+  urlValueFallback: string | undefined
+): string[] {
+  const explicitUrls = Array.from(
+    new Set(
+      (urlsValue ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+    )
+  );
+  if (explicitUrls.length > 0) {
+    return explicitUrls;
+  }
+
+  const fallback = (urlValueFallback ?? "").trim();
+  if (fallback.length > 0) {
+    return [fallback];
+  }
+
+  return [];
+}
+
 function resolveReputationCacheKey(config: AntiSpoofingPolicyConfig) {
   const staticDeviceIds = Array.from(config.highRiskDeviceIds).sort().join(",");
   const staticIpAddresses = Array.from(config.highRiskIpAddresses).sort().join(",");
+  const reputationUrls = [...config.externalReputationUrls].sort().join(",");
   return [
     config.externalReputationEnabled ? "1" : "0",
     config.externalReputationProvider,
-    config.externalReputationUrl ?? "",
+    reputationUrls,
+    config.externalReputationAggregation,
+    config.externalReputationMajorityThreshold ?? "",
+    config.externalReputationMinimumSuccess,
     config.externalReputationStrictMode ? "1" : "0",
     staticDeviceIds,
     staticIpAddresses
@@ -260,14 +302,9 @@ function parseRemoteReputationPayload(payload: unknown): {
   };
 }
 
-async function fetchRemoteReputationSnapshot(config: AntiSpoofingPolicyConfig) {
-  const url = config.externalReputationUrl;
-  if (!url) {
-    throw new Error("reputation URL is missing");
-  }
-
+async function fetchRemoteReputationSnapshot(url: string, timeoutMs: number) {
   const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), config.externalReputationTimeoutMs);
+  const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
   try {
     const response = await fetch(url, {
       method: "GET",
@@ -284,6 +321,67 @@ async function fetchRemoteReputationSnapshot(config: AntiSpoofingPolicyConfig) {
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function mergeRemoteReputationSnapshots(
+  snapshots: Array<{ highRiskDeviceIds: Set<string>; highRiskIpAddresses: Set<string> }>,
+  aggregation: "union" | "majority",
+  majorityThreshold: number | null
+) {
+  if (snapshots.length === 0) {
+    return {
+      highRiskDeviceIds: new Set<string>(),
+      highRiskIpAddresses: new Set<string>()
+    };
+  }
+
+  if (aggregation === "union") {
+    const highRiskDeviceIds = new Set<string>();
+    const highRiskIpAddresses = new Set<string>();
+    for (const snapshot of snapshots) {
+      for (const deviceId of snapshot.highRiskDeviceIds) {
+        highRiskDeviceIds.add(deviceId);
+      }
+      for (const ipAddress of snapshot.highRiskIpAddresses) {
+        highRiskIpAddresses.add(ipAddress);
+      }
+    }
+    return {
+      highRiskDeviceIds,
+      highRiskIpAddresses
+    };
+  }
+
+  const threshold = majorityThreshold ?? Math.floor(snapshots.length / 2) + 1;
+  const deviceCounts = new Map<string, number>();
+  const ipCounts = new Map<string, number>();
+
+  for (const snapshot of snapshots) {
+    for (const deviceId of snapshot.highRiskDeviceIds) {
+      deviceCounts.set(deviceId, (deviceCounts.get(deviceId) ?? 0) + 1);
+    }
+    for (const ipAddress of snapshot.highRiskIpAddresses) {
+      ipCounts.set(ipAddress, (ipCounts.get(ipAddress) ?? 0) + 1);
+    }
+  }
+
+  const highRiskDeviceIds = new Set<string>();
+  const highRiskIpAddresses = new Set<string>();
+  for (const [deviceId, count] of deviceCounts) {
+    if (count >= threshold) {
+      highRiskDeviceIds.add(deviceId);
+    }
+  }
+  for (const [ipAddress, count] of ipCounts) {
+    if (count >= threshold) {
+      highRiskIpAddresses.add(ipAddress);
+    }
+  }
+
+  return {
+    highRiskDeviceIds,
+    highRiskIpAddresses
+  };
 }
 
 async function resolveAntiSpoofingReputationSnapshot(
@@ -310,11 +408,42 @@ async function resolveAntiSpoofingReputationSnapshot(
   }
 
   try {
-    const remoteSnapshot = await fetchRemoteReputationSnapshot(config);
+    const fetchResults = await Promise.allSettled(
+      config.externalReputationUrls.map((url) =>
+        fetchRemoteReputationSnapshot(url, config.externalReputationTimeoutMs)
+      )
+    );
+    const successfulSnapshots = fetchResults
+      .filter((result): result is PromiseFulfilledResult<{ highRiskDeviceIds: Set<string>; highRiskIpAddresses: Set<string> }> => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    if (successfulSnapshots.length < config.externalReputationMinimumSuccess) {
+      if (config.externalReputationStrictMode) {
+        throw new ServiceError(
+          500,
+          "attendance anti-spoofing policy could not satisfy external reputation provider minimum-success requirement",
+          {
+            requiredSuccess: config.externalReputationMinimumSuccess,
+            succeeded: successfulSnapshots.length,
+            configuredProviders: config.externalReputationUrls.length
+          }
+        );
+      }
+      return {
+        ...baseSnapshot,
+        source: "remote-fallback"
+      };
+    }
+
+    const remoteSnapshot = mergeRemoteReputationSnapshots(
+      successfulSnapshots,
+      config.externalReputationAggregation,
+      config.externalReputationMajorityThreshold
+    );
     const mergedSnapshot: AntiSpoofingReputationSnapshot = {
       highRiskDeviceIds: new Set([...baseSnapshot.highRiskDeviceIds, ...remoteSnapshot.highRiskDeviceIds]),
       highRiskIpAddresses: new Set([...baseSnapshot.highRiskIpAddresses, ...remoteSnapshot.highRiskIpAddresses]),
-      source: "remote"
+      source: successfulSnapshots.length > 1 ? "remote-multi" : "remote"
     };
     antiSpoofingReputationCache = {
       cacheKey,
@@ -322,7 +451,10 @@ async function resolveAntiSpoofingReputationSnapshot(
       snapshot: mergedSnapshot
     };
     return mergedSnapshot;
-  } catch {
+  } catch (error) {
+    if (error instanceof ServiceError) {
+      throw error;
+    }
     if (config.externalReputationStrictMode) {
       throw new ServiceError(
         500,
@@ -448,10 +580,25 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
     process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_PROVIDER ??
       process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_PROVIDER
   );
-  const externalReputationUrl =
+  const externalReputationUrls = parseExternalReputationUrls(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URLS ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URLS,
     process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URL ??
-    process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URL ??
-    null;
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URL
+  );
+  const externalReputationAggregation = parseExternalReputationAggregation(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AGGREGATION ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AGGREGATION
+  );
+  const externalReputationMajorityThreshold = parseIntegerEnv(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MAJORITY_THRESHOLD ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MAJORITY_THRESHOLD
+  );
+  const externalReputationMinimumSuccess =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MIN_SUCCESS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MIN_SUCCESS
+    ) ?? 1;
   const externalReputationTimeoutMs =
     parseIntegerEnv(
       process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_TIMEOUT_MS ??
@@ -491,10 +638,50 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       "attendance anti-spoofing policy is enabled but reputation penalty configuration is invalid"
     );
   }
-  if (externalReputationEnabled && externalReputationProvider === "remote" && !externalReputationUrl?.trim()) {
+  if (
+    externalReputationEnabled &&
+    externalReputationProvider === "remote" &&
+    externalReputationUrls.length === 0
+  ) {
     throw new ServiceError(
       500,
       "attendance anti-spoofing policy is enabled but external reputation URL configuration is empty"
+    );
+  }
+  if (externalReputationUrls.length > 10) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation URL configuration exceeds limit"
+    );
+  }
+  if (
+    externalReputationMajorityThreshold !== null &&
+    (externalReputationMajorityThreshold < 1 || externalReputationMajorityThreshold > 10)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation majority threshold configuration is invalid"
+    );
+  }
+  if (
+    externalReputationEnabled &&
+    externalReputationProvider === "remote" &&
+    (externalReputationMinimumSuccess < 1 ||
+      externalReputationMinimumSuccess > Math.max(1, externalReputationUrls.length))
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation minimum-success configuration is invalid"
+    );
+  }
+  if (
+    externalReputationAggregation === "majority" &&
+    externalReputationMajorityThreshold !== null &&
+    externalReputationMajorityThreshold > Math.max(1, externalReputationUrls.length)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation majority threshold exceeds provider count"
     );
   }
   if (externalReputationTimeoutMs < 100 || externalReputationTimeoutMs > 10000) {
@@ -521,7 +708,10 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
     highRiskIpAddresses,
     externalReputationEnabled,
     externalReputationProvider,
-    externalReputationUrl: externalReputationUrl?.trim() || null,
+    externalReputationUrls: externalReputationUrls.map((url) => url.trim()).filter((url) => url.length > 0),
+    externalReputationAggregation,
+    externalReputationMajorityThreshold,
+    externalReputationMinimumSuccess,
     externalReputationTimeoutMs,
     externalReputationCacheTtlSeconds,
     externalReputationStrictMode
