@@ -94,6 +94,72 @@ function isAttendanceGpsPolicyEnabled() {
   );
 }
 
+function isAttendanceGeofencePolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_GEOFENCE_ENABLED ?? process.env.ATTENDANCE_GEOFENCE_ENABLED
+  );
+}
+
+type GeofenceConfig = {
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+};
+
+function parseNumberEnv(value: string | undefined): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function loadGeofenceConfig(): GeofenceConfig {
+  const latitude = parseNumberEnv(process.env.FLOWHR_ATTENDANCE_GEOFENCE_LAT);
+  const longitude = parseNumberEnv(process.env.FLOWHR_ATTENDANCE_GEOFENCE_LNG);
+  const radiusMeters = parseNumberEnv(process.env.FLOWHR_ATTENDANCE_GEOFENCE_RADIUS_METERS);
+
+  if (latitude === null || longitude === null || radiusMeters === null) {
+    throw new ServiceError(500, "attendance geofence policy is enabled but configuration is invalid");
+  }
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || radiusMeters <= 0) {
+    throw new ServiceError(500, "attendance geofence policy is enabled but configuration is invalid");
+  }
+
+  return {
+    latitude,
+    longitude,
+    radiusMeters
+  };
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function haversineDistanceMeters(
+  fromLatitude: number,
+  fromLongitude: number,
+  toLatitude: number,
+  toLongitude: number
+) {
+  const earthRadiusMeters = 6371000;
+  const deltaLat = toRadians(toLatitude - fromLatitude);
+  const deltaLng = toRadians(toLongitude - fromLongitude);
+  const fromLatRad = toRadians(fromLatitude);
+  const toLatRad = toRadians(toLatitude);
+
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(fromLatRad) * Math.cos(toLatRad) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusMeters * c;
+}
+
 function assertGpsCapturePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
   if (!isAttendanceGpsPolicyEnabled() || actor.role !== "employee") {
     return;
@@ -127,6 +193,61 @@ function assertGpsCapturePolicyForUpdate(
   if (nextChannel !== "GPS" || nextLatitude === null || nextLongitude === null) {
     throw new ServiceError(400, "attendance capture policy requires GPS channel with coordinates");
   }
+}
+
+function assertGeofenceForCoordinates(latitude: number, longitude: number) {
+  const geofence = loadGeofenceConfig();
+  const distanceMeters = haversineDistanceMeters(
+    latitude,
+    longitude,
+    geofence.latitude,
+    geofence.longitude
+  );
+  if (distanceMeters > geofence.radiusMeters) {
+    throw new ServiceError(400, "attendance capture location is outside allowed geofence");
+  }
+}
+
+function assertGeofencePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceGeofencePolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const latitude = input.capture?.latitude;
+  const longitude = input.capture?.longitude;
+  if (input.capture?.channel !== "GPS" || latitude === undefined || longitude === undefined) {
+    throw new ServiceError(400, "attendance geofence policy requires GPS coordinates");
+  }
+
+  assertGeofenceForCoordinates(latitude, longitude);
+}
+
+function assertGeofencePolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceGeofencePolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const nextChannel = input.capture?.channel ?? existing.captureChannel;
+  const nextLatitude =
+    input.capture?.latitude !== undefined ? input.capture.latitude : existing.captureLatitude;
+  const nextLongitude =
+    input.capture?.longitude !== undefined ? input.capture.longitude : existing.captureLongitude;
+
+  if (
+    nextChannel !== "GPS" ||
+    nextLatitude === undefined ||
+    nextLongitude === undefined ||
+    nextLatitude === null ||
+    nextLongitude === null
+  ) {
+    throw new ServiceError(400, "attendance geofence policy requires GPS coordinates");
+  }
+
+  assertGeofenceForCoordinates(nextLatitude, nextLongitude);
 }
 
 function toCapturePayload(record: AttendanceRecordEntity) {
@@ -187,6 +308,7 @@ export async function createAttendanceRecord(
   );
 
   assertGpsCapturePolicyForCreate(actor, input);
+  assertGeofencePolicyForCreate(actor, input);
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -269,6 +391,7 @@ export async function updateAttendanceRecord(
 ): Promise<AttendanceRecordEntity> {
   const existing = await requireEditableRecord(context, recordId);
   assertGpsCapturePolicyForUpdate(context.actor!, existing, input);
+  assertGeofencePolicyForUpdate(context.actor!, existing, input);
   const employee = await requireEmployeeWithinTenant(
     context.dataAccess,
     context.actor,

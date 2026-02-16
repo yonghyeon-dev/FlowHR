@@ -109,7 +109,7 @@ Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling rotation balancing/optimization automation (rotation baseline merged)
-  - advanced clock-in policy enforcement (geofence/channel trust/device attestation) after GPS baseline
+  - advanced clock-in policy enforcement (channel trust/device attestation/multi-site geofence) after geofence baseline
   - anomaly notification/escalation automation (read-only anomaly report baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
@@ -122,6 +122,7 @@ Recently delivered:
 - Scheduling CRUD baseline (create/list/update/delete), template single/range assignment baseline, rotation assignment baseline, and anomaly read model are merged (WI-0040, WI-0041, WI-0042, WI-0043, WI-0044, WI-0045, WI-0046, WI-0047).
 - Attendance capture channel metadata baseline is merged (GPS/QR/Wi-Fi/device/location metadata on create/update; WI-0048).
 - Attendance employee GPS policy enforcement baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_GPS_REQUIRED`; WI-0049).
+- Attendance employee geofence policy enforcement baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_GEOFENCE_ENABLED`; WI-0050).
 
 ## 2) Priority Roadmap
 
@@ -252,6 +253,7 @@ Tasks:
 8. (Done) `work-items/WI-0047-scheduling-rotation-assignment.md`
 9. (Done) `work-items/WI-0048-attendance-capture-channel-metadata.md`
 10. (Done) `work-items/WI-0049-attendance-gps-policy-enforcement.md`
+11. (Done) `work-items/WI-0050-attendance-geofence-policy.md`
 
 ## 3) Workstream Ownership
 
@@ -285,5 +287,5 @@ Request template:
 Without additional input, the next executable step is:
 
 1. define WI for rotation balancing/optimization policy contract-first,
-2. define WI for geofence/device trust policy engine (on top of GPS policy baseline) contract-first,
+2. define WI for device trust / multi-site geofence policy engine (on top of geofence baseline) contract-first,
 3. define WI for anomaly signal automation (alerting/escalation) on top of WI-0045 read-only report.
