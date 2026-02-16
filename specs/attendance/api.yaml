@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Attendance API
-  version: 1.14.0
+  version: 1.15.0
 paths:
   /attendance/records:
     get:
@@ -35,7 +35,7 @@ paths:
           description: Records listed
     post:
       summary: Create attendance record
-      description: Employee writes may require GPS capture metadata, single/multi-site geofence validation, trusted device allowlist checks, device attestation validation, and anti-spoofing signal-fusion with dynamic external reputation multi-provider risk orchestration when related policy flags are enabled.
+      description: Employee writes may require GPS capture metadata, single/multi-site geofence validation, trusted device allowlist checks, device attestation validation, and anti-spoofing signal-fusion with dynamic external reputation multi-provider/circuit-breaker orchestration when related policy flags are enabled.
       requestBody:
         required: true
         content:
@@ -94,7 +94,7 @@ paths:
   /attendance/records/{recordId}:
     patch:
       summary: Update attendance record before approval
-      description: Employee updates may require effective GPS capture metadata, single/multi-site geofence validation, trusted device checks, device attestation validation, and anti-spoofing signal-fusion with dynamic external reputation multi-provider risk orchestration when related policy flags are enabled.
+      description: Employee updates may require effective GPS capture metadata, single/multi-site geofence validation, trusted device checks, device attestation validation, and anti-spoofing signal-fusion with dynamic external reputation multi-provider/circuit-breaker orchestration when related policy flags are enabled.
       parameters:
         - in: path
           name: recordId

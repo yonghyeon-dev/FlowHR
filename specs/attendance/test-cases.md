@@ -30,6 +30,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 22. When `FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED=true`, employee write uses remote reputation high-risk device/ip signals and rejects high-risk payload while manager correction path remains allowed.
 23. When multi-provider external reputation is enabled with `majority` aggregation, employee write is accepted below threshold and rejected when provider-hit count reaches threshold.
 24. When strict mode and provider `min_success` are enabled, employee write is rejected if successful provider count is below configured minimum.
+25. When provider circuit-breaker is enabled, failed providers are skipped during cooldown and strict `min_success` continues to gate employee writes.
 
 ## Boundary and Accuracy Cases
 
@@ -48,6 +49,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 13. Signal-fusion/reputation policy feature flag only applies to employee write path and validates min-signal/reputation-penalty/high-risk-list configuration.
 14. External reputation integration validates provider mode/URL/timeout/cache/strict-mode configuration and remote payload parsing.
 15. Multi-provider external reputation integration validates URLs/aggregation/majority-threshold/min-success configuration.
+16. External reputation circuit-breaker validates failure-threshold/cooldown configuration and open-circuit skip behavior.
 
 ## Regression Linkage
 

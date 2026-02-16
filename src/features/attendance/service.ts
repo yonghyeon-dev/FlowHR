@@ -158,6 +158,9 @@ type AntiSpoofingPolicyConfig = {
   externalReputationAggregation: "union" | "majority";
   externalReputationMajorityThreshold: number | null;
   externalReputationMinimumSuccess: number;
+  externalReputationCircuitBreakerEnabled: boolean;
+  externalReputationFailureThreshold: number;
+  externalReputationCooldownSeconds: number;
   externalReputationTimeoutMs: number;
   externalReputationCacheTtlSeconds: number;
   externalReputationStrictMode: boolean;
@@ -176,6 +179,13 @@ type AntiSpoofingReputationCache = {
 };
 
 let antiSpoofingReputationCache: AntiSpoofingReputationCache | null = null;
+const antiSpoofingReputationProviderState = new Map<
+  string,
+  {
+    consecutiveFailures: number;
+    openUntil: number | null;
+  }
+>();
 
 function parseNumberEnv(value: string | undefined): number | null {
   if (value === undefined) {
@@ -262,10 +272,72 @@ function resolveReputationCacheKey(config: AntiSpoofingPolicyConfig) {
     config.externalReputationAggregation,
     config.externalReputationMajorityThreshold ?? "",
     config.externalReputationMinimumSuccess,
+    config.externalReputationCircuitBreakerEnabled ? "1" : "0",
+    config.externalReputationFailureThreshold,
+    config.externalReputationCooldownSeconds,
     config.externalReputationStrictMode ? "1" : "0",
     staticDeviceIds,
     staticIpAddresses
   ].join("|");
+}
+
+function resolveReputationProviderStateKey(config: AntiSpoofingPolicyConfig, url: string) {
+  return `${resolveReputationCacheKey(config)}|${url}`;
+}
+
+function readReputationProviderState(providerStateKey: string) {
+  const state = antiSpoofingReputationProviderState.get(providerStateKey);
+  if (state) {
+    return state;
+  }
+  const initial = {
+    consecutiveFailures: 0,
+    openUntil: null
+  };
+  antiSpoofingReputationProviderState.set(providerStateKey, initial);
+  return initial;
+}
+
+function isReputationProviderCircuitOpen(
+  config: AntiSpoofingPolicyConfig,
+  providerStateKey: string,
+  now: number
+) {
+  if (!config.externalReputationCircuitBreakerEnabled) {
+    return false;
+  }
+  const state = readReputationProviderState(providerStateKey);
+  if (state.openUntil === null) {
+    return false;
+  }
+  if (state.openUntil <= now) {
+    state.openUntil = null;
+    state.consecutiveFailures = 0;
+    return false;
+  }
+  return true;
+}
+
+function registerReputationProviderSuccess(providerStateKey: string) {
+  const state = readReputationProviderState(providerStateKey);
+  state.consecutiveFailures = 0;
+  state.openUntil = null;
+}
+
+function registerReputationProviderFailure(
+  config: AntiSpoofingPolicyConfig,
+  providerStateKey: string,
+  now: number
+) {
+  if (!config.externalReputationCircuitBreakerEnabled) {
+    return;
+  }
+  const state = readReputationProviderState(providerStateKey);
+  state.consecutiveFailures += 1;
+  if (state.consecutiveFailures >= config.externalReputationFailureThreshold) {
+    state.openUntil = now + config.externalReputationCooldownSeconds * 1000;
+    state.consecutiveFailures = 0;
+  }
 }
 
 function parseRemoteReputationPayload(payload: unknown): {
@@ -408,14 +480,39 @@ async function resolveAntiSpoofingReputationSnapshot(
   }
 
   try {
-    const fetchResults = await Promise.allSettled(
-      config.externalReputationUrls.map((url) =>
-        fetchRemoteReputationSnapshot(url, config.externalReputationTimeoutMs)
-      )
+    const providerResults = await Promise.all(
+      config.externalReputationUrls.map(async (url) => {
+        const providerStateKey = resolveReputationProviderStateKey(config, url);
+        if (isReputationProviderCircuitOpen(config, providerStateKey, now)) {
+          return {
+            url,
+            status: "skipped" as const
+          };
+        }
+
+        try {
+          const snapshot = await fetchRemoteReputationSnapshot(url, config.externalReputationTimeoutMs);
+          registerReputationProviderSuccess(providerStateKey);
+          return {
+            url,
+            status: "fulfilled" as const,
+            snapshot
+          };
+        } catch {
+          registerReputationProviderFailure(config, providerStateKey, now);
+          return {
+            url,
+            status: "rejected" as const
+          };
+        }
+      })
     );
-    const successfulSnapshots = fetchResults
-      .filter((result): result is PromiseFulfilledResult<{ highRiskDeviceIds: Set<string>; highRiskIpAddresses: Set<string> }> => result.status === "fulfilled")
-      .map((result) => result.value);
+
+    const successfulSnapshots = providerResults
+      .filter((result): result is { url: string; status: "fulfilled"; snapshot: { highRiskDeviceIds: Set<string>; highRiskIpAddresses: Set<string> } } => result.status === "fulfilled")
+      .map((result) => result.snapshot);
+    const failedProviderCount = providerResults.filter((result) => result.status === "rejected").length;
+    const skippedProviderCount = providerResults.filter((result) => result.status === "skipped").length;
 
     if (successfulSnapshots.length < config.externalReputationMinimumSuccess) {
       if (config.externalReputationStrictMode) {
@@ -425,7 +522,9 @@ async function resolveAntiSpoofingReputationSnapshot(
           {
             requiredSuccess: config.externalReputationMinimumSuccess,
             succeeded: successfulSnapshots.length,
-            configuredProviders: config.externalReputationUrls.length
+            configuredProviders: config.externalReputationUrls.length,
+            failedProviders: failedProviderCount,
+            skippedProviders: skippedProviderCount
           }
         );
       }
@@ -599,6 +698,20 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MIN_SUCCESS ??
         process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MIN_SUCCESS
     ) ?? 1;
+  const externalReputationCircuitBreakerEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CIRCUIT_BREAKER_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CIRCUIT_BREAKER_ENABLED
+  );
+  const externalReputationFailureThreshold =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_FAILURE_THRESHOLD ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_FAILURE_THRESHOLD
+    ) ?? 3;
+  const externalReputationCooldownSeconds =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_COOLDOWN_SECONDS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_COOLDOWN_SECONDS
+    ) ?? 120;
   const externalReputationTimeoutMs =
     parseIntegerEnv(
       process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_TIMEOUT_MS ??
@@ -684,6 +797,24 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       "attendance anti-spoofing policy is enabled but external reputation majority threshold exceeds provider count"
     );
   }
+  if (
+    externalReputationCircuitBreakerEnabled &&
+    (externalReputationFailureThreshold < 1 || externalReputationFailureThreshold > 20)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation failure-threshold configuration is invalid"
+    );
+  }
+  if (
+    externalReputationCircuitBreakerEnabled &&
+    (externalReputationCooldownSeconds < 10 || externalReputationCooldownSeconds > 3600)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation cooldown configuration is invalid"
+    );
+  }
   if (externalReputationTimeoutMs < 100 || externalReputationTimeoutMs > 10000) {
     throw new ServiceError(
       500,
@@ -712,6 +843,9 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
     externalReputationAggregation,
     externalReputationMajorityThreshold,
     externalReputationMinimumSuccess,
+    externalReputationCircuitBreakerEnabled,
+    externalReputationFailureThreshold,
+    externalReputationCooldownSeconds,
     externalReputationTimeoutMs,
     externalReputationCacheTtlSeconds,
     externalReputationStrictMode
