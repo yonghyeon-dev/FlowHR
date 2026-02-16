@@ -40,6 +40,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           ? {
               channel: parsed.data.capture.channel,
               deviceId: parsed.data.capture.deviceId,
+              attestationToken: parsed.data.capture.attestationToken,
               ipAddress: parsed.data.capture.ipAddress,
               latitude: parsed.data.capture.latitude,
               longitude: parsed.data.capture.longitude,

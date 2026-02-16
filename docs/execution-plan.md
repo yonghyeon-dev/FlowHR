@@ -109,7 +109,7 @@ Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling rotation balancing/optimization automation (rotation baseline merged)
-  - advanced clock-in policy enforcement (device attestation/anti-spoofing) after trusted-device + multi-site geofence baseline
+  - advanced clock-in anti-spoofing policy enforcement (risk scoring/signal fusion) after trusted-device + multi-site geofence + attestation baseline
   - anomaly escalation policy and delivery routing (alert automation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
@@ -126,6 +126,7 @@ Recently delivered:
 - Scheduling anomaly alert automation baseline is merged behind feature flag (`FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED`; WI-0051).
 - Attendance trusted device allowlist policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED`; WI-0052).
 - Attendance multi-site geofence policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED`; WI-0053).
+- Attendance device attestation policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED`; WI-0054).
 
 ## 2) Priority Roadmap
 
@@ -260,6 +261,7 @@ Tasks:
 12. (Done) `work-items/WI-0051-scheduling-anomaly-alert-automation.md`
 13. (Done) `work-items/WI-0052-attendance-trusted-device-policy.md`
 14. (Done) `work-items/WI-0053-attendance-multisite-geofence-policy.md`
+15. (Done) `work-items/WI-0054-attendance-device-attestation-policy.md`
 
 ## 3) Workstream Ownership
 
@@ -293,5 +295,5 @@ Request template:
 Without additional input, the next executable step is:
 
 1. define WI for rotation balancing/optimization policy contract-first,
-2. define WI for device attestation / anti-spoofing policy engine (on top of trusted-device + multi-site geofence baseline) contract-first,
+2. define WI for anti-spoofing signal fusion/risk scoring policy engine (on top of trusted-device + multi-site geofence + attestation baseline) contract-first,
 3. define WI for anomaly escalation policy (severity routing/retry/escalation ownership) on top of WI-0051.

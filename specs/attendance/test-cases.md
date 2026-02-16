@@ -24,6 +24,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 16. When `FLOWHR_ATTENDANCE_GEOFENCE_ENABLED=true`, employee GPS create/update outside configured radius is rejected while manager correction path remains allowed.
 17. When `FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED=true`, employee write with missing/untrusted deviceId is rejected while trusted deviceId is accepted.
 18. When `FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED=true`, employee GPS create/update must match at least one configured site geofence while manager correction path remains allowed.
+19. When `FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED=true`, employee write with missing/mismatched capture attestation token is rejected while mapped device/token pair is accepted.
 
 ## Boundary and Accuracy Cases
 
@@ -37,6 +38,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 8. Geofence policy feature flag only applies to employee write path and validates configured radius boundary.
 9. Trusted device policy feature flag only applies to employee write path and validates configured allowlist.
 10. Multi-site geofence policy feature flag only applies to employee write path and validates configured site list format and radius boundaries.
+11. Device attestation policy feature flag only applies to employee write path and validates configured device/token mapping.
 
 ## Regression Linkage
 

@@ -23,6 +23,7 @@ type CreateAttendanceInput = {
   capture?: {
     channel: AttendanceCaptureChannel;
     deviceId?: string;
+    attestationToken?: string;
     ipAddress?: string;
     latitude?: number;
     longitude?: number;
@@ -39,6 +40,7 @@ type UpdateAttendanceInput = {
   capture?: {
     channel?: AttendanceCaptureChannel;
     deviceId?: string | null;
+    attestationToken?: string;
     ipAddress?: string | null;
     latitude?: number | null;
     longitude?: number | null;
@@ -114,6 +116,13 @@ function isAttendanceTrustedDevicePolicyEnabled() {
   );
 }
 
+function isAttendanceDeviceAttestationPolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED ??
+      process.env.ATTENDANCE_DEVICE_ATTESTATION_ENABLED
+  );
+}
+
 type GeofenceConfig = {
   latitude: number;
   longitude: number;
@@ -150,6 +159,40 @@ function parseTrustedDeviceAllowlist() {
   }
 
   return new Set(values);
+}
+
+function parseDeviceAttestationMap() {
+  const raw =
+    process.env.FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_TOKENS ??
+    process.env.ATTENDANCE_DEVICE_ATTESTATION_TOKENS ??
+    "";
+  const entries = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (entries.length === 0) {
+    throw new ServiceError(
+      500,
+      "attendance device attestation policy is enabled but token mapping is empty"
+    );
+  }
+
+  const mapping = new Map<string, string>();
+  for (const entry of entries) {
+    const [deviceIdRaw, tokenRaw, ...extra] = entry.split(":");
+    const deviceId = deviceIdRaw?.trim() ?? "";
+    const token = tokenRaw?.trim() ?? "";
+    if (!deviceId || !token || extra.length > 0) {
+      throw new ServiceError(
+        500,
+        "attendance device attestation policy is enabled but token mapping is invalid"
+      );
+    }
+    mapping.set(deviceId, token);
+  }
+
+  return mapping;
 }
 
 function loadGeofenceConfig(): GeofenceConfig {
@@ -409,6 +452,61 @@ function assertTrustedDevicePolicyForUpdate(
   }
 }
 
+function assertDeviceAttestationForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceDeviceAttestationPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const deviceId = input.capture?.deviceId?.trim();
+  if (!deviceId) {
+    throw new ServiceError(
+      400,
+      "attendance device attestation policy requires effective capture deviceId"
+    );
+  }
+
+  const attestationToken = input.capture?.attestationToken?.trim();
+  if (!attestationToken) {
+    throw new ServiceError(400, "attendance device attestation policy requires capture attestationToken");
+  }
+
+  const attestationMap = parseDeviceAttestationMap();
+  const expectedToken = attestationMap.get(deviceId);
+  if (!expectedToken || expectedToken !== attestationToken) {
+    throw new ServiceError(400, "attendance capture attestation token is invalid for device");
+  }
+}
+
+function assertDeviceAttestationForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceDeviceAttestationPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const nextDeviceId = input.capture?.deviceId !== undefined ? input.capture.deviceId : existing.captureDeviceId;
+  const normalizedDeviceId = nextDeviceId?.trim();
+  if (!normalizedDeviceId) {
+    throw new ServiceError(
+      400,
+      "attendance device attestation policy requires effective capture deviceId"
+    );
+  }
+
+  const attestationToken = input.capture?.attestationToken?.trim();
+  if (!attestationToken) {
+    throw new ServiceError(400, "attendance device attestation policy requires capture attestationToken");
+  }
+
+  const attestationMap = parseDeviceAttestationMap();
+  const expectedToken = attestationMap.get(normalizedDeviceId);
+  if (!expectedToken || expectedToken !== attestationToken) {
+    throw new ServiceError(400, "attendance capture attestation token is invalid for device");
+  }
+}
+
 function toCapturePayload(record: AttendanceRecordEntity) {
   return {
     channel: record.captureChannel,
@@ -469,6 +567,7 @@ export async function createAttendanceRecord(
   assertGpsCapturePolicyForCreate(actor, input);
   assertGeofencePolicyForCreate(actor, input);
   assertTrustedDevicePolicyForCreate(actor, input);
+  assertDeviceAttestationForCreate(actor, input);
 
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
@@ -553,6 +652,7 @@ export async function updateAttendanceRecord(
   assertGpsCapturePolicyForUpdate(context.actor!, existing, input);
   assertGeofencePolicyForUpdate(context.actor!, existing, input);
   assertTrustedDevicePolicyForUpdate(context.actor!, existing, input);
+  assertDeviceAttestationForUpdate(context.actor!, existing, input);
   const employee = await requireEmployeeWithinTenant(
     context.dataAccess,
     context.actor,

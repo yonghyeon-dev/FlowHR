@@ -8,6 +8,7 @@ const captureMetadataCreateSchema = z
   .object({
     channel: attendanceCaptureChannel.default("MANUAL"),
     deviceId: z.string().min(1).max(120).optional(),
+    attestationToken: z.string().min(1).max(256).optional(),
     ipAddress: z.string().ip().optional(),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
@@ -38,6 +39,7 @@ const captureMetadataUpdateSchema = z
   .object({
     channel: attendanceCaptureChannel.optional(),
     deviceId: z.string().min(1).max(120).nullable().optional(),
+    attestationToken: z.string().min(1).max(256).optional(),
     ipAddress: z.string().ip().nullable().optional(),
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
