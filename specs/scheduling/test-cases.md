@@ -68,6 +68,8 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 60. Employee cannot call rotation fairness apply endpoint (403).
 61. Rotation fairness report with `globalConstraints` returns global summary and diversified offset recommendations.
 62. Rotation fairness apply returns 409 with no writes when `maxDailyPlannedMinutesGap` threshold is breached.
+63. Manager anomaly cockpit query returns tenant-level severity summary, employee aggregates, and prioritized queue.
+64. Employee anomaly cockpit query is rejected (403).
 
 ## Boundary Cases
 
@@ -84,11 +86,13 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 11. Rotation fairness report is deterministic for identical inputs.
 12. Rotation fairness apply preflights overlaps before write-back.
 13. Rotation fairness global constraint threshold validates integer range (0..100000).
+14. Anomaly cockpit `topN` query validates integer range (1..200) and limits queue size.
 
 ## Regression Linkage
 
 - none
 - anomaly report is read-only and does not mutate schedule or attendance state.
+- anomaly cockpit report is read-only and does not mutate schedule or attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.
