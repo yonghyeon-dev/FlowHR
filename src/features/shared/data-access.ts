@@ -157,6 +157,14 @@ export type CreateWorkScheduleInput = {
   notes?: string;
 };
 
+export type UpdateWorkScheduleInput = {
+  startAt?: Date;
+  endAt?: Date;
+  breakMinutes?: number;
+  isHoliday?: boolean;
+  notes?: string | null;
+};
+
 export type CreatePayrollRunInput = {
   organizationId?: string | null;
   employeeId?: string;
@@ -281,6 +289,8 @@ export interface AttendanceStore {
 
 export interface SchedulingStore {
   create(input: CreateWorkScheduleInput): Promise<WorkScheduleEntity>;
+  findById(id: string): Promise<WorkScheduleEntity | null>;
+  update(id: string, input: UpdateWorkScheduleInput): Promise<WorkScheduleEntity>;
   listInPeriod(input: {
     periodStart: Date;
     periodEnd: Date;

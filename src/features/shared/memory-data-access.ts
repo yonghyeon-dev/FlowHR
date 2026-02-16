@@ -2,6 +2,7 @@ import type {
   AppendAuditLogInput,
   AttendanceRecordEntity,
   CreateWorkScheduleInput,
+  UpdateWorkScheduleInput,
   CreateEmployeeInput,
   CreateOrganizationInput,
   DataAccess,
@@ -475,6 +476,31 @@ export const memoryDataAccess: DataAccess = {
       };
       state.workSchedules.set(entity.id, entity);
       return cloneWorkSchedule(entity);
+    },
+
+    async findById(id: string) {
+      const entity = state.workSchedules.get(id);
+      return entity ? cloneWorkSchedule(entity) : null;
+    },
+
+    async update(id: string, input: UpdateWorkScheduleInput) {
+      const existing = state.workSchedules.get(id);
+      if (!existing) {
+        throw new Error(`work schedule not found: ${id}`);
+      }
+
+      const updated: WorkScheduleEntity = {
+        ...existing,
+        startAt: input.startAt ? cloneDate(input.startAt) : existing.startAt,
+        endAt: input.endAt ? cloneDate(input.endAt) : existing.endAt,
+        breakMinutes: input.breakMinutes ?? existing.breakMinutes,
+        isHoliday: input.isHoliday ?? existing.isHoliday,
+        notes: input.notes !== undefined ? input.notes : existing.notes,
+        updatedAt: new Date()
+      };
+
+      state.workSchedules.set(id, updated);
+      return cloneWorkSchedule(updated);
     },
 
     async listInPeriod(input) {

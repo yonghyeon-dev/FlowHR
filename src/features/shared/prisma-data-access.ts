@@ -10,6 +10,7 @@ import type {
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreateWorkScheduleInput,
+  UpdateWorkScheduleInput,
   DataAccess,
   DeductionProfileEntity,
   DeductionProfileStore,
@@ -461,6 +462,27 @@ const scheduling: SchedulingStore = {
         breakMinutes: input.breakMinutes,
         isHoliday: input.isHoliday,
         notes: input.notes ?? null
+      }
+    });
+    return toWorkScheduleEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.workSchedule.findUnique({
+      where: { id }
+    });
+    return record ? toWorkScheduleEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateWorkScheduleInput) {
+    const record = await prisma.workSchedule.update({
+      where: { id },
+      data: {
+        ...(input.startAt ? { startAt: input.startAt } : {}),
+        ...(input.endAt ? { endAt: input.endAt } : {}),
+        ...(input.breakMinutes !== undefined ? { breakMinutes: input.breakMinutes } : {}),
+        ...(input.isHoliday !== undefined ? { isHoliday: input.isHoliday } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {})
       }
     });
     return toWorkScheduleEntity(record);
