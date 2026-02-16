@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.9.0
+version: 0.10.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -8,6 +8,7 @@ scope:
     - template-based single-date schedule assignment
     - template-based multi-day range assignment
     - rotation sequence assignment with multiple templates
+    - rotation balance report (weekday load and planned-minute imbalance, read-only)
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
@@ -17,6 +18,7 @@ scope:
     - GPS/QR/geofence clock-in enforcement
     - anomaly-driven automatic payroll or approval enforcement
     - multi-channel escalation policy orchestration
+    - automatic rotation optimizer write-back
 entities:
   - name: WorkSchedule
     description: Planned work schedule entry for an employee.
@@ -60,6 +62,9 @@ api:
     - method: POST
       path: /scheduling/rotations/assign
       description: Assign schedules by rotating templates over matched weekdays in date range.
+    - method: GET
+      path: /scheduling/rotations/balance
+      description: Read-only rotation balance report by period with optional employee filter.
     - method: GET
       path: /scheduling/anomalies
       description: Read-only anomaly report by period with optional employee filter.
@@ -105,6 +110,7 @@ invariants:
   - Rotation assignment requires at least two unique template ids.
   - Rotation assignment requires all templates share identical weekday set.
   - Rotation assignment overlap validation is preflighted and must fail with no writes on conflict.
+  - Rotation balance report is read-only and must not update WorkSchedule state.
   - Anomaly report is read-only and must not update WorkSchedule or AttendanceRecord state.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.
@@ -132,6 +138,8 @@ test_plan:
     - range assignment conflict returns 409 with no partial writes
     - manager can assign rotation using multiple templates across date range
     - rotation assignment rejects mixed weekday sets and conflict causes no partial writes
+    - rotation balance report enforces role boundaries (manager employeeId-required; employee own-only)
+    - rotation balance report returns grade and weekday load aggregates without mutating schedules
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
     - anomaly report with alert flag emits anomaly event/audit when anomalies exist
@@ -142,6 +150,7 @@ test_plan:
     - anomaly report does not mutate schedule or attendance states
     - anomaly report remains available even when alert publication fails
     - anomaly report remains available even when escalation publication fails
+    - rotation balance report does not mutate schedules
   authorization:
     - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/anomaly-report
   payroll_accuracy:
@@ -155,6 +164,7 @@ observability:
     - scheduling.template.assigned
     - scheduling.template.range_assigned
     - scheduling.rotation.assigned
+    - scheduling.rotation.balance.report.generated
     - scheduling.anomaly.report.generated
     - scheduling.anomaly.alert.triggered
     - scheduling.anomaly.alert.failed
@@ -170,6 +180,7 @@ observability:
     - schedule_template_range_assign_created_count (optional)
     - schedule_rotation_assign_count (optional)
     - schedule_rotation_assign_created_count (optional)
+    - schedule_rotation_balance_report_count (optional)
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
@@ -193,7 +204,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.9.0 adds optional anomaly escalation automation event (`scheduling.anomaly.escalated.v1`) behind FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED. Existing scheduling APIs remain response-compatible."
+consumer_impact: "Contract v0.10.0 adds read-only rotation balance report endpoint (`GET /scheduling/rotations/balance`) for weekday load and planned-minute imbalance analysis. Existing scheduling APIs remain response-compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -206,6 +217,7 @@ references:
   - work-items/WI-0047-scheduling-rotation-assignment.md
   - work-items/WI-0051-scheduling-anomaly-alert-automation.md
   - work-items/WI-0055-scheduling-anomaly-escalation-policy.md
+  - work-items/WI-0057-scheduling-rotation-balance-report.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

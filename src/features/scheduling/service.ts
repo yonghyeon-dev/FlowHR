@@ -38,6 +38,12 @@ type ListScheduleAnomaliesInput = {
   lateThresholdMinutes?: number;
 };
 
+type ListRotationBalanceInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId?: string;
+};
+
 type UpdateScheduleInput = {
   startAt?: Date;
   endAt?: Date;
@@ -128,6 +134,27 @@ export type ScheduleAttendanceAnomalyReport = {
     noShow: number;
   };
   anomalies: ScheduleAttendanceAnomaly[];
+};
+
+export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
+
+export type RotationBalanceReport = {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId: string | null;
+  counts: {
+    schedules: number;
+    activeWeekdays: number;
+    weekdayGap: number;
+    plannedMinutesGap: number;
+    grade: RotationBalanceGrade;
+  };
+  weekdays: Array<{
+    weekday: number;
+    scheduleCount: number;
+    plannedMinutes: number;
+  }>;
+  recommendations: string[];
 };
 
 type ServiceContext = {
@@ -514,6 +541,27 @@ function weekdayFromKstDate(dateYmd: string) {
   const shiftedToKst = new Date(base.getTime() + 9 * 60 * 60 * 1000);
   const weekdayJs = shiftedToKst.getUTCDay();
   return weekdayJs === 0 ? 7 : weekdayJs;
+}
+
+function weekdayFromKstDateTime(dateTime: Date) {
+  const shiftedToKst = new Date(dateTime.getTime() + 9 * 60 * 60 * 1000);
+  const weekdayJs = shiftedToKst.getUTCDay();
+  return weekdayJs === 0 ? 7 : weekdayJs;
+}
+
+function plannedMinutesForSchedule(schedule: WorkScheduleEntity) {
+  const durationMinutes = Math.floor((schedule.endAt.getTime() - schedule.startAt.getTime()) / 60_000);
+  return Math.max(0, durationMinutes - schedule.breakMinutes);
+}
+
+function deriveRotationBalanceGrade(weekdayGap: number, plannedMinutesGap: number): RotationBalanceGrade {
+  if (weekdayGap <= 1 && plannedMinutesGap <= 240) {
+    return "BALANCED";
+  }
+  if (weekdayGap <= 2 && plannedMinutesGap <= 480) {
+    return "MODERATE";
+  }
+  return "IMBALANCED";
 }
 
 function dateTimeFromKstDateAndMinute(dateYmd: string, minute: number) {
@@ -1262,6 +1310,111 @@ export async function listWorkSchedules(
     organizationId: tenantScope ?? undefined,
     employeeId
   });
+}
+
+export async function listWorkScheduleRotationBalance(
+  context: ServiceContext,
+  input: ListRotationBalanceInput
+): Promise<RotationBalanceReport> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+  const schedules = await listWorkSchedules(context, {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId
+  });
+
+  const buckets = new Map<number, { weekday: number; scheduleCount: number; plannedMinutes: number }>();
+  for (let weekday = 1; weekday <= 7; weekday += 1) {
+    buckets.set(weekday, {
+      weekday,
+      scheduleCount: 0,
+      plannedMinutes: 0
+    });
+  }
+
+  for (const schedule of schedules) {
+    const weekday = weekdayFromKstDateTime(schedule.startAt);
+    const bucket = buckets.get(weekday);
+    if (!bucket) {
+      continue;
+    }
+    bucket.scheduleCount += 1;
+    bucket.plannedMinutes += plannedMinutesForSchedule(schedule);
+  }
+
+  const weekdays = Array.from(buckets.values()).sort((a, b) => a.weekday - b.weekday);
+  const activeWeekdays = weekdays.filter((bucket) => bucket.scheduleCount > 0);
+  const weekdayGap =
+    activeWeekdays.length === 0
+      ? 0
+      : Math.max(...activeWeekdays.map((bucket) => bucket.scheduleCount)) -
+        Math.min(...activeWeekdays.map((bucket) => bucket.scheduleCount));
+  const plannedMinutesGap =
+    activeWeekdays.length === 0
+      ? 0
+      : Math.max(...activeWeekdays.map((bucket) => bucket.plannedMinutes)) -
+        Math.min(...activeWeekdays.map((bucket) => bucket.plannedMinutes));
+  const grade = deriveRotationBalanceGrade(weekdayGap, plannedMinutesGap);
+
+  const recommendations: string[] = [];
+  if (schedules.length === 0) {
+    recommendations.push("조회 범위에 회전 스케줄이 없습니다.");
+  } else if (grade === "BALANCED") {
+    recommendations.push("현재 범위에서 회전 부하가 균형적입니다.");
+  } else {
+    if (weekdayGap > 1) {
+      recommendations.push("요일별 배치 편차가 큽니다. 회전 템플릿 순서를 재조정하세요.");
+    }
+    if (plannedMinutesGap > 480) {
+      recommendations.push("요일별 계획 근로시간 편차가 큽니다. 템플릿 근무시간 또는 휴게시간을 조정하세요.");
+    }
+    if (activeWeekdays.length < 3) {
+      recommendations.push("활성 요일이 적어 편중 위험이 큽니다. 회전 적용 요일을 확장하세요.");
+    }
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push("현재 회전 밸런스는 허용 범위입니다.");
+  }
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.rotation.balance.report.generated",
+    entityType: "WorkSchedule",
+    organizationId: resolveTenantScope(actor) ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      employeeId: input.employeeId ?? null,
+      schedules: schedules.length,
+      activeWeekdays: activeWeekdays.length,
+      weekdayGap,
+      plannedMinutesGap,
+      grade,
+      recommendations
+    }
+  });
+
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId ?? null,
+    counts: {
+      schedules: schedules.length,
+      activeWeekdays: activeWeekdays.length,
+      weekdayGap,
+      plannedMinutesGap,
+      grade
+    },
+    weekdays,
+    recommendations
+  };
 }
 
 function attendanceOverlapsSchedule(

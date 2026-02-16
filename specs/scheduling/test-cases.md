@@ -55,6 +55,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 47. When anomaly alert automation is disabled, anomaly report still succeeds and does not emit automation event.
 48. When `FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED=true` and anomalies exist, emit `scheduling.anomaly.escalated.v1` with severity/owner/retry payload and append `scheduling.anomaly.escalation.triggered` audit log.
 49. When anomaly escalation automation is disabled, anomaly report still succeeds and does not emit escalation event.
+50. Manager lists rotation balance report for an employee and receives weekday load/planned-minute aggregates with grade/recommendations (200).
+51. Manager rotation balance query without `employeeId` is rejected (400).
+52. Employee can list own rotation balance report only (403 on other employeeId).
 
 ## Boundary Cases
 
@@ -66,6 +69,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 6. Rotation assignment uses max 62-day window and supports overnight templates.
 7. Alert automation failure path does not fail anomaly report response.
 8. Escalation automation failure path does not fail anomaly report response.
+9. Rotation balance report is read-only and does not mutate schedule state.
 
 ## Regression Linkage
 
@@ -73,6 +77,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly report is read-only and does not mutate schedule or attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
+- rotation balance report path does not mutate schedule state.
 
 ## QA Gate Expectations
 

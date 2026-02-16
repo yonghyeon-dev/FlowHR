@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - scheduling rotation balancing/optimization automation (rotation baseline merged)
+  - scheduling rotation optimization automation with write-back (rotation assign + balance baseline merged)
   - advanced clock-in anti-spoofing signal fusion/external reputation policy after risk-scoring baseline
   - real-time anomaly dashboard and operator cockpit flow (report/alert/escalation baseline merged)
 - Web UI and employee self-service are not started (Phase 6).
@@ -129,6 +129,7 @@ Recently delivered:
 - Attendance device attestation policy baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED`; WI-0054).
 - Scheduling anomaly escalation policy baseline is merged behind feature flag (`FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED`; WI-0055).
 - Attendance anti-spoofing risk scoring baseline is merged behind feature flag (`FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED`; WI-0056).
+- Scheduling rotation balance report baseline is merged via read-only endpoint (`GET /scheduling/rotations/balance`; WI-0057).
 
 ## 2) Priority Roadmap
 
@@ -266,6 +267,7 @@ Tasks:
 15. (Done) `work-items/WI-0054-attendance-device-attestation-policy.md`
 16. (Done) `work-items/WI-0055-scheduling-anomaly-escalation-policy.md`
 17. (Done) `work-items/WI-0056-attendance-anti-spoofing-policy.md`
+18. (Done) `work-items/WI-0057-scheduling-rotation-balance-report.md`
 
 ## 3) Workstream Ownership
 
@@ -298,6 +300,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for rotation balancing/optimization policy contract-first,
+1. define WI for rotation optimization write-back policy (on top of rotation balance baseline) contract-first,
 2. define WI for anti-spoofing signal fusion/external reputation policy engine (on top of risk-scoring baseline) contract-first,
 3. define WI for real-time anomaly dashboard/operator cockpit flow on top of report/alert/escalation baselines.

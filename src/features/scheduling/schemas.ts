@@ -70,3 +70,9 @@ export const listScheduleAnomaliesQuerySchema = z.object({
   lateThresholdMinutes: z.coerce.number().int().min(0).max(240).optional()
 });
 
+export const listScheduleRotationBalanceQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+  employeeId: z.string().min(1).optional()
+});
+
