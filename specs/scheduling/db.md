@@ -16,6 +16,7 @@
 No additional migration in WI-0045 (anomaly report is read-only).
 No additional migration in WI-0046 (range assignment is runtime/API behavior only).
 No additional migration in WI-0047 (rotation assignment is runtime/API behavior only).
+No additional migration in WI-0051 (anomaly alert automation is runtime event/audit behavior only).
 
 ## Tenant Isolation
 

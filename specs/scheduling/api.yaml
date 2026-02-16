@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.7.0
+  version: 0.8.0
 paths:
   /scheduling/schedules:
     get:
@@ -167,6 +167,7 @@ paths:
   /scheduling/anomalies:
     get:
       summary: List schedule-to-attendance anomalies (read-only)
+      description: When `FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED=true`, anomaly detection can emit automation event `scheduling.anomaly.detected.v1` without changing response shape.
       parameters:
         - in: query
           name: from

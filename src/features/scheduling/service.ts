@@ -154,6 +154,104 @@ function normalizeLateThresholdMinutes(value: number | undefined) {
   return normalized;
 }
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+function isSchedulingAnomalyAlertsEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED ??
+      process.env.SCHEDULING_ANOMALY_ALERTS_ENABLED
+  );
+}
+
+function buildAnomalyAlertPayload(
+  input: ListScheduleAnomaliesInput,
+  lateThresholdMinutes: number,
+  evaluatedSchedules: number,
+  anomalies: ScheduleAttendanceAnomaly[],
+  lateCount: number,
+  noShowCount: number
+) {
+  return {
+    periodStart: input.periodStart.toISOString(),
+    periodEnd: input.periodEnd.toISOString(),
+    employeeId: input.employeeId ?? null,
+    lateThresholdMinutes,
+    evaluatedSchedules,
+    anomalies: anomalies.length,
+    lateCount,
+    noShowCount,
+    samples: anomalies.slice(0, 20).map((anomaly) => ({
+      scheduleId: anomaly.scheduleId,
+      employeeId: anomaly.employeeId,
+      anomalyType: anomaly.anomalyType,
+      lateMinutes: anomaly.lateMinutes
+    }))
+  };
+}
+
+async function emitAnomalyAlertIfEnabled(
+  context: ServiceContext,
+  actor: Actor,
+  input: ListScheduleAnomaliesInput,
+  lateThresholdMinutes: number,
+  evaluatedSchedules: number,
+  anomalies: ScheduleAttendanceAnomaly[],
+  lateCount: number,
+  noShowCount: number
+) {
+  if (!isSchedulingAnomalyAlertsEnabled() || anomalies.length === 0) {
+    return;
+  }
+
+  const payload = buildAnomalyAlertPayload(
+    input,
+    lateThresholdMinutes,
+    evaluatedSchedules,
+    anomalies,
+    lateCount,
+    noShowCount
+  );
+
+  try {
+    await getEventPublisher(context).publish({
+      name: "scheduling.anomaly.detected.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "WorkSchedule",
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+
+    await context.dataAccess.audit.append({
+      action: "scheduling.anomaly.alert.triggered",
+      entityType: "WorkSchedule",
+      organizationId: resolveTenantScope(actor) ?? undefined,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+  } catch (error) {
+    try {
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.alert.failed",
+        entityType: "WorkSchedule",
+        organizationId: resolveTenantScope(actor) ?? undefined,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          ...payload,
+          error: error instanceof Error ? error.message : "unknown error"
+        }
+      });
+    } catch {
+      // Non-blocking path: do not fail anomaly report API on alert side-effects.
+    }
+  }
+}
+
 function toCreateInput(input: CreateScheduleInput): CreateWorkScheduleInput {
   return {
     employeeId: input.employeeId,
@@ -1100,6 +1198,17 @@ export async function listScheduleAttendanceAnomalies(
       noShowCount
     }
   });
+
+  await emitAnomalyAlertIfEnabled(
+    context,
+    actor,
+    input,
+    lateThresholdMinutes,
+    schedules.length,
+    anomalies,
+    lateCount,
+    noShowCount
+  );
 
   return {
     periodStart: input.periodStart,
