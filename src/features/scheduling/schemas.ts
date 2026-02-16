@@ -40,6 +40,12 @@ export const assignScheduleTemplateSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 });
 
+export const assignScheduleTemplateRangeSchema = z.object({
+  employeeId: z.string().min(1),
+  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+});
+
 export const listWorkScheduleQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

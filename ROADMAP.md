@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0045)
+### 완료 WI 목록 (WI-0001 ~ WI-0046)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -69,16 +69,17 @@
 | WI-0043 | Scheduling Delete API (WorkSchedule DELETE) | 핵심 비즈니스 |
 | WI-0044 | Scheduling Template + Recurring Assignment Baseline | 핵심 비즈니스 |
 | WI-0045 | Scheduling to Attendance Anomaly Report Baseline | 핵심 비즈니스 |
+| WI-0046 | Scheduling Template Multi-Day Range Assignment Baseline | 핵심 비즈니스 |
 
 ### 다음 우선순위 (Phase 2 시작)
 
-- 근무일정/교대/유연근무 고도화(다건 반복/로테이션)
+- 근무일정/교대/유연근무 고도화(로테이션/밸런싱)
 - 출퇴근 입력 강화(GPS/QR/디바이스/위치 기반)
 - 실시간 근태 현황/이상 탐지(리포트 기반 -> 알림/자동화 단계)
 
 ### 진행 중
 
-- 없음 (WI-0045까지 main에 머지 완료)
+- 없음 (WI-0046까지 main에 머지 완료)
 
 ### 현재 아키텍처
 
@@ -201,7 +202,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 |------|---------|------|-------------|-----|
 | **인사 마스터** | ✅ 직원/부서/직급/조직도 | ✅ 직원/조직/이력관리 | ⚠️ Organization/Employee 기본 CRUD(WI-0034) + RBAC baseline(WI-0036); Department/Position 미도입 | High |
 | **멀티테넌트** | ✅ 회사별 격리 | ✅ 워크스페이스 격리 | ⚠️ baseline 적용(Supabase RLS + `FLOWHR_TENANCY_V1`, WI-0037) | Critical |
-| **근무일정** | ✅ 교대근무/유연근무 | ✅ 시차출근/재택 | ⚠️ WorkSchedule CRUD + template 단건 할당 baseline(WI-0040~0044); 다건 반복/로테이션 미도입 | Critical |
+| **근무일정** | ✅ 교대근무/유연근무 | ✅ 시차출근/재택 | ⚠️ WorkSchedule CRUD + template 단건/다건 할당 baseline(WI-0040~0046); 로테이션/밸런싱 미도입 | Critical |
 | **출퇴근** | ✅ GPS/비콘/키오스크 | ✅ GPS/Wi-Fi/QR | ⚠️ 수동 기록만 | High |
 | **근태 집계** | ✅ 자동 집계/이상 감지 | ✅ 실시간 대시보드 | ⚠️ 집계 조회 API(WI-0031) + 스케줄 대비 anomaly read-only 리포트(WI-0045); 실시간 대시보드/알림 미도입 | High |
 | **휴가 관리** | ✅ 정책 엔진/잔여일 자동계산 | ✅ 자동 부여/소진 추적 | ⚠️ 기본 CRUD만 | Medium |

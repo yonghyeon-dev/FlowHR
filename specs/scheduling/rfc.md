@@ -4,6 +4,7 @@
 
 Introduce a `WorkSchedule` + `WorkScheduleTemplate` baseline so managers can assign planned windows and reuse recurring templates.
 Add a read-only anomaly report that compares schedules and attendance to signal late/no-show cases.
+Add range assignment so managers can generate multiple schedules from one template request.
 
 ## Motivation
 
@@ -41,6 +42,9 @@ Add a read-only anomaly report that compares schedules and attendance to signal 
   - Lists organization templates.
 - `POST /api/scheduling/templates/{templateId}/assign`
   - Creates one `WorkSchedule` from template for given employee/date.
+- `POST /api/scheduling/templates/{templateId}/assign-range`
+  - Creates multiple `WorkSchedule` rows for matching weekdays in requested date range.
+  - Uses overlap preflight to avoid partial writes.
 - `GET /api/scheduling/anomalies?from=...&to=...&employeeId=...`
   - Returns read-only `LATE`/`NO_SHOW` signals.
   - Uses `lateThresholdMinutes` query parameter (default 10).
@@ -60,7 +64,7 @@ Add a read-only anomaly report that compares schedules and attendance to signal 
 
 ## Future Extensions
 
-- Multi-day bulk assignment and rotation engine
+- Rotation engine and shift balancing
 - Shift swap requests and approvals
 - anomaly-driven notifications and escalation workflow
 

@@ -62,6 +62,22 @@ type AssignTemplateInput = {
   date: string;
 };
 
+type AssignTemplateRangeInput = {
+  templateId: string;
+  employeeId: string;
+  fromDate: string;
+  toDate: string;
+};
+
+export type TemplateRangeAssignmentResult = {
+  templateId: string;
+  employeeId: string;
+  fromDate: string;
+  toDate: string;
+  matchedDates: string[];
+  createdScheduleIds: string[];
+};
+
 export type ScheduleAttendanceAnomalyType = "LATE" | "NO_SHOW";
 
 export type ScheduleAttendanceAnomaly = {
@@ -195,6 +211,50 @@ function weekdayFromKstDate(dateYmd: string) {
 function dateTimeFromKstDateAndMinute(dateYmd: string, minute: number) {
   const base = parseDateToKstBase(dateYmd);
   return new Date(base.getTime() + minute * 60_000);
+}
+
+function formatKstDateYmd(base: Date) {
+  const shifted = new Date(base.getTime() + 9 * 60 * 60 * 1000);
+  return shifted.toISOString().slice(0, 10);
+}
+
+function enumerateTemplateMatchedDates(fromDate: string, toDate: string, weekdays: number[]) {
+  const start = parseDateToKstBase(fromDate);
+  const end = parseDateToKstBase(toDate);
+  if (end < start) {
+    throw new ServiceError(400, "toDate must be on or after fromDate");
+  }
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / oneDayMs) + 1;
+  if (totalDays > 62) {
+    throw new ServiceError(400, "date range too large; maximum is 62 days");
+  }
+
+  const matched: string[] = [];
+  for (let index = 0; index < totalDays; index += 1) {
+    const current = new Date(start.getTime() + index * oneDayMs);
+    const ymd = formatKstDateYmd(current);
+    const weekday = weekdayFromKstDate(ymd);
+    if (weekdays.includes(weekday)) {
+      matched.push(ymd);
+    }
+  }
+
+  if (matched.length === 0) {
+    throw new ServiceError(400, "no dates in range match template weekdays");
+  }
+
+  return matched;
+}
+
+function buildScheduleWindowFromTemplateDate(template: WorkScheduleTemplateEntity, dateYmd: string) {
+  const startAt = dateTimeFromKstDateAndMinute(dateYmd, template.startMinute);
+  let endAt = dateTimeFromKstDateAndMinute(dateYmd, template.endMinute);
+  if (template.endMinute <= template.startMinute) {
+    endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
+  }
+  return { startAt, endAt };
 }
 
 export async function createWorkSchedule(
@@ -521,11 +581,7 @@ export async function assignWorkScheduleFromTemplate(
     });
   }
 
-  const startAt = dateTimeFromKstDateAndMinute(input.date, template.startMinute);
-  let endAt = dateTimeFromKstDateAndMinute(input.date, template.endMinute);
-  if (template.endMinute <= template.startMinute) {
-    endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
-  }
+  const { startAt, endAt } = buildScheduleWindowFromTemplateDate(template, input.date);
 
   const schedule = await createWorkSchedule(context, {
     employeeId: input.employeeId,
@@ -566,6 +622,133 @@ export async function assignWorkScheduleFromTemplate(
   });
 
   return schedule;
+}
+
+export async function assignWorkScheduleRangeFromTemplate(
+  context: ServiceContext,
+  input: AssignTemplateRangeInput
+): Promise<TemplateRangeAssignmentResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(context, Permissions.schedulingScheduleWriteAny, "schedule template range assign requires permission");
+
+  const template = await requireTemplateEntityWithinTenant(context, input.templateId);
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+  if (!employee.organizationId || employee.organizationId !== template.organizationId) {
+    throw new ServiceError(409, "template organization and employee organization must match");
+  }
+
+  const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, template.weekdays);
+  const generatedWindows = matchedDates.map((date) => {
+    const window = buildScheduleWindowFromTemplateDate(template, date);
+    return {
+      date,
+      startAt: window.startAt,
+      endAt: window.endAt
+    };
+  });
+
+  const firstStart = generatedWindows.reduce((min, row) =>
+    row.startAt.getTime() < min.getTime() ? row.startAt : min
+  , generatedWindows[0].startAt);
+  const lastEnd = generatedWindows.reduce((max, row) =>
+    row.endAt.getTime() > max.getTime() ? row.endAt : max
+  , generatedWindows[0].endAt);
+  const existing = await context.dataAccess.scheduling.listInPeriod({
+    periodStart: firstStart,
+    periodEnd: lastEnd,
+    organizationId: employee.organizationId ?? undefined,
+    employeeId: input.employeeId
+  });
+
+  for (const candidate of generatedWindows) {
+    const overlaps = existing.filter(
+      (current) => current.startAt < candidate.endAt && current.endAt > candidate.startAt
+    );
+    if (overlaps.length > 0) {
+      throw new ServiceError(409, "overlapping schedule exists", {
+        templateId: template.id,
+        employeeId: input.employeeId,
+        date: candidate.date,
+        overlapCount: overlaps.length,
+        overlappingScheduleIds: overlaps.map((schedule) => schedule.id)
+      });
+    }
+  }
+
+  for (let index = 0; index < generatedWindows.length; index += 1) {
+    for (let next = index + 1; next < generatedWindows.length; next += 1) {
+      const left = generatedWindows[index];
+      const right = generatedWindows[next];
+      if (left.startAt < right.endAt && left.endAt > right.startAt) {
+        throw new ServiceError(409, "generated schedules overlap within requested range", {
+          templateId: template.id,
+          employeeId: input.employeeId,
+          leftDate: left.date,
+          rightDate: right.date
+        });
+      }
+    }
+  }
+
+  const createdScheduleIds: string[] = [];
+  for (const candidate of generatedWindows) {
+    const created = await createWorkSchedule(context, {
+      employeeId: input.employeeId,
+      startAt: candidate.startAt,
+      endAt: candidate.endAt,
+      breakMinutes: template.breakMinutes,
+      isHoliday: template.isHoliday,
+      notes: template.notes ?? undefined
+    });
+    createdScheduleIds.push(created.id);
+  }
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.template.range_assigned",
+    entityType: "WorkScheduleTemplate",
+    entityId: template.id,
+    organizationId: template.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      templateId: template.id,
+      employeeId: input.employeeId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      matchedDates,
+      createdScheduleIds,
+      createdCount: createdScheduleIds.length
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "scheduling.template.range_assigned.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "WorkScheduleTemplate",
+    entityId: template.id,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      templateId: template.id,
+      employeeId: input.employeeId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      matchedDates,
+      createdScheduleIds,
+      createdCount: createdScheduleIds.length
+    }
+  });
+
+  return {
+    templateId: template.id,
+    employeeId: input.employeeId,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    matchedDates,
+    createdScheduleIds
+  };
 }
 
 export async function listWorkSchedules(

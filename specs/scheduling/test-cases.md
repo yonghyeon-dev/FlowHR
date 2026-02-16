@@ -38,6 +38,12 @@ Work schedule CRUD + template assignment + schedule-to-attendance anomaly behavi
 30. Employee can list own anomaly report only (403 on other employeeId).
 31. Cross-tenant anomaly query for `employeeId` returns 404 (no existence leak).
 32. Append audit log `scheduling.anomaly.report.generated` for successful report reads.
+33. Manager assigns template by range and creates schedules only on matching weekdays (201).
+34. Reject range assignment when date range is invalid or exceeds limit (400).
+35. Reject range assignment when any generated window overlaps existing schedule (409) and no schedules are created.
+36. Employee cannot call template range assignment endpoint (403).
+37. Emit domain event `scheduling.template.range_assigned.v1` on successful range assignment.
+38. Append audit log `scheduling.template.range_assigned` with created-count and date-range payload.
 
 ## Boundary Cases
 
@@ -45,11 +51,13 @@ Work schedule CRUD + template assignment + schedule-to-attendance anomaly behavi
 2. Break minutes are validated (0..300).
 3. Back-to-back schedules (existing `endAt == new startAt`) are allowed.
 4. `lateThresholdMinutes` query validates integer range (0..240).
+5. Range assignment supports overnight templates and enforces overlap preflight before writes.
 
 ## Regression Linkage
 
 - none
- - anomaly report is read-only and does not mutate schedule or attendance state.
+- anomaly report is read-only and does not mutate schedule or attendance state.
+- range assignment preflight overlap conflict does not partially create schedules.
 
 ## QA Gate Expectations
 
