@@ -710,7 +710,10 @@ export const memoryDataAccess: DataAccess = {
       organizationId?: string;
       state?: "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
       assigneeId?: string;
+      incidentIds?: string[];
     }) {
+      const incidentIds =
+        input.incidentIds && input.incidentIds.length > 0 ? new Set(input.incidentIds) : null;
       const rows: ScheduleAnomalyIncidentEntity[] = [];
       for (const entity of state.scheduleAnomalyIncidents.values()) {
         if (input.organizationId !== undefined && entity.organizationId !== input.organizationId) {
@@ -720,6 +723,9 @@ export const memoryDataAccess: DataAccess = {
           continue;
         }
         if (input.assigneeId && entity.assigneeId !== input.assigneeId) {
+          continue;
+        }
+        if (incidentIds && !incidentIds.has(entity.incidentId)) {
           continue;
         }
         rows.push(cloneScheduleAnomalyIncident(entity));
@@ -756,6 +762,21 @@ export const memoryDataAccess: DataAccess = {
       };
       state.scheduleAnomalyIncidents.set(updated.incidentId, updated);
       return cloneScheduleAnomalyIncident(updated);
+    },
+
+    async deleteIncident(input: {
+      incidentId: string;
+      organizationId?: string;
+    }) {
+      const existing = state.scheduleAnomalyIncidents.get(input.incidentId);
+      if (!existing) {
+        return false;
+      }
+      if (input.organizationId !== undefined && existing.organizationId !== input.organizationId) {
+        return false;
+      }
+      state.scheduleAnomalyIncidents.delete(input.incidentId);
+      return true;
     }
   },
 

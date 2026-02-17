@@ -431,12 +431,17 @@ export interface SchedulingStore {
     organizationId?: string;
     state?: ScheduleAnomalyIncidentLifecycleState;
     assigneeId?: string;
+    incidentIds?: string[];
   }): Promise<ScheduleAnomalyIncidentEntity[]>;
   markIncidentEscalationRequested(input: {
     incidentId: string;
     organizationId?: string;
     requestedAt: string;
   }): Promise<ScheduleAnomalyIncidentEntity>;
+  deleteIncident(input: {
+    incidentId: string;
+    organizationId?: string;
+  }): Promise<boolean>;
 }
 
 export interface PayrollStore {

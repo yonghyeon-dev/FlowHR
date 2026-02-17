@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.25.0
+  version: 0.26.0
 paths:
   /scheduling/schedules:
     get:
@@ -542,6 +542,45 @@ paths:
       responses:
         "200":
           description: Incident auto-action command summary returned
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/archive:
+    post:
+      summary: Archive durable anomaly incidents by retention policy
+      description: Remove durable incident rows that satisfy retention criteria and append archive tombstone audit entries.
+      responses:
+        "200":
+          description: Archive command summary returned
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/replay:
+    post:
+      summary: Replay durable anomaly incident store from audit projection
+      description: Rebuild durable incident rows from persisted audit projection with optional archived-incident inclusion.
+      responses:
+        "200":
+          description: Replay command summary returned
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/reconcile:
+    post:
+      summary: Reconcile durable anomaly incident store against audit projection
+      description: Compare durable incident rows and audit projection rows, then return mismatch classifications.
+      responses:
+        "200":
+          description: Reconciliation summary returned
         "400":
           description: Invalid payload
         "401":

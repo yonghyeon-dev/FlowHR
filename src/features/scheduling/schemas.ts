@@ -281,6 +281,41 @@ export const executeScheduleAnomalyIncidentAutoActionSchema = z
     }
   );
 
+export const archiveScheduleAnomalyIncidentsSchema = z.object({
+  state: z.enum(["ACKNOWLEDGED", "ASSIGNED", "RESOLVED"]).optional(),
+  assigneeId: z.string().trim().min(1).optional(),
+  topN: z.number().int().min(1).max(200).optional(),
+  includeNonResolved: z.boolean().optional(),
+  olderThanMinutes: z.number().int().min(0).max(5256000).optional(),
+  asOf: isoDateTime.optional(),
+  dryRun: z.boolean().optional(),
+  reason: z.string().trim().min(1).max(500).optional()
+});
+
+export const replayScheduleAnomalyIncidentStoreSchema = z
+  .object({
+    incidentIds: z
+      .array(z.string().trim().min(1))
+      .min(1)
+      .max(200)
+      .refine((ids) => new Set(ids).size === ids.length, "incidentIds must not contain duplicates")
+      .optional(),
+    topN: z.number().int().min(1).max(200).optional(),
+    from: isoDateTime.optional(),
+    to: isoDateTime.optional(),
+    dryRun: z.boolean().optional(),
+    includeArchived: z.boolean().optional()
+  })
+  .refine((value) => value.from === undefined || value.to === undefined || value.to >= value.from, {
+    path: ["to"],
+    message: "to must be greater than or equal to from"
+  });
+
+export const reconcileScheduleAnomalyIncidentStoreSchema = z.object({
+  topN: z.number().int().min(1).max(500).optional(),
+  includeMatching: z.boolean().optional()
+});
+
 export const listScheduleRotationBalanceQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

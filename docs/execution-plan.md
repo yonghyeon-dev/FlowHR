@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - incident lifecycle archival/replay operations and long-term retention policy automation
+  - incident lifecycle retention scheduler and replay guardrail automation hardening
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -148,6 +148,7 @@ Recently delivered:
 - Scheduling anomaly incident escalation automation API is merged (`POST /incidents/escalate` + cooldown-aware workflow request publisher; WI-0077).
 - Scheduling anomaly incident auto-action execution API is merged (`POST /incidents/auto-actions` + escalation-to-assignment orchestration + ops notification event; WI-0078).
 - Scheduling anomaly incident durable store and cooldown persistence is merged (Prisma table/migration + store-backed incident read/escalation cooldown semantics + restart-safe behavior; WI-0079).
+- Scheduling anomaly incident archive/replay/reconcile APIs are merged (`POST /incidents/archive`, `/incidents/replay`, `/incidents/reconcile` + retention/audit replay/integrity check operation; WI-0080).
 
 ## 2) Priority Roadmap
 
@@ -334,4 +335,4 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for incident archival/replay operations (retention window, replay trigger, and audit reconciliation API) on top of WI-0079 durable store baseline.
+1. define WI for retention scheduler automation (scheduled archive job + replay safety guard + reconciliation alert threshold) on top of WI-0080 operator API baseline.
