@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.21.0
+version: 0.21.1
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -180,6 +180,7 @@ invariants:
   - Anomaly incident RESOLVE command persists standardized `resolutionCode` (default `OTHER`) in audit/event payload.
   - Anomaly incident lifecycle commands are operational trace signals and must not mutate scheduling/attendance/payroll state.
   - Anomaly incident read-model list/detail APIs require scheduling write-any permission and tenant scope.
+  - Anomaly incident read-model list/detail projection source must be persisted audit lifecycle events (durable across process restart).
   - Anomaly incident read-model detail API must return 404 for cross-tenant incidentId requests (no existence leak).
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.

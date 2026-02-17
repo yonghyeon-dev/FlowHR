@@ -322,6 +322,25 @@ export type AppendAuditLogInput = {
   payload?: unknown;
 };
 
+export type AuditLogEntity = {
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  organizationId: string | null;
+  actorRole: string;
+  actorId: string | null;
+  payload: unknown;
+  createdAt: Date;
+};
+
+export type ListAuditLogsInput = {
+  actions?: string[];
+  entityType?: string;
+  entityId?: string;
+  organizationId?: string;
+  limit?: number;
+};
+
 export interface AttendanceStore {
   create(input: CreateAttendanceRecordInput): Promise<AttendanceRecordEntity>;
   findById(id: string): Promise<AttendanceRecordEntity | null>;
@@ -440,6 +459,7 @@ export interface LeaveBalanceStore {
 
 export interface AuditStore {
   append(input: AppendAuditLogInput): Promise<void>;
+  list(input: ListAuditLogsInput): Promise<AuditLogEntity[]>;
 }
 
 export type DataAccess = {
