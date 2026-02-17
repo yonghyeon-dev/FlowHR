@@ -53,6 +53,41 @@ export type WorkScheduleTemplateEntity = {
   updatedAt: Date;
 };
 
+export type ScheduleAnomalyIncidentLifecycleAction = "ACKNOWLEDGE" | "ASSIGN" | "RESOLVE";
+export type ScheduleAnomalyIncidentLifecycleState = "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
+export type ScheduleAnomalyIncidentResolutionCode =
+  | "FALSE_POSITIVE"
+  | "ATTENDANCE_CORRECTED"
+  | "MANUAL_CONFIRMED"
+  | "OTHER";
+
+export type ScheduleAnomalyIncidentHistoryEntryEntity = {
+  action: ScheduleAnomalyIncidentLifecycleAction;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
+  note: string | null;
+  updatedAt: string;
+  updatedByActorId: string | null;
+  updatedByActorRole: string;
+};
+
+export type ScheduleAnomalyIncidentEntity = {
+  incidentId: string;
+  organizationId: string | null;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
+  note: string | null;
+  updatedAt: string;
+  updatedByActorId: string | null;
+  updatedByActorRole: string;
+  lastEscalationRequestedAt: string | null;
+  history: ScheduleAnomalyIncidentHistoryEntryEntity[];
+  createdAt: Date;
+  rowUpdatedAt: Date;
+};
+
 export type PayrollRunEntity = {
   id: string;
   organizationId: string | null;
@@ -219,6 +254,20 @@ export type UpdateWorkScheduleTemplateInput = {
   notes?: string | null;
 };
 
+export type UpsertScheduleAnomalyIncidentInput = {
+  incidentId: string;
+  organizationId?: string | null;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
+  note: string | null;
+  updatedAt: string;
+  updatedByActorId: string | null;
+  updatedByActorRole: string;
+  lastEscalationRequestedAt?: string | null;
+  history: ScheduleAnomalyIncidentHistoryEntryEntity[];
+};
+
 export type CreatePayrollRunInput = {
   organizationId?: string | null;
   employeeId?: string;
@@ -376,6 +425,18 @@ export interface SchedulingStore {
     organizationId?: string;
     employeeId?: string;
   }): Promise<WorkScheduleEntity[]>;
+  upsertIncident(input: UpsertScheduleAnomalyIncidentInput): Promise<ScheduleAnomalyIncidentEntity>;
+  findIncidentByIncidentId(incidentId: string): Promise<ScheduleAnomalyIncidentEntity | null>;
+  listIncidents(input: {
+    organizationId?: string;
+    state?: ScheduleAnomalyIncidentLifecycleState;
+    assigneeId?: string;
+  }): Promise<ScheduleAnomalyIncidentEntity[]>;
+  markIncidentEscalationRequested(input: {
+    incidentId: string;
+    organizationId?: string;
+    requestedAt: string;
+  }): Promise<ScheduleAnomalyIncidentEntity>;
 }
 
 export interface PayrollStore {

@@ -7,11 +7,17 @@
 - `WorkScheduleTemplate`
   - `organizationId` -> `Organization.id` (FK enforced)
   - `weekdays` int array (1=Mon ... 7=Sun)
+- `ScheduleAnomalyIncident`
+  - `organizationId` -> `Organization.id` (nullable FK, `ON DELETE SET NULL`)
+  - `state` enum (`ACKNOWLEDGED`/`ASSIGNED`/`RESOLVED`)
+  - `history` JSONB (incident lifecycle timeline snapshot)
+  - `lastEscalationRequestedAt` timestamp (durable cooldown metadata)
 
 ## Migrations
 
 - `202602150003_scheduling_baseline`
 - `202602160001_scheduling_template_recurring`
+- `202602170001_scheduling_anomaly_incident_store`
 
 No additional migration in WI-0045 (anomaly report is read-only).
 No additional migration in WI-0046 (range assignment is runtime/API behavior only).
@@ -34,6 +40,7 @@ No additional migration in WI-0075 (anomaly incident read-model projection sourc
 No additional migration in WI-0076 (anomaly incident SLA monitoring API is read-only runtime projection behavior only).
 No additional migration in WI-0077 (anomaly incident escalation automation command is runtime projection/event behavior only).
 No additional migration in WI-0078 (anomaly incident auto-action execution command is runtime orchestration/event behavior only).
+WI-0079 adds durable incident store migration `202602170001_scheduling_anomaly_incident_store`.
 
 ## Tenant Isolation
 

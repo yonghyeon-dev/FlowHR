@@ -16,7 +16,10 @@ import type {
   OrganizationEntity,
   RoleEntity,
   RoleWithPermissionsEntity,
+  ScheduleAnomalyIncidentEntity,
+  ScheduleAnomalyIncidentHistoryEntryEntity,
   UpsertRoleInput,
+  UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
   UpdateEmployeeInput,
@@ -37,6 +40,7 @@ type MemoryState = {
   attendance: Map<string, AttendanceRecordEntity>;
   workSchedules: Map<string, WorkScheduleEntity>;
   workScheduleTemplates: Map<string, WorkScheduleTemplateEntity>;
+  scheduleAnomalyIncidents: Map<string, ScheduleAnomalyIncidentEntity>;
   leaveRequests: Map<string, LeaveRequestEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
   payroll: Map<string, PayrollRunEntity>;
@@ -69,6 +73,7 @@ function createState(): MemoryState {
     attendance: new Map<string, AttendanceRecordEntity>(),
     workSchedules: new Map<string, WorkScheduleEntity>(),
     workScheduleTemplates: new Map<string, WorkScheduleTemplateEntity>(),
+    scheduleAnomalyIncidents: new Map<string, ScheduleAnomalyIncidentEntity>(),
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
@@ -122,6 +127,41 @@ function cloneWorkScheduleTemplate(entity: WorkScheduleTemplateEntity): WorkSche
     weekdays: [...entity.weekdays],
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneScheduleAnomalyIncidentHistoryEntry(
+  entry: ScheduleAnomalyIncidentHistoryEntryEntity
+): ScheduleAnomalyIncidentHistoryEntryEntity {
+  return {
+    action: entry.action,
+    state: entry.state,
+    assigneeId: entry.assigneeId,
+    resolutionCode: entry.resolutionCode,
+    note: entry.note,
+    updatedAt: entry.updatedAt,
+    updatedByActorId: entry.updatedByActorId,
+    updatedByActorRole: entry.updatedByActorRole
+  };
+}
+
+function cloneScheduleAnomalyIncident(
+  entity: ScheduleAnomalyIncidentEntity
+): ScheduleAnomalyIncidentEntity {
+  return {
+    incidentId: entity.incidentId,
+    organizationId: entity.organizationId,
+    state: entity.state,
+    assigneeId: entity.assigneeId,
+    resolutionCode: entity.resolutionCode,
+    note: entity.note,
+    updatedAt: entity.updatedAt,
+    updatedByActorId: entity.updatedByActorId,
+    updatedByActorRole: entity.updatedByActorRole,
+    lastEscalationRequestedAt: entity.lastEscalationRequestedAt,
+    history: entity.history.map(cloneScheduleAnomalyIncidentHistoryEntry),
+    createdAt: cloneDate(entity.createdAt),
+    rowUpdatedAt: cloneDate(entity.rowUpdatedAt)
   };
 }
 
@@ -633,6 +673,89 @@ export const memoryDataAccess: DataAccess = {
       }
       rows.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
       return rows;
+    },
+
+    async upsertIncident(input: UpsertScheduleAnomalyIncidentInput) {
+      const existing = state.scheduleAnomalyIncidents.get(input.incidentId);
+      const now = new Date();
+      const entity: ScheduleAnomalyIncidentEntity = {
+        incidentId: input.incidentId,
+        organizationId:
+          input.organizationId === undefined ? (existing?.organizationId ?? null) : input.organizationId,
+        state: input.state,
+        assigneeId: input.assigneeId,
+        resolutionCode: input.resolutionCode,
+        note: input.note,
+        updatedAt: input.updatedAt,
+        updatedByActorId: input.updatedByActorId,
+        updatedByActorRole: input.updatedByActorRole,
+        lastEscalationRequestedAt:
+          input.lastEscalationRequestedAt === undefined
+            ? (existing?.lastEscalationRequestedAt ?? null)
+            : input.lastEscalationRequestedAt,
+        history: input.history.map(cloneScheduleAnomalyIncidentHistoryEntry),
+        createdAt: existing ? cloneDate(existing.createdAt) : now,
+        rowUpdatedAt: now
+      };
+      state.scheduleAnomalyIncidents.set(entity.incidentId, entity);
+      return cloneScheduleAnomalyIncident(entity);
+    },
+
+    async findIncidentByIncidentId(incidentId: string) {
+      const entity = state.scheduleAnomalyIncidents.get(incidentId);
+      return entity ? cloneScheduleAnomalyIncident(entity) : null;
+    },
+
+    async listIncidents(input: {
+      organizationId?: string;
+      state?: "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
+      assigneeId?: string;
+    }) {
+      const rows: ScheduleAnomalyIncidentEntity[] = [];
+      for (const entity of state.scheduleAnomalyIncidents.values()) {
+        if (input.organizationId !== undefined && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.state && entity.state !== input.state) {
+          continue;
+        }
+        if (input.assigneeId && entity.assigneeId !== input.assigneeId) {
+          continue;
+        }
+        rows.push(cloneScheduleAnomalyIncident(entity));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.localeCompare(left.updatedAt);
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
+        }
+        return left.incidentId.localeCompare(right.incidentId);
+      });
+      return rows;
+    },
+
+    async markIncidentEscalationRequested(input: {
+      incidentId: string;
+      organizationId?: string;
+      requestedAt: string;
+    }) {
+      const existing = state.scheduleAnomalyIncidents.get(input.incidentId);
+      if (!existing) {
+        throw new Error(`schedule anomaly incident not found: ${input.incidentId}`);
+      }
+      if (
+        input.organizationId !== undefined &&
+        existing.organizationId !== input.organizationId
+      ) {
+        throw new Error(`schedule anomaly incident not found: ${input.incidentId}`);
+      }
+      const updated: ScheduleAnomalyIncidentEntity = {
+        ...existing,
+        lastEscalationRequestedAt: input.requestedAt,
+        rowUpdatedAt: new Date()
+      };
+      state.scheduleAnomalyIncidents.set(updated.incidentId, updated);
+      return cloneScheduleAnomalyIncident(updated);
     }
   },
 
