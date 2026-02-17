@@ -41,6 +41,14 @@ VALID_PR_BODY = """## Summary
 - [x] Migration smoke
 - [x] Contract governance checks
 
+## Delivery Balance
+
+- [x] UI/UX surface changed (at least one page/component/style updated).
+- [ ] Backend-only exception approved (reason and next UI WI required).
+- UI changed files: src/app/page.tsx
+- Backend-only reason:
+- Next UI WI:
+
 ## Emergency Override (Break-Glass Only)
 
 Complete this section only when bypassing normal QA gate.
@@ -100,6 +108,23 @@ def fill_break_glass_fields(body: str) -> str:
     return result
 
 
+def fill_backend_only_balance_fields(body: str, next_ui_wi: str = "work-items/WI-0081-admin-ui-shell.md") -> str:
+    values = {
+        "Backend-only reason": "critical backend stabilization required before UI binding",
+        "Next UI WI": next_ui_wi,
+    }
+    result = body
+    for key, value in values.items():
+        pattern = re.compile(
+            rf"(^[^\S\r\n]*-?[^\S\r\n]*{re.escape(key)}:[ \t]*)([^\r\n]*)$",
+            re.MULTILINE,
+        )
+        result, count = pattern.subn(rf"\g<1>{value}", result, count=1)
+        if count != 1:
+            raise AssertionError(f"failed to fill balance field: {key}")
+    return result
+
+
 class CheckPrTemplateRegressionTest(unittest.TestCase):
     @contextmanager
     def project_temp_dir(self):
@@ -137,6 +162,66 @@ class CheckPrTemplateRegressionTest(unittest.TestCase):
         result = run_checker(body=invalid_body)
         self.assertEqual(result.returncode, 1)
         self.assertIn("Unchecked required checkbox", result.stdout)
+
+    def test_missing_delivery_balance_choice_fails(self):
+        invalid_body = VALID_PR_BODY.replace(
+            "- [x] UI/UX surface changed (at least one page/component/style updated).",
+            "- [ ] UI/UX surface changed (at least one page/component/style updated).",
+        )
+        result = run_checker(body=invalid_body)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Delivery balance requires one of", result.stdout)
+
+    def test_ui_balance_requires_changed_files_field(self):
+        invalid_body = VALID_PR_BODY.replace(
+            "- UI changed files: src/app/page.tsx",
+            "- UI changed files:",
+        )
+        result = run_checker(body=invalid_body)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("UI/UX delivery check requires non-empty field: UI changed files", result.stdout)
+
+    def test_backend_only_balance_requires_reason_and_next_ui_wi(self):
+        body = VALID_PR_BODY.replace(
+            "- [x] UI/UX surface changed (at least one page/component/style updated).",
+            "- [ ] UI/UX surface changed (at least one page/component/style updated).",
+        )
+        body = body.replace(
+            "- [ ] Backend-only exception approved (reason and next UI WI required).",
+            "- [x] Backend-only exception approved (reason and next UI WI required).",
+        )
+        result = run_checker(body=body)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Backend-only exception requires non-empty field: Backend-only reason", result.stdout)
+        self.assertIn("Backend-only exception requires non-empty field: Next UI WI", result.stdout)
+
+    def test_backend_only_balance_next_ui_wi_format_is_validated(self):
+        body = VALID_PR_BODY.replace(
+            "- [x] UI/UX surface changed (at least one page/component/style updated).",
+            "- [ ] UI/UX surface changed (at least one page/component/style updated).",
+        )
+        body = body.replace(
+            "- [ ] Backend-only exception approved (reason and next UI WI required).",
+            "- [x] Backend-only exception approved (reason and next UI WI required).",
+        )
+        body = fill_backend_only_balance_fields(body, next_ui_wi="UI-TODO")
+        result = run_checker(body=body)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Next UI WI must include path like", result.stdout)
+
+    def test_backend_only_balance_with_required_fields_passes(self):
+        body = VALID_PR_BODY.replace(
+            "- [x] UI/UX surface changed (at least one page/component/style updated).",
+            "- [ ] UI/UX surface changed (at least one page/component/style updated).",
+        )
+        body = body.replace(
+            "- [ ] Backend-only exception approved (reason and next UI WI required).",
+            "- [x] Backend-only exception approved (reason and next UI WI required).",
+        )
+        body = fill_backend_only_balance_fields(body)
+        result = run_checker(body=body)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PR template compliance checks passed.", result.stdout)
 
     def test_break_glass_requires_non_empty_fields(self):
         invalid_body = VALID_PR_BODY.replace("- [ ] P0 outage", "- [x] P0 outage")

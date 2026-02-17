@@ -3,6 +3,11 @@
 Date: 2026-02-16  
 Goal: Keep contract-first delivery speed while preserving merge/release safety for a 1-person operator model.
 
+Balance policy:
+
+- `docs/delivery-balance.md`를 기준으로 UI/Backend 균형을 강제합니다.
+- PR은 `Delivery Balance` 섹션을 채우지 않으면 `contract-governance`에서 차단됩니다.
+
 ## 1) Current Baseline
 
 Completed:
@@ -109,7 +114,7 @@ Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - incident lifecycle retention scheduler and replay guardrail automation hardening
-- Web UI and employee self-service are not started (Phase 6).
+- Web UI and employee self-service are not started (Phase 6, now priority-raised by balance policy).
 - Approvals and e-contract are not started (Phase 5).
 
 Recently delivered:
@@ -335,4 +340,4 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for retention scheduler automation (scheduled archive job + replay safety guard + reconciliation alert threshold) on top of WI-0080 operator API baseline.
+1. define WI-0081 for admin UI surface expansion and move next delivery window to UI-first sequence (WI-0081~0083).

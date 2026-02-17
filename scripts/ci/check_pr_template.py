@@ -26,6 +26,20 @@ ADR_CHECKBOXES = [
     "Not required with reason.",
 ]
 
+DELIVERY_BALANCE_CHECKBOXES = [
+    "UI/UX surface changed (at least one page/component/style updated).",
+    "Backend-only exception approved (reason and next UI WI required).",
+]
+
+DELIVERY_BALANCE_REQUIRED_FIELDS = [
+    "UI changed files",
+]
+
+BACKEND_ONLY_BALANCE_REQUIRED_FIELDS = [
+    "Backend-only reason",
+    "Next UI WI",
+]
+
 BREAK_GLASS_TRIGGER_CHECKBOXES = [
     "P0 outage",
     "Security hotfix",
@@ -45,6 +59,7 @@ BREAK_GLASS_REQUIRED_FIELDS = [
 ]
 
 WORK_ITEM_RE = re.compile(r"Work Item:\s*`?(work-items/WI-\d{4}[^`\n]*)`?", re.IGNORECASE)
+NEXT_UI_WI_RE = re.compile(r"work-items/WI-\d{4}[^`\n]*", re.IGNORECASE)
 
 
 def parse_args() -> argparse.Namespace:
@@ -68,7 +83,7 @@ def checkbox_checked(body: str, label: str) -> bool:
 
 
 def has_non_empty_field(body: str, field: str) -> bool:
-    pattern = re.compile(rf"{re.escape(field)}\s*:\s*(.+)$", re.MULTILINE)
+    pattern = re.compile(rf"{re.escape(field)}[ \t]*:[ \t]*(.+)$", re.MULTILINE)
     match = pattern.search(body)
     if not match:
         return False
@@ -95,6 +110,28 @@ def main() -> int:
 
     if not any(checkbox_checked(body, label) for label in ADR_CHECKBOXES):
         errors.append("ADR requirement section must check either ADR added or Not required with reason.")
+
+    ui_surface_changed = checkbox_checked(body, DELIVERY_BALANCE_CHECKBOXES[0])
+    backend_only_exception = checkbox_checked(body, DELIVERY_BALANCE_CHECKBOXES[1])
+    if not ui_surface_changed and not backend_only_exception:
+        errors.append(
+            "Delivery balance requires one of: UI/UX surface changed or backend-only exception approved."
+        )
+
+    if ui_surface_changed:
+        for field in DELIVERY_BALANCE_REQUIRED_FIELDS:
+            if not has_non_empty_field(body, field):
+                errors.append(f"UI/UX delivery check requires non-empty field: {field}")
+
+    if backend_only_exception:
+        for field in BACKEND_ONLY_BALANCE_REQUIRED_FIELDS:
+            if not has_non_empty_field(body, field):
+                errors.append(f"Backend-only exception requires non-empty field: {field}")
+        next_ui_match = re.search(r"Next UI WI[ \t]*:[ \t]*(.+)$", body, re.MULTILINE)
+        if next_ui_match:
+            candidate = next_ui_match.group(1).strip()
+            if candidate and not NEXT_UI_WI_RE.search(candidate):
+                errors.append("Next UI WI must include path like `work-items/WI-0081-...`.")
 
     break_glass_used = any(checkbox_checked(body, label) for label in BREAK_GLASS_TRIGGER_CHECKBOXES)
     if break_glass_used:
