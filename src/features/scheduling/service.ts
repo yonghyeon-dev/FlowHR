@@ -44,6 +44,7 @@ type ListScheduleAnomalyCockpitInput = {
   periodEnd: Date;
   lateThresholdMinutes?: number;
   topN?: number;
+  suppressAutomation?: boolean;
 };
 
 type ListRotationBalanceInput = {
@@ -2753,14 +2754,16 @@ export async function listScheduleAttendanceAnomalyCockpit(
     }
   });
 
-  await emitAnomalyCockpitTicketRequestsIfEnabled(
-    context,
-    actor,
-    input,
-    lateThresholdMinutes,
-    topN,
-    queue
-  );
+  if (!input.suppressAutomation) {
+    await emitAnomalyCockpitTicketRequestsIfEnabled(
+      context,
+      actor,
+      input,
+      lateThresholdMinutes,
+      topN,
+      queue
+    );
+  }
 
   return {
     periodStart: input.periodStart,

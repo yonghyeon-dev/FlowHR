@@ -123,6 +123,9 @@ Production rollout: `docs/production-rollout.md`
 - Scheduling:
   - `GET /api/scheduling/schedules` (query: `from`, `to`, optional `employeeId`)
   - `POST /api/scheduling/schedules`
+  - `GET /api/scheduling/anomalies` (query: `from`, `to`, optional `employeeId`, optional `lateThresholdMinutes`)
+  - `GET /api/scheduling/anomalies/cockpit` (query: `from`, `to`, optional `lateThresholdMinutes`, optional `topN`)
+  - `GET /api/scheduling/anomalies/cockpit/stream` (SSE query: `from`, `to`, optional `lateThresholdMinutes`, optional `topN`, optional `intervalSeconds`, optional `sampleCount`)
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`
