@@ -26,6 +26,7 @@ No additional migration in WI-0063 (global fairness constraints are runtime/API 
 No additional migration in WI-0065 (anomaly cockpit dashboard is read-only runtime/API behavior only).
 No additional migration in WI-0067 (anomaly cockpit ticket automation is runtime event/audit behavior only).
 No additional migration in WI-0068 (anomaly cockpit streaming dashboard is read-only runtime/API/audit behavior only).
+No additional migration in WI-0069 (advanced fairness multi-objective solver is runtime/API behavior only).
 
 ## Tenant Isolation
 

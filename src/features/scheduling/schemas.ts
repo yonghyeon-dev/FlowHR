@@ -74,6 +74,56 @@ const rotationFairnessGlobalConstraintsSchema = z.object({
   maxDailyPlannedMinutesGap: z.number().int().min(0).max(100_000).optional()
 });
 
+const rotationFairnessPreferenceRuleSchema = z
+  .object({
+    employeeId: z.string().min(1),
+    preferredTemplateIds: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(14)
+      .refine((ids) => new Set(ids).size === ids.length, "preferredTemplateIds must not contain duplicates")
+      .optional(),
+    avoidTemplateIds: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(14)
+      .refine((ids) => new Set(ids).size === ids.length, "avoidTemplateIds must not contain duplicates")
+      .optional()
+  })
+  .refine(
+    (rule) =>
+      (rule.preferredTemplateIds && rule.preferredTemplateIds.length > 0) ||
+      (rule.avoidTemplateIds && rule.avoidTemplateIds.length > 0),
+    "preference rule must include preferredTemplateIds or avoidTemplateIds"
+  );
+
+const rotationFairnessAdvancedConstraintsSchema = z
+  .object({
+    preference: z
+      .object({
+        weight: z.number().int().min(0).max(100).optional(),
+        rules: z.array(rotationFairnessPreferenceRuleSchema).min(1).max(200)
+      })
+      .optional(),
+    laborLaw: z
+      .object({
+        weight: z.number().int().min(0).max(100).optional(),
+        minRestMinutesBetweenShifts: z.number().int().min(0).max(1440).optional(),
+        maxConsecutiveWorkDays: z.number().int().min(1).max(31).optional()
+      })
+      .refine(
+        (value) =>
+          value.minRestMinutesBetweenShifts !== undefined ||
+          value.maxConsecutiveWorkDays !== undefined,
+        "laborLaw must include at least one rule"
+      )
+      .optional()
+  })
+  .refine(
+    (value) => value.preference !== undefined || value.laborLaw !== undefined,
+    "advancedConstraints must include preference or laborLaw"
+  );
+
 export const listScheduleRotationFairnessSchema = z.object({
   organizationId: z.string().min(1).optional(),
   fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -89,7 +139,8 @@ export const listScheduleRotationFairnessSchema = z.object({
     .max(200)
     .refine((ids) => new Set(ids).size === ids.length, "employeeIds must not contain duplicates")
     .optional(),
-  globalConstraints: rotationFairnessGlobalConstraintsSchema.optional()
+  globalConstraints: rotationFairnessGlobalConstraintsSchema.optional(),
+  advancedConstraints: rotationFairnessAdvancedConstraintsSchema.optional()
 });
 
 export const listWorkScheduleQuerySchema = z.object({

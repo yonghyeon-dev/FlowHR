@@ -1,6 +1,6 @@
 ﻿# FlowHR Production Roadmap
 
-> **Last updated**: 2026-02-16
+> **Last updated**: 2026-02-17
 > **Current version**: 0.1.0 (MVP Backend)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex parity)
 
@@ -92,6 +92,7 @@
 | WI-0066 | Attendance Reputation Circuit-Breaker Operations Baseline | 핵심 비즈니스 |
 | WI-0067 | Scheduling Anomaly Cockpit Ticket Automation Baseline | 핵심 비즈니스 |
 | WI-0068 | Scheduling Anomaly Cockpit Streaming Dashboard Baseline | 핵심 비즈니스 |
+| WI-0069 | Scheduling Advanced Fairness Multi-Objective Optimizer | 핵심 비즈니스 |
 
 ### 다음 우선순위 (Phase 2 진행)
 
