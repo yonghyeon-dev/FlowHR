@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - operator incident durable store + SLA automation (current read model is in-memory projection baseline)
+  - incident lifecycle archival/replay operations and long-term retention policy automation
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -147,6 +147,7 @@ Recently delivered:
 - Scheduling anomaly incident SLA monitoring API is merged (`GET /incidents/sla` + policy/count/prioritized queue view; WI-0076).
 - Scheduling anomaly incident escalation automation API is merged (`POST /incidents/escalate` + cooldown-aware workflow request publisher; WI-0077).
 - Scheduling anomaly incident auto-action execution API is merged (`POST /incidents/auto-actions` + escalation-to-assignment orchestration + ops notification event; WI-0078).
+- Scheduling anomaly incident durable store and cooldown persistence is merged (Prisma table/migration + store-backed incident read/escalation cooldown semantics + restart-safe behavior; WI-0079).
 
 ## 2) Priority Roadmap
 
@@ -333,4 +334,4 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for DB-backed anomaly incident durable store and SLA timer/escalation automation on top of the read-model baseline.
+1. define WI for incident archival/replay operations (retention window, replay trigger, and audit reconciliation API) on top of WI-0079 durable store baseline.

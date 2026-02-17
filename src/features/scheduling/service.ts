@@ -7,6 +7,12 @@ import type {
   CreateWorkScheduleInput,
   DataAccess,
   EmployeeEntity,
+  ScheduleAnomalyIncidentEntity,
+  ScheduleAnomalyIncidentHistoryEntryEntity,
+  ScheduleAnomalyIncidentLifecycleAction as ScheduleAnomalyIncidentLifecycleActionEntity,
+  ScheduleAnomalyIncidentLifecycleState as ScheduleAnomalyIncidentLifecycleStateEntity,
+  ScheduleAnomalyIncidentResolutionCode as ScheduleAnomalyIncidentResolutionCodeEntity,
+  UpsertScheduleAnomalyIncidentInput,
   UpdateWorkScheduleInput,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
@@ -3430,6 +3436,92 @@ function cloneScheduleAnomalyIncidentReadModel(
   };
 }
 
+function toIncidentEntityLifecycleAction(
+  action: ScheduleAnomalyIncidentLifecycleAction
+): ScheduleAnomalyIncidentLifecycleActionEntity {
+  return action;
+}
+
+function toIncidentEntityLifecycleState(
+  state: ScheduleAnomalyIncidentLifecycleState
+): ScheduleAnomalyIncidentLifecycleStateEntity {
+  return state;
+}
+
+function toIncidentEntityResolutionCode(
+  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null
+): ScheduleAnomalyIncidentResolutionCodeEntity | null {
+  return resolutionCode;
+}
+
+function toIncidentHistoryEntity(
+  entry: ScheduleAnomalyIncidentHistoryEntry
+): ScheduleAnomalyIncidentHistoryEntryEntity {
+  return {
+    action: toIncidentEntityLifecycleAction(entry.action),
+    state: toIncidentEntityLifecycleState(entry.state),
+    assigneeId: entry.assigneeId,
+    resolutionCode: toIncidentEntityResolutionCode(entry.resolutionCode),
+    note: entry.note,
+    updatedAt: entry.updatedAt,
+    updatedByActorId: entry.updatedBy.actorId,
+    updatedByActorRole: entry.updatedBy.actorRole
+  };
+}
+
+function fromIncidentHistoryEntity(
+  entry: ScheduleAnomalyIncidentHistoryEntryEntity
+): ScheduleAnomalyIncidentHistoryEntry {
+  return {
+    action: entry.action,
+    state: entry.state,
+    assigneeId: entry.assigneeId,
+    resolutionCode: entry.resolutionCode,
+    note: entry.note,
+    updatedAt: entry.updatedAt,
+    updatedBy: {
+      actorId: entry.updatedByActorId,
+      actorRole: entry.updatedByActorRole
+    }
+  };
+}
+
+function toScheduleAnomalyIncidentReadModelFromEntity(
+  entity: ScheduleAnomalyIncidentEntity
+): ScheduleAnomalyIncidentReadModel {
+  return {
+    incidentId: entity.incidentId,
+    organizationId: entity.organizationId,
+    state: entity.state,
+    assigneeId: entity.assigneeId,
+    resolutionCode: entity.resolutionCode,
+    note: entity.note,
+    updatedAt: entity.updatedAt,
+    updatedBy: {
+      actorId: entity.updatedByActorId,
+      actorRole: entity.updatedByActorRole
+    },
+    history: entity.history.map(fromIncidentHistoryEntity)
+  };
+}
+
+function toScheduleAnomalyIncidentUpsertInput(
+  readModel: ScheduleAnomalyIncidentReadModel
+): UpsertScheduleAnomalyIncidentInput {
+  return {
+    incidentId: readModel.incidentId,
+    organizationId: readModel.organizationId,
+    state: toIncidentEntityLifecycleState(readModel.state),
+    assigneeId: readModel.assigneeId,
+    resolutionCode: toIncidentEntityResolutionCode(readModel.resolutionCode),
+    note: readModel.note,
+    updatedAt: readModel.updatedAt,
+    updatedByActorId: readModel.updatedBy.actorId,
+    updatedByActorRole: readModel.updatedBy.actorRole,
+    history: readModel.history.map(toIncidentHistoryEntity)
+  };
+}
+
 const anomalyIncidentLifecycleStateByAction: Record<
   ScheduleAnomalyIncidentLifecycleAction,
   ScheduleAnomalyIncidentLifecycleState
@@ -3588,6 +3680,95 @@ async function getScheduleAnomalyIncidentReadModelFromAudit(
   return readModel ?? null;
 }
 
+async function backfillScheduleAnomalyIncidentStoreFromReadModel(
+  context: ServiceContext,
+  readModel: ScheduleAnomalyIncidentReadModel
+) {
+  const persisted = await context.dataAccess.scheduling.upsertIncident(
+    toScheduleAnomalyIncidentUpsertInput(readModel)
+  );
+
+  try {
+    await context.dataAccess.audit.append({
+      action: "scheduling.anomaly.incident.backfilled",
+      entityType: "WorkSchedule",
+      entityId: readModel.incidentId,
+      organizationId: readModel.organizationId,
+      actorRole: "system",
+      actorId: "SCHEDULING-INCIDENT-BACKFILL",
+      payload: {
+        incidentId: readModel.incidentId,
+        state: readModel.state,
+        historyCount: readModel.history.length
+      }
+    });
+  } catch {
+    // Non-blocking path for backfill telemetry.
+  }
+
+  return toScheduleAnomalyIncidentReadModelFromEntity(persisted);
+}
+
+async function listScheduleAnomalyIncidentReadModelsFromStore(
+  context: ServiceContext,
+  input?: {
+    organizationId?: string;
+    state?: ScheduleAnomalyIncidentLifecycleState;
+    assigneeId?: string;
+  }
+): Promise<ScheduleAnomalyIncidentReadModel[]> {
+  const incidents = await context.dataAccess.scheduling.listIncidents({
+    organizationId: input?.organizationId,
+    state: input?.state,
+    assigneeId: input?.assigneeId
+  });
+  return incidents.map(toScheduleAnomalyIncidentReadModelFromEntity);
+}
+
+async function listScheduleAnomalyIncidentReadModels(
+  context: ServiceContext,
+  input?: {
+    organizationId?: string;
+    state?: ScheduleAnomalyIncidentLifecycleState;
+    assigneeId?: string;
+  }
+): Promise<ScheduleAnomalyIncidentReadModel[]> {
+  const stored = await listScheduleAnomalyIncidentReadModelsFromStore(context, input);
+  if (stored.length > 0) {
+    return stored;
+  }
+
+  const fromAudit = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
+    organizationId: input?.organizationId
+  });
+  if (fromAudit.length === 0) {
+    return [];
+  }
+
+  for (const item of fromAudit) {
+    await backfillScheduleAnomalyIncidentStoreFromReadModel(context, item);
+  }
+
+  const reloaded = await listScheduleAnomalyIncidentReadModelsFromStore(context, input);
+  return reloaded;
+}
+
+async function getScheduleAnomalyIncidentReadModel(
+  context: ServiceContext,
+  incidentId: string
+): Promise<ScheduleAnomalyIncidentReadModel | null> {
+  const stored = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
+  if (stored) {
+    return toScheduleAnomalyIncidentReadModelFromEntity(stored);
+  }
+
+  const fromAudit = await getScheduleAnomalyIncidentReadModelFromAudit(context, incidentId);
+  if (!fromAudit) {
+    return null;
+  }
+  return backfillScheduleAnomalyIncidentStoreFromReadModel(context, fromAudit);
+}
+
 export async function updateScheduleAnomalyIncidentLifecycle(
   context: ServiceContext,
   input: UpdateScheduleAnomalyIncidentLifecycleInput
@@ -3626,7 +3807,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   const state = anomalyIncidentLifecycleStateByAction[input.action];
   const updatedAt = new Date().toISOString();
   const tenantScope = resolveTenantScope(actor) ?? undefined;
-  const existing = await getScheduleAnomalyIncidentReadModelFromAudit(context, incidentId);
+  const existing = await getScheduleAnomalyIncidentReadModel(context, incidentId);
   if (
     existing &&
     tenantScope &&
@@ -3636,12 +3817,40 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     throw new ServiceError(404, "anomaly incident not found");
   }
 
-  const organizationId = tenantScope ?? existing?.organizationId ?? undefined;
+  const existingStore = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
+  const organizationId = tenantScope ?? existing?.organizationId ?? null;
   const normalizedAssigneeId =
     input.action === "ASSIGN" ? (assigneeId ?? null) : (existing?.assigneeId ?? null);
   const normalizedResolutionCode =
     input.action === "RESOLVE" ? resolutionCode : (existing?.resolutionCode ?? null);
   const normalizedNote = note ?? existing?.note ?? null;
+  const historyEntry: ScheduleAnomalyIncidentHistoryEntry = {
+    action: input.action,
+    state,
+    assigneeId: normalizedAssigneeId,
+    resolutionCode: normalizedResolutionCode,
+    note: normalizedNote,
+    updatedAt,
+    updatedBy: {
+      actorId: actor.id ?? null,
+      actorRole: actor.role
+    }
+  };
+  const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
+
+  await context.dataAccess.scheduling.upsertIncident({
+    incidentId,
+    organizationId,
+    state: toIncidentEntityLifecycleState(state),
+    assigneeId: normalizedAssigneeId,
+    resolutionCode: toIncidentEntityResolutionCode(normalizedResolutionCode),
+    note: normalizedNote,
+    updatedAt,
+    updatedByActorId: actor.id ?? null,
+    updatedByActorRole: actor.role,
+    lastEscalationRequestedAt: existingStore?.lastEscalationRequestedAt ?? null,
+    history: history.map(toIncidentHistoryEntity)
+  });
 
   const payload = {
     incidentId,
@@ -3657,7 +3866,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     action: anomalyIncidentLifecycleAuditActionByAction[input.action],
     entityType: "WorkSchedule",
     entityId: incidentId,
-    organizationId,
+    organizationId: organizationId ?? undefined,
     actorRole: actor.role,
     actorId: actor.id,
     payload
@@ -3672,19 +3881,6 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     actorId: actor.id,
     payload
   });
-
-  const historyEntry: ScheduleAnomalyIncidentHistoryEntry = {
-    action: input.action,
-    state,
-    assigneeId: normalizedAssigneeId,
-    resolutionCode: normalizedResolutionCode,
-    note: normalizedNote,
-    updatedAt,
-    updatedBy: {
-      actorId: actor.id ?? null,
-      actorRole: actor.role
-    }
-  };
   return {
     incidentId,
     action: historyEntry.action,
@@ -3719,7 +3915,7 @@ export async function listScheduleAnomalyIncidents(
   const tenantScope = resolveTenantScope(actor);
   const assigneeId = input.assigneeId?.trim();
 
-  const readModels = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
+  const readModels = await listScheduleAnomalyIncidentReadModels(context, {
     organizationId: tenantScope ?? undefined
   });
   const matched = readModels
@@ -3783,7 +3979,7 @@ export async function listScheduleAnomalyIncidentSla(
   const asOf = input.asOf ?? new Date();
   const asOfMillis = asOf.getTime();
 
-  const readModels = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
+  const readModels = await listScheduleAnomalyIncidentReadModels(context, {
     organizationId: tenantScope ?? undefined
   });
 
@@ -3916,22 +4112,21 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     (item) => item.status === "BREACHED" || (includeWarning && item.status === "WARNING")
   );
   const cooldownWindowStartMillis = asOf.getTime() - cooldownMinutes * 60_000;
-
-  const recentRequests = await context.dataAccess.audit.list({
-    actions: ["scheduling.anomaly.incident.escalation.requested"],
-    entityType: "WorkSchedule",
-    organizationId: tenantScope ?? undefined,
-    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
+  const storedIncidents = await context.dataAccess.scheduling.listIncidents({
+    organizationId: tenantScope ?? undefined
   });
   const latestRequestedAtMillisByIncident = new Map<string, number>();
-  for (const row of recentRequests) {
-    if (!row.entityId) {
+  for (const incident of storedIncidents) {
+    if (!incident.lastEscalationRequestedAt) {
       continue;
     }
-    const requestedAtMillis = row.createdAt.getTime();
-    const previous = latestRequestedAtMillisByIncident.get(row.entityId);
+    const requestedAtMillis = parseIsoTimestampToMillis(incident.lastEscalationRequestedAt);
+    if (requestedAtMillis === null) {
+      continue;
+    }
+    const previous = latestRequestedAtMillisByIncident.get(incident.incidentId);
     if (previous === undefined || requestedAtMillis > previous) {
-      latestRequestedAtMillisByIncident.set(row.entityId, requestedAtMillis);
+      latestRequestedAtMillisByIncident.set(incident.incidentId, requestedAtMillis);
     }
   }
 
@@ -4002,6 +4197,12 @@ export async function triggerScheduleAnomalyIncidentEscalation(
         actorRole: actor.role,
         actorId: actor.id,
         payload
+      });
+
+      await context.dataAccess.scheduling.markIncidentEscalationRequested({
+        incidentId: candidate.incidentId,
+        organizationId: tenantScope ?? undefined,
+        requestedAt
       });
 
       requested += 1;
@@ -4399,7 +4600,7 @@ export async function getScheduleAnomalyIncident(
     throw new ServiceError(400, "incidentId is required");
   }
 
-  const incident = await getScheduleAnomalyIncidentReadModelFromAudit(context, normalizedIncidentId);
+  const incident = await getScheduleAnomalyIncidentReadModel(context, normalizedIncidentId);
   if (!incident) {
     throw new ServiceError(404, "anomaly incident not found");
   }

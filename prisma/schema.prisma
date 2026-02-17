@@ -18,6 +18,7 @@ model Organization {
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
   workScheduleTemplates WorkScheduleTemplate[]
+  scheduleAnomalyIncidents ScheduleAnomalyIncident[]
   auditLogs AuditLog[]
 }
 
@@ -115,6 +116,26 @@ model WorkScheduleTemplate {
   updatedAt      DateTime @updatedAt
 
   @@index([organizationId, name])
+}
+
+model ScheduleAnomalyIncident {
+  incidentId String @id
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  state ScheduleAnomalyIncidentState
+  assigneeId String?
+  resolutionCode ScheduleAnomalyIncidentResolutionCode?
+  note String?
+  updatedAt DateTime
+  updatedByActorId String?
+  updatedByActorRole String
+  lastEscalationRequestedAt DateTime?
+  history Json
+  createdAt DateTime @default(now())
+  rowUpdatedAt DateTime @updatedAt
+
+  @@index([organizationId, state, updatedAt])
+  @@index([organizationId, assigneeId, updatedAt])
 }
 
 model LeaveRequest {
@@ -262,4 +283,17 @@ enum LeaveDecisionAction {
 enum PayrollState {
   PREVIEWED
   CONFIRMED
+}
+
+enum ScheduleAnomalyIncidentState {
+  ACKNOWLEDGED
+  ASSIGNED
+  RESOLVED
+}
+
+enum ScheduleAnomalyIncidentResolutionCode {
+  FALSE_POSITIVE
+  ATTENDANCE_CORRECTED
+  MANUAL_CONFIRMED
+  OTHER
 }

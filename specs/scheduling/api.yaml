@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.24.0
+  version: 0.25.0
 paths:
   /scheduling/schedules:
     get:
@@ -439,7 +439,7 @@ paths:
   /scheduling/anomalies/incidents:
     get:
       summary: List anomaly incident read-model entries
-      description: Read incident lifecycle projection entries for operator dashboards with optional state/assignee filters.
+      description: Read incident lifecycle projection entries for operator dashboards with optional state/assignee filters (durable-store source with audit fallback).
       parameters:
         - in: query
           name: state
@@ -525,7 +525,7 @@ paths:
   /scheduling/anomalies/incidents/escalate:
     post:
       summary: Trigger anomaly incident escalation workflow requests
-      description: Publish workflow escalation requests for SLA candidate incidents with cooldown and dry-run controls.
+      description: Publish workflow escalation requests for SLA candidate incidents with cooldown and dry-run controls (cooldown timestamp persisted per incident).
       responses:
         "200":
           description: Incident escalation command summary returned

@@ -32,8 +32,11 @@ import type {
   RecordLeaveDecisionInput,
   RoleEntity,
   RoleWithPermissionsEntity,
+  ScheduleAnomalyIncidentEntity,
+  ScheduleAnomalyIncidentHistoryEntryEntity,
   SchedulingStore,
   UpsertRoleInput,
+  UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
   UpdateEmployeeInput,
@@ -263,6 +266,111 @@ function toAuditLogEntity(record: {
     actorId: record.actorId,
     payload: record.payload,
     createdAt: record.createdAt
+  };
+}
+
+function toIncidentHistoryAction(
+  value: unknown
+): "ACKNOWLEDGE" | "ASSIGN" | "RESOLVE" {
+  if (value === "ACKNOWLEDGE" || value === "ASSIGN" || value === "RESOLVE") {
+    return value;
+  }
+  return "ACKNOWLEDGE";
+}
+
+function toIncidentHistoryState(
+  value: unknown
+): "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED" {
+  if (value === "ACKNOWLEDGED" || value === "ASSIGNED" || value === "RESOLVED") {
+    return value;
+  }
+  return "ACKNOWLEDGED";
+}
+
+function toIncidentHistoryResolutionCode(
+  value: unknown
+): "FALSE_POSITIVE" | "ATTENDANCE_CORRECTED" | "MANUAL_CONFIRMED" | "OTHER" | null {
+  if (
+    value === "FALSE_POSITIVE" ||
+    value === "ATTENDANCE_CORRECTED" ||
+    value === "MANUAL_CONFIRMED" ||
+    value === "OTHER"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function normalizeIncidentHistoryEntry(
+  value: unknown
+): ScheduleAnomalyIncidentHistoryEntryEntity | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const row = value as Record<string, unknown>;
+  const updatedAtRaw = typeof row.updatedAt === "string" ? row.updatedAt : "";
+  const updatedAt = Number.isFinite(Date.parse(updatedAtRaw))
+    ? updatedAtRaw
+    : new Date(0).toISOString();
+  return {
+    action: toIncidentHistoryAction(row.action),
+    state: toIncidentHistoryState(row.state),
+    assigneeId: typeof row.assigneeId === "string" ? row.assigneeId : null,
+    resolutionCode: toIncidentHistoryResolutionCode(row.resolutionCode),
+    note: typeof row.note === "string" ? row.note : null,
+    updatedAt,
+    updatedByActorId: typeof row.updatedByActorId === "string" ? row.updatedByActorId : null,
+    updatedByActorRole:
+      typeof row.updatedByActorRole === "string" && row.updatedByActorRole.trim().length > 0
+        ? row.updatedByActorRole
+        : "system"
+  };
+}
+
+function normalizeIncidentHistory(
+  value: unknown
+): ScheduleAnomalyIncidentHistoryEntryEntity[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const rows = value
+    .map(normalizeIncidentHistoryEntry)
+    .filter((entry): entry is ScheduleAnomalyIncidentHistoryEntryEntity => entry !== null);
+  rows.sort((left, right) => left.updatedAt.localeCompare(right.updatedAt));
+  return rows;
+}
+
+function toScheduleAnomalyIncidentEntity(record: {
+  incidentId: string;
+  organizationId: string | null;
+  state: "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
+  assigneeId: string | null;
+  resolutionCode: "FALSE_POSITIVE" | "ATTENDANCE_CORRECTED" | "MANUAL_CONFIRMED" | "OTHER" | null;
+  note: string | null;
+  updatedAt: Date;
+  updatedByActorId: string | null;
+  updatedByActorRole: string;
+  lastEscalationRequestedAt: Date | null;
+  history: unknown;
+  createdAt: Date;
+  rowUpdatedAt: Date;
+}): ScheduleAnomalyIncidentEntity {
+  return {
+    incidentId: record.incidentId,
+    organizationId: record.organizationId,
+    state: record.state,
+    assigneeId: record.assigneeId,
+    resolutionCode: record.resolutionCode,
+    note: record.note,
+    updatedAt: record.updatedAt.toISOString(),
+    updatedByActorId: record.updatedByActorId,
+    updatedByActorRole: record.updatedByActorRole,
+    lastEscalationRequestedAt: record.lastEscalationRequestedAt
+      ? record.lastEscalationRequestedAt.toISOString()
+      : null,
+    history: normalizeIncidentHistory(record.history),
+    createdAt: record.createdAt,
+    rowUpdatedAt: record.rowUpdatedAt
   };
 }
 
@@ -632,6 +740,93 @@ const scheduling: SchedulingStore = {
       orderBy: { startAt: "asc" }
     });
     return records.map(toWorkScheduleEntity);
+  },
+
+  async upsertIncident(input: UpsertScheduleAnomalyIncidentInput) {
+    const record = await prisma.scheduleAnomalyIncident.upsert({
+      where: { incidentId: input.incidentId },
+      create: {
+        incidentId: input.incidentId,
+        organizationId:
+          input.organizationId === undefined ? null : input.organizationId,
+        state: input.state,
+        assigneeId: input.assigneeId,
+        resolutionCode: input.resolutionCode,
+        note: input.note,
+        updatedAt: new Date(input.updatedAt),
+        updatedByActorId: input.updatedByActorId,
+        updatedByActorRole: input.updatedByActorRole,
+        lastEscalationRequestedAt: input.lastEscalationRequestedAt
+          ? new Date(input.lastEscalationRequestedAt)
+          : null,
+        history: input.history as unknown as Prisma.InputJsonValue
+      },
+      update: {
+        organizationId:
+          input.organizationId === undefined ? undefined : input.organizationId,
+        state: input.state,
+        assigneeId: input.assigneeId,
+        resolutionCode: input.resolutionCode,
+        note: input.note,
+        updatedAt: new Date(input.updatedAt),
+        updatedByActorId: input.updatedByActorId,
+        updatedByActorRole: input.updatedByActorRole,
+        lastEscalationRequestedAt:
+          input.lastEscalationRequestedAt === undefined
+            ? undefined
+            : input.lastEscalationRequestedAt
+              ? new Date(input.lastEscalationRequestedAt)
+              : null,
+        history: input.history as unknown as Prisma.InputJsonValue
+      }
+    });
+    return toScheduleAnomalyIncidentEntity(record);
+  },
+
+  async findIncidentByIncidentId(incidentId: string) {
+    const record = await prisma.scheduleAnomalyIncident.findUnique({
+      where: { incidentId }
+    });
+    return record ? toScheduleAnomalyIncidentEntity(record) : null;
+  },
+
+  async listIncidents(input: {
+    organizationId?: string;
+    state?: "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
+    assigneeId?: string;
+  }) {
+    const records = await prisma.scheduleAnomalyIncident.findMany({
+      where: {
+        ...(input.organizationId !== undefined ? { organizationId: input.organizationId } : {}),
+        ...(input.state ? { state: input.state } : {}),
+        ...(input.assigneeId ? { assigneeId: input.assigneeId } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { incidentId: "asc" }]
+    });
+    return records.map(toScheduleAnomalyIncidentEntity);
+  },
+
+  async markIncidentEscalationRequested(input: {
+    incidentId: string;
+    organizationId?: string;
+    requestedAt: string;
+  }) {
+    const existing = await prisma.scheduleAnomalyIncident.findUnique({
+      where: { incidentId: input.incidentId }
+    });
+    if (!existing) {
+      throw new Error(`schedule anomaly incident not found: ${input.incidentId}`);
+    }
+    if (input.organizationId !== undefined && existing.organizationId !== input.organizationId) {
+      throw new Error(`schedule anomaly incident not found: ${input.incidentId}`);
+    }
+    const record = await prisma.scheduleAnomalyIncident.update({
+      where: { incidentId: input.incidentId },
+      data: {
+        lastEscalationRequestedAt: new Date(input.requestedAt)
+      }
+    });
+    return toScheduleAnomalyIncidentEntity(record);
   }
 };
 

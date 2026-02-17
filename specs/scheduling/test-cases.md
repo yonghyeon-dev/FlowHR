@@ -105,6 +105,10 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 97. Auto-action command assigns only unassigned incidents when `autoAssignMode=ASSIGN_IF_UNASSIGNED` and preserves existing assignee ownership.
 98. Auto-action command `dryRun=true` does not mutate incident assignee while returning deterministic action plan.
 99. Employee cannot call anomaly incident auto-action command endpoint (403).
+100. Incident detail/list APIs can read incident lifecycle state from durable store even when audit projection source is empty for current process memory.
+101. Incident escalation command reads cooldown from durable store `lastEscalationRequestedAt` and skips duplicate escalation within window after restart.
+102. Incident escalation command with non-dry-run updates durable cooldown timestamp while preserving lifecycle state/history values.
+103. Cross-tenant manager cannot read durable incident detail and receives 404 without existence leak.
 
 ## Boundary Cases
 
@@ -133,6 +137,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 23. Incident SLA query validates `slaTargetMinutes` range and `warningMinutes < slaTargetMinutes`.
 24. Incident escalation command validates `cooldownMinutes` range and `warningMinutes < slaTargetMinutes`.
 25. Incident auto-action command requires non-empty `autoAssigneeId` and validates `warningMinutes < slaTargetMinutes`.
+26. Incident durable store history payload normalization tolerates missing/invalid optional fields without breaking read APIs.
 
 ## Regression Linkage
 
@@ -145,8 +150,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly incident lifecycle command path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident read-model list/detail path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident SLA path remains operational-only and does not mutate schedule/attendance state.
-- anomaly incident escalation command path remains operational-only and does not mutate schedule/attendance state.
+- anomaly incident escalation command path persists cooldown metadata only and does not mutate schedule/attendance state.
 - anomaly incident auto-action command path remains operational-only and does not mutate schedule/attendance state.
+- anomaly incident read/list/sla/escalation paths remain restart-safe via durable incident store source.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

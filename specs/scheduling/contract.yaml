@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.24.0
+version: 0.25.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -20,6 +20,7 @@ scope:
     - tenant-level anomaly cockpit stream incident automation event (SSE) with severity/cooldown policy
     - anomaly incident lifecycle command API (acknowledge/assign/resolve) with audit/event traceability
     - anomaly incident read-model API (list/detail with timeline projection)
+    - anomaly incident durable store persistence (lifecycle state/history + cooldown metadata)
     - anomaly incident SLA monitoring API (read-only prioritized SLA status view)
     - anomaly incident escalation automation command API (SLA-based workflow request publisher with cooldown)
     - anomaly incident auto-action execution command API (escalation + lifecycle assign orchestration with ops notification event)
@@ -156,8 +157,10 @@ db_changes:
       description: Create WorkSchedule table (Employee FK) and enable RLS tenant isolation policies.
     - id: 202602160001_scheduling_template_recurring
       description: Create WorkScheduleTemplate table and enable tenant RLS policies.
+    - id: 202602170001_scheduling_anomaly_incident_store
+      description: Create ScheduleAnomalyIncident durable store table for lifecycle/read-model/cooldown metadata.
   backward_compatible: true
-  notes: Additive API/report behavior only; no schema changes after template baseline.
+  notes: Additive change; incident lifecycle/read-model/cooldown metadata is persisted in ScheduleAnomalyIncident.
 invariants:
   - WorkSchedule.employeeId must reference existing Employee.id (FK enforced).
   - startAt must be strictly before endAt.
@@ -194,15 +197,15 @@ invariants:
   - Anomaly incident lifecycle command API requires scheduling write-any permission and tenant scope.
   - Anomaly incident ASSIGN command requires non-empty `assigneeId`.
   - Anomaly incident RESOLVE command persists standardized `resolutionCode` (default `OTHER`) in audit/event payload.
-  - Anomaly incident lifecycle commands are operational trace signals and must not mutate scheduling/attendance/payroll state.
+  - Anomaly incident lifecycle commands persist durable incident state/history metadata and must not mutate scheduling/attendance/payroll business state.
   - Anomaly incident read-model list/detail APIs require scheduling write-any permission and tenant scope.
-  - Anomaly incident read-model list/detail projection source must be persisted audit lifecycle events (durable across process restart).
+  - Anomaly incident read-model list/detail primary source must be durable incident store; audit projection fallback/backfill is compatibility path only.
   - Anomaly incident SLA API requires scheduling write-any permission and tenant scope.
   - Anomaly incident SLA status must be derived from read-model `updatedAt` versus SLA policy (`slaTargetMinutes`, `warningMinutes`) without mutating incident state.
   - Anomaly incident SLA policy must satisfy `0 <= warningMinutes < slaTargetMinutes`.
   - Anomaly incident escalation command API requires scheduling write-any permission and tenant scope.
-  - Anomaly incident escalation command publishes workflow request event only for SLA candidate incidents and must not mutate scheduling/attendance/payroll state.
-  - Anomaly incident escalation command must suppress duplicate workflow requests for same incident within cooldown window.
+  - Anomaly incident escalation command publishes workflow request event only for SLA candidate incidents and may persist cooldown timestamp metadata only.
+  - Anomaly incident escalation command must suppress duplicate workflow requests for same incident within cooldown window using durable cooldown metadata.
   - Anomaly incident escalation command `dryRun=true` must not publish domain events or per-incident request audit entries.
   - Anomaly incident auto-action command API requires scheduling write-any permission and tenant scope.
   - Anomaly incident auto-action command must only assign incident owner metadata and must not mutate scheduling/attendance/payroll state.
@@ -267,6 +270,7 @@ test_plan:
     - anomaly incident list/detail APIs return lifecycle read-model timeline for authorized operators
     - anomaly incident SLA API returns deterministic status counts/priority ordering for identical query and asOf
     - anomaly incident escalation command publishes workflow events for SLA candidates and respects cooldown skip behavior
+    - incident detail/list/sla/escalation paths remain restart-safe using durable incident store source
     - anomaly incident auto-action command assigns incident owner only for escalated candidates and publishes notification summary event
   regression:
     - template assignment path reuses schedule overlap guard
@@ -279,9 +283,9 @@ test_plan:
     - anomaly cockpit stream remains available and bounded by sampleCount/interval query constraints
     - anomaly cockpit stream incident automation cooldown remains deterministic for identical snapshot sequence timing
     - anomaly incident lifecycle commands do not mutate scheduling or attendance records
-    - anomaly incident read-model APIs do not mutate scheduling or attendance records
+    - anomaly incident read-model APIs remain available after restart via durable incident store
     - anomaly incident SLA API remains read-only and does not mutate scheduling or attendance records
-    - anomaly incident escalation command remains operational-only and does not mutate scheduling or attendance records
+    - anomaly incident escalation command persists cooldown metadata only and does not mutate scheduling or attendance records
     - anomaly incident auto-action command remains operational-only and does not mutate scheduling or attendance records
     - rotation balance report does not mutate schedules
     - rotation optimization dry-run does not mutate schedules
@@ -334,6 +338,7 @@ observability:
     - scheduling.anomaly.incident.auto_action.notified
     - scheduling.anomaly.incident.auto_action.notify.failed
     - scheduling.anomaly.incident.auto_action.assign.failed
+    - scheduling.anomaly.incident.backfilled
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
@@ -388,7 +393,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.24.0 adds anomaly incident auto-action execution command API (`POST /incidents/auto-actions`) and ops notification event (`scheduling.anomaly.incident.auto_action.executed.v1`) while preserving existing lifecycle/read-model/SLA/escalation API compatibility."
+consumer_impact: "Contract v0.25.0 keeps scheduling incident API shape compatible while adding durable incident store persistence for lifecycle/read-model/cooldown semantics (restart-safe escalation dedup)."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -416,6 +421,7 @@ references:
   - work-items/WI-0076-scheduling-anomaly-incident-sla-monitoring-api.md
   - work-items/WI-0077-scheduling-anomaly-incident-escalation-automation-api.md
   - work-items/WI-0078-scheduling-anomaly-incident-auto-action-execution-api.md
+  - work-items/WI-0079-scheduling-anomaly-incident-durable-store-and-cooldown.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent
