@@ -25,6 +25,14 @@
 - [ ] Migration smoke
 - [ ] Contract governance checks
 
+## Delivery Balance
+
+- [ ] UI/UX surface changed (at least one page/component/style updated).
+- [ ] Backend-only exception approved (reason and next UI WI required).
+- UI changed files:
+- Backend-only reason:
+- Next UI WI:
+
 ## Emergency Override (Break-Glass Only)
 
 Complete this section only when bypassing normal QA gate.
