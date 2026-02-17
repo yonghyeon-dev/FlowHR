@@ -77,7 +77,7 @@ jobs:
           DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
         run: npm run test:smoke:production-auth
 
-      - name: Create issue on failure
+      - name: Upsert issue on failure
         if: ${{ failure() }}
         uses: actions/github-script@v7
         with:
@@ -91,13 +91,33 @@ jobs:
               `- Ref: ${context.ref}`,
               `- Trigger: ${context.eventName}`
             ].join("\n");
-            await github.rest.issues.create({
+            const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title,
-              body,
-              labels: ["incident", "production", "smoke"]
+              state: "open",
+              labels: "incident,production,smoke",
+              per_page: 100
             });
+            const smokeIssue = existing.data.find((issue) =>
+              issue.title.startsWith("[production-auth-smoke] failed run")
+            );
+
+            if (smokeIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: smokeIssue.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["incident", "production", "smoke"]
+              });
+            }
 
       - name: Notify alert webhook on failure
         if: ${{ failure() }}
@@ -113,3 +133,43 @@ jobs:
           FLOWHR_ALERT_BREAK_GLASS_URL: "https://github.com/${{ github.repository }}/blob/main/docs/break-glass.md"
           FLOWHR_ALERT_ROLLBACK_WORKFLOW_URL: "https://github.com/${{ github.repository }}/actions/workflows/payroll-phase2-rollback.yml"
         run: node scripts/ops/notify-slack-failure.mjs
+
+      - name: Close open smoke incidents on success
+        if: ${{ success() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "incident,production,smoke",
+              per_page: 100
+            });
+
+            for (const issue of openIssues.data) {
+              if (!issue.title.startsWith("[production-auth-smoke] failed run")) {
+                continue;
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  "production-auth-smoke가 성공하여 incident를 자동 종료합니다.",
+                  "",
+                  `- Success Run: ${runUrl}`,
+                  `- Ref: ${context.ref}`,
+                  `- Trigger: ${context.eventName}`
+                ].join("\n")
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "closed"
+              });
+            }

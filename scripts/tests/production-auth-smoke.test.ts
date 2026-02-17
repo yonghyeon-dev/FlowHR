@@ -35,17 +35,36 @@ async function run() {
   const email = `prod-smoke-${suffix}@flowhr.local`;
   const password = "Flowhr!12345";
   const employeeId = `PROD-SMOKE-EMP-${suffix}`;
+  const organizationName = `PROD-SMOKE-ORG-${suffix}`;
 
   let createdUserId: string | null = null;
   let runId: string | null = null;
+  let organizationId: string | null = null;
 
   try {
+    const organization = await prisma.organization.create({
+      data: {
+        name: organizationName
+      }
+    });
+    organizationId = organization.id;
+
+    await prisma.employee.create({
+      data: {
+        id: employeeId,
+        organizationId: organization.id,
+        name: "Production Smoke Employee",
+        active: true
+      }
+    });
+
     const created = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       app_metadata: {
-        role: "payroll_operator"
+        role: "payroll_operator",
+        organization_id: organization.id
       }
     });
     if (created.error || !created.data.user?.id) {
@@ -124,6 +143,31 @@ async function run() {
       });
       await prisma.payrollRun.deleteMany({
         where: { id: runId }
+      });
+    }
+
+    await prisma.auditLog.deleteMany({
+      where: {
+        entityType: "Employee",
+        entityId: employeeId
+      }
+    });
+    await prisma.employee.deleteMany({
+      where: {
+        id: employeeId
+      }
+    });
+    if (organizationId) {
+      await prisma.auditLog.deleteMany({
+        where: {
+          entityType: "Organization",
+          entityId: organizationId
+        }
+      });
+      await prisma.organization.deleteMany({
+        where: {
+          id: organizationId
+        }
       });
     }
 
