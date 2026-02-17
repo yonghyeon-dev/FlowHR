@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.15.0
+  version: 0.16.0
 paths:
   /scheduling/schedules:
     get:
@@ -285,7 +285,7 @@ paths:
   /scheduling/anomalies/cockpit:
     get:
       summary: List tenant-level anomaly cockpit summary (read-only)
-      description: Aggregate anomaly severity and prioritized queue for operator triage within tenant scope.
+      description: Aggregate anomaly severity and prioritized queue for operator triage within tenant scope. When ticket automation flag is enabled, cockpit queries may emit `scheduling.anomaly.ticket.requested.v1`.
       parameters:
         - in: query
           name: from

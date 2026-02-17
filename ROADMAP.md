@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0066)
+### 완료 WI 목록 (WI-0001 ~ WI-0067)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -90,16 +90,17 @@
 | WI-0064 | Attendance Multi-Provider Reputation Orchestration Baseline | 핵심 비즈니스 |
 | WI-0065 | Scheduling Anomaly Cockpit Dashboard Baseline | 핵심 비즈니스 |
 | WI-0066 | Attendance Reputation Circuit-Breaker Operations Baseline | 핵심 비즈니스 |
+| WI-0067 | Scheduling Anomaly Cockpit Ticket Automation Baseline | 핵심 비즈니스 |
 
 ### 다음 우선순위 (Phase 2 진행)
 
 - 근무일정/교대/유연근무 고도화(고급 제약/선호 기반 fairness 최적화)
 - 출퇴근 정책 고도화(적응형 라우팅/자동복구 운영)
-- 실시간 근태 현황 고도화(콕핏 baseline 이후 실시간 대시보드/운영자동화)
+- 실시간 근태 현황 고도화(콕핏+티켓 자동화 baseline 이후 실시간 스트리밍 대시보드)
 
 ### 진행 중
 
-- 없음 (WI-0066까지 main에 머지 완료 기준)
+- 없음 (WI-0067까지 main에 머지 완료 기준)
 
 ### 현재 아키텍처
 
@@ -224,7 +225,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | **멀티테넌트** | ✅ 회사별 격리 | ✅ 워크스페이스 격리 | ⚠️ baseline 적용(Supabase RLS + `FLOWHR_TENANCY_V1`, WI-0037) | Critical |
 | **근무일정** | ✅ 교대근무/유연근무 | ✅ 시차출근/재택 | ⚠️ WorkSchedule CRUD + template 단건/다건 + rotation assign/balance/optimize/fairness/fairness-apply + global fairness constraints baseline(WI-0040~0047, WI-0057, WI-0058, WI-0059, WI-0061, WI-0063); 고급 선호/법규 멀티목적 최적화 미도입 | Medium |
 | **출퇴근** | ✅ GPS/비콘/키오스크 | ✅ GPS/Wi-Fi/QR | ⚠️ 채널 메타데이터 + GPS/지오펜스/다중 사업장/디바이스 allowlist/attestation/anti-spoofing + signal fusion + dynamic reputation + multi-provider + circuit-breaker baseline(WI-0048~0056, WI-0060, WI-0062, WI-0064, WI-0066) 완료, 적응형 라우팅/자동복구 운영 미도입 | Medium |
-| **근태 집계** | ✅ 자동 집계/이상 감지 | ✅ 실시간 대시보드 | ⚠️ 집계 조회 API(WI-0031) + anomaly 리포트/알림/에스컬레이션 + cockpit baseline(WI-0045, WI-0051, WI-0055, WI-0065); 실시간 스트리밍 대시보드/티켓 연동 미도입 | High |
+| **근태 집계** | ✅ 자동 집계/이상 감지 | ✅ 실시간 대시보드 | ⚠️ 집계 조회 API(WI-0031) + anomaly 리포트/알림/에스컬레이션 + cockpit/ticket baseline(WI-0045, WI-0051, WI-0055, WI-0065, WI-0067); 실시간 스트리밍 대시보드 미도입 | High |
 | **휴가 관리** | ✅ 정책 엔진/잔여일 자동계산 | ✅ 자동 부여/소진 추적 | ⚠️ 기본 CRUD만 | Medium |
 | **급여 계산** | ✅ 한국 세법/4대보험/연말정산 | ✅ 급여 시뮬레이션/명세서 | ⚠️ 단순 비율 | Critical |
 | **전자결재** | ✅ 결재선/양식/위임 | ✅ 승인 워크플로 | ❌ 없음 | High |

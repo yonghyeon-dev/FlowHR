@@ -70,6 +70,8 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 62. Rotation fairness apply returns 409 with no writes when `maxDailyPlannedMinutesGap` threshold is breached.
 63. Manager anomaly cockpit query returns tenant-level severity summary, employee aggregates, and prioritized queue.
 64. Employee anomaly cockpit query is rejected (403).
+65. When `FLOWHR_SCHEDULING_ANOMALY_TICKET_AUTOMATION_ENABLED=true` and queue severity matches policy, cockpit query emits `scheduling.anomaly.ticket.requested.v1` and appends `scheduling.anomaly.ticket.requested` audit log.
+66. When ticket automation is disabled, cockpit query succeeds and does not emit ticket request event.
 
 ## Boundary Cases
 
@@ -87,12 +89,14 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 12. Rotation fairness apply preflights overlaps before write-back.
 13. Rotation fairness global constraint threshold validates integer range (0..100000).
 14. Anomaly cockpit `topN` query validates integer range (1..200) and limits queue size.
+15. Invalid ticket automation config does not fail cockpit response and appends `scheduling.anomaly.ticket.request.failed` audit log.
 
 ## Regression Linkage
 
 - none
 - anomaly report is read-only and does not mutate schedule or attendance state.
 - anomaly cockpit report is read-only and does not mutate schedule or attendance state.
+- anomaly cockpit report remains available even when ticket automation publication/config validation fails.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

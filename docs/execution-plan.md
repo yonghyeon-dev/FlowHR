@@ -110,7 +110,7 @@ Open gaps:
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling advanced multi-objective fairness solver (preference/labor-law objective) on top of global-constraint baseline
   - advanced clock-in reputation operations automation (adaptive routing/auto-heal) on top of circuit-breaker baseline
-  - real-time anomaly streaming dashboard and ticket automation on top of cockpit baseline
+  - real-time anomaly streaming dashboard on top of cockpit+ticket automation baseline
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -139,6 +139,7 @@ Recently delivered:
 - Attendance multi-provider reputation orchestration baseline is merged (`URLS` + aggregation + minimum-success; WI-0064).
 - Scheduling anomaly cockpit dashboard baseline is merged (`GET /scheduling/anomalies/cockpit`; WI-0065).
 - Attendance reputation circuit-breaker operations baseline is merged (failure-threshold/cooldown provider skip; WI-0066).
+- Scheduling anomaly cockpit ticket automation baseline is merged (severity-threshold ticket request event/audit; WI-0067).
 
 ## 2) Priority Roadmap
 
@@ -286,6 +287,7 @@ Tasks:
 25. (Done) `work-items/WI-0064-attendance-multi-provider-reputation-orchestration.md`
 26. (Done) `work-items/WI-0065-scheduling-anomaly-cockpit-dashboard.md`
 27. (Done) `work-items/WI-0066-attendance-reputation-circuit-breaker-operations.md`
+28. (Done) `work-items/WI-0067-scheduling-anomaly-cockpit-ticket-automation.md`
 
 ## 3) Workstream Ownership
 
@@ -318,6 +320,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for anomaly streaming dashboard and operator ticket automation on top of cockpit baseline,
+1. define WI for anomaly streaming dashboard on top of cockpit+ticket automation baseline,
 2. define WI for advanced fairness optimizer (preference/labor-law multi-objective) on top of global-constraint baseline,
 3. define WI for reputation operations adaptive routing/auto-heal baseline on top of circuit-breaker.
