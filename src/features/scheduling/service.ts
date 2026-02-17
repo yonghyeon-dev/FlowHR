@@ -301,6 +301,31 @@ type ExecuteScheduleAnomalyIncidentAutoActionInput = {
   autoAssignNote?: string;
 };
 
+type ArchiveScheduleAnomalyIncidentsInput = {
+  state?: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId?: string;
+  topN?: number;
+  includeNonResolved?: boolean;
+  olderThanMinutes?: number;
+  asOf?: Date;
+  dryRun?: boolean;
+  reason?: string;
+};
+
+type ReplayScheduleAnomalyIncidentStoreInput = {
+  incidentIds?: string[];
+  topN?: number;
+  from?: Date;
+  to?: Date;
+  dryRun?: boolean;
+  includeArchived?: boolean;
+};
+
+type ReconcileScheduleAnomalyIncidentStoreInput = {
+  topN?: number;
+  includeMatching?: boolean;
+};
+
 export type ScheduleAnomalyIncidentHistoryEntry = {
   action: ScheduleAnomalyIncidentLifecycleAction;
   state: ScheduleAnomalyIncidentLifecycleState;
@@ -455,6 +480,114 @@ export type ScheduleAnomalyIncidentAutoActionResult = {
     dryRun: number;
   };
   items: ScheduleAnomalyIncidentAutoActionItem[];
+};
+
+export type ScheduleAnomalyIncidentArchiveDecision =
+  | "ARCHIVED"
+  | "DRY_RUN"
+  | "FAILED";
+
+export type ScheduleAnomalyIncidentArchiveItem = {
+  incidentId: string;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  updatedAt: string;
+  decision: ScheduleAnomalyIncidentArchiveDecision;
+  reason: string | null;
+};
+
+export type ScheduleAnomalyIncidentArchiveResult = {
+  archivedAt: string;
+  dryRun: boolean;
+  policy: {
+    olderThanMinutes: number;
+    includeNonResolved: boolean;
+    reason: string | null;
+  };
+  filters: {
+    state: ScheduleAnomalyIncidentLifecycleState | null;
+    assigneeId: string | null;
+    topN: number;
+  };
+  counts: {
+    total: number;
+    eligible: number;
+    candidates: number;
+    archived: number;
+    dryRun: number;
+    skippedState: number;
+    skippedRecent: number;
+    failed: number;
+  };
+  items: ScheduleAnomalyIncidentArchiveItem[];
+};
+
+export type ScheduleAnomalyIncidentReplayDecision =
+  | "REPLAYED"
+  | "DRY_RUN"
+  | "NOT_FOUND"
+  | "FAILED";
+
+export type ScheduleAnomalyIncidentReplayItem = {
+  incidentId: string;
+  state: ScheduleAnomalyIncidentLifecycleState | null;
+  historyCount: number;
+  decision: ScheduleAnomalyIncidentReplayDecision;
+  reason: string | null;
+};
+
+export type ScheduleAnomalyIncidentReplayResult = {
+  replayedAt: string;
+  dryRun: boolean;
+  policy: {
+    includeArchived: boolean;
+    from: string | null;
+    to: string | null;
+  };
+  filters: {
+    topN: number;
+    incidentIds: string[] | null;
+  };
+  counts: {
+    requested: number;
+    replayed: number;
+    dryRun: number;
+    notFound: number;
+    failed: number;
+  };
+  items: ScheduleAnomalyIncidentReplayItem[];
+};
+
+export type ScheduleAnomalyIncidentReconcileStatus =
+  | "MATCH"
+  | "STORE_MISSING"
+  | "ORPHANED_STORE"
+  | "FIELD_MISMATCH";
+
+export type ScheduleAnomalyIncidentReconcileItem = {
+  incidentId: string;
+  status: ScheduleAnomalyIncidentReconcileStatus;
+  fields: string[];
+  storeState: ScheduleAnomalyIncidentLifecycleState | null;
+  auditState: ScheduleAnomalyIncidentLifecycleState | null;
+  storeHistoryCount: number;
+  auditHistoryCount: number;
+};
+
+export type ScheduleAnomalyIncidentReconcileResult = {
+  reconciledAt: string;
+  filters: {
+    topN: number;
+    includeMatching: boolean;
+  };
+  counts: {
+    total: number;
+    match: number;
+    storeMissing: number;
+    orphanedStore: number;
+    fieldMismatch: number;
+  };
+  items: ScheduleAnomalyIncidentReconcileItem[];
 };
 
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
@@ -3292,6 +3425,7 @@ const MAX_ANOMALY_INCIDENT_AUDIT_ROWS = 5000;
 const DEFAULT_ANOMALY_INCIDENT_SLA_TARGET_MINUTES = 60;
 const DEFAULT_ANOMALY_INCIDENT_ESCALATION_COOLDOWN_MINUTES = 60;
 const DEFAULT_ANOMALY_INCIDENT_ESCALATION_CHANNEL = "ops-oncall";
+const DEFAULT_ANOMALY_INCIDENT_ARCHIVE_OLDER_THAN_MINUTES = 60 * 24 * 90;
 const DEFAULT_ANOMALY_INCIDENT_AUTO_ASSIGN_MODE: ScheduleAnomalyIncidentAutoAssignMode =
   "ASSIGN_IF_UNASSIGNED";
 
@@ -3402,12 +3536,83 @@ function normalizeAnomalyIncidentAutoAssignNote(value: string | undefined) {
   return normalized;
 }
 
+function normalizeAnomalyIncidentArchiveOlderThanMinutes(value: number | undefined) {
+  const normalized = value ?? DEFAULT_ANOMALY_INCIDENT_ARCHIVE_OLDER_THAN_MINUTES;
+  if (!Number.isInteger(normalized) || normalized < 0 || normalized > 5256000) {
+    throw new ServiceError(400, "olderThanMinutes must be an integer in range 0..5256000");
+  }
+  return normalized;
+}
+
+function normalizeAnomalyIncidentArchiveReason(value: string | undefined) {
+  if (value === undefined) {
+    return null;
+  }
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 500) {
+    throw new ServiceError(400, "reason must be 500 characters or fewer");
+  }
+  return normalized;
+}
+
+function normalizeAnomalyIncidentReplayTopN(value: number | undefined) {
+  const normalized = value ?? 50;
+  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 200) {
+    throw new ServiceError(400, "topN must be an integer in range 1..200");
+  }
+  return normalized;
+}
+
+function normalizeAnomalyIncidentReplayIncidentIds(value: string[] | undefined) {
+  if (!value) {
+    return null;
+  }
+  const normalized = Array.from(
+    new Set(
+      value
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+    )
+  );
+  if (normalized.length === 0) {
+    return null;
+  }
+  if (normalized.length > 200) {
+    throw new ServiceError(400, "incidentIds must contain at most 200 ids");
+  }
+  return normalized;
+}
+
+function normalizeReconcileTopN(value: number | undefined) {
+  const normalized = value ?? 100;
+  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 500) {
+    throw new ServiceError(400, "topN must be an integer in range 1..500");
+  }
+  return normalized;
+}
+
 function parseIsoTimestampToMillis(value: string) {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed)) {
     return null;
   }
   return parsed;
+}
+
+function isWithinOptionalCreatedAtRange(
+  value: Date,
+  input: { from?: Date; to?: Date }
+) {
+  if (input.from && value < input.from) {
+    return false;
+  }
+  if (input.to && value > input.to) {
+    return false;
+  }
+  return true;
 }
 
 function toSlaStatusWeight(status: ScheduleAnomalyIncidentSlaStatus) {
@@ -3540,6 +3745,9 @@ const anomalyIncidentLifecycleAuditActionByAction: Record<
   RESOLVE: "scheduling.anomaly.incident.resolved"
 };
 
+const anomalyIncidentArchiveAuditAction = "scheduling.anomaly.incident.archived";
+const anomalyIncidentReplayAuditAction = "scheduling.anomaly.incident.replayed";
+
 const anomalyIncidentLifecycleActionByAuditAction: Record<
   string,
   ScheduleAnomalyIncidentLifecycleAction
@@ -3552,6 +3760,11 @@ const anomalyIncidentLifecycleActionByAuditAction: Record<
 const anomalyIncidentLifecycleAuditActions = Object.values(
   anomalyIncidentLifecycleAuditActionByAction
 );
+const anomalyIncidentProjectionAuditActions = [
+  ...anomalyIncidentLifecycleAuditActions,
+  anomalyIncidentArchiveAuditAction,
+  anomalyIncidentReplayAuditAction
+];
 
 function toTrimmedString(value: unknown): string | null {
   if (typeof value !== "string") {
@@ -3583,6 +3796,42 @@ function toIncidentResolutionCode(value: unknown): ScheduleAnomalyIncidentResolu
   return null;
 }
 
+function toIncidentHistoryEntriesFromAuditPayload(
+  value: unknown
+): ScheduleAnomalyIncidentHistoryEntry[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const entries: ScheduleAnomalyIncidentHistoryEntry[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const item = raw as Record<string, unknown>;
+    const actionRaw = item.action;
+    const action =
+      actionRaw === "ACKNOWLEDGE" || actionRaw === "ASSIGN" || actionRaw === "RESOLVE"
+        ? actionRaw
+        : "ACKNOWLEDGE";
+    const fallbackState = anomalyIncidentLifecycleStateByAction[action];
+    entries.push({
+      action,
+      state: toIncidentLifecycleState(item.state, fallbackState),
+      assigneeId: toTrimmedString(item.assigneeId),
+      resolutionCode: toIncidentResolutionCode(item.resolutionCode),
+      note: toTrimmedString(item.note),
+      updatedAt: toTrimmedString(item.updatedAt) ?? new Date(0).toISOString(),
+      updatedBy: {
+        actorId: toTrimmedString(item.updatedByActorId),
+        actorRole: toTrimmedString(item.updatedByActorRole) ?? "system"
+      }
+    });
+  }
+  entries.sort((left, right) => left.updatedAt.localeCompare(right.updatedAt));
+  return entries.slice(-MAX_ANOMALY_INCIDENT_HISTORY);
+}
+
 function buildScheduleAnomalyIncidentReadModelsFromAuditLogs(
   logs: Array<{
     action: string;
@@ -3592,22 +3841,74 @@ function buildScheduleAnomalyIncidentReadModelsFromAuditLogs(
     actorId: string | null;
     payload: unknown;
     createdAt: Date;
-  }>
+  }>,
+  options?: {
+    applyArchiveActions?: boolean;
+  }
 ): ScheduleAnomalyIncidentReadModel[] {
+  const applyArchiveActions = options?.applyArchiveActions ?? true;
   const byIncidentId = new Map<string, ScheduleAnomalyIncidentReadModel>();
 
   for (const row of logs) {
-    const lifecycleAction = anomalyIncidentLifecycleActionByAuditAction[row.action];
-    if (!lifecycleAction) {
-      continue;
-    }
-
     const payload =
       row.payload && typeof row.payload === "object"
         ? (row.payload as Record<string, unknown>)
         : {};
     const incidentId = toTrimmedString(row.entityId) ?? toTrimmedString(payload.incidentId);
     if (!incidentId) {
+      continue;
+    }
+
+    if (applyArchiveActions && row.action === anomalyIncidentArchiveAuditAction) {
+      byIncidentId.delete(incidentId);
+      continue;
+    }
+
+    if (row.action === anomalyIncidentReplayAuditAction) {
+      const existing = byIncidentId.get(incidentId);
+      const fallbackState = existing?.state ?? "ACKNOWLEDGED";
+      const state = toIncidentLifecycleState(payload.state, fallbackState);
+      const assigneeId = toTrimmedString(payload.assigneeId);
+      const resolutionCode = toIncidentResolutionCode(payload.resolutionCode);
+      const note = toTrimmedString(payload.note);
+      const updatedAt = toTrimmedString(payload.updatedAt) ?? row.createdAt.toISOString();
+      const history = toIncidentHistoryEntriesFromAuditPayload(payload.history);
+      const fallbackHistoryEntry: ScheduleAnomalyIncidentHistoryEntry = {
+        action: "ACKNOWLEDGE",
+        state,
+        assigneeId,
+        resolutionCode,
+        note,
+        updatedAt,
+        updatedBy: {
+          actorId: row.actorId ?? null,
+          actorRole: row.actorRole
+        }
+      };
+      const resolvedHistory =
+        history.length > 0
+          ? history
+          : [...(existing?.history ?? []), fallbackHistoryEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
+
+      byIncidentId.set(incidentId, {
+        incidentId,
+        organizationId: existing?.organizationId ?? row.organizationId ?? null,
+        state,
+        assigneeId,
+        resolutionCode,
+        note,
+        updatedAt,
+        updatedBy: {
+          actorId: toTrimmedString(payload.updatedByActorId) ?? row.actorId ?? null,
+          actorRole: toTrimmedString(payload.updatedByActorRole) ?? row.actorRole
+        },
+        history: resolvedHistory
+      });
+      continue;
+    }
+
+    const lifecycleAction = anomalyIncidentLifecycleActionByAuditAction[row.action];
+    if (!lifecycleAction) {
       continue;
     }
 
@@ -3653,30 +3954,33 @@ function buildScheduleAnomalyIncidentReadModelsFromAuditLogs(
 
 async function listScheduleAnomalyIncidentReadModelsFromAudit(
   context: ServiceContext,
-  input?: { organizationId?: string }
+  input?: { organizationId?: string; applyArchiveActions?: boolean }
 ) {
   const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentLifecycleAuditActions,
+    actions: anomalyIncidentProjectionAuditActions,
     entityType: "WorkSchedule",
     organizationId: input?.organizationId,
     limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
   });
-  return buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs);
+  return buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs, {
+    applyArchiveActions: input?.applyArchiveActions
+  });
 }
 
 async function getScheduleAnomalyIncidentReadModelFromAudit(
   context: ServiceContext,
-  incidentId: string
+  incidentId: string,
+  input?: { applyArchiveActions?: boolean }
 ) {
   const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentLifecycleAuditActions,
+    actions: anomalyIncidentProjectionAuditActions,
     entityType: "WorkSchedule",
     entityId: incidentId,
-    limit: MAX_ANOMALY_INCIDENT_HISTORY
+    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
   });
-  const readModel = buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs).find(
-    (item) => item.incidentId === incidentId
-  );
+  const readModel = buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs, {
+    applyArchiveActions: input?.applyArchiveActions
+  }).find((item) => item.incidentId === incidentId);
   return readModel ?? null;
 }
 
@@ -3715,12 +4019,14 @@ async function listScheduleAnomalyIncidentReadModelsFromStore(
     organizationId?: string;
     state?: ScheduleAnomalyIncidentLifecycleState;
     assigneeId?: string;
+    incidentIds?: string[];
   }
 ): Promise<ScheduleAnomalyIncidentReadModel[]> {
   const incidents = await context.dataAccess.scheduling.listIncidents({
     organizationId: input?.organizationId,
     state: input?.state,
-    assigneeId: input?.assigneeId
+    assigneeId: input?.assigneeId,
+    incidentIds: input?.incidentIds
   });
   return incidents.map(toScheduleAnomalyIncidentReadModelFromEntity);
 }
@@ -3731,6 +4037,7 @@ async function listScheduleAnomalyIncidentReadModels(
     organizationId?: string;
     state?: ScheduleAnomalyIncidentLifecycleState;
     assigneeId?: string;
+    incidentIds?: string[];
   }
 ): Promise<ScheduleAnomalyIncidentReadModel[]> {
   const stored = await listScheduleAnomalyIncidentReadModelsFromStore(context, input);
@@ -4576,6 +4883,522 @@ export async function executeScheduleAnomalyIncidentAutoAction(
       failed,
       dryRun
     },
+    items
+  };
+}
+
+export async function archiveScheduleAnomalyIncidents(
+  context: ServiceContext,
+  input: ArchiveScheduleAnomalyIncidentsInput
+): Promise<ScheduleAnomalyIncidentArchiveResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident archive requires permission"
+  );
+
+  const topN = normalizeIncidentListTopN(input.topN);
+  const includeNonResolved = input.includeNonResolved ?? false;
+  const olderThanMinutes = normalizeAnomalyIncidentArchiveOlderThanMinutes(input.olderThanMinutes);
+  const archiveReason = normalizeAnomalyIncidentArchiveReason(input.reason);
+  const dryRun = input.dryRun ?? false;
+  const asOf = input.asOf ?? new Date();
+  const asOfIso = asOf.toISOString();
+  const cutoffMillis = asOf.getTime() - olderThanMinutes * 60_000;
+
+  const stateFilter = input.state;
+  const assigneeFilter = input.assigneeId?.trim() || undefined;
+  const tenantScope = resolveTenantScope(actor) ?? undefined;
+
+  const incidents = await context.dataAccess.scheduling.listIncidents({
+    organizationId: tenantScope,
+    state: stateFilter,
+    assigneeId: assigneeFilter
+  });
+
+  const sorted = incidents.slice().sort((left, right) => {
+    const byUpdatedAt = left.updatedAt.localeCompare(right.updatedAt);
+    if (byUpdatedAt !== 0) {
+      return byUpdatedAt;
+    }
+    return left.incidentId.localeCompare(right.incidentId);
+  });
+
+  let skippedState = 0;
+  let skippedRecent = 0;
+  const eligible: ScheduleAnomalyIncidentEntity[] = [];
+  for (const incident of sorted) {
+    if (!includeNonResolved && incident.state !== "RESOLVED") {
+      skippedState += 1;
+      continue;
+    }
+    const updatedAtMillis = parseIsoTimestampToMillis(incident.updatedAt);
+    if (updatedAtMillis === null || updatedAtMillis > cutoffMillis) {
+      skippedRecent += 1;
+      continue;
+    }
+    eligible.push(incident);
+  }
+
+  const candidates = eligible.slice(0, topN);
+  let archived = 0;
+  let dryRunCount = 0;
+  let failed = 0;
+  const items: ScheduleAnomalyIncidentArchiveItem[] = [];
+
+  for (const candidate of candidates) {
+    if (dryRun) {
+      dryRunCount += 1;
+      items.push({
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        assigneeId: candidate.assigneeId,
+        updatedAt: candidate.updatedAt,
+        decision: "DRY_RUN",
+        reason: "dry-run mode"
+      });
+      continue;
+    }
+
+    try {
+      const deleted = await context.dataAccess.scheduling.deleteIncident({
+        incidentId: candidate.incidentId,
+        organizationId: tenantScope
+      });
+      if (!deleted) {
+        failed += 1;
+        items.push({
+          incidentId: candidate.incidentId,
+          state: candidate.state,
+          assigneeId: candidate.assigneeId,
+          updatedAt: candidate.updatedAt,
+          decision: "FAILED",
+          reason: "incident not found"
+        });
+        continue;
+      }
+
+      const archivedAt = new Date().toISOString();
+      await context.dataAccess.audit.append({
+        action: anomalyIncidentArchiveAuditAction,
+        entityType: "WorkSchedule",
+        entityId: candidate.incidentId,
+        organizationId: candidate.organizationId ?? tenantScope ?? undefined,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          incidentId: candidate.incidentId,
+          state: candidate.state,
+          assigneeId: candidate.assigneeId,
+          updatedAt: candidate.updatedAt,
+          archivedAt,
+          asOf: asOfIso,
+          olderThanMinutes,
+          reason: archiveReason
+        }
+      });
+
+      archived += 1;
+      items.push({
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        assigneeId: candidate.assigneeId,
+        updatedAt: candidate.updatedAt,
+        decision: "ARCHIVED",
+        reason: null
+      });
+    } catch (error) {
+      failed += 1;
+      items.push({
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        assigneeId: candidate.assigneeId,
+        updatedAt: candidate.updatedAt,
+        decision: "FAILED",
+        reason: error instanceof Error ? error.message : "unknown error"
+      });
+    }
+  }
+
+  const archivedAt = new Date().toISOString();
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.archive.generated",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      archivedAt,
+      dryRun,
+      asOf: asOfIso,
+      olderThanMinutes,
+      includeNonResolved,
+      state: stateFilter ?? null,
+      assigneeId: assigneeFilter ?? null,
+      topN,
+      reason: archiveReason,
+      total: incidents.length,
+      eligible: eligible.length,
+      candidates: candidates.length,
+      archived,
+      dryRunCount,
+      skippedState,
+      skippedRecent,
+      failed
+    }
+  });
+
+  return {
+    archivedAt,
+    dryRun,
+    policy: {
+      olderThanMinutes,
+      includeNonResolved,
+      reason: archiveReason
+    },
+    filters: {
+      state: stateFilter ?? null,
+      assigneeId: assigneeFilter ?? null,
+      topN
+    },
+    counts: {
+      total: incidents.length,
+      eligible: eligible.length,
+      candidates: candidates.length,
+      archived,
+      dryRun: dryRunCount,
+      skippedState,
+      skippedRecent,
+      failed
+    },
+    items
+  };
+}
+
+export async function replayScheduleAnomalyIncidentStore(
+  context: ServiceContext,
+  input: ReplayScheduleAnomalyIncidentStoreInput
+): Promise<ScheduleAnomalyIncidentReplayResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident replay requires permission"
+  );
+
+  const topN = normalizeAnomalyIncidentReplayTopN(input.topN);
+  const normalizedIncidentIds = normalizeAnomalyIncidentReplayIncidentIds(input.incidentIds);
+  if (input.from && input.to && input.to < input.from) {
+    throw new ServiceError(400, "to must be greater than or equal to from");
+  }
+
+  const dryRun = input.dryRun ?? false;
+  const includeArchived = input.includeArchived ?? false;
+  const tenantScope = resolveTenantScope(actor) ?? undefined;
+
+  const logs = await context.dataAccess.audit.list({
+    actions: anomalyIncidentProjectionAuditActions,
+    entityType: "WorkSchedule",
+    organizationId: tenantScope,
+    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
+  });
+  const logsInRange = logs.filter((entry) =>
+    isWithinOptionalCreatedAtRange(entry.createdAt, {
+      from: input.from,
+      to: input.to
+    })
+  );
+  const replayModels = buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logsInRange, {
+    applyArchiveActions: !includeArchived
+  });
+
+  const replayModelById = new Map(replayModels.map((item) => [item.incidentId, item]));
+  const selectedIncidentIds = (
+    normalizedIncidentIds ??
+    replayModels
+      .slice()
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+      .map((item) => item.incidentId)
+  ).slice(0, topN);
+
+  let replayed = 0;
+  let dryRunCount = 0;
+  let notFound = 0;
+  let failed = 0;
+  const items: ScheduleAnomalyIncidentReplayItem[] = [];
+
+  for (const incidentId of selectedIncidentIds) {
+    const replayModel = replayModelById.get(incidentId);
+    if (!replayModel) {
+      notFound += 1;
+      items.push({
+        incidentId,
+        state: null,
+        historyCount: 0,
+        decision: "NOT_FOUND",
+        reason: "incident not found in audit projection"
+      });
+      continue;
+    }
+
+    if (dryRun) {
+      dryRunCount += 1;
+      items.push({
+        incidentId,
+        state: replayModel.state,
+        historyCount: replayModel.history.length,
+        decision: "DRY_RUN",
+        reason: "dry-run mode"
+      });
+      continue;
+    }
+
+    try {
+      const existing = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
+      await context.dataAccess.scheduling.upsertIncident({
+        ...toScheduleAnomalyIncidentUpsertInput(replayModel),
+        lastEscalationRequestedAt: existing?.lastEscalationRequestedAt ?? null
+      });
+      await context.dataAccess.audit.append({
+        action: anomalyIncidentReplayAuditAction,
+        entityType: "WorkSchedule",
+        entityId: incidentId,
+        organizationId: replayModel.organizationId ?? tenantScope ?? undefined,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          incidentId,
+          state: replayModel.state,
+          assigneeId: replayModel.assigneeId,
+          resolutionCode: replayModel.resolutionCode,
+          note: replayModel.note,
+          updatedAt: replayModel.updatedAt,
+          updatedByActorId: replayModel.updatedBy.actorId,
+          updatedByActorRole: replayModel.updatedBy.actorRole,
+          history: replayModel.history.map((entry) => ({
+            action: entry.action,
+            state: entry.state,
+            assigneeId: entry.assigneeId,
+            resolutionCode: entry.resolutionCode,
+            note: entry.note,
+            updatedAt: entry.updatedAt,
+            updatedByActorId: entry.updatedBy.actorId,
+            updatedByActorRole: entry.updatedBy.actorRole
+          })),
+          includeArchived,
+          replayedAt: new Date().toISOString()
+        }
+      });
+      replayed += 1;
+      items.push({
+        incidentId,
+        state: replayModel.state,
+        historyCount: replayModel.history.length,
+        decision: "REPLAYED",
+        reason: null
+      });
+    } catch (error) {
+      failed += 1;
+      items.push({
+        incidentId,
+        state: replayModel.state,
+        historyCount: replayModel.history.length,
+        decision: "FAILED",
+        reason: error instanceof Error ? error.message : "unknown error"
+      });
+    }
+  }
+
+  const replayedAt = new Date().toISOString();
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.replay.generated",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      replayedAt,
+      dryRun,
+      includeArchived,
+      from: input.from?.toISOString() ?? null,
+      to: input.to?.toISOString() ?? null,
+      topN,
+      incidentIds: normalizedIncidentIds ?? null,
+      requested: selectedIncidentIds.length,
+      replayed,
+      dryRunCount,
+      notFound,
+      failed
+    }
+  });
+
+  return {
+    replayedAt,
+    dryRun,
+    policy: {
+      includeArchived,
+      from: input.from?.toISOString() ?? null,
+      to: input.to?.toISOString() ?? null
+    },
+    filters: {
+      topN,
+      incidentIds: normalizedIncidentIds
+    },
+    counts: {
+      requested: selectedIncidentIds.length,
+      replayed,
+      dryRun: dryRunCount,
+      notFound,
+      failed
+    },
+    items
+  };
+}
+
+export async function reconcileScheduleAnomalyIncidentStore(
+  context: ServiceContext,
+  input: ReconcileScheduleAnomalyIncidentStoreInput
+): Promise<ScheduleAnomalyIncidentReconcileResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident reconciliation requires permission"
+  );
+
+  const topN = normalizeReconcileTopN(input.topN);
+  const includeMatching = input.includeMatching ?? false;
+  const tenantScope = resolveTenantScope(actor) ?? undefined;
+
+  const storeRows = await context.dataAccess.scheduling.listIncidents({
+    organizationId: tenantScope
+  });
+  const auditRows = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
+    organizationId: tenantScope,
+    applyArchiveActions: true
+  });
+
+  const storeById = new Map(storeRows.map((item) => [item.incidentId, item]));
+  const auditById = new Map(auditRows.map((item) => [item.incidentId, item]));
+  const allIncidentIds = Array.from(
+    new Set([...storeById.keys(), ...auditById.keys()])
+  ).sort((left, right) => left.localeCompare(right));
+
+  const compared: ScheduleAnomalyIncidentReconcileItem[] = [];
+  for (const incidentId of allIncidentIds) {
+    const store = storeById.get(incidentId) ?? null;
+    const audit = auditById.get(incidentId) ?? null;
+
+    if (!store && audit) {
+      compared.push({
+        incidentId,
+        status: "STORE_MISSING",
+        fields: ["incident"],
+        storeState: null,
+        auditState: audit.state,
+        storeHistoryCount: 0,
+        auditHistoryCount: audit.history.length
+      });
+      continue;
+    }
+
+    if (store && !audit) {
+      compared.push({
+        incidentId,
+        status: "ORPHANED_STORE",
+        fields: ["incident"],
+        storeState: store.state,
+        auditState: null,
+        storeHistoryCount: store.history.length,
+        auditHistoryCount: 0
+      });
+      continue;
+    }
+
+    if (!store || !audit) {
+      continue;
+    }
+
+    const fields: string[] = [];
+    if (store.state !== audit.state) {
+      fields.push("state");
+    }
+    if (store.assigneeId !== audit.assigneeId) {
+      fields.push("assigneeId");
+    }
+    if (store.resolutionCode !== audit.resolutionCode) {
+      fields.push("resolutionCode");
+    }
+    if (store.note !== audit.note) {
+      fields.push("note");
+    }
+    if (store.updatedAt !== audit.updatedAt) {
+      fields.push("updatedAt");
+    }
+    if (store.history.length !== audit.history.length) {
+      fields.push("historyCount");
+    }
+
+    compared.push({
+      incidentId,
+      status: fields.length > 0 ? "FIELD_MISMATCH" : "MATCH",
+      fields,
+      storeState: store.state,
+      auditState: audit.state,
+      storeHistoryCount: store.history.length,
+      auditHistoryCount: audit.history.length
+    });
+  }
+
+  const counts = {
+    total: compared.length,
+    match: compared.filter((item) => item.status === "MATCH").length,
+    storeMissing: compared.filter((item) => item.status === "STORE_MISSING").length,
+    orphanedStore: compared.filter((item) => item.status === "ORPHANED_STORE").length,
+    fieldMismatch: compared.filter((item) => item.status === "FIELD_MISMATCH").length
+  };
+
+  const reconciledAt = new Date().toISOString();
+  const items = compared
+    .filter((item) => (includeMatching ? true : item.status !== "MATCH"))
+    .slice(0, topN);
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.reconciliation.generated",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      reconciledAt,
+      topN,
+      includeMatching,
+      compared: compared.length,
+      returned: items.length,
+      counts
+    }
+  });
+
+  return {
+    reconciledAt,
+    filters: {
+      topN,
+      includeMatching
+    },
+    counts,
     items
   };
 }

@@ -109,6 +109,15 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 101. Incident escalation command reads cooldown from durable store `lastEscalationRequestedAt` and skips duplicate escalation within window after restart.
 102. Incident escalation command with non-dry-run updates durable cooldown timestamp while preserving lifecycle state/history values.
 103. Cross-tenant manager cannot read durable incident detail and receives 404 without existence leak.
+104. Manager can archive durable incidents (`POST /scheduling/anomalies/incidents/archive`) with retention filters and receives archived/skipped summary.
+105. Archive command `dryRun=true` returns deterministic candidate plan without deleting durable incident rows.
+106. Archive command appends per-incident tombstone audit (`scheduling.anomaly.incident.archived`) and summary audit (`scheduling.anomaly.incident.archive.generated`) on apply path.
+107. Archived incidents are excluded from incident list/detail audit projection fallback path unless replay includes archived source.
+108. Manager can replay durable incident store (`POST /scheduling/anomalies/incidents/replay`) from audit projection and restore archived incidents when `includeArchived=true`.
+109. Replay command with `includeArchived=false` reports archived incidents as `NOT_FOUND` from active projection.
+110. Manager can reconcile durable incident store (`POST /scheduling/anomalies/incidents/reconcile`) and receive mismatch classes (`MATCH`, `STORE_MISSING`, `ORPHANED_STORE`, `FIELD_MISMATCH`).
+111. Employee cannot call anomaly incident archive/replay/reconcile command endpoints (403).
+112. Replay apply path appends `scheduling.anomaly.incident.replayed` audit entries so archived incidents remain recoverable after restart.
 
 ## Boundary Cases
 
@@ -138,6 +147,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 24. Incident escalation command validates `cooldownMinutes` range and `warningMinutes < slaTargetMinutes`.
 25. Incident auto-action command requires non-empty `autoAssigneeId` and validates `warningMinutes < slaTargetMinutes`.
 26. Incident durable store history payload normalization tolerates missing/invalid optional fields without breaking read APIs.
+27. Incident archive `olderThanMinutes` validates integer range (0..5256000).
+28. Incident replay `incidentIds` validates max 200 unique ids and `to >= from`.
+29. Incident reconcile `topN` validates integer range (1..500).
 
 ## Regression Linkage
 
@@ -153,6 +165,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly incident escalation command path persists cooldown metadata only and does not mutate schedule/attendance state.
 - anomaly incident auto-action command path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident read/list/sla/escalation paths remain restart-safe via durable incident store source.
+- anomaly incident archive command removes durable rows only and does not publish domain events.
+- anomaly incident replay command rebuilds durable rows from audit projection without changing scheduling/attendance/payroll business records.
+- anomaly incident reconcile command remains read-only and deterministic for identical store/audit inputs.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

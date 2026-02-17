@@ -41,6 +41,7 @@ No additional migration in WI-0076 (anomaly incident SLA monitoring API is read-
 No additional migration in WI-0077 (anomaly incident escalation automation command is runtime projection/event behavior only).
 No additional migration in WI-0078 (anomaly incident auto-action execution command is runtime orchestration/event behavior only).
 WI-0079 adds durable incident store migration `202602170001_scheduling_anomaly_incident_store`.
+No additional migration in WI-0080 (incident archive/replay/reconcile is runtime store/audit operation only).
 
 ## Tenant Isolation
 

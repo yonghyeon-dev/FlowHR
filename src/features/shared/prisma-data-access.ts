@@ -794,12 +794,16 @@ const scheduling: SchedulingStore = {
     organizationId?: string;
     state?: "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
     assigneeId?: string;
+    incidentIds?: string[];
   }) {
     const records = await prisma.scheduleAnomalyIncident.findMany({
       where: {
         ...(input.organizationId !== undefined ? { organizationId: input.organizationId } : {}),
         ...(input.state ? { state: input.state } : {}),
-        ...(input.assigneeId ? { assigneeId: input.assigneeId } : {})
+        ...(input.assigneeId ? { assigneeId: input.assigneeId } : {}),
+        ...(input.incidentIds && input.incidentIds.length > 0
+          ? { incidentId: { in: input.incidentIds } }
+          : {})
       },
       orderBy: [{ updatedAt: "desc" }, { incidentId: "asc" }]
     });
@@ -827,6 +831,25 @@ const scheduling: SchedulingStore = {
       }
     });
     return toScheduleAnomalyIncidentEntity(record);
+  },
+
+  async deleteIncident(input: {
+    incidentId: string;
+    organizationId?: string;
+  }) {
+    const existing = await prisma.scheduleAnomalyIncident.findUnique({
+      where: { incidentId: input.incidentId }
+    });
+    if (!existing) {
+      return false;
+    }
+    if (input.organizationId !== undefined && existing.organizationId !== input.organizationId) {
+      return false;
+    }
+    await prisma.scheduleAnomalyIncident.delete({
+      where: { incidentId: input.incidentId }
+    });
+    return true;
   }
 };
 

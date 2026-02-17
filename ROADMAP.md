@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0079)
+### 완료 WI 목록 (WI-0001 ~ WI-0080)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -103,6 +103,7 @@
 | WI-0077 | Scheduling Anomaly Incident Escalation Automation API | 운영 |
 | WI-0078 | Scheduling Anomaly Incident Auto-Action Execution API | 운영 |
 | WI-0079 | Scheduling Anomaly Incident Durable Store and Cooldown Persistence | 안정성 |
+| WI-0080 | Scheduling Anomaly Incident Archive/Replay/Reconcile API | 운영 |
 
 ### 다음 우선순위 (Phase 2 진행)
 
@@ -112,7 +113,7 @@
 
 ### 진행 중
 
-- 없음 (WI-0079까지 main 반영 기준)
+- 없음 (WI-0080까지 main 반영 기준)
 
 ### 현재 아키텍처
 
@@ -204,7 +205,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | 야간 시간대 | `00:00~04:00` 하드코딩 | 조직별 야간 기준 변경 불가 |
 | 기본 연차 | `15일` 하드코딩 | 정책별 부여일수 변경 불가 |
 
-**로드맵 반영**: RBAC 엔진 도입 완료(WI-0036). 이후 Phase 4(WI-0080~)에서 급여 규칙 엔진화.
+**로드맵 반영**: RBAC 엔진 도입 완료(WI-0036). 이후 Phase 4(WI-0081~)에서 급여 규칙 엔진화.
 
 ### 개선 우선순위 요약
 
