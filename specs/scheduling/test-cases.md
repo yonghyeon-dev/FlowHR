@@ -87,6 +87,11 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 79. Manager can resolve anomaly incident (`POST /resolve`) with optional `resolutionCode` and receives lifecycle state `RESOLVED`.
 80. Employee cannot call anomaly incident lifecycle command endpoints (403).
 81. Anomaly incident lifecycle commands append audit log and emit `scheduling.anomaly.incident.updated.v1` event.
+82. Manager can list anomaly incident read-model entries (`GET /scheduling/anomalies/incidents`) with total/items response.
+83. `state` query filter on incident list returns only matching lifecycle state entries.
+84. Manager can read anomaly incident detail (`GET /scheduling/anomalies/incidents/{incidentId}`) with timeline history.
+85. Employee cannot access anomaly incident read-model list/detail endpoints (403).
+86. Cross-tenant anomaly incident detail request returns 404 (no existence leak).
 
 ## Boundary Cases
 
@@ -110,6 +115,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 18. Rotation fairness advanced `weight` fields validate integer range (0..100).
 19. Cockpit stream `incidentCooldownSeconds` validates integer range (0..3600).
 20. Incident assign endpoint rejects payload without `assigneeId` (400).
+21. Incident list `topN` validates integer range (1..200).
 
 ## Regression Linkage
 
@@ -120,6 +126,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly cockpit stream reuses cockpit invariants and does not mutate schedule or attendance state.
 - anomaly cockpit stream incident-automation SSE signal remains read-only and does not publish domain events.
 - anomaly incident lifecycle command path remains operational-only and does not mutate schedule/attendance state.
+- anomaly incident read-model list/detail path remains operational-only and does not mutate schedule/attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

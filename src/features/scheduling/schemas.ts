@@ -201,6 +201,12 @@ export const resolveScheduleAnomalyIncidentSchema = z.object({
   note: incidentLifecycleNoteSchema.optional()
 });
 
+export const listScheduleAnomalyIncidentQuerySchema = z.object({
+  state: z.enum(["ACKNOWLEDGED", "ASSIGNED", "RESOLVED"]).optional(),
+  assigneeId: z.string().trim().min(1).optional(),
+  topN: z.coerce.number().int().min(1).max(200).optional()
+});
+
 export const listScheduleRotationBalanceQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - operator incident persistence/read model (list/state timeline/SLA) on top of lifecycle commands
+  - operator incident durable store + SLA automation (current read model is in-memory projection baseline)
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -143,6 +143,7 @@ Recently delivered:
 - Attendance reputation adaptive routing/auto-heal baseline is merged (provider prioritization + open-circuit probe recovery; WI-0070).
 - Scheduling anomaly cockpit operator dashboard + stream incident automation is merged (`/ops/scheduling-cockpit` and `incident-automation` SSE policy controls; WI-0071).
 - Scheduling anomaly incident lifecycle command API is merged (`/ack`, `/assign`, `/resolve` + incident lifecycle audit/event traceability; WI-0072).
+- Scheduling anomaly incident read-model API is merged (`GET /incidents`, `GET /incidents/{incidentId}` + timeline projection/audit traceability; WI-0073).
 
 ## 2) Priority Roadmap
 
@@ -296,6 +297,7 @@ Tasks:
 31. (Done) `work-items/WI-0070-attendance-reputation-adaptive-routing-autoheal.md`
 32. (Done) `work-items/WI-0071-scheduling-anomaly-cockpit-ops-dashboard-incident-automation.md`
 33. (Done) `work-items/WI-0072-scheduling-anomaly-incident-lifecycle-api.md`
+34. (Done) `work-items/WI-0073-scheduling-anomaly-incident-read-model-api.md`
 
 ## 3) Workstream Ownership
 
@@ -328,4 +330,4 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for anomaly incident read-model API (list/detail/timeline) and connect lifecycle command history to operator cockpit UI.
+1. define WI for DB-backed anomaly incident durable store and SLA timer/escalation automation on top of the read-model baseline.

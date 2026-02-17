@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.20.0
+version: 0.21.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -19,6 +19,7 @@ scope:
     - tenant-level anomaly cockpit bounded streaming snapshots (SSE)
     - tenant-level anomaly cockpit stream incident automation event (SSE) with severity/cooldown policy
     - anomaly incident lifecycle command API (acknowledge/assign/resolve) with audit/event traceability
+    - anomaly incident read-model API (list/detail with timeline projection)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
     - anomaly cockpit ticket request automation event emission behind feature flag
@@ -102,6 +103,12 @@ api:
     - method: POST
       path: /scheduling/anomalies/incidents/{incidentId}/resolve
       description: Resolve anomaly incident with resolution code and append audit/event traceability.
+    - method: GET
+      path: /scheduling/anomalies/incidents
+      description: List anomaly incident read-model entries with optional state/assignee filters and bounded topN.
+    - method: GET
+      path: /scheduling/anomalies/incidents/{incidentId}
+      description: Read one anomaly incident read-model entry including command history timeline.
   events:
     published:
       - name: scheduling.schedule.assigned.v1
@@ -172,6 +179,8 @@ invariants:
   - Anomaly incident ASSIGN command requires non-empty `assigneeId`.
   - Anomaly incident RESOLVE command persists standardized `resolutionCode` (default `OTHER`) in audit/event payload.
   - Anomaly incident lifecycle commands are operational trace signals and must not mutate scheduling/attendance/payroll state.
+  - Anomaly incident read-model list/detail APIs require scheduling write-any permission and tenant scope.
+  - Anomaly incident read-model detail API must return 404 for cross-tenant incidentId requests (no existence leak).
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.
   - Anomaly escalation automation must not block anomaly report API response.
@@ -227,6 +236,7 @@ test_plan:
     - anomaly cockpit stream suppresses ticket request domain event even when ticket automation is enabled
     - anomaly cockpit stream emits incident-automation SSE event when enabled and severity/cooldown policy matches
     - anomaly incident ack/assign/resolve APIs append audit logs and emit incident lifecycle domain event
+    - anomaly incident list/detail APIs return lifecycle read-model timeline for authorized operators
   regression:
     - template assignment path reuses schedule overlap guard
     - single-date assignment behavior remains unchanged
@@ -238,6 +248,7 @@ test_plan:
     - anomaly cockpit stream remains available and bounded by sampleCount/interval query constraints
     - anomaly cockpit stream incident automation cooldown remains deterministic for identical snapshot sequence timing
     - anomaly incident lifecycle commands do not mutate scheduling or attendance records
+    - anomaly incident read-model APIs do not mutate scheduling or attendance records
     - rotation balance report does not mutate schedules
     - rotation optimization dry-run does not mutate schedules
     - rotation fairness report does not mutate schedules
@@ -248,6 +259,7 @@ test_plan:
     - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/rotation-optimize/rotation-fairness/rotation-fairness-apply/anomaly-report
     - permission boundaries for anomaly-cockpit and anomaly-cockpit-stream read endpoints
     - permission boundaries for anomaly incident lifecycle command endpoints (ack/assign/resolve)
+    - permission boundaries for anomaly incident read-model list/detail endpoints
   payroll_accuracy:
     - anomaly report is non-blocking and does not change payroll run outputs
 observability:
@@ -275,6 +287,8 @@ observability:
     - scheduling.anomaly.incident.acknowledged
     - scheduling.anomaly.incident.assigned
     - scheduling.anomaly.incident.resolved
+    - scheduling.anomaly.incident.listed
+    - scheduling.anomaly.incident.read
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
@@ -323,7 +337,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.20.0 adds anomaly incident lifecycle command endpoints (`/ack`, `/assign`, `/resolve`) and publishes `scheduling.anomaly.incident.updated.v1` for operational traceability; existing cockpit/anomaly read APIs remain backward compatible."
+consumer_impact: "Contract v0.21.0 adds anomaly incident read-model APIs (`GET /incidents`, `GET /incidents/{incidentId}`) for operator timeline visibility while preserving existing lifecycle command and cockpit API compatibility."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -347,6 +361,7 @@ references:
   - work-items/WI-0069-scheduling-advanced-fairness-multi-objective.md
   - work-items/WI-0071-scheduling-anomaly-cockpit-ops-dashboard-incident-automation.md
   - work-items/WI-0072-scheduling-anomaly-incident-lifecycle-api.md
+  - work-items/WI-0073-scheduling-anomaly-incident-read-model-api.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent
