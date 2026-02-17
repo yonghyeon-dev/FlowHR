@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.15.0
+version: 1.16.0
 scope:
   in:
     - attendance record create/update
@@ -13,6 +13,7 @@ scope:
     - feature-flag based dynamic external reputation integration for anti-spoofing risk scoring
     - feature-flag based multi-provider external reputation orchestration (union/majority + minimum-success)
     - feature-flag based external reputation provider circuit-breaker (failure threshold/cooldown)
+    - feature-flag based adaptive reputation provider routing and open-circuit auto-heal probing
     - attendance record list query by period
     - attendance aggregates query by period
     - correction approval/rejection flow
@@ -24,7 +25,7 @@ scope:
     - physical device protocol integration
     - geofence polygon policy engine
     - distributed anti-spoofing external reputation circuit-breaker state sharing
-    - adaptive reputation routing and auto-healing operations
+    - distributed adaptive routing and auto-heal state coordination across instances
     - trusted network policy engine
     - cryptographic device attestation policy engine
 entities:
@@ -106,6 +107,8 @@ invariants:
   - When dynamic external reputation is enabled, remote provider snapshots must satisfy configured aggregation mode (union/majority) before risk penalty is applied.
   - When dynamic external reputation strict mode is enabled, provider minimum-success requirement breach must reject employee attendance writes.
   - When external reputation circuit-breaker is enabled, providers exceeding failure threshold must be skipped until cooldown expiry.
+  - When external reputation adaptive routing is enabled, provider query order must prioritize healthy providers deterministically for identical provider-state snapshots.
+  - When external reputation auto-heal is enabled, open-circuit providers may be probed at configured interval and must rejoin normal routing immediately after successful probe.
 risk:
   permissions:
     - Unauthorized approval could alter payroll amount.
@@ -123,6 +126,7 @@ risk:
     - External reputation provider failure in strict mode can block employee attendance writes when dynamic reputation flag is enabled.
     - Multi-provider reputation aggregation/threshold misconfiguration can over-block or under-block employee attendance writes.
     - Reputation circuit-breaker threshold/cooldown misconfiguration can over-skip healthy providers and block valid employee writes.
+    - Adaptive routing or auto-heal probe misconfiguration can amplify latency or delay provider recovery.
   legal:
     - Attendance history must remain auditable.
 test_plan:
@@ -143,6 +147,7 @@ test_plan:
     - external reputation provider response parsing and fallback/strict-mode boundaries
     - multi-provider reputation aggregation (union/majority) and minimum-success boundaries
     - circuit-breaker failure-threshold/cooldown boundaries
+    - adaptive routing provider ordering and auto-heal probe interval boundaries
   integration:
     - create record rejects unknown employeeId (404)
     - create record to approve flow
@@ -177,11 +182,14 @@ test_plan:
     - employee attendance write follows multi-provider aggregation mode (union/majority) when multiple reputation URLs are configured
     - employee attendance write strict mode rejects when provider minimum-success requirement is not met
     - employee attendance write with circuit-breaker enabled skips open providers during cooldown
+    - employee attendance write with adaptive routing enabled prioritizes healthy providers over recently failed/open providers
+    - employee attendance write with auto-heal enabled re-probes open providers after probe interval and restores recovered providers before cooldown expiry
     - manager correction path remains allowed when anti-spoofing flag is enabled
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
   regression:
     - replay GC-001, GC-002, GC-003, GC-005
+    - circuit-breaker disabled path preserves WI-0066 provider retry behavior
   authorization:
     - manager-only approval/rejection check
     - employee self-only list boundary check
@@ -210,6 +218,8 @@ observability:
     - attendance_anti_spoofing_external_reputation_provider_failure_count
     - attendance_anti_spoofing_external_reputation_circuit_open_count
     - attendance_anti_spoofing_external_reputation_circuit_skip_count
+    - attendance_anti_spoofing_external_reputation_adaptive_route_count
+    - attendance_anti_spoofing_external_reputation_auto_heal_probe_count
   logs:
     - authorization denied logs for attendance approval
     - capture metadata validation failure logs for attendance create/update
@@ -233,13 +243,19 @@ rollout:
       default: "false"
     - name: FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED
       default: "false"
+    - name: FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ADAPTIVE_ROUTING_ENABLED
+      default: "false"
+    - name: FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_ENABLED
+      default: "false"
+    - name: FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_PROBE_INTERVAL_SECONDS
+      default: "60"
   migration_strategy: expand-contract
 rollback:
   strategy: disable attendance_v1 and route reads to previous adapter
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.15.0 extends multi-provider reputation orchestration with optional provider circuit-breaker controls (`..._CIRCUIT_BREAKER_ENABLED`, failure threshold, cooldown). Existing behavior remains backward compatible when breaker is disabled."
+consumer_impact: "Contract v1.16.0 extends external reputation orchestration with optional adaptive provider routing and open-circuit auto-heal probes (`..._ADAPTIVE_ROUTING_ENABLED`, `..._AUTO_HEAL_ENABLED`, `..._AUTO_HEAL_PROBE_INTERVAL_SECONDS`) while preserving existing behavior when new flags are disabled."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -259,6 +275,7 @@ references:
   - work-items/WI-0062-attendance-external-reputation-integration.md
   - work-items/WI-0064-attendance-multi-provider-reputation-orchestration.md
   - work-items/WI-0066-attendance-reputation-circuit-breaker-operations.md
+  - work-items/WI-0070-attendance-reputation-adaptive-routing-autoheal.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent

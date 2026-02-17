@@ -19,6 +19,7 @@ No additional migration in WI-0060 (anti-spoofing signal-fusion/reputation is ru
 No additional migration in WI-0062 (dynamic external reputation integration is runtime policy behavior only).
 No additional migration in WI-0064 (multi-provider reputation orchestration is runtime policy behavior only).
 No additional migration in WI-0066 (reputation circuit-breaker operations are runtime policy behavior only).
+No additional migration in WI-0070 (adaptive routing and auto-heal operations are runtime policy behavior only).
 
 ## Compatibility
 

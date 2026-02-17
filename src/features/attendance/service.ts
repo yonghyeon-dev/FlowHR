@@ -161,6 +161,9 @@ type AntiSpoofingPolicyConfig = {
   externalReputationCircuitBreakerEnabled: boolean;
   externalReputationFailureThreshold: number;
   externalReputationCooldownSeconds: number;
+  externalReputationAdaptiveRoutingEnabled: boolean;
+  externalReputationAutoHealEnabled: boolean;
+  externalReputationAutoHealProbeIntervalSeconds: number;
   externalReputationTimeoutMs: number;
   externalReputationCacheTtlSeconds: number;
   externalReputationStrictMode: boolean;
@@ -184,6 +187,9 @@ const antiSpoofingReputationProviderState = new Map<
   {
     consecutiveFailures: number;
     openUntil: number | null;
+    lastSuccessAt: number | null;
+    lastFailureAt: number | null;
+    lastProbeAt: number | null;
   }
 >();
 
@@ -275,6 +281,9 @@ function resolveReputationCacheKey(config: AntiSpoofingPolicyConfig) {
     config.externalReputationCircuitBreakerEnabled ? "1" : "0",
     config.externalReputationFailureThreshold,
     config.externalReputationCooldownSeconds,
+    config.externalReputationAdaptiveRoutingEnabled ? "1" : "0",
+    config.externalReputationAutoHealEnabled ? "1" : "0",
+    config.externalReputationAutoHealProbeIntervalSeconds,
     config.externalReputationStrictMode ? "1" : "0",
     staticDeviceIds,
     staticIpAddresses
@@ -292,7 +301,10 @@ function readReputationProviderState(providerStateKey: string) {
   }
   const initial = {
     consecutiveFailures: 0,
-    openUntil: null
+    openUntil: null,
+    lastSuccessAt: null,
+    lastFailureAt: null,
+    lastProbeAt: null
   };
   antiSpoofingReputationProviderState.set(providerStateKey, initial);
   return initial;
@@ -318,10 +330,11 @@ function isReputationProviderCircuitOpen(
   return true;
 }
 
-function registerReputationProviderSuccess(providerStateKey: string) {
+function registerReputationProviderSuccess(providerStateKey: string, now: number) {
   const state = readReputationProviderState(providerStateKey);
   state.consecutiveFailures = 0;
   state.openUntil = null;
+  state.lastSuccessAt = now;
 }
 
 function registerReputationProviderFailure(
@@ -329,15 +342,86 @@ function registerReputationProviderFailure(
   providerStateKey: string,
   now: number
 ) {
+  const state = readReputationProviderState(providerStateKey);
+  state.consecutiveFailures += 1;
+  state.lastFailureAt = now;
+
   if (!config.externalReputationCircuitBreakerEnabled) {
     return;
   }
-  const state = readReputationProviderState(providerStateKey);
-  state.consecutiveFailures += 1;
+
+  if (state.openUntil !== null && state.openUntil > now) {
+    state.openUntil = now + config.externalReputationCooldownSeconds * 1000;
+    state.consecutiveFailures = 0;
+    return;
+  }
+
   if (state.consecutiveFailures >= config.externalReputationFailureThreshold) {
     state.openUntil = now + config.externalReputationCooldownSeconds * 1000;
     state.consecutiveFailures = 0;
   }
+}
+
+function markReputationProviderProbeAttempt(providerStateKey: string, now: number) {
+  const state = readReputationProviderState(providerStateKey);
+  state.lastProbeAt = now;
+}
+
+function shouldAttemptReputationProviderAutoHealProbe(
+  config: AntiSpoofingPolicyConfig,
+  providerStateKey: string,
+  now: number
+) {
+  if (!config.externalReputationAutoHealEnabled || !config.externalReputationCircuitBreakerEnabled) {
+    return false;
+  }
+  const state = readReputationProviderState(providerStateKey);
+  if (state.openUntil === null || state.openUntil <= now) {
+    return false;
+  }
+  const baseTimestamp = state.lastProbeAt ?? state.lastFailureAt;
+  if (baseTimestamp === null) {
+    return true;
+  }
+  return now - baseTimestamp >= config.externalReputationAutoHealProbeIntervalSeconds * 1000;
+}
+
+function resolveExternalReputationProviderOrder(config: AntiSpoofingPolicyConfig, now: number) {
+  const urls = [...config.externalReputationUrls];
+  if (!config.externalReputationAdaptiveRoutingEnabled || urls.length < 2) {
+    return urls;
+  }
+
+  return urls.sort((left, right) => {
+    const leftKey = resolveReputationProviderStateKey(config, left);
+    const rightKey = resolveReputationProviderStateKey(config, right);
+    const leftOpen = isReputationProviderCircuitOpen(config, leftKey, now);
+    const rightOpen = isReputationProviderCircuitOpen(config, rightKey, now);
+    if (leftOpen !== rightOpen) {
+      return leftOpen ? 1 : -1;
+    }
+
+    const leftState = readReputationProviderState(leftKey);
+    const rightState = readReputationProviderState(rightKey);
+
+    if (leftState.consecutiveFailures !== rightState.consecutiveFailures) {
+      return leftState.consecutiveFailures - rightState.consecutiveFailures;
+    }
+
+    const leftSuccessAt = leftState.lastSuccessAt ?? 0;
+    const rightSuccessAt = rightState.lastSuccessAt ?? 0;
+    if (leftSuccessAt !== rightSuccessAt) {
+      return rightSuccessAt - leftSuccessAt;
+    }
+
+    const leftFailureAt = leftState.lastFailureAt ?? 0;
+    const rightFailureAt = rightState.lastFailureAt ?? 0;
+    if (leftFailureAt !== rightFailureAt) {
+      return leftFailureAt - rightFailureAt;
+    }
+
+    return left.localeCompare(right);
+  });
 }
 
 function parseRemoteReputationPayload(payload: unknown): {
@@ -480,33 +564,69 @@ async function resolveAntiSpoofingReputationSnapshot(
   }
 
   try {
-    const providerResults = await Promise.all(
-      config.externalReputationUrls.map(async (url) => {
-        const providerStateKey = resolveReputationProviderStateKey(config, url);
-        if (isReputationProviderCircuitOpen(config, providerStateKey, now)) {
-          return {
-            url,
-            status: "skipped" as const
+    const providerResults: Array<
+      | {
+          url: string;
+          status: "fulfilled";
+          snapshot: {
+            highRiskDeviceIds: Set<string>;
+            highRiskIpAddresses: Set<string>;
           };
+        }
+      | {
+          url: string;
+          status: "rejected" | "skipped";
+        }
+    > = [];
+
+    const orderedUrls = resolveExternalReputationProviderOrder(config, now);
+    for (const url of orderedUrls) {
+      const providerStateKey = resolveReputationProviderStateKey(config, url);
+      const isCircuitOpen = isReputationProviderCircuitOpen(config, providerStateKey, now);
+      if (isCircuitOpen) {
+        if (!shouldAttemptReputationProviderAutoHealProbe(config, providerStateKey, now)) {
+          providerResults.push({
+            url,
+            status: "skipped"
+          });
+          continue;
         }
 
+        markReputationProviderProbeAttempt(providerStateKey, now);
         try {
           const snapshot = await fetchRemoteReputationSnapshot(url, config.externalReputationTimeoutMs);
-          registerReputationProviderSuccess(providerStateKey);
-          return {
+          registerReputationProviderSuccess(providerStateKey, now);
+          providerResults.push({
             url,
-            status: "fulfilled" as const,
+            status: "fulfilled",
             snapshot
-          };
+          });
         } catch {
           registerReputationProviderFailure(config, providerStateKey, now);
-          return {
+          providerResults.push({
             url,
-            status: "rejected" as const
-          };
+            status: "rejected"
+          });
         }
-      })
-    );
+        continue;
+      }
+
+      try {
+        const snapshot = await fetchRemoteReputationSnapshot(url, config.externalReputationTimeoutMs);
+        registerReputationProviderSuccess(providerStateKey, now);
+        providerResults.push({
+          url,
+          status: "fulfilled",
+          snapshot
+        });
+      } catch {
+        registerReputationProviderFailure(config, providerStateKey, now);
+        providerResults.push({
+          url,
+          status: "rejected"
+        });
+      }
+    }
 
     const successfulSnapshots = providerResults
       .filter((result): result is { url: string; status: "fulfilled"; snapshot: { highRiskDeviceIds: Set<string>; highRiskIpAddresses: Set<string> } } => result.status === "fulfilled")
@@ -712,6 +832,19 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_COOLDOWN_SECONDS ??
         process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_COOLDOWN_SECONDS
     ) ?? 120;
+  const externalReputationAdaptiveRoutingEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ADAPTIVE_ROUTING_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ADAPTIVE_ROUTING_ENABLED
+  );
+  const externalReputationAutoHealEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_ENABLED
+  );
+  const externalReputationAutoHealProbeIntervalSeconds =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_PROBE_INTERVAL_SECONDS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_PROBE_INTERVAL_SECONDS
+    ) ?? 60;
   const externalReputationTimeoutMs =
     parseIntegerEnv(
       process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_TIMEOUT_MS ??
@@ -815,6 +948,22 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
       "attendance anti-spoofing policy is enabled but external reputation cooldown configuration is invalid"
     );
   }
+  if (externalReputationAutoHealEnabled && !externalReputationCircuitBreakerEnabled) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation auto-heal requires circuit-breaker enabled"
+    );
+  }
+  if (
+    externalReputationAutoHealEnabled &&
+    (externalReputationAutoHealProbeIntervalSeconds < 10 ||
+      externalReputationAutoHealProbeIntervalSeconds > 600)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation auto-heal probe interval configuration is invalid"
+    );
+  }
   if (externalReputationTimeoutMs < 100 || externalReputationTimeoutMs > 10000) {
     throw new ServiceError(
       500,
@@ -846,6 +995,9 @@ function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
     externalReputationCircuitBreakerEnabled,
     externalReputationFailureThreshold,
     externalReputationCooldownSeconds,
+    externalReputationAdaptiveRoutingEnabled,
+    externalReputationAutoHealEnabled,
+    externalReputationAutoHealProbeIntervalSeconds,
     externalReputationTimeoutMs,
     externalReputationCacheTtlSeconds,
     externalReputationStrictMode

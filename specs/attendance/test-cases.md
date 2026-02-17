@@ -31,6 +31,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 23. When multi-provider external reputation is enabled with `majority` aggregation, employee write is accepted below threshold and rejected when provider-hit count reaches threshold.
 24. When strict mode and provider `min_success` are enabled, employee write is rejected if successful provider count is below configured minimum.
 25. When provider circuit-breaker is enabled, failed providers are skipped during cooldown and strict `min_success` continues to gate employee writes.
+26. When adaptive routing and auto-heal are enabled, healthy providers are prioritized, open-circuit providers are probed after interval, and recovered providers rejoin routing before cooldown expiry.
 
 ## Boundary and Accuracy Cases
 
@@ -50,6 +51,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 14. External reputation integration validates provider mode/URL/timeout/cache/strict-mode configuration and remote payload parsing.
 15. Multi-provider external reputation integration validates URLs/aggregation/majority-threshold/min-success configuration.
 16. External reputation circuit-breaker validates failure-threshold/cooldown configuration and open-circuit skip behavior.
+17. External reputation adaptive routing/auto-heal validates probe interval boundaries and auto-heal requires circuit-breaker enabled.
 
 ## Regression Linkage
 
