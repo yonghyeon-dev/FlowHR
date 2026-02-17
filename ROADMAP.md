@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0076)
+### 완료 WI 목록 (WI-0001 ~ WI-0077)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -100,16 +100,17 @@
 | WI-0074 | Production Auth Smoke Stabilization and Incident Auto-Close | 운영 |
 | WI-0075 | Scheduling Anomaly Incident Audit-Backed Durable Read-Model | 안정성 |
 | WI-0076 | Scheduling Anomaly Incident SLA Monitoring API | 핵심 비즈니스 |
+| WI-0077 | Scheduling Anomaly Incident Escalation Automation API | 운영 |
 
 ### 다음 우선순위 (Phase 2 진행)
 
 - 근무일정/교대/유연근무 고도화(고급 제약/선호 기반 fairness 최적화)
 - 출퇴근 정책 고도화(적응형 라우팅/자동복구 운영)
-- 실시간 근태 현황 고도화(incident 에스컬레이션 자동화/워크플로 연동)
+- 실시간 근태 현황 고도화(incident 자동 조치 실행 워크플로 + 알림/운영 연동)
 
 ### 진행 중
 
-- 없음 (WI-0076까지 main 반영 기준)
+- 없음 (WI-0077까지 main 반영 기준)
 
 ### 현재 아키텍처
 

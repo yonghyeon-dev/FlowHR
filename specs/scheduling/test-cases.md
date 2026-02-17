@@ -97,6 +97,10 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 89. Incident SLA query with `includeResolved=true` includes `RESOLVED` status entries.
 90. Employee cannot access anomaly incident SLA endpoint (403).
 91. Cross-tenant manager sees only own-tenant incident SLA entries.
+92. Manager can trigger anomaly incident escalation command (`POST /scheduling/anomalies/incidents/escalate`) and receives requested/skipped/failed summary.
+93. Escalation command emits `scheduling.anomaly.incident.escalation.requested.v1` event for requested candidates and appends request audit.
+94. Escalation command enforces cooldown and skips duplicate requests for recently escalated incidents.
+95. Employee cannot call anomaly incident escalation command endpoint (403).
 
 ## Boundary Cases
 
@@ -123,6 +127,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 21. Incident list `topN` validates integer range (1..200).
 22. Incident read-model projection still returns consistent history after service restart because source-of-truth is audit log.
 23. Incident SLA query validates `slaTargetMinutes` range and `warningMinutes < slaTargetMinutes`.
+24. Incident escalation command validates `cooldownMinutes` range and `warningMinutes < slaTargetMinutes`.
 
 ## Regression Linkage
 
@@ -135,6 +140,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly incident lifecycle command path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident read-model list/detail path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident SLA path remains operational-only and does not mutate schedule/attendance state.
+- anomaly incident escalation command path remains operational-only and does not mutate schedule/attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

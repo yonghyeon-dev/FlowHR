@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.22.0
+version: 0.23.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -21,6 +21,7 @@ scope:
     - anomaly incident lifecycle command API (acknowledge/assign/resolve) with audit/event traceability
     - anomaly incident read-model API (list/detail with timeline projection)
     - anomaly incident SLA monitoring API (read-only prioritized SLA status view)
+    - anomaly incident escalation automation command API (SLA-based workflow request publisher with cooldown)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
     - anomaly cockpit ticket request automation event emission behind feature flag
@@ -110,6 +111,9 @@ api:
     - method: GET
       path: /scheduling/anomalies/incidents/sla
       description: Read anomaly incident SLA dashboard with status buckets (healthy/warning/breached/resolved) and prioritized queue.
+    - method: POST
+      path: /scheduling/anomalies/incidents/escalate
+      description: Trigger anomaly incident escalation workflow requests from SLA candidate set with cooldown control.
     - method: GET
       path: /scheduling/anomalies/incidents/{incidentId}
       description: Read one anomaly incident read-model entry including command history timeline.
@@ -137,6 +141,8 @@ api:
         description: Emitted when anomaly cockpit ticket automation is enabled and queue entries match severity policy.
       - name: scheduling.anomaly.incident.updated.v1
         description: Emitted when anomaly incident lifecycle command (ack/assign/resolve) is executed.
+      - name: scheduling.anomaly.incident.escalation.requested.v1
+        description: Emitted when anomaly incident escalation command requests workflow escalation for one incident.
     consumed: []
 db_changes:
   migrations:
@@ -188,6 +194,10 @@ invariants:
   - Anomaly incident SLA API requires scheduling write-any permission and tenant scope.
   - Anomaly incident SLA status must be derived from read-model `updatedAt` versus SLA policy (`slaTargetMinutes`, `warningMinutes`) without mutating incident state.
   - Anomaly incident SLA policy must satisfy `0 <= warningMinutes < slaTargetMinutes`.
+  - Anomaly incident escalation command API requires scheduling write-any permission and tenant scope.
+  - Anomaly incident escalation command publishes workflow request event only for SLA candidate incidents and must not mutate scheduling/attendance/payroll state.
+  - Anomaly incident escalation command must suppress duplicate workflow requests for same incident within cooldown window.
+  - Anomaly incident escalation command `dryRun=true` must not publish domain events or per-incident request audit entries.
   - Anomaly incident read-model detail API must return 404 for cross-tenant incidentId requests (no existence leak).
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.
@@ -246,6 +256,7 @@ test_plan:
     - anomaly incident ack/assign/resolve APIs append audit logs and emit incident lifecycle domain event
     - anomaly incident list/detail APIs return lifecycle read-model timeline for authorized operators
     - anomaly incident SLA API returns deterministic status counts/priority ordering for identical query and asOf
+    - anomaly incident escalation command publishes workflow events for SLA candidates and respects cooldown skip behavior
   regression:
     - template assignment path reuses schedule overlap guard
     - single-date assignment behavior remains unchanged
@@ -259,6 +270,7 @@ test_plan:
     - anomaly incident lifecycle commands do not mutate scheduling or attendance records
     - anomaly incident read-model APIs do not mutate scheduling or attendance records
     - anomaly incident SLA API remains read-only and does not mutate scheduling or attendance records
+    - anomaly incident escalation command remains operational-only and does not mutate scheduling or attendance records
     - rotation balance report does not mutate schedules
     - rotation optimization dry-run does not mutate schedules
     - rotation fairness report does not mutate schedules
@@ -271,6 +283,7 @@ test_plan:
     - permission boundaries for anomaly incident lifecycle command endpoints (ack/assign/resolve)
     - permission boundaries for anomaly incident read-model list/detail endpoints
     - permission boundaries for anomaly incident SLA endpoint
+    - permission boundaries for anomaly incident escalation command endpoint
   payroll_accuracy:
     - anomaly report is non-blocking and does not change payroll run outputs
 observability:
@@ -301,6 +314,9 @@ observability:
     - scheduling.anomaly.incident.listed
     - scheduling.anomaly.incident.read
     - scheduling.anomaly.incident.sla.generated
+    - scheduling.anomaly.incident.escalation.generated
+    - scheduling.anomaly.incident.escalation.requested
+    - scheduling.anomaly.incident.escalation.request.failed
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
@@ -332,8 +348,10 @@ observability:
     - schedule_anomaly_ticket_request_failed_count (optional)
     - schedule_anomaly_incident_lifecycle_command_count (optional)
     - schedule_anomaly_incident_sla_query_count (optional)
+    - schedule_anomaly_incident_escalation_request_count (optional)
+    - schedule_anomaly_incident_escalation_request_failed_count (optional)
   logs:
-    - authorization denied logs for scheduling/template create/list/assign/assign-range/rotation/anomaly/incident-sla
+    - authorization denied logs for scheduling/template create/list/assign/assign-range/rotation/anomaly/incident-sla/escalation
 rollout:
   feature_flags:
     - name: scheduling_v1
@@ -350,7 +368,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.22.0 adds anomaly incident SLA monitoring API (`GET /incidents/sla`) for operator triage prioritization while preserving existing lifecycle/read-model API compatibility."
+consumer_impact: "Contract v0.23.0 adds anomaly incident escalation automation command API (`POST /incidents/escalate`) and workflow request event (`scheduling.anomaly.incident.escalation.requested.v1`) while preserving existing lifecycle/read-model/SLA API compatibility."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -376,6 +394,7 @@ references:
   - work-items/WI-0072-scheduling-anomaly-incident-lifecycle-api.md
   - work-items/WI-0073-scheduling-anomaly-incident-read-model-api.md
   - work-items/WI-0076-scheduling-anomaly-incident-sla-monitoring-api.md
+  - work-items/WI-0077-scheduling-anomaly-incident-escalation-automation-api.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

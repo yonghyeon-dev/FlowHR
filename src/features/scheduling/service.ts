@@ -262,6 +262,20 @@ type ListScheduleAnomalyIncidentSlaInput = {
   asOf?: Date;
 };
 
+type TriggerScheduleAnomalyIncidentEscalationInput = {
+  state?: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId?: string;
+  topN?: number;
+  includeResolved?: boolean;
+  includeWarning?: boolean;
+  slaTargetMinutes?: number;
+  warningMinutes?: number;
+  cooldownMinutes?: number;
+  asOf?: Date;
+  escalationChannel?: string;
+  dryRun?: boolean;
+};
+
 export type ScheduleAnomalyIncidentHistoryEntry = {
   action: ScheduleAnomalyIncidentLifecycleAction;
   state: ScheduleAnomalyIncidentLifecycleState;
@@ -335,6 +349,42 @@ export type ScheduleAnomalyIncidentSlaReport = {
     resolved: number;
   };
   items: ScheduleAnomalyIncidentSlaItem[];
+};
+
+export type ScheduleAnomalyIncidentEscalationDecision =
+  | "REQUESTED"
+  | "SKIPPED_COOLDOWN"
+  | "FAILED"
+  | "DRY_RUN";
+
+export type ScheduleAnomalyIncidentEscalationItem = {
+  incidentId: string;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  status: ScheduleAnomalyIncidentSlaStatus;
+  elapsedMinutes: number;
+  assigneeId: string | null;
+  decision: ScheduleAnomalyIncidentEscalationDecision;
+  reason: string | null;
+};
+
+export type ScheduleAnomalyIncidentEscalationResult = {
+  requestedAt: string;
+  dryRun: boolean;
+  policy: {
+    slaTargetMinutes: number;
+    warningMinutes: number;
+    includeResolved: boolean;
+    includeWarning: boolean;
+    cooldownMinutes: number;
+    escalationChannel: string;
+  };
+  counts: {
+    candidates: number;
+    requested: number;
+    skippedCooldown: number;
+    failed: number;
+  };
+  items: ScheduleAnomalyIncidentEscalationItem[];
 };
 
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
@@ -3170,6 +3220,8 @@ function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
 const MAX_ANOMALY_INCIDENT_HISTORY = 50;
 const MAX_ANOMALY_INCIDENT_AUDIT_ROWS = 5000;
 const DEFAULT_ANOMALY_INCIDENT_SLA_TARGET_MINUTES = 60;
+const DEFAULT_ANOMALY_INCIDENT_ESCALATION_COOLDOWN_MINUTES = 60;
+const DEFAULT_ANOMALY_INCIDENT_ESCALATION_CHANNEL = "ops-oncall";
 
 function normalizeIncidentListTopN(value: number | undefined) {
   const normalized = value ?? 50;
@@ -3224,6 +3276,25 @@ function resolveAnomalyIncidentWarningMinutes(
       overrideValue !== undefined ? 400 : 500,
       "warningMinutes must be less than slaTargetMinutes"
     );
+  }
+  return normalized;
+}
+
+function normalizeAnomalyIncidentEscalationCooldownMinutes(value: number | undefined) {
+  const normalized = value ?? DEFAULT_ANOMALY_INCIDENT_ESCALATION_COOLDOWN_MINUTES;
+  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 10080) {
+    throw new ServiceError(400, "cooldownMinutes must be an integer in range 1..10080");
+  }
+  return normalized;
+}
+
+function normalizeAnomalyIncidentEscalationChannel(value: string | undefined) {
+  const normalized = (value ?? DEFAULT_ANOMALY_INCIDENT_ESCALATION_CHANNEL).trim();
+  if (!normalized) {
+    throw new ServiceError(400, "escalationChannel is required");
+  }
+  if (normalized.length > 100) {
+    throw new ServiceError(400, "escalationChannel must be 100 characters or fewer");
   }
   return normalized;
 }
@@ -3707,6 +3778,223 @@ export async function listScheduleAnomalyIncidentSla(
       topN
     },
     counts,
+    items
+  };
+}
+
+export async function triggerScheduleAnomalyIncidentEscalation(
+  context: ServiceContext,
+  input: TriggerScheduleAnomalyIncidentEscalationInput
+): Promise<ScheduleAnomalyIncidentEscalationResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident escalation requires permission"
+  );
+
+  const includeResolved = input.includeResolved ?? false;
+  const includeWarning = input.includeWarning ?? false;
+  const dryRun = input.dryRun ?? false;
+  const cooldownMinutes = normalizeAnomalyIncidentEscalationCooldownMinutes(input.cooldownMinutes);
+  const escalationChannel = normalizeAnomalyIncidentEscalationChannel(input.escalationChannel);
+  const asOf = input.asOf ?? new Date();
+  const tenantScope = resolveTenantScope(actor);
+
+  const slaReport = await listScheduleAnomalyIncidentSla(context, {
+    state: input.state,
+    assigneeId: input.assigneeId,
+    topN: input.topN,
+    includeResolved,
+    slaTargetMinutes: input.slaTargetMinutes,
+    warningMinutes: input.warningMinutes,
+    asOf
+  });
+
+  const candidates = slaReport.items.filter(
+    (item) => item.status === "BREACHED" || (includeWarning && item.status === "WARNING")
+  );
+  const cooldownWindowStartMillis = asOf.getTime() - cooldownMinutes * 60_000;
+
+  const recentRequests = await context.dataAccess.audit.list({
+    actions: ["scheduling.anomaly.incident.escalation.requested"],
+    entityType: "WorkSchedule",
+    organizationId: tenantScope ?? undefined,
+    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
+  });
+  const latestRequestedAtMillisByIncident = new Map<string, number>();
+  for (const row of recentRequests) {
+    if (!row.entityId) {
+      continue;
+    }
+    const requestedAtMillis = row.createdAt.getTime();
+    const previous = latestRequestedAtMillisByIncident.get(row.entityId);
+    if (previous === undefined || requestedAtMillis > previous) {
+      latestRequestedAtMillisByIncident.set(row.entityId, requestedAtMillis);
+    }
+  }
+
+  let requested = 0;
+  let skippedCooldown = 0;
+  let failed = 0;
+  const items: ScheduleAnomalyIncidentEscalationItem[] = [];
+
+  for (const candidate of candidates) {
+    const lastRequestedAtMillis = latestRequestedAtMillisByIncident.get(candidate.incidentId);
+    if (lastRequestedAtMillis !== undefined && lastRequestedAtMillis >= cooldownWindowStartMillis) {
+      skippedCooldown += 1;
+      items.push({
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        status: candidate.status,
+        elapsedMinutes: candidate.elapsedMinutes,
+        assigneeId: candidate.assigneeId,
+        decision: "SKIPPED_COOLDOWN",
+        reason: `cooldown active (${cooldownMinutes}m)`
+      });
+      continue;
+    }
+
+    if (dryRun) {
+      items.push({
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        status: candidate.status,
+        elapsedMinutes: candidate.elapsedMinutes,
+        assigneeId: candidate.assigneeId,
+        decision: "DRY_RUN",
+        reason: "dry-run mode"
+      });
+      continue;
+    }
+
+    const requestedAt = new Date().toISOString();
+    const payload = {
+      incidentId: candidate.incidentId,
+      state: candidate.state,
+      status: candidate.status,
+      elapsedMinutes: candidate.elapsedMinutes,
+      assigneeId: candidate.assigneeId,
+      slaTargetMinutes: candidate.slaTargetMinutes,
+      warningMinutes: candidate.warningMinutes,
+      cooldownMinutes,
+      escalationChannel,
+      requestedAt
+    };
+
+    try {
+      await getEventPublisher(context).publish({
+        name: "scheduling.anomaly.incident.escalation.requested.v1",
+        occurredAt: requestedAt,
+        entityType: "WorkSchedule",
+        entityId: candidate.incidentId,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload
+      });
+
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.incident.escalation.requested",
+        entityType: "WorkSchedule",
+        entityId: candidate.incidentId,
+        organizationId: tenantScope ?? undefined,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload
+      });
+
+      requested += 1;
+      latestRequestedAtMillisByIncident.set(candidate.incidentId, Date.parse(requestedAt));
+      items.push({
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        status: candidate.status,
+        elapsedMinutes: candidate.elapsedMinutes,
+        assigneeId: candidate.assigneeId,
+        decision: "REQUESTED",
+        reason: null
+      });
+    } catch (error) {
+      failed += 1;
+      const reason = error instanceof Error ? error.message : "unknown error";
+      items.push({
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        status: candidate.status,
+        elapsedMinutes: candidate.elapsedMinutes,
+        assigneeId: candidate.assigneeId,
+        decision: "FAILED",
+        reason
+      });
+
+      try {
+        await context.dataAccess.audit.append({
+          action: "scheduling.anomaly.incident.escalation.request.failed",
+          entityType: "WorkSchedule",
+          entityId: candidate.incidentId,
+          organizationId: tenantScope ?? undefined,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            incidentId: candidate.incidentId,
+            status: candidate.status,
+            elapsedMinutes: candidate.elapsedMinutes,
+            cooldownMinutes,
+            escalationChannel,
+            error: reason
+          }
+        });
+      } catch {
+        // Non-blocking failure path for escalation command telemetry.
+      }
+    }
+  }
+
+  const requestedAt = new Date().toISOString();
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.escalation.generated",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      requestedAt,
+      dryRun,
+      includeResolved,
+      includeWarning,
+      cooldownMinutes,
+      escalationChannel,
+      state: input.state ?? null,
+      assigneeId: input.assigneeId?.trim() ?? null,
+      topN: input.topN ?? 50,
+      candidates: candidates.length,
+      requested,
+      skippedCooldown,
+      failed
+    }
+  });
+
+  return {
+    requestedAt,
+    dryRun,
+    policy: {
+      slaTargetMinutes: slaReport.policy.slaTargetMinutes,
+      warningMinutes: slaReport.policy.warningMinutes,
+      includeResolved,
+      includeWarning,
+      cooldownMinutes,
+      escalationChannel
+    },
+    counts: {
+      candidates: candidates.length,
+      requested,
+      skippedCooldown,
+      failed
+    },
     items
   };
 }
