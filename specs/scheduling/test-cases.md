@@ -92,6 +92,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 84. Manager can read anomaly incident detail (`GET /scheduling/anomalies/incidents/{incidentId}`) with timeline history.
 85. Employee cannot access anomaly incident read-model list/detail endpoints (403).
 86. Cross-tenant anomaly incident detail request returns 404 (no existence leak).
+87. Incident read-model list/detail is reconstructed from persisted lifecycle audit logs (no process-local map dependency).
 
 ## Boundary Cases
 
@@ -116,6 +117,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 19. Cockpit stream `incidentCooldownSeconds` validates integer range (0..3600).
 20. Incident assign endpoint rejects payload without `assigneeId` (400).
 21. Incident list `topN` validates integer range (1..200).
+22. Incident read-model projection still returns consistent history after service restart because source-of-truth is audit log.
 
 ## Regression Linkage
 

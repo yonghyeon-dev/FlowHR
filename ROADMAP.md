@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0074)
+### 완료 WI 목록 (WI-0001 ~ WI-0075)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -98,6 +98,7 @@
 | WI-0072 | Scheduling Anomaly Incident Lifecycle Command API | 핵심 비즈니스 |
 | WI-0073 | Scheduling Anomaly Incident Read-Model API | 핵심 비즈니스 |
 | WI-0074 | Production Auth Smoke Stabilization and Incident Auto-Close | 운영 |
+| WI-0075 | Scheduling Anomaly Incident Audit-Backed Durable Read-Model | 안정성 |
 
 ### 다음 우선순위 (Phase 2 진행)
 
@@ -107,7 +108,7 @@
 
 ### 진행 중
 
-- 없음 (WI-0074까지 main 반영 기준)
+- 없음 (WI-0075까지 main 반영 기준)
 
 ### 현재 아키텍처
 

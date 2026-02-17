@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type {
+  AuditLogEntity,
   AttendanceRecordEntity,
   AttendanceStore,
   AuditStore,
@@ -18,6 +19,7 @@ import type {
   DeductionProfileStore,
   EmployeeEntity,
   EmployeeStore,
+  ListAuditLogsInput,
   LeaveBalanceEntity,
   LeaveBalanceStore,
   LeaveRequestEntity,
@@ -239,6 +241,28 @@ function toRoleWithPermissionsEntity(record: {
   return {
     ...toRoleEntity(record),
     permissions
+  };
+}
+
+function toAuditLogEntity(record: {
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  organizationId: string | null;
+  actorRole: string;
+  actorId: string | null;
+  payload: unknown | null;
+  createdAt: Date;
+}): AuditLogEntity {
+  return {
+    action: record.action,
+    entityType: record.entityType,
+    entityId: record.entityId,
+    organizationId: record.organizationId,
+    actorRole: record.actorRole,
+    actorId: record.actorId,
+    payload: record.payload,
+    createdAt: record.createdAt
   };
 }
 
@@ -926,6 +950,26 @@ const audit: AuditStore = {
         payload: input.payload as object | undefined
       }
     });
+  },
+
+  async list(input: ListAuditLogsInput) {
+    const actions = (input.actions ?? [])
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+    const records = await prisma.auditLog.findMany({
+      where: {
+        ...(actions.length > 0 ? { action: { in: actions } } : {}),
+        ...(input.entityType ? { entityType: input.entityType } : {}),
+        ...(input.entityId ? { entityId: input.entityId } : {}),
+        ...(input.organizationId !== undefined ? { organizationId: input.organizationId } : {})
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: normalizedLimit
+    });
+    return records.map(toAuditLogEntity);
   }
 };
 

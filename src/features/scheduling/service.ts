@@ -3115,8 +3115,8 @@ function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
   return "지각 사유 확인 및 재발 방지 조치";
 }
 
-const scheduleAnomalyIncidentReadModelStore = new Map<string, ScheduleAnomalyIncidentReadModel>();
 const MAX_ANOMALY_INCIDENT_HISTORY = 50;
+const MAX_ANOMALY_INCIDENT_AUDIT_ROWS = 5000;
 
 function normalizeIncidentListTopN(value: number | undefined) {
   const normalized = value ?? 50;
@@ -3157,6 +3157,146 @@ const anomalyIncidentLifecycleAuditActionByAction: Record<
   RESOLVE: "scheduling.anomaly.incident.resolved"
 };
 
+const anomalyIncidentLifecycleActionByAuditAction: Record<
+  string,
+  ScheduleAnomalyIncidentLifecycleAction
+> = {
+  "scheduling.anomaly.incident.acknowledged": "ACKNOWLEDGE",
+  "scheduling.anomaly.incident.assigned": "ASSIGN",
+  "scheduling.anomaly.incident.resolved": "RESOLVE"
+};
+
+const anomalyIncidentLifecycleAuditActions = Object.values(
+  anomalyIncidentLifecycleAuditActionByAction
+);
+
+function toTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function toIncidentLifecycleState(
+  value: unknown,
+  fallback: ScheduleAnomalyIncidentLifecycleState
+): ScheduleAnomalyIncidentLifecycleState {
+  if (value === "ACKNOWLEDGED" || value === "ASSIGNED" || value === "RESOLVED") {
+    return value;
+  }
+  return fallback;
+}
+
+function toIncidentResolutionCode(value: unknown): ScheduleAnomalyIncidentResolutionCode | null {
+  if (
+    value === "FALSE_POSITIVE" ||
+    value === "ATTENDANCE_CORRECTED" ||
+    value === "MANUAL_CONFIRMED" ||
+    value === "OTHER"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function buildScheduleAnomalyIncidentReadModelsFromAuditLogs(
+  logs: Array<{
+    action: string;
+    entityId: string | null;
+    organizationId: string | null;
+    actorRole: string;
+    actorId: string | null;
+    payload: unknown;
+    createdAt: Date;
+  }>
+): ScheduleAnomalyIncidentReadModel[] {
+  const byIncidentId = new Map<string, ScheduleAnomalyIncidentReadModel>();
+
+  for (const row of logs) {
+    const lifecycleAction = anomalyIncidentLifecycleActionByAuditAction[row.action];
+    if (!lifecycleAction) {
+      continue;
+    }
+
+    const payload =
+      row.payload && typeof row.payload === "object"
+        ? (row.payload as Record<string, unknown>)
+        : {};
+    const incidentId = toTrimmedString(row.entityId) ?? toTrimmedString(payload.incidentId);
+    if (!incidentId) {
+      continue;
+    }
+
+    const fallbackState = anomalyIncidentLifecycleStateByAction[lifecycleAction];
+    const state = toIncidentLifecycleState(payload.state, fallbackState);
+    const assigneeId = toTrimmedString(payload.assigneeId);
+    const resolutionCode = toIncidentResolutionCode(payload.resolutionCode);
+    const note = toTrimmedString(payload.note);
+    const updatedAt = toTrimmedString(payload.updatedAt) ?? row.createdAt.toISOString();
+
+    const historyEntry: ScheduleAnomalyIncidentHistoryEntry = {
+      action: lifecycleAction,
+      state,
+      assigneeId,
+      resolutionCode,
+      note,
+      updatedAt,
+      updatedBy: {
+        actorId: row.actorId ?? null,
+        actorRole: row.actorRole
+      }
+    };
+
+    const existing = byIncidentId.get(incidentId);
+    const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
+    const organizationId = existing?.organizationId ?? row.organizationId ?? null;
+
+    byIncidentId.set(incidentId, {
+      incidentId,
+      organizationId,
+      state: historyEntry.state,
+      assigneeId: historyEntry.assigneeId,
+      resolutionCode: historyEntry.resolutionCode,
+      note: historyEntry.note,
+      updatedAt: historyEntry.updatedAt,
+      updatedBy: { ...historyEntry.updatedBy },
+      history
+    });
+  }
+
+  return Array.from(byIncidentId.values());
+}
+
+async function listScheduleAnomalyIncidentReadModelsFromAudit(
+  context: ServiceContext,
+  input?: { organizationId?: string }
+) {
+  const logs = await context.dataAccess.audit.list({
+    actions: anomalyIncidentLifecycleAuditActions,
+    entityType: "WorkSchedule",
+    organizationId: input?.organizationId,
+    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
+  });
+  return buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs);
+}
+
+async function getScheduleAnomalyIncidentReadModelFromAudit(
+  context: ServiceContext,
+  incidentId: string
+) {
+  const logs = await context.dataAccess.audit.list({
+    actions: anomalyIncidentLifecycleAuditActions,
+    entityType: "WorkSchedule",
+    entityId: incidentId,
+    limit: MAX_ANOMALY_INCIDENT_HISTORY
+  });
+  const readModel = buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs).find(
+    (item) => item.incidentId === incidentId
+  );
+  return readModel ?? null;
+}
+
 export async function updateScheduleAnomalyIncidentLifecycle(
   context: ServiceContext,
   input: UpdateScheduleAnomalyIncidentLifecycleInput
@@ -3195,7 +3335,17 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   const state = anomalyIncidentLifecycleStateByAction[input.action];
   const updatedAt = new Date().toISOString();
   const tenantScope = resolveTenantScope(actor) ?? undefined;
-  const existing = scheduleAnomalyIncidentReadModelStore.get(incidentId);
+  const existing = await getScheduleAnomalyIncidentReadModelFromAudit(context, incidentId);
+  if (
+    existing &&
+    tenantScope &&
+    existing.organizationId &&
+    existing.organizationId !== tenantScope
+  ) {
+    throw new ServiceError(404, "anomaly incident not found");
+  }
+
+  const organizationId = tenantScope ?? existing?.organizationId ?? undefined;
   const normalizedAssigneeId =
     input.action === "ASSIGN" ? (assigneeId ?? null) : (existing?.assigneeId ?? null);
   const normalizedResolutionCode =
@@ -3216,7 +3366,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     action: anomalyIncidentLifecycleAuditActionByAction[input.action],
     entityType: "WorkSchedule",
     entityId: incidentId,
-    organizationId: tenantScope,
+    organizationId,
     actorRole: actor.role,
     actorId: actor.id,
     payload
@@ -3244,23 +3394,6 @@ export async function updateScheduleAnomalyIncidentLifecycle(
       actorRole: actor.role
     }
   };
-  const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
-  const readModel: ScheduleAnomalyIncidentReadModel = {
-    incidentId,
-    organizationId: tenantScope ?? null,
-    state,
-    assigneeId: normalizedAssigneeId,
-    resolutionCode: normalizedResolutionCode,
-    note: normalizedNote,
-    updatedAt,
-    updatedBy: {
-      actorId: actor.id ?? null,
-      actorRole: actor.role
-    },
-    history
-  };
-  scheduleAnomalyIncidentReadModelStore.set(incidentId, readModel);
-
   return {
     incidentId,
     action: historyEntry.action,
@@ -3295,8 +3428,10 @@ export async function listScheduleAnomalyIncidents(
   const tenantScope = resolveTenantScope(actor);
   const assigneeId = input.assigneeId?.trim();
 
-  const matched = Array.from(scheduleAnomalyIncidentReadModelStore.values())
-    .filter((item) => (tenantScope ? item.organizationId === tenantScope : true))
+  const readModels = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
+    organizationId: tenantScope ?? undefined
+  });
+  const matched = readModels
     .filter((item) => (input.state ? item.state === input.state : true))
     .filter((item) => (assigneeId ? item.assigneeId === assigneeId : true))
     .sort((left, right) => {
@@ -3350,7 +3485,7 @@ export async function getScheduleAnomalyIncident(
     throw new ServiceError(400, "incidentId is required");
   }
 
-  const incident = scheduleAnomalyIncidentReadModelStore.get(normalizedIncidentId);
+  const incident = await getScheduleAnomalyIncidentReadModelFromAudit(context, normalizedIncidentId);
   if (!incident) {
     throw new ServiceError(404, "anomaly incident not found");
   }

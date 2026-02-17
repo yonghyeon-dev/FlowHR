@@ -1,8 +1,9 @@
 import type {
-  AppendAuditLogInput,
+  AuditLogEntity,
   AttendanceRecordEntity,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
+  ListAuditLogsInput,
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
@@ -40,7 +41,7 @@ type MemoryState = {
   leaveBalances: Map<string, LeaveBalanceEntity>;
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
-  audit: Array<AppendAuditLogInput & { createdAt: Date }>;
+  audit: AuditLogEntity[];
 };
 
 function seedRbacDefaults(target: MemoryState) {
@@ -727,6 +728,7 @@ export const memoryDataAccess: DataAccess = {
         action: `leave.decision.${input.action.toLowerCase()}`,
         entityType: "LeaveApproval",
         entityId: input.requestId,
+        organizationId: null,
         actorRole: input.actorRole,
         actorId: input.actorId,
         payload: {
@@ -909,10 +911,40 @@ export const memoryDataAccess: DataAccess = {
 
   audit: {
     async append(input) {
+      const createdAt = new Date();
       state.audit.push({
-        ...input,
-        createdAt: new Date()
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId ?? null,
+        organizationId: input.organizationId === undefined ? null : input.organizationId,
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        payload: input.payload ?? null,
+        createdAt
       });
+    },
+
+    async list(input: ListAuditLogsInput) {
+      const actions = new Set((input.actions ?? []).map((item) => item.trim()).filter((item) => item));
+      const limit = input.limit ?? 500;
+      const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+      const rows = state.audit
+        .filter((entry) => (actions.size > 0 ? actions.has(entry.action) : true))
+        .filter((entry) => (input.entityType ? entry.entityType === input.entityType : true))
+        .filter((entry) => (input.entityId ? entry.entityId === input.entityId : true))
+        .filter((entry) =>
+          input.organizationId !== undefined ? entry.organizationId === input.organizationId : true
+        )
+        .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+        .slice(0, normalizedLimit)
+        .map((entry) => ({
+          ...entry,
+          payload: cloneJson(entry.payload),
+          createdAt: cloneDate(entry.createdAt)
+        }));
+
+      return rows;
     }
   }
 };
@@ -928,7 +960,7 @@ export function getMemoryAuditActions() {
 export function getMemoryAuditEntries() {
   return state.audit.map((entry) => ({
     ...entry,
-    payload: entry.payload ? cloneJson(entry.payload) : undefined,
+    payload: cloneJson(entry.payload),
     createdAt: cloneDate(entry.createdAt)
   }));
 }
