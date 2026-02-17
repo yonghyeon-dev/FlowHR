@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.17.0
+  version: 0.18.0
 paths:
   /scheduling/schedules:
     get:
@@ -215,7 +215,7 @@ paths:
   /scheduling/rotations/fairness:
     post:
       summary: Generate tenant-level rotation fairness report across employees (read-only)
-      description: Evaluate per-employee recommendations and optionally coordinate offsets with global daily planned-minute gap constraints.
+      description: Evaluate per-employee recommendations and optionally coordinate offsets with global daily planned-minute gap constraints plus advanced preference/labor-law weighting.
       responses:
         "200":
           description: Fairness report generated
@@ -232,7 +232,7 @@ paths:
   /scheduling/rotations/fairness/apply:
     post:
       summary: Apply tenant-level fairness recommendations to schedule rotations
-      description: Generate fairness recommendations (optionally with global constraints) and write schedules per employee when threshold guards are satisfied.
+      description: Generate fairness recommendations (optionally with global constraints and advanced preference/labor-law weighting) and write schedules per employee when threshold guards are satisfied.
       responses:
         "201":
           description: Fairness recommendations applied and schedules created

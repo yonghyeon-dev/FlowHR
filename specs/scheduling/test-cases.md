@@ -76,6 +76,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 68. Employee anomaly cockpit stream query is rejected (403).
 69. Cockpit stream query appends `scheduling.anomaly.cockpit.stream.opened` audit log.
 70. Cockpit stream query suppresses ticket request domain event even when ticket automation is enabled.
+71. Rotation fairness report with `advancedConstraints.preference/laborLaw` returns per-employee `advancedScore` and aggregate `advanced` summary.
+72. Multi-objective fairness weighting flips selected offset when preference weight and labor-law weight priorities are inverted.
+73. Rotation fairness advanced constraints reject out-of-scope template ids in preference rules (404).
 
 ## Boundary Cases
 
@@ -96,6 +99,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 15. Invalid ticket automation config does not fail cockpit response and appends `scheduling.anomaly.ticket.request.failed` audit log.
 16. Cockpit stream `intervalSeconds` validates integer range (0..60).
 17. Cockpit stream `sampleCount` validates integer range (1..30).
+18. Rotation fairness advanced `weight` fields validate integer range (0..100).
 
 ## Regression Linkage
 
@@ -110,6 +114,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - rotation optimization dry-run path does not mutate schedule state.
 - rotation fairness report path does not mutate schedule state.
 - rotation fairness global constraints path remains deterministic for identical inputs.
+- rotation fairness advanced constraints path remains deterministic for identical inputs.
 - rotation fairness apply emits rotation assignment event/audit per employee.
 
 ## QA Gate Expectations

@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.17.0
+version: 0.18.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -13,6 +13,7 @@ scope:
     - rotation fairness report endpoint (tenant-scoped multi-employee optimization summary, read-only)
     - rotation fairness write-back endpoint (tenant-scoped multi-employee apply orchestration)
     - global fairness constraints for multi-employee offset coordination (daily planned-minute gap objective)
+    - advanced multi-objective fairness optimization (employee preference and labor-law penalty weighting)
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - tenant-level anomaly cockpit dashboard read-model (severity/queue summary)
     - tenant-level anomaly cockpit bounded streaming snapshots (SSE)
@@ -25,7 +26,7 @@ scope:
     - GPS/QR/geofence clock-in enforcement
     - anomaly-driven automatic payroll or approval enforcement
     - multi-channel escalation policy orchestration
-    - advanced multi-objective fairness solver (employee preferences/labor-law constraints)
+    - legally binding payroll enforcement from fairness recommendations
 entities:
   - name: WorkSchedule
     description: Planned work schedule entry for an employee.
@@ -77,10 +78,10 @@ api:
       description: Evaluate optimized template order and optionally apply rotation assignment write-back.
     - method: POST
       path: /scheduling/rotations/fairness
-      description: Read-only tenant-level fairness report aggregating per-employee recommendations with optional global constraints.
+      description: Read-only tenant-level fairness report aggregating per-employee recommendations with optional global and advanced multi-objective constraints.
     - method: POST
       path: /scheduling/rotations/fairness/apply
-      description: Apply tenant-level fairness recommendations with optional global threshold guard before schedule writes.
+      description: Apply tenant-level fairness recommendations with optional global threshold guard and advanced multi-objective constraints before schedule writes.
     - method: GET
       path: /scheduling/anomalies
       description: Read-only anomaly report by period with optional employee filter.
@@ -139,6 +140,8 @@ invariants:
   - Rotation fairness report must remain read-only and must not write WorkSchedule state.
   - Rotation fairness report must be tenant-scoped and reject cross-tenant organization queries.
   - Rotation fairness report with global constraints must deterministically coordinate employee offsets for the configured objective.
+  - Rotation fairness report with advanced constraints must deterministically apply employee preference and labor-law penalty scoring for identical input.
+  - Advanced preference constraints must reference employee ids and template ids within the fairness request scope.
   - Rotation fairness apply must preflight overlap checks for all target employees before writing schedules.
   - Rotation fairness apply must reuse rotation assignment invariants and emit assignment events per employee.
   - Rotation fairness apply must fail with 409 and no writes when configured global threshold is breached.
@@ -185,9 +188,12 @@ test_plan:
     - rotation optimization apply=true creates schedules using optimized template order
     - rotation fairness report returns aggregated tenant-level metrics and per-employee recommendations without mutating schedules
     - rotation fairness report with global constraints returns global summary and diversified offset recommendations
+    - rotation fairness report with advanced constraints returns per-employee advanced penalty score and advanced summary
+    - rotation fairness advanced constraints reject out-of-scope template ids and employee ids
     - rotation fairness report rejects unknown employee ids in organization scope
     - rotation fairness apply creates schedules for all selected employees and returns per-employee created schedule ids
     - rotation fairness apply rejects with 409 when global maxDailyPlannedMinutesGap is unsatisfied
+    - rotation fairness apply returns advanced summary when advanced constraints are configured
     - rotation fairness apply enforces role boundaries (employee denied)
     - list schedules enforces role boundaries (employee own-only; manager requires employeeId)
     - anomaly report enforces role boundaries (manager employeeId-required; employee own-only)
@@ -212,6 +218,7 @@ test_plan:
     - rotation optimization dry-run does not mutate schedules
     - rotation fairness report does not mutate schedules
     - rotation fairness global constraints path remains deterministic for identical inputs
+    - rotation fairness advanced constraints path remains deterministic for identical inputs
     - rotation fairness apply emits rotation assignment event/audit for each applied employee
   authorization:
     - permission boundaries for create/update/delete/list/template-assign/template-range-assign/rotation-assign/rotation-optimize/rotation-fairness/rotation-fairness-apply/anomaly-report
@@ -256,6 +263,7 @@ observability:
     - schedule_rotation_fairness_report_count (optional)
     - schedule_rotation_fairness_apply_count (optional)
     - schedule_rotation_fairness_global_solver_count (optional)
+    - schedule_rotation_fairness_advanced_solver_count (optional)
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_cockpit_query_count (optional)
     - schedule_anomaly_cockpit_stream_query_count (optional)
@@ -285,7 +293,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.17.0 adds anomaly cockpit streaming endpoint (`GET /scheduling/anomalies/cockpit/stream`) with bounded SSE snapshots for near real-time operator dashboards while preserving existing endpoint response shapes."
+consumer_impact: "Contract v0.18.0 extends rotation fairness report/apply payloads with optional `advancedConstraints` (preference/labor-law weighting) and returns `advanced` summary + per-employee `advancedScore` while preserving existing global-constraint behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -306,6 +314,7 @@ references:
   - work-items/WI-0065-scheduling-anomaly-cockpit-dashboard.md
   - work-items/WI-0067-scheduling-anomaly-cockpit-ticket-automation.md
   - work-items/WI-0068-scheduling-anomaly-cockpit-streaming-dashboard.md
+  - work-items/WI-0069-scheduling-advanced-fairness-multi-objective.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

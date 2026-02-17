@@ -30,7 +30,8 @@ export async function POST(request: Request) {
         toDate: parsed.data.toDate,
         templateIds: parsed.data.templateIds,
         employeeIds: parsed.data.employeeIds,
-        globalConstraints: parsed.data.globalConstraints
+        globalConstraints: parsed.data.globalConstraints,
+        advancedConstraints: parsed.data.advancedConstraints
       }
     );
     return ok({ report });
