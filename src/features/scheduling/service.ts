@@ -246,6 +246,45 @@ export type ScheduleAnomalyIncidentLifecycleResult = {
   };
 };
 
+type ListScheduleAnomalyIncidentsInput = {
+  state?: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId?: string;
+  topN?: number;
+};
+
+export type ScheduleAnomalyIncidentHistoryEntry = {
+  action: ScheduleAnomalyIncidentLifecycleAction;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
+  note: string | null;
+  updatedAt: string;
+  updatedBy: {
+    actorId: string | null;
+    actorRole: string;
+  };
+};
+
+export type ScheduleAnomalyIncidentReadModel = {
+  incidentId: string;
+  organizationId: string | null;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
+  note: string | null;
+  updatedAt: string;
+  updatedBy: {
+    actorId: string | null;
+    actorRole: string;
+  };
+  history: ScheduleAnomalyIncidentHistoryEntry[];
+};
+
+export type ScheduleAnomalyIncidentListResult = {
+  total: number;
+  items: ScheduleAnomalyIncidentReadModel[];
+};
+
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
 export type RotationFairnessGlobalObjective = "MINIMIZE_DAILY_PLANNED_MINUTES_GAP";
 
@@ -3076,6 +3115,30 @@ function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
   return "지각 사유 확인 및 재발 방지 조치";
 }
 
+const scheduleAnomalyIncidentReadModelStore = new Map<string, ScheduleAnomalyIncidentReadModel>();
+const MAX_ANOMALY_INCIDENT_HISTORY = 50;
+
+function normalizeIncidentListTopN(value: number | undefined) {
+  const normalized = value ?? 50;
+  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 200) {
+    throw new ServiceError(400, "topN must be an integer in range 1..200");
+  }
+  return normalized;
+}
+
+function cloneScheduleAnomalyIncidentReadModel(
+  item: ScheduleAnomalyIncidentReadModel
+): ScheduleAnomalyIncidentReadModel {
+  return {
+    ...item,
+    updatedBy: { ...item.updatedBy },
+    history: item.history.map((entry) => ({
+      ...entry,
+      updatedBy: { ...entry.updatedBy }
+    }))
+  };
+}
+
 const anomalyIncidentLifecycleStateByAction: Record<
   ScheduleAnomalyIncidentLifecycleAction,
   ScheduleAnomalyIncidentLifecycleState
@@ -3132,14 +3195,20 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   const state = anomalyIncidentLifecycleStateByAction[input.action];
   const updatedAt = new Date().toISOString();
   const tenantScope = resolveTenantScope(actor) ?? undefined;
+  const existing = scheduleAnomalyIncidentReadModelStore.get(incidentId);
+  const normalizedAssigneeId =
+    input.action === "ASSIGN" ? (assigneeId ?? null) : (existing?.assigneeId ?? null);
+  const normalizedResolutionCode =
+    input.action === "RESOLVE" ? resolutionCode : (existing?.resolutionCode ?? null);
+  const normalizedNote = note ?? existing?.note ?? null;
 
   const payload = {
     incidentId,
     action: input.action,
     state,
-    assigneeId: assigneeId ?? null,
-    resolutionCode,
-    note,
+    assigneeId: normalizedAssigneeId,
+    resolutionCode: normalizedResolutionCode,
+    note: normalizedNote,
     updatedAt
   };
 
@@ -3163,19 +3232,150 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     payload
   });
 
-  return {
-    incidentId,
+  const historyEntry: ScheduleAnomalyIncidentHistoryEntry = {
     action: input.action,
     state,
-    assigneeId: assigneeId ?? null,
-    resolutionCode,
-    note,
+    assigneeId: normalizedAssigneeId,
+    resolutionCode: normalizedResolutionCode,
+    note: normalizedNote,
     updatedAt,
     updatedBy: {
       actorId: actor.id ?? null,
       actorRole: actor.role
     }
   };
+  const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
+  const readModel: ScheduleAnomalyIncidentReadModel = {
+    incidentId,
+    organizationId: tenantScope ?? null,
+    state,
+    assigneeId: normalizedAssigneeId,
+    resolutionCode: normalizedResolutionCode,
+    note: normalizedNote,
+    updatedAt,
+    updatedBy: {
+      actorId: actor.id ?? null,
+      actorRole: actor.role
+    },
+    history
+  };
+  scheduleAnomalyIncidentReadModelStore.set(incidentId, readModel);
+
+  return {
+    incidentId,
+    action: historyEntry.action,
+    state: historyEntry.state,
+    assigneeId: historyEntry.assigneeId,
+    resolutionCode: historyEntry.resolutionCode,
+    note: historyEntry.note,
+    updatedAt: historyEntry.updatedAt,
+    updatedBy: {
+      actorId: historyEntry.updatedBy.actorId,
+      actorRole: historyEntry.updatedBy.actorRole
+    }
+  };
+}
+
+export async function listScheduleAnomalyIncidents(
+  context: ServiceContext,
+  input: ListScheduleAnomalyIncidentsInput
+): Promise<ScheduleAnomalyIncidentListResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident list requires permission"
+  );
+
+  const topN = normalizeIncidentListTopN(input.topN);
+  const tenantScope = resolveTenantScope(actor);
+  const assigneeId = input.assigneeId?.trim();
+
+  const matched = Array.from(scheduleAnomalyIncidentReadModelStore.values())
+    .filter((item) => (tenantScope ? item.organizationId === tenantScope : true))
+    .filter((item) => (input.state ? item.state === input.state : true))
+    .filter((item) => (assigneeId ? item.assigneeId === assigneeId : true))
+    .sort((left, right) => {
+      const byUpdatedAt = right.updatedAt.localeCompare(left.updatedAt);
+      if (byUpdatedAt !== 0) {
+        return byUpdatedAt;
+      }
+      return left.incidentId.localeCompare(right.incidentId);
+    });
+
+  const items = matched.slice(0, topN).map(cloneScheduleAnomalyIncidentReadModel);
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.listed",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      state: input.state ?? null,
+      assigneeId: assigneeId ?? null,
+      topN,
+      total: matched.length,
+      returned: items.length
+    }
+  });
+
+  return {
+    total: matched.length,
+    items
+  };
+}
+
+export async function getScheduleAnomalyIncident(
+  context: ServiceContext,
+  incidentId: string
+): Promise<ScheduleAnomalyIncidentReadModel> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident read requires permission"
+  );
+
+  const normalizedIncidentId = incidentId.trim();
+  if (!normalizedIncidentId) {
+    throw new ServiceError(400, "incidentId is required");
+  }
+
+  const incident = scheduleAnomalyIncidentReadModelStore.get(normalizedIncidentId);
+  if (!incident) {
+    throw new ServiceError(404, "anomaly incident not found");
+  }
+
+  const tenantScope = resolveTenantScope(actor);
+  if (tenantScope && incident.organizationId !== tenantScope) {
+    throw new ServiceError(404, "anomaly incident not found");
+  }
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.read",
+    entityType: "WorkSchedule",
+    entityId: incident.incidentId,
+    organizationId: incident.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      incidentId: incident.incidentId,
+      state: incident.state,
+      assigneeId: incident.assigneeId,
+      historyCount: incident.history.length
+    }
+  });
+
+  return cloneScheduleAnomalyIncidentReadModel(incident);
 }
 
 export async function listScheduleAttendanceAnomalyCockpit(

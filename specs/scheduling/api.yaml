@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.20.0
+  version: 0.21.0
 paths:
   /scheduling/schedules:
     get:
@@ -436,3 +436,57 @@ paths:
           description: Missing/invalid actor context
         "403":
           description: Insufficient permissions
+  /scheduling/anomalies/incidents:
+    get:
+      summary: List anomaly incident read-model entries
+      description: Read incident lifecycle projection entries for operator dashboards with optional state/assignee filters.
+      parameters:
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+            enum:
+              - ACKNOWLEDGED
+              - ASSIGNED
+              - RESOLVED
+        - in: query
+          name: assigneeId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: topN
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Incident read-model list returned
+        "400":
+          description: Invalid query
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/{incidentId}:
+    get:
+      summary: Read one anomaly incident read-model entry
+      description: Return incident lifecycle state and timeline history for one incident id.
+      parameters:
+        - in: path
+          name: incidentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Incident read-model detail returned
+        "400":
+          description: Invalid incident id
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Incident not found in tenant scope

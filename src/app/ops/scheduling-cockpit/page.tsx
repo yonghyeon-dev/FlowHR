@@ -66,6 +66,19 @@ type IncidentCommandLog = {
   body: unknown;
 };
 
+type IncidentReadModel = {
+  incidentId: string;
+  state: "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
+  assigneeId: string | null;
+  resolutionCode: string | null;
+  note: string | null;
+  updatedAt: string;
+  history: Array<{
+    action: "ACKNOWLEDGE" | "ASSIGN" | "RESOLVE";
+    updatedAt: string;
+  }>;
+};
+
 function toIsoInputValue(value: Date) {
   const shifted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return shifted.toISOString().slice(0, 16);
@@ -157,6 +170,8 @@ export default function SchedulingCockpitOpsPage() {
   >("OTHER");
   const [incidentNote, setIncidentNote] = useState("");
   const [incidentLogs, setIncidentLogs] = useState<IncidentCommandLog[]>([]);
+  const [incidentReadModels, setIncidentReadModels] = useState<IncidentReadModel[]>([]);
+  const [incidentReadError, setIncidentReadError] = useState("");
 
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -408,6 +423,7 @@ export default function SchedulingCockpitOpsPage() {
 
       if (response.ok) {
         setStatusMessage(`Incident command '${action}' completed.`);
+        void refreshIncidentReadModels();
       } else {
         setStatusMessage(`Incident command '${action}' failed (${response.status}).`);
       }
@@ -424,6 +440,40 @@ export default function SchedulingCockpitOpsPage() {
         ...prev
       ]);
       setStatusMessage(`Incident command '${action}' failed due to network error.`);
+    }
+  }
+
+  async function refreshIncidentReadModels() {
+    const headers = resolveAuthHeaders();
+    const query = buildQuery({ topN: "20" });
+
+    try {
+      const response = await fetch(`/api/scheduling/anomalies/incidents${query}`, {
+        method: "GET",
+        headers
+      });
+      const raw = await response.text();
+      let body: unknown = null;
+      if (raw.trim().length > 0) {
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          body = raw;
+        }
+      }
+
+      if (!response.ok) {
+        setIncidentReadError(`Read model refresh failed (${response.status}).`);
+        return;
+      }
+
+      const parsed = body as { items?: IncidentReadModel[] };
+      setIncidentReadModels(parsed.items ?? []);
+      setIncidentReadError("");
+    } catch (error) {
+      setIncidentReadError(
+        error instanceof Error ? error.message : "unknown read model refresh error"
+      );
     }
   }
 
@@ -612,6 +662,9 @@ export default function SchedulingCockpitOpsPage() {
           >
             Clear Command Logs
           </button>
+          <button className={styles.secondaryBtn} onClick={() => void refreshIncidentReadModels()}>
+            Refresh Read Model
+          </button>
         </div>
         {incidentLogs.length > 0 ? (
           <ul className={styles.eventList}>
@@ -629,6 +682,24 @@ export default function SchedulingCockpitOpsPage() {
           </ul>
         ) : (
           <p className={styles.empty}>No incident lifecycle command logs yet.</p>
+        )}
+        {incidentReadError ? <p className={styles.empty}>{incidentReadError}</p> : null}
+        {incidentReadModels.length > 0 ? (
+          <ul className={styles.eventList}>
+            {incidentReadModels.map((incident) => (
+              <li key={incident.incidentId}>
+                <div>
+                  <strong>{incident.state}</strong> / {incident.incidentId}
+                </div>
+                <div>assignee: {incident.assigneeId ?? "-"}</div>
+                <div>resolution: {incident.resolutionCode ?? "-"}</div>
+                <div>updatedAt: {formatDateTime(incident.updatedAt)}</div>
+                <div>history: {incident.history.length}</div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.empty}>No incident read-model entry yet.</p>
         )}
       </section>
 

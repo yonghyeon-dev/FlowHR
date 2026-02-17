@@ -29,6 +29,7 @@ No additional migration in WI-0068 (anomaly cockpit streaming dashboard is read-
 No additional migration in WI-0069 (advanced fairness multi-objective solver is runtime/API behavior only).
 No additional migration in WI-0071 (cockpit stream incident automation + ops dashboard UI is read-only runtime/API/UI behavior only).
 No additional migration in WI-0072 (anomaly incident lifecycle commands are runtime API/audit/event behavior only).
+No additional migration in WI-0073 (anomaly incident read-model list/detail APIs are runtime projection behavior only).
 
 ## Tenant Isolation
 
