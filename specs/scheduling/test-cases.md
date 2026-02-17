@@ -93,6 +93,10 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 85. Employee cannot access anomaly incident read-model list/detail endpoints (403).
 86. Cross-tenant anomaly incident detail request returns 404 (no existence leak).
 87. Incident read-model list/detail is reconstructed from persisted lifecycle audit logs (no process-local map dependency).
+88. Manager can list anomaly incident SLA monitoring entries (`GET /scheduling/anomalies/incidents/sla`) with status counts and prioritized items.
+89. Incident SLA query with `includeResolved=true` includes `RESOLVED` status entries.
+90. Employee cannot access anomaly incident SLA endpoint (403).
+91. Cross-tenant manager sees only own-tenant incident SLA entries.
 
 ## Boundary Cases
 
@@ -118,6 +122,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 20. Incident assign endpoint rejects payload without `assigneeId` (400).
 21. Incident list `topN` validates integer range (1..200).
 22. Incident read-model projection still returns consistent history after service restart because source-of-truth is audit log.
+23. Incident SLA query validates `slaTargetMinutes` range and `warningMinutes < slaTargetMinutes`.
 
 ## Regression Linkage
 
@@ -129,6 +134,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly cockpit stream incident-automation SSE signal remains read-only and does not publish domain events.
 - anomaly incident lifecycle command path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident read-model list/detail path remains operational-only and does not mutate schedule/attendance state.
+- anomaly incident SLA path remains operational-only and does not mutate schedule/attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

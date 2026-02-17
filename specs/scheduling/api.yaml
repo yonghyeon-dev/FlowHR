@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.21.1
+  version: 0.22.0
 paths:
   /scheduling/schedules:
     get:
@@ -463,6 +463,59 @@ paths:
       responses:
         "200":
           description: Incident read-model list returned
+        "400":
+          description: Invalid query
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/sla:
+    get:
+      summary: List anomaly incident SLA monitoring entries
+      description: Read incident SLA status dashboard with prioritized queue and policy summary for operator triage.
+      parameters:
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+            enum:
+              - ACKNOWLEDGED
+              - ASSIGNED
+              - RESOLVED
+        - in: query
+          name: assigneeId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: topN
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: includeResolved
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: slaTargetMinutes
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: warningMinutes
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: asOf
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Incident SLA monitoring payload returned
         "400":
           description: Invalid query
         "401":

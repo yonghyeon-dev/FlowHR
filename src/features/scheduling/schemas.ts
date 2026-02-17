@@ -207,6 +207,27 @@ export const listScheduleAnomalyIncidentQuerySchema = z.object({
   topN: z.coerce.number().int().min(1).max(200).optional()
 });
 
+export const listScheduleAnomalyIncidentSlaQuerySchema = z
+  .object({
+    state: z.enum(["ACKNOWLEDGED", "ASSIGNED", "RESOLVED"]).optional(),
+    assigneeId: z.string().trim().min(1).optional(),
+    topN: z.coerce.number().int().min(1).max(200).optional(),
+    includeResolved: queryBooleanSchema.optional(),
+    slaTargetMinutes: z.coerce.number().int().min(1).max(10080).optional(),
+    warningMinutes: z.coerce.number().int().min(0).max(10079).optional(),
+    asOf: isoDateTime.optional()
+  })
+  .refine(
+    (value) =>
+      value.warningMinutes === undefined ||
+      value.slaTargetMinutes === undefined ||
+      value.warningMinutes < value.slaTargetMinutes,
+    {
+      path: ["warningMinutes"],
+      message: "warningMinutes must be less than slaTargetMinutes"
+    }
+  );
+
 export const listScheduleRotationBalanceQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,
