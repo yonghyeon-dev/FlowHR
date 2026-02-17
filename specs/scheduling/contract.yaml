@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.21.1
+version: 0.22.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -20,6 +20,7 @@ scope:
     - tenant-level anomaly cockpit stream incident automation event (SSE) with severity/cooldown policy
     - anomaly incident lifecycle command API (acknowledge/assign/resolve) with audit/event traceability
     - anomaly incident read-model API (list/detail with timeline projection)
+    - anomaly incident SLA monitoring API (read-only prioritized SLA status view)
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
     - anomaly cockpit ticket request automation event emission behind feature flag
@@ -107,6 +108,9 @@ api:
       path: /scheduling/anomalies/incidents
       description: List anomaly incident read-model entries with optional state/assignee filters and bounded topN.
     - method: GET
+      path: /scheduling/anomalies/incidents/sla
+      description: Read anomaly incident SLA dashboard with status buckets (healthy/warning/breached/resolved) and prioritized queue.
+    - method: GET
       path: /scheduling/anomalies/incidents/{incidentId}
       description: Read one anomaly incident read-model entry including command history timeline.
   events:
@@ -181,6 +185,9 @@ invariants:
   - Anomaly incident lifecycle commands are operational trace signals and must not mutate scheduling/attendance/payroll state.
   - Anomaly incident read-model list/detail APIs require scheduling write-any permission and tenant scope.
   - Anomaly incident read-model list/detail projection source must be persisted audit lifecycle events (durable across process restart).
+  - Anomaly incident SLA API requires scheduling write-any permission and tenant scope.
+  - Anomaly incident SLA status must be derived from read-model `updatedAt` versus SLA policy (`slaTargetMinutes`, `warningMinutes`) without mutating incident state.
+  - Anomaly incident SLA policy must satisfy `0 <= warningMinutes < slaTargetMinutes`.
   - Anomaly incident read-model detail API must return 404 for cross-tenant incidentId requests (no existence leak).
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.
@@ -238,6 +245,7 @@ test_plan:
     - anomaly cockpit stream emits incident-automation SSE event when enabled and severity/cooldown policy matches
     - anomaly incident ack/assign/resolve APIs append audit logs and emit incident lifecycle domain event
     - anomaly incident list/detail APIs return lifecycle read-model timeline for authorized operators
+    - anomaly incident SLA API returns deterministic status counts/priority ordering for identical query and asOf
   regression:
     - template assignment path reuses schedule overlap guard
     - single-date assignment behavior remains unchanged
@@ -250,6 +258,7 @@ test_plan:
     - anomaly cockpit stream incident automation cooldown remains deterministic for identical snapshot sequence timing
     - anomaly incident lifecycle commands do not mutate scheduling or attendance records
     - anomaly incident read-model APIs do not mutate scheduling or attendance records
+    - anomaly incident SLA API remains read-only and does not mutate scheduling or attendance records
     - rotation balance report does not mutate schedules
     - rotation optimization dry-run does not mutate schedules
     - rotation fairness report does not mutate schedules
@@ -261,6 +270,7 @@ test_plan:
     - permission boundaries for anomaly-cockpit and anomaly-cockpit-stream read endpoints
     - permission boundaries for anomaly incident lifecycle command endpoints (ack/assign/resolve)
     - permission boundaries for anomaly incident read-model list/detail endpoints
+    - permission boundaries for anomaly incident SLA endpoint
   payroll_accuracy:
     - anomaly report is non-blocking and does not change payroll run outputs
 observability:
@@ -290,6 +300,7 @@ observability:
     - scheduling.anomaly.incident.resolved
     - scheduling.anomaly.incident.listed
     - scheduling.anomaly.incident.read
+    - scheduling.anomaly.incident.sla.generated
   metrics:
     - schedule_assign_count (optional)
     - schedule_update_count (optional)
@@ -320,8 +331,9 @@ observability:
     - schedule_anomaly_ticket_request_count (optional)
     - schedule_anomaly_ticket_request_failed_count (optional)
     - schedule_anomaly_incident_lifecycle_command_count (optional)
+    - schedule_anomaly_incident_sla_query_count (optional)
   logs:
-    - authorization denied logs for scheduling/template create/list/assign/assign-range/rotation/anomaly
+    - authorization denied logs for scheduling/template create/list/assign/assign-range/rotation/anomaly/incident-sla
 rollout:
   feature_flags:
     - name: scheduling_v1
@@ -338,7 +350,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.21.0 adds anomaly incident read-model APIs (`GET /incidents`, `GET /incidents/{incidentId}`) for operator timeline visibility while preserving existing lifecycle command and cockpit API compatibility."
+consumer_impact: "Contract v0.22.0 adds anomaly incident SLA monitoring API (`GET /incidents/sla`) for operator triage prioritization while preserving existing lifecycle/read-model API compatibility."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -363,6 +375,7 @@ references:
   - work-items/WI-0071-scheduling-anomaly-cockpit-ops-dashboard-incident-automation.md
   - work-items/WI-0072-scheduling-anomaly-incident-lifecycle-api.md
   - work-items/WI-0073-scheduling-anomaly-incident-read-model-api.md
+  - work-items/WI-0076-scheduling-anomaly-incident-sla-monitoring-api.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

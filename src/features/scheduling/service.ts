@@ -252,6 +252,16 @@ type ListScheduleAnomalyIncidentsInput = {
   topN?: number;
 };
 
+type ListScheduleAnomalyIncidentSlaInput = {
+  state?: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId?: string;
+  topN?: number;
+  includeResolved?: boolean;
+  slaTargetMinutes?: number;
+  warningMinutes?: number;
+  asOf?: Date;
+};
+
 export type ScheduleAnomalyIncidentHistoryEntry = {
   action: ScheduleAnomalyIncidentLifecycleAction;
   state: ScheduleAnomalyIncidentLifecycleState;
@@ -283,6 +293,48 @@ export type ScheduleAnomalyIncidentReadModel = {
 export type ScheduleAnomalyIncidentListResult = {
   total: number;
   items: ScheduleAnomalyIncidentReadModel[];
+};
+
+export type ScheduleAnomalyIncidentSlaStatus = "HEALTHY" | "WARNING" | "BREACHED" | "RESOLVED";
+
+export type ScheduleAnomalyIncidentSlaItem = {
+  incidentId: string;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  updatedAt: string;
+  elapsedMinutes: number;
+  slaTargetMinutes: number;
+  warningMinutes: number;
+  status: ScheduleAnomalyIncidentSlaStatus;
+  updatedBy: {
+    actorId: string | null;
+    actorRole: string;
+  };
+  historyCount: number;
+};
+
+export type ScheduleAnomalyIncidentSlaReport = {
+  generatedAt: string;
+  asOf: string;
+  policy: {
+    slaTargetMinutes: number;
+    warningMinutes: number;
+    includeResolved: boolean;
+  };
+  filters: {
+    state: ScheduleAnomalyIncidentLifecycleState | null;
+    assigneeId: string | null;
+    topN: number;
+  };
+  counts: {
+    total: number;
+    open: number;
+    healthy: number;
+    warning: number;
+    breached: number;
+    resolved: number;
+  };
+  items: ScheduleAnomalyIncidentSlaItem[];
 };
 
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
@@ -3117,6 +3169,7 @@ function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
 
 const MAX_ANOMALY_INCIDENT_HISTORY = 50;
 const MAX_ANOMALY_INCIDENT_AUDIT_ROWS = 5000;
+const DEFAULT_ANOMALY_INCIDENT_SLA_TARGET_MINUTES = 60;
 
 function normalizeIncidentListTopN(value: number | undefined) {
   const normalized = value ?? 50;
@@ -3124,6 +3177,76 @@ function normalizeIncidentListTopN(value: number | undefined) {
     throw new ServiceError(400, "topN must be an integer in range 1..200");
   }
   return normalized;
+}
+
+function parseAnomalyIncidentSlaMinutesEnvValue(
+  raw: string | undefined,
+  fieldName: string
+): number | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10080) {
+    throw new ServiceError(500, `${fieldName} configuration is invalid`);
+  }
+  return parsed;
+}
+
+function resolveAnomalyIncidentSlaTargetMinutes(overrideValue: number | undefined) {
+  if (overrideValue !== undefined) {
+    return overrideValue;
+  }
+
+  const parsed = parseAnomalyIncidentSlaMinutesEnvValue(
+    process.env.FLOWHR_SCHEDULING_ANOMALY_INCIDENT_SLA_MINUTES ??
+      process.env.SCHEDULING_ANOMALY_INCIDENT_SLA_MINUTES,
+    "FLOWHR_SCHEDULING_ANOMALY_INCIDENT_SLA_MINUTES"
+  );
+  return parsed ?? DEFAULT_ANOMALY_INCIDENT_SLA_TARGET_MINUTES;
+}
+
+function resolveAnomalyIncidentWarningMinutes(
+  overrideValue: number | undefined,
+  slaTargetMinutes: number
+) {
+  const normalized =
+    overrideValue ??
+    parseAnomalyIncidentSlaMinutesEnvValue(
+      process.env.FLOWHR_SCHEDULING_ANOMALY_INCIDENT_WARNING_MINUTES ??
+        process.env.SCHEDULING_ANOMALY_INCIDENT_WARNING_MINUTES,
+      "FLOWHR_SCHEDULING_ANOMALY_INCIDENT_WARNING_MINUTES"
+    ) ??
+    Math.max(0, Math.floor(slaTargetMinutes / 2));
+
+  if (normalized >= slaTargetMinutes) {
+    throw new ServiceError(
+      overrideValue !== undefined ? 400 : 500,
+      "warningMinutes must be less than slaTargetMinutes"
+    );
+  }
+  return normalized;
+}
+
+function parseIsoTimestampToMillis(value: string) {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function toSlaStatusWeight(status: ScheduleAnomalyIncidentSlaStatus) {
+  if (status === "BREACHED") {
+    return 4;
+  }
+  if (status === "WARNING") {
+    return 3;
+  }
+  if (status === "HEALTHY") {
+    return 2;
+  }
+  return 1;
 }
 
 function cloneScheduleAnomalyIncidentReadModel(
@@ -3461,6 +3584,129 @@ export async function listScheduleAnomalyIncidents(
 
   return {
     total: matched.length,
+    items
+  };
+}
+
+export async function listScheduleAnomalyIncidentSla(
+  context: ServiceContext,
+  input: ListScheduleAnomalyIncidentSlaInput
+): Promise<ScheduleAnomalyIncidentSlaReport> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident SLA requires permission"
+  );
+
+  const topN = normalizeIncidentListTopN(input.topN);
+  const tenantScope = resolveTenantScope(actor);
+  const assigneeId = input.assigneeId?.trim();
+  const includeResolved = input.includeResolved ?? false;
+  const slaTargetMinutes = resolveAnomalyIncidentSlaTargetMinutes(input.slaTargetMinutes);
+  const warningMinutes = resolveAnomalyIncidentWarningMinutes(
+    input.warningMinutes,
+    slaTargetMinutes
+  );
+  const asOf = input.asOf ?? new Date();
+  const asOfMillis = asOf.getTime();
+
+  const readModels = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
+    organizationId: tenantScope ?? undefined
+  });
+
+  const matched = readModels
+    .filter((item) => (input.state ? item.state === input.state : true))
+    .filter((item) => (assigneeId ? item.assigneeId === assigneeId : true))
+    .map((item) => {
+      const updatedAtMillis = parseIsoTimestampToMillis(item.updatedAt) ?? asOfMillis;
+      const elapsedMinutes = Math.max(0, Math.floor((asOfMillis - updatedAtMillis) / 60_000));
+      const status: ScheduleAnomalyIncidentSlaStatus =
+        item.state === "RESOLVED"
+          ? "RESOLVED"
+          : elapsedMinutes >= slaTargetMinutes
+            ? "BREACHED"
+            : elapsedMinutes >= warningMinutes
+              ? "WARNING"
+              : "HEALTHY";
+
+      const result: ScheduleAnomalyIncidentSlaItem = {
+        incidentId: item.incidentId,
+        state: item.state,
+        assigneeId: item.assigneeId,
+        updatedAt: item.updatedAt,
+        elapsedMinutes,
+        slaTargetMinutes,
+        warningMinutes,
+        status,
+        updatedBy: { ...item.updatedBy },
+        historyCount: item.history.length
+      };
+      return result;
+    })
+    .filter((item) => (includeResolved ? true : item.state !== "RESOLVED"))
+    .sort((left, right) => {
+      const byStatus = toSlaStatusWeight(right.status) - toSlaStatusWeight(left.status);
+      if (byStatus !== 0) {
+        return byStatus;
+      }
+      if (left.elapsedMinutes !== right.elapsedMinutes) {
+        return right.elapsedMinutes - left.elapsedMinutes;
+      }
+      const byUpdatedAt = left.updatedAt.localeCompare(right.updatedAt);
+      if (byUpdatedAt !== 0) {
+        return byUpdatedAt;
+      }
+      return left.incidentId.localeCompare(right.incidentId);
+    });
+
+  const items = matched.slice(0, topN);
+  const counts = {
+    total: matched.length,
+    open: matched.filter((item) => item.status !== "RESOLVED").length,
+    healthy: matched.filter((item) => item.status === "HEALTHY").length,
+    warning: matched.filter((item) => item.status === "WARNING").length,
+    breached: matched.filter((item) => item.status === "BREACHED").length,
+    resolved: matched.filter((item) => item.status === "RESOLVED").length
+  };
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.sla.generated",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope ?? undefined,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      asOf: asOf.toISOString(),
+      state: input.state ?? null,
+      assigneeId: assigneeId ?? null,
+      topN,
+      includeResolved,
+      slaTargetMinutes,
+      warningMinutes,
+      ...counts,
+      returned: items.length
+    }
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    asOf: asOf.toISOString(),
+    policy: {
+      slaTargetMinutes,
+      warningMinutes,
+      includeResolved
+    },
+    filters: {
+      state: input.state ?? null,
+      assigneeId: assigneeId ?? null,
+      topN
+    },
+    counts,
     items
   };
 }
