@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.23.0
+  version: 0.24.0
 paths:
   /scheduling/schedules:
     get:
@@ -529,6 +529,19 @@ paths:
       responses:
         "200":
           description: Incident escalation command summary returned
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/auto-actions:
+    post:
+      summary: Execute anomaly incident auto-action workflow
+      description: Orchestrate incident escalation candidate selection and lifecycle assignment with optional dry-run controls.
+      responses:
+        "200":
+          description: Incident auto-action command summary returned
         "400":
           description: Invalid payload
         "401":

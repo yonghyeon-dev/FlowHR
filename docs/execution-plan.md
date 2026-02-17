@@ -144,6 +144,9 @@ Recently delivered:
 - Scheduling anomaly cockpit operator dashboard + stream incident automation is merged (`/ops/scheduling-cockpit` and `incident-automation` SSE policy controls; WI-0071).
 - Scheduling anomaly incident lifecycle command API is merged (`/ack`, `/assign`, `/resolve` + incident lifecycle audit/event traceability; WI-0072).
 - Scheduling anomaly incident read-model API is merged (`GET /incidents`, `GET /incidents/{incidentId}` + timeline projection/audit traceability; WI-0073).
+- Scheduling anomaly incident SLA monitoring API is merged (`GET /incidents/sla` + policy/count/prioritized queue view; WI-0076).
+- Scheduling anomaly incident escalation automation API is merged (`POST /incidents/escalate` + cooldown-aware workflow request publisher; WI-0077).
+- Scheduling anomaly incident auto-action execution API is merged (`POST /incidents/auto-actions` + escalation-to-assignment orchestration + ops notification event; WI-0078).
 
 ## 2) Priority Roadmap
 
