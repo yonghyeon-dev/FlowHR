@@ -16,6 +16,7 @@ export const domainEventNames = [
   "scheduling.anomaly.detected.v1",
   "scheduling.anomaly.escalated.v1",
   "scheduling.anomaly.ticket.requested.v1",
+  "scheduling.anomaly.incident.updated.v1",
   "payroll.calculated.v1",
   "payroll.deductions.calculated.v1",
   "payroll.deduction_profile.updated.v1",

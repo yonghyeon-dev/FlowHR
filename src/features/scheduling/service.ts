@@ -216,6 +216,36 @@ export type ScheduleAnomalyCockpitQueueEntry = {
   recommendedAction: string;
 };
 
+export type ScheduleAnomalyIncidentLifecycleAction = "ACKNOWLEDGE" | "ASSIGN" | "RESOLVE";
+export type ScheduleAnomalyIncidentLifecycleState = "ACKNOWLEDGED" | "ASSIGNED" | "RESOLVED";
+export type ScheduleAnomalyIncidentResolutionCode =
+  | "FALSE_POSITIVE"
+  | "ATTENDANCE_CORRECTED"
+  | "MANUAL_CONFIRMED"
+  | "OTHER";
+
+type UpdateScheduleAnomalyIncidentLifecycleInput = {
+  incidentId: string;
+  action: ScheduleAnomalyIncidentLifecycleAction;
+  assigneeId?: string;
+  note?: string;
+  resolutionCode?: ScheduleAnomalyIncidentResolutionCode;
+};
+
+export type ScheduleAnomalyIncidentLifecycleResult = {
+  incidentId: string;
+  action: ScheduleAnomalyIncidentLifecycleAction;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null;
+  note: string | null;
+  updatedAt: string;
+  updatedBy: {
+    actorId: string | null;
+    actorRole: string;
+  };
+};
+
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
 export type RotationFairnessGlobalObjective = "MINIMIZE_DAILY_PLANNED_MINUTES_GAP";
 
@@ -3045,6 +3075,109 @@ function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
   }
   return "지각 사유 확인 및 재발 방지 조치";
 }
+
+const anomalyIncidentLifecycleStateByAction: Record<
+  ScheduleAnomalyIncidentLifecycleAction,
+  ScheduleAnomalyIncidentLifecycleState
+> = {
+  ACKNOWLEDGE: "ACKNOWLEDGED",
+  ASSIGN: "ASSIGNED",
+  RESOLVE: "RESOLVED"
+};
+
+const anomalyIncidentLifecycleAuditActionByAction: Record<
+  ScheduleAnomalyIncidentLifecycleAction,
+  string
+> = {
+  ACKNOWLEDGE: "scheduling.anomaly.incident.acknowledged",
+  ASSIGN: "scheduling.anomaly.incident.assigned",
+  RESOLVE: "scheduling.anomaly.incident.resolved"
+};
+
+export async function updateScheduleAnomalyIncidentLifecycle(
+  context: ServiceContext,
+  input: UpdateScheduleAnomalyIncidentLifecycleInput
+): Promise<ScheduleAnomalyIncidentLifecycleResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident lifecycle requires permission"
+  );
+
+  const incidentId = input.incidentId.trim();
+  if (!incidentId) {
+    throw new ServiceError(400, "incidentId is required");
+  }
+
+  const assigneeId = input.assigneeId?.trim();
+  if (input.action === "ASSIGN" && !assigneeId) {
+    throw new ServiceError(400, "assigneeId is required when action is ASSIGN");
+  }
+  if (input.action !== "ASSIGN" && assigneeId) {
+    throw new ServiceError(400, "assigneeId is only allowed when action is ASSIGN");
+  }
+
+  const resolutionCode =
+    input.action === "RESOLVE" ? (input.resolutionCode ?? "OTHER") : null;
+  if (input.action !== "RESOLVE" && input.resolutionCode !== undefined) {
+    throw new ServiceError(400, "resolutionCode is only allowed when action is RESOLVE");
+  }
+
+  const note = input.note?.trim() || null;
+  const state = anomalyIncidentLifecycleStateByAction[input.action];
+  const updatedAt = new Date().toISOString();
+  const tenantScope = resolveTenantScope(actor) ?? undefined;
+
+  const payload = {
+    incidentId,
+    action: input.action,
+    state,
+    assigneeId: assigneeId ?? null,
+    resolutionCode,
+    note,
+    updatedAt
+  };
+
+  await context.dataAccess.audit.append({
+    action: anomalyIncidentLifecycleAuditActionByAction[input.action],
+    entityType: "WorkSchedule",
+    entityId: incidentId,
+    organizationId: tenantScope,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload
+  });
+
+  await getEventPublisher(context).publish({
+    name: "scheduling.anomaly.incident.updated.v1",
+    occurredAt: updatedAt,
+    entityType: "WorkSchedule",
+    entityId: incidentId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload
+  });
+
+  return {
+    incidentId,
+    action: input.action,
+    state,
+    assigneeId: assigneeId ?? null,
+    resolutionCode,
+    note,
+    updatedAt,
+    updatedBy: {
+      actorId: actor.id ?? null,
+      actorRole: actor.role
+    }
+  };
+}
+
 export async function listScheduleAttendanceAnomalyCockpit(
   context: ServiceContext,
   input: ListScheduleAnomalyCockpitInput

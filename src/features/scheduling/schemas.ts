@@ -182,6 +182,25 @@ export const listScheduleAnomalyCockpitStreamQuerySchema = z.object({
   incidentCooldownSeconds: z.coerce.number().int().min(0).max(3600).optional()
 });
 
+const incidentLifecycleNoteSchema = z.string().trim().min(1).max(500);
+
+export const acknowledgeScheduleAnomalyIncidentSchema = z.object({
+  note: incidentLifecycleNoteSchema.optional()
+});
+
+export const assignScheduleAnomalyIncidentSchema = z.object({
+  assigneeId: z.string().trim().min(1),
+  note: incidentLifecycleNoteSchema.optional()
+});
+
+export const resolveScheduleAnomalyIncidentSchema = z.object({
+  resolutionCode: z
+    .enum(["FALSE_POSITIVE", "ATTENDANCE_CORRECTED", "MANUAL_CONFIRMED", "OTHER"])
+    .optional()
+    .default("OTHER"),
+  note: incidentLifecycleNoteSchema.optional()
+});
+
 export const listScheduleRotationBalanceQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

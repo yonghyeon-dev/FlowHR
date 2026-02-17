@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.19.0
+  version: 0.20.0
 paths:
   /scheduling/schedules:
     get:
@@ -375,6 +375,63 @@ paths:
           description: SSE stream opened
         "400":
           description: Invalid query
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/{incidentId}/ack:
+    post:
+      summary: Acknowledge anomaly incident
+      description: Operational incident lifecycle command for anomaly triage acknowledgement (audit/event traceability only).
+      parameters:
+        - in: path
+          name: incidentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Incident lifecycle updated
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/{incidentId}/assign:
+    post:
+      summary: Assign anomaly incident owner
+      description: Operational incident lifecycle command for owner assignment (audit/event traceability only).
+      parameters:
+        - in: path
+          name: incidentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Incident lifecycle updated
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/incidents/{incidentId}/resolve:
+    post:
+      summary: Resolve anomaly incident
+      description: Operational incident lifecycle command for resolution close-out with resolution code (audit/event traceability only).
+      parameters:
+        - in: path
+          name: incidentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Incident lifecycle updated
+        "400":
+          description: Invalid payload
         "401":
           description: Missing/invalid actor context
         "403":
