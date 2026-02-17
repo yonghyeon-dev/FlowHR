@@ -55,6 +55,17 @@ type StreamErrorEvent = {
   message: string;
 };
 
+type IncidentCommandAction = "ack" | "assign" | "resolve";
+
+type IncidentCommandLog = {
+  id: number;
+  action: IncidentCommandAction;
+  status: number;
+  ok: boolean;
+  at: string;
+  body: unknown;
+};
+
 function toIsoInputValue(value: Date) {
   const shifted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return shifted.toISOString().slice(0, 16);
@@ -139,6 +150,13 @@ export default function SchedulingCockpitOpsPage() {
   const [incidentEvents, setIncidentEvents] = useState<IncidentAutomationEvent[]>([]);
   const [streamErrors, setStreamErrors] = useState<StreamErrorEvent[]>([]);
   const [statusMessage, setStatusMessage] = useState("Ready");
+  const [incidentId, setIncidentId] = useState("INC-ANOMALY-20260217-0001");
+  const [incidentAssigneeId, setIncidentAssigneeId] = useState("OPS-ONCALL-1");
+  const [incidentResolutionCode, setIncidentResolutionCode] = useState<
+    "FALSE_POSITIVE" | "ATTENDANCE_CORRECTED" | "MANUAL_CONFIRMED" | "OTHER"
+  >("OTHER");
+  const [incidentNote, setIncidentNote] = useState("");
+  const [incidentLogs, setIncidentLogs] = useState<IncidentCommandLog[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,6 +170,21 @@ export default function SchedulingCockpitOpsPage() {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
     }
+  }
+
+  function resolveAuthHeaders() {
+    const headers: Record<string, string> = {};
+    if (usesBearerToken) {
+      headers.authorization = `Bearer ${accessToken.trim()}`;
+      return headers;
+    }
+
+    headers["x-actor-role"] = "manager";
+    headers["x-actor-id"] = actorId.trim() || "MGR-OPS-1001";
+    if (organizationId.trim()) {
+      headers["x-actor-organization-id"] = organizationId.trim();
+    }
+    return headers;
   }
 
   function stopStream(message = "Stopped") {
@@ -186,16 +219,7 @@ export default function SchedulingCockpitOpsPage() {
       incidentCooldownSeconds
     });
 
-    const headers: Record<string, string> = {};
-    if (usesBearerToken) {
-      headers.authorization = `Bearer ${accessToken.trim()}`;
-    } else {
-      headers["x-actor-role"] = "manager";
-      headers["x-actor-id"] = actorId.trim() || "MGR-OPS-1001";
-      if (organizationId.trim()) {
-        headers["x-actor-organization-id"] = organizationId.trim();
-      }
-    }
+    const headers = resolveAuthHeaders();
 
     try {
       const response = await fetch(`/api/scheduling/anomalies/cockpit/stream${query}`, {
@@ -326,6 +350,83 @@ export default function SchedulingCockpitOpsPage() {
     }
   }
 
+  async function runIncidentCommand(action: IncidentCommandAction) {
+    const normalizedIncidentId = incidentId.trim();
+    if (!normalizedIncidentId) {
+      setStatusMessage("incidentId is required for lifecycle commands.");
+      return;
+    }
+
+    const endpointByAction: Record<IncidentCommandAction, string> = {
+      ack: `/api/scheduling/anomalies/incidents/${normalizedIncidentId}/ack`,
+      assign: `/api/scheduling/anomalies/incidents/${normalizedIncidentId}/assign`,
+      resolve: `/api/scheduling/anomalies/incidents/${normalizedIncidentId}/resolve`
+    };
+
+    const payload: Record<string, string> = {};
+    const note = incidentNote.trim();
+    if (note.length > 0) {
+      payload.note = note;
+    }
+    if (action === "assign") {
+      payload.assigneeId = incidentAssigneeId.trim();
+    }
+    if (action === "resolve") {
+      payload.resolutionCode = incidentResolutionCode;
+    }
+
+    const headers = resolveAuthHeaders();
+    headers["content-type"] = "application/json";
+
+    try {
+      const response = await fetch(endpointByAction[action], {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      });
+      const raw = await response.text();
+      let body: unknown = null;
+      if (raw.trim().length > 0) {
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          body = raw;
+        }
+      }
+
+      setIncidentLogs((prev) => [
+        {
+          id: Date.now(),
+          action,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR"),
+          body
+        },
+        ...prev
+      ]);
+
+      if (response.ok) {
+        setStatusMessage(`Incident command '${action}' completed.`);
+      } else {
+        setStatusMessage(`Incident command '${action}' failed (${response.status}).`);
+      }
+    } catch (error) {
+      setIncidentLogs((prev) => [
+        {
+          id: Date.now(),
+          action,
+          status: 0,
+          ok: false,
+          at: new Date().toLocaleString("ko-KR"),
+          body: error instanceof Error ? error.message : "unknown request error"
+        },
+        ...prev
+      ]);
+      setStatusMessage(`Incident command '${action}' failed due to network error.`);
+    }
+  }
+
   const statusClassName = useMemo(() => {
     if (streamStatus === "streaming") {
       return styles.statusOk;
@@ -448,6 +549,87 @@ export default function SchedulingCockpitOpsPage() {
             Clear Events
           </button>
         </div>
+      </section>
+
+      <section className={styles.controls}>
+        <h2>Incident Lifecycle Commands</h2>
+        <div className={styles.grid}>
+          <label>
+            incidentId
+            <input value={incidentId} onChange={(event) => setIncidentId(event.target.value)} />
+          </label>
+          <label>
+            assigneeId
+            <input
+              value={incidentAssigneeId}
+              onChange={(event) => setIncidentAssigneeId(event.target.value)}
+            />
+          </label>
+          <label>
+            resolutionCode
+            <select
+              value={incidentResolutionCode}
+              onChange={(event) =>
+                setIncidentResolutionCode(
+                  event.target.value as
+                    | "FALSE_POSITIVE"
+                    | "ATTENDANCE_CORRECTED"
+                    | "MANUAL_CONFIRMED"
+                    | "OTHER"
+                )
+              }
+            >
+              <option value="FALSE_POSITIVE">FALSE_POSITIVE</option>
+              <option value="ATTENDANCE_CORRECTED">ATTENDANCE_CORRECTED</option>
+              <option value="MANUAL_CONFIRMED">MANUAL_CONFIRMED</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </label>
+          <label className={styles.full}>
+            note (optional)
+            <textarea
+              rows={2}
+              value={incidentNote}
+              onChange={(event) => setIncidentNote(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className={styles.actions}>
+          <button className={styles.primaryBtn} onClick={() => void runIncidentCommand("ack")}>
+            ACK
+          </button>
+          <button className={styles.secondaryBtn} onClick={() => void runIncidentCommand("assign")}>
+            ASSIGN
+          </button>
+          <button className={styles.secondaryBtn} onClick={() => void runIncidentCommand("resolve")}>
+            RESOLVE
+          </button>
+          <button
+            className={styles.secondaryBtn}
+            onClick={() => {
+              setIncidentLogs([]);
+            }}
+          >
+            Clear Command Logs
+          </button>
+        </div>
+        {incidentLogs.length > 0 ? (
+          <ul className={styles.eventList}>
+            {incidentLogs.map((log) => (
+              <li key={log.id}>
+                <div>
+                  <strong>{log.ok ? "OK" : "FAIL"}</strong> {log.action} / status {log.status}
+                </div>
+                <div>{log.at}</div>
+                <div>
+                  <code>{typeof log.body === "string" ? log.body : JSON.stringify(log.body)}</code>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.empty}>No incident lifecycle command logs yet.</p>
+        )}
       </section>
 
       <section className={styles.dashboardGrid}>
