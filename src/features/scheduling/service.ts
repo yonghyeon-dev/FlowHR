@@ -276,6 +276,25 @@ type TriggerScheduleAnomalyIncidentEscalationInput = {
   dryRun?: boolean;
 };
 
+export type ScheduleAnomalyIncidentAutoAssignMode = "ASSIGN_IF_UNASSIGNED" | "FORCE_ASSIGN";
+
+type ExecuteScheduleAnomalyIncidentAutoActionInput = {
+  state?: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId?: string;
+  topN?: number;
+  includeResolved?: boolean;
+  includeWarning?: boolean;
+  slaTargetMinutes?: number;
+  warningMinutes?: number;
+  cooldownMinutes?: number;
+  asOf?: Date;
+  escalationChannel?: string;
+  dryRun?: boolean;
+  autoAssigneeId: string;
+  autoAssignMode?: ScheduleAnomalyIncidentAutoAssignMode;
+  autoAssignNote?: string;
+};
+
 export type ScheduleAnomalyIncidentHistoryEntry = {
   action: ScheduleAnomalyIncidentLifecycleAction;
   state: ScheduleAnomalyIncidentLifecycleState;
@@ -385,6 +404,51 @@ export type ScheduleAnomalyIncidentEscalationResult = {
     failed: number;
   };
   items: ScheduleAnomalyIncidentEscalationItem[];
+};
+
+export type ScheduleAnomalyIncidentAutoActionDecision =
+  | "ASSIGNED"
+  | "SKIPPED_ESCALATION"
+  | "SKIPPED_ALREADY_ASSIGNED"
+  | "SKIPPED_SAME_ASSIGNEE"
+  | "FAILED"
+  | "DRY_RUN";
+
+export type ScheduleAnomalyIncidentAutoActionItem = {
+  incidentId: string;
+  state: ScheduleAnomalyIncidentLifecycleState;
+  status: ScheduleAnomalyIncidentSlaStatus;
+  escalationDecision: ScheduleAnomalyIncidentEscalationDecision;
+  previousAssigneeId: string | null;
+  assignedAssigneeId: string | null;
+  decision: ScheduleAnomalyIncidentAutoActionDecision;
+  reason: string | null;
+};
+
+export type ScheduleAnomalyIncidentAutoActionResult = {
+  executedAt: string;
+  dryRun: boolean;
+  policy: {
+    slaTargetMinutes: number;
+    warningMinutes: number;
+    includeResolved: boolean;
+    includeWarning: boolean;
+    cooldownMinutes: number;
+    escalationChannel: string;
+    autoAssigneeId: string;
+    autoAssignMode: ScheduleAnomalyIncidentAutoAssignMode;
+    autoAssignNote: string | null;
+  };
+  counts: {
+    candidates: number;
+    escalated: number;
+    assigned: number;
+    skippedEscalation: number;
+    skippedAssigned: number;
+    failed: number;
+    dryRun: number;
+  };
+  items: ScheduleAnomalyIncidentAutoActionItem[];
 };
 
 export type RotationBalanceGrade = "BALANCED" | "MODERATE" | "IMBALANCED";
@@ -3222,6 +3286,8 @@ const MAX_ANOMALY_INCIDENT_AUDIT_ROWS = 5000;
 const DEFAULT_ANOMALY_INCIDENT_SLA_TARGET_MINUTES = 60;
 const DEFAULT_ANOMALY_INCIDENT_ESCALATION_COOLDOWN_MINUTES = 60;
 const DEFAULT_ANOMALY_INCIDENT_ESCALATION_CHANNEL = "ops-oncall";
+const DEFAULT_ANOMALY_INCIDENT_AUTO_ASSIGN_MODE: ScheduleAnomalyIncidentAutoAssignMode =
+  "ASSIGN_IF_UNASSIGNED";
 
 function normalizeIncidentListTopN(value: number | undefined) {
   const normalized = value ?? 50;
@@ -3295,6 +3361,37 @@ function normalizeAnomalyIncidentEscalationChannel(value: string | undefined) {
   }
   if (normalized.length > 100) {
     throw new ServiceError(400, "escalationChannel must be 100 characters or fewer");
+  }
+  return normalized;
+}
+
+function normalizeAnomalyIncidentAutoAssigneeId(value: string) {
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new ServiceError(400, "autoAssigneeId is required");
+  }
+  if (normalized.length > 100) {
+    throw new ServiceError(400, "autoAssigneeId must be 100 characters or fewer");
+  }
+  return normalized;
+}
+
+function normalizeAnomalyIncidentAutoAssignMode(
+  value: ScheduleAnomalyIncidentAutoAssignMode | undefined
+) {
+  return value ?? DEFAULT_ANOMALY_INCIDENT_AUTO_ASSIGN_MODE;
+}
+
+function normalizeAnomalyIncidentAutoAssignNote(value: string | undefined) {
+  if (value === undefined) {
+    return null;
+  }
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.length > 500) {
+    throw new ServiceError(400, "autoAssignNote must be 500 characters or fewer");
   }
   return normalized;
 }
@@ -3994,6 +4091,289 @@ export async function triggerScheduleAnomalyIncidentEscalation(
       requested,
       skippedCooldown,
       failed
+    },
+    items
+  };
+}
+
+export async function executeScheduleAnomalyIncidentAutoAction(
+  context: ServiceContext,
+  input: ExecuteScheduleAnomalyIncidentAutoActionInput
+): Promise<ScheduleAnomalyIncidentAutoActionResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requirePermission(
+    context,
+    Permissions.schedulingScheduleWriteAny,
+    "schedule anomaly incident auto action requires permission"
+  );
+
+  const autoAssigneeId = normalizeAnomalyIncidentAutoAssigneeId(input.autoAssigneeId);
+  const autoAssignMode = normalizeAnomalyIncidentAutoAssignMode(input.autoAssignMode);
+  const autoAssignNote = normalizeAnomalyIncidentAutoAssignNote(input.autoAssignNote);
+  const tenantScope = resolveTenantScope(actor) ?? undefined;
+
+  const escalation = await triggerScheduleAnomalyIncidentEscalation(context, {
+    state: input.state,
+    assigneeId: input.assigneeId,
+    topN: input.topN,
+    includeResolved: input.includeResolved,
+    includeWarning: input.includeWarning,
+    slaTargetMinutes: input.slaTargetMinutes,
+    warningMinutes: input.warningMinutes,
+    cooldownMinutes: input.cooldownMinutes,
+    asOf: input.asOf,
+    escalationChannel: input.escalationChannel,
+    dryRun: input.dryRun
+  });
+
+  let assigned = 0;
+  let skippedEscalation = 0;
+  let skippedAssigned = 0;
+  let failed = 0;
+  let dryRun = 0;
+  const items: ScheduleAnomalyIncidentAutoActionItem[] = [];
+
+  for (const escalationItem of escalation.items) {
+    const previousAssigneeId = escalationItem.assigneeId ?? null;
+    const isEscalated =
+      escalationItem.decision === "REQUESTED" || escalationItem.decision === "DRY_RUN";
+    if (!isEscalated) {
+      skippedEscalation += 1;
+      items.push({
+        incidentId: escalationItem.incidentId,
+        state: escalationItem.state,
+        status: escalationItem.status,
+        escalationDecision: escalationItem.decision,
+        previousAssigneeId,
+        assignedAssigneeId: previousAssigneeId,
+        decision: "SKIPPED_ESCALATION",
+        reason: escalationItem.reason ?? `escalation decision ${escalationItem.decision}`
+      });
+      continue;
+    }
+
+    if (autoAssignMode === "ASSIGN_IF_UNASSIGNED" && previousAssigneeId) {
+      skippedAssigned += 1;
+      items.push({
+        incidentId: escalationItem.incidentId,
+        state: escalationItem.state,
+        status: escalationItem.status,
+        escalationDecision: escalationItem.decision,
+        previousAssigneeId,
+        assignedAssigneeId: previousAssigneeId,
+        decision: "SKIPPED_ALREADY_ASSIGNED",
+        reason: "incident already has assignee"
+      });
+      continue;
+    }
+
+    if (autoAssignMode === "FORCE_ASSIGN" && previousAssigneeId === autoAssigneeId) {
+      skippedAssigned += 1;
+      items.push({
+        incidentId: escalationItem.incidentId,
+        state: escalationItem.state,
+        status: escalationItem.status,
+        escalationDecision: escalationItem.decision,
+        previousAssigneeId,
+        assignedAssigneeId: previousAssigneeId,
+        decision: "SKIPPED_SAME_ASSIGNEE",
+        reason: "incident is already assigned to autoAssigneeId"
+      });
+      continue;
+    }
+
+    if (escalation.dryRun || escalationItem.decision === "DRY_RUN") {
+      dryRun += 1;
+      items.push({
+        incidentId: escalationItem.incidentId,
+        state: escalationItem.state,
+        status: escalationItem.status,
+        escalationDecision: escalationItem.decision,
+        previousAssigneeId,
+        assignedAssigneeId: autoAssigneeId,
+        decision: "DRY_RUN",
+        reason: "dry-run mode"
+      });
+      continue;
+    }
+
+    try {
+      const updated = await updateScheduleAnomalyIncidentLifecycle(context, {
+        incidentId: escalationItem.incidentId,
+        action: "ASSIGN",
+        assigneeId: autoAssigneeId,
+        note: autoAssignNote ?? undefined
+      });
+
+      assigned += 1;
+      items.push({
+        incidentId: escalationItem.incidentId,
+        state: updated.state,
+        status: escalationItem.status,
+        escalationDecision: escalationItem.decision,
+        previousAssigneeId,
+        assignedAssigneeId: updated.assigneeId,
+        decision: "ASSIGNED",
+        reason: null
+      });
+    } catch (error) {
+      failed += 1;
+      const reason = error instanceof Error ? error.message : "unknown error";
+      items.push({
+        incidentId: escalationItem.incidentId,
+        state: escalationItem.state,
+        status: escalationItem.status,
+        escalationDecision: escalationItem.decision,
+        previousAssigneeId,
+        assignedAssigneeId: previousAssigneeId,
+        decision: "FAILED",
+        reason
+      });
+
+      try {
+        await context.dataAccess.audit.append({
+          action: "scheduling.anomaly.incident.auto_action.assign.failed",
+          entityType: "WorkSchedule",
+          entityId: escalationItem.incidentId,
+          organizationId: tenantScope,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            incidentId: escalationItem.incidentId,
+            previousAssigneeId,
+            autoAssigneeId,
+            autoAssignMode,
+            escalationDecision: escalationItem.decision,
+            error: reason
+          }
+        });
+      } catch {
+        // Non-blocking failure path for auto-action assignment telemetry.
+      }
+    }
+  }
+
+  const executedAt = new Date().toISOString();
+  const escalated = escalation.items.filter(
+    (item) => item.decision === "REQUESTED" || item.decision === "DRY_RUN"
+  ).length;
+  const summaryPayload = {
+    executedAt,
+    dryRun: escalation.dryRun,
+    state: input.state ?? null,
+    assigneeId: input.assigneeId?.trim() ?? null,
+    topN: input.topN ?? 50,
+    includeResolved: escalation.policy.includeResolved,
+    includeWarning: escalation.policy.includeWarning,
+    slaTargetMinutes: escalation.policy.slaTargetMinutes,
+    warningMinutes: escalation.policy.warningMinutes,
+    cooldownMinutes: escalation.policy.cooldownMinutes,
+    escalationChannel: escalation.policy.escalationChannel,
+    autoAssigneeId,
+    autoAssignMode,
+    autoAssignNote,
+    candidates: escalation.counts.candidates,
+    escalated,
+    assigned,
+    skippedEscalation,
+    skippedAssigned,
+    failed,
+    dryRunCount: dryRun
+  };
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.anomaly.incident.auto_action.generated",
+    entityType: "WorkSchedule",
+    organizationId: tenantScope,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: summaryPayload
+  });
+
+  if (!escalation.dryRun) {
+    try {
+      await getEventPublisher(context).publish({
+        name: "scheduling.anomaly.incident.auto_action.executed.v1",
+        occurredAt: executedAt,
+        entityType: "WorkSchedule",
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          ...summaryPayload,
+          items: items.slice(0, 50).map((item) => ({
+            incidentId: item.incidentId,
+            escalationDecision: item.escalationDecision,
+            decision: item.decision,
+            previousAssigneeId: item.previousAssigneeId,
+            assignedAssigneeId: item.assignedAssigneeId,
+            reason: item.reason
+          }))
+        }
+      });
+
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.incident.auto_action.notified",
+        entityType: "WorkSchedule",
+        organizationId: tenantScope,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          executedAt,
+          candidates: escalation.counts.candidates,
+          escalated,
+          assigned,
+          failed
+        }
+      });
+    } catch (error) {
+      try {
+        await context.dataAccess.audit.append({
+          action: "scheduling.anomaly.incident.auto_action.notify.failed",
+          entityType: "WorkSchedule",
+          organizationId: tenantScope,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            executedAt,
+            candidates: escalation.counts.candidates,
+            escalated,
+            assigned,
+            failed,
+            error: error instanceof Error ? error.message : "unknown error"
+          }
+        });
+      } catch {
+        // Non-blocking failure path for auto-action notification telemetry.
+      }
+    }
+  }
+
+  return {
+    executedAt,
+    dryRun: escalation.dryRun,
+    policy: {
+      slaTargetMinutes: escalation.policy.slaTargetMinutes,
+      warningMinutes: escalation.policy.warningMinutes,
+      includeResolved: escalation.policy.includeResolved,
+      includeWarning: escalation.policy.includeWarning,
+      cooldownMinutes: escalation.policy.cooldownMinutes,
+      escalationChannel: escalation.policy.escalationChannel,
+      autoAssigneeId,
+      autoAssignMode,
+      autoAssignNote
+    },
+    counts: {
+      candidates: escalation.counts.candidates,
+      escalated,
+      assigned,
+      skippedEscalation,
+      skippedAssigned,
+      failed,
+      dryRun
     },
     items
   };

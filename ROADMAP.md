@@ -21,7 +21,7 @@
 
 ## 1. 현재 상태 요약
 
-### 완료 WI 목록 (WI-0001 ~ WI-0077)
+### 완료 WI 목록 (WI-0001 ~ WI-0078)
 
 | WI | 제목 | 카테고리 |
 |----|-------|----------|
@@ -101,6 +101,7 @@
 | WI-0075 | Scheduling Anomaly Incident Audit-Backed Durable Read-Model | 안정성 |
 | WI-0076 | Scheduling Anomaly Incident SLA Monitoring API | 핵심 비즈니스 |
 | WI-0077 | Scheduling Anomaly Incident Escalation Automation API | 운영 |
+| WI-0078 | Scheduling Anomaly Incident Auto-Action Execution API | 운영 |
 
 ### 다음 우선순위 (Phase 2 진행)
 

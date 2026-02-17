@@ -101,6 +101,10 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 93. Escalation command emits `scheduling.anomaly.incident.escalation.requested.v1` event for requested candidates and appends request audit.
 94. Escalation command enforces cooldown and skips duplicate requests for recently escalated incidents.
 95. Employee cannot call anomaly incident escalation command endpoint (403).
+96. Manager can execute anomaly incident auto-action command (`POST /scheduling/anomalies/incidents/auto-actions`) and receives assign/skipped summary for escalated candidates.
+97. Auto-action command assigns only unassigned incidents when `autoAssignMode=ASSIGN_IF_UNASSIGNED` and preserves existing assignee ownership.
+98. Auto-action command `dryRun=true` does not mutate incident assignee while returning deterministic action plan.
+99. Employee cannot call anomaly incident auto-action command endpoint (403).
 
 ## Boundary Cases
 
@@ -128,6 +132,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 22. Incident read-model projection still returns consistent history after service restart because source-of-truth is audit log.
 23. Incident SLA query validates `slaTargetMinutes` range and `warningMinutes < slaTargetMinutes`.
 24. Incident escalation command validates `cooldownMinutes` range and `warningMinutes < slaTargetMinutes`.
+25. Incident auto-action command requires non-empty `autoAssigneeId` and validates `warningMinutes < slaTargetMinutes`.
 
 ## Regression Linkage
 
@@ -141,6 +146,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly incident read-model list/detail path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident SLA path remains operational-only and does not mutate schedule/attendance state.
 - anomaly incident escalation command path remains operational-only and does not mutate schedule/attendance state.
+- anomaly incident auto-action command path remains operational-only and does not mutate schedule/attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

@@ -33,6 +33,7 @@ No additional migration in WI-0073 (anomaly incident read-model list/detail APIs
 No additional migration in WI-0075 (anomaly incident read-model projection source moved to persisted audit logs).
 No additional migration in WI-0076 (anomaly incident SLA monitoring API is read-only runtime projection behavior only).
 No additional migration in WI-0077 (anomaly incident escalation automation command is runtime projection/event behavior only).
+No additional migration in WI-0078 (anomaly incident auto-action execution command is runtime orchestration/event behavior only).
 
 ## Tenant Isolation
 

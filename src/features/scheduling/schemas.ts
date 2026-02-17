@@ -253,6 +253,34 @@ export const triggerScheduleAnomalyIncidentEscalationSchema = z
     }
   );
 
+export const executeScheduleAnomalyIncidentAutoActionSchema = z
+  .object({
+    state: z.enum(["ACKNOWLEDGED", "ASSIGNED", "RESOLVED"]).optional(),
+    assigneeId: z.string().trim().min(1).optional(),
+    topN: z.number().int().min(1).max(200).optional(),
+    includeResolved: z.boolean().optional(),
+    includeWarning: z.boolean().optional(),
+    slaTargetMinutes: z.number().int().min(1).max(10080).optional(),
+    warningMinutes: z.number().int().min(0).max(10079).optional(),
+    cooldownMinutes: z.number().int().min(1).max(10080).optional(),
+    asOf: isoDateTime.optional(),
+    escalationChannel: z.string().trim().min(1).max(100).optional(),
+    dryRun: z.boolean().optional(),
+    autoAssigneeId: z.string().trim().min(1).max(100),
+    autoAssignMode: z.enum(["ASSIGN_IF_UNASSIGNED", "FORCE_ASSIGN"]).optional(),
+    autoAssignNote: incidentLifecycleNoteSchema.optional()
+  })
+  .refine(
+    (value) =>
+      value.warningMinutes === undefined ||
+      value.slaTargetMinutes === undefined ||
+      value.warningMinutes < value.slaTargetMinutes,
+    {
+      path: ["warningMinutes"],
+      message: "warningMinutes must be less than slaTargetMinutes"
+    }
+  );
+
 export const listScheduleRotationBalanceQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,
