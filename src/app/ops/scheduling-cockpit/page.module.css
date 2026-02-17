@@ -1,0 +1,217 @@
+.page {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 28px 18px 64px;
+  display: grid;
+  gap: 14px;
+}
+
+.hero {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    radial-gradient(600px 180px at 0% 0%, #d7e8ff 0%, transparent 80%),
+    linear-gradient(150deg, #f8fbff 0%, #eef4ff 100%);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.hero h1 {
+  margin: 8px 0 0;
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
+}
+
+.hero p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.statusBadge {
+  margin-top: 14px;
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.statusIdle {
+  background: #f3f7ff;
+  color: #38547d;
+}
+
+.statusPending {
+  background: #fff8e8;
+  color: #7f5e00;
+}
+
+.statusOk {
+  background: #e9fff4;
+  color: #08603b;
+}
+
+.statusError {
+  background: #ffeef2;
+  color: #8a1833;
+}
+
+.controls,
+.card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.controls h2,
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 1.02rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.grid input,
+.grid select,
+.grid textarea {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.inlineToggle {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  padding-top: 8px;
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primaryBtn {
+  color: #fff;
+  background: linear-gradient(135deg, #2467dc 0%, #1f58bd 100%);
+}
+
+.secondaryBtn {
+  color: var(--ink);
+  background: #eaf2ff;
+  border-color: var(--line);
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.meta {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kpiGrid > div {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpiGrid strong {
+  font-size: 1.1rem;
+}
+
+.kpiGrid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.queueList,
+.eventList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.queueList li,
+.eventList li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+  background: #f8fbff;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 960px) {
+  .grid,
+  .dashboardGrid,
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+}

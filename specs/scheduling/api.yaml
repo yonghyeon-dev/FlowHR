@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.18.0
+  version: 0.19.0
 paths:
   /scheduling/schedules:
     get:
@@ -319,7 +319,7 @@ paths:
   /scheduling/anomalies/cockpit/stream:
     get:
       summary: Stream tenant-level anomaly cockpit snapshots (SSE, read-only)
-      description: Emits `cockpit-snapshot` SSE events and a final `stream-end` event for bounded real-time dashboard updates within tenant scope.
+      description: Emits `cockpit-snapshot` SSE events, optional `incident-automation` SSE events (severity/cooldown policy), and a final `stream-end` event for bounded real-time dashboard updates within tenant scope.
       parameters:
         - in: query
           name: from
@@ -348,6 +348,25 @@ paths:
             type: integer
         - in: query
           name: sampleCount
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: incidentAutomation
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: incidentSeverity
+          required: false
+          schema:
+            type: string
+            enum:
+              - MINOR
+              - MAJOR
+              - CRITICAL
+        - in: query
+          name: incidentCooldownSeconds
           required: false
           schema:
             type: integer
