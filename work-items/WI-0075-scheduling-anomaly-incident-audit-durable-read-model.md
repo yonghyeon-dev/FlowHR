@@ -30,7 +30,7 @@ This causes lifecycle state loss on process restart and weakens operational dura
 
 - No schema migration
 - Runtime projection source:
-  - `AuditLog` (`scheduling.anomaly.incident.acknowledged|assigned|resolved`)
+  - `AuditLog` (incident lifecycle actions: scheduling.anomaly.incident.acknowledged / assigned / resolved)
 
 ## API/Event Changes
 
