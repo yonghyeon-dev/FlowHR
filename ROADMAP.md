@@ -93,6 +93,7 @@
 | WI-0067 | Scheduling Anomaly Cockpit Ticket Automation Baseline | 핵심 비즈니스 |
 | WI-0068 | Scheduling Anomaly Cockpit Streaming Dashboard Baseline | 핵심 비즈니스 |
 | WI-0069 | Scheduling Advanced Fairness Multi-Objective Optimizer | 핵심 비즈니스 |
+| WI-0070 | Attendance Reputation Adaptive Routing/Auto-Heal Baseline | 핵심 비즈니스 |
 
 ### 다음 우선순위 (Phase 2 진행)
 
