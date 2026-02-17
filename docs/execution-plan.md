@@ -108,7 +108,7 @@ Completed:
 Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
-  - operator-facing streaming dashboard UI and operations automation on top of cockpit+ticket+stream baseline
+  - operator incident lifecycle API (ack/assign/resolve) on top of cockpit stream baseline
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -141,6 +141,7 @@ Recently delivered:
 - Scheduling anomaly cockpit streaming dashboard baseline is merged (`GET /scheduling/anomalies/cockpit/stream`; WI-0068).
 - Scheduling advanced fairness multi-objective optimizer is merged (`advancedConstraints` on fairness report/apply with preference/labor-law weighted scoring; WI-0069).
 - Attendance reputation adaptive routing/auto-heal baseline is merged (provider prioritization + open-circuit probe recovery; WI-0070).
+- Scheduling anomaly cockpit operator dashboard + stream incident automation is merged (`/ops/scheduling-cockpit` and `incident-automation` SSE policy controls; WI-0071).
 
 ## 2) Priority Roadmap
 
@@ -292,6 +293,7 @@ Tasks:
 29. (Done) `work-items/WI-0068-scheduling-anomaly-cockpit-streaming-dashboard.md`
 30. (Done) `work-items/WI-0069-scheduling-advanced-fairness-multi-objective.md`
 31. (Done) `work-items/WI-0070-attendance-reputation-adaptive-routing-autoheal.md`
+32. (Done) `work-items/WI-0071-scheduling-anomaly-cockpit-ops-dashboard-incident-automation.md`
 
 ## 3) Workstream Ownership
 
@@ -324,4 +326,4 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for operator streaming dashboard UI and incident automation on top of cockpit stream baseline.
+1. define WI for operator incident lifecycle API (`ack`/`assign`/`resolve`) and wire it to cockpit stream automation payloads.

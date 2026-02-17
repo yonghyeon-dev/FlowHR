@@ -79,6 +79,9 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 71. Rotation fairness report with `advancedConstraints.preference/laborLaw` returns per-employee `advancedScore` and aggregate `advanced` summary.
 72. Multi-objective fairness weighting flips selected offset when preference weight and labor-law weight priorities are inverted.
 73. Rotation fairness advanced constraints reject out-of-scope template ids in preference rules (404).
+74. Cockpit stream with `incidentAutomation=true` and matching severity emits SSE `incident-automation` event with `TRIGGER_TICKET_AUTOMATION` recommended action.
+75. Cockpit stream `incidentCooldownSeconds` suppresses repeated `incident-automation` events across bounded snapshots.
+76. Cockpit stream with `incidentAutomation=false` emits no `incident-automation` event while keeping snapshot stream behavior unchanged.
 
 ## Boundary Cases
 
@@ -100,6 +103,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 16. Cockpit stream `intervalSeconds` validates integer range (0..60).
 17. Cockpit stream `sampleCount` validates integer range (1..30).
 18. Rotation fairness advanced `weight` fields validate integer range (0..100).
+19. Cockpit stream `incidentCooldownSeconds` validates integer range (0..3600).
 
 ## Regression Linkage
 
@@ -108,6 +112,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly cockpit report is read-only and does not mutate schedule or attendance state.
 - anomaly cockpit report remains available even when ticket automation publication/config validation fails.
 - anomaly cockpit stream reuses cockpit invariants and does not mutate schedule or attendance state.
+- anomaly cockpit stream incident-automation SSE signal remains read-only and does not publish domain events.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.

@@ -1,5 +1,5 @@
 owner: scheduling-agent
-version: 0.18.0
+version: 0.19.0
 scope:
   in:
     - work schedule assignment (planned start/end)
@@ -17,6 +17,7 @@ scope:
     - schedule-to-attendance anomaly report (late/no-show, non-blocking)
     - tenant-level anomaly cockpit dashboard read-model (severity/queue summary)
     - tenant-level anomaly cockpit bounded streaming snapshots (SSE)
+    - tenant-level anomaly cockpit stream incident automation event (SSE) with severity/cooldown policy
     - anomaly alert automation event emission behind feature flag
     - anomaly escalation event emission (severity/owner/retry metadata) behind feature flag
     - anomaly cockpit ticket request automation event emission behind feature flag
@@ -90,7 +91,7 @@ api:
       description: Read-only tenant-level anomaly cockpit summary with severity distribution and prioritized queue.
     - method: GET
       path: /scheduling/anomalies/cockpit/stream
-      description: Read-only tenant-level anomaly cockpit SSE stream with bounded snapshots and stream-end marker.
+      description: Read-only tenant-level anomaly cockpit SSE stream with bounded snapshots, optional incident-automation events, and stream-end marker.
   events:
     published:
       - name: scheduling.schedule.assigned.v1
@@ -152,6 +153,9 @@ invariants:
   - Anomaly cockpit report requires scheduling write-any permission and tenant scope.
   - Anomaly cockpit stream requires scheduling write-any permission and tenant scope.
   - Anomaly cockpit stream must suppress ticket automation side-effects to avoid duplicate ticket requests per snapshot.
+  - Anomaly cockpit stream incident automation event is emitted only when `incidentAutomation=true` and queue severity matches threshold.
+  - Anomaly cockpit stream incident automation event must respect `incidentCooldownSeconds` to rate-limit repeated automation triggers.
+  - Anomaly cockpit stream incident automation event is operational signal only and must not emit domain events or mutate scheduling/attendance state.
   - Late anomaly is raised only when check-in is strictly after schedule start plus threshold minutes.
   - Anomaly alert automation must not block anomaly report API response.
   - Anomaly escalation automation must not block anomaly report API response.
@@ -205,6 +209,7 @@ test_plan:
     - anomaly cockpit report with ticket automation disabled does not emit ticket request event
     - anomaly cockpit stream returns bounded SSE snapshots and appends stream-opened audit
     - anomaly cockpit stream suppresses ticket request domain event even when ticket automation is enabled
+    - anomaly cockpit stream emits incident-automation SSE event when enabled and severity/cooldown policy matches
   regression:
     - template assignment path reuses schedule overlap guard
     - single-date assignment behavior remains unchanged
@@ -214,6 +219,7 @@ test_plan:
     - anomaly report remains available even when escalation publication fails
     - anomaly cockpit report remains available even when ticket automation publication or config validation fails
     - anomaly cockpit stream remains available and bounded by sampleCount/interval query constraints
+    - anomaly cockpit stream incident automation cooldown remains deterministic for identical snapshot sequence timing
     - rotation balance report does not mutate schedules
     - rotation optimization dry-run does not mutate schedules
     - rotation fairness report does not mutate schedules
@@ -267,6 +273,7 @@ observability:
     - schedule_anomaly_report_count (optional)
     - schedule_anomaly_cockpit_query_count (optional)
     - schedule_anomaly_cockpit_stream_query_count (optional)
+    - schedule_anomaly_cockpit_stream_incident_automation_count (optional)
     - schedule_anomaly_late_count (optional)
     - schedule_anomaly_no_show_count (optional)
     - schedule_anomaly_alert_triggered_count (optional)
@@ -293,7 +300,7 @@ rollback:
   max_recovery_time: 60m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.18.0 extends rotation fairness report/apply payloads with optional `advancedConstraints` (preference/labor-law weighting) and returns `advanced` summary + per-employee `advancedScore` while preserving existing global-constraint behavior."
+consumer_impact: "Contract v0.19.0 extends anomaly cockpit stream query with optional `incidentAutomation`, `incidentSeverity`, and `incidentCooldownSeconds` controls and may emit additional SSE `incident-automation` events without changing existing cockpit-snapshot payload shape."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0040-scheduling-baseline.md
@@ -315,6 +322,7 @@ references:
   - work-items/WI-0067-scheduling-anomaly-cockpit-ticket-automation.md
   - work-items/WI-0068-scheduling-anomaly-cockpit-streaming-dashboard.md
   - work-items/WI-0069-scheduling-advanced-fairness-multi-objective.md
+  - work-items/WI-0071-scheduling-anomaly-cockpit-ops-dashboard-incident-automation.md
 approval:
   spec_owner: scheduling-agent
   qa_owner: qa-agent

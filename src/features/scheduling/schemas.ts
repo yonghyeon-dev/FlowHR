@@ -163,13 +163,23 @@ export const listScheduleAnomalyCockpitQuerySchema = z.object({
   topN: z.coerce.number().int().min(1).max(200).optional()
 });
 
+const queryBooleanSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .refine((value) => ["1", "0", "true", "false", "yes", "no", "on", "off"].includes(value))
+  .transform((value) => ["1", "true", "yes", "on"].includes(value));
+
 export const listScheduleAnomalyCockpitStreamQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,
   lateThresholdMinutes: z.coerce.number().int().min(0).max(240).optional(),
   topN: z.coerce.number().int().min(1).max(200).optional(),
   intervalSeconds: z.coerce.number().int().min(0).max(60).optional(),
-  sampleCount: z.coerce.number().int().min(1).max(30).optional()
+  sampleCount: z.coerce.number().int().min(1).max(30).optional(),
+  incidentAutomation: queryBooleanSchema.optional(),
+  incidentSeverity: z.enum(["MINOR", "MAJOR", "CRITICAL"]).optional(),
+  incidentCooldownSeconds: z.coerce.number().int().min(0).max(3600).optional()
 });
 
 export const listScheduleRotationBalanceQuerySchema = z.object({
