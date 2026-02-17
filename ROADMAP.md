@@ -2,7 +2,7 @@
 
 > **Last updated**: 2026-02-17
 > **Current version**: 0.1.0 (MVP Backend)
-> **Target**: Production-grade Korean HR SaaS (Shiftee/Flex parity)
+> **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
 
@@ -18,6 +18,7 @@
   - 긴급 머지(break-glass): `docs/break-glass.md`
   - 계약 버전/폐기: `contracts/versioning.md`
   - QA 게이트: `qa/gate.checklist.md`
+  - 상위호환 KPI 기준: `docs/competitive-scorecard.md`
 
 ## 1. 현재 상태 요약
 
@@ -108,9 +109,9 @@
 ### 다음 우선순위 (Phase 2 진행)
 
 - 균형 조정 우선순위(UI-first window):
-  - 관리자 UI 정보 구조/가시성 개선 (WI-0081)
-  - 직원 셀프서비스 기본 흐름 UI (WI-0082)
-  - 사용자 여정 e2e 및 UI 회귀 게이트 (WI-0083)
+  - 관리자 조치시간 단축 UI 재설계 + KPI baseline (WI-0081)
+  - 직원 셀프서비스 90초 여정 UI baseline (WI-0082)
+  - UI 핵심 여정 e2e + 회귀 차단 게이트 (WI-0083)
 - 이후 백엔드 고도화:
   - 근무일정/교대/유연근무 고도화(고급 제약/선호 기반 fairness 최적화)
   - 출퇴근 정책 고도화(적응형 라우팅/자동복구 운영)
@@ -210,7 +211,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | 야간 시간대 | `00:00~04:00` 하드코딩 | 조직별 야간 기준 변경 불가 |
 | 기본 연차 | `15일` 하드코딩 | 정책별 부여일수 변경 불가 |
 
-**로드맵 반영**: RBAC 엔진 도입 완료(WI-0036). 이후 Phase 4(WI-0081~)에서 급여 규칙 엔진화.
+**로드맵 반영**: RBAC 엔진 도입 완료(WI-0036). 이후 Phase 4에서 급여 규칙 엔진화 WI를 별도 발행하여 진행.
 
 ### 개선 우선순위 요약
 
@@ -233,7 +234,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 
 ---
 
-## 3. 프로덕션급 기준 (Shiftee/Flex 벤치마크)
+## 3. 프로덕션급 기준 (Shiftee/Flex 상위호환 벤치마크)
 
 ### 기능 모듈 매핑
 
@@ -258,7 +259,17 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | **교육 관리** | ⚠️ 기본 | ⚠️ 기본 | ❌ 없음 | Low |
 | **분석/리포트** | ✅ 대시보드/엑셀 | ✅ 커스텀 리포트 | ❌ 없음 | Medium |
 
-### 현재 달성률 추정: ~8-10%
+### 상위호환 승리 조건 (운영 KPI)
+
+| 영역 | 승리 기준 (FlowHR 목표) |
+|------|--------------------------|
+| 관리자 운영 속도 | 근태 이슈 인지→조치 완료 median 3분 이내 |
+| 직원 셀프서비스 속도 | 출퇴근 정정/휴가 신청 median 90초 이내 |
+| 급여 정확성 | 골든 케이스 100% 일치 + 릴리즈 후 계산 결함 0건 목표 |
+| 변경 안정성 | main 병합 후 rollback 비율 2% 미만 |
+| 장애 대응 | P1 incident MTTR 30분 이내 |
+
+### 현재 달성률 추정: ~10-12%
 
 ---
 

@@ -1,8 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type ActorRole = "admin" | "manager" | "employee" | "payroll_operator" | "system";
+type AttendanceListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
+type LeaveListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+type PayrollListState = "ALL" | "PREVIEWED" | "CONFIRMED";
+
+type ActorContext = {
+  role: ActorRole;
+  id: string;
+};
 
 type ApiLog = {
   id: number;
@@ -13,14 +22,12 @@ type ApiLog = {
   body: unknown;
 };
 
-type ActorContext = {
-  role: ActorRole;
-  id: string;
+type QueueSnapshot = {
+  pendingAttendance: number;
+  pendingLeave: number;
+  pendingPayroll: number;
+  refreshedAt: string | null;
 };
-
-type AttendanceListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
-type LeaveListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
-type PayrollListState = "ALL" | "PREVIEWED" | "CONFIRMED";
 
 function toLocalInputValue(value: Date) {
   const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
@@ -67,8 +74,16 @@ function buildQuery(params: Record<string, string | undefined>) {
     }
     search.set(key, value);
   }
-  const qs = search.toString();
-  return qs.length > 0 ? `?${qs}` : "";
+  const query = search.toString();
+  return query.length > 0 ? `?${query}` : "";
+}
+
+function readArrayCount(body: unknown, key: string) {
+  if (!body || typeof body !== "object") {
+    return 0;
+  }
+  const value = (body as Record<string, unknown>)[key];
+  return Array.isArray(value) ? value.length : 0;
 }
 
 export default function HomePage() {
@@ -97,18 +112,7 @@ export default function HomePage() {
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
   const [hourlyRateKrw, setHourlyRateKrw] = useState("12000");
-  const [withholdingTaxKrw, setWithholdingTaxKrw] = useState("5000");
-  const [socialInsuranceKrw, setSocialInsuranceKrw] = useState("3000");
-  const [otherDeductionsKrw, setOtherDeductionsKrw] = useState("1000");
   const [lastPayrollRunId, setLastPayrollRunId] = useState("");
-
-  const [profileId, setProfileId] = useState("DP-KR-DEFAULT");
-  const [profileName, setProfileName] = useState("Korea Standard Profile");
-  const [profileMode, setProfileMode] = useState<"manual" | "profile">("profile");
-  const [withholdingRate, setWithholdingRate] = useState("0.03");
-  const [socialInsuranceRate, setSocialInsuranceRate] = useState("0.045");
-  const [fixedOtherDeductionKrw, setFixedOtherDeductionKrw] = useState("2000");
-  const [profileActive, setProfileActive] = useState(true);
 
   const [leaveEmployeeId, setLeaveEmployeeId] = useState("EMP-1001");
   const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
@@ -123,10 +127,15 @@ export default function HomePage() {
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [queueSnapshot, setQueueSnapshot] = useState<QueueSnapshot>({
+    pendingAttendance: 0,
+    pendingLeave: 0,
+    pendingPayroll: 0,
+    refreshedAt: null
+  });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const usesBearerToken = accessToken.trim().length > 0;
-
   const newestLog = logs[0];
 
   async function callApi(
@@ -159,13 +168,13 @@ export default function HomePage() {
         body: payload ? JSON.stringify(payload) : undefined
       });
 
-      const text = await response.text();
+      const raw = await response.text();
       let body: unknown = null;
-      if (text.length > 0) {
+      if (raw.trim().length > 0) {
         try {
-          body = JSON.parse(text);
+          body = JSON.parse(raw);
         } catch {
-          body = text;
+          body = raw;
         }
       }
 
@@ -201,12 +210,12 @@ export default function HomePage() {
         isHoliday
       }
     );
-
-    if (response.ok) {
-      const parsed = body as { record?: { id?: string } };
-      if (parsed.record?.id) {
-        setLastAttendanceId(parsed.record.id);
-      }
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { record?: { id?: string } };
+    if (parsed.record?.id) {
+      setLastAttendanceId(parsed.record.id);
     }
   }
 
@@ -222,26 +231,44 @@ export default function HomePage() {
     );
   }
 
-  async function createWorkSchedule() {
-    await callApi(
-      "근무일정 생성",
+  async function createLeaveRequest() {
+    const { response, body } = await callApi(
+      "휴가 요청 생성",
       "POST",
-      "/api/scheduling/schedules",
-      { role: "manager", id: managerActorId },
+      "/api/leave/requests",
+      { role: "employee", id: employeeActorId },
       {
-        employeeId: scheduleEmployeeId,
-        startAt: toIso(scheduleStartAt),
-        endAt: toIso(scheduleEndAt),
-        breakMinutes: Math.max(0, Math.trunc(coerceNumber(scheduleBreakMinutes))),
-        isHoliday: scheduleIsHoliday,
-        notes: scheduleNotes.trim().length > 0 ? scheduleNotes.trim() : undefined
+        employeeId: leaveEmployeeId,
+        leaveType,
+        startDate: toIso(leaveStartDate),
+        endDate: toIso(leaveEndDate),
+        reason: leaveReason
       }
+    );
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { request?: { id?: string } };
+    if (parsed.request?.id) {
+      setLastLeaveRequestId(parsed.request.id);
+    }
+  }
+
+  async function approveLeaveRequest() {
+    if (!lastLeaveRequestId.trim()) {
+      return;
+    }
+    await callApi(
+      "휴가 승인",
+      "POST",
+      `/api/leave/requests/${lastLeaveRequestId}/approve`,
+      { role: "manager", id: managerActorId }
     );
   }
 
   async function previewPayroll() {
     const { response, body } = await callApi(
-      "급여 프리뷰(기본)",
+      "급여 프리뷰",
       "POST",
       "/api/payroll/runs/preview",
       { role: "payroll_operator", id: payrollActorId },
@@ -252,64 +279,12 @@ export default function HomePage() {
         hourlyRateKrw: Math.max(1, Math.trunc(coerceNumber(hourlyRateKrw, 10000)))
       }
     );
-
-    if (response.ok) {
-      const parsed = body as { run?: { id?: string } };
-      if (parsed.run?.id) {
-        setLastPayrollRunId(parsed.run.id);
-      }
+    if (!response.ok) {
+      return;
     }
-  }
-
-  async function previewPayrollManualDeductions() {
-    const { response, body } = await callApi(
-      "급여 프리뷰(수동 공제)",
-      "POST",
-      "/api/payroll/runs/preview-with-deductions",
-      { role: "payroll_operator", id: payrollActorId },
-      {
-        periodStart: toIso(periodStart),
-        periodEnd: toIso(periodEnd),
-        employeeId: payrollEmployeeId,
-        hourlyRateKrw: Math.max(1, Math.trunc(coerceNumber(hourlyRateKrw, 10000))),
-        deductionMode: "manual",
-        deductions: {
-          withholdingTaxKrw: Math.max(0, Math.trunc(coerceNumber(withholdingTaxKrw))),
-          socialInsuranceKrw: Math.max(0, Math.trunc(coerceNumber(socialInsuranceKrw))),
-          otherDeductionsKrw: Math.max(0, Math.trunc(coerceNumber(otherDeductionsKrw)))
-        }
-      }
-    );
-
-    if (response.ok) {
-      const parsed = body as { run?: { id?: string } };
-      if (parsed.run?.id) {
-        setLastPayrollRunId(parsed.run.id);
-      }
-    }
-  }
-
-  async function previewPayrollProfileDeductions() {
-    const { response, body } = await callApi(
-      "급여 프리뷰(프로필 공제)",
-      "POST",
-      "/api/payroll/runs/preview-with-deductions",
-      { role: "payroll_operator", id: payrollActorId },
-      {
-        periodStart: toIso(periodStart),
-        periodEnd: toIso(periodEnd),
-        employeeId: payrollEmployeeId,
-        hourlyRateKrw: Math.max(1, Math.trunc(coerceNumber(hourlyRateKrw, 10000))),
-        deductionMode: "profile",
-        profileId
-      }
-    );
-
-    if (response.ok) {
-      const parsed = body as { run?: { id?: string } };
-      if (parsed.run?.id) {
-        setLastPayrollRunId(parsed.run.id);
-      }
+    const parsed = body as { run?: { id?: string } };
+    if (parsed.run?.id) {
+      setLastPayrollRunId(parsed.run.id);
     }
   }
 
@@ -325,53 +300,72 @@ export default function HomePage() {
     );
   }
 
-  async function upsertDeductionProfile() {
+  async function createWorkSchedule() {
     await callApi(
-      "공제 프로필 저장",
-      "PUT",
-      `/api/payroll/deduction-profiles/${profileId}`,
-      { role: "admin", id: adminActorId },
+      "근무 일정 생성",
+      "POST",
+      "/api/scheduling/schedules",
+      { role: "manager", id: managerActorId },
       {
-        name: profileName,
-        mode: profileMode,
-        withholdingRate: coerceNumber(withholdingRate),
-        socialInsuranceRate: coerceNumber(socialInsuranceRate),
-        fixedOtherDeductionKrw: Math.max(0, Math.trunc(coerceNumber(fixedOtherDeductionKrw))),
-        active: profileActive
+        employeeId: scheduleEmployeeId,
+        startAt: toIso(scheduleStartAt),
+        endAt: toIso(scheduleEndAt),
+        breakMinutes: Math.max(0, Math.trunc(coerceNumber(scheduleBreakMinutes))),
+        isHoliday: scheduleIsHoliday,
+        notes: scheduleNotes.trim().length > 0 ? scheduleNotes.trim() : undefined
       }
     );
   }
 
-  async function readDeductionProfile() {
-    await callApi(
-      "공제 프로필 조회",
-      "GET",
-      `/api/payroll/deduction-profiles/${profileId}`,
-      { role: "payroll_operator", id: payrollActorId }
-    );
-  }
-
-  async function listDeductionProfiles() {
-    await callApi("공제 프로필 목록 조회", "GET", "/api/payroll/deduction-profiles", {
-      role: "payroll_operator",
-      id: payrollActorId
-    });
-  }
-
-  async function listAttendanceRecords() {
+  async function listAttendanceRecords(state = attendanceListState) {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
-    await callApi(
+    const { body } = await callApi(
       "출퇴근 기록 조회",
       "GET",
       `/api/attendance/records${buildQuery({
         from,
         to,
         employeeId: attendanceEmployeeId,
-        state: attendanceListState === "ALL" ? undefined : attendanceListState
+        state: state === "ALL" ? undefined : state
       })}`,
       { role: "payroll_operator", id: payrollActorId }
     );
+    return readArrayCount(body, "records");
+  }
+
+  async function listLeaveRequests(state = leaveListState) {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    const { body } = await callApi(
+      "휴가 요청 조회",
+      "GET",
+      `/api/leave/requests${buildQuery({
+        from,
+        to,
+        employeeId: leaveEmployeeId,
+        state: state === "ALL" ? undefined : state
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+    return readArrayCount(body, "requests");
+  }
+
+  async function listPayrollRuns(state = payrollListState) {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    const { body } = await callApi(
+      "급여 Run 조회",
+      "GET",
+      `/api/payroll/runs${buildQuery({
+        from,
+        to,
+        employeeId: payrollEmployeeId,
+        state: state === "ALL" ? undefined : state
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+    return readArrayCount(body, "runs");
   }
 
   async function listAttendanceAggregates() {
@@ -393,7 +387,7 @@ export default function HomePage() {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
     await callApi(
-      "근무일정 조회",
+      "근무 일정 조회",
       "GET",
       `/api/scheduling/schedules${buildQuery({
         from,
@@ -404,89 +398,28 @@ export default function HomePage() {
     );
   }
 
-  async function listLeaveRequests() {
-    const from = toIso(periodStart);
-    const to = toIso(periodEnd);
-    await callApi(
-      "휴가 요청 조회",
-      "GET",
-      `/api/leave/requests${buildQuery({
-        from,
-        to,
-        employeeId: leaveEmployeeId,
-        state: leaveListState === "ALL" ? undefined : leaveListState
-      })}`,
-      { role: "payroll_operator", id: payrollActorId }
-    );
-  }
+  async function refreshPriorityQueue() {
+    const [attendanceCount, leaveCount, payrollCount] = await Promise.all([
+      listAttendanceRecords("PENDING"),
+      listLeaveRequests("PENDING"),
+      listPayrollRuns("PREVIEWED")
+    ]);
 
-  async function listPayrollRuns() {
-    const from = toIso(periodStart);
-    const to = toIso(periodEnd);
-    await callApi(
-      "급여 Run 조회",
-      "GET",
-      `/api/payroll/runs${buildQuery({
-        from,
-        to,
-        employeeId: payrollEmployeeId,
-        state: payrollListState === "ALL" ? undefined : payrollListState
-      })}`,
-      { role: "payroll_operator", id: payrollActorId }
-    );
+    setQueueSnapshot({
+      pendingAttendance: attendanceCount,
+      pendingLeave: leaveCount,
+      pendingPayroll: payrollCount,
+      refreshedAt: new Date().toLocaleString("ko-KR")
+    });
   }
 
   function clearLogs() {
     setLogs([]);
   }
 
-  async function createLeaveRequest() {
-    const { response, body } = await callApi(
-      "휴가 요청 생성",
-      "POST",
-      "/api/leave/requests",
-      { role: "employee", id: employeeActorId },
-      {
-        employeeId: leaveEmployeeId,
-        leaveType,
-        startDate: toIso(leaveStartDate),
-        endDate: toIso(leaveEndDate),
-        reason: leaveReason
-      }
-    );
-
-    if (response.ok) {
-      const parsed = body as { request?: { id?: string } };
-      if (parsed.request?.id) {
-        setLastLeaveRequestId(parsed.request.id);
-      }
-    }
-  }
-
-  async function approveLeaveRequest() {
-    if (!lastLeaveRequestId.trim()) {
-      return;
-    }
-    await callApi(
-      "휴가 승인",
-      "POST",
-      `/api/leave/requests/${lastLeaveRequestId}/approve`,
-      { role: "manager", id: managerActorId }
-    );
-  }
-
-  async function readLeaveBalance() {
-    await callApi(
-      "휴가 잔액 조회",
-      "GET",
-      `/api/leave/balances/${leaveEmployeeId}`,
-      { role: "payroll_operator", id: payrollActorId }
-    );
-  }
-
   const latestPayload = useMemo(() => {
     if (!newestLog) {
-      return "아직 호출 내역이 없습니다.";
+      return "아직 호출 이력이 없습니다.";
     }
     try {
       return JSON.stringify(newestLog.body, null, 2);
@@ -495,24 +428,92 @@ export default function HomePage() {
     }
   }, [newestLog]);
 
+  const stats = useMemo(() => {
+    const total = logs.length;
+    const success = logs.filter((log) => log.ok).length;
+    const fail = total - success;
+    const successRate = total === 0 ? 0 : Math.round((success / total) * 100);
+    return { total, success, fail, successRate };
+  }, [logs]);
+
+  const priorityMessage = useMemo(() => {
+    const totalPending =
+      queueSnapshot.pendingAttendance + queueSnapshot.pendingLeave + queueSnapshot.pendingPayroll;
+    if (totalPending === 0) {
+      return "긴급 처리 항목이 없습니다. 모니터링 상태를 유지하세요.";
+    }
+    if (queueSnapshot.pendingAttendance > 0) {
+      return `출퇴근 미승인 ${queueSnapshot.pendingAttendance}건이 우선입니다.`;
+    }
+    if (queueSnapshot.pendingLeave > 0) {
+      return `휴가 미승인 ${queueSnapshot.pendingLeave}건 확인이 필요합니다.`;
+    }
+    return `급여 미확정 ${queueSnapshot.pendingPayroll}건을 확인하세요.`;
+  }, [queueSnapshot]);
+
   return (
     <main className="console-page">
       <section className="hero-panel">
-        <p className="eyebrow">FlowHR MVP Console</p>
-        <h1>출퇴근, 휴가, 급여를 한 화면에서 검증합니다.</h1>
+        <p className="eyebrow">FlowHR Command Center</p>
+        <h1>Shift/Flex 상위호환을 위한 운영 우선순위 콘솔</h1>
         <p className="hero-copy">
-          이 콘솔은 API 기반 MVP 동작 확인용입니다. 로컬/스테이징에서는 헤더 기반 액터 모드로,
-          프로덕션에서는 Bearer 토큰 기반으로 사용할 수 있습니다.
+          먼저 처리해야 할 업무를 상단에 배치하고, 핵심 지표를 실시간으로 확인하는 관리자 중심 화면입니다.
         </p>
         <div className="hero-meta">
           <span>
             Runtime Supabase URL <code>{supabaseUrl}</code>
           </span>
           <span>Auth Mode {usesBearerToken ? "Bearer Token" : "Dev Header"}</span>
+          <span>KPI 목표: 관리자 조치 median 3분 이내</span>
+          <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
+            스케줄링 Cockpit 이동
+          </Link>
         </div>
       </section>
 
+      <section className="kpi-strip">
+        <article className="kpi-card">
+          <p>출퇴근 미승인</p>
+          <strong>{queueSnapshot.pendingAttendance}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>휴가 미승인</p>
+          <strong>{queueSnapshot.pendingLeave}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>급여 미확정</p>
+          <strong>{queueSnapshot.pendingPayroll}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>API 성공률</p>
+          <strong>{stats.successRate}%</strong>
+        </article>
+        <article className="kpi-card">
+          <p>최근 큐 갱신</p>
+          <strong>{queueSnapshot.refreshedAt ?? "-"}</strong>
+        </article>
+      </section>
+
       <section className="panel-grid">
+        <article className="panel">
+          <h2>우선 조치 큐</h2>
+          <p className="small">{priorityMessage}</p>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={() => void refreshPriorityQueue()}>
+              우선순위 큐 새로고침
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listAttendanceRecords("PENDING")}>
+              출퇴근 미승인 조회
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listLeaveRequests("PENDING")}>
+              휴가 미승인 조회
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listPayrollRuns("PREVIEWED")}>
+              급여 미확정 조회
+            </button>
+          </div>
+        </article>
+
         <article className="panel">
           <h2>요청 컨텍스트</h2>
           <div className="input-grid">
@@ -520,7 +521,7 @@ export default function HomePage() {
               Organization ID (Tenant)
               <input
                 value={organizationId}
-                placeholder="예: ORG-00001 (memory) 또는 cuid (prisma)"
+                placeholder="예: ORG-00001"
                 onChange={(event) => setOrganizationId(event.target.value)}
               />
             </label>
@@ -554,7 +555,7 @@ export default function HomePage() {
             Bearer Access Token (선택)
             <textarea
               rows={3}
-              placeholder="토큰이 비어있으면 x-actor-* 헤더 모드로 호출합니다."
+              placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
               value={accessToken}
               onChange={(event) => setAccessToken(event.target.value)}
             />
@@ -562,70 +563,7 @@ export default function HomePage() {
         </article>
 
         <article className="panel">
-          <h2>리스트 조회</h2>
-          <p className="small">
-            조회 기간은 급여 섹션의 <strong>기간 시작/종료</strong> 값을 사용합니다. 직원 ID는 각
-            섹션의 직원 ID 값을 사용합니다.
-          </p>
-          <div className="input-grid">
-            <label>
-              출퇴근 상태
-              <select
-                value={attendanceListState}
-                onChange={(event) => setAttendanceListState(event.target.value as AttendanceListState)}
-              >
-                <option value="ALL">ALL</option>
-                <option value="PENDING">PENDING</option>
-                <option value="APPROVED">APPROVED</option>
-                <option value="REJECTED">REJECTED</option>
-              </select>
-            </label>
-            <label>
-              휴가 상태
-              <select
-                value={leaveListState}
-                onChange={(event) => setLeaveListState(event.target.value as LeaveListState)}
-              >
-                <option value="ALL">ALL</option>
-                <option value="PENDING">PENDING</option>
-                <option value="APPROVED">APPROVED</option>
-                <option value="REJECTED">REJECTED</option>
-                <option value="CANCELED">CANCELED</option>
-              </select>
-            </label>
-            <label>
-              급여 상태
-              <select
-                value={payrollListState}
-                onChange={(event) => setPayrollListState(event.target.value as PayrollListState)}
-              >
-                <option value="ALL">ALL</option>
-                <option value="PREVIEWED">PREVIEWED</option>
-                <option value="CONFIRMED">CONFIRMED</option>
-              </select>
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={listAttendanceRecords}>
-              출퇴근 조회
-            </button>
-            <button className="btn btn-secondary" onClick={listAttendanceAggregates}>
-              근태 집계 조회
-            </button>
-            <button className="btn btn-secondary" onClick={listWorkSchedules}>
-              근무일정 조회
-            </button>
-            <button className="btn btn-secondary" onClick={listLeaveRequests}>
-              휴가 조회
-            </button>
-            <button className="btn btn-secondary" onClick={listPayrollRuns}>
-              급여 Run 조회
-            </button>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>출퇴근</h2>
+          <h2>출퇴근 처리</h2>
           <div className="input-grid">
             <label>
               직원 ID
@@ -678,17 +616,138 @@ export default function HomePage() {
             </label>
           </div>
           <div className="actions">
-            <button className="btn btn-primary" onClick={createAttendance}>
+            <button className="btn btn-primary" onClick={() => void createAttendance()}>
               기록 생성
             </button>
-            <button className="btn btn-secondary" onClick={approveAttendance} disabled={!lastAttendanceId}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void approveAttendance()}
+              disabled={!lastAttendanceId}
+            >
               기록 승인
             </button>
           </div>
         </article>
 
         <article className="panel">
-          <h2>근무일정</h2>
+          <h2>휴가 처리</h2>
+          <div className="input-grid">
+            <label>
+              직원 ID
+              <input value={leaveEmployeeId} onChange={(event) => setLeaveEmployeeId(event.target.value)} />
+            </label>
+            <label>
+              휴가 유형
+              <select
+                value={leaveType}
+                onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}
+              >
+                <option value="ANNUAL">ANNUAL</option>
+                <option value="SICK">SICK</option>
+                <option value="UNPAID">UNPAID</option>
+              </select>
+            </label>
+            <label>
+              시작일
+              <input
+                type="datetime-local"
+                value={leaveStartDate}
+                onChange={(event) => setLeaveStartDate(event.target.value)}
+              />
+            </label>
+            <label>
+              종료일
+              <input
+                type="datetime-local"
+                value={leaveEndDate}
+                onChange={(event) => setLeaveEndDate(event.target.value)}
+              />
+            </label>
+            <label className="full">
+              사유
+              <input value={leaveReason} onChange={(event) => setLeaveReason(event.target.value)} />
+            </label>
+            <label className="full">
+              최근 휴가 요청 ID
+              <input
+                value={lastLeaveRequestId}
+                onChange={(event) => setLastLeaveRequestId(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={() => void createLeaveRequest()}>
+              요청 생성
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void approveLeaveRequest()}
+              disabled={!lastLeaveRequestId}
+            >
+              요청 승인
+            </button>
+          </div>
+        </article>
+
+        <article className="panel">
+          <h2>급여 처리</h2>
+          <div className="input-grid">
+            <label>
+              직원 ID
+              <input
+                value={payrollEmployeeId}
+                onChange={(event) => setPayrollEmployeeId(event.target.value)}
+              />
+            </label>
+            <label>
+              시급 (KRW)
+              <input
+                type="number"
+                min={1}
+                value={hourlyRateKrw}
+                onChange={(event) => setHourlyRateKrw(event.target.value)}
+              />
+            </label>
+            <label>
+              기간 시작
+              <input
+                type="datetime-local"
+                value={periodStart}
+                onChange={(event) => setPeriodStart(event.target.value)}
+              />
+            </label>
+            <label>
+              기간 종료
+              <input
+                type="datetime-local"
+                value={periodEnd}
+                onChange={(event) => setPeriodEnd(event.target.value)}
+              />
+            </label>
+            <label className="full">
+              최근 급여 Run ID
+              <input
+                value={lastPayrollRunId}
+                onChange={(event) => setLastPayrollRunId(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={() => void previewPayroll()}>
+              급여 프리뷰
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={() => void confirmPayrollRun()}
+              disabled={!lastPayrollRunId}
+            >
+              급여 확정
+            </button>
+          </div>
+        </article>
+
+        <article className="panel">
+          <h2>근무 일정</h2>
           <div className="input-grid">
             <label>
               직원 ID
@@ -735,232 +794,67 @@ export default function HomePage() {
             </label>
           </div>
           <div className="actions">
-            <button className="btn btn-primary" onClick={createWorkSchedule}>
+            <button className="btn btn-primary" onClick={() => void createWorkSchedule()}>
               일정 생성
             </button>
-            <button className="btn btn-secondary" onClick={listWorkSchedules}>
+            <button className="btn btn-secondary" onClick={() => void listWorkSchedules()}>
               일정 조회
             </button>
           </div>
         </article>
 
         <article className="panel">
-          <h2>급여 프리뷰/확정</h2>
+          <h2>조회 액션</h2>
           <div className="input-grid">
             <label>
-              직원 ID
-              <input
-                value={payrollEmployeeId}
-                onChange={(event) => setPayrollEmployeeId(event.target.value)}
-              />
-            </label>
-            <label>
-              시급(KRW)
-              <input
-                type="number"
-                min={1}
-                value={hourlyRateKrw}
-                onChange={(event) => setHourlyRateKrw(event.target.value)}
-              />
-            </label>
-            <label>
-              기간 시작
-              <input
-                type="datetime-local"
-                value={periodStart}
-                onChange={(event) => setPeriodStart(event.target.value)}
-              />
-            </label>
-            <label>
-              기간 종료
-              <input
-                type="datetime-local"
-                value={periodEnd}
-                onChange={(event) => setPeriodEnd(event.target.value)}
-              />
-            </label>
-            <label>
-              원천세(KRW)
-              <input
-                type="number"
-                min={0}
-                value={withholdingTaxKrw}
-                onChange={(event) => setWithholdingTaxKrw(event.target.value)}
-              />
-            </label>
-            <label>
-              사회보험(KRW)
-              <input
-                type="number"
-                min={0}
-                value={socialInsuranceKrw}
-                onChange={(event) => setSocialInsuranceKrw(event.target.value)}
-              />
-            </label>
-            <label>
-              기타 공제(KRW)
-              <input
-                type="number"
-                min={0}
-                value={otherDeductionsKrw}
-                onChange={(event) => setOtherDeductionsKrw(event.target.value)}
-              />
-            </label>
-            <label>
-              최근 급여 Run ID
-              <input
-                value={lastPayrollRunId}
-                onChange={(event) => setLastPayrollRunId(event.target.value)}
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={previewPayroll}>
-              기본 프리뷰
-            </button>
-            <button className="btn btn-secondary" onClick={previewPayrollManualDeductions}>
-              수동 공제 프리뷰
-            </button>
-            <button className="btn btn-secondary" onClick={previewPayrollProfileDeductions}>
-              프로필 공제 프리뷰
-            </button>
-            <button className="btn btn-danger" onClick={confirmPayrollRun} disabled={!lastPayrollRunId}>
-              급여 확정
-            </button>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>공제 프로필</h2>
-          <div className="input-grid">
-            <label>
-              Profile ID
-              <input value={profileId} onChange={(event) => setProfileId(event.target.value)} />
-            </label>
-            <label>
-              Profile Name
-              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} />
-            </label>
-            <label>
-              모드
+              출퇴근 상태
               <select
-                value={profileMode}
-                onChange={(event) => setProfileMode(event.target.value as "manual" | "profile")}
+                value={attendanceListState}
+                onChange={(event) => setAttendanceListState(event.target.value as AttendanceListState)}
               >
-                <option value="profile">profile</option>
-                <option value="manual">manual</option>
+                <option value="ALL">ALL</option>
+                <option value="PENDING">PENDING</option>
+                <option value="APPROVED">APPROVED</option>
+                <option value="REJECTED">REJECTED</option>
               </select>
             </label>
             <label>
-              활성 상태
+              휴가 상태
               <select
-                value={profileActive ? "active" : "inactive"}
-                onChange={(event) => setProfileActive(event.target.value === "active")}
+                value={leaveListState}
+                onChange={(event) => setLeaveListState(event.target.value as LeaveListState)}
               >
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
+                <option value="ALL">ALL</option>
+                <option value="PENDING">PENDING</option>
+                <option value="APPROVED">APPROVED</option>
+                <option value="REJECTED">REJECTED</option>
+                <option value="CANCELED">CANCELED</option>
               </select>
             </label>
             <label>
-              원천세 비율
-              <input
-                type="number"
-                min={0}
-                max={1}
-                step="0.001"
-                value={withholdingRate}
-                onChange={(event) => setWithholdingRate(event.target.value)}
-              />
-            </label>
-            <label>
-              사회보험 비율
-              <input
-                type="number"
-                min={0}
-                max={1}
-                step="0.001"
-                value={socialInsuranceRate}
-                onChange={(event) => setSocialInsuranceRate(event.target.value)}
-              />
-            </label>
-            <label>
-              고정 기타 공제(KRW)
-              <input
-                type="number"
-                min={0}
-                value={fixedOtherDeductionKrw}
-                onChange={(event) => setFixedOtherDeductionKrw(event.target.value)}
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={upsertDeductionProfile}>
-              프로필 저장
-            </button>
-            <button className="btn btn-secondary" onClick={readDeductionProfile}>
-              프로필 조회
-            </button>
-            <button className="btn btn-secondary" onClick={listDeductionProfiles}>
-              프로필 목록
-            </button>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>휴가 요청/승인</h2>
-          <div className="input-grid">
-            <label>
-              직원 ID
-              <input value={leaveEmployeeId} onChange={(event) => setLeaveEmployeeId(event.target.value)} />
-            </label>
-            <label>
-              휴가 유형
+              급여 상태
               <select
-                value={leaveType}
-                onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}
+                value={payrollListState}
+                onChange={(event) => setPayrollListState(event.target.value as PayrollListState)}
               >
-                <option value="ANNUAL">ANNUAL</option>
-                <option value="SICK">SICK</option>
-                <option value="UNPAID">UNPAID</option>
+                <option value="ALL">ALL</option>
+                <option value="PREVIEWED">PREVIEWED</option>
+                <option value="CONFIRMED">CONFIRMED</option>
               </select>
             </label>
-            <label>
-              시작일
-              <input
-                type="datetime-local"
-                value={leaveStartDate}
-                onChange={(event) => setLeaveStartDate(event.target.value)}
-              />
-            </label>
-            <label>
-              종료일
-              <input
-                type="datetime-local"
-                value={leaveEndDate}
-                onChange={(event) => setLeaveEndDate(event.target.value)}
-              />
-            </label>
-            <label className="full">
-              사유
-              <input value={leaveReason} onChange={(event) => setLeaveReason(event.target.value)} />
-            </label>
-            <label className="full">
-              최근 휴가 요청 ID
-              <input
-                value={lastLeaveRequestId}
-                onChange={(event) => setLastLeaveRequestId(event.target.value)}
-              />
-            </label>
           </div>
           <div className="actions">
-            <button className="btn btn-primary" onClick={createLeaveRequest}>
-              휴가 요청
+            <button className="btn btn-secondary" onClick={() => void listAttendanceRecords()}>
+              출퇴근 기록 조회
             </button>
-            <button className="btn btn-secondary" onClick={approveLeaveRequest} disabled={!lastLeaveRequestId}>
-              휴가 승인
+            <button className="btn btn-secondary" onClick={() => void listAttendanceAggregates()}>
+              근태 집계 조회
             </button>
-            <button className="btn btn-secondary" onClick={readLeaveBalance}>
-              잔액 조회
+            <button className="btn btn-secondary" onClick={() => void listLeaveRequests()}>
+              휴가 요청 조회
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listPayrollRuns()}>
+              급여 Run 조회
             </button>
           </div>
         </article>
@@ -968,8 +862,8 @@ export default function HomePage() {
         <article className="panel panel-log">
           <h2>API 실행 로그</h2>
           <p className="small">
-            최근 호출 결과를 보여줍니다. 현재 실행 중:{" "}
-            <strong>{pendingLabel ? pendingLabel : "없음"}</strong>
+            현재 실행 중: <strong>{pendingLabel ?? "없음"}</strong> / 총 호출 {stats.total}건 (성공{" "}
+            {stats.success}건, 실패 {stats.fail}건)
           </p>
           <div className="actions">
             <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
