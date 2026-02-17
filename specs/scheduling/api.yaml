@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Scheduling API
-  version: 0.16.0
+  version: 0.17.0
 paths:
   /scheduling/schedules:
     get:
@@ -310,6 +310,50 @@ paths:
       responses:
         "200":
           description: Anomaly cockpit summary listed
+        "400":
+          description: Invalid query
+        "401":
+          description: Missing/invalid actor context
+        "403":
+          description: Insufficient permissions
+  /scheduling/anomalies/cockpit/stream:
+    get:
+      summary: Stream tenant-level anomaly cockpit snapshots (SSE, read-only)
+      description: Emits `cockpit-snapshot` SSE events and a final `stream-end` event for bounded real-time dashboard updates within tenant scope.
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: lateThresholdMinutes
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: topN
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: intervalSeconds
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: sampleCount
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SSE stream opened
         "400":
           description: Invalid query
         "401":

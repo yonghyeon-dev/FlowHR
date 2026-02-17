@@ -110,7 +110,7 @@ Open gaps:
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - scheduling advanced multi-objective fairness solver (preference/labor-law objective) on top of global-constraint baseline
   - advanced clock-in reputation operations automation (adaptive routing/auto-heal) on top of circuit-breaker baseline
-  - real-time anomaly streaming dashboard on top of cockpit+ticket automation baseline
+  - operator-facing streaming dashboard UI and operations automation on top of cockpit+ticket+stream baseline
 - Web UI and employee self-service are not started (Phase 6).
 - Approvals and e-contract are not started (Phase 5).
 
@@ -140,6 +140,7 @@ Recently delivered:
 - Scheduling anomaly cockpit dashboard baseline is merged (`GET /scheduling/anomalies/cockpit`; WI-0065).
 - Attendance reputation circuit-breaker operations baseline is merged (failure-threshold/cooldown provider skip; WI-0066).
 - Scheduling anomaly cockpit ticket automation baseline is merged (severity-threshold ticket request event/audit; WI-0067).
+- Scheduling anomaly cockpit streaming dashboard baseline is merged (`GET /scheduling/anomalies/cockpit/stream`; WI-0068).
 
 ## 2) Priority Roadmap
 
@@ -288,6 +289,7 @@ Tasks:
 26. (Done) `work-items/WI-0065-scheduling-anomaly-cockpit-dashboard.md`
 27. (Done) `work-items/WI-0066-attendance-reputation-circuit-breaker-operations.md`
 28. (Done) `work-items/WI-0067-scheduling-anomaly-cockpit-ticket-automation.md`
+29. (Done) `work-items/WI-0068-scheduling-anomaly-cockpit-streaming-dashboard.md`
 
 ## 3) Workstream Ownership
 
@@ -320,6 +322,6 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI for anomaly streaming dashboard on top of cockpit+ticket automation baseline,
-2. define WI for advanced fairness optimizer (preference/labor-law multi-objective) on top of global-constraint baseline,
-3. define WI for reputation operations adaptive routing/auto-heal baseline on top of circuit-breaker.
+1. define WI for advanced fairness optimizer (preference/labor-law multi-objective) on top of global-constraint baseline,
+2. define WI for reputation operations adaptive routing/auto-heal baseline on top of circuit-breaker,
+3. define WI for operator streaming dashboard UI and incident automation on top of cockpit stream baseline.

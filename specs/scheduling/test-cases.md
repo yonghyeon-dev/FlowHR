@@ -72,6 +72,10 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 64. Employee anomaly cockpit query is rejected (403).
 65. When `FLOWHR_SCHEDULING_ANOMALY_TICKET_AUTOMATION_ENABLED=true` and queue severity matches policy, cockpit query emits `scheduling.anomaly.ticket.requested.v1` and appends `scheduling.anomaly.ticket.requested` audit log.
 66. When ticket automation is disabled, cockpit query succeeds and does not emit ticket request event.
+67. Manager anomaly cockpit stream query returns bounded SSE `cockpit-snapshot` events and final `stream-end` event.
+68. Employee anomaly cockpit stream query is rejected (403).
+69. Cockpit stream query appends `scheduling.anomaly.cockpit.stream.opened` audit log.
+70. Cockpit stream query suppresses ticket request domain event even when ticket automation is enabled.
 
 ## Boundary Cases
 
@@ -90,6 +94,8 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 13. Rotation fairness global constraint threshold validates integer range (0..100000).
 14. Anomaly cockpit `topN` query validates integer range (1..200) and limits queue size.
 15. Invalid ticket automation config does not fail cockpit response and appends `scheduling.anomaly.ticket.request.failed` audit log.
+16. Cockpit stream `intervalSeconds` validates integer range (0..60).
+17. Cockpit stream `sampleCount` validates integer range (1..30).
 
 ## Regression Linkage
 
@@ -97,6 +103,7 @@ Work schedule CRUD + template/rotation assignment + schedule-to-attendance anoma
 - anomaly report is read-only and does not mutate schedule or attendance state.
 - anomaly cockpit report is read-only and does not mutate schedule or attendance state.
 - anomaly cockpit report remains available even when ticket automation publication/config validation fails.
+- anomaly cockpit stream reuses cockpit invariants and does not mutate schedule or attendance state.
 - range assignment preflight overlap conflict does not partially create schedules.
 - rotation assignment preflight overlap conflict does not partially create schedules.
 - rotation balance report path does not mutate schedule state.
