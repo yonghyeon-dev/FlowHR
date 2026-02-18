@@ -1,12 +1,13 @@
-# Production Rollout: Payroll Phase2 Flag
+# Production Rollout: Payroll Phase2 Flags
 
-Target flags: `FLOWHR_PAYROLL_DEDUCTIONS_V1`, `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1`
+Target flags: `FLOWHR_PAYROLL_DEDUCTIONS_V1`, `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1`, `FLOWHR_PAYROLL_KR_BASELINE_V1`
 
 ## Current Baseline
 
 - GitHub environment `production`: created.
 - `FLOWHR_PAYROLL_DEDUCTIONS_V1=true` in `production` environment.
 - `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` in `production` environment.
+- `FLOWHR_PAYROLL_KR_BASELINE_V1=false` in `production` environment.
 - External runtime sync completed on Vercel project `flowhr`.
 
 ## Rollout Policy
@@ -15,6 +16,7 @@ Target flags: `FLOWHR_PAYROLL_DEDUCTIONS_V1`, `FLOWHR_PAYROLL_DEDUCTION_PROFILE_
 2. Move to canary (`true`) only after staging CI and consumer checks pass.
 3. If issue occurs, immediately revert to `false`.
 4. Keep `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` until business sign-off for profile-mode rollout.
+5. Keep `FLOWHR_PAYROLL_KR_BASELINE_V1=false` until KR baseline validation and payroll QA sign-off.
 
 ## CLI Commands
 
@@ -96,6 +98,7 @@ Tunable production environment variables:
 
 - `FLOWHR_PAYROLL_DEDUCTIONS_V1` (default `false`): gate on/off for phase2 health.
 - `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1` (default `false`): profile-mode gate alignment for 409 expected/mismatch classification.
+- `FLOWHR_PAYROLL_KR_BASELINE_V1` (default `false`): statutory baseline mode rollout gate.
 - `FLOWHR_PHASE2_HEALTH_WINDOW_HOURS` (default `24`)
 - `FLOWHR_PHASE2_HEALTH_MIN_ATTEMPTS` (default `1`)
 - `FLOWHR_PHASE2_HEALTH_MAX_403_RATIO` (default `0.20`)
@@ -135,5 +138,6 @@ gh workflow run alert-webhook-smoke.yml -R yonghyeon-dev/FlowHR
 
 1. Set `FLOWHR_PAYROLL_DEDUCTIONS_V1=false`.
 2. Set `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=false` when profile mode rollout starts.
-3. Re-run production smoke/integration workflow if available.
-4. Keep gross-only endpoint (`/api/payroll/runs/preview`) as fallback path.
+3. Set `FLOWHR_PAYROLL_KR_BASELINE_V1=false`.
+4. Re-run production smoke/integration workflow if available.
+5. Keep gross-only endpoint (`/api/payroll/runs/preview`) as fallback path.

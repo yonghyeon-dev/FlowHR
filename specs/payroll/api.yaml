@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.5.2
+  version: 1.6.0
 paths:
   /payroll/runs:
     get:
@@ -59,8 +59,8 @@ paths:
           description: Preview generated
   /payroll/runs/preview-with-deductions:
     post:
-      summary: Create payroll preview with deduction and tax components (manual/profile mode)
-      description: In profile mode, `expectedProfileVersion` can be provided to reject stale profile usage with `409`.
+      summary: Create payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode)
+      description: In profile mode, `expectedProfileVersion` can be provided to reject stale profile usage with `409`. In statutory_kr_baseline mode, baseline KR withholding/social insurance components are derived from configurable rates.
       responses:
         "200":
           description: Deduction preview generated

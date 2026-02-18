@@ -37,7 +37,22 @@ type ProfileDeductions = {
   expectedProfileVersion?: number;
 };
 
-type PreviewPayrollWithDeductionsInput = PreviewPayrollInput & (ManualDeductions | ProfileDeductions);
+type StatutoryKrBaselineDeductions = {
+  deductionMode: "statutory_kr_baseline";
+  statutory?: {
+    nonTaxableIncomeKrw: number;
+    incomeTaxRate: number;
+    localIncomeTaxRate: number;
+    nationalPensionRate: number;
+    healthInsuranceRate: number;
+    longTermCareRateOnHealth: number;
+    employmentInsuranceRate: number;
+    otherDeductionsKrw: number;
+  };
+};
+
+type PreviewPayrollWithDeductionsInput = PreviewPayrollInput &
+  (ManualDeductions | ProfileDeductions | StatutoryKrBaselineDeductions);
 
 type UpsertDeductionProfileInput = {
   profileId: string;
@@ -71,7 +86,7 @@ type PreviewPayrollResult = {
 type PreviewPayrollWithDeductionsResult = {
   run: PayrollRunEntity;
   summary: {
-    deductionMode: "manual" | "profile";
+    deductionMode: "manual" | "profile" | "statutory_kr_baseline";
     profileId: string | null;
     profileVersion: number | null;
     sourceRecordCount: number;
@@ -156,6 +171,13 @@ function isPayrollDeductionProfileEnabled() {
     process.env.FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1 ??
     process.env.PAYROLL_DEDUCTION_PROFILE_V1 ??
     "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isPayrollKrBaselineEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_KR_BASELINE_V1 ?? process.env.PAYROLL_KR_BASELINE_V1 ?? "";
   const value = raw.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
 }
@@ -308,7 +330,7 @@ export async function previewPayrollWithDeductions(
       manualAdditional[name] = toKrwInteger(amount, `deductions.breakdown.${name}`);
     }
     Object.assign(additionalBreakdown, manualAdditional);
-  } else {
+  } else if (deductionMode === "profile") {
     if (!isPayrollDeductionProfileEnabled()) {
       throw new ServiceError(409, "payroll_deduction_profile_v1 feature flag is disabled");
     }
@@ -353,6 +375,96 @@ export async function previewPayrollWithDeductions(
       withholdingRate,
       socialInsuranceRate,
       fixedOtherDeductionKrw
+    });
+  } else {
+    if (!isPayrollKrBaselineEnabled()) {
+      throw new ServiceError(409, "payroll_kr_baseline_v1 feature flag is disabled");
+    }
+
+    const nonTaxableIncomeKrw = toKrwInteger(
+      input.statutory?.nonTaxableIncomeKrw ?? 0,
+      "statutory.nonTaxableIncomeKrw"
+    );
+    const incomeTaxRate =
+      toRateNumber(input.statutory?.incomeTaxRate ?? 0.03, "statutory.incomeTaxRate") ?? 0;
+    const localIncomeTaxRate =
+      toRateNumber(input.statutory?.localIncomeTaxRate ?? 0.1, "statutory.localIncomeTaxRate") ??
+      0;
+    const nationalPensionRate =
+      toRateNumber(input.statutory?.nationalPensionRate ?? 0.045, "statutory.nationalPensionRate") ??
+      0;
+    const healthInsuranceRate =
+      toRateNumber(input.statutory?.healthInsuranceRate ?? 0.03545, "statutory.healthInsuranceRate") ??
+      0;
+    const longTermCareRateOnHealth =
+      toRateNumber(
+        input.statutory?.longTermCareRateOnHealth ?? 0.1295,
+        "statutory.longTermCareRateOnHealth"
+      ) ?? 0;
+    const employmentInsuranceRate =
+      toRateNumber(
+        input.statutory?.employmentInsuranceRate ?? 0.009,
+        "statutory.employmentInsuranceRate"
+      ) ?? 0;
+    otherDeductionsKrw = toKrwInteger(
+      input.statutory?.otherDeductionsKrw ?? 0,
+      "statutory.otherDeductionsKrw"
+    );
+
+    const taxableBaseKrw = Math.max(computed.grossPayKrw - nonTaxableIncomeKrw, 0);
+    const incomeTaxKrw = toKrwInteger(
+      Math.round(taxableBaseKrw * incomeTaxRate),
+      "statutory.incomeTaxKrw"
+    );
+    const localIncomeTaxKrw = toKrwInteger(
+      Math.round(incomeTaxKrw * localIncomeTaxRate),
+      "statutory.localIncomeTaxKrw"
+    );
+    const nationalPensionKrw = toKrwInteger(
+      Math.round(taxableBaseKrw * nationalPensionRate),
+      "statutory.nationalPensionKrw"
+    );
+    const healthInsuranceKrw = toKrwInteger(
+      Math.round(taxableBaseKrw * healthInsuranceRate),
+      "statutory.healthInsuranceKrw"
+    );
+    const longTermCareKrw = toKrwInteger(
+      Math.round(healthInsuranceKrw * longTermCareRateOnHealth),
+      "statutory.longTermCareKrw"
+    );
+    const employmentInsuranceKrw = toKrwInteger(
+      Math.round(taxableBaseKrw * employmentInsuranceRate),
+      "statutory.employmentInsuranceKrw"
+    );
+
+    withholdingTaxKrw = toKrwInteger(
+      incomeTaxKrw + localIncomeTaxKrw,
+      "withholdingTaxKrw"
+    );
+    socialInsuranceKrw = toKrwInteger(
+      nationalPensionKrw + healthInsuranceKrw + longTermCareKrw + employmentInsuranceKrw,
+      "socialInsuranceKrw"
+    );
+
+    Object.assign(additionalBreakdown, {
+      statutoryModel: "kr_baseline_v1",
+      taxableBaseKrw,
+      rates: {
+        incomeTaxRate,
+        localIncomeTaxRate,
+        nationalPensionRate,
+        healthInsuranceRate,
+        longTermCareRateOnHealth,
+        employmentInsuranceRate
+      },
+      components: {
+        incomeTaxKrw,
+        localIncomeTaxKrw,
+        nationalPensionKrw,
+        healthInsuranceKrw,
+        longTermCareKrw,
+        employmentInsuranceKrw
+      }
     });
   }
 

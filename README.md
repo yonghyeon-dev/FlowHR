@@ -63,6 +63,7 @@ Use Supabase CLI for schema sync/inspection while Prisma remains the app ORM and
 - For Prisma-backed route smoke test, run `npm run test:e2e:prisma` with DB env set.
 - Payroll phase2 preview endpoint is gated by `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`.
 - Payroll deduction profile mode is additionally gated by `FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1=true`.
+- Payroll KR statutory baseline mode is additionally gated by `FLOWHR_PAYROLL_KR_BASELINE_V1=true`.
 
 ## Domain Event Publication Adapter
 
@@ -107,6 +108,7 @@ Main-branch push runs Prisma-backed route e2e only when repository variable
 Optional staging environment variable:
 
 - `FLOWHR_PAYROLL_DEDUCTIONS_V1` (`true|false`) for phase2 runtime rollout validation.
+- `FLOWHR_PAYROLL_KR_BASELINE_V1` (`true|false`) for KR baseline rollout validation.
 
 Details: `docs/staging-secrets.md`
 Production rollout: `docs/production-rollout.md`
@@ -129,7 +131,7 @@ Production rollout: `docs/production-rollout.md`
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`
-  - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, profile mode optional `expectedProfileVersion`)
+  - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, profile mode optional `expectedProfileVersion`, statutory mode optional `statutory` rates)
   - `POST /api/payroll/runs/{runId}/confirm`
   - `GET /api/payroll/deduction-profiles` (optional query: `active`, `mode`)
   - `GET /api/payroll/deduction-profiles/{profileId}`
@@ -147,5 +149,5 @@ Production rollout: `docs/production-rollout.md`
 ## Payroll Phase 2 Contract Artifacts
 
 - Work item: `work-items/WI-0005-payroll-phase2-deductions-tax-contract.md`
-- Contract: `specs/payroll/contract.yaml` (v1.5.0)
+- Contract: `specs/payroll/contract.yaml` (v1.6.0)
 - Compatibility matrix: `specs/payroll/phase2-compatibility-matrix.md`

@@ -20,7 +20,8 @@ This document is the shared source of truth for attendance-to-payroll calculatio
 - Payroll period defaults:
   - Start: first day of month `00:00`.
   - End: last day of month `23:59:59`.
-- Settlement output for MVP: gross pay only (pre-deduction).
+- Baseline settlement output for MVP: gross pay only (pre-deduction).
+- Phase2 additive path: deduction/net output can be included when payroll phase2 feature flags are enabled.
 
 ## Rounding Rules
 
@@ -64,6 +65,25 @@ This document is the shared source of truth for attendance-to-payroll calculatio
 - All deduction components must be non-negative KRW integers after rounding.
 - Net pay must not be negative; if deductions exceed gross pay, request is rejected.
 
+## WI-0101 KR Statutory Baseline Rules (Contract)
+
+- Deduction calculation mode:
+  - `statutory_kr_baseline`: derive withholding/social insurance components from baseline KR rate inputs.
+- Taxable base:
+  - `taxableBaseKrw = max(grossPayKrw - nonTaxableIncomeKrw, 0)`.
+- Withholding tax:
+  - `incomeTaxKrw = round(taxableBaseKrw * incomeTaxRate)`
+  - `localIncomeTaxKrw = round(incomeTaxKrw * localIncomeTaxRate)`
+  - `withholdingTaxKrw = incomeTaxKrw + localIncomeTaxKrw`
+- Social insurance:
+  - `nationalPensionKrw = round(taxableBaseKrw * nationalPensionRate)`
+  - `healthInsuranceKrw = round(taxableBaseKrw * healthInsuranceRate)`
+  - `longTermCareKrw = round(healthInsuranceKrw * longTermCareRateOnHealth)`
+  - `employmentInsuranceKrw = round(taxableBaseKrw * employmentInsuranceRate)`
+  - `socialInsuranceKrw = nationalPensionKrw + healthInsuranceKrw + longTermCareKrw + employmentInsuranceKrw`
+- Legal precision:
+  - This mode is baseline approximation for rollout hardening, not final legal-grade tax filing logic.
+
 ## Calculation Priority
 
 1. Validate attendance record state (approved vs pending/canceled).
@@ -80,6 +100,6 @@ This document is the shared source of truth for attendance-to-payroll calculatio
 
 ## Future Scope (Phase 2+)
 
-- Deductions and tax handling.
+- Legal-grade deductions and tax table handling.
 - Multi-country legal profile support.
 - Flexible payroll cycle per organization.
