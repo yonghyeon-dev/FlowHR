@@ -219,6 +219,8 @@ export default function AdminDashboardPage() {
   const [pendingAttendance, setPendingAttendance] = useState<AttendanceRecordDto[]>([]);
   const [pendingLeave, setPendingLeave] = useState<LeaveRequestDto[]>([]);
   const [previewedPayroll, setPreviewedPayroll] = useState<PayrollRunDto[]>([]);
+  const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<string[]>([]);
+  const [selectedLeaveIds, setSelectedLeaveIds] = useState<string[]>([]);
 
   const [aggregateEmployeeId, setAggregateEmployeeId] = useState("");
   const [aggregates, setAggregates] = useState<AttendanceAggregateDto[]>([]);
@@ -267,6 +269,9 @@ export default function AdminDashboardPage() {
     const fail = total - success;
     return { total, success, fail };
   }, [logs]);
+
+  const selectedAttendanceCount = selectedAttendanceIds.length;
+  const selectedLeaveCount = selectedLeaveIds.length;
 
   async function callApi(
     label: string,
@@ -522,17 +527,53 @@ export default function AdminDashboardPage() {
       const parsed = attendanceRes.body as { records?: AttendanceRecordDto[] };
       const records = Array.isArray(parsed.records) ? parsed.records : [];
       setPendingAttendance(records);
+      setSelectedAttendanceIds((prev) => prev.filter((id) => records.some((record) => record.id === id)));
     }
     if (leaveRes.response.ok) {
       const parsed = leaveRes.body as { requests?: LeaveRequestDto[] };
       const requests = Array.isArray(parsed.requests) ? parsed.requests : [];
       setPendingLeave(requests);
+      setSelectedLeaveIds((prev) => prev.filter((id) => requests.some((request) => request.id === id)));
     }
     if (payrollRes.response.ok) {
       const parsed = payrollRes.body as { runs?: PayrollRunDto[] };
       const runs = Array.isArray(parsed.runs) ? parsed.runs : [];
       setPreviewedPayroll(runs);
     }
+  }
+
+  function toggleAttendanceSelection(recordId: string, checked: boolean) {
+    setSelectedAttendanceIds((prev) => {
+      if (checked) {
+        return prev.includes(recordId) ? prev : [...prev, recordId];
+      }
+      return prev.filter((id) => id !== recordId);
+    });
+  }
+
+  function toggleLeaveSelection(requestId: string, checked: boolean) {
+    setSelectedLeaveIds((prev) => {
+      if (checked) {
+        return prev.includes(requestId) ? prev : [...prev, requestId];
+      }
+      return prev.filter((id) => id !== requestId);
+    });
+  }
+
+  function selectAllAttendance() {
+    setSelectedAttendanceIds(pendingAttendance.map((record) => record.id));
+  }
+
+  function clearAttendanceSelection() {
+    setSelectedAttendanceIds([]);
+  }
+
+  function selectAllLeave() {
+    setSelectedLeaveIds(pendingLeave.map((request) => request.id));
+  }
+
+  function clearLeaveSelection() {
+    setSelectedLeaveIds([]);
   }
 
   async function approveAttendance(recordId: string) {
@@ -570,6 +611,68 @@ export default function AdminDashboardPage() {
       return;
     }
     await callApi("휴가 반려", "POST", `/api/leave/requests/${requestId}/reject`, { reason });
+    await refreshInbox();
+  }
+
+  async function approveSelectedAttendance() {
+    if (selectedAttendanceIds.length === 0) {
+      return;
+    }
+    const targets = [...selectedAttendanceIds];
+    await Promise.all(
+      targets.map((recordId) => callApi("출퇴근 승인(일괄)", "POST", `/api/attendance/records/${recordId}/approve`))
+    );
+    await refreshInbox();
+  }
+
+  async function rejectSelectedAttendance() {
+    if (selectedAttendanceIds.length === 0) {
+      return;
+    }
+    const reason = attendanceRejectReason.trim();
+    const payload = reason.length > 0 ? { reason } : undefined;
+    const targets = [...selectedAttendanceIds];
+    await Promise.all(
+      targets.map((recordId) => callApi("출퇴근 반려(일괄)", "POST", `/api/attendance/records/${recordId}/reject`, payload))
+    );
+    await refreshInbox();
+  }
+
+  async function approveSelectedLeave() {
+    if (selectedLeaveIds.length === 0) {
+      return;
+    }
+    const targets = [...selectedLeaveIds];
+    await Promise.all(
+      targets.map((requestId) => callApi("휴가 승인(일괄)", "POST", `/api/leave/requests/${requestId}/approve`))
+    );
+    await refreshInbox();
+  }
+
+  async function rejectSelectedLeave() {
+    if (selectedLeaveIds.length === 0) {
+      return;
+    }
+    const reason = leaveRejectReason.trim();
+    if (!reason) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "휴가 반려(일괄)",
+          status: 400,
+          ok: false,
+          durationMs: 0,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { error: "반려 사유는 필수입니다." }
+        },
+        ...prev
+      ]);
+      return;
+    }
+    const targets = [...selectedLeaveIds];
+    await Promise.all(
+      targets.map((requestId) => callApi("휴가 반려(일괄)", "POST", `/api/leave/requests/${requestId}/reject`, { reason }))
+    );
     await refreshInbox();
   }
 
@@ -1187,20 +1290,43 @@ export default function AdminDashboardPage() {
           </div>
 
           <hr className="divider" />
-          <p className="small">출퇴근 (PENDING {pendingAttendance.length}건)</p>
+          <p className="small">
+            출퇴근 (PENDING {pendingAttendance.length}건 / 선택 {selectedAttendanceCount}건)
+          </p>
+          <div className="queue-toolbar">
+            <button className="btn btn-secondary btn-small" onClick={selectAllAttendance} disabled={pendingAttendance.length === 0}>
+              전체 선택
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={clearAttendanceSelection} disabled={selectedAttendanceCount === 0}>
+              선택 해제
+            </button>
+            <button className="btn btn-primary btn-small" onClick={() => void approveSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
+              선택 승인
+            </button>
+            <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
+              선택 반려
+            </button>
+          </div>
           {pendingAttendance.length === 0 ? (
             <p className="small muted">대기 중인 출퇴근이 없습니다.</p>
           ) : (
             <ul className="simple-list" aria-label="출퇴근 승인 대기">
               {pendingAttendance.map((record) => (
                 <li key={record.id}>
-                  <span>
-                    <strong>{record.employeeId}</strong>{" "}
-                    <span className="muted">
-                      {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
-                      {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
+                  <label className="queue-item-main">
+                    <input
+                      type="checkbox"
+                      checked={selectedAttendanceIds.includes(record.id)}
+                      onChange={(event) => toggleAttendanceSelection(record.id, event.target.checked)}
+                    />
+                    <span>
+                      <strong>{record.employeeId}</strong>{" "}
+                      <span className="muted">
+                        {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
+                        {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
+                      </span>
                     </span>
-                  </span>
+                  </label>
                   <div className="queue-actions">
                     <button
                       type="button"
@@ -1223,20 +1349,41 @@ export default function AdminDashboardPage() {
           )}
 
           <hr className="divider" />
-          <p className="small">휴가 (PENDING {pendingLeave.length}건)</p>
+          <p className="small">휴가 (PENDING {pendingLeave.length}건 / 선택 {selectedLeaveCount}건)</p>
+          <div className="queue-toolbar">
+            <button className="btn btn-secondary btn-small" onClick={selectAllLeave} disabled={pendingLeave.length === 0}>
+              전체 선택
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={clearLeaveSelection} disabled={selectedLeaveCount === 0}>
+              선택 해제
+            </button>
+            <button className="btn btn-primary btn-small" onClick={() => void approveSelectedLeave()} disabled={selectedLeaveCount === 0}>
+              선택 승인
+            </button>
+            <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedLeave()} disabled={selectedLeaveCount === 0}>
+              선택 반려
+            </button>
+          </div>
           {pendingLeave.length === 0 ? (
             <p className="small muted">대기 중인 휴가 요청이 없습니다.</p>
           ) : (
             <ul className="simple-list" aria-label="휴가 승인 대기">
               {pendingLeave.map((request) => (
                 <li key={request.id}>
-                  <span>
-                    <strong>{request.employeeId}</strong>{" "}
-                    <span className="muted">
-                      {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
-                      {formatDateTime(request.endDate)} ({request.days}일)
+                  <label className="queue-item-main">
+                    <input
+                      type="checkbox"
+                      checked={selectedLeaveIds.includes(request.id)}
+                      onChange={(event) => toggleLeaveSelection(request.id, event.target.checked)}
+                    />
+                    <span>
+                      <strong>{request.employeeId}</strong>{" "}
+                      <span className="muted">
+                        {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
+                        {formatDateTime(request.endDate)} ({request.days}일)
+                      </span>
                     </span>
-                  </span>
+                  </label>
                   <div className="queue-actions">
                     <button
                       type="button"
