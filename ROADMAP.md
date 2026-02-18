@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
-> **Last updated**: 2026-02-17
-> **Current version**: 0.1.0 (MVP Backend)
+> **Last updated**: 2026-02-18
+> **Current version**: 0.1.1 (SaaS UI Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -122,11 +122,17 @@
   - 출퇴근 정책 고도화(적응형 라우팅/자동복구 운영)
   - 실시간 근태 현황 고도화(incident 자동 조치 실행 워크플로 + 알림/운영 연동)
 
-### 진행 중
+### 최근 반영됨 (main)
 
-- WI-0084~0088 SaaS UI 베이스라인(관리자 대시보드 + 직원 포털 + 명세서) 정착 (브랜치 작업 중)
+- WI-0088 SaaS UI 피벗: `/`, `/admin`, `/employee`, `/employee/payslips` 추가. ops 도구는 `/ops/*`로 격리하고 기본 UI에서 숨김.
 - WI-0089 e2e 테스트 스위트 분리(MVP vs Full)로 SaaS 배송 속도 우선
 - WI-0090 휴가 정책(조직 단위) 저장/조회 + 정산 기본값 적용 (정책 엔진 베이스라인)
+
+### 진행 중
+
+- WI-0082 직원 셀프서비스 핵심 여정 UI 고도화 (브랜치 존재)
+- WI-0084 People 온보딩 UI(조직/직원) (브랜치 존재)
+- WI-0087 근태 집계 UI (브랜치 존재)
 
 ### 현재 아키텍처
 
@@ -232,7 +238,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 높음  │ 5. 근무일정 & 출퇴근 고도화 (Phase 2)         │ ← 핵심 기능 확장
      │ 6. 급여 엔진 고도화 (Phase 4)                 │ ← 세법 미적용
      ├─────────────────────────────────────────────┤
-중간  │ 7. 사용자 UI (Phase 6)                       │ ← UI 베이스라인은 이미 존재(WI-0081~). Phase 6에서 '런칭 품질'로 확장
+중간  │ 7. SaaS UI 런칭 품질 (Phase 6)                │ ← UI 베이스라인은 이미 main에 존재(WI-0088). Phase 6에서 '런칭 품질'로 확장
      │ 8. 모바일 앱 (Phase 7)                        │ ← 채널 부재
      ├─────────────────────────────────────────────┤
 낮음  │ 9. 확장 기능 (Phase 8)                       │ ← 부가 모듈
@@ -252,12 +258,12 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | **근무일정** | ✅ 교대근무/유연근무 | ✅ 시차출근/재택 | ⚠️ WorkSchedule CRUD + template 단건/다건 + rotation assign/balance/optimize/fairness/fairness-apply + global fairness constraints baseline(WI-0040~0047, WI-0057, WI-0058, WI-0059, WI-0061, WI-0063); 고급 선호/법규 멀티목적 최적화 미도입 | Medium |
 | **출퇴근** | ✅ GPS/비콘/키오스크 | ✅ GPS/Wi-Fi/QR | ⚠️ 채널 메타데이터 + GPS/지오펜스/다중 사업장/디바이스 allowlist/attestation/anti-spoofing + signal fusion + dynamic reputation + multi-provider + circuit-breaker baseline(WI-0048~0056, WI-0060, WI-0062, WI-0064, WI-0066) 완료, 적응형 라우팅/자동복구 운영 미도입 | Medium |
 | **근태 집계** | ✅ 자동 집계/이상 감지 | ✅ 실시간 대시보드 | ⚠️ 집계 조회 API(WI-0031) + anomaly 리포트/알림/에스컬레이션 + cockpit/ticket/stream + ops dashboard/incident stream automation + incident lifecycle command/read-model baseline(WI-0045, WI-0051, WI-0055, WI-0065, WI-0067, WI-0068, WI-0071, WI-0072, WI-0073); durable incident store/SLA 자동화 미도입 | Medium |
-| **휴가 관리** | ✅ 정책 엔진/잔여일 자동계산 | ✅ 자동 부여/소진 추적 | ⚠️ 기본 CRUD만 | Medium |
+| **휴가 관리** | ✅ 정책 엔진/잔여일 자동계산 | ✅ 자동 부여/소진 추적 | ⚠️ 휴가 요청/승인/취소 + 잔액/정산 baseline(WI-0002/0003) + 조직 정책 baseline(WI-0090). 시간단위/반차/연차촉진/캘린더 연동 미도입 | Medium |
 | **급여 계산** | ✅ 한국 세법/4대보험/연말정산 | ✅ 급여 시뮬레이션/명세서 | ⚠️ 단순 비율 | Critical |
-| **전자결재** | ✅ 결재선/양식/위임 | ✅ 승인 워크플로 | ❌ 없음 | High |
+| **전자결재** | ✅ 결재선/양식/위임 | ✅ 승인 워크플로 | ⚠️ 도메인별 승인(출퇴근/휴가/급여 확정) baseline 존재. 범용 결재선/위임/양식/전자서명은 미도입 | High |
 | **전자계약** | ✅ 근로계약/전자서명 | ✅ 계약 관리 | ❌ 없음 | Medium |
-| **관리자 대시보드** | ✅ 웹 SPA | ✅ 웹 SPA | ⚠️ 운영 콘솔만 | Critical |
-| **직원 셀프서비스** | ✅ 웹 포탈 | ✅ 웹 포탈 | ❌ 없음 | Critical |
+| **관리자 대시보드** | ✅ 웹 SPA | ✅ 웹 SPA | ⚠️ `/admin` SaaS 대시보드 baseline + ops 콘솔은 `/ops/*`로 격리(기본 숨김) | Critical |
+| **직원 셀프서비스** | ✅ 웹 포탈 | ✅ 웹 포탈 | ⚠️ `/employee` baseline + `/employee/payslips` (확정 급여 조회) | Critical |
 | **모바일 앱** | ✅ iOS/Android | ✅ iOS/Android | ❌ 없음 | High |
 | **알림** | ✅ 푸시/이메일/Slack | ✅ 푸시/Slack/Teams | ⚠️ 웹훅만 | Medium |
 | **채용 관리** | ✅ ATS | ⚠️ 기본 | ❌ 없음 | Low |
@@ -298,7 +304,7 @@ Phase 4: Payroll Hardening (KR tax/4-insurance)
 Phase 5: Approvals + e-Contract
   |
   v
-Phase 6: Web UI (Admin + Employee self-service)
+Phase 6: Web UI Launch Quality (journeys, onboarding, approvals UX)
   |
   v
 Phase 7: Mobile + Notifications
@@ -310,7 +316,7 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 **핵심 의존 관계**:
 - Phase 2~5는 Phase 1(인사/권한/테넌트 기반)에 의존
 - Phase 4(급여)는 Phase 2(근태) + Phase 3(휴가)에 의존
-- UI/모바일은 안정화된 API 이후에 진행
+- UI는 Phase 2부터 병렬로 진행하며, Phase 6에서 '런칭 품질' 수준으로 고도화
 
 ---
 
@@ -346,7 +352,7 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - Phase 3: 휴가 정책 엔진(자동 부여/소진/연차촉진) + 시간/반차 단위
 - Phase 4: 급여 엔진 고도화(세법/4대보험/명세서/마감)
 - Phase 5: 전자결재/전자계약(결재선, 문서 양식, 서명)
-- Phase 6: 관리자/직원 UI
+- Phase 6: 관리자/직원 UI 런칭 품질(여정/온보딩/권한/회귀게이트)
 - Phase 7: 모바일 + 알림(푸시/이메일/인앱)
 - Phase 8: 확장 모듈(채용/성과/경비/교육/분석)
 

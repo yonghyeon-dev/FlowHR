@@ -40,6 +40,12 @@ type ApiLog = {
   body: unknown;
 };
 
+function isDevToolsEnabled() {
+  const raw = process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "";
+  const normalized = raw.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 function toLocalInputValue(value: Date) {
   const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return adjusted.toISOString().slice(0, 16);
@@ -108,8 +114,7 @@ export default function EmployeePayslipsPage() {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const usesBearerToken = accessToken.trim().length > 0;
-  const showDevTools =
-    (process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "").trim().toLowerCase() === "true";
+  const showDevTools = isDevToolsEnabled();
 
   const stats = useMemo(() => {
     const total = logs.length;

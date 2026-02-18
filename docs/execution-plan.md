@@ -115,12 +115,16 @@ Open gaps:
 
 - Phase 2 core functionality is still missing (tracked in `ROADMAP.md`):
   - incident lifecycle retention scheduler and replay guardrail automation hardening
-- Web UI and employee self-service are not started (Phase 6, now priority-raised by balance policy).
-- Approvals and e-contract are not started (Phase 5).
+- SaaS UI는 baseline이 main에 반영되었지만, 런칭 품질(온보딩/핵심 여정/권한 UX/회귀게이트) 고도화가 필요합니다.
+- 범용 전자결재/전자계약(결재선/위임/양식/전자서명)은 미도입입니다.
+  - 단, 도메인별 승인(출퇴근/휴가/급여 확정) baseline은 존재합니다.
 
 Recently delivered:
 
 - Employee/Organization master data baseline exists and is audited (WI-0034).
+- SaaS UI pivot is merged (WI-0088): `/`, `/admin`, `/employee`, `/employee/payslips` shipped; ops tools are isolated under `/ops/*`.
+- MVP e2e suite split is merged (WI-0089): `test:e2e` is MVP-only, `test:e2e:full` keeps full regression.
+- Leave policy settings baseline is merged (WI-0090): org-level annual grant/carry-over defaults applied in accrual settle.
 - employeeId FK integrity and RBAC foundation are merged (WI-0035, WI-0036).
 - Multi-tenant isolation baseline (Supabase RLS) is merged (WI-0037).
 - Scheduling CRUD baseline (create/list/update/delete), template single/range assignment baseline, rotation assignment baseline, and anomaly read model are merged (WI-0040, WI-0041, WI-0042, WI-0043, WI-0044, WI-0045, WI-0046, WI-0047).
