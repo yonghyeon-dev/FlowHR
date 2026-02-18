@@ -18,6 +18,7 @@
   - 긴급 머지(break-glass): `docs/break-glass.md`
   - 계약 버전/폐기: `contracts/versioning.md`
   - QA 게이트: `qa/gate.checklist.md`
+  - 테스트 스위트 운영: `docs/test-suites.md`
   - 상위호환 KPI 기준: `docs/competitive-scorecard.md`
 
 ## 1. 현재 상태 요약
@@ -124,6 +125,7 @@
 ### 진행 중
 
 - WI-0084~0088 SaaS UI 베이스라인(관리자 대시보드 + 직원 포털 + 명세서) 정착 (브랜치 작업 중)
+- WI-0089 e2e 테스트 스위트 분리(MVP vs Full)로 SaaS 배송 속도 우선
 
 ### 현재 아키텍처
 
