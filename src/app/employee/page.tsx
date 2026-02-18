@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useStickyStringState } from "@/lib/client/useStickyState";
+
 type ApiLog = {
   id: number;
   label: string;
@@ -117,8 +119,8 @@ function formatDateTime(value: string | null) {
 
 export default function EmployeeSelfServicePage() {
   const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useState("");
-  const [employeeId, setEmployeeId] = useState("EMP-1001");
+  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
+  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
 
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useStickyStringState } from "@/lib/client/useStickyState";
+
 type ActorRole = "admin" | "manager" | "employee" | "payroll_operator" | "system";
 type AttendanceListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 type LeaveListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
@@ -101,12 +103,27 @@ function readArrayCount(body: unknown, key: string) {
 
 export default function HomePage() {
   const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useState("");
-  const [employeeActorId, setEmployeeActorId] = useState("EMP-1001");
-  const [managerActorId, setManagerActorId] = useState("MGR-1001");
-  const [payrollActorId, setPayrollActorId] = useState("PAY-1001");
-  const [adminActorId, setAdminActorId] = useState("ADM-1001");
-  const [systemActorId, setSystemActorId] = useState("SYS-1001");
+  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
+  const [employeeActorId, setEmployeeActorId] = useStickyStringState(
+    "flowhr:ctx:employeeId",
+    "EMP-1001"
+  );
+  const [managerActorId, setManagerActorId] = useStickyStringState(
+    "flowhr:ctx:managerId",
+    "MGR-1001"
+  );
+  const [payrollActorId, setPayrollActorId] = useStickyStringState(
+    "flowhr:ctx:payrollId",
+    "PAY-1001"
+  );
+  const [adminActorId, setAdminActorId] = useStickyStringState(
+    "flowhr:ctx:adminId",
+    "ADM-1001"
+  );
+  const [systemActorId, setSystemActorId] = useStickyStringState(
+    "flowhr:ctx:systemId",
+    "SYS-1001"
+  );
 
   const [peopleOrganizationName, setPeopleOrganizationName] = useState("FlowHR Demo Org");
   const [peopleOrganizations, setPeopleOrganizations] = useState<OrganizationSummary[]>([]);
@@ -120,27 +137,39 @@ export default function HomePage() {
     "ALL" | "true" | "false"
   >("ALL");
 
-  const [attendanceEmployeeId, setAttendanceEmployeeId] = useState("EMP-1001");
+  const [attendanceEmployeeId, setAttendanceEmployeeId] = useStickyStringState(
+    "flowhr:cmd:attendanceEmployeeId",
+    "EMP-1001"
+  );
   const [checkInAt, setCheckInAt] = useState(firstDayOfMonthLocal());
   const [checkOutAt, setCheckOutAt] = useState(lastDayOfMonthLocal());
   const [breakMinutes, setBreakMinutes] = useState("60");
   const [isHoliday, setIsHoliday] = useState(false);
   const [lastAttendanceId, setLastAttendanceId] = useState("");
 
-  const [scheduleEmployeeId, setScheduleEmployeeId] = useState("EMP-1001");
+  const [scheduleEmployeeId, setScheduleEmployeeId] = useStickyStringState(
+    "flowhr:cmd:scheduleEmployeeId",
+    "EMP-1001"
+  );
   const [scheduleStartAt, setScheduleStartAt] = useState(defaultWorkScheduleStartLocal());
   const [scheduleEndAt, setScheduleEndAt] = useState(defaultWorkScheduleEndLocal());
   const [scheduleBreakMinutes, setScheduleBreakMinutes] = useState("60");
   const [scheduleIsHoliday, setScheduleIsHoliday] = useState(false);
   const [scheduleNotes, setScheduleNotes] = useState("");
 
-  const [payrollEmployeeId, setPayrollEmployeeId] = useState("EMP-1001");
+  const [payrollEmployeeId, setPayrollEmployeeId] = useStickyStringState(
+    "flowhr:cmd:payrollEmployeeId",
+    "EMP-1001"
+  );
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
   const [hourlyRateKrw, setHourlyRateKrw] = useState("12000");
   const [lastPayrollRunId, setLastPayrollRunId] = useState("");
 
-  const [leaveEmployeeId, setLeaveEmployeeId] = useState("EMP-1001");
+  const [leaveEmployeeId, setLeaveEmployeeId] = useStickyStringState(
+    "flowhr:cmd:leaveEmployeeId",
+    "EMP-1001"
+  );
   const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
   const [leaveStartDate, setLeaveStartDate] = useState(firstDayOfMonthLocal());
   const [leaveEndDate, setLeaveEndDate] = useState(firstDayOfMonthLocal());
