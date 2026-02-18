@@ -1,12 +1,13 @@
 ﻿# FlowHR Execution Plan (Priority-Driven)
 
-Date: 2026-02-16  
-Goal: Keep contract-first delivery speed while preserving merge/release safety for a 1-person operator model.
+Date: 2026-02-17  
+Goal: Shift/Flex 대비 상위호환 달성을 위해 contract-first 속도와 릴리즈 안정성을 동시에 유지한다.
 
 Balance policy:
 
 - `docs/delivery-balance.md`를 기준으로 UI/Backend 균형을 강제합니다.
 - PR은 `Delivery Balance` 섹션을 채우지 않으면 `contract-governance`에서 차단됩니다.
+- 상위호환 KPI 기준은 `docs/competitive-scorecard.md`를 단일 기준으로 사용합니다.
 
 ## 1) Current Baseline
 
@@ -340,4 +341,9 @@ Request template:
 
 Without additional input, the next executable step is:
 
-1. define WI-0081 for admin UI surface expansion and move next delivery window to UI-first sequence (WI-0081~0083).
+1. create and execute WI-0081~WI-0083 as a UI-first superiority window.
+2. map each WI deliverable to the roadmap win KPI:
+   - admin operation median action time
+   - employee self-service median completion time
+   - UI regression gate coverage for critical journeys
+3. ship first measurable baseline report in the PR body for each WI.
