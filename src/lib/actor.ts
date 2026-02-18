@@ -1,5 +1,5 @@
 import { User } from "@supabase/supabase-js";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const actorRoles = [
   "admin",
@@ -90,6 +90,7 @@ function readBearerToken(request: Request) {
 export async function readActor(request: Request): Promise<Actor | null> {
   const token = readBearerToken(request);
   if (token) {
+    const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin.auth.getUser(token);
     if (!error && data.user) {
       return {
