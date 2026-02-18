@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR RBAC API
-  version: 0.1.0
+  version: 0.1.1
 paths:
   /rbac/roles:
     get:

@@ -36,6 +36,7 @@ export const Permissions = {
   payrollRunPreview: "payroll.run.preview",
   payrollRunConfirm: "payroll.run.confirm",
   payrollRunList: "payroll.run.list",
+  payrollRunListOwn: "payroll.run.list.own",
   payrollDeductionProfileRead: "payroll.deduction_profile.read",
   payrollDeductionProfileWrite: "payroll.deduction_profile.write"
 } as const;
@@ -81,7 +82,8 @@ export const defaultRolePermissions: Record<ActorRole, readonly Permission[]> = 
     Permissions.schedulingScheduleListOwn,
     Permissions.leaveRequestWriteOwn,
     Permissions.leaveRequestListOwn,
-    Permissions.leaveBalanceReadOwn
+    Permissions.leaveBalanceReadOwn,
+    Permissions.payrollRunListOwn
   ]
 };
 

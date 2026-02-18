@@ -355,7 +355,9 @@ async function run() {
     path.resolve(process.cwd(), "src", "app", "employee", "page.tsx"),
     "utf8"
   );
-  assert.match(homeSource, /운영 우선순위 콘솔/, "home page should keep the command center heading");
+  assert.match(homeSource, /한국형 HR SaaS MVP/, "home page should be SaaS landing");
+  assert.match(homeSource, /href="\/admin"/, "home page should link to admin dashboard");
+  assert.match(homeSource, /href="\/employee"/, "home page should link to employee portal");
   assert.match(employeeSource, /직원 셀프서비스/, "employee page should keep the employee portal heading");
 
   const { memoryDataAccess, resetMemoryDataAccess } = await import(

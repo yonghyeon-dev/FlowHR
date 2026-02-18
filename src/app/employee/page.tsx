@@ -149,6 +149,8 @@ export default function EmployeeSelfServicePage() {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const usesBearerToken = accessToken.trim().length > 0;
+  const showDevTools =
+    (process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "").trim().toLowerCase() === "true";
   const newestLog = logs[0];
 
   async function callApi(
@@ -386,17 +388,27 @@ export default function EmployeeSelfServicePage() {
           셀프서비스 목표: 휴가 신청/정정 요청을 90초 내 완료할 수 있는 UX를 만든다.
         </p>
         <div className="hero-meta">
-          <span>
-            Runtime Supabase URL <code>{supabaseUrl}</code>
-          </span>
-          <span>Auth Mode {usesBearerToken ? "Bearer Token" : "Dev Header"}</span>
           <span>API 성공률 {stats.successRate}%</span>
+          <Link className="btn btn-secondary" href="/employee/payslips">
+            급여 명세서
+          </Link>
+          <Link className="btn btn-secondary" href="/admin">
+            관리자 대시보드
+          </Link>
           <Link className="btn btn-secondary" href="/">
-            커맨드 센터
+            홈
           </Link>
-          <Link className="btn btn-secondary" href="/ops/mvp-console">
-            검증 콘솔
-          </Link>
+          {showDevTools ? (
+            <>
+              <span>
+                Runtime Supabase URL <code>{supabaseUrl}</code>
+              </span>
+              <span>Auth Mode {usesBearerToken ? "Bearer Token" : "Dev Header"}</span>
+              <Link className="btn btn-secondary" href="/ops/mvp-console">
+                검증 콘솔
+              </Link>
+            </>
+          ) : null}
         </div>
       </section>
 
@@ -420,15 +432,17 @@ export default function EmployeeSelfServicePage() {
               내 직원 ID
               <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
             </label>
-            <label className="full">
-              Bearer Access Token (선택)
-              <textarea
-                rows={3}
-                placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
-                value={accessToken}
-                onChange={(event) => setAccessToken(event.target.value)}
-              />
-            </label>
+            {showDevTools ? (
+              <label className="full">
+                Bearer Access Token (선택)
+                <textarea
+                  rows={3}
+                  placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
+                  value={accessToken}
+                  onChange={(event) => setAccessToken(event.target.value)}
+                />
+              </label>
+            ) : null}
             <label>
               조회 기간 시작
               <input
@@ -606,32 +620,34 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
-        <article className="panel panel-log">
-          <h2>API 실행 로그</h2>
-          <p className="small">
-            현재 실행 중: <strong>{pendingLabel ?? "없음"}</strong> / 총 호출 {stats.total}건 (성공{" "}
-            {stats.success}건, 실패 {stats.fail}건)
-          </p>
-          <div className="actions">
-            <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
-              로그 초기화
-            </button>
-          </div>
-          <pre>{latestPayload}</pre>
-          <ul className="log-list">
-            {logs.map((log) => (
-              <li key={log.id}>
-                <span className={log.ok ? "ok" : "fail"}>
-                  {log.ok ? "OK" : "FAIL"} {log.status}
-                </span>
-                <span>
-                  {log.label} ({Math.max(0, Math.round(log.durationMs))}ms)
-                </span>
-                <time>{log.at}</time>
-              </li>
-            ))}
-          </ul>
-        </article>
+        {showDevTools ? (
+          <article className="panel panel-log">
+            <h2>API 실행 로그</h2>
+            <p className="small">
+              현재 실행 중: <strong>{pendingLabel ?? "없음"}</strong> / 총 호출 {stats.total}건 (성공{" "}
+              {stats.success}건, 실패 {stats.fail}건)
+            </p>
+            <div className="actions">
+              <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
+                로그 초기화
+              </button>
+            </div>
+            <pre>{latestPayload}</pre>
+            <ul className="log-list">
+              {logs.map((log) => (
+                <li key={log.id}>
+                  <span className={log.ok ? "ok" : "fail"}>
+                    {log.ok ? "OK" : "FAIL"} {log.status}
+                  </span>
+                  <span>
+                    {log.label} ({Math.max(0, Math.round(log.durationMs))}ms)
+                  </span>
+                  <time>{log.at}</time>
+                </li>
+              ))}
+            </ul>
+          </article>
+        ) : null}
       </section>
     </main>
   );

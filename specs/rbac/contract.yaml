@@ -1,5 +1,5 @@
 owner: rbac-agent
-version: 0.1.0
+version: 0.1.1
 scope:
   in:
     - role-to-permission mapping (RBAC)
@@ -36,6 +36,8 @@ db_changes:
   migrations:
     - id: 202602150001_rbac_foundation
       description: Create Role/RolePermission tables and seed default roles/permissions.
+    - id: 202602180001_rbac_payroll_run_list_own
+      description: Extend employee role with payroll.run.list.own for payslip self-service (confirmed-only enforced in service).
   backward_compatible: true
   notes: "Additive tables + seeded defaults. Existing JWT role claims keep working."
 invariants:
@@ -79,7 +81,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "RBAC contract v0.1.0 introduces role-permission mappings and permission-based authorization for core APIs."
+consumer_impact: "RBAC contract v0.1.1 extends the default employee role permissions to support payroll payslip self-service via payroll.run.list.own (confirmed-only)."
 references:
   - work-items/WI-0036-rbac-engine-foundation.md
   - docs/raci.md

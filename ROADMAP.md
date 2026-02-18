@@ -123,7 +123,7 @@
 
 ### 진행 중
 
-- WI-0084~0087 UI 운영속도/집계 가시화 개선 (브랜치 작업 중)
+- WI-0084~0088 SaaS UI 베이스라인(관리자 대시보드 + 직원 포털 + 명세서) 정착 (브랜치 작업 중)
 
 ### 현재 아키텍처
 
@@ -134,7 +134,7 @@
 | 인증 | Supabase JWT + 헤더 폴백 + RBAC(permission) | RBAC 엔진 + 테넌트 격리 |
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | 단순 비율 (hourlyRate × multiplier) | 한국 세법 + 4대보험 |
-| UI | MVP 운영 콘솔 (단일 페이지; 근무일정 포함) | 관리자 대시보드 + 직원 포탈 |
+| UI | 관리자 대시보드(`/admin`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
 | 모바일 | 없음 | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 

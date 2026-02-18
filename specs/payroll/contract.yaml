@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.5.1
+version: 1.5.2
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -28,6 +28,8 @@ api:
       permission: run payroll preview, list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
+    - role: employee
+      permission: list own confirmed payroll runs for payslip self-service (employeeId must match actor id)
   endpoints:
     - method: GET
       path: /payroll/runs
@@ -86,7 +88,7 @@ invariants:
   - Profile-mode preview rejects request when expected profile version mismatches current profile version.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
-  - Payroll run list API is restricted to payroll_operator/admin roles.
+  - Payroll run list API is restricted to payroll_operator/admin roles, with employee self-service allowed for own CONFIRMED runs only.
   - Deduction profile list API is restricted to payroll_operator/admin roles.
   - PayrollRun.employeeId (when set) must reference existing Employee.id (FK enforced).
 risk:
@@ -113,7 +115,7 @@ test_plan:
     - deduction profile CRUD and authorization checks
     - profile mode preview rejects stale expected profile version
     - list payroll runs by period returns expected rows
-    - non-payroll roles are blocked from listing (403)
+    - employees can list their own CONFIRMED runs for payslip self-service, but are blocked from other employees and PREVIEWED runs
     - list deduction profiles and filter by active/mode
   regression:
     - replay GC-001 through GC-006 fixtures
@@ -153,7 +155,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.5.1 enforces payroll employeeId referential integrity (Employee FK) and rejects preview requests that reference a non-existent employee."
+consumer_impact: "Contract v1.5.2 expands payroll run list semantics to allow employee self-service payslip access (own CONFIRMED runs only), while keeping payroll_operator/admin privileged flows unchanged."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -162,6 +164,7 @@ references:
   - work-items/WI-0006-payroll-phase2-deduction-policy-runtime.md
   - work-items/WI-0010-payroll-profile-version-guard.md
   - work-items/WI-0028-payroll-run-list-api.md
+  - work-items/WI-0088-saas-core-ui.md
   - work-items/WI-0030-deduction-profile-list-api.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:

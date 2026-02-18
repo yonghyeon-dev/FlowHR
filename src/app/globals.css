@@ -35,6 +35,12 @@ body {
   padding: 34px 18px 64px;
 }
 
+.landing-page {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 34px 18px 64px;
+}
+
 .hero-panel {
   border: 1px solid var(--line);
   background: linear-gradient(130deg, #f8fcff 5%, #eef5ff 45%, #f8fcff 100%);

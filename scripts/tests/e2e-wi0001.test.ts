@@ -444,7 +444,40 @@ async function run() {
       }
     )
   );
-  assert.equal(listRunsDenied.status, 403, "employee should not list payroll runs");
+  assert.equal(listRunsDenied.status, 200, "employee should list confirmed payroll runs for self");
+  const listRunsEmployeeBody = (await readJson(listRunsDenied)) as {
+    runs: Array<{ id: string; state: string; employeeId: string | null }>;
+  };
+  assert.ok(
+    listRunsEmployeeBody.runs.some((run) => run.id === previewBody.run.id && run.state === "CONFIRMED"),
+    "employee list should include confirmed run"
+  );
+  assert.ok(
+    listRunsEmployeeBody.runs.every((run) => run.employeeId === "EMP-1001" && run.state === "CONFIRMED"),
+    "employee list must not include other employees or non-confirmed states"
+  );
+
+  const employeeListOtherDenied = await payrollRunsRoute.GET(
+    new Request(
+      "http://localhost/api/payroll/runs?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00&employeeId=EMP-9999",
+      {
+        method: "GET",
+        headers: actorHeaders("employee", "EMP-1001")
+      }
+    )
+  );
+  assert.equal(employeeListOtherDenied.status, 403, "employee should not list other employees payroll runs");
+
+  const employeeListPreviewDenied = await payrollRunsRoute.GET(
+    new Request(
+      "http://localhost/api/payroll/runs?from=2026-02-01T00:00:00+09:00&to=2026-02-28T23:59:59+09:00&employeeId=EMP-1001&state=PREVIEWED",
+      {
+        method: "GET",
+        headers: actorHeaders("employee", "EMP-1001")
+      }
+    )
+  );
+  assert.equal(employeeListPreviewDenied.status, 403, "employee should not list previewed payroll runs");
 
   const rejectedAuditEntry = getMemoryAuditEntries().find((entry) => entry.action === "attendance.rejected");
   assert.ok(rejectedAuditEntry, "attendance.rejected audit entry should exist");
