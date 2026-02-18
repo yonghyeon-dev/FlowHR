@@ -7,6 +7,8 @@ export const createOrganizationSchema = z.object({
 export const createEmployeeSchema = z.object({
   id: z.string().min(1),
   organizationId: z.string().min(1).optional(),
+  departmentId: z.string().min(1).nullable().optional(),
+  positionId: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
   active: z.boolean().optional()
@@ -15,6 +17,8 @@ export const createEmployeeSchema = z.object({
 export const updateEmployeeSchema = z
   .object({
     organizationId: z.string().min(1).nullable().optional(),
+    departmentId: z.string().min(1).nullable().optional(),
+    positionId: z.string().min(1).nullable().optional(),
     name: z.string().min(1).max(100).nullable().optional(),
     email: z.string().email().nullable().optional(),
     active: z.boolean().optional()
@@ -22,9 +26,47 @@ export const updateEmployeeSchema = z
   .refine(
     (value) =>
       value.organizationId !== undefined ||
+      value.departmentId !== undefined ||
+      value.positionId !== undefined ||
       value.name !== undefined ||
       value.email !== undefined ||
       value.active !== undefined,
+    { message: "at least one field is required" }
+  );
+
+export const createDepartmentSchema = z.object({
+  organizationId: z.string().min(1),
+  code: z.string().min(1).max(50),
+  name: z.string().min(1).max(100),
+  active: z.boolean().optional()
+});
+
+export const updateDepartmentSchema = z
+  .object({
+    code: z.string().min(1).max(50).optional(),
+    name: z.string().min(1).max(100).optional(),
+    active: z.boolean().optional()
+  })
+  .refine(
+    (value) => value.code !== undefined || value.name !== undefined || value.active !== undefined,
+    { message: "at least one field is required" }
+  );
+
+export const createPositionSchema = z.object({
+  organizationId: z.string().min(1),
+  code: z.string().min(1).max(50),
+  name: z.string().min(1).max(100),
+  active: z.boolean().optional()
+});
+
+export const updatePositionSchema = z
+  .object({
+    code: z.string().min(1).max(50).optional(),
+    name: z.string().min(1).max(100).optional(),
+    active: z.boolean().optional()
+  })
+  .refine(
+    (value) => value.code !== undefined || value.name !== undefined || value.active !== undefined,
     { message: "at least one field is required" }
   );
 
@@ -33,6 +75,16 @@ const queryBoolean = z
   .transform((value) => value === "true");
 
 export const listEmployeesQuerySchema = z.object({
+  active: queryBoolean.optional(),
+  organizationId: z.string().min(1).optional()
+});
+
+export const listDepartmentsQuerySchema = z.object({
+  active: queryBoolean.optional(),
+  organizationId: z.string().min(1).optional()
+});
+
+export const listPositionsQuerySchema = z.object({
   active: queryBoolean.optional(),
   organizationId: z.string().min(1).optional()
 });

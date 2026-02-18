@@ -1,26 +1,26 @@
-import { updateEmployeeSchema } from "@/features/people/schemas";
-import { getEmployee, updateEmployee } from "@/features/people/service";
+import { updateDepartmentSchema } from "@/features/people/schemas";
+import { getDepartment, updateDepartment } from "@/features/people/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 type RouteContext = {
-  params: Promise<{ employeeId: string }>;
+  params: Promise<{ departmentId: string }>;
 };
 
 export async function GET(request: Request, context: RouteContext) {
-  const { employeeId } = await context.params;
+  const { departmentId } = await context.params;
 
   try {
-    const employee = await getEmployee(
+    const department = await getDepartment(
       {
         actor: await readActor(request),
         dataAccess: getRuntimeDataAccess()
       },
-      { employeeId }
+      { departmentId }
     );
-    return ok({ employee });
+    return ok({ department });
   } catch (error) {
     if (isServiceError(error)) {
       return fail(error.status, error.message, error.details);
@@ -37,29 +37,26 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail(400, "invalid JSON body");
   }
 
-  const parsed = updateEmployeeSchema.safeParse(payload);
+  const parsed = updateDepartmentSchema.safeParse(payload);
   if (!parsed.success) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const { employeeId } = await context.params;
+  const { departmentId } = await context.params;
   try {
-    const employee = await updateEmployee(
+    const department = await updateDepartment(
       {
         actor: await readActor(request),
         dataAccess: getRuntimeDataAccess()
       },
       {
-        employeeId,
-        organizationId: parsed.data.organizationId,
-        departmentId: parsed.data.departmentId,
-        positionId: parsed.data.positionId,
+        departmentId,
+        code: parsed.data.code,
         name: parsed.data.name,
-        email: parsed.data.email,
         active: parsed.data.active
       }
     );
-    return ok({ employee });
+    return ok({ department });
   } catch (error) {
     if (isServiceError(error)) {
       return fail(error.status, error.message, error.details);
@@ -67,4 +64,3 @@ export async function PATCH(request: Request, context: RouteContext) {
     throw error;
   }
 }
-

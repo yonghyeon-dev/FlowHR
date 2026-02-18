@@ -132,9 +132,31 @@ export type OrganizationEntity = {
   updatedAt: Date;
 };
 
+export type DepartmentEntity = {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type PositionEntity = {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type EmployeeEntity = {
   id: string;
   organizationId: string | null;
+  departmentId: string | null;
+  positionId: string | null;
   name: string | null;
   email: string | null;
   active: boolean;
@@ -318,6 +340,8 @@ export type CreateOrganizationInput = {
 export type CreateEmployeeInput = {
   id: string;
   organizationId?: string | null;
+  departmentId?: string | null;
+  positionId?: string | null;
   name?: string | null;
   email?: string | null;
   active?: boolean;
@@ -325,8 +349,36 @@ export type CreateEmployeeInput = {
 
 export type UpdateEmployeeInput = {
   organizationId?: string | null;
+  departmentId?: string | null;
+  positionId?: string | null;
   name?: string | null;
   email?: string | null;
+  active?: boolean;
+};
+
+export type CreateDepartmentInput = {
+  organizationId: string;
+  code: string;
+  name: string;
+  active?: boolean;
+};
+
+export type UpdateDepartmentInput = {
+  code?: string;
+  name?: string;
+  active?: boolean;
+};
+
+export type CreatePositionInput = {
+  organizationId: string;
+  code: string;
+  name: string;
+  active?: boolean;
+};
+
+export type UpdatePositionInput = {
+  code?: string;
+  name?: string;
   active?: boolean;
 };
 
@@ -495,6 +547,20 @@ export interface EmployeeStore {
   list(input: { active?: boolean; organizationId?: string }): Promise<EmployeeEntity[]>;
 }
 
+export interface DepartmentStore {
+  create(input: CreateDepartmentInput): Promise<DepartmentEntity>;
+  findById(id: string): Promise<DepartmentEntity | null>;
+  update(id: string, input: UpdateDepartmentInput): Promise<DepartmentEntity>;
+  list(input: { active?: boolean; organizationId?: string }): Promise<DepartmentEntity[]>;
+}
+
+export interface PositionStore {
+  create(input: CreatePositionInput): Promise<PositionEntity>;
+  findById(id: string): Promise<PositionEntity | null>;
+  update(id: string, input: UpdatePositionInput): Promise<PositionEntity>;
+  list(input: { active?: boolean; organizationId?: string }): Promise<PositionEntity[]>;
+}
+
 export interface RbacStore {
   listRoles(): Promise<RoleWithPermissionsEntity[]>;
   findRoleById(id: string): Promise<RoleWithPermissionsEntity | null>;
@@ -551,6 +617,8 @@ export interface AuditStore {
 export type DataAccess = {
   organizations: OrganizationStore;
   employees: EmployeeStore;
+  departments: DepartmentStore;
+  positions: PositionStore;
   rbac: RbacStore;
   attendance: AttendanceStore;
   scheduling: SchedulingStore;

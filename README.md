@@ -128,6 +128,22 @@ Production rollout: `docs/production-rollout.md`
   - `GET /api/scheduling/anomalies` (query: `from`, `to`, optional `employeeId`, optional `lateThresholdMinutes`)
   - `GET /api/scheduling/anomalies/cockpit` (query: `from`, `to`, optional `lateThresholdMinutes`, optional `topN`)
   - `GET /api/scheduling/anomalies/cockpit/stream` (SSE query: `from`, `to`, optional `lateThresholdMinutes`, optional `topN`, optional `intervalSeconds`, optional `sampleCount`)
+- People:
+  - `GET /api/people/organizations`
+  - `POST /api/people/organizations`
+  - `GET /api/people/organizations/{organizationId}`
+  - `GET /api/people/departments` (optional query: `active`, `organizationId`)
+  - `POST /api/people/departments`
+  - `GET /api/people/departments/{departmentId}`
+  - `PATCH /api/people/departments/{departmentId}`
+  - `GET /api/people/positions` (optional query: `active`, `organizationId`)
+  - `POST /api/people/positions`
+  - `GET /api/people/positions/{positionId}`
+  - `PATCH /api/people/positions/{positionId}`
+  - `GET /api/people/employees` (optional query: `active`, `organizationId`)
+  - `POST /api/people/employees`
+  - `GET /api/people/employees/{employeeId}`
+  - `PATCH /api/people/employees/{employeeId}`
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`

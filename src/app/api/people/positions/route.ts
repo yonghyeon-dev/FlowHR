@@ -1,5 +1,5 @@
-import { createEmployeeSchema, listEmployeesQuerySchema } from "@/features/people/schemas";
-import { createEmployee, listEmployees } from "@/features/people/service";
+import { createPositionSchema, listPositionsQuerySchema } from "@/features/people/schemas";
+import { createPosition, listPositions } from "@/features/people/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
@@ -7,7 +7,7 @@ import { fail, ok } from "@/lib/http";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const parsed = listEmployeesQuerySchema.safeParse({
+  const parsed = listPositionsQuerySchema.safeParse({
     active: url.searchParams.get("active") ?? undefined,
     organizationId: url.searchParams.get("organizationId") ?? undefined
   });
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const employees = await listEmployees(
+    const positions = await listPositions(
       {
         actor: await readActor(request),
         dataAccess: getRuntimeDataAccess()
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         organizationId: parsed.data.organizationId
       }
     );
-    return ok({ employees });
+    return ok({ positions });
   } catch (error) {
     if (isServiceError(error)) {
       return fail(error.status, error.message, error.details);
@@ -44,28 +44,25 @@ export async function POST(request: Request) {
     return fail(400, "invalid JSON body");
   }
 
-  const parsed = createEmployeeSchema.safeParse(payload);
+  const parsed = createPositionSchema.safeParse(payload);
   if (!parsed.success) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
   try {
-    const employee = await createEmployee(
+    const position = await createPosition(
       {
         actor: await readActor(request),
         dataAccess: getRuntimeDataAccess()
       },
       {
-        id: parsed.data.id,
-        organizationId: parsed.data.organizationId ?? null,
-        departmentId: parsed.data.departmentId ?? null,
-        positionId: parsed.data.positionId ?? null,
-        name: parsed.data.name ?? null,
-        email: parsed.data.email ?? null,
+        organizationId: parsed.data.organizationId,
+        code: parsed.data.code,
+        name: parsed.data.name,
         active: parsed.data.active
       }
     );
-    return ok({ employee }, 201);
+    return ok({ position }, 201);
   } catch (error) {
     if (isServiceError(error)) {
       return fail(error.status, error.message, error.details);
@@ -73,4 +70,3 @@ export async function POST(request: Request) {
     throw error;
   }
 }
-
