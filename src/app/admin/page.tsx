@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
 type ApiLog = {
@@ -193,8 +194,31 @@ export default function AdminDashboardPage() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
-  const usesBearerToken = accessToken.trim().length > 0;
+  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+
+  const bearerToken =
+    accessToken.trim().length > 0
+      ? accessToken.trim()
+      : isProductionRuntime
+        ? (supabaseSession?.accessToken ?? "")
+        : "";
+
+  const usesBearerToken = bearerToken.trim().length > 0;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
+
+  useEffect(() => {
+    if (!isProductionRuntime) {
+      return;
+    }
+    if (organizationId.trim()) {
+      return;
+    }
+    const orgId = supabaseSession?.organizationId ?? "";
+    if (orgId.trim().length > 0) {
+      setOrganizationId(orgId.trim());
+    }
+  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -219,7 +243,7 @@ export default function AdminDashboardPage() {
       }
 
       if (usesBearerToken) {
-        headers.authorization = `Bearer ${accessToken.trim()}`;
+        headers.authorization = `Bearer ${bearerToken.trim()}`;
       } else {
         headers["x-actor-role"] = "admin";
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
@@ -604,6 +628,13 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
+      {isProductionRuntime && !usesBearerToken ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          현재 환경은 <strong>production</strong>입니다. API 호출을 위해 로그인 세션(Bearer)이 필요합니다:{" "}
+          <Link href="/login">/login</Link>
+        </p>
+      ) : null}
+
       <section className="kpi-strip">
         <article className="kpi-card">
           <p>출퇴근 승인 대기</p>
@@ -715,6 +746,20 @@ export default function AdminDashboardPage() {
                 />
               </label>
             </div>
+            {isProductionRuntime ? (
+              <p className="small muted" style={{ marginTop: 10 }}>
+                세션:{" "}
+                {supabaseSession
+                  ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"}`
+                  : "없음"}{" "}
+                (Bearer {usesBearerToken ? "ON" : "OFF"})
+              </p>
+            ) : null}
+            {supabaseSessionError ? (
+              <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
+                세션 오류: {supabaseSessionError}
+              </p>
+            ) : null}
             {showDevTools ? (
               <p className="small muted" style={{ marginTop: 10 }}>
                 (dev) Runtime Supabase URL: <code>{supabaseUrl}</code>

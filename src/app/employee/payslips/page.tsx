@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
 type PayrollRunDto = {
@@ -113,8 +114,18 @@ export default function EmployeePayslipsPage() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
-  const usesBearerToken = accessToken.trim().length > 0;
   const showDevTools = isDevToolsEnabled();
+  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+
+  const bearerToken =
+    accessToken.trim().length > 0
+      ? accessToken.trim()
+      : isProductionRuntime
+        ? (supabaseSession?.accessToken ?? "")
+        : "";
+
+  const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -122,6 +133,26 @@ export default function EmployeePayslipsPage() {
     const fail = total - success;
     return { total, success, fail };
   }, [logs]);
+
+  useEffect(() => {
+    if (!isProductionRuntime) {
+      return;
+    }
+    const orgId = supabaseSession?.organizationId ?? "";
+    if (orgId.trim().length > 0 && !organizationId.trim()) {
+      setOrganizationId(orgId.trim());
+    }
+  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
+
+  useEffect(() => {
+    if (!isProductionRuntime) {
+      return;
+    }
+    const actorId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim();
+    if (actorId.length > 0 && employeeId.trim() !== actorId) {
+      setEmployeeId(actorId);
+    }
+  }, [employeeId, isProductionRuntime, setEmployeeId, supabaseSession?.actorId, supabaseSession?.userId]);
 
   async function callApi(
     label: string,
@@ -137,7 +168,7 @@ export default function EmployeePayslipsPage() {
       }
 
       if (usesBearerToken) {
-        headers.authorization = `Bearer ${accessToken.trim()}`;
+        headers.authorization = `Bearer ${bearerToken.trim()}`;
       } else {
         headers["x-actor-role"] = "employee";
         headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
@@ -242,6 +273,13 @@ export default function EmployeePayslipsPage() {
         </div>
       </header>
 
+      {isProductionRuntime && !usesBearerToken ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          현재 환경은 <strong>production</strong>입니다. 명세서 조회를 위해 로그인 세션(Bearer)이 필요합니다:{" "}
+          <Link href="/login">/login</Link>
+        </p>
+      ) : null}
+
       <section className="panel-grid">
         <article className="panel">
           <h2>조회 조건</h2>
@@ -300,6 +338,20 @@ export default function EmployeePayslipsPage() {
               <p className="small">
                 호출 {stats.total}건 (OK {stats.success} / FAIL {stats.fail}) · 현재 {pendingLabel ?? "-"}
               </p>
+              {isProductionRuntime ? (
+                <p className="small muted">
+                  세션:{" "}
+                  {supabaseSession
+                    ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"} · actor=${supabaseSession.actorId ?? "-"}`
+                    : "없음"}{" "}
+                  (Bearer {usesBearerToken ? "ON" : "OFF"})
+                </p>
+              ) : null}
+              {supabaseSessionError ? (
+                <p className="small" style={{ color: "var(--danger)" }}>
+                  세션 오류: {supabaseSessionError}
+                </p>
+              ) : null}
               <div className="actions">
                 <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
                   로그 초기화

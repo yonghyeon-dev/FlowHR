@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
 type ApiLog = {
@@ -154,9 +155,39 @@ export default function EmployeeSelfServicePage() {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
-  const usesBearerToken = accessToken.trim().length > 0;
   const showDevTools = isDevToolsEnabled();
+  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+
+  const bearerToken =
+    accessToken.trim().length > 0
+      ? accessToken.trim()
+      : isProductionRuntime
+        ? (supabaseSession?.accessToken ?? "")
+        : "";
+
+  const usesBearerToken = bearerToken.trim().length > 0;
   const newestLog = logs[0];
+
+  useEffect(() => {
+    if (!isProductionRuntime) {
+      return;
+    }
+    const orgId = supabaseSession?.organizationId ?? "";
+    if (orgId.trim().length > 0 && !organizationId.trim()) {
+      setOrganizationId(orgId.trim());
+    }
+  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
+
+  useEffect(() => {
+    if (!isProductionRuntime) {
+      return;
+    }
+    const actorId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim();
+    if (actorId.length > 0 && employeeId.trim() !== actorId) {
+      setEmployeeId(actorId);
+    }
+  }, [employeeId, isProductionRuntime, setEmployeeId, supabaseSession?.actorId, supabaseSession?.userId]);
 
   async function callApi(
     label: string,
@@ -173,7 +204,7 @@ export default function EmployeeSelfServicePage() {
       }
 
       if (usesBearerToken) {
-        headers.authorization = `Bearer ${accessToken.trim()}`;
+        headers.authorization = `Bearer ${bearerToken.trim()}`;
       } else {
         headers["x-actor-role"] = "employee";
         headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
@@ -434,6 +465,13 @@ export default function EmployeeSelfServicePage() {
         </div>
       </header>
 
+      {isProductionRuntime && !usesBearerToken ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          현재 환경은 <strong>production</strong>입니다. 출퇴근/휴가 API 호출을 위해 로그인 세션(Bearer)이 필요합니다:{" "}
+          <Link href="/login">/login</Link>
+        </p>
+      ) : null}
+
       <section className="kpi-strip">
         <article className="kpi-card">
           <p>오늘 출퇴근</p>
@@ -513,6 +551,20 @@ export default function EmployeeSelfServicePage() {
               <p className="small muted" style={{ marginTop: 10 }}>
                 (dev) Runtime Supabase URL: <code>{supabaseUrl}</code> / Auth Mode{" "}
                 {usesBearerToken ? "Bearer Token" : "Dev Header"}
+              </p>
+            ) : null}
+            {isProductionRuntime ? (
+              <p className="small muted" style={{ marginTop: 10 }}>
+                세션:{" "}
+                {supabaseSession
+                  ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"} · actor=${supabaseSession.actorId ?? "-"}`
+                  : "없음"}{" "}
+                (Bearer {usesBearerToken ? "ON" : "OFF"})
+              </p>
+            ) : null}
+            {supabaseSessionError ? (
+              <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
+                세션 오류: {supabaseSessionError}
               </p>
             ) : null}
           </details>
