@@ -453,6 +453,16 @@ textarea:focus {
   color: var(--muted);
 }
 
+.ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.fail {
+  color: var(--fail);
+  font-weight: 700;
+}
+
 .divider {
   border: none;
   border-top: 1px dashed var(--line);
