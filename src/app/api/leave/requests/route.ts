@@ -66,6 +66,8 @@ export async function POST(request: Request) {
         leaveType: parsed.data.leaveType,
         startDate: new Date(parsed.data.startDate),
         endDate: new Date(parsed.data.endDate),
+        unit: parsed.data.unit,
+        hours: parsed.data.hours,
         reason: parsed.data.reason
       }
     );

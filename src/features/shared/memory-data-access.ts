@@ -120,6 +120,10 @@ function cloneDate(value: Date) {
   return new Date(value.getTime());
 }
 
+function roundTo2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -345,6 +349,8 @@ function updateLeaveRequestEntity(
     leaveType: input.leaveType ?? existing.leaveType,
     startDate: input.startDate ?? existing.startDate,
     endDate: input.endDate ?? existing.endDate,
+    unit: input.unit ?? existing.unit,
+    hours: input.hours !== undefined ? input.hours : existing.hours,
     days: input.days ?? existing.days,
     reason: input.reason !== undefined ? input.reason : existing.reason,
     state: input.state ?? existing.state,
@@ -1083,6 +1089,8 @@ export const memoryDataAccess: DataAccess = {
         leaveType: input.leaveType,
         startDate: cloneDate(input.startDate),
         endDate: cloneDate(input.endDate),
+        unit: input.unit ?? "FULL_DAY",
+        hours: input.hours ?? null,
         days: input.days,
         reason: input.reason ?? null,
         state: "PENDING",
@@ -1192,6 +1200,11 @@ export const memoryDataAccess: DataAccess = {
             ...existing,
             annualGrantDays: input.annualGrantDays,
             carryOverCapDays: input.carryOverCapDays,
+            allowHalfDay: input.allowHalfDay ?? existing.allowHalfDay,
+            allowHourly: input.allowHourly ?? existing.allowHourly,
+            hourlyIncrementMinutes:
+              input.hourlyIncrementMinutes ?? existing.hourlyIncrementMinutes,
+            maxHoursPerRequest: input.maxHoursPerRequest ?? existing.maxHoursPerRequest,
             updatedAt: now
           }
         : {
@@ -1199,6 +1212,10 @@ export const memoryDataAccess: DataAccess = {
             organizationId: input.organizationId,
             annualGrantDays: input.annualGrantDays,
             carryOverCapDays: input.carryOverCapDays,
+            allowHalfDay: input.allowHalfDay ?? true,
+            allowHourly: input.allowHourly ?? true,
+            hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
+            maxHoursPerRequest: input.maxHoursPerRequest ?? 8,
             createdAt: now,
             updatedAt: now
           };
@@ -1230,10 +1247,12 @@ export const memoryDataAccess: DataAccess = {
 
     async applyUsage(input) {
       const current = await this.ensure(input.employeeId, input.defaultGrantedDays);
+      const usedDays = roundTo2(current.usedDays + input.usedDaysDelta);
+      const remainingDays = roundTo2(current.grantedDays - usedDays);
       const next: LeaveBalanceEntity = {
         ...current,
-        usedDays: current.usedDays + input.usedDaysDelta,
-        remainingDays: current.grantedDays - (current.usedDays + input.usedDaysDelta),
+        usedDays,
+        remainingDays,
         updatedAt: new Date()
       };
       state.leaveBalances.set(input.employeeId, next);
@@ -1242,8 +1261,10 @@ export const memoryDataAccess: DataAccess = {
 
     async settleAccrual(input) {
       const current = await this.ensure(input.employeeId, input.defaultGrantedDays);
-      const carryOverDays = Math.min(input.carryOverCapDays, Math.max(0, current.remainingDays));
-      const grantedDays = input.annualGrantDays + carryOverDays;
+      const carryOverDays = roundTo2(
+        Math.min(input.carryOverCapDays, Math.max(0, current.remainingDays))
+      );
+      const grantedDays = roundTo2(input.annualGrantDays + carryOverDays);
 
       const next: LeaveBalanceEntity = {
         ...current,

@@ -1,0 +1,26 @@
+-- CreateEnum
+CREATE TYPE "LeaveRequestUnit" AS ENUM ('FULL_DAY', 'HALF_DAY', 'HOUR');
+
+-- AlterTable
+ALTER TABLE "LeaveRequest"
+ADD COLUMN "unit" "LeaveRequestUnit" NOT NULL DEFAULT 'FULL_DAY',
+ADD COLUMN "hours" DECIMAL(6,2),
+ALTER COLUMN "days" TYPE DECIMAL(6,2) USING "days"::DECIMAL;
+
+-- AlterTable
+ALTER TABLE "LeaveBalanceProjection"
+ALTER COLUMN "grantedDays" TYPE DECIMAL(6,2) USING "grantedDays"::DECIMAL,
+ALTER COLUMN "grantedDays" SET DEFAULT 15,
+ALTER COLUMN "usedDays" TYPE DECIMAL(6,2) USING "usedDays"::DECIMAL,
+ALTER COLUMN "usedDays" SET DEFAULT 0,
+ALTER COLUMN "remainingDays" TYPE DECIMAL(6,2) USING "remainingDays"::DECIMAL,
+ALTER COLUMN "remainingDays" SET DEFAULT 15,
+ALTER COLUMN "carryOverDays" TYPE DECIMAL(6,2) USING "carryOverDays"::DECIMAL,
+ALTER COLUMN "carryOverDays" SET DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "LeavePolicy"
+ADD COLUMN "allowHalfDay" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "allowHourly" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "hourlyIncrementMinutes" INTEGER NOT NULL DEFAULT 30,
+ADD COLUMN "maxHoursPerRequest" DECIMAL(6,2) NOT NULL DEFAULT 8;

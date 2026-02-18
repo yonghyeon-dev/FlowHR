@@ -160,12 +160,13 @@ Production rollout: `docs/production-rollout.md`
   - `PUT /api/payroll/deduction-profiles/{profileId}`
 - Leave:
   - `GET /api/leave/requests` (query: `from`, `to`, optional `employeeId`, optional `state`)
-  - `POST /api/leave/requests`
-  - `PATCH /api/leave/requests/{requestId}`
+  - `POST /api/leave/requests` (payload: optional `unit=FULL_DAY|HALF_DAY|HOUR`, optional `hours`)
+  - `PATCH /api/leave/requests/{requestId}` (payload: optional `unit`, optional `hours`)
   - `POST /api/leave/requests/{requestId}/approve`
   - `POST /api/leave/requests/{requestId}/reject`
   - `POST /api/leave/requests/{requestId}/cancel`
   - `GET /api/leave/balances/{employeeId}`
+  - `GET /api/leave/policy` / `PUT /api/leave/policy` (fractional policy: `allowHalfDay`, `allowHourly`, `hourlyIncrementMinutes`, `maxHoursPerRequest`)
   - `POST /api/leave/accrual/settle`
 
 ## Payroll Phase 2 Contract Artifacts

@@ -123,7 +123,9 @@ function toLeaveRequestEntity(record: {
   leaveType: "ANNUAL" | "SICK" | "UNPAID";
   startDate: Date;
   endDate: Date;
-  days: number;
+  unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
+  hours: Prisma.Decimal | null;
+  days: Prisma.Decimal;
   reason: string | null;
   state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
   decisionReason: string | null;
@@ -136,19 +138,29 @@ function toLeaveRequestEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): LeaveRequestEntity {
-  return record;
+  return {
+    ...record,
+    hours: decimalToNumber(record.hours),
+    days: Number(record.days)
+  };
 }
 
 function toLeaveBalanceEntity(record: {
   employeeId: string;
-  grantedDays: number;
-  usedDays: number;
-  remainingDays: number;
-  carryOverDays: number;
+  grantedDays: Prisma.Decimal;
+  usedDays: Prisma.Decimal;
+  remainingDays: Prisma.Decimal;
+  carryOverDays: Prisma.Decimal;
   lastAccrualYear: number | null;
   updatedAt: Date;
 }): LeaveBalanceEntity {
-  return record;
+  return {
+    ...record,
+    grantedDays: Number(record.grantedDays),
+    usedDays: Number(record.usedDays),
+    remainingDays: Number(record.remainingDays),
+    carryOverDays: Number(record.carryOverDays)
+  };
 }
 
 function toLeavePolicyEntity(record: {
@@ -156,10 +168,17 @@ function toLeavePolicyEntity(record: {
   organizationId: string;
   annualGrantDays: number;
   carryOverCapDays: number;
+  allowHalfDay: boolean;
+  allowHourly: boolean;
+  hourlyIncrementMinutes: number;
+  maxHoursPerRequest: Prisma.Decimal;
   createdAt: Date;
   updatedAt: Date;
 }): LeavePolicyEntity {
-  return record;
+  return {
+    ...record,
+    maxHoursPerRequest: Number(record.maxHoursPerRequest)
+  };
 }
 
 function toPayrollEntity(record: {
@@ -1123,7 +1142,9 @@ const leave: LeaveStore = {
         leaveType: input.leaveType,
         startDate: input.startDate,
         endDate: input.endDate,
-        days: input.days,
+        unit: input.unit ?? "FULL_DAY",
+        hours: input.hours === undefined || input.hours === null ? null : new Prisma.Decimal(input.hours),
+        days: new Prisma.Decimal(input.days),
         reason: input.reason ?? null
       }
     });
@@ -1144,7 +1165,14 @@ const leave: LeaveStore = {
         leaveType: input.leaveType,
         startDate: input.startDate,
         endDate: input.endDate,
-        days: input.days,
+        unit: input.unit,
+        hours:
+          input.hours === undefined
+            ? undefined
+            : input.hours === null
+              ? null
+              : new Prisma.Decimal(input.hours),
+        days: input.days === undefined ? undefined : new Prisma.Decimal(input.days),
         reason: input.reason,
         state: input.state,
         decisionReason: input.decisionReason,
@@ -1240,10 +1268,10 @@ const leaveBalance: LeaveBalanceStore = {
     const created = await prisma.leaveBalanceProjection.create({
       data: {
         employeeId,
-        grantedDays: defaultGrantedDays,
-        usedDays: 0,
-        remainingDays: defaultGrantedDays,
-        carryOverDays: 0,
+        grantedDays: new Prisma.Decimal(defaultGrantedDays),
+        usedDays: new Prisma.Decimal(0),
+        remainingDays: new Prisma.Decimal(defaultGrantedDays),
+        carryOverDays: new Prisma.Decimal(0),
         lastAccrualYear: null
       }
     });
@@ -1258,8 +1286,8 @@ const leaveBalance: LeaveBalanceStore = {
     const updated = await prisma.leaveBalanceProjection.update({
       where: { employeeId: input.employeeId },
       data: {
-        usedDays,
-        remainingDays
+        usedDays: new Prisma.Decimal(usedDays),
+        remainingDays: new Prisma.Decimal(remainingDays)
       }
     });
     return toLeaveBalanceEntity(updated);
@@ -1279,10 +1307,10 @@ const leaveBalance: LeaveBalanceStore = {
     const updated = await prisma.leaveBalanceProjection.update({
       where: { employeeId: input.employeeId },
       data: {
-        grantedDays,
-        usedDays: 0,
-        remainingDays: grantedDays,
-        carryOverDays,
+        grantedDays: new Prisma.Decimal(grantedDays),
+        usedDays: new Prisma.Decimal(0),
+        remainingDays: new Prisma.Decimal(grantedDays),
+        carryOverDays: new Prisma.Decimal(carryOverDays),
         lastAccrualYear: input.year
       }
     });
@@ -1303,12 +1331,24 @@ const leavePolicy: LeavePolicyStore = {
       where: { organizationId: input.organizationId },
       update: {
         annualGrantDays: input.annualGrantDays,
-        carryOverCapDays: input.carryOverCapDays
+        carryOverCapDays: input.carryOverCapDays,
+        ...(input.allowHalfDay !== undefined ? { allowHalfDay: input.allowHalfDay } : {}),
+        ...(input.allowHourly !== undefined ? { allowHourly: input.allowHourly } : {}),
+        ...(input.hourlyIncrementMinutes !== undefined
+          ? { hourlyIncrementMinutes: input.hourlyIncrementMinutes }
+          : {}),
+        ...(input.maxHoursPerRequest !== undefined
+          ? { maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest) }
+          : {})
       },
       create: {
         organizationId: input.organizationId,
         annualGrantDays: input.annualGrantDays,
-        carryOverCapDays: input.carryOverCapDays
+        carryOverCapDays: input.carryOverCapDays,
+        allowHalfDay: input.allowHalfDay ?? true,
+        allowHourly: input.allowHourly ?? true,
+        hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
+        maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest ?? 8)
       }
     });
     return toLeavePolicyEntity(policy);

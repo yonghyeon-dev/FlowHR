@@ -1,24 +1,25 @@
 owner: leave-agent
-version: 1.4.0
+version: 1.5.0
 scope:
   in:
     - leave request create/update/cancel flow
+    - leave request fractional units (full-day/half-day/hourly)
     - leave request list query by period overlap
     - leave approve/reject flow with audit trace
     - leave balance read model contract
     - annual leave accrual and carry-over settlement
-    - leave policy read/update (annual grant + carry-over cap)
+    - leave policy read/update (annual grant + carry-over cap + fractional controls)
   out:
     - external calendar synchronization
 entities:
   - name: LeaveRequest
-    description: Employee leave request with period, type, and status.
+    description: Employee leave request with period, type, unit, and status.
   - name: LeaveApproval
     description: Approval or rejection decision record with actor and reason.
   - name: LeaveBalanceProjection
-    description: Read model of granted, used, remaining, and carry-over leave days.
+    description: Read model of granted, used, remaining, and carry-over leave days (decimal precision).
   - name: LeavePolicy
-    description: Organization-level leave policy (annual grant and carry-over cap).
+    description: Organization-level leave policy (annual grant, carry-over cap, and fractional leave controls).
 api:
   auth:
     - role: employee
@@ -35,10 +36,10 @@ api:
       description: List leave requests overlapping a period (from/to) with optional employeeId/state filters.
     - method: POST
       path: /leave/requests
-      description: Create leave request.
+      description: Create leave request with optional unit/hours fields.
     - method: PATCH
       path: /leave/requests/{requestId}
-      description: Update pending leave request.
+      description: Update pending leave request with optional unit/hours fields.
     - method: POST
       path: /leave/requests/{requestId}/approve
       description: Approve leave request.
@@ -56,7 +57,7 @@ api:
       description: Read leave policy for an organization (defaults when not configured).
     - method: PUT
       path: /leave/policy
-      description: Upsert leave policy for an organization.
+      description: Upsert leave policy for an organization including fractional leave controls.
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
@@ -87,8 +88,10 @@ db_changes:
       description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
     - id: 202602180002_leave_policy
       description: Add organization-level leave policy (annual grant + carry-over cap).
+    - id: 202602180005_leave_fractional_units
+      description: Add leave unit/hours fields, widen leave balance to decimals, and extend leave policy fractional controls.
   backward_compatible: true
-  notes: Additive schema change. Existing leave accrual defaults remain unchanged until a policy is configured.
+  notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
   - Final leave decisions are immutable and auditable.
   - Employee can mutate only own pending request.
@@ -98,6 +101,8 @@ invariants:
   - Leave accrual settlement uses leave policy defaults when grant/cap inputs are omitted.
   - Employee leave list queries are restricted to own employeeId.
   - LeaveRequest.employeeId and LeaveBalanceProjection.employeeId must reference existing Employee.id (FK enforced).
+  - Hourly leave requests must satisfy policy increment and maximum-hour rules.
+  - LeaveBalanceProjection values keep two-decimal precision and never go negative.
 risk:
   permissions:
     - Unauthorized approval or accrual settlement can alter payroll and staffing plans.
@@ -111,6 +116,8 @@ test_plan:
     - leave date normalization by Asia/Seoul
     - accrual settlement carry-over cap calculation
     - leave policy validation and default fallback
+    - leave fractional unit calculation (FULL_DAY/HALF_DAY/HOUR)
+    - hourly increment and maxHoursPerRequest validation
     - leave list query parsing and role boundary guards
   integration:
     - create leave request rejects unknown employeeId (404)
@@ -122,9 +129,12 @@ test_plan:
     - list leave requests by period overlap returns expected rows
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
+    - half-day and hourly leave approval updates balance with decimal day usage
+    - policy-denied half-day/hourly requests return 409
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
+    - whole-day leave flow remains backward compatible after fractional-unit rollout
   authorization:
     - employee self-service boundary check
     - manager/admin approval check
@@ -133,6 +143,7 @@ test_plan:
   payroll_accuracy:
     - approved paid leave classification for payroll consumer compatibility
     - carry-over cap and yearly reset rules
+    - decimal day usage (`hours/8`) consistency for payroll consumers
 observability:
   audit_events:
     - leave.requested
@@ -146,6 +157,9 @@ observability:
     - leave_approval_latency_ms
     - leave_request_rejection_rate
     - leave_accrual_settlement_count
+    - leave_hourly_request_count
+    - leave_halfday_request_count
+    - leave_policy_denied_count
   logs:
     - leave authorization denied with actor role
     - leave accrual duplicate-year rejection logs
@@ -163,12 +177,13 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.4.0 adds organization-level leave policy endpoints (`/leave/policy`) and allows accrual settlement to fall back to policy defaults when grant/cap inputs are omitted."
+consumer_impact: "Contract v1.5.0 adds fractional leave support (`unit`, `hours`) and policy controls (`allowHalfDay`, `allowHourly`, `hourlyIncrementMinutes`, `maxHoursPerRequest`) while preserving backward compatibility for existing full-day flows."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
   - work-items/WI-0027-leave-list-api.md
   - work-items/WI-0090-leave-policy-settings.md
+  - work-items/WI-0104-leave-fractional-hourly-policy.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

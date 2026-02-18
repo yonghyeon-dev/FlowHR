@@ -2,7 +2,7 @@
 
 ## Scope
 
-Leave request lifecycle, role authorization, and approved leave output compatibility for attendance/payroll.
+Leave request lifecycle, role authorization, fractional leave policy, and approved leave output compatibility for attendance/payroll.
 
 ## Functional Cases
 
@@ -16,6 +16,10 @@ Leave request lifecycle, role authorization, and approved leave output compatibi
 8. Admin/payroll operator upserts leave policy (grant/carry cap) and reads policy snapshot.
 9. Accrual settlement uses leave policy defaults when request omits grant/cap fields.
 10. List leave requests by period overlap (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
+11. Employee creates and approves `HALF_DAY` leave request and balance usage deducts `0.5`.
+12. Employee creates and approves `HOUR` leave request and balance usage deducts `hours/8`.
+13. Policy denial returns `409` when `allowHalfDay=false` or `allowHourly=false`.
+14. Policy validation rejects hourly requests that violate increment/maxHours rules.
 
 ## Boundary and Accuracy Cases
 
@@ -26,12 +30,15 @@ Leave request lifecycle, role authorization, and approved leave output compatibi
 5. Carry-over uses `min(max(remainingDays, 0), carryOverCapDays)`.
 6. Same employee/year accrual settlement is rejected as duplicate.
 7. Tenant-scoped policy read/write rejects cross-tenant access when tenancy is enabled.
+8. Fractional leave balances keep two-decimal precision across approve/settle flows.
+9. Existing full-day leave behavior remains backward compatible after fractional rollout.
 
 ## Regression Linkage
 
 - Future fixtures will be added under `qa/golden/fixtures` for leave+attendance impacts.
 - Existing payroll fixtures must remain unaffected by leave contract introduction.
 - Leave balance continuity must remain valid after yearly settlement.
+- Fractional leave fixtures (`HALF_DAY`, `HOUR`) must remain deterministic across CI runs.
 
 ## QA Gate Expectations
 

@@ -78,6 +78,8 @@ type LeaveRequestDto = {
   leaveType: "ANNUAL" | "SICK" | "UNPAID";
   startDate: string;
   endDate: string;
+  unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
+  hours: number | null;
   days: number;
   reason: string | null;
   decisionReason: string | null;
@@ -170,6 +172,10 @@ function formatKrw(value: number | null) {
   return `${value.toLocaleString("ko-KR")}원`;
 }
 
+function formatDays(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
 function buildQuery(params: Record<string, string | undefined>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -239,6 +245,10 @@ export default function AdminDashboardPage() {
   const [accrualYear, setAccrualYear] = useState(String(new Date().getFullYear()));
   const [accrualGrantDays, setAccrualGrantDays] = useState("15");
   const [accrualCarryCapDays, setAccrualCarryCapDays] = useState("5");
+  const [leaveAllowHalfDay, setLeaveAllowHalfDay] = useState(true);
+  const [leaveAllowHourly, setLeaveAllowHourly] = useState(true);
+  const [leaveHourlyIncrementMinutes, setLeaveHourlyIncrementMinutes] = useState("30");
+  const [leaveMaxHoursPerRequest, setLeaveMaxHoursPerRequest] = useState("8");
   const [accrualResult, setAccrualResult] = useState<LeaveBalanceDto | null>(null);
 
   const [payrollHourlyRateKrw, setPayrollHourlyRateKrw] = useState("12000");
@@ -860,13 +870,32 @@ export default function AdminDashboardPage() {
       return;
     }
     const parsed = body as {
-      policy?: { annualGrantDays?: number; carryOverCapDays?: number };
+      policy?: {
+        annualGrantDays?: number;
+        carryOverCapDays?: number;
+        allowHalfDay?: boolean;
+        allowHourly?: boolean;
+        hourlyIncrementMinutes?: number;
+        maxHoursPerRequest?: number;
+      };
     };
     if (typeof parsed.policy?.annualGrantDays === "number") {
       setAccrualGrantDays(String(parsed.policy.annualGrantDays));
     }
     if (typeof parsed.policy?.carryOverCapDays === "number") {
       setAccrualCarryCapDays(String(parsed.policy.carryOverCapDays));
+    }
+    if (typeof parsed.policy?.allowHalfDay === "boolean") {
+      setLeaveAllowHalfDay(parsed.policy.allowHalfDay);
+    }
+    if (typeof parsed.policy?.allowHourly === "boolean") {
+      setLeaveAllowHourly(parsed.policy.allowHourly);
+    }
+    if (typeof parsed.policy?.hourlyIncrementMinutes === "number") {
+      setLeaveHourlyIncrementMinutes(String(parsed.policy.hourlyIncrementMinutes));
+    }
+    if (typeof parsed.policy?.maxHoursPerRequest === "number") {
+      setLeaveMaxHoursPerRequest(String(parsed.policy.maxHoursPerRequest));
     }
   }
 
@@ -890,10 +919,16 @@ export default function AdminDashboardPage() {
 
     const annualGrantDays = Number(accrualGrantDays.trim());
     const carryOverCapDays = Number(accrualCarryCapDays.trim());
+    const hourlyIncrementMinutes = Number(leaveHourlyIncrementMinutes.trim());
+    const maxHoursPerRequest = Number(leaveMaxHoursPerRequest.trim());
     const payload = {
       organizationId: orgId,
       annualGrantDays,
-      carryOverCapDays
+      carryOverCapDays,
+      allowHalfDay: leaveAllowHalfDay,
+      allowHourly: leaveAllowHourly,
+      hourlyIncrementMinutes,
+      maxHoursPerRequest
     };
     await callApi("휴가 정책 저장", "PUT", "/api/leave/policy", payload);
   }
@@ -1483,7 +1518,13 @@ export default function AdminDashboardPage() {
                       <strong>{request.employeeId}</strong>{" "}
                       <span className="muted">
                         {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
-                        {formatDateTime(request.endDate)} ({request.days}일)
+                        {formatDateTime(request.endDate)} ({formatDays(request.days)}일
+                        {request.unit === "HOUR" && request.hours !== null
+                          ? ` / ${request.hours.toFixed(2)}시간`
+                          : request.unit === "HALF_DAY"
+                            ? " / 반차"
+                            : ""}
+                        )
                       </span>
                     </span>
                   </label>
@@ -1661,6 +1702,40 @@ export default function AdminDashboardPage() {
                 onChange={(event) => setAccrualCarryCapDays(event.target.value)}
               />
             </label>
+            <label>
+              반차 허용
+              <select
+                value={leaveAllowHalfDay ? "true" : "false"}
+                onChange={(event) => setLeaveAllowHalfDay(event.target.value === "true")}
+              >
+                <option value="true">허용</option>
+                <option value="false">비허용</option>
+              </select>
+            </label>
+            <label>
+              시간단위 허용
+              <select
+                value={leaveAllowHourly ? "true" : "false"}
+                onChange={(event) => setLeaveAllowHourly(event.target.value === "true")}
+              >
+                <option value="true">허용</option>
+                <option value="false">비허용</option>
+              </select>
+            </label>
+            <label>
+              시간 단위(분)
+              <input
+                value={leaveHourlyIncrementMinutes}
+                onChange={(event) => setLeaveHourlyIncrementMinutes(event.target.value)}
+              />
+            </label>
+            <label>
+              1회 최대 시간
+              <input
+                value={leaveMaxHoursPerRequest}
+                onChange={(event) => setLeaveMaxHoursPerRequest(event.target.value)}
+              />
+            </label>
           </div>
           <div className="actions">
             <button className="btn btn-secondary" onClick={() => void loadLeavePolicy()} disabled={!organizationId.trim()}>
@@ -1675,8 +1750,9 @@ export default function AdminDashboardPage() {
           </div>
           {accrualResult ? (
             <p className="small">
-              결과: 잔여 {accrualResult.remainingDays}일 (부여 {accrualResult.grantedDays}일, 사용{" "}
-              {accrualResult.usedDays}일, 이월 {accrualResult.carryOverDays}일) / updated{" "}
+              결과: 잔여 {formatDays(accrualResult.remainingDays)}일 (부여{" "}
+              {formatDays(accrualResult.grantedDays)}일, 사용 {formatDays(accrualResult.usedDays)}일, 이월{" "}
+              {formatDays(accrualResult.carryOverDays)}일) / updated{" "}
               {formatDateTime(accrualResult.updatedAt)}
             </p>
           ) : (

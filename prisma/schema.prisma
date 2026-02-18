@@ -219,7 +219,9 @@ model LeaveRequest {
   leaveType      LeaveType        @default(ANNUAL)
   startDate      DateTime
   endDate        DateTime
-  days           Int
+  unit           LeaveRequestUnit @default(FULL_DAY)
+  hours          Decimal?         @db.Decimal(6, 2)
+  days           Decimal          @db.Decimal(6, 2)
   reason         String?
   state          LeaveRequestState @default(PENDING)
   decisionReason String?
@@ -252,10 +254,10 @@ model LeaveApproval {
 model LeaveBalanceProjection {
   employeeId      String   @id
   employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  grantedDays     Int      @default(15)
-  usedDays        Int      @default(0)
-  remainingDays   Int      @default(15)
-  carryOverDays   Int      @default(0)
+  grantedDays     Decimal  @default(15) @db.Decimal(6, 2)
+  usedDays        Decimal  @default(0) @db.Decimal(6, 2)
+  remainingDays   Decimal  @default(15) @db.Decimal(6, 2)
+  carryOverDays   Decimal  @default(0) @db.Decimal(6, 2)
   lastAccrualYear Int?
   updatedAt       DateTime @updatedAt
 }
@@ -266,6 +268,10 @@ model LeavePolicy {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   annualGrantDays Int         @default(15)
   carryOverCapDays Int        @default(5)
+  allowHalfDay    Boolean     @default(true)
+  allowHourly     Boolean     @default(true)
+  hourlyIncrementMinutes Int  @default(30)
+  maxHoursPerRequest Decimal  @default(8) @db.Decimal(6, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
@@ -362,6 +368,12 @@ enum LeaveDecisionAction {
   APPROVED
   REJECTED
   CANCELED
+}
+
+enum LeaveRequestUnit {
+  FULL_DAY
+  HALF_DAY
+  HOUR
 }
 
 enum PayrollState {

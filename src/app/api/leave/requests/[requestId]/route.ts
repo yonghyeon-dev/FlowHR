@@ -34,6 +34,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         leaveType: parsed.data.leaveType,
         startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : undefined,
         endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : undefined,
+        unit: parsed.data.unit,
+        hours: parsed.data.hours,
         reason: parsed.data.reason
       }
     );
