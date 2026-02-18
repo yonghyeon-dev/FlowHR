@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.3.1
+version: 1.4.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -7,6 +7,7 @@ scope:
     - leave approve/reject flow with audit trace
     - leave balance read model contract
     - annual leave accrual and carry-over settlement
+    - leave policy read/update (annual grant + carry-over cap)
   out:
     - external calendar synchronization
 entities:
@@ -16,14 +17,16 @@ entities:
     description: Approval or rejection decision record with actor and reason.
   - name: LeaveBalanceProjection
     description: Read model of granted, used, remaining, and carry-over leave days.
+  - name: LeavePolicy
+    description: Organization-level leave policy (annual grant and carry-over cap).
 api:
   auth:
     - role: employee
       permission: create/update and list own leave requests
     - role: manager
-      permission: approve or reject leave requests within scope
+      permission: approve/reject leave requests and read leave policy within tenant scope
     - role: payroll_operator
-      permission: settle leave accrual cycle, read leave balances, and list leave requests for payroll review
+      permission: settle leave accrual cycle, read leave balances, manage leave policy, and list leave requests for payroll review
     - role: admin
       permission: full leave operations
   endpoints:
@@ -48,6 +51,12 @@ api:
     - method: GET
       path: /leave/balances/{employeeId}
       description: Retrieve leave balance snapshot.
+    - method: GET
+      path: /leave/policy
+      description: Read leave policy for an organization (defaults when not configured).
+    - method: PUT
+      path: /leave/policy
+      description: Upsert leave policy for an organization.
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
@@ -63,6 +72,8 @@ api:
         description: Emitted when pending leave is canceled.
       - name: leave.accrual.settled.v1
         description: Emitted when annual accrual settlement is applied.
+      - name: leave.policy.updated.v1
+        description: Emitted when leave policy is created or updated.
     consumed:
       - name: employee.profile.updated.v1
         description: Employee org/profile metadata updates.
@@ -74,14 +85,17 @@ db_changes:
       description: Add carry-over and accrual settlement trace fields to LeaveBalanceProjection.
     - id: 202602140006_employee_fk_constraints
       description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
+    - id: 202602180002_leave_policy
+      description: Add organization-level leave policy (annual grant + carry-over cap).
   backward_compatible: true
-  notes: Additive schema change. Existing balance rows default carry-over to 0.
+  notes: Additive schema change. Existing leave accrual defaults remain unchanged until a policy is configured.
 invariants:
   - Final leave decisions are immutable and auditable.
   - Employee can mutate only own pending request.
   - Approved leave state is consumable for attendance/payroll downstream.
   - Same employee/year accrual settlement cannot be applied more than once.
   - Carry-over days are capped by policy and never negative.
+  - Leave accrual settlement uses leave policy defaults when grant/cap inputs are omitted.
   - Employee leave list queries are restricted to own employeeId.
   - LeaveRequest.employeeId and LeaveBalanceProjection.employeeId must reference existing Employee.id (FK enforced).
 risk:
@@ -96,12 +110,15 @@ test_plan:
     - leave state transition guard validation
     - leave date normalization by Asia/Seoul
     - accrual settlement carry-over cap calculation
+    - leave policy validation and default fallback
     - leave list query parsing and role boundary guards
   integration:
     - create leave request rejects unknown employeeId (404)
     - create/update/approve leave flow
     - reject flow with reason and audit
     - accrual settlement with duplicate-year protection
+    - leave policy upsert/read returns configured values
+    - accrual settlement uses policy defaults when request does not include grant/cap
     - list leave requests by period overlap returns expected rows
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
@@ -123,6 +140,8 @@ observability:
     - leave.rejected
     - leave.canceled
     - leave.accrual_settled
+    - leave.policy_read
+    - leave.policy_updated
   metrics:
     - leave_approval_latency_ms
     - leave_request_rejection_rate
@@ -144,11 +163,12 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.3.1 enforces leave employeeId referential integrity (Employee FK) and rejects write paths that reference a non-existent employee."
+consumer_impact: "Contract v1.4.0 adds organization-level leave policy endpoints (`/leave/policy`) and allows accrual settlement to fall back to policy defaults when grant/cap inputs are omitted."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
   - work-items/WI-0027-leave-list-api.md
+  - work-items/WI-0090-leave-policy-settings.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

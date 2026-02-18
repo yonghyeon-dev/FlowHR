@@ -15,7 +15,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 7. Create/update deduction profile and read latest profile by ID.
 8. Run deduction/tax preview in `profile` mode without explicit deduction values.
 9. Reject profile-mode preview when `expectedProfileVersion` is stale.
-10. List payroll runs by period (`from`/`to`) and verify role guard (payroll_operator/admin only).
+10. List payroll runs by period (`from`/`to`) and verify role guard (payroll_operator/admin, plus employee self-service for own CONFIRMED only).
 11. List deduction profiles (optional filters `active`, `mode`) and verify role guard.
 
 ## Accuracy Cases
@@ -43,3 +43,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Code Gate: payroll unit/integration/regression checks pass.
 - Compatibility Gate: gross-only consumer path remains valid with phase2 flag off.
 - Profile Gate: profile-mode API/auth/audit checks are validated before merge.
+- Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).

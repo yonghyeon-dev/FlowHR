@@ -22,6 +22,8 @@ import type {
   ListAuditLogsInput,
   LeaveBalanceEntity,
   LeaveBalanceStore,
+  LeavePolicyEntity,
+  LeavePolicyStore,
   LeaveRequestEntity,
   LeaveStore,
   OrganizationEntity,
@@ -42,6 +44,7 @@ import type {
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
   UpdatePayrollRunInput,
+  UpsertLeavePolicyInput,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
@@ -130,6 +133,17 @@ function toLeaveBalanceEntity(record: {
   lastAccrualYear: number | null;
   updatedAt: Date;
 }): LeaveBalanceEntity {
+  return record;
+}
+
+function toLeavePolicyEntity(record: {
+  id: string;
+  organizationId: string;
+  annualGrantDays: number;
+  carryOverCapDays: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): LeavePolicyEntity {
   return record;
 }
 
@@ -1028,6 +1042,31 @@ const leaveBalance: LeaveBalanceStore = {
   }
 };
 
+const leavePolicy: LeavePolicyStore = {
+  async findByOrganizationId(organizationId: string) {
+    const policy = await prisma.leavePolicy.findUnique({
+      where: { organizationId }
+    });
+    return policy ? toLeavePolicyEntity(policy) : null;
+  },
+
+  async upsertForOrganization(input: UpsertLeavePolicyInput) {
+    const policy = await prisma.leavePolicy.upsert({
+      where: { organizationId: input.organizationId },
+      update: {
+        annualGrantDays: input.annualGrantDays,
+        carryOverCapDays: input.carryOverCapDays
+      },
+      create: {
+        organizationId: input.organizationId,
+        annualGrantDays: input.annualGrantDays,
+        carryOverCapDays: input.carryOverCapDays
+      }
+    });
+    return toLeavePolicyEntity(policy);
+  }
+};
+
 const payroll: PayrollStore = {
   async create(input: CreatePayrollRunInput) {
     const run = await prisma.payrollRun.create({
@@ -1198,6 +1237,7 @@ export const prismaDataAccess: DataAccess = {
   attendance,
   scheduling,
   leave,
+  leavePolicy,
   leaveBalance,
   payroll,
   deductionProfiles,

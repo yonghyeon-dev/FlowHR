@@ -17,6 +17,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .devserver.*.log
+.devserver.pid
 .pr-wi-*.md
 
 # Prisma
@@ -27,6 +28,8 @@ prisma/dev.db-journal
 .tmp-check-contracts-*/
 .tmp-contract-governance-tests/
 .tmp-pr-template-tests/
+.tmp-ui-journey/
+.tmp-pr-body-*.md
 
 # Python
 __pycache__/

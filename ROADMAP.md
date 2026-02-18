@@ -18,6 +18,7 @@
   - 긴급 머지(break-glass): `docs/break-glass.md`
   - 계약 버전/폐기: `contracts/versioning.md`
   - QA 게이트: `qa/gate.checklist.md`
+  - 테스트 스위트 운영: `docs/test-suites.md`
   - 상위호환 KPI 기준: `docs/competitive-scorecard.md`
 
 ## 1. 현재 상태 요약
@@ -112,6 +113,10 @@
   - 관리자 조치시간 단축 UI 재설계 + KPI baseline (WI-0081)
   - 직원 셀프서비스 90초 여정 UI baseline (WI-0082)
   - UI 핵심 여정 e2e + 회귀 차단 게이트 (WI-0083)
+  - People 온보딩 UI(조직/직원) baseline (WI-0084)
+  - UI 컨텍스트 지속성(테넌트/Actor ID) baseline (WI-0085)
+  - 관리자 우선 큐 인라인 조치 UI baseline (WI-0086)
+  - 근태 집계 UI baseline (WI-0087)
 - 이후 백엔드 고도화:
   - 근무일정/교대/유연근무 고도화(고급 제약/선호 기반 fairness 최적화)
   - 출퇴근 정책 고도화(적응형 라우팅/자동복구 운영)
@@ -119,7 +124,9 @@
 
 ### 진행 중
 
-- 없음 (WI-0080까지 main 반영 기준)
+- WI-0084~0088 SaaS UI 베이스라인(관리자 대시보드 + 직원 포털 + 명세서) 정착 (브랜치 작업 중)
+- WI-0089 e2e 테스트 스위트 분리(MVP vs Full)로 SaaS 배송 속도 우선
+- WI-0090 휴가 정책(조직 단위) 저장/조회 + 정산 기본값 적용 (정책 엔진 베이스라인)
 
 ### 현재 아키텍처
 
@@ -130,7 +137,7 @@
 | 인증 | Supabase JWT + 헤더 폴백 + RBAC(permission) | RBAC 엔진 + 테넌트 격리 |
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | 단순 비율 (hourlyRate × multiplier) | 한국 세법 + 4대보험 |
-| UI | MVP 운영 콘솔 (단일 페이지; 근무일정 포함) | 관리자 대시보드 + 직원 포탈 |
+| UI | 관리자 대시보드(`/admin`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
 | 모바일 | 없음 | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 
@@ -225,7 +232,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 높음  │ 5. 근무일정 & 출퇴근 고도화 (Phase 2)         │ ← 핵심 기능 확장
      │ 6. 급여 엔진 고도화 (Phase 4)                 │ ← 세법 미적용
      ├─────────────────────────────────────────────┤
-중간  │ 7. 사용자 UI (Phase 6)                       │ ← UI 전무
+중간  │ 7. 사용자 UI (Phase 6)                       │ ← UI 베이스라인은 이미 존재(WI-0081~). Phase 6에서 '런칭 품질'로 확장
      │ 8. 모바일 앱 (Phase 7)                        │ ← 채널 부재
      ├─────────────────────────────────────────────┤
 낮음  │ 9. 확장 기능 (Phase 8)                       │ ← 부가 모듈

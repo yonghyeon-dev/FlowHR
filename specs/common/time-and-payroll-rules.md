@@ -42,8 +42,9 @@ This document is the shared source of truth for attendance-to-payroll calculatio
 ## WI-0003 Leave Accrual Rules
 
 - Yearly accrual settlement actor: `admin` or `payroll_operator`.
-- Default annual grant: `15` days.
-- Default carry-over cap: `5` days.
+- Default annual grant: `15` days (when policy is not configured).
+- Default carry-over cap: `5` days (when policy is not configured).
+- Organization-level leave policy can override grant/cap defaults. When configured, settlement uses policy values when request omits them.
 - Carry-over formula: `min(max(remainingDays, 0), carryOverCapDays)`.
 - Duplicate settlement for same employee/year is rejected.
 

@@ -1,5 +1,5 @@
 import type { Actor } from "@/lib/actor";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
 import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import {
@@ -515,7 +515,31 @@ export async function listPayrollRuns(
   context: ServiceContext,
   input: ListPayrollRunsInput
 ): Promise<PayrollRunEntity[]> {
-  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const permissions = await resolveActorPermissions({ actor, dataAccess: context.dataAccess });
+  const canListAny = permissions.has(Permissions.payrollRunList);
+  const canListOwn = permissions.has(Permissions.payrollRunListOwn);
+
+  if (!canListAny && !canListOwn) {
+    throw new ServiceError(403, `payroll list requires ${Permissions.payrollRunList} permission`);
+  }
+
+  if (!canListAny) {
+    const targetEmployeeId = input.employeeId?.trim() ?? "";
+    if (!targetEmployeeId || targetEmployeeId !== actor.id) {
+      throw new ServiceError(403, "employees can only list their own confirmed payroll runs");
+    }
+    if (input.state && input.state !== "CONFIRMED") {
+      throw new ServiceError(403, "employees can only access confirmed payroll runs");
+    }
+    // Enforce confirmed-only view for employee self-service payslips.
+    input = { ...input, employeeId: targetEmployeeId, state: "CONFIRMED" };
+  }
+
   ensureValidPeriod(input.periodStart, input.periodEnd);
   const tenantScope = resolveTenantScope(context.actor);
 

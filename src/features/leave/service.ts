@@ -9,7 +9,7 @@ import type {
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
-import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
+import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
 
 const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -49,6 +49,16 @@ type SettleLeaveAccrualInput = {
   carryOverCapDays?: number;
 };
 
+type ReadLeavePolicyInput = {
+  organizationId?: string;
+};
+
+type UpsertLeavePolicyInput = {
+  organizationId?: string;
+  annualGrantDays: number;
+  carryOverCapDays: number;
+};
+
 type ListLeaveRequestsInput = {
   periodStart: Date;
   periodEnd: Date;
@@ -80,6 +90,19 @@ function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
   if (periodEnd <= periodStart) {
     throw new ServiceError(400, "to must be after from");
   }
+}
+
+function resolveTargetOrganizationId(actor: Actor | null, inputOrganizationId?: string) {
+  const candidate = (inputOrganizationId ?? actor?.organizationId ?? "").trim();
+  if (!candidate) {
+    throw new ServiceError(400, "organizationId is required");
+  }
+  return candidate;
+}
+
+function ensureTenantAccess(actor: Actor | null, organizationId: string) {
+  const tenantScope = resolveTenantScope(actor);
+  ensureTenantMatch(tenantScope, organizationId, "organization not found");
 }
 
 async function ensureNoOverlap(
@@ -525,8 +548,13 @@ export async function settleLeaveAccrual(
 
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
 
-  const annualGrantDays = input.annualGrantDays ?? DEFAULT_GRANTED_DAYS;
-  const carryOverCapDays = input.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS;
+  const policy =
+    employee.organizationId && (input.annualGrantDays === undefined || input.carryOverCapDays === undefined)
+      ? await context.dataAccess.leavePolicy.findByOrganizationId(employee.organizationId)
+      : null;
+
+  const annualGrantDays = input.annualGrantDays ?? policy?.annualGrantDays ?? DEFAULT_GRANTED_DAYS;
+  const carryOverCapDays = input.carryOverCapDays ?? policy?.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS;
   if (!Number.isInteger(input.year) || input.year < 2000 || input.year > 9999) {
     throw new ServiceError(400, "year must be a valid 4-digit year");
   }
@@ -585,6 +613,127 @@ export async function settleLeaveAccrual(
   });
 
   return balance;
+}
+
+export async function readLeavePolicy(
+  context: ServiceContext,
+  input: ReadLeavePolicyInput
+): Promise<{
+  policy: {
+    organizationId: string;
+    annualGrantDays: number;
+    carryOverCapDays: number;
+    source: "configured" | "default";
+    updatedAt: string | null;
+  };
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(context, Permissions.leaveBalanceReadAny, "leave policy read requires permission");
+
+  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
+  ensureTenantAccess(actor, organizationId);
+
+  const stored = await context.dataAccess.leavePolicy.findByOrganizationId(organizationId);
+  const policy = stored
+    ? {
+        organizationId: stored.organizationId,
+        annualGrantDays: stored.annualGrantDays,
+        carryOverCapDays: stored.carryOverCapDays,
+        source: "configured" as const,
+        updatedAt: stored.updatedAt.toISOString()
+      }
+    : {
+        organizationId,
+        annualGrantDays: DEFAULT_GRANTED_DAYS,
+        carryOverCapDays: DEFAULT_CARRY_OVER_CAP_DAYS,
+        source: "default" as const,
+        updatedAt: null
+      };
+
+  await context.dataAccess.audit.append({
+    action: "leave.policy_read",
+    entityType: "LeavePolicy",
+    entityId: stored?.id,
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: policy
+  });
+
+  return { policy };
+}
+
+export async function upsertLeavePolicy(
+  context: ServiceContext,
+  input: UpsertLeavePolicyInput
+): Promise<{
+  policy: {
+    organizationId: string;
+    annualGrantDays: number;
+    carryOverCapDays: number;
+    updatedAt: string;
+  };
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(context, Permissions.leaveAccrualSettle, "leave policy write requires permission");
+
+  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
+  ensureTenantAccess(actor, organizationId);
+
+  if (!Number.isInteger(input.annualGrantDays) || input.annualGrantDays <= 0) {
+    throw new ServiceError(400, "annualGrantDays must be a positive integer");
+  }
+  if (!Number.isInteger(input.carryOverCapDays) || input.carryOverCapDays < 0) {
+    throw new ServiceError(400, "carryOverCapDays must be a non-negative integer");
+  }
+
+  const stored = await context.dataAccess.leavePolicy.upsertForOrganization({
+    organizationId,
+    annualGrantDays: input.annualGrantDays,
+    carryOverCapDays: input.carryOverCapDays
+  });
+
+  await context.dataAccess.audit.append({
+    action: "leave.policy_updated",
+    entityType: "LeavePolicy",
+    entityId: stored.id,
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      organizationId: stored.organizationId,
+      annualGrantDays: stored.annualGrantDays,
+      carryOverCapDays: stored.carryOverCapDays
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "leave.policy.updated.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "LeavePolicy",
+    entityId: stored.id,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      organizationId: stored.organizationId,
+      annualGrantDays: stored.annualGrantDays,
+      carryOverCapDays: stored.carryOverCapDays
+    }
+  });
+
+  return {
+    policy: {
+      organizationId: stored.organizationId,
+      annualGrantDays: stored.annualGrantDays,
+      carryOverCapDays: stored.carryOverCapDays,
+      updatedAt: stored.updatedAt.toISOString()
+    }
+  };
 }
 
 export const leaveServiceInternals = {
