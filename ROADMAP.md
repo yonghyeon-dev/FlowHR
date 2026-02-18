@@ -139,22 +139,23 @@
 - WI-0100 관리자 승인 처리 이력 타임라인 UX
 - WI-0101 급여 KR 법정공제 baseline 모드 추가 (feature flag: `FLOWHR_PAYROLL_KR_BASELINE_V1`)
 - WI-0102 People 도메인 Department/Position 모델 + API + 직원 배정 정합성 검증
+- WI-0103 결재선/위임 정책 baseline (정책 API + 위임 API + 승인 게이트 연동 + `/admin/approval-policy` UI)
 
 ### 진행 중
 
-- WI-0103 결재선/위임 정책 설계
 - 다음: 휴가 정책 고도화(반차/시간단위) + 결재 엔진 UI 연동
+- 다음: 급여 엔진 고도화(세법/4대보험 세부 룰) 및 명세서 검증 자동화 확장
 
 ### 현재 아키텍처
 
 | 항목 | 현재 상태 | 프로덕션 요구 |
 |------|-----------|---------------|
-| DB 모델 | 15개 (Department/Position 포함; employeeId FK/RLS baseline 적용) | 25~30개 |
-| API 엔드포인트 | ~42개 | 100+ |
+| DB 모델 | 17개 (Department/Position + ApprovalPolicy/ApprovalDelegation 포함; employeeId FK/RLS baseline 적용) | 25~30개 |
+| API 엔드포인트 | ~47개 | 100+ |
 | 인증 | Supabase JWT + 헤더 폴백 + RBAC(permission) | RBAC 엔진 + 테넌트 격리 |
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | phase2 수동/프로필 + KR baseline 근사 | 한국 세법 + 4대보험 |
-| UI | 관리자 대시보드(`/admin`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
+| UI | 관리자 대시보드(`/admin`) + 결재 정책(`/admin/approval-policy`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
 | 모바일 | 없음 | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 

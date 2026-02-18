@@ -5,6 +5,7 @@ export type LeaveRequestState = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED"
 export type LeaveDecisionAction = "APPROVED" | "REJECTED" | "CANCELED";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type DeductionProfileMode = "manual" | "profile";
+export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 
 export type AttendanceRecordEntity = {
   id: string;
@@ -147,6 +148,30 @@ export type PositionEntity = {
   organizationId: string;
   code: string;
   name: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ApprovalPolicyEntity = {
+  id: string;
+  organizationId: string;
+  attendanceApproverRole: string;
+  leaveApproverRole: string;
+  payrollApproverRole: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ApprovalDelegationEntity = {
+  id: string;
+  organizationId: string;
+  domain: ApprovalDomain;
+  delegatorRole: string;
+  delegateActorId: string;
+  reason: string | null;
+  startsAt: Date;
+  endsAt: Date;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -382,6 +407,32 @@ export type UpdatePositionInput = {
   active?: boolean;
 };
 
+export type UpsertApprovalPolicyInput = {
+  organizationId: string;
+  attendanceApproverRole: string;
+  leaveApproverRole: string;
+  payrollApproverRole: string;
+};
+
+export type CreateApprovalDelegationInput = {
+  organizationId: string;
+  domain: ApprovalDomain;
+  delegatorRole: string;
+  delegateActorId: string;
+  reason?: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  active?: boolean;
+};
+
+export type UpdateApprovalDelegationInput = {
+  delegateActorId?: string;
+  reason?: string | null;
+  startsAt?: Date;
+  endsAt?: Date;
+  active?: boolean;
+};
+
 export type UpsertRoleInput = {
   id: string;
   name: string;
@@ -561,6 +612,20 @@ export interface PositionStore {
   list(input: { active?: boolean; organizationId?: string }): Promise<PositionEntity[]>;
 }
 
+export interface ApprovalStore {
+  findPolicyByOrganizationId(organizationId: string): Promise<ApprovalPolicyEntity | null>;
+  upsertPolicyForOrganization(input: UpsertApprovalPolicyInput): Promise<ApprovalPolicyEntity>;
+  createDelegation(input: CreateApprovalDelegationInput): Promise<ApprovalDelegationEntity>;
+  findDelegationById(id: string): Promise<ApprovalDelegationEntity | null>;
+  updateDelegation(id: string, input: UpdateApprovalDelegationInput): Promise<ApprovalDelegationEntity>;
+  listDelegations(input: {
+    organizationId?: string;
+    domain?: ApprovalDomain;
+    active?: boolean;
+    delegateActorId?: string;
+  }): Promise<ApprovalDelegationEntity[]>;
+}
+
 export interface RbacStore {
   listRoles(): Promise<RoleWithPermissionsEntity[]>;
   findRoleById(id: string): Promise<RoleWithPermissionsEntity | null>;
@@ -619,6 +684,7 @@ export type DataAccess = {
   employees: EmployeeStore;
   departments: DepartmentStore;
   positions: PositionStore;
+  approvals: ApprovalStore;
   rbac: RbacStore;
   attendance: AttendanceStore;
   scheduling: SchedulingStore;

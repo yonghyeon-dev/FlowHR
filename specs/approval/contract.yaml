@@ -1,0 +1,110 @@
+owner: approval-agent
+version: 0.1.0
+scope:
+  in:
+    - organization-level approval policy for attendance/leave/payroll
+    - approval delegation management with active time window
+    - approval gate enforcement on attendance/leave/payroll decision endpoints
+  out:
+    - multi-step approval chain routing
+    - external groupware approval sync
+entities:
+  - name: ApprovalPolicy
+    description: Organization-level domain-to-approver role mapping.
+  - name: ApprovalDelegation
+    description: Time-bounded delegation from delegator role to delegate actor.
+api:
+  auth:
+    - role: admin
+      permission: read/write approval policy and delegation
+    - role: manager
+      permission: read policy/delegation and create manager-level delegation
+    - role: system
+      permission: full approval policy/delegation operations
+  endpoints:
+    - method: GET
+      path: /approval/policy
+      description: Read organization approval policy (returns default fallback when not configured).
+    - method: PUT
+      path: /approval/policy
+      description: Upsert organization approval policy.
+    - method: GET
+      path: /approval/delegations
+      description: List approval delegations by organization/domain/active filter.
+    - method: POST
+      path: /approval/delegations
+      description: Create approval delegation.
+    - method: PATCH
+      path: /approval/delegations/{delegationId}
+      description: Update approval delegation (window/active/delegate).
+  events:
+    published:
+      - name: approval.policy.updated.v1
+        description: Emitted when organization approval policy is updated.
+      - name: approval.delegation.created.v1
+        description: Emitted when approval delegation is created.
+      - name: approval.delegation.updated.v1
+        description: Emitted when approval delegation is updated.
+    consumed: []
+db_changes:
+  migrations:
+    - id: 202602180004_approval_policy_delegation
+      description: Add approval policy/delegation tables and approval role permissions.
+  backward_compatible: true
+  notes: Additive schema change with role-permission seed using idempotent insert.
+invariants:
+  - Approval policy fallback defaults to manager(manager/payroll_operator) when no record exists.
+  - Approval delegation must have endsAt greater than startsAt.
+  - Approval execution requires both permission and policy/delegation gate.
+  - Tenant-scoped actors cannot mutate policy/delegation for another organization.
+risk:
+  permissions:
+    - Incorrect policy/delegation can block approvals or allow unintended approvers.
+  payroll_accuracy:
+    - Invalid payroll confirmation approver can impact release readiness and payroll closing timing.
+  legal:
+    - Approval authority changes must remain auditable.
+test_plan:
+  unit:
+    - approval policy/delegation schema validation
+    - delegation time-window guard
+  integration:
+    - read fallback policy without persisted row
+    - upsert and read configured policy
+    - create and deactivate delegation lifecycle
+    - manager non-manager delegation write blocked with 403
+  regression:
+    - attendance/leave/payroll approval endpoints enforce policy gate
+  authorization:
+    - policy/delegation endpoint permission checks
+    - tenant boundary checks for policy/delegation mutation
+  payroll_accuracy:
+    - payroll confirm gate follows configured approver role/delegation
+observability:
+  audit_events:
+    - approval.policy.updated
+    - approval.delegation.created
+    - approval.delegation.updated
+  metrics:
+    - approval_policy_update_count
+    - approval_delegation_active_count
+    - approval_policy_gate_denied_count
+  logs:
+    - approval policy gate denial with expected role and actor context
+rollout:
+  feature_flags:
+    - name: approval_policy_v1
+      default: "on"
+  migration_strategy: expand-contract
+rollback:
+  strategy: keep permission checks and temporarily set policy to defaults while disabling delegation updates.
+  max_recovery_time: 30m
+deprecations: []
+breaking_changes: false
+consumer_impact: "Adds new approval policy/delegation API and enforces domain-level approval gate on existing attendance/leave/payroll decision flows."
+references:
+  - specs/common/time-and-payroll-rules.md
+  - work-items/WI-0103-approval-line-delegation-policy.md
+approval:
+  spec_owner: orchestrator-agent
+  qa_owner: qa-agent

@@ -1,6 +1,7 @@
 import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
+import { assertApprovalPolicyGate } from "@/features/approval/service";
 import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import {
   calculateGrossPay,
@@ -593,6 +594,10 @@ export async function confirmPayrollRun(
   if (run.state !== "PREVIEWED") {
     throw new ServiceError(409, "only previewed payroll run can be confirmed");
   }
+  await assertApprovalPolicyGate(context, {
+    domain: "PAYROLL",
+    organizationId: run.organizationId
+  });
 
   const confirmed = await context.dataAccess.payroll.update(runId, {
     state: "CONFIRMED",
