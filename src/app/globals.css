@@ -115,6 +115,64 @@ body {
   gap: 8px;
 }
 
+.session-menu {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.session-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.session-id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.session-id strong {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-pill {
+  font-size: 0.72rem;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border: 1px solid var(--line);
+  padding: 2px 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.session-sub {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.session-sub code {
+  color: var(--primary);
+}
+
+.session-error {
+  margin-top: 6px;
+  color: var(--danger);
+  font-size: 0.74rem;
+  grid-column: 1 / -1;
+}
+
 .saas-sidebar-footer a {
   text-decoration: none;
   color: var(--ink);

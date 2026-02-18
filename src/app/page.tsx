@@ -27,6 +27,9 @@ export default function HomePage() {
           <Link className="btn btn-secondary" href="/employee/payslips">
             급여 명세서
           </Link>
+          <Link className="btn btn-secondary" href="/login">
+            로그인
+          </Link>
         </div>
       </section>
 

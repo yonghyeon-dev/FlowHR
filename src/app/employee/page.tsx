@@ -496,78 +496,78 @@ export default function EmployeeSelfServicePage() {
       </section>
 
       <section className="panel-grid">
-        <article className="panel" id="devtools">
-          <h2>내 계정/컨텍스트 (개발/검증용)</h2>
-          <p className="small">
-            로컬 개발에서는 Dev Header(x-actor-*) 모드를 사용합니다. 스테이징/프로덕션에서는 로그인 세션으로 동작하도록
-            확장합니다.
-          </p>
-          <details className="details">
-            <summary>
-              설정 열기 <small>(기본은 숨김)</small>
-            </summary>
-            <div className="input-grid" style={{ marginTop: 12 }}>
-              <label>
-                Organization ID (선택)
-                <input
-                  value={organizationId}
-                  placeholder="예: ORG-00001"
-                  onChange={(event) => setOrganizationId(event.target.value)}
-                />
-              </label>
-              <label>
-                내 직원 ID
-                <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-              </label>
-              {showDevTools ? (
-                <label className="full">
-                  Bearer Access Token (선택)
-                  <textarea
-                    rows={3}
-                    placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
-                    value={accessToken}
-                    onChange={(event) => setAccessToken(event.target.value)}
+        <article className="panel" id="account">
+          <h2>내 계정</h2>
+          {isProductionRuntime ? (
+            <p className="small">
+              {supabaseSession
+                ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"}`
+                : "현재 로그인되어 있지 않습니다."}{" "}
+              <span className="muted">(Bearer {usesBearerToken ? "ON" : "OFF"})</span>
+            </p>
+          ) : (
+            <p className="small muted">로컬 개발: Dev Header(x-actor-*) 모드가 기본입니다.</p>
+          )}
+          {supabaseSessionError ? (
+            <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
+              세션 오류: {supabaseSessionError}
+            </p>
+          ) : null}
+
+          {showDevTools || !isProductionRuntime ? (
+            <details className="details" style={{ marginTop: 12 }}>
+              <summary>
+                개발/검증 설정 <small>(필요할 때만)</small>
+              </summary>
+              <div className="input-grid" style={{ marginTop: 12 }}>
+                <label>
+                  Organization ID (선택)
+                  <input
+                    value={organizationId}
+                    placeholder="예: ORG-00001"
+                    onChange={(event) => setOrganizationId(event.target.value)}
                   />
                 </label>
+                <label>
+                  내 직원 ID
+                  <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
+                </label>
+                {showDevTools ? (
+                  <label className="full">
+                    Bearer Access Token (override)
+                    <textarea
+                      rows={3}
+                      placeholder="비어 있으면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
+                      value={accessToken}
+                      onChange={(event) => setAccessToken(event.target.value)}
+                    />
+                  </label>
+                ) : null}
+                <label>
+                  조회 기간 시작
+                  <input
+                    type="datetime-local"
+                    value={periodStart}
+                    onChange={(event) => setPeriodStart(event.target.value)}
+                  />
+                </label>
+                <label>
+                  조회 기간 종료
+                  <input
+                    type="datetime-local"
+                    value={periodEnd}
+                    onChange={(event) => setPeriodEnd(event.target.value)}
+                  />
+                </label>
+              </div>
+              {showDevTools ? (
+                <p className="small muted" style={{ marginTop: 10 }}>
+                  (dev) Runtime Supabase URL: <code>{supabaseUrl}</code> / Auth Mode{" "}
+                  {usesBearerToken ? "Bearer Token" : "Dev Header"}
+                </p>
               ) : null}
-              <label>
-                조회 기간 시작
-                <input
-                  type="datetime-local"
-                  value={periodStart}
-                  onChange={(event) => setPeriodStart(event.target.value)}
-                />
-              </label>
-              <label>
-                조회 기간 종료
-                <input
-                  type="datetime-local"
-                  value={periodEnd}
-                  onChange={(event) => setPeriodEnd(event.target.value)}
-                />
-              </label>
-            </div>
-            {showDevTools ? (
-              <p className="small muted" style={{ marginTop: 10 }}>
-                (dev) Runtime Supabase URL: <code>{supabaseUrl}</code> / Auth Mode{" "}
-                {usesBearerToken ? "Bearer Token" : "Dev Header"}
-              </p>
-            ) : null}
-            {isProductionRuntime ? (
-              <p className="small muted" style={{ marginTop: 10 }}>
-                세션:{" "}
-                {supabaseSession
-                  ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"} · actor=${supabaseSession.actorId ?? "-"}`
-                  : "없음"}{" "}
-                (Bearer {usesBearerToken ? "ON" : "OFF"})
-              </p>
-            ) : null}
-            {supabaseSessionError ? (
-              <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
-                세션 오류: {supabaseSessionError}
-              </p>
-            ) : null}
-          </details>
+            </details>
+          ) : null}
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void refreshEmployeeSnapshot()}>
               내 데이터 새로고침

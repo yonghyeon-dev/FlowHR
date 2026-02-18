@@ -109,7 +109,7 @@
 
 ### 다음 우선순위 (Phase 2 진행)
 
-- 균형 조정 우선순위(UI-first window):
+- ✅ 균형 조정 우선순위(UI-first window) 완료:
   - 관리자 조치시간 단축 UI 재설계 + KPI baseline (WI-0081)
   - 직원 셀프서비스 90초 여정 UI baseline (WI-0082)
   - UI 핵심 여정 e2e + 회귀 차단 게이트 (WI-0083)
@@ -127,11 +127,13 @@
 - WI-0088 SaaS UI 피벗: `/`, `/admin`, `/employee`, `/employee/payslips` 추가. ops 도구는 `/ops/*`로 격리하고 기본 UI에서 숨김.
 - WI-0089 e2e 테스트 스위트 분리(MVP vs Full)로 SaaS 배송 속도 우선
 - WI-0090 휴가 정책(조직 단위) 저장/조회 + 정산 기본값 적용 (정책 엔진 베이스라인)
+- WI-0091 SaaS 방향성 재정렬 + 스테이징 빌드 안정성(lazy env init, ops UI 격리)
+- WI-0092 SaaS Shell(사이드 네비) + `/login` 추가
+- WI-0093 production 환경에서 Supabase Auth 세션 기반 Bearer 호출(fallback) 적용
 
 ### 진행 중
 
-- WI-0084 People 온보딩 UI(조직/직원) `/admin` 내 온보딩 패널로 진행
-- WI-0087 근태 집계 UI 고도화 (예정)
+- (없음) 다음은 결재/초대/명세서 UX 고도화로 진행
 
 ### 현재 아키텍처
 

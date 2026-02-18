@@ -1,11 +1,20 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import SessionMenu from "@/components/SessionMenu";
+
 type AdminLayoutProps = {
   children: ReactNode;
 };
 
+function isDevToolsEnabled() {
+  const raw = process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "";
+  const normalized = raw.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  const showDevTools = isDevToolsEnabled();
   return (
     <div className="saas-shell">
       <aside className="saas-sidebar">
@@ -22,19 +31,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
           <Link href="/admin#payroll">급여</Link>
-          <Link className="muted-link" href="/admin#devtools">
-            개발/디버그
+          <Link className="muted-link" href="/admin#account">
+            내 계정
           </Link>
         </nav>
 
         <div className="saas-sidebar-footer">
+          <SessionMenu />
           <Link href="/employee">직원 포털</Link>
-          <Link className="muted-link" href="/ops/mvp-console">
-            (dev) ops 콘솔
-          </Link>
-          <Link className="muted-link" href="/login">
-            로그인
-          </Link>
+          {showDevTools ? (
+            <Link className="muted-link" href="/ops/mvp-console">
+              (dev) ops 콘솔
+            </Link>
+          ) : null}
         </div>
       </aside>
 
