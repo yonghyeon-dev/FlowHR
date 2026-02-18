@@ -471,6 +471,9 @@ export default function HomePage() {
           <Link className="btn btn-secondary" href="/ops/mvp-console">
             검증 콘솔
           </Link>
+          <Link className="btn btn-secondary" href="/employee">
+            직원 셀프서비스
+          </Link>
         </div>
       </section>
 
