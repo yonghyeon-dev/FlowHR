@@ -384,83 +384,138 @@ export default function EmployeeSelfServicePage() {
     return `잔여 ${leaveBalance.remainingDays}일 (부여 ${leaveBalance.grantedDays}일, 사용 ${leaveBalance.usedDays}일)`;
   }, [leaveBalance]);
 
+  const pendingLeaveCount = useMemo(
+    () => leaveRequests.filter((request) => request.state === "PENDING").length,
+    [leaveRequests]
+  );
+
+  const latestAttendance = useMemo(() => {
+    if (attendance.length === 0) {
+      return null;
+    }
+    return attendance[attendance.length - 1] ?? null;
+  }, [attendance]);
+
+  const attendanceSummary = useMemo(() => {
+    if (!latestAttendance) {
+      return "기록 없음";
+    }
+    if (!latestAttendance.checkOutAt) {
+      return "근무 중";
+    }
+    return "퇴근 완료";
+  }, [latestAttendance]);
+
   return (
-    <main className="console-page">
-      <section className="hero-panel">
-        <p className="eyebrow">FlowHR Employee</p>
-        <h1>직원 셀프서비스 (출퇴근 · 휴가)</h1>
-        <p className="hero-copy">
-          셀프서비스 목표: 휴가 신청/정정 요청을 90초 내 완료할 수 있는 UX를 만든다.
-        </p>
-        <div className="hero-meta">
-          <span>API 성공률 {stats.successRate}%</span>
+    <main className="saas-content">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">직원 포털</h1>
+          <p className="page-subtitle">출퇴근 기록, 휴가 신청/취소, 내 스케줄 확인을 직원이 직접 처리합니다.</p>
+        </div>
+        <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee/payslips">
             급여 명세서
           </Link>
+          <Link className="btn btn-secondary" href="/login">
+            로그인
+          </Link>
           <Link className="btn btn-secondary" href="/admin">
-            관리자 대시보드
+            관리자
           </Link>
           <Link className="btn btn-secondary" href="/">
             홈
           </Link>
           {showDevTools ? (
-            <>
-              <span>
-                Runtime Supabase URL <code>{supabaseUrl}</code>
-              </span>
-              <span>Auth Mode {usesBearerToken ? "Bearer Token" : "Dev Header"}</span>
-              <Link className="btn btn-secondary" href="/ops/mvp-console">
-                검증 콘솔
-              </Link>
-            </>
+            <Link className="btn btn-secondary" href="/ops/mvp-console">
+              (dev) ops 콘솔
+            </Link>
           ) : null}
         </div>
+      </header>
+
+      <section className="kpi-strip">
+        <article className="kpi-card">
+          <p>오늘 출퇴근</p>
+          <strong>{attendanceSummary}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>잔여 휴가</p>
+          <strong>{leaveBalance ? `${leaveBalance.remainingDays}일` : "-"}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>휴가 대기</p>
+          <strong>{pendingLeaveCount}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>API 성공률</p>
+          <strong>{stats.successRate}%</strong>
+        </article>
+        <article className="kpi-card">
+          <p>최근 실행</p>
+          <strong>{pendingLabel ?? "-"}</strong>
+        </article>
       </section>
 
       <section className="panel-grid">
-        <article className="panel">
-          <h2>내 계정 컨텍스트</h2>
+        <article className="panel" id="devtools">
+          <h2>내 계정/컨텍스트 (개발/검증용)</h2>
           <p className="small">
-            employee 권한은 <strong>본인 데이터</strong>만 처리할 수 있습니다. (payload의 employeeId는 actor
-            id와 동일해야 합니다.)
+            로컬 개발에서는 Dev Header(x-actor-*) 모드를 사용합니다. 스테이징/프로덕션에서는 로그인 세션으로 동작하도록
+            확장합니다.
           </p>
-          <div className="input-grid">
-            <label>
-              Organization ID (선택)
-              <input
-                value={organizationId}
-                placeholder="예: ORG-00001"
-                onChange={(event) => setOrganizationId(event.target.value)}
-              />
-            </label>
-            <label>
-              내 직원 ID
-              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-            </label>
-            {showDevTools ? (
-              <label className="full">
-                Bearer Access Token (선택)
-                <textarea
-                  rows={3}
-                  placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
-                  value={accessToken}
-                  onChange={(event) => setAccessToken(event.target.value)}
+          <details className="details">
+            <summary>
+              설정 열기 <small>(기본은 숨김)</small>
+            </summary>
+            <div className="input-grid" style={{ marginTop: 12 }}>
+              <label>
+                Organization ID (선택)
+                <input
+                  value={organizationId}
+                  placeholder="예: ORG-00001"
+                  onChange={(event) => setOrganizationId(event.target.value)}
                 />
               </label>
+              <label>
+                내 직원 ID
+                <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
+              </label>
+              {showDevTools ? (
+                <label className="full">
+                  Bearer Access Token (선택)
+                  <textarea
+                    rows={3}
+                    placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
+                    value={accessToken}
+                    onChange={(event) => setAccessToken(event.target.value)}
+                  />
+                </label>
+              ) : null}
+              <label>
+                조회 기간 시작
+                <input
+                  type="datetime-local"
+                  value={periodStart}
+                  onChange={(event) => setPeriodStart(event.target.value)}
+                />
+              </label>
+              <label>
+                조회 기간 종료
+                <input
+                  type="datetime-local"
+                  value={periodEnd}
+                  onChange={(event) => setPeriodEnd(event.target.value)}
+                />
+              </label>
+            </div>
+            {showDevTools ? (
+              <p className="small muted" style={{ marginTop: 10 }}>
+                (dev) Runtime Supabase URL: <code>{supabaseUrl}</code> / Auth Mode{" "}
+                {usesBearerToken ? "Bearer Token" : "Dev Header"}
+              </p>
             ) : null}
-            <label>
-              조회 기간 시작
-              <input
-                type="datetime-local"
-                value={periodStart}
-                onChange={(event) => setPeriodStart(event.target.value)}
-              />
-            </label>
-            <label>
-              조회 기간 종료
-              <input type="datetime-local" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} />
-            </label>
-          </div>
+          </details>
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void refreshEmployeeSnapshot()}>
               내 데이터 새로고침
@@ -468,7 +523,7 @@ export default function EmployeeSelfServicePage() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel" id="attendance">
           <h2>출퇴근</h2>
           <div className="input-grid">
             <label>
@@ -533,7 +588,7 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
-        <article className="panel">
+        <article className="panel" id="leave">
           <h2>휴가</h2>
           <p className="small">{leaveBalanceSummary}</p>
           <div className="input-grid">
@@ -597,7 +652,7 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
-        <article className="panel">
+        <article className="panel" id="schedule">
           <h2>근무 일정</h2>
           {showDevTools ? (
             <div className="actions">

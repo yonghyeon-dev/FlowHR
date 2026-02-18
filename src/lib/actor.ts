@@ -63,6 +63,30 @@ function parseOrganizationIdFromUser(user: User): string | null {
   return null;
 }
 
+function parseActorIdFromUser(user: User): string | null {
+  // Optional canonical override: app_metadata.actor_id
+  // - Useful when the domain actor id (e.g., Employee.id) is not the same as Supabase user uuid.
+  // - Only trust app_metadata (service-role controlled), not user_metadata (user-editable).
+  const candidates = [
+    user.app_metadata?.actor_id,
+    user.app_metadata?.actorId,
+    user.app_metadata?.employee_id,
+    user.app_metadata?.employeeId
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") {
+      continue;
+    }
+    const value = candidate.trim();
+    if (value.length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 function readActorFromHeaders(request: Request): Actor | null {
   const roleValue = request.headers.get("x-actor-role");
   if (!roleValue || !actorRoles.includes(roleValue as ActorRole)) {
@@ -93,8 +117,9 @@ export async function readActor(request: Request): Promise<Actor | null> {
     const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin.auth.getUser(token);
     if (!error && data.user) {
+      const actorId = parseActorIdFromUser(data.user);
       return {
-        id: data.user.id,
+        id: actorId ?? data.user.id,
         role: parseRoleFromUser(data.user),
         organizationId: parseOrganizationIdFromUser(data.user)
       };

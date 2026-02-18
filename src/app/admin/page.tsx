@@ -544,10 +544,12 @@ export default function AdminDashboardPage() {
     await callApi("휴가 정책 저장", "PUT", "/api/leave/policy", payload);
   }
 
-  async function listAttendanceAggregates() {
+  async function listAttendanceAggregates(options?: { employeeId?: string }) {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
-    const employee = aggregateEmployeeId.trim();
+    const employeeCandidate = options?.employeeId;
+    const employee =
+      typeof employeeCandidate === "string" ? employeeCandidate.trim() : aggregateEmployeeId.trim();
     const { response, body } = await callApi(
       employee ? "근태 집계 조회" : "근태 집계 조회(전체)",
       "GET",
@@ -568,39 +570,39 @@ export default function AdminDashboardPage() {
     setLogs([]);
   }
 
+  async function refreshDashboard() {
+    await Promise.all([refreshInbox(), listAttendanceAggregates()]);
+  }
+
   return (
-    <main className="console-page">
-      <section className="hero-panel">
-        <p className="eyebrow">FlowHR</p>
-        <h1>관리자 대시보드</h1>
-        <p className="hero-copy">
-          SaaS 제품 관점에서 꼭 필요한 흐름(직원/조직 → 승인 → 집계 → 급여)을 먼저 완성합니다.
-        </p>
-        <div className="hero-meta">
-          <span>
-            Runtime Supabase URL <code>{supabaseUrl}</code>
-          </span>
+    <main className="saas-content">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">관리자 대시보드</h1>
+          <p className="page-subtitle">
+            직원/조직 온보딩부터 승인 대기함 처리, 근태 집계 확인, 급여 프리뷰/확정까지 한 화면에서 처리합니다.
+          </p>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary" onClick={() => void refreshDashboard()}>
+            대시보드 새로고침
+          </button>
           <Link className="btn btn-secondary" href="/employee">
             직원 포털
           </Link>
-          <Link className="btn btn-secondary" href="/employee/payslips">
-            급여 명세서
+          <Link className="btn btn-secondary" href="/login">
+            로그인
           </Link>
           <Link className="btn btn-secondary" href="/">
             홈
           </Link>
           {showDevTools ? (
-            <>
-              <Link className="btn btn-secondary" href="/ops/mvp-console">
-                MVP Console
-              </Link>
-              <Link className="btn btn-secondary" href="/ops/admin-console">
-                Admin Console (legacy)
-              </Link>
-            </>
+            <Link className="btn btn-secondary" href="/ops/mvp-console">
+              (dev) ops 콘솔
+            </Link>
           ) : null}
         </div>
-      </section>
+      </header>
 
       <section className="kpi-strip">
         <article className="kpi-card">
@@ -628,7 +630,7 @@ export default function AdminDashboardPage() {
       </section>
 
       <section className="panel-grid">
-        <article className="panel">
+        <article className="panel" id="onboarding">
           <h2>조직 온보딩</h2>
           <p className="small">
             조직(테넌트)을 먼저 만들고 선택해야 직원/근태/휴가/급여 흐름을 정상 검증할 수 있습니다. 이 패널의 조직
@@ -680,37 +682,48 @@ export default function AdminDashboardPage() {
           )}
         </article>
 
-        <article className="panel">
-          <h2>회사/권한 컨텍스트</h2>
+        <article className="panel" id="devtools">
+          <h2>인증/컨텍스트 (개발/검증용)</h2>
           <p className="small">
-            지금은 MVP 검증을 위해 Bearer 토큰(선택) 또는 Dev Header(x-actor-*) 모드로 동작합니다.
+            로컬 개발에서는 Dev Header(x-actor-*) 모드로 빠르게 검증하고, 스테이징/프로덕션에서는 Supabase Auth의
+            Bearer 토큰으로 동작합니다.
           </p>
-          <div className="input-grid">
-            <label>
-              Organization ID
-              <input
-                value={organizationId}
-                placeholder="예: ORG-00001"
-                onChange={(event) => setOrganizationId(event.target.value)}
-              />
-            </label>
-            <label>
-              Admin Actor ID
-              <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-            </label>
-          </div>
-          <label className="token-field">
-            Bearer Access Token (선택)
-            <textarea
-              rows={3}
-              placeholder="비어 있으면 Dev Header 모드가 사용됩니다."
-              value={accessToken}
-              onChange={(event) => setAccessToken(event.target.value)}
-            />
-          </label>
+          <details className="details">
+            <summary>
+              설정 열기 <small>(기본은 숨김)</small>
+            </summary>
+            <div className="input-grid" style={{ marginTop: 12 }}>
+              <label>
+                Organization ID
+                <input
+                  value={organizationId}
+                  placeholder="예: ORG-00001"
+                  onChange={(event) => setOrganizationId(event.target.value)}
+                />
+              </label>
+              <label>
+                Admin Actor ID
+                <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
+              </label>
+              <label className="full">
+                Bearer Access Token (선택)
+                <textarea
+                  rows={3}
+                  placeholder="비어 있으면 Dev Header 모드가 사용됩니다."
+                  value={accessToken}
+                  onChange={(event) => setAccessToken(event.target.value)}
+                />
+              </label>
+            </div>
+            {showDevTools ? (
+              <p className="small muted" style={{ marginTop: 10 }}>
+                (dev) Runtime Supabase URL: <code>{supabaseUrl}</code>
+              </p>
+            ) : null}
+          </details>
         </article>
 
-        <article className="panel">
+        <article className="panel" id="people">
           <h2>직원 관리</h2>
           <p className="small">
             출퇴근/휴가/급여는 Employee 마스터가 있어야 동작합니다. 먼저 직원부터 생성하세요.
@@ -780,7 +793,7 @@ export default function AdminDashboardPage() {
           ) : null}
         </article>
 
-        <article className="panel">
+        <article className="panel" id="approvals">
           <h2>승인 대기함</h2>
           <div className="input-grid">
             <label>
@@ -924,7 +937,7 @@ export default function AdminDashboardPage() {
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel" id="aggregates">
           <h2>근태 집계</h2>
           <div className="input-grid">
             <label>
@@ -939,6 +952,15 @@ export default function AdminDashboardPage() {
           <div className="actions">
             <button className="btn btn-secondary" onClick={() => void listAttendanceAggregates()}>
               집계 조회
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setAggregateEmployeeId("");
+                void listAttendanceAggregates({ employeeId: "" });
+              }}
+            >
+              전체 집계
             </button>
           </div>
           {aggregates.length > 0 ? (
@@ -956,6 +978,17 @@ export default function AdminDashboardPage() {
                       {minutesToHours(aggregate.totals.holiday)}
                     </span>
                   </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => {
+                      setAggregateEmployeeId(aggregate.employeeId);
+                      setEmployeeId(aggregate.employeeId);
+                      setAccrualEmployeeId(aggregate.employeeId);
+                    }}
+                  >
+                    이 직원으로 적용
+                  </button>
                 </li>
               ))}
             </ul>
@@ -964,7 +997,7 @@ export default function AdminDashboardPage() {
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel" id="leave-policy">
           <h2>휴가 정책/정산 (연차 부여/이월)</h2>
           <p className="small">
             조직 단위 휴가 정책(연간 부여/이월 상한)을 저장하고, 정산 시 부여/이월 값을 비워두면 정책 기본값이 적용됩니다.
@@ -1018,7 +1051,7 @@ export default function AdminDashboardPage() {
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel" id="payroll">
           <h2>급여 프리뷰/확정</h2>
           <p className="small">승인된 출퇴근 기반으로 총지급을 산정하고, 확정된 급여는 직원 명세서에서 조회합니다.</p>
           <div className="input-grid">
