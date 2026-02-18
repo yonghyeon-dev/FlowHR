@@ -423,6 +423,26 @@ textarea:focus {
   gap: 6px;
 }
 
+.queue-item-main {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.83rem;
+  color: inherit;
+}
+
+.queue-item-main input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.queue-item-main span {
+  display: inline-block;
+  line-height: 1.4;
+}
+
 .btn-small {
   padding: 6px 10px;
   font-size: 0.78rem;
