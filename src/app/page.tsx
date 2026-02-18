@@ -66,6 +66,25 @@ type PayrollRunDto = {
   confirmedBy: string | null;
 };
 
+type AttendanceAggregateDto = {
+  employeeId: string;
+  periodStart: string;
+  periodEnd: string;
+  counts: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    payable: number;
+  };
+  totals: {
+    regular: number;
+    overtime: number;
+    night: number;
+    holiday: number;
+  };
+};
+
 type OrganizationSummary = {
   id: string;
   name: string;
@@ -145,6 +164,12 @@ function formatDateTime(value: string | null) {
     return value;
   }
   return parsed.toLocaleString("ko-KR");
+}
+
+function formatHoursFromMinutes(minutes: number) {
+  const hours = minutes / 60;
+  const rounded = Math.round(hours * 10) / 10;
+  return `${rounded.toLocaleString("ko-KR")}시간`;
 }
 
 export default function HomePage() {
@@ -241,6 +266,7 @@ export default function HomePage() {
   const [queuePayrollRuns, setQueuePayrollRuns] = useState<PayrollRunDto[]>([]);
   const [attendanceRejectReason, setAttendanceRejectReason] = useState("관리자 반려");
   const [leaveRejectReason, setLeaveRejectReason] = useState("관리자 반려");
+  const [attendanceAggregates, setAttendanceAggregates] = useState<AttendanceAggregateDto[]>([]);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const usesBearerToken = accessToken.trim().length > 0;
@@ -322,6 +348,18 @@ export default function HomePage() {
     setScheduleEmployeeId(normalized);
     setPayrollEmployeeId(normalized);
     setLeaveEmployeeId(normalized);
+  }
+
+  function applyEmployeeTargets(nextEmployeeId: string) {
+    const normalized = nextEmployeeId.trim();
+    if (!normalized) {
+      return;
+    }
+    setAttendanceEmployeeId(normalized);
+    setScheduleEmployeeId(normalized);
+    setPayrollEmployeeId(normalized);
+    setLeaveEmployeeId(normalized);
+    setPeopleEmployeeId(normalized);
   }
 
   async function listPeopleOrganizations() {
@@ -752,19 +790,28 @@ export default function HomePage() {
     return readArrayCount(body, "runs");
   }
 
-  async function listAttendanceAggregates() {
+  async function listAttendanceAggregates(scope: "EMPLOYEE" | "TENANT" = "EMPLOYEE") {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
-    await callApi(
-      "근태 집계 조회",
+    const employeeFilter = attendanceEmployeeId.trim();
+    const employeeId = scope === "TENANT" ? undefined : employeeFilter.length > 0 ? employeeFilter : undefined;
+
+    const { response, body } = await callApi(
+      scope === "TENANT" ? "근태 집계 조회(전체)" : "근태 집계 조회",
       "GET",
       `/api/attendance/aggregates${buildQuery({
         from,
         to,
-        employeeId: attendanceEmployeeId
+        employeeId
       })}`,
       { role: "payroll_operator", id: payrollActorId }
     );
+
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { aggregates?: AttendanceAggregateDto[] };
+    setAttendanceAggregates(Array.isArray(parsed.aggregates) ? parsed.aggregates : []);
   }
 
   async function listWorkSchedules() {
@@ -1550,8 +1597,11 @@ export default function HomePage() {
             <button className="btn btn-secondary" onClick={() => void listAttendanceRecords()}>
               출퇴근 기록 조회
             </button>
-            <button className="btn btn-secondary" onClick={() => void listAttendanceAggregates()}>
+            <button className="btn btn-secondary" onClick={() => void listAttendanceAggregates("EMPLOYEE")}>
               근태 집계 조회
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listAttendanceAggregates("TENANT")}>
+              근태 집계(전체)
             </button>
             <button className="btn btn-secondary" onClick={() => void listLeaveRequests()}>
               휴가 요청 조회
@@ -1560,6 +1610,37 @@ export default function HomePage() {
               급여 Run 조회
             </button>
           </div>
+
+          {attendanceAggregates.length > 0 ? (
+            <>
+              <hr className="divider" />
+              <p className="small">근태 집계 결과 ({attendanceAggregates.length}명)</p>
+              <ul className="simple-list" aria-label="근태 집계 결과">
+                {attendanceAggregates.map((aggregate) => (
+                  <li key={aggregate.employeeId}>
+                    <span>
+                      <strong>{aggregate.employeeId}</strong>{" "}
+                      <span className="muted">
+                        승인 {aggregate.counts.approved} / 대기 {aggregate.counts.pending} / 반려{" "}
+                        {aggregate.counts.rejected} / 급여반영 {aggregate.counts.payable}
+                        {" · "}정규 {formatHoursFromMinutes(aggregate.totals.regular)} / 연장{" "}
+                        {formatHoursFromMinutes(aggregate.totals.overtime)} / 야간{" "}
+                        {formatHoursFromMinutes(aggregate.totals.night)} / 휴일{" "}
+                        {formatHoursFromMinutes(aggregate.totals.holiday)}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => applyEmployeeTargets(aggregate.employeeId)}
+                    >
+                      이 직원으로 필터
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </article>
 
         <article className="panel panel-log">
