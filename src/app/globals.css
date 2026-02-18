@@ -201,6 +201,26 @@ textarea:focus {
   gap: 8px;
 }
 
+.queue-toolbar {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  border-radius: 9px;
+}
+
 .muted {
   color: var(--muted);
 }

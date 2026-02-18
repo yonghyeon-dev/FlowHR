@@ -31,6 +31,41 @@ type QueueSnapshot = {
   refreshedAt: string | null;
 };
 
+type AttendanceRecordDto = {
+  id: string;
+  employeeId: string;
+  checkInAt: string;
+  checkOutAt: string | null;
+  breakMinutes: number;
+  isHoliday: boolean;
+  notes: string | null;
+  state: "PENDING" | "APPROVED" | "REJECTED";
+};
+
+type LeaveRequestDto = {
+  id: string;
+  employeeId: string;
+  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string | null;
+  state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+};
+
+type PayrollRunDto = {
+  id: string;
+  organizationId: string | null;
+  employeeId: string | null;
+  periodStart: string;
+  periodEnd: string;
+  state: "PREVIEWED" | "CONFIRMED";
+  grossPayKrw: number;
+  sourceRecordCount: number;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+};
+
 type OrganizationSummary = {
   id: string;
   name: string;
@@ -99,6 +134,17 @@ function readArrayCount(body: unknown, key: string) {
   }
   const value = (body as Record<string, unknown>)[key];
   return Array.isArray(value) ? value.length : 0;
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString("ko-KR");
 }
 
 export default function HomePage() {
@@ -188,6 +234,13 @@ export default function HomePage() {
     pendingPayroll: 0,
     refreshedAt: null
   });
+
+  const [queueView, setQueueView] = useState<"attendance" | "leave" | "payroll" | null>(null);
+  const [queueAttendanceRecords, setQueueAttendanceRecords] = useState<AttendanceRecordDto[]>([]);
+  const [queueLeaveRequests, setQueueLeaveRequests] = useState<LeaveRequestDto[]>([]);
+  const [queuePayrollRuns, setQueuePayrollRuns] = useState<PayrollRunDto[]>([]);
+  const [attendanceRejectReason, setAttendanceRejectReason] = useState("관리자 반려");
+  const [leaveRejectReason, setLeaveRejectReason] = useState("관리자 반려");
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const usesBearerToken = accessToken.trim().length > 0;
@@ -492,6 +545,162 @@ export default function HomePage() {
     );
   }
 
+  async function fetchPendingAttendanceQueue() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    const { response, body } = await callApi(
+      "큐: 출퇴근 미승인 조회",
+      "GET",
+      `/api/attendance/records${buildQuery({
+        from,
+        to,
+        state: "PENDING"
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+    const parsed = body as { records?: AttendanceRecordDto[] };
+    const records = Array.isArray(parsed.records) ? parsed.records : [];
+    setQueueAttendanceRecords(records);
+    return records;
+  }
+
+  async function fetchPendingLeaveQueue() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    const { response, body } = await callApi(
+      "큐: 휴가 미승인 조회",
+      "GET",
+      `/api/leave/requests${buildQuery({
+        from,
+        to,
+        state: "PENDING"
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+    const parsed = body as { requests?: LeaveRequestDto[] };
+    const requests = Array.isArray(parsed.requests) ? parsed.requests : [];
+    setQueueLeaveRequests(requests);
+    return requests;
+  }
+
+  async function fetchPendingPayrollQueue() {
+    const from = toIso(periodStart);
+    const to = toIso(periodEnd);
+    const { response, body } = await callApi(
+      "큐: 급여 미확정 조회",
+      "GET",
+      `/api/payroll/runs${buildQuery({
+        from,
+        to,
+        state: "PREVIEWED"
+      })}`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+    const parsed = body as { runs?: PayrollRunDto[] };
+    const runs = Array.isArray(parsed.runs) ? parsed.runs : [];
+    setQueuePayrollRuns(runs);
+    return runs;
+  }
+
+  async function showPendingAttendanceQueue() {
+    const records = await fetchPendingAttendanceQueue();
+    setQueueView("attendance");
+    setQueueSnapshot((prev) => ({
+      ...prev,
+      pendingAttendance: records.length,
+      refreshedAt: new Date().toLocaleString("ko-KR")
+    }));
+  }
+
+  async function showPendingLeaveQueue() {
+    const requests = await fetchPendingLeaveQueue();
+    setQueueView("leave");
+    setQueueSnapshot((prev) => ({
+      ...prev,
+      pendingLeave: requests.length,
+      refreshedAt: new Date().toLocaleString("ko-KR")
+    }));
+  }
+
+  async function showPendingPayrollQueue() {
+    const runs = await fetchPendingPayrollQueue();
+    setQueueView("payroll");
+    setQueueSnapshot((prev) => ({
+      ...prev,
+      pendingPayroll: runs.length,
+      refreshedAt: new Date().toLocaleString("ko-KR")
+    }));
+  }
+
+  async function approveQueueAttendance(recordId: string) {
+    await callApi(
+      "출퇴근 승인",
+      "POST",
+      `/api/attendance/records/${recordId}/approve`,
+      { role: "manager", id: managerActorId }
+    );
+    await showPendingAttendanceQueue();
+  }
+
+  async function rejectQueueAttendance(recordId: string) {
+    const reason = attendanceRejectReason.trim();
+    await callApi(
+      "출퇴근 반려",
+      "POST",
+      `/api/attendance/records/${recordId}/reject`,
+      { role: "manager", id: managerActorId },
+      reason.length > 0 ? { reason } : undefined
+    );
+    await showPendingAttendanceQueue();
+  }
+
+  async function approveQueueLeave(requestId: string) {
+    await callApi(
+      "휴가 승인",
+      "POST",
+      `/api/leave/requests/${requestId}/approve`,
+      { role: "manager", id: managerActorId }
+    );
+    await showPendingLeaveQueue();
+  }
+
+  async function rejectQueueLeave(requestId: string) {
+    const reason = leaveRejectReason.trim();
+    if (reason.length === 0) {
+      return;
+    }
+    await callApi(
+      "휴가 반려",
+      "POST",
+      `/api/leave/requests/${requestId}/reject`,
+      { role: "manager", id: managerActorId },
+      { reason }
+    );
+    await showPendingLeaveQueue();
+  }
+
+  async function confirmQueuePayroll(runId: string) {
+    await callApi(
+      "급여 확정",
+      "POST",
+      `/api/payroll/runs/${runId}/confirm`,
+      { role: "payroll_operator", id: payrollActorId }
+    );
+    await showPendingPayrollQueue();
+  }
+
   async function listAttendanceRecords(state = attendanceListState) {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
@@ -574,18 +783,32 @@ export default function HomePage() {
   }
 
   async function refreshPriorityQueue() {
-    const [attendanceCount, leaveCount, payrollCount] = await Promise.all([
-      listAttendanceRecords("PENDING"),
-      listLeaveRequests("PENDING"),
-      listPayrollRuns("PREVIEWED")
+    const [attendance, leave, payroll] = await Promise.all([
+      fetchPendingAttendanceQueue(),
+      fetchPendingLeaveQueue(),
+      fetchPendingPayrollQueue()
     ]);
 
     setQueueSnapshot({
-      pendingAttendance: attendanceCount,
-      pendingLeave: leaveCount,
-      pendingPayroll: payrollCount,
+      pendingAttendance: attendance.length,
+      pendingLeave: leave.length,
+      pendingPayroll: payroll.length,
       refreshedAt: new Date().toLocaleString("ko-KR")
     });
+
+    if (attendance.length > 0) {
+      setQueueView("attendance");
+      return;
+    }
+    if (leave.length > 0) {
+      setQueueView("leave");
+      return;
+    }
+    if (payroll.length > 0) {
+      setQueueView("payroll");
+      return;
+    }
+    setQueueView(null);
   }
 
   function clearLogs() {
@@ -683,16 +906,175 @@ export default function HomePage() {
             <button className="btn btn-primary" onClick={() => void refreshPriorityQueue()}>
               우선순위 큐 새로고침
             </button>
-            <button className="btn btn-secondary" onClick={() => void listAttendanceRecords("PENDING")}>
+            <button className="btn btn-secondary" onClick={() => void showPendingAttendanceQueue()}>
               출퇴근 미승인 조회
             </button>
-            <button className="btn btn-secondary" onClick={() => void listLeaveRequests("PENDING")}>
+            <button className="btn btn-secondary" onClick={() => void showPendingLeaveQueue()}>
               휴가 미승인 조회
             </button>
-            <button className="btn btn-secondary" onClick={() => void listPayrollRuns("PREVIEWED")}>
+            <button className="btn btn-secondary" onClick={() => void showPendingPayrollQueue()}>
               급여 미확정 조회
             </button>
           </div>
+
+          <div className="queue-toolbar" role="tablist" aria-label="우선 큐 선택">
+            <button
+              type="button"
+              className={
+                queueView === "attendance"
+                  ? "btn btn-primary btn-small"
+                  : "btn btn-secondary btn-small"
+              }
+              onClick={() => setQueueView("attendance")}
+            >
+              출퇴근 {queueSnapshot.pendingAttendance}
+            </button>
+            <button
+              type="button"
+              className={
+                queueView === "leave" ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"
+              }
+              onClick={() => setQueueView("leave")}
+            >
+              휴가 {queueSnapshot.pendingLeave}
+            </button>
+            <button
+              type="button"
+              className={
+                queueView === "payroll"
+                  ? "btn btn-primary btn-small"
+                  : "btn btn-secondary btn-small"
+              }
+              onClick={() => setQueueView("payroll")}
+            >
+              급여 {queueSnapshot.pendingPayroll}
+            </button>
+          </div>
+
+          {queueView === null ? (
+            <p className="small">표시할 큐가 없습니다.</p>
+          ) : queueView === "attendance" ? (
+            <>
+              <div className="input-grid">
+                <label className="full">
+                  출퇴근 반려 사유 (선택)
+                  <input
+                    value={attendanceRejectReason}
+                    onChange={(event) => setAttendanceRejectReason(event.target.value)}
+                  />
+                </label>
+              </div>
+              {queueAttendanceRecords.length === 0 ? (
+                <p className="small">미승인 출퇴근이 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="미승인 출퇴근 목록">
+                  {queueAttendanceRecords.map((record) => (
+                    <li key={record.id}>
+                      <span>
+                        <strong>{record.id}</strong>{" "}
+                        <span className="muted">
+                          {record.employeeId} / {formatDateTime(record.checkInAt)} →{" "}
+                          {formatDateTime(record.checkOutAt)}
+                        </span>
+                      </span>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => void approveQueueAttendance(record.id)}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectQueueAttendance(record.id)}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : queueView === "leave" ? (
+            <>
+              <div className="input-grid">
+                <label className="full">
+                  휴가 반려 사유 (필수)
+                  <input
+                    value={leaveRejectReason}
+                    onChange={(event) => setLeaveRejectReason(event.target.value)}
+                  />
+                </label>
+              </div>
+              {queueLeaveRequests.length === 0 ? (
+                <p className="small">미승인 휴가가 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="미승인 휴가 목록">
+                  {queueLeaveRequests.map((request) => (
+                    <li key={request.id}>
+                      <span>
+                        <strong>{request.id}</strong>{" "}
+                        <span className="muted">
+                          {request.employeeId} / {request.leaveType} / {formatDateTime(request.startDate)} →{" "}
+                          {formatDateTime(request.endDate)} ({request.days}일)
+                        </span>
+                      </span>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => void approveQueueLeave(request.id)}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectQueueLeave(request.id)}
+                          disabled={leaveRejectReason.trim().length === 0}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <>
+              {queuePayrollRuns.length === 0 ? (
+                <p className="small">미확정 급여 Run이 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="미확정 급여 Run 목록">
+                  {queuePayrollRuns.map((run) => (
+                    <li key={run.id}>
+                      <span>
+                        <strong>{run.id}</strong>{" "}
+                        <span className="muted">
+                          {run.employeeId ?? "-"} / {formatDateTime(run.periodStart)} →{" "}
+                          {formatDateTime(run.periodEnd)} /{" "}
+                          {Math.round(run.grossPayKrw).toLocaleString("ko-KR")}원 ({run.sourceRecordCount}건)
+                        </span>
+                      </span>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void confirmQueuePayroll(run.id)}
+                        >
+                          확정
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
         </article>
 
         <article className="panel">
