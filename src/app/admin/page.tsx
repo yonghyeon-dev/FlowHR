@@ -40,6 +40,16 @@ type AttendanceRecordDto = {
   state: "PENDING" | "APPROVED" | "REJECTED";
 };
 
+type WorkScheduleDto = {
+  id: string;
+  employeeId: string;
+  startAt: string;
+  endAt: string;
+  breakMinutes: number;
+  isHoliday: boolean;
+  notes: string | null;
+};
+
 type LeaveRequestDto = {
   id: string;
   employeeId: string;
@@ -173,6 +183,20 @@ export default function AdminDashboardPage() {
   const [employeeEmail, setEmployeeEmail] = useState("");
   const [employeeActive, setEmployeeActive] = useState(true);
 
+  const [scheduleEmployeeId, setScheduleEmployeeId] = useState("EMP-1001");
+  const [scheduleIsHoliday, setScheduleIsHoliday] = useState(false);
+  const [scheduleStartAt, setScheduleStartAt] = useState(() => {
+    const now = new Date();
+    return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0));
+  });
+  const [scheduleEndAt, setScheduleEndAt] = useState(() => {
+    const now = new Date();
+    return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0));
+  });
+  const [scheduleBreakMinutes, setScheduleBreakMinutes] = useState("60");
+  const [scheduleNotes, setScheduleNotes] = useState("");
+  const [schedules, setSchedules] = useState<WorkScheduleDto[]>([]);
+
   const [attendanceRejectReason, setAttendanceRejectReason] = useState("");
   const [leaveRejectReason, setLeaveRejectReason] = useState("");
   const [pendingAttendance, setPendingAttendance] = useState<AttendanceRecordDto[]>([]);
@@ -229,7 +253,7 @@ export default function AdminDashboardPage() {
 
   async function callApi(
     label: string,
-    method: "GET" | "POST" | "PATCH" | "PUT",
+    method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
     path: string,
     payload?: Record<string, unknown>,
     options?: { omitOrganizationHeader?: boolean }
@@ -319,8 +343,64 @@ export default function AdminDashboardPage() {
     if (parsed.employee?.id) {
       setEmployeeId(parsed.employee.id);
       setAccrualEmployeeId(parsed.employee.id);
+      setScheduleEmployeeId(parsed.employee.id);
     }
     await listEmployees();
+  }
+
+  async function listSchedules() {
+    const { response, body } = await callApi(
+      "근무 일정 조회",
+      "GET",
+      `/api/scheduling/schedules${buildQuery({
+        from: toIso(periodStart),
+        to: toIso(periodEnd),
+        employeeId: scheduleEmployeeId.trim() || undefined
+      })}`
+    );
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { schedules?: WorkScheduleDto[] };
+    setSchedules(Array.isArray(parsed.schedules) ? parsed.schedules : []);
+  }
+
+  async function createSchedule() {
+    const breakMinutesRaw = Number(scheduleBreakMinutes);
+    const payload = {
+      employeeId: scheduleEmployeeId.trim(),
+      startAt: toIso(scheduleStartAt),
+      endAt: toIso(scheduleEndAt),
+      breakMinutes: Math.max(0, Math.trunc(Number.isFinite(breakMinutesRaw) ? breakMinutesRaw : 0)),
+      isHoliday: scheduleIsHoliday,
+      notes: scheduleNotes.trim() ? scheduleNotes.trim() : undefined
+    };
+
+    const { response } = await callApi("근무 일정 생성", "POST", "/api/scheduling/schedules", payload);
+    if (!response.ok) {
+      return;
+    }
+    await listSchedules();
+  }
+
+  async function deleteSchedule(scheduleId: string) {
+    if (!scheduleId.trim()) {
+      return;
+    }
+    const okToDelete = window.confirm(`근무 일정을 삭제할까요?\n\nID: ${scheduleId}`);
+    if (!okToDelete) {
+      return;
+    }
+
+    const { response } = await callApi(
+      "근무 일정 삭제",
+      "DELETE",
+      `/api/scheduling/schedules/${encodeURIComponent(scheduleId)}`
+    );
+    if (!response.ok) {
+      return;
+    }
+    setSchedules((prev) => prev.filter((item) => item.id !== scheduleId));
   }
 
   async function listOrganizations() {
@@ -830,6 +910,7 @@ export default function AdminDashboardPage() {
                       setEmployeeId(employee.id);
                       setAccrualEmployeeId(employee.id);
                       setAggregateEmployeeId(employee.id);
+                      setScheduleEmployeeId(employee.id);
                     }}
                   >
                     이 직원으로 적용
@@ -838,6 +919,119 @@ export default function AdminDashboardPage() {
               ))}
             </ul>
           ) : null}
+        </article>
+
+        <article className="panel" id="scheduling">
+          <h2>근무 일정</h2>
+          <p className="small">
+            직원별 근무 일정을 생성/조회/삭제합니다. 기간 필터(시작/종료)는 아래 기능들과 동일하게 공유됩니다.
+          </p>
+          <div className="input-grid">
+            <label>
+              직원 ID
+              <input
+                value={scheduleEmployeeId}
+                onChange={(event) => setScheduleEmployeeId(event.target.value)}
+                placeholder="예: EMP-1001"
+              />
+            </label>
+            <label>
+              기간 시작 (조회)
+              <input
+                type="datetime-local"
+                value={periodStart}
+                onChange={(event) => setPeriodStart(event.target.value)}
+              />
+            </label>
+            <label>
+              기간 종료 (조회)
+              <input
+                type="datetime-local"
+                value={periodEnd}
+                onChange={(event) => setPeriodEnd(event.target.value)}
+              />
+            </label>
+            <label>
+              휴일 근무
+              <select
+                value={scheduleIsHoliday ? "yes" : "no"}
+                onChange={(event) => setScheduleIsHoliday(event.target.value === "yes")}
+              >
+                <option value="no">아니오</option>
+                <option value="yes">예</option>
+              </select>
+            </label>
+            <label>
+              시작 시각
+              <input
+                type="datetime-local"
+                value={scheduleStartAt}
+                onChange={(event) => setScheduleStartAt(event.target.value)}
+              />
+            </label>
+            <label>
+              종료 시각
+              <input
+                type="datetime-local"
+                value={scheduleEndAt}
+                onChange={(event) => setScheduleEndAt(event.target.value)}
+              />
+            </label>
+            <label>
+              휴게 분
+              <input
+                type="number"
+                min={0}
+                value={scheduleBreakMinutes}
+                onChange={(event) => setScheduleBreakMinutes(event.target.value)}
+              />
+            </label>
+            <label>
+              메모 (선택)
+              <input value={scheduleNotes} onChange={(event) => setScheduleNotes(event.target.value)} />
+            </label>
+          </div>
+          <div className="actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => void createSchedule()}
+              disabled={!scheduleEmployeeId.trim()}
+            >
+              일정 생성
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listSchedules()}>
+              일정 조회
+            </button>
+          </div>
+          {schedules.length === 0 ? (
+            <p className="small muted">근무 일정이 없습니다.</p>
+          ) : (
+            <ul className="simple-list" aria-label="근무 일정 목록">
+              {schedules.map((schedule) => (
+                <li key={schedule.id}>
+                  <span>
+                    <span className="ok">{schedule.isHoliday ? "HOLIDAY" : "WORK"}</span>{" "}
+                    <strong>{schedule.employeeId}</strong>{" "}
+                    <span className="muted">
+                      {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (휴게{" "}
+                      {schedule.breakMinutes}분)
+                      {schedule.notes ? ` / ${schedule.notes}` : ""}
+                    </span>{" "}
+                    <time className="muted">{schedule.id}</time>
+                  </span>
+                  <div className="queue-actions">
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-small"
+                      onClick={() => void deleteSchedule(schedule.id)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
 
         <article className="panel" id="approvals">
