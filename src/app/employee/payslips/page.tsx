@@ -14,8 +14,12 @@ type PayrollRunDto = {
   periodEnd: string;
   state: "PREVIEWED" | "CONFIRMED";
   grossPayKrw: number;
+  withholdingTaxKrw: number | null;
+  socialInsuranceKrw: number | null;
+  otherDeductionsKrw: number | null;
   totalDeductionsKrw: number | null;
   netPayKrw: number | null;
+  deductionBreakdown: Record<string, unknown> | null;
   confirmedAt: string | null;
 };
 
@@ -117,6 +121,12 @@ function buildQuery(params: Record<string, string | undefined>) {
   }
   const query = search.toString();
   return query.length > 0 ? `?${query}` : "";
+}
+
+function escapeCsv(value: string) {
+  const needsQuote = value.includes(",") || value.includes("\"") || value.includes("\n");
+  const escaped = value.replace(/"/g, "\"\"");
+  return needsQuote ? `"${escaped}"` : escaped;
 }
 
 export default function EmployeePayslipsPage() {
@@ -341,6 +351,50 @@ export default function EmployeePayslipsPage() {
     }
   }
 
+  function downloadRunsCsv() {
+    if (runs.length === 0) {
+      return;
+    }
+    const header = [
+      "run_id",
+      "employee_id",
+      "period_start",
+      "period_end",
+      "gross_pay_krw",
+      "withholding_tax_krw",
+      "social_insurance_krw",
+      "other_deductions_krw",
+      "total_deductions_krw",
+      "net_pay_krw",
+      "confirmed_at"
+    ];
+
+    const rows = runs.map((run) => [
+      run.id,
+      run.employeeId ?? "",
+      run.periodStart,
+      run.periodEnd,
+      String(run.grossPayKrw),
+      String(run.withholdingTaxKrw ?? 0),
+      String(run.socialInsuranceKrw ?? 0),
+      String(run.otherDeductionsKrw ?? 0),
+      String(run.totalDeductionsKrw ?? 0),
+      String(run.netPayKrw ?? 0),
+      run.confirmedAt ?? ""
+    ]);
+
+    const csv = [header, ...rows].map((cols) => cols.map((col) => escapeCsv(col)).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `flowhr-payslips-${employeeId || "employee"}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function clearLogs() {
     setLogs([]);
   }
@@ -445,6 +499,9 @@ export default function EmployeePayslipsPage() {
             </button>
             <button className="btn btn-secondary" onClick={applyLastThreeMonthsRange}>
               최근 3개월
+            </button>
+            <button className="btn btn-secondary" onClick={downloadRunsCsv} disabled={runs.length === 0}>
+              CSV 다운로드
             </button>
           </div>
 
@@ -560,6 +617,18 @@ export default function EmployeePayslipsPage() {
                   <strong>{formatKrw(selectedRun.totalDeductionsKrw)}</strong>
                 </li>
                 <li>
+                  <span className="muted">원천세</span>
+                  <strong>{formatKrw(selectedRun.withholdingTaxKrw)}</strong>
+                </li>
+                <li>
+                  <span className="muted">사회보험</span>
+                  <strong>{formatKrw(selectedRun.socialInsuranceKrw)}</strong>
+                </li>
+                <li>
+                  <span className="muted">기타 공제</span>
+                  <strong>{formatKrw(selectedRun.otherDeductionsKrw)}</strong>
+                </li>
+                <li>
                   <span className="muted">실지급</span>
                   <strong>{formatKrw(selectedRun.netPayKrw)}</strong>
                 </li>
@@ -568,6 +637,15 @@ export default function EmployeePayslipsPage() {
                   <strong>{formatDateTime(selectedRun.confirmedAt)}</strong>
                 </li>
               </ul>
+
+              {selectedRun.deductionBreakdown ? (
+                <details className="details" style={{ marginTop: 12 }}>
+                  <summary>공제 Breakdown 원본</summary>
+                  <pre className="small" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
+                    {JSON.stringify(selectedRun.deductionBreakdown, null, 2)}
+                  </pre>
+                </details>
+              ) : null}
 
               {aggregate ? (
                 <p className="small" style={{ marginTop: 12 }}>
