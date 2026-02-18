@@ -29,6 +29,19 @@ type QueueSnapshot = {
   refreshedAt: string | null;
 };
 
+type OrganizationSummary = {
+  id: string;
+  name: string;
+};
+
+type EmployeeSummary = {
+  id: string;
+  organizationId: string | null;
+  name: string | null;
+  email: string | null;
+  active: boolean;
+};
+
 function toLocalInputValue(value: Date) {
   const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return adjusted.toISOString().slice(0, 16);
@@ -93,6 +106,19 @@ export default function HomePage() {
   const [managerActorId, setManagerActorId] = useState("MGR-1001");
   const [payrollActorId, setPayrollActorId] = useState("PAY-1001");
   const [adminActorId, setAdminActorId] = useState("ADM-1001");
+  const [systemActorId, setSystemActorId] = useState("SYS-1001");
+
+  const [peopleOrganizationName, setPeopleOrganizationName] = useState("FlowHR Demo Org");
+  const [peopleOrganizations, setPeopleOrganizations] = useState<OrganizationSummary[]>([]);
+
+  const [peopleEmployeeId, setPeopleEmployeeId] = useState("EMP-1001");
+  const [peopleEmployeeName, setPeopleEmployeeName] = useState("");
+  const [peopleEmployeeEmail, setPeopleEmployeeEmail] = useState("");
+  const [peopleEmployeeActive, setPeopleEmployeeActive] = useState(true);
+  const [peopleEmployees, setPeopleEmployees] = useState<EmployeeSummary[]>([]);
+  const [peopleEmployeeActiveFilter, setPeopleEmployeeActiveFilter] = useState<
+    "ALL" | "true" | "false"
+  >("ALL");
 
   const [attendanceEmployeeId, setAttendanceEmployeeId] = useState("EMP-1001");
   const [checkInAt, setCheckInAt] = useState(firstDayOfMonthLocal());
@@ -194,6 +220,126 @@ export default function HomePage() {
     } finally {
       setPendingLabel(null);
     }
+  }
+
+  function applyTenantOrganization(nextOrgId: string) {
+    const normalized = nextOrgId.trim();
+    if (!normalized) {
+      return;
+    }
+    setOrganizationId(normalized);
+  }
+
+  function applyEmployeeDefaults(nextEmployeeId: string) {
+    const normalized = nextEmployeeId.trim();
+    if (!normalized) {
+      return;
+    }
+    setEmployeeActorId(normalized);
+    setAttendanceEmployeeId(normalized);
+    setScheduleEmployeeId(normalized);
+    setPayrollEmployeeId(normalized);
+    setLeaveEmployeeId(normalized);
+  }
+
+  async function listPeopleOrganizations() {
+    const { response, body } = await callApi(
+      "People: 조직 목록 조회",
+      "GET",
+      "/api/people/organizations",
+      { role: "system", id: systemActorId }
+    );
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { organizations?: OrganizationSummary[] };
+    const organizations = Array.isArray(parsed.organizations) ? parsed.organizations : [];
+    setPeopleOrganizations(organizations);
+    if (organizationId.trim().length === 0 && organizations.length > 0) {
+      applyTenantOrganization(organizations[0]!.id);
+    }
+  }
+
+  async function createPeopleOrganization() {
+    const name = peopleOrganizationName.trim();
+    if (!name) {
+      return;
+    }
+    const { response, body } = await callApi(
+      "People: 조직 생성",
+      "POST",
+      "/api/people/organizations",
+      { role: "system", id: systemActorId },
+      { name }
+    );
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { organization?: { id?: string } };
+    const createdOrgId = parsed.organization?.id;
+    if (typeof createdOrgId === "string") {
+      applyTenantOrganization(createdOrgId);
+    }
+    await listPeopleOrganizations();
+  }
+
+  async function listPeopleEmployees() {
+    const query = buildQuery({
+      active: peopleEmployeeActiveFilter === "ALL" ? undefined : peopleEmployeeActiveFilter,
+      organizationId: organizationId.trim().length > 0 ? organizationId.trim() : undefined
+    });
+
+    const { response, body } = await callApi(
+      "People: 직원 목록 조회",
+      "GET",
+      `/api/people/employees${query}`,
+      { role: "system", id: systemActorId }
+    );
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { employees?: EmployeeSummary[] };
+    setPeopleEmployees(Array.isArray(parsed.employees) ? parsed.employees : []);
+  }
+
+  async function createPeopleEmployee() {
+    const id = peopleEmployeeId.trim();
+    const orgId = organizationId.trim();
+    if (!id || !orgId) {
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      id,
+      organizationId: orgId,
+      active: peopleEmployeeActive
+    };
+
+    const name = peopleEmployeeName.trim();
+    if (name.length > 0) {
+      payload.name = name;
+    }
+
+    const email = peopleEmployeeEmail.trim();
+    if (email.length > 0) {
+      payload.email = email;
+    }
+
+    const { response } = await callApi(
+      "People: 직원 생성",
+      "POST",
+      "/api/people/employees",
+      { role: "system", id: systemActorId },
+      payload
+    );
+    if (!response.ok) {
+      return;
+    }
+
+    // 사내 도구의 기본 입력값을 방금 만든 직원 기준으로 맞춰둡니다.
+    applyEmployeeDefaults(id);
+
+    await listPeopleEmployees();
   }
 
   async function createAttendance() {
@@ -556,6 +702,13 @@ export default function HomePage() {
               Admin Actor ID
               <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
             </label>
+            <label>
+              System Actor ID
+              <input
+                value={systemActorId}
+                onChange={(event) => setSystemActorId(event.target.value)}
+              />
+            </label>
           </div>
           <label className="token-field">
             Bearer Access Token (선택)
@@ -566,6 +719,139 @@ export default function HomePage() {
               onChange={(event) => setAccessToken(event.target.value)}
             />
           </label>
+        </article>
+
+        <article className="panel">
+          <h2>조직/직원 온보딩 (People)</h2>
+          <p className="small">
+            조직/직원이 없으면 출퇴근, 휴가, 급여 API가 <code>employee not found</code>로 막힙니다. 먼저
+            마스터 데이터를 생성하세요.
+          </p>
+          <p className="small">
+            현재 테넌트(Organization ID): <code>{organizationId.trim() || "-"}</code>
+          </p>
+
+          <div className="input-grid">
+            <label className="full">
+              새 조직 이름 (system 전용)
+              <input
+                value={peopleOrganizationName}
+                onChange={(event) => setPeopleOrganizationName(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={() => void createPeopleOrganization()}>
+              조직 생성
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listPeopleOrganizations()}>
+              조직 목록 조회
+            </button>
+          </div>
+
+          {peopleOrganizations.length > 0 ? (
+            <ul className="simple-list" aria-label="조직 목록">
+              {peopleOrganizations.map((org) => (
+                <li key={org.id}>
+                  <span>
+                    <strong>{org.id}</strong> <span className="muted">{org.name}</span>
+                  </span>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => applyTenantOrganization(org.id)}
+                  >
+                    테넌트로 사용
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <hr className="divider" />
+
+          <div className="input-grid">
+            <label>
+              직원 ID
+              <input value={peopleEmployeeId} onChange={(event) => setPeopleEmployeeId(event.target.value)} />
+            </label>
+            <label>
+              이름 (선택)
+              <input
+                value={peopleEmployeeName}
+                onChange={(event) => setPeopleEmployeeName(event.target.value)}
+              />
+            </label>
+            <label>
+              이메일 (선택)
+              <input
+                value={peopleEmployeeEmail}
+                onChange={(event) => setPeopleEmployeeEmail(event.target.value)}
+              />
+            </label>
+            <label>
+              활성
+              <select
+                value={peopleEmployeeActive ? "yes" : "no"}
+                onChange={(event) => setPeopleEmployeeActive(event.target.value === "yes")}
+              >
+                <option value="yes">예</option>
+                <option value="no">아니오</option>
+              </select>
+            </label>
+          </div>
+          <div className="actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => void createPeopleEmployee()}
+              disabled={!organizationId.trim() || !peopleEmployeeId.trim()}
+            >
+              직원 생성
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listPeopleEmployees()}>
+              직원 목록 조회
+            </button>
+          </div>
+
+          <div className="input-grid">
+            <label>
+              직원 활성 필터
+              <select
+                value={peopleEmployeeActiveFilter}
+                onChange={(event) =>
+                  setPeopleEmployeeActiveFilter(event.target.value as "ALL" | "true" | "false")
+                }
+              >
+                <option value="ALL">ALL</option>
+                <option value="true">활성</option>
+                <option value="false">비활성</option>
+              </select>
+            </label>
+          </div>
+
+          {peopleEmployees.length > 0 ? (
+            <ul className="simple-list" aria-label="직원 목록">
+              {peopleEmployees.map((employee) => (
+                <li key={employee.id}>
+                  <span>
+                    <strong>{employee.id}</strong>{" "}
+                    <span className="muted">
+                      {employee.organizationId ?? "-"} / {employee.active ? "활성" : "비활성"}
+                    </span>
+                    {employee.name ? ` / ${employee.name}` : ""}
+                    {employee.email ? ` / ${employee.email}` : ""}
+                  </span>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => applyEmployeeDefaults(employee.id)}
+                  >
+                    이 직원으로 적용
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </article>
 
         <article className="panel">
