@@ -2,6 +2,7 @@ import type { Actor } from "@/lib/actor";
 import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import { derivePayableMinutes, type PayableMinutes } from "@/lib/payroll-rules";
+import { assertApprovalPolicyGate } from "@/features/approval/service";
 import type {
   AttendanceCaptureChannel,
   AttendanceRecordEntity,
@@ -1655,6 +1656,10 @@ export async function approveAttendanceRecord(
     context.actor,
     existing.employeeId
   );
+  await assertApprovalPolicyGate(context, {
+    domain: "ATTENDANCE",
+    organizationId: employee.organizationId
+  });
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be approved");
   }
@@ -1711,6 +1716,10 @@ export async function rejectAttendanceRecord(
     context.actor,
     existing.employeeId
   );
+  await assertApprovalPolicyGate(context, {
+    domain: "ATTENDANCE",
+    organizationId: employee.organizationId
+  });
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be rejected");
   }

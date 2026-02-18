@@ -1,0 +1,85 @@
+openapi: 3.1.0
+info:
+  title: FlowHR Approval Policy API
+  version: 0.1.0
+paths:
+  /approval/policy:
+    get:
+      summary: Read approval policy
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approval policy returned (configured or default fallback)
+        "403":
+          description: Permission denied
+    put:
+      summary: Upsert approval policy
+      responses:
+        "200":
+          description: Approval policy saved
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+  /approval/delegations:
+    get:
+      summary: List approval delegations
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+            enum: [ATTENDANCE, LEAVE, PAYROLL]
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: delegateActorId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delegations listed
+        "403":
+          description: Permission denied
+    post:
+      summary: Create approval delegation
+      responses:
+        "201":
+          description: Delegation created
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+  /approval/delegations/{delegationId}:
+    patch:
+      summary: Update approval delegation
+      parameters:
+        - in: path
+          name: delegationId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delegation updated
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+        "404":
+          description: Delegation not found

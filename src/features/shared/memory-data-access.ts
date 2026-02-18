@@ -1,9 +1,14 @@
 import type {
+  ApprovalDelegationEntity,
+  ApprovalDomain,
+  ApprovalPolicyEntity,
   AuditLogEntity,
   AttendanceRecordEntity,
+  CreateApprovalDelegationInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   ListAuditLogsInput,
+  UpdateApprovalDelegationInput,
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
@@ -31,6 +36,7 @@ import type {
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
   UpsertLeavePolicyInput,
+  UpsertApprovalPolicyInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
   PayrollRunEntity,
@@ -44,6 +50,8 @@ type MemoryState = {
   organizations: Map<string, OrganizationEntity>;
   departments: Map<string, DepartmentEntity>;
   positions: Map<string, PositionEntity>;
+  approvalPolicies: Map<string, ApprovalPolicyEntity>;
+  approvalDelegations: Map<string, ApprovalDelegationEntity>;
   employees: Map<string, EmployeeEntity>;
   roles: Map<string, RoleEntity>;
   rolePermissions: Map<string, Set<string>>;
@@ -80,6 +88,8 @@ function createState(): MemoryState {
     organizations: new Map<string, OrganizationEntity>(),
     departments: new Map<string, DepartmentEntity>(),
     positions: new Map<string, PositionEntity>(),
+    approvalPolicies: new Map<string, ApprovalPolicyEntity>(),
+    approvalDelegations: new Map<string, ApprovalDelegationEntity>(),
     employees: new Map<string, EmployeeEntity>(),
     roles: new Map<string, RoleEntity>(),
     rolePermissions: new Map<string, Set<string>>(),
@@ -251,6 +261,24 @@ function clonePosition(entity: PositionEntity): PositionEntity {
   };
 }
 
+function cloneApprovalPolicy(entity: ApprovalPolicyEntity): ApprovalPolicyEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneApprovalDelegation(entity: ApprovalDelegationEntity): ApprovalDelegationEntity {
+  return {
+    ...entity,
+    startsAt: cloneDate(entity.startsAt),
+    endsAt: cloneDate(entity.endsAt),
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
 function cloneEmployee(entity: EmployeeEntity): EmployeeEntity {
   return {
     ...entity,
@@ -377,6 +405,22 @@ function updatePositionEntity(existing: PositionEntity, input: UpdatePositionInp
   };
 }
 
+function updateApprovalDelegationEntity(
+  existing: ApprovalDelegationEntity,
+  input: UpdateApprovalDelegationInput
+): ApprovalDelegationEntity {
+  return {
+    ...existing,
+    delegateActorId:
+      input.delegateActorId !== undefined ? input.delegateActorId : existing.delegateActorId,
+    reason: input.reason !== undefined ? input.reason : existing.reason,
+    startsAt: input.startsAt !== undefined ? cloneDate(input.startsAt) : existing.startsAt,
+    endsAt: input.endsAt !== undefined ? cloneDate(input.endsAt) : existing.endsAt,
+    active: input.active !== undefined ? input.active : existing.active,
+    updatedAt: new Date()
+  };
+}
+
 export const memoryDataAccess: DataAccess = {
   organizations: {
     async create(input: CreateOrganizationInput) {
@@ -496,6 +540,95 @@ export const memoryDataAccess: DataAccess = {
         rows.push(clonePosition(entity));
       }
       rows.sort((a, b) => a.code.localeCompare(b.code));
+      return rows;
+    }
+  },
+
+  approvals: {
+    async findPolicyByOrganizationId(organizationId: string) {
+      const entity = state.approvalPolicies.get(organizationId);
+      return entity ? cloneApprovalPolicy(entity) : null;
+    },
+
+    async upsertPolicyForOrganization(input: UpsertApprovalPolicyInput) {
+      const now = new Date();
+      const existing = state.approvalPolicies.get(input.organizationId);
+      const entity: ApprovalPolicyEntity = {
+        id: existing?.id ?? nextId("APOL"),
+        organizationId: input.organizationId,
+        attendanceApproverRole: input.attendanceApproverRole,
+        leaveApproverRole: input.leaveApproverRole,
+        payrollApproverRole: input.payrollApproverRole,
+        createdAt: existing ? existing.createdAt : now,
+        updatedAt: now
+      };
+      state.approvalPolicies.set(entity.organizationId, entity);
+      return cloneApprovalPolicy(entity);
+    },
+
+    async createDelegation(input: CreateApprovalDelegationInput) {
+      const now = new Date();
+      const entity: ApprovalDelegationEntity = {
+        id: nextId("ADEL"),
+        organizationId: input.organizationId,
+        domain: input.domain as ApprovalDomain,
+        delegatorRole: input.delegatorRole,
+        delegateActorId: input.delegateActorId,
+        reason: input.reason ?? null,
+        startsAt: cloneDate(input.startsAt),
+        endsAt: cloneDate(input.endsAt),
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.approvalDelegations.set(entity.id, entity);
+      return cloneApprovalDelegation(entity);
+    },
+
+    async findDelegationById(id: string) {
+      const entity = state.approvalDelegations.get(id);
+      return entity ? cloneApprovalDelegation(entity) : null;
+    },
+
+    async updateDelegation(id: string, input: UpdateApprovalDelegationInput) {
+      const existing = state.approvalDelegations.get(id);
+      if (!existing) {
+        throw new Error(`approval delegation not found: ${id}`);
+      }
+      const updated = updateApprovalDelegationEntity(existing, input);
+      state.approvalDelegations.set(id, updated);
+      return cloneApprovalDelegation(updated);
+    },
+
+    async listDelegations(input: {
+      organizationId?: string;
+      domain?: ApprovalDomain;
+      active?: boolean;
+      delegateActorId?: string;
+    }) {
+      const rows: ApprovalDelegationEntity[] = [];
+      for (const entity of state.approvalDelegations.values()) {
+        if (input.organizationId && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.domain && entity.domain !== input.domain) {
+          continue;
+        }
+        if (input.active !== undefined && entity.active !== input.active) {
+          continue;
+        }
+        if (input.delegateActorId && entity.delegateActorId !== input.delegateActorId) {
+          continue;
+        }
+        rows.push(cloneApprovalDelegation(entity));
+      }
+      rows.sort((left, right) => {
+        const byStart = right.startsAt.getTime() - left.startsAt.getTime();
+        if (byStart !== 0) {
+          return byStart;
+        }
+        return left.id.localeCompare(right.id);
+      });
       return rows;
     }
   },

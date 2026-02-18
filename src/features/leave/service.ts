@@ -1,6 +1,7 @@
 import type { Actor } from "@/lib/actor";
 import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
+import { assertApprovalPolicyGate } from "@/features/approval/service";
 import type {
   DataAccess,
   LeaveBalanceEntity,
@@ -263,6 +264,10 @@ export async function approveLeaveRequest(
 
   const pending = await requirePendingRequest(context, requestId);
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
+  await assertApprovalPolicyGate(context, {
+    domain: "LEAVE",
+    organizationId: employee.organizationId
+  });
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
     state: "APPROVED",
@@ -332,6 +337,10 @@ export async function rejectLeaveRequest(
 
   const pending = await requirePendingRequest(context, requestId);
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
+  await assertApprovalPolicyGate(context, {
+    domain: "LEAVE",
+    organizationId: employee.organizationId
+  });
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
     state: "REJECTED",

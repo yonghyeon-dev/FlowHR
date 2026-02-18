@@ -1,10 +1,15 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type {
+  ApprovalDelegationEntity,
+  ApprovalDomain,
+  ApprovalPolicyEntity,
+  ApprovalStore,
   AuditLogEntity,
   AttendanceRecordEntity,
   AttendanceStore,
   AuditStore,
+  CreateApprovalDelegationInput,
   CreateAttendanceRecordInput,
   CreateDepartmentInput,
   CreateEmployeeInput,
@@ -43,9 +48,11 @@ import type {
   ScheduleAnomalyIncidentEntity,
   ScheduleAnomalyIncidentHistoryEntryEntity,
   SchedulingStore,
+  UpsertApprovalPolicyInput,
   UpsertRoleInput,
   UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
+  UpdateApprovalDelegationInput,
   UpdateAttendanceRecordInput,
   UpdateDepartmentInput,
   UpdateEmployeeInput,
@@ -254,6 +261,37 @@ function toPositionEntity(record: {
   updatedAt: Date;
 }): PositionEntity {
   return record;
+}
+
+function toApprovalPolicyEntity(record: {
+  id: string;
+  organizationId: string;
+  attendanceApproverRole: string;
+  leaveApproverRole: string;
+  payrollApproverRole: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): ApprovalPolicyEntity {
+  return record;
+}
+
+function toApprovalDelegationEntity(record: {
+  id: string;
+  organizationId: string;
+  domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
+  delegatorRole: string;
+  delegateActorId: string;
+  reason: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): ApprovalDelegationEntity {
+  return {
+    ...record,
+    domain: record.domain as ApprovalDomain
+  };
 }
 
 function toEmployeeEntity(record: {
@@ -532,6 +570,88 @@ const positions: PositionStore = {
       orderBy: [{ code: "asc" }, { createdAt: "asc" }]
     });
     return records.map(toPositionEntity);
+  }
+};
+
+const approvals: ApprovalStore = {
+  async findPolicyByOrganizationId(organizationId: string) {
+    const record = await prisma.approvalPolicy.findUnique({
+      where: { organizationId }
+    });
+    return record ? toApprovalPolicyEntity(record) : null;
+  },
+
+  async upsertPolicyForOrganization(input: UpsertApprovalPolicyInput) {
+    const record = await prisma.approvalPolicy.upsert({
+      where: { organizationId: input.organizationId },
+      create: {
+        organizationId: input.organizationId,
+        attendanceApproverRole: input.attendanceApproverRole,
+        leaveApproverRole: input.leaveApproverRole,
+        payrollApproverRole: input.payrollApproverRole
+      },
+      update: {
+        attendanceApproverRole: input.attendanceApproverRole,
+        leaveApproverRole: input.leaveApproverRole,
+        payrollApproverRole: input.payrollApproverRole
+      }
+    });
+    return toApprovalPolicyEntity(record);
+  },
+
+  async createDelegation(input: CreateApprovalDelegationInput) {
+    const record = await prisma.approvalDelegation.create({
+      data: {
+        organizationId: input.organizationId,
+        domain: input.domain,
+        delegatorRole: input.delegatorRole,
+        delegateActorId: input.delegateActorId,
+        reason: input.reason ?? null,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        active: input.active ?? true
+      }
+    });
+    return toApprovalDelegationEntity(record);
+  },
+
+  async findDelegationById(id: string) {
+    const record = await prisma.approvalDelegation.findUnique({
+      where: { id }
+    });
+    return record ? toApprovalDelegationEntity(record) : null;
+  },
+
+  async updateDelegation(id: string, input: UpdateApprovalDelegationInput) {
+    const record = await prisma.approvalDelegation.update({
+      where: { id },
+      data: {
+        ...(input.delegateActorId !== undefined ? { delegateActorId: input.delegateActorId } : {}),
+        ...(input.reason !== undefined ? { reason: input.reason } : {}),
+        ...(input.startsAt !== undefined ? { startsAt: input.startsAt } : {}),
+        ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {})
+      }
+    });
+    return toApprovalDelegationEntity(record);
+  },
+
+  async listDelegations(input: {
+    organizationId?: string;
+    domain?: ApprovalDomain;
+    active?: boolean;
+    delegateActorId?: string;
+  }) {
+    const records = await prisma.approvalDelegation.findMany({
+      where: {
+        ...(input.organizationId ? { organizationId: input.organizationId } : {}),
+        ...(input.domain ? { domain: input.domain } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.delegateActorId ? { delegateActorId: input.delegateActorId } : {})
+      },
+      orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }]
+    });
+    return records.map(toApprovalDelegationEntity);
   }
 };
 
@@ -1363,6 +1483,7 @@ export const prismaDataAccess: DataAccess = {
   employees,
   departments,
   positions,
+  approvals,
   rbac,
   attendance,
   scheduling,

@@ -144,6 +144,12 @@ Production rollout: `docs/production-rollout.md`
   - `POST /api/people/employees`
   - `GET /api/people/employees/{employeeId}`
   - `PATCH /api/people/employees/{employeeId}`
+- Approval:
+  - `GET /api/approval/policy` (optional query: `organizationId`)
+  - `PUT /api/approval/policy`
+  - `GET /api/approval/delegations` (optional query: `organizationId`, `domain`, `active`, `delegateActorId`)
+  - `POST /api/approval/delegations`
+  - `PATCH /api/approval/delegations/{delegationId}`
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`

@@ -17,6 +17,8 @@ model Organization {
   employees Employee[]
   departments Department[]
   positions Position[]
+  approvalPolicy ApprovalPolicy?
+  approvalDelegations ApprovalDelegation[]
   leavePolicy LeavePolicy?
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
@@ -80,6 +82,37 @@ model Position {
 
   @@unique([organizationId, code])
   @@index([organizationId, active])
+}
+
+model ApprovalPolicy {
+  id                     String       @id @default(cuid())
+  organizationId         String       @unique
+  attendanceApproverRole String       @default("manager")
+  leaveApproverRole      String       @default("manager")
+  payrollApproverRole    String       @default("payroll_operator")
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model ApprovalDelegation {
+  id              String         @id @default(cuid())
+  organizationId  String
+  domain          ApprovalDomain
+  delegatorRole   String
+  delegateActorId String
+  reason          String?
+  startsAt        DateTime
+  endsAt          DateTime
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, domain, active, startsAt, endsAt])
+  @@index([organizationId, delegateActorId, active])
 }
 
 model Role {
@@ -334,6 +367,12 @@ enum LeaveDecisionAction {
 enum PayrollState {
   PREVIEWED
   CONFIRMED
+}
+
+enum ApprovalDomain {
+  ATTENDANCE
+  LEAVE
+  PAYROLL
 }
 
 enum ScheduleAnomalyIncidentState {

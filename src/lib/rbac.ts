@@ -5,6 +5,10 @@ export const Permissions = {
 
   peopleOrganizationsManage: "people.organizations.manage",
   peopleEmployeesManage: "people.employees.manage",
+  approvalPolicyRead: "approval.policy.read",
+  approvalPolicyWrite: "approval.policy.write",
+  approvalDelegationRead: "approval.delegation.read",
+  approvalDelegationWrite: "approval.delegation.write",
 
   attendanceRecordWriteAny: "attendance.record.write.any",
   attendanceRecordWriteOwn: "attendance.record.write.own",
@@ -49,6 +53,9 @@ export const defaultRolePermissions: Record<ActorRole, readonly Permission[]> = 
   admin: Object.values(Permissions),
   system: Object.values(Permissions),
   manager: [
+    Permissions.approvalPolicyRead,
+    Permissions.approvalDelegationRead,
+    Permissions.approvalDelegationWrite,
     Permissions.attendanceRecordWriteAny,
     Permissions.attendanceRecordApprove,
     Permissions.attendanceRecordReject,
@@ -63,6 +70,8 @@ export const defaultRolePermissions: Record<ActorRole, readonly Permission[]> = 
     Permissions.leaveBalanceReadAny
   ],
   payroll_operator: [
+    Permissions.approvalPolicyRead,
+    Permissions.approvalDelegationRead,
     Permissions.attendanceRecordListAny,
     Permissions.attendanceAggregateListAny,
     Permissions.schedulingScheduleListAny,

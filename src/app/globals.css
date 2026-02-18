@@ -409,6 +409,13 @@ textarea:focus {
   gap: 8px;
 }
 
+.panel-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .queue-toolbar {
   margin-top: 12px;
   display: flex;
