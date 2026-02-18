@@ -140,11 +140,12 @@
 - WI-0101 급여 KR 법정공제 baseline 모드 추가 (feature flag: `FLOWHR_PAYROLL_KR_BASELINE_V1`)
 - WI-0102 People 도메인 Department/Position 모델 + API + 직원 배정 정합성 검증
 - WI-0103 결재선/위임 정책 baseline (정책 API + 위임 API + 승인 게이트 연동 + `/admin/approval-policy` UI)
+- WI-0104 휴가 반차/시간단위 정책 고도화 (fractional leave unit + 정책 게이트 + UI + e2e)
 
 ### 진행 중
 
-- 다음: 휴가 정책 고도화(반차/시간단위) + 결재 엔진 UI 연동
 - 다음: 급여 엔진 고도화(세법/4대보험 세부 룰) 및 명세서 검증 자동화 확장
+- 다음: 전자결재 범용화(결재선 템플릿/위임 만료 자동화) + UI 연동 확장
 
 ### 현재 아키텍처
 

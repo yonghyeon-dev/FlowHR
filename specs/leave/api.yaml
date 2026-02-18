@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.4.0
+  version: 1.5.0
 paths:
   /leave/requests:
     get:
@@ -34,13 +34,13 @@ paths:
         "200":
           description: Requests listed
     post:
-      summary: Create leave request
+      summary: Create leave request (supports FULL_DAY/HALF_DAY/HOUR units)
       responses:
         "201":
           description: Created
   /leave/requests/{requestId}:
     patch:
-      summary: Update pending leave request
+      summary: Update pending leave request (supports unit/hours changes)
       parameters:
         - in: path
           name: requestId
@@ -111,7 +111,7 @@ paths:
         "200":
           description: Leave policy snapshot
     put:
-      summary: Upsert leave policy for organization
+      summary: Upsert leave policy for organization including fractional controls
       responses:
         "200":
           description: Leave policy updated

@@ -33,6 +33,8 @@ type LeaveRequestDto = {
   leaveType: "ANNUAL" | "SICK" | "UNPAID";
   startDate: string;
   endDate: string;
+  unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
+  hours: number | null;
   days: number;
   reason: string | null;
   state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
@@ -124,6 +126,10 @@ function formatDateTime(value: string | null) {
   return parsed.toLocaleString("ko-KR");
 }
 
+function formatDays(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
 export default function EmployeeSelfServicePage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -140,6 +146,8 @@ export default function EmployeeSelfServicePage() {
   const [lastAttendanceId, setLastAttendanceId] = useState("");
 
   const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
+  const [leaveUnit, setLeaveUnit] = useState<"FULL_DAY" | "HALF_DAY" | "HOUR">("FULL_DAY");
+  const [leaveHours, setLeaveHours] = useState("4");
   const [leaveStartDate, setLeaveStartDate] = useState(todayStartLocal());
   const [leaveEndDate, setLeaveEndDate] = useState(todayEndLocal());
   const [leaveReason, setLeaveReason] = useState("");
@@ -356,6 +364,8 @@ export default function EmployeeSelfServicePage() {
       leaveType,
       startDate: toIso(leaveStartDate),
       endDate: toIso(leaveEndDate),
+      unit: leaveUnit,
+      hours: leaveUnit === "HOUR" ? Math.max(0, coerceNumber(leaveHours)) : undefined,
       reason: leaveReason.trim().length > 0 ? leaveReason.trim() : undefined
     });
 
@@ -412,7 +422,7 @@ export default function EmployeeSelfServicePage() {
     if (!leaveBalance) {
       return "잔여 휴가 정보를 아직 불러오지 못했습니다.";
     }
-    return `잔여 ${leaveBalance.remainingDays}일 (부여 ${leaveBalance.grantedDays}일, 사용 ${leaveBalance.usedDays}일)`;
+    return `잔여 ${formatDays(leaveBalance.remainingDays)}일 (부여 ${formatDays(leaveBalance.grantedDays)}일, 사용 ${formatDays(leaveBalance.usedDays)}일)`;
   }, [leaveBalance]);
 
   const pendingLeaveCount = useMemo(
@@ -479,7 +489,7 @@ export default function EmployeeSelfServicePage() {
         </article>
         <article className="kpi-card">
           <p>잔여 휴가</p>
-          <strong>{leaveBalance ? `${leaveBalance.remainingDays}일` : "-"}</strong>
+          <strong>{leaveBalance ? `${formatDays(leaveBalance.remainingDays)}일` : "-"}</strong>
         </article>
         <article className="kpi-card">
           <p>휴가 대기</p>
@@ -653,6 +663,17 @@ export default function EmployeeSelfServicePage() {
               </select>
             </label>
             <label>
+              신청 단위
+              <select
+                value={leaveUnit}
+                onChange={(event) => setLeaveUnit(event.target.value as "FULL_DAY" | "HALF_DAY" | "HOUR")}
+              >
+                <option value="FULL_DAY">일 단위</option>
+                <option value="HALF_DAY">반차</option>
+                <option value="HOUR">시간 단위</option>
+              </select>
+            </label>
+            <label>
               시작일
               <input type="datetime-local" value={leaveStartDate} onChange={(event) => setLeaveStartDate(event.target.value)} />
             </label>
@@ -660,6 +681,12 @@ export default function EmployeeSelfServicePage() {
               종료일
               <input type="datetime-local" value={leaveEndDate} onChange={(event) => setLeaveEndDate(event.target.value)} />
             </label>
+            {leaveUnit === "HOUR" ? (
+              <label>
+                시간(시)
+                <input value={leaveHours} onChange={(event) => setLeaveHours(event.target.value)} />
+              </label>
+            ) : null}
             <label>
               취소 사유
               <input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
@@ -695,7 +722,9 @@ export default function EmployeeSelfServicePage() {
                     {request.state}
                   </span>
                   <span>
-                    {request.leaveType} / {formatDateTime(request.startDate)} ~ {formatDateTime(request.endDate)} ({request.days}일)
+                    {request.leaveType} / {formatDateTime(request.startDate)} ~ {formatDateTime(request.endDate)} ({formatDays(request.days)}일
+                    {request.unit === "HOUR" && request.hours !== null ? ` / ${request.hours.toFixed(2)}시간` : request.unit === "HALF_DAY" ? " / 반차" : ""}
+                    )
                   </span>
                   <time>{request.id}</time>
                 </li>

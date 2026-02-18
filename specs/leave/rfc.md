@@ -1,8 +1,8 @@
-# Leave RFC (WI-0002 + WI-0003)
+# Leave RFC (WI-0002 + WI-0003 + WI-0090 + WI-0104)
 
 ## Goal
 
-Define contract-first leave lifecycle plus yearly accrual settlement behavior with auditability and downstream compatibility for attendance/payroll.
+Define contract-first leave lifecycle plus yearly accrual settlement and fractional leave behavior with auditability and downstream compatibility for attendance/payroll.
 
 ## Key Decisions
 
@@ -10,6 +10,9 @@ Define contract-first leave lifecycle plus yearly accrual settlement behavior wi
 - Authorization is role-gated with self-service boundary for employees.
 - Approved leave events are published for attendance/payroll consumers.
 - Yearly accrual settlement applies carry-over cap and blocks duplicate-year settlement.
+- Leave request unit is explicit (`FULL_DAY`, `HALF_DAY`, `HOUR`) and drives balance deduction.
+- Hourly leave is policy-controlled by increment and max-hours constraints.
+- Leave balance projection keeps decimal precision (`Decimal(6,2)`) for fractional day accounting.
 
 ## Non-Goals
 

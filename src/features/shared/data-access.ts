@@ -3,6 +3,7 @@ export type AttendanceCaptureChannel = "MANUAL" | "GPS" | "QR" | "WIFI" | "DEVIC
 export type LeaveType = "ANNUAL" | "SICK" | "UNPAID";
 export type LeaveRequestState = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveDecisionAction = "APPROVED" | "REJECTED" | "CANCELED";
+export type LeaveRequestUnit = "FULL_DAY" | "HALF_DAY" | "HOUR";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
@@ -207,6 +208,8 @@ export type LeaveRequestEntity = {
   leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
+  unit: LeaveRequestUnit;
+  hours: number | null;
   days: number;
   reason: string | null;
   state: LeaveRequestState;
@@ -236,6 +239,10 @@ export type LeavePolicyEntity = {
   organizationId: string;
   annualGrantDays: number;
   carryOverCapDays: number;
+  allowHalfDay: boolean;
+  allowHourly: boolean;
+  hourlyIncrementMinutes: number;
+  maxHoursPerRequest: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -445,6 +452,8 @@ export type CreateLeaveRequestInput = {
   leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
+  unit?: LeaveRequestUnit;
+  hours?: number | null;
   days: number;
   reason?: string;
 };
@@ -453,6 +462,8 @@ export type UpdateLeaveRequestInput = {
   leaveType?: LeaveType;
   startDate?: Date;
   endDate?: Date;
+  unit?: LeaveRequestUnit;
+  hours?: number | null;
   days?: number;
   reason?: string | null;
   state?: LeaveRequestState;
@@ -469,6 +480,10 @@ export type UpsertLeavePolicyInput = {
   organizationId: string;
   annualGrantDays: number;
   carryOverCapDays: number;
+  allowHalfDay?: boolean;
+  allowHourly?: boolean;
+  hourlyIncrementMinutes?: number;
+  maxHoursPerRequest?: number;
 };
 
 export type RecordLeaveDecisionInput = {

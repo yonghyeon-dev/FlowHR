@@ -6,6 +6,7 @@ import type {
   DataAccess,
   LeaveBalanceEntity,
   LeaveRequestEntity,
+  LeaveRequestUnit,
   LeaveType
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
@@ -15,8 +16,13 @@ import { ServiceError } from "@/features/shared/service-error";
 
 const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const FULL_DAY_HOURS = 8;
 const DEFAULT_GRANTED_DAYS = 15;
 const DEFAULT_CARRY_OVER_CAP_DAYS = 5;
+const DEFAULT_ALLOW_HALF_DAY = true;
+const DEFAULT_ALLOW_HOURLY = true;
+const DEFAULT_HOURLY_INCREMENT_MINUTES = 30;
+const DEFAULT_MAX_HOURS_PER_REQUEST = 8;
 
 type ServiceContext = {
   actor: Actor | null;
@@ -33,6 +39,8 @@ type CreateLeaveRequestInput = {
   leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
+  unit?: LeaveRequestUnit;
+  hours?: number;
   reason?: string;
 };
 
@@ -40,6 +48,8 @@ type UpdateLeaveRequestInput = {
   leaveType?: LeaveType;
   startDate?: Date;
   endDate?: Date;
+  unit?: LeaveRequestUnit;
+  hours?: number | null;
   reason?: string;
 };
 
@@ -58,6 +68,19 @@ type UpsertLeavePolicyInput = {
   organizationId?: string;
   annualGrantDays: number;
   carryOverCapDays: number;
+  allowHalfDay?: boolean;
+  allowHourly?: boolean;
+  hourlyIncrementMinutes?: number;
+  maxHoursPerRequest?: number;
+};
+
+type LeavePolicyRules = {
+  annualGrantDays: number;
+  carryOverCapDays: number;
+  allowHalfDay: boolean;
+  allowHourly: boolean;
+  hourlyIncrementMinutes: number;
+  maxHoursPerRequest: number;
 };
 
 type ListLeaveRequestsInput = {
@@ -85,6 +108,96 @@ function calculateLeaveDays(startDate: Date, endDate: Date) {
     throw new ServiceError(400, "leave days must be positive");
   }
   return days;
+}
+
+function roundTo2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function calculateHoursBetween(startDate: Date, endDate: Date) {
+  if (endDate <= startDate) {
+    throw new ServiceError(400, "endDate must be after startDate");
+  }
+  return roundTo2((endDate.getTime() - startDate.getTime()) / (60 * 60 * 1000));
+}
+
+function isSameSeoulDay(left: Date, right: Date) {
+  return toSeoulDayIndex(left) === toSeoulDayIndex(right);
+}
+
+function resolvePolicyRules(policy?: {
+  annualGrantDays: number;
+  carryOverCapDays: number;
+  allowHalfDay?: boolean;
+  allowHourly?: boolean;
+  hourlyIncrementMinutes?: number;
+  maxHoursPerRequest?: number;
+} | null): LeavePolicyRules {
+  return {
+    annualGrantDays: policy?.annualGrantDays ?? DEFAULT_GRANTED_DAYS,
+    carryOverCapDays: policy?.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS,
+    allowHalfDay: policy?.allowHalfDay ?? DEFAULT_ALLOW_HALF_DAY,
+    allowHourly: policy?.allowHourly ?? DEFAULT_ALLOW_HOURLY,
+    hourlyIncrementMinutes: policy?.hourlyIncrementMinutes ?? DEFAULT_HOURLY_INCREMENT_MINUTES,
+    maxHoursPerRequest: policy?.maxHoursPerRequest ?? DEFAULT_MAX_HOURS_PER_REQUEST
+  };
+}
+
+function calculateRequestedLeave(input: {
+  unit: LeaveRequestUnit;
+  startDate: Date;
+  endDate: Date;
+  hours?: number | null;
+  policy: LeavePolicyRules;
+}): { unit: LeaveRequestUnit; days: number; hours: number | null } {
+  const unit = input.unit;
+
+  if (unit === "FULL_DAY") {
+    const days = calculateLeaveDays(input.startDate, input.endDate);
+    return {
+      unit,
+      days: roundTo2(days),
+      hours: roundTo2(days * FULL_DAY_HOURS)
+    };
+  }
+
+  if (unit === "HALF_DAY") {
+    if (!input.policy.allowHalfDay) {
+      throw new ServiceError(409, "leave policy does not allow half-day requests");
+    }
+    if (!isSameSeoulDay(input.startDate, input.endDate)) {
+      throw new ServiceError(400, "half-day leave must be within the same day");
+    }
+    return {
+      unit,
+      days: 0.5,
+      hours: FULL_DAY_HOURS / 2
+    };
+  }
+
+  if (!input.policy.allowHourly) {
+    throw new ServiceError(409, "leave policy does not allow hourly requests");
+  }
+  if (!isSameSeoulDay(input.startDate, input.endDate)) {
+    throw new ServiceError(400, "hourly leave must be within the same day");
+  }
+  const hoursFromRange = calculateHoursBetween(input.startDate, input.endDate);
+  const requestedHours = input.hours ?? hoursFromRange;
+  if (!Number.isFinite(requestedHours) || requestedHours <= 0) {
+    throw new ServiceError(400, "hourly leave hours must be positive");
+  }
+  if (requestedHours > input.policy.maxHoursPerRequest) {
+    throw new ServiceError(400, "hourly leave exceeds maxHoursPerRequest policy");
+  }
+  const minutes = Math.round(requestedHours * 60);
+  if (minutes % input.policy.hourlyIncrementMinutes !== 0) {
+    throw new ServiceError(400, "hourly leave must align with policy increment");
+  }
+  return {
+    unit,
+    days: roundTo2(requestedHours / FULL_DAY_HOURS),
+    hours: roundTo2(requestedHours)
+  };
 }
 
 function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
@@ -148,7 +261,17 @@ export async function createLeaveRequest(
 
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
 
-  const days = calculateLeaveDays(input.startDate, input.endDate);
+  const policy =
+    employee.organizationId
+      ? await context.dataAccess.leavePolicy.findByOrganizationId(employee.organizationId)
+      : null;
+  const requested = calculateRequestedLeave({
+    unit: input.unit ?? "FULL_DAY",
+    startDate: input.startDate,
+    endDate: input.endDate,
+    hours: input.hours,
+    policy: resolvePolicyRules(policy)
+  });
   await ensureNoOverlap(context, {
     employeeId: input.employeeId,
     startDate: input.startDate,
@@ -160,7 +283,9 @@ export async function createLeaveRequest(
     leaveType: input.leaveType,
     startDate: input.startDate,
     endDate: input.endDate,
-    days,
+    unit: requested.unit,
+    hours: requested.hours,
+    days: requested.days,
     reason: input.reason
   });
 
@@ -174,9 +299,11 @@ export async function createLeaveRequest(
     payload: {
       employeeId: request.employeeId,
       leaveType: request.leaveType,
+      unit: request.unit,
+      hours: request.hours,
       startDate: request.startDate.toISOString(),
       endDate: request.endDate.toISOString(),
-      days
+      days: request.days
     }
   });
   await getEventPublisher(context).publish({
@@ -189,9 +316,11 @@ export async function createLeaveRequest(
     payload: {
       employeeId: request.employeeId,
       leaveType: request.leaveType,
+      unit: request.unit,
+      hours: request.hours,
       startDate: request.startDate.toISOString(),
       endDate: request.endDate.toISOString(),
-      days
+      days: request.days
     }
   });
 
@@ -218,7 +347,29 @@ export async function updateLeaveRequest(
 
   const nextStartDate = input.startDate ?? existing.startDate;
   const nextEndDate = input.endDate ?? existing.endDate;
-  const nextDays = calculateLeaveDays(nextStartDate, nextEndDate);
+  const nextUnit = input.unit ?? existing.unit;
+  const shouldRecalculateHourlyFromRange =
+    nextUnit === "HOUR" &&
+    input.hours === undefined &&
+    (input.startDate !== undefined || input.endDate !== undefined || input.unit !== undefined);
+  const policy =
+    employee.organizationId
+      ? await context.dataAccess.leavePolicy.findByOrganizationId(employee.organizationId)
+      : null;
+  const requested = calculateRequestedLeave({
+    unit: nextUnit,
+    startDate: nextStartDate,
+    endDate: nextEndDate,
+    hours:
+      nextUnit === "HOUR"
+        ? input.hours !== undefined
+          ? input.hours
+          : shouldRecalculateHourlyFromRange
+            ? undefined
+            : existing.hours
+        : undefined,
+    policy: resolvePolicyRules(policy)
+  });
   await ensureNoOverlap(context, {
     employeeId: existing.employeeId,
     startDate: nextStartDate,
@@ -230,8 +381,10 @@ export async function updateLeaveRequest(
     leaveType: input.leaveType,
     startDate: input.startDate,
     endDate: input.endDate,
+    unit: requested.unit,
+    hours: requested.hours,
     reason: input.reason,
-    days: nextDays
+    days: requested.days
   });
 
   await context.dataAccess.audit.append({
@@ -243,6 +396,8 @@ export async function updateLeaveRequest(
     actorId: actor.id,
     payload: {
       leaveType: updated.leaveType,
+      unit: updated.unit,
+      hours: updated.hours,
       startDate: updated.startDate.toISOString(),
       endDate: updated.endDate.toISOString(),
       days: updated.days
@@ -303,6 +458,8 @@ export async function approveLeaveRequest(
     payload: {
       employeeId: request.employeeId,
       days: request.days,
+      unit: request.unit,
+      hours: request.hours,
       leaveType: request.leaveType
     }
   });
@@ -316,6 +473,8 @@ export async function approveLeaveRequest(
     payload: {
       employeeId: request.employeeId,
       leaveType: request.leaveType,
+      unit: request.unit,
+      hours: request.hours,
       days: request.days,
       remainingDays: balance.remainingDays
     }
@@ -632,6 +791,10 @@ export async function readLeavePolicy(
     organizationId: string;
     annualGrantDays: number;
     carryOverCapDays: number;
+    allowHalfDay: boolean;
+    allowHourly: boolean;
+    hourlyIncrementMinutes: number;
+    maxHoursPerRequest: number;
     source: "configured" | "default";
     updatedAt: string | null;
   };
@@ -651,6 +814,10 @@ export async function readLeavePolicy(
         organizationId: stored.organizationId,
         annualGrantDays: stored.annualGrantDays,
         carryOverCapDays: stored.carryOverCapDays,
+        allowHalfDay: stored.allowHalfDay,
+        allowHourly: stored.allowHourly,
+        hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
+        maxHoursPerRequest: stored.maxHoursPerRequest,
         source: "configured" as const,
         updatedAt: stored.updatedAt.toISOString()
       }
@@ -658,6 +825,10 @@ export async function readLeavePolicy(
         organizationId,
         annualGrantDays: DEFAULT_GRANTED_DAYS,
         carryOverCapDays: DEFAULT_CARRY_OVER_CAP_DAYS,
+        allowHalfDay: DEFAULT_ALLOW_HALF_DAY,
+        allowHourly: DEFAULT_ALLOW_HOURLY,
+        hourlyIncrementMinutes: DEFAULT_HOURLY_INCREMENT_MINUTES,
+        maxHoursPerRequest: DEFAULT_MAX_HOURS_PER_REQUEST,
         source: "default" as const,
         updatedAt: null
       };
@@ -683,6 +854,10 @@ export async function upsertLeavePolicy(
     organizationId: string;
     annualGrantDays: number;
     carryOverCapDays: number;
+    allowHalfDay: boolean;
+    allowHourly: boolean;
+    hourlyIncrementMinutes: number;
+    maxHoursPerRequest: number;
     updatedAt: string;
   };
 }> {
@@ -701,11 +876,25 @@ export async function upsertLeavePolicy(
   if (!Number.isInteger(input.carryOverCapDays) || input.carryOverCapDays < 0) {
     throw new ServiceError(400, "carryOverCapDays must be a non-negative integer");
   }
+  if (input.hourlyIncrementMinutes !== undefined) {
+    if (!Number.isInteger(input.hourlyIncrementMinutes) || input.hourlyIncrementMinutes < 15) {
+      throw new ServiceError(400, "hourlyIncrementMinutes must be an integer >= 15");
+    }
+  }
+  if (input.maxHoursPerRequest !== undefined) {
+    if (!Number.isFinite(input.maxHoursPerRequest) || input.maxHoursPerRequest <= 0) {
+      throw new ServiceError(400, "maxHoursPerRequest must be a positive number");
+    }
+  }
 
   const stored = await context.dataAccess.leavePolicy.upsertForOrganization({
     organizationId,
     annualGrantDays: input.annualGrantDays,
-    carryOverCapDays: input.carryOverCapDays
+    carryOverCapDays: input.carryOverCapDays,
+    allowHalfDay: input.allowHalfDay,
+    allowHourly: input.allowHourly,
+    hourlyIncrementMinutes: input.hourlyIncrementMinutes,
+    maxHoursPerRequest: input.maxHoursPerRequest
   });
 
   await context.dataAccess.audit.append({
@@ -718,7 +907,11 @@ export async function upsertLeavePolicy(
     payload: {
       organizationId: stored.organizationId,
       annualGrantDays: stored.annualGrantDays,
-      carryOverCapDays: stored.carryOverCapDays
+      carryOverCapDays: stored.carryOverCapDays,
+      allowHalfDay: stored.allowHalfDay,
+      allowHourly: stored.allowHourly,
+      hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
+      maxHoursPerRequest: stored.maxHoursPerRequest
     }
   });
   await getEventPublisher(context).publish({
@@ -731,7 +924,11 @@ export async function upsertLeavePolicy(
     payload: {
       organizationId: stored.organizationId,
       annualGrantDays: stored.annualGrantDays,
-      carryOverCapDays: stored.carryOverCapDays
+      carryOverCapDays: stored.carryOverCapDays,
+      allowHalfDay: stored.allowHalfDay,
+      allowHourly: stored.allowHourly,
+      hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
+      maxHoursPerRequest: stored.maxHoursPerRequest
     }
   });
 
@@ -740,11 +937,16 @@ export async function upsertLeavePolicy(
       organizationId: stored.organizationId,
       annualGrantDays: stored.annualGrantDays,
       carryOverCapDays: stored.carryOverCapDays,
+      allowHalfDay: stored.allowHalfDay,
+      allowHourly: stored.allowHourly,
+      hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
+      maxHoursPerRequest: stored.maxHoursPerRequest,
       updatedAt: stored.updatedAt.toISOString()
     }
   };
 }
 
 export const leaveServiceInternals = {
-  calculateLeaveDays
+  calculateLeaveDays,
+  calculateRequestedLeave
 };
