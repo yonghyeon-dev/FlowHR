@@ -9,12 +9,12 @@
 
 ### In Scope
 
-- `/` Command Center에 People(조직/직원) 온보딩 패널 추가
+- `/admin` 관리자 대시보드에 People(조직/직원) 온보딩 패널 추가
   - 조직 생성/목록 조회 (`/api/people/organizations`)
   - 직원 생성/목록 조회 (`/api/people/employees`)
   - 조직 선택 시 Tenant(Organization ID) 컨텍스트에 즉시 반영
   - 직원 선택 시 출퇴근/휴가/급여 폼의 기본 Employee ID에 즉시 반영
-- system actor 입력 필드 추가(Dev Header 모드에서 사용)
+- Dev Header 모드에서 조직 생성/목록 조회 시에는 `x-actor-organization-id` 헤더를 생략하여(tenantScope=null) 생성이 가능하도록 UX 제공
 
 ### Out of Scope
 
@@ -24,10 +24,10 @@
 
 ## User Scenarios
 
-1. 운영자가 system role로 조직을 생성한다.
+1. 운영자가 조직을 생성한다. (Dev Header 모드에서는 tenantScope 없이 생성)
 2. 생성된 조직을 Tenant 컨텍스트로 선택한다.
 3. 해당 조직에 직원을 생성한다.
-4. 같은 화면에서 출퇴근/휴가/급여 수직 슬라이스를 즉시 검증한다.
+4. 같은 화면에서 승인 대기함/집계/급여까지 수직 슬라이스를 즉시 검증한다.
 
 ## Data Changes (Tables and Migrations)
 
@@ -53,5 +53,5 @@
 
 ## Rollback Plan
 
-- `src/app/page.tsx` 및 `src/app/globals.css`에서 WI-0084 변경 revert
+- `src/app/admin/page.tsx`에서 WI-0084 변경 revert
 
