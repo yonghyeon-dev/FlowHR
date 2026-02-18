@@ -16,6 +16,16 @@ type ApiLog = {
   body: unknown;
 };
 
+type ApprovalActivity = {
+  id: number;
+  queue: "attendance" | "leave" | "payroll";
+  action: string;
+  itemId: string;
+  ok: boolean;
+  status: number;
+  at: string;
+};
+
 type EmployeeSummary = {
   id: string;
   organizationId: string | null;
@@ -235,6 +245,7 @@ export default function AdminDashboardPage() {
   const [lastPayrollRunId, setLastPayrollRunId] = useState("");
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
+  const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -332,6 +343,27 @@ export default function AdminDashboardPage() {
     } finally {
       setPendingLabel(null);
     }
+  }
+
+  function appendApprovalActivity(input: {
+    queue: "attendance" | "leave" | "payroll";
+    action: string;
+    itemId: string;
+    ok: boolean;
+    status: number;
+  }) {
+    setApprovalActivities((prev) => [
+      {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        queue: input.queue,
+        action: input.action,
+        itemId: input.itemId,
+        ok: input.ok,
+        status: input.status,
+        at: new Date().toLocaleString("ko-KR")
+      },
+      ...prev
+    ].slice(0, 30));
   }
 
   async function listEmployees() {
@@ -577,19 +609,40 @@ export default function AdminDashboardPage() {
   }
 
   async function approveAttendance(recordId: string) {
-    await callApi("출퇴근 승인", "POST", `/api/attendance/records/${recordId}/approve`);
+    const { response } = await callApi("출퇴근 승인", "POST", `/api/attendance/records/${recordId}/approve`);
+    appendApprovalActivity({
+      queue: "attendance",
+      action: "승인",
+      itemId: recordId,
+      ok: response.ok,
+      status: response.status
+    });
     await refreshInbox();
   }
 
   async function rejectAttendance(recordId: string) {
     const reason = attendanceRejectReason.trim();
     const payload = reason.length > 0 ? { reason } : undefined;
-    await callApi("출퇴근 반려", "POST", `/api/attendance/records/${recordId}/reject`, payload);
+    const { response } = await callApi("출퇴근 반려", "POST", `/api/attendance/records/${recordId}/reject`, payload);
+    appendApprovalActivity({
+      queue: "attendance",
+      action: "반려",
+      itemId: recordId,
+      ok: response.ok,
+      status: response.status
+    });
     await refreshInbox();
   }
 
   async function approveLeave(requestId: string) {
-    await callApi("휴가 승인", "POST", `/api/leave/requests/${requestId}/approve`);
+    const { response } = await callApi("휴가 승인", "POST", `/api/leave/requests/${requestId}/approve`);
+    appendApprovalActivity({
+      queue: "leave",
+      action: "승인",
+      itemId: requestId,
+      ok: response.ok,
+      status: response.status
+    });
     await refreshInbox();
   }
 
@@ -610,7 +663,14 @@ export default function AdminDashboardPage() {
       ]);
       return;
     }
-    await callApi("휴가 반려", "POST", `/api/leave/requests/${requestId}/reject`, { reason });
+    const { response } = await callApi("휴가 반려", "POST", `/api/leave/requests/${requestId}/reject`, { reason });
+    appendApprovalActivity({
+      queue: "leave",
+      action: "반려",
+      itemId: requestId,
+      ok: response.ok,
+      status: response.status
+    });
     await refreshInbox();
   }
 
@@ -619,9 +679,18 @@ export default function AdminDashboardPage() {
       return;
     }
     const targets = [...selectedAttendanceIds];
-    await Promise.all(
+    const results = await Promise.all(
       targets.map((recordId) => callApi("출퇴근 승인(일괄)", "POST", `/api/attendance/records/${recordId}/approve`))
     );
+    results.forEach(({ response }, index) => {
+      appendApprovalActivity({
+        queue: "attendance",
+        action: "승인(일괄)",
+        itemId: targets[index],
+        ok: response.ok,
+        status: response.status
+      });
+    });
     await refreshInbox();
   }
 
@@ -632,9 +701,18 @@ export default function AdminDashboardPage() {
     const reason = attendanceRejectReason.trim();
     const payload = reason.length > 0 ? { reason } : undefined;
     const targets = [...selectedAttendanceIds];
-    await Promise.all(
+    const results = await Promise.all(
       targets.map((recordId) => callApi("출퇴근 반려(일괄)", "POST", `/api/attendance/records/${recordId}/reject`, payload))
     );
+    results.forEach(({ response }, index) => {
+      appendApprovalActivity({
+        queue: "attendance",
+        action: "반려(일괄)",
+        itemId: targets[index],
+        ok: response.ok,
+        status: response.status
+      });
+    });
     await refreshInbox();
   }
 
@@ -643,9 +721,18 @@ export default function AdminDashboardPage() {
       return;
     }
     const targets = [...selectedLeaveIds];
-    await Promise.all(
+    const results = await Promise.all(
       targets.map((requestId) => callApi("휴가 승인(일괄)", "POST", `/api/leave/requests/${requestId}/approve`))
     );
+    results.forEach(({ response }, index) => {
+      appendApprovalActivity({
+        queue: "leave",
+        action: "승인(일괄)",
+        itemId: targets[index],
+        ok: response.ok,
+        status: response.status
+      });
+    });
     await refreshInbox();
   }
 
@@ -670,14 +757,30 @@ export default function AdminDashboardPage() {
       return;
     }
     const targets = [...selectedLeaveIds];
-    await Promise.all(
+    const results = await Promise.all(
       targets.map((requestId) => callApi("휴가 반려(일괄)", "POST", `/api/leave/requests/${requestId}/reject`, { reason }))
     );
+    results.forEach(({ response }, index) => {
+      appendApprovalActivity({
+        queue: "leave",
+        action: "반려(일괄)",
+        itemId: targets[index],
+        ok: response.ok,
+        status: response.status
+      });
+    });
     await refreshInbox();
   }
 
   async function confirmPayroll(runId: string) {
     const { response, body } = await callApi("급여 확정", "POST", `/api/payroll/runs/${runId}/confirm`);
+    appendApprovalActivity({
+      queue: "payroll",
+      action: "확정",
+      itemId: runId,
+      ok: response.ok,
+      status: response.status
+    });
     if (response.ok) {
       const parsed = body as { run?: { id?: string } };
       if (parsed.run?.id) {
@@ -1429,6 +1532,38 @@ export default function AdminDashboardPage() {
                       확정
                     </button>
                   </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <hr className="divider" />
+          <div className="actions">
+            <p className="small" style={{ margin: 0 }}>
+              최근 처리 이력 ({approvalActivities.length}건)
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={() => setApprovalActivities([])}
+              disabled={approvalActivities.length === 0}
+            >
+              이력 초기화
+            </button>
+          </div>
+          {approvalActivities.length === 0 ? (
+            <p className="small muted">아직 처리 이력이 없습니다.</p>
+          ) : (
+            <ul className="simple-list" aria-label="승인 처리 이력">
+              {approvalActivities.map((activity) => (
+                <li key={activity.id}>
+                  <span>
+                    <span className={activity.ok ? "ok" : "fail"}>{activity.ok ? "OK" : "FAIL"}</span>{" "}
+                    <strong>[{activity.queue}]</strong> {activity.action} · {activity.itemId}{" "}
+                    <span className="muted">
+                      ({activity.status} · {activity.at})
+                    </span>
+                  </span>
                 </li>
               ))}
             </ul>
