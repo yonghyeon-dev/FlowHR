@@ -132,11 +132,13 @@
 - WI-0093 production 환경에서 Supabase Auth 세션 기반 Bearer 호출(fallback) 적용
 - WI-0094 세션 메뉴(세션 상태/로그아웃) + identity 정리 + 홈 로그인 CTA
 - WI-0095 근무 일정(Admin) UI baseline (생성/조회/삭제)
+- WI-0096 초대/가입(Auth Invite) baseline (초대 링크 생성 + role/org/actor_id 클레임 세팅)
+- WI-0097 관리자 승인 워크플로 UI 고도화 (다건 선택/일괄 승인/반려)
 
 ### 진행 중
 
-- WI-0097 관리자 승인 워크플로 UI 고도화 (다건 선택/일괄 승인/반려)
-- 다음: 명세서 UX 고도화
+- WI-0098 직원 명세서 UX 고도화 (빠른 기간/요약 KPI/상세/인쇄)
+- 다음: 결재선/위임 정책 설계 또는 급여 상세 항목 UX
 
 ### 현재 아키텍처
 

@@ -62,6 +62,24 @@ function lastDayOfMonthLocal() {
   return toLocalInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 0));
 }
 
+function previousMonthRangeLocal() {
+  const now = new Date();
+  const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const month = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+  return {
+    start: toLocalInputValue(new Date(year, month, 1, 0, 0, 0)),
+    end: toLocalInputValue(new Date(year, month + 1, 0, 23, 59, 0))
+  };
+}
+
+function lastThreeMonthsRangeLocal() {
+  const now = new Date();
+  return {
+    start: toLocalInputValue(new Date(now.getFullYear(), now.getMonth() - 2, 1, 0, 0, 0)),
+    end: toLocalInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 0))
+  };
+}
+
 function toIso(value: string) {
   return new Date(value).toISOString();
 }
@@ -110,6 +128,7 @@ export default function EmployeePayslipsPage() {
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
 
   const [runs, setRuns] = useState<PayrollRunDto[]>([]);
+  const [selectedRunId, setSelectedRunId] = useState("");
   const [aggregate, setAggregate] = useState<AttendanceAggregateDto | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -133,6 +152,33 @@ export default function EmployeePayslipsPage() {
     const fail = total - success;
     return { total, success, fail };
   }, [logs]);
+
+  const payslipStats = useMemo(() => {
+    const totalGross = runs.reduce((sum, run) => sum + run.grossPayKrw, 0);
+    const totalDeductions = runs.reduce((sum, run) => sum + (run.totalDeductionsKrw ?? 0), 0);
+    const totalNet = runs.reduce((sum, run) => sum + (run.netPayKrw ?? 0), 0);
+    return {
+      count: runs.length,
+      totalGross,
+      totalDeductions,
+      totalNet
+    };
+  }, [runs]);
+
+  const selectedRun = useMemo(
+    () => runs.find((run) => run.id === selectedRunId) ?? runs[0] ?? null,
+    [runs, selectedRunId]
+  );
+
+  useEffect(() => {
+    if (runs.length === 0) {
+      setSelectedRunId("");
+      return;
+    }
+    if (!runs.some((run) => run.id === selectedRunId)) {
+      setSelectedRunId(runs[0].id);
+    }
+  }, [runs, selectedRunId]);
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -246,6 +292,55 @@ export default function EmployeePayslipsPage() {
     }
   }
 
+  function applyCurrentMonthRange() {
+    setPeriodStart(firstDayOfMonthLocal());
+    setPeriodEnd(lastDayOfMonthLocal());
+  }
+
+  function applyPreviousMonthRange() {
+    const range = previousMonthRangeLocal();
+    setPeriodStart(range.start);
+    setPeriodEnd(range.end);
+  }
+
+  function applyLastThreeMonthsRange() {
+    const range = lastThreeMonthsRangeLocal();
+    setPeriodStart(range.start);
+    setPeriodEnd(range.end);
+  }
+
+  async function copySelectedRunId() {
+    if (!selectedRun) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(selectedRun.id);
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "명세서 ID 복사",
+          status: 200,
+          ok: true,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { runId: selectedRun.id }
+        },
+        ...prev
+      ]);
+    } catch (error) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "명세서 ID 복사",
+          status: 500,
+          ok: false,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { error: error instanceof Error ? error.message : String(error) }
+        },
+        ...prev
+      ]);
+    }
+  }
+
   function clearLogs() {
     setLogs([]);
   }
@@ -279,6 +374,31 @@ export default function EmployeePayslipsPage() {
           <Link href="/login">/login</Link>
         </p>
       ) : null}
+
+      <section className="kpi-strip">
+        <article className="kpi-card">
+          <p>명세서 건수</p>
+          <strong>{payslipStats.count}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>총지급 합계</p>
+          <strong>{formatKrw(payslipStats.totalGross)}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>총공제 합계</p>
+          <strong>{formatKrw(payslipStats.totalDeductions)}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>실지급 합계</p>
+          <strong>{formatKrw(payslipStats.totalNet)}</strong>
+        </article>
+        <article className="kpi-card">
+          <p>API 호출</p>
+          <strong>
+            {stats.total} (OK {stats.success} / FAIL {stats.fail})
+          </strong>
+        </article>
+      </section>
 
       <section className="panel-grid">
         <article className="panel">
@@ -316,6 +436,15 @@ export default function EmployeePayslipsPage() {
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void refreshPayslips()}>
               조회
+            </button>
+            <button className="btn btn-secondary" onClick={applyCurrentMonthRange}>
+              이번 달
+            </button>
+            <button className="btn btn-secondary" onClick={applyPreviousMonthRange}>
+              지난 달
+            </button>
+            <button className="btn btn-secondary" onClick={applyLastThreeMonthsRange}>
+              최근 3개월
             </button>
           </div>
 
@@ -378,7 +507,13 @@ export default function EmployeePayslipsPage() {
           ) : (
             <ul className="simple-list" aria-label="급여 명세서 목록">
               {runs.map((run) => (
-                <li key={run.id}>
+                <li
+                  key={run.id}
+                  style={{
+                    borderColor: selectedRun?.id === run.id ? "var(--primary)" : "var(--line)",
+                    background: selectedRun?.id === run.id ? "var(--primary-soft)" : "#fff"
+                  }}
+                >
                   <span>
                     <strong>{formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)}</strong>{" "}
                     <span className="muted">
@@ -386,9 +521,71 @@ export default function EmployeePayslipsPage() {
                       {formatKrw(run.netPayKrw)} · 확정 {formatDateTime(run.confirmedAt)}
                     </span>
                   </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => setSelectedRunId(run.id)}
+                  >
+                    선택
+                  </button>
                 </li>
               ))}
             </ul>
+          )}
+        </article>
+
+        <article className="panel">
+          <h2>선택 명세서 상세</h2>
+          {!selectedRun ? (
+            <p className="small muted">선택된 명세서가 없습니다.</p>
+          ) : (
+            <>
+              <ul className="simple-list" aria-label="선택 명세서 상세">
+                <li>
+                  <span className="muted">명세서 ID</span>
+                  <strong>{selectedRun.id}</strong>
+                </li>
+                <li>
+                  <span className="muted">기간</span>
+                  <strong>
+                    {formatDateTime(selectedRun.periodStart)} ~ {formatDateTime(selectedRun.periodEnd)}
+                  </strong>
+                </li>
+                <li>
+                  <span className="muted">총지급</span>
+                  <strong>{formatKrw(selectedRun.grossPayKrw)}</strong>
+                </li>
+                <li>
+                  <span className="muted">총공제</span>
+                  <strong>{formatKrw(selectedRun.totalDeductionsKrw)}</strong>
+                </li>
+                <li>
+                  <span className="muted">실지급</span>
+                  <strong>{formatKrw(selectedRun.netPayKrw)}</strong>
+                </li>
+                <li>
+                  <span className="muted">확정 시각</span>
+                  <strong>{formatDateTime(selectedRun.confirmedAt)}</strong>
+                </li>
+              </ul>
+
+              {aggregate ? (
+                <p className="small" style={{ marginTop: 12 }}>
+                  근태 기준: 정규 {minutesToHours(aggregate.totals.regular)} / 연장{" "}
+                  {minutesToHours(aggregate.totals.overtime)} / 야간{" "}
+                  {minutesToHours(aggregate.totals.night)} / 휴일 {minutesToHours(aggregate.totals.holiday)}
+                </p>
+              ) : null}
+
+              <div className="actions">
+                <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
+                  인쇄
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => void copySelectedRunId()}>
+                  명세서 ID 복사
+                </button>
+              </div>
+            </>
           )}
         </article>
 
