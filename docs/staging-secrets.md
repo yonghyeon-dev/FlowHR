@@ -13,6 +13,7 @@
 - Staging CI is `OFF` by default.
 - Enable only when needed by setting repository variable `FLOWHR_ENABLE_STAGING_CI=true`.
 - Payroll phase2 runtime toggle for staging environment: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true|false`.
+- Payroll KR statutory baseline toggle for staging environment: `FLOWHR_PAYROLL_KR_BASELINE_V1=true|false`.
 
 ## Setup Rule
 
@@ -28,12 +29,13 @@ gh secret set FLOWHR_STAGING_SUPABASE_URL -b"https://<flowhr-project-ref>.supaba
 gh secret set FLOWHR_STAGING_ANON_KEY -b"<flowhr-anon-key>"
 gh secret set FLOWHR_STAGING_SERVICE_ROLE_KEY -b"<flowhr-service-role-key>"
 gh variable set FLOWHR_PAYROLL_DEDUCTIONS_V1 --env staging --body "true"
+gh variable set FLOWHR_PAYROLL_KR_BASELINE_V1 --env staging --body "false"
 ```
 
 ## Verification
 
 - `gh secret list` should include all five names.
-- `gh variable list --env staging` should include `FLOWHR_PAYROLL_DEDUCTIONS_V1`.
+- `gh variable list --env staging` should include `FLOWHR_PAYROLL_DEDUCTIONS_V1` and `FLOWHR_PAYROLL_KR_BASELINE_V1`.
 - `FLOWHR_STAGING_DATABASE_URL` and `FLOWHR_STAGING_DIRECT_URL` must include `schema=staging`.
 - When `FLOWHR_ENABLE_STAGING_CI=true`, `staging-prisma-integration` must run and pass on `main` push.
 

@@ -12,6 +12,7 @@ This matrix defines how WI-0001 gross-pay behavior coexists with Phase 2 deducti
 | Hybrid | `payroll_deductions_v1=on` for selected org | existing + `POST /payroll/runs/preview-with-deductions` | additive deduction/net columns populated when phase2 endpoint used | Existing consumers continue with gross-only path |
 | Phase2 Primary | `payroll_deductions_v1=on` default | deduction preview endpoint preferred | deduction and net fields expected for new consumers | Legacy consumers still supported during deprecation window |
 | Phase2 Profile Mode (WI-0006 + WI-0010) | `payroll_deductions_v1=on` + `payroll_deduction_profile_v1=on` | existing + `GET/PUT /payroll/deduction-profiles/{profileId}` | additive profile trace fields populated when profile mode is used | Manual phase2 consumers remain valid |
+| Phase2 KR Statutory Baseline Mode (WI-0101) | `payroll_deductions_v1=on` + `payroll_kr_baseline_v1=on` | existing `POST /payroll/runs/preview-with-deductions` with `deductionMode=statutory_kr_baseline` | additive deduction/net fields populated with KR baseline component breakdown | Manual/profile consumers remain valid |
 
 ## Field Compatibility
 
@@ -48,5 +49,6 @@ This matrix defines how WI-0001 gross-pay behavior coexists with Phase 2 deducti
 2. Gross-only regression suite must remain green in CI.
 3. `payroll_deductions_v1` defaults to `off` until consumer validation is complete.
 4. `payroll_deduction_profile_v1` defaults to `off` until profile auth/audit tests are green.
-5. `expectedProfileVersion` remains optional for backward compatibility; stale mismatch must return `409`.
-6. Deprecation notice for gross-only integrations must follow `contracts/versioning.md` policy before default switch.
+5. `payroll_kr_baseline_v1` defaults to `off` until statutory baseline accuracy tests are green.
+6. `expectedProfileVersion` remains optional for backward compatibility; stale mismatch must return `409`.
+7. Deprecation notice for gross-only integrations must follow `contracts/versioning.md` policy before default switch.

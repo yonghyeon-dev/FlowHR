@@ -28,12 +28,24 @@ const manualDeductionsSchema = z.object({
   breakdown: z.record(nonNegativeInteger).optional()
 });
 
+const statutoryKrBaselineSchema = z.object({
+  nonTaxableIncomeKrw: nonNegativeInteger.default(0),
+  incomeTaxRate: rate.default(0.03),
+  localIncomeTaxRate: rate.default(0.1),
+  nationalPensionRate: rate.default(0.045),
+  healthInsuranceRate: rate.default(0.03545),
+  longTermCareRateOnHealth: rate.default(0.1295),
+  employmentInsuranceRate: rate.default(0.009),
+  otherDeductionsKrw: nonNegativeInteger.default(0)
+});
+
 export const previewPayrollWithDeductionsSchema = previewPayrollSchema
   .extend({
-    deductionMode: z.enum(["manual", "profile"]).default("manual"),
+    deductionMode: z.enum(["manual", "profile", "statutory_kr_baseline"]).default("manual"),
     profileId: z.string().min(1).optional(),
     expectedProfileVersion: z.number().int().positive().optional(),
-    deductions: manualDeductionsSchema.optional()
+    deductions: manualDeductionsSchema.optional(),
+    statutory: statutoryKrBaselineSchema.optional()
   })
   .superRefine((value, ctx) => {
     if (value.deductionMode === "manual" && !value.deductions) {
@@ -50,11 +62,32 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
         message: "profileId is required when deductionMode is profile"
       });
     }
-    if (value.deductionMode === "manual" && value.expectedProfileVersion !== undefined) {
+    if (value.deductionMode !== "profile" && value.expectedProfileVersion !== undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["expectedProfileVersion"],
         message: "expectedProfileVersion is supported only when deductionMode is profile"
+      });
+    }
+    if (value.deductionMode !== "manual" && value.deductions !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deductions"],
+        message: "deductions is supported only when deductionMode is manual"
+      });
+    }
+    if (value.deductionMode !== "profile" && value.profileId !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["profileId"],
+        message: "profileId is supported only when deductionMode is profile"
+      });
+    }
+    if (value.deductionMode !== "statutory_kr_baseline" && value.statutory !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["statutory"],
+        message: "statutory is supported only when deductionMode is statutory_kr_baseline"
       });
     }
   });

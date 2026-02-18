@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.5.2
+version: 1.6.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -9,6 +9,7 @@ scope:
     - deduction profile policy and profile-mode preview
     - deduction profile list query
     - profile version expectation guard for deterministic preview
+    - KR statutory baseline deduction mode for payroll preview (income tax + 4-insurance approximation)
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -42,7 +43,7 @@ api:
       description: Generate payroll gross pay preview for a period.
     - method: POST
       path: /payroll/runs/preview-with-deductions
-      description: Generate payroll preview with deduction and tax components (manual/profile mode).
+      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode).
     - method: POST
       path: /payroll/runs/{runId}/confirm
       description: Confirm a payroll run.
@@ -86,6 +87,8 @@ invariants:
   - Net pay equals gross pay minus total deductions when phase2 fields are populated.
   - Profile-mode preview must persist profile ID and version trace.
   - Profile-mode preview rejects request when expected profile version mismatches current profile version.
+  - Statutory KR baseline mode must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0).
+  - Statutory KR baseline mode must keep deduction and net-pay outputs deterministic for same inputs/rates.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
   - Payroll run list API is restricted to payroll_operator/admin roles, with employee self-service allowed for own CONFIRMED runs only.
@@ -99,12 +102,14 @@ risk:
     - Misapplied overtime/night/holiday multipliers affect compensation.
     - Miscalculated deduction aggregation affects net pay accuracy.
     - Stale deduction profile version can produce incorrect net pay.
+    - Statutory baseline rates are approximation-only and require policy/legal review before production default.
   legal:
     - Payroll trace must support audit and dispute resolution.
 test_plan:
   unit:
     - gross pay calculator with multiplier rules
     - manual/profile mode deduction and net-pay aggregation formula
+    - statutory_kr_baseline mode deduction component and net-pay aggregation formula
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
     - deduction profile list query parsing and role guard
@@ -112,6 +117,7 @@ test_plan:
     - payroll preview rejects unknown employeeId (404)
     - consume attendance.approved and produce payroll preview
     - preview-with-deductions and confirm flow
+    - preview-with-deductions statutory_kr_baseline mode flow
     - deduction profile CRUD and authorization checks
     - profile mode preview rejects stale expected profile version
     - list payroll runs by period returns expected rows
@@ -119,6 +125,7 @@ test_plan:
     - list deduction profiles and filter by active/mode
   regression:
     - replay GC-001 through GC-006 fixtures
+    - statutory_kr_baseline deterministic result replay via WI-0101 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -126,6 +133,7 @@ test_plan:
   payroll_accuracy:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
+    - statutory taxable-base and component-level deterministic checks
 observability:
   audit_events:
     - payroll.calculated
@@ -149,13 +157,15 @@ rollout:
       default: "off"
     - name: payroll_deduction_profile_v1
       default: "off"
+    - name: payroll_kr_baseline_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
+  strategy: disable payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.5.2 expands payroll run list semantics to allow employee self-service payslip access (own CONFIRMED runs only), while keeping payroll_operator/admin privileged flows unchanged."
+consumer_impact: "Contract v1.6.0 adds statutory_kr_baseline preview mode on existing deduction endpoint behind payroll_kr_baseline_v1 flag. Existing manual/profile flows and role guards remain backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -166,6 +176,7 @@ references:
   - work-items/WI-0028-payroll-run-list-api.md
   - work-items/WI-0088-saas-core-ui.md
   - work-items/WI-0030-deduction-profile-list-api.md
+  - work-items/WI-0101-payroll-kr-statutory-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

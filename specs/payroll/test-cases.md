@@ -17,6 +17,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 9. Reject profile-mode preview when `expectedProfileVersion` is stale.
 10. List payroll runs by period (`from`/`to`) and verify role guard (payroll_operator/admin, plus employee self-service for own CONFIRMED only).
 11. List deduction profiles (optional filters `active`, `mode`) and verify role guard.
+12. Run deduction/tax preview in `statutory_kr_baseline` mode with taxable-base and component breakdown output.
+13. Reject statutory baseline preview when `payroll_kr_baseline_v1` feature flag is disabled.
 
 ## Accuracy Cases
 
@@ -27,6 +29,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 5. `netPayKrw` equals `grossPayKrw - totalDeductionsKrw`.
 6. Profile-mode calculation stores profile ID/version trace and remains deterministic.
 7. Profile-mode stale version guard returns deterministic `409` mismatch error.
+8. Statutory baseline mode computes taxable base and component sums deterministically.
+9. Statutory baseline mode total/net calculations match component aggregation.
 
 ## Regression Linkage
 
@@ -43,4 +47,5 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Code Gate: payroll unit/integration/regression checks pass.
 - Compatibility Gate: gross-only consumer path remains valid with phase2 flag off.
 - Profile Gate: profile-mode API/auth/audit checks are validated before merge.
+- Statutory Gate: statutory_kr_baseline mode must remain feature-flagged and deterministic.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
