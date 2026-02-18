@@ -57,6 +57,12 @@ type LeaveBalanceDto = {
   updatedAt: string;
 };
 
+function isDevToolsEnabled() {
+  const raw = process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "";
+  const normalized = raw.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 function toLocalInputValue(value: Date) {
   const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
   return adjusted.toISOString().slice(0, 16);
@@ -149,8 +155,7 @@ export default function EmployeeSelfServicePage() {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const usesBearerToken = accessToken.trim().length > 0;
-  const showDevTools =
-    (process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "").trim().toLowerCase() === "true";
+  const showDevTools = isDevToolsEnabled();
   const newestLog = logs[0];
 
   async function callApi(
@@ -594,11 +599,13 @@ export default function EmployeeSelfServicePage() {
 
         <article className="panel">
           <h2>근무 일정</h2>
-          <div className="actions">
-            <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-              스케줄링 Cockpit
-            </Link>
-          </div>
+          {showDevTools ? (
+            <div className="actions">
+              <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
+                (dev) 스케줄링 Cockpit
+              </Link>
+            </div>
+          ) : null}
           <ul className="log-list">
             {schedules.length === 0 ? (
               <li>
