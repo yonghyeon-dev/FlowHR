@@ -50,6 +50,18 @@ type WorkScheduleDto = {
   notes: string | null;
 };
 
+type InviteRole = "admin" | "manager" | "employee" | "payroll_operator";
+
+type InviteResultDto = {
+  userId: string;
+  email: string;
+  role: InviteRole;
+  organizationId: string;
+  actorId: string | null;
+  redirectTo: string;
+  actionLink: string;
+};
+
 type LeaveRequestDto = {
   id: string;
   employeeId: string;
@@ -182,6 +194,11 @@ export default function AdminDashboardPage() {
   const [employeeName, setEmployeeName] = useState("");
   const [employeeEmail, setEmployeeEmail] = useState("");
   const [employeeActive, setEmployeeActive] = useState(true);
+
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<InviteRole>("employee");
+  const [inviteActorId, setInviteActorId] = useState("EMP-1001");
+  const [inviteResult, setInviteResult] = useState<InviteResultDto | null>(null);
 
   const [scheduleEmployeeId, setScheduleEmployeeId] = useState("EMP-1001");
   const [scheduleIsHoliday, setScheduleIsHoliday] = useState(false);
@@ -344,8 +361,35 @@ export default function AdminDashboardPage() {
       setEmployeeId(parsed.employee.id);
       setAccrualEmployeeId(parsed.employee.id);
       setScheduleEmployeeId(parsed.employee.id);
+      setInviteActorId(parsed.employee.id);
     }
     await listEmployees();
+  }
+
+  async function createInvite() {
+    setInviteResult(null);
+
+    const email = inviteEmail.trim();
+    if (!email) {
+      return;
+    }
+
+    const payload = {
+      email,
+      role: inviteRole,
+      organizationId: organizationId.trim() || undefined,
+      actorId: inviteActorId.trim() || undefined
+    };
+
+    const { response, body } = await callApi("직원 초대 생성", "POST", "/api/auth/invites", payload);
+    if (!response.ok) {
+      return;
+    }
+
+    const parsed = body as { invite?: InviteResultDto };
+    if (parsed.invite) {
+      setInviteResult(parsed.invite);
+    }
   }
 
   async function listSchedules() {
@@ -911,6 +955,7 @@ export default function AdminDashboardPage() {
                       setAccrualEmployeeId(employee.id);
                       setAggregateEmployeeId(employee.id);
                       setScheduleEmployeeId(employee.id);
+                      setInviteActorId(employee.id);
                     }}
                   >
                     이 직원으로 적용
@@ -919,6 +964,71 @@ export default function AdminDashboardPage() {
               ))}
             </ul>
           ) : null}
+        </article>
+
+        <article className="panel" id="invites">
+          <h2>초대/가입</h2>
+          <p className="small">
+            직원에게 전달할 초대 링크를 생성합니다. <strong>Actor ID</strong>에 <code>Employee.id</code>를 넣으면 직원 포털이 해당
+            직원으로 매핑됩니다.
+          </p>
+          <div className="input-grid">
+            <label className="full">
+              초대 이메일
+              <input
+                value={inviteEmail}
+                onChange={(event) => setInviteEmail(event.target.value)}
+                placeholder="you@company.com"
+              />
+            </label>
+            <label>
+              역할
+              <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as InviteRole)}>
+                <option value="employee">employee</option>
+                <option value="manager">manager</option>
+                <option value="payroll_operator">payroll_operator</option>
+                <option value="admin">admin</option>
+              </select>
+            </label>
+            <label>
+              Actor ID (선택)
+              <input
+                value={inviteActorId}
+                onChange={(event) => setInviteActorId(event.target.value)}
+                placeholder="예: EMP-1001"
+              />
+            </label>
+            <label className="full">
+              Organization ID
+              <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
+            </label>
+          </div>
+          <div className="actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => void createInvite()}
+              disabled={!inviteEmail.trim() || !organizationId.trim()}
+            >
+              초대 링크 생성
+            </button>
+          </div>
+          {inviteResult ? (
+            <>
+              <p className="small">
+                생성됨: <strong>{inviteResult.email}</strong> · role={inviteResult.role} · org={inviteResult.organizationId}
+                {inviteResult.actorId ? ` · actor=${inviteResult.actorId}` : ""}
+              </p>
+              <label className="full" style={{ display: "block", marginTop: 8 }}>
+                초대 링크 (action_link)
+                <textarea readOnly rows={3} value={inviteResult.actionLink} />
+              </label>
+              <p className="small muted" style={{ marginTop: 8 }}>
+                링크가 `/login`으로 리다이렉트되려면 Supabase Auth의 Redirect URL에 현재 도메인이 허용되어 있어야 합니다.
+              </p>
+            </>
+          ) : (
+            <p className="small muted">아직 초대 링크를 생성하지 않았습니다.</p>
+          )}
         </article>
 
         <article className="panel" id="scheduling">

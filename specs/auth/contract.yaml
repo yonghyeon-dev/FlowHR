@@ -1,0 +1,79 @@
+owner: auth-agent
+version: 0.1.0
+scope:
+  in:
+    - invite/join baseline for SaaS onboarding (no email sending)
+    - provision Supabase app_metadata claims (role/org/actor_id)
+  out:
+    - email delivery/templating
+    - self-service sign-up UX
+    - invite expiration/reissue policy automation
+entities:
+  - name: AuthInvite
+    description: Generated Supabase invite action link used to bootstrap user access.
+api:
+  auth:
+    - role: admin
+      permission: generate invite link and set user claims for an organization
+    - role: system
+      permission: platform automation for invite link and claim provisioning
+  endpoints:
+    - method: POST
+      path: /auth/invites
+      description: Generate invite action link and set app_metadata(role/org/actor_id) for the invited user.
+  events:
+    published: []
+    consumed: []
+db_changes:
+  migrations: []
+  backward_compatible: true
+  notes: Supabase Auth only; no database migrations.
+invariants:
+  - Invites must set claims in app_metadata (not user_metadata).
+  - If actor.organizationId exists, payload.organizationId must match.
+  - action_link is secret and must be returned only to authorized actors.
+risk:
+  permissions:
+    - action_link leakage could grant account access; must be admin-only and audited.
+  payroll_accuracy:
+    - not applicable
+  legal:
+    - invite email addresses are PII; avoid persisting action_link in logs.
+test_plan:
+  unit:
+    - validate payload parsing and role allowlist
+    - enforce org mismatch rejection
+  integration:
+    - admin can generate invite and receives action_link
+    - non-admin forbidden
+  regression:
+    - existing auth/session flows remain unchanged
+  authorization:
+    - only admin/system can call invite endpoint
+  payroll_accuracy:
+    - not applicable
+observability:
+  audit_events:
+    - auth.invite.generated
+    - auth.user.claims.updated
+  metrics:
+    - auth_invite_generated_count
+  logs:
+    - auth invite failures (without action_link)
+rollout:
+  feature_flags:
+    - name: auth_invites_v1
+      default: "on"
+  migration_strategy: expand-contract
+rollback:
+  strategy: disable auth_invites_v1 and remove UI entry points
+  max_recovery_time: 30m
+deprecations: []
+breaking_changes: false
+consumer_impact: "Adds admin-only invite endpoint to provision Supabase app_metadata claims for SaaS onboarding."
+references:
+  - work-items/WI-0096-auth-invite-baseline.md
+approval:
+  spec_owner: auth-agent
+  qa_owner: qa-agent
+

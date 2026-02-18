@@ -1,0 +1,20 @@
+openapi: 3.1.0
+info:
+  title: FlowHR Auth API
+  version: 0.1.0
+paths:
+  /auth/invites:
+    post:
+      summary: Generate invite action link and set claims
+      responses:
+        "201":
+          description: Invite link generated
+        "400":
+          description: Invalid payload
+        "401":
+          description: Missing actor
+        "403":
+          description: Forbidden
+        "502":
+          description: Supabase admin failure
+
