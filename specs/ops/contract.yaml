@@ -1,5 +1,5 @@
 owner: ops-agent
-version: 0.1.5
+version: 0.1.6
 scope:
   in:
     - local developer experience scripts and conventions
@@ -7,6 +7,7 @@ scope:
     - workflow-level smoke checks for alert delivery
     - phase2 health monitoring guardrails (gate skip + 409 expected/mismatch/ignored classification + incident dedup)
     - MVP console verification affordances (list actions)
+    - admin command center UI surfaces (people onboarding, priority queue inline actions, attendance aggregates rendering)
     - production roadmap and execution plan documentation for Phase 1 prioritization
   out:
     - business domain rules (attendance/leave/payroll)
@@ -28,6 +29,7 @@ invariants:
   - Dev scripts must not require production secrets.
   - Phase2 health monitoring must not generate incident noise when Phase2 rollout is disabled.
   - Phase2 health monitoring must treat business-input 409 conflicts as report-only and gate only on config mismatch signals.
+  - Command Center UI must keep the MVP flow runnable end-to-end (people -> attendance -> aggregates -> payroll) without manual DB edits.
 test_plan:
   unit:
     - notifier provider auto-detection and required webhook guard
@@ -38,6 +40,7 @@ test_plan:
   regression:
     - ops alert webhook regression tests remain green in CI
     - phase2 health workflow failures deduplicate into a single open incident issue (comment on existing)
+    - UI journey e2e regression gate remains green (Command Center -> MVP Console -> Employee self-service)
   authorization:
     - production secret mutation remains admin-only
   payroll_accuracy:
@@ -63,7 +66,7 @@ rollback:
   max_recovery_time: 15m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Ops contract v0.1.5 further reduces phase2-health false incidents by gating 409 only on feature-flag config mismatch, while reporting other 409 conflicts for triage (top-5 message breakdown included)."
+consumer_impact: "Ops contract v0.1.6 adds UI surfaces for admin Command Center (people onboarding, priority queue inline actions, attendance aggregates rendering) while keeping existing ops workflows backward compatible."
 references:
   - work-items/WI-0011-slack-alert-unification.md
   - work-items/WI-0013-discord-alert-webhook-support.md
@@ -78,6 +81,11 @@ references:
   - work-items/WI-0036-rbac-engine-foundation.md
   - work-items/WI-0037-multi-tenant-rls-baseline.md
   - work-items/WI-0038-phase2-health-409-gate-tuning.md
+  - work-items/WI-0081-admin-ui-information-architecture-and-kpi-cockpit.md
+  - work-items/WI-0084-people-onboarding-ui.md
+  - work-items/WI-0085-ui-context-persistence.md
+  - work-items/WI-0086-admin-queue-inline-actions.md
+  - work-items/WI-0087-attendance-aggregates-ui.md
   - ROADMAP.md
   - docs/execution-plan.md
   - docs/production-rollout.md

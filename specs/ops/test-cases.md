@@ -1,4 +1,4 @@
-# Ops Test Cases (Contract v0.1.5)
+# Ops Test Cases (Contract v0.1.6)
 
 ## Alert Webhook Smoke (Discord-first, Slack fallback)
 
@@ -21,6 +21,18 @@
   - `GET /api/attendance/records`
   - `GET /api/leave/requests`
   - `GET /api/payroll/runs`
+
+## Command Center UI (Admin)
+
+- The root page `/` renders the FlowHR Command Center and provides:
+  - People onboarding panel (create organization, create employee, list employees).
+  - Priority queue panel showing pending attendance/leave and previewed payroll items, with inline actions:
+    - attendance approve/reject
+    - leave approve/reject (reject reason required)
+    - payroll confirm
+  - Attendance aggregates rendering (per employee totals/counters) and a quick filter action that sets employeeId.
+- Context persistence:
+  - `organizationId`, `employeeId`, and system actor id persist across `/`, `/employee`, and `/ops/mvp-console` after reload.
 
 ## Roadmap / Planning Artifacts
 
