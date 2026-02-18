@@ -130,10 +130,12 @@
 - WI-0091 SaaS 방향성 재정렬 + 스테이징 빌드 안정성(lazy env init, ops UI 격리)
 - WI-0092 SaaS Shell(사이드 네비) + `/login` 추가
 - WI-0093 production 환경에서 Supabase Auth 세션 기반 Bearer 호출(fallback) 적용
+- WI-0094 세션 메뉴(세션 상태/로그아웃) + identity 정리 + 홈 로그인 CTA
 
 ### 진행 중
 
-- (없음) 다음은 결재/초대/명세서 UX 고도화로 진행
+- WI-0095 근무 일정(Admin) UI baseline (생성/조회/삭제)
+- 다음: 결재 워크플로 + 초대/가입 + 명세서 UX 고도화
 
 ### 현재 아키텍처
 
