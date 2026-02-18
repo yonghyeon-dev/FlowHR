@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.1.0
+  version: 0.2.0
 paths:
   /people/organizations:
     get:
@@ -46,12 +46,114 @@ paths:
         "200":
           description: Employees listed
     post:
-      summary: Create employee
+      summary: Create employee with optional department/position assignment
       responses:
         "201":
           description: Created
         "409":
           description: Duplicate
+  /people/departments:
+    get:
+      summary: List departments
+      parameters:
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Departments listed
+    post:
+      summary: Create department
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Duplicate code in organization
+  /people/departments/{departmentId}:
+    get:
+      summary: Get department
+      parameters:
+        - in: path
+          name: departmentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Department returned
+        "404":
+          description: Not found
+    patch:
+      summary: Update department
+      parameters:
+        - in: path
+          name: departmentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Not found
+  /people/positions:
+    get:
+      summary: List positions
+      parameters:
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Positions listed
+    post:
+      summary: Create position
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Duplicate code in organization
+  /people/positions/{positionId}:
+    get:
+      summary: Get position
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Position returned
+        "404":
+          description: Not found
+    patch:
+      summary: Update position
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Not found
   /people/employees/{employeeId}:
     get:
       summary: Get employee

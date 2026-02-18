@@ -15,6 +15,8 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   employees Employee[]
+  departments Department[]
+  positions Position[]
   leavePolicy LeavePolicy?
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
@@ -26,6 +28,8 @@ model Organization {
 model Employee {
   id             String   @id
   organizationId String?
+  departmentId   String?
+  positionId     String?
   name           String?
   email          String?
   active         Boolean  @default(true)
@@ -33,12 +37,48 @@ model Employee {
   updatedAt      DateTime @updatedAt
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  position Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
   attendanceRecords AttendanceRecord[]
   workSchedules      WorkSchedule[]
   leaveRequests      LeaveRequest[]
   leaveBalance       LeaveBalanceProjection?
   payrollRuns        PayrollRun[]
 
+  @@index([organizationId, active])
+  @@index([departmentId])
+  @@index([positionId])
+}
+
+model Department {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employees Employee[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, active])
+}
+
+model Position {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  employees Employee[]
+
+  @@unique([organizationId, code])
   @@index([organizationId, active])
 }
 

@@ -7,14 +7,18 @@ import type {
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
+  CreateDepartmentInput,
+  CreatePositionInput,
   CreateOrganizationInput,
   DataAccess,
+  DepartmentEntity,
   DeductionProfileEntity,
   EmployeeEntity,
   LeaveBalanceEntity,
   LeavePolicyEntity,
   LeaveRequestEntity,
   OrganizationEntity,
+  PositionEntity,
   RoleEntity,
   RoleWithPermissionsEntity,
   ScheduleAnomalyIncidentEntity,
@@ -23,9 +27,11 @@ import type {
   UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
+  UpdateDepartmentInput,
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
   UpsertLeavePolicyInput,
+  UpdatePositionInput,
   UpdatePayrollRunInput,
   PayrollRunEntity,
   WorkScheduleTemplateEntity,
@@ -36,6 +42,8 @@ import { defaultRolePermissions } from "@/lib/rbac";
 type MemoryState = {
   sequence: number;
   organizations: Map<string, OrganizationEntity>;
+  departments: Map<string, DepartmentEntity>;
+  positions: Map<string, PositionEntity>;
   employees: Map<string, EmployeeEntity>;
   roles: Map<string, RoleEntity>;
   rolePermissions: Map<string, Set<string>>;
@@ -70,6 +78,8 @@ function createState(): MemoryState {
   const created: MemoryState = {
     sequence: 1,
     organizations: new Map<string, OrganizationEntity>(),
+    departments: new Map<string, DepartmentEntity>(),
+    positions: new Map<string, PositionEntity>(),
     employees: new Map<string, EmployeeEntity>(),
     roles: new Map<string, RoleEntity>(),
     rolePermissions: new Map<string, Set<string>>(),
@@ -225,6 +235,22 @@ function cloneOrganization(entity: OrganizationEntity): OrganizationEntity {
   };
 }
 
+function cloneDepartment(entity: DepartmentEntity): DepartmentEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function clonePosition(entity: PositionEntity): PositionEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
 function cloneEmployee(entity: EmployeeEntity): EmployeeEntity {
   return {
     ...entity,
@@ -319,9 +345,34 @@ function updateEmployeeEntity(existing: EmployeeEntity, input: UpdateEmployeeInp
   return {
     ...existing,
     organizationId: input.organizationId !== undefined ? input.organizationId : existing.organizationId,
+    departmentId: input.departmentId !== undefined ? input.departmentId : existing.departmentId,
+    positionId: input.positionId !== undefined ? input.positionId : existing.positionId,
     name: input.name !== undefined ? input.name : existing.name,
     email: input.email !== undefined ? input.email : existing.email,
     active: input.active !== undefined ? input.active : existing.active,
+    updatedAt: new Date()
+  };
+}
+
+function updateDepartmentEntity(
+  existing: DepartmentEntity,
+  input: UpdateDepartmentInput
+): DepartmentEntity {
+  return {
+    ...existing,
+    code: input.code ?? existing.code,
+    name: input.name ?? existing.name,
+    active: input.active ?? existing.active,
+    updatedAt: new Date()
+  };
+}
+
+function updatePositionEntity(existing: PositionEntity, input: UpdatePositionInput): PositionEntity {
+  return {
+    ...existing,
+    code: input.code ?? existing.code,
+    name: input.name ?? existing.name,
+    active: input.active ?? existing.active,
     updatedAt: new Date()
   };
 }
@@ -355,6 +406,100 @@ export const memoryDataAccess: DataAccess = {
     }
   },
 
+  departments: {
+    async create(input: CreateDepartmentInput) {
+      const now = new Date();
+      const entity: DepartmentEntity = {
+        id: nextId("DEPT"),
+        organizationId: input.organizationId,
+        code: input.code,
+        name: input.name,
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.departments.set(entity.id, entity);
+      return cloneDepartment(entity);
+    },
+
+    async findById(id: string) {
+      const entity = state.departments.get(id);
+      return entity ? cloneDepartment(entity) : null;
+    },
+
+    async update(id: string, input: UpdateDepartmentInput) {
+      const existing = state.departments.get(id);
+      if (!existing) {
+        throw new Error(`department not found: ${id}`);
+      }
+      const updated = updateDepartmentEntity(existing, input);
+      state.departments.set(id, updated);
+      return cloneDepartment(updated);
+    },
+
+    async list(input: { active?: boolean; organizationId?: string }) {
+      const rows: DepartmentEntity[] = [];
+      for (const entity of state.departments.values()) {
+        if (input.active !== undefined && entity.active !== input.active) {
+          continue;
+        }
+        if (input.organizationId && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        rows.push(cloneDepartment(entity));
+      }
+      rows.sort((a, b) => a.code.localeCompare(b.code));
+      return rows;
+    }
+  },
+
+  positions: {
+    async create(input: CreatePositionInput) {
+      const now = new Date();
+      const entity: PositionEntity = {
+        id: nextId("POS"),
+        organizationId: input.organizationId,
+        code: input.code,
+        name: input.name,
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.positions.set(entity.id, entity);
+      return clonePosition(entity);
+    },
+
+    async findById(id: string) {
+      const entity = state.positions.get(id);
+      return entity ? clonePosition(entity) : null;
+    },
+
+    async update(id: string, input: UpdatePositionInput) {
+      const existing = state.positions.get(id);
+      if (!existing) {
+        throw new Error(`position not found: ${id}`);
+      }
+      const updated = updatePositionEntity(existing, input);
+      state.positions.set(id, updated);
+      return clonePosition(updated);
+    },
+
+    async list(input: { active?: boolean; organizationId?: string }) {
+      const rows: PositionEntity[] = [];
+      for (const entity of state.positions.values()) {
+        if (input.active !== undefined && entity.active !== input.active) {
+          continue;
+        }
+        if (input.organizationId && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        rows.push(clonePosition(entity));
+      }
+      rows.sort((a, b) => a.code.localeCompare(b.code));
+      return rows;
+    }
+  },
+
   employees: {
     async create(input: CreateEmployeeInput) {
       const now = new Date();
@@ -362,6 +507,10 @@ export const memoryDataAccess: DataAccess = {
         id: input.id,
         organizationId:
           input.organizationId === undefined ? null : input.organizationId,
+        departmentId:
+          input.departmentId === undefined ? null : input.departmentId,
+        positionId:
+          input.positionId === undefined ? null : input.positionId,
         name: input.name === undefined ? null : input.name,
         email: input.email === undefined ? null : input.email,
         active: input.active ?? true,

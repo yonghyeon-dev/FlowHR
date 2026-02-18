@@ -6,12 +6,16 @@ import type {
   AttendanceStore,
   AuditStore,
   CreateAttendanceRecordInput,
+  CreateDepartmentInput,
   CreateEmployeeInput,
   CreateLeaveRequestInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
+  CreatePositionInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
+  DepartmentEntity,
+  DepartmentStore,
   UpdateWorkScheduleTemplateInput,
   UpdateWorkScheduleInput,
   DataAccess,
@@ -30,6 +34,8 @@ import type {
   OrganizationStore,
   PayrollRunEntity,
   PayrollStore,
+  PositionEntity,
+  PositionStore,
   RbacStore,
   RecordLeaveDecisionInput,
   RoleEntity,
@@ -41,8 +47,10 @@ import type {
   UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
   UpdateAttendanceRecordInput,
+  UpdateDepartmentInput,
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
+  UpdatePositionInput,
   UpdatePayrollRunInput,
   UpsertLeavePolicyInput,
   WorkScheduleTemplateEntity,
@@ -224,9 +232,35 @@ function toOrganizationEntity(record: {
   return record;
 }
 
+function toDepartmentEntity(record: {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): DepartmentEntity {
+  return record;
+}
+
+function toPositionEntity(record: {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): PositionEntity {
+  return record;
+}
+
 function toEmployeeEntity(record: {
   id: string;
   organizationId: string | null;
+  departmentId: string | null;
+  positionId: string | null;
   name: string | null;
   email: string | null;
   active: boolean;
@@ -413,6 +447,94 @@ const organizations: OrganizationStore = {
   }
 };
 
+const departments: DepartmentStore = {
+  async create(input: CreateDepartmentInput) {
+    const record = await prisma.department.create({
+      data: {
+        organizationId: input.organizationId,
+        code: input.code,
+        name: input.name,
+        active: input.active ?? true
+      }
+    });
+    return toDepartmentEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.department.findUnique({
+      where: { id }
+    });
+    return record ? toDepartmentEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateDepartmentInput) {
+    const record = await prisma.department.update({
+      where: { id },
+      data: {
+        ...(input.code !== undefined ? { code: input.code } : {}),
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {})
+      }
+    });
+    return toDepartmentEntity(record);
+  },
+
+  async list(input: { active?: boolean; organizationId?: string }) {
+    const records = await prisma.department.findMany({
+      where: {
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.organizationId ? { organizationId: input.organizationId } : {})
+      },
+      orderBy: [{ code: "asc" }, { createdAt: "asc" }]
+    });
+    return records.map(toDepartmentEntity);
+  }
+};
+
+const positions: PositionStore = {
+  async create(input: CreatePositionInput) {
+    const record = await prisma.position.create({
+      data: {
+        organizationId: input.organizationId,
+        code: input.code,
+        name: input.name,
+        active: input.active ?? true
+      }
+    });
+    return toPositionEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.position.findUnique({
+      where: { id }
+    });
+    return record ? toPositionEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdatePositionInput) {
+    const record = await prisma.position.update({
+      where: { id },
+      data: {
+        ...(input.code !== undefined ? { code: input.code } : {}),
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {})
+      }
+    });
+    return toPositionEntity(record);
+  },
+
+  async list(input: { active?: boolean; organizationId?: string }) {
+    const records = await prisma.position.findMany({
+      where: {
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.organizationId ? { organizationId: input.organizationId } : {})
+      },
+      orderBy: [{ code: "asc" }, { createdAt: "asc" }]
+    });
+    return records.map(toPositionEntity);
+  }
+};
+
 const employees: EmployeeStore = {
   async create(input: CreateEmployeeInput) {
     const record = await prisma.employee.create({
@@ -420,6 +542,10 @@ const employees: EmployeeStore = {
         id: input.id,
         organizationId:
           input.organizationId === undefined ? null : input.organizationId,
+        departmentId:
+          input.departmentId === undefined ? null : input.departmentId,
+        positionId:
+          input.positionId === undefined ? null : input.positionId,
         name: input.name === undefined ? null : input.name,
         email: input.email === undefined ? null : input.email,
         active: input.active ?? true
@@ -440,6 +566,8 @@ const employees: EmployeeStore = {
       where: { id },
       data: {
         organizationId: input.organizationId,
+        departmentId: input.departmentId,
+        positionId: input.positionId,
         name: input.name,
         email: input.email,
         active: input.active
@@ -1233,6 +1361,8 @@ const audit: AuditStore = {
 export const prismaDataAccess: DataAccess = {
   organizations,
   employees,
+  departments,
+  positions,
   rbac,
   attendance,
   scheduling,

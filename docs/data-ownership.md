@@ -13,7 +13,7 @@ Exception:
 
 | Domain | Owned Tables | Published Events | Allowed Reads |
 | --- | --- | --- | --- |
-| People | `Organization`, `Employee` | `organization.created.v1`, `employee.created.v1`, `employee.profile.updated.v1` | Own tables, read-only via API/event projections |
+| People | `Organization`, `Department`, `Position`, `Employee` | `organization.created.v1`, `department.created.v1`, `department.updated.v1`, `position.created.v1`, `position.updated.v1`, `employee.created.v1`, `employee.profile.updated.v1` | Own tables, read-only via API/event projections |
 | RBAC | `Role`, `RolePermission` | none | Read-only by runtime services for authorization resolution; write via RBAC API (admin only) |
 | Attendance | `AttendanceRecord` | `attendance.recorded.v1`, `attendance.corrected.v1`, `attendance.approved.v1`, `attendance.rejected.v1` | Own tables, event projections |
 | Scheduling | `WorkSchedule`, `WorkScheduleTemplate`, `ScheduleAnomalyIncident` | `scheduling.schedule.assigned.v1`, `scheduling.schedule.updated.v1`, `scheduling.schedule.deleted.v1`, `scheduling.template.created.v1`, `scheduling.template.assigned.v1`, `scheduling.template.range_assigned.v1`, `scheduling.rotation.assigned.v1`, `scheduling.anomaly.detected.v1`, `scheduling.anomaly.escalated.v1`, `scheduling.anomaly.ticket.requested.v1`, `scheduling.anomaly.incident.updated.v1`, `scheduling.anomaly.incident.escalation.requested.v1`, `scheduling.anomaly.incident.auto_action.executed.v1` | Own tables, read-only via API/event projections |
