@@ -23,6 +23,11 @@ type EmployeeSummary = {
   active: boolean;
 };
 
+type OrganizationSummary = {
+  id: string;
+  name: string;
+};
+
 type AttendanceRecordDto = {
   id: string;
   employeeId: string;
@@ -155,6 +160,8 @@ export default function AdminDashboardPage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
+  const [organizationName, setOrganizationName] = useState("FlowHR Demo Org");
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
 
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
@@ -200,7 +207,8 @@ export default function AdminDashboardPage() {
     label: string,
     method: "GET" | "POST" | "PATCH" | "PUT",
     path: string,
-    payload?: Record<string, unknown>
+    payload?: Record<string, unknown>,
+    options?: { omitOrganizationHeader?: boolean }
   ) {
     setPendingLabel(label);
     const startedAt = Date.now();
@@ -215,7 +223,7 @@ export default function AdminDashboardPage() {
       } else {
         headers["x-actor-role"] = "admin";
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-        if (organizationId.trim().length > 0) {
+        if (!options?.omitOrganizationHeader && organizationId.trim().length > 0) {
           headers["x-actor-organization-id"] = organizationId.trim();
         }
       }
@@ -289,6 +297,55 @@ export default function AdminDashboardPage() {
       setAccrualEmployeeId(parsed.employee.id);
     }
     await listEmployees();
+  }
+
+  async function listOrganizations() {
+    const { response, body } = await callApi("조직 목록 조회", "GET", "/api/people/organizations", undefined, {
+      omitOrganizationHeader: true
+    });
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as { organizations?: OrganizationSummary[] };
+    setOrganizations(Array.isArray(parsed.organizations) ? parsed.organizations : []);
+  }
+
+  async function createOrganization() {
+    const name = organizationName.trim();
+    if (!name) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "조직 생성",
+          status: 400,
+          ok: false,
+          durationMs: 0,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { error: "조직 이름이 필요합니다." }
+        },
+        ...prev
+      ]);
+      return;
+    }
+
+    const { response, body } = await callApi(
+      "조직 생성",
+      "POST",
+      "/api/people/organizations",
+      { name },
+      { omitOrganizationHeader: true }
+    );
+    if (!response.ok) {
+      return;
+    }
+
+    const parsed = body as { organization?: { id?: string } };
+    const createdId = parsed.organization?.id;
+    if (typeof createdId === "string" && createdId.trim().length > 0) {
+      setOrganizationId(createdId);
+    }
+
+    await listOrganizations();
   }
 
   async function refreshInbox() {
@@ -571,6 +628,58 @@ export default function AdminDashboardPage() {
       </section>
 
       <section className="panel-grid">
+        <article className="panel">
+          <h2>조직 온보딩</h2>
+          <p className="small">
+            조직(테넌트)을 먼저 만들고 선택해야 직원/근태/휴가/급여 흐름을 정상 검증할 수 있습니다. 이 패널의 조직
+            생성/목록 조회 호출은 tenantScope 제한을 피하기 위해 Dev Header 모드에서{" "}
+            <code>x-actor-organization-id</code> 헤더를 생략합니다.
+          </p>
+          <p className="small">
+            현재 선택된 Organization ID: <code>{organizationId.trim() || "-"}</code>
+          </p>
+
+          <div className="input-grid">
+            <label className="full">
+              새 조직 이름
+              <input value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} />
+            </label>
+          </div>
+          <div className="actions">
+            <button className="btn btn-primary" onClick={() => void createOrganization()} disabled={!organizationName.trim()}>
+              조직 생성
+            </button>
+            <button className="btn btn-secondary" onClick={() => void listOrganizations()}>
+              조직 목록 조회
+            </button>
+          </div>
+
+          {organizations.length === 0 ? (
+            <p className="small muted">조직 목록을 아직 불러오지 않았습니다.</p>
+          ) : (
+            <ul className="simple-list" aria-label="조직 목록">
+              {organizations.map((org) => (
+                <li key={org.id}>
+                  <span>
+                    <strong>{org.id}</strong>{" "}
+                    <span className="muted">
+                      {org.name}
+                      {organizationId.trim() === org.id ? " (선택됨)" : ""}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => setOrganizationId(org.id)}
+                  >
+                    이 조직 사용
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
         <article className="panel">
           <h2>회사/권한 컨텍스트</h2>
           <p className="small">
