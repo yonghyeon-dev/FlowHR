@@ -466,7 +466,10 @@ export default function HomePage() {
           <span>Auth Mode {usesBearerToken ? "Bearer Token" : "Dev Header"}</span>
           <span>KPI 목표: 관리자 조치 median 3분 이내</span>
           <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-            스케줄링 Cockpit 이동
+            스케줄링 Cockpit
+          </Link>
+          <Link className="btn btn-secondary" href="/ops/mvp-console">
+            검증 콘솔
           </Link>
         </div>
       </section>
