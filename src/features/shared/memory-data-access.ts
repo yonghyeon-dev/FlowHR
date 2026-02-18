@@ -12,6 +12,7 @@ import type {
   DeductionProfileEntity,
   EmployeeEntity,
   LeaveBalanceEntity,
+  LeavePolicyEntity,
   LeaveRequestEntity,
   OrganizationEntity,
   RoleEntity,
@@ -24,6 +25,7 @@ import type {
   UpdateAttendanceRecordInput,
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
+  UpsertLeavePolicyInput,
   UpdatePayrollRunInput,
   PayrollRunEntity,
   WorkScheduleTemplateEntity,
@@ -42,6 +44,7 @@ type MemoryState = {
   workScheduleTemplates: Map<string, WorkScheduleTemplateEntity>;
   scheduleAnomalyIncidents: Map<string, ScheduleAnomalyIncidentEntity>;
   leaveRequests: Map<string, LeaveRequestEntity>;
+  leavePolicies: Map<string, LeavePolicyEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
@@ -75,6 +78,7 @@ function createState(): MemoryState {
     workScheduleTemplates: new Map<string, WorkScheduleTemplateEntity>(),
     scheduleAnomalyIncidents: new Map<string, ScheduleAnomalyIncidentEntity>(),
     leaveRequests: new Map<string, LeaveRequestEntity>(),
+    leavePolicies: new Map<string, LeavePolicyEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
@@ -181,6 +185,14 @@ function cloneLeaveRequest(entity: LeaveRequestEntity): LeaveRequestEntity {
 function cloneLeaveBalance(entity: LeaveBalanceEntity): LeaveBalanceEntity {
   return {
     ...entity,
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneLeavePolicy(entity: LeavePolicyEntity): LeavePolicyEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
 }
@@ -881,6 +893,35 @@ export const memoryDataAccess: DataAccess = {
         },
         createdAt: new Date()
       });
+    }
+  },
+
+  leavePolicy: {
+    async findByOrganizationId(organizationId: string) {
+      const existing = state.leavePolicies.get(organizationId);
+      return existing ? cloneLeavePolicy(existing) : null;
+    },
+
+    async upsertForOrganization(input: UpsertLeavePolicyInput) {
+      const now = new Date();
+      const existing = state.leavePolicies.get(input.organizationId);
+      const next: LeavePolicyEntity = existing
+        ? {
+            ...existing,
+            annualGrantDays: input.annualGrantDays,
+            carryOverCapDays: input.carryOverCapDays,
+            updatedAt: now
+          }
+        : {
+            id: nextId("LP"),
+            organizationId: input.organizationId,
+            annualGrantDays: input.annualGrantDays,
+            carryOverCapDays: input.carryOverCapDays,
+            createdAt: now,
+            updatedAt: now
+          };
+      state.leavePolicies.set(input.organizationId, next);
+      return cloneLeavePolicy(next);
     }
   },
 

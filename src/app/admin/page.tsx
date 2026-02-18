@@ -404,8 +404,10 @@ export default function AdminDashboardPage() {
 
   async function settleLeaveAccrual() {
     const year = Number(accrualYear);
-    const annualGrantDays = Number(accrualGrantDays);
-    const carryOverCapDays = Number(accrualCarryCapDays);
+    const annualGrantDaysRaw = accrualGrantDays.trim();
+    const carryOverCapDaysRaw = accrualCarryCapDays.trim();
+    const annualGrantDays = annualGrantDaysRaw.length > 0 ? Number(annualGrantDaysRaw) : Number.NaN;
+    const carryOverCapDays = carryOverCapDaysRaw.length > 0 ? Number(carryOverCapDaysRaw) : Number.NaN;
     const payload = {
       employeeId: accrualEmployeeId.trim(),
       year,
@@ -418,6 +420,71 @@ export default function AdminDashboardPage() {
     }
     const parsed = body as { balance?: LeaveBalanceDto };
     setAccrualResult(parsed.balance ?? null);
+  }
+
+  async function loadLeavePolicy() {
+    const orgId = organizationId.trim();
+    if (!orgId) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "휴가 정책 조회",
+          status: 400,
+          ok: false,
+          durationMs: 0,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { error: "Organization ID가 필요합니다." }
+        },
+        ...prev
+      ]);
+      return;
+    }
+
+    const { response, body } = await callApi(
+      "휴가 정책 조회",
+      "GET",
+      `/api/leave/policy${buildQuery({ organizationId: orgId })}`
+    );
+    if (!response.ok) {
+      return;
+    }
+    const parsed = body as {
+      policy?: { annualGrantDays?: number; carryOverCapDays?: number };
+    };
+    if (typeof parsed.policy?.annualGrantDays === "number") {
+      setAccrualGrantDays(String(parsed.policy.annualGrantDays));
+    }
+    if (typeof parsed.policy?.carryOverCapDays === "number") {
+      setAccrualCarryCapDays(String(parsed.policy.carryOverCapDays));
+    }
+  }
+
+  async function saveLeavePolicy() {
+    const orgId = organizationId.trim();
+    if (!orgId) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "휴가 정책 저장",
+          status: 400,
+          ok: false,
+          durationMs: 0,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { error: "Organization ID가 필요합니다." }
+        },
+        ...prev
+      ]);
+      return;
+    }
+
+    const annualGrantDays = Number(accrualGrantDays.trim());
+    const carryOverCapDays = Number(accrualCarryCapDays.trim());
+    const payload = {
+      organizationId: orgId,
+      annualGrantDays,
+      carryOverCapDays
+    };
+    await callApi("휴가 정책 저장", "PUT", "/api/leave/policy", payload);
   }
 
   async function listAttendanceAggregates() {
@@ -791,7 +858,7 @@ export default function AdminDashboardPage() {
         <article className="panel">
           <h2>휴가 정책/정산 (연차 부여/이월)</h2>
           <p className="small">
-            휴가 정책 엔진의 MVP: 직원별 연간 부여/이월 상한을 고정 규칙으로 정산합니다.
+            조직 단위 휴가 정책(연간 부여/이월 상한)을 저장하고, 정산 시 부여/이월 값을 비워두면 정책 기본값이 적용됩니다.
           </p>
           <div className="input-grid">
             <label>
@@ -821,6 +888,12 @@ export default function AdminDashboardPage() {
             </label>
           </div>
           <div className="actions">
+            <button className="btn btn-secondary" onClick={() => void loadLeavePolicy()} disabled={!organizationId.trim()}>
+              정책 불러오기
+            </button>
+            <button className="btn btn-secondary" onClick={() => void saveLeavePolicy()} disabled={!organizationId.trim()}>
+              정책 저장
+            </button>
             <button className="btn btn-primary" onClick={() => void settleLeaveAccrual()}>
               정산 실행
             </button>
@@ -912,4 +985,3 @@ export default function AdminDashboardPage() {
     </main>
   );
 }
-

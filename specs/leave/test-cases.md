@@ -13,7 +13,9 @@ Leave request lifecycle, role authorization, and approved leave output compatibi
 5. Manager rejects request with mandatory reason.
 6. Employee cancels pending request and final state is reflected.
 7. Payroll operator settles yearly leave accrual for employee.
-8. List leave requests by period overlap (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
+8. Admin/payroll operator upserts leave policy (grant/carry cap) and reads policy snapshot.
+9. Accrual settlement uses leave policy defaults when request omits grant/cap fields.
+10. List leave requests by period overlap (`from`/`to`) with role boundary guards (employee self-only, manager requires employeeId).
 
 ## Boundary and Accuracy Cases
 
@@ -23,6 +25,7 @@ Leave request lifecycle, role authorization, and approved leave output compatibi
 4. Rejected/canceled requests are excluded from payable-time consumers.
 5. Carry-over uses `min(max(remainingDays, 0), carryOverCapDays)`.
 6. Same employee/year accrual settlement is rejected as duplicate.
+7. Tenant-scoped policy read/write rejects cross-tenant access when tenancy is enabled.
 
 ## Regression Linkage
 

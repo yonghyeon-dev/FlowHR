@@ -50,6 +50,7 @@ async function run() {
   const leaveCancelRoute = await import("../../src/app/api/leave/requests/[requestId]/cancel/route.ts");
   const leaveBalanceRoute = await import("../../src/app/api/leave/balances/[employeeId]/route.ts");
   const leaveAccrualSettleRoute = await import("../../src/app/api/leave/accrual/settle/route.ts");
+  const leavePolicyRoute = await import("../../src/app/api/leave/policy/route.ts");
 
   resetMemoryDataAccess();
   resetRuntimeMemoryDomainEvents();
@@ -74,9 +75,11 @@ async function run() {
   const unknownEmployeeBody = await readJson<{ error: string }>(unknownEmployeeResponse);
   assert.equal(unknownEmployeeBody.error, "employee not found");
 
-  await memoryDataAccess.employees.create({ id: employeeId });
-  await memoryDataAccess.employees.create({ id: otherEmployeeId });
-  await memoryDataAccess.employees.create({ id: "EMP-LEAVE-3003" });
+  const org = await memoryDataAccess.organizations.create({ name: "Org Leave" });
+
+  await memoryDataAccess.employees.create({ id: employeeId, organizationId: org.id });
+  await memoryDataAccess.employees.create({ id: otherEmployeeId, organizationId: org.id });
+  await memoryDataAccess.employees.create({ id: "EMP-LEAVE-3003", organizationId: org.id });
 
   const createResponse = await leaveCreateRoute.POST(
     jsonRequest(
@@ -216,6 +219,35 @@ async function run() {
   );
   assert.equal(deniedBalanceResponse.status, 403, "other employee should not read target balance");
 
+  const policyUpsertResponse = await leavePolicyRoute.PUT(
+    jsonRequest(
+      "PUT",
+      "/api/leave/policy",
+      {
+        organizationId: org.id,
+        annualGrantDays: 20,
+        carryOverCapDays: 5
+      },
+      actorHeaders("payroll_operator", "PAY-LEAVE-1")
+    )
+  );
+  assert.equal(policyUpsertResponse.status, 200, "payroll operator should upsert leave policy");
+
+  const policyReadResponse = await leavePolicyRoute.GET(
+    new Request(`http://localhost/api/leave/policy?organizationId=${org.id}`, {
+      method: "GET",
+      headers: actorHeaders("manager", "MGR-LEAVE-1")
+    })
+  );
+  assert.equal(policyReadResponse.status, 200, "manager should read leave policy");
+  const policyReadBody = await readJson<{
+    policy: { organizationId: string; annualGrantDays: number; carryOverCapDays: number; source: string };
+  }>(policyReadResponse);
+  assert.equal(policyReadBody.policy.organizationId, org.id);
+  assert.equal(policyReadBody.policy.annualGrantDays, 20);
+  assert.equal(policyReadBody.policy.carryOverCapDays, 5);
+  assert.equal(policyReadBody.policy.source, "configured");
+
   const settleResponse = await leaveAccrualSettleRoute.POST(
     jsonRequest(
       "POST",
@@ -231,9 +263,9 @@ async function run() {
   const settleBody = await readJson<{
     balance: { grantedDays: number; usedDays: number; remainingDays: number; carryOverDays: number };
   }>(settleResponse);
-  assert.equal(settleBody.balance.grantedDays, 20);
+  assert.equal(settleBody.balance.grantedDays, 25);
   assert.equal(settleBody.balance.usedDays, 0);
-  assert.equal(settleBody.balance.remainingDays, 20);
+  assert.equal(settleBody.balance.remainingDays, 25);
   assert.equal(settleBody.balance.carryOverDays, 5);
 
   const duplicateSettleResponse = await leaveAccrualSettleRoute.POST(

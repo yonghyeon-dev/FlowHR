@@ -38,6 +38,16 @@ export const settleLeaveAccrualSchema = z.object({
   carryOverCapDays: z.number().int().min(0).optional()
 });
 
+export const readLeavePolicyQuerySchema = z.object({
+  organizationId: z.string().min(1).optional()
+});
+
+export const upsertLeavePolicySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  annualGrantDays: z.number().int().positive(),
+  carryOverCapDays: z.number().int().min(0)
+});
+
 export const listLeaveRequestQuerySchema = z.object({
   from: isoDateTime,
   to: isoDateTime,

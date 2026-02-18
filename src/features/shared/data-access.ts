@@ -184,6 +184,15 @@ export type LeaveBalanceEntity = {
   updatedAt: Date;
 };
 
+export type LeavePolicyEntity = {
+  id: string;
+  organizationId: string;
+  annualGrantDays: number;
+  carryOverCapDays: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type CreateAttendanceRecordInput = {
   employeeId: string;
   checkInAt: Date;
@@ -353,6 +362,12 @@ export type UpdateLeaveRequestInput = {
   canceledBy?: string | null;
 };
 
+export type UpsertLeavePolicyInput = {
+  organizationId: string;
+  annualGrantDays: number;
+  carryOverCapDays: number;
+};
+
 export type RecordLeaveDecisionInput = {
   requestId: string;
   action: LeaveDecisionAction;
@@ -507,6 +522,11 @@ export interface LeaveStore {
   appendDecision(input: RecordLeaveDecisionInput): Promise<void>;
 }
 
+export interface LeavePolicyStore {
+  findByOrganizationId(organizationId: string): Promise<LeavePolicyEntity | null>;
+  upsertForOrganization(input: UpsertLeavePolicyInput): Promise<LeavePolicyEntity>;
+}
+
 export interface LeaveBalanceStore {
   ensure(employeeId: string, defaultGrantedDays: number): Promise<LeaveBalanceEntity>;
   applyUsage(input: {
@@ -535,6 +555,7 @@ export type DataAccess = {
   attendance: AttendanceStore;
   scheduling: SchedulingStore;
   leave: LeaveStore;
+  leavePolicy: LeavePolicyStore;
   leaveBalance: LeaveBalanceStore;
   payroll: PayrollStore;
   deductionProfiles: DeductionProfileStore;

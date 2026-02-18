@@ -5,6 +5,7 @@
 - `LeaveRequest`
 - `LeaveApproval`
 - `LeaveBalanceProjection`
+- `LeavePolicy`
 
 ## Referential Integrity (WI-0035)
 
@@ -16,6 +17,7 @@
 - `202602140001_wi0002_leave_base`
 - `202602140002_wi0003_leave_accrual`
 - `202602140006_employee_fk_constraints`
+- `202602180002_leave_policy`
 
 ## WI-0003 Additive Columns
 
