@@ -10,7 +10,7 @@
 
 ### In Scope
 
-- `/`의 “우선 조치 큐” 패널에서 아래 항목을 **리스트로 표시**하고 **인라인 액션** 제공
+- `/admin`의 “승인 대기함” 패널에서 아래 항목을 **리스트로 표시**하고 **인라인 액션** 제공
   - 출퇴근(PENDING): 승인/반려
   - 휴가(PENDING): 승인/반려(반려 사유 필수)
   - 급여(PREVIEWED): 확정
@@ -46,5 +46,5 @@
 
 ## Rollback Plan
 
-- `src/app/page.tsx`, `src/app/globals.css`의 WI-0086 변경 revert
+- `src/app/admin/page.tsx`, `src/app/globals.css`의 WI-0086 변경 revert
 

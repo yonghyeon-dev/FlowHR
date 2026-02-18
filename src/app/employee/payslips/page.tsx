@@ -220,23 +220,27 @@ export default function EmployeePayslipsPage() {
   }
 
   return (
-    <main className="console-page">
-      <section className="hero-panel">
-        <p className="eyebrow">FlowHR</p>
-        <h1>급여 명세서</h1>
-        <p className="hero-copy">직원은 본인의 확정된 급여 내역만 조회할 수 있습니다.</p>
-        <div className="hero-meta">
+    <main className="saas-content">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">급여 명세서</h1>
+          <p className="page-subtitle">직원은 본인의 확정된 급여 내역만 조회할 수 있습니다.</p>
+        </div>
+        <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
             직원 포털
           </Link>
+          <Link className="btn btn-secondary" href="/login">
+            로그인
+          </Link>
           <Link className="btn btn-secondary" href="/admin">
-            관리자 대시보드
+            관리자
           </Link>
           <Link className="btn btn-secondary" href="/">
             홈
           </Link>
         </div>
-      </section>
+      </header>
 
       <section className="panel-grid">
         <article className="panel">
@@ -277,6 +281,33 @@ export default function EmployeePayslipsPage() {
             </button>
           </div>
 
+          {showDevTools ? (
+            <details className="details" style={{ marginTop: 12 }}>
+              <summary>
+                개발/검증 설정 <small>(기본은 숨김)</small>
+              </summary>
+              <div className="input-grid" style={{ marginTop: 12 }}>
+                <label className="full">
+                  Bearer Access Token (선택)
+                  <textarea
+                    rows={3}
+                    placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
+                    value={accessToken}
+                    onChange={(event) => setAccessToken(event.target.value)}
+                  />
+                </label>
+              </div>
+              <p className="small">
+                호출 {stats.total}건 (OK {stats.success} / FAIL {stats.fail}) · 현재 {pendingLabel ?? "-"}
+              </p>
+              <div className="actions">
+                <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
+                  로그 초기화
+                </button>
+              </div>
+            </details>
+          ) : null}
+
           {aggregate ? (
             <p className="small">
               근태 요약: 정규 {minutesToHours(aggregate.totals.regular)} / 연장{" "}
@@ -309,30 +340,6 @@ export default function EmployeePayslipsPage() {
           )}
         </article>
 
-        {showDevTools ? (
-          <article className="panel">
-            <h2>디버그</h2>
-            <div className="input-grid">
-              <label className="full">
-                Bearer Access Token (선택)
-                <textarea
-                  rows={3}
-                  placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
-                  value={accessToken}
-                  onChange={(event) => setAccessToken(event.target.value)}
-                />
-              </label>
-            </div>
-            <p className="small">
-              호출 {stats.total}건 (OK {stats.success} / FAIL {stats.fail}) · 현재 {pendingLabel ?? "-"}
-            </p>
-            <div className="actions">
-              <button className="btn btn-secondary" onClick={clearLogs}>
-                로그 초기화
-              </button>
-            </div>
-          </article>
-        ) : null}
       </section>
     </main>
   );
