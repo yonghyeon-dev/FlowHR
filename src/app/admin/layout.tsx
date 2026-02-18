@@ -27,6 +27,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin">대시보드</Link>
           <Link href="/admin#onboarding">조직</Link>
           <Link href="/admin#people">직원</Link>
+          <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
