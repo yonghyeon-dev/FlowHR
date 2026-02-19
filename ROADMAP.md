@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-19
-> **Current version**: 0.1.5 (Approval Execution Visibility UI Baseline)
+> **Current version**: 0.1.9 (Approval Execution Stalled Escalation Automation)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -156,11 +156,14 @@
 - WI-0117 결재선 템플릿 다단계 모델 baseline (`approvalStages` payload + stage-1 게이트 호환 + e2e)
 - WI-0118 결재 실행 상태머신 baseline (`ApprovalExecution`/`ApprovalExecutionActionLog` + `/approval/executions` API + 단계별 도메인 최종확정 제어 + e2e)
 - WI-0119 결재 실행 가시성 UI baseline (`/admin/approval-executions` + 진행률/단계 로그 패널 + 관리자 네비게이션 연결)
+- WI-0120 연차촉진/사내공지 프리뷰 baseline (`LeavePolicy` 연차촉진 필드 + `/leave/policy/promotion-preview` API + `/admin/leave-promotion` UI + e2e)
+- WI-0121 결재 실행 우선순위/정체 큐 고도화 (`/approval/executions` sort/stalled filter + `/admin/approval-executions` 요약 KPI/빠른점프 + e2e)
+- WI-0122 연차촉진 공지 발송 자동화 (`POST /leave/policy/promotion-notify` + Discord/Slack webhook 연동 + `/admin/leave-promotion` 드라이런/실발송 UX + e2e)
+- WI-0123 결재 실행 정체 에스컬레이션 자동화 (`POST /approval/executions/escalate` + `/admin/approval-executions` 드라이런/실행 + 스케줄러 runner/workflow + e2e)
 
 ### 진행 중
 
-- 다음: 휴가 고도화(연차촉진/사내 공지 플로우 정책) 회귀 확장
-- 다음: 결재선 실행 결과 조치 UX(조건별 우선순위/정체 항목 빠른 점프) 강화
+- 다음: 휴가 촉진 공지 채널을 이메일 템플릿 발송까지 확장 (현재 webhook-only)
 
 ### 현재 아키텍처
 

@@ -72,6 +72,40 @@ type ListApprovalExecutionsInput = {
   targetEntityId?: string;
   state?: ApprovalExecutionState;
   limit?: number;
+  sort?: "updated_desc" | "priority_desc";
+  stalledHoursMin?: number;
+  asOf?: Date;
+};
+
+type TriggerApprovalExecutionEscalationInput = {
+  organizationId?: string;
+  domain?: ApprovalDomain;
+  stalledHoursMin?: number;
+  limit?: number;
+  asOf?: Date;
+  dryRun?: boolean;
+  notificationChannel?: string;
+};
+
+type ApprovalExecutionEscalationDecision = "REQUESTED" | "DRY_RUN";
+
+type ApprovalExecutionEscalationItem = {
+  executionId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  stalledHours: number;
+  currentStageIndex: number;
+  totalStages: number;
+  decision: ApprovalExecutionEscalationDecision;
+};
+
+type ApprovalEscalationWebhookProvider = "discord" | "slack";
+
+type ApprovalEscalationWebhookConfig = {
+  url: string;
+  provider: ApprovalEscalationWebhookProvider;
+  source: string;
 };
 
 type CreateApprovalDelegationInput = {
@@ -581,6 +615,168 @@ async function resolveStageActorGate(
 
 function isDelegationActiveAt(delegation: ApprovalDelegationEntity, now: Date) {
   return delegation.startsAt <= now && delegation.endsAt >= now && delegation.active;
+}
+
+function resolveExecutionDomainPriority(domain: ApprovalDomain) {
+  if (domain === "PAYROLL") {
+    return 300;
+  }
+  if (domain === "LEAVE") {
+    return 200;
+  }
+  return 100;
+}
+
+function calculateExecutionStalledHours(execution: ApprovalExecutionEntity, asOf: Date) {
+  return Math.max(0, (asOf.getTime() - execution.updatedAt.getTime()) / (60 * 60 * 1000));
+}
+
+function calculateExecutionPriorityScore(execution: ApprovalExecutionEntity, asOf: Date) {
+  const pendingWeight = execution.state === "PENDING" ? 100_000 : execution.state === "REJECTED" ? 1_000 : 0;
+  const stalledHours = calculateExecutionStalledHours(execution, asOf);
+  const stalledWeight = Math.round(stalledHours * 100);
+  const domainWeight = resolveExecutionDomainPriority(execution.domain);
+  const stageWeight =
+    execution.state === "PENDING"
+      ? Math.max(0, execution.totalStages - execution.currentStageIndex + 1) * 10
+      : 0;
+  return pendingWeight + stalledWeight + domainWeight + stageWeight;
+}
+
+function compareExecutionsByPriority(left: ApprovalExecutionEntity, right: ApprovalExecutionEntity, asOf: Date) {
+  const byPriority =
+    calculateExecutionPriorityScore(right, asOf) - calculateExecutionPriorityScore(left, asOf);
+  if (byPriority !== 0) {
+    return byPriority;
+  }
+
+  const byUpdatedAt = left.updatedAt.getTime() - right.updatedAt.getTime();
+  if (byUpdatedAt !== 0) {
+    return byUpdatedAt;
+  }
+
+  return left.id.localeCompare(right.id);
+}
+
+function normalizeEnvValue(value: string | undefined) {
+  return (value ?? "").trim();
+}
+
+function resolveApprovalEscalationWebhookProvider(
+  webhookUrl: string
+): ApprovalEscalationWebhookProvider {
+  const configured = normalizeEnvValue(
+    process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_PROVIDER ??
+      process.env.FLOWHR_ALERT_WEBHOOK_PROVIDER
+  ).toLowerCase();
+  if (configured === "discord" || configured === "slack") {
+    return configured;
+  }
+
+  if (
+    webhookUrl.includes("discord.com/api/webhooks/") ||
+    webhookUrl.includes("discordapp.com/api/webhooks/")
+  ) {
+    return "discord";
+  }
+  if (webhookUrl.includes("hooks.slack.com/services/")) {
+    return "slack";
+  }
+  return "slack";
+}
+
+function resolveApprovalEscalationWebhookConfig(): ApprovalEscalationWebhookConfig | null {
+  const candidates: Array<{ source: string; value: string }> = [
+    {
+      source: "FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_URL",
+      value: normalizeEnvValue(process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_URL)
+    },
+    {
+      source: "FLOWHR_APPROVAL_EXECUTION_ESCALATION_DISCORD_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_DISCORD_WEBHOOK)
+    },
+    {
+      source: "FLOWHR_APPROVAL_EXECUTION_ESCALATION_SLACK_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_SLACK_WEBHOOK)
+    },
+    {
+      source: "FLOWHR_ALERT_WEBHOOK_URL",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_WEBHOOK_URL)
+    },
+    {
+      source: "FLOWHR_ALERT_DISCORD_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_DISCORD_WEBHOOK)
+    },
+    {
+      source: "FLOWHR_ALERT_SLACK_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_SLACK_WEBHOOK)
+    }
+  ];
+
+  const matched = candidates.find((candidate) => candidate.value.length > 0);
+  if (!matched) {
+    return null;
+  }
+
+  return {
+    url: matched.value,
+    provider: resolveApprovalEscalationWebhookProvider(matched.value),
+    source: matched.source
+  };
+}
+
+function buildApprovalExecutionEscalationMessage(input: {
+  organizationId: string;
+  requestedAt: string;
+  asOf: string;
+  stalledHoursMin: number;
+  notificationChannel: string;
+  dryRun: boolean;
+  items: ApprovalExecutionEscalationItem[];
+}) {
+  const title = input.dryRun
+    ? "[FlowHR] 결재 실행 정체 에스컬레이션 드라이런"
+    : "[FlowHR] 결재 실행 정체 에스컬레이션";
+  const lines = [
+    title,
+    `- organizationId: ${input.organizationId}`,
+    `- requestedAt: ${input.requestedAt}`,
+    `- asOf: ${input.asOf}`,
+    `- stalledHoursMin: ${input.stalledHoursMin}`,
+    `- notificationChannel: ${input.notificationChannel}`,
+    `- candidateCount: ${input.items.length}`,
+    "- candidates:"
+  ];
+
+  for (const item of input.items.slice(0, 50)) {
+    lines.push(
+      `  - ${item.executionId} | ${item.domain} | ${item.targetEntityType}:${item.targetEntityId} | stalled=${item.stalledHours.toFixed(1)}h | stage=${item.currentStageIndex}/${item.totalStages}`
+    );
+  }
+  if (input.items.length > 50) {
+    lines.push(`  - ... and ${input.items.length - 50} more`);
+  }
+  return lines.join("\n");
+}
+
+async function sendApprovalEscalationWebhook(config: ApprovalEscalationWebhookConfig, message: string) {
+  const payload =
+    config.provider === "discord"
+      ? JSON.stringify({ content: message })
+      : JSON.stringify({ text: message });
+
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: payload
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`${config.provider} webhook request failed: ${response.status} ${body}`);
+  }
 }
 
 export async function assertApprovalPolicyGate(
@@ -1194,15 +1390,38 @@ export async function listApprovalExecutions(
   );
   const organizationId = await resolveOrganizationId(context, input.organizationId);
   const limit = input.limit !== undefined ? Math.min(Math.max(input.limit, 1), 500) : 100;
+  const sort = input.sort ?? "updated_desc";
+  const stalledHoursMin =
+    input.stalledHoursMin !== undefined ? Math.max(input.stalledHoursMin, 0) : undefined;
+  const asOf = input.asOf ?? new Date();
+  if (!Number.isFinite(asOf.getTime())) {
+    throw new ServiceError(400, "asOf must be a valid datetime");
+  }
 
-  const rows = await context.dataAccess.approvals.listExecutions({
+  let rows = await context.dataAccess.approvals.listExecutions({
     organizationId,
     domain: input.domain,
     targetEntityType: input.targetEntityType?.trim(),
     targetEntityId: input.targetEntityId?.trim(),
-    state: input.state,
-    limit
+    state: input.state
   });
+
+  if (stalledHoursMin !== undefined) {
+    rows = rows.filter((row) => {
+      if (row.state !== "PENDING") {
+        return false;
+      }
+      return calculateExecutionStalledHours(row, asOf) >= stalledHoursMin;
+    });
+  }
+
+  if (sort === "priority_desc") {
+    rows = [...rows].sort((left, right) => compareExecutionsByPriority(left, right, asOf));
+  }
+
+  if (limit > 0 && rows.length > limit) {
+    rows = rows.slice(0, limit);
+  }
 
   await context.dataAccess.audit.append({
     action: "approval.execution.listed",
@@ -1215,12 +1434,238 @@ export async function listApprovalExecutions(
       targetEntityType: input.targetEntityType ?? null,
       targetEntityId: input.targetEntityId ?? null,
       state: input.state ?? null,
+      sort,
+      stalledHoursMin: stalledHoursMin ?? null,
+      asOf: asOf.toISOString(),
       limit,
       resultCount: rows.length
     }
   });
 
   return rows;
+}
+
+export async function triggerApprovalExecutionEscalation(
+  context: ServiceContext,
+  input: TriggerApprovalExecutionEscalationInput
+): Promise<{
+  requestedAt: string;
+  dryRun: boolean;
+  policy: {
+    stalledHoursMin: number;
+    limit: number;
+    notificationChannel: string;
+    webhookConfigured: boolean;
+    provider: ApprovalEscalationWebhookProvider | null;
+    webhookSource: string | null;
+  };
+  filters: {
+    organizationId: string;
+    domain: ApprovalDomain | null;
+    asOf: string;
+  };
+  counts: {
+    totalPending: number;
+    candidates: number;
+    requested: number;
+    dryRun: number;
+    skippedNoCandidate: number;
+    failed: number;
+  };
+  items: ApprovalExecutionEscalationItem[];
+}> {
+  const actor = requireActor(context);
+  await requirePermission(
+    context,
+    Permissions.approvalPolicyRead,
+    "approval execution escalation requires permission"
+  );
+  const organizationId = await resolveOrganizationId(context, input.organizationId);
+  const requestedAt = new Date().toISOString();
+  const asOf = input.asOf ?? new Date();
+  if (!Number.isFinite(asOf.getTime())) {
+    throw new ServiceError(400, "asOf must be a valid datetime");
+  }
+
+  const stalledHoursMin =
+    input.stalledHoursMin !== undefined
+      ? Math.max(1, Math.min(input.stalledHoursMin, 24 * 365))
+      : 24;
+  const limit = input.limit !== undefined ? Math.min(Math.max(input.limit, 1), 500) : 50;
+  const dryRun = input.dryRun ?? false;
+  const notificationChannel =
+    input.notificationChannel?.trim() || "approval-stalled-queue";
+
+  let executions = await context.dataAccess.approvals.listExecutions({
+    organizationId,
+    domain: input.domain,
+    state: "PENDING"
+  });
+
+  const totalPending = executions.length;
+  executions = executions.filter(
+    (execution) => calculateExecutionStalledHours(execution, asOf) >= stalledHoursMin
+  );
+  executions.sort((left, right) => compareExecutionsByPriority(left, right, asOf));
+  if (executions.length > limit) {
+    executions = executions.slice(0, limit);
+  }
+
+  const items: ApprovalExecutionEscalationItem[] = executions.map((execution) => ({
+    executionId: execution.id,
+    domain: execution.domain,
+    targetEntityType: execution.targetEntityType,
+    targetEntityId: execution.targetEntityId,
+    stalledHours: Math.round(calculateExecutionStalledHours(execution, asOf) * 10) / 10,
+    currentStageIndex: execution.currentStageIndex,
+    totalStages: execution.totalStages,
+    decision: dryRun ? "DRY_RUN" : "REQUESTED"
+  }));
+
+  const webhook = resolveApprovalEscalationWebhookConfig();
+  const payloadBase = {
+    asOf: asOf.toISOString(),
+    domain: input.domain ?? null,
+    stalledHoursMin,
+    limit,
+    notificationChannel,
+    dryRun,
+    totalPending,
+    candidateCount: items.length,
+    requestedAt,
+    provider: webhook?.provider ?? null,
+    webhookSource: webhook?.source ?? null
+  };
+
+  await context.dataAccess.audit.append({
+    action: "approval.execution.escalation.generated",
+    entityType: "ApprovalExecution",
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: payloadBase
+  });
+
+  if (!dryRun && items.length > 0 && !webhook) {
+    await context.dataAccess.audit.append({
+      action: "approval.execution.escalation.failed",
+      entityType: "ApprovalExecution",
+      organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        ...payloadBase,
+        reason: "webhook_not_configured"
+      }
+    });
+    throw new ServiceError(
+      503,
+      "approval execution escalation webhook is not configured (set FLOWHR_APPROVAL_EXECUTION_ESCALATION_* or FLOWHR_ALERT_* webhook env)"
+    );
+  }
+
+  if (!dryRun && items.length > 0 && webhook) {
+    const message = buildApprovalExecutionEscalationMessage({
+      organizationId,
+      requestedAt,
+      asOf: asOf.toISOString(),
+      stalledHoursMin,
+      notificationChannel,
+      dryRun: false,
+      items
+    });
+    try {
+      await sendApprovalEscalationWebhook(webhook, message);
+      await context.dataAccess.audit.append({
+        action: "approval.execution.escalation.requested",
+        entityType: "ApprovalExecution",
+        organizationId,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: payloadBase
+      });
+    } catch (error) {
+      await context.dataAccess.audit.append({
+        action: "approval.execution.escalation.failed",
+        entityType: "ApprovalExecution",
+        organizationId,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          ...payloadBase,
+          reason: "webhook_request_failed",
+          error: error instanceof Error ? error.message : "unknown error"
+        }
+      });
+      throw new ServiceError(502, "approval execution escalation webhook request failed");
+    }
+
+    try {
+      await getEventPublisher(context).publish({
+        name: "approval.execution.escalation.requested.v1",
+        occurredAt: requestedAt,
+        entityType: "ApprovalExecution",
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          organizationId,
+          asOf: asOf.toISOString(),
+          domain: input.domain ?? null,
+          stalledHoursMin,
+          limit,
+          notificationChannel,
+          candidateCount: items.length,
+          provider: webhook.provider,
+          webhookSource: webhook.source,
+          items: items.slice(0, 100)
+        }
+      });
+    } catch (error) {
+      try {
+        await context.dataAccess.audit.append({
+          action: "approval.execution.escalation.event_publish_failed",
+          entityType: "ApprovalExecution",
+          organizationId,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            ...payloadBase,
+            reason: "event_publish_failed",
+            error: error instanceof Error ? error.message : "unknown error"
+          }
+        });
+      } catch {
+        // Non-blocking failure path: webhook dispatch already completed.
+      }
+    }
+  }
+
+  return {
+    requestedAt,
+    dryRun,
+    policy: {
+      stalledHoursMin,
+      limit,
+      notificationChannel,
+      webhookConfigured: webhook !== null,
+      provider: webhook?.provider ?? null,
+      webhookSource: webhook?.source ?? null
+    },
+    filters: {
+      organizationId,
+      domain: input.domain ?? null,
+      asOf: asOf.toISOString()
+    },
+    counts: {
+      totalPending,
+      candidates: items.length,
+      requested: !dryRun && items.length > 0 ? items.length : 0,
+      dryRun: dryRun ? items.length : 0,
+      skippedNoCandidate: items.length === 0 ? 1 : 0,
+      failed: 0
+    },
+    items
+  };
 }
 
 export async function createApprovalLineTemplate(

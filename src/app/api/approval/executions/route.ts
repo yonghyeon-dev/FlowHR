@@ -5,7 +5,7 @@ import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
-function parseOptionalLimit(value: string | null): number | string | undefined {
+function parseOptionalInteger(value: string | null): number | string | undefined {
   if (value === null || value.trim().length === 0) {
     return undefined;
   }
@@ -24,7 +24,10 @@ export async function GET(request: Request) {
     targetEntityType: url.searchParams.get("targetEntityType") ?? undefined,
     targetEntityId: url.searchParams.get("targetEntityId") ?? undefined,
     state: url.searchParams.get("state") ?? undefined,
-    limit: parseOptionalLimit(url.searchParams.get("limit"))
+    limit: parseOptionalInteger(url.searchParams.get("limit")),
+    sort: url.searchParams.get("sort") ?? undefined,
+    stalledHoursMin: parseOptionalInteger(url.searchParams.get("stalledHoursMin")),
+    asOf: url.searchParams.get("asOf") ?? undefined
   });
   if (!parsed.success) {
     return fail(400, "invalid query", parsed.error.flatten());
@@ -42,7 +45,10 @@ export async function GET(request: Request) {
         targetEntityType: parsed.data.targetEntityType,
         targetEntityId: parsed.data.targetEntityId,
         state: parsed.data.state,
-        limit: parsed.data.limit
+        limit: parsed.data.limit,
+        sort: parsed.data.sort,
+        stalledHoursMin: parsed.data.stalledHoursMin,
+        asOf: parsed.data.asOf ? new Date(parsed.data.asOf) : undefined
       }
     );
     return ok({ executions });

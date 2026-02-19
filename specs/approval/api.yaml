@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.8.0
+  version: 0.10.0
 paths:
   /approval/policy:
     get:
@@ -101,7 +101,7 @@ paths:
           description: Permission denied
   /approval/executions:
     get:
-      summary: List runtime approval executions
+      summary: List runtime approval executions (priority/stalled queue support)
       parameters:
         - in: query
           name: organizationId
@@ -137,6 +137,24 @@ paths:
             type: integer
             minimum: 1
             maximum: 500
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+            enum: [updated_desc, priority_desc]
+        - in: query
+          name: stalledHoursMin
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: asOf
+          required: false
+          schema:
+            type: string
+            format: date-time
       responses:
         "200":
           description: Approval execution rows listed
@@ -144,6 +162,45 @@ paths:
           description: Invalid query
         "403":
           description: Permission denied
+  /approval/executions/escalate:
+    post:
+      summary: Trigger stalled approval execution escalation command
+      description: Selects pending execution rows over stalled threshold, supports dry-run mode, and dispatches one webhook summary payload when `dryRun=false` and candidates exist.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationId:
+                  type: string
+                domain:
+                  type: string
+                  enum: [ATTENDANCE, LEAVE, PAYROLL]
+                stalledHoursMin:
+                  type: integer
+                  minimum: 1
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+                asOf:
+                  type: string
+                  format: date-time
+                dryRun:
+                  type: boolean
+                notificationChannel:
+                  type: string
+      responses:
+        "200":
+          description: Escalation command summary returned
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+        "503":
+          description: Webhook configuration missing for non-dry-run candidate dispatch
   /approval/delegations:
     get:
       summary: List approval delegations

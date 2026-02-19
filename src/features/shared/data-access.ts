@@ -320,6 +320,10 @@ export type LeavePolicyEntity = {
   maxHoursPerRequest: number;
   minNoticeDays: number;
   maxConsecutiveDays: number | null;
+  annualLeavePromotionEnabled: boolean;
+  annualLeavePromotionThresholdDays: number;
+  annualLeavePromotionLeadDays: number;
+  annualLeavePromotionMessageTemplate: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -634,6 +638,10 @@ export type UpsertLeavePolicyInput = {
   maxHoursPerRequest?: number;
   minNoticeDays?: number;
   maxConsecutiveDays?: number | null;
+  annualLeavePromotionEnabled?: boolean;
+  annualLeavePromotionThresholdDays?: number;
+  annualLeavePromotionLeadDays?: number;
+  annualLeavePromotionMessageTemplate?: string | null;
 };
 
 export type RecordLeaveDecisionInput = {

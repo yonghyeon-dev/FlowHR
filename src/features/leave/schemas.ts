@@ -57,7 +57,11 @@ export const upsertLeavePolicySchema = z.object({
   hourlyIncrementMinutes: z.number().int().min(15).max(480).optional(),
   maxHoursPerRequest: z.number().positive().max(24).optional(),
   minNoticeDays: z.number().int().min(0).max(365).optional(),
-  maxConsecutiveDays: z.number().positive().max(365).nullable().optional()
+  maxConsecutiveDays: z.number().positive().max(365).nullable().optional(),
+  annualLeavePromotionEnabled: z.boolean().optional(),
+  annualLeavePromotionThresholdDays: z.number().positive().max(365).optional(),
+  annualLeavePromotionLeadDays: z.number().int().min(0).max(365).optional(),
+  annualLeavePromotionMessageTemplate: z.string().max(4000).nullable().optional()
 });
 
 export const listLeaveRequestQuerySchema = z.object({
@@ -65,4 +69,31 @@ export const listLeaveRequestQuerySchema = z.object({
   to: isoDateTime,
   employeeId: z.string().min(1).optional(),
   state: leaveRequestStateSchema.optional()
+});
+
+function parseBooleanLike(value: unknown) {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") {
+    return false;
+  }
+  return value;
+}
+
+export const previewLeavePromotionQuerySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  asOf: isoDateTime.optional(),
+  includeUpcoming: z.preprocess(parseBooleanLike, z.boolean().optional())
+});
+
+export const notifyLeavePromotionSchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  asOf: isoDateTime.optional(),
+  includeUpcoming: z.preprocess(parseBooleanLike, z.boolean().optional()),
+  dryRun: z.preprocess(parseBooleanLike, z.boolean().optional())
 });

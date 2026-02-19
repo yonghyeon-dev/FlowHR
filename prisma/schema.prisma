@@ -356,6 +356,10 @@ model LeavePolicy {
   maxHoursPerRequest Decimal  @default(8) @db.Decimal(6, 2)
   minNoticeDays   Int         @default(0)
   maxConsecutiveDays Decimal? @db.Decimal(6, 2)
+  annualLeavePromotionEnabled Boolean @default(false)
+  annualLeavePromotionThresholdDays Decimal @default(5) @db.Decimal(6, 2)
+  annualLeavePromotionLeadDays Int @default(30)
+  annualLeavePromotionMessageTemplate String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }

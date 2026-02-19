@@ -416,6 +416,31 @@ textarea:focus {
   gap: 8px;
 }
 
+.summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summary-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+.summary-card p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.summary-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.1rem;
+}
+
 .queue-toolbar {
   margin-top: 12px;
   display: flex;
@@ -512,6 +537,24 @@ textarea:focus {
   flex-direction: column;
   gap: 6px;
   cursor: pointer;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.stale-chip {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid #f5c16b;
+  background: #fff4db;
+  color: #8a5b00;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
 }
 
 .execution-head {
@@ -690,6 +733,10 @@ textarea:focus {
 
   .panel-grid {
     grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .input-grid {

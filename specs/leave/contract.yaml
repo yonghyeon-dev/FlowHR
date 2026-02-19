@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.6.0
+version: 1.8.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -9,6 +9,8 @@ scope:
     - leave balance read model contract
     - annual leave accrual and carry-over settlement
     - leave policy read/update (annual grant + carry-over cap + fractional controls + notice/consecutive constraints)
+    - annual leave promotion preview and internal notice draft policy
+    - annual leave promotion notice dispatch automation via Discord/Slack webhook
   out:
     - external calendar synchronization
 entities:
@@ -19,7 +21,7 @@ entities:
   - name: LeaveBalanceProjection
     description: Read model of granted, used, remaining, and carry-over leave days (decimal precision).
   - name: LeavePolicy
-    description: Organization-level leave policy (annual grant, carry-over cap, fractional controls, and request constraints).
+    description: Organization-level leave policy (annual grant, carry-over cap, fractional controls, request constraints, and annual leave promotion controls).
 api:
   auth:
     - role: employee
@@ -58,6 +60,12 @@ api:
     - method: PUT
       path: /leave/policy
       description: Upsert leave policy for an organization including fractional controls and request constraints.
+    - method: GET
+      path: /leave/policy/promotion-preview
+      description: Preview annual leave promotion targets and internal announcement draft based on policy.
+    - method: POST
+      path: /leave/policy/promotion-notify
+      description: Dispatch annual leave promotion notice through configured webhook channel (supports dry-run).
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
@@ -75,6 +83,8 @@ api:
         description: Emitted when annual accrual settlement is applied.
       - name: leave.policy.updated.v1
         description: Emitted when leave policy is created or updated.
+      - name: leave.promotion.notice.dispatched.v1
+        description: Emitted when annual leave promotion notice is dispatched through webhook.
     consumed:
       - name: employee.profile.updated.v1
         description: Employee org/profile metadata updates.
@@ -92,6 +102,8 @@ db_changes:
       description: Add leave unit/hours fields, widen leave balance to decimals, and extend leave policy fractional controls.
     - id: 202602190003_leave_policy_notice_consecutive
       description: Add leave policy constraints for minimum advance notice and max consecutive leave days.
+    - id: 202602190007_leave_policy_annual_promotion
+      description: Add annual leave promotion controls and internal notice template fields to LeavePolicy.
   backward_compatible: true
   notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
@@ -106,6 +118,10 @@ invariants:
   - Hourly leave requests must satisfy policy increment and maximum-hour rules.
   - Leave requests must satisfy policy minNoticeDays and maxConsecutiveDays constraints when configured.
   - LeaveBalanceProjection values keep two-decimal precision and never go negative.
+  - Annual leave promotion targets are filtered by remainingDays threshold and organization scope.
+  - Annual leave promotion preview can include upcoming targets before notice window opens, but immediate targets require notice window open.
+  - Annual leave promotion notice dispatch requires leave accrual settle permission and tenant scope validation.
+  - Annual leave promotion notice dry-run never triggers webhook side effects.
 risk:
   permissions:
     - Unauthorized approval or accrual settlement can alter payroll and staffing plans.
@@ -122,6 +138,7 @@ test_plan:
     - leave fractional unit calculation (FULL_DAY/HALF_DAY/HOUR)
     - hourly increment and maxHoursPerRequest validation
     - minNoticeDays/maxConsecutiveDays validation
+    - annual leave promotion preview window and placeholder rendering
     - leave list query parsing and role boundary guards
   integration:
     - create leave request rejects unknown employeeId (404)
@@ -136,11 +153,16 @@ test_plan:
     - half-day and hourly leave approval updates balance with decimal day usage
     - policy-denied half-day/hourly requests return 409
     - policy-denied requests for minNoticeDays/maxConsecutiveDays return 409
+    - annual leave promotion preview returns threshold-filtered targets and rendered announcement draft
+    - annual leave promotion notify dispatch triggers webhook when eligible targets exist
+    - annual leave promotion notify dry-run and no-target run never call webhook
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
     - whole-day leave flow remains backward compatible after fractional-unit rollout
     - maxConsecutiveDays null update restores unlimited consecutive requests
+    - annual leave promotion disabled mode returns no targets regardless of balance state
+    - annual leave promotion notify returns 503 when dispatch is required but webhook is missing
   authorization:
     - employee self-service boundary check
     - manager/admin approval check
@@ -159,6 +181,11 @@ observability:
     - leave.accrual_settled
     - leave.policy_read
     - leave.policy_updated
+    - leave.promotion_preview_read
+    - leave.promotion_notice.dispatched
+    - leave.promotion_notice.dry_run
+    - leave.promotion_notice.skipped
+    - leave.promotion_notice.failed
   metrics:
     - leave_approval_latency_ms
     - leave_request_rejection_rate
@@ -166,6 +193,8 @@ observability:
     - leave_hourly_request_count
     - leave_halfday_request_count
     - leave_policy_denied_count
+    - leave_promotion_target_count
+    - leave_promotion_notice_dispatched_count
   logs:
     - leave authorization denied with actor role
     - leave accrual duplicate-year rejection logs
@@ -183,7 +212,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.6.0 adds leave policy request constraints (`minNoticeDays`, `maxConsecutiveDays`) while preserving backward compatibility for existing flows when defaults are used (`0` / `null`)."
+consumer_impact: "Contract v1.8.0 adds annual leave promotion notice dispatch endpoint (`POST /leave/policy/promotion-notify`) and webhook delivery telemetry while preserving existing leave request/policy/preview behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -191,6 +220,8 @@ references:
   - work-items/WI-0090-leave-policy-settings.md
   - work-items/WI-0104-leave-fractional-hourly-policy.md
   - work-items/WI-0114-leave-notice-consecutive-policy.md
+  - work-items/WI-0120-leave-promotion-notice-preview.md
+  - work-items/WI-0122-leave-promotion-notice-delivery-automation.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

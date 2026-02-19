@@ -37,6 +37,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/approval-executions">결재 실행 현황</Link>
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
+          <Link href="/admin/leave-promotion">연차촉진 공지</Link>
           <Link href="/admin#payroll">급여</Link>
           <Link className="muted-link" href="/admin#account">
             내 계정

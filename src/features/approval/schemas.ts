@@ -18,6 +18,8 @@ export const approvalStageResolutionSchema = z.enum(approvalStageResolutionValue
 
 export const approvalExecutionStateValues = ["PENDING", "APPROVED", "REJECTED"] as const;
 export const approvalExecutionStateSchema = z.enum(approvalExecutionStateValues);
+export const approvalExecutionSortValues = ["updated_desc", "priority_desc"] as const;
+export const approvalExecutionSortSchema = z.enum(approvalExecutionSortValues);
 
 export const readApprovalPolicyQuerySchema = z.object({
   organizationId: z.string().min(1).optional()
@@ -87,7 +89,20 @@ export const listApprovalExecutionsQuerySchema = z.object({
   targetEntityType: z.string().min(1).optional(),
   targetEntityId: z.string().min(1).optional(),
   state: approvalExecutionStateSchema.optional(),
-  limit: z.number().int().min(1).max(500).optional()
+  limit: z.number().int().min(1).max(500).optional(),
+  sort: approvalExecutionSortSchema.optional(),
+  stalledHoursMin: z.number().int().min(0).optional(),
+  asOf: isoDateTime.optional()
+});
+
+export const triggerApprovalExecutionEscalationSchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  domain: approvalDomainSchema.optional(),
+  stalledHoursMin: z.number().int().min(1).optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+  asOf: isoDateTime.optional(),
+  dryRun: z.boolean().optional(),
+  notificationChannel: z.string().trim().min(1).max(100).optional()
 });
 
 export const previewApprovalPolicyGateSchema = z

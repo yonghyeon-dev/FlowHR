@@ -1,4 +1,4 @@
-# Approval Test Cases (v0.8.0)
+# Approval Test Cases (v0.10.0)
 
 ## Positive
 
@@ -23,6 +23,10 @@
 19. Multi-stage leave approval keeps request `PENDING` and leaves balance unchanged until final stage.
 20. Multi-stage payroll confirmation keeps run `PREVIEWED` until final stage and then transitions to `CONFIRMED`.
 21. Admin reads `GET /approval/executions` and verifies state/stage progression for target entity.
+22. Admin reads `GET /approval/executions?sort=priority_desc` and verifies pending/stale/domain priority ordering.
+23. Admin reads `GET /approval/executions?stalledHoursMin=...&asOf=...` and verifies only stalled pending rows are returned.
+24. Admin runs `POST /approval/executions/escalate` with `dryRun=true` and receives deterministic candidate summary without webhook side effects.
+25. Admin runs `POST /approval/executions/escalate` with `dryRun=false` and receives webhook dispatch summary for stalled candidates.
 
 ## Negative
 
@@ -39,6 +43,8 @@
 11. Template create/update rejects duplicate stage index or `minApprovals > approverRoles.length`.
 12. Stage-2 action with non-required role is rejected with `403`.
 13. Duplicate actor approve on the same stage is rejected with `409`.
+14. `GET /approval/executions` rejects invalid `sort`, non-numeric `stalledHoursMin`, and invalid `asOf`.
+15. `POST /approval/executions/escalate` returns `503` when `dryRun=false` and stalled candidates exist but webhook is not configured.
 
 ## Regression
 
@@ -53,6 +59,8 @@
 9. Stage-history listing endpoint remains read-only and does not mutate approval policy/delegation/template state.
 10. Stage-enabled template remains backward compatible with stage-1 runtime gate behavior.
 11. Single-stage template behavior remains equivalent to pre-WI-0118 finalization behavior.
+12. `GET /approval/executions` without `sort` remains backward compatible with updated-desc ordering.
+13. `POST /approval/executions/escalate` with no candidates remains successful without webhook configuration.
 
 ## Evidence
 
@@ -65,3 +73,5 @@
 - `scripts/tests/e2e-wi0116-approval-stage-history-baseline.test.ts`
 - `scripts/tests/e2e-wi0117-approval-template-multi-stage-baseline.test.ts`
 - `scripts/tests/e2e-wi0118-approval-execution-state-machine.test.ts`
+- `scripts/tests/e2e-wi0121-approval-execution-priority-listing.test.ts`
+- `scripts/tests/e2e-wi0123-approval-execution-escalation-automation.test.ts`

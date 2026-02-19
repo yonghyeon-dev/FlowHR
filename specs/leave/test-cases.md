@@ -23,6 +23,13 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 15. Policy denial returns `409` when request start does not satisfy `minNoticeDays`.
 16. Policy denial returns `409` when requested days exceed `maxConsecutiveDays`.
 17. Updating policy with `maxConsecutiveDays=null` restores unlimited consecutive requests.
+18. Leave policy updates annual promotion fields (`enabled`, `threshold`, `leadDays`, `template`) successfully.
+19. Promotion preview excludes upcoming targets when notice window is closed and `includeUpcoming=false`.
+20. Promotion preview returns threshold-matching targets and rendered announcement draft when window is open.
+21. Promotion notify dry-run returns dispatch summary without sending webhook payload.
+22. Promotion notify dispatch sends webhook when eligible targets exist in open notice window.
+23. Promotion notify dispatch skips webhook when no display target exists.
+24. Promotion notify dispatch fails with `503` when dispatch is required but webhook is not configured.
 
 ## Boundary and Accuracy Cases
 
@@ -36,6 +43,8 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 8. Fractional leave balances keep two-decimal precision across approve/settle flows.
 9. Existing full-day leave behavior remains backward compatible after fractional rollout.
 10. Min notice day validation uses Asia/Seoul day boundary for today/start-date comparison.
+11. Promotion notice window start/end is derived from Seoul year-end and policy lead days.
+12. Promotion notify webhook payload keeps deterministic title/body and target summaries.
 
 ## Regression Linkage
 
@@ -43,8 +52,11 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 - Existing payroll fixtures must remain unaffected by leave contract introduction.
 - Leave balance continuity must remain valid after yearly settlement.
 - Fractional leave fixtures (`HALF_DAY`, `HOUR`) must remain deterministic across CI runs.
+- Promotion preview fixtures remain deterministic for closed-window and open-window scenarios.
+- Promotion notify fixtures remain deterministic for dry-run / no-target / dispatched / missing-webhook outcomes.
 
 ## QA Gate Expectations
 
 - Spec Gate: leave contract completeness, role matrix, and invariant checks.
 - Code Gate: unit/integration tests, authorization tests, audit log, and settlement idempotency assertions.
+- Code Gate: promotion notify webhook side-effects are blocked in dry-run and validated in dispatch path.

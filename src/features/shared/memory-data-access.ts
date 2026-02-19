@@ -1630,6 +1630,17 @@ export const memoryDataAccess: DataAccess = {
               input.maxConsecutiveDays !== undefined
                 ? input.maxConsecutiveDays
                 : existing.maxConsecutiveDays,
+            annualLeavePromotionEnabled:
+              input.annualLeavePromotionEnabled ?? existing.annualLeavePromotionEnabled,
+            annualLeavePromotionThresholdDays:
+              input.annualLeavePromotionThresholdDays ??
+              existing.annualLeavePromotionThresholdDays,
+            annualLeavePromotionLeadDays:
+              input.annualLeavePromotionLeadDays ?? existing.annualLeavePromotionLeadDays,
+            annualLeavePromotionMessageTemplate:
+              input.annualLeavePromotionMessageTemplate !== undefined
+                ? input.annualLeavePromotionMessageTemplate
+                : existing.annualLeavePromotionMessageTemplate,
             updatedAt: now
           }
         : {
@@ -1643,6 +1654,10 @@ export const memoryDataAccess: DataAccess = {
             maxHoursPerRequest: input.maxHoursPerRequest ?? 8,
             minNoticeDays: input.minNoticeDays ?? 0,
             maxConsecutiveDays: input.maxConsecutiveDays ?? null,
+            annualLeavePromotionEnabled: input.annualLeavePromotionEnabled ?? false,
+            annualLeavePromotionThresholdDays: input.annualLeavePromotionThresholdDays ?? 5,
+            annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays ?? 30,
+            annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate ?? null,
             createdAt: now,
             updatedAt: now
           };

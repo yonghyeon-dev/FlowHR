@@ -25,6 +25,11 @@ const DEFAULT_HOURLY_INCREMENT_MINUTES = 30;
 const DEFAULT_MAX_HOURS_PER_REQUEST = 8;
 const DEFAULT_MIN_NOTICE_DAYS = 0;
 const DEFAULT_MAX_CONSECUTIVE_DAYS: number | null = null;
+const DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED = false;
+const DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS = 5;
+const DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS = 30;
+const DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE =
+  "Annual leave notice: Please use your remaining annual leave before year end.";
 
 type ServiceContext = {
   actor: Actor | null;
@@ -76,6 +81,10 @@ type UpsertLeavePolicyInput = {
   maxHoursPerRequest?: number;
   minNoticeDays?: number;
   maxConsecutiveDays?: number | null;
+  annualLeavePromotionEnabled?: boolean;
+  annualLeavePromotionThresholdDays?: number;
+  annualLeavePromotionLeadDays?: number;
+  annualLeavePromotionMessageTemplate?: string | null;
 };
 
 type LeavePolicyRules = {
@@ -87,6 +96,31 @@ type LeavePolicyRules = {
   maxHoursPerRequest: number;
   minNoticeDays: number;
   maxConsecutiveDays: number | null;
+  annualLeavePromotionEnabled: boolean;
+  annualLeavePromotionThresholdDays: number;
+  annualLeavePromotionLeadDays: number;
+  annualLeavePromotionMessageTemplate: string;
+};
+
+type PreviewAnnualLeavePromotionInput = {
+  organizationId?: string;
+  asOf?: Date;
+  includeUpcoming?: boolean;
+};
+
+type DispatchAnnualLeavePromotionNoticeInput = {
+  organizationId?: string;
+  asOf?: Date;
+  includeUpcoming?: boolean;
+  dryRun?: boolean;
+};
+
+type PromotionWebhookProvider = "discord" | "slack";
+
+type PromotionWebhookConfig = {
+  url: string;
+  provider: PromotionWebhookProvider;
+  source: string;
 };
 
 type ListLeaveRequestsInput = {
@@ -101,6 +135,24 @@ function toSeoulDayIndex(value: Date) {
   return Math.floor(
     Date.UTC(adjusted.getUTCFullYear(), adjusted.getUTCMonth(), adjusted.getUTCDate()) / DAY_MS
   );
+}
+
+function fromSeoulDayIndex(dayIndex: number) {
+  return new Date(dayIndex * DAY_MS - SEOUL_OFFSET_MS);
+}
+
+function formatSeoulDay(value: Date) {
+  const adjusted = new Date(value.getTime() + SEOUL_OFFSET_MS);
+  const year = adjusted.getUTCFullYear();
+  const month = String(adjusted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(adjusted.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function resolveSeoulYearEnd(value: Date) {
+  const adjusted = new Date(value.getTime() + SEOUL_OFFSET_MS);
+  const year = adjusted.getUTCFullYear();
+  return new Date(Date.UTC(year, 11, 31, 14, 59, 59, 999));
 }
 
 function calculateLeaveDays(startDate: Date, endDate: Date) {
@@ -140,6 +192,10 @@ function resolvePolicyRules(policy?: {
   maxHoursPerRequest?: number;
   minNoticeDays?: number;
   maxConsecutiveDays?: number | null;
+  annualLeavePromotionEnabled?: boolean;
+  annualLeavePromotionThresholdDays?: number;
+  annualLeavePromotionLeadDays?: number;
+  annualLeavePromotionMessageTemplate?: string | null;
 } | null): LeavePolicyRules {
   return {
     annualGrantDays: policy?.annualGrantDays ?? DEFAULT_GRANTED_DAYS,
@@ -149,8 +205,175 @@ function resolvePolicyRules(policy?: {
     hourlyIncrementMinutes: policy?.hourlyIncrementMinutes ?? DEFAULT_HOURLY_INCREMENT_MINUTES,
     maxHoursPerRequest: policy?.maxHoursPerRequest ?? DEFAULT_MAX_HOURS_PER_REQUEST,
     minNoticeDays: policy?.minNoticeDays ?? DEFAULT_MIN_NOTICE_DAYS,
-    maxConsecutiveDays: policy?.maxConsecutiveDays ?? DEFAULT_MAX_CONSECUTIVE_DAYS
+    maxConsecutiveDays: policy?.maxConsecutiveDays ?? DEFAULT_MAX_CONSECUTIVE_DAYS,
+    annualLeavePromotionEnabled:
+      policy?.annualLeavePromotionEnabled ?? DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED,
+    annualLeavePromotionThresholdDays:
+      policy?.annualLeavePromotionThresholdDays ?? DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS,
+    annualLeavePromotionLeadDays:
+      policy?.annualLeavePromotionLeadDays ?? DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS,
+    annualLeavePromotionMessageTemplate:
+      policy?.annualLeavePromotionMessageTemplate?.trim() ||
+      DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE
   };
+}
+
+function renderPromotionMessageTemplate(
+  template: string,
+  values: Record<string, string | number>
+): string {
+  return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) => {
+    const value = values[key];
+    return value === undefined || value === null ? match : String(value);
+  });
+}
+
+function normalizeEnvValue(value: string | undefined) {
+  return (value ?? "").trim();
+}
+
+function resolvePromotionWebhookProvider(webhookUrl: string): PromotionWebhookProvider {
+  const configured = normalizeEnvValue(
+    process.env.FLOWHR_LEAVE_PROMOTION_WEBHOOK_PROVIDER ??
+      process.env.FLOWHR_ALERT_WEBHOOK_PROVIDER
+  ).toLowerCase();
+  if (configured === "discord" || configured === "slack") {
+    return configured;
+  }
+
+  if (
+    webhookUrl.includes("discord.com/api/webhooks/") ||
+    webhookUrl.includes("discordapp.com/api/webhooks/")
+  ) {
+    return "discord";
+  }
+  if (webhookUrl.includes("hooks.slack.com/services/")) {
+    return "slack";
+  }
+  return "slack";
+}
+
+function resolvePromotionWebhookConfig(): PromotionWebhookConfig | null {
+  const candidates: Array<{ source: string; value: string }> = [
+    {
+      source: "FLOWHR_LEAVE_PROMOTION_WEBHOOK_URL",
+      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_WEBHOOK_URL)
+    },
+    {
+      source: "FLOWHR_LEAVE_PROMOTION_DISCORD_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_DISCORD_WEBHOOK)
+    },
+    {
+      source: "FLOWHR_LEAVE_PROMOTION_SLACK_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_SLACK_WEBHOOK)
+    },
+    {
+      source: "FLOWHR_ALERT_WEBHOOK_URL",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_WEBHOOK_URL)
+    },
+    {
+      source: "FLOWHR_ALERT_DISCORD_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_DISCORD_WEBHOOK)
+    },
+    {
+      source: "FLOWHR_ALERT_SLACK_WEBHOOK",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_SLACK_WEBHOOK)
+    }
+  ];
+
+  const matched = candidates.find((candidate) => candidate.value.length > 0);
+  if (!matched) {
+    return null;
+  }
+
+  return {
+    url: matched.value,
+    provider: resolvePromotionWebhookProvider(matched.value),
+    source: matched.source
+  };
+}
+
+function buildPromotionNoticeMessage(input: {
+  organizationId: string;
+  asOf: string;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  noticeWindow: {
+    startAt: string;
+    endAt: string;
+    isOpen: boolean;
+  };
+  summary: {
+    potentialTargetCount: number;
+    displayTargetCount: number;
+    eligibleNowCount: number;
+  };
+  targets: Array<{
+    employeeId: string;
+    name: string | null;
+    email: string | null;
+    remainingDays: number;
+    eligibleNow: boolean;
+  }>;
+  announcementDraft: {
+    title: string;
+    body: string;
+  };
+}) {
+  const headline = input.dryRun
+    ? "[FlowHR] 연차 촉진 공지 드라이런"
+    : "[FlowHR] 연차 촉진 공지 발송";
+
+  const lines = [
+    headline,
+    `- 조직: ${input.organizationId}`,
+    `- 기준 시각(asOf): ${input.asOf}`,
+    `- 공지 윈도우: ${input.noticeWindow.startAt} ~ ${input.noticeWindow.endAt}`,
+    `- 윈도우 오픈: ${input.noticeWindow.isOpen ? "yes" : "no"}`,
+    `- includeUpcoming: ${input.includeUpcoming ? "yes" : "no"}`,
+    `- 대상자: 표시 ${input.summary.displayTargetCount}명 / 즉시 ${input.summary.eligibleNowCount}명 / 잠재 ${input.summary.potentialTargetCount}명`,
+    "- 공지 제목:",
+    input.announcementDraft.title,
+    "- 공지 본문:",
+    input.announcementDraft.body
+  ];
+
+  const sampleTargets = input.targets.slice(0, 30);
+  if (sampleTargets.length > 0) {
+    lines.push("- 대상자 샘플:");
+    for (const target of sampleTargets) {
+      const name = target.name?.trim() || "-";
+      const email = target.email?.trim() || "-";
+      lines.push(
+        `  - ${target.employeeId} | ${name} | ${email} | remaining=${target.remainingDays} | ${target.eligibleNow ? "eligible" : "upcoming"}`
+      );
+    }
+  }
+  if (input.targets.length > sampleTargets.length) {
+    lines.push(`  - ... and ${input.targets.length - sampleTargets.length} more target(s)`);
+  }
+
+  return lines.join("\n");
+}
+
+async function sendPromotionWebhook(config: PromotionWebhookConfig, message: string) {
+  const payload =
+    config.provider === "discord"
+      ? JSON.stringify({ content: message })
+      : JSON.stringify({ text: message });
+
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: payload
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    throw new Error(`${config.provider} webhook request failed: ${response.status} ${responseBody}`);
+  }
 }
 
 function calculateRequestedLeave(input: {
@@ -886,6 +1109,10 @@ export async function readLeavePolicy(
     maxHoursPerRequest: number;
     minNoticeDays: number;
     maxConsecutiveDays: number | null;
+    annualLeavePromotionEnabled: boolean;
+    annualLeavePromotionThresholdDays: number;
+    annualLeavePromotionLeadDays: number;
+    annualLeavePromotionMessageTemplate: string;
     source: "configured" | "default";
     updatedAt: string | null;
   };
@@ -911,6 +1138,12 @@ export async function readLeavePolicy(
         maxHoursPerRequest: stored.maxHoursPerRequest,
         minNoticeDays: stored.minNoticeDays,
         maxConsecutiveDays: stored.maxConsecutiveDays,
+        annualLeavePromotionEnabled: stored.annualLeavePromotionEnabled,
+        annualLeavePromotionThresholdDays: stored.annualLeavePromotionThresholdDays,
+        annualLeavePromotionLeadDays: stored.annualLeavePromotionLeadDays,
+        annualLeavePromotionMessageTemplate:
+          stored.annualLeavePromotionMessageTemplate?.trim() ||
+          DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE,
         source: "configured" as const,
         updatedAt: stored.updatedAt.toISOString()
       }
@@ -924,6 +1157,10 @@ export async function readLeavePolicy(
         maxHoursPerRequest: DEFAULT_MAX_HOURS_PER_REQUEST,
         minNoticeDays: DEFAULT_MIN_NOTICE_DAYS,
         maxConsecutiveDays: DEFAULT_MAX_CONSECUTIVE_DAYS,
+        annualLeavePromotionEnabled: DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED,
+        annualLeavePromotionThresholdDays: DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS,
+        annualLeavePromotionLeadDays: DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS,
+        annualLeavePromotionMessageTemplate: DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE,
         source: "default" as const,
         updatedAt: null
       };
@@ -955,6 +1192,10 @@ export async function upsertLeavePolicy(
     maxHoursPerRequest: number;
     minNoticeDays: number;
     maxConsecutiveDays: number | null;
+    annualLeavePromotionEnabled: boolean;
+    annualLeavePromotionThresholdDays: number;
+    annualLeavePromotionLeadDays: number;
+    annualLeavePromotionMessageTemplate: string;
     updatedAt: string;
   };
 }> {
@@ -993,6 +1234,27 @@ export async function upsertLeavePolicy(
       throw new ServiceError(400, "maxConsecutiveDays must be a positive number or null");
     }
   }
+  if (input.annualLeavePromotionThresholdDays !== undefined) {
+    if (
+      !Number.isFinite(input.annualLeavePromotionThresholdDays) ||
+      input.annualLeavePromotionThresholdDays <= 0
+    ) {
+      throw new ServiceError(400, "annualLeavePromotionThresholdDays must be a positive number");
+    }
+  }
+  if (input.annualLeavePromotionLeadDays !== undefined) {
+    if (
+      !Number.isInteger(input.annualLeavePromotionLeadDays) ||
+      input.annualLeavePromotionLeadDays < 0
+    ) {
+      throw new ServiceError(400, "annualLeavePromotionLeadDays must be a non-negative integer");
+    }
+  }
+  if (input.annualLeavePromotionMessageTemplate !== undefined && input.annualLeavePromotionMessageTemplate !== null) {
+    if (input.annualLeavePromotionMessageTemplate.trim().length === 0) {
+      throw new ServiceError(400, "annualLeavePromotionMessageTemplate cannot be blank");
+    }
+  }
 
   const stored = await context.dataAccess.leavePolicy.upsertForOrganization({
     organizationId,
@@ -1003,7 +1265,11 @@ export async function upsertLeavePolicy(
     hourlyIncrementMinutes: input.hourlyIncrementMinutes,
     maxHoursPerRequest: input.maxHoursPerRequest,
     minNoticeDays: input.minNoticeDays,
-    maxConsecutiveDays: input.maxConsecutiveDays
+    maxConsecutiveDays: input.maxConsecutiveDays,
+    annualLeavePromotionEnabled: input.annualLeavePromotionEnabled,
+    annualLeavePromotionThresholdDays: input.annualLeavePromotionThresholdDays,
+    annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays,
+    annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate
   });
 
   await context.dataAccess.audit.append({
@@ -1022,7 +1288,13 @@ export async function upsertLeavePolicy(
       hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
       maxHoursPerRequest: stored.maxHoursPerRequest,
       minNoticeDays: stored.minNoticeDays,
-      maxConsecutiveDays: stored.maxConsecutiveDays
+      maxConsecutiveDays: stored.maxConsecutiveDays,
+      annualLeavePromotionEnabled: stored.annualLeavePromotionEnabled,
+      annualLeavePromotionThresholdDays: stored.annualLeavePromotionThresholdDays,
+      annualLeavePromotionLeadDays: stored.annualLeavePromotionLeadDays,
+      annualLeavePromotionMessageTemplate:
+        stored.annualLeavePromotionMessageTemplate?.trim() ||
+        DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE
     }
   });
   await getEventPublisher(context).publish({
@@ -1041,7 +1313,13 @@ export async function upsertLeavePolicy(
       hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
       maxHoursPerRequest: stored.maxHoursPerRequest,
       minNoticeDays: stored.minNoticeDays,
-      maxConsecutiveDays: stored.maxConsecutiveDays
+      maxConsecutiveDays: stored.maxConsecutiveDays,
+      annualLeavePromotionEnabled: stored.annualLeavePromotionEnabled,
+      annualLeavePromotionThresholdDays: stored.annualLeavePromotionThresholdDays,
+      annualLeavePromotionLeadDays: stored.annualLeavePromotionLeadDays,
+      annualLeavePromotionMessageTemplate:
+        stored.annualLeavePromotionMessageTemplate?.trim() ||
+        DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE
     }
   });
 
@@ -1056,12 +1334,435 @@ export async function upsertLeavePolicy(
       maxHoursPerRequest: stored.maxHoursPerRequest,
       minNoticeDays: stored.minNoticeDays,
       maxConsecutiveDays: stored.maxConsecutiveDays,
+      annualLeavePromotionEnabled: stored.annualLeavePromotionEnabled,
+      annualLeavePromotionThresholdDays: stored.annualLeavePromotionThresholdDays,
+      annualLeavePromotionLeadDays: stored.annualLeavePromotionLeadDays,
+      annualLeavePromotionMessageTemplate:
+        stored.annualLeavePromotionMessageTemplate?.trim() ||
+        DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE,
       updatedAt: stored.updatedAt.toISOString()
+    }
+  };
+}
+
+export async function previewAnnualLeavePromotion(
+  context: ServiceContext,
+  input: PreviewAnnualLeavePromotionInput
+): Promise<{
+  organizationId: string;
+  asOf: string;
+  policy: {
+    enabled: boolean;
+    thresholdDays: number;
+    leadDays: number;
+    messageTemplate: string;
+    source: "configured" | "default";
+    updatedAt: string | null;
+  };
+  noticeWindow: {
+    startAt: string;
+    endAt: string;
+    isOpen: boolean;
+  };
+  summary: {
+    activeEmployeeCount: number;
+    potentialTargetCount: number;
+    displayTargetCount: number;
+    eligibleNowCount: number;
+  };
+  targets: Array<{
+    employeeId: string;
+    name: string | null;
+    email: string | null;
+    remainingDays: number;
+    grantedDays: number;
+    usedDays: number;
+    lastAccrualYear: number | null;
+    eligibleNow: boolean;
+  }>;
+  announcementDraft: {
+    title: string;
+    body: string;
+  };
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(
+    context,
+    Permissions.leaveBalanceReadAny,
+    "leave promotion preview requires permission"
+  );
+
+  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
+  ensureTenantAccess(actor, organizationId);
+
+  const asOf = input.asOf ?? new Date();
+  if (!Number.isFinite(asOf.getTime())) {
+    throw new ServiceError(400, "asOf must be a valid datetime");
+  }
+
+  const stored = await context.dataAccess.leavePolicy.findByOrganizationId(organizationId);
+  const policyRules = resolvePolicyRules(stored);
+
+  const yearEnd = resolveSeoulYearEnd(asOf);
+  const yearEndDayIndex = toSeoulDayIndex(yearEnd);
+  const noticeWindowStartDayIndex = yearEndDayIndex - policyRules.annualLeavePromotionLeadDays;
+  const noticeWindowStart = fromSeoulDayIndex(noticeWindowStartDayIndex);
+  const noticeWindowEnd = new Date(fromSeoulDayIndex(yearEndDayIndex + 1).getTime() - 1);
+  const asOfDayIndex = toSeoulDayIndex(asOf);
+  const noticeWindowOpen =
+    asOfDayIndex >= noticeWindowStartDayIndex && asOfDayIndex <= yearEndDayIndex;
+
+  const employees = await context.dataAccess.employees.list({
+    organizationId,
+    active: true
+  });
+
+  const potentialTargets: Array<{
+    employeeId: string;
+    name: string | null;
+    email: string | null;
+    remainingDays: number;
+    grantedDays: number;
+    usedDays: number;
+    lastAccrualYear: number | null;
+    eligibleNow: boolean;
+  }> = [];
+
+  if (policyRules.annualLeavePromotionEnabled) {
+    for (const employee of employees) {
+      const balance = await context.dataAccess.leaveBalance.ensure(
+        employee.id,
+        policyRules.annualGrantDays
+      );
+      if (balance.remainingDays < policyRules.annualLeavePromotionThresholdDays) {
+        continue;
+      }
+      potentialTargets.push({
+        employeeId: employee.id,
+        name: employee.name,
+        email: employee.email,
+        remainingDays: roundTo2(balance.remainingDays),
+        grantedDays: roundTo2(balance.grantedDays),
+        usedDays: roundTo2(balance.usedDays),
+        lastAccrualYear: balance.lastAccrualYear,
+        eligibleNow: noticeWindowOpen
+      });
+    }
+  }
+
+  potentialTargets.sort((left, right) => {
+    if (right.remainingDays !== left.remainingDays) {
+      return right.remainingDays - left.remainingDays;
+    }
+    return left.employeeId.localeCompare(right.employeeId);
+  });
+
+  const displayTargets = potentialTargets.filter((target) => {
+    if (target.eligibleNow) {
+      return true;
+    }
+    return Boolean(input.includeUpcoming);
+  });
+
+  const eligibleNowCount = potentialTargets.filter((target) => target.eligibleNow).length;
+  const seoulYear = new Date(asOf.getTime() + SEOUL_OFFSET_MS).getUTCFullYear();
+  const announcementBody = renderPromotionMessageTemplate(
+    policyRules.annualLeavePromotionMessageTemplate,
+    {
+      organizationId,
+      year: seoulYear,
+      thresholdDays: policyRules.annualLeavePromotionThresholdDays,
+      targetCount: displayTargets.length,
+      potentialTargetCount: potentialTargets.length,
+      eligibleNowCount,
+      noticeWindowStart: formatSeoulDay(noticeWindowStart),
+      noticeWindowEnd: formatSeoulDay(noticeWindowEnd)
+    }
+  );
+
+  await context.dataAccess.audit.append({
+    action: "leave.promotion_preview_read",
+    entityType: "LeavePolicy",
+    entityId: stored?.id,
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      asOf: asOf.toISOString(),
+      includeUpcoming: Boolean(input.includeUpcoming),
+      noticeWindowOpen,
+      potentialTargetCount: potentialTargets.length,
+      displayTargetCount: displayTargets.length
+    }
+  });
+
+  return {
+    organizationId,
+    asOf: asOf.toISOString(),
+    policy: {
+      enabled: policyRules.annualLeavePromotionEnabled,
+      thresholdDays: policyRules.annualLeavePromotionThresholdDays,
+      leadDays: policyRules.annualLeavePromotionLeadDays,
+      messageTemplate: policyRules.annualLeavePromotionMessageTemplate,
+      source: stored ? "configured" : "default",
+      updatedAt: stored?.updatedAt.toISOString() ?? null
+    },
+    noticeWindow: {
+      startAt: noticeWindowStart.toISOString(),
+      endAt: noticeWindowEnd.toISOString(),
+      isOpen: noticeWindowOpen
+    },
+    summary: {
+      activeEmployeeCount: employees.length,
+      potentialTargetCount: potentialTargets.length,
+      displayTargetCount: displayTargets.length,
+      eligibleNowCount
+    },
+    targets: displayTargets,
+    announcementDraft: {
+      title: `Annual leave promotion notice (${seoulYear})`,
+      body: announcementBody
+    }
+  };
+}
+
+export async function dispatchAnnualLeavePromotionNotice(
+  context: ServiceContext,
+  input: DispatchAnnualLeavePromotionNoticeInput
+): Promise<{
+  organizationId: string;
+  asOf: string;
+  policy: {
+    enabled: boolean;
+    thresholdDays: number;
+    leadDays: number;
+    messageTemplate: string;
+    source: "configured" | "default";
+    updatedAt: string | null;
+  };
+  noticeWindow: {
+    startAt: string;
+    endAt: string;
+    isOpen: boolean;
+  };
+  summary: {
+    activeEmployeeCount: number;
+    potentialTargetCount: number;
+    displayTargetCount: number;
+    eligibleNowCount: number;
+    sentTargetCount: number;
+  };
+  targets: Array<{
+    employeeId: string;
+    name: string | null;
+    email: string | null;
+    remainingDays: number;
+    grantedDays: number;
+    usedDays: number;
+    lastAccrualYear: number | null;
+    eligibleNow: boolean;
+  }>;
+  announcementDraft: {
+    title: string;
+    body: string;
+  };
+  delivery: {
+    status: "dry_run" | "skipped_no_targets" | "dispatched";
+    attempted: boolean;
+    dryRun: boolean;
+    provider: PromotionWebhookProvider | null;
+    webhookSource: string | null;
+    webhookConfigured: boolean;
+    dispatchedAt: string | null;
+  };
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(
+    context,
+    Permissions.leaveAccrualSettle,
+    "leave promotion notice dispatch requires permission"
+  );
+
+  const preview = await previewAnnualLeavePromotion(context, {
+    organizationId: input.organizationId,
+    asOf: input.asOf,
+    includeUpcoming: input.includeUpcoming
+  });
+
+  const dryRun = input.dryRun ?? false;
+  const includeUpcoming = Boolean(input.includeUpcoming);
+  const targetCount = preview.targets.length;
+  const webhook = resolvePromotionWebhookConfig();
+  const attempted = !dryRun && targetCount > 0;
+
+  if (attempted && !webhook) {
+    await context.dataAccess.audit.append({
+      action: "leave.promotion_notice.failed",
+      entityType: "LeavePolicy",
+      organizationId: preview.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        asOf: preview.asOf,
+        includeUpcoming,
+        dryRun,
+        targetCount,
+        reason: "webhook_not_configured"
+      }
+    });
+    throw new ServiceError(
+      503,
+      "leave promotion webhook is not configured (set FLOWHR_LEAVE_PROMOTION_* or FLOWHR_ALERT_* webhook env)"
+    );
+  }
+
+  const message = buildPromotionNoticeMessage({
+    organizationId: preview.organizationId,
+    asOf: preview.asOf,
+    includeUpcoming,
+    dryRun,
+    noticeWindow: preview.noticeWindow,
+    summary: preview.summary,
+    targets: preview.targets,
+    announcementDraft: preview.announcementDraft
+  });
+
+  let status: "dry_run" | "skipped_no_targets" | "dispatched" = "dry_run";
+  let dispatchedAt: string | null = null;
+
+  if (attempted && webhook) {
+    try {
+      await sendPromotionWebhook(webhook, message);
+      status = "dispatched";
+      dispatchedAt = new Date().toISOString();
+    } catch (error) {
+      await context.dataAccess.audit.append({
+        action: "leave.promotion_notice.failed",
+        entityType: "LeavePolicy",
+        organizationId: preview.organizationId,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          asOf: preview.asOf,
+          includeUpcoming,
+          dryRun,
+          targetCount,
+          provider: webhook.provider,
+          webhookSource: webhook.source,
+          error: error instanceof Error ? error.message : "unknown error"
+        }
+      });
+      throw new ServiceError(502, "leave promotion webhook request failed");
+    }
+  } else if (!dryRun && targetCount === 0) {
+    status = "skipped_no_targets";
+  }
+
+  const sentTargetCount = status === "dispatched" ? targetCount : 0;
+  const action =
+    status === "dispatched"
+      ? "leave.promotion_notice.dispatched"
+      : status === "skipped_no_targets"
+        ? "leave.promotion_notice.skipped"
+        : "leave.promotion_notice.dry_run";
+
+  await context.dataAccess.audit.append({
+    action,
+    entityType: "LeavePolicy",
+    organizationId: preview.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      asOf: preview.asOf,
+      includeUpcoming,
+      dryRun,
+      targetCount,
+      sentTargetCount,
+      status,
+      provider: webhook?.provider ?? null,
+      webhookSource: webhook?.source ?? null
+    }
+  });
+
+  if (status === "dispatched" && webhook && dispatchedAt) {
+    try {
+      await getEventPublisher(context).publish({
+        name: "leave.promotion.notice.dispatched.v1",
+        occurredAt: dispatchedAt,
+        entityType: "LeavePolicy",
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          organizationId: preview.organizationId,
+          asOf: preview.asOf,
+          includeUpcoming,
+          targetCount,
+          provider: webhook.provider,
+          webhookSource: webhook.source,
+          announcementTitle: preview.announcementDraft.title,
+          noticeWindow: preview.noticeWindow,
+          targetEmployeeIds: preview.targets.slice(0, 100).map((target) => target.employeeId)
+        }
+      });
+    } catch (error) {
+      try {
+        await context.dataAccess.audit.append({
+          action: "leave.promotion_notice.event_publish_failed",
+          entityType: "LeavePolicy",
+          organizationId: preview.organizationId,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            asOf: preview.asOf,
+            includeUpcoming,
+            dispatchedAt,
+            targetCount,
+            provider: webhook.provider,
+            webhookSource: webhook.source,
+            error: error instanceof Error ? error.message : "unknown error"
+          }
+        });
+      } catch {
+        // Non-blocking failure path: dispatch already completed.
+      }
+    }
+  }
+
+  return {
+    organizationId: preview.organizationId,
+    asOf: preview.asOf,
+    policy: preview.policy,
+    noticeWindow: preview.noticeWindow,
+    summary: {
+      activeEmployeeCount: preview.summary.activeEmployeeCount,
+      potentialTargetCount: preview.summary.potentialTargetCount,
+      displayTargetCount: preview.summary.displayTargetCount,
+      eligibleNowCount: preview.summary.eligibleNowCount,
+      sentTargetCount
+    },
+    targets: preview.targets,
+    announcementDraft: preview.announcementDraft,
+    delivery: {
+      status,
+      attempted,
+      dryRun,
+      provider: webhook?.provider ?? null,
+      webhookSource: webhook?.source ?? null,
+      webhookConfigured: webhook !== null,
+      dispatchedAt
     }
   };
 }
 
 export const leaveServiceInternals = {
   calculateLeaveDays,
-  calculateRequestedLeave
+  calculateRequestedLeave,
+  resolveSeoulYearEnd,
+  renderPromotionMessageTemplate
 };

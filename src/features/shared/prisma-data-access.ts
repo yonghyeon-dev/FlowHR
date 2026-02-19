@@ -187,12 +187,17 @@ function toLeavePolicyEntity(record: {
   maxHoursPerRequest: Prisma.Decimal;
   minNoticeDays: number;
   maxConsecutiveDays: Prisma.Decimal | null;
+  annualLeavePromotionEnabled: boolean;
+  annualLeavePromotionThresholdDays: Prisma.Decimal;
+  annualLeavePromotionLeadDays: number;
+  annualLeavePromotionMessageTemplate: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): LeavePolicyEntity {
   return {
     ...record,
     maxHoursPerRequest: Number(record.maxHoursPerRequest),
+    annualLeavePromotionThresholdDays: Number(record.annualLeavePromotionThresholdDays),
     maxConsecutiveDays:
       record.maxConsecutiveDays === null ? null : Number(record.maxConsecutiveDays)
   };
@@ -1772,6 +1777,22 @@ const leavePolicy: LeavePolicyStore = {
                   ? null
                   : new Prisma.Decimal(input.maxConsecutiveDays)
             }
+          : {}),
+        ...(input.annualLeavePromotionEnabled !== undefined
+          ? { annualLeavePromotionEnabled: input.annualLeavePromotionEnabled }
+          : {}),
+        ...(input.annualLeavePromotionThresholdDays !== undefined
+          ? {
+              annualLeavePromotionThresholdDays: new Prisma.Decimal(
+                input.annualLeavePromotionThresholdDays
+              )
+            }
+          : {}),
+        ...(input.annualLeavePromotionLeadDays !== undefined
+          ? { annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays }
+          : {}),
+        ...(input.annualLeavePromotionMessageTemplate !== undefined
+          ? { annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate }
           : {})
       },
       create: {
@@ -1786,7 +1807,13 @@ const leavePolicy: LeavePolicyStore = {
         maxConsecutiveDays:
           input.maxConsecutiveDays === undefined || input.maxConsecutiveDays === null
             ? null
-            : new Prisma.Decimal(input.maxConsecutiveDays)
+            : new Prisma.Decimal(input.maxConsecutiveDays),
+        annualLeavePromotionEnabled: input.annualLeavePromotionEnabled ?? false,
+        annualLeavePromotionThresholdDays: new Prisma.Decimal(
+          input.annualLeavePromotionThresholdDays ?? 5
+        ),
+        annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays ?? 30,
+        annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate ?? null
       }
     });
     return toLeavePolicyEntity(policy);

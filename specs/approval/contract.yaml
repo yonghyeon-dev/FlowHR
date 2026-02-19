@@ -1,5 +1,5 @@
 owner: approval-agent
-version: 0.8.0
+version: 0.10.0
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
@@ -13,7 +13,10 @@ scope:
     - runtime gate stage-history persistence for attendance/leave/payroll decision endpoints
     - approval stage-history read API for gate troubleshooting
     - approval execution state machine for staged runtime actions on attendance/leave/payroll decisions
-    - approval execution listing API for operator troubleshooting
+    - approval execution listing API for operator troubleshooting (priority sorting + stalled queue filtering)
+    - approval execution admin UI with stalled-item prioritization and quick domain jump
+    - approval execution stalled escalation command API with dry-run and webhook dispatch
+    - approval execution stalled escalation scheduler runner for periodic multi-organization sweep
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
     - generic standalone approval command endpoint independent of domain action APIs
@@ -54,7 +57,10 @@ api:
       description: List persisted stage-gate evaluations by organization/domain/target entity filters.
     - method: GET
       path: /approval/executions
-      description: List runtime approval execution states by organization/domain/target entity filters.
+      description: List runtime approval execution states by organization/domain/target entity filters, with optional priority sort and stalled queue filters.
+    - method: POST
+      path: /approval/executions/escalate
+      description: Trigger stalled approval execution escalation command with optional dry-run and webhook dispatch.
     - method: GET
       path: /approval/delegations
       description: List approval delegations by organization/domain/active filter.
@@ -79,6 +85,8 @@ api:
   operations:
     - name: approval-delegation-expiry-sweep
       description: Scheduled runner executes delegation expire command per organization with dry-run/apply mode.
+    - name: approval-execution-escalation-sweep
+      description: Scheduled runner executes stalled approval execution escalation command per organization.
   events:
     published:
       - name: approval.policy.updated.v1
@@ -91,6 +99,8 @@ api:
         description: Emitted when approval line template is created.
       - name: approval.template.updated.v1
         description: Emitted when approval line template is updated.
+      - name: approval.execution.escalation.requested.v1
+        description: Emitted when stalled approval execution escalation dispatch is requested.
     consumed: []
 db_changes:
   migrations:
@@ -131,6 +141,10 @@ invariants:
   - Expire command with dryRun=true must not mutate delegation state.
   - Expiry sweep with empty organization list must target tenant scope (tenant actor) or all organizations (system actor).
   - Approval execution requires both permission and policy/delegation gate.
+  - stalledHoursMin filter applies only to PENDING execution rows.
+  - priority_desc sort must prioritize PENDING and stale rows before terminal states.
+  - Approval execution escalation command evaluates only PENDING execution rows above stalledHoursMin threshold.
+  - Approval execution escalation command with dryRun=true must not dispatch webhook side effects.
   - Tenant-scoped actors cannot mutate policy/delegation for another organization.
 risk:
   permissions:
@@ -154,6 +168,9 @@ test_plan:
     - template create/update/list supports multi-stage payload and stage-1 compatibility mapping
     - stage-history query returns deny/allow gate evaluations for attendance/leave/payroll target entities
     - execution list query returns staged runtime state (`PENDING/APPROVED/REJECTED`) with stage position
+    - execution list query supports `sort=priority_desc` and `stalledHoursMin` + `asOf` filtering
+    - execution escalation command returns deterministic candidate ordering and dry-run summary
+    - execution escalation command dispatch path emits webhook and runtime event when candidates exist
     - attendance/leave/payroll staged flow keeps target pending until final stage approval
     - reject duplicate active template in same organization+domain with 409
     - reject payroll condition fields for non-PAYROLL template domain
@@ -169,6 +186,8 @@ test_plan:
     - staged execution mode keeps single-stage templates behavior unchanged
     - stage-history records keep deny/allow ordering with required roles and resolution labels
     - stage-history stageLabel includes action suffix for staged actions
+    - execution list default ordering (`updated_desc`) remains backward compatible
+    - execution escalation command with no candidates remains successful without webhook requirement
   authorization:
     - policy/delegation endpoint permission checks
     - template endpoint permission checks
@@ -186,6 +205,9 @@ observability:
     - approval.policy_gate.previewed
     - approval.stage_history.listed
     - approval.execution.listed
+    - approval.execution.escalation.generated
+    - approval.execution.escalation.requested
+    - approval.execution.escalation.failed
   metrics:
     - approval_policy_update_count
     - approval_delegation_active_count
@@ -193,6 +215,8 @@ observability:
     - approval_policy_gate_denied_count
     - approval_stage_history_list_count
     - approval_execution_list_count
+    - approval_execution_escalation_candidate_count
+    - approval_execution_escalation_requested_count
     - approval_delegation_expire_sweep_checked_count
     - approval_delegation_expire_sweep_applied_count
   logs:
@@ -207,7 +231,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.8.0 adds staged runtime execution persistence (`ApprovalExecution`, `ApprovalExecutionActionLog`) and `GET /approval/executions`; multi-stage templates now finalize domain state only at terminal stage."
+consumer_impact: "Contract v0.10.0 adds stalled escalation command endpoint (`POST /approval/executions/escalate`) and scheduler operation metadata while preserving existing policy/delegation/template/execution list behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
@@ -219,6 +243,8 @@ references:
   - work-items/WI-0116-approval-stage-history-baseline.md
   - work-items/WI-0117-approval-template-multi-stage-baseline.md
   - work-items/WI-0118-approval-execution-state-machine.md
+  - work-items/WI-0121-approval-execution-priority-and-stalled-queue.md
+  - work-items/WI-0123-approval-execution-stalled-escalation-automation.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent
