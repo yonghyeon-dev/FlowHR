@@ -149,11 +149,12 @@
 - WI-0110 급여 법정공제 골든 회귀 확장 (GC-007/GC-008 + golden/CI 검증기 확장)
 - WI-0111 Auth 초대 delivery mode 확장 (`link`/`email`) + claims/audit 일관성 회귀 테스트 추가
 - WI-0112 직원 명세서 회귀 확장 (statutory self-service own-confirmed gate + deduction breakdown 검증)
+- WI-0113 결재선 템플릿 조건부 라우팅 baseline (PAYROLL gross-pay 조건 + 정책 폴백 게이트 + e2e)
 
 ### 진행 중
 
-- 다음: 결재선 템플릿 고도화(다단계/조건부 라우팅 RFC)
-- 다음: 급여 명세서 검증 자동화 확장(세액공제/월경계 포함 회귀 세트)
+- 다음: 결재선 템플릿 고도화(다단계 라우팅 RFC)
+- 다음: 휴가 고도화(반차/시간단위/촉진 정책) 회귀 확장
 
 ### 현재 아키텍처
 

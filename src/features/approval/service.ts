@@ -65,6 +65,8 @@ type CreateApprovalLineTemplateInput = {
   name: string;
   domain: ApprovalDomain;
   approverRoles: string[];
+  payrollGrossPayMinKrw?: number | null;
+  payrollGrossPayMaxKrw?: number | null;
   active?: boolean;
 };
 
@@ -80,6 +82,8 @@ type UpdateApprovalLineTemplateInput = {
   name?: string;
   domain?: ApprovalDomain;
   approverRoles?: string[];
+  payrollGrossPayMinKrw?: number | null;
+  payrollGrossPayMaxKrw?: number | null;
   active?: boolean;
 };
 
@@ -186,14 +190,17 @@ function resolvePolicyApproverRole(
 function resolveExpectedApproverRoles(
   policy: ApprovalPolicyEntity | null,
   templates: ApprovalLineTemplateEntity[],
-  domain: ApprovalDomain
+  input: { domain: ApprovalDomain; payrollGrossPayKrw?: number | null }
 ): string[] {
-  if (templates.length === 0) {
-    return [resolvePolicyApproverRole(policy, domain)];
+  const matchedTemplates = templates.filter((template) =>
+    doesTemplateMatchGateContext(template, input)
+  );
+  if (matchedTemplates.length === 0) {
+    return [resolvePolicyApproverRole(policy, input.domain)];
   }
 
   const deduped = new Set<string>();
-  for (const template of templates) {
+  for (const template of matchedTemplates) {
     for (const role of template.approverRoles) {
       const normalized = role.trim();
       if (!normalized) {
@@ -207,7 +214,75 @@ function resolveExpectedApproverRoles(
   if (roles.length > 0) {
     return roles;
   }
-  return [resolvePolicyApproverRole(policy, domain)];
+  return [resolvePolicyApproverRole(policy, input.domain)];
+}
+
+function doesTemplateMatchGateContext(
+  template: ApprovalLineTemplateEntity,
+  input: { domain: ApprovalDomain; payrollGrossPayKrw?: number | null }
+) {
+  if (template.domain !== input.domain) {
+    return false;
+  }
+  if (input.domain !== "PAYROLL") {
+    return true;
+  }
+
+  const min = template.payrollGrossPayMinKrw;
+  const max = template.payrollGrossPayMaxKrw;
+  if (min === null && max === null) {
+    return true;
+  }
+
+  if (input.payrollGrossPayKrw === null || input.payrollGrossPayKrw === undefined) {
+    return false;
+  }
+  if (min !== null && input.payrollGrossPayKrw < min) {
+    return false;
+  }
+  if (max !== null && input.payrollGrossPayKrw > max) {
+    return false;
+  }
+  return true;
+}
+
+function normalizePayrollTemplateCondition(input: {
+  domain: ApprovalDomain;
+  payrollGrossPayMinKrw?: number | null;
+  payrollGrossPayMaxKrw?: number | null;
+}) {
+  const hasCondition =
+    (input.payrollGrossPayMinKrw !== undefined && input.payrollGrossPayMinKrw !== null) ||
+    (input.payrollGrossPayMaxKrw !== undefined && input.payrollGrossPayMaxKrw !== null);
+  if (input.domain !== "PAYROLL") {
+    if (hasCondition) {
+      throw new ServiceError(
+        400,
+        "payrollGrossPayMinKrw/payrollGrossPayMaxKrw are only allowed for PAYROLL domain"
+      );
+    }
+    return {
+      payrollGrossPayMinKrw: null as number | null,
+      payrollGrossPayMaxKrw: null as number | null
+    };
+  }
+
+  const payrollGrossPayMinKrw =
+    input.payrollGrossPayMinKrw === undefined ? null : input.payrollGrossPayMinKrw;
+  const payrollGrossPayMaxKrw =
+    input.payrollGrossPayMaxKrw === undefined ? null : input.payrollGrossPayMaxKrw;
+  if (
+    payrollGrossPayMinKrw !== null &&
+    payrollGrossPayMaxKrw !== null &&
+    payrollGrossPayMinKrw > payrollGrossPayMaxKrw
+  ) {
+    throw new ServiceError(
+      400,
+      "payrollGrossPayMaxKrw must be greater than or equal to payrollGrossPayMinKrw"
+    );
+  }
+
+  return { payrollGrossPayMinKrw, payrollGrossPayMaxKrw };
 }
 
 function isDelegationActiveAt(delegation: ApprovalDelegationEntity, now: Date) {
@@ -219,6 +294,7 @@ export async function assertApprovalPolicyGate(
   input: {
     domain: ApprovalDomain;
     organizationId: string | null;
+    payrollGrossPayKrw?: number | null;
   }
 ): Promise<void> {
   const actor = requireActor(context);
@@ -236,7 +312,10 @@ export async function assertApprovalPolicyGate(
     domain: input.domain,
     active: true
   });
-  const expectedRoles = resolveExpectedApproverRoles(policy, templates, input.domain);
+  const expectedRoles = resolveExpectedApproverRoles(policy, templates, {
+    domain: input.domain,
+    payrollGrossPayKrw: input.payrollGrossPayKrw
+  });
   if (expectedRoles.includes(actor.role)) {
     return;
   }
@@ -365,6 +444,11 @@ export async function createApprovalLineTemplate(
   await requirePermission(context, Permissions.approvalPolicyWrite, "approval policy write requires permission");
   const organizationId = await resolveOrganizationId(context, input.organizationId);
   const approverRoles = normalizeApproverRoles(input.approverRoles);
+  const payrollCondition = normalizePayrollTemplateCondition({
+    domain: input.domain,
+    payrollGrossPayMinKrw: input.payrollGrossPayMinKrw,
+    payrollGrossPayMaxKrw: input.payrollGrossPayMaxKrw
+  });
   const active = input.active ?? true;
 
   if (active) {
@@ -386,6 +470,8 @@ export async function createApprovalLineTemplate(
     name: input.name.trim(),
     domain: input.domain,
     approverRoles,
+    payrollGrossPayMinKrw: payrollCondition.payrollGrossPayMinKrw,
+    payrollGrossPayMaxKrw: payrollCondition.payrollGrossPayMaxKrw,
     active
   });
 
@@ -400,6 +486,8 @@ export async function createApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
+      payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
     }
   });
@@ -415,6 +503,8 @@ export async function createApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
+      payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
     }
   });
@@ -442,6 +532,23 @@ export async function updateApprovalLineTemplate(
   const nextActive = input.active ?? existing.active;
   const nextApproverRoles =
     input.approverRoles !== undefined ? normalizeApproverRoles(input.approverRoles) : existing.approverRoles;
+  const nextPayrollGrossPayMinKrw =
+    nextDomain === "PAYROLL"
+      ? input.payrollGrossPayMinKrw !== undefined
+        ? input.payrollGrossPayMinKrw
+        : existing.payrollGrossPayMinKrw
+      : null;
+  const nextPayrollGrossPayMaxKrw =
+    nextDomain === "PAYROLL"
+      ? input.payrollGrossPayMaxKrw !== undefined
+        ? input.payrollGrossPayMaxKrw
+        : existing.payrollGrossPayMaxKrw
+      : null;
+  const nextPayrollCondition = normalizePayrollTemplateCondition({
+    domain: nextDomain,
+    payrollGrossPayMinKrw: nextPayrollGrossPayMinKrw,
+    payrollGrossPayMaxKrw: nextPayrollGrossPayMaxKrw
+  });
 
   if (nextActive) {
     const existingActive = await context.dataAccess.approvals.listTemplates({
@@ -462,6 +569,12 @@ export async function updateApprovalLineTemplate(
     ...(input.name !== undefined ? { name: input.name.trim() } : {}),
     ...(input.domain !== undefined ? { domain: input.domain } : {}),
     ...(input.approverRoles !== undefined ? { approverRoles: nextApproverRoles } : {}),
+    ...(input.payrollGrossPayMinKrw !== undefined || nextDomain !== existing.domain
+      ? { payrollGrossPayMinKrw: nextPayrollCondition.payrollGrossPayMinKrw }
+      : {}),
+    ...(input.payrollGrossPayMaxKrw !== undefined || nextDomain !== existing.domain
+      ? { payrollGrossPayMaxKrw: nextPayrollCondition.payrollGrossPayMaxKrw }
+      : {}),
     ...(input.active !== undefined ? { active: input.active } : {})
   });
 
@@ -476,6 +589,8 @@ export async function updateApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
+      payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
     }
   });
@@ -491,6 +606,8 @@ export async function updateApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
+      payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
     }
   });

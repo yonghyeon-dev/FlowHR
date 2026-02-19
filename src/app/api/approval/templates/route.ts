@@ -77,6 +77,8 @@ export async function POST(request: Request) {
         name: parsed.data.name,
         domain: parsed.data.domain,
         approverRoles: parsed.data.approverRoles,
+        payrollGrossPayMinKrw: parsed.data.payrollGrossPayMinKrw,
+        payrollGrossPayMaxKrw: parsed.data.payrollGrossPayMaxKrw,
         active: parsed.data.active
       }
     );

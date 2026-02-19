@@ -322,6 +322,8 @@ function toApprovalLineTemplateEntity(record: {
   name: string;
   domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
   approverRoles: string[];
+  payrollGrossPayMinKrw: number | null;
+  payrollGrossPayMaxKrw: number | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -329,7 +331,9 @@ function toApprovalLineTemplateEntity(record: {
   return {
     ...record,
     domain: record.domain as ApprovalDomain,
-    approverRoles: [...record.approverRoles]
+    approverRoles: [...record.approverRoles],
+    payrollGrossPayMinKrw: record.payrollGrossPayMinKrw,
+    payrollGrossPayMaxKrw: record.payrollGrossPayMaxKrw
   };
 }
 
@@ -700,6 +704,10 @@ const approvals: ApprovalStore = {
         name: input.name,
         domain: input.domain,
         approverRoles: input.approverRoles,
+        payrollGrossPayMinKrw:
+          input.payrollGrossPayMinKrw === undefined ? null : input.payrollGrossPayMinKrw,
+        payrollGrossPayMaxKrw:
+          input.payrollGrossPayMaxKrw === undefined ? null : input.payrollGrossPayMaxKrw,
         active: input.active ?? true
       }
     });
@@ -720,6 +728,12 @@ const approvals: ApprovalStore = {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.domain !== undefined ? { domain: input.domain } : {}),
         ...(input.approverRoles !== undefined ? { approverRoles: input.approverRoles } : {}),
+        ...(input.payrollGrossPayMinKrw !== undefined
+          ? { payrollGrossPayMinKrw: input.payrollGrossPayMinKrw }
+          : {}),
+        ...(input.payrollGrossPayMaxKrw !== undefined
+          ? { payrollGrossPayMaxKrw: input.payrollGrossPayMaxKrw }
+          : {}),
         ...(input.active !== undefined ? { active: input.active } : {})
       }
     });

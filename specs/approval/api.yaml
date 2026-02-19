@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.3.0
+  version: 0.4.0
 paths:
   /approval/policy:
     get:
@@ -121,6 +121,7 @@ paths:
           description: Permission denied
     post:
       summary: Create approval line template
+      description: PAYROLL domain templates may include optional `payrollGrossPayMinKrw` / `payrollGrossPayMaxKrw` conditions.
       responses:
         "201":
           description: Template created
@@ -133,6 +134,7 @@ paths:
   /approval/templates/{templateId}:
     patch:
       summary: Update approval line template
+      description: Supports updating optional PAYROLL gross-pay condition bounds.
       parameters:
         - in: path
           name: templateId

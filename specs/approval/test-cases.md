@@ -1,4 +1,4 @@
-# Approval Test Cases (v0.3.0)
+# Approval Test Cases (v0.4.0)
 
 ## Positive
 
@@ -11,6 +11,7 @@
 7. Scheduler sweep runs across multiple organizations and returns deterministic per-organization counts.
 8. Admin creates an active approval template and manager approval succeeds when template includes `manager`.
 9. Admin deactivates template and approval gate falls back to policy role.
+10. Admin creates PAYROLL template with `payrollGrossPayMinKrw`, and template gate is applied only when payroll gross pay matches threshold.
 
 ## Negative
 
@@ -21,6 +22,7 @@
 5. Non-privileged actor cannot execute delegation expire command.
 6. Manager cannot create or update approval templates.
 7. Active template duplicate create/update in same organization+domain is rejected with `409`.
+8. Non-PAYROLL template create/update with payroll gross-pay condition fields is rejected with `400`.
 
 ## Regression
 
@@ -30,6 +32,7 @@
 4. Existing delegation create/update/list paths remain backward compatible after expire endpoint addition.
 5. Scheduler dry-run must not mutate active delegation rows in any target organization.
 6. Existing policy/delegation APIs stay backward compatible after template endpoint addition.
+7. Payroll confirm gate falls back to policy role when active PAYROLL template condition does not match.
 
 ## Evidence
 
@@ -37,3 +40,4 @@
 - `scripts/tests/e2e-wi0107-approval-delegation-expiry.test.ts`
 - `scripts/tests/e2e-wi0108-approval-delegation-expiry-scheduler.test.ts`
 - `scripts/tests/e2e-wi0109-approval-line-template.test.ts`
+- `scripts/tests/e2e-wi0113-approval-template-payroll-conditional-routing.test.ts`

@@ -184,6 +184,8 @@ export type ApprovalLineTemplateEntity = {
   name: string;
   domain: ApprovalDomain;
   approverRoles: string[];
+  payrollGrossPayMinKrw: number | null;
+  payrollGrossPayMaxKrw: number | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -456,6 +458,8 @@ export type CreateApprovalLineTemplateInput = {
   name: string;
   domain: ApprovalDomain;
   approverRoles: string[];
+  payrollGrossPayMinKrw?: number | null;
+  payrollGrossPayMaxKrw?: number | null;
   active?: boolean;
 };
 
@@ -463,6 +467,8 @@ export type UpdateApprovalLineTemplateInput = {
   name?: string;
   domain?: ApprovalDomain;
   approverRoles?: string[];
+  payrollGrossPayMinKrw?: number | null;
+  payrollGrossPayMaxKrw?: number | null;
   active?: boolean;
 };
 

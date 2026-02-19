@@ -35,6 +35,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         name: parsed.data.name,
         domain: parsed.data.domain,
         approverRoles: parsed.data.approverRoles,
+        payrollGrossPayMinKrw: parsed.data.payrollGrossPayMinKrw,
+        payrollGrossPayMaxKrw: parsed.data.payrollGrossPayMaxKrw,
         active: parsed.data.active
       }
     );

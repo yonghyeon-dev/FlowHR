@@ -1,5 +1,5 @@
 owner: approval-agent
-version: 0.3.0
+version: 0.4.0
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
@@ -7,6 +7,7 @@ scope:
     - delegation auto-expiry command with dry-run support
     - multi-organization delegation expiry sweep runner for scheduled cleanup
     - domain approval line template management for role-set based gate override
+    - payroll conditional routing baseline by gross-pay threshold in active template
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
     - multi-step approval chain routing
@@ -50,10 +51,10 @@ api:
       description: List approval line templates by organization/domain/active filter.
     - method: POST
       path: /approval/templates
-      description: Create approval line template.
+      description: Create approval line template (PAYROLL domain can include gross-pay min/max condition).
     - method: PATCH
       path: /approval/templates/{templateId}
-      description: Update approval line template (name/domain/roles/active).
+      description: Update approval line template (name/domain/roles/condition/active).
   operations:
     - name: approval-delegation-expiry-sweep
       description: Scheduled runner executes delegation expire command per organization with dry-run/apply mode.
@@ -76,13 +77,17 @@ db_changes:
       description: Add approval policy/delegation tables and approval role permissions.
     - id: 202602190001_approval_line_template
       description: Add approval line template table and tenant-domain active index.
+    - id: 202602190002_approval_template_payroll_condition
+      description: Add payroll gross-pay min/max columns to approval template for conditional PAYROLL routing.
   backward_compatible: true
-  notes: Additive schema change with approval template table and idempotent role-permission seed.
+  notes: Additive schema change with approval template condition columns and idempotent role-permission seed.
 invariants:
   - Approval policy fallback defaults to manager(manager/payroll_operator) when no record exists.
   - Active approval line template for a given organization+domain is unique.
   - Active template approverRoles (deduped set) must contain at least one role.
-  - Approval gate uses active template role set first; policy single-role fallback applies when no active template exists.
+  - payrollGrossPayMinKrw/payrollGrossPayMaxKrw are only allowed for PAYROLL template domain.
+  - PAYROLL template condition applies when grossPayKrw is within [min,max] (null means open bound); otherwise gate falls back to policy role.
+  - Approval gate uses active and matching template role set first; policy single-role fallback applies when no active/matching template exists.
   - Approval delegation must have endsAt greater than startsAt.
   - Expire command must deactivate only active delegations where endsAt is before expiresBeforeAt.
   - Expire command with dryRun=true must not mutate delegation state.
@@ -106,13 +111,16 @@ test_plan:
     - upsert and read configured policy
     - create and deactivate delegation lifecycle
     - create/list/update approval template lifecycle
+    - payroll template condition gate applies for matching grossPayKrw and falls back for non-matching grossPayKrw
     - reject duplicate active template in same organization+domain with 409
+    - reject payroll condition fields for non-PAYROLL template domain
     - expire delegation dryRun/apply flow
     - expiry sweep dryRun/apply flow across multiple organizations
     - manager non-manager delegation write blocked with 403
   regression:
     - attendance/leave/payroll approval endpoints enforce policy gate
     - approval gate reflects template activation/deactivation changes
+    - payroll confirm gate enforces conditional template route when threshold is matched
   authorization:
     - policy/delegation endpoint permission checks
     - template endpoint permission checks
@@ -146,13 +154,14 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.3.0 adds approval line template APIs (`/approval/templates`) and template-backed approval gate override while keeping existing policy/delegation endpoints backward compatible."
+consumer_impact: "Contract v0.4.0 extends approval template APIs with PAYROLL gross-pay conditional routing while keeping existing policy/delegation/template paths backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
   - work-items/WI-0107-approval-delegation-expiry-automation.md
   - work-items/WI-0108-approval-delegation-expiry-scheduler.md
   - work-items/WI-0109-approval-line-template-baseline.md
+  - work-items/WI-0113-approval-template-payroll-conditional-routing.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent

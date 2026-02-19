@@ -15,6 +15,8 @@ type ApprovalLineTemplateDto = {
   name: string;
   domain: ApprovalDomain;
   approverRoles: string[];
+  payrollGrossPayMinKrw: number | null;
+  payrollGrossPayMaxKrw: number | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -51,6 +53,8 @@ export default function AdminApprovalTemplatesPage() {
   const [name, setName] = useState("attendance-default-line");
   const [domain, setDomain] = useState<ApprovalDomain>("ATTENDANCE");
   const [selectedRoles, setSelectedRoles] = useState<string[]>(["manager"]);
+  const [payrollGrossPayMinKrw, setPayrollGrossPayMinKrw] = useState("");
+  const [payrollGrossPayMaxKrw, setPayrollGrossPayMaxKrw] = useState("");
   const [createAsActive, setCreateAsActive] = useState(true);
 
   const [templates, setTemplates] = useState<ApprovalLineTemplateDto[]>([]);
@@ -177,11 +181,32 @@ export default function AdminApprovalTemplatesPage() {
     if (selectedRoles.length === 0) {
       return;
     }
+    const minRaw = payrollGrossPayMinKrw.trim();
+    const maxRaw = payrollGrossPayMaxKrw.trim();
+    const min = minRaw.length > 0 ? Number(minRaw) : null;
+    const max = maxRaw.length > 0 ? Number(maxRaw) : null;
+    if (domain === "PAYROLL") {
+      if (
+        (minRaw.length > 0 && !Number.isInteger(min)) ||
+        (maxRaw.length > 0 && !Number.isInteger(max))
+      ) {
+        return;
+      }
+      if (min !== null && max !== null && min > max) {
+        return;
+      }
+    }
     await callApi("결재선 템플릿 생성", "POST", "/api/approval/templates", {
       organizationId: organizationId.trim(),
       name: name.trim(),
       domain,
       approverRoles: selectedRoles,
+      ...(domain === "PAYROLL"
+        ? {
+            payrollGrossPayMinKrw: min,
+            payrollGrossPayMaxKrw: max
+          }
+        : {}),
       active: createAsActive
     });
     await loadTemplates();
@@ -252,6 +277,30 @@ export default function AdminApprovalTemplatesPage() {
               ))}
             </select>
           </label>
+          {domain === "PAYROLL" ? (
+            <>
+              <label>
+                Payroll Gross Min (KRW)
+                <input
+                  type="number"
+                  min={0}
+                  value={payrollGrossPayMinKrw}
+                  onChange={(event) => setPayrollGrossPayMinKrw(event.target.value)}
+                  placeholder="비우면 하한 없음"
+                />
+              </label>
+              <label>
+                Payroll Gross Max (KRW)
+                <input
+                  type="number"
+                  min={0}
+                  value={payrollGrossPayMaxKrw}
+                  onChange={(event) => setPayrollGrossPayMaxKrw(event.target.value)}
+                  placeholder="비우면 상한 없음"
+                />
+              </label>
+            </>
+          ) : null}
           <fieldset>
             <legend className="small">승인 가능 role (1개 이상)</legend>
             <div style={{ display: "grid", gap: 8 }}>
@@ -297,6 +346,10 @@ export default function AdminApprovalTemplatesPage() {
                   <span className="muted">
                     [{template.domain}] / roles: {template.approverRoles.join(", ")} /{" "}
                     {template.active ? "ACTIVE" : "INACTIVE"}
+                    {template.domain === "PAYROLL" &&
+                    (template.payrollGrossPayMinKrw !== null || template.payrollGrossPayMaxKrw !== null)
+                      ? ` / gross: ${template.payrollGrossPayMinKrw ?? "-"} ~ ${template.payrollGrossPayMaxKrw ?? "-"}`
+                      : ""}
                   </span>
                   <br />
                   <span className="small">

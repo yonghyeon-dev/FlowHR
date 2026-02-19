@@ -451,6 +451,14 @@ function updateApprovalLineTemplateEntity(
     domain: input.domain !== undefined ? input.domain : existing.domain,
     approverRoles:
       input.approverRoles !== undefined ? [...input.approverRoles] : [...existing.approverRoles],
+    payrollGrossPayMinKrw:
+      input.payrollGrossPayMinKrw !== undefined
+        ? input.payrollGrossPayMinKrw
+        : existing.payrollGrossPayMinKrw,
+    payrollGrossPayMaxKrw:
+      input.payrollGrossPayMaxKrw !== undefined
+        ? input.payrollGrossPayMaxKrw
+        : existing.payrollGrossPayMaxKrw,
     active: input.active !== undefined ? input.active : existing.active,
     updatedAt: new Date()
   };
@@ -675,6 +683,10 @@ export const memoryDataAccess: DataAccess = {
         name: input.name,
         domain: input.domain,
         approverRoles: [...input.approverRoles],
+        payrollGrossPayMinKrw:
+          input.payrollGrossPayMinKrw === undefined ? null : input.payrollGrossPayMinKrw,
+        payrollGrossPayMaxKrw:
+          input.payrollGrossPayMaxKrw === undefined ? null : input.payrollGrossPayMaxKrw,
         active: input.active ?? true,
         createdAt: now,
         updatedAt: now

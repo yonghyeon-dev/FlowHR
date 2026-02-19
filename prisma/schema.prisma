@@ -123,12 +123,14 @@ model ApprovalLineTemplate {
   name           String
   domain         ApprovalDomain
   approverRoles  String[]
+  payrollGrossPayMinKrw Int?
+  payrollGrossPayMaxKrw Int?
   active         Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   @@unique([organizationId, domain, name])
-  @@index([organizationId, domain, active])
+  @@index([organizationId, domain, active, payrollGrossPayMinKrw, payrollGrossPayMaxKrw])
 }
 
 model Role {

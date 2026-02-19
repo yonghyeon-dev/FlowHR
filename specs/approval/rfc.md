@@ -1,4 +1,4 @@
-# RFC: Approval Policy, Delegation, and Template Baseline (WI-0103 + WI-0107 + WI-0108 + WI-0109)
+# RFC: Approval Policy, Delegation, and Template Baseline (WI-0103 + WI-0107 + WI-0108 + WI-0109 + WI-0113)
 
 ## Goal
 
@@ -14,10 +14,11 @@ Provide tenant-level approver role policy and temporary delegation so approval e
 6. Scheduler workflow executes a multi-organization expiry sweep to keep delegation board state clean without manual action.
 7. Approval line template provides a domain-level role-set override, and active template is applied before single-role policy fallback.
 8. Template activation is constrained to one active template per organization and domain to keep gate behavior deterministic.
+9. PAYROLL domain template can define optional gross-pay min/max bounds; when bounds do not match, gate falls back to policy role.
 
 ## Non-Goals
 
-- Multi-step approval line graph and conditional routing.
+- Multi-step approval line graph.
 - Delegation email/notification workflow.
 - External workflow engine integration.
 
@@ -25,10 +26,12 @@ Provide tenant-level approver role policy and temporary delegation so approval e
 
 - Misconfigured policy could block operational approvals.
 - Misconfigured active template could widen or block approver gate unexpectedly.
+- Misconfigured PAYROLL threshold bounds could route approvals to unintended role.
 - Delegation windows with wrong timezone input could cause false denials.
 
 ## Mitigations
 
 - Default fallback policy keeps behavior compatible when no policy is configured.
 - Active-template uniqueness guard (organization+domain) prevents ambiguous gate expectations.
+- PAYROLL condition mismatch is designed to fallback to policy role instead of hard deny.
 - Policy and delegation changes are audited and evented for traceability.
