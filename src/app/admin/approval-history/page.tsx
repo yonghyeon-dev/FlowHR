@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -175,7 +175,7 @@ export default function AdminApprovalHistoryPage() {
     }
 
     const { response, body } = await callApi(
-      "결재 ?�계 ?�력 조회",
+      "寃곗옱 ?④퀎 ?대젰 議고쉶",
       `/api/approval/stage-history?${query.toString()}`
     );
     if (!response.ok || !body || typeof body !== "object") {
@@ -189,16 +189,16 @@ export default function AdminApprovalHistoryPage() {
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>결재 ?�계 ?�력</h1>
+        <h1>寃곗옱 ?④퀎 ?대젰</h1>
         <p>
-          ?�인 게이???��? 결과(?�용/차단, ?�플�?매칭, ?�임 ?�용)�?조회?�니??
-          {showDevTools ? " 개발 모드?�서???�더 기반 Actor 컨텍?�트�??�용?�니??" : ""}
+          ?뱀씤 寃뚯씠???됯? 寃곌낵(?덉슜/李⑤떒, ?쒗뵆由?留ㅼ묶, ?꾩엫 ?곸슜)瑜?議고쉶?⑸땲??
+          {showDevTools ? " 媛쒕컻 紐⑤뱶?먯꽌???ㅻ뜑 湲곕컲 Actor 而⑦뀓?ㅽ듃瑜??ъ슜?⑸땲??" : ""}
         </p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>컨텍?�트/?�터</h2>
+          <h2>而⑦뀓?ㅽ듃/?꾪꽣</h2>
           <label>
             Organization ID
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
@@ -264,16 +264,16 @@ export default function AdminApprovalHistoryPage() {
           </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadHistory()} disabled={!organizationId.trim()}>
-              ?�력 조회
+              ?대젰 議고쉶
             </button>
           </div>
-          {supabaseSessionError ? <p className="small fail">Session ?�류: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">Session ?ㅻ쪟: {supabaseSessionError}</p> : null}
         </article>
 
         <article className="panel">
-          <h2>조회 결과 ({history.length})</h2>
+          <h2>議고쉶 寃곌낵 ({history.length})</h2>
           {history.length === 0 ? (
-            <p className="small">조회???�력???�습?�다.</p>
+            <p className="small">議고쉶???대젰???놁뒿?덈떎.</p>
           ) : (
             <ul className="simple-list">
               {history.map((entry) => (
@@ -281,9 +281,9 @@ export default function AdminApprovalHistoryPage() {
                   <strong>{entry.domain}</strong> / {entry.targetEntityType}:{entry.targetEntityId}
                   <br />
                   <span className={entry.allowed ? "ok" : "fail"}>
-                    {entry.allowed ? "?�용" : "차단"} ({entry.resolution})
+                    {entry.allowed ? "?덉슜" : "李⑤떒"} ({entry.resolution})
                   </span>
-                  {" · "}required [{entry.requiredRoles.join(", ")}] / fallback {entry.fallbackRole}
+                  {" 쨌 "}required [{entry.requiredRoles.join(", ")}] / fallback {entry.fallbackRole}
                   <br />
                   actor {entry.actorRole}
                   {entry.actorId ? ` (${entry.actorId})` : ""} / stage {entry.stageIndex}({entry.stageLabel})
@@ -307,33 +307,34 @@ export default function AdminApprovalHistoryPage() {
         </article>
 
         <article className="panel">
-          <h2>?�청 로그</h2>
+          <h2>?붿껌 濡쒓렇</h2>
           <p className="small">
-            �?{stats.total}�?· ?�공 {stats.success}�?· ?�패 {stats.fail}�?            {pendingLabel ? ` · 진행�?${pendingLabel}` : ""}
+            珥?{stats.total}嫄?쨌 ?깃났 {stats.success}嫄?쨌 ?ㅽ뙣 {stats.fail}嫄?            {pendingLabel ? ` 쨌 吏꾪뻾以?${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">?�직 API ?�출 ?�력???�습?�다.</p>
+            <p className="small">?꾩쭅 API ?몄텧 ?대젰???놁뒿?덈떎.</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} ·{" "}
-                  {log.status} · {log.at}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} 쨌{" "}
+                  {log.status} 쨌 {log.at}
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
             <Link href="/admin/approval-executions" className="btn btn-secondary">
-              ���� ���� ��Ȳ
+              결재 실행 현황
             </Link>
             <Link href="/admin/approval-templates" className="btn btn-secondary">
-              결재???�플릿으�?            </Link>
+              寃곗옱???쒗뵆由우쑝濡?            </Link>
             <Link href="/admin" className="btn btn-secondary">
-              관리자 ?�으�?            </Link>
+              愿由ъ옄 ?덉쑝濡?            </Link>
           </div>
         </article>
       </section>
     </main>
   );
 }
+
