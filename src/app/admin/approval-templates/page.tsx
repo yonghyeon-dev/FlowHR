@@ -15,6 +15,12 @@ type ApprovalLineTemplateDto = {
   name: string;
   domain: ApprovalDomain;
   approverRoles: string[];
+  approvalStages: Array<{
+    stageIndex: number;
+    label: string;
+    approverRoles: string[];
+    minApprovals: number;
+  }>;
   payrollGrossPayMinKrw: number | null;
   payrollGrossPayMaxKrw: number | null;
   active: boolean;
@@ -37,6 +43,12 @@ type ApprovalGatePreviewDto = {
     id: string;
     name: string;
     approverRoles: string[];
+    approvalStages: Array<{
+      stageIndex: number;
+      label: string;
+      approverRoles: string[];
+      minApprovals: number;
+    }>;
     payrollGrossPayMinKrw: number | null;
     payrollGrossPayMaxKrw: number | null;
     active: boolean;
@@ -458,7 +470,8 @@ export default function AdminApprovalTemplatesPage() {
                 <ul className="simple-list">
                   {gatePreview.matchedTemplates.map((template) => (
                     <li key={template.id}>
-                      {template.name} / roles: {template.approverRoles.join(", ")} / gross{" "}
+                      {template.name} / roles: {template.approverRoles.join(", ")} / stages:{" "}
+                      {template.approvalStages.length} / gross{" "}
                       {template.payrollGrossPayMinKrw ?? "-"} ~ {template.payrollGrossPayMaxKrw ?? "-"}
                     </li>
                   ))}
@@ -494,6 +507,7 @@ export default function AdminApprovalTemplatesPage() {
                   <strong>{template.name}</strong>{" "}
                   <span className="muted">
                     [{template.domain}] / roles: {template.approverRoles.join(", ")} /{" "}
+                    stages: {template.approvalStages.length} /{" "}
                     {template.active ? "ACTIVE" : "INACTIVE"}
                     {template.domain === "PAYROLL" &&
                     (template.payrollGrossPayMinKrw !== null || template.payrollGrossPayMaxKrw !== null)

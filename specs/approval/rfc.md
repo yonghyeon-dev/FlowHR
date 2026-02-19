@@ -1,4 +1,4 @@
-# RFC: Approval Policy, Delegation, and Template Baseline (WI-0103 + WI-0107 + WI-0108 + WI-0109 + WI-0113 + WI-0115 + WI-0116)
+# RFC: Approval Policy, Delegation, and Template Baseline (WI-0103 + WI-0107 + WI-0108 + WI-0109 + WI-0113 + WI-0115 + WI-0116 + WI-0117)
 
 ## Goal
 
@@ -17,6 +17,7 @@ Provide tenant-level approver role policy and temporary delegation so approval e
 9. PAYROLL domain template can define optional gross-pay min/max bounds; when bounds do not match, gate falls back to policy role.
 10. Gate preview endpoint provides read-only simulation output using the same template/policy/delegation resolution logic as runtime gate.
 11. Runtime gate evaluations for attendance/leave/payroll decisions persist stage-history rows for deny/allow troubleshooting and policy audits.
+12. Approval template model supports ordered multi-stage definitions, while runtime gate remains stage-1 compatible until full multi-step execution is introduced.
 
 ## Non-Goals
 

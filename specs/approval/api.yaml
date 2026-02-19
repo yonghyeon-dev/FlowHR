@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.6.0
+  version: 0.7.0
 paths:
   /approval/policy:
     get:
@@ -29,7 +29,7 @@ paths:
   /approval/policy/gate-preview:
     post:
       summary: Preview approval gate result without state mutation
-      description: Simulates policy/template/delegation evaluation for given domain and actor context.
+      description: Simulates policy/template/delegation evaluation for given domain and actor context. Matched template payload includes `approvalStages`.
       responses:
         "200":
           description: Gate preview result
@@ -170,6 +170,7 @@ paths:
   /approval/templates:
     get:
       summary: List approval line templates
+      description: Returns template stage definitions in `approvalStages`.
       parameters:
         - in: query
           name: organizationId
@@ -194,7 +195,7 @@ paths:
           description: Permission denied
     post:
       summary: Create approval line template
-      description: PAYROLL domain templates may include optional `payrollGrossPayMinKrw` / `payrollGrossPayMaxKrw` conditions.
+      description: PAYROLL domain templates may include optional `payrollGrossPayMinKrw` / `payrollGrossPayMaxKrw` conditions. Supports optional multi-stage definition payload `approvalStages`.
       responses:
         "201":
           description: Template created
@@ -207,7 +208,7 @@ paths:
   /approval/templates/{templateId}:
     patch:
       summary: Update approval line template
-      description: Supports updating optional PAYROLL gross-pay condition bounds.
+      description: Supports updating optional PAYROLL gross-pay condition bounds and optional `approvalStages`.
       parameters:
         - in: path
           name: templateId

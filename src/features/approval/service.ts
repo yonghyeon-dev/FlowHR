@@ -78,7 +78,8 @@ type CreateApprovalLineTemplateInput = {
   organizationId?: string;
   name: string;
   domain: ApprovalDomain;
-  approverRoles: string[];
+  approverRoles?: string[];
+  approvalStages?: ApprovalTemplateStageInput[];
   payrollGrossPayMinKrw?: number | null;
   payrollGrossPayMaxKrw?: number | null;
   active?: boolean;
@@ -96,9 +97,17 @@ type UpdateApprovalLineTemplateInput = {
   name?: string;
   domain?: ApprovalDomain;
   approverRoles?: string[];
+  approvalStages?: ApprovalTemplateStageInput[];
   payrollGrossPayMinKrw?: number | null;
   payrollGrossPayMaxKrw?: number | null;
   active?: boolean;
+};
+
+type ApprovalTemplateStageInput = {
+  stageIndex: number;
+  label?: string;
+  approverRoles: string[];
+  minApprovals?: number;
 };
 
 type PreviewApprovalPolicyGateInput = {
@@ -179,6 +188,129 @@ function normalizeApproverRoles(input: string[]): string[] {
     throw new ServiceError(400, "approverRoles must contain at least one role");
   }
   return roles;
+}
+
+function normalizeApprovalTemplateStages(input: {
+  approverRoles?: string[];
+  approvalStages?: ApprovalTemplateStageInput[];
+  fallbackApproverRoles?: string[];
+  fallbackApprovalStages?: ApprovalTemplateStageInput[];
+}): {
+  approverRoles: string[];
+  approvalStages: Array<{
+    stageIndex: number;
+    label: string;
+    approverRoles: string[];
+    minApprovals: number;
+  }>;
+} {
+  const stageInput = input.approvalStages;
+  if (!stageInput || stageInput.length === 0) {
+    const fallbackApprovalStages = (input.fallbackApprovalStages ?? [])
+      .map((stage) => ({
+        stageIndex: stage.stageIndex,
+        label: stage.label?.trim() || `stage-${stage.stageIndex}`,
+        approverRoles: [...stage.approverRoles],
+        minApprovals: Math.max(1, Math.min(stage.minApprovals ?? 1, stage.approverRoles.length))
+      }))
+      .sort((left, right) => left.stageIndex - right.stageIndex);
+
+    if (input.approverRoles !== undefined) {
+      const baseApproverRoles = normalizeApproverRoles(input.approverRoles);
+      if (fallbackApprovalStages.length > 0) {
+        const firstStage = fallbackApprovalStages[0];
+        firstStage.approverRoles = baseApproverRoles;
+        firstStage.minApprovals = Math.max(
+          1,
+          Math.min(firstStage.minApprovals ?? 1, baseApproverRoles.length)
+        );
+        return {
+          approverRoles: baseApproverRoles,
+          approvalStages: fallbackApprovalStages
+        };
+      }
+      return {
+        approverRoles: baseApproverRoles,
+        approvalStages: [
+          {
+            stageIndex: 1,
+            label: "stage-1",
+            approverRoles: baseApproverRoles,
+            minApprovals: 1
+          }
+        ]
+      };
+    }
+
+    if (fallbackApprovalStages.length > 0) {
+      return {
+        approverRoles: [...fallbackApprovalStages[0].approverRoles],
+        approvalStages: fallbackApprovalStages
+      };
+    }
+
+    const baseApproverRoles = normalizeApproverRoles(input.fallbackApproverRoles ?? []);
+    return {
+      approverRoles: baseApproverRoles,
+      approvalStages: [
+        {
+          stageIndex: 1,
+          label: "stage-1",
+          approverRoles: baseApproverRoles,
+          minApprovals: 1
+        }
+      ]
+    };
+  }
+
+  const normalized = stageInput.map((stage) => {
+    if (!Number.isInteger(stage.stageIndex) || stage.stageIndex < 1) {
+      throw new ServiceError(400, "approval stage index must be an integer greater than or equal to 1");
+    }
+    const approverRoles = normalizeApproverRoles(stage.approverRoles);
+    const label = stage.label?.trim() || `stage-${stage.stageIndex}`;
+    if (label.length > 80) {
+      throw new ServiceError(400, "approval stage label must be 80 characters or fewer");
+    }
+    const minApprovals = stage.minApprovals ?? 1;
+    if (!Number.isInteger(minApprovals) || minApprovals < 1) {
+      throw new ServiceError(400, "approval stage minApprovals must be an integer greater than or equal to 1");
+    }
+    if (minApprovals > approverRoles.length) {
+      throw new ServiceError(
+        400,
+        "approval stage minApprovals must be less than or equal to approverRoles length"
+      );
+    }
+    return {
+      stageIndex: stage.stageIndex,
+      label,
+      approverRoles,
+      minApprovals
+    };
+  });
+
+  normalized.sort((left, right) => left.stageIndex - right.stageIndex);
+  if (normalized.length > 5) {
+    throw new ServiceError(400, "approval stages must contain at most 5 stages");
+  }
+
+  const seen = new Set<number>();
+  for (let index = 0; index < normalized.length; index += 1) {
+    const stage = normalized[index];
+    if (seen.has(stage.stageIndex)) {
+      throw new ServiceError(400, "approval stage index must be unique");
+    }
+    seen.add(stage.stageIndex);
+    if (stage.stageIndex !== index + 1) {
+      throw new ServiceError(400, "approval stage indexes must be sequential starting from 1");
+    }
+  }
+
+  return {
+    approverRoles: normalized[0].approverRoles,
+    approvalStages: normalized
+  };
 }
 
 function toPolicyFallback(organizationId: string): ApprovalPolicyEntity {
@@ -440,6 +572,12 @@ export async function previewApprovalPolicyGate(
       name: string;
       domain: ApprovalDomain;
       approverRoles: string[];
+      approvalStages: Array<{
+        stageIndex: number;
+        label: string;
+        approverRoles: string[];
+        minApprovals: number;
+      }>;
       payrollGrossPayMinKrw: number | null;
       payrollGrossPayMaxKrw: number | null;
       active: boolean;
@@ -538,6 +676,12 @@ export async function previewApprovalPolicyGate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      approvalStages: template.approvalStages.map((stage) => ({
+        stageIndex: stage.stageIndex,
+        label: stage.label,
+        approverRoles: [...stage.approverRoles],
+        minApprovals: stage.minApprovals
+      })),
       payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
       payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
@@ -717,7 +861,11 @@ export async function createApprovalLineTemplate(
   const actor = requireActor(context);
   await requirePermission(context, Permissions.approvalPolicyWrite, "approval policy write requires permission");
   const organizationId = await resolveOrganizationId(context, input.organizationId);
-  const approverRoles = normalizeApproverRoles(input.approverRoles);
+  const stageConfig = normalizeApprovalTemplateStages({
+    approverRoles: input.approverRoles,
+    approvalStages: input.approvalStages
+  });
+  const approverRoles = stageConfig.approverRoles;
   const payrollCondition = normalizePayrollTemplateCondition({
     domain: input.domain,
     payrollGrossPayMinKrw: input.payrollGrossPayMinKrw,
@@ -744,6 +892,7 @@ export async function createApprovalLineTemplate(
     name: input.name.trim(),
     domain: input.domain,
     approverRoles,
+    approvalStages: stageConfig.approvalStages,
     payrollGrossPayMinKrw: payrollCondition.payrollGrossPayMinKrw,
     payrollGrossPayMaxKrw: payrollCondition.payrollGrossPayMaxKrw,
     active
@@ -760,6 +909,7 @@ export async function createApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      approvalStages: template.approvalStages,
       payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
       payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
@@ -777,6 +927,7 @@ export async function createApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      approvalStages: template.approvalStages,
       payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
       payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
@@ -804,8 +955,13 @@ export async function updateApprovalLineTemplate(
 
   const nextDomain = input.domain ?? existing.domain;
   const nextActive = input.active ?? existing.active;
-  const nextApproverRoles =
-    input.approverRoles !== undefined ? normalizeApproverRoles(input.approverRoles) : existing.approverRoles;
+  const stageConfig = normalizeApprovalTemplateStages({
+    approverRoles: input.approverRoles,
+    approvalStages: input.approvalStages,
+    fallbackApproverRoles: existing.approverRoles,
+    fallbackApprovalStages: existing.approvalStages
+  });
+  const nextApproverRoles = stageConfig.approverRoles;
   const nextPayrollGrossPayMinKrw =
     nextDomain === "PAYROLL"
       ? input.payrollGrossPayMinKrw !== undefined
@@ -842,7 +998,9 @@ export async function updateApprovalLineTemplate(
   const template = await context.dataAccess.approvals.updateTemplate(templateId, {
     ...(input.name !== undefined ? { name: input.name.trim() } : {}),
     ...(input.domain !== undefined ? { domain: input.domain } : {}),
-    ...(input.approverRoles !== undefined ? { approverRoles: nextApproverRoles } : {}),
+    ...(input.approverRoles !== undefined || input.approvalStages !== undefined
+      ? { approverRoles: nextApproverRoles, approvalStages: stageConfig.approvalStages }
+      : {}),
     ...(input.payrollGrossPayMinKrw !== undefined || nextDomain !== existing.domain
       ? { payrollGrossPayMinKrw: nextPayrollCondition.payrollGrossPayMinKrw }
       : {}),
@@ -863,6 +1021,7 @@ export async function updateApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      approvalStages: template.approvalStages,
       payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
       payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active
@@ -880,6 +1039,7 @@ export async function updateApprovalLineTemplate(
       name: template.name,
       domain: template.domain,
       approverRoles: template.approverRoles,
+      approvalStages: template.approvalStages,
       payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
       payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
       active: template.active

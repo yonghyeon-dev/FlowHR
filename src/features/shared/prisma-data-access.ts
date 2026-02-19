@@ -5,6 +5,7 @@ import type {
   ApprovalDomain,
   ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
+  ApprovalTemplateStageEntity,
   ApprovalStageHistoryEntity,
   ApprovalStore,
   AuditLogEntity,
@@ -328,19 +329,97 @@ function toApprovalLineTemplateEntity(record: {
   name: string;
   domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
   approverRoles: string[];
+  approvalStagesJson: Prisma.JsonValue;
   payrollGrossPayMinKrw: number | null;
   payrollGrossPayMaxKrw: number | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): ApprovalLineTemplateEntity {
+  const approvalStages = toApprovalTemplateStages(record.approvalStagesJson, record.approverRoles);
   return {
     ...record,
     domain: record.domain as ApprovalDomain,
     approverRoles: [...record.approverRoles],
+    approvalStages,
     payrollGrossPayMinKrw: record.payrollGrossPayMinKrw,
     payrollGrossPayMaxKrw: record.payrollGrossPayMaxKrw
   };
+}
+
+function toApprovalTemplateStages(
+  value: Prisma.JsonValue,
+  fallbackApproverRoles: string[]
+): ApprovalTemplateStageEntity[] {
+  if (!Array.isArray(value)) {
+    return [
+      {
+        stageIndex: 1,
+        label: "stage-1",
+        approverRoles: [...fallbackApproverRoles],
+        minApprovals: 1
+      }
+    ];
+  }
+
+  const rows: ApprovalTemplateStageEntity[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      continue;
+    }
+    const stageIndexValue = (item as Record<string, unknown>).stageIndex;
+    const labelValue = (item as Record<string, unknown>).label;
+    const approverRolesValue = (item as Record<string, unknown>).approverRoles;
+    const minApprovalsValue = (item as Record<string, unknown>).minApprovals;
+    if (
+      typeof stageIndexValue !== "number" ||
+      !Number.isInteger(stageIndexValue) ||
+      stageIndexValue < 1
+    ) {
+      continue;
+    }
+    if (typeof labelValue !== "string" || labelValue.trim().length === 0) {
+      continue;
+    }
+    if (!Array.isArray(approverRolesValue)) {
+      continue;
+    }
+    const approverRoles = approverRolesValue
+      .filter((role): role is string => typeof role === "string")
+      .map((role) => role.trim())
+      .filter((role) => role.length > 0);
+    if (approverRoles.length === 0) {
+      continue;
+    }
+    if (
+      typeof minApprovalsValue !== "number" ||
+      !Number.isInteger(minApprovalsValue) ||
+      minApprovalsValue < 1 ||
+      minApprovalsValue > approverRoles.length
+    ) {
+      continue;
+    }
+    rows.push({
+      stageIndex: stageIndexValue,
+      label: labelValue.trim(),
+      approverRoles,
+      minApprovals: minApprovalsValue
+    });
+  }
+
+  if (rows.length === 0) {
+    return [
+      {
+        stageIndex: 1,
+        label: "stage-1",
+        approverRoles: [...fallbackApproverRoles],
+        minApprovals: 1
+      }
+    ];
+  }
+
+  rows.sort((left, right) => left.stageIndex - right.stageIndex);
+  return rows;
 }
 
 function toApprovalStageHistoryEntity(record: {
@@ -732,12 +811,23 @@ const approvals: ApprovalStore = {
   },
 
   async createTemplate(input: CreateApprovalLineTemplateInput) {
+    const approvalStagesJson = (
+      (input.approvalStages ?? [
+        {
+          stageIndex: 1,
+          label: "stage-1",
+          approverRoles: [...input.approverRoles],
+          minApprovals: 1
+        }
+      ]) as unknown
+    ) as Prisma.InputJsonValue;
     const record = await prisma.approvalLineTemplate.create({
       data: {
         organizationId: input.organizationId,
         name: input.name,
         domain: input.domain,
         approverRoles: input.approverRoles,
+        approvalStagesJson,
         payrollGrossPayMinKrw:
           input.payrollGrossPayMinKrw === undefined ? null : input.payrollGrossPayMinKrw,
         payrollGrossPayMaxKrw:
@@ -756,12 +846,17 @@ const approvals: ApprovalStore = {
   },
 
   async updateTemplate(id: string, input: UpdateApprovalLineTemplateInput) {
+    const approvalStagesJson =
+      input.approvalStages !== undefined
+        ? ((input.approvalStages as unknown) as Prisma.InputJsonValue)
+        : undefined;
     const record = await prisma.approvalLineTemplate.update({
       where: { id },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.domain !== undefined ? { domain: input.domain } : {}),
         ...(input.approverRoles !== undefined ? { approverRoles: input.approverRoles } : {}),
+        ...(approvalStagesJson !== undefined ? { approvalStagesJson } : {}),
         ...(input.payrollGrossPayMinKrw !== undefined
           ? { payrollGrossPayMinKrw: input.payrollGrossPayMinKrw }
           : {}),

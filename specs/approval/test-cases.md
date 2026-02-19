@@ -1,4 +1,4 @@
-# Approval Test Cases (v0.6.0)
+# Approval Test Cases (v0.7.0)
 
 ## Positive
 
@@ -17,6 +17,8 @@
 13. Runtime attendance gate writes DENIED stage-history when non-approver actor attempts approval.
 14. Runtime attendance gate writes PRIVILEGED_BYPASS stage-history when admin actor approves.
 15. Admin/manager reads stage-history with domain/target/resolution filters and receives deterministic ordering.
+16. Admin creates multi-stage template and API persists ordered stage payload.
+17. Admin updates multi-stage template stage-1 role, and runtime gate expected role switches to updated stage-1.
 
 ## Negative
 
@@ -30,6 +32,7 @@
 8. Non-PAYROLL template create/update with payroll gross-pay condition fields is rejected with `400`.
 9. Gate preview rejects `payrollGrossPayKrw` payload when domain is not `PAYROLL`.
 10. Stage-history list query rejects invalid `resolution`, datetime, or out-of-range `limit`.
+11. Template create/update rejects duplicate stage index or `minApprovals > approverRoles.length`.
 
 ## Regression
 
@@ -42,6 +45,7 @@
 7. Payroll confirm gate falls back to policy role when active PAYROLL template condition does not match.
 8. Gate preview decision remains consistent with runtime gate role resolution.
 9. Stage-history listing endpoint remains read-only and does not mutate approval policy/delegation/template state.
+10. Stage-enabled template remains backward compatible with stage-1 runtime gate behavior.
 
 ## Evidence
 
@@ -52,3 +56,4 @@
 - `scripts/tests/e2e-wi0113-approval-template-payroll-conditional-routing.test.ts`
 - `scripts/tests/e2e-wi0115-approval-gate-preview.test.ts`
 - `scripts/tests/e2e-wi0116-approval-stage-history-baseline.test.ts`
+- `scripts/tests/e2e-wi0117-approval-template-multi-stage-baseline.test.ts`

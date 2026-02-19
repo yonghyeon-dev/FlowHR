@@ -1,5 +1,5 @@
 owner: approval-agent
-version: 0.6.0
+version: 0.7.0
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
@@ -8,6 +8,7 @@ scope:
     - multi-organization delegation expiry sweep runner for scheduled cleanup
     - domain approval line template management for role-set based gate override
     - payroll conditional routing baseline by gross-pay threshold in active template
+    - multi-stage template stage-definition model (ordered stage roles/min approvals)
     - approval policy gate preview simulation API for policy/template/delegation pre-check
     - runtime gate stage-history persistence for attendance/leave/payroll decision endpoints
     - approval stage-history read API for gate troubleshooting
@@ -21,7 +22,7 @@ entities:
   - name: ApprovalDelegation
     description: Time-bounded delegation from delegator role to delegate actor.
   - name: ApprovalLineTemplate
-    description: Organization-level domain approval role-set template with active flag.
+    description: Organization-level domain approval template with stage definitions and active flag.
   - name: ApprovalStageHistory
     description: Persisted policy-gate evaluation result per target entity for audit/troubleshooting.
 api:
@@ -92,12 +93,17 @@ db_changes:
       description: Add payroll gross-pay min/max columns to approval template for conditional PAYROLL routing.
     - id: 202602190004_approval_stage_history_baseline
       description: Add approval stage history table for runtime gate audit records.
+    - id: 202602190005_approval_template_multi_stage
+      description: Add JSON stage-definition payload for approval template multi-stage routing model.
   backward_compatible: true
-  notes: Additive schema changes with approval template condition columns, stage history table, and idempotent role-permission seed.
+  notes: Additive schema changes with template condition/stage payload, stage history table, and idempotent role-permission seed.
 invariants:
   - Approval policy fallback defaults to manager(manager/payroll_operator) when no record exists.
   - Active approval line template for a given organization+domain is unique.
   - Active template approverRoles (deduped set) must contain at least one role.
+  - approvalStages must have sequential unique indexes starting at 1 and maximum 5 stages.
+  - Each approval stage minApprovals must be between 1 and approverRoles length.
+  - Runtime gate compatibility mode must use stage-1 approverRoles as template approverRoles.
   - payrollGrossPayMinKrw/payrollGrossPayMaxKrw are only allowed for PAYROLL template domain.
   - PAYROLL template condition applies when grossPayKrw is within [min,max] (null means open bound); otherwise gate falls back to policy role.
   - Approval gate uses active and matching template role set first; policy single-role fallback applies when no active/matching template exists.
@@ -130,6 +136,7 @@ test_plan:
     - create/list/update approval template lifecycle
     - payroll template condition gate applies for matching grossPayKrw and falls back for non-matching grossPayKrw
     - gate preview returns expected roles/template match/delegation result for matched/non-matched payroll conditions
+    - template create/update/list supports multi-stage payload and stage-1 compatibility mapping
     - stage-history query returns deny/allow gate evaluations for attendance/leave/payroll target entities
     - reject duplicate active template in same organization+domain with 409
     - reject payroll condition fields for non-PAYROLL template domain
@@ -141,6 +148,7 @@ test_plan:
     - approval gate reflects template activation/deactivation changes
     - payroll confirm gate enforces conditional template route when threshold is matched
     - gate preview remains consistent with runtime gate decision outcomes
+    - stage-enabled template keeps runtime gate behavior via stage-1 role mapping
     - stage-history records keep deny/allow ordering with required roles and resolution labels
   authorization:
     - policy/delegation endpoint permission checks
@@ -178,7 +186,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.6.0 adds persisted approval stage-history and `GET /approval/stage-history` while keeping existing policy/delegation/template and runtime gate behavior backward compatible."
+consumer_impact: "Contract v0.7.0 adds multi-stage template definition payload (`approvalStages`) while preserving existing runtime gate behavior through stage-1 compatibility mapping."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
@@ -188,6 +196,7 @@ references:
   - work-items/WI-0113-approval-template-payroll-conditional-routing.md
   - work-items/WI-0115-approval-gate-preview.md
   - work-items/WI-0116-approval-stage-history-baseline.md
+  - work-items/WI-0117-approval-template-multi-stage-baseline.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent

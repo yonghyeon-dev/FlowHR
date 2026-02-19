@@ -3,6 +3,7 @@ import type {
   ApprovalDomain,
   ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
+  ApprovalTemplateStageEntity,
   ApprovalStageHistoryEntity,
   AuditLogEntity,
   AttendanceRecordEntity,
@@ -296,6 +297,12 @@ function cloneApprovalLineTemplate(entity: ApprovalLineTemplateEntity): Approval
   return {
     ...entity,
     approverRoles: [...entity.approverRoles],
+    approvalStages: entity.approvalStages.map((stage) => ({
+      stageIndex: stage.stageIndex,
+      label: stage.label,
+      approverRoles: [...stage.approverRoles],
+      minApprovals: stage.minApprovals
+    })),
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -459,12 +466,27 @@ function updateApprovalLineTemplateEntity(
   existing: ApprovalLineTemplateEntity,
   input: UpdateApprovalLineTemplateInput
 ): ApprovalLineTemplateEntity {
+  const approvalStages: ApprovalTemplateStageEntity[] =
+    input.approvalStages !== undefined
+      ? input.approvalStages.map((stage) => ({
+          stageIndex: stage.stageIndex,
+          label: stage.label,
+          approverRoles: [...stage.approverRoles],
+          minApprovals: stage.minApprovals
+        }))
+      : existing.approvalStages.map((stage) => ({
+          stageIndex: stage.stageIndex,
+          label: stage.label,
+          approverRoles: [...stage.approverRoles],
+          minApprovals: stage.minApprovals
+        }));
   return {
     ...existing,
     name: input.name !== undefined ? input.name : existing.name,
     domain: input.domain !== undefined ? input.domain : existing.domain,
     approverRoles:
       input.approverRoles !== undefined ? [...input.approverRoles] : [...existing.approverRoles],
+    approvalStages,
     payrollGrossPayMinKrw:
       input.payrollGrossPayMinKrw !== undefined
         ? input.payrollGrossPayMinKrw
@@ -691,12 +713,29 @@ export const memoryDataAccess: DataAccess = {
 
     async createTemplate(input: CreateApprovalLineTemplateInput) {
       const now = new Date();
+      const approvalStages =
+        input.approvalStages && input.approvalStages.length > 0
+          ? input.approvalStages.map((stage) => ({
+              stageIndex: stage.stageIndex,
+              label: stage.label,
+              approverRoles: [...stage.approverRoles],
+              minApprovals: stage.minApprovals
+            }))
+          : [
+              {
+                stageIndex: 1,
+                label: "stage-1",
+                approverRoles: [...input.approverRoles],
+                minApprovals: 1
+              }
+            ];
       const entity: ApprovalLineTemplateEntity = {
         id: nextId("ATPL"),
         organizationId: input.organizationId,
         name: input.name,
         domain: input.domain,
         approverRoles: [...input.approverRoles],
+        approvalStages,
         payrollGrossPayMinKrw:
           input.payrollGrossPayMinKrw === undefined ? null : input.payrollGrossPayMinKrw,
         payrollGrossPayMaxKrw:

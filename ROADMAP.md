@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-19
-> **Current version**: 0.1.2 (Approval Stage History Baseline)
+> **Current version**: 0.1.3 (Approval Multi-Stage Template Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -153,10 +153,11 @@
 - WI-0114 휴가 정책 제약 고도화 (`minNoticeDays`, `maxConsecutiveDays` + Admin UI + e2e)
 - WI-0115 결재 게이트 프리뷰 API/UX (`/approval/policy/gate-preview` + `/admin/approval-templates` 프리뷰 패널 + e2e)
 - WI-0116 결재 단계 이력 baseline (`ApprovalStageHistory` 모델 + `/approval/stage-history` API + `/admin/approval-history` UI + e2e)
+- WI-0117 결재선 템플릿 다단계 모델 baseline (`approvalStages` payload + stage-1 게이트 호환 + e2e)
 
 ### 진행 중
 
-- 다음: 결재선 템플릿 고도화(다단계 라우팅 RFC + 단계별 승인/완료 모델)
+- 다음: 결재선 실행 모델 고도화(단계별 승인 액션/완료 상태머신 + stage history 연계)
 - 다음: 휴가 고도화(연차촉진/사내 공지 플로우 정책) 회귀 확장
 
 ### 현재 아키텍처

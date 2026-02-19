@@ -124,6 +124,7 @@ model ApprovalLineTemplate {
   name           String
   domain         ApprovalDomain
   approverRoles  String[]
+  approvalStagesJson Json
   payrollGrossPayMinKrw Int?
   payrollGrossPayMaxKrw Int?
   active         Boolean        @default(true)

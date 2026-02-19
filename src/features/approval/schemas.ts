@@ -51,6 +51,13 @@ const approverRolesSchema = z
   .max(5)
   .refine((value) => new Set(value).size === value.length, "approverRoles must not contain duplicates");
 
+const approvalTemplateStageSchema = z.object({
+  stageIndex: z.number().int().min(1).max(5),
+  label: z.string().min(1).max(80).optional(),
+  approverRoles: approverRolesSchema,
+  minApprovals: z.number().int().min(1).max(5).optional()
+});
+
 const payrollGrossPayBoundSchema = z.number().int().nonnegative();
 
 export const listApprovalLineTemplatesQuerySchema = z.object({
@@ -95,12 +102,20 @@ export const createApprovalLineTemplateSchema = z
     organizationId: z.string().min(1).optional(),
     name: z.string().min(1).max(120),
     domain: approvalDomainSchema,
-    approverRoles: approverRolesSchema,
+    approverRoles: approverRolesSchema.optional(),
+    approvalStages: z.array(approvalTemplateStageSchema).min(1).max(5).optional(),
     payrollGrossPayMinKrw: payrollGrossPayBoundSchema.nullable().optional(),
     payrollGrossPayMaxKrw: payrollGrossPayBoundSchema.nullable().optional(),
     active: z.boolean().optional()
   })
   .superRefine((value, ctx) => {
+    if (!value.approverRoles && !value.approvalStages) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "either approverRoles or approvalStages is required",
+        path: ["approverRoles"]
+      });
+    }
     const hasPayrollCondition =
       value.payrollGrossPayMinKrw !== undefined ||
       value.payrollGrossPayMaxKrw !== undefined;
@@ -124,6 +139,28 @@ export const createApprovalLineTemplateSchema = z
         path: ["payrollGrossPayMaxKrw"]
       });
     }
+    if (value.approvalStages) {
+      const indexSet = new Set<number>();
+      for (const stage of value.approvalStages) {
+        if (indexSet.has(stage.stageIndex)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "approval stage index must be unique",
+            path: ["approvalStages"]
+          });
+          break;
+        }
+        indexSet.add(stage.stageIndex);
+        if (stage.minApprovals !== undefined && stage.minApprovals > stage.approverRoles.length) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "approval stage minApprovals must be less than or equal to approverRoles length",
+            path: ["approvalStages"]
+          });
+          break;
+        }
+      }
+    }
   });
 
 export const expireApprovalDelegationsSchema = z.object({
@@ -145,6 +182,7 @@ export const updateApprovalLineTemplateSchema = z
     name: z.string().min(1).max(120).optional(),
     domain: approvalDomainSchema.optional(),
     approverRoles: approverRolesSchema.optional(),
+    approvalStages: z.array(approvalTemplateStageSchema).min(1).max(5).optional(),
     payrollGrossPayMinKrw: payrollGrossPayBoundSchema.nullable().optional(),
     payrollGrossPayMaxKrw: payrollGrossPayBoundSchema.nullable().optional(),
     active: z.boolean().optional()
@@ -162,5 +200,27 @@ export const updateApprovalLineTemplateSchema = z
         message: "payrollGrossPayMaxKrw must be greater than or equal to payrollGrossPayMinKrw",
         path: ["payrollGrossPayMaxKrw"]
       });
+    }
+    if (value.approvalStages) {
+      const indexSet = new Set<number>();
+      for (const stage of value.approvalStages) {
+        if (indexSet.has(stage.stageIndex)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "approval stage index must be unique",
+            path: ["approvalStages"]
+          });
+          break;
+        }
+        indexSet.add(stage.stageIndex);
+        if (stage.minApprovals !== undefined && stage.minApprovals > stage.approverRoles.length) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "approval stage minApprovals must be less than or equal to approverRoles length",
+            path: ["approvalStages"]
+          });
+          break;
+        }
+      }
     }
   });
