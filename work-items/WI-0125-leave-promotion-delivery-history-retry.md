@@ -41,15 +41,17 @@ Production operations require delivery traceability and targeted retry without r
 | List/read promotion delivery history | Allow | Deny | Allow | Deny | Allow |
 | Retry promotion delivery recipients | Allow | Deny | Allow | Deny | Allow |
 
-## Data and API Changes
+## Data Changes
 
 - DB schema change:
+  - migration:
+    - `202602190008_leave_promotion_delivery_history`
   - `LeavePromotionDelivery`
   - `LeavePromotionDeliveryRecipient`
-  - enums:
-    - `LeavePromotionDeliveryChannel`
-    - `LeavePromotionDeliveryStatus`
-    - `LeavePromotionRecipientStatus`
+  - enum columns added for delivery channel/status and recipient status.
+
+## API Changes
+
 - Existing endpoint update:
   - `POST /leave/policy/promotion-notify` now persists delivery/recipient history rows.
 - New endpoints:
