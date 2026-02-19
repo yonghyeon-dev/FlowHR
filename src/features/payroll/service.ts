@@ -42,12 +42,19 @@ type StatutoryKrBaselineDeductions = {
   deductionMode: "statutory_kr_baseline";
   statutory?: {
     nonTaxableIncomeKrw: number;
+    incomeTaxBrackets?: Array<{
+      upToKrw: number | null;
+      rate: number;
+    }>;
     incomeTaxRate: number;
     localIncomeTaxRate: number;
     nationalPensionRate: number;
+    nationalPensionCapKrw?: number;
     healthInsuranceRate: number;
+    healthInsuranceCapKrw?: number;
     longTermCareRateOnHealth: number;
     employmentInsuranceRate: number;
+    employmentInsuranceCapKrw?: number;
     otherDeductionsKrw: number;
   };
 };
@@ -124,6 +131,11 @@ type PayrollComputation = {
   grossPayKrw: number;
 };
 
+type IncomeTaxBracket = {
+  upToKrw: number | null;
+  rate: number;
+};
+
 const emptyTotals: PayableMinutes = {
   regular: 0,
   overtime: 0,
@@ -191,6 +203,77 @@ function toRateNumber(value: number | null, fieldName: string) {
     throw new ServiceError(400, `${fieldName} must be between 0 and 1`);
   }
   return value;
+}
+
+function normalizeIncomeTaxBrackets(brackets?: IncomeTaxBracket[]): IncomeTaxBracket[] | null {
+  if (!brackets || brackets.length === 0) {
+    return null;
+  }
+
+  const normalized: IncomeTaxBracket[] = [];
+  let lastFiniteUpper = -1;
+  let hasOpenEnded = false;
+  for (const [index, bracket] of brackets.entries()) {
+    const rate = toRateNumber(bracket.rate, `statutory.incomeTaxBrackets[${index}].rate`) ?? 0;
+    if (bracket.upToKrw === null) {
+      if (index !== brackets.length - 1) {
+        throw new ServiceError(
+          400,
+          "statutory.incomeTaxBrackets open-ended bracket(upToKrw=null) must be last"
+        );
+      }
+      hasOpenEnded = true;
+      normalized.push({ upToKrw: null, rate });
+      continue;
+    }
+
+    const upToKrw = toKrwInteger(
+      bracket.upToKrw,
+      `statutory.incomeTaxBrackets[${index}].upToKrw`
+    );
+    if (upToKrw <= lastFiniteUpper) {
+      throw new ServiceError(
+        400,
+        "statutory.incomeTaxBrackets upToKrw must be strictly increasing"
+      );
+    }
+    lastFiniteUpper = upToKrw;
+    normalized.push({ upToKrw, rate });
+  }
+
+  if (!hasOpenEnded) {
+    throw new ServiceError(
+      400,
+      "statutory.incomeTaxBrackets must include open-ended bracket(upToKrw=null) as last entry"
+    );
+  }
+
+  return normalized;
+}
+
+function calculateProgressiveIncomeTaxKrw(taxableBaseKrw: number, brackets: IncomeTaxBracket[]) {
+  let tax = 0;
+  let lowerBound = 0;
+  for (const bracket of brackets) {
+    if (taxableBaseKrw <= lowerBound) {
+      break;
+    }
+    const upperBound = bracket.upToKrw === null ? Number.POSITIVE_INFINITY : bracket.upToKrw;
+    const segment = Math.min(taxableBaseKrw, upperBound) - lowerBound;
+    if (segment > 0) {
+      tax += segment * bracket.rate;
+    }
+    lowerBound = upperBound;
+  }
+  return toKrwInteger(Math.round(tax), "statutory.incomeTaxKrw");
+}
+
+function applyContributionCap(baseKrw: number, capKrw: number | undefined, fieldName: string) {
+  if (capKrw === undefined) {
+    return baseKrw;
+  }
+  const normalizedCap = toKrwInteger(capKrw, fieldName);
+  return Math.min(baseKrw, normalizedCap);
 }
 
 async function calculatePayrollComputation(
@@ -388,6 +471,7 @@ export async function previewPayrollWithDeductions(
     );
     const incomeTaxRate =
       toRateNumber(input.statutory?.incomeTaxRate ?? 0.03, "statutory.incomeTaxRate") ?? 0;
+    const incomeTaxBrackets = normalizeIncomeTaxBrackets(input.statutory?.incomeTaxBrackets);
     const localIncomeTaxRate =
       toRateNumber(input.statutory?.localIncomeTaxRate ?? 0.1, "statutory.localIncomeTaxRate") ??
       0;
@@ -413,20 +497,34 @@ export async function previewPayrollWithDeductions(
     );
 
     const taxableBaseKrw = Math.max(computed.grossPayKrw - nonTaxableIncomeKrw, 0);
-    const incomeTaxKrw = toKrwInteger(
-      Math.round(taxableBaseKrw * incomeTaxRate),
-      "statutory.incomeTaxKrw"
-    );
+    const incomeTaxKrw = incomeTaxBrackets
+      ? calculateProgressiveIncomeTaxKrw(taxableBaseKrw, incomeTaxBrackets)
+      : toKrwInteger(Math.round(taxableBaseKrw * incomeTaxRate), "statutory.incomeTaxKrw");
     const localIncomeTaxKrw = toKrwInteger(
       Math.round(incomeTaxKrw * localIncomeTaxRate),
       "statutory.localIncomeTaxKrw"
     );
+    const nationalPensionBaseKrw = applyContributionCap(
+      taxableBaseKrw,
+      input.statutory?.nationalPensionCapKrw,
+      "statutory.nationalPensionCapKrw"
+    );
+    const healthInsuranceBaseKrw = applyContributionCap(
+      taxableBaseKrw,
+      input.statutory?.healthInsuranceCapKrw,
+      "statutory.healthInsuranceCapKrw"
+    );
+    const employmentInsuranceBaseKrw = applyContributionCap(
+      taxableBaseKrw,
+      input.statutory?.employmentInsuranceCapKrw,
+      "statutory.employmentInsuranceCapKrw"
+    );
     const nationalPensionKrw = toKrwInteger(
-      Math.round(taxableBaseKrw * nationalPensionRate),
+      Math.round(nationalPensionBaseKrw * nationalPensionRate),
       "statutory.nationalPensionKrw"
     );
     const healthInsuranceKrw = toKrwInteger(
-      Math.round(taxableBaseKrw * healthInsuranceRate),
+      Math.round(healthInsuranceBaseKrw * healthInsuranceRate),
       "statutory.healthInsuranceKrw"
     );
     const longTermCareKrw = toKrwInteger(
@@ -434,7 +532,7 @@ export async function previewPayrollWithDeductions(
       "statutory.longTermCareKrw"
     );
     const employmentInsuranceKrw = toKrwInteger(
-      Math.round(taxableBaseKrw * employmentInsuranceRate),
+      Math.round(employmentInsuranceBaseKrw * employmentInsuranceRate),
       "statutory.employmentInsuranceKrw"
     );
 
@@ -449,7 +547,19 @@ export async function previewPayrollWithDeductions(
 
     Object.assign(additionalBreakdown, {
       statutoryModel: "kr_baseline_v1",
+      taxMethod: incomeTaxBrackets ? "progressive_brackets" : "flat_rate",
       taxableBaseKrw,
+      incomeTaxBrackets: incomeTaxBrackets,
+      contributionBasesKrw: {
+        nationalPensionBaseKrw,
+        healthInsuranceBaseKrw,
+        employmentInsuranceBaseKrw
+      },
+      contributionCapsKrw: {
+        nationalPensionCapKrw: input.statutory?.nationalPensionCapKrw ?? null,
+        healthInsuranceCapKrw: input.statutory?.healthInsuranceCapKrw ?? null,
+        employmentInsuranceCapKrw: input.statutory?.employmentInsuranceCapKrw ?? null
+      },
       rates: {
         incomeTaxRate,
         localIncomeTaxRate,

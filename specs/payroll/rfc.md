@@ -1,8 +1,8 @@
-# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 Contract)
+# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 + WI-0105 Contract)
 
 ## Goal
 
-Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode.
+Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode with progressive/cap options.
 
 ## Key Decisions
 
@@ -13,6 +13,7 @@ Provide payroll gross pay preview based on attendance aggregates, phase2 deducti
 - WI-0006 introduces profile-mode deduction calculation with versioned trace metadata.
 - WI-0010 introduces optional expected profile version guard to reject stale profile preview requests.
 - WI-0101 introduces `statutory_kr_baseline` mode with feature-flagged KR withholding/social insurance approximation.
+- WI-0105 extends statutory baseline with optional progressive income-tax brackets and insurance contribution caps while preserving flat-rate compatibility.
 
 ## Non-Goals
 

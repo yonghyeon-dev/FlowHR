@@ -153,7 +153,7 @@ Production rollout: `docs/production-rollout.md`
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`
-  - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, profile mode optional `expectedProfileVersion`, statutory mode optional `statutory` rates)
+  - `POST /api/payroll/runs/preview-with-deductions` (feature flag: `FLOWHR_PAYROLL_DEDUCTIONS_V1=true`, profile mode optional `expectedProfileVersion`, statutory mode optional `statutory` rates + optional `incomeTaxBrackets` + insurance caps)
   - `POST /api/payroll/runs/{runId}/confirm`
   - `GET /api/payroll/deduction-profiles` (optional query: `active`, `mode`)
   - `GET /api/payroll/deduction-profiles/{profileId}`

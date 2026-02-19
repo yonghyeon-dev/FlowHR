@@ -252,6 +252,14 @@ export default function AdminDashboardPage() {
   const [accrualResult, setAccrualResult] = useState<LeaveBalanceDto | null>(null);
 
   const [payrollHourlyRateKrw, setPayrollHourlyRateKrw] = useState("12000");
+  const [payrollPreviewMode, setPayrollPreviewMode] = useState<"gross" | "statutory_kr_baseline">(
+    "gross"
+  );
+  const [payrollNonTaxableIncomeKrw, setPayrollNonTaxableIncomeKrw] = useState("0");
+  const [payrollOtherDeductionsKrw, setPayrollOtherDeductionsKrw] = useState("0");
+  const [payrollNationalPensionCapKrw, setPayrollNationalPensionCapKrw] = useState("");
+  const [payrollHealthInsuranceCapKrw, setPayrollHealthInsuranceCapKrw] = useState("");
+  const [payrollEmploymentInsuranceCapKrw, setPayrollEmploymentInsuranceCapKrw] = useState("");
   const [lastPayrollRunId, setLastPayrollRunId] = useState("");
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
@@ -801,7 +809,7 @@ export default function AdminDashboardPage() {
   }
 
   async function previewPayroll() {
-    const payload = {
+    const basePayload = {
       periodStart: toIso(periodStart),
       periodEnd: toIso(periodEnd),
       employeeId: employeeId.trim() || undefined,
@@ -812,7 +820,36 @@ export default function AdminDashboardPage() {
         holiday: 1.5
       }
     };
-    const { response, body } = await callApi("급여 프리뷰 생성", "POST", "/api/payroll/runs/preview", payload);
+
+    const statutoryPayload = {
+      ...basePayload,
+      deductionMode: "statutory_kr_baseline" as const,
+      statutory: {
+        nonTaxableIncomeKrw: Math.max(0, Number(payrollNonTaxableIncomeKrw) || 0),
+        otherDeductionsKrw: Math.max(0, Number(payrollOtherDeductionsKrw) || 0),
+        nationalPensionCapKrw:
+          payrollNationalPensionCapKrw.trim().length > 0
+            ? Math.max(0, Number(payrollNationalPensionCapKrw) || 0)
+            : undefined,
+        healthInsuranceCapKrw:
+          payrollHealthInsuranceCapKrw.trim().length > 0
+            ? Math.max(0, Number(payrollHealthInsuranceCapKrw) || 0)
+            : undefined,
+        employmentInsuranceCapKrw:
+          payrollEmploymentInsuranceCapKrw.trim().length > 0
+            ? Math.max(0, Number(payrollEmploymentInsuranceCapKrw) || 0)
+            : undefined
+      }
+    };
+
+    const { response, body } = await callApi(
+      payrollPreviewMode === "gross" ? "급여 프리뷰 생성(총지급)" : "급여 프리뷰 생성(법정공제)",
+      "POST",
+      payrollPreviewMode === "gross"
+        ? "/api/payroll/runs/preview"
+        : "/api/payroll/runs/preview-with-deductions",
+      payrollPreviewMode === "gross" ? basePayload : statutoryPayload
+    );
     if (!response.ok) {
       return;
     }
@@ -1762,8 +1799,22 @@ export default function AdminDashboardPage() {
 
         <article className="panel" id="payroll">
           <h2>급여 프리뷰/확정</h2>
-          <p className="small">승인된 출퇴근 기반으로 총지급을 산정하고, 확정된 급여는 직원 명세서에서 조회합니다.</p>
+          <p className="small">
+            승인된 출퇴근 기반으로 총지급을 산정하거나, 법정공제 기준 프리뷰를 생성할 수 있습니다.
+          </p>
           <div className="input-grid">
+            <label>
+              프리뷰 모드
+              <select
+                value={payrollPreviewMode}
+                onChange={(event) =>
+                  setPayrollPreviewMode(event.target.value as "gross" | "statutory_kr_baseline")
+                }
+              >
+                <option value="gross">총지급만</option>
+                <option value="statutory_kr_baseline">법정공제(KR baseline)</option>
+              </select>
+            </label>
             <label>
               대상 직원 ID
               <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
@@ -1777,6 +1828,55 @@ export default function AdminDashboardPage() {
                 onChange={(event) => setPayrollHourlyRateKrw(event.target.value)}
               />
             </label>
+            {payrollPreviewMode === "statutory_kr_baseline" ? (
+              <>
+                <label>
+                  비과세 소득(KRW)
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollNonTaxableIncomeKrw}
+                    onChange={(event) => setPayrollNonTaxableIncomeKrw(event.target.value)}
+                  />
+                </label>
+                <label>
+                  기타 공제(KRW)
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollOtherDeductionsKrw}
+                    onChange={(event) => setPayrollOtherDeductionsKrw(event.target.value)}
+                  />
+                </label>
+                <label>
+                  국민연금 상한(KRW, 선택)
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollNationalPensionCapKrw}
+                    onChange={(event) => setPayrollNationalPensionCapKrw(event.target.value)}
+                  />
+                </label>
+                <label>
+                  건강보험 상한(KRW, 선택)
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollHealthInsuranceCapKrw}
+                    onChange={(event) => setPayrollHealthInsuranceCapKrw(event.target.value)}
+                  />
+                </label>
+                <label>
+                  고용보험 상한(KRW, 선택)
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollEmploymentInsuranceCapKrw}
+                    onChange={(event) => setPayrollEmploymentInsuranceCapKrw(event.target.value)}
+                  />
+                </label>
+              </>
+            ) : null}
             <label className="full">
               최근 Run ID
               <input
