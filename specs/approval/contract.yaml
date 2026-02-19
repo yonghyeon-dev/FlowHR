@@ -1,9 +1,10 @@
 owner: approval-agent
-version: 0.1.0
+version: 0.2.0
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
     - approval delegation management with active time window
+    - delegation auto-expiry command with dry-run support
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
     - multi-step approval chain routing
@@ -37,6 +38,9 @@ api:
     - method: PATCH
       path: /approval/delegations/{delegationId}
       description: Update approval delegation (window/active/delegate).
+    - method: POST
+      path: /approval/delegations/expire
+      description: Auto-expire active delegations ended before cutoff time (supports dryRun preview).
   events:
     published:
       - name: approval.policy.updated.v1
@@ -55,6 +59,8 @@ db_changes:
 invariants:
   - Approval policy fallback defaults to manager(manager/payroll_operator) when no record exists.
   - Approval delegation must have endsAt greater than startsAt.
+  - Expire command must deactivate only active delegations where endsAt is before expiresBeforeAt.
+  - Expire command with dryRun=true must not mutate delegation state.
   - Approval execution requires both permission and policy/delegation gate.
   - Tenant-scoped actors cannot mutate policy/delegation for another organization.
 risk:
@@ -72,6 +78,7 @@ test_plan:
     - read fallback policy without persisted row
     - upsert and read configured policy
     - create and deactivate delegation lifecycle
+    - expire delegation dryRun/apply flow
     - manager non-manager delegation write blocked with 403
   regression:
     - attendance/leave/payroll approval endpoints enforce policy gate
@@ -85,6 +92,7 @@ observability:
     - approval.policy.updated
     - approval.delegation.created
     - approval.delegation.updated
+    - approval.delegation.auto_expired
   metrics:
     - approval_policy_update_count
     - approval_delegation_active_count
@@ -101,10 +109,11 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds new approval policy/delegation API and enforces domain-level approval gate on existing attendance/leave/payroll decision flows."
+consumer_impact: "Contract v0.2.0 adds delegation auto-expiry command endpoint (`/approval/delegations/expire`) with dry-run mode while keeping existing approval policy/delegation APIs backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
+  - work-items/WI-0107-approval-delegation-expiry-automation.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent
