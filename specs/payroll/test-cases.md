@@ -22,6 +22,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 14. Run statutory baseline preview with progressive `incomeTaxBrackets`.
 15. Run statutory baseline preview with insurance contribution caps and verify capped bases.
 16. Reject statutory baseline preview when bracket ordering/open-ended bracket rule is invalid.
+17. Run statutory baseline preview with additive tax-credit fields and verify pre-credit vs post-credit tax values.
+18. Reject statutory baseline preview when `requireMonthlyBoundary=true` and period is not monthly boundary in `Asia/Seoul`.
 
 ## Accuracy Cases
 
@@ -36,6 +38,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 9. Statutory baseline mode total/net calculations match component aggregation.
 10. Progressive bracket mode computes income tax by bracket segments deterministically.
 11. Insurance caps bound each insurance component base deterministically.
+12. Tax-credit mode applies credit before local-income-tax and never produces negative income tax.
+13. Monthly-boundary guard in `Asia/Seoul` rejects non-monthly periods deterministically.
 
 ## Regression Linkage
 
@@ -54,4 +58,5 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Profile Gate: profile-mode API/auth/audit checks are validated before merge.
 - Statutory Gate: statutory_kr_baseline mode must remain feature-flagged and deterministic.
 - Progressive/Cap Gate: bracket ordering and insurance-cap calculations must be deterministic and validated.
+- Tax-Credit/Boundary Gate: tax-credit ordering and monthly-boundary guard checks must be deterministic and validated.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).

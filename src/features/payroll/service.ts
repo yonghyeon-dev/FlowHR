@@ -46,6 +46,10 @@ type StatutoryKrBaselineDeductions = {
       upToKrw: number | null;
       rate: number;
     }>;
+    additionalTaxCreditKrw: number;
+    dependentCount: number;
+    dependentTaxCreditPerPersonKrw: number;
+    requireMonthlyBoundary: boolean;
     incomeTaxRate: number;
     localIncomeTaxRate: number;
     nationalPensionRate: number;
@@ -276,6 +280,84 @@ function applyContributionCap(baseKrw: number, capKrw: number | undefined, field
   return Math.min(baseKrw, normalizedCap);
 }
 
+type SeoulDateTimeParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+const seoulDateTimeFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  hourCycle: "h23",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false
+});
+
+function toSeoulDateTimeParts(value: Date): SeoulDateTimeParts {
+  const parts = seoulDateTimeFormatter.formatToParts(value);
+  const read = (type: Intl.DateTimeFormatPartTypes) => {
+    const part = parts.find((item) => item.type === type);
+    return part ? Number(part.value) : NaN;
+  };
+  const rawHour = read("hour");
+
+  return {
+    year: read("year"),
+    month: read("month"),
+    day: read("day"),
+    hour: rawHour === 24 ? 0 : rawHour,
+    minute: read("minute"),
+    second: read("second")
+  };
+}
+
+function formatSeoulDateTime(parts: SeoulDateTimeParts) {
+  const month = String(parts.month).padStart(2, "0");
+  const day = String(parts.day).padStart(2, "0");
+  const hour = String(parts.hour).padStart(2, "0");
+  const minute = String(parts.minute).padStart(2, "0");
+  const second = String(parts.second).padStart(2, "0");
+  return `${parts.year}-${month}-${day} ${hour}:${minute}:${second} (Asia/Seoul)`;
+}
+
+function lastDayOfMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function ensureMonthlyBoundaryInSeoul(periodStart: Date, periodEnd: Date) {
+  const start = toSeoulDateTimeParts(periodStart);
+  const end = toSeoulDateTimeParts(periodEnd);
+  if (start.year !== end.year || start.month !== end.month) {
+    throw new ServiceError(
+      400,
+      "statutory.requireMonthlyBoundary requires periodStart/periodEnd to be in the same month (Asia/Seoul)"
+    );
+  }
+
+  if (start.day !== 1 || start.hour !== 0 || start.minute !== 0 || start.second !== 0) {
+    throw new ServiceError(
+      400,
+      "statutory.requireMonthlyBoundary requires periodStart to be first day 00:00:00 (Asia/Seoul)"
+    );
+  }
+
+  const monthLastDay = lastDayOfMonth(start.year, start.month);
+  if (end.day !== monthLastDay || end.hour !== 23 || end.minute !== 59) {
+    throw new ServiceError(
+      400,
+      "statutory.requireMonthlyBoundary requires periodEnd to be last day 23:59:* (Asia/Seoul)"
+    );
+  }
+}
+
 async function calculatePayrollComputation(
   dataAccess: DataAccess,
   input: PreviewPayrollInput,
@@ -469,6 +551,23 @@ export async function previewPayrollWithDeductions(
       input.statutory?.nonTaxableIncomeKrw ?? 0,
       "statutory.nonTaxableIncomeKrw"
     );
+    const additionalTaxCreditKrw = toKrwInteger(
+      input.statutory?.additionalTaxCreditKrw ?? 0,
+      "statutory.additionalTaxCreditKrw"
+    );
+    const dependentCount = toKrwInteger(
+      input.statutory?.dependentCount ?? 0,
+      "statutory.dependentCount"
+    );
+    const dependentTaxCreditPerPersonKrw = toKrwInteger(
+      input.statutory?.dependentTaxCreditPerPersonKrw ?? 0,
+      "statutory.dependentTaxCreditPerPersonKrw"
+    );
+    const requireMonthlyBoundary = input.statutory?.requireMonthlyBoundary ?? false;
+    if (requireMonthlyBoundary) {
+      ensureMonthlyBoundaryInSeoul(input.periodStart, input.periodEnd);
+    }
+
     const incomeTaxRate =
       toRateNumber(input.statutory?.incomeTaxRate ?? 0.03, "statutory.incomeTaxRate") ?? 0;
     const incomeTaxBrackets = normalizeIncomeTaxBrackets(input.statutory?.incomeTaxBrackets);
@@ -497,9 +596,15 @@ export async function previewPayrollWithDeductions(
     );
 
     const taxableBaseKrw = Math.max(computed.grossPayKrw - nonTaxableIncomeKrw, 0);
-    const incomeTaxKrw = incomeTaxBrackets
+    const preCreditIncomeTaxKrw = incomeTaxBrackets
       ? calculateProgressiveIncomeTaxKrw(taxableBaseKrw, incomeTaxBrackets)
       : toKrwInteger(Math.round(taxableBaseKrw * incomeTaxRate), "statutory.incomeTaxKrw");
+    const dependentTaxCreditKrw = dependentCount * dependentTaxCreditPerPersonKrw;
+    const totalTaxCreditKrw = additionalTaxCreditKrw + dependentTaxCreditKrw;
+    const incomeTaxKrw = toKrwInteger(
+      Math.max(preCreditIncomeTaxKrw - totalTaxCreditKrw, 0),
+      "statutory.incomeTaxKrw"
+    );
     const localIncomeTaxKrw = toKrwInteger(
       Math.round(incomeTaxKrw * localIncomeTaxRate),
       "statutory.localIncomeTaxKrw"
@@ -545,6 +650,9 @@ export async function previewPayrollWithDeductions(
       "socialInsuranceKrw"
     );
 
+    const periodStartSeoul = toSeoulDateTimeParts(input.periodStart);
+    const periodEndSeoul = toSeoulDateTimeParts(input.periodEnd);
+
     Object.assign(additionalBreakdown, {
       statutoryModel: "kr_baseline_v1",
       taxMethod: incomeTaxBrackets ? "progressive_brackets" : "flat_rate",
@@ -575,6 +683,20 @@ export async function previewPayrollWithDeductions(
         healthInsuranceKrw,
         longTermCareKrw,
         employmentInsuranceKrw
+      },
+      taxCreditsKrw: {
+        preCreditIncomeTaxKrw,
+        additionalTaxCreditKrw,
+        dependentCount,
+        dependentTaxCreditPerPersonKrw,
+        dependentTaxCreditKrw,
+        totalTaxCreditKrw
+      },
+      monthlyBoundary: {
+        required: requireMonthlyBoundary,
+        validated: requireMonthlyBoundary,
+        periodStartSeoul: formatSeoulDateTime(periodStartSeoul),
+        periodEndSeoul: formatSeoulDateTime(periodEndSeoul)
       }
     });
   }

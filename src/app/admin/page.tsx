@@ -257,6 +257,11 @@ export default function AdminDashboardPage() {
   );
   const [payrollNonTaxableIncomeKrw, setPayrollNonTaxableIncomeKrw] = useState("0");
   const [payrollOtherDeductionsKrw, setPayrollOtherDeductionsKrw] = useState("0");
+  const [payrollAdditionalTaxCreditKrw, setPayrollAdditionalTaxCreditKrw] = useState("0");
+  const [payrollDependentCount, setPayrollDependentCount] = useState("0");
+  const [payrollDependentTaxCreditPerPersonKrw, setPayrollDependentTaxCreditPerPersonKrw] =
+    useState("0");
+  const [payrollRequireMonthlyBoundary, setPayrollRequireMonthlyBoundary] = useState(false);
   const [payrollNationalPensionCapKrw, setPayrollNationalPensionCapKrw] = useState("");
   const [payrollHealthInsuranceCapKrw, setPayrollHealthInsuranceCapKrw] = useState("");
   const [payrollEmploymentInsuranceCapKrw, setPayrollEmploymentInsuranceCapKrw] = useState("");
@@ -827,6 +832,13 @@ export default function AdminDashboardPage() {
       statutory: {
         nonTaxableIncomeKrw: Math.max(0, Number(payrollNonTaxableIncomeKrw) || 0),
         otherDeductionsKrw: Math.max(0, Number(payrollOtherDeductionsKrw) || 0),
+        additionalTaxCreditKrw: Math.max(0, Math.trunc(Number(payrollAdditionalTaxCreditKrw) || 0)),
+        dependentCount: Math.max(0, Math.trunc(Number(payrollDependentCount) || 0)),
+        dependentTaxCreditPerPersonKrw: Math.max(
+          0,
+          Math.trunc(Number(payrollDependentTaxCreditPerPersonKrw) || 0)
+        ),
+        requireMonthlyBoundary: payrollRequireMonthlyBoundary,
         nationalPensionCapKrw:
           payrollNationalPensionCapKrw.trim().length > 0
             ? Math.max(0, Number(payrollNationalPensionCapKrw) || 0)
@@ -1847,6 +1859,45 @@ export default function AdminDashboardPage() {
                     value={payrollOtherDeductionsKrw}
                     onChange={(event) => setPayrollOtherDeductionsKrw(event.target.value)}
                   />
+                </label>
+                <label>
+                  세액공제 추가(KRW)
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollAdditionalTaxCreditKrw}
+                    onChange={(event) => setPayrollAdditionalTaxCreditKrw(event.target.value)}
+                  />
+                </label>
+                <label>
+                  부양가족 수
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollDependentCount}
+                    onChange={(event) => setPayrollDependentCount(event.target.value)}
+                  />
+                </label>
+                <label>
+                  1인당 부양가족 공제(KRW)
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollDependentTaxCreditPerPersonKrw}
+                    onChange={(event) =>
+                      setPayrollDependentTaxCreditPerPersonKrw(event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  월경계 강제검증(서울)
+                  <select
+                    value={payrollRequireMonthlyBoundary ? "true" : "false"}
+                    onChange={(event) => setPayrollRequireMonthlyBoundary(event.target.value === "true")}
+                  >
+                    <option value="false">비활성</option>
+                    <option value="true">활성</option>
+                  </select>
                 </label>
                 <label>
                   국민연금 상한(KRW, 선택)
