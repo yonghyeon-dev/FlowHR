@@ -1,4 +1,4 @@
-# RFC: Approval Policy and Delegation Baseline (WI-0103 + WI-0107)
+# RFC: Approval Policy and Delegation Baseline (WI-0103 + WI-0107 + WI-0108)
 
 ## Goal
 
@@ -11,6 +11,7 @@ Provide tenant-level approver role policy and temporary delegation so approval e
 3. Existing decision endpoints (attendance approve/reject, leave approve/reject, payroll confirm) must pass policy/delegation gate.
 4. Admin UI is delivered at `/admin/approval-policy` for direct operational control.
 5. Delegation lifecycle includes auto-expiry command endpoint with dry-run support for ops safety.
+6. Scheduler workflow executes a multi-organization expiry sweep to keep delegation board state clean without manual action.
 
 ## Non-Goals
 
