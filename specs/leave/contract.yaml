@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.9.0
+version: 1.10.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -11,6 +11,7 @@ scope:
     - leave policy read/update (annual grant + carry-over cap + fractional controls + notice/consecutive constraints)
     - annual leave promotion preview and internal notice draft policy
     - annual leave promotion notice dispatch automation via webhook (Discord/Slack) and email-template channel
+    - annual leave promotion delivery history list/detail and per-recipient retry
   out:
     - external calendar synchronization
 entities:
@@ -22,6 +23,10 @@ entities:
     description: Read model of granted, used, remaining, and carry-over leave days (decimal precision).
   - name: LeavePolicy
     description: Organization-level leave policy (annual grant, carry-over cap, fractional controls, request constraints, and annual leave promotion controls).
+  - name: LeavePromotionDelivery
+    description: Delivery history row for annual leave promotion notify/retry runs.
+  - name: LeavePromotionDeliveryRecipient
+    description: Recipient snapshot and send result row linked to a promotion delivery.
 api:
   auth:
     - role: employee
@@ -29,7 +34,7 @@ api:
     - role: manager
       permission: approve/reject leave requests and read leave policy within tenant scope
     - role: payroll_operator
-      permission: settle leave accrual cycle, read leave balances, manage leave policy, and list leave requests for payroll review
+      permission: settle leave accrual cycle, read leave balances, manage leave policy, run promotion notify/history/retry operations, and list leave requests for payroll review
     - role: admin
       permission: full leave operations
   endpoints:
@@ -66,6 +71,15 @@ api:
     - method: POST
       path: /leave/policy/promotion-notify
       description: Dispatch annual leave promotion notice through webhook or email-template channel (supports dry-run).
+    - method: GET
+      path: /leave/policy/promotion-deliveries
+      description: List annual leave promotion delivery history with channel/status/retry filters.
+    - method: GET
+      path: /leave/policy/promotion-deliveries/{deliveryId}
+      description: Read one annual leave promotion delivery detail with recipient snapshots and retry chain.
+    - method: POST
+      path: /leave/policy/promotion-deliveries/{deliveryId}/retry
+      description: Retry annual leave promotion email-template delivery for failed or selected recipients.
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
@@ -104,6 +118,8 @@ db_changes:
       description: Add leave policy constraints for minimum advance notice and max consecutive leave days.
     - id: 202602190007_leave_policy_annual_promotion
       description: Add annual leave promotion controls and internal notice template fields to LeavePolicy.
+    - id: 202602190008_leave_promotion_delivery_history
+      description: Add annual leave promotion delivery/recipient history and retry-chain linkage model.
   backward_compatible: true
   notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
@@ -123,6 +139,9 @@ invariants:
   - Annual leave promotion notice dispatch requires leave accrual settle permission and tenant scope validation.
   - Annual leave promotion notice dry-run never triggers external delivery side effects.
   - Email-template channel dispatch requires template id resolution and configured endpoint/from address.
+  - Promotion notify writes delivery history rows for dry-run/skipped/dispatched/failed outcomes.
+  - Promotion retry is allowed only for email-template deliveries and persists retry chain linkage.
+  - Promotion retry defaults to failed recipients when `recipientEmployeeIds` are omitted.
 risk:
   permissions:
     - Unauthorized approval or accrual settlement can alter payroll and staffing plans.
@@ -158,6 +177,9 @@ test_plan:
     - annual leave promotion notify dispatch triggers webhook when `deliveryChannel=webhook` and eligible targets exist
     - annual leave promotion notify dispatch triggers email-template endpoint when `deliveryChannel=email_template` and recipients with email exist
     - annual leave promotion notify dry-run and no-target/no-recipient run never call external delivery endpoints
+    - annual leave promotion delivery history list/detail APIs return persisted delivery and recipient snapshots
+    - annual leave promotion retry dry-run preserves side-effect free behavior and emits retry history row
+    - annual leave promotion retry dispatch re-sends only failed (or selected) recipients with retry linkage
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
@@ -165,6 +187,7 @@ test_plan:
     - maxConsecutiveDays null update restores unlimited consecutive requests
     - annual leave promotion disabled mode returns no targets regardless of balance state
     - annual leave promotion notify returns 503 when dispatch is required but selected channel configuration is missing
+    - annual leave promotion retry chain remains queryable via `retryOfDeliveryId` filter
   authorization:
     - employee self-service boundary check
     - manager/admin approval check
@@ -188,6 +211,12 @@ observability:
     - leave.promotion_notice.dry_run
     - leave.promotion_notice.skipped
     - leave.promotion_notice.failed
+    - leave.promotion_delivery.list_read
+    - leave.promotion_delivery.read
+    - leave.promotion_notice.retry_dry_run
+    - leave.promotion_notice.retry_skipped
+    - leave.promotion_notice.retry_dispatched
+    - leave.promotion_notice.retry_failed
   metrics:
     - leave_approval_latency_ms
     - leave_request_rejection_rate
@@ -214,7 +243,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.9.0 extends annual leave promotion notice dispatch endpoint (`POST /leave/policy/promotion-notify`) with `deliveryChannel=email_template` and template delivery telemetry while preserving existing webhook behavior."
+consumer_impact: "Contract v1.10.0 introduces promotion delivery history APIs (`GET /leave/policy/promotion-deliveries`, `GET /leave/policy/promotion-deliveries/{deliveryId}`) and targeted retry API (`POST /leave/policy/promotion-deliveries/{deliveryId}/retry`) while keeping existing notify dispatch behavior backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -225,6 +254,7 @@ references:
   - work-items/WI-0120-leave-promotion-notice-preview.md
   - work-items/WI-0122-leave-promotion-notice-delivery-automation.md
   - work-items/WI-0124-leave-promotion-email-template-delivery.md
+  - work-items/WI-0125-leave-promotion-delivery-history-retry.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

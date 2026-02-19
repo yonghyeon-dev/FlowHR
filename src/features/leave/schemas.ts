@@ -93,6 +93,20 @@ export const previewLeavePromotionQuerySchema = z.object({
 
 export const leavePromotionDeliveryChannelValues = ["webhook", "email_template"] as const;
 export const leavePromotionDeliveryChannelSchema = z.enum(leavePromotionDeliveryChannelValues);
+export const leavePromotionDeliveryStatusValues = [
+  "dry_run",
+  "skipped_no_targets",
+  "dispatched",
+  "failed"
+] as const;
+export const leavePromotionDeliveryStatusSchema = z.enum(leavePromotionDeliveryStatusValues);
+export const leavePromotionRecipientStatusValues = [
+  "PENDING",
+  "SENT",
+  "SKIPPED_NO_EMAIL",
+  "FAILED"
+] as const;
+export const leavePromotionRecipientStatusSchema = z.enum(leavePromotionRecipientStatusValues);
 
 export const notifyLeavePromotionSchema = z.object({
   organizationId: z.string().min(1).optional(),
@@ -101,4 +115,27 @@ export const notifyLeavePromotionSchema = z.object({
   dryRun: z.preprocess(parseBooleanLike, z.boolean().optional()),
   deliveryChannel: leavePromotionDeliveryChannelSchema.optional(),
   emailTemplateId: z.string().trim().min(1).max(120).optional()
+});
+
+export const listLeavePromotionDeliveriesQuerySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  channel: leavePromotionDeliveryChannelSchema.optional(),
+  status: leavePromotionDeliveryStatusSchema.optional(),
+  retryOfDeliveryId: z.string().min(1).optional(),
+  limit: z.number().int().min(1).max(200).optional()
+});
+
+export const readLeavePromotionDeliveryQuerySchema = z.object({
+  organizationId: z.string().min(1).optional()
+});
+
+export const leavePromotionDeliveryPathSchema = z.object({
+  deliveryId: z.string().min(1)
+});
+
+export const retryLeavePromotionDeliverySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  dryRun: z.preprocess(parseBooleanLike, z.boolean().optional()),
+  emailTemplateId: z.string().trim().min(1).max(120).optional(),
+  recipientEmployeeIds: z.array(z.string().min(1)).max(200).optional()
 });

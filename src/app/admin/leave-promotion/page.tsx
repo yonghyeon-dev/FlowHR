@@ -52,7 +52,8 @@ type PromotionNotifyResponse = PromotionPreviewResponse & {
     sentTargetCount: number;
   };
   delivery: {
-    status: "dry_run" | "skipped_no_targets" | "dispatched";
+    deliveryId: string;
+    status: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
     attempted: boolean;
     dryRun: boolean;
     channel: "webhook" | "email_template";
@@ -66,6 +67,76 @@ type PromotionNotifyResponse = PromotionPreviewResponse & {
     missingEmailCount: number;
     dispatchedAt: string | null;
   };
+};
+
+type PromotionDeliveryStatus = "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+
+type PromotionDeliverySummary = {
+  id: string;
+  organizationId: string;
+  asOf: string;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: "webhook" | "email_template";
+  provider: string | null;
+  status: PromotionDeliveryStatus;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource: string | null;
+  emailTemplateSource: string | null;
+  emailTemplateId: string | null;
+  dispatchedAt: string | null;
+  requestedByActorRole: string;
+  requestedByActorId: string | null;
+  retryOfDeliveryId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type PromotionDeliveryRecipient = {
+  id: string;
+  deliveryId: string;
+  employeeId: string;
+  email: string | null;
+  name: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+  status: "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
+  lastError: string | null;
+  sentAt: string | null;
+  retryCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type PromotionDeliveryListResponse = {
+  organizationId: string;
+  deliveries: PromotionDeliverySummary[];
+};
+
+type PromotionDeliveryDetailResponse = {
+  delivery: PromotionDeliverySummary & {
+    announcementTitle: string;
+    announcementBody: string;
+  };
+  recipients: PromotionDeliveryRecipient[];
+  sourceDelivery: PromotionDeliverySummary | null;
+  retries: PromotionDeliverySummary[];
+};
+
+type PromotionDeliveryRetryResponse = {
+  sourceDeliveryId: string;
+  delivery: PromotionDeliverySummary & {
+    attempted: boolean;
+    emailTemplateConfigured: boolean;
+  };
+  recipients: PromotionDeliveryRecipient[];
+  retries: PromotionDeliverySummary[];
 };
 
 type LeavePolicyResponse = {
@@ -136,6 +207,14 @@ function formatDays(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+function normalizeEmployeeIdList(value: string) {
+  const values = value
+    .split(/[\s,]+/g)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  return [...new Set(values)];
+}
+
 export default function AdminLeavePromotionPage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -156,6 +235,15 @@ export default function AdminLeavePromotionPage() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [deliveryHistory, setDeliveryHistory] = useState<PromotionDeliverySummary[]>([]);
+  const [deliveryHistoryStatus, setDeliveryHistoryStatus] = useState<"" | PromotionDeliveryStatus>("");
+  const [deliveryHistoryChannel, setDeliveryHistoryChannel] = useState<"" | "webhook" | "email_template">("");
+  const [deliveryHistoryLimit, setDeliveryHistoryLimit] = useState("30");
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState("");
+  const [deliveryDetail, setDeliveryDetail] = useState<PromotionDeliveryDetailResponse | null>(null);
+  const [retryDryRun, setRetryDryRun] = useState(false);
+  const [retryTemplateId, setRetryTemplateId] = useState("");
+  const [retryEmployeeIdsInput, setRetryEmployeeIdsInput] = useState("");
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -357,6 +445,64 @@ export default function AdminLeavePromotionPage() {
     setPromotionMessageTemplate(parsed.policy.messageTemplate);
   }
 
+  async function loadDeliveryHistory() {
+    if (!organizationId.trim()) {
+      return;
+    }
+    const limit = Number(deliveryHistoryLimit.trim());
+    const query = new URLSearchParams({
+      organizationId: organizationId.trim()
+    });
+    if (deliveryHistoryChannel) {
+      query.set("channel", deliveryHistoryChannel);
+    }
+    if (deliveryHistoryStatus) {
+      query.set("status", deliveryHistoryStatus);
+    }
+    if (Number.isInteger(limit) && limit > 0) {
+      query.set("limit", String(limit));
+    }
+
+    const { response, body } = await callApi(
+      "연차 촉진 발송 이력 조회",
+      "GET",
+      `/api/leave/policy/promotion-deliveries?${query.toString()}`
+    );
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+
+    const parsed = body as PromotionDeliveryListResponse;
+    const rows = Array.isArray(parsed.deliveries) ? parsed.deliveries : [];
+    setDeliveryHistory(rows);
+  }
+
+  async function loadDeliveryDetail(deliveryId: string) {
+    if (!organizationId.trim()) {
+      return;
+    }
+    const normalizedDeliveryId = deliveryId.trim();
+    if (!normalizedDeliveryId) {
+      return;
+    }
+
+    const query = new URLSearchParams({
+      organizationId: organizationId.trim()
+    });
+    const { response, body } = await callApi(
+      "연차 촉진 발송 이력 상세 조회",
+      "GET",
+      `/api/leave/policy/promotion-deliveries/${encodeURIComponent(normalizedDeliveryId)}?${query.toString()}`
+    );
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+
+    const parsed = body as PromotionDeliveryDetailResponse;
+    setSelectedDeliveryId(normalizedDeliveryId);
+    setDeliveryDetail(parsed);
+  }
+
   async function sendNotice(dryRun: boolean) {
     if (!organizationId.trim()) {
       return;
@@ -391,6 +537,10 @@ export default function AdminLeavePromotionPage() {
       targets: parsed.targets,
       announcementDraft: parsed.announcementDraft
     });
+    setSelectedDeliveryId(parsed.delivery.deliveryId);
+    setRetryTemplateId(parsed.delivery.emailTemplateId ?? "");
+    await loadDeliveryHistory();
+    await loadDeliveryDetail(parsed.delivery.deliveryId);
 
     if (parsed.delivery.status === "dispatched") {
       if (parsed.delivery.channel === "email_template") {
@@ -404,6 +554,45 @@ export default function AdminLeavePromotionPage() {
       setStatusMessage("대상자가 없어 발송을 건너뛰었습니다.");
     } else {
       setStatusMessage("드라이런 완료: 실제 발송 없이 결과만 검증했습니다.");
+    }
+    setTimeout(() => setStatusMessage(""), 3000);
+  }
+
+  async function retrySelectedDelivery() {
+    if (!organizationId.trim() || !selectedDeliveryId.trim()) {
+      return;
+    }
+    const recipientEmployeeIds = normalizeEmployeeIdList(retryEmployeeIdsInput);
+    const payload = {
+      organizationId: organizationId.trim(),
+      dryRun: retryDryRun,
+      emailTemplateId: retryTemplateId.trim() || undefined,
+      recipientEmployeeIds: recipientEmployeeIds.length > 0 ? recipientEmployeeIds : undefined
+    };
+    const { response, body } = await callApi(
+      retryDryRun ? "연차 촉진 이력 재시도 드라이런" : "연차 촉진 이력 재시도 실행",
+      "POST",
+      `/api/leave/policy/promotion-deliveries/${encodeURIComponent(selectedDeliveryId)}/retry`,
+      payload
+    );
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+
+    const parsed = body as PromotionDeliveryRetryResponse;
+    setSelectedDeliveryId(parsed.delivery.id);
+    setRetryTemplateId(parsed.delivery.emailTemplateId ?? "");
+    await loadDeliveryHistory();
+    await loadDeliveryDetail(parsed.delivery.id);
+
+    if (parsed.delivery.status === "dispatched") {
+      setStatusMessage(`재시도 발송 완료: ${parsed.delivery.sentTargetCount}명`);
+    } else if (parsed.delivery.status === "skipped_no_targets") {
+      setStatusMessage("재시도 대상이 없어 발송을 건너뛰었습니다.");
+    } else if (parsed.delivery.status === "dry_run") {
+      setStatusMessage("재시도 드라이런 완료: 실제 발송 없이 결과만 검증했습니다.");
+    } else {
+      setStatusMessage("재시도 처리 중 오류가 발생했습니다.");
     }
     setTimeout(() => setStatusMessage(""), 3000);
   }
@@ -505,6 +694,9 @@ export default function AdminLeavePromotionPage() {
             </button>
             <button className="btn btn-primary" onClick={() => void loadPreview()} disabled={!organizationId.trim()}>
               프리뷰 조회
+            </button>
+            <button className="btn btn-secondary" onClick={() => void loadDeliveryHistory()} disabled={!organizationId.trim()}>
+              이력 조회
             </button>
           </div>
           {supabaseSessionError ? <p className="small fail">Session 오류: {supabaseSessionError}</p> : null}
@@ -618,6 +810,10 @@ export default function AdminLeavePromotionPage() {
           ) : (
             <ul className="simple-list">
               <li>
+                <span>delivery id</span>
+                <strong>{notifyResult.delivery.deliveryId}</strong>
+              </li>
+              <li>
                 <span>status</span>
                 <strong>{notifyResult.delivery.status}</strong>
               </li>
@@ -671,6 +867,17 @@ export default function AdminLeavePromotionPage() {
               </li>
             </ul>
           )}
+          {notifyResult ? (
+            <div className="panel-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => void loadDeliveryDetail(notifyResult.delivery.deliveryId)}
+                disabled={pendingLabel !== null || !organizationId.trim()}
+              >
+                이력 상세 열기
+              </button>
+            </div>
+          ) : null}
         </article>
 
         <article className="panel">
@@ -735,6 +942,207 @@ export default function AdminLeavePromotionPage() {
                   실제 발송
                 </button>
               </div>
+            </>
+          )}
+        </article>
+
+        <article className="panel">
+          <h2>발송 이력 {deliveryHistory.length > 0 ? `(${deliveryHistory.length})` : ""}</h2>
+          <div className="input-grid">
+            <label>
+              Channel
+              <select
+                value={deliveryHistoryChannel}
+                onChange={(event) =>
+                  setDeliveryHistoryChannel(
+                    event.target.value === "webhook" || event.target.value === "email_template"
+                      ? event.target.value
+                      : ""
+                  )
+                }
+              >
+                <option value="">all</option>
+                <option value="webhook">webhook</option>
+                <option value="email_template">email_template</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select
+                value={deliveryHistoryStatus}
+                onChange={(event) =>
+                  setDeliveryHistoryStatus(
+                    event.target.value === "dry_run" ||
+                      event.target.value === "skipped_no_targets" ||
+                      event.target.value === "dispatched" ||
+                      event.target.value === "failed"
+                      ? event.target.value
+                      : ""
+                  )
+                }
+              >
+                <option value="">all</option>
+                <option value="dry_run">dry_run</option>
+                <option value="skipped_no_targets">skipped_no_targets</option>
+                <option value="dispatched">dispatched</option>
+                <option value="failed">failed</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Limit
+            <input
+              type="number"
+              min={1}
+              max={200}
+              step={1}
+              value={deliveryHistoryLimit}
+              onChange={(event) => setDeliveryHistoryLimit(event.target.value)}
+            />
+          </label>
+          <div className="panel-actions">
+            <button className="btn btn-secondary" onClick={() => void loadDeliveryHistory()} disabled={!organizationId.trim()}>
+              이력 새로고침
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setSelectedDeliveryId("");
+                setDeliveryDetail(null);
+              }}
+              disabled={pendingLabel !== null}
+            >
+              상세 선택 해제
+            </button>
+          </div>
+          {deliveryHistory.length === 0 ? (
+            <p className="small">조회된 이력이 없습니다.</p>
+          ) : (
+            <ul className="simple-list">
+              {deliveryHistory.map((item) => (
+                <li key={item.id}>
+                  <span>
+                    <strong>{item.id}</strong>
+                    {" / "}
+                    {item.status}
+                    {" / "}
+                    {item.channel}
+                    <br />
+                    <span className="small">
+                      sent {item.sentTargetCount} / recipient {item.recipientCount} / target {item.targetCount}
+                      {" / "}created {formatDateTime(item.createdAt)}
+                    </span>
+                  </span>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => void loadDeliveryDetail(item.id)}
+                    disabled={!organizationId.trim() || pendingLabel !== null}
+                  >
+                    상세
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article className="panel">
+          <h2>이력 상세 / 재시도</h2>
+          {!deliveryDetail ? (
+            <p className="small">발송 이력에서 delivery를 선택해 주세요.</p>
+          ) : (
+            <>
+              <ul className="simple-list">
+                <li>
+                  <span>delivery id</span>
+                  <strong>{deliveryDetail.delivery.id}</strong>
+                </li>
+                <li>
+                  <span>status</span>
+                  <strong>{deliveryDetail.delivery.status}</strong>
+                </li>
+                <li>
+                  <span>retry of</span>
+                  <strong>{deliveryDetail.delivery.retryOfDeliveryId ?? "-"}</strong>
+                </li>
+                <li>
+                  <span>recipient count</span>
+                  <strong>{deliveryDetail.delivery.recipientCount}</strong>
+                </li>
+                <li>
+                  <span>missing email count</span>
+                  <strong>{deliveryDetail.delivery.missingEmailCount}</strong>
+                </li>
+                <li>
+                  <span>sent target count</span>
+                  <strong>{deliveryDetail.delivery.sentTargetCount}</strong>
+                </li>
+              </ul>
+              <label>
+                Retry mode
+                <select
+                  value={retryDryRun ? "true" : "false"}
+                  onChange={(event) => setRetryDryRun(event.target.value === "true")}
+                >
+                  <option value="false">실제 발송</option>
+                  <option value="true">드라이런</option>
+                </select>
+              </label>
+              <label>
+                Retry template id (optional)
+                <input
+                  value={retryTemplateId}
+                  onChange={(event) => setRetryTemplateId(event.target.value)}
+                  placeholder="leave-promotion-template-v1"
+                />
+              </label>
+              <label>
+                Retry recipient employeeIds (optional, comma/newline)
+                <textarea
+                  rows={3}
+                  value={retryEmployeeIdsInput}
+                  onChange={(event) => setRetryEmployeeIdsInput(event.target.value)}
+                  placeholder="EMP-001, EMP-002"
+                />
+              </label>
+              <div className="panel-actions">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => void retrySelectedDelivery()}
+                  disabled={!organizationId.trim() || !selectedDeliveryId.trim() || pendingLabel !== null}
+                >
+                  선택 이력 재시도
+                </button>
+              </div>
+              <p className="small">
+                source delivery: {deliveryDetail.sourceDelivery?.id ?? "-"} / retry deliveries:{" "}
+                {deliveryDetail.retries.length}
+              </p>
+              <h3>수신자 상태 {deliveryDetail.recipients.length > 0 ? `(${deliveryDetail.recipients.length})` : ""}</h3>
+              {deliveryDetail.recipients.length === 0 ? (
+                <p className="small">수신자 스냅샷이 없습니다.</p>
+              ) : (
+                <ul className="simple-list">
+                  {deliveryDetail.recipients.map((recipient) => (
+                    <li key={recipient.id}>
+                      <span>
+                        <strong>{recipient.employeeId}</strong>
+                        {recipient.email ? ` (${recipient.email})` : ""}
+                        {" / "}
+                        {recipient.status}
+                        {" / "}retryCount {recipient.retryCount}
+                        {recipient.lastError ? (
+                          <>
+                            <br />
+                            <span className="small fail">{recipient.lastError}</span>
+                          </>
+                        ) : null}
+                      </span>
+                      <span>{formatDateTime(recipient.sentAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </>
           )}
         </article>

@@ -32,6 +32,10 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 24. Promotion notify dispatch fails with `503` when dispatch is required but webhook is not configured.
 25. Promotion notify dispatch sends email-template payload when `deliveryChannel=email_template` and recipients have email addresses.
 26. Promotion notify email-template dispatch fails with `503` when email-template endpoint/from config is missing for required dispatch.
+27. Promotion delivery history list endpoint returns channel/status filtered dispatch rows.
+28. Promotion delivery history detail endpoint returns recipient snapshot statuses (`FAILED`, `SKIPPED_NO_EMAIL`, etc.).
+29. Promotion delivery retry endpoint supports dry-run and real dispatch with retry-chain linkage.
+30. Promotion delivery retry defaults to failed recipients when `recipientEmployeeIds` is omitted.
 
 ## Boundary and Accuracy Cases
 
@@ -48,6 +52,8 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 11. Promotion notice window start/end is derived from Seoul year-end and policy lead days.
 12. Promotion notify webhook payload keeps deterministic title/body and target summaries.
 13. Promotion notify email-template payload keeps deterministic template id/recipient summary and excludes recipients without email.
+14. Promotion retry payload excludes recipients without email and keeps deterministic selected recipient set.
+15. Promotion retry increments recipient retry count deterministically.
 
 ## Regression Linkage
 
@@ -58,6 +64,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 - Promotion preview fixtures remain deterministic for closed-window and open-window scenarios.
 - Promotion notify fixtures remain deterministic for dry-run / no-target / dispatched / missing-webhook outcomes.
 - Promotion notify fixtures remain deterministic for email-template dry-run / dispatched / missing-config outcomes.
+- Promotion delivery history fixtures remain deterministic for failed-dispatch snapshots and retry-chain list/detail views.
 
 ## QA Gate Expectations
 

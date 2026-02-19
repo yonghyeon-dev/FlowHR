@@ -42,6 +42,14 @@ import type {
   ListAuditLogsInput,
   LeaveBalanceEntity,
   LeaveBalanceStore,
+  LeavePromotionDeliveryEntity,
+  LeavePromotionDeliveryRecipientEntity,
+  LeavePromotionDeliveryStore,
+  LeavePromotionRecipientStatus,
+  CreateLeavePromotionDeliveryInput,
+  CreateLeavePromotionDeliveryRecipientInput,
+  UpdateLeavePromotionDeliveryInput,
+  UpdateLeavePromotionDeliveryRecipientInput,
   LeavePolicyEntity,
   LeavePolicyStore,
   LeaveRequestEntity,
@@ -200,6 +208,60 @@ function toLeavePolicyEntity(record: {
     annualLeavePromotionThresholdDays: Number(record.annualLeavePromotionThresholdDays),
     maxConsecutiveDays:
       record.maxConsecutiveDays === null ? null : Number(record.maxConsecutiveDays)
+  };
+}
+
+function toLeavePromotionDeliveryEntity(record: {
+  id: string;
+  organizationId: string;
+  asOf: Date;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: "webhook" | "email_template";
+  provider: string | null;
+  status: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+  announcementTitle: string;
+  announcementBody: string;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource: string | null;
+  emailTemplateSource: string | null;
+  emailTemplateId: string | null;
+  dispatchedAt: Date | null;
+  requestedByActorRole: string;
+  requestedByActorId: string | null;
+  retryOfDeliveryId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): LeavePromotionDeliveryEntity {
+  return record;
+}
+
+function toLeavePromotionDeliveryRecipientEntity(record: {
+  id: string;
+  deliveryId: string;
+  employeeId: string;
+  email: string | null;
+  name: string | null;
+  remainingDays: Prisma.Decimal;
+  grantedDays: Prisma.Decimal;
+  usedDays: Prisma.Decimal;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+  status: "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
+  lastError: string | null;
+  sentAt: Date | null;
+  retryCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): LeavePromotionDeliveryRecipientEntity {
+  return {
+    ...record,
+    remainingDays: Number(record.remainingDays),
+    grantedDays: Number(record.grantedDays),
+    usedDays: Number(record.usedDays)
   };
 }
 
@@ -1820,6 +1882,130 @@ const leavePolicy: LeavePolicyStore = {
   }
 };
 
+const leavePromotionDeliveries: LeavePromotionDeliveryStore = {
+  async create(input: CreateLeavePromotionDeliveryInput) {
+    const record = await prisma.leavePromotionDelivery.create({
+      data: {
+        organizationId: input.organizationId,
+        asOf: input.asOf,
+        includeUpcoming: input.includeUpcoming,
+        dryRun: input.dryRun,
+        channel: input.channel,
+        provider: input.provider ?? null,
+        status: input.status,
+        announcementTitle: input.announcementTitle,
+        announcementBody: input.announcementBody,
+        targetCount: input.targetCount,
+        recipientCount: input.recipientCount,
+        missingEmailCount: input.missingEmailCount,
+        sentTargetCount: input.sentTargetCount,
+        webhookSource: input.webhookSource ?? null,
+        emailTemplateSource: input.emailTemplateSource ?? null,
+        emailTemplateId: input.emailTemplateId ?? null,
+        dispatchedAt: input.dispatchedAt ?? null,
+        requestedByActorRole: input.requestedByActorRole,
+        requestedByActorId: input.requestedByActorId ?? null,
+        retryOfDeliveryId: input.retryOfDeliveryId ?? null
+      }
+    });
+    return toLeavePromotionDeliveryEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.leavePromotionDelivery.findUnique({
+      where: { id }
+    });
+    return record ? toLeavePromotionDeliveryEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateLeavePromotionDeliveryInput) {
+    const record = await prisma.leavePromotionDelivery.update({
+      where: { id },
+      data: {
+        provider: input.provider,
+        status: input.status,
+        sentTargetCount: input.sentTargetCount,
+        dispatchedAt: input.dispatchedAt,
+        webhookSource: input.webhookSource,
+        emailTemplateSource: input.emailTemplateSource,
+        emailTemplateId: input.emailTemplateId
+      }
+    });
+    return toLeavePromotionDeliveryEntity(record);
+  },
+
+  async list(input: {
+    organizationId: string;
+    channel?: "webhook" | "email_template";
+    status?: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+    retryOfDeliveryId?: string;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 100;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 100;
+
+    const records = await prisma.leavePromotionDelivery.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.channel ? { channel: input.channel } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.retryOfDeliveryId !== undefined
+          ? { retryOfDeliveryId: input.retryOfDeliveryId }
+          : {})
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toLeavePromotionDeliveryEntity);
+  },
+
+  async createRecipient(input: CreateLeavePromotionDeliveryRecipientInput) {
+    const record = await prisma.leavePromotionDeliveryRecipient.create({
+      data: {
+        deliveryId: input.deliveryId,
+        employeeId: input.employeeId,
+        email: input.email ?? null,
+        name: input.name ?? null,
+        remainingDays: new Prisma.Decimal(input.remainingDays),
+        grantedDays: new Prisma.Decimal(input.grantedDays),
+        usedDays: new Prisma.Decimal(input.usedDays),
+        lastAccrualYear: input.lastAccrualYear ?? null,
+        eligibleNow: input.eligibleNow,
+        status: input.status,
+        lastError: input.lastError ?? null,
+        sentAt: input.sentAt ?? null,
+        retryCount: input.retryCount ?? 0
+      }
+    });
+    return toLeavePromotionDeliveryRecipientEntity(record);
+  },
+
+  async updateRecipient(id: string, input: UpdateLeavePromotionDeliveryRecipientInput) {
+    const record = await prisma.leavePromotionDeliveryRecipient.update({
+      where: { id },
+      data: {
+        email: input.email,
+        status: input.status,
+        lastError: input.lastError,
+        sentAt: input.sentAt,
+        retryCount: input.retryCount
+      }
+    });
+    return toLeavePromotionDeliveryRecipientEntity(record);
+  },
+
+  async listRecipients(input: { deliveryId: string; status?: LeavePromotionRecipientStatus }) {
+    const records = await prisma.leavePromotionDeliveryRecipient.findMany({
+      where: {
+        deliveryId: input.deliveryId,
+        ...(input.status ? { status: input.status } : {})
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toLeavePromotionDeliveryRecipientEntity);
+  }
+};
+
 const payroll: PayrollStore = {
   async create(input: CreatePayrollRunInput) {
     const run = await prisma.payrollRun.create({
@@ -1995,6 +2181,7 @@ export const prismaDataAccess: DataAccess = {
   leave,
   leavePolicy,
   leaveBalance,
+  leavePromotionDeliveries,
   payroll,
   deductionProfiles,
   audit

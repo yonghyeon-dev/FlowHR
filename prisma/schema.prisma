@@ -23,6 +23,7 @@ model Organization {
   approvalStageHistories ApprovalStageHistory[]
   approvalExecutions ApprovalExecution[]
   leavePolicy LeavePolicy?
+  leavePromotionDeliveries LeavePromotionDelivery[]
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
   workScheduleTemplates WorkScheduleTemplate[]
@@ -364,6 +365,64 @@ model LeavePolicy {
   updatedAt      DateTime     @updatedAt
 }
 
+model LeavePromotionDelivery {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  asOf                DateTime
+  includeUpcoming     Boolean
+  dryRun              Boolean
+  channel             LeavePromotionDeliveryChannel
+  provider            String?
+  status              LeavePromotionDeliveryStatus
+  announcementTitle   String
+  announcementBody    String
+  targetCount         Int
+  recipientCount      Int
+  missingEmailCount   Int
+  sentTargetCount     Int
+  webhookSource       String?
+  emailTemplateSource String?
+  emailTemplateId     String?
+  dispatchedAt        DateTime?
+  requestedByActorRole String
+  requestedByActorId  String?
+  retryOfDeliveryId   String?
+  retryOfDelivery     LeavePromotionDelivery? @relation("LeavePromotionDeliveryRetry", fields: [retryOfDeliveryId], references: [id], onDelete: SetNull)
+  retryDeliveries     LeavePromotionDelivery[] @relation("LeavePromotionDeliveryRetry")
+  recipients          LeavePromotionDeliveryRecipient[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, channel, createdAt])
+  @@index([retryOfDeliveryId])
+}
+
+model LeavePromotionDeliveryRecipient {
+  id             String   @id @default(cuid())
+  deliveryId     String
+  delivery       LeavePromotionDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  employeeId     String
+  email          String?
+  name           String?
+  remainingDays  Decimal  @db.Decimal(6, 2)
+  grantedDays    Decimal  @db.Decimal(6, 2)
+  usedDays       Decimal  @db.Decimal(6, 2)
+  lastAccrualYear Int?
+  eligibleNow    Boolean
+  status         LeavePromotionRecipientStatus
+  lastError      String?
+  sentAt         DateTime?
+  retryCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([deliveryId, status, createdAt])
+  @@index([employeeId, createdAt])
+}
+
 model PayrollRun {
   id                     String   @id @default(cuid())
   organizationId         String?
@@ -462,6 +521,25 @@ enum LeaveRequestUnit {
   FULL_DAY
   HALF_DAY
   HOUR
+}
+
+enum LeavePromotionDeliveryChannel {
+  webhook
+  email_template
+}
+
+enum LeavePromotionDeliveryStatus {
+  dry_run
+  skipped_no_targets
+  dispatched
+  failed
+}
+
+enum LeavePromotionRecipientStatus {
+  PENDING
+  SENT
+  SKIPPED_NO_EMAIL
+  FAILED
 }
 
 enum PayrollState {

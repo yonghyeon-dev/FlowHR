@@ -33,7 +33,10 @@ import type {
   DeductionProfileEntity,
   EmployeeEntity,
   LeaveBalanceEntity,
+  LeavePromotionDeliveryEntity,
+  LeavePromotionDeliveryRecipientEntity,
   LeavePolicyEntity,
+  LeavePromotionRecipientStatus,
   LeaveRequestEntity,
   OrganizationEntity,
   PositionEntity,
@@ -48,13 +51,17 @@ import type {
   UpdateDepartmentInput,
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
+  UpdateLeavePromotionDeliveryInput,
+  UpdateLeavePromotionDeliveryRecipientInput,
   UpsertLeavePolicyInput,
   UpsertApprovalPolicyInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
   PayrollRunEntity,
   WorkScheduleTemplateEntity,
-  WorkScheduleEntity
+  WorkScheduleEntity,
+  CreateLeavePromotionDeliveryInput,
+  CreateLeavePromotionDeliveryRecipientInput
 } from "@/features/shared/data-access";
 import { defaultRolePermissions } from "@/lib/rbac";
 
@@ -79,6 +86,8 @@ type MemoryState = {
   leaveRequests: Map<string, LeaveRequestEntity>;
   leavePolicies: Map<string, LeavePolicyEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
+  leavePromotionDeliveries: Map<string, LeavePromotionDeliveryEntity>;
+  leavePromotionDeliveryRecipients: Map<string, LeavePromotionDeliveryRecipientEntity>;
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
   audit: AuditLogEntity[];
@@ -121,6 +130,8 @@ function createState(): MemoryState {
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leavePolicies: new Map<string, LeavePolicyEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
+    leavePromotionDeliveries: new Map<string, LeavePromotionDeliveryEntity>(),
+    leavePromotionDeliveryRecipients: new Map<string, LeavePromotionDeliveryRecipientEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
     audit: []
@@ -237,6 +248,29 @@ function cloneLeaveBalance(entity: LeaveBalanceEntity): LeaveBalanceEntity {
 function cloneLeavePolicy(entity: LeavePolicyEntity): LeavePolicyEntity {
   return {
     ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneLeavePromotionDelivery(
+  entity: LeavePromotionDeliveryEntity
+): LeavePromotionDeliveryEntity {
+  return {
+    ...entity,
+    asOf: cloneDate(entity.asOf),
+    dispatchedAt: entity.dispatchedAt ? cloneDate(entity.dispatchedAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneLeavePromotionDeliveryRecipient(
+  entity: LeavePromotionDeliveryRecipientEntity
+): LeavePromotionDeliveryRecipientEntity {
+  return {
+    ...entity,
+    sentAt: entity.sentAt ? cloneDate(entity.sentAt) : null,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -1719,6 +1753,159 @@ export const memoryDataAccess: DataAccess = {
       };
       state.leaveBalances.set(input.employeeId, next);
       return cloneLeaveBalance(next);
+    }
+  },
+
+  leavePromotionDeliveries: {
+    async create(input: CreateLeavePromotionDeliveryInput) {
+      const now = new Date();
+      const delivery: LeavePromotionDeliveryEntity = {
+        id: nextId("LPD"),
+        organizationId: input.organizationId,
+        asOf: cloneDate(input.asOf),
+        includeUpcoming: input.includeUpcoming,
+        dryRun: input.dryRun,
+        channel: input.channel,
+        provider: input.provider ?? null,
+        status: input.status,
+        announcementTitle: input.announcementTitle,
+        announcementBody: input.announcementBody,
+        targetCount: input.targetCount,
+        recipientCount: input.recipientCount,
+        missingEmailCount: input.missingEmailCount,
+        sentTargetCount: input.sentTargetCount,
+        webhookSource: input.webhookSource ?? null,
+        emailTemplateSource: input.emailTemplateSource ?? null,
+        emailTemplateId: input.emailTemplateId ?? null,
+        dispatchedAt: input.dispatchedAt ? cloneDate(input.dispatchedAt) : null,
+        requestedByActorRole: input.requestedByActorRole,
+        requestedByActorId: input.requestedByActorId ?? null,
+        retryOfDeliveryId: input.retryOfDeliveryId ?? null,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.leavePromotionDeliveries.set(delivery.id, delivery);
+      return cloneLeavePromotionDelivery(delivery);
+    },
+
+    async findById(id: string) {
+      const delivery = state.leavePromotionDeliveries.get(id);
+      return delivery ? cloneLeavePromotionDelivery(delivery) : null;
+    },
+
+    async update(id: string, input: UpdateLeavePromotionDeliveryInput) {
+      const existing = state.leavePromotionDeliveries.get(id);
+      if (!existing) {
+        throw new Error(`leave promotion delivery not found: ${id}`);
+      }
+      const updated: LeavePromotionDeliveryEntity = {
+        ...existing,
+        provider: input.provider !== undefined ? input.provider : existing.provider,
+        status: input.status ?? existing.status,
+        sentTargetCount:
+          input.sentTargetCount !== undefined ? input.sentTargetCount : existing.sentTargetCount,
+        dispatchedAt:
+          input.dispatchedAt !== undefined
+            ? (input.dispatchedAt ? cloneDate(input.dispatchedAt) : null)
+            : existing.dispatchedAt,
+        webhookSource:
+          input.webhookSource !== undefined ? input.webhookSource : existing.webhookSource,
+        emailTemplateSource:
+          input.emailTemplateSource !== undefined
+            ? input.emailTemplateSource
+            : existing.emailTemplateSource,
+        emailTemplateId:
+          input.emailTemplateId !== undefined ? input.emailTemplateId : existing.emailTemplateId,
+        updatedAt: new Date()
+      };
+      state.leavePromotionDeliveries.set(id, updated);
+      return cloneLeavePromotionDelivery(updated);
+    },
+
+    async list(input: {
+      organizationId: string;
+      channel?: "webhook" | "email_template";
+      status?: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+      retryOfDeliveryId?: string;
+      limit?: number;
+    }) {
+      const rows: LeavePromotionDeliveryEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 100;
+      for (const delivery of state.leavePromotionDeliveries.values()) {
+        if (delivery.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.channel && delivery.channel !== input.channel) {
+          continue;
+        }
+        if (input.status && delivery.status !== input.status) {
+          continue;
+        }
+        if (input.retryOfDeliveryId !== undefined && delivery.retryOfDeliveryId !== input.retryOfDeliveryId) {
+          continue;
+        }
+        rows.push(cloneLeavePromotionDelivery(delivery));
+      }
+      rows.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+      return rows.slice(0, limit);
+    },
+
+    async createRecipient(input: CreateLeavePromotionDeliveryRecipientInput) {
+      const now = new Date();
+      const recipient: LeavePromotionDeliveryRecipientEntity = {
+        id: nextId("LPDR"),
+        deliveryId: input.deliveryId,
+        employeeId: input.employeeId,
+        email: input.email ?? null,
+        name: input.name ?? null,
+        remainingDays: input.remainingDays,
+        grantedDays: input.grantedDays,
+        usedDays: input.usedDays,
+        lastAccrualYear: input.lastAccrualYear ?? null,
+        eligibleNow: input.eligibleNow,
+        status: input.status,
+        lastError: input.lastError ?? null,
+        sentAt: input.sentAt ? cloneDate(input.sentAt) : null,
+        retryCount: input.retryCount ?? 0,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.leavePromotionDeliveryRecipients.set(recipient.id, recipient);
+      return cloneLeavePromotionDeliveryRecipient(recipient);
+    },
+
+    async updateRecipient(id: string, input: UpdateLeavePromotionDeliveryRecipientInput) {
+      const existing = state.leavePromotionDeliveryRecipients.get(id);
+      if (!existing) {
+        throw new Error(`leave promotion delivery recipient not found: ${id}`);
+      }
+      const updated: LeavePromotionDeliveryRecipientEntity = {
+        ...existing,
+        email: input.email !== undefined ? input.email : existing.email,
+        status: input.status ?? existing.status,
+        lastError: input.lastError !== undefined ? input.lastError : existing.lastError,
+        sentAt:
+          input.sentAt !== undefined ? (input.sentAt ? cloneDate(input.sentAt) : null) : existing.sentAt,
+        retryCount: input.retryCount !== undefined ? input.retryCount : existing.retryCount,
+        updatedAt: new Date()
+      };
+      state.leavePromotionDeliveryRecipients.set(id, updated);
+      return cloneLeavePromotionDeliveryRecipient(updated);
+    },
+
+    async listRecipients(input: { deliveryId: string; status?: LeavePromotionRecipientStatus }) {
+      const rows: LeavePromotionDeliveryRecipientEntity[] = [];
+      for (const recipient of state.leavePromotionDeliveryRecipients.values()) {
+        if (recipient.deliveryId !== input.deliveryId) {
+          continue;
+        }
+        if (input.status && recipient.status !== input.status) {
+          continue;
+        }
+        rows.push(cloneLeavePromotionDeliveryRecipient(recipient));
+      }
+      rows.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+      return rows;
     }
   },
 

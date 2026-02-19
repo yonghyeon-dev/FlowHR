@@ -4,6 +4,9 @@ export type LeaveType = "ANNUAL" | "SICK" | "UNPAID";
 export type LeaveRequestState = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveDecisionAction = "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveRequestUnit = "FULL_DAY" | "HALF_DAY" | "HOUR";
+export type LeavePromotionDeliveryChannel = "webhook" | "email_template";
+export type LeavePromotionDeliveryStatus = "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+export type LeavePromotionRecipientStatus = "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
@@ -328,6 +331,51 @@ export type LeavePolicyEntity = {
   updatedAt: Date;
 };
 
+export type LeavePromotionDeliveryEntity = {
+  id: string;
+  organizationId: string;
+  asOf: Date;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: LeavePromotionDeliveryChannel;
+  provider: string | null;
+  status: LeavePromotionDeliveryStatus;
+  announcementTitle: string;
+  announcementBody: string;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource: string | null;
+  emailTemplateSource: string | null;
+  emailTemplateId: string | null;
+  dispatchedAt: Date | null;
+  requestedByActorRole: string;
+  requestedByActorId: string | null;
+  retryOfDeliveryId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type LeavePromotionDeliveryRecipientEntity = {
+  id: string;
+  deliveryId: string;
+  employeeId: string;
+  email: string | null;
+  name: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+  status: LeavePromotionRecipientStatus;
+  lastError: string | null;
+  sentAt: Date | null;
+  retryCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type CreateAttendanceRecordInput = {
   employeeId: string;
   checkInAt: Date;
@@ -644,6 +692,63 @@ export type UpsertLeavePolicyInput = {
   annualLeavePromotionMessageTemplate?: string | null;
 };
 
+export type CreateLeavePromotionDeliveryInput = {
+  organizationId: string;
+  asOf: Date;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: LeavePromotionDeliveryChannel;
+  provider?: string | null;
+  status: LeavePromotionDeliveryStatus;
+  announcementTitle: string;
+  announcementBody: string;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource?: string | null;
+  emailTemplateSource?: string | null;
+  emailTemplateId?: string | null;
+  dispatchedAt?: Date | null;
+  requestedByActorRole: string;
+  requestedByActorId?: string | null;
+  retryOfDeliveryId?: string | null;
+};
+
+export type UpdateLeavePromotionDeliveryInput = {
+  provider?: string | null;
+  status?: LeavePromotionDeliveryStatus;
+  sentTargetCount?: number;
+  dispatchedAt?: Date | null;
+  webhookSource?: string | null;
+  emailTemplateSource?: string | null;
+  emailTemplateId?: string | null;
+};
+
+export type CreateLeavePromotionDeliveryRecipientInput = {
+  deliveryId: string;
+  employeeId: string;
+  email?: string | null;
+  name?: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear?: number | null;
+  eligibleNow: boolean;
+  status: LeavePromotionRecipientStatus;
+  lastError?: string | null;
+  sentAt?: Date | null;
+  retryCount?: number;
+};
+
+export type UpdateLeavePromotionDeliveryRecipientInput = {
+  email?: string | null;
+  status?: LeavePromotionRecipientStatus;
+  lastError?: string | null;
+  sentAt?: Date | null;
+  retryCount?: number;
+};
+
 export type RecordLeaveDecisionInput = {
   requestId: string;
   action: LeaveDecisionAction;
@@ -892,6 +997,30 @@ export interface LeaveBalanceStore {
   }): Promise<LeaveBalanceEntity>;
 }
 
+export interface LeavePromotionDeliveryStore {
+  create(input: CreateLeavePromotionDeliveryInput): Promise<LeavePromotionDeliveryEntity>;
+  findById(id: string): Promise<LeavePromotionDeliveryEntity | null>;
+  update(id: string, input: UpdateLeavePromotionDeliveryInput): Promise<LeavePromotionDeliveryEntity>;
+  list(input: {
+    organizationId: string;
+    channel?: LeavePromotionDeliveryChannel;
+    status?: LeavePromotionDeliveryStatus;
+    retryOfDeliveryId?: string;
+    limit?: number;
+  }): Promise<LeavePromotionDeliveryEntity[]>;
+  createRecipient(
+    input: CreateLeavePromotionDeliveryRecipientInput
+  ): Promise<LeavePromotionDeliveryRecipientEntity>;
+  updateRecipient(
+    id: string,
+    input: UpdateLeavePromotionDeliveryRecipientInput
+  ): Promise<LeavePromotionDeliveryRecipientEntity>;
+  listRecipients(input: {
+    deliveryId: string;
+    status?: LeavePromotionRecipientStatus;
+  }): Promise<LeavePromotionDeliveryRecipientEntity[]>;
+}
+
 export interface AuditStore {
   append(input: AppendAuditLogInput): Promise<void>;
   list(input: ListAuditLogsInput): Promise<AuditLogEntity[]>;
@@ -909,6 +1038,7 @@ export type DataAccess = {
   leave: LeaveStore;
   leavePolicy: LeavePolicyStore;
   leaveBalance: LeaveBalanceStore;
+  leavePromotionDeliveries: LeavePromotionDeliveryStore;
   payroll: PayrollStore;
   deductionProfiles: DeductionProfileStore;
   audit: AuditStore;

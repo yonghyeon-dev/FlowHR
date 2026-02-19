@@ -5,6 +5,8 @@ import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/featur
 import type {
   DataAccess,
   LeaveBalanceEntity,
+  LeavePromotionDeliveryEntity,
+  LeavePromotionDeliveryRecipientEntity,
   LeaveRequestEntity,
   LeaveRequestUnit,
   LeaveType
@@ -117,6 +119,27 @@ type DispatchAnnualLeavePromotionNoticeInput = {
   emailTemplateId?: string;
 };
 
+type ListLeavePromotionDeliveriesInput = {
+  organizationId?: string;
+  channel?: "webhook" | "email_template";
+  status?: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+  retryOfDeliveryId?: string;
+  limit?: number;
+};
+
+type ReadLeavePromotionDeliveryInput = {
+  deliveryId: string;
+  organizationId?: string;
+};
+
+type RetryLeavePromotionDeliveryInput = {
+  deliveryId: string;
+  organizationId?: string;
+  dryRun?: boolean;
+  emailTemplateId?: string;
+  recipientEmployeeIds?: string[];
+};
+
 type PromotionWebhookProvider = "discord" | "slack";
 type PromotionDeliveryProvider = PromotionWebhookProvider | "email_template";
 
@@ -133,6 +156,63 @@ type PromotionEmailTemplateConfig = {
   urlSource: string;
   tokenSource: string | null;
   fromSource: string;
+};
+
+type PromotionDeliveryStatus = "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+type PromotionRecipientStatus = "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
+
+type PromotionTargetSnapshot = {
+  employeeId: string;
+  name: string | null;
+  email: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+};
+
+type PromotionDeliverySummaryView = {
+  id: string;
+  organizationId: string;
+  asOf: string;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: "webhook" | "email_template";
+  provider: string | null;
+  status: PromotionDeliveryStatus;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource: string | null;
+  emailTemplateSource: string | null;
+  emailTemplateId: string | null;
+  dispatchedAt: string | null;
+  requestedByActorRole: string;
+  requestedByActorId: string | null;
+  retryOfDeliveryId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type PromotionDeliveryRecipientView = {
+  id: string;
+  deliveryId: string;
+  employeeId: string;
+  email: string | null;
+  name: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+  status: PromotionRecipientStatus;
+  lastError: string | null;
+  sentAt: string | null;
+  retryCount: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type ListLeaveRequestsInput = {
@@ -447,8 +527,8 @@ async function sendPromotionEmailTemplate(
     organizationId: string;
     asOf: string;
     includeUpcoming: boolean;
-    noticeWindow: { startAt: string; endAt: string; isOpen: boolean };
-    summary: { potentialTargetCount: number; displayTargetCount: number; eligibleNowCount: number };
+    noticeWindow?: { startAt: string; endAt: string; isOpen: boolean };
+    summary?: { potentialTargetCount: number; displayTargetCount: number; eligibleNowCount: number };
     recipients: Array<{
       employeeId: string;
       email: string;
@@ -478,6 +558,235 @@ async function sendPromotionEmailTemplate(
     const responseBody = await response.text();
     throw new Error(`email template request failed: ${response.status} ${responseBody}`);
   }
+}
+
+function toPromotionTargetSnapshots(targets: Array<{
+  employeeId: string;
+  name: string | null;
+  email: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+}>): PromotionTargetSnapshot[] {
+  return targets.map((target) => ({
+    employeeId: target.employeeId,
+    name: target.name,
+    email: target.email,
+    remainingDays: target.remainingDays,
+    grantedDays: target.grantedDays,
+    usedDays: target.usedDays,
+    lastAccrualYear: target.lastAccrualYear,
+    eligibleNow: target.eligibleNow
+  }));
+}
+
+function toPromotionTargetSnapshotsFromRecipients(
+  recipients: LeavePromotionDeliveryRecipientEntity[]
+): PromotionTargetSnapshot[] {
+  return recipients.map((recipient) => ({
+    employeeId: recipient.employeeId,
+    name: recipient.name,
+    email: recipient.email,
+    remainingDays: recipient.remainingDays,
+    grantedDays: recipient.grantedDays,
+    usedDays: recipient.usedDays,
+    lastAccrualYear: recipient.lastAccrualYear,
+    eligibleNow: recipient.eligibleNow
+  }));
+}
+
+function toPromotionDispatchRecipients(targets: PromotionTargetSnapshot[]) {
+  return targets.flatMap((target) => {
+    const email = target.email?.trim() || "";
+    if (!email) {
+      return [];
+    }
+    return [
+      {
+        employeeId: target.employeeId,
+        email,
+        name: target.name,
+        remainingDays: target.remainingDays,
+        grantedDays: target.grantedDays,
+        usedDays: target.usedDays,
+        lastAccrualYear: target.lastAccrualYear,
+        eligibleNow: target.eligibleNow
+      }
+    ];
+  });
+}
+
+function toPromotionDeliverySummaryView(
+  delivery: LeavePromotionDeliveryEntity
+): PromotionDeliverySummaryView {
+  return {
+    id: delivery.id,
+    organizationId: delivery.organizationId,
+    asOf: delivery.asOf.toISOString(),
+    includeUpcoming: delivery.includeUpcoming,
+    dryRun: delivery.dryRun,
+    channel: delivery.channel,
+    provider: delivery.provider,
+    status: delivery.status,
+    targetCount: delivery.targetCount,
+    recipientCount: delivery.recipientCount,
+    missingEmailCount: delivery.missingEmailCount,
+    sentTargetCount: delivery.sentTargetCount,
+    webhookSource: delivery.webhookSource,
+    emailTemplateSource: delivery.emailTemplateSource,
+    emailTemplateId: delivery.emailTemplateId,
+    dispatchedAt: delivery.dispatchedAt ? delivery.dispatchedAt.toISOString() : null,
+    requestedByActorRole: delivery.requestedByActorRole,
+    requestedByActorId: delivery.requestedByActorId,
+    retryOfDeliveryId: delivery.retryOfDeliveryId,
+    createdAt: delivery.createdAt.toISOString(),
+    updatedAt: delivery.updatedAt.toISOString()
+  };
+}
+
+function toPromotionDeliveryRecipientView(
+  recipient: LeavePromotionDeliveryRecipientEntity
+): PromotionDeliveryRecipientView {
+  return {
+    id: recipient.id,
+    deliveryId: recipient.deliveryId,
+    employeeId: recipient.employeeId,
+    email: recipient.email,
+    name: recipient.name,
+    remainingDays: recipient.remainingDays,
+    grantedDays: recipient.grantedDays,
+    usedDays: recipient.usedDays,
+    lastAccrualYear: recipient.lastAccrualYear,
+    eligibleNow: recipient.eligibleNow,
+    status: recipient.status,
+    lastError: recipient.lastError,
+    sentAt: recipient.sentAt ? recipient.sentAt.toISOString() : null,
+    retryCount: recipient.retryCount,
+    createdAt: recipient.createdAt.toISOString(),
+    updatedAt: recipient.updatedAt.toISOString()
+  };
+}
+
+function toRetryCountByEmployeeId(
+  sourceRecipients: LeavePromotionDeliveryRecipientEntity[]
+): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const recipient of sourceRecipients) {
+    const current = map[recipient.employeeId] ?? 0;
+    map[recipient.employeeId] = Math.max(current, recipient.retryCount);
+  }
+  return map;
+}
+
+function toRecipientStatus(
+  target: PromotionTargetSnapshot,
+  input: {
+    status: PromotionDeliveryStatus;
+    channel: "webhook" | "email_template";
+    dryRun: boolean;
+    attempted: boolean;
+    sentAt: Date | null;
+  }
+): PromotionRecipientStatus {
+  const email = target.email?.trim() || "";
+  if (!email) {
+    return "SKIPPED_NO_EMAIL";
+  }
+  if (input.status === "failed" && input.attempted) {
+    return "FAILED";
+  }
+  if (input.status === "dispatched") {
+    return "SENT";
+  }
+  return "PENDING";
+}
+
+async function persistPromotionDeliveryHistory(
+  context: ServiceContext,
+  input: {
+    organizationId: string;
+    asOf: string;
+    includeUpcoming: boolean;
+    dryRun: boolean;
+    channel: "webhook" | "email_template";
+    provider: PromotionDeliveryProvider | null;
+    status: PromotionDeliveryStatus;
+    announcementTitle: string;
+    announcementBody: string;
+    targets: PromotionTargetSnapshot[];
+    sentTargetCount: number;
+    webhookSource: string | null;
+    emailTemplateSource: string | null;
+    emailTemplateId: string | null;
+    dispatchedAt: Date | null;
+    actorRole: string;
+    actorId: string | null;
+    retryOfDeliveryId?: string | null;
+    retryCountByEmployeeId?: Record<string, number>;
+    attempted: boolean;
+    failureMessage?: string | null;
+  }
+) {
+  const asOf = new Date(input.asOf);
+  const recipients = input.targets.filter((target) => (target.email?.trim() || "").length > 0);
+  const missingEmailCount = Math.max(input.targets.length - recipients.length, 0);
+  const delivery = await context.dataAccess.leavePromotionDeliveries.create({
+    organizationId: input.organizationId,
+    asOf,
+    includeUpcoming: input.includeUpcoming,
+    dryRun: input.dryRun,
+    channel: input.channel,
+    provider: input.provider,
+    status: input.status,
+    announcementTitle: input.announcementTitle,
+    announcementBody: input.announcementBody,
+    targetCount: input.targets.length,
+    recipientCount: recipients.length,
+    missingEmailCount,
+    sentTargetCount: input.sentTargetCount,
+    webhookSource: input.webhookSource,
+    emailTemplateSource: input.emailTemplateSource,
+    emailTemplateId: input.emailTemplateId,
+    dispatchedAt: input.dispatchedAt,
+    requestedByActorRole: input.actorRole,
+    requestedByActorId: input.actorId,
+    retryOfDeliveryId: input.retryOfDeliveryId ?? null
+  });
+
+  for (const target of input.targets) {
+    const status = toRecipientStatus(target, {
+      status: input.status,
+      channel: input.channel,
+      dryRun: input.dryRun,
+      attempted: input.attempted,
+      sentAt: input.dispatchedAt
+    });
+    await context.dataAccess.leavePromotionDeliveries.createRecipient({
+      deliveryId: delivery.id,
+      employeeId: target.employeeId,
+      email: target.email,
+      name: target.name,
+      remainingDays: target.remainingDays,
+      grantedDays: target.grantedDays,
+      usedDays: target.usedDays,
+      lastAccrualYear: target.lastAccrualYear,
+      eligibleNow: target.eligibleNow,
+      status,
+      lastError: status === "FAILED" ? input.failureMessage ?? null : null,
+      sentAt: status === "SENT" ? input.dispatchedAt : null,
+      retryCount: input.retryOfDeliveryId
+        ? Math.max(0, (input.retryCountByEmployeeId?.[target.employeeId] ?? 0) + 1)
+        : 0
+    });
+  }
+
+  return {
+    deliveryId: delivery.id,
+    recipientCount: recipients.length,
+    missingEmailCount
+  };
 }
 
 function calculateRequestedLeave(input: {
@@ -1674,6 +1983,7 @@ export async function dispatchAnnualLeavePromotionNotice(
     body: string;
   };
   delivery: {
+    deliveryId: string;
     status: "dry_run" | "skipped_no_targets" | "dispatched";
     attempted: boolean;
     dryRun: boolean;
@@ -1712,6 +2022,7 @@ export async function dispatchAnnualLeavePromotionNotice(
   const configuredTemplateId = normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID);
   const emailTemplateId = requestedTemplateId || configuredTemplateId || null;
   const targetCount = preview.targets.length;
+  const targetSnapshots = toPromotionTargetSnapshots(preview.targets);
   const recipients = preview.targets.flatMap((target) => {
     const email = target.email?.trim() || "";
     if (!email) {
@@ -1745,6 +2056,27 @@ export async function dispatchAnnualLeavePromotionNotice(
         : null;
 
   if (channel === "email_template" && attempted && !emailTemplateId) {
+    await persistPromotionDeliveryHistory(context, {
+      organizationId: preview.organizationId,
+      asOf: preview.asOf,
+      includeUpcoming,
+      dryRun,
+      channel,
+      provider,
+      status: "failed",
+      announcementTitle: preview.announcementDraft.title,
+      announcementBody: preview.announcementDraft.body,
+      targets: targetSnapshots,
+      sentTargetCount: 0,
+      webhookSource: null,
+      emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+      emailTemplateId,
+      dispatchedAt: null,
+      actorRole: actor.role,
+      actorId: actor.id,
+      attempted,
+      failureMessage: "email_template_id_missing"
+    });
     await context.dataAccess.audit.append({
       action: "leave.promotion_notice.failed",
       entityType: "LeavePolicy",
@@ -1769,6 +2101,27 @@ export async function dispatchAnnualLeavePromotionNotice(
   }
 
   if (channel === "webhook" && attempted && !webhook) {
+    await persistPromotionDeliveryHistory(context, {
+      organizationId: preview.organizationId,
+      asOf: preview.asOf,
+      includeUpcoming,
+      dryRun,
+      channel,
+      provider,
+      status: "failed",
+      announcementTitle: preview.announcementDraft.title,
+      announcementBody: preview.announcementDraft.body,
+      targets: targetSnapshots,
+      sentTargetCount: 0,
+      webhookSource: null,
+      emailTemplateSource: null,
+      emailTemplateId,
+      dispatchedAt: null,
+      actorRole: actor.role,
+      actorId: actor.id,
+      attempted,
+      failureMessage: "webhook_not_configured"
+    });
     await context.dataAccess.audit.append({
       action: "leave.promotion_notice.failed",
       entityType: "LeavePolicy",
@@ -1793,6 +2146,27 @@ export async function dispatchAnnualLeavePromotionNotice(
   }
 
   if (channel === "email_template" && attempted && !emailTemplateConfig) {
+    await persistPromotionDeliveryHistory(context, {
+      organizationId: preview.organizationId,
+      asOf: preview.asOf,
+      includeUpcoming,
+      dryRun,
+      channel,
+      provider,
+      status: "failed",
+      announcementTitle: preview.announcementDraft.title,
+      announcementBody: preview.announcementDraft.body,
+      targets: targetSnapshots,
+      sentTargetCount: 0,
+      webhookSource: null,
+      emailTemplateSource: null,
+      emailTemplateId,
+      dispatchedAt: null,
+      actorRole: actor.role,
+      actorId: actor.id,
+      attempted,
+      failureMessage: "email_template_not_configured"
+    });
     await context.dataAccess.audit.append({
       action: "leave.promotion_notice.failed",
       entityType: "LeavePolicy",
@@ -1872,6 +2246,27 @@ export async function dispatchAnnualLeavePromotionNotice(
           error: error instanceof Error ? error.message : "unknown error"
         }
       });
+      await persistPromotionDeliveryHistory(context, {
+        organizationId: preview.organizationId,
+        asOf: preview.asOf,
+        includeUpcoming,
+        dryRun,
+        channel,
+        provider,
+        status: "failed",
+        announcementTitle: preview.announcementDraft.title,
+        announcementBody: preview.announcementDraft.body,
+        targets: targetSnapshots,
+        sentTargetCount: 0,
+        webhookSource: webhook?.source ?? null,
+        emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+        emailTemplateId,
+        dispatchedAt: null,
+        actorRole: actor.role,
+        actorId: actor.id,
+        attempted,
+        failureMessage: error instanceof Error ? error.message : "unknown error"
+      });
       if (channel === "webhook") {
         throw new ServiceError(502, "leave promotion webhook request failed");
       }
@@ -1883,6 +2278,26 @@ export async function dispatchAnnualLeavePromotionNotice(
 
   const sentTargetCount =
     status === "dispatched" ? (channel === "webhook" ? targetCount : recipientCount) : 0;
+  const persisted = await persistPromotionDeliveryHistory(context, {
+    organizationId: preview.organizationId,
+    asOf: preview.asOf,
+    includeUpcoming,
+    dryRun,
+    channel,
+    provider,
+    status,
+    announcementTitle: preview.announcementDraft.title,
+    announcementBody: preview.announcementDraft.body,
+    targets: targetSnapshots,
+    sentTargetCount,
+    webhookSource: webhook?.source ?? null,
+    emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+    emailTemplateId,
+    dispatchedAt: dispatchedAt ? new Date(dispatchedAt) : null,
+    actorRole: actor.role,
+    actorId: actor.id,
+    attempted
+  });
   const action =
     status === "dispatched"
       ? "leave.promotion_notice.dispatched"
@@ -1923,6 +2338,7 @@ export async function dispatchAnnualLeavePromotionNotice(
         actorId: actor.id,
         payload: {
           organizationId: preview.organizationId,
+          deliveryId: persisted.deliveryId,
           asOf: preview.asOf,
           includeUpcoming,
           targetCount,
@@ -1985,6 +2401,7 @@ export async function dispatchAnnualLeavePromotionNotice(
     targets: preview.targets,
     announcementDraft: preview.announcementDraft,
     delivery: {
+      deliveryId: persisted.deliveryId,
       status,
       attempted,
       dryRun,
@@ -1999,6 +2416,472 @@ export async function dispatchAnnualLeavePromotionNotice(
       missingEmailCount,
       dispatchedAt
     }
+  };
+}
+
+function normalizeRecipientEmployeeIds(values?: string[]) {
+  if (!values) {
+    return [];
+  }
+  const deduped = new Set<string>();
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized) {
+      continue;
+    }
+    deduped.add(normalized);
+  }
+  return [...deduped];
+}
+
+export async function listLeavePromotionDeliveries(
+  context: ServiceContext,
+  input: ListLeavePromotionDeliveriesInput
+): Promise<{
+  organizationId: string;
+  deliveries: PromotionDeliverySummaryView[];
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(
+    context,
+    Permissions.leaveAccrualSettle,
+    "leave promotion delivery history list requires permission"
+  );
+
+  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
+  ensureTenantAccess(actor, organizationId);
+
+  if (input.limit !== undefined) {
+    if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 200) {
+      throw new ServiceError(400, "limit must be an integer between 1 and 200");
+    }
+  }
+
+  const deliveries = await context.dataAccess.leavePromotionDeliveries.list({
+    organizationId,
+    channel: input.channel,
+    status: input.status,
+    retryOfDeliveryId: input.retryOfDeliveryId,
+    limit: input.limit
+  });
+
+  await context.dataAccess.audit.append({
+    action: "leave.promotion_delivery.list_read",
+    entityType: "LeavePromotionDelivery",
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      channel: input.channel ?? null,
+      status: input.status ?? null,
+      retryOfDeliveryId: input.retryOfDeliveryId ?? null,
+      limit: input.limit ?? null,
+      resultCount: deliveries.length
+    }
+  });
+
+  return {
+    organizationId,
+    deliveries: deliveries.map(toPromotionDeliverySummaryView)
+  };
+}
+
+export async function readLeavePromotionDelivery(
+  context: ServiceContext,
+  input: ReadLeavePromotionDeliveryInput
+): Promise<{
+  delivery: PromotionDeliverySummaryView & {
+    announcementTitle: string;
+    announcementBody: string;
+  };
+  recipients: PromotionDeliveryRecipientView[];
+  sourceDelivery: PromotionDeliverySummaryView | null;
+  retries: PromotionDeliverySummaryView[];
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(
+    context,
+    Permissions.leaveAccrualSettle,
+    "leave promotion delivery history detail requires permission"
+  );
+
+  const deliveryId = input.deliveryId.trim();
+  if (!deliveryId) {
+    throw new ServiceError(400, "deliveryId is required");
+  }
+
+  const delivery = await context.dataAccess.leavePromotionDeliveries.findById(deliveryId);
+  if (!delivery) {
+    throw new ServiceError(404, "leave promotion delivery not found");
+  }
+  if (input.organizationId && input.organizationId !== delivery.organizationId) {
+    throw new ServiceError(404, "leave promotion delivery not found");
+  }
+  ensureTenantAccess(actor, delivery.organizationId);
+
+  const recipients = await context.dataAccess.leavePromotionDeliveries.listRecipients({
+    deliveryId: delivery.id
+  });
+  const retries = await context.dataAccess.leavePromotionDeliveries.list({
+    organizationId: delivery.organizationId,
+    retryOfDeliveryId: delivery.id,
+    limit: 200
+  });
+  const sourceDelivery =
+    delivery.retryOfDeliveryId === null
+      ? null
+      : await context.dataAccess.leavePromotionDeliveries.findById(delivery.retryOfDeliveryId);
+
+  await context.dataAccess.audit.append({
+    action: "leave.promotion_delivery.read",
+    entityType: "LeavePromotionDelivery",
+    entityId: delivery.id,
+    organizationId: delivery.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      recipientCount: recipients.length,
+      retryCount: retries.length,
+      sourceDeliveryId: sourceDelivery?.id ?? null
+    }
+  });
+
+  return {
+    delivery: {
+      ...toPromotionDeliverySummaryView(delivery),
+      announcementTitle: delivery.announcementTitle,
+      announcementBody: delivery.announcementBody
+    },
+    recipients: recipients.map(toPromotionDeliveryRecipientView),
+    sourceDelivery: sourceDelivery ? toPromotionDeliverySummaryView(sourceDelivery) : null,
+    retries: retries.map(toPromotionDeliverySummaryView)
+  };
+}
+
+export async function retryLeavePromotionDelivery(
+  context: ServiceContext,
+  input: RetryLeavePromotionDeliveryInput
+): Promise<{
+  sourceDeliveryId: string;
+  delivery: PromotionDeliverySummaryView & {
+    attempted: boolean;
+    emailTemplateConfigured: boolean;
+  };
+  recipients: PromotionDeliveryRecipientView[];
+  retries: PromotionDeliverySummaryView[];
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(
+    context,
+    Permissions.leaveAccrualSettle,
+    "leave promotion delivery retry requires permission"
+  );
+
+  const deliveryId = input.deliveryId.trim();
+  if (!deliveryId) {
+    throw new ServiceError(400, "deliveryId is required");
+  }
+
+  const sourceDelivery = await context.dataAccess.leavePromotionDeliveries.findById(deliveryId);
+  if (!sourceDelivery) {
+    throw new ServiceError(404, "leave promotion delivery not found");
+  }
+  if (input.organizationId && input.organizationId !== sourceDelivery.organizationId) {
+    throw new ServiceError(404, "leave promotion delivery not found");
+  }
+  ensureTenantAccess(actor, sourceDelivery.organizationId);
+
+  if (sourceDelivery.channel !== "email_template") {
+    throw new ServiceError(409, "retry is supported only for email-template promotion deliveries");
+  }
+
+  const sourceRecipients = await context.dataAccess.leavePromotionDeliveries.listRecipients({
+    deliveryId: sourceDelivery.id
+  });
+  if (sourceRecipients.length === 0) {
+    throw new ServiceError(409, "source delivery has no recipient snapshots");
+  }
+
+  const sourceRecipientsByEmployeeId = new Map<string, LeavePromotionDeliveryRecipientEntity>();
+  for (const recipient of sourceRecipients) {
+    sourceRecipientsByEmployeeId.set(recipient.employeeId, recipient);
+  }
+  const requestedEmployeeIds = normalizeRecipientEmployeeIds(input.recipientEmployeeIds);
+  if (requestedEmployeeIds.length > 0) {
+    const unknownEmployeeIds = requestedEmployeeIds.filter(
+      (employeeId) => !sourceRecipientsByEmployeeId.has(employeeId)
+    );
+    if (unknownEmployeeIds.length > 0) {
+      throw new ServiceError(400, "recipientEmployeeIds include unknown employee(s)", {
+        unknownEmployeeIds
+      });
+    }
+  }
+
+  const selectedRecipients =
+    requestedEmployeeIds.length > 0
+      ? requestedEmployeeIds.flatMap((employeeId) => {
+          const recipient = sourceRecipientsByEmployeeId.get(employeeId);
+          return recipient ? [recipient] : [];
+        })
+      : sourceRecipients.filter((recipient) => recipient.status === "FAILED");
+  const selectedTargets = toPromotionTargetSnapshotsFromRecipients(selectedRecipients);
+  const dispatchRecipients = toPromotionDispatchRecipients(selectedTargets);
+  const selectedTargetCount = selectedTargets.length;
+  const recipientCount = dispatchRecipients.length;
+  const missingEmailCount = Math.max(selectedTargetCount - recipientCount, 0);
+
+  const dryRun = input.dryRun ?? false;
+  const attempted = !dryRun && recipientCount > 0;
+  const requestedTemplateId = input.emailTemplateId?.trim() || "";
+  const sourceTemplateId = sourceDelivery.emailTemplateId?.trim() || "";
+  const configuredTemplateId = normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID);
+  const emailTemplateId = requestedTemplateId || sourceTemplateId || configuredTemplateId || null;
+  const emailTemplateConfig = resolvePromotionEmailTemplateConfig();
+  const provider: PromotionDeliveryProvider | null = emailTemplateConfig ? "email_template" : null;
+  const retryCountByEmployeeId = toRetryCountByEmployeeId(sourceRecipients);
+
+  const persistBase = {
+    organizationId: sourceDelivery.organizationId,
+    asOf: sourceDelivery.asOf.toISOString(),
+    includeUpcoming: sourceDelivery.includeUpcoming,
+    dryRun,
+    channel: "email_template" as const,
+    provider,
+    announcementTitle: sourceDelivery.announcementTitle,
+    announcementBody: sourceDelivery.announcementBody,
+    targets: selectedTargets,
+    webhookSource: null,
+    emailTemplateSource: emailTemplateConfig?.urlSource ?? sourceDelivery.emailTemplateSource,
+    emailTemplateId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    retryOfDeliveryId: sourceDelivery.id,
+    retryCountByEmployeeId,
+    attempted
+  };
+
+  if (attempted && !emailTemplateId) {
+    await persistPromotionDeliveryHistory(context, {
+      ...persistBase,
+      status: "failed",
+      sentTargetCount: 0,
+      dispatchedAt: null,
+      failureMessage: "email_template_id_missing"
+    });
+    await context.dataAccess.audit.append({
+      action: "leave.promotion_notice.retry_failed",
+      entityType: "LeavePromotionDelivery",
+      entityId: sourceDelivery.id,
+      organizationId: sourceDelivery.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        reason: "email_template_id_missing",
+        requestedEmployeeIds,
+        selectedTargetCount,
+        recipientCount,
+        missingEmailCount
+      }
+    });
+    throw new ServiceError(
+      400,
+      "emailTemplateId is required for retry (request body, source delivery, or FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
+    );
+  }
+
+  if (attempted && !emailTemplateConfig) {
+    await persistPromotionDeliveryHistory(context, {
+      ...persistBase,
+      status: "failed",
+      sentTargetCount: 0,
+      dispatchedAt: null,
+      failureMessage: "email_template_not_configured"
+    });
+    await context.dataAccess.audit.append({
+      action: "leave.promotion_notice.retry_failed",
+      entityType: "LeavePromotionDelivery",
+      entityId: sourceDelivery.id,
+      organizationId: sourceDelivery.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        reason: "email_template_not_configured",
+        requestedEmployeeIds,
+        selectedTargetCount,
+        recipientCount,
+        missingEmailCount
+      }
+    });
+    throw new ServiceError(
+      503,
+      "leave promotion email template retry is not configured (set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL and FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)"
+    );
+  }
+
+  let status: PromotionDeliveryStatus = "dry_run";
+  let dispatchedAt: string | null = null;
+
+  if (attempted && emailTemplateConfig && emailTemplateId) {
+    try {
+      await sendPromotionEmailTemplate(emailTemplateConfig, {
+        templateId: emailTemplateId,
+        from: emailTemplateConfig.from,
+        subject: sourceDelivery.announcementTitle,
+        body: sourceDelivery.announcementBody,
+        organizationId: sourceDelivery.organizationId,
+        asOf: sourceDelivery.asOf.toISOString(),
+        includeUpcoming: sourceDelivery.includeUpcoming,
+        recipients: dispatchRecipients
+      });
+      status = "dispatched";
+      dispatchedAt = new Date().toISOString();
+    } catch (error) {
+      await context.dataAccess.audit.append({
+        action: "leave.promotion_notice.retry_failed",
+        entityType: "LeavePromotionDelivery",
+        entityId: sourceDelivery.id,
+        organizationId: sourceDelivery.organizationId,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          reason: "email_template_request_failed",
+          requestedEmployeeIds,
+          selectedTargetCount,
+          recipientCount,
+          missingEmailCount,
+          emailTemplateSource: emailTemplateConfig.urlSource,
+          emailTemplateId,
+          error: error instanceof Error ? error.message : "unknown error"
+        }
+      });
+      await persistPromotionDeliveryHistory(context, {
+        ...persistBase,
+        status: "failed",
+        sentTargetCount: 0,
+        dispatchedAt: null,
+        failureMessage: error instanceof Error ? error.message : "unknown error"
+      });
+      throw new ServiceError(502, "leave promotion email template retry request failed");
+    }
+  } else if (!dryRun) {
+    status = "skipped_no_targets";
+  }
+
+  const sentTargetCount = status === "dispatched" ? recipientCount : 0;
+  const persisted = await persistPromotionDeliveryHistory(context, {
+    ...persistBase,
+    status,
+    sentTargetCount,
+    dispatchedAt: dispatchedAt ? new Date(dispatchedAt) : null
+  });
+
+  const action =
+    status === "dispatched"
+      ? "leave.promotion_notice.retry_dispatched"
+      : status === "skipped_no_targets"
+        ? "leave.promotion_notice.retry_skipped"
+        : "leave.promotion_notice.retry_dry_run";
+  await context.dataAccess.audit.append({
+    action,
+    entityType: "LeavePromotionDelivery",
+    entityId: persisted.deliveryId,
+    organizationId: sourceDelivery.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      sourceDeliveryId: sourceDelivery.id,
+      requestedEmployeeIds,
+      selectedTargetCount,
+      recipientCount,
+      missingEmailCount,
+      sentTargetCount,
+      status,
+      dryRun,
+      attempted,
+      emailTemplateSource: emailTemplateConfig?.urlSource ?? sourceDelivery.emailTemplateSource,
+      emailTemplateId
+    }
+  });
+
+  if (status === "dispatched" && dispatchedAt) {
+    try {
+      await getEventPublisher(context).publish({
+        name: "leave.promotion.notice.dispatched.v1",
+        occurredAt: dispatchedAt,
+        entityType: "LeavePromotionDelivery",
+        entityId: persisted.deliveryId,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
+          organizationId: sourceDelivery.organizationId,
+          deliveryId: persisted.deliveryId,
+          retryOfDeliveryId: sourceDelivery.id,
+          asOf: sourceDelivery.asOf.toISOString(),
+          includeUpcoming: sourceDelivery.includeUpcoming,
+          targetCount: selectedTargetCount,
+          recipientCount,
+          missingEmailCount,
+          channel: "email_template",
+          provider,
+          emailTemplateSource: emailTemplateConfig?.urlSource ?? sourceDelivery.emailTemplateSource,
+          emailTemplateId,
+          announcementTitle: sourceDelivery.announcementTitle,
+          targetEmployeeIds: dispatchRecipients.slice(0, 100).map((recipient) => recipient.employeeId)
+        }
+      });
+    } catch (error) {
+      try {
+        await context.dataAccess.audit.append({
+          action: "leave.promotion_notice.retry_event_publish_failed",
+          entityType: "LeavePromotionDelivery",
+          entityId: persisted.deliveryId,
+          organizationId: sourceDelivery.organizationId,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            sourceDeliveryId: sourceDelivery.id,
+            dispatchedAt,
+            error: error instanceof Error ? error.message : "unknown error"
+          }
+        });
+      } catch {
+        // Non-blocking failure path: retry dispatch already completed.
+      }
+    }
+  }
+
+  const persistedDelivery = await context.dataAccess.leavePromotionDeliveries.findById(persisted.deliveryId);
+  if (!persistedDelivery) {
+    throw new ServiceError(500, "retry delivery history persistence failed");
+  }
+  const persistedRecipients = await context.dataAccess.leavePromotionDeliveries.listRecipients({
+    deliveryId: persisted.deliveryId
+  });
+  const retries = await context.dataAccess.leavePromotionDeliveries.list({
+    organizationId: sourceDelivery.organizationId,
+    retryOfDeliveryId: sourceDelivery.id,
+    limit: 200
+  });
+
+  return {
+    sourceDeliveryId: sourceDelivery.id,
+    delivery: {
+      ...toPromotionDeliverySummaryView(persistedDelivery),
+      attempted,
+      emailTemplateConfigured: emailTemplateConfig !== null
+    },
+    recipients: persistedRecipients.map(toPromotionDeliveryRecipientView),
+    retries: retries.map(toPromotionDeliverySummaryView)
   };
 }
 
