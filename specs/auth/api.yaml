@@ -1,20 +1,48 @@
 openapi: 3.1.0
 info:
   title: FlowHR Auth API
-  version: 0.1.0
+  version: 0.2.0
 paths:
   /auth/invites:
     post:
-      summary: Generate invite action link and set claims
+      summary: Create onboarding invite and set auth claims
+      description: >
+        Admin/system can choose `deliveryMode=link` (return actionLink) or
+        `deliveryMode=email` (dispatch email invite, actionLink omitted).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, manager, employee, payroll_operator]
+                organizationId:
+                  type: string
+                actorId:
+                  type: string
+                redirectTo:
+                  type: string
+                  format: uri
+                deliveryMode:
+                  type: string
+                  enum: [link, email]
+                  default: link
       responses:
         "201":
-          description: Invite link generated
+          description: Invite created
         "400":
-          description: Invalid payload
+          description: Invalid payload or missing organization scope
         "401":
           description: Missing actor
         "403":
-          description: Forbidden
+          description: Forbidden or organization mismatch
         "502":
           description: Supabase admin failure
-

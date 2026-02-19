@@ -1,11 +1,11 @@
 owner: auth-agent
-version: 0.1.0
+version: 0.2.0
 scope:
   in:
-    - invite/join baseline for SaaS onboarding (no email sending)
+    - invite/join onboarding with selectable delivery mode (link/email)
     - provision Supabase app_metadata claims (role/org/actor_id)
   out:
-    - email delivery/templating
+    - custom email template/branding management
     - self-service sign-up UX
     - invite expiration/reissue policy automation
 entities:
@@ -20,7 +20,7 @@ api:
   endpoints:
     - method: POST
       path: /auth/invites
-      description: Generate invite action link and set app_metadata(role/org/actor_id) for the invited user.
+      description: Generate invite action link or send invite email, then set app_metadata(role/org/actor_id) for the invited user.
   events:
     published: []
     consumed: []
@@ -31,20 +31,23 @@ db_changes:
 invariants:
   - Invites must set claims in app_metadata (not user_metadata).
   - If actor.organizationId exists, payload.organizationId must match.
+  - deliveryMode=link must return actionLink; deliveryMode=email must return actionLink=null.
   - action_link is secret and must be returned only to authorized actors.
 risk:
   permissions:
-    - action_link leakage could grant account access; must be admin-only and audited.
+    - action_link leakage could grant account access; endpoint must stay admin/system-only and audited.
+    - deliveryMode=email must not persist or expose action_link.
   payroll_accuracy:
     - not applicable
   legal:
     - invite email addresses are PII; avoid persisting action_link in logs.
 test_plan:
   unit:
-    - validate payload parsing and role allowlist
+    - validate payload parsing, role allowlist, and delivery mode allowlist
     - enforce org mismatch rejection
   integration:
-    - admin can generate invite and receives action_link
+    - admin can generate invite with deliveryMode=link and receives action_link
+    - admin can invite with deliveryMode=email and receives actionLink=null
     - non-admin forbidden
   regression:
     - existing auth/session flows remain unchanged
@@ -58,6 +61,7 @@ observability:
     - auth.user.claims.updated
   metrics:
     - auth_invite_generated_count
+    - auth_invite_delivery_mode_count
   logs:
     - auth invite failures (without action_link)
 rollout:
@@ -70,9 +74,10 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Adds admin-only invite endpoint to provision Supabase app_metadata claims for SaaS onboarding."
+consumer_impact: "Adds deliveryMode(link/email) to admin-only invite endpoint while keeping backward-compatible default(link)."
 references:
   - work-items/WI-0096-auth-invite-baseline.md
+  - work-items/WI-0111-auth-invite-delivery-mode.md
 approval:
   spec_owner: auth-agent
   qa_owner: qa-agent

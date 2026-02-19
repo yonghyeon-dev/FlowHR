@@ -61,6 +61,7 @@ type WorkScheduleDto = {
 };
 
 type InviteRole = "admin" | "manager" | "employee" | "payroll_operator";
+type InviteDeliveryMode = "link" | "email";
 
 type InviteResultDto = {
   userId: string;
@@ -69,7 +70,8 @@ type InviteResultDto = {
   organizationId: string;
   actorId: string | null;
   redirectTo: string;
-  actionLink: string;
+  deliveryMode: InviteDeliveryMode;
+  actionLink: string | null;
 };
 
 type LeaveRequestDto = {
@@ -213,6 +215,7 @@ export default function AdminDashboardPage() {
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InviteRole>("employee");
+  const [inviteDeliveryMode, setInviteDeliveryMode] = useState<InviteDeliveryMode>("link");
   const [inviteActorId, setInviteActorId] = useState("EMP-1001");
   const [inviteResult, setInviteResult] = useState<InviteResultDto | null>(null);
 
@@ -437,6 +440,7 @@ export default function AdminDashboardPage() {
     const payload = {
       email,
       role: inviteRole,
+      deliveryMode: inviteDeliveryMode,
       organizationId: organizationId.trim() || undefined,
       actorId: inviteActorId.trim() || undefined
     };
@@ -1281,6 +1285,16 @@ export default function AdminDashboardPage() {
               </select>
             </label>
             <label>
+              Delivery
+              <select
+                value={inviteDeliveryMode}
+                onChange={(event) => setInviteDeliveryMode(event.target.value as InviteDeliveryMode)}
+              >
+                <option value="link">link</option>
+                <option value="email">email</option>
+              </select>
+            </label>
+            <label>
               Actor ID (선택)
               <input
                 value={inviteActorId}
@@ -1305,13 +1319,20 @@ export default function AdminDashboardPage() {
           {inviteResult ? (
             <>
               <p className="small">
-                생성됨: <strong>{inviteResult.email}</strong> · role={inviteResult.role} · org={inviteResult.organizationId}
+                생성됨: <strong>{inviteResult.email}</strong> · role={inviteResult.role} · delivery=
+                {inviteResult.deliveryMode} · org={inviteResult.organizationId}
                 {inviteResult.actorId ? ` · actor=${inviteResult.actorId}` : ""}
               </p>
-              <label className="full" style={{ display: "block", marginTop: 8 }}>
-                초대 링크 (action_link)
-                <textarea readOnly rows={3} value={inviteResult.actionLink} />
-              </label>
+              {inviteResult.actionLink ? (
+                <label className="full" style={{ display: "block", marginTop: 8 }}>
+                  초대 링크 (action_link)
+                  <textarea readOnly rows={3} value={inviteResult.actionLink} />
+                </label>
+              ) : (
+                <p className="small muted" style={{ marginTop: 8 }}>
+                  이메일 발송 모드로 생성되어 action_link를 저장하지 않았습니다.
+                </p>
+              )}
               <p className="small muted" style={{ marginTop: 8 }}>
                 링크가 `/login`으로 리다이렉트되려면 Supabase Auth의 Redirect URL에 현재 도메인이 허용되어 있어야 합니다.
               </p>
