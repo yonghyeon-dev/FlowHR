@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.2.1
+  version: 0.3.0
 paths:
   /approval/policy:
     get:
@@ -94,3 +94,59 @@ paths:
           description: Invalid payload
         "403":
           description: Permission denied
+  /approval/templates:
+    get:
+      summary: List approval line templates
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+            enum: [ATTENDANCE, LEAVE, PAYROLL]
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Templates listed
+        "403":
+          description: Permission denied
+    post:
+      summary: Create approval line template
+      responses:
+        "201":
+          description: Template created
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+        "409":
+          description: Active template conflict for same organization and domain
+  /approval/templates/{templateId}:
+    patch:
+      summary: Update approval line template
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template updated
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+        "404":
+          description: Template not found
+        "409":
+          description: Active template conflict for same organization and domain

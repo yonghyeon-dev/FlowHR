@@ -1,14 +1,17 @@
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
   AuditLogEntity,
   AttendanceRecordEntity,
   CreateApprovalDelegationInput,
+  CreateApprovalLineTemplateInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   ListAuditLogsInput,
   UpdateApprovalDelegationInput,
+  UpdateApprovalLineTemplateInput,
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
@@ -52,6 +55,7 @@ type MemoryState = {
   positions: Map<string, PositionEntity>;
   approvalPolicies: Map<string, ApprovalPolicyEntity>;
   approvalDelegations: Map<string, ApprovalDelegationEntity>;
+  approvalLineTemplates: Map<string, ApprovalLineTemplateEntity>;
   employees: Map<string, EmployeeEntity>;
   roles: Map<string, RoleEntity>;
   rolePermissions: Map<string, Set<string>>;
@@ -90,6 +94,7 @@ function createState(): MemoryState {
     positions: new Map<string, PositionEntity>(),
     approvalPolicies: new Map<string, ApprovalPolicyEntity>(),
     approvalDelegations: new Map<string, ApprovalDelegationEntity>(),
+    approvalLineTemplates: new Map<string, ApprovalLineTemplateEntity>(),
     employees: new Map<string, EmployeeEntity>(),
     roles: new Map<string, RoleEntity>(),
     rolePermissions: new Map<string, Set<string>>(),
@@ -283,6 +288,15 @@ function cloneApprovalDelegation(entity: ApprovalDelegationEntity): ApprovalDele
   };
 }
 
+function cloneApprovalLineTemplate(entity: ApprovalLineTemplateEntity): ApprovalLineTemplateEntity {
+  return {
+    ...entity,
+    approverRoles: [...entity.approverRoles],
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
 function cloneEmployee(entity: EmployeeEntity): EmployeeEntity {
   return {
     ...entity,
@@ -422,6 +436,21 @@ function updateApprovalDelegationEntity(
     reason: input.reason !== undefined ? input.reason : existing.reason,
     startsAt: input.startsAt !== undefined ? cloneDate(input.startsAt) : existing.startsAt,
     endsAt: input.endsAt !== undefined ? cloneDate(input.endsAt) : existing.endsAt,
+    active: input.active !== undefined ? input.active : existing.active,
+    updatedAt: new Date()
+  };
+}
+
+function updateApprovalLineTemplateEntity(
+  existing: ApprovalLineTemplateEntity,
+  input: UpdateApprovalLineTemplateInput
+): ApprovalLineTemplateEntity {
+  return {
+    ...existing,
+    name: input.name !== undefined ? input.name : existing.name,
+    domain: input.domain !== undefined ? input.domain : existing.domain,
+    approverRoles:
+      input.approverRoles !== undefined ? [...input.approverRoles] : [...existing.approverRoles],
     active: input.active !== undefined ? input.active : existing.active,
     updatedAt: new Date()
   };
@@ -632,6 +661,65 @@ export const memoryDataAccess: DataAccess = {
         const byStart = right.startsAt.getTime() - left.startsAt.getTime();
         if (byStart !== 0) {
           return byStart;
+        }
+        return left.id.localeCompare(right.id);
+      });
+      return rows;
+    },
+
+    async createTemplate(input: CreateApprovalLineTemplateInput) {
+      const now = new Date();
+      const entity: ApprovalLineTemplateEntity = {
+        id: nextId("ATPL"),
+        organizationId: input.organizationId,
+        name: input.name,
+        domain: input.domain,
+        approverRoles: [...input.approverRoles],
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.approvalLineTemplates.set(entity.id, entity);
+      return cloneApprovalLineTemplate(entity);
+    },
+
+    async findTemplateById(id: string) {
+      const entity = state.approvalLineTemplates.get(id);
+      return entity ? cloneApprovalLineTemplate(entity) : null;
+    },
+
+    async updateTemplate(id: string, input: UpdateApprovalLineTemplateInput) {
+      const existing = state.approvalLineTemplates.get(id);
+      if (!existing) {
+        throw new Error(`approval line template not found: ${id}`);
+      }
+      const updated = updateApprovalLineTemplateEntity(existing, input);
+      state.approvalLineTemplates.set(id, updated);
+      return cloneApprovalLineTemplate(updated);
+    },
+
+    async listTemplates(input: {
+      organizationId?: string;
+      domain?: ApprovalDomain;
+      active?: boolean;
+    }) {
+      const rows: ApprovalLineTemplateEntity[] = [];
+      for (const entity of state.approvalLineTemplates.values()) {
+        if (input.organizationId && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.domain && entity.domain !== input.domain) {
+          continue;
+        }
+        if (input.active !== undefined && entity.active !== input.active) {
+          continue;
+        }
+        rows.push(cloneApprovalLineTemplate(entity));
+      }
+      rows.sort((left, right) => {
+        const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
         }
         return left.id.localeCompare(right.id);
       });

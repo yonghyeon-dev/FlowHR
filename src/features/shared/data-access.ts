@@ -178,6 +178,17 @@ export type ApprovalDelegationEntity = {
   updatedAt: Date;
 };
 
+export type ApprovalLineTemplateEntity = {
+  id: string;
+  organizationId: string;
+  name: string;
+  domain: ApprovalDomain;
+  approverRoles: string[];
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type EmployeeEntity = {
   id: string;
   organizationId: string | null;
@@ -440,6 +451,21 @@ export type UpdateApprovalDelegationInput = {
   active?: boolean;
 };
 
+export type CreateApprovalLineTemplateInput = {
+  organizationId: string;
+  name: string;
+  domain: ApprovalDomain;
+  approverRoles: string[];
+  active?: boolean;
+};
+
+export type UpdateApprovalLineTemplateInput = {
+  name?: string;
+  domain?: ApprovalDomain;
+  approverRoles?: string[];
+  active?: boolean;
+};
+
 export type UpsertRoleInput = {
   id: string;
   name: string;
@@ -639,6 +665,14 @@ export interface ApprovalStore {
     active?: boolean;
     delegateActorId?: string;
   }): Promise<ApprovalDelegationEntity[]>;
+  createTemplate(input: CreateApprovalLineTemplateInput): Promise<ApprovalLineTemplateEntity>;
+  findTemplateById(id: string): Promise<ApprovalLineTemplateEntity | null>;
+  updateTemplate(id: string, input: UpdateApprovalLineTemplateInput): Promise<ApprovalLineTemplateEntity>;
+  listTemplates(input: {
+    organizationId?: string;
+    domain?: ApprovalDomain;
+    active?: boolean;
+  }): Promise<ApprovalLineTemplateEntity[]>;
 }
 
 export interface RbacStore {

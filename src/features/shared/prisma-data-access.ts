@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
   ApprovalStore,
   AuditLogEntity,
@@ -10,6 +11,7 @@ import type {
   AttendanceStore,
   AuditStore,
   CreateApprovalDelegationInput,
+  CreateApprovalLineTemplateInput,
   CreateAttendanceRecordInput,
   CreateDepartmentInput,
   CreateEmployeeInput,
@@ -53,6 +55,7 @@ import type {
   UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
   UpdateApprovalDelegationInput,
+  UpdateApprovalLineTemplateInput,
   UpdateAttendanceRecordInput,
   UpdateDepartmentInput,
   UpdateEmployeeInput,
@@ -310,6 +313,23 @@ function toApprovalDelegationEntity(record: {
   return {
     ...record,
     domain: record.domain as ApprovalDomain
+  };
+}
+
+function toApprovalLineTemplateEntity(record: {
+  id: string;
+  organizationId: string;
+  name: string;
+  domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
+  approverRoles: string[];
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): ApprovalLineTemplateEntity {
+  return {
+    ...record,
+    domain: record.domain as ApprovalDomain,
+    approverRoles: [...record.approverRoles]
   };
 }
 
@@ -671,6 +691,55 @@ const approvals: ApprovalStore = {
       orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }]
     });
     return records.map(toApprovalDelegationEntity);
+  },
+
+  async createTemplate(input: CreateApprovalLineTemplateInput) {
+    const record = await prisma.approvalLineTemplate.create({
+      data: {
+        organizationId: input.organizationId,
+        name: input.name,
+        domain: input.domain,
+        approverRoles: input.approverRoles,
+        active: input.active ?? true
+      }
+    });
+    return toApprovalLineTemplateEntity(record);
+  },
+
+  async findTemplateById(id: string) {
+    const record = await prisma.approvalLineTemplate.findUnique({
+      where: { id }
+    });
+    return record ? toApprovalLineTemplateEntity(record) : null;
+  },
+
+  async updateTemplate(id: string, input: UpdateApprovalLineTemplateInput) {
+    const record = await prisma.approvalLineTemplate.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.domain !== undefined ? { domain: input.domain } : {}),
+        ...(input.approverRoles !== undefined ? { approverRoles: input.approverRoles } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {})
+      }
+    });
+    return toApprovalLineTemplateEntity(record);
+  },
+
+  async listTemplates(input: {
+    organizationId?: string;
+    domain?: ApprovalDomain;
+    active?: boolean;
+  }) {
+    const records = await prisma.approvalLineTemplate.findMany({
+      where: {
+        ...(input.organizationId ? { organizationId: input.organizationId } : {}),
+        ...(input.domain ? { domain: input.domain } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {})
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toApprovalLineTemplateEntity);
   }
 };
 

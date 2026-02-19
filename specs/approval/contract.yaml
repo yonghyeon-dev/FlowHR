@@ -1,11 +1,12 @@
 owner: approval-agent
-version: 0.2.1
+version: 0.3.0
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
     - approval delegation management with active time window
     - delegation auto-expiry command with dry-run support
     - multi-organization delegation expiry sweep runner for scheduled cleanup
+    - domain approval line template management for role-set based gate override
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
     - multi-step approval chain routing
@@ -15,14 +16,16 @@ entities:
     description: Organization-level domain-to-approver role mapping.
   - name: ApprovalDelegation
     description: Time-bounded delegation from delegator role to delegate actor.
+  - name: ApprovalLineTemplate
+    description: Organization-level domain approval role-set template with active flag.
 api:
   auth:
     - role: admin
-      permission: read/write approval policy and delegation
+      permission: read/write approval policy, delegation, and templates
     - role: manager
-      permission: read policy/delegation and create manager-level delegation
+      permission: read policy/delegation/templates and create manager-level delegation
     - role: system
-      permission: full approval policy/delegation operations
+      permission: full approval policy/delegation/template operations
   endpoints:
     - method: GET
       path: /approval/policy
@@ -42,6 +45,15 @@ api:
     - method: POST
       path: /approval/delegations/expire
       description: Auto-expire active delegations ended before cutoff time (supports dryRun preview).
+    - method: GET
+      path: /approval/templates
+      description: List approval line templates by organization/domain/active filter.
+    - method: POST
+      path: /approval/templates
+      description: Create approval line template.
+    - method: PATCH
+      path: /approval/templates/{templateId}
+      description: Update approval line template (name/domain/roles/active).
   operations:
     - name: approval-delegation-expiry-sweep
       description: Scheduled runner executes delegation expire command per organization with dry-run/apply mode.
@@ -53,15 +65,24 @@ api:
         description: Emitted when approval delegation is created.
       - name: approval.delegation.updated.v1
         description: Emitted when approval delegation is updated.
+      - name: approval.template.created.v1
+        description: Emitted when approval line template is created.
+      - name: approval.template.updated.v1
+        description: Emitted when approval line template is updated.
     consumed: []
 db_changes:
   migrations:
     - id: 202602180004_approval_policy_delegation
       description: Add approval policy/delegation tables and approval role permissions.
+    - id: 202602190001_approval_line_template
+      description: Add approval line template table and tenant-domain active index.
   backward_compatible: true
-  notes: Additive schema change with role-permission seed using idempotent insert.
+  notes: Additive schema change with approval template table and idempotent role-permission seed.
 invariants:
   - Approval policy fallback defaults to manager(manager/payroll_operator) when no record exists.
+  - Active approval line template for a given organization+domain is unique.
+  - Active template approverRoles (deduped set) must contain at least one role.
+  - Approval gate uses active template role set first; policy single-role fallback applies when no active template exists.
   - Approval delegation must have endsAt greater than startsAt.
   - Expire command must deactivate only active delegations where endsAt is before expiresBeforeAt.
   - Expire command with dryRun=true must not mutate delegation state.
@@ -78,18 +99,23 @@ risk:
 test_plan:
   unit:
     - approval policy/delegation schema validation
+    - approval template schema validation (role dedupe, min role count)
     - delegation time-window guard
   integration:
     - read fallback policy without persisted row
     - upsert and read configured policy
     - create and deactivate delegation lifecycle
+    - create/list/update approval template lifecycle
+    - reject duplicate active template in same organization+domain with 409
     - expire delegation dryRun/apply flow
     - expiry sweep dryRun/apply flow across multiple organizations
     - manager non-manager delegation write blocked with 403
   regression:
     - attendance/leave/payroll approval endpoints enforce policy gate
+    - approval gate reflects template activation/deactivation changes
   authorization:
     - policy/delegation endpoint permission checks
+    - template endpoint permission checks
     - tenant boundary checks for policy/delegation mutation
   payroll_accuracy:
     - payroll confirm gate follows configured approver role/delegation
@@ -99,9 +125,12 @@ observability:
     - approval.delegation.created
     - approval.delegation.updated
     - approval.delegation.auto_expired
+    - approval.template.created
+    - approval.template.updated
   metrics:
     - approval_policy_update_count
     - approval_delegation_active_count
+    - approval_template_active_count
     - approval_policy_gate_denied_count
     - approval_delegation_expire_sweep_checked_count
     - approval_delegation_expire_sweep_applied_count
@@ -117,12 +146,13 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.2.1 adds scheduled delegation expiry sweep operation that reuses existing `/approval/delegations/expire` behavior and keeps approval policy/delegation APIs backward compatible."
+consumer_impact: "Contract v0.3.0 adds approval line template APIs (`/approval/templates`) and template-backed approval gate override while keeping existing policy/delegation endpoints backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
   - work-items/WI-0107-approval-delegation-expiry-automation.md
   - work-items/WI-0108-approval-delegation-expiry-scheduler.md
+  - work-items/WI-0109-approval-line-template-baseline.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent

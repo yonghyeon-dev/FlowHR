@@ -153,6 +153,9 @@ Ops command: `npm run ops:approval:delegations:expire`
   - `POST /api/approval/delegations`
   - `PATCH /api/approval/delegations/{delegationId}`
   - `POST /api/approval/delegations/expire` (payload: optional `organizationId`, optional `expiresBeforeAt`, optional `dryRun`)
+  - `GET /api/approval/templates` (optional query: `organizationId`, `domain`, `active`)
+  - `POST /api/approval/templates`
+  - `PATCH /api/approval/templates/{templateId}`
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`

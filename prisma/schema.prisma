@@ -19,6 +19,7 @@ model Organization {
   positions Position[]
   approvalPolicy ApprovalPolicy?
   approvalDelegations ApprovalDelegation[]
+  approvalLineTemplates ApprovalLineTemplate[]
   leavePolicy LeavePolicy?
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
@@ -113,6 +114,21 @@ model ApprovalDelegation {
 
   @@index([organizationId, domain, active, startsAt, endsAt])
   @@index([organizationId, delegateActorId, active])
+}
+
+model ApprovalLineTemplate {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  domain         ApprovalDomain
+  approverRoles  String[]
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([organizationId, domain, name])
+  @@index([organizationId, domain, active])
 }
 
 model Role {

@@ -145,10 +145,11 @@
 - WI-0106 급여 KR baseline 2차 고도화 (세액공제 + 부양가족 공제 + 월경계 강제검증 옵션 + e2e)
 - WI-0107 결재 위임 만료 자동화 (dry-run/apply API + Admin UI + e2e)
 - WI-0108 결재 위임 만료 스케줄러 (멀티 조직 sweep runner + hourly workflow + incident/alert + e2e)
+- WI-0109 전자결재 범용화 1차 (결재선 템플릿 API + 승인 게이트 연동 + `/admin/approval-templates` UI + e2e)
 
 ### 진행 중
 
-- 다음: 전자결재 범용화(결재선 템플릿) + UI 연동 확장
+- 다음: 결재선 템플릿 고도화(다단계/조건부 라우팅 RFC)
 - 다음: 급여 명세서 검증 자동화 확장(세액공제/월경계 포함 회귀 세트)
 
 ### 현재 아키텍처

@@ -37,6 +37,26 @@ export const createApprovalDelegationSchema = z.object({
   active: z.boolean().optional()
 });
 
+const approverRolesSchema = z
+  .array(actorRoleSchema)
+  .min(1)
+  .max(5)
+  .refine((value) => new Set(value).size === value.length, "approverRoles must not contain duplicates");
+
+export const listApprovalLineTemplatesQuerySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  domain: approvalDomainSchema.optional(),
+  active: z.boolean().optional()
+});
+
+export const createApprovalLineTemplateSchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  name: z.string().min(1).max(120),
+  domain: approvalDomainSchema,
+  approverRoles: approverRolesSchema,
+  active: z.boolean().optional()
+});
+
 export const expireApprovalDelegationsSchema = z.object({
   organizationId: z.string().min(1).optional(),
   expiresBeforeAt: isoDateTime.optional(),
@@ -48,5 +68,12 @@ export const updateApprovalDelegationSchema = z.object({
   startsAt: isoDateTime.optional(),
   endsAt: isoDateTime.optional(),
   reason: z.string().max(1000).nullable().optional(),
+  active: z.boolean().optional()
+});
+
+export const updateApprovalLineTemplateSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  domain: approvalDomainSchema.optional(),
+  approverRoles: approverRolesSchema.optional(),
   active: z.boolean().optional()
 });

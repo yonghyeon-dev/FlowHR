@@ -8,12 +8,17 @@
 - `ApprovalDelegation`
   - many rows per organization
   - stores `domain`, `delegatorRole`, `delegateActorId`, active window (`startsAt`, `endsAt`), and `active`
+- `ApprovalLineTemplate`
+  - many rows per organization (one active row per organization+domain)
+  - stores `name`, `domain`, `approverRoles[]`, and `active`
 
 ## Migration
 
 - `202602180004_approval_policy_delegation`
+- `202602190001_approval_line_template`
 
 ## Compatibility
 
 - Additive schema only; no existing columns/tables removed.
 - Role-permission seeds use `ON CONFLICT DO NOTHING`.
+- Approval template active uniqueness is enforced at service layer (organization+domain).

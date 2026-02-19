@@ -4,6 +4,7 @@ import { Permissions } from "@/lib/rbac";
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
   DataAccess
 } from "@/features/shared/data-access";
@@ -42,6 +43,12 @@ type ListApprovalDelegationsInput = {
   delegateActorId?: string;
 };
 
+type ListApprovalLineTemplatesInput = {
+  organizationId?: string;
+  domain?: ApprovalDomain;
+  active?: boolean;
+};
+
 type CreateApprovalDelegationInput = {
   organizationId?: string;
   domain: ApprovalDomain;
@@ -53,11 +60,26 @@ type CreateApprovalDelegationInput = {
   active?: boolean;
 };
 
+type CreateApprovalLineTemplateInput = {
+  organizationId?: string;
+  name: string;
+  domain: ApprovalDomain;
+  approverRoles: string[];
+  active?: boolean;
+};
+
 type UpdateApprovalDelegationInput = {
   delegateActorId?: string;
   startsAt?: Date;
   endsAt?: Date;
   reason?: string | null;
+  active?: boolean;
+};
+
+type UpdateApprovalLineTemplateInput = {
+  name?: string;
+  domain?: ApprovalDomain;
+  approverRoles?: string[];
   active?: boolean;
 };
 
@@ -116,6 +138,22 @@ function ensureValidDelegationWindow(startsAt: Date, endsAt: Date) {
   }
 }
 
+function normalizeApproverRoles(input: string[]): string[] {
+  const deduped = new Set<string>();
+  for (const role of input) {
+    const normalized = role.trim();
+    if (!normalized) {
+      continue;
+    }
+    deduped.add(normalized);
+  }
+  const roles = Array.from(deduped);
+  if (roles.length === 0) {
+    throw new ServiceError(400, "approverRoles must contain at least one role");
+  }
+  return roles;
+}
+
 function toPolicyFallback(organizationId: string): ApprovalPolicyEntity {
   const now = new Date();
   return {
@@ -129,7 +167,7 @@ function toPolicyFallback(organizationId: string): ApprovalPolicyEntity {
   };
 }
 
-function resolveExpectedApproverRole(
+function resolvePolicyApproverRole(
   policy: ApprovalPolicyEntity | null,
   domain: ApprovalDomain
 ): string {
@@ -143,6 +181,33 @@ function resolveExpectedApproverRole(
     return policy.leaveApproverRole;
   }
   return policy.payrollApproverRole;
+}
+
+function resolveExpectedApproverRoles(
+  policy: ApprovalPolicyEntity | null,
+  templates: ApprovalLineTemplateEntity[],
+  domain: ApprovalDomain
+): string[] {
+  if (templates.length === 0) {
+    return [resolvePolicyApproverRole(policy, domain)];
+  }
+
+  const deduped = new Set<string>();
+  for (const template of templates) {
+    for (const role of template.approverRoles) {
+      const normalized = role.trim();
+      if (!normalized) {
+        continue;
+      }
+      deduped.add(normalized);
+    }
+  }
+
+  const roles = Array.from(deduped);
+  if (roles.length > 0) {
+    return roles;
+  }
+  return [resolvePolicyApproverRole(policy, domain)];
 }
 
 function isDelegationActiveAt(delegation: ApprovalDelegationEntity, now: Date) {
@@ -166,8 +231,13 @@ export async function assertApprovalPolicyGate(
   }
 
   const policy = await context.dataAccess.approvals.findPolicyByOrganizationId(input.organizationId);
-  const expectedRole = resolveExpectedApproverRole(policy, input.domain);
-  if (actor.role === expectedRole) {
+  const templates = await context.dataAccess.approvals.listTemplates({
+    organizationId: input.organizationId,
+    domain: input.domain,
+    active: true
+  });
+  const expectedRoles = resolveExpectedApproverRoles(policy, templates, input.domain);
+  if (expectedRoles.includes(actor.role)) {
     return;
   }
 
@@ -180,13 +250,17 @@ export async function assertApprovalPolicyGate(
   });
 
   const delegated = delegations.some(
-    (delegation) => delegation.delegatorRole === expectedRole && isDelegationActiveAt(delegation, now)
+    (delegation) =>
+      expectedRoles.includes(delegation.delegatorRole) && isDelegationActiveAt(delegation, now)
   );
   if (delegated) {
     return;
   }
 
-  throw new ServiceError(403, `approval policy requires ${expectedRole} role or active delegation`);
+  throw new ServiceError(
+    403,
+    `approval policy requires one of [${expectedRoles.join(", ")}] role or active delegation`
+  );
 }
 
 export async function readApprovalPolicy(
@@ -264,6 +338,164 @@ export async function listApprovalDelegations(
     active: input.active,
     delegateActorId: input.delegateActorId
   });
+}
+
+export async function listApprovalLineTemplates(
+  context: ServiceContext,
+  input: ListApprovalLineTemplatesInput
+): Promise<ApprovalLineTemplateEntity[]> {
+  await requirePermission(
+    context,
+    Permissions.approvalPolicyRead,
+    "approval policy read requires permission"
+  );
+  const organizationId = await resolveOrganizationId(context, input.organizationId);
+  return await context.dataAccess.approvals.listTemplates({
+    organizationId,
+    domain: input.domain,
+    active: input.active
+  });
+}
+
+export async function createApprovalLineTemplate(
+  context: ServiceContext,
+  input: CreateApprovalLineTemplateInput
+): Promise<ApprovalLineTemplateEntity> {
+  const actor = requireActor(context);
+  await requirePermission(context, Permissions.approvalPolicyWrite, "approval policy write requires permission");
+  const organizationId = await resolveOrganizationId(context, input.organizationId);
+  const approverRoles = normalizeApproverRoles(input.approverRoles);
+  const active = input.active ?? true;
+
+  if (active) {
+    const existingActive = await context.dataAccess.approvals.listTemplates({
+      organizationId,
+      domain: input.domain,
+      active: true
+    });
+    if (existingActive.length > 0) {
+      throw new ServiceError(409, "active approval line template already exists for domain", {
+        domain: input.domain,
+        existingTemplateIds: existingActive.map((template) => template.id)
+      });
+    }
+  }
+
+  const template = await context.dataAccess.approvals.createTemplate({
+    organizationId,
+    name: input.name.trim(),
+    domain: input.domain,
+    approverRoles,
+    active
+  });
+
+  await context.dataAccess.audit.append({
+    action: "approval.template.created",
+    entityType: "ApprovalLineTemplate",
+    entityId: template.id,
+    organizationId: template.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      name: template.name,
+      domain: template.domain,
+      approverRoles: template.approverRoles,
+      active: template.active
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "approval.template.created.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "ApprovalLineTemplate",
+    entityId: template.id,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      organizationId: template.organizationId,
+      name: template.name,
+      domain: template.domain,
+      approverRoles: template.approverRoles,
+      active: template.active
+    }
+  });
+
+  return template;
+}
+
+export async function updateApprovalLineTemplate(
+  context: ServiceContext,
+  templateId: string,
+  input: UpdateApprovalLineTemplateInput
+): Promise<ApprovalLineTemplateEntity> {
+  const actor = requireActor(context);
+  await requirePermission(context, Permissions.approvalPolicyWrite, "approval policy write requires permission");
+
+  const existing = await context.dataAccess.approvals.findTemplateById(templateId);
+  if (!existing) {
+    throw new ServiceError(404, "approval line template not found");
+  }
+
+  const tenantScope = resolveTenantScope(actor);
+  ensureTenantMatch(tenantScope, existing.organizationId, "approval line template not found");
+
+  const nextDomain = input.domain ?? existing.domain;
+  const nextActive = input.active ?? existing.active;
+  const nextApproverRoles =
+    input.approverRoles !== undefined ? normalizeApproverRoles(input.approverRoles) : existing.approverRoles;
+
+  if (nextActive) {
+    const existingActive = await context.dataAccess.approvals.listTemplates({
+      organizationId: existing.organizationId,
+      domain: nextDomain,
+      active: true
+    });
+    const conflict = existingActive.find((template) => template.id !== existing.id);
+    if (conflict) {
+      throw new ServiceError(409, "active approval line template already exists for domain", {
+        domain: nextDomain,
+        existingTemplateId: conflict.id
+      });
+    }
+  }
+
+  const template = await context.dataAccess.approvals.updateTemplate(templateId, {
+    ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+    ...(input.domain !== undefined ? { domain: input.domain } : {}),
+    ...(input.approverRoles !== undefined ? { approverRoles: nextApproverRoles } : {}),
+    ...(input.active !== undefined ? { active: input.active } : {})
+  });
+
+  await context.dataAccess.audit.append({
+    action: "approval.template.updated",
+    entityType: "ApprovalLineTemplate",
+    entityId: template.id,
+    organizationId: template.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      name: template.name,
+      domain: template.domain,
+      approverRoles: template.approverRoles,
+      active: template.active
+    }
+  });
+  await getEventPublisher(context).publish({
+    name: "approval.template.updated.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "ApprovalLineTemplate",
+    entityId: template.id,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      organizationId: template.organizationId,
+      name: template.name,
+      domain: template.domain,
+      approverRoles: template.approverRoles,
+      active: template.active
+    }
+  });
+
+  return template;
 }
 
 export async function expireApprovalDelegations(

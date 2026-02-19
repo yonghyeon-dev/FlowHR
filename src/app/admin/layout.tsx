@@ -31,6 +31,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
           <Link href="/admin/approval-policy">결재선/위임 정책</Link>
+          <Link href="/admin/approval-templates">결재선 템플릿</Link>
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
           <Link href="/admin#payroll">급여</Link>
