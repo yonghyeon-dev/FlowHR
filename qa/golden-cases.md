@@ -20,6 +20,8 @@ Golden cases are fixed regression references for:
 | GC-004 | Holiday work with overtime | Multiplier correctness |
 | GC-005 | Retroactive edit after payroll preview | Recalculation traceability |
 | GC-006 | Phase2 deduction profile mode preview | Net pay and profile trace determinism |
+| GC-007 | KR statutory baseline (progressive tax + insurance caps) | Statutory deduction determinism |
+| GC-008 | KR statutory baseline (tax credits + monthly boundary) | Tax credit ordering and boundary guard determinism |
 
 ## Expected Outputs (Minimum)
 

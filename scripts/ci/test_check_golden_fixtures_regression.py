@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import importlib.util
+import json
 import pathlib
+import shutil
 import unittest
+import uuid
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -108,6 +111,66 @@ class CheckGoldenFixturesRegressionTest(unittest.TestCase):
             )
         finally:
             self.module.git_show = original_git_show
+
+    def test_validate_fixture_allows_statutory_phase2_mode(self):
+        payload = {
+            "id": "GC-STAT-001",
+            "description": "statutory mode fixture",
+            "inputs": {},
+            "expected": {
+                "payable_minutes": {"regular": 1, "overtime": 0, "night": 0, "holiday": 0},
+                "gross_pay_krw": 1000,
+                "audit_events": ["payroll.deductions_calculated"],
+                "phase2": {
+                    "mode": "statutory_kr_baseline",
+                    "withholdingTaxKrw": 10,
+                    "socialInsuranceKrw": 10,
+                    "otherDeductionsKrw": 10,
+                    "totalDeductionsKrw": 30,
+                    "netPayKrw": 970,
+                },
+            },
+        }
+
+        tmp_root = ROOT / ".tmp-test-fixtures"
+        tmp_root.mkdir(parents=True, exist_ok=True)
+        test_dir = tmp_root / f"case-{uuid.uuid4().hex}"
+        test_dir.mkdir(parents=True, exist_ok=True)
+        path = test_dir / "GC-STAT-001.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        errors = self.module.validate_fixture(path, set())
+        shutil.rmtree(test_dir, ignore_errors=True)
+        self.assertEqual(errors, [])
+
+    def test_validate_fixture_rejects_unknown_phase2_mode(self):
+        payload = {
+            "id": "GC-STAT-INVALID",
+            "description": "invalid mode fixture",
+            "inputs": {},
+            "expected": {
+                "payable_minutes": {"regular": 1, "overtime": 0, "night": 0, "holiday": 0},
+                "gross_pay_krw": 1000,
+                "audit_events": ["payroll.deductions_calculated"],
+                "phase2": {
+                    "mode": "unknown_mode",
+                    "withholdingTaxKrw": 10,
+                    "socialInsuranceKrw": 10,
+                    "otherDeductionsKrw": 10,
+                    "totalDeductionsKrw": 30,
+                    "netPayKrw": 970,
+                },
+            },
+        }
+
+        tmp_root = ROOT / ".tmp-test-fixtures"
+        tmp_root.mkdir(parents=True, exist_ok=True)
+        test_dir = tmp_root / f"case-{uuid.uuid4().hex}"
+        test_dir.mkdir(parents=True, exist_ok=True)
+        path = test_dir / "GC-STAT-INVALID.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        errors = self.module.validate_fixture(path, set())
+        shutil.rmtree(test_dir, ignore_errors=True)
+        self.assertTrue(any("expected.phase2.mode" in err for err in errors))
 
 
 if __name__ == "__main__":

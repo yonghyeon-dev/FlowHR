@@ -146,6 +146,7 @@
 - WI-0107 결재 위임 만료 자동화 (dry-run/apply API + Admin UI + e2e)
 - WI-0108 결재 위임 만료 스케줄러 (멀티 조직 sweep runner + hourly workflow + incident/alert + e2e)
 - WI-0109 전자결재 범용화 1차 (결재선 템플릿 API + 승인 게이트 연동 + `/admin/approval-templates` UI + e2e)
+- WI-0110 급여 법정공제 골든 회귀 확장 (GC-007/GC-008 + golden/CI 검증기 확장)
 
 ### 진행 중
 

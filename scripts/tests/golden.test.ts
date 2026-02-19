@@ -78,7 +78,7 @@ for (const file of files) {
       payable_minutes: Record<string, number>;
       gross_pay_krw: number;
       phase2?: {
-        mode: "manual" | "profile";
+        mode: "manual" | "profile" | "statutory_kr_baseline";
         withholdingTaxKrw: number;
         socialInsuranceKrw: number;
         otherDeductionsKrw: number;

@@ -24,6 +24,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 16. Reject statutory baseline preview when bracket ordering/open-ended bracket rule is invalid.
 17. Run statutory baseline preview with additive tax-credit fields and verify pre-credit vs post-credit tax values.
 18. Reject statutory baseline preview when `requireMonthlyBoundary=true` and period is not monthly boundary in `Asia/Seoul`.
+19. Replay statutory golden fixtures (`GC-007`, `GC-008`) and verify deterministic deduction totals/net pay.
 
 ## Accuracy Cases
 
@@ -49,6 +50,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - `GC-004-holiday-overtime.json`
 - `GC-005-retroactive-recalc.json`
 - `GC-006-phase2-deduction-profile.json`
+- `GC-007-statutory-progressive-cap.json`
+- `GC-008-statutory-tax-credit-month-boundary.json`
 
 ## QA Gate Expectations
 
