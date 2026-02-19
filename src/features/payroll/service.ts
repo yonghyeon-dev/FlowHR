@@ -295,6 +295,7 @@ const seoulDateTimeFormatter = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
   hour: "2-digit",
+  hourCycle: "h23",
   minute: "2-digit",
   second: "2-digit",
   hour12: false
@@ -306,12 +307,13 @@ function toSeoulDateTimeParts(value: Date): SeoulDateTimeParts {
     const part = parts.find((item) => item.type === type);
     return part ? Number(part.value) : NaN;
   };
+  const rawHour = read("hour");
 
   return {
     year: read("year"),
     month: read("month"),
     day: read("day"),
-    hour: read("hour"),
+    hour: rawHour === 24 ? 0 : rawHour,
     minute: read("minute"),
     second: read("second")
   };
