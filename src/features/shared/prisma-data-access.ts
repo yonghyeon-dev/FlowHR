@@ -175,12 +175,16 @@ function toLeavePolicyEntity(record: {
   allowHourly: boolean;
   hourlyIncrementMinutes: number;
   maxHoursPerRequest: Prisma.Decimal;
+  minNoticeDays: number;
+  maxConsecutiveDays: Prisma.Decimal | null;
   createdAt: Date;
   updatedAt: Date;
 }): LeavePolicyEntity {
   return {
     ...record,
-    maxHoursPerRequest: Number(record.maxHoursPerRequest)
+    maxHoursPerRequest: Number(record.maxHoursPerRequest),
+    maxConsecutiveDays:
+      record.maxConsecutiveDays === null ? null : Number(record.maxConsecutiveDays)
   };
 }
 
@@ -1422,6 +1426,15 @@ const leavePolicy: LeavePolicyStore = {
           : {}),
         ...(input.maxHoursPerRequest !== undefined
           ? { maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest) }
+          : {}),
+        ...(input.minNoticeDays !== undefined ? { minNoticeDays: input.minNoticeDays } : {}),
+        ...(input.maxConsecutiveDays !== undefined
+          ? {
+              maxConsecutiveDays:
+                input.maxConsecutiveDays === null
+                  ? null
+                  : new Prisma.Decimal(input.maxConsecutiveDays)
+            }
           : {})
       },
       create: {
@@ -1431,7 +1444,12 @@ const leavePolicy: LeavePolicyStore = {
         allowHalfDay: input.allowHalfDay ?? true,
         allowHourly: input.allowHourly ?? true,
         hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
-        maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest ?? 8)
+        maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest ?? 8),
+        minNoticeDays: input.minNoticeDays ?? 0,
+        maxConsecutiveDays:
+          input.maxConsecutiveDays === undefined || input.maxConsecutiveDays === null
+            ? null
+            : new Prisma.Decimal(input.maxConsecutiveDays)
       }
     });
     return toLeavePolicyEntity(policy);

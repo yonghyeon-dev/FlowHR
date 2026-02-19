@@ -256,6 +256,8 @@ export type LeavePolicyEntity = {
   allowHourly: boolean;
   hourlyIncrementMinutes: number;
   maxHoursPerRequest: number;
+  minNoticeDays: number;
+  maxConsecutiveDays: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -516,6 +518,8 @@ export type UpsertLeavePolicyInput = {
   allowHourly?: boolean;
   hourlyIncrementMinutes?: number;
   maxHoursPerRequest?: number;
+  minNoticeDays?: number;
+  maxConsecutiveDays?: number | null;
 };
 
 export type RecordLeaveDecisionInput = {

@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.5.0
+version: 1.6.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -8,7 +8,7 @@ scope:
     - leave approve/reject flow with audit trace
     - leave balance read model contract
     - annual leave accrual and carry-over settlement
-    - leave policy read/update (annual grant + carry-over cap + fractional controls)
+    - leave policy read/update (annual grant + carry-over cap + fractional controls + notice/consecutive constraints)
   out:
     - external calendar synchronization
 entities:
@@ -19,7 +19,7 @@ entities:
   - name: LeaveBalanceProjection
     description: Read model of granted, used, remaining, and carry-over leave days (decimal precision).
   - name: LeavePolicy
-    description: Organization-level leave policy (annual grant, carry-over cap, and fractional leave controls).
+    description: Organization-level leave policy (annual grant, carry-over cap, fractional controls, and request constraints).
 api:
   auth:
     - role: employee
@@ -57,7 +57,7 @@ api:
       description: Read leave policy for an organization (defaults when not configured).
     - method: PUT
       path: /leave/policy
-      description: Upsert leave policy for an organization including fractional leave controls.
+      description: Upsert leave policy for an organization including fractional controls and request constraints.
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
@@ -90,6 +90,8 @@ db_changes:
       description: Add organization-level leave policy (annual grant + carry-over cap).
     - id: 202602180005_leave_fractional_units
       description: Add leave unit/hours fields, widen leave balance to decimals, and extend leave policy fractional controls.
+    - id: 202602190003_leave_policy_notice_consecutive
+      description: Add leave policy constraints for minimum advance notice and max consecutive leave days.
   backward_compatible: true
   notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
@@ -102,6 +104,7 @@ invariants:
   - Employee leave list queries are restricted to own employeeId.
   - LeaveRequest.employeeId and LeaveBalanceProjection.employeeId must reference existing Employee.id (FK enforced).
   - Hourly leave requests must satisfy policy increment and maximum-hour rules.
+  - Leave requests must satisfy policy minNoticeDays and maxConsecutiveDays constraints when configured.
   - LeaveBalanceProjection values keep two-decimal precision and never go negative.
 risk:
   permissions:
@@ -118,6 +121,7 @@ test_plan:
     - leave policy validation and default fallback
     - leave fractional unit calculation (FULL_DAY/HALF_DAY/HOUR)
     - hourly increment and maxHoursPerRequest validation
+    - minNoticeDays/maxConsecutiveDays validation
     - leave list query parsing and role boundary guards
   integration:
     - create leave request rejects unknown employeeId (404)
@@ -131,10 +135,12 @@ test_plan:
     - manager list query requires employeeId (400)
     - half-day and hourly leave approval updates balance with decimal day usage
     - policy-denied half-day/hourly requests return 409
+    - policy-denied requests for minNoticeDays/maxConsecutiveDays return 409
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
     - whole-day leave flow remains backward compatible after fractional-unit rollout
+    - maxConsecutiveDays null update restores unlimited consecutive requests
   authorization:
     - employee self-service boundary check
     - manager/admin approval check
@@ -177,13 +183,14 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.5.0 adds fractional leave support (`unit`, `hours`) and policy controls (`allowHalfDay`, `allowHourly`, `hourlyIncrementMinutes`, `maxHoursPerRequest`) while preserving backward compatibility for existing full-day flows."
+consumer_impact: "Contract v1.6.0 adds leave policy request constraints (`minNoticeDays`, `maxConsecutiveDays`) while preserving backward compatibility for existing flows when defaults are used (`0` / `null`)."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
   - work-items/WI-0027-leave-list-api.md
   - work-items/WI-0090-leave-policy-settings.md
   - work-items/WI-0104-leave-fractional-hourly-policy.md
+  - work-items/WI-0114-leave-notice-consecutive-policy.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

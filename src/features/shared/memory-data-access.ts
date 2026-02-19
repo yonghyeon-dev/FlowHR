@@ -1305,6 +1305,11 @@ export const memoryDataAccess: DataAccess = {
             hourlyIncrementMinutes:
               input.hourlyIncrementMinutes ?? existing.hourlyIncrementMinutes,
             maxHoursPerRequest: input.maxHoursPerRequest ?? existing.maxHoursPerRequest,
+            minNoticeDays: input.minNoticeDays ?? existing.minNoticeDays,
+            maxConsecutiveDays:
+              input.maxConsecutiveDays !== undefined
+                ? input.maxConsecutiveDays
+                : existing.maxConsecutiveDays,
             updatedAt: now
           }
         : {
@@ -1316,6 +1321,8 @@ export const memoryDataAccess: DataAccess = {
             allowHourly: input.allowHourly ?? true,
             hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
             maxHoursPerRequest: input.maxHoursPerRequest ?? 8,
+            minNoticeDays: input.minNoticeDays ?? 0,
+            maxConsecutiveDays: input.maxConsecutiveDays ?? null,
             createdAt: now,
             updatedAt: now
           };

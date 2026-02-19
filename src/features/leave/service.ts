@@ -23,6 +23,8 @@ const DEFAULT_ALLOW_HALF_DAY = true;
 const DEFAULT_ALLOW_HOURLY = true;
 const DEFAULT_HOURLY_INCREMENT_MINUTES = 30;
 const DEFAULT_MAX_HOURS_PER_REQUEST = 8;
+const DEFAULT_MIN_NOTICE_DAYS = 0;
+const DEFAULT_MAX_CONSECUTIVE_DAYS: number | null = null;
 
 type ServiceContext = {
   actor: Actor | null;
@@ -72,6 +74,8 @@ type UpsertLeavePolicyInput = {
   allowHourly?: boolean;
   hourlyIncrementMinutes?: number;
   maxHoursPerRequest?: number;
+  minNoticeDays?: number;
+  maxConsecutiveDays?: number | null;
 };
 
 type LeavePolicyRules = {
@@ -81,6 +85,8 @@ type LeavePolicyRules = {
   allowHourly: boolean;
   hourlyIncrementMinutes: number;
   maxHoursPerRequest: number;
+  minNoticeDays: number;
+  maxConsecutiveDays: number | null;
 };
 
 type ListLeaveRequestsInput = {
@@ -132,6 +138,8 @@ function resolvePolicyRules(policy?: {
   allowHourly?: boolean;
   hourlyIncrementMinutes?: number;
   maxHoursPerRequest?: number;
+  minNoticeDays?: number;
+  maxConsecutiveDays?: number | null;
 } | null): LeavePolicyRules {
   return {
     annualGrantDays: policy?.annualGrantDays ?? DEFAULT_GRANTED_DAYS,
@@ -139,7 +147,9 @@ function resolvePolicyRules(policy?: {
     allowHalfDay: policy?.allowHalfDay ?? DEFAULT_ALLOW_HALF_DAY,
     allowHourly: policy?.allowHourly ?? DEFAULT_ALLOW_HOURLY,
     hourlyIncrementMinutes: policy?.hourlyIncrementMinutes ?? DEFAULT_HOURLY_INCREMENT_MINUTES,
-    maxHoursPerRequest: policy?.maxHoursPerRequest ?? DEFAULT_MAX_HOURS_PER_REQUEST
+    maxHoursPerRequest: policy?.maxHoursPerRequest ?? DEFAULT_MAX_HOURS_PER_REQUEST,
+    minNoticeDays: policy?.minNoticeDays ?? DEFAULT_MIN_NOTICE_DAYS,
+    maxConsecutiveDays: policy?.maxConsecutiveDays ?? DEFAULT_MAX_CONSECUTIVE_DAYS
   };
 }
 
@@ -198,6 +208,34 @@ function calculateRequestedLeave(input: {
     days: roundTo2(requestedHours / FULL_DAY_HOURS),
     hours: roundTo2(requestedHours)
   };
+}
+
+function assertPolicyRequestConstraints(input: {
+  startDate: Date;
+  requestedDays: number;
+  policy: LeavePolicyRules;
+  now?: Date;
+}) {
+  const maxConsecutiveDays = input.policy.maxConsecutiveDays;
+  if (
+    maxConsecutiveDays !== null &&
+    Number.isFinite(maxConsecutiveDays) &&
+    input.requestedDays > maxConsecutiveDays
+  ) {
+    throw new ServiceError(
+      409,
+      `leave policy maxConsecutiveDays exceeded (${maxConsecutiveDays} days)`
+    );
+  }
+
+  const now = input.now ?? new Date();
+  const noticeDays = toSeoulDayIndex(input.startDate) - toSeoulDayIndex(now);
+  if (input.policy.minNoticeDays > 0 && noticeDays < input.policy.minNoticeDays) {
+    throw new ServiceError(
+      409,
+      `leave policy requires at least ${input.policy.minNoticeDays} day(s) notice`
+    );
+  }
 }
 
 function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
@@ -265,12 +303,18 @@ export async function createLeaveRequest(
     employee.organizationId
       ? await context.dataAccess.leavePolicy.findByOrganizationId(employee.organizationId)
       : null;
+  const policyRules = resolvePolicyRules(policy);
   const requested = calculateRequestedLeave({
     unit: input.unit ?? "FULL_DAY",
     startDate: input.startDate,
     endDate: input.endDate,
     hours: input.hours,
-    policy: resolvePolicyRules(policy)
+    policy: policyRules
+  });
+  assertPolicyRequestConstraints({
+    startDate: input.startDate,
+    requestedDays: requested.days,
+    policy: policyRules
   });
   await ensureNoOverlap(context, {
     employeeId: input.employeeId,
@@ -356,6 +400,7 @@ export async function updateLeaveRequest(
     employee.organizationId
       ? await context.dataAccess.leavePolicy.findByOrganizationId(employee.organizationId)
       : null;
+  const policyRules = resolvePolicyRules(policy);
   const requested = calculateRequestedLeave({
     unit: nextUnit,
     startDate: nextStartDate,
@@ -368,7 +413,12 @@ export async function updateLeaveRequest(
             ? undefined
             : existing.hours
         : undefined,
-    policy: resolvePolicyRules(policy)
+    policy: policyRules
+  });
+  assertPolicyRequestConstraints({
+    startDate: nextStartDate,
+    requestedDays: requested.days,
+    policy: policyRules
   });
   await ensureNoOverlap(context, {
     employeeId: existing.employeeId,
@@ -795,6 +845,8 @@ export async function readLeavePolicy(
     allowHourly: boolean;
     hourlyIncrementMinutes: number;
     maxHoursPerRequest: number;
+    minNoticeDays: number;
+    maxConsecutiveDays: number | null;
     source: "configured" | "default";
     updatedAt: string | null;
   };
@@ -818,6 +870,8 @@ export async function readLeavePolicy(
         allowHourly: stored.allowHourly,
         hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
         maxHoursPerRequest: stored.maxHoursPerRequest,
+        minNoticeDays: stored.minNoticeDays,
+        maxConsecutiveDays: stored.maxConsecutiveDays,
         source: "configured" as const,
         updatedAt: stored.updatedAt.toISOString()
       }
@@ -829,6 +883,8 @@ export async function readLeavePolicy(
         allowHourly: DEFAULT_ALLOW_HOURLY,
         hourlyIncrementMinutes: DEFAULT_HOURLY_INCREMENT_MINUTES,
         maxHoursPerRequest: DEFAULT_MAX_HOURS_PER_REQUEST,
+        minNoticeDays: DEFAULT_MIN_NOTICE_DAYS,
+        maxConsecutiveDays: DEFAULT_MAX_CONSECUTIVE_DAYS,
         source: "default" as const,
         updatedAt: null
       };
@@ -858,6 +914,8 @@ export async function upsertLeavePolicy(
     allowHourly: boolean;
     hourlyIncrementMinutes: number;
     maxHoursPerRequest: number;
+    minNoticeDays: number;
+    maxConsecutiveDays: number | null;
     updatedAt: string;
   };
 }> {
@@ -886,6 +944,16 @@ export async function upsertLeavePolicy(
       throw new ServiceError(400, "maxHoursPerRequest must be a positive number");
     }
   }
+  if (input.minNoticeDays !== undefined) {
+    if (!Number.isInteger(input.minNoticeDays) || input.minNoticeDays < 0) {
+      throw new ServiceError(400, "minNoticeDays must be a non-negative integer");
+    }
+  }
+  if (input.maxConsecutiveDays !== undefined && input.maxConsecutiveDays !== null) {
+    if (!Number.isFinite(input.maxConsecutiveDays) || input.maxConsecutiveDays <= 0) {
+      throw new ServiceError(400, "maxConsecutiveDays must be a positive number or null");
+    }
+  }
 
   const stored = await context.dataAccess.leavePolicy.upsertForOrganization({
     organizationId,
@@ -894,7 +962,9 @@ export async function upsertLeavePolicy(
     allowHalfDay: input.allowHalfDay,
     allowHourly: input.allowHourly,
     hourlyIncrementMinutes: input.hourlyIncrementMinutes,
-    maxHoursPerRequest: input.maxHoursPerRequest
+    maxHoursPerRequest: input.maxHoursPerRequest,
+    minNoticeDays: input.minNoticeDays,
+    maxConsecutiveDays: input.maxConsecutiveDays
   });
 
   await context.dataAccess.audit.append({
@@ -911,7 +981,9 @@ export async function upsertLeavePolicy(
       allowHalfDay: stored.allowHalfDay,
       allowHourly: stored.allowHourly,
       hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
-      maxHoursPerRequest: stored.maxHoursPerRequest
+      maxHoursPerRequest: stored.maxHoursPerRequest,
+      minNoticeDays: stored.minNoticeDays,
+      maxConsecutiveDays: stored.maxConsecutiveDays
     }
   });
   await getEventPublisher(context).publish({
@@ -928,7 +1000,9 @@ export async function upsertLeavePolicy(
       allowHalfDay: stored.allowHalfDay,
       allowHourly: stored.allowHourly,
       hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
-      maxHoursPerRequest: stored.maxHoursPerRequest
+      maxHoursPerRequest: stored.maxHoursPerRequest,
+      minNoticeDays: stored.minNoticeDays,
+      maxConsecutiveDays: stored.maxConsecutiveDays
     }
   });
 
@@ -941,6 +1015,8 @@ export async function upsertLeavePolicy(
       allowHourly: stored.allowHourly,
       hourlyIncrementMinutes: stored.hourlyIncrementMinutes,
       maxHoursPerRequest: stored.maxHoursPerRequest,
+      minNoticeDays: stored.minNoticeDays,
+      maxConsecutiveDays: stored.maxConsecutiveDays,
       updatedAt: stored.updatedAt.toISOString()
     }
   };

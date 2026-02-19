@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.5.0
+  version: 1.6.0
 paths:
   /leave/requests:
     get:
@@ -111,7 +111,7 @@ paths:
         "200":
           description: Leave policy snapshot
     put:
-      summary: Upsert leave policy for organization including fractional controls
+      summary: Upsert leave policy including fractional controls and notice/consecutive constraints
       responses:
         "200":
           description: Leave policy updated

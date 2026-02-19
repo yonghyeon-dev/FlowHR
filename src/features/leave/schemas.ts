@@ -55,7 +55,9 @@ export const upsertLeavePolicySchema = z.object({
   allowHalfDay: z.boolean().optional(),
   allowHourly: z.boolean().optional(),
   hourlyIncrementMinutes: z.number().int().min(15).max(480).optional(),
-  maxHoursPerRequest: z.number().positive().max(24).optional()
+  maxHoursPerRequest: z.number().positive().max(24).optional(),
+  minNoticeDays: z.number().int().min(0).max(365).optional(),
+  maxConsecutiveDays: z.number().positive().max(365).nullable().optional()
 });
 
 export const listLeaveRequestQuerySchema = z.object({

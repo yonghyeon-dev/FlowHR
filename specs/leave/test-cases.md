@@ -20,6 +20,9 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 12. Employee creates and approves `HOUR` leave request and balance usage deducts `hours/8`.
 13. Policy denial returns `409` when `allowHalfDay=false` or `allowHourly=false`.
 14. Policy validation rejects hourly requests that violate increment/maxHours rules.
+15. Policy denial returns `409` when request start does not satisfy `minNoticeDays`.
+16. Policy denial returns `409` when requested days exceed `maxConsecutiveDays`.
+17. Updating policy with `maxConsecutiveDays=null` restores unlimited consecutive requests.
 
 ## Boundary and Accuracy Cases
 
@@ -32,6 +35,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 7. Tenant-scoped policy read/write rejects cross-tenant access when tenancy is enabled.
 8. Fractional leave balances keep two-decimal precision across approve/settle flows.
 9. Existing full-day leave behavior remains backward compatible after fractional rollout.
+10. Min notice day validation uses Asia/Seoul day boundary for today/start-date comparison.
 
 ## Regression Linkage
 

@@ -1,4 +1,4 @@
-# Leave RFC (WI-0002 + WI-0003 + WI-0090 + WI-0104)
+# Leave RFC (WI-0002 + WI-0003 + WI-0090 + WI-0104 + WI-0114)
 
 ## Goal
 
@@ -12,6 +12,7 @@ Define contract-first leave lifecycle plus yearly accrual settlement and fractio
 - Yearly accrual settlement applies carry-over cap and blocks duplicate-year settlement.
 - Leave request unit is explicit (`FULL_DAY`, `HALF_DAY`, `HOUR`) and drives balance deduction.
 - Hourly leave is policy-controlled by increment and max-hours constraints.
+- Leave request admission is policy-controlled by minimum advance notice and optional max consecutive-day cap.
 - Leave balance projection keeps decimal precision (`Decimal(6,2)`) for fractional day accounting.
 
 ## Non-Goals

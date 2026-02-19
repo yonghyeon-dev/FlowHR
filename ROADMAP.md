@@ -150,11 +150,12 @@
 - WI-0111 Auth 초대 delivery mode 확장 (`link`/`email`) + claims/audit 일관성 회귀 테스트 추가
 - WI-0112 직원 명세서 회귀 확장 (statutory self-service own-confirmed gate + deduction breakdown 검증)
 - WI-0113 결재선 템플릿 조건부 라우팅 baseline (PAYROLL gross-pay 조건 + 정책 폴백 게이트 + e2e)
+- WI-0114 휴가 정책 제약 고도화 (`minNoticeDays`, `maxConsecutiveDays` + Admin UI + e2e)
 
 ### 진행 중
 
 - 다음: 결재선 템플릿 고도화(다단계 라우팅 RFC)
-- 다음: 휴가 고도화(반차/시간단위/촉진 정책) 회귀 확장
+- 다음: 휴가 고도화(연차촉진/사내 공지 플로우 정책) 회귀 확장
 
 ### 현재 아키텍처
 

@@ -252,6 +252,8 @@ export default function AdminDashboardPage() {
   const [leaveAllowHourly, setLeaveAllowHourly] = useState(true);
   const [leaveHourlyIncrementMinutes, setLeaveHourlyIncrementMinutes] = useState("30");
   const [leaveMaxHoursPerRequest, setLeaveMaxHoursPerRequest] = useState("8");
+  const [leaveMinNoticeDays, setLeaveMinNoticeDays] = useState("0");
+  const [leaveMaxConsecutiveDays, setLeaveMaxConsecutiveDays] = useState("");
   const [accrualResult, setAccrualResult] = useState<LeaveBalanceDto | null>(null);
 
   const [payrollHourlyRateKrw, setPayrollHourlyRateKrw] = useState("12000");
@@ -930,6 +932,8 @@ export default function AdminDashboardPage() {
         allowHourly?: boolean;
         hourlyIncrementMinutes?: number;
         maxHoursPerRequest?: number;
+        minNoticeDays?: number;
+        maxConsecutiveDays?: number | null;
       };
     };
     if (typeof parsed.policy?.annualGrantDays === "number") {
@@ -949,6 +953,14 @@ export default function AdminDashboardPage() {
     }
     if (typeof parsed.policy?.maxHoursPerRequest === "number") {
       setLeaveMaxHoursPerRequest(String(parsed.policy.maxHoursPerRequest));
+    }
+    if (typeof parsed.policy?.minNoticeDays === "number") {
+      setLeaveMinNoticeDays(String(parsed.policy.minNoticeDays));
+    }
+    if (typeof parsed.policy?.maxConsecutiveDays === "number") {
+      setLeaveMaxConsecutiveDays(String(parsed.policy.maxConsecutiveDays));
+    } else if (parsed.policy?.maxConsecutiveDays === null) {
+      setLeaveMaxConsecutiveDays("");
     }
   }
 
@@ -974,6 +986,11 @@ export default function AdminDashboardPage() {
     const carryOverCapDays = Number(accrualCarryCapDays.trim());
     const hourlyIncrementMinutes = Number(leaveHourlyIncrementMinutes.trim());
     const maxHoursPerRequest = Number(leaveMaxHoursPerRequest.trim());
+    const minNoticeDaysRaw = leaveMinNoticeDays.trim();
+    const minNoticeDays = minNoticeDaysRaw.length > 0 ? Number(minNoticeDaysRaw) : Number.NaN;
+    const maxConsecutiveDaysRaw = leaveMaxConsecutiveDays.trim();
+    const maxConsecutiveDays =
+      maxConsecutiveDaysRaw.length > 0 ? Number(maxConsecutiveDaysRaw) : null;
     const payload = {
       organizationId: orgId,
       annualGrantDays,
@@ -981,7 +998,14 @@ export default function AdminDashboardPage() {
       allowHalfDay: leaveAllowHalfDay,
       allowHourly: leaveAllowHourly,
       hourlyIncrementMinutes,
-      maxHoursPerRequest
+      maxHoursPerRequest,
+      minNoticeDays: Number.isFinite(minNoticeDays) ? minNoticeDays : undefined,
+      maxConsecutiveDays:
+        maxConsecutiveDays === null
+          ? null
+          : Number.isFinite(maxConsecutiveDays)
+            ? maxConsecutiveDays
+            : undefined
     };
     await callApi("휴가 정책 저장", "PUT", "/api/leave/policy", payload);
   }
@@ -1804,6 +1828,25 @@ export default function AdminDashboardPage() {
               <input
                 value={leaveMaxHoursPerRequest}
                 onChange={(event) => setLeaveMaxHoursPerRequest(event.target.value)}
+              />
+            </label>
+            <label>
+              사전 신청 최소 일수
+              <input
+                type="number"
+                min={0}
+                value={leaveMinNoticeDays}
+                onChange={(event) => setLeaveMinNoticeDays(event.target.value)}
+              />
+            </label>
+            <label>
+              연속 사용 상한(일, 비우면 무제한)
+              <input
+                type="number"
+                min={0.5}
+                step="0.5"
+                value={leaveMaxConsecutiveDays}
+                onChange={(event) => setLeaveMaxConsecutiveDays(event.target.value)}
               />
             </label>
           </div>
