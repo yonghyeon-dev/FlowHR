@@ -33,6 +33,15 @@ type ApprovalDelegationDto = {
   updatedAt: string;
 };
 
+type ApprovalDelegationExpireResultDto = {
+  organizationId: string;
+  checkedCount: number;
+  expiredCount: number;
+  delegationIds: string[];
+  effectiveAt: string;
+  dryRun: boolean;
+};
+
 type ApiLog = {
   id: number;
   label: string;
@@ -88,6 +97,10 @@ export default function AdminApprovalPolicyPage() {
   });
   const [delegationReason, setDelegationReason] = useState("");
   const [delegations, setDelegations] = useState<ApprovalDelegationDto[]>([]);
+  const [delegationExpireDryRun, setDelegationExpireDryRun] = useState(false);
+  const [lastExpireResult, setLastExpireResult] = useState<ApprovalDelegationExpireResultDto | null>(
+    null
+  );
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -188,15 +201,15 @@ export default function AdminApprovalPolicyPage() {
     if (!response.ok || !body || typeof body !== "object") {
       return;
     }
-    const parsed = body as { data?: { policy?: ApprovalPolicyDto; configured?: boolean } };
-    const policy = parsed.data?.policy;
+    const parsed = body as { policy?: ApprovalPolicyDto; configured?: boolean };
+    const policy = parsed.policy;
     if (!policy) {
       return;
     }
     setAttendanceRole(policy.attendanceApproverRole);
     setLeaveRole(policy.leaveApproverRole);
     setPayrollRole(policy.payrollApproverRole);
-    setPolicyConfigured(Boolean(parsed.data?.configured));
+    setPolicyConfigured(Boolean(parsed.configured));
   }
 
   async function savePolicy() {
@@ -221,8 +234,8 @@ export default function AdminApprovalPolicyPage() {
     if (!response.ok || !body || typeof body !== "object") {
       return;
     }
-    const parsed = body as { data?: { delegations?: ApprovalDelegationDto[] } };
-    setDelegations(parsed.data?.delegations ?? []);
+    const parsed = body as { delegations?: ApprovalDelegationDto[] };
+    setDelegations(parsed.delegations ?? []);
   }
 
   async function createDelegation() {
@@ -247,6 +260,26 @@ export default function AdminApprovalPolicyPage() {
       active: false
     });
     await loadDelegations();
+  }
+
+  async function expireDelegations() {
+    if (!organizationId.trim()) {
+      return;
+    }
+
+    const { response, body } = await callApi("만료 위임 정리", "POST", "/api/approval/delegations/expire", {
+      organizationId: organizationId.trim(),
+      dryRun: delegationExpireDryRun
+    });
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+
+    const parsed = body as ApprovalDelegationExpireResultDto;
+    setLastExpireResult(parsed);
+    if (!parsed.dryRun) {
+      await loadDelegations();
+    }
   }
 
   return (
@@ -389,6 +422,32 @@ export default function AdminApprovalPolicyPage() {
 
         <article className="panel">
           <h2>위임 목록 ({delegations.length})</h2>
+          <div className="panel-actions">
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => void expireDelegations()}
+              disabled={!organizationId.trim()}
+            >
+              만료 위임 정리
+            </button>
+            <label className="small" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+              Dry-run
+              <select
+                value={delegationExpireDryRun ? "true" : "false"}
+                onChange={(event) => setDelegationExpireDryRun(event.target.value === "true")}
+              >
+                <option value="false">실행</option>
+                <option value="true">미리보기</option>
+              </select>
+            </label>
+          </div>
+          {lastExpireResult ? (
+            <p className="small">
+              최근 정리 결과: checked {lastExpireResult.checkedCount}, expired{" "}
+              {lastExpireResult.expiredCount}, dryRun {lastExpireResult.dryRun ? "true" : "false"} (
+              {formatDateTime(lastExpireResult.effectiveAt)})
+            </p>
+          ) : null}
           {delegations.length === 0 ? (
             <p className="small">등록된 위임이 없습니다.</p>
           ) : (

@@ -37,6 +37,12 @@ export const createApprovalDelegationSchema = z.object({
   active: z.boolean().optional()
 });
 
+export const expireApprovalDelegationsSchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  expiresBeforeAt: isoDateTime.optional(),
+  dryRun: z.boolean().default(false)
+});
+
 export const updateApprovalDelegationSchema = z.object({
   delegateActorId: z.string().min(1).optional(),
   startsAt: isoDateTime.optional(),

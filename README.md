@@ -150,6 +150,7 @@ Production rollout: `docs/production-rollout.md`
   - `GET /api/approval/delegations` (optional query: `organizationId`, `domain`, `active`, `delegateActorId`)
   - `POST /api/approval/delegations`
   - `PATCH /api/approval/delegations/{delegationId}`
+  - `POST /api/approval/delegations/expire` (payload: optional `organizationId`, optional `expiresBeforeAt`, optional `dryRun`)
 - Payroll:
   - `GET /api/payroll/runs` (query: `from`, `to`, optional `employeeId`, optional `state`)
   - `POST /api/payroll/runs/preview`

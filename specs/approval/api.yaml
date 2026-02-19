@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.1.0
+  version: 0.2.0
 paths:
   /approval/policy:
     get:
@@ -83,3 +83,14 @@ paths:
           description: Permission denied
         "404":
           description: Delegation not found
+  /approval/delegations/expire:
+    post:
+      summary: Expire active delegations that ended before cutoff time
+      description: Deactivates active delegations where `endsAt < expiresBeforeAt` for an organization. Supports `dryRun=true` to preview results without mutation.
+      responses:
+        "200":
+          description: Expire result returned
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied

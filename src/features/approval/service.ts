@@ -61,6 +61,12 @@ type UpdateApprovalDelegationInput = {
   active?: boolean;
 };
 
+type ExpireApprovalDelegationsInput = {
+  organizationId?: string;
+  expiresBeforeAt?: Date;
+  dryRun?: boolean;
+};
+
 function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
 }
@@ -252,6 +258,97 @@ export async function listApprovalDelegations(
     active: input.active,
     delegateActorId: input.delegateActorId
   });
+}
+
+export async function expireApprovalDelegations(
+  context: ServiceContext,
+  input: ExpireApprovalDelegationsInput
+): Promise<{
+  organizationId: string;
+  checkedCount: number;
+  expiredCount: number;
+  delegationIds: string[];
+  effectiveAt: string;
+  dryRun: boolean;
+}> {
+  const actor = requireActor(context);
+  await requirePermission(
+    context,
+    Permissions.approvalDelegationWrite,
+    "approval delegation write requires permission"
+  );
+
+  const organizationId = await resolveOrganizationId(context, input.organizationId);
+  const effectiveAt = input.expiresBeforeAt ?? new Date();
+  const dryRun = input.dryRun ?? false;
+
+  const delegations = await context.dataAccess.approvals.listDelegations({
+    organizationId,
+    active: true
+  });
+  const targets = delegations.filter((delegation) => delegation.endsAt < effectiveAt);
+  const delegationIds = targets.map((delegation) => delegation.id);
+
+  if (dryRun) {
+    return {
+      organizationId,
+      checkedCount: delegations.length,
+      expiredCount: targets.length,
+      delegationIds,
+      effectiveAt: effectiveAt.toISOString(),
+      dryRun: true
+    };
+  }
+
+  for (const delegation of targets) {
+    const updated = await context.dataAccess.approvals.updateDelegation(delegation.id, {
+      active: false
+    });
+
+    await context.dataAccess.audit.append({
+      action: "approval.delegation.auto_expired",
+      entityType: "ApprovalDelegation",
+      entityId: updated.id,
+      organizationId: updated.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        domain: updated.domain,
+        delegatorRole: updated.delegatorRole,
+        delegateActorId: updated.delegateActorId,
+        startsAt: updated.startsAt.toISOString(),
+        endsAt: updated.endsAt.toISOString(),
+        effectiveAt: effectiveAt.toISOString(),
+        active: updated.active
+      }
+    });
+    await getEventPublisher(context).publish({
+      name: "approval.delegation.updated.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "ApprovalDelegation",
+      entityId: updated.id,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        organizationId: updated.organizationId,
+        domain: updated.domain,
+        delegatorRole: updated.delegatorRole,
+        delegateActorId: updated.delegateActorId,
+        active: updated.active,
+        autoExpired: true,
+        effectiveAt: effectiveAt.toISOString()
+      }
+    });
+  }
+
+  return {
+    organizationId,
+    checkedCount: delegations.length,
+    expiredCount: targets.length,
+    delegationIds,
+    effectiveAt: effectiveAt.toISOString(),
+    dryRun: false
+  };
 }
 
 export async function createApprovalDelegation(
