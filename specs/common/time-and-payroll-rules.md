@@ -84,6 +84,24 @@ This document is the shared source of truth for attendance-to-payroll calculatio
 - Legal precision:
   - This mode is baseline approximation for rollout hardening, not final legal-grade tax filing logic.
 
+## WI-0106 KR Tax-Credit and Monthly Boundary Rules (Contract)
+
+- Additive tax-credit inputs:
+  - `additionalTaxCreditKrw`
+  - `dependentCount`
+  - `dependentTaxCreditPerPersonKrw`
+- Tax-credit application order:
+  - `dependentTaxCreditKrw = dependentCount * dependentTaxCreditPerPersonKrw`
+  - `totalTaxCreditKrw = additionalTaxCreditKrw + dependentTaxCreditKrw`
+  - `incomeTaxKrw = max(preCreditIncomeTaxKrw - totalTaxCreditKrw, 0)`
+  - `localIncomeTaxKrw = round(incomeTaxKrw * localIncomeTaxRate)`
+- Optional monthly-boundary guard:
+  - enabled only when `requireMonthlyBoundary=true`
+  - validates payroll period in `Asia/Seoul`:
+    - start: first day `00:00:00`
+    - end: last day `23:59:*`
+    - same month/year
+
 ## Calculation Priority
 
 1. Validate attendance record state (approved vs pending/canceled).

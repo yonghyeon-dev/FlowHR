@@ -36,6 +36,10 @@ const statutoryIncomeTaxBracketSchema = z.object({
 const statutoryKrBaselineSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
   incomeTaxBrackets: z.array(statutoryIncomeTaxBracketSchema).min(1).optional(),
+  additionalTaxCreditKrw: nonNegativeInteger.default(0),
+  dependentCount: nonNegativeInteger.default(0),
+  dependentTaxCreditPerPersonKrw: nonNegativeInteger.default(0),
+  requireMonthlyBoundary: z.boolean().default(false),
   incomeTaxRate: rate.default(0.03),
   localIncomeTaxRate: rate.default(0.1),
   nationalPensionRate: rate.default(0.045),

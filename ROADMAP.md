@@ -1,6 +1,6 @@
 ﻿# FlowHR Production Roadmap
 
-> **Last updated**: 2026-02-18
+> **Last updated**: 2026-02-19
 > **Current version**: 0.1.1 (SaaS UI Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
@@ -142,11 +142,12 @@
 - WI-0103 결재선/위임 정책 baseline (정책 API + 위임 API + 승인 게이트 연동 + `/admin/approval-policy` UI)
 - WI-0104 휴가 반차/시간단위 정책 고도화 (fractional leave unit + 정책 게이트 + UI + e2e)
 - WI-0105 급여 KR baseline 고도화 (누진세 구간 + 보험 상한 + 관리자 UI 법정공제 프리뷰)
+- WI-0106 급여 KR baseline 2차 고도화 (세액공제 + 부양가족 공제 + 월경계 강제검증 옵션 + e2e)
 
 ### 진행 중
 
-- 다음: 급여 엔진 고도화 2차(세액공제/부양가족/월경계 정합성) 및 명세서 검증 자동화 확장
 - 다음: 전자결재 범용화(결재선 템플릿/위임 만료 자동화) + UI 연동 확장
+- 다음: 급여 명세서 검증 자동화 확장(세액공제/월경계 포함 회귀 세트)
 
 ### 현재 아키텍처
 
