@@ -28,14 +28,23 @@ const manualDeductionsSchema = z.object({
   breakdown: z.record(nonNegativeInteger).optional()
 });
 
+const statutoryIncomeTaxBracketSchema = z.object({
+  upToKrw: nonNegativeInteger.nullable(),
+  rate
+});
+
 const statutoryKrBaselineSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
+  incomeTaxBrackets: z.array(statutoryIncomeTaxBracketSchema).min(1).optional(),
   incomeTaxRate: rate.default(0.03),
   localIncomeTaxRate: rate.default(0.1),
   nationalPensionRate: rate.default(0.045),
+  nationalPensionCapKrw: nonNegativeInteger.optional(),
   healthInsuranceRate: rate.default(0.03545),
+  healthInsuranceCapKrw: nonNegativeInteger.optional(),
   longTermCareRateOnHealth: rate.default(0.1295),
   employmentInsuranceRate: rate.default(0.009),
+  employmentInsuranceCapKrw: nonNegativeInteger.optional(),
   otherDeductionsKrw: nonNegativeInteger.default(0)
 });
 
@@ -89,6 +98,36 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
         path: ["statutory"],
         message: "statutory is supported only when deductionMode is statutory_kr_baseline"
       });
+    }
+    if (value.deductionMode === "statutory_kr_baseline" && value.statutory?.incomeTaxBrackets) {
+      const brackets = value.statutory.incomeTaxBrackets;
+      let lastFiniteUpper = -1;
+      for (const [index, bracket] of brackets.entries()) {
+        if (bracket.upToKrw === null) {
+          if (index !== brackets.length - 1) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["statutory", "incomeTaxBrackets", index, "upToKrw"],
+              message: "open-ended bracket(upToKrw=null) must be the last bracket"
+            });
+          }
+        } else if (bracket.upToKrw <= lastFiniteUpper) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["statutory", "incomeTaxBrackets", index, "upToKrw"],
+            message: "incomeTaxBrackets upToKrw values must be strictly increasing"
+          });
+        } else {
+          lastFiniteUpper = bracket.upToKrw;
+        }
+      }
+      if (brackets[brackets.length - 1]?.upToKrw !== null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["statutory", "incomeTaxBrackets"],
+          message: "incomeTaxBrackets must end with an open-ended bracket(upToKrw=null)"
+        });
+      }
     }
   });
 

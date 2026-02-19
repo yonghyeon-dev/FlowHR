@@ -19,6 +19,9 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 11. List deduction profiles (optional filters `active`, `mode`) and verify role guard.
 12. Run deduction/tax preview in `statutory_kr_baseline` mode with taxable-base and component breakdown output.
 13. Reject statutory baseline preview when `payroll_kr_baseline_v1` feature flag is disabled.
+14. Run statutory baseline preview with progressive `incomeTaxBrackets`.
+15. Run statutory baseline preview with insurance contribution caps and verify capped bases.
+16. Reject statutory baseline preview when bracket ordering/open-ended bracket rule is invalid.
 
 ## Accuracy Cases
 
@@ -31,6 +34,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 7. Profile-mode stale version guard returns deterministic `409` mismatch error.
 8. Statutory baseline mode computes taxable base and component sums deterministically.
 9. Statutory baseline mode total/net calculations match component aggregation.
+10. Progressive bracket mode computes income tax by bracket segments deterministically.
+11. Insurance caps bound each insurance component base deterministically.
 
 ## Regression Linkage
 
@@ -48,4 +53,5 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Compatibility Gate: gross-only consumer path remains valid with phase2 flag off.
 - Profile Gate: profile-mode API/auth/audit checks are validated before merge.
 - Statutory Gate: statutory_kr_baseline mode must remain feature-flagged and deterministic.
+- Progressive/Cap Gate: bracket ordering and insurance-cap calculations must be deterministic and validated.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).

@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.6.0
+version: 1.7.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -10,6 +10,7 @@ scope:
     - deduction profile list query
     - profile version expectation guard for deterministic preview
     - KR statutory baseline deduction mode for payroll preview (income tax + 4-insurance approximation)
+    - KR statutory baseline progressive income-tax brackets and insurance contribution caps
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -43,7 +44,7 @@ api:
       description: Generate payroll gross pay preview for a period.
     - method: POST
       path: /payroll/runs/preview-with-deductions
-      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode).
+      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets and contribution caps).
     - method: POST
       path: /payroll/runs/{runId}/confirm
       description: Confirm a payroll run.
@@ -89,6 +90,8 @@ invariants:
   - Profile-mode preview rejects request when expected profile version mismatches current profile version.
   - Statutory KR baseline mode must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0).
   - Statutory KR baseline mode must keep deduction and net-pay outputs deterministic for same inputs/rates.
+  - When incomeTaxBrackets is provided, statutory income tax must be calculated by bracket segments and include open-ended final bracket.
+  - Insurance contribution caps (if provided) must bound each insurance contribution base deterministically.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
   - Payroll run list API is restricted to payroll_operator/admin roles, with employee self-service allowed for own CONFIRMED runs only.
@@ -110,6 +113,7 @@ test_plan:
     - gross pay calculator with multiplier rules
     - manual/profile mode deduction and net-pay aggregation formula
     - statutory_kr_baseline mode deduction component and net-pay aggregation formula
+    - statutory_kr_baseline progressive bracket and contribution-cap formulas
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
     - deduction profile list query parsing and role guard
@@ -123,9 +127,11 @@ test_plan:
     - list payroll runs by period returns expected rows
     - employees can list their own CONFIRMED runs for payslip self-service, but are blocked from other employees and PREVIEWED runs
     - list deduction profiles and filter by active/mode
+    - statutory_kr_baseline validates progressive bracket ordering/open-ended final bracket
   regression:
     - replay GC-001 through GC-006 fixtures
     - statutory_kr_baseline deterministic result replay via WI-0101 e2e
+    - statutory_kr_baseline progressive/cap deterministic replay via WI-0105 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -134,6 +140,7 @@ test_plan:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
     - statutory taxable-base and component-level deterministic checks
+    - progressive bracket and insurance-cap component checks
 observability:
   audit_events:
     - payroll.calculated
@@ -165,7 +172,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.6.0 adds statutory_kr_baseline preview mode on existing deduction endpoint behind payroll_kr_baseline_v1 flag. Existing manual/profile flows and role guards remain backward compatible."
+consumer_impact: "Contract v1.7.0 extends statutory_kr_baseline mode with optional progressive income-tax brackets and insurance contribution caps. Existing flat-rate baseline inputs remain backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -177,6 +184,7 @@ references:
   - work-items/WI-0088-saas-core-ui.md
   - work-items/WI-0030-deduction-profile-list-api.md
   - work-items/WI-0101-payroll-kr-statutory-baseline.md
+  - work-items/WI-0105-payroll-kr-progressive-cap.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent
