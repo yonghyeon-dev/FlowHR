@@ -3,9 +3,11 @@ import type {
   ApprovalDomain,
   ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
+  ApprovalStageHistoryEntity,
   AuditLogEntity,
   AttendanceRecordEntity,
   CreateApprovalDelegationInput,
+  CreateApprovalStageHistoryInput,
   CreateApprovalLineTemplateInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
@@ -56,6 +58,7 @@ type MemoryState = {
   approvalPolicies: Map<string, ApprovalPolicyEntity>;
   approvalDelegations: Map<string, ApprovalDelegationEntity>;
   approvalLineTemplates: Map<string, ApprovalLineTemplateEntity>;
+  approvalStageHistory: Map<string, ApprovalStageHistoryEntity>;
   employees: Map<string, EmployeeEntity>;
   roles: Map<string, RoleEntity>;
   rolePermissions: Map<string, Set<string>>;
@@ -95,6 +98,7 @@ function createState(): MemoryState {
     approvalPolicies: new Map<string, ApprovalPolicyEntity>(),
     approvalDelegations: new Map<string, ApprovalDelegationEntity>(),
     approvalLineTemplates: new Map<string, ApprovalLineTemplateEntity>(),
+    approvalStageHistory: new Map<string, ApprovalStageHistoryEntity>(),
     employees: new Map<string, EmployeeEntity>(),
     roles: new Map<string, RoleEntity>(),
     rolePermissions: new Map<string, Set<string>>(),
@@ -294,6 +298,16 @@ function cloneApprovalLineTemplate(entity: ApprovalLineTemplateEntity): Approval
     approverRoles: [...entity.approverRoles],
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneApprovalStageHistory(entity: ApprovalStageHistoryEntity): ApprovalStageHistoryEntity {
+  return {
+    ...entity,
+    requiredRoles: [...entity.requiredRoles],
+    matchedTemplateIds: [...entity.matchedTemplateIds],
+    activeDelegationIds: [...entity.activeDelegationIds],
+    evaluatedAt: cloneDate(entity.evaluatedAt)
   };
 }
 
@@ -735,6 +749,82 @@ export const memoryDataAccess: DataAccess = {
         }
         return left.id.localeCompare(right.id);
       });
+      return rows;
+    },
+
+    async appendStageHistory(input: CreateApprovalStageHistoryInput) {
+      const entity: ApprovalStageHistoryEntity = {
+        id: nextId("ASH"),
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        stageIndex: input.stageIndex ?? 1,
+        stageLabel: input.stageLabel ?? "policy-gate",
+        requiredRoles: [...input.requiredRoles],
+        fallbackRole: input.fallbackRole,
+        matchedTemplateIds: [...(input.matchedTemplateIds ?? [])],
+        activeDelegationIds: [...(input.activeDelegationIds ?? [])],
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        allowed: input.allowed,
+        resolution: input.resolution,
+        payrollGrossPayKrw: input.payrollGrossPayKrw ?? null,
+        evaluatedAt: input.evaluatedAt ? cloneDate(input.evaluatedAt) : new Date()
+      };
+      state.approvalStageHistory.set(entity.id, entity);
+      return cloneApprovalStageHistory(entity);
+    },
+
+    async listStageHistory(input: {
+      organizationId: string;
+      domain?: ApprovalDomain;
+      targetEntityType?: string;
+      targetEntityId?: string;
+      allowed?: boolean;
+      resolution?: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+      from?: Date;
+      to?: Date;
+      limit?: number;
+    }) {
+      const rows: ApprovalStageHistoryEntity[] = [];
+      for (const entity of state.approvalStageHistory.values()) {
+        if (entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.domain && entity.domain !== input.domain) {
+          continue;
+        }
+        if (input.targetEntityType && entity.targetEntityType !== input.targetEntityType) {
+          continue;
+        }
+        if (input.targetEntityId && entity.targetEntityId !== input.targetEntityId) {
+          continue;
+        }
+        if (input.allowed !== undefined && entity.allowed !== input.allowed) {
+          continue;
+        }
+        if (input.resolution && entity.resolution !== input.resolution) {
+          continue;
+        }
+        if (input.from && entity.evaluatedAt < input.from) {
+          continue;
+        }
+        if (input.to && entity.evaluatedAt > input.to) {
+          continue;
+        }
+        rows.push(cloneApprovalStageHistory(entity));
+      }
+      rows.sort((left, right) => {
+        const byEvaluatedAt = right.evaluatedAt.getTime() - left.evaluatedAt.getTime();
+        if (byEvaluatedAt !== 0) {
+          return byEvaluatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      if (input.limit !== undefined && input.limit > 0) {
+        return rows.slice(0, input.limit);
+      }
       return rows;
     }
   },

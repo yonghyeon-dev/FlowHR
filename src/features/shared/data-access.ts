@@ -7,6 +7,11 @@ export type LeaveRequestUnit = "FULL_DAY" | "HALF_DAY" | "HOUR";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
+export type ApprovalStageResolution =
+  | "EXPECTED_ROLE"
+  | "ACTIVE_DELEGATION"
+  | "PRIVILEGED_BYPASS"
+  | "DENIED";
 
 export type AttendanceRecordEntity = {
   id: string;
@@ -189,6 +194,26 @@ export type ApprovalLineTemplateEntity = {
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type ApprovalStageHistoryEntity = {
+  id: string;
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  stageIndex: number;
+  stageLabel: string;
+  requiredRoles: string[];
+  fallbackRole: string;
+  matchedTemplateIds: string[];
+  activeDelegationIds: string[];
+  actorRole: string;
+  actorId: string | null;
+  allowed: boolean;
+  resolution: ApprovalStageResolution;
+  payrollGrossPayKrw: number | null;
+  evaluatedAt: Date;
 };
 
 export type EmployeeEntity = {
@@ -474,6 +499,25 @@ export type UpdateApprovalLineTemplateInput = {
   active?: boolean;
 };
 
+export type CreateApprovalStageHistoryInput = {
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  stageIndex?: number;
+  stageLabel?: string;
+  requiredRoles: string[];
+  fallbackRole: string;
+  matchedTemplateIds?: string[];
+  activeDelegationIds?: string[];
+  actorRole: string;
+  actorId?: string | null;
+  allowed: boolean;
+  resolution: ApprovalStageResolution;
+  payrollGrossPayKrw?: number | null;
+  evaluatedAt?: Date;
+};
+
 export type UpsertRoleInput = {
   id: string;
   name: string;
@@ -683,6 +727,18 @@ export interface ApprovalStore {
     domain?: ApprovalDomain;
     active?: boolean;
   }): Promise<ApprovalLineTemplateEntity[]>;
+  appendStageHistory(input: CreateApprovalStageHistoryInput): Promise<ApprovalStageHistoryEntity>;
+  listStageHistory(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    allowed?: boolean;
+    resolution?: ApprovalStageResolution;
+    from?: Date;
+    to?: Date;
+    limit?: number;
+  }): Promise<ApprovalStageHistoryEntity[]>;
 }
 
 export interface RbacStore {

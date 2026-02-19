@@ -20,6 +20,7 @@ model Organization {
   approvalPolicy ApprovalPolicy?
   approvalDelegations ApprovalDelegation[]
   approvalLineTemplates ApprovalLineTemplate[]
+  approvalStageHistories ApprovalStageHistory[]
   leavePolicy LeavePolicy?
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
@@ -131,6 +132,30 @@ model ApprovalLineTemplate {
 
   @@unique([organizationId, domain, name])
   @@index([organizationId, domain, active, payrollGrossPayMinKrw, payrollGrossPayMaxKrw])
+}
+
+model ApprovalStageHistory {
+  id                  String                  @id @default(cuid())
+  organizationId      String
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  domain              ApprovalDomain
+  targetEntityType    String
+  targetEntityId      String
+  stageIndex          Int                     @default(1)
+  stageLabel          String                  @default("policy-gate")
+  requiredRoles       String[]
+  fallbackRole        String
+  matchedTemplateIds  String[]
+  activeDelegationIds String[]
+  actorRole           String
+  actorId             String?
+  allowed             Boolean
+  resolution          ApprovalStageResolution
+  payrollGrossPayKrw  Int?
+  evaluatedAt         DateTime                @default(now())
+
+  @@index([organizationId, domain, evaluatedAt])
+  @@index([targetEntityType, targetEntityId, evaluatedAt])
 }
 
 model Role {
@@ -405,6 +430,13 @@ enum ApprovalDomain {
   ATTENDANCE
   LEAVE
   PAYROLL
+}
+
+enum ApprovalStageResolution {
+  EXPECTED_ROLE
+  ACTIVE_DELEGATION
+  PRIVILEGED_BYPASS
+  DENIED
 }
 
 enum ScheduleAnomalyIncidentState {

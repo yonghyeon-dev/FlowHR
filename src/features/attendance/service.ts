@@ -1658,7 +1658,9 @@ export async function approveAttendanceRecord(
   );
   await assertApprovalPolicyGate(context, {
     domain: "ATTENDANCE",
-    organizationId: employee.organizationId
+    organizationId: employee.organizationId,
+    targetEntityType: "AttendanceRecord",
+    targetEntityId: existing.id
   });
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be approved");
@@ -1718,7 +1720,9 @@ export async function rejectAttendanceRecord(
   );
   await assertApprovalPolicyGate(context, {
     domain: "ATTENDANCE",
-    organizationId: employee.organizationId
+    organizationId: employee.organizationId,
+    targetEntityType: "AttendanceRecord",
+    targetEntityId: existing.id
   });
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be rejected");

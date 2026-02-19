@@ -471,7 +471,9 @@ export async function approveLeaveRequest(
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
   await assertApprovalPolicyGate(context, {
     domain: "LEAVE",
-    organizationId: employee.organizationId
+    organizationId: employee.organizationId,
+    targetEntityType: "LeaveRequest",
+    targetEntityId: pending.id
   });
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
@@ -548,7 +550,9 @@ export async function rejectLeaveRequest(
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
   await assertApprovalPolicyGate(context, {
     domain: "LEAVE",
-    organizationId: employee.organizationId
+    organizationId: employee.organizationId,
+    targetEntityType: "LeaveRequest",
+    targetEntityId: pending.id
   });
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {

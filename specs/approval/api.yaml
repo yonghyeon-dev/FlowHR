@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.5.0
+  version: 0.6.0
 paths:
   /approval/policy:
     get:
@@ -35,6 +35,68 @@ paths:
           description: Gate preview result
         "400":
           description: Invalid payload
+        "403":
+          description: Permission denied
+  /approval/stage-history:
+    get:
+      summary: List persisted approval stage-history evaluations
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+            enum: [ATTENDANCE, LEAVE, PAYROLL]
+        - in: query
+          name: targetEntityType
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: targetEntityId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: allowed
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: resolution
+          required: false
+          schema:
+            type: string
+            enum: [EXPECTED_ROLE, ACTIVE_DELEGATION, PRIVILEGED_BYPASS, DENIED]
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        "200":
+          description: Stage-history rows listed
+        "400":
+          description: Invalid query
         "403":
           description: Permission denied
   /approval/delegations:

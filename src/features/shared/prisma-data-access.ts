@@ -5,12 +5,14 @@ import type {
   ApprovalDomain,
   ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
+  ApprovalStageHistoryEntity,
   ApprovalStore,
   AuditLogEntity,
   AttendanceRecordEntity,
   AttendanceStore,
   AuditStore,
   CreateApprovalDelegationInput,
+  CreateApprovalStageHistoryInput,
   CreateApprovalLineTemplateInput,
   CreateAttendanceRecordInput,
   CreateDepartmentInput,
@@ -338,6 +340,34 @@ function toApprovalLineTemplateEntity(record: {
     approverRoles: [...record.approverRoles],
     payrollGrossPayMinKrw: record.payrollGrossPayMinKrw,
     payrollGrossPayMaxKrw: record.payrollGrossPayMaxKrw
+  };
+}
+
+function toApprovalStageHistoryEntity(record: {
+  id: string;
+  organizationId: string;
+  domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
+  targetEntityType: string;
+  targetEntityId: string;
+  stageIndex: number;
+  stageLabel: string;
+  requiredRoles: string[];
+  fallbackRole: string;
+  matchedTemplateIds: string[];
+  activeDelegationIds: string[];
+  actorRole: string;
+  actorId: string | null;
+  allowed: boolean;
+  resolution: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+  payrollGrossPayKrw: number | null;
+  evaluatedAt: Date;
+}): ApprovalStageHistoryEntity {
+  return {
+    ...record,
+    domain: record.domain as ApprovalDomain,
+    requiredRoles: [...record.requiredRoles],
+    matchedTemplateIds: [...record.matchedTemplateIds],
+    activeDelegationIds: [...record.activeDelegationIds]
   };
 }
 
@@ -758,6 +788,64 @@ const approvals: ApprovalStore = {
       orderBy: [{ createdAt: "asc" }, { id: "asc" }]
     });
     return records.map(toApprovalLineTemplateEntity);
+  },
+
+  async appendStageHistory(input: CreateApprovalStageHistoryInput) {
+    const record = await prisma.approvalStageHistory.create({
+      data: {
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        stageIndex: input.stageIndex ?? 1,
+        stageLabel: input.stageLabel ?? "policy-gate",
+        requiredRoles: input.requiredRoles,
+        fallbackRole: input.fallbackRole,
+        matchedTemplateIds: input.matchedTemplateIds ?? [],
+        activeDelegationIds: input.activeDelegationIds ?? [],
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        allowed: input.allowed,
+        resolution: input.resolution,
+        payrollGrossPayKrw: input.payrollGrossPayKrw ?? null,
+        ...(input.evaluatedAt ? { evaluatedAt: input.evaluatedAt } : {})
+      }
+    });
+    return toApprovalStageHistoryEntity(record);
+  },
+
+  async listStageHistory(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    allowed?: boolean;
+    resolution?: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+    from?: Date;
+    to?: Date;
+    limit?: number;
+  }) {
+    const records = await prisma.approvalStageHistory.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.domain ? { domain: input.domain } : {}),
+        ...(input.targetEntityType ? { targetEntityType: input.targetEntityType } : {}),
+        ...(input.targetEntityId ? { targetEntityId: input.targetEntityId } : {}),
+        ...(input.allowed !== undefined ? { allowed: input.allowed } : {}),
+        ...(input.resolution ? { resolution: input.resolution } : {}),
+        ...(input.from || input.to
+          ? {
+              evaluatedAt: {
+                ...(input.from ? { gte: input.from } : {}),
+                ...(input.to ? { lte: input.to } : {})
+              }
+            }
+          : {})
+      },
+      orderBy: [{ evaluatedAt: "desc" }, { id: "desc" }],
+      ...(input.limit && input.limit > 0 ? { take: input.limit } : {})
+    });
+    return records.map(toApprovalStageHistoryEntity);
   }
 };
 

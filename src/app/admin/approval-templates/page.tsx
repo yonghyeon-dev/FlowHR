@@ -30,7 +30,7 @@ type ApprovalGatePreviewDto = {
   actorRole: string;
   actorId: string | null;
   allowed: boolean;
-  allowedReason: "expected_role" | "active_delegation" | "denied";
+  allowedReason: "expected_role" | "active_delegation" | "privileged_bypass" | "denied";
   payrollGrossPayKrw: number | null;
   effectiveAt: string;
   matchedTemplates: Array<{

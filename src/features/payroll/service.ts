@@ -829,7 +829,9 @@ export async function confirmPayrollRun(
   await assertApprovalPolicyGate(context, {
     domain: "PAYROLL",
     organizationId: run.organizationId,
-    payrollGrossPayKrw: run.grossPayKrw
+    payrollGrossPayKrw: run.grossPayKrw,
+    targetEntityType: "PayrollRun",
+    targetEntityId: run.id
   });
 
   const confirmed = await context.dataAccess.payroll.update(runId, {

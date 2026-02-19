@@ -1,4 +1,4 @@
-# Approval Test Cases (v0.5.0)
+# Approval Test Cases (v0.6.0)
 
 ## Positive
 
@@ -14,6 +14,9 @@
 10. Admin creates PAYROLL template with `payrollGrossPayMinKrw`, and template gate is applied only when payroll gross pay matches threshold.
 11. Admin runs gate preview and receives expected roles/template matches for both matched and non-matched PAYROLL conditions.
 12. Admin runs gate preview with delegated actor and receives `active_delegation` allow result when delegation is valid.
+13. Runtime attendance gate writes DENIED stage-history when non-approver actor attempts approval.
+14. Runtime attendance gate writes PRIVILEGED_BYPASS stage-history when admin actor approves.
+15. Admin/manager reads stage-history with domain/target/resolution filters and receives deterministic ordering.
 
 ## Negative
 
@@ -26,6 +29,7 @@
 7. Active template duplicate create/update in same organization+domain is rejected with `409`.
 8. Non-PAYROLL template create/update with payroll gross-pay condition fields is rejected with `400`.
 9. Gate preview rejects `payrollGrossPayKrw` payload when domain is not `PAYROLL`.
+10. Stage-history list query rejects invalid `resolution`, datetime, or out-of-range `limit`.
 
 ## Regression
 
@@ -37,6 +41,7 @@
 6. Existing policy/delegation APIs stay backward compatible after template endpoint addition.
 7. Payroll confirm gate falls back to policy role when active PAYROLL template condition does not match.
 8. Gate preview decision remains consistent with runtime gate role resolution.
+9. Stage-history listing endpoint remains read-only and does not mutate approval policy/delegation/template state.
 
 ## Evidence
 
@@ -46,3 +51,4 @@
 - `scripts/tests/e2e-wi0109-approval-line-template.test.ts`
 - `scripts/tests/e2e-wi0113-approval-template-payroll-conditional-routing.test.ts`
 - `scripts/tests/e2e-wi0115-approval-gate-preview.test.ts`
+- `scripts/tests/e2e-wi0116-approval-stage-history-baseline.test.ts`

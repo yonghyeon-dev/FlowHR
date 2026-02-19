@@ -8,6 +8,14 @@ const actorRoleSchema = z.enum(actorRoles);
 export const approvalDomainValues = ["ATTENDANCE", "LEAVE", "PAYROLL"] as const;
 export const approvalDomainSchema = z.enum(approvalDomainValues);
 
+export const approvalStageResolutionValues = [
+  "EXPECTED_ROLE",
+  "ACTIVE_DELEGATION",
+  "PRIVILEGED_BYPASS",
+  "DENIED"
+] as const;
+export const approvalStageResolutionSchema = z.enum(approvalStageResolutionValues);
+
 export const readApprovalPolicyQuerySchema = z.object({
   organizationId: z.string().min(1).optional()
 });
@@ -49,6 +57,18 @@ export const listApprovalLineTemplatesQuerySchema = z.object({
   organizationId: z.string().min(1).optional(),
   domain: approvalDomainSchema.optional(),
   active: z.boolean().optional()
+});
+
+export const listApprovalStageHistoryQuerySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  domain: approvalDomainSchema.optional(),
+  targetEntityType: z.string().min(1).optional(),
+  targetEntityId: z.string().min(1).optional(),
+  allowed: z.boolean().optional(),
+  resolution: approvalStageResolutionSchema.optional(),
+  from: isoDateTime.optional(),
+  to: isoDateTime.optional(),
+  limit: z.number().int().min(1).max(500).optional()
 });
 
 export const previewApprovalPolicyGateSchema = z
