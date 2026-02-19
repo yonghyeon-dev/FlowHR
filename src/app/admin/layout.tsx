@@ -37,7 +37,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/approval-executions">결재 실행 현황</Link>
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
-          <Link href="/admin/leave-promotion">연차촉진 공지</Link>
           <Link href="/admin#payroll">급여</Link>
           <Link className="muted-link" href="/admin#account">
             내 계정
@@ -48,9 +47,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <SessionMenu />
           <Link href="/employee">직원 포털</Link>
           {showDevTools ? (
-            <Link className="muted-link" href="/ops/mvp-console">
-              (dev) ops 콘솔
-            </Link>
+            <>
+              <Link className="muted-link" href="/ops/mvp-console">
+                (dev) ops 콘솔
+              </Link>
+              <Link className="muted-link" href="/ops/leave-promotion">
+                (dev) 연차촉진 공지
+              </Link>
+            </>
           ) : null}
         </div>
       </aside>

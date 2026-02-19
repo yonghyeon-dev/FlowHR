@@ -447,6 +447,44 @@ export default function EmployeeSelfServicePage() {
     return "퇴근 완료";
   }, [latestAttendance]);
 
+  const leaveUsageRatePercent = useMemo(() => {
+    if (!leaveBalance || leaveBalance.grantedDays <= 0) {
+      return 0;
+    }
+    const ratio = (leaveBalance.usedDays / leaveBalance.grantedDays) * 100;
+    return Math.max(0, Math.min(100, Math.round(ratio)));
+  }, [leaveBalance]);
+
+  const leaveCalendarRows = useMemo(() => {
+    return [...leaveRequests]
+      .sort((lhs, rhs) => new Date(lhs.startDate).getTime() - new Date(rhs.startDate).getTime())
+      .map((request) => ({
+        id: request.id,
+        dateRange: `${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`,
+        status: request.state,
+        label:
+          request.unit === "HOUR" && request.hours !== null
+            ? `${request.leaveType} / ${request.hours.toFixed(2)}시간`
+            : request.unit === "HALF_DAY"
+              ? `${request.leaveType} / 반차`
+              : `${request.leaveType} / ${formatDays(request.days)}일`
+      }));
+  }, [leaveRequests]);
+
+  function applyLatestAttendanceToCorrectionForm() {
+    if (!latestAttendance) {
+      return;
+    }
+    setLastAttendanceId(latestAttendance.id);
+    setCheckInAt(toLocalInputValue(new Date(latestAttendance.checkInAt)));
+    if (latestAttendance.checkOutAt) {
+      setCheckOutAt(toLocalInputValue(new Date(latestAttendance.checkOutAt)));
+    }
+    setBreakMinutes(String(latestAttendance.breakMinutes));
+    setIsHoliday(latestAttendance.isHoliday);
+    setAttendanceNotes(latestAttendance.notes ?? "정정 요청");
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -626,6 +664,9 @@ export default function EmployeeSelfServicePage() {
             <button className="btn btn-secondary" onClick={() => void requestAttendanceCorrection()} disabled={!lastAttendanceId}>
               출퇴근 정정(요청)
             </button>
+            <button className="btn btn-secondary" onClick={applyLatestAttendanceToCorrectionForm} disabled={!latestAttendance}>
+              최근 기록 불러오기
+            </button>
           </div>
           <ul className="log-list">
             {attendance.length === 0 ? (
@@ -731,6 +772,35 @@ export default function EmployeeSelfServicePage() {
               ))
             )}
           </ul>
+        </article>
+
+        <article className="panel" id="leave-calendar">
+          <h2>휴가 캘린더</h2>
+          <p className="small">
+            연차 사용률 {leaveUsageRatePercent}% (사용 {formatDays(leaveBalance?.usedDays ?? 0)} / 부여{" "}
+            {formatDays(leaveBalance?.grantedDays ?? 0)})
+          </p>
+          <progress max={100} value={leaveUsageRatePercent} style={{ width: "100%" }} />
+          {leaveCalendarRows.length === 0 ? (
+            <p className="small" style={{ marginTop: 12 }}>
+              이번 조회 구간에 휴가 일정이 없습니다.
+            </p>
+          ) : (
+            <ul className="simple-list" style={{ marginTop: 12 }}>
+              {leaveCalendarRows.map((row) => (
+                <li key={row.id}>
+                  <span>
+                    <strong>{row.label}</strong>
+                    <br />
+                    <span className="small">{row.dateRange}</span>
+                  </span>
+                  <span className={row.status === "APPROVED" ? "ok" : row.status === "PENDING" ? "muted" : "fail"}>
+                    {row.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
 
         <article className="panel" id="schedule">
