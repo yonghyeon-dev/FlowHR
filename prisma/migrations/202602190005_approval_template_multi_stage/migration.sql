@@ -1,4 +1,4 @@
-﻿-- WI-0117: Add multi-stage routing definition payload for approval templates.
+-- WI-0117: Add multi-stage routing definition payload for approval templates.
 ALTER TABLE "ApprovalLineTemplate"
   ADD COLUMN IF NOT EXISTS "approvalStagesJson" JSONB;
 

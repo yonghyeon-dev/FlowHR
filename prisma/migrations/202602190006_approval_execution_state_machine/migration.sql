@@ -1,4 +1,4 @@
-﻿-- WI-0118: Add approval execution state machine tables for staged approval actions.
+-- WI-0118: Add approval execution state machine tables for staged approval actions.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ApprovalExecutionState') THEN
