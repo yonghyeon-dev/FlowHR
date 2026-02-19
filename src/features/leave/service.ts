@@ -113,14 +113,26 @@ type DispatchAnnualLeavePromotionNoticeInput = {
   asOf?: Date;
   includeUpcoming?: boolean;
   dryRun?: boolean;
+  deliveryChannel?: "webhook" | "email_template";
+  emailTemplateId?: string;
 };
 
 type PromotionWebhookProvider = "discord" | "slack";
+type PromotionDeliveryProvider = PromotionWebhookProvider | "email_template";
 
 type PromotionWebhookConfig = {
   url: string;
   provider: PromotionWebhookProvider;
   source: string;
+};
+
+type PromotionEmailTemplateConfig = {
+  url: string;
+  token: string | null;
+  from: string;
+  urlSource: string;
+  tokenSource: string | null;
+  fromSource: string;
 };
 
 type ListLeaveRequestsInput = {
@@ -293,6 +305,55 @@ function resolvePromotionWebhookConfig(): PromotionWebhookConfig | null {
   };
 }
 
+function resolvePromotionEmailTemplateConfig(): PromotionEmailTemplateConfig | null {
+  const urlCandidates: Array<{ source: string; value: string }> = [
+    {
+      source: "FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL",
+      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL)
+    },
+    {
+      source: "FLOWHR_ALERT_EMAIL_TEMPLATE_URL",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_EMAIL_TEMPLATE_URL)
+    }
+  ];
+  const fromCandidates: Array<{ source: string; value: string }> = [
+    {
+      source: "FLOWHR_LEAVE_PROMOTION_EMAIL_FROM",
+      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)
+    },
+    {
+      source: "FLOWHR_ALERT_EMAIL_FROM",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_EMAIL_FROM)
+    }
+  ];
+  const tokenCandidates: Array<{ source: string; value: string }> = [
+    {
+      source: "FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_TOKEN",
+      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_TOKEN)
+    },
+    {
+      source: "FLOWHR_ALERT_EMAIL_TEMPLATE_TOKEN",
+      value: normalizeEnvValue(process.env.FLOWHR_ALERT_EMAIL_TEMPLATE_TOKEN)
+    }
+  ];
+
+  const matchedUrl = urlCandidates.find((candidate) => candidate.value.length > 0);
+  const matchedFrom = fromCandidates.find((candidate) => candidate.value.length > 0);
+  if (!matchedUrl || !matchedFrom) {
+    return null;
+  }
+  const matchedToken = tokenCandidates.find((candidate) => candidate.value.length > 0);
+
+  return {
+    url: matchedUrl.value,
+    token: matchedToken?.value ?? null,
+    from: matchedFrom.value,
+    urlSource: matchedUrl.source,
+    tokenSource: matchedToken?.source ?? null,
+    fromSource: matchedFrom.source
+  };
+}
+
 function buildPromotionNoticeMessage(input: {
   organizationId: string;
   asOf: string;
@@ -373,6 +434,49 @@ async function sendPromotionWebhook(config: PromotionWebhookConfig, message: str
   if (!response.ok) {
     const responseBody = await response.text();
     throw new Error(`${config.provider} webhook request failed: ${response.status} ${responseBody}`);
+  }
+}
+
+async function sendPromotionEmailTemplate(
+  config: PromotionEmailTemplateConfig,
+  payload: {
+    templateId: string;
+    from: string;
+    subject: string;
+    body: string;
+    organizationId: string;
+    asOf: string;
+    includeUpcoming: boolean;
+    noticeWindow: { startAt: string; endAt: string; isOpen: boolean };
+    summary: { potentialTargetCount: number; displayTargetCount: number; eligibleNowCount: number };
+    recipients: Array<{
+      employeeId: string;
+      email: string;
+      name: string | null;
+      remainingDays: number;
+      grantedDays: number;
+      usedDays: number;
+      lastAccrualYear: number | null;
+      eligibleNow: boolean;
+    }>;
+  }
+) {
+  const headers: Record<string, string> = {
+    "content-type": "application/json"
+  };
+  if (config.token) {
+    headers.authorization = `Bearer ${config.token}`;
+  }
+
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    throw new Error(`email template request failed: ${response.status} ${responseBody}`);
   }
 }
 
@@ -1573,9 +1677,15 @@ export async function dispatchAnnualLeavePromotionNotice(
     status: "dry_run" | "skipped_no_targets" | "dispatched";
     attempted: boolean;
     dryRun: boolean;
-    provider: PromotionWebhookProvider | null;
+    channel: "webhook" | "email_template";
+    provider: PromotionDeliveryProvider | null;
     webhookSource: string | null;
     webhookConfigured: boolean;
+    emailTemplateSource: string | null;
+    emailTemplateConfigured: boolean;
+    emailTemplateId: string | null;
+    recipientCount: number;
+    missingEmailCount: number;
     dispatchedAt: string | null;
   };
 }> {
@@ -1597,11 +1707,44 @@ export async function dispatchAnnualLeavePromotionNotice(
 
   const dryRun = input.dryRun ?? false;
   const includeUpcoming = Boolean(input.includeUpcoming);
+  const channel = input.deliveryChannel ?? "webhook";
+  const requestedTemplateId = input.emailTemplateId?.trim() || "";
+  const configuredTemplateId = normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID);
+  const emailTemplateId = requestedTemplateId || configuredTemplateId || null;
   const targetCount = preview.targets.length;
-  const webhook = resolvePromotionWebhookConfig();
-  const attempted = !dryRun && targetCount > 0;
+  const recipients = preview.targets.flatMap((target) => {
+    const email = target.email?.trim() || "";
+    if (!email) {
+      return [];
+    }
+    return [
+      {
+        employeeId: target.employeeId,
+        email,
+        name: target.name,
+        remainingDays: target.remainingDays,
+        grantedDays: target.grantedDays,
+        usedDays: target.usedDays,
+        lastAccrualYear: target.lastAccrualYear,
+        eligibleNow: target.eligibleNow
+      }
+    ];
+  });
+  const recipientCount = recipients.length;
+  const missingEmailCount = Math.max(targetCount - recipientCount, 0);
+  const webhook = channel === "webhook" ? resolvePromotionWebhookConfig() : null;
+  const emailTemplateConfig =
+    channel === "email_template" ? resolvePromotionEmailTemplateConfig() : null;
+  const attempted = !dryRun && (channel === "webhook" ? targetCount > 0 : recipientCount > 0);
 
-  if (attempted && !webhook) {
+  const provider: PromotionDeliveryProvider | null =
+    channel === "webhook"
+      ? webhook?.provider ?? null
+      : emailTemplateConfig
+        ? "email_template"
+        : null;
+
+  if (channel === "email_template" && attempted && !emailTemplateId) {
     await context.dataAccess.audit.append({
       action: "leave.promotion_notice.failed",
       entityType: "LeavePolicy",
@@ -1613,12 +1756,63 @@ export async function dispatchAnnualLeavePromotionNotice(
         includeUpcoming,
         dryRun,
         targetCount,
+        recipientCount,
+        missingEmailCount,
+        channel,
+        reason: "email_template_id_missing"
+      }
+    });
+    throw new ServiceError(
+      400,
+      "emailTemplateId is required for deliveryChannel=email_template (or set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
+    );
+  }
+
+  if (channel === "webhook" && attempted && !webhook) {
+    await context.dataAccess.audit.append({
+      action: "leave.promotion_notice.failed",
+      entityType: "LeavePolicy",
+      organizationId: preview.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        asOf: preview.asOf,
+        includeUpcoming,
+        dryRun,
+        targetCount,
+        recipientCount,
+        missingEmailCount,
+        channel,
         reason: "webhook_not_configured"
       }
     });
     throw new ServiceError(
       503,
       "leave promotion webhook is not configured (set FLOWHR_LEAVE_PROMOTION_* or FLOWHR_ALERT_* webhook env)"
+    );
+  }
+
+  if (channel === "email_template" && attempted && !emailTemplateConfig) {
+    await context.dataAccess.audit.append({
+      action: "leave.promotion_notice.failed",
+      entityType: "LeavePolicy",
+      organizationId: preview.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        asOf: preview.asOf,
+        includeUpcoming,
+        dryRun,
+        targetCount,
+        recipientCount,
+        missingEmailCount,
+        channel,
+        reason: "email_template_not_configured"
+      }
+    });
+    throw new ServiceError(
+      503,
+      "leave promotion email template dispatch is not configured (set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL and FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)"
     );
   }
 
@@ -1636,9 +1830,24 @@ export async function dispatchAnnualLeavePromotionNotice(
   let status: "dry_run" | "skipped_no_targets" | "dispatched" = "dry_run";
   let dispatchedAt: string | null = null;
 
-  if (attempted && webhook) {
+  if (attempted) {
     try {
-      await sendPromotionWebhook(webhook, message);
+      if (channel === "webhook" && webhook) {
+        await sendPromotionWebhook(webhook, message);
+      } else if (channel === "email_template" && emailTemplateConfig && emailTemplateId) {
+        await sendPromotionEmailTemplate(emailTemplateConfig, {
+          templateId: emailTemplateId,
+          from: emailTemplateConfig.from,
+          subject: preview.announcementDraft.title,
+          body: preview.announcementDraft.body,
+          organizationId: preview.organizationId,
+          asOf: preview.asOf,
+          includeUpcoming,
+          noticeWindow: preview.noticeWindow,
+          summary: preview.summary,
+          recipients
+        });
+      }
       status = "dispatched";
       dispatchedAt = new Date().toISOString();
     } catch (error) {
@@ -1653,18 +1862,27 @@ export async function dispatchAnnualLeavePromotionNotice(
           includeUpcoming,
           dryRun,
           targetCount,
-          provider: webhook.provider,
-          webhookSource: webhook.source,
+          recipientCount,
+          missingEmailCount,
+          channel,
+          provider,
+          webhookSource: webhook?.source ?? null,
+          emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+          emailTemplateId,
           error: error instanceof Error ? error.message : "unknown error"
         }
       });
-      throw new ServiceError(502, "leave promotion webhook request failed");
+      if (channel === "webhook") {
+        throw new ServiceError(502, "leave promotion webhook request failed");
+      }
+      throw new ServiceError(502, "leave promotion email template request failed");
     }
-  } else if (!dryRun && targetCount === 0) {
+  } else if (!dryRun) {
     status = "skipped_no_targets";
   }
 
-  const sentTargetCount = status === "dispatched" ? targetCount : 0;
+  const sentTargetCount =
+    status === "dispatched" ? (channel === "webhook" ? targetCount : recipientCount) : 0;
   const action =
     status === "dispatched"
       ? "leave.promotion_notice.dispatched"
@@ -1683,14 +1901,19 @@ export async function dispatchAnnualLeavePromotionNotice(
       includeUpcoming,
       dryRun,
       targetCount,
+      recipientCount,
+      missingEmailCount,
       sentTargetCount,
       status,
-      provider: webhook?.provider ?? null,
-      webhookSource: webhook?.source ?? null
+      channel,
+      provider,
+      webhookSource: webhook?.source ?? null,
+      emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+      emailTemplateId
     }
   });
 
-  if (status === "dispatched" && webhook && dispatchedAt) {
+  if (status === "dispatched" && dispatchedAt) {
     try {
       await getEventPublisher(context).publish({
         name: "leave.promotion.notice.dispatched.v1",
@@ -1703,11 +1926,19 @@ export async function dispatchAnnualLeavePromotionNotice(
           asOf: preview.asOf,
           includeUpcoming,
           targetCount,
-          provider: webhook.provider,
-          webhookSource: webhook.source,
+          recipientCount,
+          missingEmailCount,
+          channel,
+          provider,
+          webhookSource: webhook?.source ?? null,
+          emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+          emailTemplateId,
           announcementTitle: preview.announcementDraft.title,
           noticeWindow: preview.noticeWindow,
-          targetEmployeeIds: preview.targets.slice(0, 100).map((target) => target.employeeId)
+          targetEmployeeIds:
+            channel === "webhook"
+              ? preview.targets.slice(0, 100).map((target) => target.employeeId)
+              : recipients.slice(0, 100).map((target) => target.employeeId)
         }
       });
     } catch (error) {
@@ -1723,8 +1954,13 @@ export async function dispatchAnnualLeavePromotionNotice(
             includeUpcoming,
             dispatchedAt,
             targetCount,
-            provider: webhook.provider,
-            webhookSource: webhook.source,
+            recipientCount,
+            missingEmailCount,
+            channel,
+            provider,
+            webhookSource: webhook?.source ?? null,
+            emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+            emailTemplateId,
             error: error instanceof Error ? error.message : "unknown error"
           }
         });
@@ -1752,9 +1988,15 @@ export async function dispatchAnnualLeavePromotionNotice(
       status,
       attempted,
       dryRun,
-      provider: webhook?.provider ?? null,
+      channel,
+      provider,
       webhookSource: webhook?.source ?? null,
       webhookConfigured: webhook !== null,
+      emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
+      emailTemplateConfigured: emailTemplateConfig !== null,
+      emailTemplateId,
+      recipientCount,
+      missingEmailCount,
       dispatchedAt
     }
   };

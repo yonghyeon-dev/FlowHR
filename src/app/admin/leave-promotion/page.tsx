@@ -55,9 +55,15 @@ type PromotionNotifyResponse = PromotionPreviewResponse & {
     status: "dry_run" | "skipped_no_targets" | "dispatched";
     attempted: boolean;
     dryRun: boolean;
-    provider: "discord" | "slack" | null;
+    channel: "webhook" | "email_template";
+    provider: "discord" | "slack" | "email_template" | null;
     webhookSource: string | null;
     webhookConfigured: boolean;
+    emailTemplateSource: string | null;
+    emailTemplateConfigured: boolean;
+    emailTemplateId: string | null;
+    recipientCount: number;
+    missingEmailCount: number;
     dispatchedAt: string | null;
   };
 };
@@ -136,6 +142,8 @@ export default function AdminLeavePromotionPage() {
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
   const [asOfInput, setAsOfInput] = useState(() => toLocalInputValue(new Date()));
   const [includeUpcoming, setIncludeUpcoming] = useState(true);
+  const [deliveryChannel, setDeliveryChannel] = useState<"webhook" | "email_template">("webhook");
+  const [emailTemplateId, setEmailTemplateId] = useState("");
 
   const [policyBase, setPolicyBase] = useState<PolicyBase | null>(null);
   const [promotionEnabled, setPromotionEnabled] = useState(false);
@@ -357,11 +365,13 @@ export default function AdminLeavePromotionPage() {
       organizationId: organizationId.trim(),
       asOf: asOfInput.trim() ? toIso(asOfInput) : undefined,
       includeUpcoming,
-      dryRun
+      dryRun,
+      deliveryChannel,
+      emailTemplateId: deliveryChannel === "email_template" ? emailTemplateId.trim() || undefined : undefined
     };
 
     const { response, body } = await callApi(
-      dryRun ? "연차 촉진 공지 드라이런" : "연차 촉진 공지 발송",
+      dryRun ? "연차 촉진 공지 드라이런" : `연차 촉진 공지 발송 (${deliveryChannel})`,
       "POST",
       "/api/leave/policy/promotion-notify",
       payload
@@ -383,7 +393,13 @@ export default function AdminLeavePromotionPage() {
     });
 
     if (parsed.delivery.status === "dispatched") {
-      setStatusMessage(`공지 발송 완료: ${parsed.summary.sentTargetCount}명 (${parsed.delivery.provider ?? "unknown"})`);
+      if (parsed.delivery.channel === "email_template") {
+        setStatusMessage(
+          `이메일 템플릿 발송 완료: ${parsed.summary.sentTargetCount}명 (template=${parsed.delivery.emailTemplateId ?? "-"})`
+        );
+      } else {
+        setStatusMessage(`공지 발송 완료: ${parsed.summary.sentTargetCount}명 (${parsed.delivery.provider ?? "unknown"})`);
+      }
     } else if (parsed.delivery.status === "skipped_no_targets") {
       setStatusMessage("대상자가 없어 발송을 건너뛰었습니다.");
     } else {
@@ -413,7 +429,7 @@ export default function AdminLeavePromotionPage() {
         <p className="eyebrow">FlowHR Admin</p>
         <h1>연차 촉진 공지</h1>
         <p>
-          연차 촉진 대상자를 사전에 미리 확인하고, 드라이런 검증 후 Discord/Slack 웹훅으로 공지를 발송합니다.
+          연차 촉진 대상자를 사전에 미리 확인하고, 드라이런 검증 후 Discord/Slack 웹훅 또는 이메일 템플릿 채널로 공지를 발송합니다.
           {showDevTools ? " 개발 모드에서는 헤더 기반 Actor 컨텍스트를 사용할 수 있습니다." : ""}
         </p>
       </header>
@@ -457,6 +473,32 @@ export default function AdminLeavePromotionPage() {
               </select>
             </label>
           </div>
+          <div className="input-grid">
+            <label>
+              발송 채널
+              <select
+                value={deliveryChannel}
+                onChange={(event) =>
+                  setDeliveryChannel(event.target.value === "email_template" ? "email_template" : "webhook")
+                }
+              >
+                <option value="webhook">webhook (Discord/Slack)</option>
+                <option value="email_template">email template</option>
+              </select>
+            </label>
+            <label>
+              Email Template ID
+              <input
+                placeholder="leave-promotion-default"
+                value={emailTemplateId}
+                onChange={(event) => setEmailTemplateId(event.target.value)}
+                disabled={deliveryChannel !== "email_template"}
+              />
+            </label>
+          </div>
+          <p className="small">
+            email template 채널 사용 시 `emailTemplateId` 또는 서버 환경변수(`FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID`)가 필요합니다.
+          </p>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadPolicySettings()} disabled={!organizationId.trim()}>
               정책 불러오기
@@ -588,6 +630,10 @@ export default function AdminLeavePromotionPage() {
                 <strong>{notifyResult.delivery.attempted ? "yes" : "no"}</strong>
               </li>
               <li>
+                <span>channel</span>
+                <strong>{notifyResult.delivery.channel}</strong>
+              </li>
+              <li>
                 <span>provider</span>
                 <strong>{notifyResult.delivery.provider ?? "-"}</strong>
               </li>
@@ -598,6 +644,26 @@ export default function AdminLeavePromotionPage() {
               <li>
                 <span>webhook configured</span>
                 <strong>{notifyResult.delivery.webhookConfigured ? "yes" : "no"}</strong>
+              </li>
+              <li>
+                <span>email template source</span>
+                <strong>{notifyResult.delivery.emailTemplateSource ?? "-"}</strong>
+              </li>
+              <li>
+                <span>email template configured</span>
+                <strong>{notifyResult.delivery.emailTemplateConfigured ? "yes" : "no"}</strong>
+              </li>
+              <li>
+                <span>email template id</span>
+                <strong>{notifyResult.delivery.emailTemplateId ?? "-"}</strong>
+              </li>
+              <li>
+                <span>recipient count</span>
+                <strong>{notifyResult.delivery.recipientCount}</strong>
+              </li>
+              <li>
+                <span>missing email count</span>
+                <strong>{notifyResult.delivery.missingEmailCount}</strong>
               </li>
               <li>
                 <span>dispatched at</span>

@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.8.0
+version: 1.9.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -10,7 +10,7 @@ scope:
     - annual leave accrual and carry-over settlement
     - leave policy read/update (annual grant + carry-over cap + fractional controls + notice/consecutive constraints)
     - annual leave promotion preview and internal notice draft policy
-    - annual leave promotion notice dispatch automation via Discord/Slack webhook
+    - annual leave promotion notice dispatch automation via webhook (Discord/Slack) and email-template channel
   out:
     - external calendar synchronization
 entities:
@@ -65,7 +65,7 @@ api:
       description: Preview annual leave promotion targets and internal announcement draft based on policy.
     - method: POST
       path: /leave/policy/promotion-notify
-      description: Dispatch annual leave promotion notice through configured webhook channel (supports dry-run).
+      description: Dispatch annual leave promotion notice through webhook or email-template channel (supports dry-run).
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
@@ -84,7 +84,7 @@ api:
       - name: leave.policy.updated.v1
         description: Emitted when leave policy is created or updated.
       - name: leave.promotion.notice.dispatched.v1
-        description: Emitted when annual leave promotion notice is dispatched through webhook.
+        description: Emitted when annual leave promotion notice is dispatched through the configured delivery channel.
     consumed:
       - name: employee.profile.updated.v1
         description: Employee org/profile metadata updates.
@@ -121,7 +121,8 @@ invariants:
   - Annual leave promotion targets are filtered by remainingDays threshold and organization scope.
   - Annual leave promotion preview can include upcoming targets before notice window opens, but immediate targets require notice window open.
   - Annual leave promotion notice dispatch requires leave accrual settle permission and tenant scope validation.
-  - Annual leave promotion notice dry-run never triggers webhook side effects.
+  - Annual leave promotion notice dry-run never triggers external delivery side effects.
+  - Email-template channel dispatch requires template id resolution and configured endpoint/from address.
 risk:
   permissions:
     - Unauthorized approval or accrual settlement can alter payroll and staffing plans.
@@ -154,15 +155,16 @@ test_plan:
     - policy-denied half-day/hourly requests return 409
     - policy-denied requests for minNoticeDays/maxConsecutiveDays return 409
     - annual leave promotion preview returns threshold-filtered targets and rendered announcement draft
-    - annual leave promotion notify dispatch triggers webhook when eligible targets exist
-    - annual leave promotion notify dry-run and no-target run never call webhook
+    - annual leave promotion notify dispatch triggers webhook when `deliveryChannel=webhook` and eligible targets exist
+    - annual leave promotion notify dispatch triggers email-template endpoint when `deliveryChannel=email_template` and recipients with email exist
+    - annual leave promotion notify dry-run and no-target/no-recipient run never call external delivery endpoints
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
     - whole-day leave flow remains backward compatible after fractional-unit rollout
     - maxConsecutiveDays null update restores unlimited consecutive requests
     - annual leave promotion disabled mode returns no targets regardless of balance state
-    - annual leave promotion notify returns 503 when dispatch is required but webhook is missing
+    - annual leave promotion notify returns 503 when dispatch is required but selected channel configuration is missing
   authorization:
     - employee self-service boundary check
     - manager/admin approval check
@@ -212,7 +214,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.8.0 adds annual leave promotion notice dispatch endpoint (`POST /leave/policy/promotion-notify`) and webhook delivery telemetry while preserving existing leave request/policy/preview behavior."
+consumer_impact: "Contract v1.9.0 extends annual leave promotion notice dispatch endpoint (`POST /leave/policy/promotion-notify`) with `deliveryChannel=email_template` and template delivery telemetry while preserving existing webhook behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -222,6 +224,7 @@ references:
   - work-items/WI-0114-leave-notice-consecutive-policy.md
   - work-items/WI-0120-leave-promotion-notice-preview.md
   - work-items/WI-0122-leave-promotion-notice-delivery-automation.md
+  - work-items/WI-0124-leave-promotion-email-template-delivery.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

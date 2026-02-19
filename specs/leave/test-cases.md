@@ -30,6 +30,8 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 22. Promotion notify dispatch sends webhook when eligible targets exist in open notice window.
 23. Promotion notify dispatch skips webhook when no display target exists.
 24. Promotion notify dispatch fails with `503` when dispatch is required but webhook is not configured.
+25. Promotion notify dispatch sends email-template payload when `deliveryChannel=email_template` and recipients have email addresses.
+26. Promotion notify email-template dispatch fails with `503` when email-template endpoint/from config is missing for required dispatch.
 
 ## Boundary and Accuracy Cases
 
@@ -45,6 +47,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 10. Min notice day validation uses Asia/Seoul day boundary for today/start-date comparison.
 11. Promotion notice window start/end is derived from Seoul year-end and policy lead days.
 12. Promotion notify webhook payload keeps deterministic title/body and target summaries.
+13. Promotion notify email-template payload keeps deterministic template id/recipient summary and excludes recipients without email.
 
 ## Regression Linkage
 
@@ -54,9 +57,10 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 - Fractional leave fixtures (`HALF_DAY`, `HOUR`) must remain deterministic across CI runs.
 - Promotion preview fixtures remain deterministic for closed-window and open-window scenarios.
 - Promotion notify fixtures remain deterministic for dry-run / no-target / dispatched / missing-webhook outcomes.
+- Promotion notify fixtures remain deterministic for email-template dry-run / dispatched / missing-config outcomes.
 
 ## QA Gate Expectations
 
 - Spec Gate: leave contract completeness, role matrix, and invariant checks.
 - Code Gate: unit/integration tests, authorization tests, audit log, and settlement idempotency assertions.
-- Code Gate: promotion notify webhook side-effects are blocked in dry-run and validated in dispatch path.
+- Code Gate: promotion notify side-effects (webhook/email-template) are blocked in dry-run and validated in dispatch path.

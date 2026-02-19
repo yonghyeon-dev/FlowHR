@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-19
-> **Current version**: 0.1.9 (Approval Execution Stalled Escalation Automation)
+> **Current version**: 0.1.10 (Leave Promotion Email Template Delivery)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -160,10 +160,11 @@
 - WI-0121 결재 실행 우선순위/정체 큐 고도화 (`/approval/executions` sort/stalled filter + `/admin/approval-executions` 요약 KPI/빠른점프 + e2e)
 - WI-0122 연차촉진 공지 발송 자동화 (`POST /leave/policy/promotion-notify` + Discord/Slack webhook 연동 + `/admin/leave-promotion` 드라이런/실발송 UX + e2e)
 - WI-0123 결재 실행 정체 에스컬레이션 자동화 (`POST /approval/executions/escalate` + `/admin/approval-executions` 드라이런/실행 + 스케줄러 runner/workflow + e2e)
+- WI-0124 연차촉진 공지 이메일 템플릿 채널 확장 (`deliveryChannel=email_template` + 템플릿 ID/수신자 메타데이터 + `/admin/leave-promotion` 채널 선택 UX + e2e)
 
 ### 진행 중
 
-- 다음: 휴가 촉진 공지 채널을 이메일 템플릿 발송까지 확장 (현재 webhook-only)
+- 다음: 연차촉진 이메일 템플릿 발송의 개인별 재시도/전송 이력 추적 모델 도입
 
 ### 현재 아키텍처
 
@@ -296,7 +297,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | **관리자 대시보드** | ✅ 웹 SPA | ✅ 웹 SPA | ⚠️ `/admin` SaaS 대시보드 baseline + ops 콘솔은 `/ops/*`로 격리(기본 숨김) | Critical |
 | **직원 셀프서비스** | ✅ 웹 포탈 | ✅ 웹 포탈 | ⚠️ `/employee` baseline + `/employee/payslips` (확정 급여 조회) | Critical |
 | **모바일 앱** | ✅ iOS/Android | ✅ iOS/Android | ❌ 없음 | High |
-| **알림** | ✅ 푸시/이메일/Slack | ✅ 푸시/Slack/Teams | ⚠️ 웹훅만 | Medium |
+| **알림** | ✅ 푸시/이메일/Slack | ✅ 푸시/Slack/Teams | ⚠️ 웹훅 + 부분 이메일(초대/연차촉진) | Medium |
 | **채용 관리** | ✅ ATS | ⚠️ 기본 | ❌ 없음 | Low |
 | **성과 평가** | ✅ MBO/OKR | ✅ 리뷰 시스템 | ❌ 없음 | Low |
 | **경비 관리** | ⚠️ 기본 | ✅ 경비 청구/정산 | ❌ 없음 | Low |

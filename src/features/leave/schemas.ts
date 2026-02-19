@@ -91,9 +91,14 @@ export const previewLeavePromotionQuerySchema = z.object({
   includeUpcoming: z.preprocess(parseBooleanLike, z.boolean().optional())
 });
 
+export const leavePromotionDeliveryChannelValues = ["webhook", "email_template"] as const;
+export const leavePromotionDeliveryChannelSchema = z.enum(leavePromotionDeliveryChannelValues);
+
 export const notifyLeavePromotionSchema = z.object({
   organizationId: z.string().min(1).optional(),
   asOf: isoDateTime.optional(),
   includeUpcoming: z.preprocess(parseBooleanLike, z.boolean().optional()),
-  dryRun: z.preprocess(parseBooleanLike, z.boolean().optional())
+  dryRun: z.preprocess(parseBooleanLike, z.boolean().optional()),
+  deliveryChannel: leavePromotionDeliveryChannelSchema.optional(),
+  emailTemplateId: z.string().trim().min(1).max(120).optional()
 });

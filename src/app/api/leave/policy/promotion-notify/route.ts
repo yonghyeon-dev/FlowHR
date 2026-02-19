@@ -28,7 +28,9 @@ export async function POST(request: Request) {
         organizationId: parsed.data.organizationId,
         asOf: parsed.data.asOf ? new Date(parsed.data.asOf) : undefined,
         includeUpcoming: parsed.data.includeUpcoming,
-        dryRun: parsed.data.dryRun
+        dryRun: parsed.data.dryRun,
+        deliveryChannel: parsed.data.deliveryChannel,
+        emailTemplateId: parsed.data.emailTemplateId
       }
     );
     return ok(result);
