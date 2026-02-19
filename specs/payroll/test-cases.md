@@ -25,6 +25,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 17. Run statutory baseline preview with additive tax-credit fields and verify pre-credit vs post-credit tax values.
 18. Reject statutory baseline preview when `requireMonthlyBoundary=true` and period is not monthly boundary in `Asia/Seoul`.
 19. Replay statutory golden fixtures (`GC-007`, `GC-008`) and verify deterministic deduction totals/net pay.
+20. Employee self-service payslip list returns only own `CONFIRMED` statutory runs with deduction breakdown details, and rejects `PREVIEWED`/other-employee access.
 
 ## Accuracy Cases
 
@@ -41,6 +42,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 11. Insurance caps bound each insurance component base deterministically.
 12. Tax-credit mode applies credit before local-income-tax and never produces negative income tax.
 13. Monthly-boundary guard in `Asia/Seoul` rejects non-monthly periods deterministically.
+14. Employee payslip self-service view preserves statutory deduction totals/net values and excludes unauthorized runs.
 
 ## Regression Linkage
 
