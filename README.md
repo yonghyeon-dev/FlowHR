@@ -112,6 +112,8 @@ Optional staging environment variable:
 
 Details: `docs/staging-secrets.md`
 Production rollout: `docs/production-rollout.md`
+Approval delegation scheduler: `.github/workflows/approval-delegation-expiry.yml`
+Ops command: `npm run ops:approval:delegations:expire`
 
 ## Current API Surface (MVP)
 

@@ -1,10 +1,11 @@
 owner: approval-agent
-version: 0.2.0
+version: 0.2.1
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
     - approval delegation management with active time window
     - delegation auto-expiry command with dry-run support
+    - multi-organization delegation expiry sweep runner for scheduled cleanup
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
     - multi-step approval chain routing
@@ -41,6 +42,9 @@ api:
     - method: POST
       path: /approval/delegations/expire
       description: Auto-expire active delegations ended before cutoff time (supports dryRun preview).
+  operations:
+    - name: approval-delegation-expiry-sweep
+      description: Scheduled runner executes delegation expire command per organization with dry-run/apply mode.
   events:
     published:
       - name: approval.policy.updated.v1
@@ -61,6 +65,7 @@ invariants:
   - Approval delegation must have endsAt greater than startsAt.
   - Expire command must deactivate only active delegations where endsAt is before expiresBeforeAt.
   - Expire command with dryRun=true must not mutate delegation state.
+  - Expiry sweep with empty organization list must target tenant scope (tenant actor) or all organizations (system actor).
   - Approval execution requires both permission and policy/delegation gate.
   - Tenant-scoped actors cannot mutate policy/delegation for another organization.
 risk:
@@ -79,6 +84,7 @@ test_plan:
     - upsert and read configured policy
     - create and deactivate delegation lifecycle
     - expire delegation dryRun/apply flow
+    - expiry sweep dryRun/apply flow across multiple organizations
     - manager non-manager delegation write blocked with 403
   regression:
     - attendance/leave/payroll approval endpoints enforce policy gate
@@ -97,6 +103,8 @@ observability:
     - approval_policy_update_count
     - approval_delegation_active_count
     - approval_policy_gate_denied_count
+    - approval_delegation_expire_sweep_checked_count
+    - approval_delegation_expire_sweep_applied_count
   logs:
     - approval policy gate denial with expected role and actor context
 rollout:
@@ -109,11 +117,12 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.2.0 adds delegation auto-expiry command endpoint (`/approval/delegations/expire`) with dry-run mode while keeping existing approval policy/delegation APIs backward compatible."
+consumer_impact: "Contract v0.2.1 adds scheduled delegation expiry sweep operation that reuses existing `/approval/delegations/expire` behavior and keeps approval policy/delegation APIs backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
   - work-items/WI-0107-approval-delegation-expiry-automation.md
+  - work-items/WI-0108-approval-delegation-expiry-scheduler.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent

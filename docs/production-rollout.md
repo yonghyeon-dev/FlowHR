@@ -104,6 +104,26 @@ Tunable production environment variables:
 - `FLOWHR_PHASE2_HEALTH_MAX_403_RATIO` (default `0.20`)
 - `FLOWHR_PHASE2_HEALTH_MAX_409_RATIO` (default `0.20`)
 
+## Approval Delegation Expiry Scheduler (GitHub Actions)
+
+Workflow: `.github/workflows/approval-delegation-expiry.yml`
+
+- Runs hourly and can be triggered manually.
+- Uses system actor flow in scheduler runner (`scripts/ops/approval-delegation-expiry-runner.ts`).
+- Reuses existing approval delegation expire command behavior per organization.
+- Creates incident issue on failure (`incident,approval,ops`) and notifies webhook when configured.
+
+Required production environment secrets:
+
+- `FLOWHR_PRODUCTION_DATABASE_URL`
+- `FLOWHR_PRODUCTION_DIRECT_URL`
+
+Optional manual dispatch inputs:
+
+- `organization_ids` (comma-separated target organizations; empty means all organizations)
+- `expires_before_at` (ISO datetime; empty means current time)
+- `dry_run` (`true|false`)
+
 ## Rollback Automation (GitHub Actions)
 
 Workflow: `.github/workflows/payroll-phase2-rollback.yml`

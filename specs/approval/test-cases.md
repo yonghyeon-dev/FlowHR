@@ -1,4 +1,4 @@
-# Approval Test Cases (v0.2.0)
+# Approval Test Cases (v0.2.1)
 
 ## Positive
 
@@ -8,6 +8,7 @@
 4. Admin deactivates delegation and delegated manager is denied afterwards.
 5. Admin runs delegation expire command in dry-run mode and receives deterministic candidate counts without mutation.
 6. Admin runs delegation expire command in apply mode and only expired active delegations are deactivated.
+7. Scheduler sweep runs across multiple organizations and returns deterministic per-organization counts.
 
 ## Negative
 
@@ -23,8 +24,10 @@
 2. Leave approve/reject endpoint still updates balance/audit/event as before.
 3. Payroll confirm endpoint still allows privileged role with proper permission.
 4. Existing delegation create/update/list paths remain backward compatible after expire endpoint addition.
+5. Scheduler dry-run must not mutate active delegation rows in any target organization.
 
 ## Evidence
 
 - `scripts/tests/e2e-wi0103-approval-policy-delegation.test.ts`
 - `scripts/tests/e2e-wi0107-approval-delegation-expiry.test.ts`
+- `scripts/tests/e2e-wi0108-approval-delegation-expiry-scheduler.test.ts`

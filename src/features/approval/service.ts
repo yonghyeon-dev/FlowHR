@@ -67,6 +67,12 @@ type ExpireApprovalDelegationsInput = {
   dryRun?: boolean;
 };
 
+type ExpireApprovalDelegationsSweepInput = {
+  organizationIds?: string[];
+  expiresBeforeAt?: Date;
+  dryRun?: boolean;
+};
+
 function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
 }
@@ -348,6 +354,112 @@ export async function expireApprovalDelegations(
     delegationIds,
     effectiveAt: effectiveAt.toISOString(),
     dryRun: false
+  };
+}
+
+function normalizeOrganizationIdList(values: string[] | undefined): string[] {
+  if (!values || values.length === 0) {
+    return [];
+  }
+
+  const deduped = new Set<string>();
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized) {
+      continue;
+    }
+    deduped.add(normalized);
+  }
+  return Array.from(deduped);
+}
+
+export async function expireApprovalDelegationsSweep(
+  context: ServiceContext,
+  input: ExpireApprovalDelegationsSweepInput
+): Promise<{
+  totalOrganizations: number;
+  totalCheckedCount: number;
+  totalExpiredCount: number;
+  effectiveAt: string;
+  dryRun: boolean;
+  organizations: Array<{
+    organizationId: string;
+    checkedCount: number;
+    expiredCount: number;
+    delegationIds: string[];
+  }>;
+}> {
+  const actor = requireActor(context);
+  await requirePermission(
+    context,
+    Permissions.approvalDelegationWrite,
+    "approval delegation write requires permission"
+  );
+
+  const effectiveAt = input.expiresBeforeAt ?? new Date();
+  const dryRun = input.dryRun ?? false;
+  const requestedOrganizationIds = normalizeOrganizationIdList(input.organizationIds);
+
+  let organizationIds: string[];
+  if (requestedOrganizationIds.length > 0) {
+    organizationIds = [];
+    for (const organizationId of requestedOrganizationIds) {
+      const resolved = await resolveOrganizationId(context, organizationId);
+      organizationIds.push(resolved);
+    }
+  } else {
+    const tenantScope = resolveTenantScope(actor);
+    if (tenantScope) {
+      organizationIds = [tenantScope];
+    } else {
+      const organizations = await context.dataAccess.organizations.list();
+      organizationIds = organizations.map((organization) => organization.id);
+    }
+  }
+
+  if (organizationIds.length === 0) {
+    return {
+      totalOrganizations: 0,
+      totalCheckedCount: 0,
+      totalExpiredCount: 0,
+      effectiveAt: effectiveAt.toISOString(),
+      dryRun,
+      organizations: []
+    };
+  }
+
+  const organizations: Array<{
+    organizationId: string;
+    checkedCount: number;
+    expiredCount: number;
+    delegationIds: string[];
+  }> = [];
+  let totalCheckedCount = 0;
+  let totalExpiredCount = 0;
+
+  for (const organizationId of organizationIds) {
+    const result = await expireApprovalDelegations(context, {
+      organizationId,
+      expiresBeforeAt: effectiveAt,
+      dryRun
+    });
+    organizations.push({
+      organizationId: result.organizationId,
+      checkedCount: result.checkedCount,
+      expiredCount: result.expiredCount,
+      delegationIds: result.delegationIds
+    });
+    totalCheckedCount += result.checkedCount;
+    totalExpiredCount += result.expiredCount;
+  }
+
+  return {
+    totalOrganizations: organizations.length,
+    totalCheckedCount,
+    totalExpiredCount,
+    effectiveAt: effectiveAt.toISOString(),
+    dryRun,
+    organizations
   };
 }
 
