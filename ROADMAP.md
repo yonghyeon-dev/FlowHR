@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-19
-> **Current version**: 0.1.4 (Approval Execution State Machine Baseline)
+> **Current version**: 0.1.5 (Approval Execution Visibility UI Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -155,11 +155,12 @@
 - WI-0116 결재 단계 이력 baseline (`ApprovalStageHistory` 모델 + `/approval/stage-history` API + `/admin/approval-history` UI + e2e)
 - WI-0117 결재선 템플릿 다단계 모델 baseline (`approvalStages` payload + stage-1 게이트 호환 + e2e)
 - WI-0118 결재 실행 상태머신 baseline (`ApprovalExecution`/`ApprovalExecutionActionLog` + `/approval/executions` API + 단계별 도메인 최종확정 제어 + e2e)
+- WI-0119 결재 실행 가시성 UI baseline (`/admin/approval-executions` + 진행률/단계 로그 패널 + 관리자 네비게이션 연결)
 
 ### 진행 중
 
 - 다음: 휴가 고도화(연차촉진/사내 공지 플로우 정책) 회귀 확장
-- 다음: 결재선 실행 결과 UI 가시성(단계 진행률/실행 로그 패널) 강화
+- 다음: 결재선 실행 결과 조치 UX(조건별 우선순위/정체 항목 빠른 점프) 강화
 
 ### 현재 아키텍처
 

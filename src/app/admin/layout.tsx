@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { ReactNode } from "react";
 
 import SessionMenu from "@/components/SessionMenu";
@@ -15,6 +15,7 @@ function isDevToolsEnabled() {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const showDevTools = isDevToolsEnabled();
+
   return (
     <div className="saas-shell">
       <aside className="saas-sidebar">
@@ -30,9 +31,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#invites">초대/가입</Link>
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
-          <Link href="/admin/approval-policy">결재선/위임 정책</Link>
+          <Link href="/admin/approval-policy">결재/위임 정책</Link>
           <Link href="/admin/approval-templates">결재선 템플릿</Link>
           <Link href="/admin/approval-history">결재 단계 이력</Link>
+          <Link href="/admin/approval-executions">결재 실행 현황</Link>
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
           <Link href="/admin#payroll">급여</Link>
@@ -56,4 +58,3 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   );
 }
-

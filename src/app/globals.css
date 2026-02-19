@@ -496,6 +496,70 @@ textarea:focus {
   padding: 8px 10px;
 }
 
+.simple-list li.selected-row {
+  border-color: #98bcfa;
+  background: #f4f8ff;
+}
+
+.execution-row-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.execution-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.state-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+}
+
+.state-pending {
+  color: #8a5b00;
+  background: #fff7df;
+}
+
+.state-approved {
+  color: var(--ok);
+  background: #e9fbf2;
+}
+
+.state-rejected {
+  color: var(--fail);
+  background: #ffedf1;
+}
+
+.progress-track {
+  display: block;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5eefc;
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2c75e8 0%, #1752b5 100%);
+}
+
 .btn {
   border-radius: 10px;
   border: 1px solid transparent;
