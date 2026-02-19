@@ -22,6 +22,35 @@ type ApprovalLineTemplateDto = {
   updatedAt: string;
 };
 
+type ApprovalGatePreviewDto = {
+  organizationId: string;
+  domain: ApprovalDomain;
+  fallbackRole: string;
+  expectedRoles: string[];
+  actorRole: string;
+  actorId: string | null;
+  allowed: boolean;
+  allowedReason: "expected_role" | "active_delegation" | "denied";
+  payrollGrossPayKrw: number | null;
+  effectiveAt: string;
+  matchedTemplates: Array<{
+    id: string;
+    name: string;
+    approverRoles: string[];
+    payrollGrossPayMinKrw: number | null;
+    payrollGrossPayMaxKrw: number | null;
+    active: boolean;
+  }>;
+  activeDelegations: Array<{
+    id: string;
+    delegatorRole: string;
+    delegateActorId: string;
+    startsAt: string;
+    endsAt: string;
+    active: boolean;
+  }>;
+};
+
 type ApiLog = {
   id: number;
   label: string;
@@ -57,7 +86,13 @@ export default function AdminApprovalTemplatesPage() {
   const [payrollGrossPayMaxKrw, setPayrollGrossPayMaxKrw] = useState("");
   const [createAsActive, setCreateAsActive] = useState(true);
 
+  const [previewDomain, setPreviewDomain] = useState<ApprovalDomain>("ATTENDANCE");
+  const [previewActorRole, setPreviewActorRole] = useState("manager");
+  const [previewActorId, setPreviewActorId] = useState("MGR-1001");
+  const [previewPayrollGrossPayKrw, setPreviewPayrollGrossPayKrw] = useState("");
+
   const [templates, setTemplates] = useState<ApprovalLineTemplateDto[]>([]);
+  const [gatePreview, setGatePreview] = useState<ApprovalGatePreviewDto | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
@@ -212,6 +247,32 @@ export default function AdminApprovalTemplatesPage() {
     await loadTemplates();
   }
 
+  async function runGatePreview() {
+    if (!organizationId.trim()) {
+      return;
+    }
+
+    const payrollGrossRaw = previewPayrollGrossPayKrw.trim();
+    const payrollGross =
+      previewDomain === "PAYROLL" && payrollGrossRaw.length > 0 ? Number(payrollGrossRaw) : null;
+    if (previewDomain === "PAYROLL" && payrollGrossRaw.length > 0 && !Number.isInteger(payrollGross)) {
+      return;
+    }
+
+    const { response, body } = await callApi("결재 게이트 프리뷰", "POST", "/api/approval/policy/gate-preview", {
+      organizationId: organizationId.trim(),
+      domain: previewDomain,
+      actorRole: previewActorRole.trim() || undefined,
+      actorId: previewActorId.trim() || undefined,
+      ...(previewDomain === "PAYROLL" ? { payrollGrossPayKrw: payrollGross } : {})
+    });
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+    const parsed = body as { preview?: ApprovalGatePreviewDto };
+    setGatePreview(parsed.preview ?? null);
+  }
+
   async function toggleTemplateActive(template: ApprovalLineTemplateDto) {
     await callApi(
       template.active ? "결재선 템플릿 비활성화" : "결재선 템플릿 활성화",
@@ -332,6 +393,94 @@ export default function AdminApprovalTemplatesPage() {
               템플릿 생성
             </button>
           </div>
+        </article>
+
+        <article className="panel">
+          <h2>게이트 프리뷰</h2>
+          <p className="small">정책/템플릿/위임 조합 결과를 승인 전에 미리 확인합니다.</p>
+          <label>
+            도메인
+            <select value={previewDomain} onChange={(event) => setPreviewDomain(event.target.value as ApprovalDomain)}>
+              {domainOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            검증 Actor Role
+            <select value={previewActorRole} onChange={(event) => setPreviewActorRole(event.target.value)}>
+              {actorRoles.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            검증 Actor ID (선택)
+            <input value={previewActorId} onChange={(event) => setPreviewActorId(event.target.value)} />
+          </label>
+          {previewDomain === "PAYROLL" ? (
+            <label>
+              Payroll Gross (KRW)
+              <input
+                type="number"
+                min={0}
+                value={previewPayrollGrossPayKrw}
+                onChange={(event) => setPreviewPayrollGrossPayKrw(event.target.value)}
+                placeholder="비우면 조건 미매치로 계산"
+              />
+            </label>
+          ) : null}
+          <div className="panel-actions">
+            <button className="btn btn-secondary" onClick={() => void runGatePreview()} disabled={!organizationId.trim()}>
+              게이트 프리뷰 실행
+            </button>
+          </div>
+          {gatePreview ? (
+            <div className="small" style={{ display: "grid", gap: 8 }}>
+              <p>
+                결과: <strong>{gatePreview.allowed ? "허용" : "차단"}</strong> ({gatePreview.allowedReason}) /
+                expected: {gatePreview.expectedRoles.join(", ") || "-"} / fallback:{" "}
+                {gatePreview.fallbackRole}
+              </p>
+              <p>
+                actor: {gatePreview.actorRole}
+                {gatePreview.actorId ? ` (${gatePreview.actorId})` : ""}
+                {gatePreview.payrollGrossPayKrw !== null
+                  ? ` / gross ${gatePreview.payrollGrossPayKrw.toLocaleString("ko-KR")} KRW`
+                  : ""}
+              </p>
+              <p>매칭 템플릿: {gatePreview.matchedTemplates.length}건</p>
+              {gatePreview.matchedTemplates.length > 0 ? (
+                <ul className="simple-list">
+                  {gatePreview.matchedTemplates.map((template) => (
+                    <li key={template.id}>
+                      {template.name} / roles: {template.approverRoles.join(", ")} / gross{" "}
+                      {template.payrollGrossPayMinKrw ?? "-"} ~ {template.payrollGrossPayMaxKrw ?? "-"}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {gatePreview.activeDelegations.length > 0 ? (
+                <>
+                  <p>적용 위임: {gatePreview.activeDelegations.length}건</p>
+                  <ul className="simple-list">
+                    {gatePreview.activeDelegations.map((delegation) => (
+                      <li key={delegation.id}>
+                        {delegation.delegatorRole} → {delegation.delegateActorId} /{" "}
+                        {formatDateTime(delegation.startsAt)} ~ {formatDateTime(delegation.endsAt)}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <p className="small muted">프리뷰 결과가 아직 없습니다.</p>
+          )}
         </article>
 
         <article className="panel">

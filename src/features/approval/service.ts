@@ -87,6 +87,15 @@ type UpdateApprovalLineTemplateInput = {
   active?: boolean;
 };
 
+type PreviewApprovalPolicyGateInput = {
+  organizationId?: string;
+  domain: ApprovalDomain;
+  actorRole?: string;
+  actorId?: string;
+  payrollGrossPayKrw?: number | null;
+  effectiveAt?: Date;
+};
+
 type ExpireApprovalDelegationsInput = {
   organizationId?: string;
   expiresBeforeAt?: Date;
@@ -340,6 +349,153 @@ export async function assertApprovalPolicyGate(
     403,
     `approval policy requires one of [${expectedRoles.join(", ")}] role or active delegation`
   );
+}
+
+export async function previewApprovalPolicyGate(
+  context: ServiceContext,
+  input: PreviewApprovalPolicyGateInput
+): Promise<{
+  preview: {
+    organizationId: string;
+    domain: ApprovalDomain;
+    fallbackRole: string;
+    expectedRoles: string[];
+    actorRole: string;
+    actorId: string | null;
+    allowed: boolean;
+    allowedReason: "expected_role" | "active_delegation" | "denied";
+    payrollGrossPayKrw: number | null;
+    effectiveAt: string;
+    matchedTemplates: Array<{
+      id: string;
+      name: string;
+      domain: ApprovalDomain;
+      approverRoles: string[];
+      payrollGrossPayMinKrw: number | null;
+      payrollGrossPayMaxKrw: number | null;
+      active: boolean;
+    }>;
+    activeDelegations: Array<{
+      id: string;
+      delegatorRole: string;
+      delegateActorId: string;
+      startsAt: string;
+      endsAt: string;
+      active: boolean;
+    }>;
+  };
+}> {
+  const actor = requireActor(context);
+  await requirePermission(context, Permissions.approvalPolicyRead, "approval policy read requires permission");
+
+  const organizationId = await resolveOrganizationId(context, input.organizationId);
+  const policy = await context.dataAccess.approvals.findPolicyByOrganizationId(organizationId);
+  const templates = await context.dataAccess.approvals.listTemplates({
+    organizationId,
+    domain: input.domain,
+    active: true
+  });
+
+  const gateContext = {
+    domain: input.domain,
+    payrollGrossPayKrw: input.payrollGrossPayKrw
+  };
+  const matchedTemplates = templates.filter((template) =>
+    doesTemplateMatchGateContext(template, gateContext)
+  );
+  const fallbackRole = resolvePolicyApproverRole(policy, input.domain);
+  const expectedRoles = resolveExpectedApproverRoles(policy, templates, gateContext);
+
+  const previewActorRole = input.actorRole?.trim() || actor.role;
+  const previewActorId = input.actorId?.trim() || actor.id || null;
+  const effectiveAt = input.effectiveAt ?? new Date();
+
+  let allowed = expectedRoles.includes(previewActorRole);
+  let allowedReason: "expected_role" | "active_delegation" | "denied" = allowed
+    ? "expected_role"
+    : "denied";
+  let activeDelegations: Array<{
+    id: string;
+    delegatorRole: string;
+    delegateActorId: string;
+    startsAt: string;
+    endsAt: string;
+    active: boolean;
+  }> = [];
+
+  if (!allowed && previewActorId) {
+    const delegations = await context.dataAccess.approvals.listDelegations({
+      organizationId,
+      domain: input.domain,
+      active: true,
+      delegateActorId: previewActorId
+    });
+    activeDelegations = delegations
+      .filter(
+        (delegation) =>
+          expectedRoles.includes(delegation.delegatorRole) &&
+          isDelegationActiveAt(delegation, effectiveAt)
+      )
+      .map((delegation) => ({
+        id: delegation.id,
+        delegatorRole: delegation.delegatorRole,
+        delegateActorId: delegation.delegateActorId,
+        startsAt: delegation.startsAt.toISOString(),
+        endsAt: delegation.endsAt.toISOString(),
+        active: delegation.active
+      }));
+
+    if (activeDelegations.length > 0) {
+      allowed = true;
+      allowedReason = "active_delegation";
+    }
+  }
+
+  const preview = {
+    organizationId,
+    domain: input.domain,
+    fallbackRole,
+    expectedRoles,
+    actorRole: previewActorRole,
+    actorId: previewActorId,
+    allowed,
+    allowedReason,
+    payrollGrossPayKrw: input.payrollGrossPayKrw ?? null,
+    effectiveAt: effectiveAt.toISOString(),
+    matchedTemplates: matchedTemplates.map((template) => ({
+      id: template.id,
+      name: template.name,
+      domain: template.domain,
+      approverRoles: template.approverRoles,
+      payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
+      payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
+      active: template.active
+    })),
+    activeDelegations
+  };
+
+  await context.dataAccess.audit.append({
+    action: "approval.policy_gate.previewed",
+    entityType: "ApprovalPolicy",
+    entityId: policy?.id ?? "default",
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      domain: preview.domain,
+      actorRole: preview.actorRole,
+      actorId: preview.actorId,
+      expectedRoles: preview.expectedRoles,
+      fallbackRole: preview.fallbackRole,
+      allowed: preview.allowed,
+      allowedReason: preview.allowedReason,
+      payrollGrossPayKrw: preview.payrollGrossPayKrw,
+      matchedTemplateIds: preview.matchedTemplates.map((template) => template.id),
+      activeDelegationIds: preview.activeDelegations.map((delegation) => delegation.id)
+    }
+  });
+
+  return { preview };
 }
 
 export async function readApprovalPolicy(

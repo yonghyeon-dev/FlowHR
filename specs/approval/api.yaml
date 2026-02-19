@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.4.0
+  version: 0.5.0
 paths:
   /approval/policy:
     get:
@@ -22,6 +22,17 @@ paths:
       responses:
         "200":
           description: Approval policy saved
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+  /approval/policy/gate-preview:
+    post:
+      summary: Preview approval gate result without state mutation
+      description: Simulates policy/template/delegation evaluation for given domain and actor context.
+      responses:
+        "200":
+          description: Gate preview result
         "400":
           description: Invalid payload
         "403":

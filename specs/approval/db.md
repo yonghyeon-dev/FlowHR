@@ -24,3 +24,4 @@
 - Role-permission seeds use `ON CONFLICT DO NOTHING`.
 - Approval template active uniqueness is enforced at service layer (organization+domain).
 - PAYROLL template condition bounds are additive nullable columns; non-PAYROLL templates keep null bounds.
+- Gate preview (WI-0115) is API/service-only and does not change DB schema.

@@ -1,4 +1,4 @@
-# Approval Test Cases (v0.4.0)
+# Approval Test Cases (v0.5.0)
 
 ## Positive
 
@@ -12,6 +12,8 @@
 8. Admin creates an active approval template and manager approval succeeds when template includes `manager`.
 9. Admin deactivates template and approval gate falls back to policy role.
 10. Admin creates PAYROLL template with `payrollGrossPayMinKrw`, and template gate is applied only when payroll gross pay matches threshold.
+11. Admin runs gate preview and receives expected roles/template matches for both matched and non-matched PAYROLL conditions.
+12. Admin runs gate preview with delegated actor and receives `active_delegation` allow result when delegation is valid.
 
 ## Negative
 
@@ -23,6 +25,7 @@
 6. Manager cannot create or update approval templates.
 7. Active template duplicate create/update in same organization+domain is rejected with `409`.
 8. Non-PAYROLL template create/update with payroll gross-pay condition fields is rejected with `400`.
+9. Gate preview rejects `payrollGrossPayKrw` payload when domain is not `PAYROLL`.
 
 ## Regression
 
@@ -33,6 +36,7 @@
 5. Scheduler dry-run must not mutate active delegation rows in any target organization.
 6. Existing policy/delegation APIs stay backward compatible after template endpoint addition.
 7. Payroll confirm gate falls back to policy role when active PAYROLL template condition does not match.
+8. Gate preview decision remains consistent with runtime gate role resolution.
 
 ## Evidence
 
@@ -41,3 +45,4 @@
 - `scripts/tests/e2e-wi0108-approval-delegation-expiry-scheduler.test.ts`
 - `scripts/tests/e2e-wi0109-approval-line-template.test.ts`
 - `scripts/tests/e2e-wi0113-approval-template-payroll-conditional-routing.test.ts`
+- `scripts/tests/e2e-wi0115-approval-gate-preview.test.ts`

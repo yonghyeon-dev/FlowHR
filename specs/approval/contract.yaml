@@ -1,5 +1,5 @@
 owner: approval-agent
-version: 0.4.0
+version: 0.5.0
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
@@ -8,6 +8,7 @@ scope:
     - multi-organization delegation expiry sweep runner for scheduled cleanup
     - domain approval line template management for role-set based gate override
     - payroll conditional routing baseline by gross-pay threshold in active template
+    - approval policy gate preview simulation API for policy/template/delegation pre-check
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
     - multi-step approval chain routing
@@ -34,6 +35,9 @@ api:
     - method: PUT
       path: /approval/policy
       description: Upsert organization approval policy.
+    - method: POST
+      path: /approval/policy/gate-preview
+      description: Preview approval gate result (expected roles/template match/delegation) without mutating state.
     - method: GET
       path: /approval/delegations
       description: List approval delegations by organization/domain/active filter.
@@ -88,6 +92,8 @@ invariants:
   - payrollGrossPayMinKrw/payrollGrossPayMaxKrw are only allowed for PAYROLL template domain.
   - PAYROLL template condition applies when grossPayKrw is within [min,max] (null means open bound); otherwise gate falls back to policy role.
   - Approval gate uses active and matching template role set first; policy single-role fallback applies when no active/matching template exists.
+  - Gate preview must use the same template/policy/delegation resolution logic as runtime approval gate.
+  - Gate preview endpoint is read-only and must not mutate policy/delegation/template state.
   - Approval delegation must have endsAt greater than startsAt.
   - Expire command must deactivate only active delegations where endsAt is before expiresBeforeAt.
   - Expire command with dryRun=true must not mutate delegation state.
@@ -112,6 +118,7 @@ test_plan:
     - create and deactivate delegation lifecycle
     - create/list/update approval template lifecycle
     - payroll template condition gate applies for matching grossPayKrw and falls back for non-matching grossPayKrw
+    - gate preview returns expected roles/template match/delegation result for matched/non-matched payroll conditions
     - reject duplicate active template in same organization+domain with 409
     - reject payroll condition fields for non-PAYROLL template domain
     - expire delegation dryRun/apply flow
@@ -121,6 +128,7 @@ test_plan:
     - attendance/leave/payroll approval endpoints enforce policy gate
     - approval gate reflects template activation/deactivation changes
     - payroll confirm gate enforces conditional template route when threshold is matched
+    - gate preview remains consistent with runtime gate decision outcomes
   authorization:
     - policy/delegation endpoint permission checks
     - template endpoint permission checks
@@ -135,6 +143,7 @@ observability:
     - approval.delegation.auto_expired
     - approval.template.created
     - approval.template.updated
+    - approval.policy_gate.previewed
   metrics:
     - approval_policy_update_count
     - approval_delegation_active_count
@@ -154,7 +163,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.4.0 extends approval template APIs with PAYROLL gross-pay conditional routing while keeping existing policy/delegation/template paths backward compatible."
+consumer_impact: "Contract v0.5.0 adds `/approval/policy/gate-preview` for read-only gate simulation while keeping existing policy/delegation/template and runtime gate behavior backward compatible."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
@@ -162,6 +171,7 @@ references:
   - work-items/WI-0108-approval-delegation-expiry-scheduler.md
   - work-items/WI-0109-approval-line-template-baseline.md
   - work-items/WI-0113-approval-template-payroll-conditional-routing.md
+  - work-items/WI-0115-approval-gate-preview.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent

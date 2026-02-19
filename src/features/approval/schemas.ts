@@ -51,6 +51,25 @@ export const listApprovalLineTemplatesQuerySchema = z.object({
   active: z.boolean().optional()
 });
 
+export const previewApprovalPolicyGateSchema = z
+  .object({
+    organizationId: z.string().min(1).optional(),
+    domain: approvalDomainSchema,
+    actorRole: actorRoleSchema.optional(),
+    actorId: z.string().min(1).optional(),
+    payrollGrossPayKrw: z.number().int().nonnegative().nullable().optional(),
+    effectiveAt: isoDateTime.optional()
+  })
+  .superRefine((value, ctx) => {
+    if (value.domain !== "PAYROLL" && value.payrollGrossPayKrw !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "payrollGrossPayKrw is only allowed when domain=PAYROLL",
+        path: ["payrollGrossPayKrw"]
+      });
+    }
+  });
+
 export const createApprovalLineTemplateSchema = z
   .object({
     organizationId: z.string().min(1).optional(),
