@@ -12,6 +12,8 @@ export type ApprovalStageResolution =
   | "ACTIVE_DELEGATION"
   | "PRIVILEGED_BYPASS"
   | "DENIED";
+export type ApprovalExecutionState = "PENDING" | "APPROVED" | "REJECTED";
+export type ApprovalExecutionActionType = "APPROVE" | "REJECT";
 
 export type AttendanceRecordEntity = {
   id: string;
@@ -222,6 +224,33 @@ export type ApprovalStageHistoryEntity = {
   resolution: ApprovalStageResolution;
   payrollGrossPayKrw: number | null;
   evaluatedAt: Date;
+};
+
+export type ApprovalExecutionEntity = {
+  id: string;
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  templateId: string | null;
+  state: ApprovalExecutionState;
+  totalStages: number;
+  currentStageIndex: number;
+  startedAt: Date;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ApprovalExecutionActionEntity = {
+  id: string;
+  executionId: string;
+  stageIndex: number;
+  action: ApprovalExecutionActionType;
+  actorRole: string;
+  actorId: string | null;
+  resolution: ApprovalStageResolution;
+  createdAt: Date;
 };
 
 export type EmployeeEntity = {
@@ -528,6 +557,37 @@ export type CreateApprovalStageHistoryInput = {
   evaluatedAt?: Date;
 };
 
+export type CreateApprovalExecutionInput = {
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  templateId?: string | null;
+  totalStages: number;
+  currentStageIndex?: number;
+  state?: ApprovalExecutionState;
+  startedAt?: Date;
+  completedAt?: Date | null;
+};
+
+export type UpdateApprovalExecutionInput = {
+  templateId?: string | null;
+  state?: ApprovalExecutionState;
+  totalStages?: number;
+  currentStageIndex?: number;
+  completedAt?: Date | null;
+};
+
+export type CreateApprovalExecutionActionInput = {
+  executionId: string;
+  stageIndex: number;
+  action: ApprovalExecutionActionType;
+  actorRole: string;
+  actorId?: string | null;
+  resolution: ApprovalStageResolution;
+  createdAt?: Date;
+};
+
 export type UpsertRoleInput = {
   id: string;
   name: string;
@@ -749,6 +809,31 @@ export interface ApprovalStore {
     to?: Date;
     limit?: number;
   }): Promise<ApprovalStageHistoryEntity[]>;
+  findExecutionByTarget(input: {
+    organizationId: string;
+    domain: ApprovalDomain;
+    targetEntityType: string;
+    targetEntityId: string;
+  }): Promise<ApprovalExecutionEntity | null>;
+  createExecution(input: CreateApprovalExecutionInput): Promise<ApprovalExecutionEntity>;
+  updateExecution(id: string, input: UpdateApprovalExecutionInput): Promise<ApprovalExecutionEntity>;
+  listExecutions(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    state?: ApprovalExecutionState;
+    limit?: number;
+  }): Promise<ApprovalExecutionEntity[]>;
+  appendExecutionAction(
+    input: CreateApprovalExecutionActionInput
+  ): Promise<ApprovalExecutionActionEntity>;
+  listExecutionActions(input: {
+    executionId: string;
+    stageIndex?: number;
+    action?: ApprovalExecutionActionType;
+    actorId?: string | null;
+  }): Promise<ApprovalExecutionActionEntity[]>;
 }
 
 export interface RbacStore {

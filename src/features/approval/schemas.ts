@@ -16,6 +16,9 @@ export const approvalStageResolutionValues = [
 ] as const;
 export const approvalStageResolutionSchema = z.enum(approvalStageResolutionValues);
 
+export const approvalExecutionStateValues = ["PENDING", "APPROVED", "REJECTED"] as const;
+export const approvalExecutionStateSchema = z.enum(approvalExecutionStateValues);
+
 export const readApprovalPolicyQuerySchema = z.object({
   organizationId: z.string().min(1).optional()
 });
@@ -75,6 +78,15 @@ export const listApprovalStageHistoryQuerySchema = z.object({
   resolution: approvalStageResolutionSchema.optional(),
   from: isoDateTime.optional(),
   to: isoDateTime.optional(),
+  limit: z.number().int().min(1).max(500).optional()
+});
+
+export const listApprovalExecutionsQuerySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  domain: approvalDomainSchema.optional(),
+  targetEntityType: z.string().min(1).optional(),
+  targetEntityId: z.string().min(1).optional(),
+  state: approvalExecutionStateSchema.optional(),
   limit: z.number().int().min(1).max(500).optional()
 });
 

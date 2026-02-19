@@ -1,7 +1,7 @@
 import type { Actor } from "@/lib/actor";
 import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
-import { assertApprovalPolicyGate } from "@/features/approval/service";
+import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
 import type {
   DataAccess,
   LeaveBalanceEntity,
@@ -469,12 +469,34 @@ export async function approveLeaveRequest(
 
   const pending = await requirePendingRequest(context, requestId);
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
-  await assertApprovalPolicyGate(context, {
-    domain: "LEAVE",
-    organizationId: employee.organizationId,
-    targetEntityType: "LeaveRequest",
-    targetEntityId: pending.id
-  });
+
+  let approvalFinalized = true;
+  if (employee.organizationId) {
+    const execution = await applyApprovalExecutionAction(context, {
+      domain: "LEAVE",
+      organizationId: employee.organizationId,
+      targetEntityType: "LeaveRequest",
+      targetEntityId: pending.id,
+      action: "APPROVE"
+    });
+    approvalFinalized = execution.finalized;
+  } else {
+    await assertApprovalPolicyGate(context, {
+      domain: "LEAVE",
+      organizationId: employee.organizationId,
+      targetEntityType: "LeaveRequest",
+      targetEntityId: pending.id
+    });
+  }
+
+  if (!approvalFinalized) {
+    const balance = await context.dataAccess.leaveBalance.ensure(
+      pending.employeeId,
+      DEFAULT_GRANTED_DAYS
+    );
+    return { request: pending, balance };
+  }
+
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
     state: "APPROVED",
@@ -548,12 +570,25 @@ export async function rejectLeaveRequest(
 
   const pending = await requirePendingRequest(context, requestId);
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, pending.employeeId);
-  await assertApprovalPolicyGate(context, {
-    domain: "LEAVE",
-    organizationId: employee.organizationId,
-    targetEntityType: "LeaveRequest",
-    targetEntityId: pending.id
-  });
+  if (employee.organizationId) {
+    const execution = await applyApprovalExecutionAction(context, {
+      domain: "LEAVE",
+      organizationId: employee.organizationId,
+      targetEntityType: "LeaveRequest",
+      targetEntityId: pending.id,
+      action: "REJECT"
+    });
+    if (!execution.finalized || execution.execution.state !== "REJECTED") {
+      throw new ServiceError(409, "leave reject action is not finalized");
+    }
+  } else {
+    await assertApprovalPolicyGate(context, {
+      domain: "LEAVE",
+      organizationId: employee.organizationId,
+      targetEntityType: "LeaveRequest",
+      targetEntityId: pending.id
+    });
+  }
   const now = new Date();
   const request = await context.dataAccess.leave.update(requestId, {
     state: "REJECTED",

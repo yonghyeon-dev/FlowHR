@@ -1,4 +1,4 @@
-# Approval Test Cases (v0.7.0)
+# Approval Test Cases (v0.8.0)
 
 ## Positive
 
@@ -19,6 +19,10 @@
 15. Admin/manager reads stage-history with domain/target/resolution filters and receives deterministic ordering.
 16. Admin creates multi-stage template and API persists ordered stage payload.
 17. Admin updates multi-stage template stage-1 role, and runtime gate expected role switches to updated stage-1.
+18. Multi-stage attendance approval keeps record `PENDING` after stage-1 manager approve and finalizes as `APPROVED` only after stage-2 admin approve.
+19. Multi-stage leave approval keeps request `PENDING` and leaves balance unchanged until final stage.
+20. Multi-stage payroll confirmation keeps run `PREVIEWED` until final stage and then transitions to `CONFIRMED`.
+21. Admin reads `GET /approval/executions` and verifies state/stage progression for target entity.
 
 ## Negative
 
@@ -33,6 +37,8 @@
 9. Gate preview rejects `payrollGrossPayKrw` payload when domain is not `PAYROLL`.
 10. Stage-history list query rejects invalid `resolution`, datetime, or out-of-range `limit`.
 11. Template create/update rejects duplicate stage index or `minApprovals > approverRoles.length`.
+12. Stage-2 action with non-required role is rejected with `403`.
+13. Duplicate actor approve on the same stage is rejected with `409`.
 
 ## Regression
 
@@ -46,6 +52,7 @@
 8. Gate preview decision remains consistent with runtime gate role resolution.
 9. Stage-history listing endpoint remains read-only and does not mutate approval policy/delegation/template state.
 10. Stage-enabled template remains backward compatible with stage-1 runtime gate behavior.
+11. Single-stage template behavior remains equivalent to pre-WI-0118 finalization behavior.
 
 ## Evidence
 
@@ -57,3 +64,4 @@
 - `scripts/tests/e2e-wi0115-approval-gate-preview.test.ts`
 - `scripts/tests/e2e-wi0116-approval-stage-history-baseline.test.ts`
 - `scripts/tests/e2e-wi0117-approval-template-multi-stage-baseline.test.ts`
+- `scripts/tests/e2e-wi0118-approval-execution-state-machine.test.ts`

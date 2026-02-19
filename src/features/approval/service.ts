@@ -4,6 +4,8 @@ import { Permissions } from "@/lib/rbac";
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalExecutionEntity,
+  ApprovalExecutionState,
   ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
   ApprovalStageHistoryEntity,
@@ -63,6 +65,15 @@ type ListApprovalStageHistoryInput = {
   limit?: number;
 };
 
+type ListApprovalExecutionsInput = {
+  organizationId?: string;
+  domain?: ApprovalDomain;
+  targetEntityType?: string;
+  targetEntityId?: string;
+  state?: ApprovalExecutionState;
+  limit?: number;
+};
+
 type CreateApprovalDelegationInput = {
   organizationId?: string;
   domain: ApprovalDomain;
@@ -117,6 +128,16 @@ type PreviewApprovalPolicyGateInput = {
   actorId?: string;
   payrollGrossPayKrw?: number | null;
   effectiveAt?: Date;
+};
+
+type ApplyApprovalExecutionActionInput = {
+  domain: ApprovalDomain;
+  organizationId: string | null;
+  targetEntityType: string;
+  targetEntityId: string;
+  action: "APPROVE" | "REJECT";
+  payrollGrossPayKrw?: number | null;
+  evaluatedAt?: Date;
 };
 
 type ExpireApprovalDelegationsInput = {
@@ -440,6 +461,124 @@ function normalizePayrollTemplateCondition(input: {
   return { payrollGrossPayMinKrw, payrollGrossPayMaxKrw };
 }
 
+function resolveApprovalStages(
+  policy: ApprovalPolicyEntity | null,
+  templates: ApprovalLineTemplateEntity[],
+  input: { domain: ApprovalDomain; payrollGrossPayKrw?: number | null }
+): {
+  fallbackRole: string;
+  matchedTemplateIds: string[];
+  templateId: string | null;
+  stages: Array<{
+    stageIndex: number;
+    label: string;
+    approverRoles: string[];
+    minApprovals: number;
+  }>;
+} {
+  const matchedTemplates = templates.filter((template) =>
+    doesTemplateMatchGateContext(template, input)
+  );
+  const fallbackRole = resolvePolicyApproverRole(policy, input.domain);
+
+  if (matchedTemplates.length === 0) {
+    return {
+      fallbackRole,
+      matchedTemplateIds: [],
+      templateId: null,
+      stages: [
+        {
+          stageIndex: 1,
+          label: "stage-1",
+          approverRoles: [fallbackRole],
+          minApprovals: 1
+        }
+      ]
+    };
+  }
+
+  const template = matchedTemplates[0];
+  const stages =
+    template.approvalStages.length > 0
+      ? template.approvalStages.map((stage) => ({
+          stageIndex: stage.stageIndex,
+          label: stage.label,
+          approverRoles: [...stage.approverRoles],
+          minApprovals: stage.minApprovals
+        }))
+      : [
+          {
+            stageIndex: 1,
+            label: "stage-1",
+            approverRoles: [...template.approverRoles],
+            minApprovals: 1
+          }
+        ];
+
+  return {
+    fallbackRole,
+    matchedTemplateIds: matchedTemplates.map((item) => item.id),
+    templateId: template.id,
+    stages
+  };
+}
+
+async function resolveStageActorGate(
+  context: ServiceContext,
+  input: {
+    actor: Actor;
+    organizationId: string;
+    domain: ApprovalDomain;
+    requiredRoles: string[];
+    evaluatedAt: Date;
+  }
+): Promise<{
+  allowed: boolean;
+  resolution: ApprovalStageResolution;
+  activeDelegationIds: string[];
+}> {
+  if (isPrivilegedActor(input.actor.role)) {
+    return {
+      allowed: true,
+      resolution: "PRIVILEGED_BYPASS",
+      activeDelegationIds: []
+    };
+  }
+
+  if (input.requiredRoles.includes(input.actor.role)) {
+    return {
+      allowed: true,
+      resolution: "EXPECTED_ROLE",
+      activeDelegationIds: []
+    };
+  }
+
+  const delegations = await context.dataAccess.approvals.listDelegations({
+    organizationId: input.organizationId,
+    domain: input.domain,
+    active: true,
+    delegateActorId: input.actor.id
+  });
+  const activeDelegations = delegations.filter(
+    (delegation) =>
+      input.requiredRoles.includes(delegation.delegatorRole) &&
+      isDelegationActiveAt(delegation, input.evaluatedAt)
+  );
+  if (activeDelegations.length > 0) {
+    return {
+      allowed: true,
+      resolution: "ACTIVE_DELEGATION",
+      activeDelegationIds: activeDelegations.map((delegation) => delegation.id)
+    };
+  }
+
+  return {
+    allowed: false,
+    resolution: "DENIED",
+    activeDelegationIds: []
+  };
+}
+
 function isDelegationActiveAt(delegation: ApprovalDelegationEntity, now: Date) {
   return delegation.startsAt <= now && delegation.endsAt >= now && delegation.active;
 }
@@ -470,18 +609,13 @@ export async function assertApprovalPolicyGate(
     domain: input.domain,
     active: true
   });
-  const matchedTemplates = templates.filter((template) =>
-    doesTemplateMatchGateContext(template, {
-      domain: input.domain,
-      payrollGrossPayKrw: input.payrollGrossPayKrw
-    })
-  );
-  const matchedTemplateIds = matchedTemplates.map((template) => template.id);
-  const fallbackRole = resolvePolicyApproverRole(policy, input.domain);
-  const expectedRoles = resolveExpectedApproverRoles(policy, templates, {
+  const stageConfig = resolveApprovalStages(policy, templates, {
     domain: input.domain,
     payrollGrossPayKrw: input.payrollGrossPayKrw
   });
+  const matchedTemplateIds = stageConfig.matchedTemplateIds;
+  const fallbackRole = stageConfig.fallbackRole;
+  const expectedRoles = [...stageConfig.stages[0].approverRoles];
   const evaluatedAt = input.evaluatedAt ?? new Date();
   const canRecordHistory = Boolean(targetEntityType && targetEntityId);
 
@@ -514,42 +648,236 @@ export async function assertApprovalPolicyGate(
     });
   }
 
-  if (isPrivilegedActor(actor.role)) {
-    await appendStageHistory(true, "PRIVILEGED_BYPASS");
-    return;
-  }
-
-  if (expectedRoles.includes(actor.role)) {
-    await appendStageHistory(true, "EXPECTED_ROLE");
-    return;
-  }
-
-  const delegations = await context.dataAccess.approvals.listDelegations({
+  const gate = await resolveStageActorGate(context, {
+    actor,
     organizationId,
     domain: input.domain,
-    active: true,
-    delegateActorId: actor.id
+    requiredRoles: expectedRoles,
+    evaluatedAt
   });
-
-  const activeDelegations = delegations.filter(
-    (delegation) =>
-      expectedRoles.includes(delegation.delegatorRole) && isDelegationActiveAt(delegation, evaluatedAt)
-  );
-  if (activeDelegations.length > 0) {
-    await appendStageHistory(
-      true,
-      "ACTIVE_DELEGATION",
-      activeDelegations.map((delegation) => delegation.id)
-    );
+  await appendStageHistory(gate.allowed, gate.resolution, gate.activeDelegationIds);
+  if (gate.allowed) {
     return;
   }
-
-  await appendStageHistory(false, "DENIED");
 
   throw new ServiceError(
     403,
     `approval policy requires one of [${expectedRoles.join(", ")}] role or active delegation`
   );
+}
+
+export async function applyApprovalExecutionAction(
+  context: ServiceContext,
+  input: ApplyApprovalExecutionActionInput
+): Promise<{
+  execution: ApprovalExecutionEntity;
+  finalized: boolean;
+  stageIndex: number;
+  totalStages: number;
+}> {
+  const actor = requireActor(context);
+  const organizationIdRaw = input.organizationId?.trim();
+  if (!organizationIdRaw) {
+    throw new ServiceError(400, "organizationId is required for approval execution");
+  }
+  const organizationId: string = organizationIdRaw;
+
+  const targetEntityType = input.targetEntityType.trim();
+  const targetEntityId = input.targetEntityId.trim();
+  if (!targetEntityType || !targetEntityId) {
+    throw new ServiceError(400, "targetEntityType and targetEntityId are required");
+  }
+
+  const evaluatedAt = input.evaluatedAt ?? new Date();
+  const policy = await context.dataAccess.approvals.findPolicyByOrganizationId(organizationId);
+  const templates = await context.dataAccess.approvals.listTemplates({
+    organizationId,
+    domain: input.domain,
+    active: true
+  });
+  const stageConfig = resolveApprovalStages(policy, templates, {
+    domain: input.domain,
+    payrollGrossPayKrw: input.payrollGrossPayKrw
+  });
+
+  let execution = await context.dataAccess.approvals.findExecutionByTarget({
+    organizationId,
+    domain: input.domain,
+    targetEntityType,
+    targetEntityId
+  });
+  if (!execution) {
+    execution = await context.dataAccess.approvals.createExecution({
+      organizationId,
+      domain: input.domain,
+      targetEntityType,
+      targetEntityId,
+      templateId: stageConfig.templateId,
+      totalStages: stageConfig.stages.length,
+      currentStageIndex: 1,
+      state: "PENDING",
+      startedAt: evaluatedAt
+    });
+  } else if (
+    execution.templateId !== stageConfig.templateId ||
+    execution.totalStages !== stageConfig.stages.length
+  ) {
+    const adjustedCurrentStage = Math.max(
+      1,
+      Math.min(execution.currentStageIndex, stageConfig.stages.length)
+    );
+    execution = await context.dataAccess.approvals.updateExecution(execution.id, {
+      templateId: stageConfig.templateId,
+      totalStages: stageConfig.stages.length,
+      currentStageIndex: adjustedCurrentStage
+    });
+  }
+
+  if (execution.state === "REJECTED") {
+    throw new ServiceError(409, "approval execution already rejected");
+  }
+  if (execution.state === "APPROVED") {
+    if (input.action === "APPROVE") {
+      return {
+        execution,
+        finalized: true,
+        stageIndex: execution.currentStageIndex,
+        totalStages: execution.totalStages
+      };
+    }
+    throw new ServiceError(409, "approval execution already approved");
+  }
+
+  const stageIndex = Math.max(1, Math.min(execution.currentStageIndex, stageConfig.stages.length));
+  const stage = stageConfig.stages[stageIndex - 1];
+  if (!stage) {
+    throw new ServiceError(409, "approval execution stage is out of range");
+  }
+
+  const gate = await resolveStageActorGate(context, {
+    actor,
+    organizationId,
+    domain: input.domain,
+    requiredRoles: stage.approverRoles,
+    evaluatedAt
+  });
+
+  async function appendStageHistory(allowed: boolean, resolution: ApprovalStageResolution) {
+    await context.dataAccess.approvals.appendStageHistory({
+      organizationId,
+      domain: input.domain,
+      targetEntityType,
+      targetEntityId,
+      stageIndex: stage.stageIndex,
+      stageLabel: `${stage.label}:${input.action.toLowerCase()}`,
+      requiredRoles: stage.approverRoles,
+      fallbackRole: stageConfig.fallbackRole,
+      matchedTemplateIds: stageConfig.matchedTemplateIds,
+      activeDelegationIds: gate.activeDelegationIds,
+      actorRole: actor.role,
+      actorId: actor.id,
+      allowed,
+      resolution,
+      payrollGrossPayKrw: input.payrollGrossPayKrw ?? null,
+      evaluatedAt
+    });
+  }
+
+  if (!gate.allowed) {
+    await appendStageHistory(false, gate.resolution);
+    throw new ServiceError(
+      403,
+      `approval stage ${stage.stageIndex} requires one of [${stage.approverRoles.join(
+        ", "
+      )}] role or active delegation`
+    );
+  }
+
+  if (input.action === "APPROVE") {
+    const existingActorApprovals = await context.dataAccess.approvals.listExecutionActions({
+      executionId: execution.id,
+      stageIndex,
+      action: "APPROVE",
+      actorId: actor.id
+    });
+    if (existingActorApprovals.length > 0) {
+      throw new ServiceError(409, "actor already approved this stage");
+    }
+
+    await context.dataAccess.approvals.appendExecutionAction({
+      executionId: execution.id,
+      stageIndex,
+      action: "APPROVE",
+      actorRole: actor.role,
+      actorId: actor.id,
+      resolution: gate.resolution,
+      createdAt: evaluatedAt
+    });
+
+    const approvals = await context.dataAccess.approvals.listExecutionActions({
+      executionId: execution.id,
+      stageIndex,
+      action: "APPROVE"
+    });
+    const stageSatisfied =
+      gate.resolution === "PRIVILEGED_BYPASS" || approvals.length >= stage.minApprovals;
+
+    let finalized = false;
+    if (stageSatisfied) {
+      if (stageIndex >= stageConfig.stages.length) {
+        execution = await context.dataAccess.approvals.updateExecution(execution.id, {
+          state: "APPROVED",
+          currentStageIndex: stageIndex,
+          completedAt: evaluatedAt
+        });
+        finalized = true;
+      } else {
+        execution = await context.dataAccess.approvals.updateExecution(execution.id, {
+          currentStageIndex: stageIndex + 1
+        });
+      }
+    }
+
+    await appendStageHistory(true, gate.resolution);
+    return {
+      execution,
+      finalized,
+      stageIndex,
+      totalStages: stageConfig.stages.length
+    };
+  }
+
+  const existingReject = await context.dataAccess.approvals.listExecutionActions({
+    executionId: execution.id,
+    stageIndex,
+    action: "REJECT",
+    actorId: actor.id
+  });
+  if (existingReject.length > 0) {
+    throw new ServiceError(409, "actor already rejected this stage");
+  }
+
+  await context.dataAccess.approvals.appendExecutionAction({
+    executionId: execution.id,
+    stageIndex,
+    action: "REJECT",
+    actorRole: actor.role,
+    actorId: actor.id,
+    resolution: gate.resolution,
+    createdAt: evaluatedAt
+  });
+  execution = await context.dataAccess.approvals.updateExecution(execution.id, {
+    state: "REJECTED",
+    currentStageIndex: stageIndex,
+    completedAt: evaluatedAt
+  });
+  await appendStageHistory(true, gate.resolution);
+  return {
+    execution,
+    finalized: true,
+    stageIndex,
+    totalStages: stageConfig.stages.length
+  };
 }
 
 export async function previewApprovalPolicyGate(
@@ -846,6 +1174,47 @@ export async function listApprovalStageHistory(
       resolution: input.resolution ?? null,
       from: input.from?.toISOString() ?? null,
       to: input.to?.toISOString() ?? null,
+      limit,
+      resultCount: rows.length
+    }
+  });
+
+  return rows;
+}
+
+export async function listApprovalExecutions(
+  context: ServiceContext,
+  input: ListApprovalExecutionsInput
+): Promise<ApprovalExecutionEntity[]> {
+  const actor = requireActor(context);
+  await requirePermission(
+    context,
+    Permissions.approvalPolicyRead,
+    "approval execution read requires permission"
+  );
+  const organizationId = await resolveOrganizationId(context, input.organizationId);
+  const limit = input.limit !== undefined ? Math.min(Math.max(input.limit, 1), 500) : 100;
+
+  const rows = await context.dataAccess.approvals.listExecutions({
+    organizationId,
+    domain: input.domain,
+    targetEntityType: input.targetEntityType?.trim(),
+    targetEntityId: input.targetEntityId?.trim(),
+    state: input.state,
+    limit
+  });
+
+  await context.dataAccess.audit.append({
+    action: "approval.execution.listed",
+    entityType: "ApprovalExecution",
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      domain: input.domain ?? null,
+      targetEntityType: input.targetEntityType ?? null,
+      targetEntityId: input.targetEntityId ?? null,
+      state: input.state ?? null,
       limit,
       resultCount: rows.length
     }

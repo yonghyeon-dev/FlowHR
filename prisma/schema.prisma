@@ -21,6 +21,7 @@ model Organization {
   approvalDelegations ApprovalDelegation[]
   approvalLineTemplates ApprovalLineTemplate[]
   approvalStageHistories ApprovalStageHistory[]
+  approvalExecutions ApprovalExecution[]
   leavePolicy LeavePolicy?
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
@@ -157,6 +158,43 @@ model ApprovalStageHistory {
 
   @@index([organizationId, domain, evaluatedAt])
   @@index([targetEntityType, targetEntityId, evaluatedAt])
+}
+
+model ApprovalExecution {
+  id               String                 @id @default(cuid())
+  organizationId   String
+  organization     Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  domain           ApprovalDomain
+  targetEntityType String
+  targetEntityId   String
+  templateId       String?
+  state            ApprovalExecutionState @default(PENDING)
+  totalStages      Int
+  currentStageIndex Int                   @default(1)
+  startedAt        DateTime               @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  actions ApprovalExecutionActionLog[]
+
+  @@unique([organizationId, domain, targetEntityType, targetEntityId], name: "approval_execution_target_key")
+  @@index([organizationId, state, updatedAt])
+}
+
+model ApprovalExecutionActionLog {
+  id         String                   @id @default(cuid())
+  executionId String
+  execution  ApprovalExecution        @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  stageIndex Int
+  action     ApprovalExecutionAction
+  actorRole  String
+  actorId    String?
+  resolution ApprovalStageResolution
+  createdAt  DateTime                 @default(now())
+
+  @@index([executionId, stageIndex, action, createdAt])
+  @@index([executionId, actorId, stageIndex, action])
 }
 
 model Role {
@@ -438,6 +476,17 @@ enum ApprovalStageResolution {
   ACTIVE_DELEGATION
   PRIVILEGED_BYPASS
   DENIED
+}
+
+enum ApprovalExecutionState {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalExecutionAction {
+  APPROVE
+  REJECT
 }
 
 enum ScheduleAnomalyIncidentState {

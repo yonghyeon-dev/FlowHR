@@ -1,6 +1,10 @@
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalExecutionActionEntity,
+  ApprovalExecutionActionType,
+  ApprovalExecutionEntity,
+  ApprovalExecutionState,
   ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
   ApprovalTemplateStageEntity,
@@ -8,12 +12,15 @@ import type {
   AuditLogEntity,
   AttendanceRecordEntity,
   CreateApprovalDelegationInput,
+  CreateApprovalExecutionActionInput,
+  CreateApprovalExecutionInput,
   CreateApprovalStageHistoryInput,
   CreateApprovalLineTemplateInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   ListAuditLogsInput,
   UpdateApprovalDelegationInput,
+  UpdateApprovalExecutionInput,
   UpdateApprovalLineTemplateInput,
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
@@ -60,6 +67,8 @@ type MemoryState = {
   approvalDelegations: Map<string, ApprovalDelegationEntity>;
   approvalLineTemplates: Map<string, ApprovalLineTemplateEntity>;
   approvalStageHistory: Map<string, ApprovalStageHistoryEntity>;
+  approvalExecutions: Map<string, ApprovalExecutionEntity>;
+  approvalExecutionActions: Map<string, ApprovalExecutionActionEntity>;
   employees: Map<string, EmployeeEntity>;
   roles: Map<string, RoleEntity>;
   rolePermissions: Map<string, Set<string>>;
@@ -100,6 +109,8 @@ function createState(): MemoryState {
     approvalDelegations: new Map<string, ApprovalDelegationEntity>(),
     approvalLineTemplates: new Map<string, ApprovalLineTemplateEntity>(),
     approvalStageHistory: new Map<string, ApprovalStageHistoryEntity>(),
+    approvalExecutions: new Map<string, ApprovalExecutionEntity>(),
+    approvalExecutionActions: new Map<string, ApprovalExecutionActionEntity>(),
     employees: new Map<string, EmployeeEntity>(),
     roles: new Map<string, RoleEntity>(),
     rolePermissions: new Map<string, Set<string>>(),
@@ -318,6 +329,23 @@ function cloneApprovalStageHistory(entity: ApprovalStageHistoryEntity): Approval
   };
 }
 
+function cloneApprovalExecution(entity: ApprovalExecutionEntity): ApprovalExecutionEntity {
+  return {
+    ...entity,
+    startedAt: cloneDate(entity.startedAt),
+    completedAt: entity.completedAt ? cloneDate(entity.completedAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneApprovalExecutionAction(entity: ApprovalExecutionActionEntity): ApprovalExecutionActionEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt)
+  };
+}
+
 function cloneEmployee(entity: EmployeeEntity): EmployeeEntity {
   return {
     ...entity,
@@ -496,6 +524,22 @@ function updateApprovalLineTemplateEntity(
         ? input.payrollGrossPayMaxKrw
         : existing.payrollGrossPayMaxKrw,
     active: input.active !== undefined ? input.active : existing.active,
+    updatedAt: new Date()
+  };
+}
+
+function updateApprovalExecutionEntity(
+  existing: ApprovalExecutionEntity,
+  input: UpdateApprovalExecutionInput
+): ApprovalExecutionEntity {
+  return {
+    ...existing,
+    templateId: input.templateId !== undefined ? input.templateId : existing.templateId,
+    state: input.state !== undefined ? input.state : existing.state,
+    totalStages: input.totalStages !== undefined ? input.totalStages : existing.totalStages,
+    currentStageIndex:
+      input.currentStageIndex !== undefined ? input.currentStageIndex : existing.currentStageIndex,
+    completedAt: input.completedAt !== undefined ? input.completedAt : existing.completedAt,
     updatedAt: new Date()
   };
 }
@@ -864,6 +908,153 @@ export const memoryDataAccess: DataAccess = {
       if (input.limit !== undefined && input.limit > 0) {
         return rows.slice(0, input.limit);
       }
+      return rows;
+    },
+
+    async findExecutionByTarget(input: {
+      organizationId: string;
+      domain: ApprovalDomain;
+      targetEntityType: string;
+      targetEntityId: string;
+    }) {
+      for (const entity of state.approvalExecutions.values()) {
+        if (entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (entity.domain !== input.domain) {
+          continue;
+        }
+        if (entity.targetEntityType !== input.targetEntityType) {
+          continue;
+        }
+        if (entity.targetEntityId !== input.targetEntityId) {
+          continue;
+        }
+        return cloneApprovalExecution(entity);
+      }
+      return null;
+    },
+
+    async createExecution(input: CreateApprovalExecutionInput) {
+      const now = new Date();
+      const entity: ApprovalExecutionEntity = {
+        id: nextId("AEX"),
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        templateId: input.templateId ?? null,
+        state: input.state ?? "PENDING",
+        totalStages: input.totalStages,
+        currentStageIndex: input.currentStageIndex ?? 1,
+        startedAt: input.startedAt ? cloneDate(input.startedAt) : now,
+        completedAt:
+          input.completedAt === undefined
+            ? null
+            : input.completedAt === null
+              ? null
+              : cloneDate(input.completedAt),
+        createdAt: now,
+        updatedAt: now
+      };
+      state.approvalExecutions.set(entity.id, entity);
+      return cloneApprovalExecution(entity);
+    },
+
+    async updateExecution(id: string, input: UpdateApprovalExecutionInput) {
+      const existing = state.approvalExecutions.get(id);
+      if (!existing) {
+        throw new Error(`approval execution not found: ${id}`);
+      }
+      const updated = updateApprovalExecutionEntity(existing, input);
+      state.approvalExecutions.set(id, updated);
+      return cloneApprovalExecution(updated);
+    },
+
+    async listExecutions(input: {
+      organizationId: string;
+      domain?: ApprovalDomain;
+      targetEntityType?: string;
+      targetEntityId?: string;
+      state?: ApprovalExecutionState;
+      limit?: number;
+    }) {
+      const rows: ApprovalExecutionEntity[] = [];
+      for (const entity of state.approvalExecutions.values()) {
+        if (entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.domain && entity.domain !== input.domain) {
+          continue;
+        }
+        if (input.targetEntityType && entity.targetEntityType !== input.targetEntityType) {
+          continue;
+        }
+        if (input.targetEntityId && entity.targetEntityId !== input.targetEntityId) {
+          continue;
+        }
+        if (input.state && entity.state !== input.state) {
+          continue;
+        }
+        rows.push(cloneApprovalExecution(entity));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      if (input.limit !== undefined && input.limit > 0) {
+        return rows.slice(0, input.limit);
+      }
+      return rows;
+    },
+
+    async appendExecutionAction(input: CreateApprovalExecutionActionInput) {
+      const entity: ApprovalExecutionActionEntity = {
+        id: nextId("AEXA"),
+        executionId: input.executionId,
+        stageIndex: input.stageIndex,
+        action: input.action,
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        resolution: input.resolution,
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : new Date()
+      };
+      state.approvalExecutionActions.set(entity.id, entity);
+      return cloneApprovalExecutionAction(entity);
+    },
+
+    async listExecutionActions(input: {
+      executionId: string;
+      stageIndex?: number;
+      action?: ApprovalExecutionActionType;
+      actorId?: string | null;
+    }) {
+      const rows: ApprovalExecutionActionEntity[] = [];
+      for (const entity of state.approvalExecutionActions.values()) {
+        if (entity.executionId !== input.executionId) {
+          continue;
+        }
+        if (input.stageIndex !== undefined && entity.stageIndex !== input.stageIndex) {
+          continue;
+        }
+        if (input.action !== undefined && entity.action !== input.action) {
+          continue;
+        }
+        if (input.actorId !== undefined && entity.actorId !== input.actorId) {
+          continue;
+        }
+        rows.push(cloneApprovalExecutionAction(entity));
+      }
+      rows.sort((left, right) => {
+        const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+        return left.id.localeCompare(right.id);
+      });
       return rows;
     }
   },

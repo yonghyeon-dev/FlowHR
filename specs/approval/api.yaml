@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.7.0
+  version: 0.8.0
 paths:
   /approval/policy:
     get:
@@ -95,6 +95,51 @@ paths:
       responses:
         "200":
           description: Stage-history rows listed
+        "400":
+          description: Invalid query
+        "403":
+          description: Permission denied
+  /approval/executions:
+    get:
+      summary: List runtime approval executions
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+            enum: [ATTENDANCE, LEAVE, PAYROLL]
+        - in: query
+          name: targetEntityType
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: targetEntityId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        "200":
+          description: Approval execution rows listed
         "400":
           description: Invalid query
         "403":

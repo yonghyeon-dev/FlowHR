@@ -14,6 +14,12 @@
 - `ApprovalStageHistory`
   - many rows per organization and target entity
   - stores gate evaluation output (`requiredRoles`, `fallbackRole`, `matchedTemplateIds`, `activeDelegationIds`, `allowed`, `resolution`) with actor context and evaluation time
+- `ApprovalExecution`
+  - one row per organization+domain+target entity
+  - stores staged execution lifecycle (`state`, `currentStageIndex`, `totalStages`, `templateId`, `startedAt`, `completedAt`)
+- `ApprovalExecutionActionLog`
+  - many rows per execution
+  - stores immutable stage action log (`APPROVE`/`REJECT`, actor context, resolution, createdAt)
 
 ## Migration
 
@@ -22,6 +28,7 @@
 - `202602190002_approval_template_payroll_condition`
 - `202602190004_approval_stage_history_baseline`
 - `202602190005_approval_template_multi_stage`
+- `202602190006_approval_execution_state_machine`
 
 ## Compatibility
 
@@ -32,3 +39,4 @@
 - PAYROLL template condition bounds are additive nullable columns; non-PAYROLL templates keep null bounds.
 - Stage history table is additive and does not alter existing policy/delegation/template rows.
 - Gate preview (WI-0115) remains API/service-only and does not mutate DB schema.
+- Execution/action-log tables are additive and do not alter existing attendance/leave/payroll row schemas.

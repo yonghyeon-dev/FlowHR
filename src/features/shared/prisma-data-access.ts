@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalExecutionActionEntity,
+  ApprovalExecutionActionType,
+  ApprovalExecutionEntity,
+  ApprovalExecutionState,
   ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
   ApprovalTemplateStageEntity,
@@ -13,6 +17,8 @@ import type {
   AttendanceStore,
   AuditStore,
   CreateApprovalDelegationInput,
+  CreateApprovalExecutionActionInput,
+  CreateApprovalExecutionInput,
   CreateApprovalStageHistoryInput,
   CreateApprovalLineTemplateInput,
   CreateAttendanceRecordInput,
@@ -58,6 +64,7 @@ import type {
   UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
   UpdateApprovalDelegationInput,
+  UpdateApprovalExecutionInput,
   UpdateApprovalLineTemplateInput,
   UpdateAttendanceRecordInput,
   UpdateDepartmentInput,
@@ -447,6 +454,45 @@ function toApprovalStageHistoryEntity(record: {
     requiredRoles: [...record.requiredRoles],
     matchedTemplateIds: [...record.matchedTemplateIds],
     activeDelegationIds: [...record.activeDelegationIds]
+  };
+}
+
+function toApprovalExecutionEntity(record: {
+  id: string;
+  organizationId: string;
+  domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
+  targetEntityType: string;
+  targetEntityId: string;
+  templateId: string | null;
+  state: "PENDING" | "APPROVED" | "REJECTED";
+  totalStages: number;
+  currentStageIndex: number;
+  startedAt: Date;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): ApprovalExecutionEntity {
+  return {
+    ...record,
+    domain: record.domain as ApprovalDomain,
+    state: record.state as ApprovalExecutionState
+  };
+}
+
+function toApprovalExecutionActionEntity(record: {
+  id: string;
+  executionId: string;
+  stageIndex: number;
+  action: "APPROVE" | "REJECT";
+  actorRole: string;
+  actorId: string | null;
+  resolution: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+  createdAt: Date;
+}): ApprovalExecutionActionEntity {
+  return {
+    ...record,
+    action: record.action as ApprovalExecutionActionType,
+    resolution: record.resolution
   };
 }
 
@@ -941,6 +987,114 @@ const approvals: ApprovalStore = {
       ...(input.limit && input.limit > 0 ? { take: input.limit } : {})
     });
     return records.map(toApprovalStageHistoryEntity);
+  },
+
+  async findExecutionByTarget(input: {
+    organizationId: string;
+    domain: ApprovalDomain;
+    targetEntityType: string;
+    targetEntityId: string;
+  }) {
+    const record = await prisma.approvalExecution.findUnique({
+      where: {
+        approval_execution_target_key: {
+          organizationId: input.organizationId,
+          domain: input.domain,
+          targetEntityType: input.targetEntityType,
+          targetEntityId: input.targetEntityId
+        }
+      }
+    });
+    return record ? toApprovalExecutionEntity(record) : null;
+  },
+
+  async createExecution(input: CreateApprovalExecutionInput) {
+    const record = await prisma.approvalExecution.create({
+      data: {
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        templateId: input.templateId ?? null,
+        state: input.state ?? "PENDING",
+        totalStages: input.totalStages,
+        currentStageIndex: input.currentStageIndex ?? 1,
+        ...(input.startedAt ? { startedAt: input.startedAt } : {}),
+        ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {})
+      }
+    });
+    return toApprovalExecutionEntity(record);
+  },
+
+  async updateExecution(id: string, input: UpdateApprovalExecutionInput) {
+    const record = await prisma.approvalExecution.update({
+      where: { id },
+      data: {
+        ...(input.templateId !== undefined ? { templateId: input.templateId } : {}),
+        ...(input.state !== undefined ? { state: input.state } : {}),
+        ...(input.totalStages !== undefined ? { totalStages: input.totalStages } : {}),
+        ...(input.currentStageIndex !== undefined
+          ? { currentStageIndex: input.currentStageIndex }
+          : {}),
+        ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {})
+      }
+    });
+    return toApprovalExecutionEntity(record);
+  },
+
+  async listExecutions(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    state?: ApprovalExecutionState;
+    limit?: number;
+  }) {
+    const records = await prisma.approvalExecution.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.domain ? { domain: input.domain } : {}),
+        ...(input.targetEntityType ? { targetEntityType: input.targetEntityType } : {}),
+        ...(input.targetEntityId ? { targetEntityId: input.targetEntityId } : {}),
+        ...(input.state ? { state: input.state } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      ...(input.limit && input.limit > 0 ? { take: input.limit } : {})
+    });
+    return records.map(toApprovalExecutionEntity);
+  },
+
+  async appendExecutionAction(input: CreateApprovalExecutionActionInput) {
+    const record = await prisma.approvalExecutionActionLog.create({
+      data: {
+        executionId: input.executionId,
+        stageIndex: input.stageIndex,
+        action: input.action,
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        resolution: input.resolution,
+        ...(input.createdAt ? { createdAt: input.createdAt } : {})
+      }
+    });
+    return toApprovalExecutionActionEntity(record);
+  },
+
+  async listExecutionActions(input: {
+    executionId: string;
+    stageIndex?: number;
+    action?: ApprovalExecutionActionType;
+    actorId?: string | null;
+  }) {
+    const records = await prisma.approvalExecutionActionLog.findMany({
+      where: {
+        executionId: input.executionId,
+        ...(input.stageIndex !== undefined ? { stageIndex: input.stageIndex } : {}),
+        ...(input.action ? { action: input.action } : {}),
+        ...(input.actorId !== undefined ? { actorId: input.actorId } : {})
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toApprovalExecutionActionEntity);
   }
 };
 

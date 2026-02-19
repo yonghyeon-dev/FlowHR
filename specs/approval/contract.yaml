@@ -1,5 +1,5 @@
 owner: approval-agent
-version: 0.7.0
+version: 0.8.0
 scope:
   in:
     - organization-level approval policy for attendance/leave/payroll
@@ -12,9 +12,11 @@ scope:
     - approval policy gate preview simulation API for policy/template/delegation pre-check
     - runtime gate stage-history persistence for attendance/leave/payroll decision endpoints
     - approval stage-history read API for gate troubleshooting
+    - approval execution state machine for staged runtime actions on attendance/leave/payroll decisions
+    - approval execution listing API for operator troubleshooting
     - approval gate enforcement on attendance/leave/payroll decision endpoints
   out:
-    - multi-step approval chain routing
+    - generic standalone approval command endpoint independent of domain action APIs
     - external groupware approval sync
 entities:
   - name: ApprovalPolicy
@@ -25,6 +27,10 @@ entities:
     description: Organization-level domain approval template with stage definitions and active flag.
   - name: ApprovalStageHistory
     description: Persisted policy-gate evaluation result per target entity for audit/troubleshooting.
+  - name: ApprovalExecution
+    description: Runtime stage-by-stage approval execution state per target domain entity.
+  - name: ApprovalExecutionActionLog
+    description: Immutable action log for each stage approval/rejection decision.
 api:
   auth:
     - role: admin
@@ -46,6 +52,9 @@ api:
     - method: GET
       path: /approval/stage-history
       description: List persisted stage-gate evaluations by organization/domain/target entity filters.
+    - method: GET
+      path: /approval/executions
+      description: List runtime approval execution states by organization/domain/target entity filters.
     - method: GET
       path: /approval/delegations
       description: List approval delegations by organization/domain/active filter.
@@ -95,6 +104,8 @@ db_changes:
       description: Add approval stage history table for runtime gate audit records.
     - id: 202602190005_approval_template_multi_stage
       description: Add JSON stage-definition payload for approval template multi-stage routing model.
+    - id: 202602190006_approval_execution_state_machine
+      description: Add approval execution/action-log tables and staged action runtime model.
   backward_compatible: true
   notes: Additive schema changes with template condition/stage payload, stage history table, and idempotent role-permission seed.
 invariants:
@@ -104,6 +115,10 @@ invariants:
   - approvalStages must have sequential unique indexes starting at 1 and maximum 5 stages.
   - Each approval stage minApprovals must be between 1 and approverRoles length.
   - Runtime gate compatibility mode must use stage-1 approverRoles as template approverRoles.
+  - Approval execution state is terminal once REJECTED or APPROVED.
+  - Stage action `APPROVE` advances to next stage only when stage minApprovals is satisfied (or privileged bypass).
+  - Stage action `REJECT` finalizes execution as REJECTED immediately.
+  - Domain entity finalization (attendance approved/rejected, leave approved/rejected, payroll confirmed) occurs only when execution is finalized.
   - payrollGrossPayMinKrw/payrollGrossPayMaxKrw are only allowed for PAYROLL template domain.
   - PAYROLL template condition applies when grossPayKrw is within [min,max] (null means open bound); otherwise gate falls back to policy role.
   - Approval gate uses active and matching template role set first; policy single-role fallback applies when no active/matching template exists.
@@ -138,6 +153,8 @@ test_plan:
     - gate preview returns expected roles/template match/delegation result for matched/non-matched payroll conditions
     - template create/update/list supports multi-stage payload and stage-1 compatibility mapping
     - stage-history query returns deny/allow gate evaluations for attendance/leave/payroll target entities
+    - execution list query returns staged runtime state (`PENDING/APPROVED/REJECTED`) with stage position
+    - attendance/leave/payroll staged flow keeps target pending until final stage approval
     - reject duplicate active template in same organization+domain with 409
     - reject payroll condition fields for non-PAYROLL template domain
     - expire delegation dryRun/apply flow
@@ -149,7 +166,9 @@ test_plan:
     - payroll confirm gate enforces conditional template route when threshold is matched
     - gate preview remains consistent with runtime gate decision outcomes
     - stage-enabled template keeps runtime gate behavior via stage-1 role mapping
+    - staged execution mode keeps single-stage templates behavior unchanged
     - stage-history records keep deny/allow ordering with required roles and resolution labels
+    - stage-history stageLabel includes action suffix for staged actions
   authorization:
     - policy/delegation endpoint permission checks
     - template endpoint permission checks
@@ -166,12 +185,14 @@ observability:
     - approval.template.updated
     - approval.policy_gate.previewed
     - approval.stage_history.listed
+    - approval.execution.listed
   metrics:
     - approval_policy_update_count
     - approval_delegation_active_count
     - approval_template_active_count
     - approval_policy_gate_denied_count
     - approval_stage_history_list_count
+    - approval_execution_list_count
     - approval_delegation_expire_sweep_checked_count
     - approval_delegation_expire_sweep_applied_count
   logs:
@@ -186,7 +207,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v0.7.0 adds multi-stage template definition payload (`approvalStages`) while preserving existing runtime gate behavior through stage-1 compatibility mapping."
+consumer_impact: "Contract v0.8.0 adds staged runtime execution persistence (`ApprovalExecution`, `ApprovalExecutionActionLog`) and `GET /approval/executions`; multi-stage templates now finalize domain state only at terminal stage."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0103-approval-line-delegation-policy.md
@@ -197,6 +218,7 @@ references:
   - work-items/WI-0115-approval-gate-preview.md
   - work-items/WI-0116-approval-stage-history-baseline.md
   - work-items/WI-0117-approval-template-multi-stage-baseline.md
+  - work-items/WI-0118-approval-execution-state-machine.md
 approval:
   spec_owner: orchestrator-agent
   qa_owner: qa-agent
