@@ -26,9 +26,12 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
         <nav className="saas-nav" aria-label="직원 네비게이션">
           <Link href="/employee">오늘</Link>
           <Link href="/employee#self-service-overview">통합 요약</Link>
+          <Link href="/employee#submit-checklist">제출 체크리스트</Link>
           <Link href="/employee#request-feedback">요청 피드백</Link>
+          <Link href="/employee#request-bottleneck-feedback">병목 피드백</Link>
           <Link href="/employee#mobile-shortcuts">모바일 단축</Link>
           <Link href="/employee#mobile-status-badges">모바일 배지</Link>
+          <Link href="/employee#mobile-submit-guide">모바일 제출 가이드</Link>
           <Link href="/employee#request-timeline">요청 타임라인</Link>
           <Link href="/employee#request-resubmit">재제출 흐름</Link>
           <Link href="/employee#attendance">출퇴근</Link>

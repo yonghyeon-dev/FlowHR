@@ -138,6 +138,38 @@ type MobileStatusBadge = {
   tone: "ok" | "pending" | "fail" | "info";
 };
 
+type IntegratedSubmitChecklistCard = {
+  key: string;
+  label: string;
+  passCount: number;
+  totalCount: number;
+  ready: boolean;
+  detail: string;
+  targetSectionId: string;
+};
+
+type RequestBottleneckSeverity = "normal" | "watch" | "critical";
+
+type RequestBottleneckFeedbackCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  count: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type MobileSubmitGuideCard = {
+  key: string;
+  label: string;
+  ready: boolean;
+  progressLabel: string;
+  detail: string;
+  targetSectionId: string;
+  ctaLabel: string;
+  tone: "ready" | "pending" | "fail";
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -281,6 +313,16 @@ function statusToTone(status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") 
     return "pending";
   }
   return "fail";
+}
+
+function bottleneckSeverityRank(severity: RequestBottleneckSeverity) {
+  if (severity === "critical") {
+    return 2;
+  }
+  if (severity === "watch") {
+    return 1;
+  }
+  return 0;
 }
 
 function estimateLeaveRequestedDays(input: {
@@ -1425,6 +1467,22 @@ export default function EmployeeSelfServicePage() {
     [attendancePreSubmitChecks]
   );
 
+  const attendanceFirstFailCheck = useMemo(
+    () => attendancePreSubmitChecks.find((check) => !check.pass) ?? null,
+    [attendancePreSubmitChecks]
+  );
+
+  const estimatedLeaveRequestedDays = useMemo(
+    () =>
+      estimateLeaveRequestedDays({
+        startDate: leaveStartDate,
+        endDate: leaveEndDate,
+        unit: leaveUnit,
+        hoursInput: leaveHours
+      }),
+    [leaveEndDate, leaveHours, leaveStartDate, leaveUnit]
+  );
+
   const leavePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(() => {
     const checks: PreSubmitCheckItem[] = [];
     const startMs = new Date(leaveStartDate).getTime();
@@ -1463,35 +1521,45 @@ export default function EmployeeSelfServicePage() {
       });
     }
 
-    const estimatedDays = estimateLeaveRequestedDays({
-      startDate: leaveStartDate,
-      endDate: leaveEndDate,
-      unit: leaveUnit,
-      hoursInput: leaveHours
-    });
     checks.push({
       id: "leave-estimated-days",
-      pass: estimatedDays > 0,
+      pass: estimatedLeaveRequestedDays > 0,
       label: "신청 일수 계산",
-      detail: estimatedDays > 0 ? `예상 신청 ${formatDays(estimatedDays)}일` : "신청 일수를 계산할 수 없습니다."
+      detail:
+        estimatedLeaveRequestedDays > 0
+          ? `예상 신청 ${formatDays(estimatedLeaveRequestedDays)}일`
+          : "신청 일수를 계산할 수 없습니다."
     });
 
     if (leaveType === "ANNUAL" && leaveBalance) {
       checks.push({
         id: "leave-balance",
-        pass: leaveBalance.remainingDays >= estimatedDays,
+        pass: leaveBalance.remainingDays >= estimatedLeaveRequestedDays,
         label: "잔여 연차 검증",
         detail:
-          leaveBalance.remainingDays >= estimatedDays
+          leaveBalance.remainingDays >= estimatedLeaveRequestedDays
             ? `잔여 ${formatDays(leaveBalance.remainingDays)}일`
-            : `잔여 ${formatDays(leaveBalance.remainingDays)}일, 요청 ${formatDays(estimatedDays)}일`
+            : `잔여 ${formatDays(leaveBalance.remainingDays)}일, 요청 ${formatDays(estimatedLeaveRequestedDays)}일`
       });
     }
 
     return checks;
-  }, [leaveBalance, leaveEndDate, leaveHours, leaveStartDate, leaveType, leaveUnit]);
+  }, [
+    estimatedLeaveRequestedDays,
+    leaveBalance,
+    leaveEndDate,
+    leaveHours,
+    leaveStartDate,
+    leaveType,
+    leaveUnit
+  ]);
 
   const leavePreSubmitValid = useMemo(() => leavePreSubmitChecks.every((check) => check.pass), [leavePreSubmitChecks]);
+
+  const leaveFirstFailCheck = useMemo(
+    () => leavePreSubmitChecks.find((check) => !check.pass) ?? null,
+    [leavePreSubmitChecks]
+  );
 
   const resubmitFlowChecks = useMemo<PreSubmitCheckItem[]>(() => {
     const hasCandidate = Boolean(selectedResubmitCandidate);
@@ -1533,6 +1601,240 @@ export default function EmployeeSelfServicePage() {
     lastAppliedResubmitCandidateKey,
     leavePreSubmitValid,
     selectedResubmitCandidate
+  ]);
+
+  const resubmitFlowReady = useMemo(
+    () => resubmitFlowChecks.every((check) => check.pass),
+    [resubmitFlowChecks]
+  );
+
+  const resubmitFirstFailCheck = useMemo(
+    () => resubmitFlowChecks.find((check) => !check.pass) ?? null,
+    [resubmitFlowChecks]
+  );
+
+  const integratedSubmitChecklistCards = useMemo<IntegratedSubmitChecklistCard[]>(() => {
+    const attendancePassCount = attendancePreSubmitChecks.filter((check) => check.pass).length;
+    const leavePassCount = leavePreSubmitChecks.filter((check) => check.pass).length;
+    const resubmitPassCount = resubmitFlowChecks.filter((check) => check.pass).length;
+    const attendanceReady =
+      attendancePreSubmitValid && correctionValidation.isValid && lastAttendanceId.trim().length > 0;
+
+    return [
+      {
+        key: "attendance",
+        label: "출퇴근 정정 제출",
+        passCount: attendancePassCount,
+        totalCount: attendancePreSubmitChecks.length,
+        ready: attendanceReady,
+        detail: attendanceReady
+          ? "정정 제출이 가능합니다."
+          : correctionValidation.message || attendanceFirstFailCheck?.detail || "정정 입력을 보완해 주세요.",
+        targetSectionId: "attendance"
+      },
+      {
+        key: "leave",
+        label: "휴가 신청 제출",
+        passCount: leavePassCount,
+        totalCount: leavePreSubmitChecks.length,
+        ready: leavePreSubmitValid,
+        detail: leavePreSubmitValid
+          ? `예상 ${formatDays(estimatedLeaveRequestedDays)}일 신청 가능합니다.`
+          : leaveFirstFailCheck?.detail || "휴가 신청 입력을 보완해 주세요.",
+        targetSectionId: "leave"
+      },
+      {
+        key: "resubmit",
+        label: "요청 재제출",
+        passCount: resubmitPassCount,
+        totalCount: resubmitFlowChecks.length,
+        ready: resubmitFlowReady,
+        detail: resubmitFlowReady
+          ? "재제출 흐름 검증을 통과했습니다."
+          : resubmitFirstFailCheck?.detail || "재제출 후보 선택 및 초안 반영이 필요합니다.",
+        targetSectionId: "request-resubmit"
+      }
+    ];
+  }, [
+    attendanceFirstFailCheck,
+    attendancePreSubmitChecks,
+    attendancePreSubmitValid,
+    correctionValidation.isValid,
+    correctionValidation.message,
+    estimatedLeaveRequestedDays,
+    lastAttendanceId,
+    leaveFirstFailCheck,
+    leavePreSubmitChecks,
+    leavePreSubmitValid,
+    resubmitFirstFailCheck,
+    resubmitFlowChecks,
+    resubmitFlowReady
+  ]);
+
+  const requestBottleneckFeedbackCards = useMemo<RequestBottleneckFeedbackCard[]>(() => {
+    const cards: RequestBottleneckFeedbackCard[] = [];
+
+    if (totalPendingRequestCount > 0) {
+      cards.push({
+        key: "pending",
+        label: "승인 대기 누적",
+        severity: totalPendingRequestCount >= 4 ? "critical" : "watch",
+        count: totalPendingRequestCount,
+        detail: `출퇴근 ${attendanceStatusSummary.pending}건 / 휴가 ${leaveStatusSummary.pending}건이 승인 대기 중입니다.`,
+        targetSectionId: "request-feedback"
+      });
+    }
+
+    if (!attendancePreSubmitValid || !correctionValidation.isValid) {
+      cards.push({
+        key: "attendance-validation",
+        label: "출퇴근 정정 제출 병목",
+        severity: "watch",
+        count: attendancePreSubmitChecks.filter((check) => !check.pass).length,
+        detail:
+          correctionValidation.message ||
+          attendanceFirstFailCheck?.detail ||
+          "출퇴근 정정 검증 항목을 확인해 주세요.",
+        targetSectionId: "attendance"
+      });
+    }
+
+    if (!leavePreSubmitValid) {
+      cards.push({
+        key: "leave-validation",
+        label: "휴가 신청 제출 병목",
+        severity: leaveType === "ANNUAL" ? "critical" : "watch",
+        count: leavePreSubmitChecks.filter((check) => !check.pass).length,
+        detail: leaveFirstFailCheck?.detail || "휴가 신청 검증 항목을 확인해 주세요.",
+        targetSectionId: "leave"
+      });
+    }
+
+    if (resubmitCandidates.length > 0 && !resubmitFlowReady) {
+      cards.push({
+        key: "resubmit-flow",
+        label: "재제출 흐름 병목",
+        severity: "watch",
+        count: resubmitCandidates.length,
+        detail: resubmitFirstFailCheck?.detail || "재제출 후보 선택/초안 반영 상태를 확인해 주세요.",
+        targetSectionId: "request-resubmit"
+      });
+    }
+
+    if (stats.fail > 0) {
+      cards.push({
+        key: "api-fail",
+        label: "API 실패 병목",
+        severity: "critical",
+        count: stats.fail,
+        detail: latestFailureCauseMessage || "최근 API 실패 응답을 먼저 점검해 주세요.",
+        targetSectionId: "request-feedback"
+      });
+    }
+
+    if (cards.length === 0) {
+      cards.push({
+        key: "clear",
+        label: "현재 병목 없음",
+        severity: "normal",
+        count: 0,
+        detail: "현재 요청 흐름에서 즉시 조치가 필요한 병목이 없습니다.",
+        targetSectionId: "self-service-overview"
+      });
+    }
+
+    return cards
+      .slice()
+      .sort((left, right) => {
+        const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.count - left.count;
+      })
+      .slice(0, 5);
+  }, [
+    attendanceFirstFailCheck,
+    attendancePreSubmitChecks,
+    attendancePreSubmitValid,
+    attendanceStatusSummary.pending,
+    correctionValidation.isValid,
+    correctionValidation.message,
+    latestFailureCauseMessage,
+    leaveFirstFailCheck,
+    leavePreSubmitChecks,
+    leavePreSubmitValid,
+    leaveStatusSummary.pending,
+    leaveType,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowReady,
+    stats.fail,
+    totalPendingRequestCount
+  ]);
+
+  const mobileSubmitGuideCards = useMemo<MobileSubmitGuideCard[]>(() => {
+    const attendancePassCount = attendancePreSubmitChecks.filter((check) => check.pass).length;
+    const leavePassCount = leavePreSubmitChecks.filter((check) => check.pass).length;
+    const resubmitPassCount = resubmitFlowChecks.filter((check) => check.pass).length;
+    const attendanceReady =
+      attendancePreSubmitValid && correctionValidation.isValid && lastAttendanceId.trim().length > 0;
+
+    return [
+      {
+        key: "attendance",
+        label: "출퇴근 정정 가이드",
+        ready: attendanceReady,
+        progressLabel: `${attendancePassCount}/${attendancePreSubmitChecks.length} 검증 통과`,
+        detail: attendanceReady
+          ? "정정 요청 버튼으로 바로 제출할 수 있습니다."
+          : correctionValidation.message || attendanceFirstFailCheck?.detail || "정정 입력 보완이 필요합니다.",
+        targetSectionId: "attendance",
+        ctaLabel: attendanceReady ? "정정 요청으로 이동" : "출퇴근 입력 보완",
+        tone: attendanceReady ? "ready" : "fail"
+      },
+      {
+        key: "leave",
+        label: "휴가 신청 가이드",
+        ready: leavePreSubmitValid,
+        progressLabel: `${leavePassCount}/${leavePreSubmitChecks.length} 검증 통과`,
+        detail: leavePreSubmitValid
+          ? `예상 신청 ${formatDays(estimatedLeaveRequestedDays)}일 기준으로 제출 가능합니다.`
+          : leaveFirstFailCheck?.detail || "휴가 신청 입력 보완이 필요합니다.",
+        targetSectionId: "leave",
+        ctaLabel: leavePreSubmitValid ? "휴가 신청으로 이동" : "휴가 입력 보완",
+        tone: leavePreSubmitValid ? "ready" : "fail"
+      },
+      {
+        key: "resubmit",
+        label: "재제출 가이드",
+        ready: resubmitFlowReady,
+        progressLabel: `${resubmitPassCount}/${resubmitFlowChecks.length} 검증 통과`,
+        detail: resubmitFlowReady
+          ? "초안 반영이 완료되어 재제출 폼으로 이동할 수 있습니다."
+          : resubmitCandidates.length > 0
+            ? resubmitFirstFailCheck?.detail || "재제출 후보 선택이 필요합니다."
+            : "반려/취소된 요청이 없어 재제출 대상이 없습니다.",
+        targetSectionId: "request-resubmit",
+        ctaLabel: resubmitFlowReady ? "재제출 흐름으로 이동" : "재제출 후보 확인",
+        tone: resubmitCandidates.length === 0 ? "pending" : resubmitFlowReady ? "ready" : "fail"
+      }
+    ];
+  }, [
+    attendanceFirstFailCheck,
+    attendancePreSubmitChecks,
+    attendancePreSubmitValid,
+    correctionValidation.isValid,
+    correctionValidation.message,
+    estimatedLeaveRequestedDays,
+    lastAttendanceId,
+    leaveFirstFailCheck,
+    leavePreSubmitChecks,
+    leavePreSubmitValid,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowChecks,
+    resubmitFlowReady
   ]);
 
   const correctionDeltaLabel = useMemo(() => {
@@ -1739,6 +2041,31 @@ export default function EmployeeSelfServicePage() {
           </div>
         </article>
 
+        <article className="panel panel-submit-checklist" id="submit-checklist">
+          <h2>정정/휴가 제출 체크리스트 통합</h2>
+          <p className="small">
+            출퇴근 정정, 휴가 신청, 재제출 흐름의 제출 가능 상태를 한 화면에서 점검합니다.
+          </p>
+          <div className="submit-checklist-grid" aria-label="integrated submit checklist">
+            {integratedSubmitChecklistCards.map((card) => (
+              <article key={card.key} className={`submit-checklist-card ${card.ready ? "is-ready" : "is-blocked"}`}>
+                <p>{card.label}</p>
+                <strong>
+                  {card.passCount}/{card.totalCount}
+                </strong>
+                <span>{card.detail}</span>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  관련 섹션 이동
+                </button>
+              </article>
+            ))}
+          </div>
+        </article>
+
         <article className="panel panel-request-feedback" id="request-feedback">
           <h2>요청 상태 피드백</h2>
           <p className="small">최근 출퇴근/휴가 요청 상태와 반려·실패 원인을 한 화면에서 확인합니다.</p>
@@ -1824,6 +2151,31 @@ export default function EmployeeSelfServicePage() {
           )}
         </article>
 
+        <article className="panel panel-request-bottleneck-feedback" id="request-bottleneck-feedback">
+          <h2>요청 병목 구간 피드백</h2>
+          <p className="small">
+            승인 대기, 제출 검증 실패, API 실패를 병목 우선순위로 정리해 빠르게 처리 순서를 잡습니다.
+          </p>
+          <ul className="request-bottleneck-list" aria-label="request bottleneck feedback list">
+            {requestBottleneckFeedbackCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="request-bottleneck-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">count {card.count}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  바로 확인
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-mobile-shortcuts" id="mobile-shortcuts">
           <h2>모바일 단축 흐름</h2>
           <p className="small">터치 중심 단축 버튼으로 입력/정정/신청/갱신을 빠르게 진행합니다.</p>
@@ -1873,6 +2225,31 @@ export default function EmployeeSelfServicePage() {
               상태 새로고침
             </button>
           </div>
+        </article>
+
+        <article className="panel panel-mobile-submit-guide" id="mobile-submit-guide">
+          <h2>모바일 제출 가이드</h2>
+          <p className="small">
+            모바일 기준으로 제출 준비도와 다음 조치를 안내합니다. 가이드 카드에서 바로 해당 입력 화면으로 이동할 수 있습니다.
+          </p>
+          <ul className="mobile-submit-guide-list" aria-label="mobile submit guide list">
+            {mobileSubmitGuideCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="mobile-submit-guide-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.progressLabel}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
         </article>
 
         <article className="panel panel-request-timeline" id="request-timeline">
