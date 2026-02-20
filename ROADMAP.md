@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-19
-> **Current version**: 0.1.12 (Employee Self-Service Leave Calendar and Ops Isolation)
+> **Current version**: 0.1.13 (Employee Attendance Correction UX Upgrade)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -163,10 +163,11 @@
 - WI-0124 연차촉진 공지 이메일 템플릿 채널 확장 (`deliveryChannel=email_template` + 템플릿 ID/수신자 메타데이터 + `/admin/leave-promotion` 채널 선택 UX + e2e)
 - WI-0125 연차촉진 공지 발송 이력/재시도 모델 (`LeavePromotionDelivery`/`LeavePromotionDeliveryRecipient` + 이력 조회/상세/재시도 API + `/admin/leave-promotion` 이력/재시도 UX + e2e)
 - WI-0126 방향 재정렬(UI-first): 연차촉진 화면 `/ops/leave-promotion` 격리 + `/employee` 휴가 캘린더/연차 사용률/출퇴근 정정 보조 UX + e2e
+- WI-0127 직원 출퇴근 정정 UX 고도화(정정 대상 셀렉터/선택 기록 자동반영/메모 프리셋/입력 가드/근무시간 변화 프리뷰 + e2e)
 
 ### 진행 중
 
-- 다음: 직원 출퇴근 정정 UX 고도화(입력 가드/최근 기록 프리셋/검토 흐름)
+- 다음: 관리자 승인 큐 UX 고도화(대기 알림 배지, 모바일 반응형, 검색/정렬)
 
 ### 현재 아키텍처
 

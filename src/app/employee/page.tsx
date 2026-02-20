@@ -130,6 +130,42 @@ function formatDays(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+const ATTENDANCE_NOTE_PRESETS = ["퇴근 누락 정정", "출근 시각 정정", "휴게시간 정정"] as const;
+
+function calculateNetMinutes(input: { checkInAt: string; checkOutAt: string | null; breakMinutes: number }) {
+  const checkInMs = new Date(input.checkInAt).getTime();
+  if (Number.isNaN(checkInMs)) {
+    return null;
+  }
+  if (!input.checkOutAt) {
+    return null;
+  }
+  const checkOutMs = new Date(input.checkOutAt).getTime();
+  if (Number.isNaN(checkOutMs) || checkOutMs <= checkInMs) {
+    return null;
+  }
+  const grossMinutes = Math.round((checkOutMs - checkInMs) / 60_000);
+  return grossMinutes - Math.max(0, Math.trunc(input.breakMinutes));
+}
+
+function formatDeltaMinutes(deltaMinutes: number) {
+  if (deltaMinutes === 0) {
+    return "변화 없음";
+  }
+  const absMinutes = Math.abs(deltaMinutes);
+  const hours = Math.floor(absMinutes / 60);
+  const minutes = absMinutes % 60;
+  const parts: string[] = [];
+  if (hours > 0) {
+    parts.push(`${hours}시간`);
+  }
+  if (minutes > 0 || parts.length === 0) {
+    parts.push(`${minutes}분`);
+  }
+  const sign = deltaMinutes > 0 ? "+" : "-";
+  return `${sign}${parts.join(" ")}`;
+}
+
 export default function EmployeeSelfServicePage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -144,6 +180,7 @@ export default function EmployeeSelfServicePage() {
   const [isHoliday, setIsHoliday] = useState(false);
   const [attendanceNotes, setAttendanceNotes] = useState("");
   const [lastAttendanceId, setLastAttendanceId] = useState("");
+  const [selectedCorrectionRecordId, setSelectedCorrectionRecordId] = useState("");
 
   const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
   const [leaveUnit, setLeaveUnit] = useState<"FULL_DAY" | "HALF_DAY" | "HOUR">("FULL_DAY");
@@ -271,10 +308,16 @@ export default function EmployeeSelfServicePage() {
     if (attendanceRes.response.ok) {
       const parsed = attendanceRes.body as { records?: AttendanceRecordDto[] };
       const records = parsed.records ?? [];
-      setAttendance(records.slice().reverse().slice(-10).reverse());
+      const recentRecords = records.slice().reverse().slice(-10).reverse();
+      setAttendance(recentRecords);
       const pending = records.find((record) => record.state === "PENDING");
       if (pending) {
         setLastAttendanceId(pending.id);
+        setSelectedCorrectionRecordId(pending.id);
+      } else if (recentRecords.length > 0 && !selectedCorrectionRecordId.trim() && !lastAttendanceId.trim()) {
+        const latestId = recentRecords[recentRecords.length - 1].id;
+        setSelectedCorrectionRecordId(latestId);
+        setLastAttendanceId(latestId);
       }
     }
 
@@ -314,6 +357,7 @@ export default function EmployeeSelfServicePage() {
       const parsed = body as { record?: { id?: string } };
       if (parsed.record?.id) {
         setLastAttendanceId(parsed.record.id);
+        setSelectedCorrectionRecordId(parsed.record.id);
       }
       await refreshEmployeeSnapshot();
     }
@@ -437,6 +481,14 @@ export default function EmployeeSelfServicePage() {
     return attendance[attendance.length - 1] ?? null;
   }, [attendance]);
 
+  const selectedCorrectionRecord = useMemo(() => {
+    const targetId = selectedCorrectionRecordId.trim() || lastAttendanceId.trim();
+    if (!targetId) {
+      return null;
+    }
+    return attendance.find((record) => record.id === targetId) ?? null;
+  }, [attendance, lastAttendanceId, selectedCorrectionRecordId]);
+
   const attendanceSummary = useMemo(() => {
     if (!latestAttendance) {
       return "기록 없음";
@@ -471,18 +523,89 @@ export default function EmployeeSelfServicePage() {
       }));
   }, [leaveRequests]);
 
+  const correctionValidation = useMemo(() => {
+    if (!lastAttendanceId.trim()) {
+      return { isValid: false, message: "정정 대상 기록 ID를 선택해 주세요." };
+    }
+
+    const checkInMs = new Date(checkInAt).getTime();
+    if (Number.isNaN(checkInMs)) {
+      return { isValid: false, message: "출근 시각 형식이 올바르지 않습니다." };
+    }
+
+    const normalizedBreakMinutes = Math.max(0, Math.trunc(coerceNumber(breakMinutes)));
+    if (normalizedBreakMinutes > 12 * 60) {
+      return { isValid: false, message: "휴게 시간이 과도합니다. 12시간 이하로 입력해 주세요." };
+    }
+
+    if (checkOutAt.trim().length === 0) {
+      return { isValid: true, message: null };
+    }
+
+    const checkOutMs = new Date(checkOutAt).getTime();
+    if (Number.isNaN(checkOutMs)) {
+      return { isValid: false, message: "퇴근 시각 형식이 올바르지 않습니다." };
+    }
+    if (checkOutMs <= checkInMs) {
+      return { isValid: false, message: "퇴근 시각은 출근 시각 이후여야 합니다." };
+    }
+
+    const totalMinutes = Math.round((checkOutMs - checkInMs) / 60_000);
+    if (normalizedBreakMinutes >= totalMinutes) {
+      return { isValid: false, message: "휴게 시간이 근무 시간보다 크거나 같습니다." };
+    }
+
+    return { isValid: true, message: null };
+  }, [breakMinutes, checkInAt, checkOutAt, lastAttendanceId]);
+
+  const correctionDeltaLabel = useMemo(() => {
+    if (!selectedCorrectionRecord) {
+      return "비교 대상 없음";
+    }
+    const originalNetMinutes = calculateNetMinutes({
+      checkInAt: selectedCorrectionRecord.checkInAt,
+      checkOutAt: selectedCorrectionRecord.checkOutAt,
+      breakMinutes: selectedCorrectionRecord.breakMinutes
+    });
+    const draftNetMinutes = calculateNetMinutes({
+      checkInAt: toIso(checkInAt),
+      checkOutAt: checkOutAt.trim() ? toIso(checkOutAt) : null,
+      breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes)))
+    });
+
+    if (originalNetMinutes === null || draftNetMinutes === null) {
+      return "비교 불가";
+    }
+    return formatDeltaMinutes(draftNetMinutes - originalNetMinutes);
+  }, [breakMinutes, checkInAt, checkOutAt, selectedCorrectionRecord]);
+
+  function applyAttendanceRecordToCorrectionForm(record: AttendanceRecordDto) {
+    setSelectedCorrectionRecordId(record.id);
+    setLastAttendanceId(record.id);
+    setCheckInAt(toLocalInputValue(new Date(record.checkInAt)));
+    setCheckOutAt(record.checkOutAt ? toLocalInputValue(new Date(record.checkOutAt)) : "");
+    setBreakMinutes(String(record.breakMinutes));
+    setIsHoliday(record.isHoliday);
+    setAttendanceNotes(record.notes ?? "정정 요청");
+  }
+
+  function applySelectedCorrectionRecord() {
+    if (!selectedCorrectionRecord) {
+      return;
+    }
+    applyAttendanceRecordToCorrectionForm(selectedCorrectionRecord);
+  }
+
   function applyLatestAttendanceToCorrectionForm() {
     if (!latestAttendance) {
       return;
     }
-    setLastAttendanceId(latestAttendance.id);
-    setCheckInAt(toLocalInputValue(new Date(latestAttendance.checkInAt)));
-    if (latestAttendance.checkOutAt) {
-      setCheckOutAt(toLocalInputValue(new Date(latestAttendance.checkOutAt)));
-    }
-    setBreakMinutes(String(latestAttendance.breakMinutes));
-    setIsHoliday(latestAttendance.isHoliday);
-    setAttendanceNotes(latestAttendance.notes ?? "정정 요청");
+    applyAttendanceRecordToCorrectionForm(latestAttendance);
+  }
+
+  function selectCorrectionTarget(recordId: string) {
+    setSelectedCorrectionRecordId(recordId);
+    setLastAttendanceId(recordId);
   }
 
   return (
@@ -653,7 +776,29 @@ export default function EmployeeSelfServicePage() {
               최근/대상 기록 ID
               <input value={lastAttendanceId} onChange={(event) => setLastAttendanceId(event.target.value)} />
             </label>
+            <label className="full">
+              정정 대상 기록 선택
+              <select
+                value={selectedCorrectionRecordId}
+                onChange={(event) => selectCorrectionTarget(event.target.value)}
+              >
+                <option value="">최근 기록에서 선택</option>
+                {attendance.map((record) => (
+                  <option key={record.id} value={record.id}>
+                    {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} ({record.state})
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+          <p className="small muted" style={{ margin: "4px 0 0" }}>
+            근무시간 변화: <strong>{correctionDeltaLabel}</strong>
+          </p>
+          {correctionValidation.message ? (
+            <p className="small" style={{ margin: "8px 0 0", color: "var(--danger)" }}>
+              {correctionValidation.message}
+            </p>
+          ) : null}
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void createAttendance()}>
               출퇴근 기록 생성
@@ -661,12 +806,28 @@ export default function EmployeeSelfServicePage() {
             <button className="btn btn-secondary" onClick={() => void checkOutNow()} disabled={!lastAttendanceId}>
               퇴근 처리(지금)
             </button>
-            <button className="btn btn-secondary" onClick={() => void requestAttendanceCorrection()} disabled={!lastAttendanceId}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void requestAttendanceCorrection()}
+              disabled={!correctionValidation.isValid}
+            >
               출퇴근 정정(요청)
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={applySelectedCorrectionRecord}
+              disabled={!selectedCorrectionRecord}
+            >
+              선택 기록 불러오기
             </button>
             <button className="btn btn-secondary" onClick={applyLatestAttendanceToCorrectionForm} disabled={!latestAttendance}>
               최근 기록 불러오기
             </button>
+            {ATTENDANCE_NOTE_PRESETS.map((preset) => (
+              <button key={preset} className="btn btn-secondary" onClick={() => setAttendanceNotes(preset)}>
+                {preset}
+              </button>
+            ))}
           </div>
           <ul className="log-list">
             {attendance.length === 0 ? (
@@ -684,6 +845,9 @@ export default function EmployeeSelfServicePage() {
                   <span>
                     {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)}
                   </span>
+                  <button className="btn btn-secondary" onClick={() => applyAttendanceRecordToCorrectionForm(record)}>
+                    선택
+                  </button>
                   <time>{record.id}</time>
                 </li>
               ))
