@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-20
-> **Current version**: 0.1.24 (Employee Self-Service UX Phase 5)
+> **Current version**: 0.1.25 (Admin Approval Queue UX Phase 4)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -175,10 +175,11 @@
 - WI-0136 직원 셀프서비스 UX 4차 고도화(요청 상태 필터 + 모바일 요청 이력 타임라인 + 제출 직전 검증 피드백 + 사이드 네비 앵커 + e2e)
 - WI-0137 관리자 승인 큐 UX 3차 고도화(항목별 이력 요약 + 일괄 처리 직전 검증 피드백 + 모바일 승인 결과 피드백 + 사이드 네비 앵커 + e2e)
 - WI-0138 직원 셀프서비스 UX 5차 고도화(근태/휴가 통합 요약 카드 + 요청 수정/재제출 흐름 + 모바일 상태 알림 배지 + 사이드 네비 앵커 + e2e)
+- WI-0139 관리자 승인 큐 UX 4차 고도화(승인 근거 프리뷰 + 대기 SLA 타임라인 + 모바일 일괄 검토 시트 + 사이드 네비 앵커 + e2e)
 
 ### 진행 중
 
-- 다음: 관리자 승인 큐 UX 4차 고도화(승인 근거 프리뷰 + 대기 SLA 타임라인 + 모바일 일괄 검토 시트)
+- 다음: 직원 셀프서비스 UX 6차 고도화(정정/휴가 제출 체크리스트 통합 + 병목 구간 피드백 + 모바일 제출 가이드)
 
 ### 현재 아키텍처
 

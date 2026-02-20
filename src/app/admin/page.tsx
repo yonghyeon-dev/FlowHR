@@ -184,6 +184,38 @@ type QueueMobileApprovalFeedback = {
   at: string;
 };
 
+type QueueEvidencePreviewCard = {
+  key: string;
+  queue: "attendance" | "leave" | "payroll";
+  itemId: string;
+  employeeId: string;
+  primary: string;
+  secondary: string;
+  waitedHours: number;
+  alertLevel: QueueAlertLevel;
+  historySummary: string;
+  selected: boolean;
+};
+
+type QueueSlaTimelinePoint = {
+  key: QueueFocus;
+  label: string;
+  total: number;
+  within24: number;
+  between24And48: number;
+  over48: number;
+  oldestHours: number;
+};
+
+type QueueMobileReviewStep = {
+  id: "attendance" | "leave" | "payroll";
+  label: string;
+  targetCount: number;
+  approveReady: boolean;
+  rejectReady: boolean;
+  detail: string;
+};
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -292,6 +324,26 @@ function summarizeQueueAlert(waitHoursValues: number[]) {
   const watch = waitHoursValues.filter((value) => toQueueAlertLevel(value) === "watch").length;
   const alertLevel: QueueAlertLevel = critical > 0 ? "critical" : watch > 0 ? "watch" : "normal";
   return { oldestHours, critical, watch, alertLevel };
+}
+
+function summarizeSlaTimeline(waitHoursValues: number[]) {
+  const total = waitHoursValues.length;
+  let within24 = 0;
+  let between24And48 = 0;
+  let over48 = 0;
+
+  for (const waitHours of waitHoursValues) {
+    if (waitHours > 48) {
+      over48 += 1;
+    } else if (waitHours >= 24) {
+      between24And48 += 1;
+    } else {
+      within24 += 1;
+    }
+  }
+
+  const oldestHours = total > 0 ? Math.max(...waitHoursValues) : 0;
+  return { total, within24, between24And48, over48, oldestHours };
 }
 
 function matchesQueueSearch(
@@ -858,6 +910,190 @@ export default function AdminDashboardPage() {
           })[0];
     return { totalCritical, totalWatch, hottestQueue };
   }, [queueBadgeSummaries]);
+
+  const queueEvidencePreviewCards = useMemo<QueueEvidencePreviewCard[]>(() => {
+    const attendanceCards: QueueEvidencePreviewCard[] = filteredPendingAttendance.map((record) => {
+      const waitedHours = attendanceWaitHoursById.get(record.id) ?? 0;
+      const historySummary = approvalItemHistorySummaryMap.get(
+        toQueueItemHistoryKey("attendance", record.id)
+      );
+
+      return {
+        key: `attendance:${record.id}`,
+        queue: "attendance",
+        itemId: record.id,
+        employeeId: record.employeeId,
+        primary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)} / 휴게 ${record.breakMinutes}분`,
+        secondary: record.notes?.trim() ? `메모: ${record.notes.trim()}` : "메모 없음",
+        waitedHours,
+        alertLevel: toQueueAlertLevel(waitedHours),
+        historySummary: historySummary
+          ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
+          : "history 0",
+        selected: selectedAttendanceIds.includes(record.id)
+      };
+    });
+
+    const leaveCards: QueueEvidencePreviewCard[] = filteredPendingLeave.map((request) => {
+      const waitedHours = leaveWaitHoursById.get(request.id) ?? 0;
+      const historySummary = approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("leave", request.id));
+      const reasonParts = [request.reason?.trim(), request.decisionReason?.trim()].filter(
+        (value): value is string => Boolean(value)
+      );
+
+      return {
+        key: `leave:${request.id}`,
+        queue: "leave",
+        itemId: request.id,
+        employeeId: request.employeeId,
+        primary: `${request.leaveType} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)} (${formatDays(request.days)}일)`,
+        secondary: reasonParts.length > 0 ? `사유: ${reasonParts.join(" / ")}` : "사유 없음",
+        waitedHours,
+        alertLevel: toQueueAlertLevel(waitedHours),
+        historySummary: historySummary
+          ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
+          : "history 0",
+        selected: selectedLeaveIds.includes(request.id)
+      };
+    });
+
+    const payrollCards: QueueEvidencePreviewCard[] = filteredPreviewedPayroll.map((run) => {
+      const waitedHours = payrollWaitHoursById.get(run.id) ?? 0;
+      const historySummary = approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("payroll", run.id));
+      return {
+        key: `payroll:${run.id}`,
+        queue: "payroll",
+        itemId: run.id,
+        employeeId: run.employeeId ?? "-",
+        primary: `${formatDateTime(run.periodStart)} ~ ${formatDateTime(run.periodEnd)} / 총지급 ${formatKrw(run.grossPayKrw)}`,
+        secondary: "급여 프리뷰는 개별 확정으로 처리합니다.",
+        waitedHours,
+        alertLevel: toQueueAlertLevel(waitedHours),
+        historySummary: historySummary
+          ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
+          : "history 0",
+        selected: false
+      };
+    });
+
+    const allCards = [...attendanceCards, ...leaveCards, ...payrollCards];
+    const focusedCards =
+      approvalQueueFocus === "all"
+        ? allCards
+        : allCards.filter((card) => card.queue === approvalQueueFocus);
+
+    return [...focusedCards]
+      .sort((left, right) => {
+        const selectedDiff = Number(right.selected) - Number(left.selected);
+        if (selectedDiff !== 0) {
+          return selectedDiff;
+        }
+        const levelDiff = queueAlertLevelRank(right.alertLevel) - queueAlertLevelRank(left.alertLevel);
+        if (levelDiff !== 0) {
+          return levelDiff;
+        }
+        return right.waitedHours - left.waitedHours;
+      })
+      .slice(0, 9);
+  }, [
+    approvalItemHistorySummaryMap,
+    approvalQueueFocus,
+    attendanceWaitHoursById,
+    filteredPendingAttendance,
+    filteredPendingLeave,
+    filteredPreviewedPayroll,
+    leaveWaitHoursById,
+    payrollWaitHoursById,
+    selectedAttendanceIds,
+    selectedLeaveIds
+  ]);
+
+  const queueSlaTimelinePoints = useMemo<QueueSlaTimelinePoint[]>(
+    () => [
+      {
+        key: "all",
+        label: "전체",
+        ...summarizeSlaTimeline([
+          ...attendanceWaitHoursValues,
+          ...leaveWaitHoursValues,
+          ...payrollWaitHoursValues
+        ])
+      },
+      {
+        key: "attendance",
+        label: "출퇴근",
+        ...summarizeSlaTimeline(attendanceWaitHoursValues)
+      },
+      {
+        key: "leave",
+        label: "휴가",
+        ...summarizeSlaTimeline(leaveWaitHoursValues)
+      },
+      {
+        key: "payroll",
+        label: "급여",
+        ...summarizeSlaTimeline(payrollWaitHoursValues)
+      }
+    ],
+    [attendanceWaitHoursValues, leaveWaitHoursValues, payrollWaitHoursValues]
+  );
+
+  const activeQueueSlaTimelinePoint =
+    queueSlaTimelinePoints.find((point) => point.key === approvalQueueFocus) ?? queueSlaTimelinePoints[0];
+
+  const mobileBulkReviewSteps = useMemo<QueueMobileReviewStep[]>(
+    () => [
+      {
+        id: "attendance",
+        label: "출퇴근",
+        targetCount: selectedAttendanceCount,
+        approveReady: canApproveSelectedAttendance,
+        rejectReady: canRejectSelectedAttendance,
+        detail:
+          selectedAttendanceCount === 0
+            ? "선택 항목이 없습니다."
+            : canApproveSelectedAttendance
+              ? "일괄 승인/반려 실행 가능"
+              : "현재 필터와 선택 상태를 먼저 맞춰야 합니다."
+      },
+      {
+        id: "leave",
+        label: "휴가",
+        targetCount: selectedLeaveCount,
+        approveReady: canApproveSelectedLeave,
+        rejectReady: canRejectSelectedLeave,
+        detail:
+          selectedLeaveCount === 0
+            ? "선택 항목이 없습니다."
+            : canRejectSelectedLeave
+              ? "사유 확인 완료, 일괄 반려 실행 가능"
+              : hasLeaveRejectReason
+                ? "선택/필터 상태를 정리하면 실행할 수 있습니다."
+                : "반려 사유 입력이 필요합니다."
+      },
+      {
+        id: "payroll",
+        label: "급여",
+        targetCount: filteredPreviewedPayroll.length,
+        approveReady: false,
+        rejectReady: false,
+        detail:
+          filteredPreviewedPayroll.length > 0
+            ? "급여 프리뷰는 개별 확정으로 처리합니다."
+            : "현재 필터 조건에서 검토할 급여 프리뷰가 없습니다."
+      }
+    ],
+    [
+      canApproveSelectedAttendance,
+      canApproveSelectedLeave,
+      canRejectSelectedAttendance,
+      canRejectSelectedLeave,
+      filteredPreviewedPayroll.length,
+      hasLeaveRejectReason,
+      selectedAttendanceCount,
+      selectedLeaveCount
+    ]
+  );
 
   async function callApi(
     label: string,
@@ -2267,6 +2503,158 @@ export default function AdminDashboardPage() {
               급여 큐는 선택 필터가 없어 검색 조건만 적용됩니다.
             </p>
           ) : null}
+
+          <section className="queue-evidence-preview-panel" id="approval-evidence-preview">
+            <div className="queue-section-head">
+              <h3>승인 근거 프리뷰</h3>
+              <p className="small muted">
+                선택 항목과 긴급 항목을 우선으로, 메모/사유/이력을 승인 전에 미리 확인합니다.
+              </p>
+            </div>
+            {queueEvidencePreviewCards.length === 0 ? (
+              <p className="small muted">현재 필터 조건에서 확인할 승인 근거가 없습니다.</p>
+            ) : (
+              <ul className="queue-evidence-preview-list" aria-label="approval evidence preview cards">
+                {queueEvidencePreviewCards.map((card) => (
+                  <li
+                    key={card.key}
+                    className={`level-${card.alertLevel}${card.selected ? " is-selected" : ""}`}
+                  >
+                    <div className="queue-evidence-preview-head">
+                      <strong>
+                        [{card.queue}] {card.itemId}
+                      </strong>
+                      <span className={`queue-sla-chip level-${card.alertLevel}`}>
+                        대기 {Math.round(card.waitedHours)}h
+                      </span>
+                    </div>
+                    <p>{card.primary}</p>
+                    <p className="small muted">{card.secondary}</p>
+                    <div className="queue-evidence-preview-meta">
+                      <span className="queue-history-chip">{card.employeeId}</span>
+                      <span className="queue-history-chip">{card.historySummary}</span>
+                      {card.selected ? <span className="queue-history-chip">selected</span> : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="queue-sla-timeline-panel" id="approval-sla-timeline">
+            <div className="queue-section-head">
+              <h3>대기 SLA 타임라인</h3>
+              <p className="small muted">
+                24h 이내 / 24~48h / 48h 초과 구간으로 대기 분포를 확인해 우선순위를 정합니다.
+              </p>
+            </div>
+            <p className="small muted" style={{ marginTop: 0 }}>
+              현재 포커스: {activeQueueSlaTimelinePoint.label} / total {activeQueueSlaTimelinePoint.total} / oldest{" "}
+              {Math.round(activeQueueSlaTimelinePoint.oldestHours)}h
+            </p>
+            <ul className="queue-sla-timeline-list" aria-label="approval queue sla timeline">
+              {queueSlaTimelinePoints.map((point) => {
+                const safeTotal = Math.max(1, point.total);
+                const withinPercent = (point.within24 / safeTotal) * 100;
+                const watchPercent = (point.between24And48 / safeTotal) * 100;
+                const criticalPercent = (point.over48 / safeTotal) * 100;
+
+                return (
+                  <li key={point.key}>
+                    <div className="queue-sla-timeline-head">
+                      <strong>{point.label}</strong>
+                      <span className="muted">
+                        total {point.total} / oldest {Math.round(point.oldestHours)}h
+                      </span>
+                    </div>
+                    <div className="queue-sla-timeline-bar" role="img" aria-label={`${point.label} sla timeline`}>
+                      <span className="segment segment-normal" style={{ width: `${withinPercent}%` }} />
+                      <span className="segment segment-watch" style={{ width: `${watchPercent}%` }} />
+                      <span className="segment segment-critical" style={{ width: `${criticalPercent}%` }} />
+                    </div>
+                    <div className="queue-sla-timeline-chips">
+                      <span className="queue-history-chip">24h 이내 {point.within24}</span>
+                      <span className="queue-history-chip">24~48h {point.between24And48}</span>
+                      <span className="queue-history-chip">48h 초과 {point.over48}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          <section className="queue-mobile-review-sheet" id="approval-mobile-review-sheet">
+            <div className="queue-section-head">
+              <h3>모바일 일괄 검토 시트</h3>
+              <p className="small muted">
+                선택 건수와 실행 가능 조건을 모바일 기준으로 확인하고 즉시 일괄 처리합니다.
+              </p>
+            </div>
+            <div className="queue-mobile-review-grid" aria-label="mobile bulk review sheet">
+              {mobileBulkReviewSteps.map((step) => (
+                <article
+                  key={step.id}
+                  className={`queue-mobile-review-card ${step.approveReady || step.rejectReady ? "is-ready" : "is-blocked"}`}
+                >
+                  <p>
+                    <strong>{step.label}</strong> · 대상 {step.targetCount}건
+                  </p>
+                  <p className="small muted">{step.detail}</p>
+                  <div className="queue-mobile-review-actions">
+                    {step.id === "attendance" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveSelectedAttendance()}
+                          disabled={!canApproveSelectedAttendance}
+                        >
+                          출퇴근 승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectSelectedAttendance()}
+                          disabled={!canRejectSelectedAttendance}
+                        >
+                          출퇴근 반려
+                        </button>
+                      </>
+                    ) : null}
+                    {step.id === "leave" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveSelectedLeave()}
+                          disabled={!canApproveSelectedLeave}
+                        >
+                          휴가 승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectSelectedLeave()}
+                          disabled={!canRejectSelectedLeave}
+                        >
+                          휴가 반려
+                        </button>
+                      </>
+                    ) : null}
+                    {step.id === "payroll" ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => setApprovalQueueFocus("payroll")}
+                      >
+                        급여 큐 보기
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <section className="queue-bulk-validation-panel" id="approval-bulk-validation">
             <div className="queue-section-head">
