@@ -33,12 +33,15 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <Link href="/employee#request-bottleneck-feedback">Bottleneck Feedback</Link>
           <Link href="/employee#request-wait-prediction">Wait Prediction</Link>
           <Link href="/employee#request-history-sort-accuracy">Sort Accuracy</Link>
+          <Link href="/employee#request-history-sort-hardening">Sort Hardening</Link>
           <Link href="/employee#approval-delay-risk-prediction">Delay Risk Prediction</Link>
+          <Link href="/employee#approval-delay-risk-response">Delay Risk Response</Link>
           <Link href="/employee#mobile-shortcuts">Mobile Shortcuts</Link>
           <Link href="/employee#mobile-status-badges">Mobile Status Badges</Link>
           <Link href="/employee#mobile-submit-guide">Mobile Submit Guide</Link>
           <Link href="/employee#mobile-follow-up-guide">Mobile Follow-up Guide</Link>
           <Link href="/employee#mobile-follow-up-recommendation">Mobile Follow-up Recommendation</Link>
+          <Link href="/employee#mobile-follow-up-recommendation-upgrade">Recommendation Upgrade</Link>
           <Link href="/employee#request-timeline">Request Timeline</Link>
           <Link href="/employee#request-resubmit">Resubmit Flow</Link>
           <Link href="/employee#attendance">Attendance</Link>

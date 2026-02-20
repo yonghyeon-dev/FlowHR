@@ -241,6 +241,48 @@ type MobileFollowUpRecommendationCard = {
   targetSectionId: string;
 };
 
+type RequestHistorySortHardeningCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  accuracyScore: number;
+  confidenceGap: number;
+  totalCompared: number;
+  responseLabel: string;
+  detail: string;
+  searchScope: RequestSearchScope;
+  searchQuery: string;
+  recommendedSortOption: RequestSortOption;
+  targetSectionId: string;
+};
+
+type ApprovalDelayRiskResponseCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  pendingCount: number;
+  stalledCount: number;
+  criticalCount: number;
+  riskScore: number;
+  responseWindow: string;
+  responseLabel: string;
+  detail: string;
+  searchScope: RequestSearchScope;
+  searchQuery: string;
+  recommendedSortOption: RequestSortOption;
+  targetSectionId: string;
+};
+
+type MobileFollowUpRecommendationUpgradeCard = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  priorityScore: number;
+  detail: string;
+  ctaLabel: string;
+  targetSectionId: string;
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -426,6 +468,29 @@ function sortRequestRowsByOption(rows: RequestSearchRow[], sortOption: RequestSo
     }
     return toTimestamp(right.at) - toTimestamp(left.at);
   });
+}
+
+function requestSortOptionLabel(sortOption: RequestSortOption) {
+  if (sortOption === "pending_first") {
+    return "pending-first";
+  }
+  if (sortOption === "latest_desc") {
+    return "latest-first";
+  }
+  if (sortOption === "oldest_asc") {
+    return "oldest-first";
+  }
+  return "status-cluster";
+}
+
+function mobileFollowUpToneRank(tone: "ready" | "pending" | "fail") {
+  if (tone === "fail") {
+    return 2;
+  }
+  if (tone === "pending") {
+    return 1;
+  }
+  return 0;
 }
 
 function matchesRequestSearch(scope: RequestSearchScope, query: string, row: RequestSearchRow) {
@@ -878,20 +943,38 @@ export default function EmployeeSelfServicePage() {
     }
   }
 
+  function applyRequestSearchPreset(preset: {
+    scope: RequestSearchScope;
+    query: string;
+    sortOption: RequestSortOption;
+    targetSectionId: string;
+    feedback: string;
+  }) {
+    setRequestSearchScope(preset.scope);
+    setRequestSearchQuery(preset.query);
+    setRequestSortOption(preset.sortOption);
+    jumpToSection(preset.targetSectionId);
+    pushMobileFlowFeedback(preset.feedback);
+  }
+
   function openPendingRequestSearch() {
-    setRequestSearchScope("status");
-    setRequestSearchQuery("pending");
-    setRequestSortOption("pending_first");
-    jumpToSection("request-search-sort");
-    pushMobileFlowFeedback("승인 대기 요청 필터를 열었습니다.");
+    applyRequestSearchPreset({
+      scope: "status",
+      query: "pending",
+      sortOption: "pending_first",
+      targetSectionId: "request-search-sort",
+      feedback: "Pending requests filter is now applied."
+    });
   }
 
   function openRejectedRequestSearch() {
-    setRequestSearchScope("status");
-    setRequestSearchQuery("rejected");
-    setRequestSortOption("latest_desc");
-    jumpToSection("request-search-sort");
-    pushMobileFlowFeedback("반려 요청 필터를 열었습니다.");
+    applyRequestSearchPreset({
+      scope: "status",
+      query: "rejected",
+      sortOption: "latest_desc",
+      targetSectionId: "request-search-sort",
+      feedback: "Rejected requests filter is now applied."
+    });
   }
 
   function runMobileFollowUpAction(card: MobileFollowUpGuideCard) {
@@ -943,6 +1026,67 @@ export default function EmployeeSelfServicePage() {
       return;
     }
     if (card.key === "api-failure-follow-up" && stats.fail > 0) {
+      jumpToSection("request-feedback");
+      pushMobileFlowFeedback("Review API failure details before retry.");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runRequestHistorySortHardeningAction(card: RequestHistorySortHardeningCard) {
+    applyRequestSearchPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      sortOption: card.recommendedSortOption,
+      targetSectionId: card.targetSectionId,
+      feedback:
+        card.totalCompared === 0
+          ? "No request history rows for sort hardening."
+          : `Applied ${requestSortOptionLabel(card.recommendedSortOption)} preset for sort hardening.`
+    });
+  }
+
+  function runApprovalDelayRiskResponseAction(card: ApprovalDelayRiskResponseCard) {
+    applyRequestSearchPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      sortOption: card.recommendedSortOption,
+      targetSectionId: card.targetSectionId,
+      feedback:
+        card.pendingCount === 0
+          ? "No pending requests for delay-risk response."
+          : `Delay-risk response prepared (${card.responseWindow}).`
+    });
+  }
+
+  function runMobileFollowUpRecommendationUpgradeAction(card: MobileFollowUpRecommendationUpgradeCard) {
+    if (card.key === "sort-hardening") {
+      const sortHardeningTarget = requestHistorySortHardeningCards.find(
+        (hardeningCard) => hardeningCard.totalCompared > 0 && hardeningCard.severity !== "normal"
+      );
+      if (sortHardeningTarget) {
+        runRequestHistorySortHardeningAction(sortHardeningTarget);
+        jumpToSection("request-history-sort-hardening");
+        return;
+      }
+    }
+    if (card.key === "delay-response") {
+      const delayResponseTarget = approvalDelayRiskResponseCards.find(
+        (responseCard) => responseCard.pendingCount > 0 && responseCard.severity !== "normal"
+      );
+      if (delayResponseTarget) {
+        runApprovalDelayRiskResponseAction(delayResponseTarget);
+        jumpToSection("approval-delay-risk-response");
+        return;
+      }
+    }
+    if (card.key === "resubmit-readiness" && resubmitCandidates.length > 0 && !resubmitFlowReady) {
+      openRejectedRequestSearch();
+      jumpToSection("request-resubmit");
+      pushMobileFlowFeedback("Review rejected requests and complete resubmit validation.");
+      return;
+    }
+    if (card.key === "api-recovery-upgrade" && stats.fail > 0) {
       jumpToSection("request-feedback");
       pushMobileFlowFeedback("Review API failure details before retry.");
       return;
@@ -1672,6 +1816,62 @@ export default function EmployeeSelfServicePage() {
     });
   }, [normalizedRequestSearchQuery, requestSearchRows, requestSearchScope, requestSortOption]);
 
+  const requestHistorySortHardeningCards = useMemo<RequestHistorySortHardeningCard[]>(() => {
+    const cards = requestHistorySortAccuracyCards.map((card) => {
+      let searchScope: RequestSearchScope = "all";
+      let searchQuery = "";
+      let recommendedSortOption: RequestSortOption = "pending_first";
+      if (card.key === "pending-first") {
+        searchScope = "status";
+        searchQuery = "pending";
+        recommendedSortOption = "pending_first";
+      } else if (card.key === "latest-desc") {
+        recommendedSortOption = "latest_desc";
+      } else if (card.key === "status-cluster") {
+        recommendedSortOption = "status";
+      }
+
+      const confidenceGap = Math.max(0, 100 - card.accuracyScore);
+      const alreadyAligned = requestSortOption === recommendedSortOption;
+      const responseLabel =
+        card.totalCompared === 0
+          ? "No rows in scope."
+          : card.severity === "critical"
+            ? `Apply ${requestSortOptionLabel(recommendedSortOption)} and review top rows immediately.`
+            : card.severity === "watch"
+              ? `Apply ${requestSortOptionLabel(recommendedSortOption)} and re-check alignment.`
+              : alreadyAligned
+                ? "Current sort option is already aligned."
+                : `Switch to ${requestSortOptionLabel(recommendedSortOption)} for higher confidence.`;
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        accuracyScore: card.accuracyScore,
+        confidenceGap,
+        totalCompared: card.totalCompared,
+        responseLabel,
+        detail:
+          card.totalCompared === 0
+            ? "No request history rows in current scope."
+            : `Accuracy ${card.accuracyScore} with confidence gap ${confidenceGap}.`,
+        searchScope,
+        searchQuery,
+        recommendedSortOption,
+        targetSectionId: "request-search-sort"
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.confidenceGap - left.confidenceGap;
+    });
+  }, [requestHistorySortAccuracyCards, requestSortOption]);
+
   const approvalDelayRiskPredictionCards = useMemo<ApprovalDelayRiskPredictionCard[]>(() => {
     const pendingRows = requestSearchRows.filter((row) => row.status === "PENDING");
 
@@ -1739,6 +1939,68 @@ export default function EmployeeSelfServicePage() {
       return right.pendingCount - left.pendingCount;
     });
   }, [requestSearchRows]);
+
+  const approvalDelayRiskResponseCards = useMemo<ApprovalDelayRiskResponseCard[]>(() => {
+    const cards = approvalDelayRiskPredictionCards.map((card) => {
+      let searchScope: RequestSearchScope = "status";
+      let searchQuery = "pending";
+      let targetSectionId = "request-search-sort";
+      let responseLabel = "Open pending request queue and resolve oldest items first.";
+
+      if (card.key === "attendance") {
+        searchScope = "all";
+        searchQuery = "attendance";
+        targetSectionId = "attendance";
+        responseLabel = "Review attendance requests and remove correction blockers.";
+      } else if (card.key === "leave") {
+        searchScope = "all";
+        searchQuery = "leave";
+        targetSectionId = "leave";
+        responseLabel = "Review leave requests and confirm dependency fields.";
+      }
+
+      const responseWindow =
+        card.pendingCount === 0
+          ? "monitor daily"
+          : card.severity === "critical"
+            ? "within 2h"
+            : card.severity === "watch"
+              ? "within 8h"
+              : "within 24h";
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        pendingCount: card.pendingCount,
+        stalledCount: card.stalledCount,
+        criticalCount: card.criticalCount,
+        riskScore: card.riskScore,
+        responseWindow,
+        responseLabel,
+        detail:
+          card.pendingCount === 0
+            ? "No pending requests for this scope."
+            : `Respond ${responseWindow}: risk ${card.riskScore}, stalled ${card.stalledCount}, critical ${card.criticalCount}.`,
+        searchScope,
+        searchQuery,
+        recommendedSortOption: "pending_first",
+        targetSectionId
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      const riskScoreDiff = right.riskScore - left.riskScore;
+      if (riskScoreDiff !== 0) {
+        return riskScoreDiff;
+      }
+      return right.pendingCount - left.pendingCount;
+    });
+  }, [approvalDelayRiskPredictionCards]);
 
   const filteredRequestFeedbackRows = useMemo(() => {
     if (requestFeedbackStatusFilter === "all") {
@@ -2428,6 +2690,98 @@ export default function EmployeeSelfServicePage() {
     stats.fail
   ]);
 
+  const mobileFollowUpRecommendationUpgradeCards = useMemo<MobileFollowUpRecommendationUpgradeCard[]>(() => {
+    const topSortHardeningRisk = requestHistorySortHardeningCards.find(
+      (card) => card.totalCompared > 0 && card.severity !== "normal"
+    );
+    const topDelayResponseRisk = approvalDelayRiskResponseCards.find(
+      (card) => card.pendingCount > 0 && card.severity !== "normal"
+    );
+
+    const cards: MobileFollowUpRecommendationUpgradeCard[] = [
+      {
+        key: "sort-hardening",
+        label: "Sort hardening recommendation",
+        tone: topSortHardeningRisk
+          ? topSortHardeningRisk.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topSortHardeningRisk
+          ? topSortHardeningRisk.severity === "critical"
+            ? 100
+            : 75
+          : 25,
+        detail: topSortHardeningRisk
+          ? topSortHardeningRisk.responseLabel
+          : "No sort hardening action is required.",
+        ctaLabel: topSortHardeningRisk ? "Apply hardening preset" : "Open hardening panel",
+        targetSectionId: "request-history-sort-hardening"
+      },
+      {
+        key: "delay-response",
+        label: "Delay response recommendation",
+        tone: topDelayResponseRisk
+          ? topDelayResponseRisk.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topDelayResponseRisk
+          ? topDelayResponseRisk.severity === "critical"
+            ? 95
+            : 70
+          : 20,
+        detail: topDelayResponseRisk
+          ? topDelayResponseRisk.responseLabel
+          : "No delay-risk response action is required.",
+        ctaLabel: topDelayResponseRisk ? "Run delay response" : "Open response panel",
+        targetSectionId: "approval-delay-risk-response"
+      },
+      {
+        key: "resubmit-readiness",
+        label: "Resubmit readiness recommendation",
+        tone: resubmitCandidates.length === 0 ? "ready" : resubmitFlowReady ? "pending" : "fail",
+        priorityScore: resubmitCandidates.length === 0 ? 15 : resubmitFlowReady ? 55 : 90,
+        detail:
+          resubmitCandidates.length === 0
+            ? "No rejected/canceled requests require resubmission."
+            : resubmitFlowReady
+              ? "Resubmit validation is ready. Complete final submission."
+              : resubmitFirstFailCheck?.detail || "Review resubmit draft and validation.",
+        ctaLabel: resubmitCandidates.length > 0 ? "Open resubmit flow" : "Open submit guide",
+        targetSectionId: resubmitCandidates.length > 0 ? "request-resubmit" : "mobile-submit-guide"
+      },
+      {
+        key: "api-recovery-upgrade",
+        label: "API recovery recommendation",
+        tone: stats.fail > 0 ? "fail" : "ready",
+        priorityScore: stats.fail > 0 ? 85 : 10,
+        detail:
+          stats.fail > 0
+            ? latestFailureCauseMessage || "Investigate API failure causes before retry."
+            : "No API recovery follow-up is required.",
+        ctaLabel: stats.fail > 0 ? "Open request feedback" : "Open request timeline",
+        targetSectionId: stats.fail > 0 ? "request-feedback" : "request-timeline"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const toneDiff = mobileFollowUpToneRank(right.tone) - mobileFollowUpToneRank(left.tone);
+      if (toneDiff !== 0) {
+        return toneDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    approvalDelayRiskResponseCards,
+    latestFailureCauseMessage,
+    requestHistorySortHardeningCards,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowReady,
+    stats.fail
+  ]);
+
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
       return "비교 대상 없음";
@@ -2910,6 +3264,36 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article className="panel panel-request-history-sort-hardening" id="request-history-sort-hardening">
+          <h2>Request history sort hardening</h2>
+          <p className="small">
+            Reinforces sort-accuracy cards with actionable presets so follow-up order stays aligned with request intent.
+          </p>
+          <ul className="request-history-sort-hardening-list" aria-label="request history sort hardening feedback list">
+            {requestHistorySortHardeningCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="request-history-sort-hardening-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">gap {card.confidenceGap}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.responseLabel}</p>
+                <div className="request-history-sort-hardening-meta">
+                  <span className="queue-history-chip">score {card.accuracyScore}</span>
+                  <span className="queue-history-chip">{requestSortOptionLabel(card.recommendedSortOption)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runRequestHistorySortHardeningAction(card)}
+                >
+                  apply preset
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-approval-delay-risk-prediction" id="approval-delay-risk-prediction">
           <h2>승인 지연 위험 예측 피드백</h2>
           <p className="small">
@@ -2941,6 +3325,37 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article className="panel panel-approval-delay-risk-response" id="approval-delay-risk-response">
+          <h2>Approval delay risk response</h2>
+          <p className="small">
+            Converts delay-risk prediction into response windows and one-tap presets for rapid mitigation.
+          </p>
+          <ul className="approval-delay-risk-response-list" aria-label="approval delay risk response feedback list">
+            {approvalDelayRiskResponseCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="approval-delay-risk-response-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">risk {card.riskScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.responseLabel}</p>
+                <div className="approval-delay-risk-response-meta">
+                  <span className="queue-history-chip">pending {card.pendingCount}</span>
+                  <span className="queue-history-chip">window {card.responseWindow}</span>
+                  <span className="queue-history-chip">critical {card.criticalCount}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runApprovalDelayRiskResponseAction(card)}
+                >
+                  run response
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-mobile-shortcuts" id="mobile-shortcuts">
           <h2>모바일 단축 흐름</h2>
           <p className="small">터치 중심 단축 버튼으로 입력/정정/신청/갱신을 빠르게 진행합니다.</p>
@@ -2959,6 +3374,18 @@ export default function EmployeeSelfServicePage() {
             </button>
             <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("request-feedback")}>
               피드백 바로가기
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("request-history-sort-hardening")}>
+              sort hardening
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("approval-delay-risk-response")}>
+              delay response
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("mobile-follow-up-recommendation-upgrade")}
+            >
+              recommendation upgrade
             </button>
             <button className="btn btn-primary btn-small" onClick={() => void refreshEmployeeSnapshot()}>
               요청 상태 새로고침
@@ -3059,6 +3486,34 @@ export default function EmployeeSelfServicePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runMobileFollowUpRecommendationAction(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article
+          className="panel panel-mobile-follow-up-recommendation-upgrade"
+          id="mobile-follow-up-recommendation-upgrade"
+        >
+          <h2>Mobile follow-up recommendation upgrade</h2>
+          <p className="small">
+            Prioritized recommendations combine sort-hardening, delay-response, resubmit readiness, and API recovery.
+          </p>
+          <ul className="mobile-follow-up-recommendation-upgrade-list" aria-label="mobile follow-up recommendation upgrade list">
+            {mobileFollowUpRecommendationUpgradeCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="mobile-follow-up-recommendation-upgrade-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">priority {card.priorityScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runMobileFollowUpRecommendationUpgradeAction(card)}
                 >
                   {card.ctaLabel}
                 </button>
