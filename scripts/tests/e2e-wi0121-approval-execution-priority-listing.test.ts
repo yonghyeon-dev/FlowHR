@@ -34,7 +34,9 @@ async function run() {
   const organization = await memoryDataAccess.organizations.create({ name: "Org Approval Priority" });
   const organizationId = organization.id;
 
-  const baseTime = new Date("2026-02-20T00:00:00.000Z");
+  const baseTime = new Date();
+  const asOf = new Date(baseTime.getTime() + 3 * 60 * 60 * 1000);
+  const asOfIso = asOf.toISOString();
 
   await memoryDataAccess.approvals.createExecution({
     organizationId,
@@ -77,7 +79,7 @@ async function run() {
   const priorityResponse = await approvalExecutionsRoute.GET(
     new Request(
       `http://localhost/api/approval/executions?organizationId=${organizationId}&sort=priority_desc&asOf=${encodeURIComponent(
-        "2026-02-20T03:00:00.000Z"
+        asOfIso
       )}&stalledHoursMin=1`,
       {
         method: "GET",
@@ -96,7 +98,7 @@ async function run() {
   const priorityNoFilterResponse = await approvalExecutionsRoute.GET(
     new Request(
       `http://localhost/api/approval/executions?organizationId=${organizationId}&sort=priority_desc&asOf=${encodeURIComponent(
-        "2026-02-20T03:00:00.000Z"
+        asOfIso
       )}`,
       {
         method: "GET",

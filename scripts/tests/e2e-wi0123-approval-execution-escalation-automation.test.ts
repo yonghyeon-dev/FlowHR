@@ -93,6 +93,7 @@ async function run() {
 
   const organization = await memoryDataAccess.organizations.create({ name: "Org Approval Escalation" });
   const organizationId = organization.id;
+  const asOfIso = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
 
   await memoryDataAccess.approvals.createExecution({
     organizationId,
@@ -139,7 +140,7 @@ async function run() {
         {
           organizationId,
           stalledHoursMin: 1,
-          asOf: "2026-02-20T03:00:00.000Z",
+          asOf: asOfIso,
           dryRun: true,
           notificationChannel: "qa-dry-run"
         },
@@ -167,7 +168,7 @@ async function run() {
         {
           organizationId,
           stalledHoursMin: 1,
-          asOf: "2026-02-20T03:00:00.000Z",
+          asOf: asOfIso,
           dryRun: false,
           notificationChannel: "approval-stalled-queue"
         },
@@ -208,7 +209,7 @@ async function run() {
         {
           organizationId,
           stalledHoursMin: 9999,
-          asOf: "2026-02-20T03:00:00.000Z",
+          asOf: asOfIso,
           dryRun: false
         },
         actorHeaders("admin", "ADM-0123", organizationId)
@@ -229,7 +230,7 @@ async function run() {
         {
           organizationId,
           stalledHoursMin: 1,
-          asOf: "2026-02-20T03:00:00.000Z",
+          asOf: asOfIso,
           dryRun: false
         },
         actorHeaders("admin", "ADM-0123", organizationId)
