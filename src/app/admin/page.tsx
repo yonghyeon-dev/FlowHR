@@ -201,9 +201,9 @@ type QueueSlaTimelinePoint = {
   key: QueueFocus;
   label: string;
   total: number;
-  within24: number;
-  between24And48: number;
-  over48: number;
+  belowWatch: number;
+  betweenWatchAndCritical: number;
+  overCritical: number;
   oldestHours: number;
 };
 
@@ -214,6 +214,38 @@ type QueueMobileReviewStep = {
   approveReady: boolean;
   rejectReady: boolean;
   detail: string;
+};
+
+type QueueEvidenceComparisonCard = {
+  key: string;
+  queue: "attendance" | "leave" | "payroll";
+  baselineItemId: string;
+  compareItemId: string;
+  baselineWaitHours: number;
+  compareWaitHours: number;
+  waitGapHours: number;
+  baselineFailCount: number;
+  compareFailCount: number;
+  failGapCount: number;
+  severity: QueueAlertLevel;
+  recommendation: string;
+};
+
+type QueueSlaRuleAlert = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  count: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type QueueMobileApprovalChecklistItem = {
+  id: string;
+  label: string;
+  pass: boolean;
+  detail: string;
+  targetSectionId: string;
 };
 
 function isTruthyFlag(value: string | undefined) {
@@ -298,11 +330,15 @@ function toWaitHours(value: string | null, referenceMs: number) {
   return Math.max(0, (referenceMs - timestamp) / 3_600_000);
 }
 
-function toQueueAlertLevel(waitHours: number): QueueAlertLevel {
-  if (waitHours >= 48) {
+function toQueueAlertLevelByRule(
+  waitHours: number,
+  watchThresholdHours: number,
+  criticalThresholdHours: number
+): QueueAlertLevel {
+  if (waitHours >= criticalThresholdHours) {
     return "critical";
   }
-  if (waitHours >= 24) {
+  if (waitHours >= watchThresholdHours) {
     return "watch";
   }
   return "normal";
@@ -318,32 +354,44 @@ function queueAlertLevelRank(level: QueueAlertLevel) {
   return 0;
 }
 
-function summarizeQueueAlert(waitHoursValues: number[]) {
+function summarizeQueueAlertByRule(
+  waitHoursValues: number[],
+  watchThresholdHours: number,
+  criticalThresholdHours: number
+) {
   const oldestHours = waitHoursValues.length > 0 ? Math.max(...waitHoursValues) : 0;
-  const critical = waitHoursValues.filter((value) => toQueueAlertLevel(value) === "critical").length;
-  const watch = waitHoursValues.filter((value) => toQueueAlertLevel(value) === "watch").length;
+  const critical = waitHoursValues.filter(
+    (value) => toQueueAlertLevelByRule(value, watchThresholdHours, criticalThresholdHours) === "critical"
+  ).length;
+  const watch = waitHoursValues.filter(
+    (value) => toQueueAlertLevelByRule(value, watchThresholdHours, criticalThresholdHours) === "watch"
+  ).length;
   const alertLevel: QueueAlertLevel = critical > 0 ? "critical" : watch > 0 ? "watch" : "normal";
   return { oldestHours, critical, watch, alertLevel };
 }
 
-function summarizeSlaTimeline(waitHoursValues: number[]) {
+function summarizeSlaTimelineByRule(
+  waitHoursValues: number[],
+  watchThresholdHours: number,
+  criticalThresholdHours: number
+) {
   const total = waitHoursValues.length;
-  let within24 = 0;
-  let between24And48 = 0;
-  let over48 = 0;
+  let belowWatch = 0;
+  let betweenWatchAndCritical = 0;
+  let overCritical = 0;
 
   for (const waitHours of waitHoursValues) {
-    if (waitHours > 48) {
-      over48 += 1;
-    } else if (waitHours >= 24) {
-      between24And48 += 1;
+    if (waitHours >= criticalThresholdHours) {
+      overCritical += 1;
+    } else if (waitHours >= watchThresholdHours) {
+      betweenWatchAndCritical += 1;
     } else {
-      within24 += 1;
+      belowWatch += 1;
     }
   }
 
   const oldestHours = total > 0 ? Math.max(...waitHoursValues) : 0;
-  return { total, within24, between24And48, over48, oldestHours };
+  return { total, belowWatch, betweenWatchAndCritical, overCritical, oldestHours };
 }
 
 function matchesQueueSearch(
@@ -427,6 +475,8 @@ export default function AdminDashboardPage() {
   const [attendanceQueueSort, setAttendanceQueueSort] = useState<AttendanceQueueSort>("checkin_desc");
   const [leaveQueueSort, setLeaveQueueSort] = useState<LeaveQueueSort>("start_desc");
   const [payrollQueueSort, setPayrollQueueSort] = useState<PayrollQueueSort>("period_desc");
+  const [queueSlaWatchHoursInput, setQueueSlaWatchHoursInput] = useState("24");
+  const [queueSlaCriticalHoursInput, setQueueSlaCriticalHoursInput] = useState("48");
 
   const [aggregateEmployeeId, setAggregateEmployeeId] = useState("");
   const [aggregates, setAggregates] = useState<AttendanceAggregateDto[]>([]);
@@ -534,11 +584,32 @@ export default function AdminDashboardPage() {
     () => [...payrollWaitHoursById.values()],
     [payrollWaitHoursById]
   );
+  const queueSlaWatchHours = useMemo(() => {
+    const parsed = Math.floor(Number(queueSlaWatchHoursInput));
+    if (!Number.isFinite(parsed)) {
+      return 24;
+    }
+    return Math.max(1, parsed);
+  }, [queueSlaWatchHoursInput]);
+  const queueSlaCriticalHours = useMemo(() => {
+    const parsed = Math.floor(Number(queueSlaCriticalHoursInput));
+    const fallback = Math.max(queueSlaWatchHours + 1, 48);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.max(queueSlaWatchHours + 1, parsed);
+  }, [queueSlaCriticalHoursInput, queueSlaWatchHours]);
+  const resolveQueueAlertLevel = useMemo(
+    () =>
+      (waitHours: number) =>
+        toQueueAlertLevelByRule(waitHours, queueSlaWatchHours, queueSlaCriticalHours),
+    [queueSlaCriticalHours, queueSlaWatchHours]
+  );
 
   const filteredPendingAttendance = useMemo(() => {
     const filtered = pendingAttendance.filter((record) => {
       const waitHours = attendanceWaitHoursById.get(record.id) ?? 0;
-      const alertLevel = toQueueAlertLevel(waitHours);
+      const alertLevel = resolveQueueAlertLevel(waitHours);
       if (approvalQueueOnlyUrgent && alertLevel === "normal") {
         return false;
       }
@@ -577,13 +648,14 @@ export default function AdminDashboardPage() {
     attendanceWaitHoursById,
     normalizedQueueSearch,
     pendingAttendance,
+    resolveQueueAlertLevel,
     selectedAttendanceIds
   ]);
 
   const filteredPendingLeave = useMemo(() => {
     const filtered = pendingLeave.filter((request) => {
       const waitHours = leaveWaitHoursById.get(request.id) ?? 0;
-      const alertLevel = toQueueAlertLevel(waitHours);
+      const alertLevel = resolveQueueAlertLevel(waitHours);
       if (approvalQueueOnlyUrgent && alertLevel === "normal") {
         return false;
       }
@@ -622,12 +694,13 @@ export default function AdminDashboardPage() {
     leaveWaitHoursById,
     normalizedQueueSearch,
     pendingLeave,
+    resolveQueueAlertLevel,
     selectedLeaveIds
   ]);
 
   const filteredPreviewedPayroll = useMemo(() => {
     const filtered = previewedPayroll.filter((run) => {
-      if (approvalQueueOnlyUrgent && toQueueAlertLevel(payrollWaitHoursById.get(run.id) ?? 0) === "normal") {
+      if (approvalQueueOnlyUrgent && resolveQueueAlertLevel(payrollWaitHoursById.get(run.id) ?? 0) === "normal") {
         return false;
       }
       if (approvalQueueSelectedOnly) {
@@ -664,7 +737,8 @@ export default function AdminDashboardPage() {
     normalizedQueueSearch,
     payrollQueueSort,
     payrollWaitHoursById,
-    previewedPayroll
+    previewedPayroll,
+    resolveQueueAlertLevel
   ]);
 
   const showAttendanceQueue = approvalQueueFocus === "all" || approvalQueueFocus === "attendance";
@@ -845,11 +919,15 @@ export default function AdminDashboardPage() {
           filteredPendingLeave.length +
           filteredPreviewedPayroll.length,
         selected: selectedVisibleAttendanceCount + selectedVisibleLeaveCount,
-        ...summarizeQueueAlert([
+        ...summarizeQueueAlertByRule(
+          [
           ...attendanceWaitHoursValues,
           ...leaveWaitHoursValues,
           ...payrollWaitHoursValues
-        ])
+          ],
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
       },
       {
         focus: "attendance",
@@ -857,7 +935,11 @@ export default function AdminDashboardPage() {
         pending: pendingAttendance.length,
         visible: filteredPendingAttendance.length,
         selected: selectedVisibleAttendanceCount,
-        ...summarizeQueueAlert(attendanceWaitHoursValues)
+        ...summarizeQueueAlertByRule(
+          attendanceWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
       },
       {
         focus: "leave",
@@ -865,7 +947,7 @@ export default function AdminDashboardPage() {
         pending: pendingLeave.length,
         visible: filteredPendingLeave.length,
         selected: selectedVisibleLeaveCount,
-        ...summarizeQueueAlert(leaveWaitHoursValues)
+        ...summarizeQueueAlertByRule(leaveWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
       },
       {
         focus: "payroll",
@@ -873,7 +955,11 @@ export default function AdminDashboardPage() {
         pending: previewedPayroll.length,
         visible: filteredPreviewedPayroll.length,
         selected: 0,
-        ...summarizeQueueAlert(payrollWaitHoursValues)
+        ...summarizeQueueAlertByRule(
+          payrollWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
       }
     ],
     [
@@ -886,6 +972,8 @@ export default function AdminDashboardPage() {
       pendingLeave.length,
       payrollWaitHoursValues,
       previewedPayroll.length,
+      queueSlaCriticalHours,
+      queueSlaWatchHours,
       selectedVisibleAttendanceCount,
       selectedVisibleLeaveCount
     ]
@@ -926,7 +1014,7 @@ export default function AdminDashboardPage() {
         primary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)} / 휴게 ${record.breakMinutes}분`,
         secondary: record.notes?.trim() ? `메모: ${record.notes.trim()}` : "메모 없음",
         waitedHours,
-        alertLevel: toQueueAlertLevel(waitedHours),
+        alertLevel: resolveQueueAlertLevel(waitedHours),
         historySummary: historySummary
           ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
           : "history 0",
@@ -949,7 +1037,7 @@ export default function AdminDashboardPage() {
         primary: `${request.leaveType} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)} (${formatDays(request.days)}일)`,
         secondary: reasonParts.length > 0 ? `사유: ${reasonParts.join(" / ")}` : "사유 없음",
         waitedHours,
-        alertLevel: toQueueAlertLevel(waitedHours),
+        alertLevel: resolveQueueAlertLevel(waitedHours),
         historySummary: historySummary
           ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
           : "history 0",
@@ -968,7 +1056,7 @@ export default function AdminDashboardPage() {
         primary: `${formatDateTime(run.periodStart)} ~ ${formatDateTime(run.periodEnd)} / 총지급 ${formatKrw(run.grossPayKrw)}`,
         secondary: "급여 프리뷰는 개별 확정으로 처리합니다.",
         waitedHours,
-        alertLevel: toQueueAlertLevel(waitedHours),
+        alertLevel: resolveQueueAlertLevel(waitedHours),
         historySummary: historySummary
           ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
           : "history 0",
@@ -1004,6 +1092,7 @@ export default function AdminDashboardPage() {
     filteredPreviewedPayroll,
     leaveWaitHoursById,
     payrollWaitHoursById,
+    resolveQueueAlertLevel,
     selectedAttendanceIds,
     selectedLeaveIds
   ]);
@@ -1013,29 +1102,43 @@ export default function AdminDashboardPage() {
       {
         key: "all",
         label: "전체",
-        ...summarizeSlaTimeline([
-          ...attendanceWaitHoursValues,
-          ...leaveWaitHoursValues,
-          ...payrollWaitHoursValues
-        ])
+        ...summarizeSlaTimelineByRule(
+          [...attendanceWaitHoursValues, ...leaveWaitHoursValues, ...payrollWaitHoursValues],
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
       },
       {
         key: "attendance",
         label: "출퇴근",
-        ...summarizeSlaTimeline(attendanceWaitHoursValues)
+        ...summarizeSlaTimelineByRule(
+          attendanceWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
       },
       {
         key: "leave",
         label: "휴가",
-        ...summarizeSlaTimeline(leaveWaitHoursValues)
+        ...summarizeSlaTimelineByRule(leaveWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
       },
       {
         key: "payroll",
         label: "급여",
-        ...summarizeSlaTimeline(payrollWaitHoursValues)
+        ...summarizeSlaTimelineByRule(
+          payrollWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
       }
     ],
-    [attendanceWaitHoursValues, leaveWaitHoursValues, payrollWaitHoursValues]
+    [
+      attendanceWaitHoursValues,
+      leaveWaitHoursValues,
+      payrollWaitHoursValues,
+      queueSlaCriticalHours,
+      queueSlaWatchHours
+    ]
   );
 
   const activeQueueSlaTimelinePoint =
@@ -1094,6 +1197,240 @@ export default function AdminDashboardPage() {
       selectedLeaveCount
     ]
   );
+
+  const queueEvidenceComparisonCards = useMemo<QueueEvidenceComparisonCard[]>(() => {
+    const candidates = [
+      ...filteredPendingAttendance.map((record) => ({
+        queue: "attendance" as const,
+        itemId: record.id,
+        waitHours: attendanceWaitHoursById.get(record.id) ?? 0,
+        failCount:
+          approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("attendance", record.id))?.fail ?? 0
+      })),
+      ...filteredPendingLeave.map((request) => ({
+        queue: "leave" as const,
+        itemId: request.id,
+        waitHours: leaveWaitHoursById.get(request.id) ?? 0,
+        failCount: approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("leave", request.id))?.fail ?? 0
+      })),
+      ...filteredPreviewedPayroll.map((run) => ({
+        queue: "payroll" as const,
+        itemId: run.id,
+        waitHours: payrollWaitHoursById.get(run.id) ?? 0,
+        failCount: approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("payroll", run.id))?.fail ?? 0
+      }))
+    ];
+
+    const focusedCandidates =
+      approvalQueueFocus === "all"
+        ? candidates
+        : candidates.filter((candidate) => candidate.queue === approvalQueueFocus);
+
+    const cards: QueueEvidenceComparisonCard[] = [];
+    for (const queue of ["attendance", "leave", "payroll"] as const) {
+      const queueItems = focusedCandidates
+        .filter((candidate) => candidate.queue === queue)
+        .sort((left, right) => {
+          const waitDiff = right.waitHours - left.waitHours;
+          if (waitDiff !== 0) {
+            return waitDiff;
+          }
+          return right.failCount - left.failCount;
+        });
+
+      if (queueItems.length < 2) {
+        continue;
+      }
+
+      const baseline = queueItems[0];
+      const compare = queueItems[1];
+      const baselineSeverity = resolveQueueAlertLevel(baseline.waitHours);
+      const compareSeverity = resolveQueueAlertLevel(compare.waitHours);
+      const severity =
+        queueAlertLevelRank(baselineSeverity) >= queueAlertLevelRank(compareSeverity)
+          ? baselineSeverity
+          : compareSeverity;
+      const waitGapHours = Math.max(0, baseline.waitHours - compare.waitHours);
+      const failGapCount = Math.max(0, baseline.failCount - compare.failCount);
+
+      let recommendation = "Process by regular queue order.";
+      if (severity === "critical" && failGapCount > 0) {
+        recommendation = "Prioritize this item and validate failure causes before bulk approval.";
+      } else if (severity === "critical") {
+        recommendation = "Prioritize this item first due to SLA critical wait time.";
+      } else if (severity === "watch") {
+        recommendation = "Review this item before normal-priority approvals.";
+      }
+
+      cards.push({
+        key: `${queue}:${baseline.itemId}:${compare.itemId}`,
+        queue,
+        baselineItemId: baseline.itemId,
+        compareItemId: compare.itemId,
+        baselineWaitHours: baseline.waitHours,
+        compareWaitHours: compare.waitHours,
+        waitGapHours,
+        baselineFailCount: baseline.failCount,
+        compareFailCount: compare.failCount,
+        failGapCount,
+        severity,
+        recommendation
+      });
+    }
+
+    return cards
+      .sort((left, right) => {
+        const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        const waitDiff = right.waitGapHours - left.waitGapHours;
+        if (waitDiff !== 0) {
+          return waitDiff;
+        }
+        return right.failGapCount - left.failGapCount;
+      })
+      .slice(0, 4);
+  }, [
+    approvalQueueFocus,
+    approvalItemHistorySummaryMap,
+    attendanceWaitHoursById,
+    filteredPendingAttendance,
+    filteredPendingLeave,
+    filteredPreviewedPayroll,
+    leaveWaitHoursById,
+    payrollWaitHoursById,
+    resolveQueueAlertLevel
+  ]);
+
+  const queueSlaRuleAlerts = useMemo<QueueSlaRuleAlert[]>(() => {
+    const queueBadges = queueBadgeSummaries.filter((badge) => badge.focus !== "all");
+    const totalAlerts = queueAlertOverview.totalCritical + queueAlertOverview.totalWatch;
+    const baseSeverity: QueueAlertLevel =
+      queueAlertOverview.totalCritical > 0
+        ? "critical"
+        : queueAlertOverview.totalWatch > 0
+          ? "watch"
+          : "normal";
+
+    const alerts: QueueSlaRuleAlert[] = [
+      {
+        key: "sla-rule-threshold",
+        label: "SLA threshold rule",
+        severity: baseSeverity,
+        count: totalAlerts,
+        detail: `Watch >= ${queueSlaWatchHours}h / Critical >= ${queueSlaCriticalHours}h`,
+        targetSectionId: "approval-sla-timeline"
+      }
+    ];
+
+    for (const badge of queueBadges) {
+      if (badge.critical > 0) {
+        alerts.push({
+          key: `critical-${badge.focus}`,
+          label: `${badge.label} critical backlog`,
+          severity: "critical",
+          count: badge.critical,
+          detail: `oldest ${Math.round(badge.oldestHours)}h / focus queue ${badge.label}`,
+          targetSectionId: "approvals"
+        });
+      } else if (badge.watch > 0) {
+        alerts.push({
+          key: `watch-${badge.focus}`,
+          label: `${badge.label} watch backlog`,
+          severity: "watch",
+          count: badge.watch,
+          detail: `oldest ${Math.round(badge.oldestHours)}h / watch threshold ${queueSlaWatchHours}h`,
+          targetSectionId: "approvals"
+        });
+      }
+    }
+
+    return alerts
+      .sort((left, right) => {
+        const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.count - left.count;
+      })
+      .slice(0, 6);
+  }, [
+    queueAlertOverview.totalCritical,
+    queueAlertOverview.totalWatch,
+    queueBadgeSummaries,
+    queueSlaCriticalHours,
+    queueSlaWatchHours
+  ]);
+
+  const queueMobileApprovalChecklistItems = useMemo<QueueMobileApprovalChecklistItem[]>(() => {
+    const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
+    const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
+    const hiddenSelectionCount = hiddenAttendanceSelection + hiddenLeaveSelection;
+    const hasActionableSelection = selectedQueueTotalCount > 0;
+    const canRunImmediateBulkAction =
+      canApproveSelectedAttendance || canRejectSelectedAttendance || canApproveSelectedLeave || canRejectSelectedLeave;
+
+    return [
+      {
+        id: "selection-scope-sync",
+        label: "Selection synced with filters",
+        pass: hiddenSelectionCount === 0,
+        detail:
+          hiddenSelectionCount === 0
+            ? "All selected items are visible in the current queue filter."
+            : `${hiddenSelectionCount} selected item(s) are hidden by current filters.`,
+        targetSectionId: "approvals"
+      },
+      {
+        id: "leave-reject-reason",
+        label: "Leave reject reason ready",
+        pass: selectedLeaveCount === 0 || hasLeaveRejectReason,
+        detail:
+          selectedLeaveCount === 0 || hasLeaveRejectReason
+            ? "Leave bulk reject condition is ready."
+            : "Leave reject reason is required before bulk reject.",
+        targetSectionId: "approvals"
+      },
+      {
+        id: "critical-backlog-check",
+        label: "Critical backlog triage",
+        pass: queueAlertOverview.totalCritical === 0 || approvalQueueOnlyUrgent,
+        detail:
+          queueAlertOverview.totalCritical === 0
+            ? "No critical backlog now."
+            : approvalQueueOnlyUrgent
+              ? "Urgent-only filter is enabled for critical triage."
+              : "Turn on urgent-only filter to triage critical backlog first.",
+        targetSectionId: "approval-sla-alert-rules"
+      },
+      {
+        id: "mobile-bulk-action",
+        label: "Bulk action ready on mobile",
+        pass: hasActionableSelection && canRunImmediateBulkAction,
+        detail:
+          hasActionableSelection && canRunImmediateBulkAction
+            ? "Bulk approval/reject can run immediately from mobile review cards."
+            : hasActionableSelection
+              ? "Selection exists, but validation conditions are not satisfied yet."
+              : "Select at least one attendance/leave item to use mobile bulk action.",
+        targetSectionId: "approval-mobile-review-sheet"
+      }
+    ];
+  }, [
+    approvalQueueOnlyUrgent,
+    canApproveSelectedAttendance,
+    canApproveSelectedLeave,
+    canRejectSelectedAttendance,
+    canRejectSelectedLeave,
+    hasLeaveRejectReason,
+    queueAlertOverview.totalCritical,
+    selectedAttendanceCount,
+    selectedLeaveCount,
+    selectedQueueTotalCount,
+    selectedVisibleAttendanceCount,
+    selectedVisibleLeaveCount
+  ]);
 
   async function callApi(
     label: string,
@@ -2541,6 +2878,43 @@ export default function AdminDashboardPage() {
             )}
           </section>
 
+          <section className="queue-evidence-comparison-panel" id="approval-evidence-comparison">
+            <div className="queue-section-head">
+              <h3>승인 근거 비교 카드</h3>
+              <p className="small muted">
+                동일 큐 내 최상위 대기 항목을 비교해 우선 처리 기준(대기 시간/실패 이력)을 즉시 확인합니다.
+              </p>
+            </div>
+            {queueEvidenceComparisonCards.length === 0 ? (
+              <p className="small muted">비교 가능한 큐 항목이 2건 이상일 때 카드가 표시됩니다.</p>
+            ) : (
+              <ul className="queue-evidence-comparison-list" aria-label="approval evidence comparison cards">
+                {queueEvidenceComparisonCards.map((card) => (
+                  <li key={card.key} className={`severity-${card.severity}`}>
+                    <div className="queue-evidence-comparison-head">
+                      <strong>
+                        [{card.queue}] {card.baselineItemId} vs {card.compareItemId}
+                      </strong>
+                      <span className={`queue-sla-chip level-${card.severity}`}>{card.severity}</span>
+                    </div>
+                    <p className="small">
+                      wait gap {Math.round(card.waitGapHours)}h / fail gap {card.failGapCount}
+                    </p>
+                    <div className="queue-evidence-comparison-metrics">
+                      <span className="queue-history-chip">
+                        baseline {Math.round(card.baselineWaitHours)}h / fail {card.baselineFailCount}
+                      </span>
+                      <span className="queue-history-chip">
+                        compare {Math.round(card.compareWaitHours)}h / fail {card.compareFailCount}
+                      </span>
+                    </div>
+                    <p className="small muted">{card.recommendation}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className="queue-sla-timeline-panel" id="approval-sla-timeline">
             <div className="queue-section-head">
               <h3>대기 SLA 타임라인</h3>
@@ -2548,6 +2922,76 @@ export default function AdminDashboardPage() {
                 24h 이내 / 24~48h / 48h 초과 구간으로 대기 분포를 확인해 우선순위를 정합니다.
               </p>
             </div>
+            <div className="queue-sla-rule-controls" aria-label="approval sla alert rule controls">
+              <label>
+                Watch 임계치 (h)
+                <input
+                  type="number"
+                  min={1}
+                  value={queueSlaWatchHoursInput}
+                  onChange={(event) => setQueueSlaWatchHoursInput(event.target.value)}
+                />
+              </label>
+              <label>
+                Critical 임계치 (h)
+                <input
+                  type="number"
+                  min={2}
+                  value={queueSlaCriticalHoursInput}
+                  onChange={(event) => setQueueSlaCriticalHoursInput(event.target.value)}
+                />
+              </label>
+              <div className="queue-sla-rule-preset-row">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSlaWatchHoursInput("12");
+                    setQueueSlaCriticalHoursInput("24");
+                  }}
+                >
+                  12 / 24
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSlaWatchHoursInput("24");
+                    setQueueSlaCriticalHoursInput("48");
+                  }}
+                >
+                  24 / 48
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSlaWatchHoursInput("36");
+                    setQueueSlaCriticalHoursInput("72");
+                  }}
+                >
+                  36 / 72
+                </button>
+              </div>
+            </div>
+            <section className="queue-sla-rule-alert-panel" id="approval-sla-alert-rules">
+              <ul className="queue-sla-rule-alert-list" aria-label="approval sla rule alerts">
+                {queueSlaRuleAlerts.map((alert) => (
+                  <li key={alert.key} className={`severity-${alert.severity}`}>
+                    <div>
+                      <strong>{alert.label}</strong>
+                      <p className="small muted">{alert.detail}</p>
+                    </div>
+                    <div className="queue-sla-rule-alert-actions">
+                      <span className={`queue-sla-chip level-${alert.severity}`}>count {alert.count}</span>
+                      <Link className="btn btn-secondary btn-small" href={`/admin#${alert.targetSectionId}`}>
+                        이동
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
             <p className="small muted" style={{ marginTop: 0 }}>
               현재 포커스: {activeQueueSlaTimelinePoint.label} / total {activeQueueSlaTimelinePoint.total} / oldest{" "}
               {Math.round(activeQueueSlaTimelinePoint.oldestHours)}h
@@ -2555,9 +2999,9 @@ export default function AdminDashboardPage() {
             <ul className="queue-sla-timeline-list" aria-label="approval queue sla timeline">
               {queueSlaTimelinePoints.map((point) => {
                 const safeTotal = Math.max(1, point.total);
-                const withinPercent = (point.within24 / safeTotal) * 100;
-                const watchPercent = (point.between24And48 / safeTotal) * 100;
-                const criticalPercent = (point.over48 / safeTotal) * 100;
+                const belowWatchPercent = (point.belowWatch / safeTotal) * 100;
+                const watchPercent = (point.betweenWatchAndCritical / safeTotal) * 100;
+                const criticalPercent = (point.overCritical / safeTotal) * 100;
 
                 return (
                   <li key={point.key}>
@@ -2568,14 +3012,16 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <div className="queue-sla-timeline-bar" role="img" aria-label={`${point.label} sla timeline`}>
-                      <span className="segment segment-normal" style={{ width: `${withinPercent}%` }} />
+                      <span className="segment segment-normal" style={{ width: `${belowWatchPercent}%` }} />
                       <span className="segment segment-watch" style={{ width: `${watchPercent}%` }} />
                       <span className="segment segment-critical" style={{ width: `${criticalPercent}%` }} />
                     </div>
                     <div className="queue-sla-timeline-chips">
-                      <span className="queue-history-chip">24h 이내 {point.within24}</span>
-                      <span className="queue-history-chip">24~48h {point.between24And48}</span>
-                      <span className="queue-history-chip">48h 초과 {point.over48}</span>
+                      <span className="queue-history-chip">{queueSlaWatchHours}h 미만 {point.belowWatch}</span>
+                      <span className="queue-history-chip">
+                        {queueSlaWatchHours}~{queueSlaCriticalHours}h {point.betweenWatchAndCritical}
+                      </span>
+                      <span className="queue-history-chip">{queueSlaCriticalHours}h 이상 {point.overCritical}</span>
                     </div>
                   </li>
                 );
@@ -2654,6 +3100,28 @@ export default function AdminDashboardPage() {
                 </article>
               ))}
             </div>
+          </section>
+
+          <section className="queue-mobile-checklist-panel" id="approval-mobile-checklist">
+            <div className="queue-section-head">
+              <h3>모바일 승인 체크리스트</h3>
+              <p className="small muted">
+                모바일 일괄 승인 전에 필수 조건을 점검하고 필요한 섹션으로 바로 이동합니다.
+              </p>
+            </div>
+            <ul className="queue-mobile-checklist-list" aria-label="approval mobile checklist">
+              {queueMobileApprovalChecklistItems.map((item) => (
+                <li key={item.id} className={item.pass ? "is-pass" : "is-fail"}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p className="small muted">{item.detail}</p>
+                  </div>
+                  <Link className="btn btn-secondary btn-small" href={`/admin#${item.targetSectionId}`}>
+                    이동
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </section>
 
           <section className="queue-bulk-validation-panel" id="approval-bulk-validation">
@@ -2782,7 +3250,7 @@ export default function AdminDashboardPage() {
                         <span>
                           <strong>{record.employeeId}</strong>{" "}
                           <span
-                            className={`queue-sla-chip level-${toQueueAlertLevel(
+                            className={`queue-sla-chip level-${resolveQueueAlertLevel(
                               attendanceWaitHoursById.get(record.id) ?? 0
                             )}`}
                           >
@@ -2865,7 +3333,7 @@ export default function AdminDashboardPage() {
                         <span>
                           <strong>{request.employeeId}</strong>{" "}
                           <span
-                            className={`queue-sla-chip level-${toQueueAlertLevel(
+                            className={`queue-sla-chip level-${resolveQueueAlertLevel(
                               leaveWaitHoursById.get(request.id) ?? 0
                             )}`}
                           >
@@ -2936,7 +3404,7 @@ export default function AdminDashboardPage() {
                       <span>
                         <strong>{run.employeeId ?? "-"}</strong>{" "}
                         <span
-                          className={`queue-sla-chip level-${toQueueAlertLevel(
+                          className={`queue-sla-chip level-${resolveQueueAlertLevel(
                             payrollWaitHoursById.get(run.id) ?? 0
                           )}`}
                         >
