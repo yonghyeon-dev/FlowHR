@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-20
-> **Current version**: 0.1.31 (Payslip UX Phase 3 Search/Sort and Prediction)
+> **Current version**: 0.1.32 (Admin People UX Phase 3 History Search/Sort and Risk Prediction)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -182,10 +182,11 @@
 - WI-0143 관리자 승인 큐 UX 6차 고도화(승인 대기 검색/정렬 + 승인 처리 예측 피드백 + 모바일 후속 액션 가이드 + 사이드 네비 앵커 + e2e)
 - WI-0144 스테이징 CI 배포 안정화(스키마 초기화 후 enum bootstrap 추가로 `staging-prisma-integration` 마이그레이션 실패(P3018) 방지)
 - WI-0145 급여 명세서 UX 3차 고도화(명세서 검색/정렬 + 지급 확정 예측 피드백 + 모바일 후속 액션 가이드 + 사이드 네비 앵커 + e2e)
+- WI-0146 관리자 조직도/인사 이력 UX 3차 고도화(이력 검색/정렬 + 변경 위험 예측 피드백 + 모바일 후속 액션 가이드 + 사이드 네비 앵커 + e2e)
 
 ### 진행 중
 
-- 다음: 관리자 조직도/인사 이력 UX 3차 고도화(이력 검색/정렬 + 변경 위험 예측 피드백 + 모바일 후속 액션 가이드) (WI-0146)
+- 다음: 직원 셀프서비스 UX 8차 고도화(요청 이력 정렬 정확도 + 승인 지연 위험 예측 피드백 + 모바일 후속 액션 추천) (WI-0147)
 
 ### 현재 아키텍처
 
