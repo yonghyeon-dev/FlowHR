@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-20
-> **Current version**: 0.1.14 (Admin Approval Queue UX Upgrade)
+> **Current version**: 0.1.15 (Payslip Format and Print Layout Upgrade)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -165,10 +165,11 @@
 - WI-0126 방향 재정렬(UI-first): 연차촉진 화면 `/ops/leave-promotion` 격리 + `/employee` 휴가 캘린더/연차 사용률/출퇴근 정정 보조 UX + e2e
 - WI-0127 직원 출퇴근 정정 UX 고도화(정정 대상 셀렉터/선택 기록 자동반영/메모 프리셋/입력 가드/근무시간 변화 프리뷰 + e2e)
 - WI-0128 관리자 승인 큐 UX 고도화(큐 포커스 배지 + 큐 검색 + 큐별 정렬 + 모바일 반응형 재배치 + e2e)
+- WI-0129 급여 명세서 서식/출력 UX 고도화(문서형 상세 패널 + 공제 항목 설명 + 인쇄/PDF 저장 + print 레이아웃 + e2e)
 
 ### 진행 중
 
-- 다음: 급여 명세서 서식/인쇄 UX 고도화(월별 비교, 인쇄 전 체크리스트, 항목 설명)
+- 다음: 관리자 조직도/인사 이력 UI 고도화(트리뷰, 이력 카드, 검색/비교 가독성)
 
 ### 현재 아키텍처
 

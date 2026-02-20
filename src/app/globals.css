@@ -785,6 +785,169 @@ button.queue-badge:hover {
   color: var(--muted);
 }
 
+.panel-payslip-print {
+  grid-column: 1 / -1;
+}
+
+.payslip-print-actions {
+  margin-bottom: 8px;
+}
+
+.payslip-sheet {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px;
+}
+
+.payslip-sheet section + section {
+  margin-top: 14px;
+}
+
+.payslip-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 12px;
+}
+
+.payslip-sheet-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.payslip-meta-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-meta-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.payslip-meta-list strong {
+  color: var(--ink);
+}
+
+.payslip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.payslip-sheet section h4 {
+  margin: 0 0 8px;
+  font-size: 0.96rem;
+}
+
+.payslip-explain {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payslip-explain-section {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: #fbfdff;
+}
+
+.payslip-explain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payslip-explain-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.payslip-explain-list strong {
+  display: block;
+}
+
+.payslip-explain-list p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.payslip-explain-amount {
+  color: var(--ink);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.no-print {
+  display: block;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .saas-sidebar,
+  .page-header,
+  .kpi-strip,
+  .panel-grid > .panel:not(.panel-payslip-print),
+  .payslip-print-actions,
+  .no-print {
+    display: none !important;
+  }
+
+  .saas-main,
+  .saas-content {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .panel-payslip-print {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .panel-payslip-print > h2 {
+    display: none !important;
+  }
+
+  .payslip-sheet {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+}
+
 @keyframes panel-rise {
   from {
     transform: translateY(8px);
@@ -862,5 +1025,22 @@ button.queue-badge:hover {
   #approvals .queue-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .payslip-sheet-header {
+    flex-direction: column;
+  }
+
+  .payslip-meta-list {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .payslip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payslip-explain-list li {
+    flex-direction: column;
   }
 }

@@ -45,6 +45,21 @@ type ApiLog = {
   body: unknown;
 };
 
+type BreakdownRecord = Record<string, unknown>;
+
+type DeductionExplainItem = {
+  key: string;
+  label: string;
+  amountKrw: number | null;
+  description: string;
+};
+
+type DeductionExplainSection = {
+  id: string;
+  title: string;
+  items: DeductionExplainItem[];
+};
+
 function isDevToolsEnabled() {
   const raw = process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "";
   const normalized = raw.trim().toLowerCase();
@@ -129,6 +144,97 @@ function escapeCsv(value: string) {
   return needsQuote ? `"${escaped}"` : escaped;
 }
 
+function toBreakdownRecord(value: unknown): BreakdownRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as BreakdownRecord;
+}
+
+function toNumberOrNull(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+  return value;
+}
+
+function formatDateOnly(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleDateString("ko-KR");
+}
+
+function formatMonthLabel(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return `${parsed.getFullYear()}년 ${String(parsed.getMonth() + 1).padStart(2, "0")}월`;
+}
+
+const DEDUCTION_DESCRIPTION_MAP: Record<string, { label: string; description: string }> = {
+  withholdingTaxKrw: {
+    label: "원천세",
+    description: "소득세와 지방소득세를 합산한 원천징수 금액입니다."
+  },
+  socialInsuranceKrw: {
+    label: "사회보험",
+    description: "국민연금, 건강보험, 장기요양, 고용보험 근로자 부담분입니다."
+  },
+  otherDeductionsKrw: {
+    label: "기타 공제",
+    description: "회사 정책에 따른 추가 공제(가불금/기타 정산) 금액입니다."
+  },
+  incomeTaxKrw: {
+    label: "소득세",
+    description: "과세표준 기준으로 계산된 월 소득세입니다."
+  },
+  localIncomeTaxKrw: {
+    label: "지방소득세",
+    description: "소득세 연동 지방세 항목입니다."
+  },
+  nationalPensionKrw: {
+    label: "국민연금",
+    description: "국민연금 근로자 부담분입니다."
+  },
+  healthInsuranceKrw: {
+    label: "건강보험",
+    description: "건강보험 근로자 부담분입니다."
+  },
+  longTermCareKrw: {
+    label: "장기요양",
+    description: "건강보험 연동 장기요양보험 부담분입니다."
+  },
+  employmentInsuranceKrw: {
+    label: "고용보험",
+    description: "고용보험 근로자 부담분입니다."
+  },
+  preCreditIncomeTaxKrw: {
+    label: "세액공제 전 소득세",
+    description: "추가 세액공제 적용 전 계산된 소득세입니다."
+  },
+  dependentTaxCreditKrw: {
+    label: "부양가족 공제",
+    description: "부양가족 기준에 따라 적용된 세액공제입니다."
+  },
+  additionalTaxCreditKrw: {
+    label: "추가 세액공제",
+    description: "정책/요건 기반으로 적용된 추가 세액공제입니다."
+  },
+  totalTaxCreditKrw: {
+    label: "총 세액공제",
+    description: "모든 세액공제를 합산한 금액입니다."
+  }
+};
+
 export default function EmployeePayslipsPage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -179,6 +285,121 @@ export default function EmployeePayslipsPage() {
     () => runs.find((run) => run.id === selectedRunId) ?? runs[0] ?? null,
     [runs, selectedRunId]
   );
+
+  const selectedRunBreakdown = useMemo(
+    () => toBreakdownRecord(selectedRun?.deductionBreakdown ?? null),
+    [selectedRun]
+  );
+
+  const fixedDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
+    if (!selectedRun) {
+      return [];
+    }
+    return [
+      {
+        key: "withholdingTaxKrw",
+        label: DEDUCTION_DESCRIPTION_MAP.withholdingTaxKrw.label,
+        amountKrw: selectedRun.withholdingTaxKrw,
+        description: DEDUCTION_DESCRIPTION_MAP.withholdingTaxKrw.description
+      },
+      {
+        key: "socialInsuranceKrw",
+        label: DEDUCTION_DESCRIPTION_MAP.socialInsuranceKrw.label,
+        amountKrw: selectedRun.socialInsuranceKrw,
+        description: DEDUCTION_DESCRIPTION_MAP.socialInsuranceKrw.description
+      },
+      {
+        key: "otherDeductionsKrw",
+        label: DEDUCTION_DESCRIPTION_MAP.otherDeductionsKrw.label,
+        amountKrw: selectedRun.otherDeductionsKrw,
+        description: DEDUCTION_DESCRIPTION_MAP.otherDeductionsKrw.description
+      }
+    ];
+  }, [selectedRun]);
+
+  const componentDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
+    const additional = toBreakdownRecord(selectedRunBreakdown?.additional ?? null);
+    const components = toBreakdownRecord(additional?.components ?? null);
+    if (!components) {
+      return [];
+    }
+
+    return Object.entries(components).flatMap(([key, value]) => {
+      const amount = toNumberOrNull(value);
+      if (amount === null || amount === 0) {
+        return [];
+      }
+      const mapped = DEDUCTION_DESCRIPTION_MAP[key];
+      return [
+        {
+          key,
+          label: mapped?.label ?? key,
+          amountKrw: amount,
+          description: mapped?.description ?? "법정공제 세부 항목입니다."
+        }
+      ];
+    });
+  }, [selectedRunBreakdown]);
+
+  const taxCreditExplainItems = useMemo<DeductionExplainItem[]>(() => {
+    const additional = toBreakdownRecord(selectedRunBreakdown?.additional ?? null);
+    const taxCredits = toBreakdownRecord(additional?.taxCreditsKrw ?? null);
+    if (!taxCredits) {
+      return [];
+    }
+
+    return ["preCreditIncomeTaxKrw", "dependentTaxCreditKrw", "additionalTaxCreditKrw", "totalTaxCreditKrw"].flatMap(
+      (key) => {
+        const amount = toNumberOrNull(taxCredits[key]);
+        if (amount === null || amount === 0) {
+          return [];
+        }
+        const mapped = DEDUCTION_DESCRIPTION_MAP[key];
+        return [
+          {
+            key,
+            label: mapped?.label ?? key,
+            amountKrw: amount,
+            description: mapped?.description ?? "세액공제 계산에 사용된 항목입니다."
+          }
+        ];
+      }
+    );
+  }, [selectedRunBreakdown]);
+
+  const deductionExplainSections = useMemo<DeductionExplainSection[]>(() => {
+    if (!selectedRun) {
+      return [];
+    }
+    return [
+      {
+        id: "fixed",
+        title: "공제 항목 설명",
+        items: fixedDeductionExplainItems
+      },
+      {
+        id: "component",
+        title: "법정공제 세부 구성",
+        items: componentDeductionExplainItems
+      },
+      {
+        id: "tax-credit",
+        title: "세액공제 참고 항목",
+        items: taxCreditExplainItems
+      }
+    ];
+  }, [componentDeductionExplainItems, fixedDeductionExplainItems, selectedRun, taxCreditExplainItems]);
+
+  const payslipFileName = useMemo(() => {
+    if (!selectedRun) {
+      return "";
+    }
+    const period = new Date(selectedRun.periodStart);
+    const year = Number.isNaN(period.getTime()) ? "unknown" : String(period.getFullYear());
+    const month = Number.isNaN(period.getTime()) ? "00" : String(period.getMonth() + 1).padStart(2, "0");
+    const actor = (selectedRun.employeeId ?? employeeId ?? "employee").replace(/\s+/g, "-");
+    return `flowhr-payslip-${actor}-${year}${month}.pdf`;
+  }, [employeeId, selectedRun]);
 
   useEffect(() => {
     if (runs.length === 0) {
@@ -341,6 +562,38 @@ export default function EmployeePayslipsPage() {
         {
           id: Date.now(),
           label: "명세서 ID 복사",
+          status: 500,
+          ok: false,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { error: error instanceof Error ? error.message : String(error) }
+        },
+        ...prev
+      ]);
+    }
+  }
+
+  async function copyPayslipFileName() {
+    if (!payslipFileName) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(payslipFileName);
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "PDF 파일명 복사",
+          status: 200,
+          ok: true,
+          at: new Date().toLocaleString("ko-KR"),
+          body: { fileName: payslipFileName }
+        },
+        ...prev
+      ]);
+    } catch (error) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "PDF 파일명 복사",
           status: 500,
           ok: false,
           at: new Date().toLocaleString("ko-KR"),
@@ -591,78 +844,139 @@ export default function EmployeePayslipsPage() {
           )}
         </article>
 
-        <article className="panel">
+        <article className="panel panel-payslip-print">
           <h2>선택 명세서 상세</h2>
           {!selectedRun ? (
             <p className="small muted">선택된 명세서가 없습니다.</p>
           ) : (
             <>
-              <ul className="simple-list" aria-label="선택 명세서 상세">
-                <li>
-                  <span className="muted">명세서 ID</span>
-                  <strong>{selectedRun.id}</strong>
-                </li>
-                <li>
-                  <span className="muted">기간</span>
-                  <strong>
-                    {formatDateTime(selectedRun.periodStart)} ~ {formatDateTime(selectedRun.periodEnd)}
-                  </strong>
-                </li>
-                <li>
-                  <span className="muted">총지급</span>
-                  <strong>{formatKrw(selectedRun.grossPayKrw)}</strong>
-                </li>
-                <li>
-                  <span className="muted">총공제</span>
-                  <strong>{formatKrw(selectedRun.totalDeductionsKrw)}</strong>
-                </li>
-                <li>
-                  <span className="muted">원천세</span>
-                  <strong>{formatKrw(selectedRun.withholdingTaxKrw)}</strong>
-                </li>
-                <li>
-                  <span className="muted">사회보험</span>
-                  <strong>{formatKrw(selectedRun.socialInsuranceKrw)}</strong>
-                </li>
-                <li>
-                  <span className="muted">기타 공제</span>
-                  <strong>{formatKrw(selectedRun.otherDeductionsKrw)}</strong>
-                </li>
-                <li>
-                  <span className="muted">실지급</span>
-                  <strong>{formatKrw(selectedRun.netPayKrw)}</strong>
-                </li>
-                <li>
-                  <span className="muted">확정 시각</span>
-                  <strong>{formatDateTime(selectedRun.confirmedAt)}</strong>
-                </li>
-              </ul>
-
-              {selectedRun.deductionBreakdown ? (
-                <details className="details" style={{ marginTop: 12 }}>
-                  <summary>공제 Breakdown 원본</summary>
-                  <pre className="small" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
-                    {JSON.stringify(selectedRun.deductionBreakdown, null, 2)}
-                  </pre>
-                </details>
-              ) : null}
-
-              {aggregate ? (
-                <p className="small" style={{ marginTop: 12 }}>
-                  근태 기준: 정규 {minutesToHours(aggregate.totals.regular)} / 연장{" "}
-                  {minutesToHours(aggregate.totals.overtime)} / 야간{" "}
-                  {minutesToHours(aggregate.totals.night)} / 휴일 {minutesToHours(aggregate.totals.holiday)}
-                </p>
-              ) : null}
-
-              <div className="actions">
-                <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
-                  인쇄
+              <div className="payslip-print-actions actions no-print">
+                <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+                  인쇄/PDF 저장
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => void copyPayslipFileName()}>
+                  PDF 파일명 복사
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => void copySelectedRunId()}>
                   명세서 ID 복사
                 </button>
               </div>
+              {payslipFileName ? (
+                <p className="small muted no-print" style={{ marginTop: 8 }}>
+                  권장 파일명: <code>{payslipFileName}</code>
+                </p>
+              ) : null}
+
+              <article className="payslip-sheet" aria-label="급여 명세서 문서 서식">
+                <header className="payslip-sheet-header">
+                  <div>
+                    <p className="eyebrow">FlowHR Payslip</p>
+                    <h3>{formatMonthLabel(selectedRun.periodStart)} 급여 명세서</h3>
+                    <p className="small muted">
+                      지급 기간 {formatDateOnly(selectedRun.periodStart)} ~{" "}
+                      {formatDateOnly(selectedRun.periodEnd)}
+                    </p>
+                  </div>
+                  <ul className="payslip-meta-list">
+                    <li>
+                      <span>직원 ID</span>
+                      <strong>{selectedRun.employeeId ?? employeeId}</strong>
+                    </li>
+                    <li>
+                      <span>명세서 ID</span>
+                      <strong>{selectedRun.id}</strong>
+                    </li>
+                    <li>
+                      <span>확정일</span>
+                      <strong>{formatDateOnly(selectedRun.confirmedAt)}</strong>
+                    </li>
+                    <li>
+                      <span>정산 상태</span>
+                      <strong>{selectedRun.state}</strong>
+                    </li>
+                  </ul>
+                </header>
+
+                <section>
+                  <h4>요약</h4>
+                  <div className="payslip-grid">
+                    <article className="summary-card">
+                      <p>총지급</p>
+                      <strong>{formatKrw(selectedRun.grossPayKrw)}</strong>
+                    </article>
+                    <article className="summary-card">
+                      <p>총공제</p>
+                      <strong>{formatKrw(selectedRun.totalDeductionsKrw)}</strong>
+                    </article>
+                    <article className="summary-card">
+                      <p>실지급</p>
+                      <strong>{formatKrw(selectedRun.netPayKrw)}</strong>
+                    </article>
+                  </div>
+                </section>
+
+                <section>
+                  <h4>지급/공제 상세</h4>
+                  <ul className="simple-list">
+                    <li>
+                      <span>원천세</span>
+                      <strong>{formatKrw(selectedRun.withholdingTaxKrw)}</strong>
+                    </li>
+                    <li>
+                      <span>사회보험</span>
+                      <strong>{formatKrw(selectedRun.socialInsuranceKrw)}</strong>
+                    </li>
+                    <li>
+                      <span>기타 공제</span>
+                      <strong>{formatKrw(selectedRun.otherDeductionsKrw)}</strong>
+                    </li>
+                  </ul>
+                </section>
+
+                <section className="payslip-explain">
+                  {deductionExplainSections.map((section) => (
+                    <div key={section.id} className="payslip-explain-section">
+                      <h4>{section.title}</h4>
+                      {section.items.length === 0 ? (
+                        <p className="small muted">표시할 항목이 없습니다.</p>
+                      ) : (
+                        <ul className="payslip-explain-list">
+                          {section.items.map((item) => (
+                            <li key={item.key}>
+                              <div>
+                                <strong>{item.label}</strong>
+                                <p>{item.description}</p>
+                              </div>
+                              <strong className="payslip-explain-amount">{formatKrw(item.amountKrw)}</strong>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </section>
+
+                {aggregate ? (
+                  <section>
+                    <h4>근태 기준(참고)</h4>
+                    <p className="small">
+                      정규 {minutesToHours(aggregate.totals.regular)} / 연장{" "}
+                      {minutesToHours(aggregate.totals.overtime)} / 야간{" "}
+                      {minutesToHours(aggregate.totals.night)} / 휴일{" "}
+                      {minutesToHours(aggregate.totals.holiday)} (급여반영 {aggregate.counts.payable}건)
+                    </p>
+                  </section>
+                ) : null}
+
+                {selectedRun.deductionBreakdown ? (
+                  <details className="details no-print" style={{ marginTop: 12 }}>
+                    <summary>공제 Breakdown 원본</summary>
+                    <pre className="small" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
+                      {JSON.stringify(selectedRun.deductionBreakdown, null, 2)}
+                    </pre>
+                  </details>
+                ) : null}
+              </article>
             </>
           )}
         </article>
