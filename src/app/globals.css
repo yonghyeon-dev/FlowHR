@@ -1204,6 +1204,188 @@ button.queue-badge:hover {
   grid-column: 1 / -1;
 }
 
+.panel-self-service-overview,
+.panel-request-resubmit,
+.panel-mobile-status-badges {
+  grid-column: 1 / -1;
+}
+
+.integrated-summary-grid {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.integrated-summary-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.integrated-summary-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.integrated-summary-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+}
+
+.integrated-summary-card span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.integrated-summary-card.tone-ok {
+  background: #ecfbf4;
+  border-color: #c8ecd9;
+}
+
+.integrated-summary-card.tone-pending {
+  background: #fff7df;
+  border-color: #f1ddb2;
+}
+
+.integrated-summary-card.tone-fail {
+  background: #ffedf1;
+  border-color: #f2c4ce;
+}
+
+.integrated-summary-card.tone-info {
+  background: #eef5ff;
+  border-color: #ccddfb;
+}
+
+.mobile-status-badge-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mobile-status-badge-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.mobile-status-badge-list li span {
+  display: block;
+  font-size: 0.73rem;
+  color: var(--muted);
+}
+
+.mobile-status-badge-list li strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 1rem;
+}
+
+.mobile-status-badge-list li p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.mobile-status-badge-list li.tone-ok {
+  background: #ecfbf4;
+  border-color: #c8ecd9;
+}
+
+.mobile-status-badge-list li.tone-pending {
+  background: #fff7df;
+  border-color: #f1ddb2;
+}
+
+.mobile-status-badge-list li.tone-fail {
+  background: #ffedf1;
+  border-color: #f2c4ce;
+}
+
+.mobile-status-badge-list li.tone-info {
+  background: #eef5ff;
+  border-color: #ccddfb;
+}
+
+.mobile-status-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resubmit-detail-card {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.resubmit-detail-card p {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+}
+
+.resubmit-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.resubmit-candidate-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.resubmit-candidate-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.resubmit-candidate-list li p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.resubmit-candidate-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.resubmit-applied-chip {
+  border: 1px solid #cddaf3;
+  border-radius: 999px;
+  background: #f6f9ff;
+  color: #35598f;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 2px 7px;
+}
+
 .feedback-kpi-grid {
   display: grid;
   gap: 8px;
@@ -2235,6 +2417,29 @@ button.queue-badge:hover {
   #attendance .pre-submit-check-list li,
   #leave .pre-submit-check-list li {
     grid-template-columns: 1fr;
+  }
+
+  #self-service-overview .integrated-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #mobile-status-badges .mobile-status-badge-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #mobile-status-badges .mobile-status-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #request-resubmit .resubmit-candidate-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #request-resubmit .resubmit-candidate-actions {
+    width: 100%;
+    align-items: flex-start;
   }
 
   .approval-queue-header {

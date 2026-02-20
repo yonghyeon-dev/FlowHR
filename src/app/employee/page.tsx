@@ -112,6 +112,32 @@ type PreSubmitCheckItem = {
   detail: string;
 };
 
+type IntegratedSummaryCard = {
+  key: string;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "ok" | "pending" | "fail" | "info";
+};
+
+type ResubmitCandidate = {
+  key: string;
+  channel: "attendance" | "leave";
+  recordId: string;
+  status: "REJECTED" | "CANCELED";
+  at: string;
+  reason: string;
+  summary: string;
+};
+
+type MobileStatusBadge = {
+  key: string;
+  label: string;
+  count: number;
+  detail: string;
+  tone: "ok" | "pending" | "fail" | "info";
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -356,6 +382,8 @@ export default function EmployeeSelfServicePage() {
   const [requestFeedbackStatusFilter, setRequestFeedbackStatusFilter] = useState<RequestStatusFilter>("all");
   const [timelineChannelFilter, setTimelineChannelFilter] = useState<TimelineChannelFilter>("all");
   const [timelineStatusFilter, setTimelineStatusFilter] = useState<RequestStatusFilter>("all");
+  const [selectedResubmitCandidateKey, setSelectedResubmitCandidateKey] = useState("");
+  const [lastAppliedResubmitCandidateKey, setLastAppliedResubmitCandidateKey] = useState("");
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const showDevTools = isDevToolsEnabled();
@@ -703,6 +731,68 @@ export default function EmployeeSelfServicePage() {
     pushMobileFlowFeedback("휴가 신청 폼을 내일 하루 기준으로 채웠습니다.");
   }
 
+  function applyLeaveRequestToResubmitDraft(request: LeaveRequestDto) {
+    setLeaveType(request.leaveType);
+    setLeaveUnit(request.unit);
+    setLeaveStartDate(toLocalInputValue(new Date(request.startDate)));
+    setLeaveEndDate(toLocalInputValue(new Date(request.endDate)));
+    if (request.unit === "HOUR") {
+      setLeaveHours(request.hours !== null ? String(request.hours) : "4");
+    }
+    setLeaveReason(request.reason?.trim() || request.decisionReason?.trim() || "Resubmit draft");
+    setLastLeaveRequestId(request.id);
+  }
+
+  function applyResubmitCandidateToDraft(candidate: ResubmitCandidate) {
+    if (candidate.channel === "attendance") {
+      const targetAttendance = attendance.find((record) => record.id === candidate.recordId);
+      if (!targetAttendance) {
+        pushMobileFlowFeedback("선택한 출퇴근 재제출 대상이 최신 목록에 없습니다.");
+        return;
+      }
+      applyAttendanceRecordToCorrectionForm(targetAttendance);
+      setAttendanceNotes(targetAttendance.notes?.trim() || "재제출 정정");
+      setLastAppliedResubmitCandidateKey(candidate.key);
+      jumpToSection("attendance");
+      pushMobileFlowFeedback("출퇴근 재제출 초안을 정정 폼에 반영했습니다.");
+      return;
+    }
+
+    const targetLeave = leaveRequests.find((request) => request.id === candidate.recordId);
+    if (!targetLeave) {
+      pushMobileFlowFeedback("선택한 휴가 재제출 대상이 최신 목록에 없습니다.");
+      return;
+    }
+    applyLeaveRequestToResubmitDraft(targetLeave);
+    setLastAppliedResubmitCandidateKey(candidate.key);
+    jumpToSection("leave");
+    pushMobileFlowFeedback("휴가 재제출 초안을 신청 폼에 반영했습니다.");
+  }
+
+  function applySelectedResubmitCandidate() {
+    if (!selectedResubmitCandidate) {
+      pushMobileFlowFeedback("재제출 후보를 먼저 선택해 주세요.");
+      return;
+    }
+    applyResubmitCandidateToDraft(selectedResubmitCandidate);
+  }
+
+  function applyLatestResubmitCandidate() {
+    if (resubmitCandidates.length === 0) {
+      pushMobileFlowFeedback("재제출할 반려/취소 건이 없습니다.");
+      return;
+    }
+    const latest = resubmitCandidates[0];
+    setSelectedResubmitCandidateKey(latest.key);
+    applyResubmitCandidateToDraft(latest);
+  }
+
+  function clearResubmitSelection() {
+    setSelectedResubmitCandidateKey("");
+    setLastAppliedResubmitCandidateKey("");
+    pushMobileFlowFeedback("재제출 후보 선택을 초기화했습니다.");
+  }
+
   async function copyFailureCause(message: string | null) {
     if (!message) {
       pushMobileFlowFeedback("복사할 실패 원인이 없습니다.");
@@ -942,6 +1032,159 @@ export default function EmployeeSelfServicePage() {
       canceled: leaveRequests.filter((request) => request.state === "CANCELED").length
     };
   }, [leaveRequests]);
+
+  const totalPendingRequestCount = attendanceStatusSummary.pending + leaveStatusSummary.pending;
+  const totalApprovedRequestCount = attendanceStatusSummary.approved + leaveStatusSummary.approved;
+  const totalRejectedOrCanceledRequestCount =
+    attendanceStatusSummary.rejected + leaveStatusSummary.rejected + leaveStatusSummary.canceled;
+
+  const requestCompletionRatePercent = useMemo(() => {
+    const totalHandled = totalApprovedRequestCount + totalRejectedOrCanceledRequestCount;
+    const total = totalHandled + totalPendingRequestCount;
+    if (total === 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, Math.round((totalHandled / total) * 100)));
+  }, [totalApprovedRequestCount, totalPendingRequestCount, totalRejectedOrCanceledRequestCount]);
+
+  const resubmitCandidates = useMemo<ResubmitCandidate[]>(() => {
+    const attendanceCandidates = attendance
+      .filter((record) => record.state === "REJECTED")
+      .map((record) => ({
+        key: `attendance:${record.id}`,
+        channel: "attendance" as const,
+        recordId: record.id,
+        status: "REJECTED" as const,
+        at: record.checkOutAt ?? record.checkInAt,
+        reason: record.notes?.trim() || "No reason provided",
+        summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
+      }));
+
+    const leaveCandidates = leaveRequests
+      .filter((request) => request.state === "REJECTED" || request.state === "CANCELED")
+      .map((request) => ({
+        key: `leave:${request.id}`,
+        channel: "leave" as const,
+        recordId: request.id,
+        status: request.state as "REJECTED" | "CANCELED",
+        at: request.endDate,
+        reason: request.decisionReason?.trim() || request.reason?.trim() || "No reason provided",
+        summary: `${request.leaveType} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
+      }));
+
+    return [...attendanceCandidates, ...leaveCandidates]
+      .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
+      .slice(0, 12);
+  }, [attendance, leaveRequests]);
+
+  const selectedResubmitCandidate = useMemo(() => {
+    if (resubmitCandidates.length === 0) {
+      return null;
+    }
+    const explicit = selectedResubmitCandidateKey.trim();
+    if (explicit.length === 0) {
+      return resubmitCandidates[0];
+    }
+    return resubmitCandidates.find((candidate) => candidate.key === explicit) ?? resubmitCandidates[0];
+  }, [resubmitCandidates, selectedResubmitCandidateKey]);
+
+  useEffect(() => {
+    if (resubmitCandidates.length === 0) {
+      if (selectedResubmitCandidateKey) {
+        setSelectedResubmitCandidateKey("");
+      }
+      return;
+    }
+    if (!selectedResubmitCandidateKey) {
+      setSelectedResubmitCandidateKey(resubmitCandidates[0].key);
+      return;
+    }
+    if (!resubmitCandidates.some((candidate) => candidate.key === selectedResubmitCandidateKey)) {
+      setSelectedResubmitCandidateKey(resubmitCandidates[0].key);
+    }
+  }, [resubmitCandidates, selectedResubmitCandidateKey]);
+
+  const integratedSummaryCards = useMemo<IntegratedSummaryCard[]>(() => {
+    const resubmitNeededCount = resubmitCandidates.length;
+    const apiFailureCount = stats.fail;
+    return [
+      {
+        key: "pending",
+        label: "Pending requests",
+        value: `${totalPendingRequestCount}`,
+        detail: `Attendance ${attendanceStatusSummary.pending} / Leave ${leaveStatusSummary.pending}`,
+        tone: totalPendingRequestCount > 0 ? "pending" : "ok"
+      },
+      {
+        key: "completion",
+        label: "Completion rate",
+        value: `${requestCompletionRatePercent}%`,
+        detail: `Approved ${totalApprovedRequestCount} / Action needed ${totalRejectedOrCanceledRequestCount}`,
+        tone: requestCompletionRatePercent >= 70 ? "ok" : requestCompletionRatePercent >= 40 ? "pending" : "fail"
+      },
+      {
+        key: "resubmit",
+        label: "Resubmit needed",
+        value: `${resubmitNeededCount}`,
+        detail:
+          resubmitNeededCount > 0
+            ? `${resubmitNeededCount} rejected or canceled request(s)`
+            : "No rejected or canceled request",
+        tone: resubmitNeededCount > 0 ? "fail" : "ok"
+      },
+      {
+        key: "api-failures",
+        label: "API failures",
+        value: `${apiFailureCount}`,
+        detail: `Success ${stats.success} / Fail ${stats.fail}`,
+        tone: apiFailureCount > 0 ? "fail" : "info"
+      }
+    ];
+  }, [
+    attendanceStatusSummary.pending,
+    leaveStatusSummary.pending,
+    requestCompletionRatePercent,
+    totalApprovedRequestCount,
+    totalPendingRequestCount,
+    totalRejectedOrCanceledRequestCount,
+    resubmitCandidates.length,
+    stats.fail,
+    stats.success
+  ]);
+
+  const mobileStatusBadges = useMemo<MobileStatusBadge[]>(() => {
+    const failedApiCount = logs.filter((log) => !log.ok).length;
+    return [
+      {
+        key: "pending",
+        label: "Pending",
+        count: totalPendingRequestCount,
+        detail: "Waiting for approval",
+        tone: totalPendingRequestCount > 0 ? "pending" : "ok"
+      },
+      {
+        key: "resubmit",
+        label: "Resubmit",
+        count: resubmitCandidates.length,
+        detail: "Rejected or canceled",
+        tone: resubmitCandidates.length > 0 ? "fail" : "ok"
+      },
+      {
+        key: "approved",
+        label: "Approved",
+        count: totalApprovedRequestCount,
+        detail: "Handled in current range",
+        tone: "ok"
+      },
+      {
+        key: "api-fail",
+        label: "API fail",
+        count: failedApiCount,
+        detail: "Recent API failures",
+        tone: failedApiCount > 0 ? "fail" : "info"
+      }
+    ];
+  }, [logs, resubmitCandidates.length, totalApprovedRequestCount, totalPendingRequestCount]);
 
   const latestLeaveRequest = useMemo(() => {
     if (leaveRequests.length === 0) {
@@ -1250,6 +1493,48 @@ export default function EmployeeSelfServicePage() {
 
   const leavePreSubmitValid = useMemo(() => leavePreSubmitChecks.every((check) => check.pass), [leavePreSubmitChecks]);
 
+  const resubmitFlowChecks = useMemo<PreSubmitCheckItem[]>(() => {
+    const hasCandidate = Boolean(selectedResubmitCandidate);
+    const isDraftApplied =
+      hasCandidate && selectedResubmitCandidate
+        ? lastAppliedResubmitCandidateKey === selectedResubmitCandidate.key
+        : false;
+    const isSubmissionReady = !hasCandidate
+      ? false
+      : selectedResubmitCandidate?.channel === "attendance"
+        ? correctionValidation.isValid && attendancePreSubmitValid
+        : leavePreSubmitValid;
+
+    return [
+      {
+        id: "resubmit-candidate",
+        pass: hasCandidate,
+        label: "재제출 후보 선택",
+        detail: hasCandidate ? "재제출 대상이 선택되었습니다." : "반려/취소 요청에서 재제출 대상을 선택해 주세요."
+      },
+      {
+        id: "resubmit-draft",
+        pass: isDraftApplied,
+        label: "초안 반영",
+        detail: isDraftApplied ? "선택 후보 초안을 신청 폼에 반영했습니다." : "선택 초안 적용 버튼으로 폼을 먼저 채워 주세요."
+      },
+      {
+        id: "resubmit-submit-ready",
+        pass: isSubmissionReady,
+        label: "제출 가능 상태",
+        detail: isSubmissionReady
+          ? "검증을 통과했습니다. 해당 폼에서 재제출할 수 있습니다."
+          : "재제출 전 입력값 검증을 다시 확인해 주세요."
+      }
+    ];
+  }, [
+    attendancePreSubmitValid,
+    correctionValidation.isValid,
+    lastAppliedResubmitCandidateKey,
+    leavePreSubmitValid,
+    selectedResubmitCandidate
+  ]);
+
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
       return "비교 대상 없음";
@@ -1438,6 +1723,22 @@ export default function EmployeeSelfServicePage() {
           </div>
         </article>
 
+        <article className="panel panel-self-service-overview" id="self-service-overview">
+          <h2>근태/휴가 통합 요약 카드</h2>
+          <p className="small">
+            현재 조회 구간의 요청 상태를 한 번에 보고, 재제출 필요 건과 API 실패 신호를 함께 점검합니다.
+          </p>
+          <div className="integrated-summary-grid" aria-label="employee integrated summary cards">
+            {integratedSummaryCards.map((card) => (
+              <article key={card.key} className={`integrated-summary-card tone-${card.tone}`}>
+                <p>{card.label}</p>
+                <strong>{card.value}</strong>
+                <span>{card.detail}</span>
+              </article>
+            ))}
+          </div>
+        </article>
+
         <article className="panel panel-request-feedback" id="request-feedback">
           <h2>요청 상태 피드백</h2>
           <p className="small">최근 출퇴근/휴가 요청 상태와 반려·실패 원인을 한 화면에서 확인합니다.</p>
@@ -1549,6 +1850,31 @@ export default function EmployeeSelfServicePage() {
           {mobileFlowFeedback ? <p className="mobile-shortcut-feedback">{mobileFlowFeedback}</p> : null}
         </article>
 
+        <article className="panel panel-mobile-status-badges" id="mobile-status-badges">
+          <h2>모바일 상태 알림 배지</h2>
+          <p className="small">대기/재제출/승인/API 실패 상태를 배지로 확인하고 필요한 화면으로 바로 이동합니다.</p>
+          <ul className="mobile-status-badge-list" aria-label="mobile status badges">
+            {mobileStatusBadges.map((badge) => (
+              <li key={badge.key} className={`tone-${badge.tone}`}>
+                <span>{badge.label}</span>
+                <strong>{badge.count}</strong>
+                <p>{badge.detail}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="mobile-status-actions">
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("request-resubmit")}>
+              재제출 흐름
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("request-feedback")}>
+              요청 피드백
+            </button>
+            <button className="btn btn-primary btn-small" onClick={() => void refreshEmployeeSnapshot()}>
+              상태 새로고침
+            </button>
+          </div>
+        </article>
+
         <article className="panel panel-request-timeline" id="request-timeline">
           <h2>모바일 요청 이력 타임라인</h2>
           <p className="small">최근 요청을 시간순으로 보고 채널/상태 기준으로 빠르게 필터링합니다.</p>
@@ -1594,6 +1920,105 @@ export default function EmployeeSelfServicePage() {
               ))}
             </ul>
           )}
+        </article>
+
+        <article className="panel panel-request-resubmit" id="request-resubmit">
+          <h2>요청 수정/재제출 흐름</h2>
+          <p className="small">
+            반려/취소된 요청을 선택해 초안을 폼으로 불러오고, 검증 상태를 확인한 뒤 재제출합니다.
+          </p>
+          <div className="input-grid">
+            <label className="full">
+              재제출 후보
+              <select
+                value={selectedResubmitCandidateKey}
+                onChange={(event) => setSelectedResubmitCandidateKey(event.target.value)}
+              >
+                <option value="">최신 후보 자동 선택</option>
+                {resubmitCandidates.map((candidate) => (
+                  <option key={candidate.key} value={candidate.key}>
+                    {candidate.channel === "attendance" ? "출퇴근" : "휴가"} / {candidate.status} / {candidate.recordId}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="actions">
+            <button className="btn btn-primary btn-small" onClick={applySelectedResubmitCandidate}>
+              선택 초안 적용
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={applyLatestResubmitCandidate}>
+              최신 반려 불러오기
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={clearResubmitSelection}>
+              재제출 선택 초기화
+            </button>
+          </div>
+          <div className="pre-submit-check-wrap">
+            <p className="small" style={{ margin: "8px 0 0" }}>
+              흐름 검증 ({resubmitFlowChecks.filter((check) => check.pass).length}/{resubmitFlowChecks.length} 통과)
+            </p>
+            <ul className="pre-submit-check-list" aria-label="재제출 흐름 검증">
+              {resubmitFlowChecks.map((check) => (
+                <li key={check.id} className={check.pass ? "pass" : "fail"}>
+                  <strong>{check.pass ? "PASS" : "FAIL"}</strong>
+                  <span>{check.label}</span>
+                  <p>{check.detail}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {selectedResubmitCandidate ? (
+            <article className="resubmit-detail-card">
+              <div className="resubmit-detail-head">
+                <strong>
+                  {selectedResubmitCandidate.channel === "attendance" ? "출퇴근 재제출" : "휴가 재제출"}
+                </strong>
+                <span className="feedback-state-pill state-fail">{selectedResubmitCandidate.status}</span>
+              </div>
+              <p>{selectedResubmitCandidate.summary}</p>
+              <p className="small muted">사유: {selectedResubmitCandidate.reason}</p>
+              <p className="small muted">ID: {selectedResubmitCandidate.recordId}</p>
+            </article>
+          ) : (
+            <p className="small muted" style={{ marginTop: 10 }}>
+              현재 재제출 후보가 없습니다.
+            </p>
+          )}
+          <ul className="resubmit-candidate-list" aria-label="resubmit candidate list">
+            {resubmitCandidates.length === 0 ? (
+              <li>
+                <strong>EMPTY</strong>
+                <span className="muted">반려/취소 요청이 없습니다.</span>
+              </li>
+            ) : (
+              resubmitCandidates.map((candidate) => (
+                <li key={candidate.key}>
+                  <div>
+                    <strong>
+                      {candidate.channel === "attendance" ? "출퇴근" : "휴가"} / {candidate.recordId}
+                    </strong>
+                    <p>{candidate.summary}</p>
+                    <span className="muted">{candidate.reason}</span>
+                  </div>
+                  <div className="resubmit-candidate-actions">
+                    {candidate.key === lastAppliedResubmitCandidateKey ? (
+                      <span className="resubmit-applied-chip">APPLIED</span>
+                    ) : null}
+                    <button
+                      className="btn btn-secondary btn-small"
+                      onClick={() => {
+                        setSelectedResubmitCandidateKey(candidate.key);
+                        applyResubmitCandidateToDraft(candidate);
+                      }}
+                    >
+                      초안 적용
+                    </button>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
         </article>
 
         <article className="panel" id="attendance">
