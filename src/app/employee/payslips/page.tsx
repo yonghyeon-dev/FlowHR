@@ -45,6 +45,18 @@ type ApiLog = {
   body: unknown;
 };
 
+type CompareMetric = {
+  id: string;
+  label: string;
+  selectedValue: number | null;
+  compareValue: number | null;
+  diffValue: number | null;
+  diffRate: number | null;
+};
+
+type MobileDeliveryChannel = "kakao" | "email" | "sms";
+type MobileDeliveryState = "idle" | "ready" | "sent" | "failed";
+
 type BreakdownRecord = Record<string, unknown>;
 
 type DeductionExplainItem = {
@@ -158,6 +170,73 @@ function toNumberOrNull(value: unknown) {
   return value;
 }
 
+function toTimestamp(value: string | null) {
+  if (!value) {
+    return 0;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 0;
+  }
+  return parsed.getTime();
+}
+
+function extractErrorMessage(body: unknown) {
+  if (!body) {
+    return "원인을 확인할 수 없습니다.";
+  }
+  if (typeof body === "string") {
+    return body;
+  }
+  if (typeof body !== "object" || Array.isArray(body)) {
+    return String(body);
+  }
+
+  const candidateKeys = ["error", "message", "reason", "detail"];
+  for (const key of candidateKeys) {
+    const value = (body as Record<string, unknown>)[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return JSON.stringify(body);
+}
+
+function safeDiff(selectedValue: number | null, compareValue: number | null) {
+  if (selectedValue === null || compareValue === null) {
+    return null;
+  }
+  return selectedValue - compareValue;
+}
+
+function safeDiffRate(selectedValue: number | null, compareValue: number | null) {
+  if (selectedValue === null || compareValue === null || compareValue === 0) {
+    return null;
+  }
+  return ((selectedValue - compareValue) / compareValue) * 100;
+}
+
+function formatDiffKrw(value: number | null) {
+  if (value === null) {
+    return "-";
+  }
+  const abs = Math.abs(value).toLocaleString("ko-KR");
+  if (value > 0) {
+    return `+${abs}원`;
+  }
+  if (value < 0) {
+    return `-${abs}원`;
+  }
+  return "0원";
+}
+
+function formatPercent(value: number | null) {
+  if (value === null) {
+    return "-";
+  }
+  return `${value.toFixed(1)}%`;
+}
+
 function formatDateOnly(value: string | null) {
   if (!value) {
     return "-";
@@ -245,9 +324,13 @@ export default function EmployeePayslipsPage() {
 
   const [runs, setRuns] = useState<PayrollRunDto[]>([]);
   const [selectedRunId, setSelectedRunId] = useState("");
+  const [compareRunId, setCompareRunId] = useState("");
   const [aggregate, setAggregate] = useState<AttendanceAggregateDto | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [mobileDeliveryChannel, setMobileDeliveryChannel] = useState<MobileDeliveryChannel>("kakao");
+  const [mobileDeliveryState, setMobileDeliveryState] = useState<MobileDeliveryState>("idle");
+  const [mobileDeliveryFeedback, setMobileDeliveryFeedback] = useState("");
 
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -290,6 +373,111 @@ export default function EmployeePayslipsPage() {
     () => toBreakdownRecord(selectedRun?.deductionBreakdown ?? null),
     [selectedRun]
   );
+
+  const latestLog = useMemo(() => logs[0] ?? null, [logs]);
+  const latestFailedLog = useMemo(() => logs.find((log) => !log.ok) ?? null, [logs]);
+
+  const statusFeedbackTone = useMemo(() => {
+    if (!latestLog) {
+      return "idle";
+    }
+    return latestLog.ok ? "ok" : "fail";
+  }, [latestLog]);
+
+  const statusFeedbackMessage = useMemo(() => {
+    if (!latestLog) {
+      return "최근 조회 결과가 없습니다.";
+    }
+    if (latestLog.ok) {
+      return `${latestLog.label} 요청이 정상 처리되었습니다.`;
+    }
+    return `${latestLog.label} 요청이 실패했습니다.`;
+  }, [latestLog]);
+
+  const latestFailureMessage = useMemo(() => {
+    if (!latestFailedLog) {
+      return "";
+    }
+    return extractErrorMessage(latestFailedLog.body);
+  }, [latestFailedLog]);
+
+  const statusRecoveryGuide = useMemo(() => {
+    if (!latestFailedLog) {
+      return "실패 이력이 없으면 최신 명세서를 선택한 뒤 전달 준비를 진행하세요.";
+    }
+    return "실패 원인을 확인한 뒤 조회 기간/사번/조직 ID를 점검하고 다시 조회하세요.";
+  }, [latestFailedLog]);
+
+  const compareCandidates = useMemo(() => {
+    if (!selectedRun) {
+      return [];
+    }
+    return runs
+      .filter((run) => run.id !== selectedRun.id)
+      .sort((left, right) => toTimestamp(right.periodStart) - toTimestamp(left.periodStart));
+  }, [runs, selectedRun]);
+
+  const compareRun = useMemo(() => {
+    if (compareCandidates.length === 0) {
+      return null;
+    }
+    return compareCandidates.find((run) => run.id === compareRunId) ?? compareCandidates[0];
+  }, [compareCandidates, compareRunId]);
+
+  const compareMetrics = useMemo<CompareMetric[]>(() => {
+    if (!selectedRun || !compareRun) {
+      return [];
+    }
+
+    const rows: Array<{ id: string; label: string; selectedValue: number | null; compareValue: number | null }> = [
+      {
+        id: "gross",
+        label: "총지급",
+        selectedValue: selectedRun.grossPayKrw,
+        compareValue: compareRun.grossPayKrw
+      },
+      {
+        id: "deduction",
+        label: "총공제",
+        selectedValue: selectedRun.totalDeductionsKrw,
+        compareValue: compareRun.totalDeductionsKrw
+      },
+      {
+        id: "net",
+        label: "실지급",
+        selectedValue: selectedRun.netPayKrw,
+        compareValue: compareRun.netPayKrw
+      }
+    ];
+
+    return rows.map((row) => ({
+      ...row,
+      diffValue: safeDiff(row.selectedValue, row.compareValue),
+      diffRate: safeDiffRate(row.selectedValue, row.compareValue)
+    }));
+  }, [compareRun, selectedRun]);
+
+  const compareWindowLabel = useMemo(() => {
+    if (!selectedRun || !compareRun) {
+      return "-";
+    }
+    const selectedLabel = `${formatDateOnly(selectedRun.periodStart)} ~ ${formatDateOnly(selectedRun.periodEnd)}`;
+    const compareLabel = `${formatDateOnly(compareRun.periodStart)} ~ ${formatDateOnly(compareRun.periodEnd)}`;
+    return `${selectedLabel} vs ${compareLabel}`;
+  }, [compareRun, selectedRun]);
+
+  const mobileDeliveryStateLabel = useMemo(() => {
+    if (mobileDeliveryState === "ready") {
+      return "전달 준비 완료";
+    }
+    if (mobileDeliveryState === "sent") {
+      return "전달 시뮬레이션 완료";
+    }
+    if (mobileDeliveryState === "failed") {
+      return "전달 준비 실패";
+    }
+    return "대기";
+  }, [mobileDeliveryState]);
 
   const fixedDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
     if (!selectedRun) {
@@ -410,6 +598,21 @@ export default function EmployeePayslipsPage() {
       setSelectedRunId(runs[0].id);
     }
   }, [runs, selectedRunId]);
+
+  useEffect(() => {
+    if (compareCandidates.length === 0) {
+      setCompareRunId("");
+      return;
+    }
+    if (!compareCandidates.some((run) => run.id === compareRunId)) {
+      setCompareRunId(compareCandidates[0].id);
+    }
+  }, [compareCandidates, compareRunId]);
+
+  useEffect(() => {
+    setMobileDeliveryState("idle");
+    setMobileDeliveryFeedback("");
+  }, [selectedRun?.id]);
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -601,6 +804,111 @@ export default function EmployeePayslipsPage() {
         },
         ...prev
       ]);
+    }
+  }
+
+  function appendClientLog(label: string, ok: boolean, status: number, body: unknown) {
+    setLogs((prev) => [
+      {
+        id: Date.now(),
+        label,
+        status,
+        ok,
+        at: new Date().toLocaleString("ko-KR"),
+        body
+      },
+      ...prev
+    ]);
+  }
+
+  async function copyLatestFailureCause() {
+    if (!latestFailedLog) {
+      return;
+    }
+    const message = extractErrorMessage(latestFailedLog.body);
+    try {
+      await navigator.clipboard.writeText(message);
+      appendClientLog("실패 원인 복사", true, 200, { message });
+    } catch (error) {
+      appendClientLog("실패 원인 복사", false, 500, {
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  function prepareMobileDelivery() {
+    if (!selectedRun) {
+      setMobileDeliveryState("failed");
+      setMobileDeliveryFeedback("선택된 명세서가 없어 전달 준비를 시작할 수 없습니다.");
+      appendClientLog("모바일 전달 준비", false, 400, {
+        reason: "missing-selected-run"
+      });
+      return;
+    }
+
+    const latestFailureAt = latestFailedLog?.at ?? "-";
+    setMobileDeliveryState("ready");
+    setMobileDeliveryFeedback(
+      `${mobileDeliveryChannel.toUpperCase()} 전달 채널 준비 완료. 최근 실패 이력 시각: ${latestFailureAt}`
+    );
+    appendClientLog("모바일 전달 준비", true, 200, {
+      runId: selectedRun.id,
+      channel: mobileDeliveryChannel
+    });
+  }
+
+  function sendMobileDeliverySimulation() {
+    if (!selectedRun) {
+      setMobileDeliveryState("failed");
+      setMobileDeliveryFeedback("명세서를 먼저 선택한 뒤 전달 시뮬레이션을 실행하세요.");
+      appendClientLog("모바일 전달 시뮬레이션", false, 400, {
+        reason: "missing-selected-run"
+      });
+      return;
+    }
+    if (mobileDeliveryState !== "ready") {
+      setMobileDeliveryState("failed");
+      setMobileDeliveryFeedback("전달 준비를 먼저 완료해야 시뮬레이션을 실행할 수 있습니다.");
+      appendClientLog("모바일 전달 시뮬레이션", false, 409, {
+        reason: "not-ready"
+      });
+      return;
+    }
+
+    setMobileDeliveryState("sent");
+    setMobileDeliveryFeedback(
+      `${mobileDeliveryChannel.toUpperCase()} 전달 시뮬레이션이 완료되었습니다. 파일명: ${payslipFileName || "-"}`
+    );
+    appendClientLog("모바일 전달 시뮬레이션", true, 200, {
+      runId: selectedRun.id,
+      channel: mobileDeliveryChannel,
+      fileName: payslipFileName || null
+    });
+  }
+
+  async function copyCompareSnapshot() {
+    if (!selectedRun || !compareRun) {
+      return;
+    }
+
+    const payload = {
+      selectedRunId: selectedRun.id,
+      compareRunId: compareRun.id,
+      window: compareWindowLabel,
+      metrics: compareMetrics.map((metric) => ({
+        id: metric.id,
+        diffValue: metric.diffValue,
+        diffRate: metric.diffRate
+      }))
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      appendClientLog("비교 스냅샷 복사", true, 200, payload);
+    } catch (error) {
+      appendClientLog("비교 스냅샷 복사", false, 500, {
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
@@ -842,6 +1150,175 @@ export default function EmployeePayslipsPage() {
               ))}
             </ul>
           )}
+        </article>
+
+        <article id="status-feedback" className="panel panel-payslip-status-feedback">
+          <h2>상태/오류 피드백</h2>
+          <div className="payslip-status-grid">
+            <article className="payslip-status-card">
+              <p>최근 API 상태</p>
+              <strong>{statusFeedbackMessage}</strong>
+              <span className={`status-pill tone-${statusFeedbackTone}`}>
+                {statusFeedbackTone === "ok" ? "정상" : statusFeedbackTone === "fail" ? "실패" : "대기"}
+              </span>
+            </article>
+            <article className="payslip-status-card">
+              <p>최근 실패 원인</p>
+              <strong>{latestFailureMessage || "실패 이력 없음"}</strong>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => void copyLatestFailureCause()}
+                  disabled={!latestFailedLog}
+                >
+                  실패 원인 복사
+                </button>
+              </div>
+            </article>
+            <article className="payslip-status-card">
+              <p>최근 확정 명세</p>
+              <strong>{selectedRun ? formatDateTime(selectedRun.confirmedAt) : "-"}</strong>
+              <span className="muted">명세서 ID {selectedRun?.id ?? "-"}</span>
+            </article>
+            <article className="payslip-status-card">
+              <p>복구 가이드</p>
+              <strong>{statusRecoveryGuide}</strong>
+              <span className="muted">
+                마지막 오류 시각 {latestFailedLog ? latestFailedLog.at : "-"} / 마지막 조회{" "}
+                {latestLog ? latestLog.at : "-"}
+              </span>
+            </article>
+          </div>
+        </article>
+
+        <article id="compare-view" className="panel panel-payslip-compare">
+          <div className="payslip-compare-head">
+            <h2>명세서 비교 조회</h2>
+            <div className="actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => void copyCompareSnapshot()}
+                disabled={!selectedRun || !compareRun}
+              >
+                비교 스냅샷 복사
+              </button>
+            </div>
+          </div>
+          {!selectedRun || compareCandidates.length === 0 ? (
+            <p className="small muted">비교 가능한 명세서가 없습니다. 기간을 넓혀 조회하세요.</p>
+          ) : (
+            <>
+              <div className="payslip-compare-controls">
+                <label>
+                  비교 대상
+                  <select value={compareRunId} onChange={(event) => setCompareRunId(event.target.value)}>
+                    {compareCandidates.map((run) => (
+                      <option key={run.id} value={run.id}>
+                        {formatDateOnly(run.periodStart)} ~ {formatDateOnly(run.periodEnd)} ({run.id})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="small muted">비교 기간: {compareWindowLabel}</p>
+              </div>
+              <div className="payslip-compare-delta-grid">
+                {compareMetrics.map((metric) => (
+                  <article key={metric.id} className="payslip-compare-delta-card">
+                    <p>{metric.label} 차이</p>
+                    <strong>{formatDiffKrw(metric.diffValue)}</strong>
+                    <span>{formatPercent(metric.diffRate)}</span>
+                  </article>
+                ))}
+              </div>
+              <div className="compare-table-wrap">
+                <table className="compare-table" aria-label="명세서 비교 표">
+                  <thead>
+                    <tr>
+                      <th>항목</th>
+                      <th>현재 선택</th>
+                      <th>비교 대상</th>
+                      <th>증감</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareMetrics.map((metric) => (
+                      <tr key={metric.id}>
+                        <th scope="row">{metric.label}</th>
+                        <td>{formatKrw(metric.selectedValue)}</td>
+                        <td>{formatKrw(metric.compareValue)}</td>
+                        <td>{formatDiffKrw(metric.diffValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </article>
+
+        <article id="mobile-delivery" className="panel panel-payslip-mobile-delivery">
+          <h2>모바일 전달 흐름</h2>
+          <p className="small">조회 실패 원인 확인 후 채널 준비와 전달 시뮬레이션 순서로 진행하세요.</p>
+          <div className="delivery-channel-grid" role="radiogroup" aria-label="모바일 전달 채널">
+            <label className={mobileDeliveryChannel === "kakao" ? "active" : ""}>
+              <input
+                type="radio"
+                name="mobile-delivery-channel"
+                checked={mobileDeliveryChannel === "kakao"}
+                onChange={() => setMobileDeliveryChannel("kakao")}
+              />
+              카카오 알림톡
+            </label>
+            <label className={mobileDeliveryChannel === "email" ? "active" : ""}>
+              <input
+                type="radio"
+                name="mobile-delivery-channel"
+                checked={mobileDeliveryChannel === "email"}
+                onChange={() => setMobileDeliveryChannel("email")}
+              />
+              이메일 링크
+            </label>
+            <label className={mobileDeliveryChannel === "sms" ? "active" : ""}>
+              <input
+                type="radio"
+                name="mobile-delivery-channel"
+                checked={mobileDeliveryChannel === "sms"}
+                onChange={() => setMobileDeliveryChannel("sms")}
+              />
+              SMS 링크
+            </label>
+          </div>
+          <ol className="mobile-delivery-step-list">
+            <li className={mobileDeliveryState !== "idle" ? "done" : ""}>1) 조회/오류 확인</li>
+            <li className={mobileDeliveryState === "ready" || mobileDeliveryState === "sent" ? "done" : ""}>
+              2) 전달 준비
+            </li>
+            <li className={mobileDeliveryState === "sent" ? "done" : ""}>3) 전달 시뮬레이션</li>
+          </ol>
+          <div className="actions">
+            <button type="button" className="btn btn-secondary" onClick={prepareMobileDelivery}>
+              전달 준비
+            </button>
+            <button type="button" className="btn btn-primary" onClick={sendMobileDeliverySimulation}>
+              전달 시뮬레이션
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setMobileDeliveryState("idle");
+                setMobileDeliveryFeedback("");
+              }}
+            >
+              흐름 초기화
+            </button>
+          </div>
+          <p className={`mobile-delivery-feedback tone-${mobileDeliveryState}`}>
+            상태: {mobileDeliveryStateLabel}
+            {mobileDeliveryFeedback ? ` | ${mobileDeliveryFeedback}` : ""}
+          </p>
         </article>
 
         <article className="panel panel-payslip-print">

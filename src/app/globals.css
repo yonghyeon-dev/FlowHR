@@ -1528,6 +1528,195 @@ button.queue-badge:hover {
   white-space: nowrap;
 }
 
+.panel-payslip-status-feedback,
+.panel-payslip-compare,
+.panel-payslip-mobile-delivery {
+  grid-column: 1 / -1;
+}
+
+.payslip-status-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payslip-status-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.payslip-status-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.payslip-status-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.92rem;
+}
+
+.payslip-status-card span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.74rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.status-pill.tone-ok {
+  color: var(--ok);
+  background: #e9fbf2;
+}
+
+.status-pill.tone-fail {
+  color: var(--fail);
+  background: #ffedf1;
+}
+
+.status-pill.tone-idle {
+  color: #35598f;
+  background: #eef5ff;
+}
+
+.payslip-compare-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-compare-controls {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 280px) 1fr;
+  align-items: end;
+}
+
+.payslip-compare-controls p {
+  margin: 0;
+}
+
+.payslip-compare-delta-grid {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.payslip-compare-delta-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.payslip-compare-delta-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.payslip-compare-delta-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+}
+
+.payslip-compare-delta-card span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.delivery-channel-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.delivery-channel-grid label {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.delivery-channel-grid label.active {
+  border-color: #8fb5f9;
+  background: #eef5ff;
+}
+
+.delivery-channel-grid input {
+  width: 15px;
+  height: 15px;
+}
+
+.mobile-delivery-step-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mobile-delivery-step-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.mobile-delivery-step-list li.done {
+  border-color: #8fb5f9;
+  background: #eef5ff;
+  color: #1f58bd;
+}
+
+.mobile-delivery-feedback {
+  margin: 10px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f3f8ff;
+  color: #204d95;
+  font-size: 0.78rem;
+  padding: 8px 10px;
+}
+
+.mobile-delivery-feedback.tone-ready,
+.mobile-delivery-feedback.tone-sent {
+  background: #e9fbf2;
+  color: #0f7a49;
+}
+
+.mobile-delivery-feedback.tone-failed {
+  background: #ffedf1;
+  color: #a1223a;
+}
+
 .no-print {
   display: block;
 }
@@ -1753,6 +1942,23 @@ button.queue-badge:hover {
 
   .payslip-explain-list li {
     flex-direction: column;
+  }
+
+  #status-feedback .payslip-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #compare-view .payslip-compare-controls {
+    grid-template-columns: 1fr;
+  }
+
+  #compare-view .payslip-compare-delta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #mobile-delivery .delivery-channel-grid,
+  #mobile-delivery .mobile-delivery-step-list {
+    grid-template-columns: 1fr;
   }
 
   .history-change-list li {

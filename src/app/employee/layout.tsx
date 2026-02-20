@@ -32,6 +32,9 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <Link href="/employee#leave-calendar">휴가 캘린더</Link>
           <Link href="/employee#schedule">스케줄</Link>
           <Link href="/employee/payslips">급여 명세서</Link>
+          <Link href="/employee/payslips#status-feedback">명세 피드백</Link>
+          <Link href="/employee/payslips#compare-view">명세 비교</Link>
+          <Link href="/employee/payslips#mobile-delivery">모바일 전달</Link>
           <Link className="muted-link" href="/employee#account">
             내 계정
           </Link>
