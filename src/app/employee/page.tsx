@@ -37,6 +37,7 @@ type LeaveRequestDto = {
   hours: number | null;
   days: number;
   reason: string | null;
+  decisionReason?: string | null;
   state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 };
 
@@ -74,6 +75,22 @@ type LeaveCalendarDayCell = {
   rejectedCount: number;
   density: LeaveCalendarDensity;
   tone: LeaveCalendarStatusTone;
+};
+
+type RequestFeedbackRow = {
+  id: string;
+  channel: "attendance" | "leave";
+  status: string;
+  at: string;
+  message: string;
+  tone: "ok" | "pending" | "fail";
+};
+
+type RequestFailureCause = {
+  id: string;
+  source: string;
+  message: string;
+  at: string;
 };
 
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
@@ -164,6 +181,17 @@ function formatDays(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+function toTimestamp(value: string | null) {
+  if (!value) {
+    return 0;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 0;
+  }
+  return parsed.getTime();
+}
+
 const ATTENDANCE_NOTE_PRESETS = ["퇴근 누락 정정", "출근 시각 정정", "휴게시간 정정"] as const;
 
 function calculateNetMinutes(input: { checkInAt: string; checkOutAt: string | null; breakMinutes: number }) {
@@ -200,6 +228,47 @@ function formatDeltaMinutes(deltaMinutes: number) {
   return `${sign}${parts.join(" ")}`;
 }
 
+function extractErrorMessage(body: unknown) {
+  if (body === null || body === undefined) {
+    return "서버 응답이 비어 있습니다.";
+  }
+  if (typeof body === "string") {
+    return body.trim().length > 0 ? body : "알 수 없는 오류";
+  }
+  if (typeof body !== "object") {
+    return String(body);
+  }
+
+  const record = body as Record<string, unknown>;
+  const candidates = [record.error, record.message, record.reason, record.detail];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+
+  const errors = record.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const first = errors[0];
+    if (typeof first === "string") {
+      return first;
+    }
+    if (first && typeof first === "object") {
+      const firstRecord = first as Record<string, unknown>;
+      if (typeof firstRecord.message === "string" && firstRecord.message.trim().length > 0) {
+        return firstRecord.message;
+      }
+    }
+  }
+
+  try {
+    const compact = JSON.stringify(body);
+    return compact.length > 140 ? `${compact.slice(0, 140)}...` : compact;
+  } catch {
+    return "응답을 해석할 수 없습니다.";
+  }
+}
+
 export default function EmployeeSelfServicePage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -232,6 +301,7 @@ export default function EmployeeSelfServicePage() {
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [mobileFlowFeedback, setMobileFlowFeedback] = useState("");
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const showDevTools = isDevToolsEnabled();
@@ -523,6 +593,79 @@ export default function EmployeeSelfServicePage() {
     await setCalendarMonthFromAnchor(new Date(), 0);
   }
 
+  function pushMobileFlowFeedback(message: string) {
+    setMobileFlowFeedback(message);
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        setMobileFlowFeedback((current) => (current === message ? "" : current));
+      }, 2200);
+    }
+  }
+
+  function jumpToSection(sectionId: string) {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${sectionId}`);
+    }
+  }
+
+  function startTodayAttendanceFlow() {
+    setCheckInAt(todayStartLocal());
+    setCheckOutAt(todayEndLocal());
+    setBreakMinutes("60");
+    setIsHoliday(false);
+    setAttendanceNotes("모바일 단축 입력");
+    jumpToSection("attendance");
+    pushMobileFlowFeedback("출퇴근 입력 폼을 오늘 기준으로 채웠습니다.");
+  }
+
+  function startAttendanceCorrectionFlow() {
+    if (latestAttendance) {
+      applyAttendanceRecordToCorrectionForm(latestAttendance);
+      setAttendanceNotes("모바일 단축 정정");
+      jumpToSection("attendance");
+      pushMobileFlowFeedback("최근 출퇴근 기록을 정정 폼에 불러왔습니다.");
+      return;
+    }
+    pushMobileFlowFeedback("불러올 최근 출퇴근 기록이 없습니다.");
+  }
+
+  function startLeaveHalfDayFlow() {
+    applyLeaveQuickPreset("today-half");
+    jumpToSection("leave");
+    pushMobileFlowFeedback("휴가 신청 폼을 오늘 반차 기준으로 채웠습니다.");
+  }
+
+  function startLeaveFullDayFlow() {
+    applyLeaveQuickPreset("tomorrow-full");
+    jumpToSection("leave");
+    pushMobileFlowFeedback("휴가 신청 폼을 내일 하루 기준으로 채웠습니다.");
+  }
+
+  async function copyFailureCause(message: string | null) {
+    if (!message) {
+      pushMobileFlowFeedback("복사할 실패 원인이 없습니다.");
+      return;
+    }
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      pushMobileFlowFeedback("클립보드 복사를 지원하지 않는 환경입니다.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(message);
+      pushMobileFlowFeedback("최근 실패 원인을 클립보드에 복사했습니다.");
+    } catch {
+      pushMobileFlowFeedback("실패 원인 복사에 실패했습니다.");
+    }
+  }
+
   function clearLogs() {
     setLogs([]);
   }
@@ -728,6 +871,130 @@ export default function EmployeeSelfServicePage() {
               : `${request.leaveType} / ${formatDays(request.days)}일`
       }));
   }, [leaveRequests]);
+
+  const attendanceStatusSummary = useMemo(() => {
+    return {
+      pending: attendance.filter((record) => record.state === "PENDING").length,
+      approved: attendance.filter((record) => record.state === "APPROVED").length,
+      rejected: attendance.filter((record) => record.state === "REJECTED").length
+    };
+  }, [attendance]);
+
+  const leaveStatusSummary = useMemo(() => {
+    return {
+      pending: leaveRequests.filter((request) => request.state === "PENDING").length,
+      approved: leaveRequests.filter((request) => request.state === "APPROVED").length,
+      rejected: leaveRequests.filter((request) => request.state === "REJECTED").length,
+      canceled: leaveRequests.filter((request) => request.state === "CANCELED").length
+    };
+  }, [leaveRequests]);
+
+  const latestLeaveRequest = useMemo(() => {
+    if (leaveRequests.length === 0) {
+      return null;
+    }
+    return leaveRequests[leaveRequests.length - 1] ?? null;
+  }, [leaveRequests]);
+
+  const requestFeedbackRows = useMemo<RequestFeedbackRow[]>(() => {
+    const rows: RequestFeedbackRow[] = [];
+    if (latestAttendance) {
+      rows.push({
+        id: `attendance-${latestAttendance.id}`,
+        channel: "attendance",
+        status: latestAttendance.state,
+        at: latestAttendance.checkOutAt ?? latestAttendance.checkInAt,
+        message:
+          latestAttendance.state === "REJECTED"
+            ? `반려 사유: ${latestAttendance.notes?.trim() || "사유 미기록"}`
+            : latestAttendance.state === "PENDING"
+              ? "승인 대기 중입니다."
+              : "정상 처리되었습니다.",
+        tone:
+          latestAttendance.state === "APPROVED"
+            ? "ok"
+            : latestAttendance.state === "PENDING"
+              ? "pending"
+              : "fail"
+      });
+    }
+    if (latestLeaveRequest) {
+      const rejectReason =
+        latestLeaveRequest.decisionReason?.trim() ||
+        latestLeaveRequest.reason?.trim() ||
+        "사유 미기록";
+      rows.push({
+        id: `leave-${latestLeaveRequest.id}`,
+        channel: "leave",
+        status: latestLeaveRequest.state,
+        at: latestLeaveRequest.endDate,
+        message:
+          latestLeaveRequest.state === "REJECTED"
+            ? `반려 사유: ${rejectReason}`
+            : latestLeaveRequest.state === "CANCELED"
+              ? `취소 사유: ${rejectReason}`
+              : latestLeaveRequest.state === "PENDING"
+                ? "승인 대기 중입니다."
+                : "정상 처리되었습니다.",
+        tone:
+          latestLeaveRequest.state === "APPROVED"
+            ? "ok"
+            : latestLeaveRequest.state === "PENDING"
+              ? "pending"
+              : "fail"
+      });
+    }
+
+    return rows.sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
+  }, [latestAttendance, latestLeaveRequest]);
+
+  const requestFailureCauses = useMemo<RequestFailureCause[]>(() => {
+    const byId = new Map<string, RequestFailureCause>();
+
+    logs
+      .filter((log) => !log.ok)
+      .slice(0, 4)
+      .forEach((log) => {
+        const message = extractErrorMessage(log.body);
+        byId.set(`log-${log.id}`, {
+          id: `log-${log.id}`,
+          source: `${log.label} (${log.status})`,
+          message,
+          at: log.at
+        });
+      });
+
+    const latestRejectedAttendance = [...attendance]
+      .reverse()
+      .find((record) => record.state === "REJECTED");
+    if (latestRejectedAttendance) {
+      byId.set(`attendance-${latestRejectedAttendance.id}`, {
+        id: `attendance-${latestRejectedAttendance.id}`,
+        source: "출퇴근 반려",
+        message: latestRejectedAttendance.notes?.trim() || "반려 사유가 기록되지 않았습니다.",
+        at: formatDateTime(latestRejectedAttendance.checkOutAt ?? latestRejectedAttendance.checkInAt)
+      });
+    }
+
+    const latestRejectedLeave = [...leaveRequests]
+      .reverse()
+      .find((request) => request.state === "REJECTED" || request.state === "CANCELED");
+    if (latestRejectedLeave) {
+      byId.set(`leave-${latestRejectedLeave.id}`, {
+        id: `leave-${latestRejectedLeave.id}`,
+        source: latestRejectedLeave.state === "REJECTED" ? "휴가 반려" : "휴가 취소",
+        message:
+          latestRejectedLeave.decisionReason?.trim() ||
+          latestRejectedLeave.reason?.trim() ||
+          "사유가 기록되지 않았습니다.",
+        at: formatDateTime(latestRejectedLeave.endDate)
+      });
+    }
+
+    return [...byId.values()].slice(0, 6);
+  }, [attendance, leaveRequests, logs]);
+
+  const latestFailureCauseMessage = requestFailureCauses[0]?.message ?? null;
 
   const correctionValidation = useMemo(() => {
     if (!lastAttendanceId.trim()) {
@@ -950,6 +1217,102 @@ export default function EmployeeSelfServicePage() {
               내 데이터 새로고침
             </button>
           </div>
+        </article>
+
+        <article className="panel panel-request-feedback" id="request-feedback">
+          <h2>요청 상태 피드백</h2>
+          <p className="small">최근 출퇴근/휴가 요청 상태와 반려·실패 원인을 한 화면에서 확인합니다.</p>
+          <div className="feedback-kpi-grid">
+            <article className="feedback-kpi-card">
+              <p>출퇴근 요청</p>
+              <strong>
+                대기 {attendanceStatusSummary.pending} / 승인 {attendanceStatusSummary.approved}
+              </strong>
+              <span>반려 {attendanceStatusSummary.rejected}</span>
+            </article>
+            <article className="feedback-kpi-card">
+              <p>휴가 요청</p>
+              <strong>
+                대기 {leaveStatusSummary.pending} / 승인 {leaveStatusSummary.approved}
+              </strong>
+              <span>
+                반려 {leaveStatusSummary.rejected} / 취소 {leaveStatusSummary.canceled}
+              </span>
+            </article>
+          </div>
+          {requestFeedbackRows.length === 0 ? (
+            <p className="small muted" style={{ marginTop: 10 }}>
+              아직 최근 요청 피드백이 없습니다. 먼저 조회 후 요청을 생성해 보세요.
+            </p>
+          ) : (
+            <ul className="simple-list feedback-row-list" aria-label="요청 상태 피드백">
+              {requestFeedbackRows.map((row) => (
+                <li key={row.id}>
+                  <span>
+                    <strong>{row.channel === "attendance" ? "출퇴근" : "휴가"}</strong>{" "}
+                    <span className={`feedback-state-pill state-${row.tone}`}>{row.status}</span>
+                    <br />
+                    <span className="small">{row.message}</span>
+                  </span>
+                  <time>{formatDateTime(row.at)}</time>
+                </li>
+              ))}
+            </ul>
+          )}
+          <hr className="divider" />
+          <div className="actions">
+            <p className="small" style={{ margin: 0 }}>
+              실패 원인 가시화 ({requestFailureCauses.length}건)
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={() => void copyFailureCause(latestFailureCauseMessage)}
+            >
+              최근 실패 원인 복사
+            </button>
+          </div>
+          {requestFailureCauses.length === 0 ? (
+            <p className="small muted" style={{ marginTop: 10 }}>
+              최근 실패/반려 이력이 없습니다.
+            </p>
+          ) : (
+            <ul className="failure-cause-list" aria-label="실패 원인 목록">
+              {requestFailureCauses.map((cause) => (
+                <li key={cause.id}>
+                  <strong>{cause.source}</strong>
+                  <p>{cause.message}</p>
+                  <time>{cause.at}</time>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article className="panel panel-mobile-shortcuts" id="mobile-shortcuts">
+          <h2>모바일 단축 흐름</h2>
+          <p className="small">터치 중심 단축 버튼으로 입력/정정/신청/갱신을 빠르게 진행합니다.</p>
+          <div className="mobile-shortcut-grid" role="group" aria-label="모바일 단축 버튼">
+            <button className="btn btn-secondary btn-small" onClick={startTodayAttendanceFlow}>
+              오늘 출퇴근 입력
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={startAttendanceCorrectionFlow}>
+              출퇴근 정정 시작
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={startLeaveHalfDayFlow}>
+              오늘 반차 신청
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={startLeaveFullDayFlow}>
+              내일 하루 신청
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("request-feedback")}>
+              피드백 바로가기
+            </button>
+            <button className="btn btn-primary btn-small" onClick={() => void refreshEmployeeSnapshot()}>
+              요청 상태 새로고침
+            </button>
+          </div>
+          {mobileFlowFeedback ? <p className="mobile-shortcut-feedback">{mobileFlowFeedback}</p> : null}
         </article>
 
         <article className="panel" id="attendance">

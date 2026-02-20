@@ -1030,6 +1030,125 @@ button.queue-badge:hover {
   overflow: auto;
 }
 
+.panel-request-feedback,
+.panel-mobile-shortcuts {
+  grid-column: 1 / -1;
+}
+
+.feedback-kpi-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feedback-kpi-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.feedback-kpi-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.feedback-kpi-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.95rem;
+}
+
+.feedback-kpi-card span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.feedback-row-list {
+  margin-top: 10px;
+}
+
+.feedback-state-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.feedback-state-pill.state-ok {
+  color: var(--ok);
+  background: #e9fbf2;
+}
+
+.feedback-state-pill.state-pending {
+  color: #8a5b00;
+  background: #fff7df;
+}
+
+.feedback-state-pill.state-fail {
+  color: var(--fail);
+  background: #ffedf1;
+}
+
+.failure-cause-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.failure-cause-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.failure-cause-list strong {
+  font-size: 0.77rem;
+}
+
+.failure-cause-list p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.77rem;
+  line-height: 1.4;
+}
+
+.failure-cause-list time {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.mobile-shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mobile-shortcut-grid .btn {
+  width: 100%;
+}
+
+.mobile-shortcut-feedback {
+  margin: 10px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f3f8ff;
+  color: #204d95;
+  font-size: 0.78rem;
+  padding: 7px 9px;
+}
+
 .btn {
   border-radius: 10px;
   border: 1px solid transparent;
@@ -1545,6 +1664,14 @@ button.queue-badge:hover {
   #leave-calendar .leave-calendar-weekdays,
   #leave-calendar .leave-calendar-grid {
     min-width: 560px;
+  }
+
+  #request-feedback .feedback-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #mobile-shortcuts .mobile-shortcut-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .approval-queue-header {
