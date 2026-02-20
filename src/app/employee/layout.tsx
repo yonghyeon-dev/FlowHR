@@ -28,10 +28,13 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <Link href="/employee#self-service-overview">통합 요약</Link>
           <Link href="/employee#submit-checklist">제출 체크리스트</Link>
           <Link href="/employee#request-feedback">요청 피드백</Link>
+          <Link href="/employee#request-search-sort">요청 검색/정렬</Link>
           <Link href="/employee#request-bottleneck-feedback">병목 피드백</Link>
+          <Link href="/employee#request-wait-prediction">승인 대기 예측</Link>
           <Link href="/employee#mobile-shortcuts">모바일 단축</Link>
           <Link href="/employee#mobile-status-badges">모바일 배지</Link>
           <Link href="/employee#mobile-submit-guide">모바일 제출 가이드</Link>
+          <Link href="/employee#mobile-follow-up-guide">모바일 후속 가이드</Link>
           <Link href="/employee#request-timeline">요청 타임라인</Link>
           <Link href="/employee#request-resubmit">재제출 흐름</Link>
           <Link href="/employee#attendance">출퇴근</Link>

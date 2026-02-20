@@ -170,6 +170,42 @@ type MobileSubmitGuideCard = {
   tone: "ready" | "pending" | "fail";
 };
 
+type RequestSearchScope = "all" | "request_id" | "status" | "content";
+type RequestSortOption = "pending_first" | "latest_desc" | "oldest_asc" | "status";
+
+type RequestSearchRow = {
+  key: string;
+  channel: "attendance" | "leave";
+  requestId: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+  at: string;
+  summary: string;
+  detail: string;
+  pendingHours: number;
+};
+
+type ApprovalWaitPredictionCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  pendingCount: number;
+  averageWaitHours: number;
+  maxWaitHours: number;
+  predictedBreaches: number;
+  etaLabel: string;
+  detail: string;
+  targetSectionId: string;
+};
+
+type MobileFollowUpGuideCard = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  detail: string;
+  ctaLabel: string;
+  targetSectionId: string;
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -315,6 +351,39 @@ function statusToTone(status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") 
   return "fail";
 }
 
+function statusSortRank(status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") {
+  if (status === "PENDING") {
+    return 0;
+  }
+  if (status === "REJECTED") {
+    return 1;
+  }
+  if (status === "CANCELED") {
+    return 2;
+  }
+  return 3;
+}
+
+function matchesRequestSearch(scope: RequestSearchScope, query: string, row: RequestSearchRow) {
+  if (!query) {
+    return true;
+  }
+  const normalizedRequestId = row.requestId.toLowerCase();
+  const normalizedStatus = row.status.toLowerCase();
+  const normalizedContent = `${row.summary} ${row.detail} ${row.channel}`.toLowerCase();
+
+  if (scope === "request_id") {
+    return normalizedRequestId.includes(query);
+  }
+  if (scope === "status") {
+    return normalizedStatus.includes(query);
+  }
+  if (scope === "content") {
+    return normalizedContent.includes(query);
+  }
+  return `${normalizedRequestId} ${normalizedStatus} ${normalizedContent}`.includes(query);
+}
+
 function bottleneckSeverityRank(severity: RequestBottleneckSeverity) {
   if (severity === "critical") {
     return 2;
@@ -424,6 +493,9 @@ export default function EmployeeSelfServicePage() {
   const [requestFeedbackStatusFilter, setRequestFeedbackStatusFilter] = useState<RequestStatusFilter>("all");
   const [timelineChannelFilter, setTimelineChannelFilter] = useState<TimelineChannelFilter>("all");
   const [timelineStatusFilter, setTimelineStatusFilter] = useState<RequestStatusFilter>("all");
+  const [requestSearchScope, setRequestSearchScope] = useState<RequestSearchScope>("all");
+  const [requestSearchQuery, setRequestSearchQuery] = useState("");
+  const [requestSortOption, setRequestSortOption] = useState<RequestSortOption>("pending_first");
   const [selectedResubmitCandidateKey, setSelectedResubmitCandidateKey] = useState("");
   const [lastAppliedResubmitCandidateKey, setLastAppliedResubmitCandidateKey] = useState("");
 
@@ -441,6 +513,8 @@ export default function EmployeeSelfServicePage() {
 
   const usesBearerToken = bearerToken.trim().length > 0;
   const newestLog = logs[0];
+  const requestNowMs = Date.now();
+  const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -738,6 +812,41 @@ export default function EmployeeSelfServicePage() {
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `#${sectionId}`);
     }
+  }
+
+  function openPendingRequestSearch() {
+    setRequestSearchScope("status");
+    setRequestSearchQuery("pending");
+    setRequestSortOption("pending_first");
+    jumpToSection("request-search-sort");
+    pushMobileFlowFeedback("승인 대기 요청 필터를 열었습니다.");
+  }
+
+  function openRejectedRequestSearch() {
+    setRequestSearchScope("status");
+    setRequestSearchQuery("rejected");
+    setRequestSortOption("latest_desc");
+    jumpToSection("request-search-sort");
+    pushMobileFlowFeedback("반려 요청 필터를 열었습니다.");
+  }
+
+  function runMobileFollowUpAction(card: MobileFollowUpGuideCard) {
+    if (card.key === "pending-follow-up" && totalPendingRequestCount > 0) {
+      openPendingRequestSearch();
+      return;
+    }
+    if (card.key === "resubmit-follow-up" && resubmitCandidates.length > 0 && !resubmitFlowReady) {
+      openRejectedRequestSearch();
+      jumpToSection("request-resubmit");
+      pushMobileFlowFeedback("재제출 대상 요청을 먼저 점검해 주세요.");
+      return;
+    }
+    if (card.key === "api-failure-follow-up" && stats.fail > 0) {
+      jumpToSection("request-feedback");
+      pushMobileFlowFeedback("최근 API 실패 원인을 먼저 확인해 주세요.");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
   }
 
   function startTodayAttendanceFlow() {
@@ -1286,6 +1395,146 @@ export default function EmployeeSelfServicePage() {
 
     return rows.sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
   }, [latestAttendance, latestLeaveRequest]);
+
+  const requestSearchRows = useMemo<RequestSearchRow[]>(() => {
+    const attendanceRows = attendance.map((record) => {
+      const at = record.checkOutAt ?? record.checkInAt;
+      const pendingHours =
+        record.state === "PENDING" ? Math.max(0, (requestNowMs - toTimestamp(at)) / 3_600_000) : 0;
+      return {
+        key: `attendance:${record.id}`,
+        channel: "attendance" as const,
+        requestId: record.id,
+        status: record.state,
+        at,
+        summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`,
+        detail: record.notes?.trim() || "No note",
+        pendingHours
+      };
+    });
+
+    const leaveRows = leaveRequests.map((request) => {
+      const at = request.startDate;
+      const pendingHours =
+        request.state === "PENDING" ? Math.max(0, (requestNowMs - toTimestamp(at)) / 3_600_000) : 0;
+      const leaveUnitLabel =
+        request.unit === "HOUR" && request.hours !== null
+          ? `${request.hours.toFixed(2)}h`
+          : request.unit === "HALF_DAY"
+            ? "0.5d"
+            : `${formatDays(request.days)}d`;
+      return {
+        key: `leave:${request.id}`,
+        channel: "leave" as const,
+        requestId: request.id,
+        status: request.state,
+        at,
+        summary: `${request.leaveType} / ${leaveUnitLabel} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`,
+        detail: request.reason?.trim() || request.decisionReason?.trim() || "No reason",
+        pendingHours
+      };
+    });
+
+    return [...attendanceRows, ...leaveRows].sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
+  }, [attendance, leaveRequests, requestNowMs]);
+
+  const filteredRequestSearchRows = useMemo(() => {
+    const filtered = requestSearchRows.filter((row) =>
+      matchesRequestSearch(requestSearchScope, normalizedRequestSearchQuery, row)
+    );
+
+    return [...filtered].sort((left, right) => {
+      if (requestSortOption === "latest_desc") {
+        return toTimestamp(right.at) - toTimestamp(left.at);
+      }
+      if (requestSortOption === "oldest_asc") {
+        return toTimestamp(left.at) - toTimestamp(right.at);
+      }
+      if (requestSortOption === "status") {
+        const statusDiff = statusSortRank(left.status) - statusSortRank(right.status);
+        if (statusDiff !== 0) {
+          return statusDiff;
+        }
+        return toTimestamp(right.at) - toTimestamp(left.at);
+      }
+      const pendingDiff = Number(right.status === "PENDING") - Number(left.status === "PENDING");
+      if (pendingDiff !== 0) {
+        return pendingDiff;
+      }
+      if (right.status === "PENDING" && left.status === "PENDING") {
+        const waitDiff = right.pendingHours - left.pendingHours;
+        if (waitDiff !== 0) {
+          return waitDiff;
+        }
+      }
+      return toTimestamp(right.at) - toTimestamp(left.at);
+    });
+  }, [normalizedRequestSearchQuery, requestSearchRows, requestSearchScope, requestSortOption]);
+
+  const approvalWaitPredictionCards = useMemo<ApprovalWaitPredictionCard[]>(() => {
+    const pendingRows = requestSearchRows.filter((row) => row.status === "PENDING");
+
+    const toPredictionCard = (
+      key: string,
+      label: string,
+      rows: RequestSearchRow[],
+      targetSectionId: string
+    ): ApprovalWaitPredictionCard => {
+      const pendingCount = rows.length;
+      const totalWaitHours = rows.reduce((sum, row) => sum + row.pendingHours, 0);
+      const averageWaitHours = pendingCount > 0 ? totalWaitHours / pendingCount : 0;
+      const maxWaitHours = pendingCount > 0 ? Math.max(...rows.map((row) => row.pendingHours)) : 0;
+      const predictedBreaches = rows.filter((row) => row.pendingHours >= 24).length;
+      const severity: RequestBottleneckSeverity =
+        maxWaitHours >= 48 || predictedBreaches >= 2
+          ? "critical"
+          : maxWaitHours >= 24 || predictedBreaches >= 1
+            ? "watch"
+            : "normal";
+      const etaLabel =
+        pendingCount === 0
+          ? "no pending"
+          : maxWaitHours >= 48
+            ? "follow-up now"
+            : maxWaitHours >= 24
+              ? "1-2 business days"
+              : maxWaitHours >= 12
+                ? "within 24h"
+                : "within today";
+
+      return {
+        key,
+        label,
+        severity,
+        pendingCount,
+        averageWaitHours,
+        maxWaitHours,
+        predictedBreaches,
+        etaLabel,
+        detail:
+          pendingCount === 0
+            ? "현재 승인 대기 요청이 없습니다."
+            : `avg ${Math.round(averageWaitHours)}h / max ${Math.round(maxWaitHours)}h / breach-risk ${predictedBreaches}`,
+        targetSectionId
+      };
+    };
+
+    const attendancePending = pendingRows.filter((row) => row.channel === "attendance");
+    const leavePending = pendingRows.filter((row) => row.channel === "leave");
+    const cards = [
+      toPredictionCard("all", "전체 승인 대기", pendingRows, "request-search-sort"),
+      toPredictionCard("attendance", "출퇴근 승인 대기", attendancePending, "attendance"),
+      toPredictionCard("leave", "휴가 승인 대기", leavePending, "leave")
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.pendingCount - left.pendingCount;
+    });
+  }, [requestSearchRows]);
 
   const filteredRequestFeedbackRows = useMemo(() => {
     if (requestFeedbackStatusFilter === "all") {
@@ -1837,6 +2086,79 @@ export default function EmployeeSelfServicePage() {
     resubmitFlowReady
   ]);
 
+  const mobileFollowUpGuideCards = useMemo<MobileFollowUpGuideCard[]>(() => {
+    const highestWaitPrediction = approvalWaitPredictionCards[0];
+    const hasPendingWaitRisk =
+      highestWaitPrediction &&
+      highestWaitPrediction.pendingCount > 0 &&
+      highestWaitPrediction.severity !== "normal";
+
+    return [
+      {
+        key: "pending-follow-up",
+        label: "승인 대기 후속",
+        tone:
+          totalPendingRequestCount === 0
+            ? "ready"
+            : highestWaitPrediction?.severity === "critical"
+              ? "fail"
+              : "pending",
+        detail:
+          totalPendingRequestCount === 0
+            ? "현재 승인 대기 요청이 없습니다."
+            : `${totalPendingRequestCount}건 대기 / 예측 ${highestWaitPrediction?.etaLabel ?? "within 24h"}`,
+        ctaLabel: totalPendingRequestCount > 0 ? "대기 요청 보기" : "요청 피드백 보기",
+        targetSectionId: totalPendingRequestCount > 0 ? "request-search-sort" : "request-feedback"
+      },
+      {
+        key: "wait-prediction",
+        label: "승인 대기 예측 피드백",
+        tone: hasPendingWaitRisk
+          ? highestWaitPrediction?.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        detail: hasPendingWaitRisk
+          ? highestWaitPrediction?.detail ?? "승인 대기 예측 신호를 확인해 주세요."
+          : "현재 예측상 즉시 후속 조치가 필요한 병목은 없습니다.",
+        ctaLabel: "예측 패널 열기",
+        targetSectionId: "request-wait-prediction"
+      },
+      {
+        key: "resubmit-follow-up",
+        label: "반려/재제출 후속",
+        tone: resubmitCandidates.length === 0 ? "ready" : resubmitFlowReady ? "pending" : "fail",
+        detail:
+          resubmitCandidates.length === 0
+            ? "재제출 대상 요청이 없습니다."
+            : resubmitFlowReady
+              ? "재제출 검증이 완료되어 제출만 남았습니다."
+              : resubmitFirstFailCheck?.detail || "재제출 초안 보완이 필요합니다.",
+        ctaLabel: resubmitCandidates.length > 0 ? "재제출 흐름 열기" : "모바일 제출 가이드",
+        targetSectionId: resubmitCandidates.length > 0 ? "request-resubmit" : "mobile-submit-guide"
+      },
+      {
+        key: "api-failure-follow-up",
+        label: "API 실패 후속",
+        tone: stats.fail > 0 ? "fail" : "ready",
+        detail:
+          stats.fail > 0
+            ? latestFailureCauseMessage || "최근 API 실패 원인을 확인하고 다시 시도해 주세요."
+            : "최근 API 실패가 없습니다.",
+        ctaLabel: stats.fail > 0 ? "실패 원인 보기" : "요청 이력 보기",
+        targetSectionId: stats.fail > 0 ? "request-feedback" : "request-timeline"
+      }
+    ];
+  }, [
+    approvalWaitPredictionCards,
+    latestFailureCauseMessage,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowReady,
+    stats.fail,
+    totalPendingRequestCount
+  ]);
+
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
       return "비교 대상 없음";
@@ -2151,6 +2473,87 @@ export default function EmployeeSelfServicePage() {
           )}
         </article>
 
+        <article className="panel panel-request-search-sort" id="request-search-sort">
+          <h2>요청 검색/정렬</h2>
+          <p className="small">
+            출퇴근/휴가 요청을 통합 목록에서 검색하고, 대기 우선 또는 시간순으로 정렬해 후속 조치 대상을 빠르게 찾습니다.
+          </p>
+          <div className="request-search-toolbar">
+            <label>
+              검색 범위
+              <select
+                value={requestSearchScope}
+                onChange={(event) => setRequestSearchScope(event.target.value as RequestSearchScope)}
+              >
+                <option value="all">전체</option>
+                <option value="request_id">요청 ID</option>
+                <option value="status">상태</option>
+                <option value="content">내용</option>
+              </select>
+            </label>
+            <label className="full">
+              검색어
+              <input
+                value={requestSearchQuery}
+                onChange={(event) => setRequestSearchQuery(event.target.value)}
+                placeholder="예: pending, REQ-..., 메모/사유"
+              />
+            </label>
+            <label>
+              정렬
+              <select
+                value={requestSortOption}
+                onChange={(event) => setRequestSortOption(event.target.value as RequestSortOption)}
+              >
+                <option value="pending_first">대기 우선</option>
+                <option value="latest_desc">최신순</option>
+                <option value="oldest_asc">오래된순</option>
+                <option value="status">상태순</option>
+              </select>
+            </label>
+            <div className="request-search-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => {
+                  setRequestSearchScope("all");
+                  setRequestSearchQuery("");
+                  setRequestSortOption("pending_first");
+                }}
+              >
+                필터 초기화
+              </button>
+              <button type="button" className="btn btn-secondary btn-small" onClick={openPendingRequestSearch}>
+                대기만 보기
+              </button>
+            </div>
+          </div>
+          {filteredRequestSearchRows.length === 0 ? (
+            <p className="small muted">현재 조건에서 표시할 요청이 없습니다.</p>
+          ) : (
+            <ul className="request-search-list" aria-label="request search and sort list">
+              {filteredRequestSearchRows.slice(0, 24).map((row) => (
+                <li key={row.key}>
+                  <div className="request-search-head">
+                    <strong>
+                      [{row.channel}] {row.requestId}
+                    </strong>
+                    <span className={`feedback-state-pill state-${statusToTone(row.status)}`}>{row.status}</span>
+                  </div>
+                  <p>{row.summary}</p>
+                  <p className="small muted">{row.detail}</p>
+                  <div className="request-search-meta">
+                    <span className="queue-history-chip">{formatDateTime(row.at)}</span>
+                    {row.status === "PENDING" ? (
+                      <span className="queue-history-chip">pending {Math.round(row.pendingHours)}h</span>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
         <article className="panel panel-request-bottleneck-feedback" id="request-bottleneck-feedback">
           <h2>요청 병목 구간 피드백</h2>
           <p className="small">
@@ -2170,6 +2573,37 @@ export default function EmployeeSelfServicePage() {
                   onClick={() => jumpToSection(card.targetSectionId)}
                 >
                   바로 확인
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel-request-wait-prediction" id="request-wait-prediction">
+          <h2>승인 대기 예측 피드백</h2>
+          <p className="small">
+            현재 대기 요청의 평균/최대 대기시간을 기반으로 승인 지연 위험을 예측하고, 우선 확인할 화면으로 바로 이동합니다.
+          </p>
+          <ul className="request-wait-prediction-list" aria-label="request wait prediction feedback list">
+            {approvalWaitPredictionCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="request-wait-prediction-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">ETA {card.etaLabel}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="request-wait-prediction-meta">
+                  <span className="queue-history-chip">pending {card.pendingCount}</span>
+                  <span className="queue-history-chip">avg {Math.round(card.averageWaitHours)}h</span>
+                  <span className="queue-history-chip">max {Math.round(card.maxWaitHours)}h</span>
+                  <span className="queue-history-chip">breach {card.predictedBreaches}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  관련 화면 이동
                 </button>
               </li>
             ))}
@@ -2244,6 +2678,31 @@ export default function EmployeeSelfServicePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel-mobile-follow-up-guide" id="mobile-follow-up-guide">
+          <h2>모바일 후속 액션 가이드</h2>
+          <p className="small">
+            제출 이후 필요한 후속 작업을 모바일 카드로 정리했습니다. 카드별 액션으로 관련 화면으로 바로 이동합니다.
+          </p>
+          <ul className="mobile-follow-up-guide-list" aria-label="mobile follow-up action guide list">
+            {mobileFollowUpGuideCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="mobile-follow-up-guide-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.tone}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runMobileFollowUpAction(card)}
                 >
                   {card.ctaLabel}
                 </button>
