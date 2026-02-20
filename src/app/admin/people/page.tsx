@@ -72,6 +72,21 @@ type HistorySortAccuracyCard = {
   targetSectionId: string;
 };
 
+type HistorySortHardeningCard = {
+  key: string;
+  label: string;
+  severity: HistoryRiskLevel;
+  accuracyScore: number;
+  confidenceGap: number;
+  totalCompared: number;
+  responseLabel: string;
+  detail: string;
+  searchScope: HistorySearchScope;
+  searchQuery: string;
+  recommendedSortOption: HistorySortOption;
+  targetSectionId: string;
+};
+
 type HistoryDelayRiskPredictionCard = {
   key: string;
   label: string;
@@ -104,6 +119,34 @@ type PeopleMobileFollowUpRecommendationCard = {
   key: string;
   label: string;
   severity: HistoryRiskLevel;
+  detail: string;
+  ctaLabel: string;
+  action: PeopleMobileFollowUpAction;
+  targetSectionId: string;
+};
+
+type HistoryDelayRiskResponseCard = {
+  key: string;
+  label: string;
+  severity: HistoryRiskLevel;
+  riskScore: number;
+  rowCount: number;
+  watchCount: number;
+  criticalCount: number;
+  responseWindow: string;
+  responseLabel: string;
+  detail: string;
+  searchScope: HistorySearchScope;
+  searchQuery: string;
+  recommendedSortOption: HistorySortOption;
+  targetSectionId: string;
+};
+
+type PeopleMobileFollowUpRecommendationUpgradeCard = {
+  key: string;
+  label: string;
+  severity: HistoryRiskLevel;
+  priorityScore: number;
   detail: string;
   ctaLabel: string;
   action: PeopleMobileFollowUpAction;
@@ -245,6 +288,19 @@ function sortHistorySearchRows(rows: HistorySearchSortRow[], option: HistorySort
     }
     return right.createdAtTs - left.createdAtTs;
   });
+}
+
+function historySortOptionLabel(option: HistorySortOption) {
+  if (option === "oldest_asc") {
+    return "오래된순";
+  }
+  if (option === "change_count_desc") {
+    return "변경 항목 많은순";
+  }
+  if (option === "risk_desc") {
+    return "위험도 우선";
+  }
+  return "최신순";
 }
 
 export default function AdminPeoplePage() {
@@ -851,6 +907,62 @@ export default function AdminPeoplePage() {
     normalizedHistorySearchQuery
   ]);
 
+  const historySortHardeningCards = useMemo<HistorySortHardeningCard[]>(() => {
+    const cards = historySortAccuracyCards.map((card) => {
+      let searchScope: HistorySearchScope = "all";
+      let searchQuery = "";
+      let recommendedSortOption: HistorySortOption = "recent_desc";
+      if (card.key === "change-count") {
+        searchScope = "field";
+        searchQuery = "부서";
+        recommendedSortOption = "change_count_desc";
+      } else if (card.key === "risk") {
+        searchScope = "detail";
+        searchQuery = "비활성";
+        recommendedSortOption = "risk_desc";
+      }
+
+      const confidenceGap = Math.max(0, 100 - card.accuracyScore);
+      const alreadyAligned = historySortOption === recommendedSortOption;
+      const responseLabel =
+        card.totalCompared === 0
+          ? "No rows in current history scope."
+          : card.severity === "critical"
+            ? `Apply ${historySortOptionLabel(recommendedSortOption)} and re-check top history rows now.`
+            : card.severity === "watch"
+              ? `Apply ${historySortOptionLabel(recommendedSortOption)} and verify ordering confidence.`
+              : alreadyAligned
+                ? "Current history sort option is already aligned."
+                : `Switch to ${historySortOptionLabel(recommendedSortOption)} for stable history ordering confidence.`;
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        accuracyScore: card.accuracyScore,
+        confidenceGap,
+        totalCompared: card.totalCompared,
+        responseLabel,
+        detail:
+          card.totalCompared === 0
+            ? "No history rows are available for hardening."
+            : `Accuracy ${card.accuracyScore} with confidence gap ${confidenceGap}.`,
+        searchScope,
+        searchQuery,
+        recommendedSortOption,
+        targetSectionId: "history-search-sort"
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = historyRiskRank(right.severity) - historyRiskRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.confidenceGap - left.confidenceGap;
+    });
+  }, [historySortAccuracyCards, historySortOption]);
+
   const historyRiskPredictionCards = useMemo<HistoryRiskPredictionCard[]>(() => {
     const highRiskRows = historySearchSortRows.filter((row) => row.riskLevel !== "normal");
     const orgJobRows = historySearchSortRows.filter((row) => row.hasOrgJobChange);
@@ -1025,6 +1137,70 @@ export default function AdminPeoplePage() {
     selectedEmployee
   ]);
 
+  const historyDelayRiskResponseCards = useMemo<HistoryDelayRiskResponseCard[]>(() => {
+    const cards = historyDelayRiskPredictionCards.map((card) => {
+      let searchScope: HistorySearchScope = "all";
+      let searchQuery = "";
+      let recommendedSortOption: HistorySortOption = "risk_desc";
+      let targetSectionId = "history-search-sort";
+      let responseLabel = "Open history search/sort and clear high-risk rows first.";
+      if (card.key === "active-scope-delay") {
+        searchScope = "field";
+        searchQuery = "부서";
+        responseLabel = "Broaden active scope and process org/job related changes first.";
+      } else if (card.key === "selected-employee-history") {
+        searchScope = "actor";
+        searchQuery = selectedEmployee?.id ?? "";
+        recommendedSortOption = "recent_desc";
+        targetSectionId = selectedEmployee ? "employee-history" : "org-chart";
+        responseLabel = selectedEmployee
+          ? "Review selected employee history first and refresh stale rows."
+          : "Select an employee from org chart before running response flow.";
+      }
+
+      const responseWindow =
+        card.rowCount === 0
+          ? "monitor daily"
+          : card.severity === "critical"
+            ? "within 2h"
+            : card.severity === "watch"
+              ? "within 8h"
+              : "within 24h";
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        riskScore: card.riskScore,
+        rowCount: card.rowCount,
+        watchCount: card.watchCount,
+        criticalCount: card.criticalCount,
+        responseWindow,
+        responseLabel,
+        detail:
+          card.rowCount === 0
+            ? "No rows available for delay-risk response."
+            : `Respond ${responseWindow}: risk ${card.riskScore}, watch ${card.watchCount}, critical ${card.criticalCount}.`,
+        searchScope,
+        searchQuery,
+        recommendedSortOption,
+        targetSectionId
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = historyRiskRank(right.severity) - historyRiskRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      const riskDiff = right.riskScore - left.riskScore;
+      if (riskDiff !== 0) {
+        return riskDiff;
+      }
+      return right.rowCount - left.rowCount;
+    });
+  }, [historyDelayRiskPredictionCards, selectedEmployee]);
+
   const peopleMobileFollowUpGuideCards = useMemo<PeopleMobileFollowUpGuideCard[]>(() => {
     const topRiskCard = historyRiskPredictionCards[0] ?? null;
     const topRiskTone = historyRiskTone(topRiskCard?.severity ?? "normal");
@@ -1172,6 +1348,111 @@ export default function AdminPeoplePage() {
     selectedEmployee
   ]);
 
+  const peopleMobileFollowUpRecommendationUpgradeCards = useMemo<
+    PeopleMobileFollowUpRecommendationUpgradeCard[]
+  >(() => {
+    const topSortHardeningRisk = historySortHardeningCards.find(
+      (card) => card.totalCompared > 0 && card.severity !== "normal"
+    );
+    const topDelayResponseRisk = historyDelayRiskResponseCards.find(
+      (card) => card.rowCount > 0 && card.severity !== "normal"
+    );
+    const hasSearchQuery = normalizedHistorySearchQuery.length > 0;
+    const hasSearchResults = filteredHistorySearchSortRows.length > 0;
+
+    const selectedEmployeeUpgrade = !selectedEmployee
+      ? {
+          severity: "critical" as const,
+          priorityScore: 96,
+          detail: "No selected employee. Pick one from org chart first.",
+          ctaLabel: "select employee",
+          action: "select_employee" as const,
+          targetSectionId: "org-chart"
+        }
+      : history.length === 0
+        ? {
+            severity: "watch" as const,
+            priorityScore: 78,
+            detail: "Selected employee has no loaded history. Refresh history now.",
+            ctaLabel: "refresh history",
+            action: "load_history" as const,
+            targetSectionId: "employee-history"
+          }
+        : {
+            severity: "normal" as const,
+            priorityScore: 30,
+            detail: `${history.length} history row(s) are loaded for ${selectedEmployee.id}.`,
+            ctaLabel: "open history",
+            action: "jump" as const,
+            targetSectionId: "employee-history"
+          };
+
+    const cards: PeopleMobileFollowUpRecommendationUpgradeCard[] = [
+      {
+        key: "sort-hardening-upgrade",
+        label: "history sort hardening recommendation",
+        severity: topSortHardeningRisk?.severity ?? "normal",
+        priorityScore: topSortHardeningRisk?.confidenceGap ?? 20,
+        detail: topSortHardeningRisk
+          ? topSortHardeningRisk.responseLabel
+          : "Current history sort confidence is stable.",
+        ctaLabel: "apply hardening",
+        action: "jump",
+        targetSectionId: "history-sort-hardening"
+      },
+      {
+        key: "delay-response-upgrade",
+        label: "history delay response recommendation",
+        severity: topDelayResponseRisk?.severity ?? "normal",
+        priorityScore: topDelayResponseRisk?.riskScore ?? 24,
+        detail: topDelayResponseRisk
+          ? `${topDelayResponseRisk.responseLabel} (${topDelayResponseRisk.responseWindow})`
+          : "No immediate delay-risk response is required.",
+        ctaLabel: "run response",
+        action: "jump",
+        targetSectionId: "history-delay-risk-response"
+      },
+      {
+        key: "search-execution-upgrade",
+        label: "search/sort execution recommendation",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        priorityScore: hasSearchQuery && !hasSearchResults ? 68 : 26,
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "Current query has no matches. Broaden scope before follow-up."
+            : `${filteredHistorySearchSortRows.length} row(s) are ready for follow-up execution.`,
+        ctaLabel: hasSearchQuery && !hasSearchResults ? "risk-first view" : "open search/sort",
+        action: hasSearchQuery && !hasSearchResults ? "risk_filter" : "jump",
+        targetSectionId: "history-search-sort"
+      },
+      {
+        key: "selected-history-upgrade",
+        label: "selected employee recommendation",
+        severity: selectedEmployeeUpgrade.severity,
+        priorityScore: selectedEmployeeUpgrade.priorityScore,
+        detail: selectedEmployeeUpgrade.detail,
+        ctaLabel: selectedEmployeeUpgrade.ctaLabel,
+        action: selectedEmployeeUpgrade.action,
+        targetSectionId: selectedEmployeeUpgrade.targetSectionId
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = historyRiskRank(right.severity) - historyRiskRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    filteredHistorySearchSortRows.length,
+    history.length,
+    historyDelayRiskResponseCards,
+    historySortHardeningCards,
+    normalizedHistorySearchQuery.length,
+    selectedEmployee
+  ]);
+
   const selectedDepartments = selectedEmployee?.organizationId
     ? departments.filter((department) => department.organizationId === selectedEmployee.organizationId)
     : departments;
@@ -1201,6 +1482,43 @@ export default function AdminPeoplePage() {
     setHistorySearchQuery("");
   }
 
+  function applyHistorySearchSortPreset(input: {
+    scope: HistorySearchScope;
+    query: string;
+    sortOption: HistorySortOption;
+    riskOnly: boolean;
+    targetSectionId: string;
+    feedbackLabel: string;
+  }) {
+    setHistorySearchScope(input.scope);
+    setHistorySearchQuery(input.query);
+    setHistorySortOption(input.sortOption);
+    setHistoryRiskOnly(input.riskOnly);
+    jumpPeopleSection(input.targetSectionId, input.feedbackLabel);
+  }
+
+  function runHistorySortHardeningAction(card: HistorySortHardeningCard) {
+    applyHistorySearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      sortOption: card.recommendedSortOption,
+      riskOnly: card.severity !== "normal",
+      targetSectionId: card.targetSectionId,
+      feedbackLabel: card.label
+    });
+  }
+
+  function runHistoryDelayRiskResponseAction(card: HistoryDelayRiskResponseCard) {
+    applyHistorySearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      sortOption: card.recommendedSortOption,
+      riskOnly: card.severity !== "normal",
+      targetSectionId: card.targetSectionId,
+      feedbackLabel: card.label
+    });
+  }
+
   function runPeopleMobileFollowUpAction(card: PeopleMobileFollowUpGuideCard) {
     if (card.action === "load_history") {
       if (selectedEmployee) {
@@ -1227,6 +1545,51 @@ export default function AdminPeoplePage() {
   }
 
   function runPeopleMobileFollowUpRecommendationAction(card: PeopleMobileFollowUpRecommendationCard) {
+    if (card.action === "load_history") {
+      if (selectedEmployee) {
+        void loadSelectedEmployeeHistory(selectedEmployee.id);
+      }
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    if (card.action === "risk_filter") {
+      applyHistoryRiskFirstFilter();
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    if (card.action === "select_employee") {
+      const fallbackEmployeeId = filteredEmployees[0]?.id ?? employees[0]?.id;
+      if (fallbackEmployeeId) {
+        setSelectedEmployeeId(fallbackEmployeeId);
+        void loadSelectedEmployeeHistory(fallbackEmployeeId);
+      }
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    jumpPeopleSection(card.targetSectionId, card.label);
+  }
+
+  function runPeopleMobileFollowUpRecommendationUpgradeAction(card: PeopleMobileFollowUpRecommendationUpgradeCard) {
+    if (card.key === "sort-hardening-upgrade") {
+      const hardeningTarget = historySortHardeningCards.find(
+        (hardeningCard) => hardeningCard.totalCompared > 0 && hardeningCard.severity !== "normal"
+      );
+      if (hardeningTarget) {
+        runHistorySortHardeningAction(hardeningTarget);
+        jumpPeopleSection("history-sort-hardening", card.label);
+        return;
+      }
+    }
+    if (card.key === "delay-response-upgrade") {
+      const responseTarget = historyDelayRiskResponseCards.find(
+        (responseCard) => responseCard.rowCount > 0 && responseCard.severity !== "normal"
+      );
+      if (responseTarget) {
+        runHistoryDelayRiskResponseAction(responseTarget);
+        jumpPeopleSection("history-delay-risk-response", card.label);
+        return;
+      }
+    }
     if (card.action === "load_history") {
       if (selectedEmployee) {
         void loadSelectedEmployeeHistory(selectedEmployee.id);
@@ -1428,6 +1791,13 @@ export default function AdminPeoplePage() {
             <button
               type="button"
               className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("history-sort-hardening", "이력 정렬 보강")}
+            >
+              정렬 보강
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
               onClick={() => jumpPeopleSection("history-delay-risk-prediction", "변경 지연 위험")}
             >
               지연 위험
@@ -1435,9 +1805,23 @@ export default function AdminPeoplePage() {
             <button
               type="button"
               className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("history-delay-risk-response", "변경 지연 대응")}
+            >
+              지연 대응
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
               onClick={() => jumpPeopleSection("people-mobile-follow-up-recommendation", "모바일 후속 추천")}
             >
               후속 추천
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("people-mobile-follow-up-recommendation-upgrade", "모바일 추천 고도화")}
+            >
+              추천 고도화
             </button>
           </div>
           <p className="people-mobile-feedback">{mobileFlowFeedback || "이동할 섹션을 선택하세요."}</p>
@@ -1752,6 +2136,34 @@ export default function AdminPeoplePage() {
           </ul>
         </article>
 
+        <article id="history-sort-hardening" className="panel panel-history-sort-hardening">
+          <h2>이력 정렬 정확도 보강</h2>
+          <p className="small">정렬 정확도 피드백을 보강 프리셋으로 전환해 정렬 신뢰도를 빠르게 회복합니다.</p>
+          <ul className="history-sort-hardening-list" aria-label="people history sort hardening feedback list">
+            {historySortHardeningCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="history-sort-hardening-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">gap {card.confidenceGap}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.responseLabel}</p>
+                <div className="history-sort-hardening-meta">
+                  <span className="queue-history-chip">score {card.accuracyScore}</span>
+                  <span className="queue-history-chip">{historySortOptionLabel(card.recommendedSortOption)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runHistorySortHardeningAction(card)}
+                >
+                  보강 프리셋 적용
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article id="history-risk-prediction" className="panel panel-history-risk-prediction">
           <h2>변경 위험 예측 피드백</h2>
           <p className="small">조직/직급 재배치, 식별정보 변경, 비활성 전환 위험을 카드로 요약합니다.</p>
@@ -1808,6 +2220,35 @@ export default function AdminPeoplePage() {
           </ul>
         </article>
 
+        <article id="history-delay-risk-response" className="panel panel-history-delay-risk-response">
+          <h2>변경 지연 위험 대응</h2>
+          <p className="small">지연 위험 예측 결과를 대응 창구와 정렬 프리셋으로 바꿔 즉시 실행합니다.</p>
+          <ul className="history-delay-risk-response-list" aria-label="people history delay risk response feedback list">
+            {historyDelayRiskResponseCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="history-delay-risk-response-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">risk {card.riskScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.responseLabel}</p>
+                <div className="history-delay-risk-response-meta">
+                  <span className="queue-history-chip">rows {card.rowCount}</span>
+                  <span className="queue-history-chip">window {card.responseWindow}</span>
+                  <span className="queue-history-chip">critical {card.criticalCount}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runHistoryDelayRiskResponseAction(card)}
+                >
+                  대응 실행
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article id="people-mobile-follow-up-guide" className="panel panel-people-mobile-follow-up-guide">
           <h2>모바일 후속 액션 가이드</h2>
           <p className="small">검색/예측/선택 상태를 바탕으로 다음 액션을 한 번에 실행합니다.</p>
@@ -1848,6 +2289,35 @@ export default function AdminPeoplePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runPeopleMobileFollowUpRecommendationAction(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article
+          id="people-mobile-follow-up-recommendation-upgrade"
+          className="panel panel-people-mobile-follow-up-recommendation-upgrade"
+        >
+          <h2>모바일 후속 액션 추천 고도화</h2>
+          <p className="small">정렬 보강, 지연 대응, 검색 실행, 선택 상태를 우선순위로 통합해 실행합니다.</p>
+          <ul
+            className="people-mobile-follow-up-recommendation-upgrade-list"
+            aria-label="people mobile follow-up recommendation upgrade list"
+          >
+            {peopleMobileFollowUpRecommendationUpgradeCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="people-mobile-follow-up-recommendation-upgrade-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">priority {card.priorityScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runPeopleMobileFollowUpRecommendationUpgradeAction(card)}
                 >
                   {card.ctaLabel}
                 </button>

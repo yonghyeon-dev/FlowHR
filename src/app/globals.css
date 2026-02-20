@@ -3228,10 +3228,13 @@ button.queue-badge:hover {
 
 .panel-history-search-sort,
 .panel-history-sort-accuracy,
+.panel-history-sort-hardening,
 .panel-history-risk-prediction,
 .panel-history-delay-risk-prediction,
+.panel-history-delay-risk-response,
 .panel-people-mobile-follow-up-guide,
-.panel-people-mobile-follow-up-recommendation {
+.panel-people-mobile-follow-up-recommendation,
+.panel-people-mobile-follow-up-recommendation-upgrade {
   grid-column: 1 / -1;
 }
 
@@ -3384,6 +3387,60 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.history-sort-hardening-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.history-sort-hardening-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-sort-hardening-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.history-sort-hardening-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.history-sort-hardening-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.history-sort-hardening-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.history-sort-hardening-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-sort-hardening-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .history-risk-prediction-list {
   margin: 10px 0 0;
   padding: 0;
@@ -3492,6 +3549,60 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.history-delay-risk-response-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.history-delay-risk-response-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-delay-risk-response-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.history-delay-risk-response-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.history-delay-risk-response-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.history-delay-risk-response-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.history-delay-risk-response-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-delay-risk-response-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .people-mobile-follow-up-guide-list {
   margin: 10px 0 0;
   padding: 0;
@@ -3582,6 +3693,54 @@ button.queue-badge:hover {
 }
 
 .people-mobile-follow-up-recommendation-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.people-mobile-follow-up-recommendation-upgrade-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4976,10 +5135,13 @@ button.queue-badge:hover {
 
   #history-search-sort .history-search-list,
   #history-sort-accuracy .history-sort-accuracy-list,
+  #history-sort-hardening .history-sort-hardening-list,
   #history-risk-prediction .history-risk-prediction-list,
   #history-delay-risk-prediction .history-delay-risk-prediction-list,
+  #history-delay-risk-response .history-delay-risk-response-list,
   #people-mobile-follow-up-guide .people-mobile-follow-up-guide-list,
-  #people-mobile-follow-up-recommendation .people-mobile-follow-up-recommendation-list {
+  #people-mobile-follow-up-recommendation .people-mobile-follow-up-recommendation-list,
+  #people-mobile-follow-up-recommendation-upgrade .people-mobile-follow-up-recommendation-upgrade-list {
     grid-template-columns: 1fr;
   }
 
@@ -4994,10 +5156,13 @@ button.queue-badge:hover {
 
   #history-search-sort .history-search-head,
   #history-sort-accuracy .history-sort-accuracy-head,
+  #history-sort-hardening .history-sort-hardening-head,
   #history-risk-prediction .history-risk-prediction-head,
   #history-delay-risk-prediction .history-delay-risk-prediction-head,
+  #history-delay-risk-response .history-delay-risk-response-head,
   #people-mobile-follow-up-guide .people-mobile-follow-up-guide-head,
-  #people-mobile-follow-up-recommendation .people-mobile-follow-up-recommendation-head {
+  #people-mobile-follow-up-recommendation .people-mobile-follow-up-recommendation-head,
+  #people-mobile-follow-up-recommendation-upgrade .people-mobile-follow-up-recommendation-upgrade-head {
     flex-direction: column;
     align-items: flex-start;
   }
