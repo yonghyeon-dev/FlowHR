@@ -327,6 +327,49 @@ type QueueMobileFollowUpRecommendationCard = {
   targetSectionId: string;
 };
 
+type QueueHistorySortHardeningCard = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  accuracyScore: number;
+  confidenceGap: number;
+  totalCompared: number;
+  responseLabel: string;
+  detail: string;
+  searchScope: QueueSearchSortScope;
+  searchQuery: string;
+  recommendedSortOption: QueueSearchSortOption;
+  targetSectionId: string;
+};
+
+type QueueDelayRiskResponseCard = {
+  key: string;
+  queue: QueueFocus;
+  label: string;
+  severity: QueueAlertLevel;
+  pendingCount: number;
+  watchCount: number;
+  criticalCount: number;
+  riskScore: number;
+  responseWindow: string;
+  responseLabel: string;
+  detail: string;
+  searchScope: QueueSearchSortScope;
+  searchQuery: string;
+  recommendedSortOption: QueueSearchSortOption;
+  targetSectionId: string;
+};
+
+type QueueMobileFollowUpRecommendationUpgradeCard = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  priorityScore: number;
+  detail: string;
+  actionLabel: string;
+  targetSectionId: string;
+};
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -493,6 +536,22 @@ function sortQueueSearchSortRows(rows: QueueSearchSortRow[], option: QueueSearch
     }
     return Number(right.selected) - Number(left.selected);
   });
+}
+
+function queueSearchSortOptionLabel(option: QueueSearchSortOption) {
+  if (option === "priority_desc") {
+    return "priority-desc";
+  }
+  if (option === "wait_desc") {
+    return "wait-desc";
+  }
+  if (option === "recent_desc") {
+    return "recent-desc";
+  }
+  if (option === "employee_asc") {
+    return "employee-asc";
+  }
+  return "queue-asc";
 }
 
 function summarizeQueueAlertByRule(
@@ -1260,6 +1319,62 @@ export default function AdminDashboardPage() {
     });
   }, [queueSearchSortOption, queueSearchSortQuery, queueSearchSortRows, queueSearchSortScope]);
 
+  const queueHistorySortHardeningCards = useMemo<QueueHistorySortHardeningCard[]>(() => {
+    const cards = queueHistorySortAccuracyCards.map((card) => {
+      let searchScope: QueueSearchSortScope = "all";
+      let searchQuery = "";
+      let recommendedSortOption: QueueSearchSortOption = "priority_desc";
+      if (card.key === "priority") {
+        searchScope = "detail";
+        searchQuery = "pending";
+        recommendedSortOption = "priority_desc";
+      } else if (card.key === "wait") {
+        recommendedSortOption = "wait_desc";
+      } else if (card.key === "recent") {
+        recommendedSortOption = "recent_desc";
+      }
+
+      const confidenceGap = Math.max(0, 100 - card.accuracyScore);
+      const alreadyAligned = queueSearchSortOption === recommendedSortOption;
+      const responseLabel =
+        card.totalCompared === 0
+          ? "No rows in current search scope."
+          : card.severity === "critical"
+            ? `Apply ${queueSearchSortOptionLabel(recommendedSortOption)} and re-triage top rows now.`
+            : card.severity === "watch"
+              ? `Apply ${queueSearchSortOptionLabel(recommendedSortOption)} and verify queue ordering.`
+              : alreadyAligned
+                ? "Current sort option is already aligned."
+                : `Switch to ${queueSearchSortOptionLabel(recommendedSortOption)} for higher ordering confidence.`;
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        accuracyScore: card.accuracyScore,
+        confidenceGap,
+        totalCompared: card.totalCompared,
+        responseLabel,
+        detail:
+          card.totalCompared === 0
+            ? "No queue rows available for hardening."
+            : `Accuracy ${card.accuracyScore} with confidence gap ${confidenceGap}.`,
+        searchScope,
+        searchQuery,
+        recommendedSortOption,
+        targetSectionId: "approval-search-sort"
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.confidenceGap - left.confidenceGap;
+    });
+  }, [queueHistorySortAccuracyCards, queueSearchSortOption]);
+
   const queueEvidencePreviewCards = useMemo<QueueEvidencePreviewCard[]>(() => {
     const attendanceCards: QueueEvidencePreviewCard[] = filteredPendingAttendance.map((record) => {
       const waitedHours = attendanceWaitHoursById.get(record.id) ?? 0;
@@ -1900,6 +2015,71 @@ export default function AdminDashboardPage() {
     });
   }, [queueSearchSortRows, queueSlaCriticalHours, queueSlaWatchHours]);
 
+  const queueDelayRiskResponseCards = useMemo<QueueDelayRiskResponseCard[]>(() => {
+    const cards = queueDelayRiskPredictionCards.map((card) => {
+      let searchScope: QueueSearchSortScope = "detail";
+      let searchQuery = "pending";
+      const targetSectionId = "approval-search-sort";
+      let responseLabel = "Open queue search/sort and clear highest wait items first.";
+      if (card.key === "attendance") {
+        searchScope = "queue";
+        searchQuery = "attendance";
+        responseLabel = "Focus attendance backlog and process correction-heavy items first.";
+      } else if (card.key === "leave") {
+        searchScope = "queue";
+        searchQuery = "leave";
+        responseLabel = "Focus leave backlog and resolve policy-dependent requests first.";
+      } else if (card.key === "payroll") {
+        searchScope = "queue";
+        searchQuery = "payroll";
+        responseLabel = "Focus payroll backlog and confirm blocked preview runs first.";
+      }
+
+      const responseWindow =
+        card.pendingCount === 0
+          ? "monitor daily"
+          : card.severity === "critical"
+            ? "within 2h"
+            : card.severity === "watch"
+              ? "within 8h"
+              : "within 24h";
+      const recommendedSortOption: QueueSearchSortOption = "wait_desc";
+
+      return {
+        key: card.key,
+        queue: card.queue,
+        label: card.label,
+        severity: card.severity,
+        pendingCount: card.pendingCount,
+        watchCount: card.watchCount,
+        criticalCount: card.criticalCount,
+        riskScore: card.riskScore,
+        responseWindow,
+        responseLabel,
+        detail:
+          card.pendingCount === 0
+            ? "No pending queue items for response flow."
+            : `Respond ${responseWindow}: risk ${card.riskScore}, watch ${card.watchCount}, critical ${card.criticalCount}.`,
+        searchScope,
+        searchQuery,
+        recommendedSortOption,
+        targetSectionId
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      const riskDiff = right.riskScore - left.riskScore;
+      if (riskDiff !== 0) {
+        return riskDiff;
+      }
+      return right.pendingCount - left.pendingCount;
+    });
+  }, [queueDelayRiskPredictionCards]);
+
   const queueMobileFollowUpGuideCards = useMemo<QueueMobileFollowUpGuideCard[]>(() => {
     const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
     const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
@@ -2047,6 +2227,166 @@ export default function AdminDashboardPage() {
     selectedVisibleAttendanceCount,
     selectedVisibleLeaveCount
   ]);
+
+  const queueMobileFollowUpRecommendationUpgradeCards = useMemo<QueueMobileFollowUpRecommendationUpgradeCard[]>(() => {
+    const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
+    const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
+    const hiddenSelectionCount = hiddenAttendanceSelection + hiddenLeaveSelection;
+    const hasSearchQuery = queueSearchSortQuery.trim().length > 0;
+    const hasSearchResults = filteredQueueSearchSortRows.length > 0;
+    const topSortHardeningRisk = queueHistorySortHardeningCards.find(
+      (card) => card.totalCompared > 0 && card.severity !== "normal"
+    );
+    const topDelayResponseRisk = queueDelayRiskResponseCards.find(
+      (card) => card.pendingCount > 0 && card.severity !== "normal"
+    );
+
+    const cards: QueueMobileFollowUpRecommendationUpgradeCard[] = [
+      {
+        key: "sort-hardening-upgrade",
+        label: "sort hardening recommendation",
+        severity: topSortHardeningRisk?.severity ?? "normal",
+        priorityScore:
+          topSortHardeningRisk?.severity === "critical" ? 100 : topSortHardeningRisk?.severity === "watch" ? 75 : 30,
+        detail: topSortHardeningRisk
+          ? topSortHardeningRisk.responseLabel
+          : "No sort hardening action is required.",
+        actionLabel: topSortHardeningRisk ? "apply hardening preset" : "open hardening panel",
+        targetSectionId: "approval-history-sort-hardening"
+      },
+      {
+        key: "delay-response-upgrade",
+        label: "delay response recommendation",
+        severity: topDelayResponseRisk?.severity ?? "normal",
+        priorityScore:
+          topDelayResponseRisk?.severity === "critical" ? 95 : topDelayResponseRisk?.severity === "watch" ? 70 : 25,
+        detail: topDelayResponseRisk
+          ? topDelayResponseRisk.responseLabel
+          : "No delay-risk response action is required.",
+        actionLabel: topDelayResponseRisk ? "run delay response" : "open response panel",
+        targetSectionId: "approval-delay-risk-response"
+      },
+      {
+        key: "search-upgrade",
+        label: "search execution recommendation",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        priorityScore: hasSearchQuery && !hasSearchResults ? 80 : 20,
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "Current query has no matches. Reset filters and widen scope."
+            : `${filteredQueueSearchSortRows.length} queue row(s) are ready for follow-up.`,
+        actionLabel: "open search/sort",
+        targetSectionId: "approval-search-sort"
+      },
+      {
+        key: "selection-upgrade",
+        label: "selection integrity recommendation",
+        severity:
+          hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason)
+            ? "watch"
+            : "normal",
+        priorityScore: hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason) ? 85 : 15,
+        detail:
+          hiddenSelectionCount > 0
+            ? `${hiddenSelectionCount} selected item(s) are hidden by active filters.`
+            : selectedLeaveCount > 0 && !hasLeaveRejectReason
+              ? "Leave reject reason is required before reject action."
+              : "Selection and required inputs are aligned.",
+        actionLabel: hiddenSelectionCount > 0 ? "open queue" : "open mobile checklist",
+        targetSectionId: hiddenSelectionCount > 0 ? "approvals" : "approval-mobile-checklist"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    filteredQueueSearchSortRows.length,
+    hasLeaveRejectReason,
+    queueDelayRiskResponseCards,
+    queueHistorySortHardeningCards,
+    queueSearchSortQuery,
+    selectedAttendanceCount,
+    selectedLeaveCount,
+    selectedVisibleAttendanceCount,
+    selectedVisibleLeaveCount
+  ]);
+
+  function jumpToSection(sectionId: string) {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${sectionId}`);
+    }
+  }
+
+  function applyQueueSearchSortPreset(preset: {
+    scope: QueueSearchSortScope;
+    query: string;
+    option: QueueSearchSortOption;
+    urgentOnly: boolean;
+    targetSectionId: string;
+  }) {
+    setQueueSearchSortScope(preset.scope);
+    setQueueSearchSortQuery(preset.query);
+    setQueueSearchSortOption(preset.option);
+    setApprovalQueueOnlyUrgent(preset.urgentOnly);
+    jumpToSection(preset.targetSectionId);
+  }
+
+  function runQueueHistorySortHardeningAction(card: QueueHistorySortHardeningCard) {
+    applyQueueSearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      option: card.recommendedSortOption,
+      urgentOnly: card.severity === "critical",
+      targetSectionId: card.targetSectionId
+    });
+  }
+
+  function runQueueDelayRiskResponseAction(card: QueueDelayRiskResponseCard) {
+    applyQueueSearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      option: card.recommendedSortOption,
+      urgentOnly: card.severity !== "normal",
+      targetSectionId: card.targetSectionId
+    });
+  }
+
+  function runQueueMobileFollowUpRecommendationUpgradeAction(card: QueueMobileFollowUpRecommendationUpgradeCard) {
+    if (card.key === "sort-hardening-upgrade") {
+      const hardeningTarget = queueHistorySortHardeningCards.find(
+        (hardeningCard) => hardeningCard.totalCompared > 0 && hardeningCard.severity !== "normal"
+      );
+      if (hardeningTarget) {
+        runQueueHistorySortHardeningAction(hardeningTarget);
+        jumpToSection("approval-history-sort-hardening");
+        return;
+      }
+    }
+    if (card.key === "delay-response-upgrade") {
+      const delayTarget = queueDelayRiskResponseCards.find(
+        (responseCard) => responseCard.pendingCount > 0 && responseCard.severity !== "normal"
+      );
+      if (delayTarget) {
+        runQueueDelayRiskResponseAction(delayTarget);
+        jumpToSection("approval-delay-risk-response");
+        return;
+      }
+    }
+    jumpToSection(card.targetSectionId);
+  }
 
   async function callApi(
     label: string,
@@ -3533,6 +3873,27 @@ export default function AdminDashboardPage() {
                 >
                   reset
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-history-sort-hardening")}
+                >
+                  sort hardening
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-delay-risk-response")}
+                >
+                  delay response
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-mobile-follow-up-recommendation-upgrade")}
+                >
+                  recommendation upgrade
+                </button>
               </div>
             </div>
             {filteredQueueSearchSortRows.length === 0 ? (
@@ -3596,6 +3957,42 @@ export default function AdminDashboardPage() {
                     <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
                       open search/sort
                     </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="queue-history-sort-hardening-panel" id="approval-history-sort-hardening">
+            <div className="queue-section-head">
+              <h3>Approval History Sort Hardening</h3>
+              <p className="small muted">
+                Converts sort-accuracy findings into one-tap hardening presets for queue search/sort.
+              </p>
+            </div>
+            <ul className="queue-history-sort-hardening-list" aria-label="approval history sort hardening feedback list">
+              {queueHistorySortHardeningCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-history-sort-hardening-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>gap {card.confidenceGap}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <p className="small muted">{card.responseLabel}</p>
+                  <div className="queue-history-sort-hardening-meta">
+                    <span className="queue-history-chip">score {card.accuracyScore}</span>
+                    <span className="queue-history-chip">
+                      {queueSearchSortOptionLabel(card.recommendedSortOption)}
+                    </span>
+                  </div>
+                  <div className="queue-history-sort-hardening-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueHistorySortHardeningAction(card)}
+                    >
+                      apply hardening
+                    </button>
                   </div>
                 </li>
               ))}
@@ -3854,6 +4251,41 @@ export default function AdminDashboardPage() {
             </ul>
           </section>
 
+          <section className="queue-delay-risk-response-panel" id="approval-delay-risk-response">
+            <div className="queue-section-head">
+              <h3>Approval Delay Risk Response</h3>
+              <p className="small muted">
+                Converts delay-risk prediction into response windows and one-tap mitigation presets.
+              </p>
+            </div>
+            <ul className="queue-delay-risk-response-list" aria-label="approval delay risk response feedback list">
+              {queueDelayRiskResponseCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-delay-risk-response-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>risk {card.riskScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <p className="small muted">{card.responseLabel}</p>
+                  <div className="queue-delay-risk-response-meta">
+                    <span className="queue-history-chip">pending {card.pendingCount}</span>
+                    <span className="queue-history-chip">window {card.responseWindow}</span>
+                    <span className="queue-history-chip">critical {card.criticalCount}</span>
+                  </div>
+                  <div className="queue-delay-risk-response-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueDelayRiskResponseAction(card)}
+                    >
+                      run response
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="queue-mobile-review-sheet" id="approval-mobile-review-sheet">
             <div className="queue-section-head">
               <h3>모바일 일괄 검토 시트</h3>
@@ -3996,6 +4428,41 @@ export default function AdminDashboardPage() {
                     <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
                       {card.actionLabel}
                     </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section
+            className="queue-mobile-follow-up-recommendation-upgrade-panel"
+            id="approval-mobile-follow-up-recommendation-upgrade"
+          >
+            <div className="queue-section-head">
+              <h3>Mobile Follow-up Recommendation Upgrade</h3>
+              <p className="small muted">
+                Prioritizes hardening, delay-response, search execution, and selection integrity follow-up in one panel.
+              </p>
+            </div>
+            <ul
+              className="queue-mobile-follow-up-recommendation-upgrade-list"
+              aria-label="approval mobile follow-up recommendation upgrade list"
+            >
+              {queueMobileFollowUpRecommendationUpgradeCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-mobile-follow-up-recommendation-upgrade-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>priority {card.priorityScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-mobile-follow-up-recommendation-upgrade-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueMobileFollowUpRecommendationUpgradeAction(card)}
+                    >
+                      {card.actionLabel}
+                    </button>
                   </div>
                 </li>
               ))}
