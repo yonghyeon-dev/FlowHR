@@ -34,9 +34,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/people#employee-compare">People 비교</Link>
           <Link href="/admin/people#employee-history">People 이력</Link>
           <Link href="/admin/people#history-search-sort">People 이력 검색/정렬</Link>
+          <Link href="/admin/people#history-sort-accuracy">People 이력 정렬 정확도</Link>
           <Link href="/admin/people#history-risk-prediction">People 변경 위험 예측</Link>
+          <Link href="/admin/people#history-delay-risk-prediction">People 변경 지연 위험 예측</Link>
           <Link href="/admin/people#people-mobile-flow">People 모바일 흐름</Link>
           <Link href="/admin/people#people-mobile-follow-up-guide">People 모바일 후속 가이드</Link>
+          <Link href="/admin/people#people-mobile-follow-up-recommendation">People 모바일 후속 추천</Link>
           <Link href="/admin#invites">초대/가입</Link>
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
