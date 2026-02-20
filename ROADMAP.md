@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
-> **Last updated**: 2026-02-19
-> **Current version**: 0.1.1 (SaaS UI Baseline)
+> **Last updated**: 2026-02-20
+> **Current version**: 0.1.27 (Admin Approval Queue UX Phase 5)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -145,11 +145,43 @@
 - WI-0106 급여 KR baseline 2차 고도화 (세액공제 + 부양가족 공제 + 월경계 강제검증 옵션 + e2e)
 - WI-0107 결재 위임 만료 자동화 (dry-run/apply API + Admin UI + e2e)
 - WI-0108 결재 위임 만료 스케줄러 (멀티 조직 sweep runner + hourly workflow + incident/alert + e2e)
+- WI-0109 전자결재 범용화 1차 (결재선 템플릿 API + 승인 게이트 연동 + `/admin/approval-templates` UI + e2e)
+- WI-0110 급여 법정공제 골든 회귀 확장 (GC-007/GC-008 + golden/CI 검증기 확장)
+- WI-0111 Auth 초대 delivery mode 확장 (`link`/`email`) + claims/audit 일관성 회귀 테스트 추가
+- WI-0112 직원 명세서 회귀 확장 (statutory self-service own-confirmed gate + deduction breakdown 검증)
+- WI-0113 결재선 템플릿 조건부 라우팅 baseline (PAYROLL gross-pay 조건 + 정책 폴백 게이트 + e2e)
+- WI-0114 휴가 정책 제약 고도화 (`minNoticeDays`, `maxConsecutiveDays` + Admin UI + e2e)
+- WI-0115 결재 게이트 프리뷰 API/UX (`/approval/policy/gate-preview` + `/admin/approval-templates` 프리뷰 패널 + e2e)
+- WI-0116 결재 단계 이력 baseline (`ApprovalStageHistory` 모델 + `/approval/stage-history` API + `/admin/approval-history` UI + e2e)
+- WI-0117 결재선 템플릿 다단계 모델 baseline (`approvalStages` payload + stage-1 게이트 호환 + e2e)
+- WI-0118 결재 실행 상태머신 baseline (`ApprovalExecution`/`ApprovalExecutionActionLog` + `/approval/executions` API + 단계별 도메인 최종확정 제어 + e2e)
+- WI-0119 결재 실행 가시성 UI baseline (`/admin/approval-executions` + 진행률/단계 로그 패널 + 관리자 네비게이션 연결)
+- WI-0120 연차촉진/사내공지 프리뷰 baseline (`LeavePolicy` 연차촉진 필드 + `/leave/policy/promotion-preview` API + `/admin/leave-promotion` UI + e2e)
+- WI-0121 결재 실행 우선순위/정체 큐 고도화 (`/approval/executions` sort/stalled filter + `/admin/approval-executions` 요약 KPI/빠른점프 + e2e)
+- WI-0122 연차촉진 공지 발송 자동화 (`POST /leave/policy/promotion-notify` + Discord/Slack webhook 연동 + `/admin/leave-promotion` 드라이런/실발송 UX + e2e)
+- WI-0123 결재 실행 정체 에스컬레이션 자동화 (`POST /approval/executions/escalate` + `/admin/approval-executions` 드라이런/실행 + 스케줄러 runner/workflow + e2e)
+- WI-0124 연차촉진 공지 이메일 템플릿 채널 확장 (`deliveryChannel=email_template` + 템플릿 ID/수신자 메타데이터 + `/admin/leave-promotion` 채널 선택 UX + e2e)
+- WI-0125 연차촉진 공지 발송 이력/재시도 모델 (`LeavePromotionDelivery`/`LeavePromotionDeliveryRecipient` + 이력 조회/상세/재시도 API + `/admin/leave-promotion` 이력/재시도 UX + e2e)
+- WI-0126 방향 재정렬(UI-first): 연차촉진 화면 `/ops/leave-promotion` 격리 + `/employee` 휴가 캘린더/연차 사용률/출퇴근 정정 보조 UX + e2e
+- WI-0127 직원 출퇴근 정정 UX 고도화(정정 대상 셀렉터/선택 기록 자동반영/메모 프리셋/입력 가드/근무시간 변화 프리뷰 + e2e)
+- WI-0128 관리자 승인 큐 UX 고도화(큐 포커스 배지 + 큐 검색 + 큐별 정렬 + 모바일 반응형 재배치 + e2e)
+- WI-0129 급여 명세서 서식/출력 UX 고도화(문서형 상세 패널 + 공제 항목 설명 + 인쇄/PDF 저장 + print 레이아웃 + e2e)
+- WI-0130 관리자 조직도/인사 이력 UI 고도화(`GET /people/employees/{employeeId}/history` + `/admin/people` 트리뷰/비교/이력 카드 + e2e)
+- WI-0131 직원 셀프서비스 2차 UX 고도화(휴가 캘린더 밀도 그리드 + 잔여 연차 시각화 + 모바일 빠른 입력/월 이동 + e2e)
+- WI-0132 관리자 승인 큐 UX 2차 고도화(긴급/주의 알림 배지 + 검색 범위/긴급 필터 + 정체 우선 정렬 + 모바일 빠른 승인 액션 + e2e)
+- WI-0133 직원 셀프서비스 3차 UX 고도화(요청 상태 피드백 카드 + 실패 원인 가시화 + 모바일 단축 흐름 + 네비 앵커 + e2e)
+- WI-0134 급여 명세서 UX 2차 고도화(상태/오류 피드백 패널 + 명세 비교 조회 + 모바일 전달 흐름 + 사이드 네비 앵커 + e2e)
+- WI-0135 관리자 조직도/인사 이력 UX 2차 고도화(부서/직급/최근변경 필터 + 변경 포인트 하이라이트 + 모바일 섹션 점프 + 사이드 네비 앵커 + e2e)
+- WI-0136 직원 셀프서비스 UX 4차 고도화(요청 상태 필터 + 모바일 요청 이력 타임라인 + 제출 직전 검증 피드백 + 사이드 네비 앵커 + e2e)
+- WI-0137 관리자 승인 큐 UX 3차 고도화(항목별 이력 요약 + 일괄 처리 직전 검증 피드백 + 모바일 승인 결과 피드백 + 사이드 네비 앵커 + e2e)
+- WI-0138 직원 셀프서비스 UX 5차 고도화(근태/휴가 통합 요약 카드 + 요청 수정/재제출 흐름 + 모바일 상태 알림 배지 + 사이드 네비 앵커 + e2e)
+- WI-0139 관리자 승인 큐 UX 4차 고도화(승인 근거 프리뷰 + 대기 SLA 타임라인 + 모바일 일괄 검토 시트 + 사이드 네비 앵커 + e2e)
+- WI-0140 직원 셀프서비스 UX 6차 고도화(정정/휴가 제출 체크리스트 통합 + 요청 병목 피드백 + 모바일 제출 가이드 + 사이드 네비 앵커 + e2e)
+- WI-0141 관리자 승인 큐 UX 5차 고도화(승인 근거 비교 카드 + SLA 임계치 알림 규칙 + 모바일 승인 체크리스트 + 사이드 네비 앵커 + e2e)
 
 ### 진행 중
 
-- 다음: 전자결재 범용화(결재선 템플릿) + UI 연동 확장
-- 다음: 급여 명세서 검증 자동화 확장(세액공제/월경계 포함 회귀 세트)
+- 다음: 직원 셀프서비스 UX 7차 고도화(요청 검색/정렬 + 승인 대기 예측 피드백 + 모바일 후속 액션 가이드)
 
 ### 현재 아키텍처
 
@@ -282,7 +314,7 @@ Employee 모델이나 Department 모델을 먼저 만들었어야 함.
 | **관리자 대시보드** | ✅ 웹 SPA | ✅ 웹 SPA | ⚠️ `/admin` SaaS 대시보드 baseline + ops 콘솔은 `/ops/*`로 격리(기본 숨김) | Critical |
 | **직원 셀프서비스** | ✅ 웹 포탈 | ✅ 웹 포탈 | ⚠️ `/employee` baseline + `/employee/payslips` (확정 급여 조회) | Critical |
 | **모바일 앱** | ✅ iOS/Android | ✅ iOS/Android | ❌ 없음 | High |
-| **알림** | ✅ 푸시/이메일/Slack | ✅ 푸시/Slack/Teams | ⚠️ 웹훅만 | Medium |
+| **알림** | ✅ 푸시/이메일/Slack | ✅ 푸시/Slack/Teams | ⚠️ 웹훅 + 부분 이메일(초대/연차촉진) | Medium |
 | **채용 관리** | ✅ ATS | ⚠️ 기본 | ❌ 없음 | Low |
 | **성과 평가** | ✅ MBO/OKR | ✅ 리뷰 시스템 | ❌ 없음 | Low |
 | **경비 관리** | ⚠️ 기본 | ✅ 경비 청구/정산 | ❌ 없음 | Low |

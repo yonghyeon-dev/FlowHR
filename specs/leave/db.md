@@ -18,11 +18,19 @@
 - `202602140002_wi0003_leave_accrual`
 - `202602140006_employee_fk_constraints`
 - `202602180002_leave_policy`
+- `202602180005_leave_fractional_units`
+- `202602190003_leave_policy_notice_consecutive`
 
-## WI-0003 Additive Columns
+## Additive Columns
 
-- `LeaveBalanceProjection.carryOverDays` (int, default 0)
+- `LeaveBalanceProjection.carryOverDays` (decimal(6,2), default 0)
 - `LeaveBalanceProjection.lastAccrualYear` (int, nullable)
+- `LeavePolicy.allowHalfDay` (boolean, default true)
+- `LeavePolicy.allowHourly` (boolean, default true)
+- `LeavePolicy.hourlyIncrementMinutes` (int, default 30)
+- `LeavePolicy.maxHoursPerRequest` (decimal(6,2), default 8)
+- `LeavePolicy.minNoticeDays` (int, default 0)
+- `LeavePolicy.maxConsecutiveDays` (decimal(6,2), nullable)
 
 ## Compatibility
 

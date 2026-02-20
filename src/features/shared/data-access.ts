@@ -4,9 +4,19 @@ export type LeaveType = "ANNUAL" | "SICK" | "UNPAID";
 export type LeaveRequestState = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveDecisionAction = "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveRequestUnit = "FULL_DAY" | "HALF_DAY" | "HOUR";
+export type LeavePromotionDeliveryChannel = "webhook" | "email_template";
+export type LeavePromotionDeliveryStatus = "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+export type LeavePromotionRecipientStatus = "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
+export type ApprovalStageResolution =
+  | "EXPECTED_ROLE"
+  | "ACTIVE_DELEGATION"
+  | "PRIVILEGED_BYPASS"
+  | "DENIED";
+export type ApprovalExecutionState = "PENDING" | "APPROVED" | "REJECTED";
+export type ApprovalExecutionActionType = "APPROVE" | "REJECT";
 
 export type AttendanceRecordEntity = {
   id: string;
@@ -178,6 +188,74 @@ export type ApprovalDelegationEntity = {
   updatedAt: Date;
 };
 
+export type ApprovalLineTemplateEntity = {
+  id: string;
+  organizationId: string;
+  name: string;
+  domain: ApprovalDomain;
+  approverRoles: string[];
+  approvalStages: ApprovalTemplateStageEntity[];
+  payrollGrossPayMinKrw: number | null;
+  payrollGrossPayMaxKrw: number | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ApprovalTemplateStageEntity = {
+  stageIndex: number;
+  label: string;
+  approverRoles: string[];
+  minApprovals: number;
+};
+
+export type ApprovalStageHistoryEntity = {
+  id: string;
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  stageIndex: number;
+  stageLabel: string;
+  requiredRoles: string[];
+  fallbackRole: string;
+  matchedTemplateIds: string[];
+  activeDelegationIds: string[];
+  actorRole: string;
+  actorId: string | null;
+  allowed: boolean;
+  resolution: ApprovalStageResolution;
+  payrollGrossPayKrw: number | null;
+  evaluatedAt: Date;
+};
+
+export type ApprovalExecutionEntity = {
+  id: string;
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  templateId: string | null;
+  state: ApprovalExecutionState;
+  totalStages: number;
+  currentStageIndex: number;
+  startedAt: Date;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ApprovalExecutionActionEntity = {
+  id: string;
+  executionId: string;
+  stageIndex: number;
+  action: ApprovalExecutionActionType;
+  actorRole: string;
+  actorId: string | null;
+  resolution: ApprovalStageResolution;
+  createdAt: Date;
+};
+
 export type EmployeeEntity = {
   id: string;
   organizationId: string | null;
@@ -243,6 +321,57 @@ export type LeavePolicyEntity = {
   allowHourly: boolean;
   hourlyIncrementMinutes: number;
   maxHoursPerRequest: number;
+  minNoticeDays: number;
+  maxConsecutiveDays: number | null;
+  annualLeavePromotionEnabled: boolean;
+  annualLeavePromotionThresholdDays: number;
+  annualLeavePromotionLeadDays: number;
+  annualLeavePromotionMessageTemplate: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type LeavePromotionDeliveryEntity = {
+  id: string;
+  organizationId: string;
+  asOf: Date;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: LeavePromotionDeliveryChannel;
+  provider: string | null;
+  status: LeavePromotionDeliveryStatus;
+  announcementTitle: string;
+  announcementBody: string;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource: string | null;
+  emailTemplateSource: string | null;
+  emailTemplateId: string | null;
+  dispatchedAt: Date | null;
+  requestedByActorRole: string;
+  requestedByActorId: string | null;
+  retryOfDeliveryId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type LeavePromotionDeliveryRecipientEntity = {
+  id: string;
+  deliveryId: string;
+  employeeId: string;
+  email: string | null;
+  name: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+  status: LeavePromotionRecipientStatus;
+  lastError: string | null;
+  sentAt: Date | null;
+  retryCount: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -440,6 +569,77 @@ export type UpdateApprovalDelegationInput = {
   active?: boolean;
 };
 
+export type CreateApprovalLineTemplateInput = {
+  organizationId: string;
+  name: string;
+  domain: ApprovalDomain;
+  approverRoles: string[];
+  approvalStages?: ApprovalTemplateStageEntity[];
+  payrollGrossPayMinKrw?: number | null;
+  payrollGrossPayMaxKrw?: number | null;
+  active?: boolean;
+};
+
+export type UpdateApprovalLineTemplateInput = {
+  name?: string;
+  domain?: ApprovalDomain;
+  approverRoles?: string[];
+  approvalStages?: ApprovalTemplateStageEntity[];
+  payrollGrossPayMinKrw?: number | null;
+  payrollGrossPayMaxKrw?: number | null;
+  active?: boolean;
+};
+
+export type CreateApprovalStageHistoryInput = {
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  stageIndex?: number;
+  stageLabel?: string;
+  requiredRoles: string[];
+  fallbackRole: string;
+  matchedTemplateIds?: string[];
+  activeDelegationIds?: string[];
+  actorRole: string;
+  actorId?: string | null;
+  allowed: boolean;
+  resolution: ApprovalStageResolution;
+  payrollGrossPayKrw?: number | null;
+  evaluatedAt?: Date;
+};
+
+export type CreateApprovalExecutionInput = {
+  organizationId: string;
+  domain: ApprovalDomain;
+  targetEntityType: string;
+  targetEntityId: string;
+  templateId?: string | null;
+  totalStages: number;
+  currentStageIndex?: number;
+  state?: ApprovalExecutionState;
+  startedAt?: Date;
+  completedAt?: Date | null;
+};
+
+export type UpdateApprovalExecutionInput = {
+  templateId?: string | null;
+  state?: ApprovalExecutionState;
+  totalStages?: number;
+  currentStageIndex?: number;
+  completedAt?: Date | null;
+};
+
+export type CreateApprovalExecutionActionInput = {
+  executionId: string;
+  stageIndex: number;
+  action: ApprovalExecutionActionType;
+  actorRole: string;
+  actorId?: string | null;
+  resolution: ApprovalStageResolution;
+  createdAt?: Date;
+};
+
 export type UpsertRoleInput = {
   id: string;
   name: string;
@@ -484,6 +684,69 @@ export type UpsertLeavePolicyInput = {
   allowHourly?: boolean;
   hourlyIncrementMinutes?: number;
   maxHoursPerRequest?: number;
+  minNoticeDays?: number;
+  maxConsecutiveDays?: number | null;
+  annualLeavePromotionEnabled?: boolean;
+  annualLeavePromotionThresholdDays?: number;
+  annualLeavePromotionLeadDays?: number;
+  annualLeavePromotionMessageTemplate?: string | null;
+};
+
+export type CreateLeavePromotionDeliveryInput = {
+  organizationId: string;
+  asOf: Date;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: LeavePromotionDeliveryChannel;
+  provider?: string | null;
+  status: LeavePromotionDeliveryStatus;
+  announcementTitle: string;
+  announcementBody: string;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource?: string | null;
+  emailTemplateSource?: string | null;
+  emailTemplateId?: string | null;
+  dispatchedAt?: Date | null;
+  requestedByActorRole: string;
+  requestedByActorId?: string | null;
+  retryOfDeliveryId?: string | null;
+};
+
+export type UpdateLeavePromotionDeliveryInput = {
+  provider?: string | null;
+  status?: LeavePromotionDeliveryStatus;
+  sentTargetCount?: number;
+  dispatchedAt?: Date | null;
+  webhookSource?: string | null;
+  emailTemplateSource?: string | null;
+  emailTemplateId?: string | null;
+};
+
+export type CreateLeavePromotionDeliveryRecipientInput = {
+  deliveryId: string;
+  employeeId: string;
+  email?: string | null;
+  name?: string | null;
+  remainingDays: number;
+  grantedDays: number;
+  usedDays: number;
+  lastAccrualYear?: number | null;
+  eligibleNow: boolean;
+  status: LeavePromotionRecipientStatus;
+  lastError?: string | null;
+  sentAt?: Date | null;
+  retryCount?: number;
+};
+
+export type UpdateLeavePromotionDeliveryRecipientInput = {
+  email?: string | null;
+  status?: LeavePromotionRecipientStatus;
+  lastError?: string | null;
+  sentAt?: Date | null;
+  retryCount?: number;
 };
 
 export type RecordLeaveDecisionInput = {
@@ -639,6 +902,51 @@ export interface ApprovalStore {
     active?: boolean;
     delegateActorId?: string;
   }): Promise<ApprovalDelegationEntity[]>;
+  createTemplate(input: CreateApprovalLineTemplateInput): Promise<ApprovalLineTemplateEntity>;
+  findTemplateById(id: string): Promise<ApprovalLineTemplateEntity | null>;
+  updateTemplate(id: string, input: UpdateApprovalLineTemplateInput): Promise<ApprovalLineTemplateEntity>;
+  listTemplates(input: {
+    organizationId?: string;
+    domain?: ApprovalDomain;
+    active?: boolean;
+  }): Promise<ApprovalLineTemplateEntity[]>;
+  appendStageHistory(input: CreateApprovalStageHistoryInput): Promise<ApprovalStageHistoryEntity>;
+  listStageHistory(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    allowed?: boolean;
+    resolution?: ApprovalStageResolution;
+    from?: Date;
+    to?: Date;
+    limit?: number;
+  }): Promise<ApprovalStageHistoryEntity[]>;
+  findExecutionByTarget(input: {
+    organizationId: string;
+    domain: ApprovalDomain;
+    targetEntityType: string;
+    targetEntityId: string;
+  }): Promise<ApprovalExecutionEntity | null>;
+  createExecution(input: CreateApprovalExecutionInput): Promise<ApprovalExecutionEntity>;
+  updateExecution(id: string, input: UpdateApprovalExecutionInput): Promise<ApprovalExecutionEntity>;
+  listExecutions(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    state?: ApprovalExecutionState;
+    limit?: number;
+  }): Promise<ApprovalExecutionEntity[]>;
+  appendExecutionAction(
+    input: CreateApprovalExecutionActionInput
+  ): Promise<ApprovalExecutionActionEntity>;
+  listExecutionActions(input: {
+    executionId: string;
+    stageIndex?: number;
+    action?: ApprovalExecutionActionType;
+    actorId?: string | null;
+  }): Promise<ApprovalExecutionActionEntity[]>;
 }
 
 export interface RbacStore {
@@ -689,6 +997,30 @@ export interface LeaveBalanceStore {
   }): Promise<LeaveBalanceEntity>;
 }
 
+export interface LeavePromotionDeliveryStore {
+  create(input: CreateLeavePromotionDeliveryInput): Promise<LeavePromotionDeliveryEntity>;
+  findById(id: string): Promise<LeavePromotionDeliveryEntity | null>;
+  update(id: string, input: UpdateLeavePromotionDeliveryInput): Promise<LeavePromotionDeliveryEntity>;
+  list(input: {
+    organizationId: string;
+    channel?: LeavePromotionDeliveryChannel;
+    status?: LeavePromotionDeliveryStatus;
+    retryOfDeliveryId?: string;
+    limit?: number;
+  }): Promise<LeavePromotionDeliveryEntity[]>;
+  createRecipient(
+    input: CreateLeavePromotionDeliveryRecipientInput
+  ): Promise<LeavePromotionDeliveryRecipientEntity>;
+  updateRecipient(
+    id: string,
+    input: UpdateLeavePromotionDeliveryRecipientInput
+  ): Promise<LeavePromotionDeliveryRecipientEntity>;
+  listRecipients(input: {
+    deliveryId: string;
+    status?: LeavePromotionRecipientStatus;
+  }): Promise<LeavePromotionDeliveryRecipientEntity[]>;
+}
+
 export interface AuditStore {
   append(input: AppendAuditLogInput): Promise<void>;
   list(input: ListAuditLogsInput): Promise<AuditLogEntity[]>;
@@ -706,6 +1038,7 @@ export type DataAccess = {
   leave: LeaveStore;
   leavePolicy: LeavePolicyStore;
   leaveBalance: LeaveBalanceStore;
+  leavePromotionDeliveries: LeavePromotionDeliveryStore;
   payroll: PayrollStore;
   deductionProfiles: DeductionProfileStore;
   audit: AuditStore;

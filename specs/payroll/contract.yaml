@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.8.0
+version: 1.8.1
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -12,6 +12,7 @@ scope:
     - KR statutory baseline deduction mode for payroll preview (income tax + 4-insurance approximation)
     - KR statutory baseline progressive income-tax brackets and insurance contribution caps
     - KR statutory baseline additive tax-credit inputs and optional monthly-boundary validation (Asia/Seoul)
+    - golden fixture regression coverage for statutory KR baseline deduction outputs
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -137,6 +138,7 @@ test_plan:
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
   regression:
     - replay GC-001 through GC-006 fixtures
+    - replay GC-007 through GC-008 statutory fixtures
     - statutory_kr_baseline deterministic result replay via WI-0101 e2e
     - statutory_kr_baseline progressive/cap deterministic replay via WI-0105 e2e
     - statutory_kr_baseline tax-credit/boundary deterministic replay via WI-0106 e2e
@@ -181,7 +183,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.8.0 extends statutory_kr_baseline mode with additive tax-credit inputs and optional monthly-boundary validation while preserving v1.7.0 progressive/cap compatibility."
+consumer_impact: "Contract v1.8.1 keeps API behavior unchanged and expands statutory_kr_baseline golden regression coverage (GC-007/GC-008) to harden deterministic payroll verification."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -195,6 +197,7 @@ references:
   - work-items/WI-0101-payroll-kr-statutory-baseline.md
   - work-items/WI-0105-payroll-kr-progressive-cap.md
   - work-items/WI-0106-payroll-tax-credit-month-boundary.md
+  - work-items/WI-0110-payroll-statutory-golden-regression.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

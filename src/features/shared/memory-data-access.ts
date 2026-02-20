@@ -1,14 +1,27 @@
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalExecutionActionEntity,
+  ApprovalExecutionActionType,
+  ApprovalExecutionEntity,
+  ApprovalExecutionState,
+  ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
+  ApprovalTemplateStageEntity,
+  ApprovalStageHistoryEntity,
   AuditLogEntity,
   AttendanceRecordEntity,
   CreateApprovalDelegationInput,
+  CreateApprovalExecutionActionInput,
+  CreateApprovalExecutionInput,
+  CreateApprovalStageHistoryInput,
+  CreateApprovalLineTemplateInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   ListAuditLogsInput,
   UpdateApprovalDelegationInput,
+  UpdateApprovalExecutionInput,
+  UpdateApprovalLineTemplateInput,
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
@@ -20,7 +33,10 @@ import type {
   DeductionProfileEntity,
   EmployeeEntity,
   LeaveBalanceEntity,
+  LeavePromotionDeliveryEntity,
+  LeavePromotionDeliveryRecipientEntity,
   LeavePolicyEntity,
+  LeavePromotionRecipientStatus,
   LeaveRequestEntity,
   OrganizationEntity,
   PositionEntity,
@@ -35,13 +51,17 @@ import type {
   UpdateDepartmentInput,
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
+  UpdateLeavePromotionDeliveryInput,
+  UpdateLeavePromotionDeliveryRecipientInput,
   UpsertLeavePolicyInput,
   UpsertApprovalPolicyInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
   PayrollRunEntity,
   WorkScheduleTemplateEntity,
-  WorkScheduleEntity
+  WorkScheduleEntity,
+  CreateLeavePromotionDeliveryInput,
+  CreateLeavePromotionDeliveryRecipientInput
 } from "@/features/shared/data-access";
 import { defaultRolePermissions } from "@/lib/rbac";
 
@@ -52,6 +72,10 @@ type MemoryState = {
   positions: Map<string, PositionEntity>;
   approvalPolicies: Map<string, ApprovalPolicyEntity>;
   approvalDelegations: Map<string, ApprovalDelegationEntity>;
+  approvalLineTemplates: Map<string, ApprovalLineTemplateEntity>;
+  approvalStageHistory: Map<string, ApprovalStageHistoryEntity>;
+  approvalExecutions: Map<string, ApprovalExecutionEntity>;
+  approvalExecutionActions: Map<string, ApprovalExecutionActionEntity>;
   employees: Map<string, EmployeeEntity>;
   roles: Map<string, RoleEntity>;
   rolePermissions: Map<string, Set<string>>;
@@ -62,6 +86,8 @@ type MemoryState = {
   leaveRequests: Map<string, LeaveRequestEntity>;
   leavePolicies: Map<string, LeavePolicyEntity>;
   leaveBalances: Map<string, LeaveBalanceEntity>;
+  leavePromotionDeliveries: Map<string, LeavePromotionDeliveryEntity>;
+  leavePromotionDeliveryRecipients: Map<string, LeavePromotionDeliveryRecipientEntity>;
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
   audit: AuditLogEntity[];
@@ -90,6 +116,10 @@ function createState(): MemoryState {
     positions: new Map<string, PositionEntity>(),
     approvalPolicies: new Map<string, ApprovalPolicyEntity>(),
     approvalDelegations: new Map<string, ApprovalDelegationEntity>(),
+    approvalLineTemplates: new Map<string, ApprovalLineTemplateEntity>(),
+    approvalStageHistory: new Map<string, ApprovalStageHistoryEntity>(),
+    approvalExecutions: new Map<string, ApprovalExecutionEntity>(),
+    approvalExecutionActions: new Map<string, ApprovalExecutionActionEntity>(),
     employees: new Map<string, EmployeeEntity>(),
     roles: new Map<string, RoleEntity>(),
     rolePermissions: new Map<string, Set<string>>(),
@@ -100,6 +130,8 @@ function createState(): MemoryState {
     leaveRequests: new Map<string, LeaveRequestEntity>(),
     leavePolicies: new Map<string, LeavePolicyEntity>(),
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
+    leavePromotionDeliveries: new Map<string, LeavePromotionDeliveryEntity>(),
+    leavePromotionDeliveryRecipients: new Map<string, LeavePromotionDeliveryRecipientEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
     audit: []
@@ -221,6 +253,29 @@ function cloneLeavePolicy(entity: LeavePolicyEntity): LeavePolicyEntity {
   };
 }
 
+function cloneLeavePromotionDelivery(
+  entity: LeavePromotionDeliveryEntity
+): LeavePromotionDeliveryEntity {
+  return {
+    ...entity,
+    asOf: cloneDate(entity.asOf),
+    dispatchedAt: entity.dispatchedAt ? cloneDate(entity.dispatchedAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneLeavePromotionDeliveryRecipient(
+  entity: LeavePromotionDeliveryRecipientEntity
+): LeavePromotionDeliveryRecipientEntity {
+  return {
+    ...entity,
+    sentAt: entity.sentAt ? cloneDate(entity.sentAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
 function clonePayroll(entity: PayrollRunEntity): PayrollRunEntity {
   return {
     ...entity,
@@ -280,6 +335,48 @@ function cloneApprovalDelegation(entity: ApprovalDelegationEntity): ApprovalDele
     endsAt: cloneDate(entity.endsAt),
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneApprovalLineTemplate(entity: ApprovalLineTemplateEntity): ApprovalLineTemplateEntity {
+  return {
+    ...entity,
+    approverRoles: [...entity.approverRoles],
+    approvalStages: entity.approvalStages.map((stage) => ({
+      stageIndex: stage.stageIndex,
+      label: stage.label,
+      approverRoles: [...stage.approverRoles],
+      minApprovals: stage.minApprovals
+    })),
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneApprovalStageHistory(entity: ApprovalStageHistoryEntity): ApprovalStageHistoryEntity {
+  return {
+    ...entity,
+    requiredRoles: [...entity.requiredRoles],
+    matchedTemplateIds: [...entity.matchedTemplateIds],
+    activeDelegationIds: [...entity.activeDelegationIds],
+    evaluatedAt: cloneDate(entity.evaluatedAt)
+  };
+}
+
+function cloneApprovalExecution(entity: ApprovalExecutionEntity): ApprovalExecutionEntity {
+  return {
+    ...entity,
+    startedAt: cloneDate(entity.startedAt),
+    completedAt: entity.completedAt ? cloneDate(entity.completedAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneApprovalExecutionAction(entity: ApprovalExecutionActionEntity): ApprovalExecutionActionEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt)
   };
 }
 
@@ -423,6 +520,60 @@ function updateApprovalDelegationEntity(
     startsAt: input.startsAt !== undefined ? cloneDate(input.startsAt) : existing.startsAt,
     endsAt: input.endsAt !== undefined ? cloneDate(input.endsAt) : existing.endsAt,
     active: input.active !== undefined ? input.active : existing.active,
+    updatedAt: new Date()
+  };
+}
+
+function updateApprovalLineTemplateEntity(
+  existing: ApprovalLineTemplateEntity,
+  input: UpdateApprovalLineTemplateInput
+): ApprovalLineTemplateEntity {
+  const approvalStages: ApprovalTemplateStageEntity[] =
+    input.approvalStages !== undefined
+      ? input.approvalStages.map((stage) => ({
+          stageIndex: stage.stageIndex,
+          label: stage.label,
+          approverRoles: [...stage.approverRoles],
+          minApprovals: stage.minApprovals
+        }))
+      : existing.approvalStages.map((stage) => ({
+          stageIndex: stage.stageIndex,
+          label: stage.label,
+          approverRoles: [...stage.approverRoles],
+          minApprovals: stage.minApprovals
+        }));
+  return {
+    ...existing,
+    name: input.name !== undefined ? input.name : existing.name,
+    domain: input.domain !== undefined ? input.domain : existing.domain,
+    approverRoles:
+      input.approverRoles !== undefined ? [...input.approverRoles] : [...existing.approverRoles],
+    approvalStages,
+    payrollGrossPayMinKrw:
+      input.payrollGrossPayMinKrw !== undefined
+        ? input.payrollGrossPayMinKrw
+        : existing.payrollGrossPayMinKrw,
+    payrollGrossPayMaxKrw:
+      input.payrollGrossPayMaxKrw !== undefined
+        ? input.payrollGrossPayMaxKrw
+        : existing.payrollGrossPayMaxKrw,
+    active: input.active !== undefined ? input.active : existing.active,
+    updatedAt: new Date()
+  };
+}
+
+function updateApprovalExecutionEntity(
+  existing: ApprovalExecutionEntity,
+  input: UpdateApprovalExecutionInput
+): ApprovalExecutionEntity {
+  return {
+    ...existing,
+    templateId: input.templateId !== undefined ? input.templateId : existing.templateId,
+    state: input.state !== undefined ? input.state : existing.state,
+    totalStages: input.totalStages !== undefined ? input.totalStages : existing.totalStages,
+    currentStageIndex:
+      input.currentStageIndex !== undefined ? input.currentStageIndex : existing.currentStageIndex,
+    completedAt: input.completedAt !== undefined ? input.completedAt : existing.completedAt,
     updatedAt: new Date()
   };
 }
@@ -632,6 +783,309 @@ export const memoryDataAccess: DataAccess = {
         const byStart = right.startsAt.getTime() - left.startsAt.getTime();
         if (byStart !== 0) {
           return byStart;
+        }
+        return left.id.localeCompare(right.id);
+      });
+      return rows;
+    },
+
+    async createTemplate(input: CreateApprovalLineTemplateInput) {
+      const now = new Date();
+      const approvalStages =
+        input.approvalStages && input.approvalStages.length > 0
+          ? input.approvalStages.map((stage) => ({
+              stageIndex: stage.stageIndex,
+              label: stage.label,
+              approverRoles: [...stage.approverRoles],
+              minApprovals: stage.minApprovals
+            }))
+          : [
+              {
+                stageIndex: 1,
+                label: "stage-1",
+                approverRoles: [...input.approverRoles],
+                minApprovals: 1
+              }
+            ];
+      const entity: ApprovalLineTemplateEntity = {
+        id: nextId("ATPL"),
+        organizationId: input.organizationId,
+        name: input.name,
+        domain: input.domain,
+        approverRoles: [...input.approverRoles],
+        approvalStages,
+        payrollGrossPayMinKrw:
+          input.payrollGrossPayMinKrw === undefined ? null : input.payrollGrossPayMinKrw,
+        payrollGrossPayMaxKrw:
+          input.payrollGrossPayMaxKrw === undefined ? null : input.payrollGrossPayMaxKrw,
+        active: input.active ?? true,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.approvalLineTemplates.set(entity.id, entity);
+      return cloneApprovalLineTemplate(entity);
+    },
+
+    async findTemplateById(id: string) {
+      const entity = state.approvalLineTemplates.get(id);
+      return entity ? cloneApprovalLineTemplate(entity) : null;
+    },
+
+    async updateTemplate(id: string, input: UpdateApprovalLineTemplateInput) {
+      const existing = state.approvalLineTemplates.get(id);
+      if (!existing) {
+        throw new Error(`approval line template not found: ${id}`);
+      }
+      const updated = updateApprovalLineTemplateEntity(existing, input);
+      state.approvalLineTemplates.set(id, updated);
+      return cloneApprovalLineTemplate(updated);
+    },
+
+    async listTemplates(input: {
+      organizationId?: string;
+      domain?: ApprovalDomain;
+      active?: boolean;
+    }) {
+      const rows: ApprovalLineTemplateEntity[] = [];
+      for (const entity of state.approvalLineTemplates.values()) {
+        if (input.organizationId && entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.domain && entity.domain !== input.domain) {
+          continue;
+        }
+        if (input.active !== undefined && entity.active !== input.active) {
+          continue;
+        }
+        rows.push(cloneApprovalLineTemplate(entity));
+      }
+      rows.sort((left, right) => {
+        const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+        return left.id.localeCompare(right.id);
+      });
+      return rows;
+    },
+
+    async appendStageHistory(input: CreateApprovalStageHistoryInput) {
+      const entity: ApprovalStageHistoryEntity = {
+        id: nextId("ASH"),
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        stageIndex: input.stageIndex ?? 1,
+        stageLabel: input.stageLabel ?? "policy-gate",
+        requiredRoles: [...input.requiredRoles],
+        fallbackRole: input.fallbackRole,
+        matchedTemplateIds: [...(input.matchedTemplateIds ?? [])],
+        activeDelegationIds: [...(input.activeDelegationIds ?? [])],
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        allowed: input.allowed,
+        resolution: input.resolution,
+        payrollGrossPayKrw: input.payrollGrossPayKrw ?? null,
+        evaluatedAt: input.evaluatedAt ? cloneDate(input.evaluatedAt) : new Date()
+      };
+      state.approvalStageHistory.set(entity.id, entity);
+      return cloneApprovalStageHistory(entity);
+    },
+
+    async listStageHistory(input: {
+      organizationId: string;
+      domain?: ApprovalDomain;
+      targetEntityType?: string;
+      targetEntityId?: string;
+      allowed?: boolean;
+      resolution?: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+      from?: Date;
+      to?: Date;
+      limit?: number;
+    }) {
+      const rows: ApprovalStageHistoryEntity[] = [];
+      for (const entity of state.approvalStageHistory.values()) {
+        if (entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.domain && entity.domain !== input.domain) {
+          continue;
+        }
+        if (input.targetEntityType && entity.targetEntityType !== input.targetEntityType) {
+          continue;
+        }
+        if (input.targetEntityId && entity.targetEntityId !== input.targetEntityId) {
+          continue;
+        }
+        if (input.allowed !== undefined && entity.allowed !== input.allowed) {
+          continue;
+        }
+        if (input.resolution && entity.resolution !== input.resolution) {
+          continue;
+        }
+        if (input.from && entity.evaluatedAt < input.from) {
+          continue;
+        }
+        if (input.to && entity.evaluatedAt > input.to) {
+          continue;
+        }
+        rows.push(cloneApprovalStageHistory(entity));
+      }
+      rows.sort((left, right) => {
+        const byEvaluatedAt = right.evaluatedAt.getTime() - left.evaluatedAt.getTime();
+        if (byEvaluatedAt !== 0) {
+          return byEvaluatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      if (input.limit !== undefined && input.limit > 0) {
+        return rows.slice(0, input.limit);
+      }
+      return rows;
+    },
+
+    async findExecutionByTarget(input: {
+      organizationId: string;
+      domain: ApprovalDomain;
+      targetEntityType: string;
+      targetEntityId: string;
+    }) {
+      for (const entity of state.approvalExecutions.values()) {
+        if (entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (entity.domain !== input.domain) {
+          continue;
+        }
+        if (entity.targetEntityType !== input.targetEntityType) {
+          continue;
+        }
+        if (entity.targetEntityId !== input.targetEntityId) {
+          continue;
+        }
+        return cloneApprovalExecution(entity);
+      }
+      return null;
+    },
+
+    async createExecution(input: CreateApprovalExecutionInput) {
+      const now = new Date();
+      const entity: ApprovalExecutionEntity = {
+        id: nextId("AEX"),
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        templateId: input.templateId ?? null,
+        state: input.state ?? "PENDING",
+        totalStages: input.totalStages,
+        currentStageIndex: input.currentStageIndex ?? 1,
+        startedAt: input.startedAt ? cloneDate(input.startedAt) : now,
+        completedAt:
+          input.completedAt === undefined
+            ? null
+            : input.completedAt === null
+              ? null
+              : cloneDate(input.completedAt),
+        createdAt: now,
+        updatedAt: now
+      };
+      state.approvalExecutions.set(entity.id, entity);
+      return cloneApprovalExecution(entity);
+    },
+
+    async updateExecution(id: string, input: UpdateApprovalExecutionInput) {
+      const existing = state.approvalExecutions.get(id);
+      if (!existing) {
+        throw new Error(`approval execution not found: ${id}`);
+      }
+      const updated = updateApprovalExecutionEntity(existing, input);
+      state.approvalExecutions.set(id, updated);
+      return cloneApprovalExecution(updated);
+    },
+
+    async listExecutions(input: {
+      organizationId: string;
+      domain?: ApprovalDomain;
+      targetEntityType?: string;
+      targetEntityId?: string;
+      state?: ApprovalExecutionState;
+      limit?: number;
+    }) {
+      const rows: ApprovalExecutionEntity[] = [];
+      for (const entity of state.approvalExecutions.values()) {
+        if (entity.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.domain && entity.domain !== input.domain) {
+          continue;
+        }
+        if (input.targetEntityType && entity.targetEntityType !== input.targetEntityType) {
+          continue;
+        }
+        if (input.targetEntityId && entity.targetEntityId !== input.targetEntityId) {
+          continue;
+        }
+        if (input.state && entity.state !== input.state) {
+          continue;
+        }
+        rows.push(cloneApprovalExecution(entity));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      if (input.limit !== undefined && input.limit > 0) {
+        return rows.slice(0, input.limit);
+      }
+      return rows;
+    },
+
+    async appendExecutionAction(input: CreateApprovalExecutionActionInput) {
+      const entity: ApprovalExecutionActionEntity = {
+        id: nextId("AEXA"),
+        executionId: input.executionId,
+        stageIndex: input.stageIndex,
+        action: input.action,
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        resolution: input.resolution,
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : new Date()
+      };
+      state.approvalExecutionActions.set(entity.id, entity);
+      return cloneApprovalExecutionAction(entity);
+    },
+
+    async listExecutionActions(input: {
+      executionId: string;
+      stageIndex?: number;
+      action?: ApprovalExecutionActionType;
+      actorId?: string | null;
+    }) {
+      const rows: ApprovalExecutionActionEntity[] = [];
+      for (const entity of state.approvalExecutionActions.values()) {
+        if (entity.executionId !== input.executionId) {
+          continue;
+        }
+        if (input.stageIndex !== undefined && entity.stageIndex !== input.stageIndex) {
+          continue;
+        }
+        if (input.action !== undefined && entity.action !== input.action) {
+          continue;
+        }
+        if (input.actorId !== undefined && entity.actorId !== input.actorId) {
+          continue;
+        }
+        rows.push(cloneApprovalExecutionAction(entity));
+      }
+      rows.sort((left, right) => {
+        const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
         }
         return left.id.localeCompare(right.id);
       });
@@ -1205,6 +1659,22 @@ export const memoryDataAccess: DataAccess = {
             hourlyIncrementMinutes:
               input.hourlyIncrementMinutes ?? existing.hourlyIncrementMinutes,
             maxHoursPerRequest: input.maxHoursPerRequest ?? existing.maxHoursPerRequest,
+            minNoticeDays: input.minNoticeDays ?? existing.minNoticeDays,
+            maxConsecutiveDays:
+              input.maxConsecutiveDays !== undefined
+                ? input.maxConsecutiveDays
+                : existing.maxConsecutiveDays,
+            annualLeavePromotionEnabled:
+              input.annualLeavePromotionEnabled ?? existing.annualLeavePromotionEnabled,
+            annualLeavePromotionThresholdDays:
+              input.annualLeavePromotionThresholdDays ??
+              existing.annualLeavePromotionThresholdDays,
+            annualLeavePromotionLeadDays:
+              input.annualLeavePromotionLeadDays ?? existing.annualLeavePromotionLeadDays,
+            annualLeavePromotionMessageTemplate:
+              input.annualLeavePromotionMessageTemplate !== undefined
+                ? input.annualLeavePromotionMessageTemplate
+                : existing.annualLeavePromotionMessageTemplate,
             updatedAt: now
           }
         : {
@@ -1216,6 +1686,12 @@ export const memoryDataAccess: DataAccess = {
             allowHourly: input.allowHourly ?? true,
             hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
             maxHoursPerRequest: input.maxHoursPerRequest ?? 8,
+            minNoticeDays: input.minNoticeDays ?? 0,
+            maxConsecutiveDays: input.maxConsecutiveDays ?? null,
+            annualLeavePromotionEnabled: input.annualLeavePromotionEnabled ?? false,
+            annualLeavePromotionThresholdDays: input.annualLeavePromotionThresholdDays ?? 5,
+            annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays ?? 30,
+            annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate ?? null,
             createdAt: now,
             updatedAt: now
           };
@@ -1277,6 +1753,159 @@ export const memoryDataAccess: DataAccess = {
       };
       state.leaveBalances.set(input.employeeId, next);
       return cloneLeaveBalance(next);
+    }
+  },
+
+  leavePromotionDeliveries: {
+    async create(input: CreateLeavePromotionDeliveryInput) {
+      const now = new Date();
+      const delivery: LeavePromotionDeliveryEntity = {
+        id: nextId("LPD"),
+        organizationId: input.organizationId,
+        asOf: cloneDate(input.asOf),
+        includeUpcoming: input.includeUpcoming,
+        dryRun: input.dryRun,
+        channel: input.channel,
+        provider: input.provider ?? null,
+        status: input.status,
+        announcementTitle: input.announcementTitle,
+        announcementBody: input.announcementBody,
+        targetCount: input.targetCount,
+        recipientCount: input.recipientCount,
+        missingEmailCount: input.missingEmailCount,
+        sentTargetCount: input.sentTargetCount,
+        webhookSource: input.webhookSource ?? null,
+        emailTemplateSource: input.emailTemplateSource ?? null,
+        emailTemplateId: input.emailTemplateId ?? null,
+        dispatchedAt: input.dispatchedAt ? cloneDate(input.dispatchedAt) : null,
+        requestedByActorRole: input.requestedByActorRole,
+        requestedByActorId: input.requestedByActorId ?? null,
+        retryOfDeliveryId: input.retryOfDeliveryId ?? null,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.leavePromotionDeliveries.set(delivery.id, delivery);
+      return cloneLeavePromotionDelivery(delivery);
+    },
+
+    async findById(id: string) {
+      const delivery = state.leavePromotionDeliveries.get(id);
+      return delivery ? cloneLeavePromotionDelivery(delivery) : null;
+    },
+
+    async update(id: string, input: UpdateLeavePromotionDeliveryInput) {
+      const existing = state.leavePromotionDeliveries.get(id);
+      if (!existing) {
+        throw new Error(`leave promotion delivery not found: ${id}`);
+      }
+      const updated: LeavePromotionDeliveryEntity = {
+        ...existing,
+        provider: input.provider !== undefined ? input.provider : existing.provider,
+        status: input.status ?? existing.status,
+        sentTargetCount:
+          input.sentTargetCount !== undefined ? input.sentTargetCount : existing.sentTargetCount,
+        dispatchedAt:
+          input.dispatchedAt !== undefined
+            ? (input.dispatchedAt ? cloneDate(input.dispatchedAt) : null)
+            : existing.dispatchedAt,
+        webhookSource:
+          input.webhookSource !== undefined ? input.webhookSource : existing.webhookSource,
+        emailTemplateSource:
+          input.emailTemplateSource !== undefined
+            ? input.emailTemplateSource
+            : existing.emailTemplateSource,
+        emailTemplateId:
+          input.emailTemplateId !== undefined ? input.emailTemplateId : existing.emailTemplateId,
+        updatedAt: new Date()
+      };
+      state.leavePromotionDeliveries.set(id, updated);
+      return cloneLeavePromotionDelivery(updated);
+    },
+
+    async list(input: {
+      organizationId: string;
+      channel?: "webhook" | "email_template";
+      status?: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+      retryOfDeliveryId?: string;
+      limit?: number;
+    }) {
+      const rows: LeavePromotionDeliveryEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 100;
+      for (const delivery of state.leavePromotionDeliveries.values()) {
+        if (delivery.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.channel && delivery.channel !== input.channel) {
+          continue;
+        }
+        if (input.status && delivery.status !== input.status) {
+          continue;
+        }
+        if (input.retryOfDeliveryId !== undefined && delivery.retryOfDeliveryId !== input.retryOfDeliveryId) {
+          continue;
+        }
+        rows.push(cloneLeavePromotionDelivery(delivery));
+      }
+      rows.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+      return rows.slice(0, limit);
+    },
+
+    async createRecipient(input: CreateLeavePromotionDeliveryRecipientInput) {
+      const now = new Date();
+      const recipient: LeavePromotionDeliveryRecipientEntity = {
+        id: nextId("LPDR"),
+        deliveryId: input.deliveryId,
+        employeeId: input.employeeId,
+        email: input.email ?? null,
+        name: input.name ?? null,
+        remainingDays: input.remainingDays,
+        grantedDays: input.grantedDays,
+        usedDays: input.usedDays,
+        lastAccrualYear: input.lastAccrualYear ?? null,
+        eligibleNow: input.eligibleNow,
+        status: input.status,
+        lastError: input.lastError ?? null,
+        sentAt: input.sentAt ? cloneDate(input.sentAt) : null,
+        retryCount: input.retryCount ?? 0,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.leavePromotionDeliveryRecipients.set(recipient.id, recipient);
+      return cloneLeavePromotionDeliveryRecipient(recipient);
+    },
+
+    async updateRecipient(id: string, input: UpdateLeavePromotionDeliveryRecipientInput) {
+      const existing = state.leavePromotionDeliveryRecipients.get(id);
+      if (!existing) {
+        throw new Error(`leave promotion delivery recipient not found: ${id}`);
+      }
+      const updated: LeavePromotionDeliveryRecipientEntity = {
+        ...existing,
+        email: input.email !== undefined ? input.email : existing.email,
+        status: input.status ?? existing.status,
+        lastError: input.lastError !== undefined ? input.lastError : existing.lastError,
+        sentAt:
+          input.sentAt !== undefined ? (input.sentAt ? cloneDate(input.sentAt) : null) : existing.sentAt,
+        retryCount: input.retryCount !== undefined ? input.retryCount : existing.retryCount,
+        updatedAt: new Date()
+      };
+      state.leavePromotionDeliveryRecipients.set(id, updated);
+      return cloneLeavePromotionDeliveryRecipient(updated);
+    },
+
+    async listRecipients(input: { deliveryId: string; status?: LeavePromotionRecipientStatus }) {
+      const rows: LeavePromotionDeliveryRecipientEntity[] = [];
+      for (const recipient of state.leavePromotionDeliveryRecipients.values()) {
+        if (recipient.deliveryId !== input.deliveryId) {
+          continue;
+        }
+        if (input.status && recipient.status !== input.status) {
+          continue;
+        }
+        rows.push(cloneLeavePromotionDeliveryRecipient(recipient));
+      }
+      rows.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+      return rows;
     }
   },
 

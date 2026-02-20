@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.5.0
+  version: 1.10.0
 paths:
   /leave/requests:
     get:
@@ -111,10 +111,143 @@ paths:
         "200":
           description: Leave policy snapshot
     put:
-      summary: Upsert leave policy for organization including fractional controls
+      summary: Upsert leave policy including fractional controls and notice/consecutive constraints
       responses:
         "200":
           description: Leave policy updated
+  /leave/policy/promotion-preview:
+    get:
+      summary: Preview annual leave promotion targets and internal announcement draft
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: asOf
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: includeUpcoming
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Leave promotion preview result
+  /leave/policy/promotion-notify:
+    post:
+      summary: Dispatch annual leave promotion notice through webhook or email-template channel (supports dry-run)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationId:
+                  type: string
+                asOf:
+                  type: string
+                  format: date-time
+                includeUpcoming:
+                  type: boolean
+                dryRun:
+                  type: boolean
+                deliveryChannel:
+                  type: string
+                  enum: [webhook, email_template]
+                emailTemplateId:
+                  type: string
+      responses:
+        "200":
+          description: Leave promotion notice dispatch result with channel delivery metadata
+  /leave/policy/promotion-deliveries:
+    get:
+      summary: List annual leave promotion delivery history rows
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: channel
+          required: false
+          schema:
+            type: string
+            enum: [webhook, email_template]
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [dry_run, skipped_no_targets, dispatched, failed]
+        - in: query
+          name: retryOfDeliveryId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: Leave promotion delivery history list
+  /leave/policy/promotion-deliveries/{deliveryId}:
+    get:
+      summary: Read annual leave promotion delivery history detail with recipient snapshots and retry chain
+      parameters:
+        - in: path
+          name: deliveryId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Leave promotion delivery detail
+  /leave/policy/promotion-deliveries/{deliveryId}/retry:
+    post:
+      summary: Retry annual leave promotion email-template delivery for failed (or selected) recipients
+      parameters:
+        - in: path
+          name: deliveryId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationId:
+                  type: string
+                dryRun:
+                  type: boolean
+                emailTemplateId:
+                  type: string
+                recipientEmployeeIds:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 200
+      responses:
+        "200":
+          description: Leave promotion retry delivery result
   /leave/accrual/settle:
     post:
       summary: Settle annual leave accrual and carry-over

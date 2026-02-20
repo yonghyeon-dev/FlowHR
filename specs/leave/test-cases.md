@@ -20,6 +20,22 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 12. Employee creates and approves `HOUR` leave request and balance usage deducts `hours/8`.
 13. Policy denial returns `409` when `allowHalfDay=false` or `allowHourly=false`.
 14. Policy validation rejects hourly requests that violate increment/maxHours rules.
+15. Policy denial returns `409` when request start does not satisfy `minNoticeDays`.
+16. Policy denial returns `409` when requested days exceed `maxConsecutiveDays`.
+17. Updating policy with `maxConsecutiveDays=null` restores unlimited consecutive requests.
+18. Leave policy updates annual promotion fields (`enabled`, `threshold`, `leadDays`, `template`) successfully.
+19. Promotion preview excludes upcoming targets when notice window is closed and `includeUpcoming=false`.
+20. Promotion preview returns threshold-matching targets and rendered announcement draft when window is open.
+21. Promotion notify dry-run returns dispatch summary without sending webhook payload.
+22. Promotion notify dispatch sends webhook when eligible targets exist in open notice window.
+23. Promotion notify dispatch skips webhook when no display target exists.
+24. Promotion notify dispatch fails with `503` when dispatch is required but webhook is not configured.
+25. Promotion notify dispatch sends email-template payload when `deliveryChannel=email_template` and recipients have email addresses.
+26. Promotion notify email-template dispatch fails with `503` when email-template endpoint/from config is missing for required dispatch.
+27. Promotion delivery history list endpoint returns channel/status filtered dispatch rows.
+28. Promotion delivery history detail endpoint returns recipient snapshot statuses (`FAILED`, `SKIPPED_NO_EMAIL`, etc.).
+29. Promotion delivery retry endpoint supports dry-run and real dispatch with retry-chain linkage.
+30. Promotion delivery retry defaults to failed recipients when `recipientEmployeeIds` is omitted.
 
 ## Boundary and Accuracy Cases
 
@@ -32,6 +48,12 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 7. Tenant-scoped policy read/write rejects cross-tenant access when tenancy is enabled.
 8. Fractional leave balances keep two-decimal precision across approve/settle flows.
 9. Existing full-day leave behavior remains backward compatible after fractional rollout.
+10. Min notice day validation uses Asia/Seoul day boundary for today/start-date comparison.
+11. Promotion notice window start/end is derived from Seoul year-end and policy lead days.
+12. Promotion notify webhook payload keeps deterministic title/body and target summaries.
+13. Promotion notify email-template payload keeps deterministic template id/recipient summary and excludes recipients without email.
+14. Promotion retry payload excludes recipients without email and keeps deterministic selected recipient set.
+15. Promotion retry increments recipient retry count deterministically.
 
 ## Regression Linkage
 
@@ -39,8 +61,13 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 - Existing payroll fixtures must remain unaffected by leave contract introduction.
 - Leave balance continuity must remain valid after yearly settlement.
 - Fractional leave fixtures (`HALF_DAY`, `HOUR`) must remain deterministic across CI runs.
+- Promotion preview fixtures remain deterministic for closed-window and open-window scenarios.
+- Promotion notify fixtures remain deterministic for dry-run / no-target / dispatched / missing-webhook outcomes.
+- Promotion notify fixtures remain deterministic for email-template dry-run / dispatched / missing-config outcomes.
+- Promotion delivery history fixtures remain deterministic for failed-dispatch snapshots and retry-chain list/detail views.
 
 ## QA Gate Expectations
 
 - Spec Gate: leave contract completeness, role matrix, and invariant checks.
 - Code Gate: unit/integration tests, authorization tests, audit log, and settlement idempotency assertions.
+- Code Gate: promotion notify side-effects (webhook/email-template) are blocked in dry-run and validated in dispatch path.

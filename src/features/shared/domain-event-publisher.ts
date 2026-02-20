@@ -9,6 +9,9 @@ export const domainEventNames = [
   "approval.policy.updated.v1",
   "approval.delegation.created.v1",
   "approval.delegation.updated.v1",
+  "approval.template.created.v1",
+  "approval.template.updated.v1",
+  "approval.execution.escalation.requested.v1",
   "attendance.recorded.v1",
   "attendance.corrected.v1",
   "attendance.approved.v1",
@@ -35,7 +38,8 @@ export const domainEventNames = [
   "leave.rejected.v1",
   "leave.canceled.v1",
   "leave.accrual.settled.v1",
-  "leave.policy.updated.v1"
+  "leave.policy.updated.v1",
+  "leave.promotion.notice.dispatched.v1"
 ] as const;
 
 export type DomainEventName = (typeof domainEventNames)[number];

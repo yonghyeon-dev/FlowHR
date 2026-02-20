@@ -19,6 +19,7 @@ PHASE2_KEYS = [
     "totalDeductionsKrw",
     "netPayKrw",
 ]
+PHASE2_MODES = ("manual", "profile", "statutory_kr_baseline")
 
 WORK_ITEM_FILE_RE = re.compile(r"(^|/)work-items/WI-\d{4}.*\.md$")
 CONTRACT_FILE_RE = re.compile(r"(^|/)specs/.+/contract\.yaml$")
@@ -232,8 +233,10 @@ def validate_fixture(path: pathlib.Path, seen_ids: set) -> List[str]:
                     errors.append(f"{path}: expected.phase2 missing key '{key}'")
 
             mode = phase2.get("mode")
-            if mode not in ("manual", "profile"):
-                errors.append(f"{path}: expected.phase2.mode must be 'manual' or 'profile'")
+            if mode not in PHASE2_MODES:
+                errors.append(
+                    f"{path}: expected.phase2.mode must be one of {', '.join(PHASE2_MODES)}"
+                )
 
             for key in PHASE2_KEYS:
                 if key == "mode":

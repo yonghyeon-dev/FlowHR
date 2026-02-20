@@ -19,6 +19,16 @@ type ServiceContext = {
   eventPublisher?: DomainEventPublisher;
 };
 
+export type EmployeeProfileHistoryEntry = {
+  action: string;
+  actorRole: string;
+  actorId: string | null;
+  payload: unknown;
+  createdAt: Date;
+};
+
+const EMPLOYEE_PROFILE_HISTORY_ACTIONS = ["employee.created", "employee.profile.updated"] as const;
+
 function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
 }
@@ -582,6 +592,45 @@ export async function getEmployee(
   }
   ensureTenantMatch(tenantScope, employee.organizationId, "employee not found");
   return employee;
+}
+
+export async function listEmployeeProfileHistory(
+  context: ServiceContext,
+  input: { employeeId: string; limit?: number }
+): Promise<EmployeeProfileHistoryEntry[]> {
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "list employee history");
+  const tenantScope = resolveTenantScope(context.actor);
+
+  const employee = await context.dataAccess.employees.findById(input.employeeId);
+  if (!employee) {
+    throw new ServiceError(404, "employee not found");
+  }
+  ensureTenantMatch(tenantScope, employee.organizationId, "employee not found");
+
+  const requestedLimit = input.limit ?? 30;
+  const normalizedLimit =
+    Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 200)
+      : 30;
+
+  const historyRows = await context.dataAccess.audit.list({
+    actions: [...EMPLOYEE_PROFILE_HISTORY_ACTIONS],
+    entityType: "Employee",
+    entityId: input.employeeId,
+    organizationId: tenantScope ?? undefined,
+    limit: 500
+  });
+
+  return historyRows
+    .slice(-normalizedLimit)
+    .reverse()
+    .map((row) => ({
+      action: row.action,
+      actorRole: row.actorRole,
+      actorId: row.actorId,
+      payload: row.payload,
+      createdAt: row.createdAt
+    }));
 }
 
 export async function updateEmployee(

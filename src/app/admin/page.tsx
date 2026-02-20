@@ -19,10 +19,12 @@ type ApiLog = {
 type ApprovalActivity = {
   id: number;
   queue: "attendance" | "leave" | "payroll";
+  actionKind: "approve" | "reject" | "confirm" | "other";
   action: string;
   itemId: string;
   ok: boolean;
   status: number;
+  createdAtMs: number;
   at: string;
 };
 
@@ -61,6 +63,7 @@ type WorkScheduleDto = {
 };
 
 type InviteRole = "admin" | "manager" | "employee" | "payroll_operator";
+type InviteDeliveryMode = "link" | "email";
 
 type InviteResultDto = {
   userId: string;
@@ -69,7 +72,8 @@ type InviteResultDto = {
   organizationId: string;
   actorId: string | null;
   redirectTo: string;
-  actionLink: string;
+  deliveryMode: InviteDeliveryMode;
+  actionLink: string | null;
 };
 
 type LeaveRequestDto = {
@@ -128,6 +132,120 @@ type LeaveBalanceDto = {
   carryOverDays: number;
   lastAccrualYear: number | null;
   updatedAt: string;
+};
+
+type QueueFocus = "all" | "attendance" | "leave" | "payroll";
+type QueueSearchScope = "all" | "employee" | "request_id" | "content";
+type QueueAlertLevel = "normal" | "watch" | "critical";
+type AttendanceQueueSort = "checkin_desc" | "checkin_asc" | "stale_desc" | "employee_asc";
+type LeaveQueueSort = "start_desc" | "start_asc" | "stale_desc" | "employee_asc";
+type PayrollQueueSort = "period_desc" | "stale_desc" | "gross_desc" | "employee_asc";
+type QueueBadgeSummary = {
+  focus: QueueFocus;
+  label: string;
+  pending: number;
+  visible: number;
+  selected: number;
+  watch: number;
+  critical: number;
+  oldestHours: number;
+  alertLevel: QueueAlertLevel;
+};
+
+type QueueItemHistorySummary = {
+  key: string;
+  queue: "attendance" | "leave" | "payroll";
+  itemId: string;
+  total: number;
+  success: number;
+  fail: number;
+  approved: number;
+  rejected: number;
+  confirmed: number;
+  lastAction: string;
+  lastStatus: number;
+  lastAt: string;
+  lastCreatedAtMs: number;
+};
+
+type QueuePreActionCheck = {
+  id: string;
+  label: string;
+  ok: boolean;
+  detail: string;
+};
+
+type QueueMobileApprovalFeedback = {
+  queue: "attendance" | "leave" | "payroll" | "mixed";
+  action: string;
+  okCount: number;
+  failCount: number;
+  total: number;
+  at: string;
+};
+
+type QueueEvidencePreviewCard = {
+  key: string;
+  queue: "attendance" | "leave" | "payroll";
+  itemId: string;
+  employeeId: string;
+  primary: string;
+  secondary: string;
+  waitedHours: number;
+  alertLevel: QueueAlertLevel;
+  historySummary: string;
+  selected: boolean;
+};
+
+type QueueSlaTimelinePoint = {
+  key: QueueFocus;
+  label: string;
+  total: number;
+  belowWatch: number;
+  betweenWatchAndCritical: number;
+  overCritical: number;
+  oldestHours: number;
+};
+
+type QueueMobileReviewStep = {
+  id: "attendance" | "leave" | "payroll";
+  label: string;
+  targetCount: number;
+  approveReady: boolean;
+  rejectReady: boolean;
+  detail: string;
+};
+
+type QueueEvidenceComparisonCard = {
+  key: string;
+  queue: "attendance" | "leave" | "payroll";
+  baselineItemId: string;
+  compareItemId: string;
+  baselineWaitHours: number;
+  compareWaitHours: number;
+  waitGapHours: number;
+  baselineFailCount: number;
+  compareFailCount: number;
+  failGapCount: number;
+  severity: QueueAlertLevel;
+  recommendation: string;
+};
+
+type QueueSlaRuleAlert = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  count: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type QueueMobileApprovalChecklistItem = {
+  id: string;
+  label: string;
+  pass: boolean;
+  detail: string;
+  targetSectionId: string;
 };
 
 function isTruthyFlag(value: string | undefined) {
@@ -193,6 +311,117 @@ function minutesToHours(minutes: number) {
   return `${hours.toFixed(1)}h`;
 }
 
+function toTimestamp(value: string | null) {
+  if (!value) {
+    return 0;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 0;
+  }
+  return parsed.getTime();
+}
+
+function toWaitHours(value: string | null, referenceMs: number) {
+  const timestamp = toTimestamp(value);
+  if (timestamp <= 0) {
+    return 0;
+  }
+  return Math.max(0, (referenceMs - timestamp) / 3_600_000);
+}
+
+function toQueueAlertLevelByRule(
+  waitHours: number,
+  watchThresholdHours: number,
+  criticalThresholdHours: number
+): QueueAlertLevel {
+  if (waitHours >= criticalThresholdHours) {
+    return "critical";
+  }
+  if (waitHours >= watchThresholdHours) {
+    return "watch";
+  }
+  return "normal";
+}
+
+function queueAlertLevelRank(level: QueueAlertLevel) {
+  if (level === "critical") {
+    return 2;
+  }
+  if (level === "watch") {
+    return 1;
+  }
+  return 0;
+}
+
+function summarizeQueueAlertByRule(
+  waitHoursValues: number[],
+  watchThresholdHours: number,
+  criticalThresholdHours: number
+) {
+  const oldestHours = waitHoursValues.length > 0 ? Math.max(...waitHoursValues) : 0;
+  const critical = waitHoursValues.filter(
+    (value) => toQueueAlertLevelByRule(value, watchThresholdHours, criticalThresholdHours) === "critical"
+  ).length;
+  const watch = waitHoursValues.filter(
+    (value) => toQueueAlertLevelByRule(value, watchThresholdHours, criticalThresholdHours) === "watch"
+  ).length;
+  const alertLevel: QueueAlertLevel = critical > 0 ? "critical" : watch > 0 ? "watch" : "normal";
+  return { oldestHours, critical, watch, alertLevel };
+}
+
+function summarizeSlaTimelineByRule(
+  waitHoursValues: number[],
+  watchThresholdHours: number,
+  criticalThresholdHours: number
+) {
+  const total = waitHoursValues.length;
+  let belowWatch = 0;
+  let betweenWatchAndCritical = 0;
+  let overCritical = 0;
+
+  for (const waitHours of waitHoursValues) {
+    if (waitHours >= criticalThresholdHours) {
+      overCritical += 1;
+    } else if (waitHours >= watchThresholdHours) {
+      betweenWatchAndCritical += 1;
+    } else {
+      belowWatch += 1;
+    }
+  }
+
+  const oldestHours = total > 0 ? Math.max(...waitHoursValues) : 0;
+  return { total, belowWatch, betweenWatchAndCritical, overCritical, oldestHours };
+}
+
+function matchesQueueSearch(
+  scope: QueueSearchScope,
+  normalizedQuery: string,
+  fields: { employee: string; requestId: string; content: string }
+) {
+  if (!normalizedQuery) {
+    return true;
+  }
+  const employee = fields.employee.toLowerCase();
+  const requestId = fields.requestId.toLowerCase();
+  const content = fields.content.toLowerCase();
+
+  if (scope === "employee") {
+    return employee.includes(normalizedQuery);
+  }
+  if (scope === "request_id") {
+    return requestId.includes(normalizedQuery);
+  }
+  if (scope === "content") {
+    return content.includes(normalizedQuery);
+  }
+  return `${employee} ${requestId} ${content}`.includes(normalizedQuery);
+}
+
+function toQueueItemHistoryKey(queue: "attendance" | "leave" | "payroll", itemId: string) {
+  return `${queue}:${itemId}`;
+}
+
 export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
 
@@ -213,6 +442,7 @@ export default function AdminDashboardPage() {
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InviteRole>("employee");
+  const [inviteDeliveryMode, setInviteDeliveryMode] = useState<InviteDeliveryMode>("link");
   const [inviteActorId, setInviteActorId] = useState("EMP-1001");
   const [inviteResult, setInviteResult] = useState<InviteResultDto | null>(null);
 
@@ -237,6 +467,16 @@ export default function AdminDashboardPage() {
   const [previewedPayroll, setPreviewedPayroll] = useState<PayrollRunDto[]>([]);
   const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<string[]>([]);
   const [selectedLeaveIds, setSelectedLeaveIds] = useState<string[]>([]);
+  const [approvalQueueFocus, setApprovalQueueFocus] = useState<QueueFocus>("all");
+  const [approvalQueueSearch, setApprovalQueueSearch] = useState("");
+  const [approvalQueueSearchScope, setApprovalQueueSearchScope] = useState<QueueSearchScope>("all");
+  const [approvalQueueOnlyUrgent, setApprovalQueueOnlyUrgent] = useState(false);
+  const [approvalQueueSelectedOnly, setApprovalQueueSelectedOnly] = useState(false);
+  const [attendanceQueueSort, setAttendanceQueueSort] = useState<AttendanceQueueSort>("checkin_desc");
+  const [leaveQueueSort, setLeaveQueueSort] = useState<LeaveQueueSort>("start_desc");
+  const [payrollQueueSort, setPayrollQueueSort] = useState<PayrollQueueSort>("period_desc");
+  const [queueSlaWatchHoursInput, setQueueSlaWatchHoursInput] = useState("24");
+  const [queueSlaCriticalHoursInput, setQueueSlaCriticalHoursInput] = useState("48");
 
   const [aggregateEmployeeId, setAggregateEmployeeId] = useState("");
   const [aggregates, setAggregates] = useState<AttendanceAggregateDto[]>([]);
@@ -249,6 +489,8 @@ export default function AdminDashboardPage() {
   const [leaveAllowHourly, setLeaveAllowHourly] = useState(true);
   const [leaveHourlyIncrementMinutes, setLeaveHourlyIncrementMinutes] = useState("30");
   const [leaveMaxHoursPerRequest, setLeaveMaxHoursPerRequest] = useState("8");
+  const [leaveMinNoticeDays, setLeaveMinNoticeDays] = useState("0");
+  const [leaveMaxConsecutiveDays, setLeaveMaxConsecutiveDays] = useState("");
   const [accrualResult, setAccrualResult] = useState<LeaveBalanceDto | null>(null);
 
   const [payrollHourlyRateKrw, setPayrollHourlyRateKrw] = useState("12000");
@@ -269,6 +511,8 @@ export default function AdminDashboardPage() {
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
+  const [mobileApprovalFeedback, setMobileApprovalFeedback] =
+    useState<QueueMobileApprovalFeedback | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -306,6 +550,887 @@ export default function AdminDashboardPage() {
 
   const selectedAttendanceCount = selectedAttendanceIds.length;
   const selectedLeaveCount = selectedLeaveIds.length;
+  const selectedQueueTotalCount = selectedAttendanceCount + selectedLeaveCount;
+  const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
+  const queueNowMs = Date.now();
+
+  const attendanceWaitHoursById = useMemo(
+    () =>
+      new Map(
+        pendingAttendance.map((record) => [record.id, toWaitHours(record.checkInAt, queueNowMs)] as const)
+      ),
+    [pendingAttendance, queueNowMs]
+  );
+  const leaveWaitHoursById = useMemo(
+    () =>
+      new Map(
+        pendingLeave.map((request) => [request.id, toWaitHours(request.startDate, queueNowMs)] as const)
+      ),
+    [pendingLeave, queueNowMs]
+  );
+  const payrollWaitHoursById = useMemo(
+    () =>
+      new Map(
+        previewedPayroll.map((run) => [run.id, toWaitHours(run.periodStart, queueNowMs)] as const)
+      ),
+    [previewedPayroll, queueNowMs]
+  );
+  const attendanceWaitHoursValues = useMemo(
+    () => [...attendanceWaitHoursById.values()],
+    [attendanceWaitHoursById]
+  );
+  const leaveWaitHoursValues = useMemo(() => [...leaveWaitHoursById.values()], [leaveWaitHoursById]);
+  const payrollWaitHoursValues = useMemo(
+    () => [...payrollWaitHoursById.values()],
+    [payrollWaitHoursById]
+  );
+  const queueSlaWatchHours = useMemo(() => {
+    const parsed = Math.floor(Number(queueSlaWatchHoursInput));
+    if (!Number.isFinite(parsed)) {
+      return 24;
+    }
+    return Math.max(1, parsed);
+  }, [queueSlaWatchHoursInput]);
+  const queueSlaCriticalHours = useMemo(() => {
+    const parsed = Math.floor(Number(queueSlaCriticalHoursInput));
+    const fallback = Math.max(queueSlaWatchHours + 1, 48);
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+    return Math.max(queueSlaWatchHours + 1, parsed);
+  }, [queueSlaCriticalHoursInput, queueSlaWatchHours]);
+  const resolveQueueAlertLevel = useMemo(
+    () =>
+      (waitHours: number) =>
+        toQueueAlertLevelByRule(waitHours, queueSlaWatchHours, queueSlaCriticalHours),
+    [queueSlaCriticalHours, queueSlaWatchHours]
+  );
+
+  const filteredPendingAttendance = useMemo(() => {
+    const filtered = pendingAttendance.filter((record) => {
+      const waitHours = attendanceWaitHoursById.get(record.id) ?? 0;
+      const alertLevel = resolveQueueAlertLevel(waitHours);
+      if (approvalQueueOnlyUrgent && alertLevel === "normal") {
+        return false;
+      }
+      if (approvalQueueSelectedOnly && !selectedAttendanceIds.includes(record.id)) {
+        return false;
+      }
+
+      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
+        employee: record.employeeId,
+        requestId: record.id,
+        content: `${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`
+      });
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (attendanceQueueSort === "employee_asc") {
+        return left.employeeId.localeCompare(right.employeeId, "ko");
+      }
+      if (attendanceQueueSort === "stale_desc") {
+        const leftWait = attendanceWaitHoursById.get(left.id) ?? 0;
+        const rightWait = attendanceWaitHoursById.get(right.id) ?? 0;
+        return rightWait - leftWait;
+      }
+      const leftTime = toTimestamp(left.checkInAt);
+      const rightTime = toTimestamp(right.checkInAt);
+      if (attendanceQueueSort === "checkin_asc") {
+        return leftTime - rightTime;
+      }
+      return rightTime - leftTime;
+    });
+  }, [
+    approvalQueueOnlyUrgent,
+    approvalQueueSearchScope,
+    approvalQueueSelectedOnly,
+    attendanceQueueSort,
+    attendanceWaitHoursById,
+    normalizedQueueSearch,
+    pendingAttendance,
+    resolveQueueAlertLevel,
+    selectedAttendanceIds
+  ]);
+
+  const filteredPendingLeave = useMemo(() => {
+    const filtered = pendingLeave.filter((request) => {
+      const waitHours = leaveWaitHoursById.get(request.id) ?? 0;
+      const alertLevel = resolveQueueAlertLevel(waitHours);
+      if (approvalQueueOnlyUrgent && alertLevel === "normal") {
+        return false;
+      }
+      if (approvalQueueSelectedOnly && !selectedLeaveIds.includes(request.id)) {
+        return false;
+      }
+
+      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
+        employee: request.employeeId,
+        requestId: request.id,
+        content: `${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`
+      });
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (leaveQueueSort === "employee_asc") {
+        return left.employeeId.localeCompare(right.employeeId, "ko");
+      }
+      if (leaveQueueSort === "stale_desc") {
+        const leftWait = leaveWaitHoursById.get(left.id) ?? 0;
+        const rightWait = leaveWaitHoursById.get(right.id) ?? 0;
+        return rightWait - leftWait;
+      }
+      const leftTime = toTimestamp(left.startDate);
+      const rightTime = toTimestamp(right.startDate);
+      if (leaveQueueSort === "start_asc") {
+        return leftTime - rightTime;
+      }
+      return rightTime - leftTime;
+    });
+  }, [
+    approvalQueueOnlyUrgent,
+    approvalQueueSearchScope,
+    approvalQueueSelectedOnly,
+    leaveQueueSort,
+    leaveWaitHoursById,
+    normalizedQueueSearch,
+    pendingLeave,
+    resolveQueueAlertLevel,
+    selectedLeaveIds
+  ]);
+
+  const filteredPreviewedPayroll = useMemo(() => {
+    const filtered = previewedPayroll.filter((run) => {
+      if (approvalQueueOnlyUrgent && resolveQueueAlertLevel(payrollWaitHoursById.get(run.id) ?? 0) === "normal") {
+        return false;
+      }
+      if (approvalQueueSelectedOnly) {
+        return false;
+      }
+
+      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
+        employee: run.employeeId ?? "",
+        requestId: run.id,
+        content: `${run.state} ${run.periodStart} ${run.periodEnd} ${run.grossPayKrw}`
+      });
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (payrollQueueSort === "employee_asc") {
+        return (left.employeeId ?? "").localeCompare(right.employeeId ?? "", "ko");
+      }
+      if (payrollQueueSort === "stale_desc") {
+        const leftWait = payrollWaitHoursById.get(left.id) ?? 0;
+        const rightWait = payrollWaitHoursById.get(right.id) ?? 0;
+        return rightWait - leftWait;
+      }
+      if (payrollQueueSort === "gross_desc") {
+        return right.grossPayKrw - left.grossPayKrw;
+      }
+      const leftPeriod = toTimestamp(left.periodStart);
+      const rightPeriod = toTimestamp(right.periodStart);
+      return rightPeriod - leftPeriod;
+    });
+  }, [
+    approvalQueueOnlyUrgent,
+    approvalQueueSearchScope,
+    approvalQueueSelectedOnly,
+    normalizedQueueSearch,
+    payrollQueueSort,
+    payrollWaitHoursById,
+    previewedPayroll,
+    resolveQueueAlertLevel
+  ]);
+
+  const showAttendanceQueue = approvalQueueFocus === "all" || approvalQueueFocus === "attendance";
+  const showLeaveQueue = approvalQueueFocus === "all" || approvalQueueFocus === "leave";
+  const showPayrollQueue = approvalQueueFocus === "all" || approvalQueueFocus === "payroll";
+
+  const selectedVisibleAttendanceCount = filteredPendingAttendance.filter((record) =>
+    selectedAttendanceIds.includes(record.id)
+  ).length;
+  const selectedVisibleLeaveCount = filteredPendingLeave.filter((request) =>
+    selectedLeaveIds.includes(request.id)
+  ).length;
+
+  const hasAttendanceSelection = selectedAttendanceCount > 0;
+  const hasLeaveSelection = selectedLeaveCount > 0;
+  const hasOnlyVisibleAttendanceSelected = selectedAttendanceCount === selectedVisibleAttendanceCount;
+  const hasOnlyVisibleLeaveSelected = selectedLeaveCount === selectedVisibleLeaveCount;
+  const hasLeaveRejectReason = leaveRejectReason.trim().length > 0;
+  const hasAttendanceRejectReason = attendanceRejectReason.trim().length > 0;
+
+  const canApproveSelectedAttendance = hasAttendanceSelection && hasOnlyVisibleAttendanceSelected;
+  const canRejectSelectedAttendance = hasAttendanceSelection && hasOnlyVisibleAttendanceSelected;
+  const canApproveSelectedLeave = hasLeaveSelection && hasOnlyVisibleLeaveSelected;
+  const canRejectSelectedLeave = hasLeaveSelection && hasOnlyVisibleLeaveSelected && hasLeaveRejectReason;
+
+  const attendanceBulkValidationChecks = useMemo<QueuePreActionCheck[]>(
+    () => [
+      {
+        id: "attendance-selected",
+        label: "attendance selection",
+        ok: hasAttendanceSelection,
+        detail: hasAttendanceSelection ? `${selectedAttendanceCount} selected` : "no selected item"
+      },
+      {
+        id: "attendance-visible-only",
+        label: "selection synced with current filter",
+        ok: hasOnlyVisibleAttendanceSelected,
+        detail: hasOnlyVisibleAttendanceSelected
+          ? "all selected items are visible"
+          : `${selectedAttendanceCount - selectedVisibleAttendanceCount} hidden selected`
+      },
+      {
+        id: "attendance-reject-reason",
+        label: "reject reason (recommended)",
+        ok: hasAttendanceRejectReason,
+        detail: hasAttendanceRejectReason ? "reason provided" : "reason is optional but recommended"
+      }
+    ],
+    [
+      hasAttendanceRejectReason,
+      hasAttendanceSelection,
+      hasOnlyVisibleAttendanceSelected,
+      selectedAttendanceCount,
+      selectedVisibleAttendanceCount
+    ]
+  );
+
+  const leaveBulkValidationChecks = useMemo<QueuePreActionCheck[]>(
+    () => [
+      {
+        id: "leave-selected",
+        label: "leave selection",
+        ok: hasLeaveSelection,
+        detail: hasLeaveSelection ? `${selectedLeaveCount} selected` : "no selected item"
+      },
+      {
+        id: "leave-visible-only",
+        label: "selection synced with current filter",
+        ok: hasOnlyVisibleLeaveSelected,
+        detail: hasOnlyVisibleLeaveSelected
+          ? "all selected items are visible"
+          : `${selectedLeaveCount - selectedVisibleLeaveCount} hidden selected`
+      },
+      {
+        id: "leave-reject-reason",
+        label: "reject reason (required for bulk reject)",
+        ok: hasLeaveRejectReason,
+        detail: hasLeaveRejectReason ? "reason ready" : "bulk reject is disabled until reason is filled"
+      }
+    ],
+    [
+      hasLeaveRejectReason,
+      hasLeaveSelection,
+      hasOnlyVisibleLeaveSelected,
+      selectedLeaveCount,
+      selectedVisibleLeaveCount
+    ]
+  );
+
+  const approvalItemHistorySummaryMap = useMemo(() => {
+    const map = new Map<string, QueueItemHistorySummary>();
+    for (const activity of approvalActivities) {
+      const key = toQueueItemHistoryKey(activity.queue, activity.itemId);
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          key,
+          queue: activity.queue,
+          itemId: activity.itemId,
+          total: 1,
+          success: activity.ok ? 1 : 0,
+          fail: activity.ok ? 0 : 1,
+          approved: activity.actionKind === "approve" ? 1 : 0,
+          rejected: activity.actionKind === "reject" ? 1 : 0,
+          confirmed: activity.actionKind === "confirm" ? 1 : 0,
+          lastAction: activity.action,
+          lastStatus: activity.status,
+          lastAt: activity.at,
+          lastCreatedAtMs: activity.createdAtMs
+        });
+        continue;
+      }
+
+      existing.total += 1;
+      if (activity.ok) {
+        existing.success += 1;
+      } else {
+        existing.fail += 1;
+      }
+      if (activity.actionKind === "approve") {
+        existing.approved += 1;
+      } else if (activity.actionKind === "reject") {
+        existing.rejected += 1;
+      } else if (activity.actionKind === "confirm") {
+        existing.confirmed += 1;
+      }
+      if (activity.createdAtMs >= existing.lastCreatedAtMs) {
+        existing.lastAction = activity.action;
+        existing.lastStatus = activity.status;
+        existing.lastAt = activity.at;
+        existing.lastCreatedAtMs = activity.createdAtMs;
+      }
+    }
+    return map;
+  }, [approvalActivities]);
+
+  const approvalItemHistoryRows = useMemo(
+    () =>
+      [...approvalItemHistorySummaryMap.values()]
+        .sort((left, right) => right.lastCreatedAtMs - left.lastCreatedAtMs)
+        .slice(0, 12),
+    [approvalItemHistorySummaryMap]
+  );
+
+  const queueFeedbackByQueue = useMemo(() => {
+    const map = new Map<
+      "attendance" | "leave" | "payroll",
+      { queue: "attendance" | "leave" | "payroll"; ok: number; fail: number }
+    >();
+    for (const activity of approvalActivities.slice(0, 12)) {
+      const existing = map.get(activity.queue) ?? { queue: activity.queue, ok: 0, fail: 0 };
+      if (activity.ok) {
+        existing.ok += 1;
+      } else {
+        existing.fail += 1;
+      }
+      map.set(activity.queue, existing);
+    }
+    return [...map.values()];
+  }, [approvalActivities]);
+
+  function formatQueueItemHistoryInline(queue: "attendance" | "leave" | "payroll", itemId: string) {
+    const summary = approvalItemHistorySummaryMap.get(toQueueItemHistoryKey(queue, itemId));
+    if (!summary) {
+      return "history 0";
+    }
+    return `history ${summary.total} / ok ${summary.success} / fail ${summary.fail}`;
+  }
+
+  const queueBadgeSummaries = useMemo<QueueBadgeSummary[]>(
+    () => [
+      {
+        focus: "all",
+        label: "전체",
+        pending: pendingAttendance.length + pendingLeave.length + previewedPayroll.length,
+        visible:
+          filteredPendingAttendance.length +
+          filteredPendingLeave.length +
+          filteredPreviewedPayroll.length,
+        selected: selectedVisibleAttendanceCount + selectedVisibleLeaveCount,
+        ...summarizeQueueAlertByRule(
+          [
+          ...attendanceWaitHoursValues,
+          ...leaveWaitHoursValues,
+          ...payrollWaitHoursValues
+          ],
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
+      },
+      {
+        focus: "attendance",
+        label: "출퇴근",
+        pending: pendingAttendance.length,
+        visible: filteredPendingAttendance.length,
+        selected: selectedVisibleAttendanceCount,
+        ...summarizeQueueAlertByRule(
+          attendanceWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
+      },
+      {
+        focus: "leave",
+        label: "휴가",
+        pending: pendingLeave.length,
+        visible: filteredPendingLeave.length,
+        selected: selectedVisibleLeaveCount,
+        ...summarizeQueueAlertByRule(leaveWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
+      },
+      {
+        focus: "payroll",
+        label: "급여",
+        pending: previewedPayroll.length,
+        visible: filteredPreviewedPayroll.length,
+        selected: 0,
+        ...summarizeQueueAlertByRule(
+          payrollWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
+      }
+    ],
+    [
+      attendanceWaitHoursValues,
+      filteredPendingAttendance.length,
+      filteredPendingLeave.length,
+      filteredPreviewedPayroll.length,
+      leaveWaitHoursValues,
+      pendingAttendance.length,
+      pendingLeave.length,
+      payrollWaitHoursValues,
+      previewedPayroll.length,
+      queueSlaCriticalHours,
+      queueSlaWatchHours,
+      selectedVisibleAttendanceCount,
+      selectedVisibleLeaveCount
+    ]
+  );
+
+  const activeQueueBadgeSummary =
+    queueBadgeSummaries.find((badge) => badge.focus === approvalQueueFocus) ?? queueBadgeSummaries[0];
+
+  const queueAlertOverview = useMemo(() => {
+    const queueBadges = queueBadgeSummaries.filter((badge) => badge.focus !== "all");
+    const totalCritical = queueBadges.reduce((sum, badge) => sum + badge.critical, 0);
+    const totalWatch = queueBadges.reduce((sum, badge) => sum + badge.watch, 0);
+    const hottestQueue =
+      queueBadges.length === 0
+        ? null
+        : [...queueBadges].sort((left, right) => {
+            const levelDiff = queueAlertLevelRank(right.alertLevel) - queueAlertLevelRank(left.alertLevel);
+            if (levelDiff !== 0) {
+              return levelDiff;
+            }
+            return right.oldestHours - left.oldestHours;
+          })[0];
+    return { totalCritical, totalWatch, hottestQueue };
+  }, [queueBadgeSummaries]);
+
+  const queueEvidencePreviewCards = useMemo<QueueEvidencePreviewCard[]>(() => {
+    const attendanceCards: QueueEvidencePreviewCard[] = filteredPendingAttendance.map((record) => {
+      const waitedHours = attendanceWaitHoursById.get(record.id) ?? 0;
+      const historySummary = approvalItemHistorySummaryMap.get(
+        toQueueItemHistoryKey("attendance", record.id)
+      );
+
+      return {
+        key: `attendance:${record.id}`,
+        queue: "attendance",
+        itemId: record.id,
+        employeeId: record.employeeId,
+        primary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)} / 휴게 ${record.breakMinutes}분`,
+        secondary: record.notes?.trim() ? `메모: ${record.notes.trim()}` : "메모 없음",
+        waitedHours,
+        alertLevel: resolveQueueAlertLevel(waitedHours),
+        historySummary: historySummary
+          ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
+          : "history 0",
+        selected: selectedAttendanceIds.includes(record.id)
+      };
+    });
+
+    const leaveCards: QueueEvidencePreviewCard[] = filteredPendingLeave.map((request) => {
+      const waitedHours = leaveWaitHoursById.get(request.id) ?? 0;
+      const historySummary = approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("leave", request.id));
+      const reasonParts = [request.reason?.trim(), request.decisionReason?.trim()].filter(
+        (value): value is string => Boolean(value)
+      );
+
+      return {
+        key: `leave:${request.id}`,
+        queue: "leave",
+        itemId: request.id,
+        employeeId: request.employeeId,
+        primary: `${request.leaveType} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)} (${formatDays(request.days)}일)`,
+        secondary: reasonParts.length > 0 ? `사유: ${reasonParts.join(" / ")}` : "사유 없음",
+        waitedHours,
+        alertLevel: resolveQueueAlertLevel(waitedHours),
+        historySummary: historySummary
+          ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
+          : "history 0",
+        selected: selectedLeaveIds.includes(request.id)
+      };
+    });
+
+    const payrollCards: QueueEvidencePreviewCard[] = filteredPreviewedPayroll.map((run) => {
+      const waitedHours = payrollWaitHoursById.get(run.id) ?? 0;
+      const historySummary = approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("payroll", run.id));
+      return {
+        key: `payroll:${run.id}`,
+        queue: "payroll",
+        itemId: run.id,
+        employeeId: run.employeeId ?? "-",
+        primary: `${formatDateTime(run.periodStart)} ~ ${formatDateTime(run.periodEnd)} / 총지급 ${formatKrw(run.grossPayKrw)}`,
+        secondary: "급여 프리뷰는 개별 확정으로 처리합니다.",
+        waitedHours,
+        alertLevel: resolveQueueAlertLevel(waitedHours),
+        historySummary: historySummary
+          ? `history ${historySummary.total} / ok ${historySummary.success} / fail ${historySummary.fail}`
+          : "history 0",
+        selected: false
+      };
+    });
+
+    const allCards = [...attendanceCards, ...leaveCards, ...payrollCards];
+    const focusedCards =
+      approvalQueueFocus === "all"
+        ? allCards
+        : allCards.filter((card) => card.queue === approvalQueueFocus);
+
+    return [...focusedCards]
+      .sort((left, right) => {
+        const selectedDiff = Number(right.selected) - Number(left.selected);
+        if (selectedDiff !== 0) {
+          return selectedDiff;
+        }
+        const levelDiff = queueAlertLevelRank(right.alertLevel) - queueAlertLevelRank(left.alertLevel);
+        if (levelDiff !== 0) {
+          return levelDiff;
+        }
+        return right.waitedHours - left.waitedHours;
+      })
+      .slice(0, 9);
+  }, [
+    approvalItemHistorySummaryMap,
+    approvalQueueFocus,
+    attendanceWaitHoursById,
+    filteredPendingAttendance,
+    filteredPendingLeave,
+    filteredPreviewedPayroll,
+    leaveWaitHoursById,
+    payrollWaitHoursById,
+    resolveQueueAlertLevel,
+    selectedAttendanceIds,
+    selectedLeaveIds
+  ]);
+
+  const queueSlaTimelinePoints = useMemo<QueueSlaTimelinePoint[]>(
+    () => [
+      {
+        key: "all",
+        label: "전체",
+        ...summarizeSlaTimelineByRule(
+          [...attendanceWaitHoursValues, ...leaveWaitHoursValues, ...payrollWaitHoursValues],
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
+      },
+      {
+        key: "attendance",
+        label: "출퇴근",
+        ...summarizeSlaTimelineByRule(
+          attendanceWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
+      },
+      {
+        key: "leave",
+        label: "휴가",
+        ...summarizeSlaTimelineByRule(leaveWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
+      },
+      {
+        key: "payroll",
+        label: "급여",
+        ...summarizeSlaTimelineByRule(
+          payrollWaitHoursValues,
+          queueSlaWatchHours,
+          queueSlaCriticalHours
+        )
+      }
+    ],
+    [
+      attendanceWaitHoursValues,
+      leaveWaitHoursValues,
+      payrollWaitHoursValues,
+      queueSlaCriticalHours,
+      queueSlaWatchHours
+    ]
+  );
+
+  const activeQueueSlaTimelinePoint =
+    queueSlaTimelinePoints.find((point) => point.key === approvalQueueFocus) ?? queueSlaTimelinePoints[0];
+
+  const mobileBulkReviewSteps = useMemo<QueueMobileReviewStep[]>(
+    () => [
+      {
+        id: "attendance",
+        label: "출퇴근",
+        targetCount: selectedAttendanceCount,
+        approveReady: canApproveSelectedAttendance,
+        rejectReady: canRejectSelectedAttendance,
+        detail:
+          selectedAttendanceCount === 0
+            ? "선택 항목이 없습니다."
+            : canApproveSelectedAttendance
+              ? "일괄 승인/반려 실행 가능"
+              : "현재 필터와 선택 상태를 먼저 맞춰야 합니다."
+      },
+      {
+        id: "leave",
+        label: "휴가",
+        targetCount: selectedLeaveCount,
+        approveReady: canApproveSelectedLeave,
+        rejectReady: canRejectSelectedLeave,
+        detail:
+          selectedLeaveCount === 0
+            ? "선택 항목이 없습니다."
+            : canRejectSelectedLeave
+              ? "사유 확인 완료, 일괄 반려 실행 가능"
+              : hasLeaveRejectReason
+                ? "선택/필터 상태를 정리하면 실행할 수 있습니다."
+                : "반려 사유 입력이 필요합니다."
+      },
+      {
+        id: "payroll",
+        label: "급여",
+        targetCount: filteredPreviewedPayroll.length,
+        approveReady: false,
+        rejectReady: false,
+        detail:
+          filteredPreviewedPayroll.length > 0
+            ? "급여 프리뷰는 개별 확정으로 처리합니다."
+            : "현재 필터 조건에서 검토할 급여 프리뷰가 없습니다."
+      }
+    ],
+    [
+      canApproveSelectedAttendance,
+      canApproveSelectedLeave,
+      canRejectSelectedAttendance,
+      canRejectSelectedLeave,
+      filteredPreviewedPayroll.length,
+      hasLeaveRejectReason,
+      selectedAttendanceCount,
+      selectedLeaveCount
+    ]
+  );
+
+  const queueEvidenceComparisonCards = useMemo<QueueEvidenceComparisonCard[]>(() => {
+    const candidates = [
+      ...filteredPendingAttendance.map((record) => ({
+        queue: "attendance" as const,
+        itemId: record.id,
+        waitHours: attendanceWaitHoursById.get(record.id) ?? 0,
+        failCount:
+          approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("attendance", record.id))?.fail ?? 0
+      })),
+      ...filteredPendingLeave.map((request) => ({
+        queue: "leave" as const,
+        itemId: request.id,
+        waitHours: leaveWaitHoursById.get(request.id) ?? 0,
+        failCount: approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("leave", request.id))?.fail ?? 0
+      })),
+      ...filteredPreviewedPayroll.map((run) => ({
+        queue: "payroll" as const,
+        itemId: run.id,
+        waitHours: payrollWaitHoursById.get(run.id) ?? 0,
+        failCount: approvalItemHistorySummaryMap.get(toQueueItemHistoryKey("payroll", run.id))?.fail ?? 0
+      }))
+    ];
+
+    const focusedCandidates =
+      approvalQueueFocus === "all"
+        ? candidates
+        : candidates.filter((candidate) => candidate.queue === approvalQueueFocus);
+
+    const cards: QueueEvidenceComparisonCard[] = [];
+    for (const queue of ["attendance", "leave", "payroll"] as const) {
+      const queueItems = focusedCandidates
+        .filter((candidate) => candidate.queue === queue)
+        .sort((left, right) => {
+          const waitDiff = right.waitHours - left.waitHours;
+          if (waitDiff !== 0) {
+            return waitDiff;
+          }
+          return right.failCount - left.failCount;
+        });
+
+      if (queueItems.length < 2) {
+        continue;
+      }
+
+      const baseline = queueItems[0];
+      const compare = queueItems[1];
+      const baselineSeverity = resolveQueueAlertLevel(baseline.waitHours);
+      const compareSeverity = resolveQueueAlertLevel(compare.waitHours);
+      const severity =
+        queueAlertLevelRank(baselineSeverity) >= queueAlertLevelRank(compareSeverity)
+          ? baselineSeverity
+          : compareSeverity;
+      const waitGapHours = Math.max(0, baseline.waitHours - compare.waitHours);
+      const failGapCount = Math.max(0, baseline.failCount - compare.failCount);
+
+      let recommendation = "Process by regular queue order.";
+      if (severity === "critical" && failGapCount > 0) {
+        recommendation = "Prioritize this item and validate failure causes before bulk approval.";
+      } else if (severity === "critical") {
+        recommendation = "Prioritize this item first due to SLA critical wait time.";
+      } else if (severity === "watch") {
+        recommendation = "Review this item before normal-priority approvals.";
+      }
+
+      cards.push({
+        key: `${queue}:${baseline.itemId}:${compare.itemId}`,
+        queue,
+        baselineItemId: baseline.itemId,
+        compareItemId: compare.itemId,
+        baselineWaitHours: baseline.waitHours,
+        compareWaitHours: compare.waitHours,
+        waitGapHours,
+        baselineFailCount: baseline.failCount,
+        compareFailCount: compare.failCount,
+        failGapCount,
+        severity,
+        recommendation
+      });
+    }
+
+    return cards
+      .sort((left, right) => {
+        const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        const waitDiff = right.waitGapHours - left.waitGapHours;
+        if (waitDiff !== 0) {
+          return waitDiff;
+        }
+        return right.failGapCount - left.failGapCount;
+      })
+      .slice(0, 4);
+  }, [
+    approvalQueueFocus,
+    approvalItemHistorySummaryMap,
+    attendanceWaitHoursById,
+    filteredPendingAttendance,
+    filteredPendingLeave,
+    filteredPreviewedPayroll,
+    leaveWaitHoursById,
+    payrollWaitHoursById,
+    resolveQueueAlertLevel
+  ]);
+
+  const queueSlaRuleAlerts = useMemo<QueueSlaRuleAlert[]>(() => {
+    const queueBadges = queueBadgeSummaries.filter((badge) => badge.focus !== "all");
+    const totalAlerts = queueAlertOverview.totalCritical + queueAlertOverview.totalWatch;
+    const baseSeverity: QueueAlertLevel =
+      queueAlertOverview.totalCritical > 0
+        ? "critical"
+        : queueAlertOverview.totalWatch > 0
+          ? "watch"
+          : "normal";
+
+    const alerts: QueueSlaRuleAlert[] = [
+      {
+        key: "sla-rule-threshold",
+        label: "SLA threshold rule",
+        severity: baseSeverity,
+        count: totalAlerts,
+        detail: `Watch >= ${queueSlaWatchHours}h / Critical >= ${queueSlaCriticalHours}h`,
+        targetSectionId: "approval-sla-timeline"
+      }
+    ];
+
+    for (const badge of queueBadges) {
+      if (badge.critical > 0) {
+        alerts.push({
+          key: `critical-${badge.focus}`,
+          label: `${badge.label} critical backlog`,
+          severity: "critical",
+          count: badge.critical,
+          detail: `oldest ${Math.round(badge.oldestHours)}h / focus queue ${badge.label}`,
+          targetSectionId: "approvals"
+        });
+      } else if (badge.watch > 0) {
+        alerts.push({
+          key: `watch-${badge.focus}`,
+          label: `${badge.label} watch backlog`,
+          severity: "watch",
+          count: badge.watch,
+          detail: `oldest ${Math.round(badge.oldestHours)}h / watch threshold ${queueSlaWatchHours}h`,
+          targetSectionId: "approvals"
+        });
+      }
+    }
+
+    return alerts
+      .sort((left, right) => {
+        const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.count - left.count;
+      })
+      .slice(0, 6);
+  }, [
+    queueAlertOverview.totalCritical,
+    queueAlertOverview.totalWatch,
+    queueBadgeSummaries,
+    queueSlaCriticalHours,
+    queueSlaWatchHours
+  ]);
+
+  const queueMobileApprovalChecklistItems = useMemo<QueueMobileApprovalChecklistItem[]>(() => {
+    const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
+    const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
+    const hiddenSelectionCount = hiddenAttendanceSelection + hiddenLeaveSelection;
+    const hasActionableSelection = selectedQueueTotalCount > 0;
+    const canRunImmediateBulkAction =
+      canApproveSelectedAttendance || canRejectSelectedAttendance || canApproveSelectedLeave || canRejectSelectedLeave;
+
+    return [
+      {
+        id: "selection-scope-sync",
+        label: "Selection synced with filters",
+        pass: hiddenSelectionCount === 0,
+        detail:
+          hiddenSelectionCount === 0
+            ? "All selected items are visible in the current queue filter."
+            : `${hiddenSelectionCount} selected item(s) are hidden by current filters.`,
+        targetSectionId: "approvals"
+      },
+      {
+        id: "leave-reject-reason",
+        label: "Leave reject reason ready",
+        pass: selectedLeaveCount === 0 || hasLeaveRejectReason,
+        detail:
+          selectedLeaveCount === 0 || hasLeaveRejectReason
+            ? "Leave bulk reject condition is ready."
+            : "Leave reject reason is required before bulk reject.",
+        targetSectionId: "approvals"
+      },
+      {
+        id: "critical-backlog-check",
+        label: "Critical backlog triage",
+        pass: queueAlertOverview.totalCritical === 0 || approvalQueueOnlyUrgent,
+        detail:
+          queueAlertOverview.totalCritical === 0
+            ? "No critical backlog now."
+            : approvalQueueOnlyUrgent
+              ? "Urgent-only filter is enabled for critical triage."
+              : "Turn on urgent-only filter to triage critical backlog first.",
+        targetSectionId: "approval-sla-alert-rules"
+      },
+      {
+        id: "mobile-bulk-action",
+        label: "Bulk action ready on mobile",
+        pass: hasActionableSelection && canRunImmediateBulkAction,
+        detail:
+          hasActionableSelection && canRunImmediateBulkAction
+            ? "Bulk approval/reject can run immediately from mobile review cards."
+            : hasActionableSelection
+              ? "Selection exists, but validation conditions are not satisfied yet."
+              : "Select at least one attendance/leave item to use mobile bulk action.",
+        targetSectionId: "approval-mobile-review-sheet"
+      }
+    ];
+  }, [
+    approvalQueueOnlyUrgent,
+    canApproveSelectedAttendance,
+    canApproveSelectedLeave,
+    canRejectSelectedAttendance,
+    canRejectSelectedLeave,
+    hasLeaveRejectReason,
+    queueAlertOverview.totalCritical,
+    selectedAttendanceCount,
+    selectedLeaveCount,
+    selectedQueueTotalCount,
+    selectedVisibleAttendanceCount,
+    selectedVisibleLeaveCount
+  ]);
 
   async function callApi(
     label: string,
@@ -370,23 +1495,43 @@ export default function AdminDashboardPage() {
 
   function appendApprovalActivity(input: {
     queue: "attendance" | "leave" | "payroll";
+    actionKind?: "approve" | "reject" | "confirm" | "other";
     action: string;
     itemId: string;
     ok: boolean;
     status: number;
   }) {
+    const createdAtMs = Date.now();
     setApprovalActivities((prev) => [
       {
-        id: Date.now() + Math.floor(Math.random() * 1000),
+        id: createdAtMs + Math.floor(Math.random() * 1000),
         queue: input.queue,
+        actionKind: input.actionKind ?? "other",
         action: input.action,
         itemId: input.itemId,
         ok: input.ok,
         status: input.status,
+        createdAtMs,
         at: new Date().toLocaleString("ko-KR")
       },
       ...prev
     ].slice(0, 30));
+  }
+
+  function publishMobileApprovalFeedback(input: {
+    queue: "attendance" | "leave" | "payroll" | "mixed";
+    action: string;
+    okCount: number;
+    failCount: number;
+  }) {
+    setMobileApprovalFeedback({
+      queue: input.queue,
+      action: input.action,
+      okCount: input.okCount,
+      failCount: input.failCount,
+      total: input.okCount + input.failCount,
+      at: new Date().toLocaleString("ko-KR")
+    });
   }
 
   async function listEmployees() {
@@ -437,6 +1582,7 @@ export default function AdminDashboardPage() {
     const payload = {
       email,
       role: inviteRole,
+      deliveryMode: inviteDeliveryMode,
       organizationId: organizationId.trim() || undefined,
       actorId: inviteActorId.trim() || undefined
     };
@@ -616,7 +1762,7 @@ export default function AdminDashboardPage() {
   }
 
   function selectAllAttendance() {
-    setSelectedAttendanceIds(pendingAttendance.map((record) => record.id));
+    setSelectedAttendanceIds(filteredPendingAttendance.map((record) => record.id));
   }
 
   function clearAttendanceSelection() {
@@ -624,7 +1770,7 @@ export default function AdminDashboardPage() {
   }
 
   function selectAllLeave() {
-    setSelectedLeaveIds(pendingLeave.map((request) => request.id));
+    setSelectedLeaveIds(filteredPendingLeave.map((request) => request.id));
   }
 
   function clearLeaveSelection() {
@@ -635,10 +1781,17 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("출퇴근 승인", "POST", `/api/attendance/records/${recordId}/approve`);
     appendApprovalActivity({
       queue: "attendance",
+      actionKind: "approve",
       action: "승인",
       itemId: recordId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-single-approve",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     await refreshInbox();
   }
@@ -649,10 +1802,17 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("출퇴근 반려", "POST", `/api/attendance/records/${recordId}/reject`, payload);
     appendApprovalActivity({
       queue: "attendance",
+      actionKind: "reject",
       action: "반려",
       itemId: recordId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-single-reject",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     await refreshInbox();
   }
@@ -661,10 +1821,17 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("휴가 승인", "POST", `/api/leave/requests/${requestId}/approve`);
     appendApprovalActivity({
       queue: "leave",
+      actionKind: "approve",
       action: "승인",
       itemId: requestId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-single-approve",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     await refreshInbox();
   }
@@ -689,16 +1856,23 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("휴가 반려", "POST", `/api/leave/requests/${requestId}/reject`, { reason });
     appendApprovalActivity({
       queue: "leave",
+      actionKind: "reject",
       action: "반려",
       itemId: requestId,
       ok: response.ok,
       status: response.status
     });
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-single-reject",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
+    });
     await refreshInbox();
   }
 
   async function approveSelectedAttendance() {
-    if (selectedAttendanceIds.length === 0) {
+    if (!canApproveSelectedAttendance || selectedAttendanceIds.length === 0) {
       return;
     }
     const targets = [...selectedAttendanceIds];
@@ -708,17 +1882,25 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "attendance",
+        actionKind: "approve",
         action: "승인(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
     });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-bulk-approve",
+      okCount,
+      failCount: results.length - okCount
+    });
     await refreshInbox();
   }
 
   async function rejectSelectedAttendance() {
-    if (selectedAttendanceIds.length === 0) {
+    if (!canRejectSelectedAttendance || selectedAttendanceIds.length === 0) {
       return;
     }
     const reason = attendanceRejectReason.trim();
@@ -730,17 +1912,25 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "attendance",
+        actionKind: "reject",
         action: "반려(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
     });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-bulk-reject",
+      okCount,
+      failCount: results.length - okCount
+    });
     await refreshInbox();
   }
 
   async function approveSelectedLeave() {
-    if (selectedLeaveIds.length === 0) {
+    if (!canApproveSelectedLeave || selectedLeaveIds.length === 0) {
       return;
     }
     const targets = [...selectedLeaveIds];
@@ -750,17 +1940,25 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "leave",
+        actionKind: "approve",
         action: "승인(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
     });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-bulk-approve",
+      okCount,
+      failCount: results.length - okCount
+    });
     await refreshInbox();
   }
 
   async function rejectSelectedLeave() {
-    if (selectedLeaveIds.length === 0) {
+    if (!canRejectSelectedLeave || selectedLeaveIds.length === 0) {
       return;
     }
     const reason = leaveRejectReason.trim();
@@ -786,11 +1984,19 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "leave",
+        actionKind: "reject",
         action: "반려(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
+    });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-bulk-reject",
+      okCount,
+      failCount: results.length - okCount
     });
     await refreshInbox();
   }
@@ -799,10 +2005,17 @@ export default function AdminDashboardPage() {
     const { response, body } = await callApi("급여 확정", "POST", `/api/payroll/runs/${runId}/confirm`);
     appendApprovalActivity({
       queue: "payroll",
+      actionKind: "confirm",
       action: "확정",
       itemId: runId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "payroll",
+      action: "payroll-single-confirm",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     if (response.ok) {
       const parsed = body as { run?: { id?: string } };
@@ -926,6 +2139,8 @@ export default function AdminDashboardPage() {
         allowHourly?: boolean;
         hourlyIncrementMinutes?: number;
         maxHoursPerRequest?: number;
+        minNoticeDays?: number;
+        maxConsecutiveDays?: number | null;
       };
     };
     if (typeof parsed.policy?.annualGrantDays === "number") {
@@ -945,6 +2160,14 @@ export default function AdminDashboardPage() {
     }
     if (typeof parsed.policy?.maxHoursPerRequest === "number") {
       setLeaveMaxHoursPerRequest(String(parsed.policy.maxHoursPerRequest));
+    }
+    if (typeof parsed.policy?.minNoticeDays === "number") {
+      setLeaveMinNoticeDays(String(parsed.policy.minNoticeDays));
+    }
+    if (typeof parsed.policy?.maxConsecutiveDays === "number") {
+      setLeaveMaxConsecutiveDays(String(parsed.policy.maxConsecutiveDays));
+    } else if (parsed.policy?.maxConsecutiveDays === null) {
+      setLeaveMaxConsecutiveDays("");
     }
   }
 
@@ -970,6 +2193,11 @@ export default function AdminDashboardPage() {
     const carryOverCapDays = Number(accrualCarryCapDays.trim());
     const hourlyIncrementMinutes = Number(leaveHourlyIncrementMinutes.trim());
     const maxHoursPerRequest = Number(leaveMaxHoursPerRequest.trim());
+    const minNoticeDaysRaw = leaveMinNoticeDays.trim();
+    const minNoticeDays = minNoticeDaysRaw.length > 0 ? Number(minNoticeDaysRaw) : Number.NaN;
+    const maxConsecutiveDaysRaw = leaveMaxConsecutiveDays.trim();
+    const maxConsecutiveDays =
+      maxConsecutiveDaysRaw.length > 0 ? Number(maxConsecutiveDaysRaw) : null;
     const payload = {
       organizationId: orgId,
       annualGrantDays,
@@ -977,7 +2205,14 @@ export default function AdminDashboardPage() {
       allowHalfDay: leaveAllowHalfDay,
       allowHourly: leaveAllowHourly,
       hourlyIncrementMinutes,
-      maxHoursPerRequest
+      maxHoursPerRequest,
+      minNoticeDays: Number.isFinite(minNoticeDays) ? minNoticeDays : undefined,
+      maxConsecutiveDays:
+        maxConsecutiveDays === null
+          ? null
+          : Number.isFinite(maxConsecutiveDays)
+            ? maxConsecutiveDays
+            : undefined
     };
     await callApi("휴가 정책 저장", "PUT", "/api/leave/policy", payload);
   }
@@ -1281,6 +2516,16 @@ export default function AdminDashboardPage() {
               </select>
             </label>
             <label>
+              Delivery
+              <select
+                value={inviteDeliveryMode}
+                onChange={(event) => setInviteDeliveryMode(event.target.value as InviteDeliveryMode)}
+              >
+                <option value="link">link</option>
+                <option value="email">email</option>
+              </select>
+            </label>
+            <label>
               Actor ID (선택)
               <input
                 value={inviteActorId}
@@ -1305,13 +2550,20 @@ export default function AdminDashboardPage() {
           {inviteResult ? (
             <>
               <p className="small">
-                생성됨: <strong>{inviteResult.email}</strong> · role={inviteResult.role} · org={inviteResult.organizationId}
+                생성됨: <strong>{inviteResult.email}</strong> · role={inviteResult.role} · delivery=
+                {inviteResult.deliveryMode} · org={inviteResult.organizationId}
                 {inviteResult.actorId ? ` · actor=${inviteResult.actorId}` : ""}
               </p>
-              <label className="full" style={{ display: "block", marginTop: 8 }}>
-                초대 링크 (action_link)
-                <textarea readOnly rows={3} value={inviteResult.actionLink} />
-              </label>
+              {inviteResult.actionLink ? (
+                <label className="full" style={{ display: "block", marginTop: 8 }}>
+                  초대 링크 (action_link)
+                  <textarea readOnly rows={3} value={inviteResult.actionLink} />
+                </label>
+              ) : (
+                <p className="small muted" style={{ marginTop: 8 }}>
+                  이메일 발송 모드로 생성되어 action_link를 저장하지 않았습니다.
+                </p>
+              )}
               <p className="small muted" style={{ marginTop: 8 }}>
                 링크가 `/login`으로 리다이렉트되려면 Supabase Auth의 Redirect URL에 현재 도메인이 허용되어 있어야 합니다.
               </p>
@@ -1435,8 +2687,59 @@ export default function AdminDashboardPage() {
         </article>
 
         <article className="panel" id="approvals">
-          <h2>승인 대기함</h2>
-          <div className="input-grid">
+          <div className="approval-queue-header">
+            <div>
+              <h2>승인 대기함</h2>
+              <p className="small">승인 큐 필터/검색/정렬로 대기열을 빠르게 좁혀 일괄 처리합니다.</p>
+            </div>
+            <button className="btn btn-primary" onClick={() => void refreshInbox()}>
+              대기함 새로고침
+            </button>
+          </div>
+
+          <div className="queue-badge-strip" role="tablist" aria-label="승인 큐 필터">
+            {queueBadgeSummaries.map((badge) => (
+              <button
+                key={badge.focus}
+                type="button"
+                role="tab"
+                aria-selected={approvalQueueFocus === badge.focus}
+                className={`queue-badge${approvalQueueFocus === badge.focus ? " active" : ""}`}
+                onClick={() => setApprovalQueueFocus(badge.focus)}
+              >
+                <span className="queue-badge-title">{badge.label}</span>
+                <span className="queue-badge-count">대기 {badge.pending}</span>
+                <span className={`queue-badge-alert alert-${badge.alertLevel}`}>
+                  {badge.alertLevel === "critical"
+                    ? `긴급 ${badge.critical}`
+                    : badge.alertLevel === "watch"
+                      ? `주의 ${badge.watch}`
+                      : "정상"}
+                </span>
+                <span className="queue-badge-meta">
+                  검색 {badge.visible} / 최장 {Math.round(badge.oldestHours)}h
+                  {badge.selected > 0 ? ` / 선택 ${badge.selected}` : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="queue-alert-strip" aria-label="승인 큐 알림 요약">
+            <article className="queue-alert-card tone-critical">
+              <p>긴급 대기</p>
+              <strong>{queueAlertOverview.totalCritical}건</strong>
+            </article>
+            <article className="queue-alert-card tone-watch">
+              <p>주의 대기</p>
+              <strong>{queueAlertOverview.totalWatch}건</strong>
+            </article>
+            <article className="queue-alert-card tone-hot">
+              <p>최우선 큐</p>
+              <strong>{queueAlertOverview.hottestQueue?.label ?? "-"}</strong>
+            </article>
+          </div>
+
+          <div className="input-grid" style={{ marginTop: 12 }}>
             <label>
               기간 시작
               <input
@@ -1453,6 +2756,53 @@ export default function AdminDashboardPage() {
                 onChange={(event) => setPeriodEnd(event.target.value)}
               />
             </label>
+            <label>
+              검색 범위
+              <select
+                value={approvalQueueSearchScope}
+                onChange={(event) => setApprovalQueueSearchScope(event.target.value as QueueSearchScope)}
+              >
+                <option value="all">전체 필드</option>
+                <option value="employee">직원 ID</option>
+                <option value="request_id">요청 ID</option>
+                <option value="content">메모/사유</option>
+              </select>
+            </label>
+            <label className="full">
+              큐 검색
+              <input
+                value={approvalQueueSearch}
+                onChange={(event) => setApprovalQueueSearch(event.target.value)}
+                placeholder="직원ID, 요청ID, 상태, 메모/사유 검색"
+              />
+            </label>
+            <div className="queue-toggle-row full" role="group" aria-label="승인 큐 빠른 필터">
+              <button
+                type="button"
+                className={`queue-toggle-chip${approvalQueueOnlyUrgent ? " active" : ""}`}
+                onClick={() => setApprovalQueueOnlyUrgent((prev) => !prev)}
+              >
+                긴급만 보기
+              </button>
+              <button
+                type="button"
+                className={`queue-toggle-chip${approvalQueueSelectedOnly ? " active" : ""}`}
+                onClick={() => setApprovalQueueSelectedOnly((prev) => !prev)}
+              >
+                선택 항목만
+              </button>
+              <button
+                type="button"
+                className="queue-toggle-chip"
+                onClick={() => {
+                  setApprovalQueueOnlyUrgent(false);
+                  setApprovalQueueSelectedOnly(false);
+                  setApprovalQueueSearch("");
+                }}
+              >
+                필터 초기화
+              </button>
+            </div>
             <label className="full">
               출퇴근 반려 사유 (선택)
               <input
@@ -1470,162 +2820,700 @@ export default function AdminDashboardPage() {
               />
             </label>
           </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void refreshInbox()}>
-              대기함 새로고침
-            </button>
-          </div>
 
-          <hr className="divider" />
-          <p className="small">
-            출퇴근 (PENDING {pendingAttendance.length}건 / 선택 {selectedAttendanceCount}건)
+          <p className="small" style={{ marginTop: 10 }}>
+            {activeQueueBadgeSummary.label} 큐: 대기 {activeQueueBadgeSummary.pending}건 / 검색 결과{" "}
+            {activeQueueBadgeSummary.visible}건
+            {activeQueueBadgeSummary.selected > 0 ? ` / 선택 ${activeQueueBadgeSummary.selected}건` : ""}
+            {" / "}
+            {activeQueueBadgeSummary.alertLevel === "critical"
+              ? `긴급 ${activeQueueBadgeSummary.critical}건`
+              : activeQueueBadgeSummary.alertLevel === "watch"
+                ? `주의 ${activeQueueBadgeSummary.watch}건`
+                : "정상"}
+            {approvalQueueSelectedOnly && activeQueueBadgeSummary.focus !== "payroll"
+              ? " / 선택 필터 ON"
+              : ""}
           </p>
-          <div className="queue-toolbar">
-            <button className="btn btn-secondary btn-small" onClick={selectAllAttendance} disabled={pendingAttendance.length === 0}>
-              전체 선택
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={clearAttendanceSelection} disabled={selectedAttendanceCount === 0}>
-              선택 해제
-            </button>
-            <button className="btn btn-primary btn-small" onClick={() => void approveSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
-              선택 승인
-            </button>
-            <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
-              선택 반려
-            </button>
-          </div>
-          {pendingAttendance.length === 0 ? (
-            <p className="small muted">대기 중인 출퇴근이 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="출퇴근 승인 대기">
-              {pendingAttendance.map((record) => (
-                <li key={record.id}>
-                  <label className="queue-item-main">
-                    <input
-                      type="checkbox"
-                      checked={selectedAttendanceIds.includes(record.id)}
-                      onChange={(event) => toggleAttendanceSelection(record.id, event.target.checked)}
-                    />
-                    <span>
-                      <strong>{record.employeeId}</strong>{" "}
-                      <span className="muted">
-                        {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
-                        {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
-                      </span>
-                    </span>
-                  </label>
-                  <div className="queue-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-small"
-                      onClick={() => void approveAttendance(record.id)}
-                    >
-                      승인
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      onClick={() => void rejectAttendance(record.id)}
-                    >
-                      반려
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+          {approvalQueueSelectedOnly && (approvalQueueFocus === "all" || approvalQueueFocus === "payroll") ? (
+            <p className="small muted" style={{ marginTop: 6 }}>
+              급여 큐는 선택 필터가 없어 검색 조건만 적용됩니다.
+            </p>
+          ) : null}
 
-          <hr className="divider" />
-          <p className="small">휴가 (PENDING {pendingLeave.length}건 / 선택 {selectedLeaveCount}건)</p>
-          <div className="queue-toolbar">
-            <button className="btn btn-secondary btn-small" onClick={selectAllLeave} disabled={pendingLeave.length === 0}>
-              전체 선택
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={clearLeaveSelection} disabled={selectedLeaveCount === 0}>
-              선택 해제
-            </button>
-            <button className="btn btn-primary btn-small" onClick={() => void approveSelectedLeave()} disabled={selectedLeaveCount === 0}>
-              선택 승인
-            </button>
-            <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedLeave()} disabled={selectedLeaveCount === 0}>
-              선택 반려
-            </button>
-          </div>
-          {pendingLeave.length === 0 ? (
-            <p className="small muted">대기 중인 휴가 요청이 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="휴가 승인 대기">
-              {pendingLeave.map((request) => (
-                <li key={request.id}>
-                  <label className="queue-item-main">
-                    <input
-                      type="checkbox"
-                      checked={selectedLeaveIds.includes(request.id)}
-                      onChange={(event) => toggleLeaveSelection(request.id, event.target.checked)}
-                    />
-                    <span>
-                      <strong>{request.employeeId}</strong>{" "}
-                      <span className="muted">
-                        {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
-                        {formatDateTime(request.endDate)} ({formatDays(request.days)}일
-                        {request.unit === "HOUR" && request.hours !== null
-                          ? ` / ${request.hours.toFixed(2)}시간`
-                          : request.unit === "HALF_DAY"
-                            ? " / 반차"
-                            : ""}
-                        )
+          <section className="queue-evidence-preview-panel" id="approval-evidence-preview">
+            <div className="queue-section-head">
+              <h3>승인 근거 프리뷰</h3>
+              <p className="small muted">
+                선택 항목과 긴급 항목을 우선으로, 메모/사유/이력을 승인 전에 미리 확인합니다.
+              </p>
+            </div>
+            {queueEvidencePreviewCards.length === 0 ? (
+              <p className="small muted">현재 필터 조건에서 확인할 승인 근거가 없습니다.</p>
+            ) : (
+              <ul className="queue-evidence-preview-list" aria-label="approval evidence preview cards">
+                {queueEvidencePreviewCards.map((card) => (
+                  <li
+                    key={card.key}
+                    className={`level-${card.alertLevel}${card.selected ? " is-selected" : ""}`}
+                  >
+                    <div className="queue-evidence-preview-head">
+                      <strong>
+                        [{card.queue}] {card.itemId}
+                      </strong>
+                      <span className={`queue-sla-chip level-${card.alertLevel}`}>
+                        대기 {Math.round(card.waitedHours)}h
                       </span>
-                    </span>
-                  </label>
-                  <div className="queue-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-small"
-                      onClick={() => void approveLeave(request.id)}
-                    >
-                      승인
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      onClick={() => void rejectLeave(request.id)}
-                    >
-                      반려
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                    </div>
+                    <p>{card.primary}</p>
+                    <p className="small muted">{card.secondary}</p>
+                    <div className="queue-evidence-preview-meta">
+                      <span className="queue-history-chip">{card.employeeId}</span>
+                      <span className="queue-history-chip">{card.historySummary}</span>
+                      {card.selected ? <span className="queue-history-chip">selected</span> : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-          <hr className="divider" />
-          <p className="small">급여 (PREVIEWED {previewedPayroll.length}건)</p>
-          {previewedPayroll.length === 0 ? (
-            <p className="small muted">확정 대기 중인 급여 프리뷰가 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="급여 프리뷰">
-              {previewedPayroll.map((run) => (
-                <li key={run.id}>
-                  <span>
-                    <strong>{run.employeeId ?? "-"}</strong>{" "}
-                    <span className="muted">
-                      {formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)} / 총지급{" "}
-                      {formatKrw(run.grossPayKrw)}
-                    </span>
-                  </span>
-                  <div className="queue-actions">
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      onClick={() => void confirmPayroll(run.id)}
-                    >
-                      확정
-                    </button>
+          <section className="queue-evidence-comparison-panel" id="approval-evidence-comparison">
+            <div className="queue-section-head">
+              <h3>승인 근거 비교 카드</h3>
+              <p className="small muted">
+                동일 큐 내 최상위 대기 항목을 비교해 우선 처리 기준(대기 시간/실패 이력)을 즉시 확인합니다.
+              </p>
+            </div>
+            {queueEvidenceComparisonCards.length === 0 ? (
+              <p className="small muted">비교 가능한 큐 항목이 2건 이상일 때 카드가 표시됩니다.</p>
+            ) : (
+              <ul className="queue-evidence-comparison-list" aria-label="approval evidence comparison cards">
+                {queueEvidenceComparisonCards.map((card) => (
+                  <li key={card.key} className={`severity-${card.severity}`}>
+                    <div className="queue-evidence-comparison-head">
+                      <strong>
+                        [{card.queue}] {card.baselineItemId} vs {card.compareItemId}
+                      </strong>
+                      <span className={`queue-sla-chip level-${card.severity}`}>{card.severity}</span>
+                    </div>
+                    <p className="small">
+                      wait gap {Math.round(card.waitGapHours)}h / fail gap {card.failGapCount}
+                    </p>
+                    <div className="queue-evidence-comparison-metrics">
+                      <span className="queue-history-chip">
+                        baseline {Math.round(card.baselineWaitHours)}h / fail {card.baselineFailCount}
+                      </span>
+                      <span className="queue-history-chip">
+                        compare {Math.round(card.compareWaitHours)}h / fail {card.compareFailCount}
+                      </span>
+                    </div>
+                    <p className="small muted">{card.recommendation}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="queue-sla-timeline-panel" id="approval-sla-timeline">
+            <div className="queue-section-head">
+              <h3>대기 SLA 타임라인</h3>
+              <p className="small muted">
+                24h 이내 / 24~48h / 48h 초과 구간으로 대기 분포를 확인해 우선순위를 정합니다.
+              </p>
+            </div>
+            <div className="queue-sla-rule-controls" aria-label="approval sla alert rule controls">
+              <label>
+                Watch 임계치 (h)
+                <input
+                  type="number"
+                  min={1}
+                  value={queueSlaWatchHoursInput}
+                  onChange={(event) => setQueueSlaWatchHoursInput(event.target.value)}
+                />
+              </label>
+              <label>
+                Critical 임계치 (h)
+                <input
+                  type="number"
+                  min={2}
+                  value={queueSlaCriticalHoursInput}
+                  onChange={(event) => setQueueSlaCriticalHoursInput(event.target.value)}
+                />
+              </label>
+              <div className="queue-sla-rule-preset-row">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSlaWatchHoursInput("12");
+                    setQueueSlaCriticalHoursInput("24");
+                  }}
+                >
+                  12 / 24
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSlaWatchHoursInput("24");
+                    setQueueSlaCriticalHoursInput("48");
+                  }}
+                >
+                  24 / 48
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSlaWatchHoursInput("36");
+                    setQueueSlaCriticalHoursInput("72");
+                  }}
+                >
+                  36 / 72
+                </button>
+              </div>
+            </div>
+            <section className="queue-sla-rule-alert-panel" id="approval-sla-alert-rules">
+              <ul className="queue-sla-rule-alert-list" aria-label="approval sla rule alerts">
+                {queueSlaRuleAlerts.map((alert) => (
+                  <li key={alert.key} className={`severity-${alert.severity}`}>
+                    <div>
+                      <strong>{alert.label}</strong>
+                      <p className="small muted">{alert.detail}</p>
+                    </div>
+                    <div className="queue-sla-rule-alert-actions">
+                      <span className={`queue-sla-chip level-${alert.severity}`}>count {alert.count}</span>
+                      <Link className="btn btn-secondary btn-small" href={`/admin#${alert.targetSectionId}`}>
+                        이동
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <p className="small muted" style={{ marginTop: 0 }}>
+              현재 포커스: {activeQueueSlaTimelinePoint.label} / total {activeQueueSlaTimelinePoint.total} / oldest{" "}
+              {Math.round(activeQueueSlaTimelinePoint.oldestHours)}h
+            </p>
+            <ul className="queue-sla-timeline-list" aria-label="approval queue sla timeline">
+              {queueSlaTimelinePoints.map((point) => {
+                const safeTotal = Math.max(1, point.total);
+                const belowWatchPercent = (point.belowWatch / safeTotal) * 100;
+                const watchPercent = (point.betweenWatchAndCritical / safeTotal) * 100;
+                const criticalPercent = (point.overCritical / safeTotal) * 100;
+
+                return (
+                  <li key={point.key}>
+                    <div className="queue-sla-timeline-head">
+                      <strong>{point.label}</strong>
+                      <span className="muted">
+                        total {point.total} / oldest {Math.round(point.oldestHours)}h
+                      </span>
+                    </div>
+                    <div className="queue-sla-timeline-bar" role="img" aria-label={`${point.label} sla timeline`}>
+                      <span className="segment segment-normal" style={{ width: `${belowWatchPercent}%` }} />
+                      <span className="segment segment-watch" style={{ width: `${watchPercent}%` }} />
+                      <span className="segment segment-critical" style={{ width: `${criticalPercent}%` }} />
+                    </div>
+                    <div className="queue-sla-timeline-chips">
+                      <span className="queue-history-chip">{queueSlaWatchHours}h 미만 {point.belowWatch}</span>
+                      <span className="queue-history-chip">
+                        {queueSlaWatchHours}~{queueSlaCriticalHours}h {point.betweenWatchAndCritical}
+                      </span>
+                      <span className="queue-history-chip">{queueSlaCriticalHours}h 이상 {point.overCritical}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          <section className="queue-mobile-review-sheet" id="approval-mobile-review-sheet">
+            <div className="queue-section-head">
+              <h3>모바일 일괄 검토 시트</h3>
+              <p className="small muted">
+                선택 건수와 실행 가능 조건을 모바일 기준으로 확인하고 즉시 일괄 처리합니다.
+              </p>
+            </div>
+            <div className="queue-mobile-review-grid" aria-label="mobile bulk review sheet">
+              {mobileBulkReviewSteps.map((step) => (
+                <article
+                  key={step.id}
+                  className={`queue-mobile-review-card ${step.approveReady || step.rejectReady ? "is-ready" : "is-blocked"}`}
+                >
+                  <p>
+                    <strong>{step.label}</strong> · 대상 {step.targetCount}건
+                  </p>
+                  <p className="small muted">{step.detail}</p>
+                  <div className="queue-mobile-review-actions">
+                    {step.id === "attendance" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveSelectedAttendance()}
+                          disabled={!canApproveSelectedAttendance}
+                        >
+                          출퇴근 승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectSelectedAttendance()}
+                          disabled={!canRejectSelectedAttendance}
+                        >
+                          출퇴근 반려
+                        </button>
+                      </>
+                    ) : null}
+                    {step.id === "leave" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveSelectedLeave()}
+                          disabled={!canApproveSelectedLeave}
+                        >
+                          휴가 승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectSelectedLeave()}
+                          disabled={!canRejectSelectedLeave}
+                        >
+                          휴가 반려
+                        </button>
+                      </>
+                    ) : null}
+                    {step.id === "payroll" ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => setApprovalQueueFocus("payroll")}
+                      >
+                        급여 큐 보기
+                      </button>
+                    ) : null}
                   </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="queue-mobile-checklist-panel" id="approval-mobile-checklist">
+            <div className="queue-section-head">
+              <h3>모바일 승인 체크리스트</h3>
+              <p className="small muted">
+                모바일 일괄 승인 전에 필수 조건을 점검하고 필요한 섹션으로 바로 이동합니다.
+              </p>
+            </div>
+            <ul className="queue-mobile-checklist-list" aria-label="approval mobile checklist">
+              {queueMobileApprovalChecklistItems.map((item) => (
+                <li key={item.id} className={item.pass ? "is-pass" : "is-fail"}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p className="small muted">{item.detail}</p>
+                  </div>
+                  <Link className="btn btn-secondary btn-small" href={`/admin#${item.targetSectionId}`}>
+                    이동
+                  </Link>
                 </li>
               ))}
             </ul>
-          )}
+          </section>
+
+          <section className="queue-bulk-validation-panel" id="approval-bulk-validation">
+            <div className="queue-section-head">
+              <h3>일괄 처리 직전 검증</h3>
+              <p className="small muted">선택/필터/반려 사유를 먼저 확인한 뒤 일괄 처리를 실행하세요.</p>
+            </div>
+            <div className="queue-bulk-validation-grid">
+              <article className="queue-precheck-card">
+                <p className="small" style={{ margin: 0 }}>
+                  출퇴근 일괄 처리
+                </p>
+                <ul className="queue-precheck-list" aria-label="attendance bulk pre-action checks">
+                  {attendanceBulkValidationChecks.map((check) => (
+                    <li key={check.id} className={check.ok ? "is-pass" : "is-fail"}>
+                      <span className="queue-precheck-label">{check.label}</span>
+                      <span className="queue-precheck-detail">{check.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className={`queue-precheck-status ${canApproveSelectedAttendance ? "is-pass" : "is-fail"}`}>
+                  {canApproveSelectedAttendance
+                    ? "승인/반려 일괄 실행 준비 완료"
+                    : "선택 상태를 먼저 정리해야 일괄 실행할 수 있습니다."}
+                </p>
+              </article>
+              <article className="queue-precheck-card">
+                <p className="small" style={{ margin: 0 }}>
+                  휴가 일괄 처리
+                </p>
+                <ul className="queue-precheck-list" aria-label="leave bulk pre-action checks">
+                  {leaveBulkValidationChecks.map((check) => (
+                    <li key={check.id} className={check.ok ? "is-pass" : "is-fail"}>
+                      <span className="queue-precheck-label">{check.label}</span>
+                      <span className="queue-precheck-detail">{check.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className={`queue-precheck-status ${canRejectSelectedLeave ? "is-pass" : "is-fail"}`}>
+                  {canRejectSelectedLeave
+                    ? "승인/반려 일괄 실행 준비 완료"
+                    : "휴가 반려는 사유 입력 후 실행할 수 있습니다."}
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section className="queue-item-history-panel" id="approval-item-history">
+            <div className="queue-section-head">
+              <h3>항목별 처리 이력 요약</h3>
+              <p className="small muted">최근 처리 항목을 기준으로 성공/실패와 액션 분포를 요약합니다.</p>
+            </div>
+            {approvalItemHistoryRows.length === 0 ? (
+              <p className="small muted">아직 항목별 이력이 없습니다.</p>
+            ) : (
+              <ul className="queue-item-history-summary-list" aria-label="approval item history summary">
+                {approvalItemHistoryRows.map((summary) => (
+                  <li key={summary.key}>
+                    <div className="queue-item-history-meta">
+                      <strong>
+                        [{summary.queue}] {summary.itemId}
+                      </strong>
+                      <span className="muted">
+                        {summary.lastAction} · {summary.lastStatus} · {summary.lastAt}
+                      </span>
+                    </div>
+                    <div className="queue-item-history-stats">
+                      <span className="queue-history-chip">total {summary.total}</span>
+                      <span className="queue-history-chip">ok {summary.success}</span>
+                      <span className="queue-history-chip">fail {summary.fail}</span>
+                      <span className="queue-history-chip">approve {summary.approved}</span>
+                      <span className="queue-history-chip">reject {summary.rejected}</span>
+                      <span className="queue-history-chip">confirm {summary.confirmed}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {showAttendanceQueue ? (
+            <>
+              <hr className="divider" />
+              <p className="small">
+                출퇴근 (PENDING {pendingAttendance.length}건 / 검색 {filteredPendingAttendance.length}건 / 선택{" "}
+                {selectedVisibleAttendanceCount}건)
+              </p>
+              <div className="queue-toolbar">
+                <label className="queue-control-inline">
+                  정렬
+                  <select
+                    value={attendanceQueueSort}
+                    onChange={(event) => setAttendanceQueueSort(event.target.value as AttendanceQueueSort)}
+                  >
+                    <option value="checkin_desc">출근 최신순</option>
+                    <option value="stale_desc">정체 우선순</option>
+                    <option value="checkin_asc">출근 오래된순</option>
+                    <option value="employee_asc">직원ID순</option>
+                  </select>
+                </label>
+                <button className="btn btn-secondary btn-small" onClick={selectAllAttendance} disabled={filteredPendingAttendance.length === 0}>
+                  전체 선택
+                </button>
+                <button className="btn btn-secondary btn-small" onClick={clearAttendanceSelection} disabled={selectedAttendanceCount === 0}>
+                  선택 해제
+                </button>
+                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedAttendance()} disabled={!canApproveSelectedAttendance}>
+                  선택 승인
+                </button>
+                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedAttendance()} disabled={!canRejectSelectedAttendance}>
+                  선택 반려
+                </button>
+              </div>
+              {filteredPendingAttendance.length === 0 ? (
+                <p className="small muted">대기 중인 출퇴근이 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="출퇴근 승인 대기">
+                  {filteredPendingAttendance.map((record) => (
+                    <li key={record.id}>
+                      <label className="queue-item-main">
+                        <input
+                          type="checkbox"
+                          checked={selectedAttendanceIds.includes(record.id)}
+                          onChange={(event) => toggleAttendanceSelection(record.id, event.target.checked)}
+                        />
+                        <span>
+                          <strong>{record.employeeId}</strong>{" "}
+                          <span
+                            className={`queue-sla-chip level-${resolveQueueAlertLevel(
+                              attendanceWaitHoursById.get(record.id) ?? 0
+                            )}`}
+                          >
+                            대기 {Math.round(attendanceWaitHoursById.get(record.id) ?? 0)}h
+                          </span>{" "}
+                          <span className="muted">
+                            {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
+                            {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
+                          </span>
+                          <span className="queue-item-history-inline">
+                            {formatQueueItemHistoryInline("attendance", record.id)}
+                          </span>
+                        </span>
+                      </label>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveAttendance(record.id)}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectAttendance(record.id)}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
+
+          {showLeaveQueue ? (
+            <>
+              <hr className="divider" />
+              <p className="small">
+                휴가 (PENDING {pendingLeave.length}건 / 검색 {filteredPendingLeave.length}건 / 선택{" "}
+                {selectedVisibleLeaveCount}건)
+              </p>
+              <div className="queue-toolbar">
+                <label className="queue-control-inline">
+                  정렬
+                  <select value={leaveQueueSort} onChange={(event) => setLeaveQueueSort(event.target.value as LeaveQueueSort)}>
+                    <option value="start_desc">시작일 최신순</option>
+                    <option value="stale_desc">정체 우선순</option>
+                    <option value="start_asc">시작일 오래된순</option>
+                    <option value="employee_asc">직원ID순</option>
+                  </select>
+                </label>
+                <button className="btn btn-secondary btn-small" onClick={selectAllLeave} disabled={filteredPendingLeave.length === 0}>
+                  전체 선택
+                </button>
+                <button className="btn btn-secondary btn-small" onClick={clearLeaveSelection} disabled={selectedLeaveCount === 0}>
+                  선택 해제
+                </button>
+                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedLeave()} disabled={!canApproveSelectedLeave}>
+                  선택 승인
+                </button>
+                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedLeave()} disabled={!canRejectSelectedLeave}>
+                  선택 반려
+                </button>
+              </div>
+              {filteredPendingLeave.length === 0 ? (
+                <p className="small muted">대기 중인 휴가 요청이 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="휴가 승인 대기">
+                  {filteredPendingLeave.map((request) => (
+                    <li key={request.id}>
+                      <label className="queue-item-main">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeaveIds.includes(request.id)}
+                          onChange={(event) => toggleLeaveSelection(request.id, event.target.checked)}
+                        />
+                        <span>
+                          <strong>{request.employeeId}</strong>{" "}
+                          <span
+                            className={`queue-sla-chip level-${resolveQueueAlertLevel(
+                              leaveWaitHoursById.get(request.id) ?? 0
+                            )}`}
+                          >
+                            대기 {Math.round(leaveWaitHoursById.get(request.id) ?? 0)}h
+                          </span>{" "}
+                          <span className="muted">
+                            {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
+                            {formatDateTime(request.endDate)} ({formatDays(request.days)}일
+                            {request.unit === "HOUR" && request.hours !== null
+                              ? ` / ${request.hours.toFixed(2)}시간`
+                              : request.unit === "HALF_DAY"
+                                ? " / 반차"
+                                : ""}
+                            )
+                          </span>
+                          <span className="queue-item-history-inline">
+                            {formatQueueItemHistoryInline("leave", request.id)}
+                          </span>
+                        </span>
+                      </label>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveLeave(request.id)}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectLeave(request.id)}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
+
+          {showPayrollQueue ? (
+            <>
+              <hr className="divider" />
+              <p className="small">급여 (PREVIEWED {previewedPayroll.length}건 / 검색 {filteredPreviewedPayroll.length}건)</p>
+              <div className="queue-toolbar">
+                <label className="queue-control-inline">
+                  정렬
+                  <select
+                    value={payrollQueueSort}
+                    onChange={(event) => setPayrollQueueSort(event.target.value as PayrollQueueSort)}
+                  >
+                    <option value="period_desc">기간 최신순</option>
+                    <option value="stale_desc">정체 우선순</option>
+                    <option value="gross_desc">총지급 높은순</option>
+                    <option value="employee_asc">직원ID순</option>
+                  </select>
+                </label>
+              </div>
+              {filteredPreviewedPayroll.length === 0 ? (
+                <p className="small muted">확정 대기 중인 급여 프리뷰가 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="급여 프리뷰">
+                  {filteredPreviewedPayroll.map((run) => (
+                    <li key={run.id}>
+                      <span>
+                        <strong>{run.employeeId ?? "-"}</strong>{" "}
+                        <span
+                          className={`queue-sla-chip level-${resolveQueueAlertLevel(
+                            payrollWaitHoursById.get(run.id) ?? 0
+                          )}`}
+                        >
+                          대기 {Math.round(payrollWaitHoursById.get(run.id) ?? 0)}h
+                        </span>{" "}
+                        <span className="muted">
+                          {formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)} / 총지급{" "}
+                          {formatKrw(run.grossPayKrw)}
+                        </span>
+                        <span className="queue-item-history-inline">
+                          {formatQueueItemHistoryInline("payroll", run.id)}
+                        </span>
+                      </span>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void confirmPayroll(run.id)}
+                        >
+                          확정
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
+
+          {selectedQueueTotalCount > 0 ? (
+            <div className="queue-mobile-sticky" role="group" aria-label="모바일 빠른 승인 액션">
+              <p>
+                모바일 빠른 승인 액션 · 선택 {selectedQueueTotalCount}건
+              </p>
+              <div className="queue-mobile-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-small"
+                  onClick={() => void approveSelectedAttendance()}
+                  disabled={!canApproveSelectedAttendance}
+                >
+                  출퇴근 선택 승인
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-small"
+                  onClick={() => void rejectSelectedAttendance()}
+                  disabled={!canRejectSelectedAttendance}
+                >
+                  출퇴근 선택 반려
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-small"
+                  onClick={() => void approveSelectedLeave()}
+                  disabled={!canApproveSelectedLeave}
+                >
+                  휴가 선택 승인
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-small"
+                  onClick={() => void rejectSelectedLeave()}
+                  disabled={!canRejectSelectedLeave}
+                >
+                  휴가 선택 반려
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    clearAttendanceSelection();
+                    clearLeaveSelection();
+                  }}
+                >
+                  선택 전체 해제
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <section className="queue-mobile-feedback-panel" id="approval-mobile-feedback" aria-live="polite">
+            <div className="queue-section-head">
+              <h3>모바일 승인 결과 피드백</h3>
+              <p className="small muted">마지막 실행 결과와 최근 큐별 성공/실패를 모바일 기준으로 요약합니다.</p>
+            </div>
+            {mobileApprovalFeedback ? (
+              <div className="queue-mobile-feedback-card">
+                <p>
+                  <strong>{mobileApprovalFeedback.action}</strong> · {mobileApprovalFeedback.at}
+                </p>
+                <div className="queue-mobile-feedback-chips">
+                  <span className="queue-history-chip">queue {mobileApprovalFeedback.queue}</span>
+                  <span className="queue-history-chip">total {mobileApprovalFeedback.total}</span>
+                  <span className="queue-history-chip">ok {mobileApprovalFeedback.okCount}</span>
+                  <span className="queue-history-chip">fail {mobileApprovalFeedback.failCount}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="small muted">아직 모바일 승인 피드백이 없습니다.</p>
+            )}
+            <div className="queue-mobile-feedback-chips">
+              {queueFeedbackByQueue.map((item) => (
+                <span key={item.queue} className="queue-history-chip">
+                  {item.queue} ok {item.ok} / fail {item.fail}
+                </span>
+              ))}
+            </div>
+          </section>
 
           <hr className="divider" />
           <div className="actions">
@@ -1635,7 +3523,10 @@ export default function AdminDashboardPage() {
             <button
               type="button"
               className="btn btn-secondary btn-small"
-              onClick={() => setApprovalActivities([])}
+              onClick={() => {
+                setApprovalActivities([]);
+                setMobileApprovalFeedback(null);
+              }}
               disabled={approvalActivities.length === 0}
             >
               이력 초기화
@@ -1783,6 +3674,25 @@ export default function AdminDashboardPage() {
               <input
                 value={leaveMaxHoursPerRequest}
                 onChange={(event) => setLeaveMaxHoursPerRequest(event.target.value)}
+              />
+            </label>
+            <label>
+              사전 신청 최소 일수
+              <input
+                type="number"
+                min={0}
+                value={leaveMinNoticeDays}
+                onChange={(event) => setLeaveMinNoticeDays(event.target.value)}
+              />
+            </label>
+            <label>
+              연속 사용 상한(일, 비우면 무제한)
+              <input
+                type="number"
+                min={0.5}
+                step="0.5"
+                value={leaveMaxConsecutiveDays}
+                onChange={(event) => setLeaveMaxConsecutiveDays(event.target.value)}
               />
             </label>
           </div>

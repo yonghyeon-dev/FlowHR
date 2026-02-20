@@ -1,0 +1,183 @@
+name: approval-execution-escalation
+
+on:
+  workflow_dispatch:
+    inputs:
+      organization_ids:
+        description: "Optional comma-separated organization IDs"
+        required: false
+        type: string
+      domain:
+        description: "Optional domain filter (ATTENDANCE|LEAVE|PAYROLL)"
+        required: false
+        type: string
+      stalled_hours_min:
+        description: "Stalled threshold in hours"
+        required: false
+        default: "24"
+        type: string
+      limit:
+        description: "Max candidates per organization"
+        required: false
+        default: "50"
+        type: string
+      dry_run:
+        description: "Run in dry-run mode (no webhook dispatch)"
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: approval-execution-escalation
+  cancel-in-progress: false
+
+jobs:
+  escalate:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate required production secrets
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          PRODUCTION_DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
+        run: |
+          missing=()
+          for key in PRODUCTION_DATABASE_URL PRODUCTION_DIRECT_URL; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required production secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Run approval execution escalation sweep
+        env:
+          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
+          FLOWHR_DATA_ACCESS: prisma
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_ORGANIZATION_IDS: ${{ inputs.organization_ids }}
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_DOMAIN: ${{ inputs.domain }}
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_STALLED_HOURS_MIN: ${{ inputs.stalled_hours_min }}
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_LIMIT: ${{ inputs.limit }}
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_DRY_RUN: ${{ inputs.dry_run }}
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_NOTIFICATION_CHANNEL: approval-stalled-queue
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_URL: ${{ secrets.FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_URL }}
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_DISCORD_WEBHOOK: ${{ secrets.FLOWHR_APPROVAL_EXECUTION_ESCALATION_DISCORD_WEBHOOK }}
+          FLOWHR_APPROVAL_EXECUTION_ESCALATION_SLACK_WEBHOOK: ${{ secrets.FLOWHR_APPROVAL_EXECUTION_ESCALATION_SLACK_WEBHOOK }}
+          FLOWHR_ALERT_DISCORD_WEBHOOK: ${{ secrets.FLOWHR_ALERT_DISCORD_WEBHOOK }}
+          FLOWHR_ALERT_SLACK_WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
+        run: npm run ops:approval:executions:escalate --if-present
+
+      - name: Upsert issue on failure
+        if: ${{ failure() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `[approval-execution-escalation] failed run ${context.runNumber}`;
+            const body = [
+              "Approval execution escalation workflow failed.",
+              "",
+              `- Run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- Trigger: ${context.eventName}`
+            ].join("\n");
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "incident,approval,ops",
+              per_page: 100
+            });
+            const incident = existing.data.find((issue) =>
+              issue.title.startsWith("[approval-execution-escalation] failed run")
+            );
+            if (incident) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: incident.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["incident", "approval", "ops"]
+              });
+            }
+
+      - name: Notify alert webhook on failure
+        if: ${{ failure() }}
+        env:
+          FLOWHR_ALERT_DISCORD_WEBHOOK: ${{ secrets.FLOWHR_ALERT_DISCORD_WEBHOOK }}
+          FLOWHR_ALERT_SLACK_WEBHOOK: ${{ secrets.FLOWHR_ALERT_SLACK_WEBHOOK }}
+          FLOWHR_ALERT_TITLE: "[FlowHR] approval-execution-escalation 실패"
+          FLOWHR_ALERT_WORKFLOW: "approval-execution-escalation"
+          FLOWHR_ALERT_RUN_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          FLOWHR_ALERT_REF: ${{ github.ref }}
+          FLOWHR_ALERT_TRIGGER: ${{ github.event_name }}
+          FLOWHR_ALERT_RUNBOOK_URL: "https://github.com/${{ github.repository }}/blob/main/docs/production-rollout.md"
+          FLOWHR_ALERT_BREAK_GLASS_URL: "https://github.com/${{ github.repository }}/blob/main/docs/break-glass.md"
+        run: node scripts/ops/notify-slack-failure.mjs
+
+      - name: Close open escalation incidents on success
+        if: ${{ success() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "incident,approval,ops",
+              per_page: 100
+            });
+
+            for (const issue of openIssues.data) {
+              if (!issue.title.startsWith("[approval-execution-escalation] failed run")) {
+                continue;
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  "approval-execution-escalation workflow succeeded and auto-closes this incident.",
+                  "",
+                  `- Success Run: ${runUrl}`,
+                  `- Ref: ${context.ref}`,
+                  `- Trigger: ${context.eventName}`
+                ].join("\n")
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "closed"
+              });
+            }

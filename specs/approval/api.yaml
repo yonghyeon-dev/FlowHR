@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Approval Policy API
-  version: 0.2.1
+  version: 0.10.0
 paths:
   /approval/policy:
     get:
@@ -26,6 +26,181 @@ paths:
           description: Invalid payload
         "403":
           description: Permission denied
+  /approval/policy/gate-preview:
+    post:
+      summary: Preview approval gate result without state mutation
+      description: Simulates policy/template/delegation evaluation for given domain and actor context. Matched template payload includes `approvalStages`.
+      responses:
+        "200":
+          description: Gate preview result
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+  /approval/stage-history:
+    get:
+      summary: List persisted approval stage-history evaluations
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+            enum: [ATTENDANCE, LEAVE, PAYROLL]
+        - in: query
+          name: targetEntityType
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: targetEntityId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: allowed
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: resolution
+          required: false
+          schema:
+            type: string
+            enum: [EXPECTED_ROLE, ACTIVE_DELEGATION, PRIVILEGED_BYPASS, DENIED]
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        "200":
+          description: Stage-history rows listed
+        "400":
+          description: Invalid query
+        "403":
+          description: Permission denied
+  /approval/executions:
+    get:
+      summary: List runtime approval executions (priority/stalled queue support)
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+            enum: [ATTENDANCE, LEAVE, PAYROLL]
+        - in: query
+          name: targetEntityType
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: targetEntityId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+            enum: [updated_desc, priority_desc]
+        - in: query
+          name: stalledHoursMin
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: asOf
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Approval execution rows listed
+        "400":
+          description: Invalid query
+        "403":
+          description: Permission denied
+  /approval/executions/escalate:
+    post:
+      summary: Trigger stalled approval execution escalation command
+      description: Selects pending execution rows over stalled threshold, supports dry-run mode, and dispatches one webhook summary payload when `dryRun=false` and candidates exist.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationId:
+                  type: string
+                domain:
+                  type: string
+                  enum: [ATTENDANCE, LEAVE, PAYROLL]
+                stalledHoursMin:
+                  type: integer
+                  minimum: 1
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+                asOf:
+                  type: string
+                  format: date-time
+                dryRun:
+                  type: boolean
+                notificationChannel:
+                  type: string
+      responses:
+        "200":
+          description: Escalation command summary returned
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+        "503":
+          description: Webhook configuration missing for non-dry-run candidate dispatch
   /approval/delegations:
     get:
       summary: List approval delegations
@@ -94,3 +269,62 @@ paths:
           description: Invalid payload
         "403":
           description: Permission denied
+  /approval/templates:
+    get:
+      summary: List approval line templates
+      description: Returns template stage definitions in `approvalStages`.
+      parameters:
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: domain
+          required: false
+          schema:
+            type: string
+            enum: [ATTENDANCE, LEAVE, PAYROLL]
+        - in: query
+          name: active
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Templates listed
+        "403":
+          description: Permission denied
+    post:
+      summary: Create approval line template
+      description: PAYROLL domain templates may include optional `payrollGrossPayMinKrw` / `payrollGrossPayMaxKrw` conditions. Supports optional multi-stage definition payload `approvalStages`.
+      responses:
+        "201":
+          description: Template created
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+        "409":
+          description: Active template conflict for same organization and domain
+  /approval/templates/{templateId}:
+    patch:
+      summary: Update approval line template
+      description: Supports updating optional PAYROLL gross-pay condition bounds and optional `approvalStages`.
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template updated
+        "400":
+          description: Invalid payload
+        "403":
+          description: Permission denied
+        "404":
+          description: Template not found
+        "409":
+          description: Active template conflict for same organization and domain

@@ -2,7 +2,7 @@ import type { Actor } from "@/lib/actor";
 import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import { derivePayableMinutes, type PayableMinutes } from "@/lib/payroll-rules";
-import { assertApprovalPolicyGate } from "@/features/approval/service";
+import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
 import type {
   AttendanceCaptureChannel,
   AttendanceRecordEntity,
@@ -1656,12 +1656,31 @@ export async function approveAttendanceRecord(
     context.actor,
     existing.employeeId
   );
-  await assertApprovalPolicyGate(context, {
-    domain: "ATTENDANCE",
-    organizationId: employee.organizationId
-  });
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be approved");
+  }
+
+  let approvalFinalized = true;
+  if (employee.organizationId) {
+    const execution = await applyApprovalExecutionAction(context, {
+      domain: "ATTENDANCE",
+      organizationId: employee.organizationId,
+      targetEntityType: "AttendanceRecord",
+      targetEntityId: existing.id,
+      action: "APPROVE"
+    });
+    approvalFinalized = execution.finalized;
+  } else {
+    await assertApprovalPolicyGate(context, {
+      domain: "ATTENDANCE",
+      organizationId: employee.organizationId,
+      targetEntityType: "AttendanceRecord",
+      targetEntityId: existing.id
+    });
+  }
+
+  if (!approvalFinalized) {
+    return existing;
   }
 
   const record = await context.dataAccess.attendance.update(recordId, {
@@ -1716,12 +1735,28 @@ export async function rejectAttendanceRecord(
     context.actor,
     existing.employeeId
   );
-  await assertApprovalPolicyGate(context, {
-    domain: "ATTENDANCE",
-    organizationId: employee.organizationId
-  });
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be rejected");
+  }
+
+  if (employee.organizationId) {
+    const execution = await applyApprovalExecutionAction(context, {
+      domain: "ATTENDANCE",
+      organizationId: employee.organizationId,
+      targetEntityType: "AttendanceRecord",
+      targetEntityId: existing.id,
+      action: "REJECT"
+    });
+    if (!execution.finalized || execution.execution.state !== "REJECTED") {
+      throw new ServiceError(409, "attendance reject action is not finalized");
+    }
+  } else {
+    await assertApprovalPolicyGate(context, {
+      domain: "ATTENDANCE",
+      organizationId: employee.organizationId,
+      targetEntityType: "AttendanceRecord",
+      targetEntityId: existing.id
+    });
   }
 
   const record = await context.dataAccess.attendance.update(recordId, {

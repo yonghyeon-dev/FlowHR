@@ -1,0 +1,58 @@
+{
+  "id": "GC-007",
+  "description": "KR statutory baseline preview with progressive income tax brackets and contribution caps",
+  "inputs": {
+    "employee_id": "E-1007",
+    "check_in": "2026-02-14T09:00:00+09:00",
+    "check_out": "2026-02-14T18:00:00+09:00",
+    "break_minutes": 60,
+    "is_holiday": false,
+    "hourly_rate_krw": 12000,
+    "multipliers": {
+      "regular": 1.0,
+      "overtime": 1.5,
+      "night": 1.5,
+      "holiday": 1.5
+    },
+    "statutory": {
+      "nonTaxableIncomeKrw": 10000,
+      "otherDeductionsKrw": 500,
+      "incomeTaxBrackets": [
+        {
+          "upToKrw": 50000,
+          "rate": 0.06
+        },
+        {
+          "upToKrw": null,
+          "rate": 0.15
+        }
+      ],
+      "nationalPensionCapKrw": 60000,
+      "healthInsuranceCapKrw": 50000,
+      "employmentInsuranceCapKrw": 40000
+    }
+  },
+  "expected": {
+    "payable_minutes": {
+      "regular": 480,
+      "overtime": 0,
+      "night": 0,
+      "holiday": 0
+    },
+    "gross_pay_krw": 96000,
+    "phase2": {
+      "mode": "statutory_kr_baseline",
+      "withholdingTaxKrw": 9240,
+      "socialInsuranceKrw": 5063,
+      "otherDeductionsKrw": 500,
+      "totalDeductionsKrw": 14803,
+      "netPayKrw": 81197
+    },
+    "audit_events": [
+      "attendance.recorded",
+      "attendance.approved",
+      "payroll.deductions_calculated",
+      "payroll.confirmed"
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { ReactNode } from "react";
 
 import SessionMenu from "@/components/SessionMenu";
@@ -15,6 +15,7 @@ function isDevToolsEnabled() {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const showDevTools = isDevToolsEnabled();
+
   return (
     <div className="saas-shell">
       <aside className="saas-sidebar">
@@ -27,10 +28,28 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin">대시보드</Link>
           <Link href="/admin#onboarding">조직</Link>
           <Link href="/admin#people">직원</Link>
+          <Link href="/admin/people">조직도/인사 이력</Link>
+          <Link href="/admin/people#directory-filters">People 필터</Link>
+          <Link href="/admin/people#org-chart">People 트리</Link>
+          <Link href="/admin/people#employee-compare">People 비교</Link>
+          <Link href="/admin/people#employee-history">People 이력</Link>
+          <Link href="/admin/people#people-mobile-flow">People 모바일 흐름</Link>
           <Link href="/admin#invites">초대/가입</Link>
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
-          <Link href="/admin/approval-policy">결재선/위임 정책</Link>
+          <Link href="/admin#approval-evidence-preview">승인 근거 프리뷰</Link>
+          <Link href="/admin#approval-evidence-comparison">승인 근거 비교 카드</Link>
+          <Link href="/admin#approval-sla-timeline">승인 SLA 타임라인</Link>
+          <Link href="/admin#approval-sla-alert-rules">승인 SLA 알림 규칙</Link>
+          <Link href="/admin#approval-mobile-review-sheet">승인 모바일 검토 시트</Link>
+          <Link href="/admin#approval-mobile-checklist">승인 모바일 체크리스트</Link>
+          <Link href="/admin#approval-bulk-validation">승인 검증</Link>
+          <Link href="/admin#approval-item-history">승인 이력 요약</Link>
+          <Link href="/admin#approval-mobile-feedback">승인 모바일 피드백</Link>
+          <Link href="/admin/approval-policy">결재/위임 정책</Link>
+          <Link href="/admin/approval-templates">결재선 템플릿</Link>
+          <Link href="/admin/approval-history">결재 단계 이력</Link>
+          <Link href="/admin/approval-executions">결재 실행 현황</Link>
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
           <Link href="/admin#payroll">급여</Link>
@@ -43,9 +62,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <SessionMenu />
           <Link href="/employee">직원 포털</Link>
           {showDevTools ? (
-            <Link className="muted-link" href="/ops/mvp-console">
-              (dev) ops 콘솔
-            </Link>
+            <>
+              <Link className="muted-link" href="/ops/mvp-console">
+                (dev) ops 콘솔
+              </Link>
+              <Link className="muted-link" href="/ops/leave-promotion">
+                (dev) 연차촉진 공지
+              </Link>
+            </>
           ) : null}
         </div>
       </aside>
@@ -54,4 +78,3 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   );
 }
-

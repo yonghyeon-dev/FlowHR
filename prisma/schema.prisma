@@ -19,7 +19,11 @@ model Organization {
   positions Position[]
   approvalPolicy ApprovalPolicy?
   approvalDelegations ApprovalDelegation[]
+  approvalLineTemplates ApprovalLineTemplate[]
+  approvalStageHistories ApprovalStageHistory[]
+  approvalExecutions ApprovalExecution[]
   leavePolicy LeavePolicy?
+  leavePromotionDeliveries LeavePromotionDelivery[]
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
   workScheduleTemplates WorkScheduleTemplate[]
@@ -113,6 +117,85 @@ model ApprovalDelegation {
 
   @@index([organizationId, domain, active, startsAt, endsAt])
   @@index([organizationId, delegateActorId, active])
+}
+
+model ApprovalLineTemplate {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  domain         ApprovalDomain
+  approverRoles  String[]
+  approvalStagesJson Json
+  payrollGrossPayMinKrw Int?
+  payrollGrossPayMaxKrw Int?
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([organizationId, domain, name])
+  @@index([organizationId, domain, active, payrollGrossPayMinKrw, payrollGrossPayMaxKrw])
+}
+
+model ApprovalStageHistory {
+  id                  String                  @id @default(cuid())
+  organizationId      String
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  domain              ApprovalDomain
+  targetEntityType    String
+  targetEntityId      String
+  stageIndex          Int                     @default(1)
+  stageLabel          String                  @default("policy-gate")
+  requiredRoles       String[]
+  fallbackRole        String
+  matchedTemplateIds  String[]
+  activeDelegationIds String[]
+  actorRole           String
+  actorId             String?
+  allowed             Boolean
+  resolution          ApprovalStageResolution
+  payrollGrossPayKrw  Int?
+  evaluatedAt         DateTime                @default(now())
+
+  @@index([organizationId, domain, evaluatedAt])
+  @@index([targetEntityType, targetEntityId, evaluatedAt])
+}
+
+model ApprovalExecution {
+  id               String                 @id @default(cuid())
+  organizationId   String
+  organization     Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  domain           ApprovalDomain
+  targetEntityType String
+  targetEntityId   String
+  templateId       String?
+  state            ApprovalExecutionState @default(PENDING)
+  totalStages      Int
+  currentStageIndex Int                   @default(1)
+  startedAt        DateTime               @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  actions ApprovalExecutionActionLog[]
+
+  @@unique([organizationId, domain, targetEntityType, targetEntityId], name: "approval_execution_target_key")
+  @@index([organizationId, state, updatedAt])
+}
+
+model ApprovalExecutionActionLog {
+  id         String                   @id @default(cuid())
+  executionId String
+  execution  ApprovalExecution        @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  stageIndex Int
+  action     ApprovalExecutionAction
+  actorRole  String
+  actorId    String?
+  resolution ApprovalStageResolution
+  createdAt  DateTime                 @default(now())
+
+  @@index([executionId, stageIndex, action, createdAt])
+  @@index([executionId, actorId, stageIndex, action])
 }
 
 model Role {
@@ -272,8 +355,72 @@ model LeavePolicy {
   allowHourly     Boolean     @default(true)
   hourlyIncrementMinutes Int  @default(30)
   maxHoursPerRequest Decimal  @default(8) @db.Decimal(6, 2)
+  minNoticeDays   Int         @default(0)
+  maxConsecutiveDays Decimal? @db.Decimal(6, 2)
+  annualLeavePromotionEnabled Boolean @default(false)
+  annualLeavePromotionThresholdDays Decimal @default(5) @db.Decimal(6, 2)
+  annualLeavePromotionLeadDays Int @default(30)
+  annualLeavePromotionMessageTemplate String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+}
+
+model LeavePromotionDelivery {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  asOf                DateTime
+  includeUpcoming     Boolean
+  dryRun              Boolean
+  channel             LeavePromotionDeliveryChannel
+  provider            String?
+  status              LeavePromotionDeliveryStatus
+  announcementTitle   String
+  announcementBody    String
+  targetCount         Int
+  recipientCount      Int
+  missingEmailCount   Int
+  sentTargetCount     Int
+  webhookSource       String?
+  emailTemplateSource String?
+  emailTemplateId     String?
+  dispatchedAt        DateTime?
+  requestedByActorRole String
+  requestedByActorId  String?
+  retryOfDeliveryId   String?
+  retryOfDelivery     LeavePromotionDelivery? @relation("LeavePromotionDeliveryRetry", fields: [retryOfDeliveryId], references: [id], onDelete: SetNull)
+  retryDeliveries     LeavePromotionDelivery[] @relation("LeavePromotionDeliveryRetry")
+  recipients          LeavePromotionDeliveryRecipient[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, channel, createdAt])
+  @@index([retryOfDeliveryId])
+}
+
+model LeavePromotionDeliveryRecipient {
+  id             String   @id @default(cuid())
+  deliveryId     String
+  delivery       LeavePromotionDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  employeeId     String
+  email          String?
+  name           String?
+  remainingDays  Decimal  @db.Decimal(6, 2)
+  grantedDays    Decimal  @db.Decimal(6, 2)
+  usedDays       Decimal  @db.Decimal(6, 2)
+  lastAccrualYear Int?
+  eligibleNow    Boolean
+  status         LeavePromotionRecipientStatus
+  lastError      String?
+  sentAt         DateTime?
+  retryCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([deliveryId, status, createdAt])
+  @@index([employeeId, createdAt])
 }
 
 model PayrollRun {
@@ -376,6 +523,25 @@ enum LeaveRequestUnit {
   HOUR
 }
 
+enum LeavePromotionDeliveryChannel {
+  webhook
+  email_template
+}
+
+enum LeavePromotionDeliveryStatus {
+  dry_run
+  skipped_no_targets
+  dispatched
+  failed
+}
+
+enum LeavePromotionRecipientStatus {
+  PENDING
+  SENT
+  SKIPPED_NO_EMAIL
+  FAILED
+}
+
 enum PayrollState {
   PREVIEWED
   CONFIRMED
@@ -385,6 +551,24 @@ enum ApprovalDomain {
   ATTENDANCE
   LEAVE
   PAYROLL
+}
+
+enum ApprovalStageResolution {
+  EXPECTED_ROLE
+  ACTIVE_DELEGATION
+  PRIVILEGED_BYPASS
+  DENIED
+}
+
+enum ApprovalExecutionState {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalExecutionAction {
+  APPROVE
+  REJECT
 }
 
 enum ScheduleAnomalyIncidentState {

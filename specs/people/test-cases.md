@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.2.0)
+# People Test Cases (Contract v0.3.0)
 
 ## Organization
 
@@ -14,6 +14,7 @@
 - Admin can list employees (filter by `active` and `organizationId`).
 - Admin can fetch an employee by id.
 - Admin can update employee profile fields (name/email/org/active).
+- Admin can list employee profile history (`/people/employees/{employeeId}/history`) with newest entries first.
 - Employee create/update supports optional `departmentId`, `positionId`.
 - Employee update returns `409` when department/position organization mismatches target employee organization.
 - Non-admin requests are rejected with `403`.

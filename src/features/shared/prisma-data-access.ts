@@ -3,13 +3,24 @@ import { prisma } from "@/lib/prisma";
 import type {
   ApprovalDelegationEntity,
   ApprovalDomain,
+  ApprovalExecutionActionEntity,
+  ApprovalExecutionActionType,
+  ApprovalExecutionEntity,
+  ApprovalExecutionState,
+  ApprovalLineTemplateEntity,
   ApprovalPolicyEntity,
+  ApprovalTemplateStageEntity,
+  ApprovalStageHistoryEntity,
   ApprovalStore,
   AuditLogEntity,
   AttendanceRecordEntity,
   AttendanceStore,
   AuditStore,
   CreateApprovalDelegationInput,
+  CreateApprovalExecutionActionInput,
+  CreateApprovalExecutionInput,
+  CreateApprovalStageHistoryInput,
+  CreateApprovalLineTemplateInput,
   CreateAttendanceRecordInput,
   CreateDepartmentInput,
   CreateEmployeeInput,
@@ -31,6 +42,14 @@ import type {
   ListAuditLogsInput,
   LeaveBalanceEntity,
   LeaveBalanceStore,
+  LeavePromotionDeliveryEntity,
+  LeavePromotionDeliveryRecipientEntity,
+  LeavePromotionDeliveryStore,
+  LeavePromotionRecipientStatus,
+  CreateLeavePromotionDeliveryInput,
+  CreateLeavePromotionDeliveryRecipientInput,
+  UpdateLeavePromotionDeliveryInput,
+  UpdateLeavePromotionDeliveryRecipientInput,
   LeavePolicyEntity,
   LeavePolicyStore,
   LeaveRequestEntity,
@@ -53,6 +72,8 @@ import type {
   UpsertScheduleAnomalyIncidentInput,
   UpsertDeductionProfileInput,
   UpdateApprovalDelegationInput,
+  UpdateApprovalExecutionInput,
+  UpdateApprovalLineTemplateInput,
   UpdateAttendanceRecordInput,
   UpdateDepartmentInput,
   UpdateEmployeeInput,
@@ -172,12 +193,75 @@ function toLeavePolicyEntity(record: {
   allowHourly: boolean;
   hourlyIncrementMinutes: number;
   maxHoursPerRequest: Prisma.Decimal;
+  minNoticeDays: number;
+  maxConsecutiveDays: Prisma.Decimal | null;
+  annualLeavePromotionEnabled: boolean;
+  annualLeavePromotionThresholdDays: Prisma.Decimal;
+  annualLeavePromotionLeadDays: number;
+  annualLeavePromotionMessageTemplate: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): LeavePolicyEntity {
   return {
     ...record,
-    maxHoursPerRequest: Number(record.maxHoursPerRequest)
+    maxHoursPerRequest: Number(record.maxHoursPerRequest),
+    annualLeavePromotionThresholdDays: Number(record.annualLeavePromotionThresholdDays),
+    maxConsecutiveDays:
+      record.maxConsecutiveDays === null ? null : Number(record.maxConsecutiveDays)
+  };
+}
+
+function toLeavePromotionDeliveryEntity(record: {
+  id: string;
+  organizationId: string;
+  asOf: Date;
+  includeUpcoming: boolean;
+  dryRun: boolean;
+  channel: "webhook" | "email_template";
+  provider: string | null;
+  status: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+  announcementTitle: string;
+  announcementBody: string;
+  targetCount: number;
+  recipientCount: number;
+  missingEmailCount: number;
+  sentTargetCount: number;
+  webhookSource: string | null;
+  emailTemplateSource: string | null;
+  emailTemplateId: string | null;
+  dispatchedAt: Date | null;
+  requestedByActorRole: string;
+  requestedByActorId: string | null;
+  retryOfDeliveryId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): LeavePromotionDeliveryEntity {
+  return record;
+}
+
+function toLeavePromotionDeliveryRecipientEntity(record: {
+  id: string;
+  deliveryId: string;
+  employeeId: string;
+  email: string | null;
+  name: string | null;
+  remainingDays: Prisma.Decimal;
+  grantedDays: Prisma.Decimal;
+  usedDays: Prisma.Decimal;
+  lastAccrualYear: number | null;
+  eligibleNow: boolean;
+  status: "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
+  lastError: string | null;
+  sentAt: Date | null;
+  retryCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): LeavePromotionDeliveryRecipientEntity {
+  return {
+    ...record,
+    remainingDays: Number(record.remainingDays),
+    grantedDays: Number(record.grantedDays),
+    usedDays: Number(record.usedDays)
   };
 }
 
@@ -310,6 +394,172 @@ function toApprovalDelegationEntity(record: {
   return {
     ...record,
     domain: record.domain as ApprovalDomain
+  };
+}
+
+function toApprovalLineTemplateEntity(record: {
+  id: string;
+  organizationId: string;
+  name: string;
+  domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
+  approverRoles: string[];
+  approvalStagesJson: Prisma.JsonValue;
+  payrollGrossPayMinKrw: number | null;
+  payrollGrossPayMaxKrw: number | null;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): ApprovalLineTemplateEntity {
+  const approvalStages = toApprovalTemplateStages(record.approvalStagesJson, record.approverRoles);
+  return {
+    ...record,
+    domain: record.domain as ApprovalDomain,
+    approverRoles: [...record.approverRoles],
+    approvalStages,
+    payrollGrossPayMinKrw: record.payrollGrossPayMinKrw,
+    payrollGrossPayMaxKrw: record.payrollGrossPayMaxKrw
+  };
+}
+
+function toApprovalTemplateStages(
+  value: Prisma.JsonValue,
+  fallbackApproverRoles: string[]
+): ApprovalTemplateStageEntity[] {
+  if (!Array.isArray(value)) {
+    return [
+      {
+        stageIndex: 1,
+        label: "stage-1",
+        approverRoles: [...fallbackApproverRoles],
+        minApprovals: 1
+      }
+    ];
+  }
+
+  const rows: ApprovalTemplateStageEntity[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      continue;
+    }
+    const stageIndexValue = (item as Record<string, unknown>).stageIndex;
+    const labelValue = (item as Record<string, unknown>).label;
+    const approverRolesValue = (item as Record<string, unknown>).approverRoles;
+    const minApprovalsValue = (item as Record<string, unknown>).minApprovals;
+    if (
+      typeof stageIndexValue !== "number" ||
+      !Number.isInteger(stageIndexValue) ||
+      stageIndexValue < 1
+    ) {
+      continue;
+    }
+    if (typeof labelValue !== "string" || labelValue.trim().length === 0) {
+      continue;
+    }
+    if (!Array.isArray(approverRolesValue)) {
+      continue;
+    }
+    const approverRoles = approverRolesValue
+      .filter((role): role is string => typeof role === "string")
+      .map((role) => role.trim())
+      .filter((role) => role.length > 0);
+    if (approverRoles.length === 0) {
+      continue;
+    }
+    if (
+      typeof minApprovalsValue !== "number" ||
+      !Number.isInteger(minApprovalsValue) ||
+      minApprovalsValue < 1 ||
+      minApprovalsValue > approverRoles.length
+    ) {
+      continue;
+    }
+    rows.push({
+      stageIndex: stageIndexValue,
+      label: labelValue.trim(),
+      approverRoles,
+      minApprovals: minApprovalsValue
+    });
+  }
+
+  if (rows.length === 0) {
+    return [
+      {
+        stageIndex: 1,
+        label: "stage-1",
+        approverRoles: [...fallbackApproverRoles],
+        minApprovals: 1
+      }
+    ];
+  }
+
+  rows.sort((left, right) => left.stageIndex - right.stageIndex);
+  return rows;
+}
+
+function toApprovalStageHistoryEntity(record: {
+  id: string;
+  organizationId: string;
+  domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
+  targetEntityType: string;
+  targetEntityId: string;
+  stageIndex: number;
+  stageLabel: string;
+  requiredRoles: string[];
+  fallbackRole: string;
+  matchedTemplateIds: string[];
+  activeDelegationIds: string[];
+  actorRole: string;
+  actorId: string | null;
+  allowed: boolean;
+  resolution: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+  payrollGrossPayKrw: number | null;
+  evaluatedAt: Date;
+}): ApprovalStageHistoryEntity {
+  return {
+    ...record,
+    domain: record.domain as ApprovalDomain,
+    requiredRoles: [...record.requiredRoles],
+    matchedTemplateIds: [...record.matchedTemplateIds],
+    activeDelegationIds: [...record.activeDelegationIds]
+  };
+}
+
+function toApprovalExecutionEntity(record: {
+  id: string;
+  organizationId: string;
+  domain: "ATTENDANCE" | "LEAVE" | "PAYROLL";
+  targetEntityType: string;
+  targetEntityId: string;
+  templateId: string | null;
+  state: "PENDING" | "APPROVED" | "REJECTED";
+  totalStages: number;
+  currentStageIndex: number;
+  startedAt: Date;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): ApprovalExecutionEntity {
+  return {
+    ...record,
+    domain: record.domain as ApprovalDomain,
+    state: record.state as ApprovalExecutionState
+  };
+}
+
+function toApprovalExecutionActionEntity(record: {
+  id: string;
+  executionId: string;
+  stageIndex: number;
+  action: "APPROVE" | "REJECT";
+  actorRole: string;
+  actorId: string | null;
+  resolution: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+  createdAt: Date;
+}): ApprovalExecutionActionEntity {
+  return {
+    ...record,
+    action: record.action as ApprovalExecutionActionType,
+    resolution: record.resolution
   };
 }
 
@@ -671,6 +921,247 @@ const approvals: ApprovalStore = {
       orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }]
     });
     return records.map(toApprovalDelegationEntity);
+  },
+
+  async createTemplate(input: CreateApprovalLineTemplateInput) {
+    const approvalStagesJson = (
+      (input.approvalStages ?? [
+        {
+          stageIndex: 1,
+          label: "stage-1",
+          approverRoles: [...input.approverRoles],
+          minApprovals: 1
+        }
+      ]) as unknown
+    ) as Prisma.InputJsonValue;
+    const record = await prisma.approvalLineTemplate.create({
+      data: {
+        organizationId: input.organizationId,
+        name: input.name,
+        domain: input.domain,
+        approverRoles: input.approverRoles,
+        approvalStagesJson,
+        payrollGrossPayMinKrw:
+          input.payrollGrossPayMinKrw === undefined ? null : input.payrollGrossPayMinKrw,
+        payrollGrossPayMaxKrw:
+          input.payrollGrossPayMaxKrw === undefined ? null : input.payrollGrossPayMaxKrw,
+        active: input.active ?? true
+      }
+    });
+    return toApprovalLineTemplateEntity(record);
+  },
+
+  async findTemplateById(id: string) {
+    const record = await prisma.approvalLineTemplate.findUnique({
+      where: { id }
+    });
+    return record ? toApprovalLineTemplateEntity(record) : null;
+  },
+
+  async updateTemplate(id: string, input: UpdateApprovalLineTemplateInput) {
+    const approvalStagesJson =
+      input.approvalStages !== undefined
+        ? ((input.approvalStages as unknown) as Prisma.InputJsonValue)
+        : undefined;
+    const record = await prisma.approvalLineTemplate.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.domain !== undefined ? { domain: input.domain } : {}),
+        ...(input.approverRoles !== undefined ? { approverRoles: input.approverRoles } : {}),
+        ...(approvalStagesJson !== undefined ? { approvalStagesJson } : {}),
+        ...(input.payrollGrossPayMinKrw !== undefined
+          ? { payrollGrossPayMinKrw: input.payrollGrossPayMinKrw }
+          : {}),
+        ...(input.payrollGrossPayMaxKrw !== undefined
+          ? { payrollGrossPayMaxKrw: input.payrollGrossPayMaxKrw }
+          : {}),
+        ...(input.active !== undefined ? { active: input.active } : {})
+      }
+    });
+    return toApprovalLineTemplateEntity(record);
+  },
+
+  async listTemplates(input: {
+    organizationId?: string;
+    domain?: ApprovalDomain;
+    active?: boolean;
+  }) {
+    const records = await prisma.approvalLineTemplate.findMany({
+      where: {
+        ...(input.organizationId ? { organizationId: input.organizationId } : {}),
+        ...(input.domain ? { domain: input.domain } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {})
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toApprovalLineTemplateEntity);
+  },
+
+  async appendStageHistory(input: CreateApprovalStageHistoryInput) {
+    const record = await prisma.approvalStageHistory.create({
+      data: {
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        stageIndex: input.stageIndex ?? 1,
+        stageLabel: input.stageLabel ?? "policy-gate",
+        requiredRoles: input.requiredRoles,
+        fallbackRole: input.fallbackRole,
+        matchedTemplateIds: input.matchedTemplateIds ?? [],
+        activeDelegationIds: input.activeDelegationIds ?? [],
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        allowed: input.allowed,
+        resolution: input.resolution,
+        payrollGrossPayKrw: input.payrollGrossPayKrw ?? null,
+        ...(input.evaluatedAt ? { evaluatedAt: input.evaluatedAt } : {})
+      }
+    });
+    return toApprovalStageHistoryEntity(record);
+  },
+
+  async listStageHistory(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    allowed?: boolean;
+    resolution?: "EXPECTED_ROLE" | "ACTIVE_DELEGATION" | "PRIVILEGED_BYPASS" | "DENIED";
+    from?: Date;
+    to?: Date;
+    limit?: number;
+  }) {
+    const records = await prisma.approvalStageHistory.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.domain ? { domain: input.domain } : {}),
+        ...(input.targetEntityType ? { targetEntityType: input.targetEntityType } : {}),
+        ...(input.targetEntityId ? { targetEntityId: input.targetEntityId } : {}),
+        ...(input.allowed !== undefined ? { allowed: input.allowed } : {}),
+        ...(input.resolution ? { resolution: input.resolution } : {}),
+        ...(input.from || input.to
+          ? {
+              evaluatedAt: {
+                ...(input.from ? { gte: input.from } : {}),
+                ...(input.to ? { lte: input.to } : {})
+              }
+            }
+          : {})
+      },
+      orderBy: [{ evaluatedAt: "desc" }, { id: "desc" }],
+      ...(input.limit && input.limit > 0 ? { take: input.limit } : {})
+    });
+    return records.map(toApprovalStageHistoryEntity);
+  },
+
+  async findExecutionByTarget(input: {
+    organizationId: string;
+    domain: ApprovalDomain;
+    targetEntityType: string;
+    targetEntityId: string;
+  }) {
+    const record = await prisma.approvalExecution.findUnique({
+      where: {
+        approval_execution_target_key: {
+          organizationId: input.organizationId,
+          domain: input.domain,
+          targetEntityType: input.targetEntityType,
+          targetEntityId: input.targetEntityId
+        }
+      }
+    });
+    return record ? toApprovalExecutionEntity(record) : null;
+  },
+
+  async createExecution(input: CreateApprovalExecutionInput) {
+    const record = await prisma.approvalExecution.create({
+      data: {
+        organizationId: input.organizationId,
+        domain: input.domain,
+        targetEntityType: input.targetEntityType,
+        targetEntityId: input.targetEntityId,
+        templateId: input.templateId ?? null,
+        state: input.state ?? "PENDING",
+        totalStages: input.totalStages,
+        currentStageIndex: input.currentStageIndex ?? 1,
+        ...(input.startedAt ? { startedAt: input.startedAt } : {}),
+        ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {})
+      }
+    });
+    return toApprovalExecutionEntity(record);
+  },
+
+  async updateExecution(id: string, input: UpdateApprovalExecutionInput) {
+    const record = await prisma.approvalExecution.update({
+      where: { id },
+      data: {
+        ...(input.templateId !== undefined ? { templateId: input.templateId } : {}),
+        ...(input.state !== undefined ? { state: input.state } : {}),
+        ...(input.totalStages !== undefined ? { totalStages: input.totalStages } : {}),
+        ...(input.currentStageIndex !== undefined
+          ? { currentStageIndex: input.currentStageIndex }
+          : {}),
+        ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {})
+      }
+    });
+    return toApprovalExecutionEntity(record);
+  },
+
+  async listExecutions(input: {
+    organizationId: string;
+    domain?: ApprovalDomain;
+    targetEntityType?: string;
+    targetEntityId?: string;
+    state?: ApprovalExecutionState;
+    limit?: number;
+  }) {
+    const records = await prisma.approvalExecution.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.domain ? { domain: input.domain } : {}),
+        ...(input.targetEntityType ? { targetEntityType: input.targetEntityType } : {}),
+        ...(input.targetEntityId ? { targetEntityId: input.targetEntityId } : {}),
+        ...(input.state ? { state: input.state } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      ...(input.limit && input.limit > 0 ? { take: input.limit } : {})
+    });
+    return records.map(toApprovalExecutionEntity);
+  },
+
+  async appendExecutionAction(input: CreateApprovalExecutionActionInput) {
+    const record = await prisma.approvalExecutionActionLog.create({
+      data: {
+        executionId: input.executionId,
+        stageIndex: input.stageIndex,
+        action: input.action,
+        actorRole: input.actorRole,
+        actorId: input.actorId ?? null,
+        resolution: input.resolution,
+        ...(input.createdAt ? { createdAt: input.createdAt } : {})
+      }
+    });
+    return toApprovalExecutionActionEntity(record);
+  },
+
+  async listExecutionActions(input: {
+    executionId: string;
+    stageIndex?: number;
+    action?: ApprovalExecutionActionType;
+    actorId?: string | null;
+  }) {
+    const records = await prisma.approvalExecutionActionLog.findMany({
+      where: {
+        executionId: input.executionId,
+        ...(input.stageIndex !== undefined ? { stageIndex: input.stageIndex } : {}),
+        ...(input.action ? { action: input.action } : {}),
+        ...(input.actorId !== undefined ? { actorId: input.actorId } : {})
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toApprovalExecutionActionEntity);
   }
 };
 
@@ -1339,6 +1830,31 @@ const leavePolicy: LeavePolicyStore = {
           : {}),
         ...(input.maxHoursPerRequest !== undefined
           ? { maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest) }
+          : {}),
+        ...(input.minNoticeDays !== undefined ? { minNoticeDays: input.minNoticeDays } : {}),
+        ...(input.maxConsecutiveDays !== undefined
+          ? {
+              maxConsecutiveDays:
+                input.maxConsecutiveDays === null
+                  ? null
+                  : new Prisma.Decimal(input.maxConsecutiveDays)
+            }
+          : {}),
+        ...(input.annualLeavePromotionEnabled !== undefined
+          ? { annualLeavePromotionEnabled: input.annualLeavePromotionEnabled }
+          : {}),
+        ...(input.annualLeavePromotionThresholdDays !== undefined
+          ? {
+              annualLeavePromotionThresholdDays: new Prisma.Decimal(
+                input.annualLeavePromotionThresholdDays
+              )
+            }
+          : {}),
+        ...(input.annualLeavePromotionLeadDays !== undefined
+          ? { annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays }
+          : {}),
+        ...(input.annualLeavePromotionMessageTemplate !== undefined
+          ? { annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate }
           : {})
       },
       create: {
@@ -1348,10 +1864,145 @@ const leavePolicy: LeavePolicyStore = {
         allowHalfDay: input.allowHalfDay ?? true,
         allowHourly: input.allowHourly ?? true,
         hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
-        maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest ?? 8)
+        maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest ?? 8),
+        minNoticeDays: input.minNoticeDays ?? 0,
+        maxConsecutiveDays:
+          input.maxConsecutiveDays === undefined || input.maxConsecutiveDays === null
+            ? null
+            : new Prisma.Decimal(input.maxConsecutiveDays),
+        annualLeavePromotionEnabled: input.annualLeavePromotionEnabled ?? false,
+        annualLeavePromotionThresholdDays: new Prisma.Decimal(
+          input.annualLeavePromotionThresholdDays ?? 5
+        ),
+        annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays ?? 30,
+        annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate ?? null
       }
     });
     return toLeavePolicyEntity(policy);
+  }
+};
+
+const leavePromotionDeliveries: LeavePromotionDeliveryStore = {
+  async create(input: CreateLeavePromotionDeliveryInput) {
+    const record = await prisma.leavePromotionDelivery.create({
+      data: {
+        organizationId: input.organizationId,
+        asOf: input.asOf,
+        includeUpcoming: input.includeUpcoming,
+        dryRun: input.dryRun,
+        channel: input.channel,
+        provider: input.provider ?? null,
+        status: input.status,
+        announcementTitle: input.announcementTitle,
+        announcementBody: input.announcementBody,
+        targetCount: input.targetCount,
+        recipientCount: input.recipientCount,
+        missingEmailCount: input.missingEmailCount,
+        sentTargetCount: input.sentTargetCount,
+        webhookSource: input.webhookSource ?? null,
+        emailTemplateSource: input.emailTemplateSource ?? null,
+        emailTemplateId: input.emailTemplateId ?? null,
+        dispatchedAt: input.dispatchedAt ?? null,
+        requestedByActorRole: input.requestedByActorRole,
+        requestedByActorId: input.requestedByActorId ?? null,
+        retryOfDeliveryId: input.retryOfDeliveryId ?? null
+      }
+    });
+    return toLeavePromotionDeliveryEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.leavePromotionDelivery.findUnique({
+      where: { id }
+    });
+    return record ? toLeavePromotionDeliveryEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateLeavePromotionDeliveryInput) {
+    const record = await prisma.leavePromotionDelivery.update({
+      where: { id },
+      data: {
+        provider: input.provider,
+        status: input.status,
+        sentTargetCount: input.sentTargetCount,
+        dispatchedAt: input.dispatchedAt,
+        webhookSource: input.webhookSource,
+        emailTemplateSource: input.emailTemplateSource,
+        emailTemplateId: input.emailTemplateId
+      }
+    });
+    return toLeavePromotionDeliveryEntity(record);
+  },
+
+  async list(input: {
+    organizationId: string;
+    channel?: "webhook" | "email_template";
+    status?: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
+    retryOfDeliveryId?: string;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 100;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 100;
+
+    const records = await prisma.leavePromotionDelivery.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.channel ? { channel: input.channel } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.retryOfDeliveryId !== undefined
+          ? { retryOfDeliveryId: input.retryOfDeliveryId }
+          : {})
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toLeavePromotionDeliveryEntity);
+  },
+
+  async createRecipient(input: CreateLeavePromotionDeliveryRecipientInput) {
+    const record = await prisma.leavePromotionDeliveryRecipient.create({
+      data: {
+        deliveryId: input.deliveryId,
+        employeeId: input.employeeId,
+        email: input.email ?? null,
+        name: input.name ?? null,
+        remainingDays: new Prisma.Decimal(input.remainingDays),
+        grantedDays: new Prisma.Decimal(input.grantedDays),
+        usedDays: new Prisma.Decimal(input.usedDays),
+        lastAccrualYear: input.lastAccrualYear ?? null,
+        eligibleNow: input.eligibleNow,
+        status: input.status,
+        lastError: input.lastError ?? null,
+        sentAt: input.sentAt ?? null,
+        retryCount: input.retryCount ?? 0
+      }
+    });
+    return toLeavePromotionDeliveryRecipientEntity(record);
+  },
+
+  async updateRecipient(id: string, input: UpdateLeavePromotionDeliveryRecipientInput) {
+    const record = await prisma.leavePromotionDeliveryRecipient.update({
+      where: { id },
+      data: {
+        email: input.email,
+        status: input.status,
+        lastError: input.lastError,
+        sentAt: input.sentAt,
+        retryCount: input.retryCount
+      }
+    });
+    return toLeavePromotionDeliveryRecipientEntity(record);
+  },
+
+  async listRecipients(input: { deliveryId: string; status?: LeavePromotionRecipientStatus }) {
+    const records = await prisma.leavePromotionDeliveryRecipient.findMany({
+      where: {
+        deliveryId: input.deliveryId,
+        ...(input.status ? { status: input.status } : {})
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    });
+    return records.map(toLeavePromotionDeliveryRecipientEntity);
   }
 };
 
@@ -1530,6 +2181,7 @@ export const prismaDataAccess: DataAccess = {
   leave,
   leavePolicy,
   leaveBalance,
+  leavePromotionDeliveries,
   payroll,
   deductionProfiles,
   audit

@@ -1,7 +1,7 @@
 import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
-import { assertApprovalPolicyGate } from "@/features/approval/service";
+import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
 import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import {
   calculateGrossPay,
@@ -826,10 +826,27 @@ export async function confirmPayrollRun(
   if (run.state !== "PREVIEWED") {
     throw new ServiceError(409, "only previewed payroll run can be confirmed");
   }
-  await assertApprovalPolicyGate(context, {
-    domain: "PAYROLL",
-    organizationId: run.organizationId
-  });
+  if (run.organizationId) {
+    const execution = await applyApprovalExecutionAction(context, {
+      domain: "PAYROLL",
+      organizationId: run.organizationId,
+      targetEntityType: "PayrollRun",
+      targetEntityId: run.id,
+      action: "APPROVE",
+      payrollGrossPayKrw: run.grossPayKrw
+    });
+    if (!execution.finalized) {
+      return run;
+    }
+  } else {
+    await assertApprovalPolicyGate(context, {
+      domain: "PAYROLL",
+      organizationId: run.organizationId,
+      payrollGrossPayKrw: run.grossPayKrw,
+      targetEntityType: "PayrollRun",
+      targetEntityId: run.id
+    });
+  }
 
   const confirmed = await context.dataAccess.payroll.update(runId, {
     state: "CONFIRMED",
