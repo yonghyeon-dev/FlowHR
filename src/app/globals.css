@@ -1710,9 +1710,12 @@ button.queue-badge:hover {
 .panel-submit-checklist,
 .panel-request-bottleneck-feedback,
 .panel-request-wait-prediction,
+.panel-request-history-sort-accuracy,
+.panel-approval-delay-risk-prediction,
 .panel-mobile-shortcuts,
 .panel-mobile-submit-guide,
 .panel-mobile-follow-up-guide,
+.panel-mobile-follow-up-recommendation,
 .panel-request-timeline {
   grid-column: 1 / -1;
 }
@@ -1924,6 +1927,114 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.request-history-sort-accuracy-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.request-history-sort-accuracy-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-history-sort-accuracy-list li p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.request-history-sort-accuracy-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.request-history-sort-accuracy-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.request-history-sort-accuracy-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.request-history-sort-accuracy-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.request-history-sort-accuracy-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.approval-delay-risk-prediction-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.approval-delay-risk-prediction-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.approval-delay-risk-prediction-list li p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.approval-delay-risk-prediction-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.approval-delay-risk-prediction-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.approval-delay-risk-prediction-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.approval-delay-risk-prediction-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.approval-delay-risk-prediction-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .mobile-submit-guide-list {
   margin: 10px 0 0;
   padding: 0;
@@ -2016,6 +2127,54 @@ button.queue-badge:hover {
 }
 
 .mobile-follow-up-guide-list li.tone-fail {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.mobile-follow-up-recommendation-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-follow-up-recommendation-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-follow-up-recommendation-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.mobile-follow-up-recommendation-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobile-follow-up-recommendation-list li.tone-ready {
+  border-color: #b8dfc4;
+  background: #f2fbf5;
+}
+
+.mobile-follow-up-recommendation-list li.tone-pending {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.mobile-follow-up-recommendation-list li.tone-fail {
   border-color: #f2c4ce;
   background: #ffedf1;
 }
@@ -3565,8 +3724,11 @@ button.queue-badge:hover {
   #request-search-sort .request-search-list,
   #request-bottleneck-feedback .request-bottleneck-list,
   #request-wait-prediction .request-wait-prediction-list,
+  #request-history-sort-accuracy .request-history-sort-accuracy-list,
+  #approval-delay-risk-prediction .approval-delay-risk-prediction-list,
   #mobile-submit-guide .mobile-submit-guide-list,
-  #mobile-follow-up-guide .mobile-follow-up-guide-list {
+  #mobile-follow-up-guide .mobile-follow-up-guide-list,
+  #mobile-follow-up-recommendation .mobile-follow-up-recommendation-list {
     grid-template-columns: 1fr;
   }
 
@@ -3582,8 +3744,11 @@ button.queue-badge:hover {
   #request-search-sort .request-search-head,
   #request-bottleneck-feedback .request-bottleneck-head,
   #request-wait-prediction .request-wait-prediction-head,
+  #request-history-sort-accuracy .request-history-sort-accuracy-head,
+  #approval-delay-risk-prediction .approval-delay-risk-prediction-head,
   #mobile-submit-guide .mobile-submit-guide-head,
-  #mobile-follow-up-guide .mobile-follow-up-guide-head {
+  #mobile-follow-up-guide .mobile-follow-up-guide-head,
+  #mobile-follow-up-recommendation .mobile-follow-up-recommendation-head {
     flex-direction: column;
     align-items: flex-start;
   }

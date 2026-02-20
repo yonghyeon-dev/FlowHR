@@ -206,6 +206,41 @@ type MobileFollowUpGuideCard = {
   targetSectionId: string;
 };
 
+type RequestHistorySortAccuracyCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  accuracyScore: number;
+  matchedCount: number;
+  totalCompared: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type ApprovalDelayRiskPredictionCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  pendingCount: number;
+  stalledCount: number;
+  criticalCount: number;
+  averageWaitHours: number;
+  maxWaitHours: number;
+  riskScore: number;
+  etaLabel: string;
+  detail: string;
+  targetSectionId: string;
+};
+
+type MobileFollowUpRecommendationCard = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  detail: string;
+  ctaLabel: string;
+  targetSectionId: string;
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -362,6 +397,35 @@ function statusSortRank(status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED"
     return 2;
   }
   return 3;
+}
+
+function sortRequestRowsByOption(rows: RequestSearchRow[], sortOption: RequestSortOption) {
+  return [...rows].sort((left, right) => {
+    if (sortOption === "latest_desc") {
+      return toTimestamp(right.at) - toTimestamp(left.at);
+    }
+    if (sortOption === "oldest_asc") {
+      return toTimestamp(left.at) - toTimestamp(right.at);
+    }
+    if (sortOption === "status") {
+      const statusDiff = statusSortRank(left.status) - statusSortRank(right.status);
+      if (statusDiff !== 0) {
+        return statusDiff;
+      }
+      return toTimestamp(right.at) - toTimestamp(left.at);
+    }
+    const pendingDiff = Number(right.status === "PENDING") - Number(left.status === "PENDING");
+    if (pendingDiff !== 0) {
+      return pendingDiff;
+    }
+    if (right.status === "PENDING" && left.status === "PENDING") {
+      const waitDiff = right.pendingHours - left.pendingHours;
+      if (waitDiff !== 0) {
+        return waitDiff;
+      }
+    }
+    return toTimestamp(right.at) - toTimestamp(left.at);
+  });
 }
 
 function matchesRequestSearch(scope: RequestSearchScope, query: string, row: RequestSearchRow) {
@@ -844,6 +908,43 @@ export default function EmployeeSelfServicePage() {
     if (card.key === "api-failure-follow-up" && stats.fail > 0) {
       jumpToSection("request-feedback");
       pushMobileFlowFeedback("최근 API 실패 원인을 먼저 확인해 주세요.");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runMobileFollowUpRecommendationAction(card: MobileFollowUpRecommendationCard) {
+    if (card.key === "sort-accuracy") {
+      const hasSortAccuracyRisk = requestHistorySortAccuracyCards.some(
+        (accuracyCard) => accuracyCard.totalCompared > 0 && accuracyCard.severity !== "normal"
+      );
+      if (hasSortAccuracyRisk) {
+        openPendingRequestSearch();
+        jumpToSection("request-history-sort-accuracy");
+        pushMobileFlowFeedback("Requested history sort-accuracy review is opened.");
+        return;
+      }
+    }
+    if (card.key === "delay-risk") {
+      const hasDelayRisk = approvalDelayRiskPredictionCards.some(
+        (riskCard) => riskCard.pendingCount > 0 && riskCard.severity !== "normal"
+      );
+      if (hasDelayRisk) {
+        openPendingRequestSearch();
+        jumpToSection("approval-delay-risk-prediction");
+        pushMobileFlowFeedback("Approval delay-risk prediction follow-up is opened.");
+        return;
+      }
+    }
+    if (card.key === "resubmit-follow-up" && resubmitCandidates.length > 0 && !resubmitFlowReady) {
+      openRejectedRequestSearch();
+      jumpToSection("request-resubmit");
+      pushMobileFlowFeedback("Review rejected requests and complete resubmit validation.");
+      return;
+    }
+    if (card.key === "api-failure-follow-up" && stats.fail > 0) {
+      jumpToSection("request-feedback");
+      pushMobileFlowFeedback("Review API failure details before retry.");
       return;
     }
     jumpToSection(card.targetSectionId);
@@ -1443,32 +1544,7 @@ export default function EmployeeSelfServicePage() {
       matchesRequestSearch(requestSearchScope, normalizedRequestSearchQuery, row)
     );
 
-    return [...filtered].sort((left, right) => {
-      if (requestSortOption === "latest_desc") {
-        return toTimestamp(right.at) - toTimestamp(left.at);
-      }
-      if (requestSortOption === "oldest_asc") {
-        return toTimestamp(left.at) - toTimestamp(right.at);
-      }
-      if (requestSortOption === "status") {
-        const statusDiff = statusSortRank(left.status) - statusSortRank(right.status);
-        if (statusDiff !== 0) {
-          return statusDiff;
-        }
-        return toTimestamp(right.at) - toTimestamp(left.at);
-      }
-      const pendingDiff = Number(right.status === "PENDING") - Number(left.status === "PENDING");
-      if (pendingDiff !== 0) {
-        return pendingDiff;
-      }
-      if (right.status === "PENDING" && left.status === "PENDING") {
-        const waitDiff = right.pendingHours - left.pendingHours;
-        if (waitDiff !== 0) {
-          return waitDiff;
-        }
-      }
-      return toTimestamp(right.at) - toTimestamp(left.at);
-    });
+    return sortRequestRowsByOption(filtered, requestSortOption);
   }, [normalizedRequestSearchQuery, requestSearchRows, requestSearchScope, requestSortOption]);
 
   const approvalWaitPredictionCards = useMemo<ApprovalWaitPredictionCard[]>(() => {
@@ -1531,6 +1607,134 @@ export default function EmployeeSelfServicePage() {
       const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
       if (severityDiff !== 0) {
         return severityDiff;
+      }
+      return right.pendingCount - left.pendingCount;
+    });
+  }, [requestSearchRows]);
+
+  const requestHistorySortAccuracyCards = useMemo<RequestHistorySortAccuracyCard[]>(() => {
+    const filteredRows = requestSearchRows.filter((row) =>
+      matchesRequestSearch(requestSearchScope, normalizedRequestSearchQuery, row)
+    );
+    const currentTopRows = sortRequestRowsByOption(filteredRows, requestSortOption);
+    const totalCompared = Math.min(8, currentTopRows.length);
+    const currentTopKeys = new Set(currentTopRows.slice(0, totalCompared).map((row) => row.key));
+
+    const toAccuracyCard = (
+      key: string,
+      label: string,
+      baselineSortOption: RequestSortOption,
+      targetSectionId: string
+    ): RequestHistorySortAccuracyCard => {
+      if (totalCompared === 0) {
+        return {
+          key,
+          label,
+          severity: "normal",
+          accuracyScore: 100,
+          matchedCount: 0,
+          totalCompared: 0,
+          detail: "No request history rows in the current filter scope.",
+          targetSectionId
+        };
+      }
+
+      const baselineTopRows = sortRequestRowsByOption(filteredRows, baselineSortOption).slice(0, totalCompared);
+      const matchedCount = baselineTopRows.filter((row) => currentTopKeys.has(row.key)).length;
+      const accuracyScore = Math.round((matchedCount / totalCompared) * 100);
+      const severity: RequestBottleneckSeverity =
+        accuracyScore < 50 ? "critical" : accuracyScore < 75 ? "watch" : "normal";
+
+      return {
+        key,
+        label,
+        severity,
+        accuracyScore,
+        matchedCount,
+        totalCompared,
+        detail: `Top ${matchedCount}/${totalCompared} rows are aligned with ${label.toLowerCase()}.`,
+        targetSectionId
+      };
+    };
+
+    const cards = [
+      toAccuracyCard("pending-first", "Pending-first precision", "pending_first", "request-search-sort"),
+      toAccuracyCard("latest-desc", "Latest-first recency", "latest_desc", "request-search-sort"),
+      toAccuracyCard("status-cluster", "Status-cluster consistency", "status", "request-search-sort")
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return left.accuracyScore - right.accuracyScore;
+    });
+  }, [normalizedRequestSearchQuery, requestSearchRows, requestSearchScope, requestSortOption]);
+
+  const approvalDelayRiskPredictionCards = useMemo<ApprovalDelayRiskPredictionCard[]>(() => {
+    const pendingRows = requestSearchRows.filter((row) => row.status === "PENDING");
+
+    const toRiskCard = (
+      key: string,
+      label: string,
+      rows: RequestSearchRow[],
+      targetSectionId: string
+    ): ApprovalDelayRiskPredictionCard => {
+      const pendingCount = rows.length;
+      const stalledCount = rows.filter((row) => row.pendingHours >= 24).length;
+      const criticalCount = rows.filter((row) => row.pendingHours >= 48).length;
+      const totalWaitHours = rows.reduce((sum, row) => sum + row.pendingHours, 0);
+      const averageWaitHours = pendingCount > 0 ? totalWaitHours / pendingCount : 0;
+      const maxWaitHours = pendingCount > 0 ? Math.max(...rows.map((row) => row.pendingHours)) : 0;
+      const rawRiskScore = averageWaitHours * 1.2 + maxWaitHours * 0.75 + stalledCount * 14 + criticalCount * 22;
+      const riskScore = pendingCount > 0 ? Math.min(100, Math.round(rawRiskScore)) : 0;
+      const severity: RequestBottleneckSeverity =
+        riskScore >= 80 || criticalCount >= 1 ? "critical" : riskScore >= 45 || stalledCount >= 1 ? "watch" : "normal";
+      const etaLabel =
+        pendingCount === 0
+          ? "stable"
+          : severity === "critical"
+            ? "act now"
+            : severity === "watch"
+              ? "within 1 business day"
+              : "within today";
+
+      return {
+        key,
+        label,
+        severity,
+        pendingCount,
+        stalledCount,
+        criticalCount,
+        averageWaitHours,
+        maxWaitHours,
+        riskScore,
+        etaLabel,
+        detail:
+          pendingCount === 0
+            ? "No pending requests in this channel."
+            : `risk ${riskScore} / avg ${Math.round(averageWaitHours)}h / max ${Math.round(maxWaitHours)}h / stalled ${stalledCount}`,
+        targetSectionId
+      };
+    };
+
+    const attendancePending = pendingRows.filter((row) => row.channel === "attendance");
+    const leavePending = pendingRows.filter((row) => row.channel === "leave");
+    const cards = [
+      toRiskCard("all", "Overall delay risk", pendingRows, "request-search-sort"),
+      toRiskCard("attendance", "Attendance delay risk", attendancePending, "attendance"),
+      toRiskCard("leave", "Leave delay risk", leavePending, "leave")
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      const scoreDiff = right.riskScore - left.riskScore;
+      if (scoreDiff !== 0) {
+        return scoreDiff;
       }
       return right.pendingCount - left.pendingCount;
     });
@@ -2159,6 +2363,71 @@ export default function EmployeeSelfServicePage() {
     totalPendingRequestCount
   ]);
 
+  const mobileFollowUpRecommendationCards = useMemo<MobileFollowUpRecommendationCard[]>(() => {
+    const highestSortAccuracyRisk = requestHistorySortAccuracyCards[0];
+    const highestDelayRisk = approvalDelayRiskPredictionCards[0];
+    const hasSortAccuracyRisk =
+      highestSortAccuracyRisk &&
+      highestSortAccuracyRisk.totalCompared > 0 &&
+      highestSortAccuracyRisk.severity !== "normal";
+    const hasDelayRisk = highestDelayRisk && highestDelayRisk.pendingCount > 0 && highestDelayRisk.severity !== "normal";
+
+    return [
+      {
+        key: "sort-accuracy",
+        label: "Sort accuracy follow-up",
+        tone: hasSortAccuracyRisk ? (highestSortAccuracyRisk?.severity === "critical" ? "fail" : "pending") : "ready",
+        detail: hasSortAccuracyRisk
+          ? highestSortAccuracyRisk?.detail ?? "Review sort accuracy risk cards."
+          : "Current sort order is stable for top request history rows.",
+        ctaLabel: "Open sort accuracy panel",
+        targetSectionId: "request-history-sort-accuracy"
+      },
+      {
+        key: "delay-risk",
+        label: "Approval delay risk follow-up",
+        tone: hasDelayRisk ? (highestDelayRisk?.severity === "critical" ? "fail" : "pending") : "ready",
+        detail: hasDelayRisk
+          ? highestDelayRisk?.detail ?? "Review delay risk prediction cards."
+          : "No immediate approval delay risk in pending requests.",
+        ctaLabel: "Open delay risk panel",
+        targetSectionId: "approval-delay-risk-prediction"
+      },
+      {
+        key: "resubmit-follow-up",
+        label: "Resubmit follow-up",
+        tone: resubmitCandidates.length === 0 ? "ready" : resubmitFlowReady ? "pending" : "fail",
+        detail:
+          resubmitCandidates.length === 0
+            ? "No rejected/canceled requests require resubmission."
+            : resubmitFlowReady
+              ? "Resubmit flow is ready. Complete final submission."
+              : resubmitFirstFailCheck?.detail || "Review resubmit draft and validation.",
+        ctaLabel: resubmitCandidates.length > 0 ? "Open resubmit flow" : "Open mobile submit guide",
+        targetSectionId: resubmitCandidates.length > 0 ? "request-resubmit" : "mobile-submit-guide"
+      },
+      {
+        key: "api-failure-follow-up",
+        label: "API recovery follow-up",
+        tone: stats.fail > 0 ? "fail" : "ready",
+        detail:
+          stats.fail > 0
+            ? latestFailureCauseMessage || "Investigate API failure cause and retry."
+            : "No recent API failures detected.",
+        ctaLabel: stats.fail > 0 ? "Open request feedback" : "Open request timeline",
+        targetSectionId: stats.fail > 0 ? "request-feedback" : "request-timeline"
+      }
+    ];
+  }, [
+    approvalDelayRiskPredictionCards,
+    latestFailureCauseMessage,
+    requestHistorySortAccuracyCards,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowReady,
+    stats.fail
+  ]);
+
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
       return "비교 대상 없음";
@@ -2610,6 +2879,68 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article className="panel panel-request-history-sort-accuracy" id="request-history-sort-accuracy">
+          <h2>요청 이력 정렬 정확도</h2>
+          <p className="small">
+            현재 정렬 결과의 상단 이력이 기준 정렬 모델과 얼마나 일치하는지 점수로 확인하고 후속 정렬 액션을 결정합니다.
+          </p>
+          <ul className="request-history-sort-accuracy-list" aria-label="request history sort accuracy feedback list">
+            {requestHistorySortAccuracyCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="request-history-sort-accuracy-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">score {card.accuracyScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="request-history-sort-accuracy-meta">
+                  <span className="queue-history-chip">
+                    match {card.matchedCount}/{card.totalCompared}
+                  </span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  정렬 보드 열기
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel-approval-delay-risk-prediction" id="approval-delay-risk-prediction">
+          <h2>승인 지연 위험 예측 피드백</h2>
+          <p className="small">
+            채널별 대기 요청의 지연 위험 점수와 임계치 도달 건수를 확인해 우선 처리 대상을 빠르게 판단합니다.
+          </p>
+          <ul className="approval-delay-risk-prediction-list" aria-label="approval delay risk prediction feedback list">
+            {approvalDelayRiskPredictionCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="approval-delay-risk-prediction-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">risk {card.riskScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="approval-delay-risk-prediction-meta">
+                  <span className="queue-history-chip">pending {card.pendingCount}</span>
+                  <span className="queue-history-chip">stalled {card.stalledCount}</span>
+                  <span className="queue-history-chip">critical {card.criticalCount}</span>
+                  <span className="queue-history-chip">eta {card.etaLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  관련 섹션 이동
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-mobile-shortcuts" id="mobile-shortcuts">
           <h2>모바일 단축 흐름</h2>
           <p className="small">터치 중심 단축 버튼으로 입력/정정/신청/갱신을 빠르게 진행합니다.</p>
@@ -2703,6 +3034,31 @@ export default function EmployeeSelfServicePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runMobileFollowUpAction(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel-mobile-follow-up-recommendation" id="mobile-follow-up-recommendation">
+          <h2>모바일 후속 액션 추천</h2>
+          <p className="small">
+            정렬 정확도와 승인 지연 위험 상태를 반영해 지금 바로 실행할 후속 액션을 우선순위로 추천합니다.
+          </p>
+          <ul className="mobile-follow-up-recommendation-list" aria-label="mobile follow-up recommendation guide list">
+            {mobileFollowUpRecommendationCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="mobile-follow-up-recommendation-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.tone}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runMobileFollowUpRecommendationAction(card)}
                 >
                   {card.ctaLabel}
                 </button>
