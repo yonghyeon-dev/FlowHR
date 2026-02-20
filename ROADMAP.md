@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-20
-> **Current version**: 0.1.29 (Admin Approval Queue UX Phase 6)
+> **Current version**: 0.1.30 (Staging CI Migration Bootstrap)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -180,10 +180,11 @@
 - WI-0141 관리자 승인 큐 UX 5차 고도화(승인 근거 비교 카드 + SLA 임계치 알림 규칙 + 모바일 승인 체크리스트 + 사이드 네비 앵커 + e2e)
 - WI-0142 직원 셀프서비스 UX 7차 고도화(요청 검색/정렬 + 승인 대기 예측 피드백 + 모바일 후속 액션 가이드 + 사이드 네비 앵커 + e2e)
 - WI-0143 관리자 승인 큐 UX 6차 고도화(승인 대기 검색/정렬 + 승인 처리 예측 피드백 + 모바일 후속 액션 가이드 + 사이드 네비 앵커 + e2e)
+- WI-0144 스테이징 CI 배포 안정화(스키마 초기화 후 enum bootstrap 추가로 `staging-prisma-integration` 마이그레이션 실패(P3018) 방지)
 
 ### 진행 중
 
-- 다음: 급여 명세서 UX 3차 고도화(명세서 검색/정렬 + 지급 확정 예측 피드백 + 모바일 후속 액션 가이드)
+- 다음: 급여 명세서 UX 3차 고도화(명세서 검색/정렬 + 지급 확정 예측 피드백 + 모바일 후속 액션 가이드) (WI-0145)
 
 ### 현재 아키텍처
 
