@@ -54,6 +54,46 @@ type CompareMetric = {
   diffRate: number | null;
 };
 
+type PayslipSearchScope = "all" | "run_id" | "period" | "state";
+type PayslipSortOption = "latest_desc" | "oldest_asc" | "net_desc" | "gross_desc";
+
+type PayslipSearchRow = {
+  key: string;
+  runId: string;
+  periodLabel: string;
+  state: PayrollRunDto["state"];
+  grossPayKrw: number;
+  totalDeductionsKrw: number | null;
+  netPayKrw: number | null;
+  confirmedAt: string | null;
+  sortTimestamp: number;
+};
+
+type PayslipPredictionSeverity = "normal" | "watch" | "critical";
+
+type PayslipConfirmationPredictionCard = {
+  key: string;
+  label: string;
+  severity: PayslipPredictionSeverity;
+  etaLabel: string;
+  detail: string;
+  metricLabel: string;
+  targetSectionId: string;
+};
+
+type PayslipMobileFollowUpTone = "ready" | "pending" | "fail";
+type PayslipMobileFollowUpAction = "jump" | "prepare_delivery" | "send_simulation" | "copy_failure";
+
+type PayslipMobileFollowUpCard = {
+  key: string;
+  label: string;
+  tone: PayslipMobileFollowUpTone;
+  detail: string;
+  ctaLabel: string;
+  action: PayslipMobileFollowUpAction;
+  targetSectionId: string;
+};
+
 type MobileDeliveryChannel = "kakao" | "email" | "sms";
 type MobileDeliveryState = "idle" | "ready" | "sent" | "failed";
 
@@ -179,6 +219,60 @@ function toTimestamp(value: string | null) {
     return 0;
   }
   return parsed.getTime();
+}
+
+function payslipPredictionSeverityRank(severity: PayslipPredictionSeverity) {
+  if (severity === "critical") {
+    return 3;
+  }
+  if (severity === "watch") {
+    return 2;
+  }
+  return 1;
+}
+
+function payslipPredictionToneFromSeverity(severity: PayslipPredictionSeverity): PayslipMobileFollowUpTone {
+  if (severity === "critical") {
+    return "fail";
+  }
+  if (severity === "watch") {
+    return "pending";
+  }
+  return "ready";
+}
+
+function matchesPayslipSearch(scope: PayslipSearchScope, query: string, row: PayslipSearchRow) {
+  if (!query) {
+    return true;
+  }
+
+  const normalizedState = row.state.toLowerCase();
+  if (scope === "run_id") {
+    return row.runId.toLowerCase().includes(query);
+  }
+  if (scope === "period") {
+    return row.periodLabel.toLowerCase().includes(query);
+  }
+  if (scope === "state") {
+    return normalizedState.includes(query);
+  }
+
+  return (
+    row.runId.toLowerCase().includes(query) ||
+    row.periodLabel.toLowerCase().includes(query) ||
+    normalizedState.includes(query)
+  );
+}
+
+function formatHourDistanceLabel(hours: number) {
+  if (hours <= 0) {
+    return "0h";
+  }
+  if (hours < 24) {
+    return `${Math.round(hours)}h`;
+  }
+  const days = hours / 24;
+  return `${days.toFixed(1)}d`;
 }
 
 function extractErrorMessage(body: unknown) {
@@ -325,6 +419,9 @@ export default function EmployeePayslipsPage() {
   const [runs, setRuns] = useState<PayrollRunDto[]>([]);
   const [selectedRunId, setSelectedRunId] = useState("");
   const [compareRunId, setCompareRunId] = useState("");
+  const [payslipSearchScope, setPayslipSearchScope] = useState<PayslipSearchScope>("all");
+  const [payslipSearchQuery, setPayslipSearchQuery] = useState("");
+  const [payslipSortOption, setPayslipSortOption] = useState<PayslipSortOption>("latest_desc");
   const [aggregate, setAggregate] = useState<AttendanceAggregateDto | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -344,6 +441,7 @@ export default function EmployeePayslipsPage() {
         : "";
 
   const usesBearerToken = bearerToken.trim().length > 0;
+  const normalizedPayslipSearchQuery = payslipSearchQuery.trim().toLowerCase();
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -363,6 +461,51 @@ export default function EmployeePayslipsPage() {
       totalNet
     };
   }, [runs]);
+
+  const payslipSearchRows = useMemo<PayslipSearchRow[]>(() => {
+    return runs.map((run) => {
+      const confirmedAtTs = toTimestamp(run.confirmedAt);
+      const periodEndTs = toTimestamp(run.periodEnd);
+      return {
+        key: run.id,
+        runId: run.id,
+        periodLabel: `${formatDateOnly(run.periodStart)} ~ ${formatDateOnly(run.periodEnd)}`,
+        state: run.state,
+        grossPayKrw: run.grossPayKrw,
+        totalDeductionsKrw: run.totalDeductionsKrw,
+        netPayKrw: run.netPayKrw,
+        confirmedAt: run.confirmedAt,
+        sortTimestamp: confirmedAtTs > 0 ? confirmedAtTs : periodEndTs
+      };
+    });
+  }, [runs]);
+
+  const filteredPayslipSearchRows = useMemo(() => {
+    const filtered = payslipSearchRows.filter((row) =>
+      matchesPayslipSearch(payslipSearchScope, normalizedPayslipSearchQuery, row)
+    );
+
+    return [...filtered].sort((left, right) => {
+      if (payslipSortOption === "oldest_asc") {
+        return left.sortTimestamp - right.sortTimestamp;
+      }
+      if (payslipSortOption === "net_desc") {
+        const netDiff = (right.netPayKrw ?? 0) - (left.netPayKrw ?? 0);
+        if (netDiff !== 0) {
+          return netDiff;
+        }
+        return right.sortTimestamp - left.sortTimestamp;
+      }
+      if (payslipSortOption === "gross_desc") {
+        const grossDiff = right.grossPayKrw - left.grossPayKrw;
+        if (grossDiff !== 0) {
+          return grossDiff;
+        }
+        return right.sortTimestamp - left.sortTimestamp;
+      }
+      return right.sortTimestamp - left.sortTimestamp;
+    });
+  }, [normalizedPayslipSearchQuery, payslipSearchRows, payslipSearchScope, payslipSortOption]);
 
   const selectedRun = useMemo(
     () => runs.find((run) => run.id === selectedRunId) ?? runs[0] ?? null,
@@ -478,6 +621,184 @@ export default function EmployeePayslipsPage() {
     }
     return "대기";
   }, [mobileDeliveryState]);
+
+  const payslipConfirmationPredictionCards = useMemo<PayslipConfirmationPredictionCard[]>(() => {
+    const confirmedRuns = [...runs]
+      .filter((run) => toTimestamp(run.confirmedAt) > 0)
+      .sort((left, right) => toTimestamp(right.confirmedAt) - toTimestamp(left.confirmedAt));
+
+    const confirmedIntervalsHours: number[] = [];
+    for (let index = 0; index < confirmedRuns.length - 1; index += 1) {
+      const currentMs = toTimestamp(confirmedRuns[index].confirmedAt);
+      const nextMs = toTimestamp(confirmedRuns[index + 1].confirmedAt);
+      if (currentMs > 0 && nextMs > 0 && currentMs > nextMs) {
+        confirmedIntervalsHours.push((currentMs - nextMs) / 3_600_000);
+      }
+    }
+
+    const averageIntervalHours =
+      confirmedIntervalsHours.length > 0
+        ? confirmedIntervalsHours.reduce((sum, value) => sum + value, 0) / confirmedIntervalsHours.length
+        : 24 * 30;
+
+    const lastConfirmedMs = toTimestamp(confirmedRuns[0]?.confirmedAt ?? null);
+    const expectedNextMs = lastConfirmedMs > 0 ? lastConfirmedMs + averageIntervalHours * 3_600_000 : 0;
+    const nowMs = Date.now();
+    const overdueHours = expectedNextMs > 0 ? Math.max(0, (nowMs - expectedNextMs) / 3_600_000) : 0;
+    const untilExpectedHours = expectedNextMs > 0 ? Math.max(0, (expectedNextMs - nowMs) / 3_600_000) : 0;
+    const cadenceSeverity: PayslipPredictionSeverity =
+      expectedNextMs === 0 ? "watch" : overdueHours >= 72 ? "critical" : overdueHours >= 24 ? "watch" : "normal";
+
+    const deliverySeverity: PayslipPredictionSeverity =
+      mobileDeliveryState === "failed"
+        ? "critical"
+        : latestFailedLog
+          ? "watch"
+          : mobileDeliveryState === "sent"
+            ? "normal"
+            : "watch";
+
+    const selectedSeverity: PayslipPredictionSeverity = selectedRun ? "normal" : "critical";
+    const selectedEtaLabel = selectedRun ? "confirmed data selected" : "selection required";
+    const selectedDetail = selectedRun
+      ? `Selected run ${selectedRun.id} / confirmed ${formatDateTime(selectedRun.confirmedAt)}`
+      : "No selected payslip. Choose one from search/sort list to continue.";
+
+    const cadenceEtaLabel =
+      expectedNextMs === 0
+        ? "insufficient history"
+        : overdueHours > 0
+          ? `${formatHourDistanceLabel(overdueHours)} overdue`
+          : `${formatHourDistanceLabel(untilExpectedHours)} remaining`;
+
+    const cards: PayslipConfirmationPredictionCard[] = [
+      {
+        key: "selected-confirmed-run",
+        label: "selected confirmed run",
+        severity: selectedSeverity,
+        etaLabel: selectedEtaLabel,
+        detail: selectedDetail,
+        metricLabel: `confirmed list ${confirmedRuns.length}`,
+        targetSectionId: "payslip-search-sort"
+      },
+      {
+        key: "next-confirmation-cadence",
+        label: "next confirmation cadence",
+        severity: cadenceSeverity,
+        etaLabel: cadenceEtaLabel,
+        detail:
+          expectedNextMs === 0
+            ? "Need at least one confirmed history item for cadence prediction."
+            : `avg interval ${formatHourDistanceLabel(averageIntervalHours)} / last confirmed ${formatDateTime(confirmedRuns[0]?.confirmedAt ?? null)}`,
+        metricLabel: `interval samples ${confirmedIntervalsHours.length}`,
+        targetSectionId: "status-feedback"
+      },
+      {
+        key: "mobile-delivery-readiness",
+        label: "mobile delivery readiness",
+        severity: deliverySeverity,
+        etaLabel: mobileDeliveryStateLabel,
+        detail:
+          mobileDeliveryState === "sent"
+            ? "Delivery simulation has completed. You can move to print/download."
+            : mobileDeliveryState === "failed"
+              ? "Delivery flow is blocked. Resolve latest failure and retry."
+              : latestFailedLog
+                ? "There is a recent failure log. Verify the cause before sending."
+                : "Prepare delivery channel and run simulation when ready.",
+        metricLabel: `failure logs ${logs.filter((log) => !log.ok).length}`,
+        targetSectionId: "mobile-delivery"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = payslipPredictionSeverityRank(right.severity) - payslipPredictionSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return left.label.localeCompare(right.label);
+    });
+  }, [latestFailedLog, logs, mobileDeliveryState, mobileDeliveryStateLabel, runs, selectedRun]);
+
+  const payslipMobileFollowUpCards = useMemo<PayslipMobileFollowUpCard[]>(() => {
+    const highestPredictionTone = payslipPredictionToneFromSeverity(
+      payslipConfirmationPredictionCards[0]?.severity ?? "normal"
+    );
+
+    return [
+      {
+        key: "search-sort-follow-up",
+        label: "search and sort follow-up",
+        tone: filteredPayslipSearchRows.length > 0 ? "ready" : "pending",
+        detail:
+          filteredPayslipSearchRows.length > 0
+            ? `${filteredPayslipSearchRows.length} payslip row(s) match current options.`
+            : "No rows match current search options. Reset filters and search again.",
+        ctaLabel: "open search/sort",
+        action: "jump",
+        targetSectionId: "payslip-search-sort"
+      },
+      {
+        key: "confirmation-prediction-follow-up",
+        label: "confirmation prediction follow-up",
+        tone: highestPredictionTone,
+        detail:
+          payslipConfirmationPredictionCards[0]?.detail ??
+          "Review confirmation prediction feedback and follow related action.",
+        ctaLabel: "open prediction",
+        action: "jump",
+        targetSectionId: "payslip-confirmation-prediction"
+      },
+      {
+        key: "mobile-delivery-prepare",
+        label: "prepare mobile delivery",
+        tone: mobileDeliveryState === "ready" || mobileDeliveryState === "sent" ? "ready" : "pending",
+        detail:
+          selectedRun && (mobileDeliveryState === "idle" || mobileDeliveryState === "failed")
+            ? "Prepare channel to continue mobile delivery simulation."
+            : "Mobile delivery channel is already prepared or completed.",
+        ctaLabel: "prepare now",
+        action: "prepare_delivery",
+        targetSectionId: "mobile-delivery"
+      },
+      {
+        key: "latest-failure-follow-up",
+        label: "latest failure follow-up",
+        tone: latestFailedLog ? "fail" : "ready",
+        detail: latestFailedLog
+          ? `Latest failure: ${extractErrorMessage(latestFailedLog.body)}`
+          : "No recent failure. Keep the latest status snapshot for delivery traceability.",
+        ctaLabel: latestFailedLog ? "copy failure cause" : "open status",
+        action: latestFailedLog ? "copy_failure" : "jump",
+        targetSectionId: "status-feedback"
+      },
+      {
+        key: "send-simulation-follow-up",
+        label: "send simulation follow-up",
+        tone:
+          mobileDeliveryState === "ready"
+            ? "ready"
+            : mobileDeliveryState === "failed" || !selectedRun
+              ? "fail"
+              : "pending",
+        detail:
+          mobileDeliveryState === "ready"
+            ? "Run delivery simulation to validate final handoff."
+            : mobileDeliveryState === "sent"
+              ? "Simulation already completed. Export/print the payslip document."
+              : "Prepare delivery first, then retry simulation.",
+        ctaLabel: "run simulation",
+        action: "send_simulation",
+        targetSectionId: "mobile-delivery"
+      }
+    ];
+  }, [
+    filteredPayslipSearchRows.length,
+    latestFailedLog,
+    mobileDeliveryState,
+    payslipConfirmationPredictionCards,
+    selectedRun
+  ]);
 
   const fixedDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
     if (!selectedRun) {
@@ -960,6 +1281,52 @@ export default function EmployeePayslipsPage() {
     setLogs([]);
   }
 
+  function jumpToSection(sectionId: string) {
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function resetPayslipSearchControls() {
+    setPayslipSearchScope("all");
+    setPayslipSearchQuery("");
+    setPayslipSortOption("latest_desc");
+  }
+
+  function focusSelectedPayslipInSearch() {
+    if (!selectedRun) {
+      return;
+    }
+    setPayslipSearchScope("run_id");
+    setPayslipSearchQuery(selectedRun.id);
+    setPayslipSortOption("latest_desc");
+  }
+
+  function prioritizeNetPaySearchSort() {
+    setPayslipSortOption("net_desc");
+  }
+
+  function runPayslipMobileFollowUpAction(card: PayslipMobileFollowUpCard) {
+    if (card.action === "prepare_delivery") {
+      prepareMobileDelivery();
+      jumpToSection(card.targetSectionId);
+      return;
+    }
+    if (card.action === "send_simulation") {
+      sendMobileDeliverySimulation();
+      jumpToSection(card.targetSectionId);
+      return;
+    }
+    if (card.action === "copy_failure") {
+      void copyLatestFailureCause();
+      jumpToSection(card.targetSectionId);
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -1152,6 +1519,92 @@ export default function EmployeePayslipsPage() {
           )}
         </article>
 
+        <article id="payslip-search-sort" className="panel panel-payslip-search-sort">
+          <h2>Payslip Search/Sort</h2>
+          <p className="small">
+            Search confirmed payslips by run id/period/state and reorder quickly for follow-up actions.
+          </p>
+          <div className="payslip-search-toolbar">
+            <label>
+              Search Scope
+              <select
+                value={payslipSearchScope}
+                onChange={(event) => setPayslipSearchScope(event.target.value as PayslipSearchScope)}
+              >
+                <option value="all">all</option>
+                <option value="run_id">run id</option>
+                <option value="period">period</option>
+                <option value="state">state</option>
+              </select>
+            </label>
+            <label className="full">
+              Query
+              <input
+                value={payslipSearchQuery}
+                onChange={(event) => setPayslipSearchQuery(event.target.value)}
+                placeholder="e.g. RUN-2026-01, confirmed, 2026.01"
+              />
+            </label>
+            <label>
+              Sort
+              <select
+                value={payslipSortOption}
+                onChange={(event) => setPayslipSortOption(event.target.value as PayslipSortOption)}
+              >
+                <option value="latest_desc">latest first</option>
+                <option value="oldest_asc">oldest first</option>
+                <option value="net_desc">net pay high</option>
+                <option value="gross_desc">gross pay high</option>
+              </select>
+            </label>
+            <div className="payslip-search-actions">
+              <button type="button" className="btn btn-secondary btn-small" onClick={resetPayslipSearchControls}>
+                reset
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={focusSelectedPayslipInSearch}
+                disabled={!selectedRun}
+              >
+                focus selected
+              </button>
+              <button type="button" className="btn btn-secondary btn-small" onClick={prioritizeNetPaySearchSort}>
+                net pay high
+              </button>
+            </div>
+          </div>
+          {filteredPayslipSearchRows.length === 0 ? (
+            <p className="small muted">No confirmed payslip matches current search options.</p>
+          ) : (
+            <ul className="payslip-search-list" aria-label="payslip search and sort list">
+              {filteredPayslipSearchRows.slice(0, 24).map((row) => (
+                <li key={row.key}>
+                  <div className="payslip-search-head">
+                    <strong>{row.runId}</strong>
+                    <span className={`status-pill tone-${row.state === "CONFIRMED" ? "ok" : "idle"}`}>{row.state}</span>
+                  </div>
+                  <p>{row.periodLabel}</p>
+                  <p className="small muted">
+                    gross {formatKrw(row.grossPayKrw)} / deduction {formatKrw(row.totalDeductionsKrw)} / net{" "}
+                    {formatKrw(row.netPayKrw)}
+                  </p>
+                  <div className="payslip-search-meta">
+                    <span className="queue-history-chip">confirmed {formatDateTime(row.confirmedAt)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => setSelectedRunId(row.runId)}
+                  >
+                    select
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
         <article id="status-feedback" className="panel panel-payslip-status-feedback">
           <h2>상태/오류 피드백</h2>
           <div className="payslip-status-grid">
@@ -1258,6 +1711,38 @@ export default function EmployeePayslipsPage() {
           )}
         </article>
 
+        <article id="payslip-confirmation-prediction" className="panel panel-payslip-confirmation-prediction">
+          <h2>Payout Confirmation Prediction</h2>
+          <p className="small">
+            Review confirmation cadence risk and delivery readiness, then jump to the related section.
+          </p>
+          <ul
+            className="payslip-confirmation-prediction-list"
+            aria-label="payslip confirmation prediction feedback list"
+          >
+            {payslipConfirmationPredictionCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="payslip-confirmation-prediction-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">ETA {card.etaLabel}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="payslip-confirmation-prediction-meta">
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                  <span className="queue-history-chip">{card.metricLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  open related section
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article id="mobile-delivery" className="panel panel-payslip-mobile-delivery">
           <h2>모바일 전달 흐름</h2>
           <p className="small">조회 실패 원인 확인 후 채널 준비와 전달 시뮬레이션 순서로 진행하세요.</p>
@@ -1319,6 +1804,31 @@ export default function EmployeePayslipsPage() {
             상태: {mobileDeliveryStateLabel}
             {mobileDeliveryFeedback ? ` | ${mobileDeliveryFeedback}` : ""}
           </p>
+        </article>
+
+        <article id="payslip-mobile-follow-up-guide" className="panel panel-payslip-mobile-follow-up-guide">
+          <h2>Mobile Follow-up Action Guide</h2>
+          <p className="small">
+            Execute next actions from one panel after search/sort, confirmation prediction, and delivery checks.
+          </p>
+          <ul className="payslip-mobile-follow-up-guide-list" aria-label="payslip mobile follow-up action guide list">
+            {payslipMobileFollowUpCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="payslip-mobile-follow-up-guide-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.tone}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runPayslipMobileFollowUpAction(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
         </article>
 
         <article className="panel panel-payslip-print">

@@ -15,6 +15,7 @@ function isDevToolsEnabled() {
 
 export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const showDevTools = isDevToolsEnabled();
+
   return (
     <div className="saas-shell">
       <aside className="saas-sidebar">
@@ -23,36 +24,39 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <span className="saas-badge">Employee</span>
         </div>
 
-        <nav className="saas-nav" aria-label="직원 네비게이션">
-          <Link href="/employee">오늘</Link>
-          <Link href="/employee#self-service-overview">통합 요약</Link>
-          <Link href="/employee#submit-checklist">제출 체크리스트</Link>
-          <Link href="/employee#request-feedback">요청 피드백</Link>
-          <Link href="/employee#request-search-sort">요청 검색/정렬</Link>
-          <Link href="/employee#request-bottleneck-feedback">병목 피드백</Link>
-          <Link href="/employee#request-wait-prediction">승인 대기 예측</Link>
-          <Link href="/employee#mobile-shortcuts">모바일 단축</Link>
-          <Link href="/employee#mobile-status-badges">모바일 배지</Link>
-          <Link href="/employee#mobile-submit-guide">모바일 제출 가이드</Link>
-          <Link href="/employee#mobile-follow-up-guide">모바일 후속 가이드</Link>
-          <Link href="/employee#request-timeline">요청 타임라인</Link>
-          <Link href="/employee#request-resubmit">재제출 흐름</Link>
-          <Link href="/employee#attendance">출퇴근</Link>
-          <Link href="/employee#leave">휴가</Link>
-          <Link href="/employee#leave-calendar">휴가 캘린더</Link>
-          <Link href="/employee#schedule">스케줄</Link>
-          <Link href="/employee/payslips">급여 명세서</Link>
-          <Link href="/employee/payslips#status-feedback">명세 피드백</Link>
-          <Link href="/employee/payslips#compare-view">명세 비교</Link>
-          <Link href="/employee/payslips#mobile-delivery">모바일 전달</Link>
+        <nav className="saas-nav" aria-label="Employee navigation">
+          <Link href="/employee">Overview</Link>
+          <Link href="/employee#self-service-overview">Self-Service Summary</Link>
+          <Link href="/employee#submit-checklist">Submit Checklist</Link>
+          <Link href="/employee#request-feedback">Request Feedback</Link>
+          <Link href="/employee#request-search-sort">Request Search/Sort</Link>
+          <Link href="/employee#request-bottleneck-feedback">Bottleneck Feedback</Link>
+          <Link href="/employee#request-wait-prediction">Wait Prediction</Link>
+          <Link href="/employee#mobile-shortcuts">Mobile Shortcuts</Link>
+          <Link href="/employee#mobile-status-badges">Mobile Status Badges</Link>
+          <Link href="/employee#mobile-submit-guide">Mobile Submit Guide</Link>
+          <Link href="/employee#mobile-follow-up-guide">Mobile Follow-up Guide</Link>
+          <Link href="/employee#request-timeline">Request Timeline</Link>
+          <Link href="/employee#request-resubmit">Resubmit Flow</Link>
+          <Link href="/employee#attendance">Attendance</Link>
+          <Link href="/employee#leave">Leave</Link>
+          <Link href="/employee#leave-calendar">Leave Calendar</Link>
+          <Link href="/employee#schedule">Schedule</Link>
+          <Link href="/employee/payslips">Payslips</Link>
+          <Link href="/employee/payslips#payslip-search-sort">Payslip Search/Sort</Link>
+          <Link href="/employee/payslips#status-feedback">Payslip Status Feedback</Link>
+          <Link href="/employee/payslips#compare-view">Payslip Compare</Link>
+          <Link href="/employee/payslips#payslip-confirmation-prediction">Payout Confirmation Prediction</Link>
+          <Link href="/employee/payslips#mobile-delivery">Payslip Mobile Delivery</Link>
+          <Link href="/employee/payslips#payslip-mobile-follow-up-guide">Payslip Mobile Follow-up</Link>
           <Link className="muted-link" href="/employee#account">
-            내 계정
+            My Account
           </Link>
         </nav>
 
         <div className="saas-sidebar-footer">
           <SessionMenu />
-          {showDevTools ? <Link href="/admin">관리자</Link> : null}
+          {showDevTools ? <Link href="/admin">Admin</Link> : null}
         </div>
       </aside>
 
@@ -60,4 +64,3 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
     </div>
   );
 }
-

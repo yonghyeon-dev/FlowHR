@@ -2881,10 +2881,70 @@ button.queue-badge:hover {
   white-space: nowrap;
 }
 
+.panel-payslip-search-sort,
 .panel-payslip-status-feedback,
 .panel-payslip-compare,
-.panel-payslip-mobile-delivery {
+.panel-payslip-mobile-delivery,
+.panel-payslip-confirmation-prediction,
+.panel-payslip-mobile-follow-up-guide {
   grid-column: 1 / -1;
+}
+
+.payslip-search-toolbar {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.payslip-search-toolbar .full {
+  grid-column: 1 / -1;
+}
+
+.payslip-search-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.payslip-search-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payslip-search-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-search-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-search-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-search-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .payslip-status-grid {
@@ -2995,6 +3055,60 @@ button.queue-badge:hover {
   font-size: 0.74rem;
 }
 
+.payslip-confirmation-prediction-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.payslip-confirmation-prediction-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-confirmation-prediction-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-confirmation-prediction-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.payslip-confirmation-prediction-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-confirmation-prediction-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-confirmation-prediction-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-confirmation-prediction-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .delivery-channel-grid {
   display: grid;
   gap: 8px;
@@ -3068,6 +3182,54 @@ button.queue-badge:hover {
 .mobile-delivery-feedback.tone-failed {
   background: #ffedf1;
   color: #a1223a;
+}
+
+.payslip-mobile-follow-up-guide-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payslip-mobile-follow-up-guide-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-mobile-follow-up-guide-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-mobile-follow-up-guide-list li.tone-ready {
+  border-color: #b8dfc4;
+  background: #f2fbf5;
+}
+
+.payslip-mobile-follow-up-guide-list li.tone-pending {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-mobile-follow-up-guide-list li.tone-fail {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-mobile-follow-up-guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .no-print {
@@ -3437,6 +3599,28 @@ button.queue-badge:hover {
 
   #status-feedback .payslip-status-grid {
     grid-template-columns: 1fr;
+  }
+
+  #payslip-search-sort .payslip-search-list,
+  #payslip-confirmation-prediction .payslip-confirmation-prediction-list,
+  #payslip-mobile-follow-up-guide .payslip-mobile-follow-up-guide-list {
+    grid-template-columns: 1fr;
+  }
+
+  #payslip-search-sort .payslip-search-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  #payslip-search-sort .payslip-search-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #payslip-search-sort .payslip-search-head,
+  #payslip-confirmation-prediction .payslip-confirmation-prediction-head,
+  #payslip-mobile-follow-up-guide .payslip-mobile-follow-up-guide-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   #compare-view .payslip-compare-controls {
