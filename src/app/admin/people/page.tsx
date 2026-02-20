@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -29,6 +29,7 @@ type EmployeeHistory = {
 type ApiLog = { id: number; label: string; status: number; ok: boolean; at: string };
 
 type ActiveFilter = "all" | "active" | "inactive";
+type UpdatedWindow = "all" | "7" | "30" | "90";
 type ProfileField = "organizationId" | "departmentId" | "positionId" | "name" | "email" | "active";
 
 const profileFieldLabel: Record<ProfileField, string> = {
@@ -51,6 +52,14 @@ function formatDateTime(value: string) {
     return value;
   }
   return parsed.toLocaleString("ko-KR");
+}
+
+function toTimestamp(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 0;
+  }
+  return parsed.getTime();
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -94,6 +103,9 @@ export default function AdminPeoplePage() {
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [positionFilter, setPositionFilter] = useState("");
+  const [recentlyUpdatedDays, setRecentlyUpdatedDays] = useState<UpdatedWindow>("all");
   const [historyLimit, setHistoryLimit] = useState("30");
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -111,6 +123,7 @@ export default function AdminPeoplePage() {
 
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
+  const [mobileFlowFeedback, setMobileFlowFeedback] = useState("");
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
 
   const bearerToken =
@@ -164,6 +177,9 @@ export default function AdminPeoplePage() {
 
   const filteredEmployees = useMemo(() => {
     const normalizedSearch = normalize(search);
+    const now = Date.now();
+    const updatedWindowDays =
+      recentlyUpdatedDays === "all" ? null : Number.parseInt(recentlyUpdatedDays, 10);
     return employees
       .filter((employee) => {
         if (organizationId.trim() && employee.organizationId !== organizationId.trim()) {
@@ -173,6 +189,18 @@ export default function AdminPeoplePage() {
           return false;
         }
         if (activeFilter === "inactive" && employee.active) {
+          return false;
+        }
+        if (departmentFilter && employee.departmentId !== departmentFilter) {
+          return false;
+        }
+        if (positionFilter && employee.positionId !== positionFilter) {
+          return false;
+        }
+        if (
+          updatedWindowDays !== null &&
+          now - toTimestamp(employee.updatedAt) > updatedWindowDays * 24 * 60 * 60 * 1000
+        ) {
           return false;
         }
         if (!normalizedSearch) {
@@ -195,7 +223,7 @@ export default function AdminPeoplePage() {
         const rightKey = normalize(right.name) || right.id.toLowerCase();
         return leftKey.localeCompare(rightKey, "ko");
       });
-  }, [activeFilter, employees, organizationId, search]);
+  }, [activeFilter, departmentFilter, employees, organizationId, positionFilter, recentlyUpdatedDays, search]);
 
   const tree = useMemo(() => {
     const result = new Map<string, { orgName: string; departments: Map<string, Employee[]> }>();
@@ -318,6 +346,29 @@ export default function AdminPeoplePage() {
         before: formatProfileValue(field, before[field]),
         after: formatProfileValue(field, after[field])
       }));
+  }
+
+  function changeHighlightClass(field: ProfileField) {
+    if (field === "organizationId" || field === "departmentId") {
+      return "highlight-org";
+    }
+    if (field === "positionId") {
+      return "highlight-job";
+    }
+    if (field === "name" || field === "email") {
+      return "highlight-identity";
+    }
+    return "highlight-status";
+  }
+
+  function jumpPeopleSection(sectionId: string, label: string) {
+    const section = document.getElementById(sectionId);
+    if (!section) {
+      setMobileFlowFeedback(`${label} 섹션을 찾지 못했습니다.`);
+      return;
+    }
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+    setMobileFlowFeedback(`${label} 섹션으로 이동했습니다.`);
   }
 
   async function callApi(label: string, method: "GET" | "PATCH", path: string, payload?: Record<string, unknown>) {
@@ -464,12 +515,68 @@ export default function AdminPeoplePage() {
     return { total, success, fail: total - success };
   }, [logs]);
 
+  const historyChangeSummary = useMemo(() => {
+    const counters: Record<ProfileField, number> = {
+      organizationId: 0,
+      departmentId: 0,
+      positionId: 0,
+      name: 0,
+      email: 0,
+      active: 0
+    };
+    const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
+
+    for (const entry of history) {
+      const payload = asRecord(entry.payload);
+      if (!payload) {
+        continue;
+      }
+
+      if (entry.action === "employee.created") {
+        for (const field of fields) {
+          if (field in payload) {
+            counters[field] += 1;
+          }
+        }
+        continue;
+      }
+
+      const before = asRecord(payload.before);
+      const after = asRecord(payload.after);
+      if (!before || !after) {
+        continue;
+      }
+      for (const field of fields) {
+        if (before[field] !== after[field]) {
+          counters[field] += 1;
+        }
+      }
+    }
+
+    return (Object.keys(counters) as ProfileField[])
+      .filter((field) => counters[field] > 0)
+      .map((field) => ({
+        field,
+        label: profileFieldLabel[field],
+        count: counters[field]
+      }))
+      .sort((left, right) => right.count - left.count);
+  }, [history]);
+
   const selectedDepartments = selectedEmployee?.organizationId
     ? departments.filter((department) => department.organizationId === selectedEmployee.organizationId)
     : departments;
   const selectedPositions = selectedEmployee?.organizationId
     ? positions.filter((position) => position.organizationId === selectedEmployee.organizationId)
     : positions;
+
+  function resetDirectoryFilters() {
+    setSearch("");
+    setActiveFilter("all");
+    setDepartmentFilter("");
+    setPositionFilter("");
+    setRecentlyUpdatedDays("all");
+  }
 
   return (
     <main className="saas-content">
@@ -516,7 +623,7 @@ export default function AdminPeoplePage() {
       </section>
 
       <section className="panel-grid">
-        <article className="panel">
+        <article id="directory-filters" className="panel panel-directory-filters">
           <h2>필터</h2>
           <div className="input-grid">
             <label>
@@ -540,7 +647,41 @@ export default function AdminPeoplePage() {
               </select>
             </label>
             <label>
-              이력 Limit
+              Department Filter
+              <select value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)}>
+                <option value="">All</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name} ({department.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Position Filter
+              <select value={positionFilter} onChange={(event) => setPositionFilter(event.target.value)}>
+                <option value="">All</option>
+                {positions.map((position) => (
+                  <option key={position.id} value={position.id}>
+                    {position.name} ({position.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Updated Window
+              <select
+                value={recentlyUpdatedDays}
+                onChange={(event) => setRecentlyUpdatedDays(event.target.value as UpdatedWindow)}
+              >
+                <option value="all">All</option>
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+                <option value="90">90 days</option>
+              </select>
+            </label>
+            <label>
+              History Limit
               <input type="number" min={1} max={200} value={historyLimit} onChange={(event) => setHistoryLimit(event.target.value)} />
             </label>
             {showDevTools ? (
@@ -563,11 +704,38 @@ export default function AdminPeoplePage() {
             <button className="btn btn-secondary" onClick={() => void loadEmployees()}>
               직원 조회
             </button>
+            <button className="btn btn-secondary" onClick={resetDirectoryFilters}>
+              Filter Reset
+            </button>
           </div>
+          <p className="small muted">
+            filter summary: dept={departmentFilter || "all"} / position={positionFilter || "all"} / updated=
+            {recentlyUpdatedDays}
+          </p>
           {supabaseSessionError ? <p className="small fail">세션 오류: {supabaseSessionError}</p> : null}
         </article>
 
-        <article className="panel panel-org-chart">
+        <article id="people-mobile-flow" className="panel panel-people-mobile-flow">
+          <h2>모바일 탐색 흐름</h2>
+          <p className="small">필터, 트리, 비교, 이력 섹션 사이를 빠르게 이동할 수 있습니다.</p>
+          <div className="people-mobile-nav-grid">
+            <button type="button" className="btn btn-secondary" onClick={() => jumpPeopleSection("directory-filters", "필터")}>
+              필터 이동
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => jumpPeopleSection("org-chart", "조직도 트리")}>
+              트리 이동
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => jumpPeopleSection("employee-compare", "직원 비교")}>
+              비교 이동
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => jumpPeopleSection("employee-history", "인사 이력")}>
+              이력 이동
+            </button>
+          </div>
+          <p className="people-mobile-feedback">{mobileFlowFeedback || "이동할 섹션을 선택하세요."}</p>
+        </article>
+
+        <article id="org-chart" className="panel panel-org-chart">
           <h2>조직도 트리</h2>
           {tree.length === 0 ? (
             <p className="small muted">표시할 직원이 없습니다.</p>
@@ -613,7 +781,7 @@ export default function AdminPeoplePage() {
           )}
         </article>
 
-        <article className="panel">
+        <article id="employee-compare" className="panel panel-employee-compare">
           <h2>직원 비교</h2>
           <div className="input-grid">
             <label>
@@ -656,7 +824,10 @@ export default function AdminPeoplePage() {
                 <tbody>
                   {compareRows.map((row) => (
                     <tr key={row.label} className={row.diff ? "compare-diff-row" : ""}>
-                      <th>{row.label}</th>
+                      <th>
+                        {row.label}
+                        {row.diff ? <span className="compare-change-chip">CHANGED</span> : null}
+                      </th>
                       <td>{row.a}</td>
                       <td>{row.b}</td>
                     </tr>
@@ -667,7 +838,7 @@ export default function AdminPeoplePage() {
           )}
         </article>
 
-        <article className="panel panel-employee-history">
+        <article id="employee-history" className="panel panel-employee-history">
           <h2>인사 이력</h2>
           {selectedEmployee ? (
             <>
@@ -722,37 +893,52 @@ export default function AdminPeoplePage() {
           {history.length === 0 ? (
             <p className="small muted">표시할 이력이 없습니다.</p>
           ) : (
-            <ul className="history-card-list" aria-label="직원 인사 이력">
-              {history.map((entry, index) => {
-                const changes = historyChanges(entry);
-                return (
-                  <li key={`${entry.action}-${entry.createdAt}-${index}`} className="history-card">
-                    <div className="history-card-head">
-                      <strong>{actionLabel(entry.action)}</strong>
-                      <span className="muted">{formatDateTime(entry.createdAt)}</span>
-                    </div>
-                    <p className="small">
-                      actor {entry.actorRole}
-                      {entry.actorId ? ` (${entry.actorId})` : ""}
-                    </p>
-                    {changes.length === 0 ? (
-                      <p className="small muted">변경 필드 정보가 없습니다.</p>
-                    ) : (
-                      <ul className="history-change-list">
-                        {changes.map((change) => (
-                          <li key={`${entry.createdAt}-${change.field}`}>
-                            <span className="history-change-field">{profileFieldLabel[change.field]}</span>
-                            <span className="history-before">{change.before}</span>
-                            <span className="history-arrow">→</span>
-                            <span className="history-after">{change.after}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              {historyChangeSummary.length > 0 ? (
+                <ul className="history-change-summary-list" aria-label="History Change Summary">
+                  {historyChangeSummary.map((item) => (
+                    <li key={item.field} className={`history-change-summary-chip ${changeHighlightClass(item.field)}`}>
+                      <strong>{item.label}</strong>
+                      <span>{item.count} changes</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <ul className="history-card-list" aria-label="직원 인사 이력">
+                {history.map((entry, index) => {
+                  const changes = historyChanges(entry);
+                  return (
+                    <li key={`${entry.action}-${entry.createdAt}-${index}`} className="history-card">
+                      <div className="history-card-head">
+                        <strong>{actionLabel(entry.action)}</strong>
+                        <span className="muted">{formatDateTime(entry.createdAt)}</span>
+                      </div>
+                      <p className="small">
+                        actor {entry.actorRole}
+                        {entry.actorId ? ` (${entry.actorId})` : ""}
+                      </p>
+                      {changes.length === 0 ? (
+                        <p className="small muted">변경 필드 정보가 없습니다.</p>
+                      ) : (
+                        <ul className="history-change-list">
+                          {changes.map((change) => (
+                            <li
+                              key={`${entry.createdAt}-${change.field}`}
+                              className={`history-change-item ${changeHighlightClass(change.field)}`}
+                            >
+                              <span className="history-change-field">{profileFieldLabel[change.field]}</span>
+                              <span className="history-before">{change.before}</span>
+                              <span className="history-arrow">→</span>
+                              <span className="history-after">{change.after}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </article>
 

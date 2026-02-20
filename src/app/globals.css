@@ -1317,6 +1317,100 @@ button.queue-badge:hover {
   background: #fff6de;
 }
 
+.compare-change-chip {
+  display: inline-flex;
+  margin-left: 6px;
+  border: 1px solid #f3d08a;
+  border-radius: 999px;
+  background: #fff7e4;
+  color: #875c00;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 6px;
+}
+
+.panel-people-mobile-flow {
+  grid-column: 1 / -1;
+}
+
+.people-mobile-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.people-mobile-nav-grid .btn {
+  width: 100%;
+}
+
+.people-mobile-feedback {
+  margin: 10px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f3f8ff;
+  color: #204d95;
+  font-size: 0.78rem;
+  padding: 8px 10px;
+}
+
+.history-change-summary-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-change-summary-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  padding: 5px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.73rem;
+}
+
+.history-change-summary-chip strong {
+  color: var(--ink);
+}
+
+.history-change-summary-chip span {
+  color: var(--muted);
+}
+
+.history-change-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.history-change-item.highlight-org,
+.history-change-summary-chip.highlight-org {
+  background: #eef5ff;
+  border-color: #cfe0fb;
+}
+
+.history-change-item.highlight-job,
+.history-change-summary-chip.highlight-job {
+  background: #f5f2ff;
+  border-color: #dbd0ff;
+}
+
+.history-change-item.highlight-identity,
+.history-change-summary-chip.highlight-identity {
+  background: #fff7e6;
+  border-color: #f1d49f;
+}
+
+.history-change-item.highlight-status,
+.history-change-summary-chip.highlight-status {
+  background: #ecfbf4;
+  border-color: #c8ecd9;
+}
+
 .history-card-list {
   margin-top: 10px;
   display: grid;
@@ -1958,6 +2052,19 @@ button.queue-badge:hover {
 
   #mobile-delivery .delivery-channel-grid,
   #mobile-delivery .mobile-delivery-step-list {
+    grid-template-columns: 1fr;
+  }
+
+  #people-mobile-flow .people-mobile-nav-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #people-mobile-flow .people-mobile-nav-grid .btn {
+    width: 100%;
+  }
+
+  .history-change-summary-list {
+    display: grid;
     grid-template-columns: 1fr;
   }
 

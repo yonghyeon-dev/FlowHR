@@ -29,6 +29,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#onboarding">조직</Link>
           <Link href="/admin#people">직원</Link>
           <Link href="/admin/people">조직도/인사 이력</Link>
+          <Link href="/admin/people#directory-filters">People 필터</Link>
+          <Link href="/admin/people#org-chart">People 트리</Link>
+          <Link href="/admin/people#employee-compare">People 비교</Link>
+          <Link href="/admin/people#employee-history">People 이력</Link>
+          <Link href="/admin/people#people-mobile-flow">People 모바일 흐름</Link>
           <Link href="/admin#invites">초대/가입</Link>
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
