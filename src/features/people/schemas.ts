@@ -79,6 +79,10 @@ export const listEmployeesQuerySchema = z.object({
   organizationId: z.string().min(1).optional()
 });
 
+export const listEmployeeHistoryQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional()
+});
+
 export const listDepartmentsQuerySchema = z.object({
   active: queryBoolean.optional(),
   organizationId: z.string().min(1).optional()

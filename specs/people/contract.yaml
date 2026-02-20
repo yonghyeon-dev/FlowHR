@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.2.0
+version: 0.3.0
 scope:
   in:
     - organization master data (create/read/list)
@@ -69,6 +69,9 @@ api:
     - method: GET
       path: /people/employees/{employeeId}
       description: Get employee by id.
+    - method: GET
+      path: /people/employees/{employeeId}/history
+      description: List employee profile history events (created/profile-updated).
     - method: PATCH
       path: /people/employees/{employeeId}
       description: Update employee profile fields (admin only).
@@ -118,6 +121,7 @@ test_plan:
   integration:
     - organization create/list/get admin-only
     - employee create/list/get/update admin-only
+    - employee history list (created/profile-updated) returns most recent entries first
     - department/position create/list/get/update admin-only
     - employee org mismatch with department/position returns 409
     - duplicate employee create returns 409
@@ -154,7 +158,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.2.0 adds Department/Position catalogs and employee assignment fields as additive APIs/fields. Existing Organization/Employee APIs remain backward compatible."
+consumer_impact: "People contract v0.3.0 adds employee history read endpoint as additive API. Existing Organization/Employee/Department/Position APIs remain backward compatible."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
