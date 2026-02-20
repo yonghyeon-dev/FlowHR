@@ -516,6 +516,67 @@ button.queue-badge:hover {
   color: var(--muted);
 }
 
+.queue-badge-alert {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid #cddaf3;
+  background: #f6f9ff;
+  color: #35598f;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 1px 7px;
+}
+
+.queue-badge-alert.alert-watch {
+  border-color: #f3d08a;
+  background: #fff7e4;
+  color: #875c00;
+}
+
+.queue-badge-alert.alert-critical {
+  border-color: #f1b0bd;
+  background: #fff0f3;
+  color: #a1223a;
+}
+
+.queue-alert-strip {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.queue-alert-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.queue-alert-card p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.queue-alert-card strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.95rem;
+}
+
+.queue-alert-card.tone-critical {
+  background: #fff4f6;
+}
+
+.queue-alert-card.tone-watch {
+  background: #fff9ec;
+}
+
+.queue-alert-card.tone-hot {
+  background: #eef5ff;
+}
+
 .queue-control-inline {
   display: inline-flex;
   align-items: center;
@@ -564,6 +625,74 @@ button.queue-badge:hover {
 .queue-item-main span {
   display: inline-block;
   line-height: 1.4;
+}
+
+.queue-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.queue-toggle-chip {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.queue-toggle-chip.active {
+  color: #fff;
+  border-color: #1f58bd;
+  background: linear-gradient(135deg, #2467dc 0%, #1f58bd 100%);
+}
+
+.queue-sla-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #cddaf3;
+  background: #f6f9ff;
+  color: #35598f;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 2px 7px;
+}
+
+.queue-sla-chip.level-watch {
+  border-color: #f3d08a;
+  background: #fff7e4;
+  color: #875c00;
+}
+
+.queue-sla-chip.level-critical {
+  border-color: #f1b0bd;
+  background: #fff0f3;
+  color: #a1223a;
+}
+
+.queue-mobile-sticky {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f3f8ff;
+  padding: 10px;
+}
+
+.queue-mobile-sticky p {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.queue-mobile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .btn-small {
@@ -1438,14 +1567,48 @@ button.queue-badge:hover {
     width: 100%;
   }
 
+  #approvals .queue-alert-strip {
+    grid-template-columns: 1fr;
+  }
+
+  #approvals .queue-toggle-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #approvals .queue-toggle-chip {
+    width: 100%;
+    text-align: center;
+  }
+
   #approvals .simple-list li {
     flex-direction: column;
     align-items: flex-start;
   }
 
+  #approvals .queue-item-main {
+    width: 100%;
+  }
+
   #approvals .queue-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  #approvals .queue-mobile-sticky {
+    position: sticky;
+    bottom: 8px;
+    z-index: 2;
+  }
+
+  #approvals .queue-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  #approvals .queue-mobile-actions .btn {
+    width: 100%;
   }
 
   .payslip-sheet-header {

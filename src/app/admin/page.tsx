@@ -133,15 +133,21 @@ type LeaveBalanceDto = {
 };
 
 type QueueFocus = "all" | "attendance" | "leave" | "payroll";
-type AttendanceQueueSort = "checkin_desc" | "checkin_asc" | "employee_asc";
-type LeaveQueueSort = "start_desc" | "start_asc" | "employee_asc";
-type PayrollQueueSort = "period_desc" | "gross_desc" | "employee_asc";
+type QueueSearchScope = "all" | "employee" | "request_id" | "content";
+type QueueAlertLevel = "normal" | "watch" | "critical";
+type AttendanceQueueSort = "checkin_desc" | "checkin_asc" | "stale_desc" | "employee_asc";
+type LeaveQueueSort = "start_desc" | "start_asc" | "stale_desc" | "employee_asc";
+type PayrollQueueSort = "period_desc" | "stale_desc" | "gross_desc" | "employee_asc";
 type QueueBadgeSummary = {
   focus: QueueFocus;
   label: string;
   pending: number;
   visible: number;
   selected: number;
+  watch: number;
+  critical: number;
+  oldestHours: number;
+  alertLevel: QueueAlertLevel;
 };
 
 function isTruthyFlag(value: string | undefined) {
@@ -218,6 +224,66 @@ function toTimestamp(value: string | null) {
   return parsed.getTime();
 }
 
+function toWaitHours(value: string | null, referenceMs: number) {
+  const timestamp = toTimestamp(value);
+  if (timestamp <= 0) {
+    return 0;
+  }
+  return Math.max(0, (referenceMs - timestamp) / 3_600_000);
+}
+
+function toQueueAlertLevel(waitHours: number): QueueAlertLevel {
+  if (waitHours >= 48) {
+    return "critical";
+  }
+  if (waitHours >= 24) {
+    return "watch";
+  }
+  return "normal";
+}
+
+function queueAlertLevelRank(level: QueueAlertLevel) {
+  if (level === "critical") {
+    return 2;
+  }
+  if (level === "watch") {
+    return 1;
+  }
+  return 0;
+}
+
+function summarizeQueueAlert(waitHoursValues: number[]) {
+  const oldestHours = waitHoursValues.length > 0 ? Math.max(...waitHoursValues) : 0;
+  const critical = waitHoursValues.filter((value) => toQueueAlertLevel(value) === "critical").length;
+  const watch = waitHoursValues.filter((value) => toQueueAlertLevel(value) === "watch").length;
+  const alertLevel: QueueAlertLevel = critical > 0 ? "critical" : watch > 0 ? "watch" : "normal";
+  return { oldestHours, critical, watch, alertLevel };
+}
+
+function matchesQueueSearch(
+  scope: QueueSearchScope,
+  normalizedQuery: string,
+  fields: { employee: string; requestId: string; content: string }
+) {
+  if (!normalizedQuery) {
+    return true;
+  }
+  const employee = fields.employee.toLowerCase();
+  const requestId = fields.requestId.toLowerCase();
+  const content = fields.content.toLowerCase();
+
+  if (scope === "employee") {
+    return employee.includes(normalizedQuery);
+  }
+  if (scope === "request_id") {
+    return requestId.includes(normalizedQuery);
+  }
+  if (scope === "content") {
+    return content.includes(normalizedQuery);
+  }
+  return `${employee} ${requestId} ${content}`.includes(normalizedQuery);
+}
+
 export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
 
@@ -265,6 +331,9 @@ export default function AdminDashboardPage() {
   const [selectedLeaveIds, setSelectedLeaveIds] = useState<string[]>([]);
   const [approvalQueueFocus, setApprovalQueueFocus] = useState<QueueFocus>("all");
   const [approvalQueueSearch, setApprovalQueueSearch] = useState("");
+  const [approvalQueueSearchScope, setApprovalQueueSearchScope] = useState<QueueSearchScope>("all");
+  const [approvalQueueOnlyUrgent, setApprovalQueueOnlyUrgent] = useState(false);
+  const [approvalQueueSelectedOnly, setApprovalQueueSelectedOnly] = useState(false);
   const [attendanceQueueSort, setAttendanceQueueSort] = useState<AttendanceQueueSort>("checkin_desc");
   const [leaveQueueSort, setLeaveQueueSort] = useState<LeaveQueueSort>("start_desc");
   const [payrollQueueSort, setPayrollQueueSort] = useState<PayrollQueueSort>("period_desc");
@@ -339,20 +408,67 @@ export default function AdminDashboardPage() {
 
   const selectedAttendanceCount = selectedAttendanceIds.length;
   const selectedLeaveCount = selectedLeaveIds.length;
+  const selectedQueueTotalCount = selectedAttendanceCount + selectedLeaveCount;
   const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
+  const queueNowMs = Date.now();
+
+  const attendanceWaitHoursById = useMemo(
+    () =>
+      new Map(
+        pendingAttendance.map((record) => [record.id, toWaitHours(record.checkInAt, queueNowMs)] as const)
+      ),
+    [pendingAttendance, queueNowMs]
+  );
+  const leaveWaitHoursById = useMemo(
+    () =>
+      new Map(
+        pendingLeave.map((request) => [request.id, toWaitHours(request.startDate, queueNowMs)] as const)
+      ),
+    [pendingLeave, queueNowMs]
+  );
+  const payrollWaitHoursById = useMemo(
+    () =>
+      new Map(
+        previewedPayroll.map((run) => [run.id, toWaitHours(run.periodStart, queueNowMs)] as const)
+      ),
+    [previewedPayroll, queueNowMs]
+  );
+  const attendanceWaitHoursValues = useMemo(
+    () => [...attendanceWaitHoursById.values()],
+    [attendanceWaitHoursById]
+  );
+  const leaveWaitHoursValues = useMemo(() => [...leaveWaitHoursById.values()], [leaveWaitHoursById]);
+  const payrollWaitHoursValues = useMemo(
+    () => [...payrollWaitHoursById.values()],
+    [payrollWaitHoursById]
+  );
 
   const filteredPendingAttendance = useMemo(() => {
     const filtered = pendingAttendance.filter((record) => {
-      if (!normalizedQueueSearch) {
-        return true;
+      const waitHours = attendanceWaitHoursById.get(record.id) ?? 0;
+      const alertLevel = toQueueAlertLevel(waitHours);
+      if (approvalQueueOnlyUrgent && alertLevel === "normal") {
+        return false;
       }
-      const haystack = `${record.employeeId} ${record.id} ${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`.toLowerCase();
-      return haystack.includes(normalizedQueueSearch);
+      if (approvalQueueSelectedOnly && !selectedAttendanceIds.includes(record.id)) {
+        return false;
+      }
+
+      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
+        employee: record.employeeId,
+        requestId: record.id,
+        content: `${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`
+      });
     });
 
     return [...filtered].sort((left, right) => {
       if (attendanceQueueSort === "employee_asc") {
         return left.employeeId.localeCompare(right.employeeId, "ko");
+      }
+      if (attendanceQueueSort === "stale_desc") {
+        const leftWait = attendanceWaitHoursById.get(left.id) ?? 0;
+        const rightWait = attendanceWaitHoursById.get(right.id) ?? 0;
+        return rightWait - leftWait;
       }
       const leftTime = toTimestamp(left.checkInAt);
       const rightTime = toTimestamp(right.checkInAt);
@@ -361,21 +477,43 @@ export default function AdminDashboardPage() {
       }
       return rightTime - leftTime;
     });
-  }, [attendanceQueueSort, normalizedQueueSearch, pendingAttendance]);
+  }, [
+    approvalQueueOnlyUrgent,
+    approvalQueueSearchScope,
+    approvalQueueSelectedOnly,
+    attendanceQueueSort,
+    attendanceWaitHoursById,
+    normalizedQueueSearch,
+    pendingAttendance,
+    selectedAttendanceIds
+  ]);
 
   const filteredPendingLeave = useMemo(() => {
     const filtered = pendingLeave.filter((request) => {
-      if (!normalizedQueueSearch) {
-        return true;
+      const waitHours = leaveWaitHoursById.get(request.id) ?? 0;
+      const alertLevel = toQueueAlertLevel(waitHours);
+      if (approvalQueueOnlyUrgent && alertLevel === "normal") {
+        return false;
       }
-      const haystack =
-        `${request.employeeId} ${request.id} ${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`.toLowerCase();
-      return haystack.includes(normalizedQueueSearch);
+      if (approvalQueueSelectedOnly && !selectedLeaveIds.includes(request.id)) {
+        return false;
+      }
+
+      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
+        employee: request.employeeId,
+        requestId: request.id,
+        content: `${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`
+      });
     });
 
     return [...filtered].sort((left, right) => {
       if (leaveQueueSort === "employee_asc") {
         return left.employeeId.localeCompare(right.employeeId, "ko");
+      }
+      if (leaveQueueSort === "stale_desc") {
+        const leftWait = leaveWaitHoursById.get(left.id) ?? 0;
+        const rightWait = leaveWaitHoursById.get(right.id) ?? 0;
+        return rightWait - leftWait;
       }
       const leftTime = toTimestamp(left.startDate);
       const rightTime = toTimestamp(right.startDate);
@@ -384,21 +522,41 @@ export default function AdminDashboardPage() {
       }
       return rightTime - leftTime;
     });
-  }, [leaveQueueSort, normalizedQueueSearch, pendingLeave]);
+  }, [
+    approvalQueueOnlyUrgent,
+    approvalQueueSearchScope,
+    approvalQueueSelectedOnly,
+    leaveQueueSort,
+    leaveWaitHoursById,
+    normalizedQueueSearch,
+    pendingLeave,
+    selectedLeaveIds
+  ]);
 
   const filteredPreviewedPayroll = useMemo(() => {
     const filtered = previewedPayroll.filter((run) => {
-      if (!normalizedQueueSearch) {
-        return true;
+      if (approvalQueueOnlyUrgent && toQueueAlertLevel(payrollWaitHoursById.get(run.id) ?? 0) === "normal") {
+        return false;
       }
-      const haystack =
-        `${run.employeeId ?? ""} ${run.id} ${run.state} ${run.periodStart} ${run.periodEnd} ${run.grossPayKrw}`.toLowerCase();
-      return haystack.includes(normalizedQueueSearch);
+      if (approvalQueueSelectedOnly) {
+        return false;
+      }
+
+      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
+        employee: run.employeeId ?? "",
+        requestId: run.id,
+        content: `${run.state} ${run.periodStart} ${run.periodEnd} ${run.grossPayKrw}`
+      });
     });
 
     return [...filtered].sort((left, right) => {
       if (payrollQueueSort === "employee_asc") {
         return (left.employeeId ?? "").localeCompare(right.employeeId ?? "", "ko");
+      }
+      if (payrollQueueSort === "stale_desc") {
+        const leftWait = payrollWaitHoursById.get(left.id) ?? 0;
+        const rightWait = payrollWaitHoursById.get(right.id) ?? 0;
+        return rightWait - leftWait;
       }
       if (payrollQueueSort === "gross_desc") {
         return right.grossPayKrw - left.grossPayKrw;
@@ -407,7 +565,15 @@ export default function AdminDashboardPage() {
       const rightPeriod = toTimestamp(right.periodStart);
       return rightPeriod - leftPeriod;
     });
-  }, [normalizedQueueSearch, payrollQueueSort, previewedPayroll]);
+  }, [
+    approvalQueueOnlyUrgent,
+    approvalQueueSearchScope,
+    approvalQueueSelectedOnly,
+    normalizedQueueSearch,
+    payrollQueueSort,
+    payrollWaitHoursById,
+    previewedPayroll
+  ]);
 
   const showAttendanceQueue = approvalQueueFocus === "all" || approvalQueueFocus === "attendance";
   const showLeaveQueue = approvalQueueFocus === "all" || approvalQueueFocus === "leave";
@@ -430,36 +596,47 @@ export default function AdminDashboardPage() {
           filteredPendingAttendance.length +
           filteredPendingLeave.length +
           filteredPreviewedPayroll.length,
-        selected: selectedVisibleAttendanceCount + selectedVisibleLeaveCount
+        selected: selectedVisibleAttendanceCount + selectedVisibleLeaveCount,
+        ...summarizeQueueAlert([
+          ...attendanceWaitHoursValues,
+          ...leaveWaitHoursValues,
+          ...payrollWaitHoursValues
+        ])
       },
       {
         focus: "attendance",
         label: "출퇴근",
         pending: pendingAttendance.length,
         visible: filteredPendingAttendance.length,
-        selected: selectedVisibleAttendanceCount
+        selected: selectedVisibleAttendanceCount,
+        ...summarizeQueueAlert(attendanceWaitHoursValues)
       },
       {
         focus: "leave",
         label: "휴가",
         pending: pendingLeave.length,
         visible: filteredPendingLeave.length,
-        selected: selectedVisibleLeaveCount
+        selected: selectedVisibleLeaveCount,
+        ...summarizeQueueAlert(leaveWaitHoursValues)
       },
       {
         focus: "payroll",
         label: "급여",
         pending: previewedPayroll.length,
         visible: filteredPreviewedPayroll.length,
-        selected: 0
+        selected: 0,
+        ...summarizeQueueAlert(payrollWaitHoursValues)
       }
     ],
     [
+      attendanceWaitHoursValues,
       filteredPendingAttendance.length,
       filteredPendingLeave.length,
       filteredPreviewedPayroll.length,
+      leaveWaitHoursValues,
       pendingAttendance.length,
       pendingLeave.length,
+      payrollWaitHoursValues,
       previewedPayroll.length,
       selectedVisibleAttendanceCount,
       selectedVisibleLeaveCount
@@ -468,6 +645,23 @@ export default function AdminDashboardPage() {
 
   const activeQueueBadgeSummary =
     queueBadgeSummaries.find((badge) => badge.focus === approvalQueueFocus) ?? queueBadgeSummaries[0];
+
+  const queueAlertOverview = useMemo(() => {
+    const queueBadges = queueBadgeSummaries.filter((badge) => badge.focus !== "all");
+    const totalCritical = queueBadges.reduce((sum, badge) => sum + badge.critical, 0);
+    const totalWatch = queueBadges.reduce((sum, badge) => sum + badge.watch, 0);
+    const hottestQueue =
+      queueBadges.length === 0
+        ? null
+        : [...queueBadges].sort((left, right) => {
+            const levelDiff = queueAlertLevelRank(right.alertLevel) - queueAlertLevelRank(left.alertLevel);
+            if (levelDiff !== 0) {
+              return levelDiff;
+            }
+            return right.oldestHours - left.oldestHours;
+          })[0];
+    return { totalCritical, totalWatch, hottestQueue };
+  }, [queueBadgeSummaries]);
 
   async function callApi(
     label: string,
@@ -1659,12 +1853,34 @@ export default function AdminDashboardPage() {
               >
                 <span className="queue-badge-title">{badge.label}</span>
                 <span className="queue-badge-count">대기 {badge.pending}</span>
+                <span className={`queue-badge-alert alert-${badge.alertLevel}`}>
+                  {badge.alertLevel === "critical"
+                    ? `긴급 ${badge.critical}`
+                    : badge.alertLevel === "watch"
+                      ? `주의 ${badge.watch}`
+                      : "정상"}
+                </span>
                 <span className="queue-badge-meta">
-                  검색 {badge.visible}
+                  검색 {badge.visible} / 최장 {Math.round(badge.oldestHours)}h
                   {badge.selected > 0 ? ` / 선택 ${badge.selected}` : ""}
                 </span>
               </button>
             ))}
+          </div>
+
+          <div className="queue-alert-strip" aria-label="승인 큐 알림 요약">
+            <article className="queue-alert-card tone-critical">
+              <p>긴급 대기</p>
+              <strong>{queueAlertOverview.totalCritical}건</strong>
+            </article>
+            <article className="queue-alert-card tone-watch">
+              <p>주의 대기</p>
+              <strong>{queueAlertOverview.totalWatch}건</strong>
+            </article>
+            <article className="queue-alert-card tone-hot">
+              <p>최우선 큐</p>
+              <strong>{queueAlertOverview.hottestQueue?.label ?? "-"}</strong>
+            </article>
           </div>
 
           <div className="input-grid" style={{ marginTop: 12 }}>
@@ -1684,6 +1900,18 @@ export default function AdminDashboardPage() {
                 onChange={(event) => setPeriodEnd(event.target.value)}
               />
             </label>
+            <label>
+              검색 범위
+              <select
+                value={approvalQueueSearchScope}
+                onChange={(event) => setApprovalQueueSearchScope(event.target.value as QueueSearchScope)}
+              >
+                <option value="all">전체 필드</option>
+                <option value="employee">직원 ID</option>
+                <option value="request_id">요청 ID</option>
+                <option value="content">메모/사유</option>
+              </select>
+            </label>
             <label className="full">
               큐 검색
               <input
@@ -1692,6 +1920,33 @@ export default function AdminDashboardPage() {
                 placeholder="직원ID, 요청ID, 상태, 메모/사유 검색"
               />
             </label>
+            <div className="queue-toggle-row full" role="group" aria-label="승인 큐 빠른 필터">
+              <button
+                type="button"
+                className={`queue-toggle-chip${approvalQueueOnlyUrgent ? " active" : ""}`}
+                onClick={() => setApprovalQueueOnlyUrgent((prev) => !prev)}
+              >
+                긴급만 보기
+              </button>
+              <button
+                type="button"
+                className={`queue-toggle-chip${approvalQueueSelectedOnly ? " active" : ""}`}
+                onClick={() => setApprovalQueueSelectedOnly((prev) => !prev)}
+              >
+                선택 항목만
+              </button>
+              <button
+                type="button"
+                className="queue-toggle-chip"
+                onClick={() => {
+                  setApprovalQueueOnlyUrgent(false);
+                  setApprovalQueueSelectedOnly(false);
+                  setApprovalQueueSearch("");
+                }}
+              >
+                필터 초기화
+              </button>
+            </div>
             <label className="full">
               출퇴근 반려 사유 (선택)
               <input
@@ -1714,7 +1969,21 @@ export default function AdminDashboardPage() {
             {activeQueueBadgeSummary.label} 큐: 대기 {activeQueueBadgeSummary.pending}건 / 검색 결과{" "}
             {activeQueueBadgeSummary.visible}건
             {activeQueueBadgeSummary.selected > 0 ? ` / 선택 ${activeQueueBadgeSummary.selected}건` : ""}
+            {" / "}
+            {activeQueueBadgeSummary.alertLevel === "critical"
+              ? `긴급 ${activeQueueBadgeSummary.critical}건`
+              : activeQueueBadgeSummary.alertLevel === "watch"
+                ? `주의 ${activeQueueBadgeSummary.watch}건`
+                : "정상"}
+            {approvalQueueSelectedOnly && activeQueueBadgeSummary.focus !== "payroll"
+              ? " / 선택 필터 ON"
+              : ""}
           </p>
+          {approvalQueueSelectedOnly && (approvalQueueFocus === "all" || approvalQueueFocus === "payroll") ? (
+            <p className="small muted" style={{ marginTop: 6 }}>
+              급여 큐는 선택 필터가 없어 검색 조건만 적용됩니다.
+            </p>
+          ) : null}
 
           {showAttendanceQueue ? (
             <>
@@ -1731,6 +2000,7 @@ export default function AdminDashboardPage() {
                     onChange={(event) => setAttendanceQueueSort(event.target.value as AttendanceQueueSort)}
                   >
                     <option value="checkin_desc">출근 최신순</option>
+                    <option value="stale_desc">정체 우선순</option>
                     <option value="checkin_asc">출근 오래된순</option>
                     <option value="employee_asc">직원ID순</option>
                   </select>
@@ -1762,6 +2032,13 @@ export default function AdminDashboardPage() {
                         />
                         <span>
                           <strong>{record.employeeId}</strong>{" "}
+                          <span
+                            className={`queue-sla-chip level-${toQueueAlertLevel(
+                              attendanceWaitHoursById.get(record.id) ?? 0
+                            )}`}
+                          >
+                            대기 {Math.round(attendanceWaitHoursById.get(record.id) ?? 0)}h
+                          </span>{" "}
                           <span className="muted">
                             {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
                             {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
@@ -1803,6 +2080,7 @@ export default function AdminDashboardPage() {
                   정렬
                   <select value={leaveQueueSort} onChange={(event) => setLeaveQueueSort(event.target.value as LeaveQueueSort)}>
                     <option value="start_desc">시작일 최신순</option>
+                    <option value="stale_desc">정체 우선순</option>
                     <option value="start_asc">시작일 오래된순</option>
                     <option value="employee_asc">직원ID순</option>
                   </select>
@@ -1834,6 +2112,13 @@ export default function AdminDashboardPage() {
                         />
                         <span>
                           <strong>{request.employeeId}</strong>{" "}
+                          <span
+                            className={`queue-sla-chip level-${toQueueAlertLevel(
+                              leaveWaitHoursById.get(request.id) ?? 0
+                            )}`}
+                          >
+                            대기 {Math.round(leaveWaitHoursById.get(request.id) ?? 0)}h
+                          </span>{" "}
                           <span className="muted">
                             {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
                             {formatDateTime(request.endDate)} ({formatDays(request.days)}일
@@ -1881,6 +2166,7 @@ export default function AdminDashboardPage() {
                     onChange={(event) => setPayrollQueueSort(event.target.value as PayrollQueueSort)}
                   >
                     <option value="period_desc">기간 최신순</option>
+                    <option value="stale_desc">정체 우선순</option>
                     <option value="gross_desc">총지급 높은순</option>
                     <option value="employee_asc">직원ID순</option>
                   </select>
@@ -1894,6 +2180,13 @@ export default function AdminDashboardPage() {
                     <li key={run.id}>
                       <span>
                         <strong>{run.employeeId ?? "-"}</strong>{" "}
+                        <span
+                          className={`queue-sla-chip level-${toQueueAlertLevel(
+                            payrollWaitHoursById.get(run.id) ?? 0
+                          )}`}
+                        >
+                          대기 {Math.round(payrollWaitHoursById.get(run.id) ?? 0)}h
+                        </span>{" "}
                         <span className="muted">
                           {formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)} / 총지급{" "}
                           {formatKrw(run.grossPayKrw)}
@@ -1913,6 +2206,58 @@ export default function AdminDashboardPage() {
                 </ul>
               )}
             </>
+          ) : null}
+
+          {selectedQueueTotalCount > 0 ? (
+            <div className="queue-mobile-sticky" role="group" aria-label="모바일 빠른 승인 액션">
+              <p>
+                모바일 빠른 승인 액션 · 선택 {selectedQueueTotalCount}건
+              </p>
+              <div className="queue-mobile-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-small"
+                  onClick={() => void approveSelectedAttendance()}
+                  disabled={selectedAttendanceCount === 0}
+                >
+                  출퇴근 선택 승인
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-small"
+                  onClick={() => void rejectSelectedAttendance()}
+                  disabled={selectedAttendanceCount === 0}
+                >
+                  출퇴근 선택 반려
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-small"
+                  onClick={() => void approveSelectedLeave()}
+                  disabled={selectedLeaveCount === 0}
+                >
+                  휴가 선택 승인
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-small"
+                  onClick={() => void rejectSelectedLeave()}
+                  disabled={selectedLeaveCount === 0}
+                >
+                  휴가 선택 반려
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    clearAttendanceSelection();
+                    clearLeaveSelection();
+                  }}
+                >
+                  선택 전체 해제
+                </button>
+              </div>
+            </div>
           ) : null}
 
           <hr className="divider" />

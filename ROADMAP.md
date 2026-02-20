@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-20
-> **Current version**: 0.1.17 (Employee Self-Service UX Phase 2)
+> **Current version**: 0.1.18 (Admin Approval Queue UX Phase 2)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -168,10 +168,11 @@
 - WI-0129 급여 명세서 서식/출력 UX 고도화(문서형 상세 패널 + 공제 항목 설명 + 인쇄/PDF 저장 + print 레이아웃 + e2e)
 - WI-0130 관리자 조직도/인사 이력 UI 고도화(`GET /people/employees/{employeeId}/history` + `/admin/people` 트리뷰/비교/이력 카드 + e2e)
 - WI-0131 직원 셀프서비스 2차 UX 고도화(휴가 캘린더 밀도 그리드 + 잔여 연차 시각화 + 모바일 빠른 입력/월 이동 + e2e)
+- WI-0132 관리자 승인 큐 UX 2차 고도화(긴급/주의 알림 배지 + 검색 범위/긴급 필터 + 정체 우선 정렬 + 모바일 빠른 승인 액션 + e2e)
 
 ### 진행 중
 
-- 다음: 관리자 승인 큐 UX 2차 고도화(알림 배지 정교화, 모바일 조작성 개선, 검색/정렬 고도화)
+- 다음: 직원 셀프서비스 3차 UX 고도화(요청 상태 피드백 강화, 실패 원인 가시화, 모바일 단축 흐름)
 
 ### 현재 아키텍처
 
