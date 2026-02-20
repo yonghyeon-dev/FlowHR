@@ -19,10 +19,12 @@ type ApiLog = {
 type ApprovalActivity = {
   id: number;
   queue: "attendance" | "leave" | "payroll";
+  actionKind: "approve" | "reject" | "confirm" | "other";
   action: string;
   itemId: string;
   ok: boolean;
   status: number;
+  createdAtMs: number;
   at: string;
 };
 
@@ -148,6 +150,38 @@ type QueueBadgeSummary = {
   critical: number;
   oldestHours: number;
   alertLevel: QueueAlertLevel;
+};
+
+type QueueItemHistorySummary = {
+  key: string;
+  queue: "attendance" | "leave" | "payroll";
+  itemId: string;
+  total: number;
+  success: number;
+  fail: number;
+  approved: number;
+  rejected: number;
+  confirmed: number;
+  lastAction: string;
+  lastStatus: number;
+  lastAt: string;
+  lastCreatedAtMs: number;
+};
+
+type QueuePreActionCheck = {
+  id: string;
+  label: string;
+  ok: boolean;
+  detail: string;
+};
+
+type QueueMobileApprovalFeedback = {
+  queue: "attendance" | "leave" | "payroll" | "mixed";
+  action: string;
+  okCount: number;
+  failCount: number;
+  total: number;
+  at: string;
 };
 
 function isTruthyFlag(value: string | undefined) {
@@ -284,6 +318,10 @@ function matchesQueueSearch(
   return `${employee} ${requestId} ${content}`.includes(normalizedQuery);
 }
 
+function toQueueItemHistoryKey(queue: "attendance" | "leave" | "payroll", itemId: string) {
+  return `${queue}:${itemId}`;
+}
+
 export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
 
@@ -371,6 +409,8 @@ export default function AdminDashboardPage() {
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
+  const [mobileApprovalFeedback, setMobileApprovalFeedback] =
+    useState<QueueMobileApprovalFeedback | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -586,6 +626,162 @@ export default function AdminDashboardPage() {
     selectedLeaveIds.includes(request.id)
   ).length;
 
+  const hasAttendanceSelection = selectedAttendanceCount > 0;
+  const hasLeaveSelection = selectedLeaveCount > 0;
+  const hasOnlyVisibleAttendanceSelected = selectedAttendanceCount === selectedVisibleAttendanceCount;
+  const hasOnlyVisibleLeaveSelected = selectedLeaveCount === selectedVisibleLeaveCount;
+  const hasLeaveRejectReason = leaveRejectReason.trim().length > 0;
+  const hasAttendanceRejectReason = attendanceRejectReason.trim().length > 0;
+
+  const canApproveSelectedAttendance = hasAttendanceSelection && hasOnlyVisibleAttendanceSelected;
+  const canRejectSelectedAttendance = hasAttendanceSelection && hasOnlyVisibleAttendanceSelected;
+  const canApproveSelectedLeave = hasLeaveSelection && hasOnlyVisibleLeaveSelected;
+  const canRejectSelectedLeave = hasLeaveSelection && hasOnlyVisibleLeaveSelected && hasLeaveRejectReason;
+
+  const attendanceBulkValidationChecks = useMemo<QueuePreActionCheck[]>(
+    () => [
+      {
+        id: "attendance-selected",
+        label: "attendance selection",
+        ok: hasAttendanceSelection,
+        detail: hasAttendanceSelection ? `${selectedAttendanceCount} selected` : "no selected item"
+      },
+      {
+        id: "attendance-visible-only",
+        label: "selection synced with current filter",
+        ok: hasOnlyVisibleAttendanceSelected,
+        detail: hasOnlyVisibleAttendanceSelected
+          ? "all selected items are visible"
+          : `${selectedAttendanceCount - selectedVisibleAttendanceCount} hidden selected`
+      },
+      {
+        id: "attendance-reject-reason",
+        label: "reject reason (recommended)",
+        ok: hasAttendanceRejectReason,
+        detail: hasAttendanceRejectReason ? "reason provided" : "reason is optional but recommended"
+      }
+    ],
+    [
+      hasAttendanceRejectReason,
+      hasAttendanceSelection,
+      hasOnlyVisibleAttendanceSelected,
+      selectedAttendanceCount,
+      selectedVisibleAttendanceCount
+    ]
+  );
+
+  const leaveBulkValidationChecks = useMemo<QueuePreActionCheck[]>(
+    () => [
+      {
+        id: "leave-selected",
+        label: "leave selection",
+        ok: hasLeaveSelection,
+        detail: hasLeaveSelection ? `${selectedLeaveCount} selected` : "no selected item"
+      },
+      {
+        id: "leave-visible-only",
+        label: "selection synced with current filter",
+        ok: hasOnlyVisibleLeaveSelected,
+        detail: hasOnlyVisibleLeaveSelected
+          ? "all selected items are visible"
+          : `${selectedLeaveCount - selectedVisibleLeaveCount} hidden selected`
+      },
+      {
+        id: "leave-reject-reason",
+        label: "reject reason (required for bulk reject)",
+        ok: hasLeaveRejectReason,
+        detail: hasLeaveRejectReason ? "reason ready" : "bulk reject is disabled until reason is filled"
+      }
+    ],
+    [
+      hasLeaveRejectReason,
+      hasLeaveSelection,
+      hasOnlyVisibleLeaveSelected,
+      selectedLeaveCount,
+      selectedVisibleLeaveCount
+    ]
+  );
+
+  const approvalItemHistorySummaryMap = useMemo(() => {
+    const map = new Map<string, QueueItemHistorySummary>();
+    for (const activity of approvalActivities) {
+      const key = toQueueItemHistoryKey(activity.queue, activity.itemId);
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          key,
+          queue: activity.queue,
+          itemId: activity.itemId,
+          total: 1,
+          success: activity.ok ? 1 : 0,
+          fail: activity.ok ? 0 : 1,
+          approved: activity.actionKind === "approve" ? 1 : 0,
+          rejected: activity.actionKind === "reject" ? 1 : 0,
+          confirmed: activity.actionKind === "confirm" ? 1 : 0,
+          lastAction: activity.action,
+          lastStatus: activity.status,
+          lastAt: activity.at,
+          lastCreatedAtMs: activity.createdAtMs
+        });
+        continue;
+      }
+
+      existing.total += 1;
+      if (activity.ok) {
+        existing.success += 1;
+      } else {
+        existing.fail += 1;
+      }
+      if (activity.actionKind === "approve") {
+        existing.approved += 1;
+      } else if (activity.actionKind === "reject") {
+        existing.rejected += 1;
+      } else if (activity.actionKind === "confirm") {
+        existing.confirmed += 1;
+      }
+      if (activity.createdAtMs >= existing.lastCreatedAtMs) {
+        existing.lastAction = activity.action;
+        existing.lastStatus = activity.status;
+        existing.lastAt = activity.at;
+        existing.lastCreatedAtMs = activity.createdAtMs;
+      }
+    }
+    return map;
+  }, [approvalActivities]);
+
+  const approvalItemHistoryRows = useMemo(
+    () =>
+      [...approvalItemHistorySummaryMap.values()]
+        .sort((left, right) => right.lastCreatedAtMs - left.lastCreatedAtMs)
+        .slice(0, 12),
+    [approvalItemHistorySummaryMap]
+  );
+
+  const queueFeedbackByQueue = useMemo(() => {
+    const map = new Map<
+      "attendance" | "leave" | "payroll",
+      { queue: "attendance" | "leave" | "payroll"; ok: number; fail: number }
+    >();
+    for (const activity of approvalActivities.slice(0, 12)) {
+      const existing = map.get(activity.queue) ?? { queue: activity.queue, ok: 0, fail: 0 };
+      if (activity.ok) {
+        existing.ok += 1;
+      } else {
+        existing.fail += 1;
+      }
+      map.set(activity.queue, existing);
+    }
+    return [...map.values()];
+  }, [approvalActivities]);
+
+  function formatQueueItemHistoryInline(queue: "attendance" | "leave" | "payroll", itemId: string) {
+    const summary = approvalItemHistorySummaryMap.get(toQueueItemHistoryKey(queue, itemId));
+    if (!summary) {
+      return "history 0";
+    }
+    return `history ${summary.total} / ok ${summary.success} / fail ${summary.fail}`;
+  }
+
   const queueBadgeSummaries = useMemo<QueueBadgeSummary[]>(
     () => [
       {
@@ -726,23 +922,43 @@ export default function AdminDashboardPage() {
 
   function appendApprovalActivity(input: {
     queue: "attendance" | "leave" | "payroll";
+    actionKind?: "approve" | "reject" | "confirm" | "other";
     action: string;
     itemId: string;
     ok: boolean;
     status: number;
   }) {
+    const createdAtMs = Date.now();
     setApprovalActivities((prev) => [
       {
-        id: Date.now() + Math.floor(Math.random() * 1000),
+        id: createdAtMs + Math.floor(Math.random() * 1000),
         queue: input.queue,
+        actionKind: input.actionKind ?? "other",
         action: input.action,
         itemId: input.itemId,
         ok: input.ok,
         status: input.status,
+        createdAtMs,
         at: new Date().toLocaleString("ko-KR")
       },
       ...prev
     ].slice(0, 30));
+  }
+
+  function publishMobileApprovalFeedback(input: {
+    queue: "attendance" | "leave" | "payroll" | "mixed";
+    action: string;
+    okCount: number;
+    failCount: number;
+  }) {
+    setMobileApprovalFeedback({
+      queue: input.queue,
+      action: input.action,
+      okCount: input.okCount,
+      failCount: input.failCount,
+      total: input.okCount + input.failCount,
+      at: new Date().toLocaleString("ko-KR")
+    });
   }
 
   async function listEmployees() {
@@ -992,10 +1208,17 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("출퇴근 승인", "POST", `/api/attendance/records/${recordId}/approve`);
     appendApprovalActivity({
       queue: "attendance",
+      actionKind: "approve",
       action: "승인",
       itemId: recordId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-single-approve",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     await refreshInbox();
   }
@@ -1006,10 +1229,17 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("출퇴근 반려", "POST", `/api/attendance/records/${recordId}/reject`, payload);
     appendApprovalActivity({
       queue: "attendance",
+      actionKind: "reject",
       action: "반려",
       itemId: recordId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-single-reject",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     await refreshInbox();
   }
@@ -1018,10 +1248,17 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("휴가 승인", "POST", `/api/leave/requests/${requestId}/approve`);
     appendApprovalActivity({
       queue: "leave",
+      actionKind: "approve",
       action: "승인",
       itemId: requestId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-single-approve",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     await refreshInbox();
   }
@@ -1046,16 +1283,23 @@ export default function AdminDashboardPage() {
     const { response } = await callApi("휴가 반려", "POST", `/api/leave/requests/${requestId}/reject`, { reason });
     appendApprovalActivity({
       queue: "leave",
+      actionKind: "reject",
       action: "반려",
       itemId: requestId,
       ok: response.ok,
       status: response.status
     });
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-single-reject",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
+    });
     await refreshInbox();
   }
 
   async function approveSelectedAttendance() {
-    if (selectedAttendanceIds.length === 0) {
+    if (!canApproveSelectedAttendance || selectedAttendanceIds.length === 0) {
       return;
     }
     const targets = [...selectedAttendanceIds];
@@ -1065,17 +1309,25 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "attendance",
+        actionKind: "approve",
         action: "승인(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
     });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-bulk-approve",
+      okCount,
+      failCount: results.length - okCount
+    });
     await refreshInbox();
   }
 
   async function rejectSelectedAttendance() {
-    if (selectedAttendanceIds.length === 0) {
+    if (!canRejectSelectedAttendance || selectedAttendanceIds.length === 0) {
       return;
     }
     const reason = attendanceRejectReason.trim();
@@ -1087,17 +1339,25 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "attendance",
+        actionKind: "reject",
         action: "반려(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
     });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "attendance",
+      action: "attendance-bulk-reject",
+      okCount,
+      failCount: results.length - okCount
+    });
     await refreshInbox();
   }
 
   async function approveSelectedLeave() {
-    if (selectedLeaveIds.length === 0) {
+    if (!canApproveSelectedLeave || selectedLeaveIds.length === 0) {
       return;
     }
     const targets = [...selectedLeaveIds];
@@ -1107,17 +1367,25 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "leave",
+        actionKind: "approve",
         action: "승인(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
     });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-bulk-approve",
+      okCount,
+      failCount: results.length - okCount
+    });
     await refreshInbox();
   }
 
   async function rejectSelectedLeave() {
-    if (selectedLeaveIds.length === 0) {
+    if (!canRejectSelectedLeave || selectedLeaveIds.length === 0) {
       return;
     }
     const reason = leaveRejectReason.trim();
@@ -1143,11 +1411,19 @@ export default function AdminDashboardPage() {
     results.forEach(({ response }, index) => {
       appendApprovalActivity({
         queue: "leave",
+        actionKind: "reject",
         action: "반려(일괄)",
         itemId: targets[index],
         ok: response.ok,
         status: response.status
       });
+    });
+    const okCount = results.filter(({ response }) => response.ok).length;
+    publishMobileApprovalFeedback({
+      queue: "leave",
+      action: "leave-bulk-reject",
+      okCount,
+      failCount: results.length - okCount
     });
     await refreshInbox();
   }
@@ -1156,10 +1432,17 @@ export default function AdminDashboardPage() {
     const { response, body } = await callApi("급여 확정", "POST", `/api/payroll/runs/${runId}/confirm`);
     appendApprovalActivity({
       queue: "payroll",
+      actionKind: "confirm",
       action: "확정",
       itemId: runId,
       ok: response.ok,
       status: response.status
+    });
+    publishMobileApprovalFeedback({
+      queue: "payroll",
+      action: "payroll-single-confirm",
+      okCount: response.ok ? 1 : 0,
+      failCount: response.ok ? 0 : 1
     });
     if (response.ok) {
       const parsed = body as { run?: { id?: string } };
@@ -1985,6 +2268,84 @@ export default function AdminDashboardPage() {
             </p>
           ) : null}
 
+          <section className="queue-bulk-validation-panel" id="approval-bulk-validation">
+            <div className="queue-section-head">
+              <h3>일괄 처리 직전 검증</h3>
+              <p className="small muted">선택/필터/반려 사유를 먼저 확인한 뒤 일괄 처리를 실행하세요.</p>
+            </div>
+            <div className="queue-bulk-validation-grid">
+              <article className="queue-precheck-card">
+                <p className="small" style={{ margin: 0 }}>
+                  출퇴근 일괄 처리
+                </p>
+                <ul className="queue-precheck-list" aria-label="attendance bulk pre-action checks">
+                  {attendanceBulkValidationChecks.map((check) => (
+                    <li key={check.id} className={check.ok ? "is-pass" : "is-fail"}>
+                      <span className="queue-precheck-label">{check.label}</span>
+                      <span className="queue-precheck-detail">{check.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className={`queue-precheck-status ${canApproveSelectedAttendance ? "is-pass" : "is-fail"}`}>
+                  {canApproveSelectedAttendance
+                    ? "승인/반려 일괄 실행 준비 완료"
+                    : "선택 상태를 먼저 정리해야 일괄 실행할 수 있습니다."}
+                </p>
+              </article>
+              <article className="queue-precheck-card">
+                <p className="small" style={{ margin: 0 }}>
+                  휴가 일괄 처리
+                </p>
+                <ul className="queue-precheck-list" aria-label="leave bulk pre-action checks">
+                  {leaveBulkValidationChecks.map((check) => (
+                    <li key={check.id} className={check.ok ? "is-pass" : "is-fail"}>
+                      <span className="queue-precheck-label">{check.label}</span>
+                      <span className="queue-precheck-detail">{check.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className={`queue-precheck-status ${canRejectSelectedLeave ? "is-pass" : "is-fail"}`}>
+                  {canRejectSelectedLeave
+                    ? "승인/반려 일괄 실행 준비 완료"
+                    : "휴가 반려는 사유 입력 후 실행할 수 있습니다."}
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section className="queue-item-history-panel" id="approval-item-history">
+            <div className="queue-section-head">
+              <h3>항목별 처리 이력 요약</h3>
+              <p className="small muted">최근 처리 항목을 기준으로 성공/실패와 액션 분포를 요약합니다.</p>
+            </div>
+            {approvalItemHistoryRows.length === 0 ? (
+              <p className="small muted">아직 항목별 이력이 없습니다.</p>
+            ) : (
+              <ul className="queue-item-history-summary-list" aria-label="approval item history summary">
+                {approvalItemHistoryRows.map((summary) => (
+                  <li key={summary.key}>
+                    <div className="queue-item-history-meta">
+                      <strong>
+                        [{summary.queue}] {summary.itemId}
+                      </strong>
+                      <span className="muted">
+                        {summary.lastAction} · {summary.lastStatus} · {summary.lastAt}
+                      </span>
+                    </div>
+                    <div className="queue-item-history-stats">
+                      <span className="queue-history-chip">total {summary.total}</span>
+                      <span className="queue-history-chip">ok {summary.success}</span>
+                      <span className="queue-history-chip">fail {summary.fail}</span>
+                      <span className="queue-history-chip">approve {summary.approved}</span>
+                      <span className="queue-history-chip">reject {summary.rejected}</span>
+                      <span className="queue-history-chip">confirm {summary.confirmed}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           {showAttendanceQueue ? (
             <>
               <hr className="divider" />
@@ -2011,10 +2372,10 @@ export default function AdminDashboardPage() {
                 <button className="btn btn-secondary btn-small" onClick={clearAttendanceSelection} disabled={selectedAttendanceCount === 0}>
                   선택 해제
                 </button>
-                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
+                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedAttendance()} disabled={!canApproveSelectedAttendance}>
                   선택 승인
                 </button>
-                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
+                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedAttendance()} disabled={!canRejectSelectedAttendance}>
                   선택 반려
                 </button>
               </div>
@@ -2042,6 +2403,9 @@ export default function AdminDashboardPage() {
                           <span className="muted">
                             {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
                             {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
+                          </span>
+                          <span className="queue-item-history-inline">
+                            {formatQueueItemHistoryInline("attendance", record.id)}
                           </span>
                         </span>
                       </label>
@@ -2091,10 +2455,10 @@ export default function AdminDashboardPage() {
                 <button className="btn btn-secondary btn-small" onClick={clearLeaveSelection} disabled={selectedLeaveCount === 0}>
                   선택 해제
                 </button>
-                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedLeave()} disabled={selectedLeaveCount === 0}>
+                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedLeave()} disabled={!canApproveSelectedLeave}>
                   선택 승인
                 </button>
-                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedLeave()} disabled={selectedLeaveCount === 0}>
+                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedLeave()} disabled={!canRejectSelectedLeave}>
                   선택 반려
                 </button>
               </div>
@@ -2128,6 +2492,9 @@ export default function AdminDashboardPage() {
                                 ? " / 반차"
                                 : ""}
                             )
+                          </span>
+                          <span className="queue-item-history-inline">
+                            {formatQueueItemHistoryInline("leave", request.id)}
                           </span>
                         </span>
                       </label>
@@ -2191,6 +2558,9 @@ export default function AdminDashboardPage() {
                           {formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)} / 총지급{" "}
                           {formatKrw(run.grossPayKrw)}
                         </span>
+                        <span className="queue-item-history-inline">
+                          {formatQueueItemHistoryInline("payroll", run.id)}
+                        </span>
                       </span>
                       <div className="queue-actions">
                         <button
@@ -2218,7 +2588,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   className="btn btn-primary btn-small"
                   onClick={() => void approveSelectedAttendance()}
-                  disabled={selectedAttendanceCount === 0}
+                  disabled={!canApproveSelectedAttendance}
                 >
                   출퇴근 선택 승인
                 </button>
@@ -2226,7 +2596,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   className="btn btn-danger btn-small"
                   onClick={() => void rejectSelectedAttendance()}
-                  disabled={selectedAttendanceCount === 0}
+                  disabled={!canRejectSelectedAttendance}
                 >
                   출퇴근 선택 반려
                 </button>
@@ -2234,7 +2604,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   className="btn btn-primary btn-small"
                   onClick={() => void approveSelectedLeave()}
-                  disabled={selectedLeaveCount === 0}
+                  disabled={!canApproveSelectedLeave}
                 >
                   휴가 선택 승인
                 </button>
@@ -2242,7 +2612,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   className="btn btn-danger btn-small"
                   onClick={() => void rejectSelectedLeave()}
-                  disabled={selectedLeaveCount === 0}
+                  disabled={!canRejectSelectedLeave}
                 >
                   휴가 선택 반려
                 </button>
@@ -2260,6 +2630,35 @@ export default function AdminDashboardPage() {
             </div>
           ) : null}
 
+          <section className="queue-mobile-feedback-panel" id="approval-mobile-feedback" aria-live="polite">
+            <div className="queue-section-head">
+              <h3>모바일 승인 결과 피드백</h3>
+              <p className="small muted">마지막 실행 결과와 최근 큐별 성공/실패를 모바일 기준으로 요약합니다.</p>
+            </div>
+            {mobileApprovalFeedback ? (
+              <div className="queue-mobile-feedback-card">
+                <p>
+                  <strong>{mobileApprovalFeedback.action}</strong> · {mobileApprovalFeedback.at}
+                </p>
+                <div className="queue-mobile-feedback-chips">
+                  <span className="queue-history-chip">queue {mobileApprovalFeedback.queue}</span>
+                  <span className="queue-history-chip">total {mobileApprovalFeedback.total}</span>
+                  <span className="queue-history-chip">ok {mobileApprovalFeedback.okCount}</span>
+                  <span className="queue-history-chip">fail {mobileApprovalFeedback.failCount}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="small muted">아직 모바일 승인 피드백이 없습니다.</p>
+            )}
+            <div className="queue-mobile-feedback-chips">
+              {queueFeedbackByQueue.map((item) => (
+                <span key={item.queue} className="queue-history-chip">
+                  {item.queue} ok {item.ok} / fail {item.fail}
+                </span>
+              ))}
+            </div>
+          </section>
+
           <hr className="divider" />
           <div className="actions">
             <p className="small" style={{ margin: 0 }}>
@@ -2268,7 +2667,10 @@ export default function AdminDashboardPage() {
             <button
               type="button"
               className="btn btn-secondary btn-small"
-              onClick={() => setApprovalActivities([])}
+              onClick={() => {
+                setApprovalActivities([]);
+                setMobileApprovalFeedback(null);
+              }}
               disabled={approvalActivities.length === 0}
             >
               이력 초기화

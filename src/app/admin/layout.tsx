@@ -37,6 +37,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#invites">초대/가입</Link>
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
+          <Link href="/admin#approval-bulk-validation">승인 검증</Link>
+          <Link href="/admin#approval-item-history">승인 이력 요약</Link>
+          <Link href="/admin#approval-mobile-feedback">승인 모바일 피드백</Link>
           <Link href="/admin/approval-policy">결재/위임 정책</Link>
           <Link href="/admin/approval-templates">결재선 템플릿</Link>
           <Link href="/admin/approval-history">결재 단계 이력</Link>
