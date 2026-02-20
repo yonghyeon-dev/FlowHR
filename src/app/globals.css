@@ -2592,6 +2592,12 @@ button.queue-badge:hover {
   grid-column: 1 / -1;
 }
 
+.panel-history-search-sort,
+.panel-history-risk-prediction,
+.panel-people-mobile-follow-up-guide {
+  grid-column: 1 / -1;
+}
+
 .people-mobile-nav-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2610,6 +2616,183 @@ button.queue-badge:hover {
   color: #204d95;
   font-size: 0.78rem;
   padding: 8px 10px;
+}
+
+.history-search-toolbar {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.history-search-toolbar .full {
+  grid-column: 1 / -1;
+}
+
+.history-risk-only-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.history-search-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.history-search-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.history-search-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-search-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.history-search-list li.risk-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.history-search-list li.risk-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.history-search-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-search-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.history-risk-prediction-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.history-risk-prediction-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-risk-prediction-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.history-risk-prediction-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.history-risk-prediction-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.history-risk-prediction-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.history-risk-prediction-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-risk-prediction-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.people-mobile-follow-up-guide-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.people-mobile-follow-up-guide-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.people-mobile-follow-up-guide-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.people-mobile-follow-up-guide-list li.tone-ready {
+  border-color: #b8dfc4;
+  background: #f2fbf5;
+}
+
+.people-mobile-follow-up-guide-list li.tone-pending {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.people-mobile-follow-up-guide-list li.tone-fail {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.people-mobile-follow-up-guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .history-change-summary-list {
@@ -3642,6 +3825,28 @@ button.queue-badge:hover {
 
   #people-mobile-flow .people-mobile-nav-grid .btn {
     width: 100%;
+  }
+
+  #history-search-sort .history-search-list,
+  #history-risk-prediction .history-risk-prediction-list,
+  #people-mobile-follow-up-guide .people-mobile-follow-up-guide-list {
+    grid-template-columns: 1fr;
+  }
+
+  #history-search-sort .history-search-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  #history-search-sort .history-search-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #history-search-sort .history-search-head,
+  #history-risk-prediction .history-risk-prediction-head,
+  #people-mobile-follow-up-guide .people-mobile-follow-up-guide-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .history-change-summary-list {

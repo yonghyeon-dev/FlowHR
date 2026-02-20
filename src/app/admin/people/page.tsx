@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
@@ -31,6 +31,48 @@ type ApiLog = { id: number; label: string; status: number; ok: boolean; at: stri
 type ActiveFilter = "all" | "active" | "inactive";
 type UpdatedWindow = "all" | "7" | "30" | "90";
 type ProfileField = "organizationId" | "departmentId" | "positionId" | "name" | "email" | "active";
+type HistorySearchScope = "all" | "action" | "actor" | "field" | "detail";
+type HistorySortOption = "recent_desc" | "oldest_asc" | "change_count_desc" | "risk_desc";
+type HistoryRiskLevel = "normal" | "watch" | "critical";
+
+type HistorySearchSortRow = {
+  key: string;
+  action: string;
+  actionText: string;
+  actor: string;
+  createdAt: string;
+  createdAtTs: number;
+  changeCount: number;
+  changedFields: ProfileField[];
+  detail: string;
+  riskLevel: HistoryRiskLevel;
+  hasOrgJobChange: boolean;
+  hasIdentityChange: boolean;
+  hasDeactivateChange: boolean;
+};
+
+type HistoryRiskPredictionCard = {
+  key: string;
+  label: string;
+  severity: HistoryRiskLevel;
+  etaLabel: string;
+  count: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type PeopleMobileFollowUpTone = "ready" | "pending" | "fail";
+type PeopleMobileFollowUpAction = "jump" | "load_history" | "risk_filter" | "select_employee";
+
+type PeopleMobileFollowUpGuideCard = {
+  key: string;
+  label: string;
+  tone: PeopleMobileFollowUpTone;
+  detail: string;
+  ctaLabel: string;
+  action: PeopleMobileFollowUpAction;
+  targetSectionId: string;
+};
 
 const profileFieldLabel: Record<ProfileField, string> = {
   organizationId: "조직",
@@ -95,6 +137,53 @@ function actionLabel(action: string) {
   return action;
 }
 
+function historyRiskRank(level: HistoryRiskLevel) {
+  if (level === "critical") {
+    return 3;
+  }
+  if (level === "watch") {
+    return 2;
+  }
+  return 1;
+}
+
+function historyRiskTone(level: HistoryRiskLevel): PeopleMobileFollowUpTone {
+  if (level === "critical") {
+    return "fail";
+  }
+  if (level === "watch") {
+    return "pending";
+  }
+  return "ready";
+}
+
+function matchesHistorySearch(scope: HistorySearchScope, query: string, row: HistorySearchSortRow) {
+  if (!query) {
+    return true;
+  }
+
+  if (scope === "action") {
+    return row.actionText.toLowerCase().includes(query) || row.action.toLowerCase().includes(query);
+  }
+  if (scope === "actor") {
+    return row.actor.toLowerCase().includes(query);
+  }
+  if (scope === "field") {
+    return row.changedFields.some((field) => profileFieldLabel[field].toLowerCase().includes(query));
+  }
+  if (scope === "detail") {
+    return row.detail.toLowerCase().includes(query);
+  }
+
+  return (
+    row.actionText.toLowerCase().includes(query) ||
+    row.action.toLowerCase().includes(query) ||
+    row.actor.toLowerCase().includes(query) ||
+    row.detail.toLowerCase().includes(query) ||
+    row.changedFields.some((field) => profileFieldLabel[field].toLowerCase().includes(query))
+  );
+}
+
 export default function AdminPeoplePage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -107,6 +196,10 @@ export default function AdminPeoplePage() {
   const [positionFilter, setPositionFilter] = useState("");
   const [recentlyUpdatedDays, setRecentlyUpdatedDays] = useState<UpdatedWindow>("all");
   const [historyLimit, setHistoryLimit] = useState("30");
+  const [historySearchScope, setHistorySearchScope] = useState<HistorySearchScope>("all");
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
+  const [historySortOption, setHistorySortOption] = useState<HistorySortOption>("recent_desc");
+  const [historyRiskOnly, setHistoryRiskOnly] = useState(false);
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -133,6 +226,7 @@ export default function AdminPeoplePage() {
         ? (supabaseSession?.accessToken ?? "")
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const normalizedHistorySearchQuery = historySearchQuery.trim().toLowerCase();
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -297,56 +391,62 @@ export default function AdminPeoplePage() {
     return rows.map((row) => ({ ...row, diff: row.a !== row.b }));
   }, [compareEmployeeA, compareEmployeeB, departmentById, organizationById, positionById]);
 
-  function formatProfileValue(field: ProfileField, value: unknown) {
-    if (value === null || value === undefined) {
-      return "-";
-    }
-    if (field === "active") {
-      if (typeof value === "boolean") {
-        return value ? "활성" : "비활성";
+  const formatProfileValue = useCallback(
+    (field: ProfileField, value: unknown) => {
+      if (value === null || value === undefined) {
+        return "-";
+      }
+      if (field === "active") {
+        if (typeof value === "boolean") {
+          return value ? "활성" : "비활성";
+        }
+        return String(value);
+      }
+      if (field === "organizationId") {
+        const key = String(value);
+        return organizationById.get(key)?.name ?? key;
+      }
+      if (field === "departmentId") {
+        const key = String(value);
+        return departmentById.get(key)?.name ?? key;
+      }
+      if (field === "positionId") {
+        const key = String(value);
+        return positionById.get(key)?.name ?? key;
       }
       return String(value);
-    }
-    if (field === "organizationId") {
-      const key = String(value);
-      return organizationById.get(key)?.name ?? key;
-    }
-    if (field === "departmentId") {
-      const key = String(value);
-      return departmentById.get(key)?.name ?? key;
-    }
-    if (field === "positionId") {
-      const key = String(value);
-      return positionById.get(key)?.name ?? key;
-    }
-    return String(value);
-  }
+    },
+    [departmentById, organizationById, positionById]
+  );
 
-  function historyChanges(entry: EmployeeHistory) {
-    const payload = asRecord(entry.payload);
-    if (!payload) {
-      return [] as Array<{ field: ProfileField; before: string; after: string }>;
-    }
-    if (entry.action === "employee.created") {
+  const historyChanges = useCallback(
+    (entry: EmployeeHistory) => {
+      const payload = asRecord(entry.payload);
+      if (!payload) {
+        return [] as Array<{ field: ProfileField; before: string; after: string }>;
+      }
+      if (entry.action === "employee.created") {
+        const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
+        return fields
+          .filter((field) => field in payload)
+          .map((field) => ({ field, before: "-", after: formatProfileValue(field, payload[field]) }));
+      }
+      const before = asRecord(payload.before);
+      const after = asRecord(payload.after);
+      if (!before || !after) {
+        return [];
+      }
       const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
       return fields
-        .filter((field) => field in payload)
-        .map((field) => ({ field, before: "-", after: formatProfileValue(field, payload[field]) }));
-    }
-    const before = asRecord(payload.before);
-    const after = asRecord(payload.after);
-    if (!before || !after) {
-      return [];
-    }
-    const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
-    return fields
-      .filter((field) => before[field] !== after[field])
-      .map((field) => ({
-        field,
-        before: formatProfileValue(field, before[field]),
-        after: formatProfileValue(field, after[field])
-      }));
-  }
+        .filter((field) => before[field] !== after[field])
+        .map((field) => ({
+          field,
+          before: formatProfileValue(field, before[field]),
+          after: formatProfileValue(field, after[field])
+        }));
+    },
+    [formatProfileValue]
+  );
 
   function changeHighlightClass(field: ProfileField) {
     if (field === "organizationId" || field === "departmentId") {
@@ -563,6 +663,196 @@ export default function AdminPeoplePage() {
       .sort((left, right) => right.count - left.count);
   }, [history]);
 
+  const historySearchSortRows = useMemo<HistorySearchSortRow[]>(() => {
+    return history.map((entry, index) => {
+      const changes = historyChanges(entry);
+      const changedFields = changes.map((change) => change.field);
+      const hasOrgJobChange = changedFields.some(
+        (field) => field === "organizationId" || field === "departmentId" || field === "positionId"
+      );
+      const hasIdentityChange = changedFields.some((field) => field === "name" || field === "email");
+      const hasDeactivateChange = changes.some((change) => change.field === "active" && change.after === "비활성");
+      const riskLevel: HistoryRiskLevel =
+        hasDeactivateChange || (hasOrgJobChange && changedFields.length >= 2)
+          ? "critical"
+          : hasOrgJobChange || hasIdentityChange || changedFields.length >= 2
+            ? "watch"
+            : "normal";
+
+      const detail =
+        changes.length === 0
+          ? "변경 필드 정보 없음"
+          : changes
+              .slice(0, 5)
+              .map((change) => `${profileFieldLabel[change.field]}: ${change.before} -> ${change.after}`)
+              .join(" | ");
+
+      return {
+        key: `${entry.action}-${entry.createdAt}-${index}`,
+        action: entry.action,
+        actionText: actionLabel(entry.action),
+        actor: `${entry.actorRole}${entry.actorId ? ` (${entry.actorId})` : ""}`,
+        createdAt: entry.createdAt,
+        createdAtTs: toTimestamp(entry.createdAt),
+        changeCount: changes.length,
+        changedFields,
+        detail,
+        riskLevel,
+        hasOrgJobChange,
+        hasIdentityChange,
+        hasDeactivateChange
+      };
+    });
+  }, [history, historyChanges]);
+
+  const filteredHistorySearchSortRows = useMemo(() => {
+    const filtered = historySearchSortRows.filter((row) => {
+      if (historyRiskOnly && row.riskLevel === "normal") {
+        return false;
+      }
+      return matchesHistorySearch(historySearchScope, normalizedHistorySearchQuery, row);
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (historySortOption === "oldest_asc") {
+        return left.createdAtTs - right.createdAtTs;
+      }
+      if (historySortOption === "change_count_desc") {
+        const changeDiff = right.changeCount - left.changeCount;
+        if (changeDiff !== 0) {
+          return changeDiff;
+        }
+        return right.createdAtTs - left.createdAtTs;
+      }
+      if (historySortOption === "risk_desc") {
+        const riskDiff = historyRiskRank(right.riskLevel) - historyRiskRank(left.riskLevel);
+        if (riskDiff !== 0) {
+          return riskDiff;
+        }
+        const changeDiff = right.changeCount - left.changeCount;
+        if (changeDiff !== 0) {
+          return changeDiff;
+        }
+        return right.createdAtTs - left.createdAtTs;
+      }
+      return right.createdAtTs - left.createdAtTs;
+    });
+  }, [
+    historyRiskOnly,
+    historySearchScope,
+    historySearchSortRows,
+    historySortOption,
+    normalizedHistorySearchQuery
+  ]);
+
+  const historyRiskPredictionCards = useMemo<HistoryRiskPredictionCard[]>(() => {
+    const highRiskRows = historySearchSortRows.filter((row) => row.riskLevel !== "normal");
+    const orgJobRows = historySearchSortRows.filter((row) => row.hasOrgJobChange);
+    const identityRows = historySearchSortRows.filter((row) => row.hasIdentityChange);
+    const deactivateRows = historySearchSortRows.filter((row) => row.hasDeactivateChange);
+
+    const toCard = (
+      key: string,
+      label: string,
+      rows: HistorySearchSortRow[],
+      targetSectionId: string
+    ): HistoryRiskPredictionCard => {
+      const count = rows.length;
+      const maxChangeCount = count > 0 ? Math.max(...rows.map((row) => row.changeCount)) : 0;
+      const criticalCount = rows.filter((row) => row.riskLevel === "critical").length;
+      const watchCount = rows.filter((row) => row.riskLevel === "watch").length;
+      const severity: HistoryRiskLevel =
+        count >= 3 || criticalCount >= 1 || maxChangeCount >= 3 ? "critical" : count > 0 ? "watch" : "normal";
+      const etaLabel = count === 0 ? "stable" : severity === "critical" ? "review now" : "within today";
+
+      return {
+        key,
+        label,
+        severity,
+        etaLabel,
+        count,
+        detail:
+          count === 0
+            ? "위험 신호 없음"
+            : `items ${count} / critical ${criticalCount} / watch ${watchCount} / max-field-change ${maxChangeCount}`,
+        targetSectionId
+      };
+    };
+
+    return [
+      toCard("overall-risk", "overall history risk", highRiskRows, "history-search-sort"),
+      toCard("org-job-risk", "org/job reassignment risk", orgJobRows, "org-chart"),
+      toCard("identity-risk", "identity change risk", identityRows, "employee-compare"),
+      toCard("deactivation-risk", "deactivation risk", deactivateRows, "directory-filters")
+    ].sort((left, right) => {
+      const severityDiff = historyRiskRank(right.severity) - historyRiskRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.count - left.count;
+    });
+  }, [historySearchSortRows]);
+
+  const peopleMobileFollowUpGuideCards = useMemo<PeopleMobileFollowUpGuideCard[]>(() => {
+    const topRiskCard = historyRiskPredictionCards[0] ?? null;
+    const topRiskTone = historyRiskTone(topRiskCard?.severity ?? "normal");
+    const hasHighRiskRows = historySearchSortRows.some((row) => row.riskLevel !== "normal");
+
+    return [
+      {
+        key: "history-search-sort-follow-up",
+        label: "history search/sort follow-up",
+        tone: filteredHistorySearchSortRows.length > 0 ? "ready" : "pending",
+        detail:
+          filteredHistorySearchSortRows.length > 0
+            ? `${filteredHistorySearchSortRows.length} row(s) match current history options.`
+            : "No history row matches current options. Reset and search again.",
+        ctaLabel: "open search/sort",
+        action: "jump",
+        targetSectionId: "history-search-sort"
+      },
+      {
+        key: "risk-prediction-follow-up",
+        label: "risk prediction follow-up",
+        tone: topRiskTone,
+        detail: topRiskCard?.detail ?? "Review change risk prediction feedback and adjust follow-up priority.",
+        ctaLabel: "open risk prediction",
+        action: "jump",
+        targetSectionId: "history-risk-prediction"
+      },
+      {
+        key: "selected-history-follow-up",
+        label: "selected employee history follow-up",
+        tone: !selectedEmployee ? "fail" : history.length > 0 ? "ready" : "pending",
+        detail: !selectedEmployee
+          ? "No selected employee. Select an employee in org chart first."
+          : history.length > 0
+            ? `Loaded ${history.length} history record(s) for ${selectedEmployee.id}.`
+            : "No loaded history for selected employee. Refresh history.",
+        ctaLabel: !selectedEmployee ? "select employee" : "refresh history",
+        action: !selectedEmployee ? "select_employee" : "load_history",
+        targetSectionId: !selectedEmployee ? "org-chart" : "employee-history"
+      },
+      {
+        key: "high-risk-filter-follow-up",
+        label: "high-risk filter follow-up",
+        tone: hasHighRiskRows ? "pending" : "ready",
+        detail: hasHighRiskRows
+          ? "There are high-risk history rows. Open risk-first view."
+          : "No high-risk row now. Keep monitoring with recent-desc sort.",
+        ctaLabel: "risk-first view",
+        action: "risk_filter",
+        targetSectionId: "history-search-sort"
+      }
+    ];
+  }, [
+    filteredHistorySearchSortRows.length,
+    history.length,
+    historyRiskPredictionCards,
+    historySearchSortRows,
+    selectedEmployee
+  ]);
+
   const selectedDepartments = selectedEmployee?.organizationId
     ? departments.filter((department) => department.organizationId === selectedEmployee.organizationId)
     : departments;
@@ -576,6 +866,45 @@ export default function AdminPeoplePage() {
     setDepartmentFilter("");
     setPositionFilter("");
     setRecentlyUpdatedDays("all");
+  }
+
+  function resetHistorySearchSortControls() {
+    setHistorySearchScope("all");
+    setHistorySearchQuery("");
+    setHistorySortOption("recent_desc");
+    setHistoryRiskOnly(false);
+  }
+
+  function applyHistoryRiskFirstFilter() {
+    setHistorySortOption("risk_desc");
+    setHistoryRiskOnly(true);
+    setHistorySearchScope("all");
+    setHistorySearchQuery("");
+  }
+
+  function runPeopleMobileFollowUpAction(card: PeopleMobileFollowUpGuideCard) {
+    if (card.action === "load_history") {
+      if (selectedEmployee) {
+        void loadSelectedEmployeeHistory(selectedEmployee.id);
+      }
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    if (card.action === "risk_filter") {
+      applyHistoryRiskFirstFilter();
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    if (card.action === "select_employee") {
+      const fallbackEmployeeId = filteredEmployees[0]?.id ?? employees[0]?.id;
+      if (fallbackEmployeeId) {
+        setSelectedEmployeeId(fallbackEmployeeId);
+        void loadSelectedEmployeeHistory(fallbackEmployeeId);
+      }
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    jumpPeopleSection(card.targetSectionId, card.label);
   }
 
   return (
@@ -730,6 +1059,20 @@ export default function AdminPeoplePage() {
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => jumpPeopleSection("employee-history", "인사 이력")}>
               이력 이동
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("history-search-sort", "이력 검색/정렬")}
+            >
+              이력 검색/정렬
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("history-risk-prediction", "위험 예측")}
+            >
+              위험 예측
             </button>
           </div>
           <p className="people-mobile-feedback">{mobileFlowFeedback || "이동할 섹션을 선택하세요."}</p>
@@ -940,6 +1283,125 @@ export default function AdminPeoplePage() {
               </ul>
             </>
           )}
+        </article>
+
+        <article id="history-search-sort" className="panel panel-history-search-sort">
+          <h2>이력 검색/정렬</h2>
+          <p className="small">인사 이력 항목을 검색 범위/위험도/변경 개수 기준으로 빠르게 탐색합니다.</p>
+          <div className="history-search-toolbar">
+            <label>
+              검색 범위
+              <select value={historySearchScope} onChange={(event) => setHistorySearchScope(event.target.value as HistorySearchScope)}>
+                <option value="all">전체</option>
+                <option value="action">액션</option>
+                <option value="actor">액터</option>
+                <option value="field">변경 필드</option>
+                <option value="detail">상세</option>
+              </select>
+            </label>
+            <label className="full">
+              검색어
+              <input
+                value={historySearchQuery}
+                onChange={(event) => setHistorySearchQuery(event.target.value)}
+                placeholder="예: 프로필, 부서, 비활성, ADM-1001"
+              />
+            </label>
+            <label>
+              정렬
+              <select value={historySortOption} onChange={(event) => setHistorySortOption(event.target.value as HistorySortOption)}>
+                <option value="recent_desc">최신순</option>
+                <option value="oldest_asc">오래된순</option>
+                <option value="change_count_desc">변경 항목 많은순</option>
+                <option value="risk_desc">위험도 우선</option>
+              </select>
+            </label>
+            <label className="history-risk-only-toggle">
+              <input type="checkbox" checked={historyRiskOnly} onChange={(event) => setHistoryRiskOnly(event.target.checked)} />
+              위험 항목만 보기
+            </label>
+            <div className="history-search-actions">
+              <button type="button" className="btn btn-secondary btn-small" onClick={resetHistorySearchSortControls}>
+                초기화
+              </button>
+              <button type="button" className="btn btn-secondary btn-small" onClick={applyHistoryRiskFirstFilter}>
+                위험 우선
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => jumpPeopleSection("employee-history", "인사 이력")}
+              >
+                이력 원본 보기
+              </button>
+            </div>
+          </div>
+          {filteredHistorySearchSortRows.length === 0 ? (
+            <p className="small muted">현재 조건에 맞는 이력 항목이 없습니다.</p>
+          ) : (
+            <ul className="history-search-list" aria-label="people history search and sort list">
+              {filteredHistorySearchSortRows.slice(0, 30).map((row) => (
+                <li key={row.key} className={`risk-${row.riskLevel}`}>
+                  <div className="history-search-head">
+                    <strong>{row.actionText}</strong>
+                    <span className="queue-history-chip">risk {row.riskLevel}</span>
+                  </div>
+                  <p>{row.detail}</p>
+                  <div className="history-search-meta">
+                    <span className="queue-history-chip">{formatDateTime(row.createdAt)}</span>
+                    <span className="queue-history-chip">{row.actor}</span>
+                    <span className="queue-history-chip">fields {row.changeCount}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article id="history-risk-prediction" className="panel panel-history-risk-prediction">
+          <h2>변경 위험 예측 피드백</h2>
+          <p className="small">조직/직급 재배치, 식별정보 변경, 비활성 전환 위험을 카드로 요약합니다.</p>
+          <ul className="history-risk-prediction-list" aria-label="people history risk prediction feedback list">
+            {historyRiskPredictionCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="history-risk-prediction-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">ETA {card.etaLabel}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="history-risk-prediction-meta">
+                  <span className="queue-history-chip">count {card.count}</span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpPeopleSection(card.targetSectionId, card.label)}
+                >
+                  관련 섹션 이동
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article id="people-mobile-follow-up-guide" className="panel panel-people-mobile-follow-up-guide">
+          <h2>모바일 후속 액션 가이드</h2>
+          <p className="small">검색/예측/선택 상태를 바탕으로 다음 액션을 한 번에 실행합니다.</p>
+          <ul className="people-mobile-follow-up-guide-list" aria-label="people mobile follow-up action guide list">
+            {peopleMobileFollowUpGuideCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="people-mobile-follow-up-guide-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.tone}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button type="button" className="btn btn-secondary btn-small" onClick={() => runPeopleMobileFollowUpAction(card)}>
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
         </article>
 
         <article className="panel">
