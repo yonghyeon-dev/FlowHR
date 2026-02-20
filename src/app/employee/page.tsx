@@ -93,6 +93,25 @@ type RequestFailureCause = {
   at: string;
 };
 
+type RequestStatusFilter = "all" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+type TimelineChannelFilter = "all" | "attendance" | "leave";
+
+type MobileRequestTimelineItem = {
+  id: string;
+  channel: "attendance" | "leave";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+  at: string;
+  title: string;
+  detail: string;
+};
+
+type PreSubmitCheckItem = {
+  id: string;
+  pass: boolean;
+  label: string;
+  detail: string;
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -228,6 +247,38 @@ function formatDeltaMinutes(deltaMinutes: number) {
   return `${sign}${parts.join(" ")}`;
 }
 
+function statusToTone(status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") {
+  if (status === "APPROVED") {
+    return "ok";
+  }
+  if (status === "PENDING") {
+    return "pending";
+  }
+  return "fail";
+}
+
+function estimateLeaveRequestedDays(input: {
+  startDate: string;
+  endDate: string;
+  unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
+  hoursInput: string;
+}) {
+  if (input.unit === "HALF_DAY") {
+    return 0.5;
+  }
+  if (input.unit === "HOUR") {
+    return Math.max(0, coerceNumber(input.hoursInput)) / 8;
+  }
+
+  const startMs = new Date(input.startDate).getTime();
+  const endMs = new Date(input.endDate).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
+    return 0;
+  }
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.ceil((endMs - startMs + 1) / dayMs));
+}
+
 function extractErrorMessage(body: unknown) {
   if (body === null || body === undefined) {
     return "서버 응답이 비어 있습니다.";
@@ -302,6 +353,9 @@ export default function EmployeeSelfServicePage() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [mobileFlowFeedback, setMobileFlowFeedback] = useState("");
+  const [requestFeedbackStatusFilter, setRequestFeedbackStatusFilter] = useState<RequestStatusFilter>("all");
+  const [timelineChannelFilter, setTimelineChannelFilter] = useState<TimelineChannelFilter>("all");
+  const [timelineStatusFilter, setTimelineStatusFilter] = useState<RequestStatusFilter>("all");
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
   const showDevTools = isDevToolsEnabled();
@@ -948,6 +1002,49 @@ export default function EmployeeSelfServicePage() {
     return rows.sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
   }, [latestAttendance, latestLeaveRequest]);
 
+  const filteredRequestFeedbackRows = useMemo(() => {
+    if (requestFeedbackStatusFilter === "all") {
+      return requestFeedbackRows;
+    }
+    return requestFeedbackRows.filter((row) => row.status === requestFeedbackStatusFilter);
+  }, [requestFeedbackStatusFilter, requestFeedbackRows]);
+
+  const mobileRequestTimeline = useMemo<MobileRequestTimelineItem[]>(() => {
+    const attendanceItems = attendance.map((record) => ({
+      id: `attendance-${record.id}`,
+      channel: "attendance" as const,
+      status: record.state,
+      at: record.checkOutAt ?? record.checkInAt,
+      title: "출퇴근 요청",
+      detail: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
+    }));
+
+    const leaveItems = leaveRequests.map((request) => ({
+      id: `leave-${request.id}`,
+      channel: "leave" as const,
+      status: request.state,
+      at: request.endDate,
+      title: "휴가 요청",
+      detail: `${request.leaveType} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
+    }));
+
+    return [...attendanceItems, ...leaveItems]
+      .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
+      .slice(0, 12);
+  }, [attendance, leaveRequests]);
+
+  const filteredMobileRequestTimeline = useMemo(() => {
+    return mobileRequestTimeline.filter((item) => {
+      if (timelineChannelFilter !== "all" && item.channel !== timelineChannelFilter) {
+        return false;
+      }
+      if (timelineStatusFilter !== "all" && item.status !== timelineStatusFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [mobileRequestTimeline, timelineChannelFilter, timelineStatusFilter]);
+
   const requestFailureCauses = useMemo<RequestFailureCause[]>(() => {
     const byId = new Map<string, RequestFailureCause>();
 
@@ -1030,6 +1127,128 @@ export default function EmployeeSelfServicePage() {
 
     return { isValid: true, message: null };
   }, [breakMinutes, checkInAt, checkOutAt, lastAttendanceId]);
+
+  const attendancePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(() => {
+    const checks: PreSubmitCheckItem[] = [];
+    checks.push({
+      id: "attendance-target",
+      pass: lastAttendanceId.trim().length > 0,
+      label: "정정 대상 선택",
+      detail: lastAttendanceId.trim().length > 0 ? "정정 대상 기록이 선택되었습니다." : "정정 대상 기록 ID를 선택해 주세요."
+    });
+
+    const checkInMs = new Date(checkInAt).getTime();
+    checks.push({
+      id: "attendance-checkin",
+      pass: !Number.isNaN(checkInMs),
+      label: "출근 시각 형식",
+      detail: !Number.isNaN(checkInMs) ? "출근 시각 형식이 유효합니다." : "출근 시각 형식이 올바르지 않습니다."
+    });
+
+    const normalizedBreakMinutes = Math.max(0, Math.trunc(coerceNumber(breakMinutes)));
+    checks.push({
+      id: "attendance-break",
+      pass: normalizedBreakMinutes <= 12 * 60,
+      label: "휴게 시간 범위",
+      detail:
+        normalizedBreakMinutes <= 12 * 60
+          ? `휴게 ${normalizedBreakMinutes}분`
+          : "휴게 시간이 과도합니다. 12시간 이하로 입력해 주세요."
+    });
+
+    if (checkOutAt.trim().length > 0) {
+      const checkOutMs = new Date(checkOutAt).getTime();
+      checks.push({
+        id: "attendance-checkout-format",
+        pass: !Number.isNaN(checkOutMs),
+        label: "퇴근 시각 형식",
+        detail: !Number.isNaN(checkOutMs) ? "퇴근 시각 형식이 유효합니다." : "퇴근 시각 형식이 올바르지 않습니다."
+      });
+      checks.push({
+        id: "attendance-time-order",
+        pass: !Number.isNaN(checkOutMs) && !Number.isNaN(checkInMs) && checkOutMs > checkInMs,
+        label: "출퇴근 시간 순서",
+        detail: !Number.isNaN(checkOutMs) && !Number.isNaN(checkInMs) && checkOutMs > checkInMs
+          ? "출퇴근 시간 순서가 유효합니다."
+          : "퇴근 시각은 출근 시각 이후여야 합니다."
+      });
+    }
+
+    return checks;
+  }, [breakMinutes, checkInAt, checkOutAt, lastAttendanceId]);
+
+  const attendancePreSubmitValid = useMemo(
+    () => attendancePreSubmitChecks.every((check) => check.pass),
+    [attendancePreSubmitChecks]
+  );
+
+  const leavePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(() => {
+    const checks: PreSubmitCheckItem[] = [];
+    const startMs = new Date(leaveStartDate).getTime();
+    const endMs = new Date(leaveEndDate).getTime();
+    const validStart = !Number.isNaN(startMs);
+    const validEnd = !Number.isNaN(endMs);
+
+    checks.push({
+      id: "leave-start-format",
+      pass: validStart,
+      label: "시작일 형식",
+      detail: validStart ? "시작일 형식이 유효합니다." : "시작일 형식이 올바르지 않습니다."
+    });
+    checks.push({
+      id: "leave-end-format",
+      pass: validEnd,
+      label: "종료일 형식",
+      detail: validEnd ? "종료일 형식이 유효합니다." : "종료일 형식이 올바르지 않습니다."
+    });
+    checks.push({
+      id: "leave-range",
+      pass: validStart && validEnd && endMs >= startMs,
+      label: "신청 기간",
+      detail: validStart && validEnd && endMs >= startMs
+        ? "신청 기간이 유효합니다."
+        : "종료일은 시작일과 같거나 이후여야 합니다."
+    });
+
+    if (leaveUnit === "HOUR") {
+      const hours = Math.max(0, coerceNumber(leaveHours));
+      checks.push({
+        id: "leave-hours",
+        pass: hours > 0 && hours <= 12,
+        label: "시간 단위 입력",
+        detail: hours > 0 && hours <= 12 ? `${hours.toFixed(1)}시간` : "시간 단위는 0보다 크고 12 이하여야 합니다."
+      });
+    }
+
+    const estimatedDays = estimateLeaveRequestedDays({
+      startDate: leaveStartDate,
+      endDate: leaveEndDate,
+      unit: leaveUnit,
+      hoursInput: leaveHours
+    });
+    checks.push({
+      id: "leave-estimated-days",
+      pass: estimatedDays > 0,
+      label: "신청 일수 계산",
+      detail: estimatedDays > 0 ? `예상 신청 ${formatDays(estimatedDays)}일` : "신청 일수를 계산할 수 없습니다."
+    });
+
+    if (leaveType === "ANNUAL" && leaveBalance) {
+      checks.push({
+        id: "leave-balance",
+        pass: leaveBalance.remainingDays >= estimatedDays,
+        label: "잔여 연차 검증",
+        detail:
+          leaveBalance.remainingDays >= estimatedDays
+            ? `잔여 ${formatDays(leaveBalance.remainingDays)}일`
+            : `잔여 ${formatDays(leaveBalance.remainingDays)}일, 요청 ${formatDays(estimatedDays)}일`
+      });
+    }
+
+    return checks;
+  }, [leaveBalance, leaveEndDate, leaveHours, leaveStartDate, leaveType, leaveUnit]);
+
+  const leavePreSubmitValid = useMemo(() => leavePreSubmitChecks.every((check) => check.pass), [leavePreSubmitChecks]);
 
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
@@ -1240,13 +1459,28 @@ export default function EmployeeSelfServicePage() {
               </span>
             </article>
           </div>
-          {requestFeedbackRows.length === 0 ? (
+          <div className="request-filter-row">
+            <label>
+              상태 필터
+              <select
+                value={requestFeedbackStatusFilter}
+                onChange={(event) => setRequestFeedbackStatusFilter(event.target.value as RequestStatusFilter)}
+              >
+                <option value="all">전체</option>
+                <option value="PENDING">대기</option>
+                <option value="APPROVED">승인</option>
+                <option value="REJECTED">반려</option>
+                <option value="CANCELED">취소</option>
+              </select>
+            </label>
+          </div>
+          {filteredRequestFeedbackRows.length === 0 ? (
             <p className="small muted" style={{ marginTop: 10 }}>
-              아직 최근 요청 피드백이 없습니다. 먼저 조회 후 요청을 생성해 보세요.
+              현재 필터 조건에서 표시할 요청 피드백이 없습니다.
             </p>
           ) : (
             <ul className="simple-list feedback-row-list" aria-label="요청 상태 피드백">
-              {requestFeedbackRows.map((row) => (
+              {filteredRequestFeedbackRows.map((row) => (
                 <li key={row.id}>
                   <span>
                     <strong>{row.channel === "attendance" ? "출퇴근" : "휴가"}</strong>{" "}
@@ -1315,6 +1549,53 @@ export default function EmployeeSelfServicePage() {
           {mobileFlowFeedback ? <p className="mobile-shortcut-feedback">{mobileFlowFeedback}</p> : null}
         </article>
 
+        <article className="panel panel-request-timeline" id="request-timeline">
+          <h2>모바일 요청 이력 타임라인</h2>
+          <p className="small">최근 요청을 시간순으로 보고 채널/상태 기준으로 빠르게 필터링합니다.</p>
+          <div className="timeline-filter-grid">
+            <label>
+              채널
+              <select
+                value={timelineChannelFilter}
+                onChange={(event) => setTimelineChannelFilter(event.target.value as TimelineChannelFilter)}
+              >
+                <option value="all">전체</option>
+                <option value="attendance">출퇴근</option>
+                <option value="leave">휴가</option>
+              </select>
+            </label>
+            <label>
+              상태
+              <select
+                value={timelineStatusFilter}
+                onChange={(event) => setTimelineStatusFilter(event.target.value as RequestStatusFilter)}
+              >
+                <option value="all">전체</option>
+                <option value="PENDING">대기</option>
+                <option value="APPROVED">승인</option>
+                <option value="REJECTED">반려</option>
+                <option value="CANCELED">취소</option>
+              </select>
+            </label>
+          </div>
+          {filteredMobileRequestTimeline.length === 0 ? (
+            <p className="small muted">현재 필터 조건에서 표시할 모바일 요청 이력이 없습니다.</p>
+          ) : (
+            <ul className="mobile-request-timeline-list" aria-label="모바일 요청 이력 타임라인">
+              {filteredMobileRequestTimeline.map((item) => (
+                <li key={item.id}>
+                  <div className="timeline-head">
+                    <strong>{item.channel === "attendance" ? "출퇴근" : "휴가"}</strong>
+                    <span className={`feedback-state-pill state-${statusToTone(item.status)}`}>{item.status}</span>
+                  </div>
+                  <p>{item.detail}</p>
+                  <time>{formatDateTime(item.at)}</time>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
         <article className="panel" id="attendance">
           <h2>출퇴근</h2>
           <div className="input-grid">
@@ -1363,6 +1644,21 @@ export default function EmployeeSelfServicePage() {
           <p className="small muted" style={{ margin: "4px 0 0" }}>
             근무시간 변화: <strong>{correctionDeltaLabel}</strong>
           </p>
+          <div className="pre-submit-check-wrap">
+            <p className="small" style={{ margin: "8px 0 0" }}>
+              제출 직전 검증 ({attendancePreSubmitChecks.filter((check) => check.pass).length}/
+              {attendancePreSubmitChecks.length} 통과)
+            </p>
+            <ul className="pre-submit-check-list" aria-label="출퇴근 제출 직전 검증">
+              {attendancePreSubmitChecks.map((check) => (
+                <li key={check.id} className={check.pass ? "pass" : "fail"}>
+                  <strong>{check.pass ? "PASS" : "FAIL"}</strong>
+                  <span>{check.label}</span>
+                  <p>{check.detail}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
           {correctionValidation.message ? (
             <p className="small" style={{ margin: "8px 0 0", color: "var(--danger)" }}>
               {correctionValidation.message}
@@ -1378,7 +1674,7 @@ export default function EmployeeSelfServicePage() {
             <button
               className="btn btn-secondary"
               onClick={() => void requestAttendanceCorrection()}
-              disabled={!correctionValidation.isValid}
+              disabled={!correctionValidation.isValid || !attendancePreSubmitValid}
             >
               출퇴근 정정(요청)
             </button>
@@ -1474,6 +1770,21 @@ export default function EmployeeSelfServicePage() {
               <input value={lastLeaveRequestId} onChange={(event) => setLastLeaveRequestId(event.target.value)} />
             </label>
           </div>
+          <div className="pre-submit-check-wrap">
+            <p className="small" style={{ margin: "8px 0 0" }}>
+              제출 직전 검증 ({leavePreSubmitChecks.filter((check) => check.pass).length}/{leavePreSubmitChecks.length}
+              통과)
+            </p>
+            <ul className="pre-submit-check-list" aria-label="휴가 제출 직전 검증">
+              {leavePreSubmitChecks.map((check) => (
+                <li key={check.id} className={check.pass ? "pass" : "fail"}>
+                  <strong>{check.pass ? "PASS" : "FAIL"}</strong>
+                  <span>{check.label}</span>
+                  <p>{check.detail}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
           <div className="leave-quick-actions" role="group" aria-label="휴가 빠른 입력">
             <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("today-half")}>
               오늘 반차
@@ -1486,7 +1797,7 @@ export default function EmployeeSelfServicePage() {
             </button>
           </div>
           <div className="actions">
-            <button className="btn btn-primary" onClick={() => void createLeave()}>
+            <button className="btn btn-primary" onClick={() => void createLeave()} disabled={!leavePreSubmitValid}>
               휴가 신청
             </button>
             <button className="btn btn-secondary" onClick={() => void cancelLeave()} disabled={!lastLeaveRequestId}>

@@ -1031,7 +1031,8 @@ button.queue-badge:hover {
 }
 
 .panel-request-feedback,
-.panel-mobile-shortcuts {
+.panel-mobile-shortcuts,
+.panel-request-timeline {
   grid-column: 1 / -1;
 }
 
@@ -1069,6 +1070,104 @@ button.queue-badge:hover {
 
 .feedback-row-list {
   margin-top: 10px;
+}
+
+.request-filter-row {
+  margin-top: 10px;
+}
+
+.request-filter-row label {
+  max-width: 220px;
+}
+
+.timeline-filter-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-request-timeline-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-request-timeline-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobile-request-timeline-list p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.77rem;
+}
+
+.mobile-request-timeline-list time {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.pre-submit-check-wrap {
+  margin-top: 8px;
+}
+
+.pre-submit-check-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.pre-submit-check-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 7px 9px;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.pre-submit-check-list li.pass {
+  background: #ecfbf4;
+  border-color: #c8ecd9;
+}
+
+.pre-submit-check-list li.fail {
+  background: #ffedf1;
+  border-color: #f2c4ce;
+}
+
+.pre-submit-check-list li strong {
+  font-size: 0.67rem;
+}
+
+.pre-submit-check-list li span {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.pre-submit-check-list li p {
+  margin: 0;
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.74rem;
 }
 
 .feedback-state-pill {
@@ -1953,8 +2052,21 @@ button.queue-badge:hover {
     grid-template-columns: 1fr;
   }
 
+  #request-feedback .request-filter-row label {
+    max-width: none;
+  }
+
   #mobile-shortcuts .mobile-shortcut-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #request-timeline .timeline-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #attendance .pre-submit-check-list li,
+  #leave .pre-submit-check-list li {
+    grid-template-columns: 1fr;
   }
 
   .approval-queue-header {

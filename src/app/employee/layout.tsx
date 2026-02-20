@@ -27,6 +27,7 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <Link href="/employee">오늘</Link>
           <Link href="/employee#request-feedback">요청 피드백</Link>
           <Link href="/employee#mobile-shortcuts">모바일 단축</Link>
+          <Link href="/employee#request-timeline">요청 타임라인</Link>
           <Link href="/employee#attendance">출퇴근</Link>
           <Link href="/employee#leave">휴가</Link>
           <Link href="/employee#leave-calendar">휴가 캘린더</Link>
