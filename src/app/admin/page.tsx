@@ -248,6 +248,49 @@ type QueueMobileApprovalChecklistItem = {
   targetSectionId: string;
 };
 
+type QueueSearchSortScope = "all" | "queue" | "employee" | "request_id" | "detail";
+type QueueSearchSortOption =
+  | "priority_desc"
+  | "wait_desc"
+  | "recent_desc"
+  | "employee_asc"
+  | "queue_asc";
+
+type QueueSearchSortRow = {
+  key: string;
+  queue: "attendance" | "leave" | "payroll";
+  queueLabel: string;
+  itemId: string;
+  employeeId: string;
+  waitHours: number;
+  waitedAtMs: number;
+  severity: QueueAlertLevel;
+  selected: boolean;
+  detail: string;
+};
+
+type QueueProcessingPredictionCard = {
+  key: string;
+  queue: QueueFocus;
+  label: string;
+  pendingCount: number;
+  severity: QueueAlertLevel;
+  predictedClearHours: number;
+  predictedEta: string;
+  recentSuccessRate: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type QueueMobileFollowUpGuideCard = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  detail: string;
+  actionLabel: string;
+  targetSectionId: string;
+};
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -475,6 +518,9 @@ export default function AdminDashboardPage() {
   const [attendanceQueueSort, setAttendanceQueueSort] = useState<AttendanceQueueSort>("checkin_desc");
   const [leaveQueueSort, setLeaveQueueSort] = useState<LeaveQueueSort>("start_desc");
   const [payrollQueueSort, setPayrollQueueSort] = useState<PayrollQueueSort>("period_desc");
+  const [queueSearchSortScope, setQueueSearchSortScope] = useState<QueueSearchSortScope>("all");
+  const [queueSearchSortQuery, setQueueSearchSortQuery] = useState("");
+  const [queueSearchSortOption, setQueueSearchSortOption] = useState<QueueSearchSortOption>("priority_desc");
   const [queueSlaWatchHoursInput, setQueueSlaWatchHoursInput] = useState("24");
   const [queueSlaCriticalHoursInput, setQueueSlaCriticalHoursInput] = useState("48");
 
@@ -999,6 +1045,116 @@ export default function AdminDashboardPage() {
     return { totalCritical, totalWatch, hottestQueue };
   }, [queueBadgeSummaries]);
 
+  const queueSearchSortRows = useMemo<QueueSearchSortRow[]>(() => {
+    const attendanceRows = filteredPendingAttendance.map((record) => ({
+      key: `attendance:${record.id}`,
+      queue: "attendance" as const,
+      queueLabel: "attendance",
+      itemId: record.id,
+      employeeId: record.employeeId,
+      waitHours: attendanceWaitHoursById.get(record.id) ?? 0,
+      waitedAtMs: toTimestamp(record.checkInAt),
+      severity: resolveQueueAlertLevel(attendanceWaitHoursById.get(record.id) ?? 0),
+      selected: selectedAttendanceIds.includes(record.id),
+      detail: `${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`
+    }));
+    const leaveRows = filteredPendingLeave.map((request) => ({
+      key: `leave:${request.id}`,
+      queue: "leave" as const,
+      queueLabel: "leave",
+      itemId: request.id,
+      employeeId: request.employeeId,
+      waitHours: leaveWaitHoursById.get(request.id) ?? 0,
+      waitedAtMs: toTimestamp(request.startDate),
+      severity: resolveQueueAlertLevel(leaveWaitHoursById.get(request.id) ?? 0),
+      selected: selectedLeaveIds.includes(request.id),
+      detail: `${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`
+    }));
+    const payrollRows = filteredPreviewedPayroll.map((run) => ({
+      key: `payroll:${run.id}`,
+      queue: "payroll" as const,
+      queueLabel: "payroll",
+      itemId: run.id,
+      employeeId: run.employeeId ?? "-",
+      waitHours: payrollWaitHoursById.get(run.id) ?? 0,
+      waitedAtMs: toTimestamp(run.periodStart),
+      severity: resolveQueueAlertLevel(payrollWaitHoursById.get(run.id) ?? 0),
+      selected: false,
+      detail: `${run.state} ${run.periodStart} ${run.periodEnd} ${run.grossPayKrw}`
+    }));
+    return [...attendanceRows, ...leaveRows, ...payrollRows];
+  }, [
+    attendanceWaitHoursById,
+    filteredPendingAttendance,
+    filteredPendingLeave,
+    filteredPreviewedPayroll,
+    leaveWaitHoursById,
+    payrollWaitHoursById,
+    resolveQueueAlertLevel,
+    selectedAttendanceIds,
+    selectedLeaveIds
+  ]);
+
+  const filteredQueueSearchSortRows = useMemo(() => {
+    const normalizedQuery = queueSearchSortQuery.trim().toLowerCase();
+    const filteredRows = queueSearchSortRows.filter((row) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+      const queue = row.queueLabel.toLowerCase();
+      const employee = row.employeeId.toLowerCase();
+      const requestId = row.itemId.toLowerCase();
+      const detail = row.detail.toLowerCase();
+      if (queueSearchSortScope === "queue") {
+        return queue.includes(normalizedQuery);
+      }
+      if (queueSearchSortScope === "employee") {
+        return employee.includes(normalizedQuery);
+      }
+      if (queueSearchSortScope === "request_id") {
+        return requestId.includes(normalizedQuery);
+      }
+      if (queueSearchSortScope === "detail") {
+        return detail.includes(normalizedQuery);
+      }
+      return `${queue} ${employee} ${requestId} ${detail}`.includes(normalizedQuery);
+    });
+
+    return [...filteredRows]
+      .sort((left, right) => {
+        if (queueSearchSortOption === "queue_asc") {
+          const queueDiff = left.queueLabel.localeCompare(right.queueLabel, "ko");
+          if (queueDiff !== 0) {
+            return queueDiff;
+          }
+          return right.waitHours - left.waitHours;
+        }
+        if (queueSearchSortOption === "employee_asc") {
+          const employeeDiff = left.employeeId.localeCompare(right.employeeId, "ko");
+          if (employeeDiff !== 0) {
+            return employeeDiff;
+          }
+          return right.waitHours - left.waitHours;
+        }
+        if (queueSearchSortOption === "recent_desc") {
+          return right.waitedAtMs - left.waitedAtMs;
+        }
+        if (queueSearchSortOption === "wait_desc") {
+          return right.waitHours - left.waitHours;
+        }
+        const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        const waitDiff = right.waitHours - left.waitHours;
+        if (waitDiff !== 0) {
+          return waitDiff;
+        }
+        return Number(right.selected) - Number(left.selected);
+      })
+      .slice(0, 18);
+  }, [queueSearchSortOption, queueSearchSortQuery, queueSearchSortRows, queueSearchSortScope]);
+
   const queueEvidencePreviewCards = useMemo<QueueEvidencePreviewCard[]>(() => {
     const attendanceCards: QueueEvidencePreviewCard[] = filteredPendingAttendance.map((record) => {
       const waitedHours = attendanceWaitHoursById.get(record.id) ?? 0;
@@ -1428,6 +1584,193 @@ export default function AdminDashboardPage() {
     selectedAttendanceCount,
     selectedLeaveCount,
     selectedQueueTotalCount,
+    selectedVisibleAttendanceCount,
+    selectedVisibleLeaveCount
+  ]);
+
+  const queueProcessingPredictionCards = useMemo<QueueProcessingPredictionCard[]>(() => {
+    const queueBadges = queueBadgeSummaries.filter((badge) => badge.focus !== "all");
+    const overallPending = queueBadges.reduce((sum, badge) => sum + badge.pending, 0);
+    const overallCritical = queueBadges.reduce((sum, badge) => sum + badge.critical, 0);
+    const overallWatch = queueBadges.reduce((sum, badge) => sum + badge.watch, 0);
+    const overallOldestHours =
+      queueBadges.length > 0 ? Math.max(...queueBadges.map((badge) => badge.oldestHours)) : 0;
+    const overallOk = queueFeedbackByQueue.reduce((sum, feedback) => sum + feedback.ok, 0);
+    const overallFail = queueFeedbackByQueue.reduce((sum, feedback) => sum + feedback.fail, 0);
+
+    const buildCard = (input: {
+      key: string;
+      queue: QueueFocus;
+      label: string;
+      pendingCount: number;
+      oldestHours: number;
+      criticalCount: number;
+      watchCount: number;
+      okCount: number;
+      failCount: number;
+      targetSectionId: string;
+    }): QueueProcessingPredictionCard => {
+      const feedbackTotal = input.okCount + input.failCount;
+      const recentSuccessRate = feedbackTotal > 0 ? input.okCount / feedbackTotal : 0.7;
+      const baselineThroughputPerHour = Math.max(0.4, recentSuccessRate * 1.6 + feedbackTotal / 12);
+      const predictedClearHours =
+        input.pendingCount === 0
+          ? 0
+          : Math.max(1, Math.round(input.pendingCount / baselineThroughputPerHour + input.oldestHours * 0.18));
+      const predictedSeverity = toQueueAlertLevelByRule(
+        predictedClearHours,
+        queueSlaWatchHours,
+        queueSlaCriticalHours
+      );
+      const severity: QueueAlertLevel =
+        input.criticalCount > 0
+          ? "critical"
+          : input.watchCount > 0 && predictedSeverity === "normal"
+            ? "watch"
+            : predictedSeverity;
+      const predictedEta =
+        input.pendingCount === 0
+          ? "now"
+          : formatDateTime(new Date(queueNowMs + predictedClearHours * 3_600_000).toISOString());
+      const detail =
+        input.pendingCount === 0
+          ? "No pending items. Queue is ready for normal throughput."
+          : `Pending ${input.pendingCount}, oldest ${Math.round(input.oldestHours)}h, recent success ${Math.round(
+              recentSuccessRate * 100
+            )}%`;
+
+      return {
+        key: input.key,
+        queue: input.queue,
+        label: input.label,
+        pendingCount: input.pendingCount,
+        severity,
+        predictedClearHours,
+        predictedEta,
+        recentSuccessRate,
+        detail,
+        targetSectionId: input.targetSectionId
+      };
+    };
+
+    const overallCard = buildCard({
+      key: "all",
+      queue: "all",
+      label: "all queues",
+      pendingCount: overallPending,
+      oldestHours: overallOldestHours,
+      criticalCount: overallCritical,
+      watchCount: overallWatch,
+      okCount: overallOk,
+      failCount: overallFail,
+      targetSectionId: "approval-sla-timeline"
+    });
+
+    const queueCards = queueBadges
+      .map((badge) => {
+        const queue = badge.focus as "attendance" | "leave" | "payroll";
+        const feedback = queueFeedbackByQueue.find((item) => item.queue === queue);
+        return buildCard({
+          key: queue,
+          queue,
+          label: badge.label,
+          pendingCount: badge.pending,
+          oldestHours: badge.oldestHours,
+          criticalCount: badge.critical,
+          watchCount: badge.watch,
+          okCount: feedback?.ok ?? 0,
+          failCount: feedback?.fail ?? 0,
+          targetSectionId: "approvals"
+        });
+      })
+      .sort((left, right) => {
+        const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.predictedClearHours - left.predictedClearHours;
+      });
+
+    return [overallCard, ...queueCards].slice(0, 4);
+  }, [
+    queueBadgeSummaries,
+    queueFeedbackByQueue,
+    queueNowMs,
+    queueSlaCriticalHours,
+    queueSlaWatchHours
+  ]);
+
+  const queueMobileFollowUpGuideCards = useMemo<QueueMobileFollowUpGuideCard[]>(() => {
+    const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
+    const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
+    const hiddenSelectionCount = hiddenAttendanceSelection + hiddenLeaveSelection;
+    const hasSearchQuery = queueSearchSortQuery.trim().length > 0;
+    const hasSearchResults = filteredQueueSearchSortRows.length > 0;
+    const topPredictionCard =
+      queueProcessingPredictionCards.find((card) => card.queue !== "all" && card.pendingCount > 0) ??
+      queueProcessingPredictionCards[0];
+
+    return [
+      {
+        key: "critical-backlog-follow-up",
+        label: "critical backlog follow-up",
+        severity: queueAlertOverview.totalCritical > 0 ? "critical" : "normal",
+        detail:
+          queueAlertOverview.totalCritical > 0
+            ? approvalQueueOnlyUrgent
+              ? "Urgent-only filter is active. Continue triage in SLA alerts."
+              : "Enable urgent-only filter, then clear critical backlog first."
+            : "No critical backlog. Keep normal queue order.",
+        actionLabel: queueAlertOverview.totalCritical > 0 ? "open SLA alerts" : "open queue",
+        targetSectionId: queueAlertOverview.totalCritical > 0 ? "approval-sla-alert-rules" : "approvals"
+      },
+      {
+        key: "search-sort-follow-up",
+        label: "search/sort follow-up",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "No rows match current query. Reset or expand search scope."
+            : `${filteredQueueSearchSortRows.length} row(s) are ready in queue search/sort panel.`,
+        actionLabel: "open search/sort",
+        targetSectionId: "approval-search-sort"
+      },
+      {
+        key: "prediction-follow-up",
+        label: "processing prediction follow-up",
+        severity: topPredictionCard?.severity ?? "normal",
+        detail: topPredictionCard
+          ? `${topPredictionCard.label}: clear in ~${Math.round(
+              topPredictionCard.predictedClearHours
+            )}h (ETA ${topPredictionCard.predictedEta})`
+          : "Prediction card is not available yet.",
+        actionLabel: "open prediction",
+        targetSectionId: "approval-processing-prediction"
+      },
+      {
+        key: "selection-follow-up",
+        label: "selection sync follow-up",
+        severity:
+          hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason) ? "watch" : "normal",
+        detail:
+          hiddenSelectionCount > 0
+            ? `${hiddenSelectionCount} selected item(s) are hidden by current filters.`
+            : selectedLeaveCount > 0 && !hasLeaveRejectReason
+              ? "Leave reject reason is required before mobile bulk reject."
+              : "Selection and required inputs are ready.",
+        actionLabel: hiddenSelectionCount > 0 ? "open queue filter" : "open mobile review",
+        targetSectionId: hiddenSelectionCount > 0 ? "approvals" : "approval-mobile-review-sheet"
+      }
+    ];
+  }, [
+    approvalQueueOnlyUrgent,
+    filteredQueueSearchSortRows.length,
+    hasLeaveRejectReason,
+    queueAlertOverview.totalCritical,
+    queueProcessingPredictionCards,
+    queueSearchSortQuery,
+    selectedAttendanceCount,
+    selectedLeaveCount,
     selectedVisibleAttendanceCount,
     selectedVisibleLeaveCount
   ]);
@@ -2841,6 +3184,120 @@ export default function AdminDashboardPage() {
             </p>
           ) : null}
 
+          <section className="queue-search-sort-panel" id="approval-search-sort">
+            <div className="queue-section-head">
+              <h3>Approval Queue Search/Sort</h3>
+              <p className="small muted">
+                Use one panel to search pending items across queues and re-order triage quickly.
+              </p>
+            </div>
+            <div className="queue-search-sort-controls" aria-label="approval queue search and sort controls">
+              <label>
+                Search scope
+                <select
+                  value={queueSearchSortScope}
+                  onChange={(event) => setQueueSearchSortScope(event.target.value as QueueSearchSortScope)}
+                >
+                  <option value="all">all fields</option>
+                  <option value="queue">queue</option>
+                  <option value="employee">employee</option>
+                  <option value="request_id">request id</option>
+                  <option value="detail">detail</option>
+                </select>
+              </label>
+              <label>
+                Sort
+                <select
+                  value={queueSearchSortOption}
+                  onChange={(event) => setQueueSearchSortOption(event.target.value as QueueSearchSortOption)}
+                >
+                  <option value="priority_desc">priority desc</option>
+                  <option value="wait_desc">wait time desc</option>
+                  <option value="recent_desc">recent first</option>
+                  <option value="employee_asc">employee asc</option>
+                  <option value="queue_asc">queue asc</option>
+                </select>
+              </label>
+              <label className="full">
+                Search query
+                <input
+                  value={queueSearchSortQuery}
+                  onChange={(event) => setQueueSearchSortQuery(event.target.value)}
+                  placeholder="employee id, request id, state, memo"
+                />
+              </label>
+              <div className="queue-search-sort-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSearchSortScope("detail");
+                    setQueueSearchSortQuery("PENDING");
+                    setQueueSearchSortOption("priority_desc");
+                  }}
+                >
+                  pending first
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSearchSortScope("all");
+                    setQueueSearchSortOption("wait_desc");
+                    setApprovalQueueOnlyUrgent(true);
+                  }}
+                >
+                  urgent first
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => {
+                    setQueueSearchSortScope("all");
+                    setQueueSearchSortQuery("");
+                    setQueueSearchSortOption("priority_desc");
+                  }}
+                >
+                  reset
+                </button>
+              </div>
+            </div>
+            {filteredQueueSearchSortRows.length === 0 ? (
+              <p className="small muted">No rows match current search/sort options.</p>
+            ) : (
+              <ul className="queue-search-sort-list" aria-label="approval queue search and sort list">
+                {filteredQueueSearchSortRows.map((row) => (
+                  <li key={row.key} className={`severity-${row.severity}${row.selected ? " is-selected" : ""}`}>
+                    <div className="queue-search-sort-head">
+                      <strong>
+                        [{row.queueLabel}] {row.itemId}
+                      </strong>
+                      <span className={`queue-sla-chip level-${row.severity}`}>wait {Math.round(row.waitHours)}h</span>
+                    </div>
+                    <p className="small muted">{row.detail}</p>
+                    <div className="queue-search-sort-meta">
+                      <span className="queue-history-chip">{row.employeeId}</span>
+                      <span className="queue-history-chip">severity {row.severity}</span>
+                      {row.selected ? <span className="queue-history-chip">selected</span> : null}
+                    </div>
+                    <div className="queue-search-sort-item-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => setApprovalQueueFocus(row.queue)}
+                      >
+                        focus queue
+                      </button>
+                      <Link className="btn btn-secondary btn-small" href="/admin#approvals">
+                        open queue
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className="queue-evidence-preview-panel" id="approval-evidence-preview">
             <div className="queue-section-head">
               <h3>승인 근거 프리뷰</h3>
@@ -3029,6 +3486,39 @@ export default function AdminDashboardPage() {
             </ul>
           </section>
 
+          <section className="queue-processing-prediction-panel" id="approval-processing-prediction">
+            <div className="queue-section-head">
+              <h3>Approval Processing Prediction</h3>
+              <p className="small muted">
+                Predicted queue clear time is calculated from pending volume, oldest wait, and recent success rate.
+              </p>
+            </div>
+            <ul className="queue-processing-prediction-list" aria-label="approval processing prediction feedback list">
+              {queueProcessingPredictionCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-processing-prediction-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>{card.severity}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-processing-prediction-meta">
+                    <span className="queue-history-chip">pending {card.pendingCount}</span>
+                    <span className="queue-history-chip">clear ~{Math.round(card.predictedClearHours)}h</span>
+                    <span className="queue-history-chip">ETA {card.predictedEta}</span>
+                    <span className="queue-history-chip">
+                      success {Math.round(card.recentSuccessRate * 100)}%
+                    </span>
+                  </div>
+                  <div className="queue-processing-prediction-actions">
+                    <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
+                      open section
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="queue-mobile-review-sheet" id="approval-mobile-review-sheet">
             <div className="queue-section-head">
               <h3>모바일 일괄 검토 시트</h3>
@@ -3119,6 +3609,31 @@ export default function AdminDashboardPage() {
                   <Link className="btn btn-secondary btn-small" href={`/admin#${item.targetSectionId}`}>
                     이동
                   </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="queue-mobile-follow-up-guide-panel" id="approval-mobile-follow-up-guide">
+            <div className="queue-section-head">
+              <h3>Mobile Follow-up Action Guide</h3>
+              <p className="small muted">
+                Shows the next mobile action after queue review so follow-up can be completed in one tap.
+              </p>
+            </div>
+            <ul className="queue-mobile-follow-up-guide-list" aria-label="approval mobile follow-up action guide list">
+              {queueMobileFollowUpGuideCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-mobile-follow-up-guide-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>{card.severity}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-mobile-follow-up-guide-actions">
+                    <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
+                      {card.actionLabel}
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>
