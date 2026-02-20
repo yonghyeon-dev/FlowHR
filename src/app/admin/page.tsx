@@ -291,6 +291,42 @@ type QueueMobileFollowUpGuideCard = {
   targetSectionId: string;
 };
 
+type QueueHistorySortAccuracyCard = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  accuracyScore: number;
+  matchedCount: number;
+  totalCompared: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type QueueDelayRiskPredictionCard = {
+  key: string;
+  queue: QueueFocus;
+  label: string;
+  severity: QueueAlertLevel;
+  pendingCount: number;
+  watchCount: number;
+  criticalCount: number;
+  averageWaitHours: number;
+  maxWaitHours: number;
+  riskScore: number;
+  etaLabel: string;
+  detail: string;
+  targetSectionId: string;
+};
+
+type QueueMobileFollowUpRecommendationCard = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  detail: string;
+  actionLabel: string;
+  targetSectionId: string;
+};
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -395,6 +431,68 @@ function queueAlertLevelRank(level: QueueAlertLevel) {
     return 1;
   }
   return 0;
+}
+
+function matchesQueueSearchSort(
+  scope: QueueSearchSortScope,
+  normalizedQuery: string,
+  row: QueueSearchSortRow
+) {
+  if (!normalizedQuery) {
+    return true;
+  }
+  const queue = row.queueLabel.toLowerCase();
+  const employee = row.employeeId.toLowerCase();
+  const requestId = row.itemId.toLowerCase();
+  const detail = row.detail.toLowerCase();
+
+  if (scope === "queue") {
+    return queue.includes(normalizedQuery);
+  }
+  if (scope === "employee") {
+    return employee.includes(normalizedQuery);
+  }
+  if (scope === "request_id") {
+    return requestId.includes(normalizedQuery);
+  }
+  if (scope === "detail") {
+    return detail.includes(normalizedQuery);
+  }
+  return `${queue} ${employee} ${requestId} ${detail}`.includes(normalizedQuery);
+}
+
+function sortQueueSearchSortRows(rows: QueueSearchSortRow[], option: QueueSearchSortOption) {
+  return [...rows].sort((left, right) => {
+    if (option === "queue_asc") {
+      const queueDiff = left.queueLabel.localeCompare(right.queueLabel, "ko");
+      if (queueDiff !== 0) {
+        return queueDiff;
+      }
+      return right.waitHours - left.waitHours;
+    }
+    if (option === "employee_asc") {
+      const employeeDiff = left.employeeId.localeCompare(right.employeeId, "ko");
+      if (employeeDiff !== 0) {
+        return employeeDiff;
+      }
+      return right.waitHours - left.waitHours;
+    }
+    if (option === "recent_desc") {
+      return right.waitedAtMs - left.waitedAtMs;
+    }
+    if (option === "wait_desc") {
+      return right.waitHours - left.waitHours;
+    }
+    const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+    if (severityDiff !== 0) {
+      return severityDiff;
+    }
+    const waitDiff = right.waitHours - left.waitHours;
+    if (waitDiff !== 0) {
+      return waitDiff;
+    }
+    return Number(right.selected) - Number(left.selected);
+  });
 }
 
 function summarizeQueueAlertByRule(
@@ -1097,62 +1195,69 @@ export default function AdminDashboardPage() {
 
   const filteredQueueSearchSortRows = useMemo(() => {
     const normalizedQuery = queueSearchSortQuery.trim().toLowerCase();
-    const filteredRows = queueSearchSortRows.filter((row) => {
-      if (!normalizedQuery) {
-        return true;
-      }
-      const queue = row.queueLabel.toLowerCase();
-      const employee = row.employeeId.toLowerCase();
-      const requestId = row.itemId.toLowerCase();
-      const detail = row.detail.toLowerCase();
-      if (queueSearchSortScope === "queue") {
-        return queue.includes(normalizedQuery);
-      }
-      if (queueSearchSortScope === "employee") {
-        return employee.includes(normalizedQuery);
-      }
-      if (queueSearchSortScope === "request_id") {
-        return requestId.includes(normalizedQuery);
-      }
-      if (queueSearchSortScope === "detail") {
-        return detail.includes(normalizedQuery);
-      }
-      return `${queue} ${employee} ${requestId} ${detail}`.includes(normalizedQuery);
-    });
+    const filteredRows = queueSearchSortRows.filter((row) =>
+      matchesQueueSearchSort(queueSearchSortScope, normalizedQuery, row)
+    );
 
-    return [...filteredRows]
-      .sort((left, right) => {
-        if (queueSearchSortOption === "queue_asc") {
-          const queueDiff = left.queueLabel.localeCompare(right.queueLabel, "ko");
-          if (queueDiff !== 0) {
-            return queueDiff;
-          }
-          return right.waitHours - left.waitHours;
-        }
-        if (queueSearchSortOption === "employee_asc") {
-          const employeeDiff = left.employeeId.localeCompare(right.employeeId, "ko");
-          if (employeeDiff !== 0) {
-            return employeeDiff;
-          }
-          return right.waitHours - left.waitHours;
-        }
-        if (queueSearchSortOption === "recent_desc") {
-          return right.waitedAtMs - left.waitedAtMs;
-        }
-        if (queueSearchSortOption === "wait_desc") {
-          return right.waitHours - left.waitHours;
-        }
-        const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
-        if (severityDiff !== 0) {
-          return severityDiff;
-        }
-        const waitDiff = right.waitHours - left.waitHours;
-        if (waitDiff !== 0) {
-          return waitDiff;
-        }
-        return Number(right.selected) - Number(left.selected);
-      })
-      .slice(0, 18);
+    return sortQueueSearchSortRows(filteredRows, queueSearchSortOption).slice(0, 18);
+  }, [queueSearchSortOption, queueSearchSortQuery, queueSearchSortRows, queueSearchSortScope]);
+
+  const queueHistorySortAccuracyCards = useMemo<QueueHistorySortAccuracyCard[]>(() => {
+    const normalizedQuery = queueSearchSortQuery.trim().toLowerCase();
+    const scopedRows = queueSearchSortRows.filter((row) =>
+      matchesQueueSearchSort(queueSearchSortScope, normalizedQuery, row)
+    );
+    const currentTopRows = sortQueueSearchSortRows(scopedRows, queueSearchSortOption);
+    const totalCompared = Math.min(10, currentTopRows.length);
+    const currentTopKeys = new Set(currentTopRows.slice(0, totalCompared).map((row) => row.key));
+
+    const toAccuracyCard = (
+      key: string,
+      label: string,
+      baselineOption: QueueSearchSortOption,
+      targetSectionId: string
+    ): QueueHistorySortAccuracyCard => {
+      if (totalCompared === 0) {
+        return {
+          key,
+          label,
+          severity: "normal",
+          accuracyScore: 100,
+          matchedCount: 0,
+          totalCompared: 0,
+          detail: "No rows available for current search/sort scope.",
+          targetSectionId
+        };
+      }
+
+      const baselineTopRows = sortQueueSearchSortRows(scopedRows, baselineOption).slice(0, totalCompared);
+      const matchedCount = baselineTopRows.filter((row) => currentTopKeys.has(row.key)).length;
+      const accuracyScore = Math.round((matchedCount / totalCompared) * 100);
+      const severity: QueueAlertLevel = accuracyScore < 50 ? "critical" : accuracyScore < 75 ? "watch" : "normal";
+
+      return {
+        key,
+        label,
+        severity,
+        accuracyScore,
+        matchedCount,
+        totalCompared,
+        detail: `Top ${matchedCount}/${totalCompared} rows match ${label.toLowerCase()}.`,
+        targetSectionId
+      };
+    };
+
+    return [
+      toAccuracyCard("priority", "priority-first baseline", "priority_desc", "approval-search-sort"),
+      toAccuracyCard("wait", "wait-time baseline", "wait_desc", "approval-search-sort"),
+      toAccuracyCard("recent", "recent-first baseline", "recent_desc", "approval-search-sort")
+    ].sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return left.accuracyScore - right.accuracyScore;
+    });
   }, [queueSearchSortOption, queueSearchSortQuery, queueSearchSortRows, queueSearchSortScope]);
 
   const queueEvidencePreviewCards = useMemo<QueueEvidencePreviewCard[]>(() => {
@@ -1700,6 +1805,101 @@ export default function AdminDashboardPage() {
     queueSlaWatchHours
   ]);
 
+  const queueDelayRiskPredictionCards = useMemo<QueueDelayRiskPredictionCard[]>(() => {
+    const toRiskCard = (input: {
+      key: string;
+      queue: QueueFocus;
+      label: string;
+      rows: QueueSearchSortRow[];
+      targetSectionId: string;
+    }): QueueDelayRiskPredictionCard => {
+      const pendingCount = input.rows.length;
+      const watchCount = input.rows.filter((row) => row.waitHours >= queueSlaWatchHours).length;
+      const criticalCount = input.rows.filter((row) => row.waitHours >= queueSlaCriticalHours).length;
+      const totalWaitHours = input.rows.reduce((sum, row) => sum + row.waitHours, 0);
+      const averageWaitHours = pendingCount > 0 ? totalWaitHours / pendingCount : 0;
+      const maxWaitHours = pendingCount > 0 ? Math.max(...input.rows.map((row) => row.waitHours)) : 0;
+      const rawRiskScore = averageWaitHours * 0.8 + maxWaitHours * 0.6 + watchCount * 10 + criticalCount * 20;
+      const riskScore = pendingCount > 0 ? Math.min(100, Math.round(rawRiskScore)) : 0;
+      const severity: QueueAlertLevel =
+        criticalCount > 0 || riskScore >= 80 ? "critical" : watchCount > 0 || riskScore >= 45 ? "watch" : "normal";
+      const etaLabel =
+        pendingCount === 0
+          ? "stable"
+          : severity === "critical"
+            ? "act now"
+            : severity === "watch"
+              ? "within 1 business day"
+              : "within today";
+      const detail =
+        pendingCount === 0
+          ? "No pending queue items."
+          : `risk ${riskScore} / avg ${Math.round(averageWaitHours)}h / max ${Math.round(maxWaitHours)}h`;
+
+      return {
+        key: input.key,
+        queue: input.queue,
+        label: input.label,
+        severity,
+        pendingCount,
+        watchCount,
+        criticalCount,
+        averageWaitHours,
+        maxWaitHours,
+        riskScore,
+        etaLabel,
+        detail,
+        targetSectionId: input.targetSectionId
+      };
+    };
+
+    const attendanceRows = queueSearchSortRows.filter((row) => row.queue === "attendance");
+    const leaveRows = queueSearchSortRows.filter((row) => row.queue === "leave");
+    const payrollRows = queueSearchSortRows.filter((row) => row.queue === "payroll");
+    const cards = [
+      toRiskCard({
+        key: "all",
+        queue: "all",
+        label: "all queues",
+        rows: queueSearchSortRows,
+        targetSectionId: "approval-search-sort"
+      }),
+      toRiskCard({
+        key: "attendance",
+        queue: "attendance",
+        label: "attendance",
+        rows: attendanceRows,
+        targetSectionId: "approvals"
+      }),
+      toRiskCard({
+        key: "leave",
+        queue: "leave",
+        label: "leave",
+        rows: leaveRows,
+        targetSectionId: "approvals"
+      }),
+      toRiskCard({
+        key: "payroll",
+        queue: "payroll",
+        label: "payroll",
+        rows: payrollRows,
+        targetSectionId: "approvals"
+      })
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      const scoreDiff = right.riskScore - left.riskScore;
+      if (scoreDiff !== 0) {
+        return scoreDiff;
+      }
+      return right.pendingCount - left.pendingCount;
+    });
+  }, [queueSearchSortRows, queueSlaCriticalHours, queueSlaWatchHours]);
+
   const queueMobileFollowUpGuideCards = useMemo<QueueMobileFollowUpGuideCard[]>(() => {
     const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
     const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
@@ -1768,6 +1968,79 @@ export default function AdminDashboardPage() {
     hasLeaveRejectReason,
     queueAlertOverview.totalCritical,
     queueProcessingPredictionCards,
+    queueSearchSortQuery,
+    selectedAttendanceCount,
+    selectedLeaveCount,
+    selectedVisibleAttendanceCount,
+    selectedVisibleLeaveCount
+  ]);
+
+  const queueMobileFollowUpRecommendationCards = useMemo<QueueMobileFollowUpRecommendationCard[]>(() => {
+    const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
+    const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
+    const hiddenSelectionCount = hiddenAttendanceSelection + hiddenLeaveSelection;
+    const hasSearchQuery = queueSearchSortQuery.trim().length > 0;
+    const hasSearchResults = filteredQueueSearchSortRows.length > 0;
+    const topSortAccuracyRisk = queueHistorySortAccuracyCards[0];
+    const topDelayRisk = queueDelayRiskPredictionCards[0];
+    const hasSortAccuracyRisk =
+      topSortAccuracyRisk &&
+      topSortAccuracyRisk.totalCompared > 0 &&
+      topSortAccuracyRisk.severity !== "normal";
+    const hasDelayRisk = topDelayRisk && topDelayRisk.pendingCount > 0 && topDelayRisk.severity !== "normal";
+
+    return [
+      {
+        key: "sort-accuracy-follow-up",
+        label: "history sort accuracy follow-up",
+        severity: hasSortAccuracyRisk ? topSortAccuracyRisk?.severity ?? "watch" : "normal",
+        detail: hasSortAccuracyRisk
+          ? topSortAccuracyRisk?.detail ?? "Review sort-accuracy cards."
+          : "Current queue history sort accuracy is stable.",
+        actionLabel: "open sort accuracy",
+        targetSectionId: "approval-history-sort-accuracy"
+      },
+      {
+        key: "delay-risk-follow-up",
+        label: "delay risk follow-up",
+        severity: hasDelayRisk ? topDelayRisk?.severity ?? "watch" : "normal",
+        detail: hasDelayRisk ? topDelayRisk?.detail ?? "Review delay-risk prediction cards." : "No immediate delay risk.",
+        actionLabel: "open delay risk",
+        targetSectionId: "approval-delay-risk-prediction"
+      },
+      {
+        key: "search-follow-up",
+        label: "search/sort execution follow-up",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "Current query has no matches. Reset scope or broaden query."
+            : `${filteredQueueSearchSortRows.length} row(s) are ready for next action.`,
+        actionLabel: "open search/sort",
+        targetSectionId: "approval-search-sort"
+      },
+      {
+        key: "selection-follow-up",
+        label: "selection integrity follow-up",
+        severity:
+          hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason)
+            ? "watch"
+            : "normal",
+        detail:
+          hiddenSelectionCount > 0
+            ? `${hiddenSelectionCount} selected item(s) are hidden by active filters.`
+            : selectedLeaveCount > 0 && !hasLeaveRejectReason
+              ? "Leave reject reason is required before reject action."
+              : "Selection and required inputs are aligned.",
+        actionLabel: hiddenSelectionCount > 0 ? "open queue" : "open mobile checklist",
+        targetSectionId: hiddenSelectionCount > 0 ? "approvals" : "approval-mobile-checklist"
+      }
+    ];
+  }, [
+    filteredQueueSearchSortRows.length,
+    hasLeaveRejectReason,
+    queueDelayRiskPredictionCards,
+    queueHistorySortAccuracyCards,
     queueSearchSortQuery,
     selectedAttendanceCount,
     selectedLeaveCount,
@@ -3298,6 +3571,37 @@ export default function AdminDashboardPage() {
             )}
           </section>
 
+          <section className="queue-history-sort-accuracy-panel" id="approval-history-sort-accuracy">
+            <div className="queue-section-head">
+              <h3>Approval History Sort Accuracy</h3>
+              <p className="small muted">
+                Compares top queue history rows with baseline sort models to check whether current ordering is accurate.
+              </p>
+            </div>
+            <ul className="queue-history-sort-accuracy-list" aria-label="approval history sort accuracy feedback list">
+              {queueHistorySortAccuracyCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-history-sort-accuracy-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>score {card.accuracyScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-history-sort-accuracy-meta">
+                    <span className="queue-history-chip">
+                      match {card.matchedCount}/{card.totalCompared}
+                    </span>
+                    <span className="queue-history-chip">severity {card.severity}</span>
+                  </div>
+                  <div className="queue-history-sort-accuracy-actions">
+                    <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
+                      open search/sort
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="queue-evidence-preview-panel" id="approval-evidence-preview">
             <div className="queue-section-head">
               <h3>승인 근거 프리뷰</h3>
@@ -3519,6 +3823,37 @@ export default function AdminDashboardPage() {
             </ul>
           </section>
 
+          <section className="queue-delay-risk-prediction-panel" id="approval-delay-risk-prediction">
+            <div className="queue-section-head">
+              <h3>Approval Delay Risk Prediction</h3>
+              <p className="small muted">
+                Scores delay risk by queue using wait thresholds and backlog concentration for immediate prioritization.
+              </p>
+            </div>
+            <ul className="queue-delay-risk-prediction-list" aria-label="approval delay risk prediction feedback list">
+              {queueDelayRiskPredictionCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-delay-risk-prediction-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>risk {card.riskScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-delay-risk-prediction-meta">
+                    <span className="queue-history-chip">pending {card.pendingCount}</span>
+                    <span className="queue-history-chip">watch {card.watchCount}</span>
+                    <span className="queue-history-chip">critical {card.criticalCount}</span>
+                    <span className="queue-history-chip">ETA {card.etaLabel}</span>
+                  </div>
+                  <div className="queue-delay-risk-prediction-actions">
+                    <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
+                      open section
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="queue-mobile-review-sheet" id="approval-mobile-review-sheet">
             <div className="queue-section-head">
               <h3>모바일 일괄 검토 시트</h3>
@@ -3630,6 +3965,34 @@ export default function AdminDashboardPage() {
                   </div>
                   <p className="small muted">{card.detail}</p>
                   <div className="queue-mobile-follow-up-guide-actions">
+                    <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
+                      {card.actionLabel}
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="queue-mobile-follow-up-recommendation-panel" id="approval-mobile-follow-up-recommendation">
+            <div className="queue-section-head">
+              <h3>Mobile Follow-up Recommendation</h3>
+              <p className="small muted">
+                Prioritized recommendations combine sort accuracy, delay risk, and selection readiness into one mobile panel.
+              </p>
+            </div>
+            <ul
+              className="queue-mobile-follow-up-recommendation-list"
+              aria-label="approval mobile follow-up recommendation list"
+            >
+              {queueMobileFollowUpRecommendationCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-mobile-follow-up-recommendation-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>{card.severity}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-mobile-follow-up-recommendation-actions">
                     <Link className="btn btn-secondary btn-small" href={`/admin#${card.targetSectionId}`}>
                       {card.actionLabel}
                     </Link>

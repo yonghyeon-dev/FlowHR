@@ -41,14 +41,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
           <Link href="/admin#approval-search-sort">승인 검색/정렬</Link>
+          <Link href="/admin#approval-history-sort-accuracy">승인 이력 정렬 정확도</Link>
           <Link href="/admin#approval-evidence-preview">승인 근거 프리뷰</Link>
           <Link href="/admin#approval-evidence-comparison">승인 근거 비교 카드</Link>
           <Link href="/admin#approval-sla-timeline">승인 SLA 타임라인</Link>
           <Link href="/admin#approval-sla-alert-rules">승인 SLA 알림 규칙</Link>
           <Link href="/admin#approval-processing-prediction">승인 처리 예측</Link>
+          <Link href="/admin#approval-delay-risk-prediction">승인 지연 위험 예측</Link>
           <Link href="/admin#approval-mobile-review-sheet">승인 모바일 검토 시트</Link>
           <Link href="/admin#approval-mobile-checklist">승인 모바일 체크리스트</Link>
           <Link href="/admin#approval-mobile-follow-up-guide">승인 모바일 후속 가이드</Link>
+          <Link href="/admin#approval-mobile-follow-up-recommendation">승인 모바일 후속 추천</Link>
           <Link href="/admin#approval-bulk-validation">승인 검증</Link>
           <Link href="/admin#approval-item-history">승인 이력 요약</Link>
           <Link href="/admin#approval-mobile-feedback">승인 모바일 피드백</Link>
