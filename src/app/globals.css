@@ -448,6 +448,97 @@ textarea:focus {
   gap: 8px;
 }
 
+.approval-queue-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.queue-badge-strip {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.queue-badge {
+  border: 1px solid var(--line);
+  background: #f4f8ff;
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 8px 11px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+button.queue-badge {
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+
+button.queue-badge:hover {
+  border-color: #b8cff7;
+  transform: translateY(-1px);
+}
+
+.queue-badge.active {
+  color: #fff;
+  border-color: #1f58bd;
+  background: linear-gradient(135deg, #2467dc 0%, #1f58bd 100%);
+}
+
+.queue-badge.active .queue-badge-title,
+.queue-badge.active .queue-badge-count,
+.queue-badge.active .queue-badge-meta {
+  color: #fff;
+}
+
+.queue-badge-title {
+  font-size: 0.71rem;
+  color: var(--muted);
+}
+
+.queue-badge-count {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: inherit;
+}
+
+.queue-badge-meta {
+  font-size: 0.69rem;
+  color: var(--muted);
+}
+
+.queue-control-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding: 4px 8px;
+}
+
+.queue-control-inline select {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 2px 4px;
+}
+
+.queue-control-inline select:focus {
+  outline: none;
+}
+
 .queue-actions {
   display: flex;
   flex-wrap: wrap;
@@ -741,5 +832,35 @@ textarea:focus {
 
   .input-grid {
     grid-template-columns: 1fr;
+  }
+
+  .approval-queue-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #approvals .queue-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #approvals .queue-toolbar .btn,
+  #approvals .queue-toolbar .queue-control-inline {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #approvals .queue-control-inline select {
+    width: 100%;
+  }
+
+  #approvals .simple-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #approvals .queue-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

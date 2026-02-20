@@ -132,6 +132,18 @@ type LeaveBalanceDto = {
   updatedAt: string;
 };
 
+type QueueFocus = "all" | "attendance" | "leave" | "payroll";
+type AttendanceQueueSort = "checkin_desc" | "checkin_asc" | "employee_asc";
+type LeaveQueueSort = "start_desc" | "start_asc" | "employee_asc";
+type PayrollQueueSort = "period_desc" | "gross_desc" | "employee_asc";
+type QueueBadgeSummary = {
+  focus: QueueFocus;
+  label: string;
+  pending: number;
+  visible: number;
+  selected: number;
+};
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -195,6 +207,17 @@ function minutesToHours(minutes: number) {
   return `${hours.toFixed(1)}h`;
 }
 
+function toTimestamp(value: string | null) {
+  if (!value) {
+    return 0;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 0;
+  }
+  return parsed.getTime();
+}
+
 export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
 
@@ -240,6 +263,11 @@ export default function AdminDashboardPage() {
   const [previewedPayroll, setPreviewedPayroll] = useState<PayrollRunDto[]>([]);
   const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<string[]>([]);
   const [selectedLeaveIds, setSelectedLeaveIds] = useState<string[]>([]);
+  const [approvalQueueFocus, setApprovalQueueFocus] = useState<QueueFocus>("all");
+  const [approvalQueueSearch, setApprovalQueueSearch] = useState("");
+  const [attendanceQueueSort, setAttendanceQueueSort] = useState<AttendanceQueueSort>("checkin_desc");
+  const [leaveQueueSort, setLeaveQueueSort] = useState<LeaveQueueSort>("start_desc");
+  const [payrollQueueSort, setPayrollQueueSort] = useState<PayrollQueueSort>("period_desc");
 
   const [aggregateEmployeeId, setAggregateEmployeeId] = useState("");
   const [aggregates, setAggregates] = useState<AttendanceAggregateDto[]>([]);
@@ -311,6 +339,135 @@ export default function AdminDashboardPage() {
 
   const selectedAttendanceCount = selectedAttendanceIds.length;
   const selectedLeaveCount = selectedLeaveIds.length;
+  const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
+
+  const filteredPendingAttendance = useMemo(() => {
+    const filtered = pendingAttendance.filter((record) => {
+      if (!normalizedQueueSearch) {
+        return true;
+      }
+      const haystack = `${record.employeeId} ${record.id} ${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`.toLowerCase();
+      return haystack.includes(normalizedQueueSearch);
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (attendanceQueueSort === "employee_asc") {
+        return left.employeeId.localeCompare(right.employeeId, "ko");
+      }
+      const leftTime = toTimestamp(left.checkInAt);
+      const rightTime = toTimestamp(right.checkInAt);
+      if (attendanceQueueSort === "checkin_asc") {
+        return leftTime - rightTime;
+      }
+      return rightTime - leftTime;
+    });
+  }, [attendanceQueueSort, normalizedQueueSearch, pendingAttendance]);
+
+  const filteredPendingLeave = useMemo(() => {
+    const filtered = pendingLeave.filter((request) => {
+      if (!normalizedQueueSearch) {
+        return true;
+      }
+      const haystack =
+        `${request.employeeId} ${request.id} ${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`.toLowerCase();
+      return haystack.includes(normalizedQueueSearch);
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (leaveQueueSort === "employee_asc") {
+        return left.employeeId.localeCompare(right.employeeId, "ko");
+      }
+      const leftTime = toTimestamp(left.startDate);
+      const rightTime = toTimestamp(right.startDate);
+      if (leaveQueueSort === "start_asc") {
+        return leftTime - rightTime;
+      }
+      return rightTime - leftTime;
+    });
+  }, [leaveQueueSort, normalizedQueueSearch, pendingLeave]);
+
+  const filteredPreviewedPayroll = useMemo(() => {
+    const filtered = previewedPayroll.filter((run) => {
+      if (!normalizedQueueSearch) {
+        return true;
+      }
+      const haystack =
+        `${run.employeeId ?? ""} ${run.id} ${run.state} ${run.periodStart} ${run.periodEnd} ${run.grossPayKrw}`.toLowerCase();
+      return haystack.includes(normalizedQueueSearch);
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (payrollQueueSort === "employee_asc") {
+        return (left.employeeId ?? "").localeCompare(right.employeeId ?? "", "ko");
+      }
+      if (payrollQueueSort === "gross_desc") {
+        return right.grossPayKrw - left.grossPayKrw;
+      }
+      const leftPeriod = toTimestamp(left.periodStart);
+      const rightPeriod = toTimestamp(right.periodStart);
+      return rightPeriod - leftPeriod;
+    });
+  }, [normalizedQueueSearch, payrollQueueSort, previewedPayroll]);
+
+  const showAttendanceQueue = approvalQueueFocus === "all" || approvalQueueFocus === "attendance";
+  const showLeaveQueue = approvalQueueFocus === "all" || approvalQueueFocus === "leave";
+  const showPayrollQueue = approvalQueueFocus === "all" || approvalQueueFocus === "payroll";
+
+  const selectedVisibleAttendanceCount = filteredPendingAttendance.filter((record) =>
+    selectedAttendanceIds.includes(record.id)
+  ).length;
+  const selectedVisibleLeaveCount = filteredPendingLeave.filter((request) =>
+    selectedLeaveIds.includes(request.id)
+  ).length;
+
+  const queueBadgeSummaries = useMemo<QueueBadgeSummary[]>(
+    () => [
+      {
+        focus: "all",
+        label: "전체",
+        pending: pendingAttendance.length + pendingLeave.length + previewedPayroll.length,
+        visible:
+          filteredPendingAttendance.length +
+          filteredPendingLeave.length +
+          filteredPreviewedPayroll.length,
+        selected: selectedVisibleAttendanceCount + selectedVisibleLeaveCount
+      },
+      {
+        focus: "attendance",
+        label: "출퇴근",
+        pending: pendingAttendance.length,
+        visible: filteredPendingAttendance.length,
+        selected: selectedVisibleAttendanceCount
+      },
+      {
+        focus: "leave",
+        label: "휴가",
+        pending: pendingLeave.length,
+        visible: filteredPendingLeave.length,
+        selected: selectedVisibleLeaveCount
+      },
+      {
+        focus: "payroll",
+        label: "급여",
+        pending: previewedPayroll.length,
+        visible: filteredPreviewedPayroll.length,
+        selected: 0
+      }
+    ],
+    [
+      filteredPendingAttendance.length,
+      filteredPendingLeave.length,
+      filteredPreviewedPayroll.length,
+      pendingAttendance.length,
+      pendingLeave.length,
+      previewedPayroll.length,
+      selectedVisibleAttendanceCount,
+      selectedVisibleLeaveCount
+    ]
+  );
+
+  const activeQueueBadgeSummary =
+    queueBadgeSummaries.find((badge) => badge.focus === approvalQueueFocus) ?? queueBadgeSummaries[0];
 
   async function callApi(
     label: string,
@@ -622,7 +779,7 @@ export default function AdminDashboardPage() {
   }
 
   function selectAllAttendance() {
-    setSelectedAttendanceIds(pendingAttendance.map((record) => record.id));
+    setSelectedAttendanceIds(filteredPendingAttendance.map((record) => record.id));
   }
 
   function clearAttendanceSelection() {
@@ -630,7 +787,7 @@ export default function AdminDashboardPage() {
   }
 
   function selectAllLeave() {
-    setSelectedLeaveIds(pendingLeave.map((request) => request.id));
+    setSelectedLeaveIds(filteredPendingLeave.map((request) => request.id));
   }
 
   function clearLeaveSelection() {
@@ -1480,8 +1637,37 @@ export default function AdminDashboardPage() {
         </article>
 
         <article className="panel" id="approvals">
-          <h2>승인 대기함</h2>
-          <div className="input-grid">
+          <div className="approval-queue-header">
+            <div>
+              <h2>승인 대기함</h2>
+              <p className="small">승인 큐 필터/검색/정렬로 대기열을 빠르게 좁혀 일괄 처리합니다.</p>
+            </div>
+            <button className="btn btn-primary" onClick={() => void refreshInbox()}>
+              대기함 새로고침
+            </button>
+          </div>
+
+          <div className="queue-badge-strip" role="tablist" aria-label="승인 큐 필터">
+            {queueBadgeSummaries.map((badge) => (
+              <button
+                key={badge.focus}
+                type="button"
+                role="tab"
+                aria-selected={approvalQueueFocus === badge.focus}
+                className={`queue-badge${approvalQueueFocus === badge.focus ? " active" : ""}`}
+                onClick={() => setApprovalQueueFocus(badge.focus)}
+              >
+                <span className="queue-badge-title">{badge.label}</span>
+                <span className="queue-badge-count">대기 {badge.pending}</span>
+                <span className="queue-badge-meta">
+                  검색 {badge.visible}
+                  {badge.selected > 0 ? ` / 선택 ${badge.selected}` : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="input-grid" style={{ marginTop: 12 }}>
             <label>
               기간 시작
               <input
@@ -1496,6 +1682,14 @@ export default function AdminDashboardPage() {
                 type="datetime-local"
                 value={periodEnd}
                 onChange={(event) => setPeriodEnd(event.target.value)}
+              />
+            </label>
+            <label className="full">
+              큐 검색
+              <input
+                value={approvalQueueSearch}
+                onChange={(event) => setApprovalQueueSearch(event.target.value)}
+                placeholder="직원ID, 요청ID, 상태, 메모/사유 검색"
               />
             </label>
             <label className="full">
@@ -1515,162 +1709,211 @@ export default function AdminDashboardPage() {
               />
             </label>
           </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void refreshInbox()}>
-              대기함 새로고침
-            </button>
-          </div>
 
-          <hr className="divider" />
-          <p className="small">
-            출퇴근 (PENDING {pendingAttendance.length}건 / 선택 {selectedAttendanceCount}건)
+          <p className="small" style={{ marginTop: 10 }}>
+            {activeQueueBadgeSummary.label} 큐: 대기 {activeQueueBadgeSummary.pending}건 / 검색 결과{" "}
+            {activeQueueBadgeSummary.visible}건
+            {activeQueueBadgeSummary.selected > 0 ? ` / 선택 ${activeQueueBadgeSummary.selected}건` : ""}
           </p>
-          <div className="queue-toolbar">
-            <button className="btn btn-secondary btn-small" onClick={selectAllAttendance} disabled={pendingAttendance.length === 0}>
-              전체 선택
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={clearAttendanceSelection} disabled={selectedAttendanceCount === 0}>
-              선택 해제
-            </button>
-            <button className="btn btn-primary btn-small" onClick={() => void approveSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
-              선택 승인
-            </button>
-            <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
-              선택 반려
-            </button>
-          </div>
-          {pendingAttendance.length === 0 ? (
-            <p className="small muted">대기 중인 출퇴근이 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="출퇴근 승인 대기">
-              {pendingAttendance.map((record) => (
-                <li key={record.id}>
-                  <label className="queue-item-main">
-                    <input
-                      type="checkbox"
-                      checked={selectedAttendanceIds.includes(record.id)}
-                      onChange={(event) => toggleAttendanceSelection(record.id, event.target.checked)}
-                    />
-                    <span>
-                      <strong>{record.employeeId}</strong>{" "}
-                      <span className="muted">
-                        {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
-                        {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
-                      </span>
-                    </span>
-                  </label>
-                  <div className="queue-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-small"
-                      onClick={() => void approveAttendance(record.id)}
-                    >
-                      승인
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      onClick={() => void rejectAttendance(record.id)}
-                    >
-                      반려
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
 
-          <hr className="divider" />
-          <p className="small">휴가 (PENDING {pendingLeave.length}건 / 선택 {selectedLeaveCount}건)</p>
-          <div className="queue-toolbar">
-            <button className="btn btn-secondary btn-small" onClick={selectAllLeave} disabled={pendingLeave.length === 0}>
-              전체 선택
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={clearLeaveSelection} disabled={selectedLeaveCount === 0}>
-              선택 해제
-            </button>
-            <button className="btn btn-primary btn-small" onClick={() => void approveSelectedLeave()} disabled={selectedLeaveCount === 0}>
-              선택 승인
-            </button>
-            <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedLeave()} disabled={selectedLeaveCount === 0}>
-              선택 반려
-            </button>
-          </div>
-          {pendingLeave.length === 0 ? (
-            <p className="small muted">대기 중인 휴가 요청이 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="휴가 승인 대기">
-              {pendingLeave.map((request) => (
-                <li key={request.id}>
-                  <label className="queue-item-main">
-                    <input
-                      type="checkbox"
-                      checked={selectedLeaveIds.includes(request.id)}
-                      onChange={(event) => toggleLeaveSelection(request.id, event.target.checked)}
-                    />
-                    <span>
-                      <strong>{request.employeeId}</strong>{" "}
-                      <span className="muted">
-                        {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
-                        {formatDateTime(request.endDate)} ({formatDays(request.days)}일
-                        {request.unit === "HOUR" && request.hours !== null
-                          ? ` / ${request.hours.toFixed(2)}시간`
-                          : request.unit === "HALF_DAY"
-                            ? " / 반차"
-                            : ""}
-                        )
-                      </span>
-                    </span>
-                  </label>
-                  <div className="queue-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-small"
-                      onClick={() => void approveLeave(request.id)}
-                    >
-                      승인
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      onClick={() => void rejectLeave(request.id)}
-                    >
-                      반려
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+          {showAttendanceQueue ? (
+            <>
+              <hr className="divider" />
+              <p className="small">
+                출퇴근 (PENDING {pendingAttendance.length}건 / 검색 {filteredPendingAttendance.length}건 / 선택{" "}
+                {selectedVisibleAttendanceCount}건)
+              </p>
+              <div className="queue-toolbar">
+                <label className="queue-control-inline">
+                  정렬
+                  <select
+                    value={attendanceQueueSort}
+                    onChange={(event) => setAttendanceQueueSort(event.target.value as AttendanceQueueSort)}
+                  >
+                    <option value="checkin_desc">출근 최신순</option>
+                    <option value="checkin_asc">출근 오래된순</option>
+                    <option value="employee_asc">직원ID순</option>
+                  </select>
+                </label>
+                <button className="btn btn-secondary btn-small" onClick={selectAllAttendance} disabled={filteredPendingAttendance.length === 0}>
+                  전체 선택
+                </button>
+                <button className="btn btn-secondary btn-small" onClick={clearAttendanceSelection} disabled={selectedAttendanceCount === 0}>
+                  선택 해제
+                </button>
+                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
+                  선택 승인
+                </button>
+                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedAttendance()} disabled={selectedAttendanceCount === 0}>
+                  선택 반려
+                </button>
+              </div>
+              {filteredPendingAttendance.length === 0 ? (
+                <p className="small muted">대기 중인 출퇴근이 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="출퇴근 승인 대기">
+                  {filteredPendingAttendance.map((record) => (
+                    <li key={record.id}>
+                      <label className="queue-item-main">
+                        <input
+                          type="checkbox"
+                          checked={selectedAttendanceIds.includes(record.id)}
+                          onChange={(event) => toggleAttendanceSelection(record.id, event.target.checked)}
+                        />
+                        <span>
+                          <strong>{record.employeeId}</strong>{" "}
+                          <span className="muted">
+                            {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} /{" "}
+                            {record.breakMinutes}분 / {record.isHoliday ? "휴일" : "평일"}
+                          </span>
+                        </span>
+                      </label>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveAttendance(record.id)}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectAttendance(record.id)}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
 
-          <hr className="divider" />
-          <p className="small">급여 (PREVIEWED {previewedPayroll.length}건)</p>
-          {previewedPayroll.length === 0 ? (
-            <p className="small muted">확정 대기 중인 급여 프리뷰가 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="급여 프리뷰">
-              {previewedPayroll.map((run) => (
-                <li key={run.id}>
-                  <span>
-                    <strong>{run.employeeId ?? "-"}</strong>{" "}
-                    <span className="muted">
-                      {formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)} / 총지급{" "}
-                      {formatKrw(run.grossPayKrw)}
-                    </span>
-                  </span>
-                  <div className="queue-actions">
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      onClick={() => void confirmPayroll(run.id)}
-                    >
-                      확정
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+          {showLeaveQueue ? (
+            <>
+              <hr className="divider" />
+              <p className="small">
+                휴가 (PENDING {pendingLeave.length}건 / 검색 {filteredPendingLeave.length}건 / 선택{" "}
+                {selectedVisibleLeaveCount}건)
+              </p>
+              <div className="queue-toolbar">
+                <label className="queue-control-inline">
+                  정렬
+                  <select value={leaveQueueSort} onChange={(event) => setLeaveQueueSort(event.target.value as LeaveQueueSort)}>
+                    <option value="start_desc">시작일 최신순</option>
+                    <option value="start_asc">시작일 오래된순</option>
+                    <option value="employee_asc">직원ID순</option>
+                  </select>
+                </label>
+                <button className="btn btn-secondary btn-small" onClick={selectAllLeave} disabled={filteredPendingLeave.length === 0}>
+                  전체 선택
+                </button>
+                <button className="btn btn-secondary btn-small" onClick={clearLeaveSelection} disabled={selectedLeaveCount === 0}>
+                  선택 해제
+                </button>
+                <button className="btn btn-primary btn-small" onClick={() => void approveSelectedLeave()} disabled={selectedLeaveCount === 0}>
+                  선택 승인
+                </button>
+                <button className="btn btn-danger btn-small" onClick={() => void rejectSelectedLeave()} disabled={selectedLeaveCount === 0}>
+                  선택 반려
+                </button>
+              </div>
+              {filteredPendingLeave.length === 0 ? (
+                <p className="small muted">대기 중인 휴가 요청이 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="휴가 승인 대기">
+                  {filteredPendingLeave.map((request) => (
+                    <li key={request.id}>
+                      <label className="queue-item-main">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeaveIds.includes(request.id)}
+                          onChange={(event) => toggleLeaveSelection(request.id, event.target.checked)}
+                        />
+                        <span>
+                          <strong>{request.employeeId}</strong>{" "}
+                          <span className="muted">
+                            {request.leaveType} / {formatDateTime(request.startDate)} ~{" "}
+                            {formatDateTime(request.endDate)} ({formatDays(request.days)}일
+                            {request.unit === "HOUR" && request.hours !== null
+                              ? ` / ${request.hours.toFixed(2)}시간`
+                              : request.unit === "HALF_DAY"
+                                ? " / 반차"
+                                : ""}
+                            )
+                          </span>
+                        </span>
+                      </label>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => void approveLeave(request.id)}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void rejectLeave(request.id)}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
+
+          {showPayrollQueue ? (
+            <>
+              <hr className="divider" />
+              <p className="small">급여 (PREVIEWED {previewedPayroll.length}건 / 검색 {filteredPreviewedPayroll.length}건)</p>
+              <div className="queue-toolbar">
+                <label className="queue-control-inline">
+                  정렬
+                  <select
+                    value={payrollQueueSort}
+                    onChange={(event) => setPayrollQueueSort(event.target.value as PayrollQueueSort)}
+                  >
+                    <option value="period_desc">기간 최신순</option>
+                    <option value="gross_desc">총지급 높은순</option>
+                    <option value="employee_asc">직원ID순</option>
+                  </select>
+                </label>
+              </div>
+              {filteredPreviewedPayroll.length === 0 ? (
+                <p className="small muted">확정 대기 중인 급여 프리뷰가 없습니다.</p>
+              ) : (
+                <ul className="simple-list" aria-label="급여 프리뷰">
+                  {filteredPreviewedPayroll.map((run) => (
+                    <li key={run.id}>
+                      <span>
+                        <strong>{run.employeeId ?? "-"}</strong>{" "}
+                        <span className="muted">
+                          {formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)} / 총지급{" "}
+                          {formatKrw(run.grossPayKrw)}
+                        </span>
+                      </span>
+                      <div className="queue-actions">
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-small"
+                          onClick={() => void confirmPayroll(run.id)}
+                        >
+                          확정
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
 
           <hr className="divider" />
           <div className="actions">
