@@ -1967,6 +1967,7 @@ export default function EmployeeSelfServicePage() {
             : card.severity === "watch"
               ? "within 8h"
               : "within 24h";
+      const recommendedSortOption: RequestSortOption = "pending_first";
 
       return {
         key: card.key,
@@ -1984,7 +1985,7 @@ export default function EmployeeSelfServicePage() {
             : `Respond ${responseWindow}: risk ${card.riskScore}, stalled ${card.stalledCount}, critical ${card.criticalCount}.`,
         searchScope,
         searchQuery,
-        recommendedSortOption: "pending_first",
+        recommendedSortOption,
         targetSectionId
       };
     });
