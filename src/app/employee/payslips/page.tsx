@@ -81,6 +81,32 @@ type PayslipConfirmationPredictionCard = {
   targetSectionId: string;
 };
 
+type PayslipHistorySortAccuracyCard = {
+  key: string;
+  label: string;
+  severity: PayslipPredictionSeverity;
+  accuracyScore: number;
+  matchedCount: number;
+  totalCompared: number;
+  detail: string;
+  targetSectionId: string;
+};
+
+type PayslipDelayRiskPredictionCard = {
+  key: string;
+  label: string;
+  severity: PayslipPredictionSeverity;
+  riskScore: number;
+  rowCount: number;
+  watchCount: number;
+  criticalCount: number;
+  averageAgeDays: number;
+  maxAgeDays: number;
+  etaLabel: string;
+  detail: string;
+  targetSectionId: string;
+};
+
 type PayslipMobileFollowUpTone = "ready" | "pending" | "fail";
 type PayslipMobileFollowUpAction = "jump" | "prepare_delivery" | "send_simulation" | "copy_failure";
 
@@ -88,6 +114,16 @@ type PayslipMobileFollowUpCard = {
   key: string;
   label: string;
   tone: PayslipMobileFollowUpTone;
+  detail: string;
+  ctaLabel: string;
+  action: PayslipMobileFollowUpAction;
+  targetSectionId: string;
+};
+
+type PayslipMobileFollowUpRecommendationCard = {
+  key: string;
+  label: string;
+  severity: PayslipPredictionSeverity;
   detail: string;
   ctaLabel: string;
   action: PayslipMobileFollowUpAction;
@@ -262,6 +298,29 @@ function matchesPayslipSearch(scope: PayslipSearchScope, query: string, row: Pay
     row.periodLabel.toLowerCase().includes(query) ||
     normalizedState.includes(query)
   );
+}
+
+function sortPayslipSearchRows(rows: PayslipSearchRow[], option: PayslipSortOption) {
+  return [...rows].sort((left, right) => {
+    if (option === "oldest_asc") {
+      return left.sortTimestamp - right.sortTimestamp;
+    }
+    if (option === "net_desc") {
+      const netDiff = (right.netPayKrw ?? 0) - (left.netPayKrw ?? 0);
+      if (netDiff !== 0) {
+        return netDiff;
+      }
+      return right.sortTimestamp - left.sortTimestamp;
+    }
+    if (option === "gross_desc") {
+      const grossDiff = right.grossPayKrw - left.grossPayKrw;
+      if (grossDiff !== 0) {
+        return grossDiff;
+      }
+      return right.sortTimestamp - left.sortTimestamp;
+    }
+    return right.sortTimestamp - left.sortTimestamp;
+  });
 }
 
 function formatHourDistanceLabel(hours: number) {
@@ -485,25 +544,64 @@ export default function EmployeePayslipsPage() {
       matchesPayslipSearch(payslipSearchScope, normalizedPayslipSearchQuery, row)
     );
 
-    return [...filtered].sort((left, right) => {
-      if (payslipSortOption === "oldest_asc") {
-        return left.sortTimestamp - right.sortTimestamp;
+    return sortPayslipSearchRows(filtered, payslipSortOption);
+  }, [normalizedPayslipSearchQuery, payslipSearchRows, payslipSearchScope, payslipSortOption]);
+
+  const payslipHistorySortAccuracyCards = useMemo<PayslipHistorySortAccuracyCard[]>(() => {
+    const scopedRows = payslipSearchRows.filter((row) =>
+      matchesPayslipSearch(payslipSearchScope, normalizedPayslipSearchQuery, row)
+    );
+    const currentTopRows = sortPayslipSearchRows(scopedRows, payslipSortOption);
+    const totalCompared = Math.min(10, currentTopRows.length);
+    const currentTopKeys = new Set(currentTopRows.slice(0, totalCompared).map((row) => row.key));
+
+    const toAccuracyCard = (
+      key: string,
+      label: string,
+      baselineOption: PayslipSortOption
+    ): PayslipHistorySortAccuracyCard => {
+      if (totalCompared === 0) {
+        return {
+          key,
+          label,
+          severity: "normal",
+          accuracyScore: 100,
+          matchedCount: 0,
+          totalCompared: 0,
+          detail: "No payslip rows are available for current search/sort scope.",
+          targetSectionId: "payslip-search-sort"
+        };
       }
-      if (payslipSortOption === "net_desc") {
-        const netDiff = (right.netPayKrw ?? 0) - (left.netPayKrw ?? 0);
-        if (netDiff !== 0) {
-          return netDiff;
-        }
-        return right.sortTimestamp - left.sortTimestamp;
+
+      const baselineTopRows = sortPayslipSearchRows(scopedRows, baselineOption).slice(0, totalCompared);
+      const matchedCount = baselineTopRows.filter((row) => currentTopKeys.has(row.key)).length;
+      const accuracyScore = Math.round((matchedCount / totalCompared) * 100);
+      const severity: PayslipPredictionSeverity =
+        accuracyScore < 50 ? "critical" : accuracyScore < 75 ? "watch" : "normal";
+
+      return {
+        key,
+        label,
+        severity,
+        accuracyScore,
+        matchedCount,
+        totalCompared,
+        detail: `Top ${matchedCount}/${totalCompared} rows match ${label.toLowerCase()}.`,
+        targetSectionId: "payslip-search-sort"
+      };
+    };
+
+    return [
+      toAccuracyCard("latest", "latest-first baseline", "latest_desc"),
+      toAccuracyCard("net", "net-pay baseline", "net_desc"),
+      toAccuracyCard("gross", "gross-pay baseline", "gross_desc")
+    ].sort((left, right) => {
+      const severityDiff =
+        payslipPredictionSeverityRank(right.severity) - payslipPredictionSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
       }
-      if (payslipSortOption === "gross_desc") {
-        const grossDiff = right.grossPayKrw - left.grossPayKrw;
-        if (grossDiff !== 0) {
-          return grossDiff;
-        }
-        return right.sortTimestamp - left.sortTimestamp;
-      }
-      return right.sortTimestamp - left.sortTimestamp;
+      return left.accuracyScore - right.accuracyScore;
     });
   }, [normalizedPayslipSearchQuery, payslipSearchRows, payslipSearchScope, payslipSortOption]);
 
@@ -720,6 +818,162 @@ export default function EmployeePayslipsPage() {
     });
   }, [latestFailedLog, logs, mobileDeliveryState, mobileDeliveryStateLabel, runs, selectedRun]);
 
+  const payslipDelayRiskPredictionCards = useMemo<PayslipDelayRiskPredictionCard[]>(() => {
+    const nowMs = Date.now();
+    const dayMs = 86_400_000;
+
+    const toRiskCard = (input: {
+      key: string;
+      label: string;
+      rows: PayslipSearchRow[];
+      targetSectionId: string;
+      emptySeverity?: PayslipPredictionSeverity;
+      emptyDetail?: string;
+    }): PayslipDelayRiskPredictionCard => {
+      const rowCount = input.rows.length;
+      if (rowCount === 0) {
+        const severity = input.emptySeverity ?? "normal";
+        return {
+          key: input.key,
+          label: input.label,
+          severity,
+          riskScore: severity === "critical" ? 95 : severity === "watch" ? 55 : 0,
+          rowCount: 0,
+          watchCount: 0,
+          criticalCount: 0,
+          averageAgeDays: 0,
+          maxAgeDays: 0,
+          etaLabel: severity === "critical" ? "act now" : severity === "watch" ? "check filters" : "stable",
+          detail: input.emptyDetail ?? "No rows in current scope.",
+          targetSectionId: input.targetSectionId
+        };
+      }
+
+      const ageDaysValues = input.rows.map((row) => Math.max(0, (nowMs - row.sortTimestamp) / dayMs));
+      const watchCount = ageDaysValues.filter((value) => value >= 35).length;
+      const criticalCount = ageDaysValues.filter((value) => value >= 45).length;
+      const totalAgeDays = ageDaysValues.reduce((sum, value) => sum + value, 0);
+      const averageAgeDays = totalAgeDays / rowCount;
+      const maxAgeDays = Math.max(...ageDaysValues);
+      const rawRiskScore = averageAgeDays * 1.4 + maxAgeDays * 1.1 + watchCount * 8 + criticalCount * 16;
+      const riskScore = Math.min(100, Math.round(rawRiskScore));
+      const severity: PayslipPredictionSeverity =
+        criticalCount > 0 || riskScore >= 80 ? "critical" : watchCount > 0 || riskScore >= 45 ? "watch" : "normal";
+      const etaLabel =
+        severity === "critical"
+          ? "act now"
+          : severity === "watch"
+            ? "within 1 business day"
+            : "within today";
+
+      return {
+        key: input.key,
+        label: input.label,
+        severity,
+        riskScore,
+        rowCount,
+        watchCount,
+        criticalCount,
+        averageAgeDays,
+        maxAgeDays,
+        etaLabel,
+        detail: `risk ${riskScore} / avg ${averageAgeDays.toFixed(1)}d / max ${maxAgeDays.toFixed(1)}d`,
+        targetSectionId: input.targetSectionId
+      };
+    };
+
+    const hasSearchQuery = normalizedPayslipSearchQuery.length > 0;
+    const selectionRiskCard: PayslipDelayRiskPredictionCard = selectedRun
+      ? {
+          key: "selected-run-delivery",
+          label: "selected run delivery handoff",
+          severity:
+            mobileDeliveryState === "failed"
+              ? "critical"
+              : latestFailedLog
+                ? "watch"
+                : mobileDeliveryState === "sent"
+                  ? "normal"
+                  : "watch",
+          riskScore:
+            mobileDeliveryState === "failed"
+              ? 95
+              : latestFailedLog
+                ? 70
+                : mobileDeliveryState === "sent"
+                  ? 10
+                  : 55,
+          rowCount: 1,
+          watchCount: mobileDeliveryState === "sent" ? 0 : 1,
+          criticalCount: mobileDeliveryState === "failed" ? 1 : 0,
+          averageAgeDays: 0,
+          maxAgeDays: 0,
+          etaLabel:
+            mobileDeliveryState === "failed"
+              ? "act now"
+              : mobileDeliveryState === "sent"
+                ? "completed"
+                : "prepare delivery",
+          detail:
+            mobileDeliveryState === "failed"
+              ? "Delivery flow failed. Resolve latest issue before handoff."
+              : mobileDeliveryState === "sent"
+                ? "Delivery simulation is completed for selected run."
+                : "Selected run is ready, but delivery simulation is not completed yet.",
+          targetSectionId: "mobile-delivery"
+        }
+      : {
+          key: "selected-run-delivery",
+          label: "selected run delivery handoff",
+          severity: "critical",
+          riskScore: 90,
+          rowCount: 0,
+          watchCount: 0,
+          criticalCount: 1,
+          averageAgeDays: 0,
+          maxAgeDays: 0,
+          etaLabel: "selection required",
+          detail: "No selected run. Pick a confirmed payslip to continue delivery handoff.",
+          targetSectionId: "payslip-search-sort"
+        };
+
+    return [
+      toRiskCard({
+        key: "all-confirmed-history",
+        label: "all confirmed history",
+        rows: payslipSearchRows,
+        targetSectionId: "payslip-search-sort",
+        emptySeverity: "watch",
+        emptyDetail: "No confirmed payslips are loaded for the selected period."
+      }),
+      toRiskCard({
+        key: "active-search-scope",
+        label: "active search scope",
+        rows: filteredPayslipSearchRows,
+        targetSectionId: "payslip-search-sort",
+        emptySeverity: hasSearchQuery ? "watch" : "normal",
+        emptyDetail: hasSearchQuery
+          ? "Current query returns no rows. Broaden filters before payout follow-up."
+          : "Search scope is clear."
+      }),
+      selectionRiskCard
+    ].sort((left, right) => {
+      const severityDiff =
+        payslipPredictionSeverityRank(right.severity) - payslipPredictionSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.riskScore - left.riskScore;
+    });
+  }, [
+    filteredPayslipSearchRows,
+    latestFailedLog,
+    mobileDeliveryState,
+    normalizedPayslipSearchQuery,
+    payslipSearchRows,
+    selectedRun
+  ]);
+
   const payslipMobileFollowUpCards = useMemo<PayslipMobileFollowUpCard[]>(() => {
     const highestPredictionTone = payslipPredictionToneFromSeverity(
       payslipConfirmationPredictionCards[0]?.severity ?? "normal"
@@ -797,6 +1051,110 @@ export default function EmployeePayslipsPage() {
     latestFailedLog,
     mobileDeliveryState,
     payslipConfirmationPredictionCards,
+    selectedRun
+  ]);
+
+  const payslipMobileFollowUpRecommendationCards = useMemo<PayslipMobileFollowUpRecommendationCard[]>(() => {
+    const topSortAccuracyRisk = payslipHistorySortAccuracyCards[0];
+    const topDelayRisk = payslipDelayRiskPredictionCards[0];
+    const hasSortAccuracyRisk =
+      topSortAccuracyRisk &&
+      topSortAccuracyRisk.totalCompared > 0 &&
+      topSortAccuracyRisk.severity !== "normal";
+    const hasDelayRisk = topDelayRisk && topDelayRisk.rowCount > 0 && topDelayRisk.severity !== "normal";
+    const hasSearchQuery = normalizedPayslipSearchQuery.length > 0;
+    const hasSearchResults = filteredPayslipSearchRows.length > 0;
+
+    const deliveryRecommendation = latestFailedLog
+      ? {
+          severity: "critical" as const,
+          detail: `Latest failure: ${extractErrorMessage(latestFailedLog.body)}`,
+          ctaLabel: "copy failure cause",
+          action: "copy_failure" as const,
+          targetSectionId: "status-feedback"
+        }
+      : !selectedRun
+        ? {
+            severity: "watch" as const,
+            detail: "Select a confirmed payslip first, then continue delivery handoff.",
+            ctaLabel: "open search/sort",
+            action: "jump" as const,
+            targetSectionId: "payslip-search-sort"
+          }
+        : mobileDeliveryState === "ready"
+          ? {
+              severity: "watch" as const,
+              detail: "Delivery channel is prepared. Run simulation to close payout handoff.",
+              ctaLabel: "run simulation",
+              action: "send_simulation" as const,
+              targetSectionId: "mobile-delivery"
+            }
+          : mobileDeliveryState === "sent"
+            ? {
+                severity: "normal" as const,
+                detail: "Delivery simulation is completed. Continue with print/export if needed.",
+                ctaLabel: "open delivery",
+                action: "jump" as const,
+                targetSectionId: "mobile-delivery"
+              }
+            : {
+                severity: "watch" as const,
+                detail: "Delivery is not prepared yet. Prepare channel before simulation.",
+                ctaLabel: "prepare delivery",
+                action: "prepare_delivery" as const,
+                targetSectionId: "mobile-delivery"
+              };
+
+    return [
+      {
+        key: "sort-accuracy-follow-up",
+        label: "history sort accuracy follow-up",
+        severity: hasSortAccuracyRisk ? topSortAccuracyRisk?.severity ?? "watch" : "normal",
+        detail: hasSortAccuracyRisk
+          ? topSortAccuracyRisk?.detail ?? "Review history sort-accuracy cards."
+          : "Current history sort accuracy is stable.",
+        ctaLabel: "open sort accuracy",
+        action: "jump",
+        targetSectionId: "payslip-history-sort-accuracy"
+      },
+      {
+        key: "delay-risk-follow-up",
+        label: "payout delay risk follow-up",
+        severity: hasDelayRisk ? topDelayRisk?.severity ?? "watch" : "normal",
+        detail: hasDelayRisk ? topDelayRisk?.detail ?? "Review delay-risk cards." : "No immediate payout delay risk.",
+        ctaLabel: "open delay risk",
+        action: "jump",
+        targetSectionId: "payslip-delay-risk-prediction"
+      },
+      {
+        key: "search-execution-follow-up",
+        label: "search/sort execution follow-up",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "Current query has no matches. Reset scope or broaden query."
+            : `${filteredPayslipSearchRows.length} row(s) are ready for follow-up.`,
+        ctaLabel: "open search/sort",
+        action: "jump",
+        targetSectionId: "payslip-search-sort"
+      },
+      {
+        key: "delivery-handoff-follow-up",
+        label: "delivery handoff follow-up",
+        severity: deliveryRecommendation.severity,
+        detail: deliveryRecommendation.detail,
+        ctaLabel: deliveryRecommendation.ctaLabel,
+        action: deliveryRecommendation.action,
+        targetSectionId: deliveryRecommendation.targetSectionId
+      }
+    ];
+  }, [
+    filteredPayslipSearchRows.length,
+    latestFailedLog,
+    mobileDeliveryState,
+    normalizedPayslipSearchQuery.length,
+    payslipDelayRiskPredictionCards,
+    payslipHistorySortAccuracyCards,
     selectedRun
   ]);
 
@@ -1327,6 +1685,25 @@ export default function EmployeePayslipsPage() {
     jumpToSection(card.targetSectionId);
   }
 
+  function runPayslipMobileFollowUpRecommendationAction(card: PayslipMobileFollowUpRecommendationCard) {
+    if (card.action === "prepare_delivery") {
+      prepareMobileDelivery();
+      jumpToSection(card.targetSectionId);
+      return;
+    }
+    if (card.action === "send_simulation") {
+      sendMobileDeliverySimulation();
+      jumpToSection(card.targetSectionId);
+      return;
+    }
+    if (card.action === "copy_failure") {
+      void copyLatestFailureCause();
+      jumpToSection(card.targetSectionId);
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -1605,6 +1982,37 @@ export default function EmployeePayslipsPage() {
           )}
         </article>
 
+        <article id="payslip-history-sort-accuracy" className="panel panel-payslip-history-sort-accuracy">
+          <h2>Payslip History Sort Accuracy</h2>
+          <p className="small">
+            Compare top rows with baseline sort models to verify whether current history ordering matches intent.
+          </p>
+          <ul className="payslip-history-sort-accuracy-list" aria-label="payslip history sort accuracy feedback list">
+            {payslipHistorySortAccuracyCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="payslip-history-sort-accuracy-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">score {card.accuracyScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="payslip-history-sort-accuracy-meta">
+                  <span className="queue-history-chip">
+                    match {card.matchedCount}/{card.totalCompared}
+                  </span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  open search/sort
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article id="status-feedback" className="panel panel-payslip-status-feedback">
           <h2>상태/오류 피드백</h2>
           <div className="payslip-status-grid">
@@ -1743,6 +2151,37 @@ export default function EmployeePayslipsPage() {
           </ul>
         </article>
 
+        <article id="payslip-delay-risk-prediction" className="panel panel-payslip-delay-risk-prediction">
+          <h2>Payout Delay Risk Prediction</h2>
+          <p className="small">
+            Review payout delay risk from confirmed history freshness, active search scope, and delivery handoff state.
+          </p>
+          <ul className="payslip-delay-risk-prediction-list" aria-label="payslip delay risk prediction feedback list">
+            {payslipDelayRiskPredictionCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="payslip-delay-risk-prediction-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">risk {card.riskScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="payslip-delay-risk-prediction-meta">
+                  <span className="queue-history-chip">rows {card.rowCount}</span>
+                  <span className="queue-history-chip">watch {card.watchCount}</span>
+                  <span className="queue-history-chip">critical {card.criticalCount}</span>
+                  <span className="queue-history-chip">ETA {card.etaLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  open related section
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article id="mobile-delivery" className="panel panel-payslip-mobile-delivery">
           <h2>모바일 전달 흐름</h2>
           <p className="small">조회 실패 원인 확인 후 채널 준비와 전달 시뮬레이션 순서로 진행하세요.</p>
@@ -1823,6 +2262,37 @@ export default function EmployeePayslipsPage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runPayslipMobileFollowUpAction(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article
+          id="payslip-mobile-follow-up-recommendation"
+          className="panel panel-payslip-mobile-follow-up-recommendation"
+        >
+          <h2>Mobile Follow-up Recommendation</h2>
+          <p className="small">
+            Prioritized recommendations combine sort accuracy, delay risk, and delivery handoff into one mobile panel.
+          </p>
+          <ul
+            className="payslip-mobile-follow-up-recommendation-list"
+            aria-label="payslip mobile follow-up recommendation list"
+          >
+            {payslipMobileFollowUpRecommendationCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="payslip-mobile-follow-up-recommendation-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.severity}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runPayslipMobileFollowUpRecommendationAction(card)}
                 >
                   {card.ctaLabel}
                 </button>
