@@ -60,6 +60,24 @@ type LeaveBalanceDto = {
   updatedAt: string;
 };
 
+type LeaveCalendarDensity = "none" | "low" | "mid" | "high";
+type LeaveCalendarStatusTone = "none" | "approved" | "pending" | "rejected" | "mixed";
+
+type LeaveCalendarDayCell = {
+  dateKey: string;
+  dayOfMonth: number;
+  inCurrentMonth: boolean;
+  isToday: boolean;
+  requestCount: number;
+  approvedCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+  density: LeaveCalendarDensity;
+  tone: LeaveCalendarStatusTone;
+};
+
+const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
 function isDevToolsEnabled() {
   const raw = process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "";
   const normalized = raw.trim().toLowerCase();
@@ -93,6 +111,22 @@ function lastDayOfMonthLocal() {
 
 function toIso(value: string) {
   return new Date(value).toISOString();
+}
+
+function toLocalDateKey(value: Date | string) {
+  const parsed = typeof value === "string" ? new Date(value) : value;
+  const adjusted = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000);
+  return adjusted.toISOString().slice(0, 10);
+}
+
+function startOfLocalDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 0, 0, 0, 0);
+}
+
+function shiftDays(value: Date, days: number) {
+  const shifted = new Date(value);
+  shifted.setDate(shifted.getDate() + days);
+  return shifted;
 }
 
 function coerceNumber(value: string, fallback = 0) {
@@ -294,9 +328,9 @@ export default function EmployeeSelfServicePage() {
     }
   }
 
-  async function refreshEmployeeSnapshot() {
-    const from = toIso(periodStart);
-    const to = toIso(periodEnd);
+  async function refreshEmployeeSnapshot(range?: { fromIso: string; toIso: string }) {
+    const from = range?.fromIso ?? toIso(periodStart);
+    const to = range?.toIso ?? toIso(periodEnd);
 
     const [attendanceRes, leaveRes, scheduleRes, balanceRes] = await Promise.all([
       callApi("내 출퇴근 조회", "GET", `/api/attendance/records${buildQuery({ from, to })}`),
@@ -439,6 +473,56 @@ export default function EmployeeSelfServicePage() {
     }
   }
 
+  function applyLeaveQuickPreset(preset: "today-half" | "tomorrow-full" | "next-week-full") {
+    const now = new Date();
+    let start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+    let end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
+    let nextUnit: "FULL_DAY" | "HALF_DAY" | "HOUR" = "FULL_DAY";
+
+    if (preset === "today-half") {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
+      nextUnit = "HALF_DAY";
+    } else if (preset === "tomorrow-full") {
+      const tomorrow = shiftDays(startOfLocalDay(now), 1);
+      start = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 9, 0, 0);
+      end = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 18, 0, 0);
+      nextUnit = "FULL_DAY";
+    } else {
+      const todayStart = startOfLocalDay(now);
+      const daysUntilNextMonday = ((8 - todayStart.getDay()) % 7) || 7;
+      const nextMonday = shiftDays(todayStart, daysUntilNextMonday);
+      start = new Date(nextMonday.getFullYear(), nextMonday.getMonth(), nextMonday.getDate(), 9, 0, 0);
+      end = new Date(nextMonday.getFullYear(), nextMonday.getMonth(), nextMonday.getDate(), 18, 0, 0);
+      nextUnit = "FULL_DAY";
+    }
+
+    setLeaveType("ANNUAL");
+    setLeaveUnit(nextUnit);
+    setLeaveStartDate(toLocalInputValue(start));
+    setLeaveEndDate(toLocalInputValue(end));
+  }
+
+  async function setCalendarMonthFromAnchor(anchor: Date, monthOffset: number) {
+    const monthStart = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset, 1, 0, 0, 0);
+    const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset + 1, 0, 23, 59, 0);
+    const nextPeriodStart = toLocalInputValue(monthStart);
+    const nextPeriodEnd = toLocalInputValue(monthEnd);
+    setPeriodStart(nextPeriodStart);
+    setPeriodEnd(nextPeriodEnd);
+    await refreshEmployeeSnapshot({ fromIso: toIso(nextPeriodStart), toIso: toIso(nextPeriodEnd) });
+  }
+
+  async function moveCalendarMonth(monthOffset: number) {
+    const parsedPeriodStart = new Date(periodStart);
+    const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
+    await setCalendarMonthFromAnchor(anchor, monthOffset);
+  }
+
+  async function resetCalendarToCurrentMonth() {
+    await setCalendarMonthFromAnchor(new Date(), 0);
+  }
+
   function clearLogs() {
     setLogs([]);
   }
@@ -506,6 +590,128 @@ export default function EmployeeSelfServicePage() {
     const ratio = (leaveBalance.usedDays / leaveBalance.grantedDays) * 100;
     return Math.max(0, Math.min(100, Math.round(ratio)));
   }, [leaveBalance]);
+
+  const leaveUsageRingStyle = useMemo(
+    () => ({
+      background: `conic-gradient(#1f5fd1 0 ${leaveUsageRatePercent}%, #dbe8ff ${leaveUsageRatePercent}% 100%)`
+    }),
+    [leaveUsageRatePercent]
+  );
+
+  const leaveBalanceCards = useMemo(() => {
+    if (!leaveBalance) {
+      return [];
+    }
+    return [
+      { key: "remaining", label: "잔여", value: `${formatDays(leaveBalance.remainingDays)}일`, tone: "remaining" },
+      { key: "granted", label: "부여", value: `${formatDays(leaveBalance.grantedDays)}일`, tone: "granted" },
+      { key: "used", label: "사용", value: `${formatDays(leaveBalance.usedDays)}일`, tone: "used" },
+      { key: "carry-over", label: "이월", value: `${formatDays(leaveBalance.carryOverDays)}일`, tone: "carry-over" }
+    ];
+  }, [leaveBalance]);
+
+  const leaveUsageProjectionLabel = useMemo(() => {
+    if (!leaveBalance || leaveBalance.grantedDays <= 0) {
+      return "연차 사용 속도 예측은 잔여 정보를 불러오면 표시됩니다.";
+    }
+
+    const elapsedMonths = Math.max(1, new Date().getMonth() + 1);
+    const averageUsedPerMonth = leaveBalance.usedDays / elapsedMonths;
+    const projectedYearEndUsed = averageUsedPerMonth * 12;
+    const projectedRemaining = leaveBalance.grantedDays - projectedYearEndUsed;
+    if (projectedRemaining >= 0) {
+      return `현재 사용 속도 기준 연말 예상 잔여 ${formatDays(projectedRemaining)}일`;
+    }
+    return `현재 사용 속도 기준 연말 예상 부족 ${formatDays(Math.abs(projectedRemaining))}일`;
+  }, [leaveBalance]);
+
+  const leaveCalendarMonthLabel = useMemo(() => {
+    const parsedPeriodStart = new Date(periodStart);
+    const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
+    return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월`;
+  }, [periodStart]);
+
+  const leaveCalendarCells = useMemo<LeaveCalendarDayCell[]>(() => {
+    const parsedPeriodStart = new Date(periodStart);
+    const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
+    const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 0, 0, 0);
+    const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 0, 0, 0);
+    const gridStart = shiftDays(startOfLocalDay(monthStart), -monthStart.getDay());
+    const gridEnd = shiftDays(startOfLocalDay(monthEnd), 6 - monthEnd.getDay());
+
+    const requestByDate = new Map<string, LeaveRequestDto[]>();
+    for (const request of leaveRequests) {
+      const parsedStartDate = new Date(request.startDate);
+      const parsedEndDate = new Date(request.endDate);
+      if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
+        continue;
+      }
+
+      let cursor = startOfLocalDay(parsedStartDate);
+      const requestEnd = startOfLocalDay(parsedEndDate);
+      while (cursor.getTime() <= requestEnd.getTime()) {
+        const dateKey = toLocalDateKey(cursor);
+        const bucket = requestByDate.get(dateKey);
+        if (bucket) {
+          bucket.push(request);
+        } else {
+          requestByDate.set(dateKey, [request]);
+        }
+        cursor = shiftDays(cursor, 1);
+      }
+    }
+
+    const todayKey = toLocalDateKey(new Date());
+    const cells: LeaveCalendarDayCell[] = [];
+    for (let cursor = new Date(gridStart); cursor.getTime() <= gridEnd.getTime(); cursor = shiftDays(cursor, 1)) {
+      const dateKey = toLocalDateKey(cursor);
+      const requestBucket = requestByDate.get(dateKey) ?? [];
+      const requestCount = requestBucket.length;
+      let approvedCount = 0;
+      let pendingCount = 0;
+      let rejectedCount = 0;
+      for (const request of requestBucket) {
+        if (request.state === "APPROVED") {
+          approvedCount += 1;
+        } else if (request.state === "PENDING") {
+          pendingCount += 1;
+        } else {
+          rejectedCount += 1;
+        }
+      }
+
+      let tone: LeaveCalendarStatusTone = "none";
+      if (requestCount > 0) {
+        if (approvedCount === requestCount) {
+          tone = "approved";
+        } else if (pendingCount === requestCount) {
+          tone = "pending";
+        } else if (rejectedCount === requestCount) {
+          tone = "rejected";
+        } else {
+          tone = "mixed";
+        }
+      }
+
+      const density: LeaveCalendarDensity =
+        requestCount >= 3 ? "high" : requestCount === 2 ? "mid" : requestCount === 1 ? "low" : "none";
+
+      cells.push({
+        dateKey,
+        dayOfMonth: cursor.getDate(),
+        inCurrentMonth: cursor.getMonth() === monthStart.getMonth(),
+        isToday: dateKey === todayKey,
+        requestCount,
+        approvedCount,
+        pendingCount,
+        rejectedCount,
+        density,
+        tone
+      });
+    }
+
+    return cells;
+  }, [leaveRequests, periodStart]);
 
   const leaveCalendarRows = useMemo(() => {
     return [...leaveRequests]
@@ -905,6 +1111,17 @@ export default function EmployeeSelfServicePage() {
               <input value={lastLeaveRequestId} onChange={(event) => setLastLeaveRequestId(event.target.value)} />
             </label>
           </div>
+          <div className="leave-quick-actions" role="group" aria-label="휴가 빠른 입력">
+            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("today-half")}>
+              오늘 반차
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("tomorrow-full")}>
+              내일 하루
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("next-week-full")}>
+              다음주 월요일
+            </button>
+          </div>
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void createLeave()}>
               휴가 신청
@@ -944,13 +1161,83 @@ export default function EmployeeSelfServicePage() {
             연차 사용률 {leaveUsageRatePercent}% (사용 {formatDays(leaveBalance?.usedDays ?? 0)} / 부여{" "}
             {formatDays(leaveBalance?.grantedDays ?? 0)})
           </p>
-          <progress max={100} value={leaveUsageRatePercent} style={{ width: "100%" }} />
+          <div className="leave-balance-visual" aria-label="연차 잔여 시각화">
+            <div className="leave-usage-ring" style={leaveUsageRingStyle}>
+              <div>
+                <strong>{leaveUsageRatePercent}%</strong>
+                <span>사용률</span>
+              </div>
+            </div>
+            <div className="leave-balance-cards">
+              {leaveBalanceCards.length === 0 ? (
+                <p className="small">잔여 연차 데이터를 불러오면 시각화가 활성화됩니다.</p>
+              ) : (
+                leaveBalanceCards.map((card) => (
+                  <article key={card.key} className={`leave-balance-card tone-${card.tone}`}>
+                    <p>{card.label}</p>
+                    <strong>{card.value}</strong>
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+          <p className="small leave-projection">{leaveUsageProjectionLabel}</p>
+          <div className="leave-calendar-toolbar">
+            <strong>{leaveCalendarMonthLabel} 밀도 보기</strong>
+            <div className="leave-calendar-shortcuts" aria-label="캘린더 빠른 이동">
+              <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(-1)}>
+                이전 달
+              </button>
+              <button className="btn btn-secondary btn-small" onClick={() => void resetCalendarToCurrentMonth()}>
+                이번 달
+              </button>
+              <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(1)}>
+                다음 달
+              </button>
+            </div>
+          </div>
+          <div className="leave-calendar-weekdays" aria-hidden="true">
+            {LEAVE_CALENDAR_WEEKDAYS.map((weekday) => (
+              <span key={weekday}>{weekday}</span>
+            ))}
+          </div>
+          <div className="leave-calendar-grid">
+            {leaveCalendarCells.map((cell) => (
+              <article
+                key={cell.dateKey}
+                className={[
+                  "leave-calendar-day",
+                  `density-${cell.density}`,
+                  `tone-${cell.tone}`,
+                  cell.inCurrentMonth ? "in-month" : "out-month",
+                  cell.isToday ? "today" : ""
+                ]
+                  .join(" ")
+                  .trim()}
+                title={
+                  cell.requestCount === 0
+                    ? `${cell.dateKey}: 휴가 일정 없음`
+                    : `${cell.dateKey}: ${cell.requestCount}건 (승인 ${cell.approvedCount}, 대기 ${cell.pendingCount}, 반려/취소 ${cell.rejectedCount})`
+                }
+              >
+                <div className="leave-day-head">
+                  <span>{cell.dayOfMonth}</span>
+                  {cell.requestCount > 0 ? <strong>{cell.requestCount}건</strong> : null}
+                </div>
+                <p>
+                  {cell.requestCount === 0
+                    ? "일정 없음"
+                    : `승인 ${cell.approvedCount} / 대기 ${cell.pendingCount} / 반려 ${cell.rejectedCount}`}
+                </p>
+              </article>
+            ))}
+          </div>
           {leaveCalendarRows.length === 0 ? (
             <p className="small" style={{ marginTop: 12 }}>
               이번 조회 구간에 휴가 일정이 없습니다.
             </p>
           ) : (
-            <ul className="simple-list" style={{ marginTop: 12 }}>
+            <ul className="simple-list leave-calendar-list" style={{ marginTop: 12 }}>
               {leaveCalendarRows.map((row) => (
                 <li key={row.id}>
                   <span>

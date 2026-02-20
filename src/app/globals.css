@@ -694,6 +694,213 @@ button.queue-badge:hover {
   background: linear-gradient(90deg, #2c75e8 0%, #1752b5 100%);
 }
 
+.leave-quick-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.leave-balance-visual {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.leave-usage-ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: inset 0 0 0 1px #d4e2fb;
+}
+
+.leave-usage-ring::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.leave-usage-ring > div {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.leave-usage-ring strong {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.leave-usage-ring span {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.leave-balance-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.leave-balance-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+}
+
+.leave-balance-card p {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.leave-balance-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.98rem;
+}
+
+.leave-balance-card.tone-remaining {
+  background: #eef5ff;
+}
+
+.leave-balance-card.tone-granted {
+  background: #f8fbff;
+}
+
+.leave-balance-card.tone-used {
+  background: #fff5f5;
+}
+
+.leave-balance-card.tone-carry-over {
+  background: #f8f6ff;
+}
+
+.leave-projection {
+  margin: 10px 0 0;
+}
+
+.leave-calendar-toolbar {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.leave-calendar-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.leave-calendar-weekdays {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.leave-calendar-weekdays span {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.leave-calendar-grid {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.leave-calendar-day {
+  border: 1px solid #d5e2f8;
+  border-radius: 10px;
+  background: #fff;
+  min-height: 78px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leave-calendar-day .leave-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.leave-calendar-day .leave-day-head strong {
+  font-size: 0.72rem;
+  color: #2258bf;
+}
+
+.leave-calendar-day p {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.leave-calendar-day.out-month {
+  opacity: 0.45;
+  background: #f8fbff;
+}
+
+.leave-calendar-day.today {
+  border-color: #6d97e8;
+  box-shadow: 0 0 0 2px rgba(49, 95, 188, 0.12);
+}
+
+.leave-calendar-day.density-low {
+  background: linear-gradient(180deg, #f8fbff 0%, #f2f7ff 100%);
+}
+
+.leave-calendar-day.density-mid {
+  background: linear-gradient(180deg, #f2f7ff 0%, #e8f1ff 100%);
+}
+
+.leave-calendar-day.density-high {
+  background: linear-gradient(180deg, #e9f2ff 0%, #dce9ff 100%);
+}
+
+.leave-calendar-day.tone-approved .leave-day-head strong {
+  color: var(--ok);
+}
+
+.leave-calendar-day.tone-pending .leave-day-head strong {
+  color: #996500;
+}
+
+.leave-calendar-day.tone-rejected .leave-day-head strong {
+  color: var(--fail);
+}
+
+.leave-calendar-day.tone-mixed .leave-day-head strong {
+  color: #4a678f;
+}
+
+.leave-calendar-list {
+  max-height: 300px;
+  overflow: auto;
+}
+
 .btn {
   border-radius: 10px;
   border: 1px solid transparent;
@@ -1165,6 +1372,50 @@ button.queue-badge:hover {
 
   .input-grid {
     grid-template-columns: 1fr;
+  }
+
+  #leave .leave-quick-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #leave .leave-quick-actions .btn {
+    width: 100%;
+  }
+
+  .leave-balance-visual {
+    grid-template-columns: 1fr;
+  }
+
+  .leave-usage-ring {
+    margin: 0 auto;
+    width: 108px;
+    height: 108px;
+  }
+
+  #leave-calendar {
+    overflow-x: auto;
+  }
+
+  #leave-calendar .leave-calendar-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #leave-calendar .leave-calendar-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  #leave-calendar .leave-calendar-shortcuts .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #leave-calendar .leave-calendar-weekdays,
+  #leave-calendar .leave-calendar-grid {
+    min-width: 560px;
   }
 
   .approval-queue-header {
