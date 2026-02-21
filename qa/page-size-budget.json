@@ -1,0 +1,25 @@
+{
+  "defaultMaxLines": 1200,
+  "tracked": {
+    "src/app/admin/page.tsx": {
+      "maxLines": 6985,
+      "targetLines": 4500
+    },
+    "src/app/employee/page.tsx": {
+      "maxLines": 5829,
+      "targetLines": 3800
+    },
+    "src/app/employee/payslips/page.tsx": {
+      "maxLines": 4649,
+      "targetLines": 3000
+    },
+    "src/app/admin/people/page.tsx": {
+      "maxLines": 3931,
+      "targetLines": 2600
+    },
+    "src/app/ops/admin-console/page.tsx": {
+      "maxLines": 1674,
+      "targetLines": 1000
+    }
+  }
+}
