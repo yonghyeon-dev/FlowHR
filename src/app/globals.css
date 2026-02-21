@@ -7399,6 +7399,145 @@ button.queue-badge:hover {
   gap: 8px;
 }
 
+.panel-contract-template-library {
+  grid-column: 1 / -1;
+}
+
+.contract-template-filters {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.contract-template-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.contract-template-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.contract-template-list li.is-selected {
+  border-color: #8fb5f9;
+  box-shadow: 0 0 0 2px rgba(31, 95, 209, 0.12);
+}
+
+.contract-template-list li.tone-ready {
+  background: #f2fbf6;
+}
+
+.contract-template-list li.tone-watch {
+  background: #fff8e8;
+}
+
+.contract-template-list li.tone-risk {
+  background: #fff2f5;
+}
+
+.contract-template-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.contract-template-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contract-template-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.panel-contract-signature-readiness,
+.panel-contract-template-detail {
+  min-height: 100%;
+}
+
+.contract-signature-readiness-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.contract-signature-readiness-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.contract-signature-readiness-list li.tone-ready {
+  background: #f2fbf6;
+}
+
+.contract-signature-readiness-list li.tone-watch {
+  background: #fff8e8;
+}
+
+.contract-signature-readiness-list li.tone-risk {
+  background: #fff2f5;
+}
+
+.contract-signature-readiness-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.contract-signature-readiness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contract-template-detail-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.contract-template-detail-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contract-template-detail-list li span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .no-print {
   display: block;
 }
@@ -7870,11 +8009,17 @@ button.queue-badge:hover {
   #payslip-mobile-follow-up-recommendation-upgrade-2 .payslip-mobile-follow-up-recommendation-upgrade-2-list,
   #payslip-mobile-follow-up-recommendation-upgrade-3 .payslip-mobile-follow-up-recommendation-upgrade-3-list,
   #payslip-mobile-follow-up-recommendation-upgrade-4 .payslip-mobile-follow-up-recommendation-upgrade-4-list,
-  #payslip-mobile-follow-up-recommendation-upgrade-5 .payslip-mobile-follow-up-recommendation-upgrade-5-list {
+  #payslip-mobile-follow-up-recommendation-upgrade-5 .payslip-mobile-follow-up-recommendation-upgrade-5-list,
+  #contract-template-library .contract-template-list,
+  #contract-signature-readiness .contract-signature-readiness-list {
     grid-template-columns: 1fr;
   }
 
   #payslip-search-sort .payslip-search-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  #contract-template-library .contract-template-filters {
     grid-template-columns: 1fr;
   }
 
@@ -7903,7 +8048,9 @@ button.queue-badge:hover {
   #payslip-mobile-follow-up-recommendation-upgrade-2 .payslip-mobile-follow-up-recommendation-upgrade-2-head,
   #payslip-mobile-follow-up-recommendation-upgrade-3 .payslip-mobile-follow-up-recommendation-upgrade-3-head,
   #payslip-mobile-follow-up-recommendation-upgrade-4 .payslip-mobile-follow-up-recommendation-upgrade-4-head,
-  #payslip-mobile-follow-up-recommendation-upgrade-5 .payslip-mobile-follow-up-recommendation-upgrade-5-head {
+  #payslip-mobile-follow-up-recommendation-upgrade-5 .payslip-mobile-follow-up-recommendation-upgrade-5-head,
+  #contract-template-library .contract-template-head,
+  #contract-signature-readiness .contract-signature-readiness-head {
     flex-direction: column;
     align-items: flex-start;
   }

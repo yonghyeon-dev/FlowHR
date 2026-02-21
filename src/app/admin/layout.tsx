@@ -92,6 +92,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#approval-mobile-feedback">승인 모바일 피드백</Link>
           <Link href="/admin/approval-policy">결재/위임 정책</Link>
           <Link href="/admin/approval-templates">결재선 템플릿</Link>
+          <Link href="/admin/contracts">전자계약 템플릿</Link>
+          <Link href="/admin/contracts#contract-template-library">계약 템플릿 라이브러리</Link>
+          <Link href="/admin/contracts#contract-signature-readiness">계약 서명 준비도</Link>
           <Link href="/admin/approval-history">결재 단계 이력</Link>
           <Link href="/admin/approval-executions">결재 실행 현황</Link>
           <Link href="/admin#aggregates">근태 집계</Link>
