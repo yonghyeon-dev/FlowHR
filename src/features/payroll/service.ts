@@ -201,9 +201,20 @@ type ReopenPayrollYearEndFilingPackageInput = {
   submissionId: string;
 };
 
+type PayrollYearEndFilingSubmissionStatusFilter =
+  | PayrollYearEndFilingSubmissionStatus
+  | "all";
+type PayrollYearEndFilingSubmissionAckStatusFilter = PayrollYearEndFilingAckStatus | "none" | "all";
+type PayrollYearEndFilingSubmissionValidationStatusFilter = "pass" | "fail" | "all";
+type PayrollYearEndFilingSubmissionTransportFilter = PayrollYearEndFilingTransport | "all";
+
 type ListPayrollYearEndFilingSubmissionsInput = {
   year: number;
   employeeId: string;
+  status?: PayrollYearEndFilingSubmissionStatusFilter;
+  ackStatus?: PayrollYearEndFilingSubmissionAckStatusFilter;
+  validationStatus?: PayrollYearEndFilingSubmissionValidationStatusFilter;
+  transport?: PayrollYearEndFilingSubmissionTransportFilter;
 };
 
 type ListPayrollYearEndFilingSubmissionTimelineInput = {
@@ -598,7 +609,32 @@ type ReopenPayrollYearEndFilingPackageResult = {
   submission: PayrollYearEndFilingSubmissionSummary;
 };
 
+type PayrollYearEndFilingSubmissionListSummary = {
+  totalCount: number;
+  filteredCount: number;
+  statusCounts: {
+    submitted: number;
+    acknowledged: number;
+    canceled: number;
+  };
+  ackStatusCounts: {
+    accepted: number;
+    rejected: number;
+    none: number;
+  };
+  validationStatusCounts: {
+    pass: number;
+    fail: number;
+  };
+  transportCounts: {
+    manual_portal: number;
+    hometax_upload: number;
+    nts_api_mock: number;
+  };
+};
+
 type ListPayrollYearEndFilingSubmissionsResult = {
+  summary: PayrollYearEndFilingSubmissionListSummary;
   submissions: PayrollYearEndFilingSubmissionSummary[];
 };
 
@@ -3548,6 +3584,81 @@ function buildYearEndFilingSubmissionTimeline(
   });
 }
 
+function matchesYearEndFilingSubmissionFilters(
+  submission: PayrollYearEndFilingSubmissionSummary,
+  filters: ListPayrollYearEndFilingSubmissionsInput
+) {
+  if (filters.status && filters.status !== "all" && submission.status !== filters.status) {
+    return false;
+  }
+  if (filters.ackStatus && filters.ackStatus !== "all") {
+    if (filters.ackStatus === "none") {
+      if (submission.ack !== null) {
+        return false;
+      }
+    } else if (submission.ack?.ackStatus !== filters.ackStatus) {
+      return false;
+    }
+  }
+  if (
+    filters.validationStatus &&
+    filters.validationStatus !== "all" &&
+    submission.validationStatus !== filters.validationStatus
+  ) {
+    return false;
+  }
+  if (filters.transport && filters.transport !== "all" && submission.transport !== filters.transport) {
+    return false;
+  }
+  return true;
+}
+
+function buildYearEndFilingSubmissionListSummary(input: {
+  allSubmissions: PayrollYearEndFilingSubmissionSummary[];
+  filteredSubmissions: PayrollYearEndFilingSubmissionSummary[];
+}): PayrollYearEndFilingSubmissionListSummary {
+  const statusCounts: PayrollYearEndFilingSubmissionListSummary["statusCounts"] = {
+    submitted: 0,
+    acknowledged: 0,
+    canceled: 0
+  };
+  const ackStatusCounts: PayrollYearEndFilingSubmissionListSummary["ackStatusCounts"] = {
+    accepted: 0,
+    rejected: 0,
+    none: 0
+  };
+  const validationStatusCounts: PayrollYearEndFilingSubmissionListSummary["validationStatusCounts"] =
+    {
+      pass: 0,
+      fail: 0
+    };
+  const transportCounts: PayrollYearEndFilingSubmissionListSummary["transportCounts"] = {
+    manual_portal: 0,
+    hometax_upload: 0,
+    nts_api_mock: 0
+  };
+
+  for (const submission of input.allSubmissions) {
+    statusCounts[submission.status] += 1;
+    validationStatusCounts[submission.validationStatus] += 1;
+    transportCounts[submission.transport] += 1;
+    if (!submission.ack) {
+      ackStatusCounts.none += 1;
+    } else {
+      ackStatusCounts[submission.ack.ackStatus] += 1;
+    }
+  }
+
+  return {
+    totalCount: input.allSubmissions.length,
+    filteredCount: input.filteredSubmissions.length,
+    statusCounts,
+    ackStatusCounts,
+    validationStatusCounts,
+    transportCounts
+  };
+}
+
 function ensureNoPendingFilingSubmission(submissions: PayrollYearEndFilingSubmissionSummary[]) {
   if (submissions.some((submission) => submission.status === "submitted")) {
     throw new ServiceError(
@@ -3988,8 +4099,17 @@ export async function listPayrollYearEndFilingSubmissions(
   }
 
   await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const submissions = await listYearEndFilingSubmissionSummaries(context, input);
-  return { submissions };
+  const allSubmissions = await listYearEndFilingSubmissionSummaries(context, input);
+  const submissions = allSubmissions.filter((submission) =>
+    matchesYearEndFilingSubmissionFilters(submission, input)
+  );
+  return {
+    summary: buildYearEndFilingSubmissionListSummary({
+      allSubmissions,
+      filteredSubmissions: submissions
+    }),
+    submissions
+  };
 }
 
 export async function listPayrollYearEndFilingAckCatalog(

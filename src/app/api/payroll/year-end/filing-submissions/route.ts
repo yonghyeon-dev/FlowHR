@@ -19,7 +19,11 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listPayrollYearEndFilingSubmissionsQuerySchema.safeParse({
     year: url.searchParams.get("year"),
-    employeeId: url.searchParams.get("employeeId")
+    employeeId: url.searchParams.get("employeeId"),
+    status: url.searchParams.get("status") ?? undefined,
+    ackStatus: url.searchParams.get("ackStatus") ?? undefined,
+    validationStatus: url.searchParams.get("validationStatus") ?? undefined,
+    transport: url.searchParams.get("transport") ?? undefined
   });
   if (!parsed.success) {
     return fail(400, "invalid query", parsed.error.flatten());

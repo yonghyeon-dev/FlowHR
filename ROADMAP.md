@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.64 (Payroll Year-End Filing Submission Cancel and Reopen Guard Baseline)
+> **Current version**: 0.1.65 (Payroll Year-End Filing Submission Status Summary and Filter UX Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -232,10 +232,11 @@
 - WI-0193 급여 연말정산 신고 패키지 제출 타임라인/증빙 메모 baseline(`GET /payroll/year-end/filing-submissions/{submissionId}/timeline`, `POST /payroll/year-end/filing-submissions/{submissionId}/evidence-note` + `/admin/payroll-year-end-filing` 타임라인/증빙 메모 UX + audit/event 추적 + e2e/spec 갱신)
 - WI-0194 급여 연말정산 신고 패키지 ACK 코드 사전/거절 사유 카탈로그 baseline(`GET /payroll/year-end/filing-ack-catalog` + `POST /payroll/year-end/filing-submissions/{submissionId}/ack` 카탈로그 유효성 가드 + `/admin/payroll-year-end-filing` ACK 코드/거절 사유 선택 UX + e2e/spec 갱신)
 - WI-0195 급여 연말정산 신고 패키지 제출 취소/재오픈 가드 baseline(`POST /payroll/year-end/filing-submissions/{submissionId}/cancel`, `POST /payroll/year-end/filing-submissions/{submissionId}/reopen` + canceled 상태 전이 가드 + ack 차단 + `/admin/payroll-year-end-filing` 취소/재오픈 UX + e2e/spec 갱신)
+- WI-0196 급여 연말정산 신고 패키지 상태 요약/필터 UX baseline(`GET /payroll/year-end/filing-submissions` 필터(status/ackStatus/validationStatus/transport) + summary 카운터 응답 + `/admin/payroll-year-end-filing` 필터/KPI 요약 UX + e2e/spec 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 상태 요약/필터 UX baseline) (WI-0196 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 검색/정렬 및 빠른 액션 UX baseline) (WI-0197 예정)
 
 ### 현재 아키텍처
 

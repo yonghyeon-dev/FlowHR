@@ -150,7 +150,52 @@ export type PayrollYearEndFilingSubmissionResponse = {
   submission: PayrollYearEndFilingSubmission;
 };
 
+export type PayrollYearEndFilingSubmissionStatusFilter =
+  | "submitted"
+  | "acknowledged"
+  | "canceled"
+  | "all";
+
+export type PayrollYearEndFilingSubmissionAckStatusFilter =
+  | "accepted"
+  | "rejected"
+  | "none"
+  | "all";
+
+export type PayrollYearEndFilingSubmissionValidationStatusFilter = "pass" | "fail" | "all";
+
+export type PayrollYearEndFilingSubmissionTransportFilter =
+  | "manual_portal"
+  | "hometax_upload"
+  | "nts_api_mock"
+  | "all";
+
+export type PayrollYearEndFilingSubmissionListSummary = {
+  totalCount: number;
+  filteredCount: number;
+  statusCounts: {
+    submitted: number;
+    acknowledged: number;
+    canceled: number;
+  };
+  ackStatusCounts: {
+    accepted: number;
+    rejected: number;
+    none: number;
+  };
+  validationStatusCounts: {
+    pass: number;
+    fail: number;
+  };
+  transportCounts: {
+    manual_portal: number;
+    hometax_upload: number;
+    nts_api_mock: number;
+  };
+};
+
 export type PayrollYearEndFilingSubmissionListResponse = {
+  summary: PayrollYearEndFilingSubmissionListSummary;
   submissions: PayrollYearEndFilingSubmission[];
 };
 
