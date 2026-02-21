@@ -38,6 +38,9 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 30. Promotion delivery retry defaults to failed recipients when `recipientEmployeeIds` is omitted.
 31. Accrual auto-grant dry-run returns per-employee statuses (`ELIGIBLE`, `ALREADY_SETTLED`, `NOT_ELIGIBLE`) without mutating balances.
 32. Accrual auto-grant apply settles only eligible employees and reports failed rows without aborting whole batch.
+33. Leave calendar query returns day summaries and entry list for organization/date range.
+34. Leave calendar query applies `departmentId` filter to entries and day occupancy.
+35. Leave calendar query includes pending requests in occupancy when `includePending=true`.
 
 ## Boundary and Accuracy Cases
 
@@ -57,6 +60,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 14. Promotion retry payload excludes recipients without email and keeps deterministic selected recipient set.
 15. Promotion retry increments recipient retry count deterministically.
 16. Accrual auto-grant `includeAlreadySettled=false` excludes already-settled rows from result list while keeping summary counts.
+17. Leave calendar query treats `to` as exclusive period end and keeps day summaries deterministic in Asia/Seoul.
 
 ## Regression Linkage
 
@@ -69,6 +73,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 - Promotion notify fixtures remain deterministic for email-template dry-run / dispatched / missing-config outcomes.
 - Promotion delivery history fixtures remain deterministic for failed-dispatch snapshots and retry-chain list/detail views.
 - Accrual auto-grant fixtures remain deterministic for dry-run/apply/already-settled summary counts.
+- Leave calendar fixtures remain deterministic for overlap warning threshold and department filter combinations.
 
 ## QA Gate Expectations
 

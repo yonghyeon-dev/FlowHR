@@ -78,6 +78,15 @@ export const listLeaveRequestQuerySchema = z.object({
   state: leaveRequestStateSchema.optional()
 });
 
+export const listLeaveCalendarQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+  organizationId: z.string().min(1).optional(),
+  departmentId: z.string().min(1).optional(),
+  includePending: z.preprocess(parseBooleanLike, z.boolean().optional()),
+  overlapWarningThreshold: z.preprocess(parseIntegerLike, z.number().int().min(1).max(100).optional())
+});
+
 function parseBooleanLike(value: unknown) {
   if (typeof value !== "string") {
     return value;
@@ -90,6 +99,21 @@ function parseBooleanLike(value: unknown) {
     return false;
   }
   return value;
+}
+
+function parseIntegerLike(value: unknown) {
+  if (typeof value !== "string") {
+    return value;
+  }
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return undefined;
+  }
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+  return parsed;
 }
 
 export const previewLeavePromotionQuerySchema = z.object({

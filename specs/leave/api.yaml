@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.11.0
+  version: 1.12.0
 paths:
   /leave/requests:
     get:
@@ -98,6 +98,47 @@ paths:
       responses:
         "200":
           description: Leave balance snapshot
+  /leave/calendar:
+    get:
+      summary: List organization leave calendar occupancy and overlap warnings for a period
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: organizationId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: departmentId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: includePending
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: overlapWarningThreshold
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Leave calendar summary by day and request entries
   /leave/policy:
     get:
       summary: Read leave policy for organization (defaults when not configured)

@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.11.0
+version: 1.12.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -13,6 +13,7 @@ scope:
     - annual leave promotion notice dispatch automation via webhook (Discord/Slack) and email-template channel
     - annual leave promotion delivery history list/detail and per-recipient retry
     - organization-level annual leave accrual auto-grant dry-run/apply workflow
+    - organization-level leave calendar occupancy read model with department filter and overlap warnings
   out:
     - external calendar synchronization
 entities:
@@ -28,6 +29,8 @@ entities:
     description: Delivery history row for annual leave promotion notify/retry runs.
   - name: LeavePromotionDeliveryRecipient
     description: Recipient snapshot and send result row linked to a promotion delivery.
+  - name: LeaveCalendarProjection
+    description: Organization leave calendar read model generated from leave requests and employee metadata.
 api:
   auth:
     - role: employee
@@ -35,7 +38,7 @@ api:
     - role: manager
       permission: approve/reject leave requests and read leave policy within tenant scope
     - role: payroll_operator
-      permission: settle leave accrual cycle, read leave balances, manage leave policy, run promotion notify/history/retry operations, and list leave requests for payroll review
+      permission: settle leave accrual cycle, read leave balances, manage leave policy, run promotion notify/history/retry operations, list leave requests for payroll review, and read organization leave calendar
     - role: admin
       permission: full leave operations
   endpoints:
@@ -60,6 +63,9 @@ api:
     - method: GET
       path: /leave/balances/{employeeId}
       description: Retrieve leave balance snapshot.
+    - method: GET
+      path: /leave/calendar
+      description: Retrieve organization leave calendar occupancy, overlap warnings, and request entries by period.
     - method: GET
       path: /leave/policy
       description: Read leave policy for an organization (defaults when not configured).
@@ -135,6 +141,9 @@ invariants:
   - Leave accrual settlement uses leave policy defaults when grant/cap inputs are omitted.
   - Leave accrual auto-grant computes suggested annual grant per employee from join month (`Employee.createdAt`) and policy annualGrantDays.
   - Leave accrual auto-grant dry-run must not mutate leave balances.
+  - Leave calendar query period uses Asia/Seoul day boundaries and returns deterministic day-level occupancy.
+  - Leave calendar warning days are computed by comparing occupancy count to `overlapWarningThreshold`.
+  - Leave calendar department filter includes only employees assigned to the selected department.
   - Employee leave list queries are restricted to own employeeId.
   - LeaveRequest.employeeId and LeaveBalanceProjection.employeeId must reference existing Employee.id (FK enforced).
   - Hourly leave requests must satisfy policy increment and maximum-hour rules.
@@ -166,6 +175,7 @@ test_plan:
     - minNoticeDays/maxConsecutiveDays validation
     - annual leave promotion preview window and placeholder rendering
     - leave list query parsing and role boundary guards
+    - leave calendar day-index conversion and overlap warning threshold validation
   integration:
     - create leave request rejects unknown employeeId (404)
     - create/update/approve leave flow
@@ -188,6 +198,9 @@ test_plan:
     - annual leave promotion delivery history list/detail APIs return persisted delivery and recipient snapshots
     - annual leave promotion retry dry-run preserves side-effect free behavior and emits retry history row
     - annual leave promotion retry dispatch re-sends only failed (or selected) recipients with retry linkage
+    - leave calendar query returns approved entries and day summaries for organization/date range
+    - leave calendar query with `departmentId` filters entries to the selected department employees
+    - leave calendar query with `includePending=true` includes pending requests in day occupancy and entries
   regression:
     - overlap detection and boundary-date regressions
     - leave balance continuity after yearly settlement
@@ -196,11 +209,13 @@ test_plan:
     - annual leave promotion disabled mode returns no targets regardless of balance state
     - annual leave promotion notify returns 503 when dispatch is required but selected channel configuration is missing
     - annual leave promotion retry chain remains queryable via `retryOfDeliveryId` filter
+    - leave calendar query treats `to` as exclusive period end and keeps Seoul-day summaries deterministic
   authorization:
     - employee self-service boundary check
     - manager/admin approval check
     - payroll_operator/admin-only accrual settlement check
     - employee self-only list boundary check
+    - payroll_operator/admin-only leave calendar read check (`leave.request.list.any`)
   payroll_accuracy:
     - approved paid leave classification for payroll consumer compatibility
     - carry-over cap and yearly reset rules
@@ -227,6 +242,7 @@ observability:
     - leave.promotion_notice.retry_skipped
     - leave.promotion_notice.retry_dispatched
     - leave.promotion_notice.retry_failed
+    - leave.calendar_read
   metrics:
     - leave_approval_latency_ms
     - leave_request_rejection_rate
@@ -236,6 +252,7 @@ observability:
     - leave_policy_denied_count
     - leave_promotion_target_count
     - leave_promotion_notice_dispatched_count
+    - leave_calendar_warning_day_count
   logs:
     - leave authorization denied with actor role
     - leave accrual duplicate-year rejection logs
@@ -253,7 +270,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.11.0 introduces organization-level accrual auto-grant API (`POST /leave/accrual/auto-grant`) while preserving existing leave request/policy/promotion APIs."
+consumer_impact: "Contract v1.12.0 introduces leave calendar API (`GET /leave/calendar`) with department filter and overlap-warning summary while preserving existing leave request/policy/promotion/accrual APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -266,6 +283,7 @@ references:
   - work-items/WI-0124-leave-promotion-email-template-delivery.md
   - work-items/WI-0125-leave-promotion-delivery-history-retry.md
   - work-items/WI-0182-leave-accrual-auto-grant-engine-baseline.md
+  - work-items/WI-0183-leave-calendar-integration-baseline.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent
