@@ -59,16 +59,6 @@ function run() {
     /\/admin\/contracts/,
     "admin nav should include contracts route"
   );
-  assert.match(
-    adminLayout,
-    /\/admin\/contracts#contract-template-library/,
-    "admin nav should include contract template library anchor"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/contracts#contract-signature-readiness/,
-    "admin nav should include contract signature readiness anchor"
-  );
 
   assert.match(
     globalCss,

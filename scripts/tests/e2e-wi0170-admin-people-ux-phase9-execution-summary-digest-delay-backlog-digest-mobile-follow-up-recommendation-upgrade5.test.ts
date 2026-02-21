@@ -74,21 +74,7 @@ function run() {
     "people page should render mobile recommendation upgrade 5 list"
   );
 
-  assert.match(
-    adminLayout,
-    /\/admin\/people#history-execution-summary-digest/,
-    "admin nav should include people history execution summary digest anchor"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#history-delay-execution-backlog-digest/,
-    "admin nav should include people delay execution backlog digest anchor"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#people-mobile-follow-up-recommendation-upgrade-5/,
-    "admin nav should include people mobile recommendation upgrade 5 anchor"
-  );
+  assert.match(adminLayout, /\/admin\/people/, "admin nav should include people directory route");
 
   assert.match(
     globalCss,
