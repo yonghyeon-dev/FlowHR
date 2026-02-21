@@ -5202,6 +5202,7 @@ button.queue-badge:hover {
 .panel-payslip-history-sort-hardening,
 .panel-payslip-history-sort-hardening-plus,
 .panel-payslip-history-sort-hardening-plus-execution,
+.panel-payslip-history-sort-execution-summary,
 .panel-payslip-status-feedback,
 .panel-payslip-compare,
 .panel-payslip-mobile-delivery,
@@ -5210,11 +5211,13 @@ button.queue-badge:hover {
 .panel-payslip-delay-risk-response,
 .panel-payslip-delay-risk-response-execution-guide,
 .panel-payslip-delay-risk-response-execution-tracker,
+.panel-payslip-delay-risk-execution-backlog,
 .panel-payslip-mobile-follow-up-guide,
 .panel-payslip-mobile-follow-up-recommendation,
 .panel-payslip-mobile-follow-up-recommendation-upgrade,
 .panel-payslip-mobile-follow-up-recommendation-upgrade-2,
-.panel-payslip-mobile-follow-up-recommendation-upgrade-3 {
+.panel-payslip-mobile-follow-up-recommendation-upgrade-3,
+.panel-payslip-mobile-follow-up-recommendation-upgrade-4 {
   grid-column: 1 / -1;
 }
 
@@ -5486,6 +5489,60 @@ button.queue-badge:hover {
 }
 
 .payslip-history-sort-hardening-plus-execution-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.payslip-history-sort-execution-summary-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payslip-history-sort-execution-summary-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-history-sort-execution-summary-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-history-sort-execution-summary-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.payslip-history-sort-execution-summary-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-history-sort-execution-summary-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-history-sort-execution-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-history-sort-execution-summary-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -5869,6 +5926,60 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.payslip-delay-risk-execution-backlog-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payslip-delay-risk-execution-backlog-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-delay-risk-execution-backlog-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-delay-risk-execution-backlog-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.payslip-delay-risk-execution-backlog-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-delay-risk-execution-backlog-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-delay-risk-execution-backlog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-delay-risk-execution-backlog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .delivery-channel-grid {
   display: grid;
   gap: 8px;
@@ -6178,6 +6289,54 @@ button.queue-badge:hover {
 }
 
 .payslip-mobile-follow-up-recommendation-upgrade-3-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-4-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-4-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-4-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-4-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-4-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-4-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-4-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6618,16 +6777,19 @@ button.queue-badge:hover {
   #payslip-history-sort-hardening .payslip-history-sort-hardening-list,
   #payslip-history-sort-hardening-plus .payslip-history-sort-hardening-plus-list,
   #payslip-history-sort-hardening-plus-execution .payslip-history-sort-hardening-plus-execution-list,
+  #payslip-history-sort-execution-summary .payslip-history-sort-execution-summary-list,
   #payslip-confirmation-prediction .payslip-confirmation-prediction-list,
   #payslip-delay-risk-prediction .payslip-delay-risk-prediction-list,
   #payslip-delay-risk-response .payslip-delay-risk-response-list,
   #payslip-delay-risk-response-execution-guide .payslip-delay-risk-response-execution-guide-list,
   #payslip-delay-risk-response-execution-tracker .payslip-delay-risk-response-execution-tracker-list,
+  #payslip-delay-risk-execution-backlog .payslip-delay-risk-execution-backlog-list,
   #payslip-mobile-follow-up-guide .payslip-mobile-follow-up-guide-list,
   #payslip-mobile-follow-up-recommendation .payslip-mobile-follow-up-recommendation-list,
   #payslip-mobile-follow-up-recommendation-upgrade .payslip-mobile-follow-up-recommendation-upgrade-list,
   #payslip-mobile-follow-up-recommendation-upgrade-2 .payslip-mobile-follow-up-recommendation-upgrade-2-list,
-  #payslip-mobile-follow-up-recommendation-upgrade-3 .payslip-mobile-follow-up-recommendation-upgrade-3-list {
+  #payslip-mobile-follow-up-recommendation-upgrade-3 .payslip-mobile-follow-up-recommendation-upgrade-3-list,
+  #payslip-mobile-follow-up-recommendation-upgrade-4 .payslip-mobile-follow-up-recommendation-upgrade-4-list {
     grid-template-columns: 1fr;
   }
 
@@ -6645,16 +6807,19 @@ button.queue-badge:hover {
   #payslip-history-sort-hardening .payslip-history-sort-hardening-head,
   #payslip-history-sort-hardening-plus .payslip-history-sort-hardening-plus-head,
   #payslip-history-sort-hardening-plus-execution .payslip-history-sort-hardening-plus-execution-head,
+  #payslip-history-sort-execution-summary .payslip-history-sort-execution-summary-head,
   #payslip-confirmation-prediction .payslip-confirmation-prediction-head,
   #payslip-delay-risk-prediction .payslip-delay-risk-prediction-head,
   #payslip-delay-risk-response .payslip-delay-risk-response-head,
   #payslip-delay-risk-response-execution-guide .payslip-delay-risk-response-execution-guide-head,
   #payslip-delay-risk-response-execution-tracker .payslip-delay-risk-response-execution-tracker-head,
+  #payslip-delay-risk-execution-backlog .payslip-delay-risk-execution-backlog-head,
   #payslip-mobile-follow-up-guide .payslip-mobile-follow-up-guide-head,
   #payslip-mobile-follow-up-recommendation .payslip-mobile-follow-up-recommendation-head,
   #payslip-mobile-follow-up-recommendation-upgrade .payslip-mobile-follow-up-recommendation-upgrade-head,
   #payslip-mobile-follow-up-recommendation-upgrade-2 .payslip-mobile-follow-up-recommendation-upgrade-2-head,
-  #payslip-mobile-follow-up-recommendation-upgrade-3 .payslip-mobile-follow-up-recommendation-upgrade-3-head {
+  #payslip-mobile-follow-up-recommendation-upgrade-3 .payslip-mobile-follow-up-recommendation-upgrade-3-head,
+  #payslip-mobile-follow-up-recommendation-upgrade-4 .payslip-mobile-follow-up-recommendation-upgrade-4-head {
     flex-direction: column;
     align-items: flex-start;
   }
