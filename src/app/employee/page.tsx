@@ -324,6 +324,48 @@ type MobileFollowUpRecommendationUpgrade2Card = {
   targetSectionId: string;
 };
 
+type RequestHistorySortHardeningPlusExecutionCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  stabilizationScore: number;
+  readinessScore: number;
+  executionLabel: string;
+  executionChecklist: string;
+  detail: string;
+  searchScope: RequestSearchScope;
+  searchQuery: string;
+  recommendedSortOption: RequestSortOption;
+  targetSectionId: string;
+};
+
+type ApprovalDelayRiskResponseExecutionTrackerCard = {
+  key: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  riskScore: number;
+  pendingCount: number;
+  responseWindow: string;
+  trackerScore: number;
+  trackerLabel: string;
+  executionChecklist: string;
+  detail: string;
+  searchScope: RequestSearchScope;
+  searchQuery: string;
+  recommendedSortOption: RequestSortOption;
+  targetSectionId: string;
+};
+
+type MobileFollowUpRecommendationUpgrade3Card = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  priorityScore: number;
+  detail: string;
+  ctaLabel: string;
+  targetSectionId: string;
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -1196,6 +1238,67 @@ export default function EmployeeSelfServicePage() {
     jumpToSection(card.targetSectionId);
   }
 
+  function runRequestHistorySortHardeningPlusExecutionAction(card: RequestHistorySortHardeningPlusExecutionCard) {
+    applyRequestSearchPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      sortOption: card.recommendedSortOption,
+      targetSectionId: card.targetSectionId,
+      feedback:
+        card.stabilizationScore > 0
+          ? `Hardening+ execution preset applied (readiness ${card.readinessScore}).`
+          : "No request rows are available for hardening+ execution."
+    });
+  }
+
+  function runApprovalDelayRiskResponseExecutionTrackerAction(card: ApprovalDelayRiskResponseExecutionTrackerCard) {
+    applyRequestSearchPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      sortOption: card.recommendedSortOption,
+      targetSectionId: card.targetSectionId,
+      feedback:
+        card.pendingCount > 0
+          ? `Execution tracker applied (${card.trackerLabel}, ${card.responseWindow}).`
+          : "No pending requests for execution tracker."
+    });
+  }
+
+  function runMobileFollowUpRecommendationUpgrade3Action(card: MobileFollowUpRecommendationUpgrade3Card) {
+    if (card.key === "sort-hardening-plus-execution") {
+      const target = requestHistorySortHardeningPlusExecutionCards.find(
+        (executionCard) => executionCard.stabilizationScore > 0 && executionCard.severity !== "normal"
+      );
+      if (target) {
+        runRequestHistorySortHardeningPlusExecutionAction(target);
+        jumpToSection("request-history-sort-hardening-plus-execution");
+        return;
+      }
+    }
+    if (card.key === "delay-response-execution-tracker") {
+      const target = approvalDelayRiskResponseExecutionTrackerCards.find(
+        (trackerCard) => trackerCard.pendingCount > 0 && trackerCard.severity !== "normal"
+      );
+      if (target) {
+        runApprovalDelayRiskResponseExecutionTrackerAction(target);
+        jumpToSection("approval-delay-risk-response-execution-tracker");
+        return;
+      }
+    }
+    if (card.key === "resubmit-flow-upgrade3" && resubmitCandidates.length > 0 && !resubmitFlowReady) {
+      openRejectedRequestSearch();
+      jumpToSection("request-resubmit");
+      pushMobileFlowFeedback("Review rejected requests and complete resubmit validation.");
+      return;
+    }
+    if (card.key === "api-recovery-upgrade3" && stats.fail > 0) {
+      jumpToSection("request-feedback");
+      pushMobileFlowFeedback("Review API failure details before retry.");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
   function startTodayAttendanceFlow() {
     setCheckInAt(todayStartLocal());
     setCheckOutAt(todayEndLocal());
@@ -2028,6 +2131,59 @@ export default function EmployeeSelfServicePage() {
     });
   }, [requestHistorySortHardeningCards, requestSortOption]);
 
+  const requestHistorySortHardeningPlusExecutionCards = useMemo<RequestHistorySortHardeningPlusExecutionCard[]>(
+    () => {
+      const cards = requestHistorySortHardeningPlusCards.map((card) => {
+        const aligned = requestSortOption === card.recommendedSortOption;
+        const severityPenalty = card.severity === "critical" ? 26 : card.severity === "watch" ? 12 : 0;
+        const readinessScore = Math.max(0, Math.min(100, card.stabilizationScore - severityPenalty + (aligned ? 8 : 0)));
+        const executionLabel =
+          card.stabilizationScore === 0
+            ? "prepare scope"
+            : card.severity === "critical"
+              ? "execute now"
+              : card.severity === "watch"
+                ? "execute this cycle"
+                : "monitor";
+        const executionChecklist =
+          card.stabilizationScore === 0
+            ? "No request history rows in scope. Reset search and refresh rows first."
+            : card.key === "pending-first"
+              ? "Apply pending-first sort and verify oldest pending rows at top."
+              : card.key === "latest-desc"
+                ? "Apply latest-first sort and confirm recency-driven triage order."
+                : "Apply status-cluster sort and verify state grouping consistency.";
+
+        return {
+          key: card.key,
+          label: card.label,
+          severity: card.severity,
+          stabilizationScore: card.stabilizationScore,
+          readinessScore,
+          executionLabel,
+          executionChecklist,
+          detail:
+            card.stabilizationScore === 0
+              ? "Execution card is idle because request history rows are empty."
+              : `stability ${card.stabilizationScore} / readiness ${readinessScore}.`,
+          searchScope: card.searchScope,
+          searchQuery: card.searchQuery,
+          recommendedSortOption: card.recommendedSortOption,
+          targetSectionId: card.targetSectionId
+        };
+      });
+
+      return cards.sort((left, right) => {
+        const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.readinessScore - left.readinessScore;
+      });
+    },
+    [requestHistorySortHardeningPlusCards, requestSortOption]
+  );
+
   const approvalDelayRiskPredictionCards = useMemo<ApprovalDelayRiskPredictionCard[]>(() => {
     const pendingRows = requestSearchRows.filter((row) => row.status === "PENDING");
 
@@ -2208,6 +2364,55 @@ export default function EmployeeSelfServicePage() {
       return right.riskScore - left.riskScore;
     });
   }, [approvalDelayRiskResponseCards]);
+
+  const approvalDelayRiskResponseExecutionTrackerCards = useMemo<
+    ApprovalDelayRiskResponseExecutionTrackerCard[]
+  >(() => {
+    const cards = approvalDelayRiskResponseExecutionGuideCards.map((card) => {
+      const trackerScore =
+        card.pendingCount === 0 ? 0 : Math.min(100, Math.max(0, card.riskScore + Math.min(30, card.pendingCount * 6)));
+      const trackerLabel =
+        card.pendingCount === 0
+          ? "idle"
+          : card.severity === "critical"
+            ? "escalate now"
+            : card.severity === "watch"
+              ? "track within today"
+              : "daily monitor";
+      const executionChecklist =
+        card.pendingCount === 0
+          ? "No pending requests in this channel."
+          : `${card.executionChecklist} Keep ${card.responseWindow} response window in follow-up checklist.`;
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        riskScore: card.riskScore,
+        pendingCount: card.pendingCount,
+        responseWindow: card.responseWindow,
+        trackerScore,
+        trackerLabel,
+        executionChecklist,
+        detail:
+          card.pendingCount === 0
+            ? "Execution tracker is idle because there are no pending requests."
+            : `tracker ${trackerScore} / risk ${card.riskScore} / pending ${card.pendingCount}.`,
+        searchScope: card.searchScope,
+        searchQuery: card.searchQuery,
+        recommendedSortOption: card.recommendedSortOption,
+        targetSectionId: card.targetSectionId
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.trackerScore - left.trackerScore;
+    });
+  }, [approvalDelayRiskResponseExecutionGuideCards]);
 
   const filteredRequestFeedbackRows = useMemo(() => {
     if (requestFeedbackStatusFilter === "all") {
@@ -3073,6 +3278,90 @@ export default function EmployeeSelfServicePage() {
     stats.fail
   ]);
 
+  const mobileFollowUpRecommendationUpgrade3Cards = useMemo<MobileFollowUpRecommendationUpgrade3Card[]>(() => {
+    const topSortExecutionRisk = requestHistorySortHardeningPlusExecutionCards.find(
+      (card) => card.stabilizationScore > 0 && card.severity !== "normal"
+    );
+    const topDelayTrackerRisk = approvalDelayRiskResponseExecutionTrackerCards.find(
+      (card) => card.pendingCount > 0 && card.severity !== "normal"
+    );
+
+    const cards: MobileFollowUpRecommendationUpgrade3Card[] = [
+      {
+        key: "sort-hardening-plus-execution",
+        label: "Sort hardening+ execution recommendation",
+        tone: topSortExecutionRisk
+          ? topSortExecutionRisk.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topSortExecutionRisk ? topSortExecutionRisk.readinessScore : 16,
+        detail: topSortExecutionRisk
+          ? `${topSortExecutionRisk.executionChecklist} (${topSortExecutionRisk.executionLabel})`
+          : "No sort hardening+ execution action is required.",
+        ctaLabel: topSortExecutionRisk ? "Run hardening+ execution" : "Open hardening+ execution",
+        targetSectionId: "request-history-sort-hardening-plus-execution"
+      },
+      {
+        key: "delay-response-execution-tracker",
+        label: "Delay response execution tracker",
+        tone: topDelayTrackerRisk
+          ? topDelayTrackerRisk.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topDelayTrackerRisk ? topDelayTrackerRisk.trackerScore : 18,
+        detail: topDelayTrackerRisk
+          ? `${topDelayTrackerRisk.executionChecklist} (${topDelayTrackerRisk.trackerLabel})`
+          : "No delay-response execution tracking action is required.",
+        ctaLabel: topDelayTrackerRisk ? "Run execution tracker" : "Open execution tracker",
+        targetSectionId: "approval-delay-risk-response-execution-tracker"
+      },
+      {
+        key: "resubmit-flow-upgrade3",
+        label: "Resubmit flow recommendation",
+        tone: resubmitCandidates.length === 0 ? "ready" : resubmitFlowReady ? "pending" : "fail",
+        priorityScore: resubmitCandidates.length === 0 ? 14 : resubmitFlowReady ? 64 : 90,
+        detail:
+          resubmitCandidates.length === 0
+            ? "No rejected/canceled requests require resubmission."
+            : resubmitFlowReady
+              ? "Resubmit draft is ready. Complete final submission."
+              : resubmitFirstFailCheck?.detail || "Review resubmit validation blockers.",
+        ctaLabel: resubmitCandidates.length > 0 ? "Open resubmit flow" : "Open submit guide",
+        targetSectionId: resubmitCandidates.length > 0 ? "request-resubmit" : "mobile-submit-guide"
+      },
+      {
+        key: "api-recovery-upgrade3",
+        label: "API recovery recommendation",
+        tone: stats.fail > 0 ? "fail" : "ready",
+        priorityScore: stats.fail > 0 ? 94 : 10,
+        detail:
+          stats.fail > 0
+            ? latestFailureCauseMessage || "Investigate API failure causes before retry."
+            : "No API recovery follow-up is required.",
+        ctaLabel: stats.fail > 0 ? "Open request feedback" : "Open request timeline",
+        targetSectionId: stats.fail > 0 ? "request-feedback" : "request-timeline"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const toneDiff = mobileFollowUpToneRank(right.tone) - mobileFollowUpToneRank(left.tone);
+      if (toneDiff !== 0) {
+        return toneDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    approvalDelayRiskResponseExecutionTrackerCards,
+    latestFailureCauseMessage,
+    requestHistorySortHardeningPlusExecutionCards,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowReady,
+    stats.fail
+  ]);
+
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
       return "비교 대상 없음";
@@ -3616,6 +3905,43 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article
+          className="panel panel-request-history-sort-hardening-plus-execution"
+          id="request-history-sort-hardening-plus-execution"
+        >
+          <h2>Request history sort hardening plus execution</h2>
+          <p className="small">
+            Converts hardening+ signals into readiness score and execution checklist for immediate follow-up execution.
+          </p>
+          <ul
+            className="request-history-sort-hardening-plus-execution-list"
+            aria-label="request history sort hardening plus execution list"
+          >
+            {requestHistorySortHardeningPlusExecutionCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="request-history-sort-hardening-plus-execution-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">readiness {card.readinessScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="request-history-sort-hardening-plus-execution-meta">
+                  <span className="queue-history-chip">stability {card.stabilizationScore}</span>
+                  <span className="queue-history-chip">{requestSortOptionLabel(card.recommendedSortOption)}</span>
+                  <span className="queue-history-chip">{card.executionLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runRequestHistorySortHardeningPlusExecutionAction(card)}
+                >
+                  run hardening+ execution
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-approval-delay-risk-prediction" id="approval-delay-risk-prediction">
           <h2>승인 지연 위험 예측 피드백</h2>
           <p className="small">
@@ -3715,6 +4041,43 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article
+          className="panel panel-approval-delay-risk-response-execution-tracker"
+          id="approval-delay-risk-response-execution-tracker"
+        >
+          <h2>Approval delay response execution tracker</h2>
+          <p className="small">
+            Tracks execution-guide cards with tracker score and follow-up label so critical queues are handled first.
+          </p>
+          <ul
+            className="approval-delay-risk-response-execution-tracker-list"
+            aria-label="approval delay risk response execution tracker list"
+          >
+            {approvalDelayRiskResponseExecutionTrackerCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="approval-delay-risk-response-execution-tracker-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">tracker {card.trackerScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="approval-delay-risk-response-execution-tracker-meta">
+                  <span className="queue-history-chip">risk {card.riskScore}</span>
+                  <span className="queue-history-chip">pending {card.pendingCount}</span>
+                  <span className="queue-history-chip">{card.trackerLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runApprovalDelayRiskResponseExecutionTrackerAction(card)}
+                >
+                  run execution tracker
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-mobile-shortcuts" id="mobile-shortcuts">
           <h2>모바일 단축 흐름</h2>
           <p className="small">터치 중심 단축 버튼으로 입력/정정/신청/갱신을 빠르게 진행합니다.</p>
@@ -3743,6 +4106,12 @@ export default function EmployeeSelfServicePage() {
             >
               sort hardening+
             </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("request-history-sort-hardening-plus-execution")}
+            >
+              hardening+ execution
+            </button>
             <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("approval-delay-risk-response")}>
               delay response
             </button>
@@ -3751,6 +4120,12 @@ export default function EmployeeSelfServicePage() {
               onClick={() => jumpToSection("approval-delay-risk-response-execution-guide")}
             >
               response execution guide
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("approval-delay-risk-response-execution-tracker")}
+            >
+              response execution tracker
             </button>
             <button
               className="btn btn-secondary btn-small"
@@ -3763,6 +4138,12 @@ export default function EmployeeSelfServicePage() {
               onClick={() => jumpToSection("mobile-follow-up-recommendation-upgrade-2")}
             >
               recommendation upgrade 2
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("mobile-follow-up-recommendation-upgrade-3")}
+            >
+              recommendation upgrade 3
             </button>
             <button className="btn btn-primary btn-small" onClick={() => void refreshEmployeeSnapshot()}>
               요청 상태 새로고침
@@ -3922,6 +4303,37 @@ export default function EmployeeSelfServicePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runMobileFollowUpRecommendationUpgrade2Action(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article
+          className="panel panel-mobile-follow-up-recommendation-upgrade-3"
+          id="mobile-follow-up-recommendation-upgrade-3"
+        >
+          <h2>Mobile follow-up recommendation upgrade 3</h2>
+          <p className="small">
+            Prioritized recommendations combine hardening+ execution, response execution tracker, resubmit flow, and API recovery.
+          </p>
+          <ul
+            className="mobile-follow-up-recommendation-upgrade-3-list"
+            aria-label="mobile follow-up recommendation upgrade 3 list"
+          >
+            {mobileFollowUpRecommendationUpgrade3Cards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="mobile-follow-up-recommendation-upgrade-3-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">priority {card.priorityScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runMobileFollowUpRecommendationUpgrade3Action(card)}
                 >
                   {card.ctaLabel}
                 </button>
