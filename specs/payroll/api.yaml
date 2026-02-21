@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.17.0
+  version: 1.18.0
 paths:
   /payroll/runs:
     get:
@@ -173,6 +173,42 @@ paths:
       responses:
         "200":
           description: Filing submission resubmitted
+  /payroll/year-end/filing-submissions/{submissionId}/timeline:
+    get:
+      summary: List payroll year-end filing submission timeline
+      description: Returns ordered timeline events for selected submission (submitted/resubmitted, acknowledgement, evidence notes).
+      parameters:
+        - in: path
+          name: submissionId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Filing submission timeline listed
+  /payroll/year-end/filing-submissions/{submissionId}/evidence-note:
+    post:
+      summary: Append payroll year-end filing evidence note
+      description: Appends operator evidence note to selected filing submission for compliance traceability.
+      parameters:
+        - in: path
+          name: submissionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Filing evidence note appended
   /payroll/year-end/withholding-receipts:
     post:
       summary: Preview or issue withholding receipt for employee/year

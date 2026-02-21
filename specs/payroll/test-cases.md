@@ -45,6 +45,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 37. Export year-end filing data in `json`/`csv`/`jsonl`/`hometax_csv` and validate `basic`/`strict` mode behavior (strict rejects validation-failed exports).
 38. Submit/list/ack year-end filing package and reject ACK for unknown/already-acknowledged submission.
 39. Resubmit rejected filing package and reject resubmit for pending/non-rejected/already-resubmitted sources.
+40. Query filing submission timeline and append evidence note; reject timeline/note for unknown submission.
 
 ## Accuracy Cases
 
@@ -75,6 +76,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 25. Year-end filing multi-format artifact checksum/content remains deterministic for same finalized payload and format.
 26. Year-end filing submission status transition (`submitted` -> `acknowledged`) remains deterministic.
 27. Year-end filing resubmission attempt/parent-link transition remains deterministic.
+28. Year-end filing timeline ordering and evidence-note replay remain deterministic.
 
 ## Regression Linkage
 
@@ -106,3 +108,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Export Format Gate: filing export multi-format artifact generation and strict validation-mode guard remain deterministic and auditable.
 - Year-End Filing Submission Gate: filing submission list/create/ack APIs remain feature-flagged, permission-guarded, and deterministic with auditable status transitions.
 - Year-End Filing Resubmission Gate: filing resubmission API enforces pending/rejected/duplicate transition guards deterministically.
+- Year-End Filing Timeline/Evidence Gate: filing timeline/evidence-note APIs remain feature-flagged, permission-guarded, and deterministic with auditable event ordering.

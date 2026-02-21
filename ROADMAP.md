@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.61 (Payroll Year-End Filing Resubmission and State Transition Guard Baseline)
+> **Current version**: 0.1.62 (Payroll Year-End Filing Submission Timeline and Evidence Note Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -229,10 +229,11 @@
 - WI-0190 급여 연말정산 신고 익스포트 포맷/검증 확장 baseline(`POST /payroll/year-end/export-filing-data` 다중 포맷 `json/csv/jsonl/hometax_csv` + `validationMode=basic/strict` + 아티팩트 체크섬/검증 요약 + `/admin/payroll-year-end-filing` UX 확장 + e2e/spec 갱신)
 - WI-0191 급여 연말정산 신고 패키지 제출 추적/ACK baseline(`GET|POST /payroll/year-end/filing-submissions`, `POST /payroll/year-end/filing-submissions/{submissionId}/ack` + `/admin/payroll-year-end-filing` 제출/ACK/이력 패널 + audit/event 추적 + e2e/spec 갱신)
 - WI-0192 급여 연말정산 신고 패키지 재제출/상태 전이 가드 baseline(`POST /payroll/year-end/filing-submissions/{submissionId}/resubmit` + pending/rejected/중복 재제출 전이 가드 + 시도횟수/원본 submission 연결 + `/admin/payroll-year-end-filing` 재제출 UX + e2e/spec 갱신)
+- WI-0193 급여 연말정산 신고 패키지 제출 타임라인/증빙 메모 baseline(`GET /payroll/year-end/filing-submissions/{submissionId}/timeline`, `POST /payroll/year-end/filing-submissions/{submissionId}/evidence-note` + `/admin/payroll-year-end-filing` 타임라인/증빙 메모 UX + audit/event 추적 + e2e/spec 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 제출 타임라인/증빙 메모 baseline) (WI-0193 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 ACK 코드 사전/거절 사유 카탈로그 baseline) (WI-0194 예정)
 
 ### 현재 아키텍처
 

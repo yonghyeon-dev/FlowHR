@@ -247,6 +247,19 @@ export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
   employeeId: z.string().min(1)
 });
 
+export const listPayrollYearEndFilingSubmissionTimelineQuerySchema = z.object({
+  year: z.coerce.number().int().min(2020).max(2100),
+  employeeId: z.string().min(1),
+  submissionId: z.string().min(1)
+});
+
+export const addPayrollYearEndFilingEvidenceNoteSchema = z.object({
+  year: payrollYearSchema,
+  employeeId: z.string().min(1),
+  submissionId: z.string().min(1),
+  note: z.string().min(1).max(500)
+});
+
 export const issuePayrollYearEndWithholdingReceiptSchema = z.object({
   year: payrollYearSchema,
   employeeId: z.string().min(1),

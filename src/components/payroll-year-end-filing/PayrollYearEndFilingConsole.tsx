@@ -8,10 +8,13 @@ import { useStickyStringState } from "@/lib/client/useStickyState";
 import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 import type {
   ApiLog,
+  PayrollYearEndFilingEvidenceNoteResponse,
   PayrollYearEndFilingExportResponse,
   PayrollYearEndFilingSubmission,
   PayrollYearEndFilingSubmissionListResponse,
   PayrollYearEndFilingSubmissionResponse,
+  PayrollYearEndFilingSubmissionTimelineResponse,
+  PayrollYearEndFilingTimelineEntry,
   PayrollYearEndFinalizationResponse
 } from "@/components/payroll-year-end-filing/types";
 
@@ -29,6 +32,22 @@ function parseRate(value: string, fieldName: string) {
     throw new Error(`${fieldName} must be between 0 and 1`);
   }
   return parsed;
+}
+
+function formatTimelineEntry(entry: PayrollYearEndFilingTimelineEntry) {
+  if (entry.action === "submitted" || entry.action === "resubmitted") {
+    const parts = [
+      `${entry.action.toUpperCase()} attempt ${entry.attempt ?? "-"}`,
+      entry.resubmissionOfSubmissionId ? `from ${entry.resubmissionOfSubmissionId}` : null,
+      entry.resubmissionReason ? `reason: ${entry.resubmissionReason}` : null,
+      entry.submissionNote ? `note: ${entry.submissionNote}` : null
+    ].filter(Boolean);
+    return parts.join(" / ");
+  }
+  if (entry.action === "acknowledged") {
+    return `ACK ${entry.ackStatus ?? "-"}${entry.ackCode ? ` (${entry.ackCode})` : ""}${entry.ackNote ? ` / ${entry.ackNote}` : ""}`;
+  }
+  return `EVIDENCE NOTE: ${entry.evidenceNote ?? "-"}`;
 }
 
 export default function PayrollYearEndFilingConsole() {
@@ -60,11 +79,14 @@ export default function PayrollYearEndFilingConsole() {
   const [ackNote, setAckNote] = useState("baseline acknowledgement");
   const [resubmitSubmissionId, setResubmitSubmissionId] = useState("");
   const [resubmissionReason, setResubmissionReason] = useState("resubmit after rejected ack");
+  const [timelineSubmissionId, setTimelineSubmissionId] = useState("");
+  const [evidenceNote, setEvidenceNote] = useState("filing evidence note");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [finalization, setFinalization] = useState<PayrollYearEndFinalizationResponse | null>(null);
   const [filingExport, setFilingExport] = useState<PayrollYearEndFilingExportResponse | null>(null);
   const [submissions, setSubmissions] = useState<PayrollYearEndFilingSubmission[]>([]);
+  const [timelineEntries, setTimelineEntries] = useState<PayrollYearEndFilingTimelineEntry[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -380,12 +402,105 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
+  async function runLoadSubmissionTimeline(submissionIdOverride?: string) {
+    const submissionId = (submissionIdOverride ?? timelineSubmissionId).trim();
+    if (!submissionId) {
+      setStatusMessage("timeline submission ID is required");
+      return;
+    }
+
+    try {
+      setPendingLabel("year-end filing submission timeline");
+      const requestYear = parseRequiredInt(year, "year");
+      const requestEmployeeId = employeeId.trim();
+      const response = await fetch(
+        `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/timeline?year=${requestYear}&employeeId=${encodeURIComponent(requestEmployeeId)}`,
+        {
+          method: "GET",
+          headers: buildHeaders()
+        }
+      );
+      const body = (await response.json()) as PayrollYearEndFilingSubmissionTimelineResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "list filing submission timeline",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setTimelineSubmissionId(submissionId);
+      setTimelineEntries(body.timeline);
+      setSubmissions((prev) =>
+        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
+      );
+      setStatusMessage(`loaded timeline ${body.timeline.length} events`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
+  async function runAddEvidenceNote() {
+    const submissionId = timelineSubmissionId.trim();
+    if (!submissionId) {
+      setStatusMessage("timeline submission ID is required for evidence note");
+      return;
+    }
+
+    try {
+      setPendingLabel("year-end filing evidence note");
+      const payload = {
+        year: parseRequiredInt(year, "year"),
+        employeeId: employeeId.trim(),
+        note: evidenceNote.trim()
+      };
+      const response = await fetch(
+        `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/evidence-note`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      const body = (await response.json()) as PayrollYearEndFilingEvidenceNoteResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "add filing evidence note",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setStatusMessage(`added evidence note for ${body.evidenceNote.submissionId}`);
+      await runLoadSubmissionTimeline(submissionId);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   return (
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization, Filing Submission, ACK, and Resubmission</h1>
-        <p>Finalize year-end settlement, submit and acknowledge filing packages, then resubmit rejected submissions with transition guards.</p>
+        <h1>Payroll Year-End Finalization, Filing Submission, Timeline, and Evidence Note</h1>
+        <p>Finalize year-end settlement, submit and acknowledge filing packages, resubmit rejected submissions, and track timeline/evidence notes per submission.</p>
       </header>
 
       <section className="panel-grid">
@@ -451,6 +566,8 @@ export default function PayrollYearEndFilingConsole() {
           <label>Ack Note<input value={ackNote} onChange={(event) => setAckNote(event.target.value)} /></label>
           <label>Resubmit Submission ID<input value={resubmitSubmissionId} onChange={(event) => setResubmitSubmissionId(event.target.value)} /></label>
           <label>Resubmission Reason<input value={resubmissionReason} onChange={(event) => setResubmissionReason(event.target.value)} /></label>
+          <label>Timeline Submission ID<input value={timelineSubmissionId} onChange={(event) => setTimelineSubmissionId(event.target.value)} /></label>
+          <label>Evidence Note<input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></label>
           <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
           <label>Actor ID (dev fallback)<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
           <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
@@ -462,6 +579,8 @@ export default function PayrollYearEndFilingConsole() {
             <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>Acknowledge Submission</button>
             <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>Resubmit Submission</button>
             <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>Refresh Submissions</button>
+            <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>Load Submission Timeline</button>
+            <button className="btn btn-secondary" onClick={() => void runAddEvidenceNote()} disabled={pendingLabel !== null}>Add Evidence Note</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
           {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
@@ -531,7 +650,35 @@ export default function PayrollYearEndFilingConsole() {
                   {submission.submissionId} / attempt {submission.attempt} / {submission.transport} / {submission.format} / {submission.validationMode}
                   {submission.resubmissionOfSubmissionId ? ` / resubmissionOf ${submission.resubmissionOfSubmissionId}` : ""}
                   {submission.ack ? ` / ACK ${submission.ack.ackStatus}` : ""}
+                  {" "}
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setTimelineSubmissionId(submission.submissionId);
+                      void runLoadSubmissionTimeline(submission.submissionId);
+                    }}
+                    disabled={pendingLabel !== null}
+                  >
+                    Timeline
+                  </button>
                   <time>{new Date(submission.submittedAt).toLocaleString("ko-KR")}</time>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article className="panel">
+          <h2>Submission Timeline</h2>
+          {timelineEntries.length === 0 ? <p className="small">No timeline loaded.</p> : (
+            <ul className="log-list">
+              {timelineEntries.map((entry, index) => (
+                <li key={`${entry.action}-${entry.occurredAt}-${index}`}>
+                  <span className={entry.action === "acknowledged" && entry.ackStatus === "accepted" ? "ok" : "small"}>
+                    {entry.action}
+                  </span>{" "}
+                  {entry.submissionId} / {formatTimelineEntry(entry)}
+                  <time>{new Date(entry.occurredAt).toLocaleString("ko-KR")}</time>
                 </li>
               ))}
             </ul>
