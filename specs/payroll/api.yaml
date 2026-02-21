@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.19.0
+  version: 1.20.0
 paths:
   /payroll/runs:
     get:
@@ -181,10 +181,36 @@ paths:
       responses:
         "200":
           description: Filing submission resubmitted
+  /payroll/year-end/filing-submissions/{submissionId}/cancel:
+    post:
+      summary: Cancel pending payroll year-end filing submission
+      description: Cancels selected filing submission only when current status is pending (`submitted`).
+      parameters:
+        - in: path
+          name: submissionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Filing submission canceled
+  /payroll/year-end/filing-submissions/{submissionId}/reopen:
+    post:
+      summary: Reopen canceled payroll year-end filing submission
+      description: Reopens selected filing submission only when current status is `canceled` and no other pending submission exists.
+      parameters:
+        - in: path
+          name: submissionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Filing submission reopened
   /payroll/year-end/filing-submissions/{submissionId}/timeline:
     get:
       summary: List payroll year-end filing submission timeline
-      description: Returns ordered timeline events for selected submission (submitted/resubmitted, acknowledgement, evidence notes).
+      description: Returns ordered timeline events for selected submission (submitted/resubmitted/canceled/reopened, acknowledgement, evidence notes).
       parameters:
         - in: path
           name: submissionId

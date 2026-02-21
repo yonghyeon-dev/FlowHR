@@ -52,6 +52,12 @@ function formatTimelineEntry(entry: PayrollYearEndFilingTimelineEntry) {
       entry.ackNote ? ` / ${entry.ackNote}` : ""
     }`;
   }
+  if (entry.action === "canceled") {
+    return "SUBMISSION CANCELED";
+  }
+  if (entry.action === "reopened") {
+    return "SUBMISSION REOPENED";
+  }
   return `EVIDENCE NOTE: ${entry.evidenceNote ?? "-"}`;
 }
 
@@ -87,6 +93,8 @@ export default function PayrollYearEndFilingConsole() {
   const [ackCatalog, setAckCatalog] = useState<PayrollYearEndFilingAckCatalogResponse | null>(null);
   const [resubmitSubmissionId, setResubmitSubmissionId] = useState("");
   const [resubmissionReason, setResubmissionReason] = useState("resubmit after rejected ack");
+  const [cancelSubmissionId, setCancelSubmissionId] = useState("");
+  const [reopenSubmissionId, setReopenSubmissionId] = useState("");
   const [timelineSubmissionId, setTimelineSubmissionId] = useState("");
   const [evidenceNote, setEvidenceNote] = useState("filing evidence note");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -296,6 +304,7 @@ export default function PayrollYearEndFilingConsole() {
       }
       setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
       setAckSubmissionId(body.submission.submissionId);
+      setCancelSubmissionId(body.submission.submissionId);
       setStatusMessage(`submitted ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -474,8 +483,108 @@ export default function PayrollYearEndFilingConsole() {
       }
       setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
       setAckSubmissionId(body.submission.submissionId);
+      setCancelSubmissionId(body.submission.submissionId);
       setResubmitSubmissionId("");
       setStatusMessage(`resubmitted ${body.submission.submissionId}`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
+  async function runCancelSubmission() {
+    const submissionId = cancelSubmissionId.trim();
+    if (!submissionId) {
+      setStatusMessage("cancel submission ID is required");
+      return;
+    }
+
+    try {
+      setPendingLabel("year-end filing package cancel");
+      const payload = {
+        year: parseRequiredInt(year, "year"),
+        employeeId: employeeId.trim()
+      };
+      const response = await fetch(
+        `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/cancel`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "cancel filing package",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setSubmissions((prev) =>
+        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
+      );
+      setReopenSubmissionId(body.submission.submissionId);
+      setStatusMessage(`canceled ${body.submission.submissionId}`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
+  async function runReopenSubmission() {
+    const submissionId = reopenSubmissionId.trim();
+    if (!submissionId) {
+      setStatusMessage("reopen submission ID is required");
+      return;
+    }
+
+    try {
+      setPendingLabel("year-end filing package reopen");
+      const payload = {
+        year: parseRequiredInt(year, "year"),
+        employeeId: employeeId.trim()
+      };
+      const response = await fetch(
+        `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/reopen`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "reopen filing package",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setSubmissions((prev) =>
+        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
+      );
+      setCancelSubmissionId(body.submission.submissionId);
+      setAckSubmissionId(body.submission.submissionId);
+      setStatusMessage(`reopened ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "invalid input");
@@ -581,8 +690,8 @@ export default function PayrollYearEndFilingConsole() {
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization, Filing ACK Catalog, Timeline, and Evidence Note</h1>
-        <p>Finalize year-end settlement, manage filing submissions, load ACK code/rejection reason catalog, and trace timeline/evidence notes per submission.</p>
+        <h1>Payroll Year-End Finalization, Filing ACK Catalog, Timeline, Evidence Note, and Cancel/Reopen</h1>
+        <p>Finalize year-end settlement, manage filing submissions, load ACK code/rejection reason catalog, and trace timeline/evidence notes plus cancel/reopen transitions per submission.</p>
       </header>
 
       <section className="panel-grid">
@@ -683,6 +792,8 @@ export default function PayrollYearEndFilingConsole() {
           <label>Ack Note<input value={ackNote} onChange={(event) => setAckNote(event.target.value)} /></label>
           <label>Resubmit Submission ID<input value={resubmitSubmissionId} onChange={(event) => setResubmitSubmissionId(event.target.value)} /></label>
           <label>Resubmission Reason<input value={resubmissionReason} onChange={(event) => setResubmissionReason(event.target.value)} /></label>
+          <label>Cancel Submission ID<input value={cancelSubmissionId} onChange={(event) => setCancelSubmissionId(event.target.value)} /></label>
+          <label>Reopen Submission ID<input value={reopenSubmissionId} onChange={(event) => setReopenSubmissionId(event.target.value)} /></label>
           <label>Timeline Submission ID<input value={timelineSubmissionId} onChange={(event) => setTimelineSubmissionId(event.target.value)} /></label>
           <label>Evidence Note<input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></label>
           <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
@@ -695,6 +806,8 @@ export default function PayrollYearEndFilingConsole() {
             <button className="btn btn-primary" onClick={() => void runSubmitFilingPackage()} disabled={pendingLabel !== null}>Submit Filing Package</button>
             <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>Acknowledge Submission</button>
             <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>Resubmit Submission</button>
+            <button className="btn btn-secondary" onClick={() => void runCancelSubmission()} disabled={pendingLabel !== null}>Cancel Submission</button>
+            <button className="btn btn-secondary" onClick={() => void runReopenSubmission()} disabled={pendingLabel !== null}>Reopen Submission</button>
             <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>Refresh Submissions</button>
             <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>Load ACK Catalog</button>
             <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>Load Submission Timeline</button>
@@ -762,7 +875,15 @@ export default function PayrollYearEndFilingConsole() {
             <ul className="log-list">
               {submissions.map((submission) => (
                 <li key={submission.submissionId}>
-                  <span className={submission.status === "acknowledged" ? "ok" : "small"}>
+                  <span
+                    className={
+                      submission.status === "acknowledged"
+                        ? "ok"
+                        : submission.status === "canceled"
+                          ? "fail"
+                          : "small"
+                    }
+                  >
                     {submission.status.toUpperCase()}
                   </span>{" "}
                   {submission.submissionId} / attempt {submission.attempt} / {submission.transport} / {submission.format} / {submission.validationMode}
@@ -796,7 +917,15 @@ export default function PayrollYearEndFilingConsole() {
             <ul className="log-list">
               {timelineEntries.map((entry, index) => (
                 <li key={`${entry.action}-${entry.occurredAt}-${index}`}>
-                  <span className={entry.action === "acknowledged" && entry.ackStatus === "accepted" ? "ok" : "small"}>
+                  <span
+                    className={
+                      entry.action === "acknowledged" && entry.ackStatus === "accepted"
+                        ? "ok"
+                        : entry.action === "canceled"
+                          ? "fail"
+                          : "small"
+                    }
+                  >
                     {entry.action}
                   </span>{" "}
                   {entry.submissionId} / {formatTimelineEntry(entry)}

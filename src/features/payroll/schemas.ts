@@ -244,6 +244,18 @@ export const resubmitPayrollYearEndFilingPackageSchema = submitPayrollYearEndFil
   resubmissionReason: z.string().min(1).max(240).optional()
 });
 
+export const cancelPayrollYearEndFilingPackageSchema = z.object({
+  year: payrollYearSchema,
+  employeeId: z.string().min(1),
+  submissionId: z.string().min(1)
+});
+
+export const reopenPayrollYearEndFilingPackageSchema = z.object({
+  year: payrollYearSchema,
+  employeeId: z.string().min(1),
+  submissionId: z.string().min(1)
+});
+
 export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
   year: z.coerce.number().int().min(2020).max(2100),
   employeeId: z.string().min(1)
