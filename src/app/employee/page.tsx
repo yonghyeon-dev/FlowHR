@@ -366,6 +366,33 @@ type MobileFollowUpRecommendationUpgrade3Card = {
   targetSectionId: string;
 };
 
+type AttendanceCorrectionInsightCard = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  metricLabel: string;
+  detail: string;
+  targetSectionId: string;
+};
+
+type LeaveBalanceForecastCard = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  valueLabel: string;
+  detail: string;
+  targetSectionId: string;
+};
+
+type LeaveCalendarInsightCard = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  countLabel: string;
+  detail: string;
+  targetSectionId: string;
+};
+
 const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function isDevToolsEnabled() {
@@ -3383,6 +3410,199 @@ export default function EmployeeSelfServicePage() {
     return formatDeltaMinutes(draftNetMinutes - originalNetMinutes);
   }, [breakMinutes, checkInAt, checkOutAt, selectedCorrectionRecord]);
 
+  const correctionDeltaMinutes = useMemo(() => {
+    if (!selectedCorrectionRecord) {
+      return null;
+    }
+    const originalNetMinutes = calculateNetMinutes({
+      checkInAt: selectedCorrectionRecord.checkInAt,
+      checkOutAt: selectedCorrectionRecord.checkOutAt,
+      breakMinutes: selectedCorrectionRecord.breakMinutes
+    });
+    const draftNetMinutes = calculateNetMinutes({
+      checkInAt: toIso(checkInAt),
+      checkOutAt: checkOutAt.trim() ? toIso(checkOutAt) : null,
+      breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes)))
+    });
+    if (originalNetMinutes === null || draftNetMinutes === null) {
+      return null;
+    }
+    return draftNetMinutes - originalNetMinutes;
+  }, [breakMinutes, checkInAt, checkOutAt, selectedCorrectionRecord]);
+
+  const attendanceCorrectionInsightCards = useMemo<AttendanceCorrectionInsightCard[]>(() => {
+    const preSubmitPassCount = attendancePreSubmitChecks.filter((check) => check.pass).length;
+    const hasSelectedTarget = Boolean(selectedCorrectionRecord);
+    const isTargetAligned =
+      hasSelectedTarget && lastAttendanceId.trim().length > 0
+        ? selectedCorrectionRecord?.id === lastAttendanceId.trim()
+        : hasSelectedTarget;
+    const deltaAbs = correctionDeltaMinutes === null ? null : Math.abs(correctionDeltaMinutes);
+
+    return [
+      {
+        key: "correction-target-sync",
+        label: "Correction target sync",
+        tone: !hasSelectedTarget ? "fail" : isTargetAligned ? "ready" : "pending",
+        metricLabel: hasSelectedTarget ? selectedCorrectionRecord?.id ?? "-" : "target required",
+        detail: !hasSelectedTarget
+          ? "Select a correction target record first."
+          : isTargetAligned
+            ? "Correction target and submit target are aligned."
+            : "Selected target and submit target differ. Re-check the record before submit.",
+        targetSectionId: "attendance"
+      },
+      {
+        key: "correction-validation-progress",
+        label: "Correction validation progress",
+        tone: attendancePreSubmitValid && correctionValidation.isValid ? "ready" : "fail",
+        metricLabel: `${preSubmitPassCount}/${attendancePreSubmitChecks.length} pass`,
+        detail:
+          attendancePreSubmitValid && correctionValidation.isValid
+            ? "Correction submit validation passed."
+            : correctionValidation.message || attendanceFirstFailCheck?.detail || "Complete the remaining validation checks.",
+        targetSectionId: "attendance"
+      },
+      {
+        key: "correction-impact-preview",
+        label: "Work-time delta impact",
+        tone:
+          deltaAbs === null
+            ? "pending"
+            : deltaAbs >= 120
+              ? "fail"
+              : deltaAbs >= 45
+                ? "pending"
+                : "ready",
+        metricLabel: correctionDeltaLabel,
+        detail:
+          deltaAbs === null
+            ? "Unable to compare original and draft work-time minutes."
+            : deltaAbs >= 120
+              ? "Work-time delta is high. Review reason and evidence before submit."
+              : deltaAbs >= 45
+                ? "Work-time delta is medium. Add memo details before submit."
+                : "Work-time delta is within expected range.",
+        targetSectionId: "attendance"
+      }
+    ];
+  }, [
+    attendanceFirstFailCheck,
+    attendancePreSubmitChecks,
+    attendancePreSubmitValid,
+    correctionDeltaLabel,
+    correctionDeltaMinutes,
+    correctionValidation.isValid,
+    correctionValidation.message,
+    lastAttendanceId,
+    selectedCorrectionRecord
+  ]);
+
+  const leaveBalanceForecastCards = useMemo<LeaveBalanceForecastCard[]>(() => {
+    if (!leaveBalance) {
+      return [
+        {
+          key: "leave-balance-load",
+          label: "Leave balance data",
+          tone: "pending",
+          valueLabel: "not loaded",
+          detail: "Load leave balance first to compute forecast cards.",
+          targetSectionId: "leave"
+        }
+      ];
+    }
+
+    const now = new Date();
+    const elapsedMonths = Math.max(1, now.getMonth() + 1);
+    const remainingMonths = Math.max(1, 12 - now.getMonth());
+    const monthlyUsedDays = leaveBalance.usedDays / elapsedMonths;
+    const monthlyBudgetDays = leaveBalance.remainingDays / remainingMonths;
+    const projectedYearEndRemaining = leaveBalance.grantedDays - monthlyUsedDays * 12;
+    const requestBufferDays = leaveBalance.remainingDays - estimatedLeaveRequestedDays;
+    const carryOverRatio = leaveBalance.remainingDays > 0 ? leaveBalance.carryOverDays / leaveBalance.remainingDays : 0;
+
+    return [
+      {
+        key: "leave-pace-forecast",
+        label: "Leave pace forecast",
+        tone: projectedYearEndRemaining < 0 ? "fail" : projectedYearEndRemaining < 2 ? "pending" : "ready",
+        valueLabel: `avg used ${formatDays(monthlyUsedDays)}d/mo`,
+        detail:
+          projectedYearEndRemaining < 0
+            ? `Projected year-end shortage: ${formatDays(Math.abs(projectedYearEndRemaining))} days.`
+            : `Projected year-end remaining: ${formatDays(projectedYearEndRemaining)} days.`,
+        targetSectionId: "leave-calendar"
+      },
+      {
+        key: "leave-request-buffer",
+        label: "Request buffer",
+        tone: requestBufferDays < 0 ? "fail" : requestBufferDays < 1.5 ? "pending" : "ready",
+        valueLabel: `buffer ${formatDays(requestBufferDays)}d`,
+        detail:
+          requestBufferDays < 0
+            ? `Draft requests (${formatDays(estimatedLeaveRequestedDays)} days) exceed remaining balance.`
+            : `Recommended monthly budget under current draft: ${formatDays(monthlyBudgetDays)} days.`,
+        targetSectionId: "leave"
+      },
+      {
+        key: "leave-carry-over-focus",
+        label: "Carry-over ratio",
+        tone: carryOverRatio >= 0.6 && leaveBalance.carryOverDays > 0 ? "pending" : "ready",
+        valueLabel: `${Math.round(carryOverRatio * 100)}%`,
+        detail:
+          carryOverRatio >= 0.6 && leaveBalance.carryOverDays > 0
+            ? "Carry-over share is high. Prioritize planned usage in the calendar."
+            : "Carry-over share is within expected range.",
+        targetSectionId: "leave-calendar"
+      }
+    ];
+  }, [estimatedLeaveRequestedDays, leaveBalance]);
+
+  const leaveCalendarInsightCards = useMemo<LeaveCalendarInsightCard[]>(() => {
+    const currentMonthCells = leaveCalendarCells.filter((cell) => cell.inCurrentMonth);
+    const pendingHotspotDays = currentMonthCells.filter((cell) => cell.pendingCount > 0 || cell.tone === "mixed").length;
+    const highDensityDays = currentMonthCells.filter((cell) => cell.density === "high").length;
+    const totalRequests = currentMonthCells.reduce((sum, cell) => sum + cell.requestCount, 0);
+    const approvedRequests = currentMonthCells.reduce((sum, cell) => sum + cell.approvedCount, 0);
+    const approvalRate = totalRequests === 0 ? 100 : Math.round((approvedRequests / totalRequests) * 100);
+
+    return [
+      {
+        key: "calendar-pending-hotspot",
+        label: "Pending hotspots",
+        tone: pendingHotspotDays >= 4 ? "fail" : pendingHotspotDays > 0 ? "pending" : "ready",
+        countLabel: `${pendingHotspotDays} days`,
+        detail:
+          pendingHotspotDays === 0
+            ? "No pending/mixed hotspot days this month."
+            : `${pendingHotspotDays} days have pending or mixed leave status.`,
+        targetSectionId: pendingHotspotDays === 0 ? "leave-calendar" : "request-feedback"
+      },
+      {
+        key: "calendar-density-hotspot",
+        label: "High-density request days",
+        tone: highDensityDays >= 3 ? "pending" : "ready",
+        countLabel: `${highDensityDays} days`,
+        detail:
+          highDensityDays === 0
+            ? "No high-density leave-request day this month."
+            : `${highDensityDays} days have high request density and need early review.`,
+        targetSectionId: "leave-calendar"
+      },
+      {
+        key: "calendar-approval-rate",
+        label: "Monthly approval rate",
+        tone: approvalRate < 60 ? "fail" : approvalRate < 80 ? "pending" : "ready",
+        countLabel: `${approvalRate}%`,
+        detail:
+          totalRequests === 0
+            ? "No leave requests this month, approval rate is treated as 100%."
+            : `${approvedRequests} of ${totalRequests} requests are approved this month.`,
+        targetSectionId: "leave"
+      }
+    ];
+  }, [leaveCalendarCells]);
+
   function applyAttendanceRecordToCorrectionForm(record: AttendanceRecordDto) {
     setSelectedCorrectionRecordId(record.id);
     setLastAttendanceId(record.id);
@@ -4088,11 +4308,20 @@ export default function EmployeeSelfServicePage() {
             <button className="btn btn-secondary btn-small" onClick={startAttendanceCorrectionFlow}>
               출퇴근 정정 시작
             </button>
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("attendance-correction-insights")}>
+              Correction insights
+            </button>
             <button className="btn btn-secondary btn-small" onClick={startLeaveHalfDayFlow}>
               오늘 반차 신청
             </button>
             <button className="btn btn-secondary btn-small" onClick={startLeaveFullDayFlow}>
               내일 하루 신청
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("leave-balance-forecast")}>
+              Leave forecast
+            </button>
+            <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("leave-calendar-insights")}>
+              Calendar insights
             </button>
             <button className="btn btn-secondary btn-small" onClick={() => jumpToSection("request-feedback")}>
               피드백 바로가기
@@ -4485,6 +4714,70 @@ export default function EmployeeSelfServicePage() {
                 </li>
               ))
             )}
+          </ul>
+        </article>
+
+        <article className="panel panel-attendance-correction-insights" id="attendance-correction-insights">
+          <h2>Attendance correction insights</h2>
+          <p className="small">Review target alignment, submit validation, and expected work-time impact before correction.</p>
+          <ul className="attendance-correction-insight-list" aria-label="attendance correction insight list">
+            {attendanceCorrectionInsightCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="attendance-correction-insight-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.metricLabel}</span>
+                </div>
+                <p>{card.detail}</p>
+                <div className="attendance-correction-insight-meta">
+                  <span className="queue-history-chip">{card.tone}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection(card.targetSectionId)}
+                >
+                  {card.targetSectionId === "attendance" ? "Open correction form" : "Open section"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel-leave-balance-forecast" id="leave-balance-forecast">
+          <h2>Leave balance forecast</h2>
+          <p className="small">Estimate leave pace, request buffer, and carry-over pressure for the rest of this year.</p>
+          <ul className="leave-balance-forecast-list" aria-label="leave balance forecast list">
+            {leaveBalanceForecastCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="leave-balance-forecast-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.valueLabel}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button type="button" className="btn btn-secondary btn-small" onClick={() => jumpToSection(card.targetSectionId)}>
+                  {card.targetSectionId === "leave" ? "Open leave form" : "Open leave calendar"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel-leave-calendar-insights" id="leave-calendar-insights">
+          <h2>Leave calendar insights</h2>
+          <p className="small">Highlight pending hotspots, high-density periods, and current-month approval rate.</p>
+          <ul className="leave-calendar-insight-list" aria-label="leave calendar insight list">
+            {leaveCalendarInsightCards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="leave-calendar-insight-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">{card.countLabel}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button type="button" className="btn btn-secondary btn-small" onClick={() => jumpToSection(card.targetSectionId)}>
+                  {card.targetSectionId === "request-feedback" ? "Open request feedback" : "Open leave calendar"}
+                </button>
+              </li>
+            ))}
           </ul>
         </article>
 
