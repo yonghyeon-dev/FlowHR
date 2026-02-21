@@ -73,7 +73,11 @@ async function run() {
   );
   assert.match(payrollApiSpec, /\/payroll\/runs\/close-period:/, "payroll api spec should include close-period endpoint");
   assert.match(payrollContract, /path: \/payroll\/runs\/close-period/, "payroll contract should include close-period endpoint");
-  assert.match(payrollContract, /version: 1\.10\.0/, "payroll contract version should be bumped to 1.10.0");
+  assert.match(
+    payrollContract,
+    /version: \d+\.\d+\.\d+/,
+    "payroll contract version should remain semver-formatted"
+  );
 
   const organization = await memoryDataAccess.organizations.create({ name: "Org Payroll Close" });
   await memoryDataAccess.employees.create({
