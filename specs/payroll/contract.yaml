@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.22.0
+version: 1.23.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -26,6 +26,7 @@ scope:
     - year-end filing acknowledgement code dictionary and rejection-reason catalog workflow
     - year-end filing submission cancel/reopen transition guard workflow
     - year-end filing submission search/sort and quick-action workflow
+    - year-end filing ops dashboard split and evidence/status summary-card workflow
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -231,6 +232,7 @@ invariants:
   - Year-end filing timeline query must return deterministic chronological event order for submit/resubmit/cancel/reopen/ack/evidence-note history.
   - Year-end filing submission list filters (status/ackStatus/validationStatus/transport) must return deterministic subsets for same submission history.
   - Year-end filing submission summary counters must be computed from same submission history and remain deterministic under repeated query replay.
+  - Year-end filing ops dashboard status/evidence summary cards must be derived deterministically from filing list/timeline data for same query and history.
   - Withholding receipt issue is blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
@@ -352,6 +354,7 @@ test_plan:
     - year-end filing cancel/reopen transition-guard deterministic replay via WI-0195 e2e
     - year-end filing submission summary/filter deterministic replay via WI-0196 e2e
     - year-end filing submission search/sort and quick-action deterministic replay via WI-0197 e2e
+    - year-end filing ops dashboard split and evidence/status summary-card deterministic replay via WI-0198 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -488,7 +491,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.22.0 extends feature-flagged year-end filing workflow with submission list search/sort and quick-action UX coverage (`GET /payroll/year-end/filing-submissions` query: status/ackStatus/validationStatus/transport/search/sortBy/sortDirection + summary counters) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.23.0 extends feature-flagged year-end filing workflow with a split ops dashboard baseline (`/admin/payroll-year-end-filing/ops`) that derives status/evidence summary cards from existing filing list/timeline APIs, while preserving all existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -517,6 +520,7 @@ references:
   - work-items/WI-0195-payroll-year-end-filing-submission-cancel-and-reopen-guard-baseline.md
   - work-items/WI-0196-payroll-year-end-filing-submission-status-summary-and-filter-ux-baseline.md
   - work-items/WI-0197-payroll-year-end-filing-submission-search-sort-and-quick-action-ux-baseline.md
+  - work-items/WI-0198-payroll-year-end-filing-ops-dashboard-split-and-evidence-status-summary-cards-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

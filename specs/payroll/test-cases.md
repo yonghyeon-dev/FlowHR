@@ -50,6 +50,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 42. Cancel/reopen filing submission and reject invalid transitions (acknowledged cancel, non-canceled reopen, canceled acknowledge).
 43. Query filing submission list with status/ackStatus/validationStatus/transport filters and verify summary counters + filtered subsets.
 44. Query filing submission list with search/sort (`search`, `sortBy`, `sortDirection`) and verify deterministic ordering + quick-action prefill coverage in admin console.
+45. Query filing list/timeline from split ops route (`/admin/payroll-year-end-filing/ops`) and verify status/evidence summary cards align with submission history.
 
 ## Accuracy Cases
 
@@ -85,6 +86,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 30. Year-end filing cancel/reopen transitions remain deterministic with single-pending submission invariant.
 31. Year-end filing submission summary/filter counters remain deterministic for same query and submission history.
 32. Year-end filing submission search/sort ordering remains deterministic for same query and submission history.
+33. Year-end filing ops dashboard status/evidence summary cards remain deterministic for same filing list/timeline replay.
 
 ## Regression Linkage
 
@@ -121,3 +123,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Filing Cancel/Reopen Gate: filing cancel/reopen APIs remain feature-flagged, permission-guarded, and deterministic with auditable state-transition guards.
 - Year-End Filing Summary/Filter Gate: filing submission list query filters and summary counters remain deterministic and permission-guarded.
 - Year-End Filing Search/Sort Quick-Action Gate: filing submission list search/sort query and admin quick actions remain deterministic, permission-guarded, and auditable.
+- Year-End Filing Ops Dashboard Gate: split ops dashboard (`/admin/payroll-year-end-filing/ops`) status/evidence cards remain deterministic and are derived from permission-guarded filing list/timeline APIs.

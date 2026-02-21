@@ -1028,6 +1028,7 @@ export default function PayrollYearEndFilingConsole() {
             </ul>
           )}
           <div className="panel-actions">
+            <Link href="/admin/payroll-year-end-filing/ops" className="btn btn-secondary">Open Filing Ops Dashboard</Link>
             <Link href="/admin/payroll-year-end" className="btn btn-secondary">Back to Year-End</Link>
             <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
           </div>
