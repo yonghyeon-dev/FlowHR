@@ -26,42 +26,16 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
 
         <nav className="saas-nav" aria-label="Employee navigation">
           <Link href="/employee">Overview</Link>
-          <Link href="/employee#self-service-overview">Self-Service Summary</Link>
+          <Link href="/employee#account">Account</Link>
+          <Link href="/employee#self-service-overview">Self-Service Overview</Link>
           <Link href="/employee#submit-checklist">Submit Checklist</Link>
           <Link href="/employee#request-feedback">Request Feedback</Link>
           <Link href="/employee#request-search-sort">Request Search/Sort</Link>
-          <Link href="/employee#request-bottleneck-feedback">Bottleneck Feedback</Link>
-          <Link href="/employee#request-wait-prediction">Wait Prediction</Link>
-          <Link href="/employee#request-history-sort-accuracy">Sort Accuracy</Link>
-          <Link href="/employee#request-history-sort-hardening">Sort Hardening</Link>
-          <Link href="/employee#request-history-sort-hardening-plus">Sort Hardening+</Link>
-          <Link href="/employee#request-history-sort-hardening-plus-execution">Sort Hardening+ Execution</Link>
-          <Link href="/employee#request-history-sort-execution-summary">Sort Execution Summary</Link>
-          <Link href="/employee#request-history-execution-summary-digest">Execution Summary Digest</Link>
-          <Link href="/employee#approval-delay-risk-prediction">Delay Risk Prediction</Link>
-          <Link href="/employee#approval-delay-risk-response">Delay Risk Response</Link>
-          <Link href="/employee#approval-delay-risk-response-execution-guide">Delay Response Execution Guide</Link>
-          <Link href="/employee#approval-delay-risk-response-execution-tracker">Delay Response Execution Tracker</Link>
-          <Link href="/employee#approval-delay-risk-execution-backlog">Delay Execution Backlog</Link>
-          <Link href="/employee#approval-delay-execution-backlog-digest">Delay Backlog Digest</Link>
-          <Link href="/employee#mobile-shortcuts">Mobile Shortcuts</Link>
-          <Link href="/employee#mobile-status-badges">Mobile Status Badges</Link>
-          <Link href="/employee#mobile-submit-guide">Mobile Submit Guide</Link>
-          <Link href="/employee#mobile-follow-up-guide">Mobile Follow-up Guide</Link>
-          <Link href="/employee#mobile-follow-up-recommendation">Mobile Follow-up Recommendation</Link>
-          <Link href="/employee#mobile-follow-up-recommendation-upgrade">Recommendation Upgrade</Link>
-          <Link href="/employee#mobile-follow-up-recommendation-upgrade-2">Recommendation Upgrade 2</Link>
-          <Link href="/employee#mobile-follow-up-recommendation-upgrade-3">Recommendation Upgrade 3</Link>
-          <Link href="/employee#mobile-follow-up-recommendation-upgrade-4">Recommendation Upgrade 4</Link>
-          <Link href="/employee#mobile-follow-up-recommendation-upgrade-5">Recommendation Upgrade 5</Link>
           <Link href="/employee#request-timeline">Request Timeline</Link>
-          <Link href="/employee#request-resubmit">Resubmit Flow</Link>
+          <Link href="/employee#request-resubmit">Request Resubmit</Link>
           <Link href="/employee#attendance">Attendance</Link>
-          <Link href="/employee#attendance-correction-insights">Correction Insights</Link>
           <Link href="/employee#leave">Leave</Link>
-          <Link href="/employee#leave-balance-forecast">Leave Forecast</Link>
           <Link href="/employee#leave-calendar">Leave Calendar</Link>
-          <Link href="/employee#leave-calendar-insights">Calendar Insights</Link>
           <Link href="/employee#schedule">Schedule</Link>
           <Link href="/employee/payslips">Payslips</Link>
           <Link href="/employee/payslips#payslip-search-sort">Payslip Search/Sort</Link>
@@ -105,9 +79,6 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           </Link>
           <Link href="/employee/payslips#payslip-mobile-follow-up-recommendation-upgrade-5">
             Payslip Recommendation Upgrade 5
-          </Link>
-          <Link className="muted-link" href="/employee#account">
-            My Account
           </Link>
         </nav>
 

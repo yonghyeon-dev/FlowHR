@@ -1,0 +1,82 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+function readUtf8(...parts: string[]) {
+  return fs.readFileSync(path.resolve(process.cwd(), ...parts), "utf8");
+}
+
+function run() {
+  const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
+  const employeePageLineCount = employeePage.split(/\r?\n/).length;
+
+  const removedSectionIds = [
+    "request-history-sort-accuracy",
+    "request-history-sort-hardening",
+    "request-history-sort-hardening-plus",
+    "request-history-sort-hardening-plus-execution",
+    "request-history-sort-execution-summary",
+    "request-history-execution-summary-digest",
+    "request-bottleneck-feedback",
+    "request-wait-prediction",
+    "approval-delay-risk-prediction",
+    "approval-delay-risk-response",
+    "approval-delay-risk-response-execution-guide",
+    "approval-delay-risk-response-execution-tracker",
+    "approval-delay-risk-execution-backlog",
+    "approval-delay-execution-backlog-digest",
+    "mobile-shortcuts",
+    "mobile-status-badges",
+    "mobile-submit-guide",
+    "mobile-follow-up-guide",
+    "mobile-follow-up-recommendation",
+    "mobile-follow-up-recommendation-upgrade",
+    "mobile-follow-up-recommendation-upgrade-2",
+    "mobile-follow-up-recommendation-upgrade-3",
+    "mobile-follow-up-recommendation-upgrade-4",
+    "mobile-follow-up-recommendation-upgrade-5",
+    "attendance-correction-insights",
+    "leave-balance-forecast",
+    "leave-calendar-insights"
+  ];
+
+  for (const sectionId of removedSectionIds) {
+    assert.equal(
+      employeePage.includes(`id="${sectionId}"`),
+      false,
+      `employee page should remove bloated section id="${sectionId}"`
+    );
+    assert.equal(
+      employeeLayout.includes(`/employee#${sectionId}`),
+      false,
+      `employee layout should remove bloated anchor /employee#${sectionId}`
+    );
+  }
+
+  const requiredEmployeeAnchors = [
+    "/employee#attendance",
+    "/employee#leave",
+    "/employee#leave-calendar",
+    "/employee#schedule",
+    "/employee#request-feedback",
+    "/employee/payslips#payslip-search-sort",
+    "/employee/payslips#compare-view"
+  ];
+
+  for (const anchor of requiredEmployeeAnchors) {
+    assert.equal(
+      employeeLayout.includes(anchor),
+      true,
+      `employee layout should keep core anchor ${anchor}`
+    );
+  }
+
+  assert.ok(
+    employeePageLineCount < 3000,
+    `employee page should stay under 3000 lines after WI-0176 cleanup (current: ${employeePageLineCount})`
+  );
+}
+
+run();
+console.log("e2e-wi0176-employee-self-service-bloat-section-removal.test passed");
