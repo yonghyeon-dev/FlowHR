@@ -3864,14 +3864,17 @@ button.queue-badge:hover {
 .panel-history-sort-accuracy,
 .panel-history-sort-hardening,
 .panel-history-sort-hardening-plus,
+.panel-history-sort-hardening-plus-execution,
 .panel-history-risk-prediction,
 .panel-history-delay-risk-prediction,
 .panel-history-delay-risk-response,
 .panel-history-delay-risk-response-execution-guide,
+.panel-history-delay-risk-response-execution-tracker,
 .panel-people-mobile-follow-up-guide,
 .panel-people-mobile-follow-up-recommendation,
 .panel-people-mobile-follow-up-recommendation-upgrade,
-.panel-people-mobile-follow-up-recommendation-upgrade-2 {
+.panel-people-mobile-follow-up-recommendation-upgrade-2,
+.panel-people-mobile-follow-up-recommendation-upgrade-3 {
   grid-column: 1 / -1;
 }
 
@@ -4132,6 +4135,60 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.history-sort-hardening-plus-execution-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.history-sort-hardening-plus-execution-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-sort-hardening-plus-execution-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.history-sort-hardening-plus-execution-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.history-sort-hardening-plus-execution-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.history-sort-hardening-plus-execution-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.history-sort-hardening-plus-execution-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-sort-hardening-plus-execution-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .history-risk-prediction-list {
   margin: 10px 0 0;
   padding: 0;
@@ -4348,6 +4405,60 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.history-delay-risk-response-execution-tracker-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.history-delay-risk-response-execution-tracker-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-delay-risk-response-execution-tracker-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.history-delay-risk-response-execution-tracker-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.history-delay-risk-response-execution-tracker-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.history-delay-risk-response-execution-tracker-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.history-delay-risk-response-execution-tracker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-delay-risk-response-execution-tracker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .people-mobile-follow-up-guide-list {
   margin: 10px 0 0;
   padding: 0;
@@ -4534,6 +4645,54 @@ button.queue-badge:hover {
 }
 
 .people-mobile-follow-up-recommendation-upgrade-2-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-3-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.people-mobile-follow-up-recommendation-upgrade-3-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-3-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-3-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-3-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-3-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.people-mobile-follow-up-recommendation-upgrade-3-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6284,14 +6443,17 @@ button.queue-badge:hover {
   #history-sort-accuracy .history-sort-accuracy-list,
   #history-sort-hardening .history-sort-hardening-list,
   #history-sort-hardening-plus .history-sort-hardening-plus-list,
+  #history-sort-hardening-plus-execution .history-sort-hardening-plus-execution-list,
   #history-risk-prediction .history-risk-prediction-list,
   #history-delay-risk-prediction .history-delay-risk-prediction-list,
   #history-delay-risk-response .history-delay-risk-response-list,
   #history-delay-risk-response-execution-guide .history-delay-risk-response-execution-guide-list,
+  #history-delay-risk-response-execution-tracker .history-delay-risk-response-execution-tracker-list,
   #people-mobile-follow-up-guide .people-mobile-follow-up-guide-list,
   #people-mobile-follow-up-recommendation .people-mobile-follow-up-recommendation-list,
   #people-mobile-follow-up-recommendation-upgrade .people-mobile-follow-up-recommendation-upgrade-list,
-  #people-mobile-follow-up-recommendation-upgrade-2 .people-mobile-follow-up-recommendation-upgrade-2-list {
+  #people-mobile-follow-up-recommendation-upgrade-2 .people-mobile-follow-up-recommendation-upgrade-2-list,
+  #people-mobile-follow-up-recommendation-upgrade-3 .people-mobile-follow-up-recommendation-upgrade-3-list {
     grid-template-columns: 1fr;
   }
 
@@ -6308,14 +6470,17 @@ button.queue-badge:hover {
   #history-sort-accuracy .history-sort-accuracy-head,
   #history-sort-hardening .history-sort-hardening-head,
   #history-sort-hardening-plus .history-sort-hardening-plus-head,
+  #history-sort-hardening-plus-execution .history-sort-hardening-plus-execution-head,
   #history-risk-prediction .history-risk-prediction-head,
   #history-delay-risk-prediction .history-delay-risk-prediction-head,
   #history-delay-risk-response .history-delay-risk-response-head,
   #history-delay-risk-response-execution-guide .history-delay-risk-response-execution-guide-head,
+  #history-delay-risk-response-execution-tracker .history-delay-risk-response-execution-tracker-head,
   #people-mobile-follow-up-guide .people-mobile-follow-up-guide-head,
   #people-mobile-follow-up-recommendation .people-mobile-follow-up-recommendation-head,
   #people-mobile-follow-up-recommendation-upgrade .people-mobile-follow-up-recommendation-upgrade-head,
-  #people-mobile-follow-up-recommendation-upgrade-2 .people-mobile-follow-up-recommendation-upgrade-2-head {
+  #people-mobile-follow-up-recommendation-upgrade-2 .people-mobile-follow-up-recommendation-upgrade-2-head,
+  #people-mobile-follow-up-recommendation-upgrade-3 .people-mobile-follow-up-recommendation-upgrade-3-head {
     flex-direction: column;
     align-items: flex-start;
   }
