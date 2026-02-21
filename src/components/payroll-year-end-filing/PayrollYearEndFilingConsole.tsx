@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 import type {
   ApiLog,
+  PayrollYearEndFilingAckCatalogResponse,
   PayrollYearEndFilingEvidenceNoteResponse,
   PayrollYearEndFilingExportResponse,
   PayrollYearEndFilingSubmission,
@@ -45,7 +46,11 @@ function formatTimelineEntry(entry: PayrollYearEndFilingTimelineEntry) {
     return parts.join(" / ");
   }
   if (entry.action === "acknowledged") {
-    return `ACK ${entry.ackStatus ?? "-"}${entry.ackCode ? ` (${entry.ackCode})` : ""}${entry.ackNote ? ` / ${entry.ackNote}` : ""}`;
+    return `ACK ${entry.ackStatus ?? "-"}${entry.ackCode ? ` (${entry.ackCode})` : ""}${
+      entry.rejectionReasonCode ? ` / reason ${entry.rejectionReasonCode}` : ""
+    }${entry.rejectionReasonDetail ? ` / detail ${entry.rejectionReasonDetail}` : ""}${
+      entry.ackNote ? ` / ${entry.ackNote}` : ""
+    }`;
   }
   return `EVIDENCE NOTE: ${entry.evidenceNote ?? "-"}`;
 }
@@ -77,6 +82,9 @@ export default function PayrollYearEndFilingConsole() {
   const [ackStatus, setAckStatus] = useState<"accepted" | "rejected">("accepted");
   const [ackCode, setAckCode] = useState("ACK-OK");
   const [ackNote, setAckNote] = useState("baseline acknowledgement");
+  const [rejectionReasonCode, setRejectionReasonCode] = useState("OTHER");
+  const [rejectionReasonDetail, setRejectionReasonDetail] = useState("");
+  const [ackCatalog, setAckCatalog] = useState<PayrollYearEndFilingAckCatalogResponse | null>(null);
   const [resubmitSubmissionId, setResubmitSubmissionId] = useState("");
   const [resubmissionReason, setResubmissionReason] = useState("resubmit after rejected ack");
   const [timelineSubmissionId, setTimelineSubmissionId] = useState("");
@@ -104,6 +112,42 @@ export default function PayrollYearEndFilingConsole() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+
+  const ackCodeOptions = useMemo(() => {
+    if (ackStatus === "accepted") {
+      return ackCatalog?.acceptedCodes ?? [];
+    }
+    return ackCatalog?.rejectedCodes ?? [];
+  }, [ackStatus, ackCatalog]);
+
+  const rejectionReasonOptions = useMemo(() => ackCatalog?.rejectionReasons ?? [], [ackCatalog]);
+
+  useEffect(() => {
+    if (ackCodeOptions.length === 0) {
+      return;
+    }
+    if (!ackCodeOptions.some((item) => item.code === ackCode)) {
+      setAckCode(ackCodeOptions[0].code);
+    }
+  }, [ackCode, ackCodeOptions]);
+
+  useEffect(() => {
+    if (ackStatus !== "rejected") {
+      return;
+    }
+    if (rejectionReasonOptions.length === 0) {
+      return;
+    }
+    if (!rejectionReasonOptions.some((item) => item.code === rejectionReasonCode)) {
+      setRejectionReasonCode(rejectionReasonOptions[0].code);
+    }
+  }, [ackStatus, rejectionReasonCode, rejectionReasonOptions]);
+
+  useEffect(() => {
+    if (ackStatus === "accepted" && rejectionReasonDetail.length > 0) {
+      setRejectionReasonDetail("");
+    }
+  }, [ackStatus, rejectionReasonDetail]);
 
   function buildHeaders() {
     const headers: Record<string, string> = {
@@ -298,6 +342,40 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
+  async function runLoadAckCatalog() {
+    try {
+      setPendingLabel("year-end filing ack catalog");
+      const response = await fetch("/api/payroll/year-end/filing-ack-catalog", {
+        method: "GET",
+        headers: buildHeaders()
+      });
+      const body = (await response.json()) as PayrollYearEndFilingAckCatalogResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "list filing ack catalog",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setAckCatalog(body);
+      setStatusMessage(
+        `loaded ack catalog (${body.acceptedCodes.length}/${body.rejectedCodes.length}/${body.rejectionReasons.length})`
+      );
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   async function runAcknowledgeSubmission() {
     const submissionId = ackSubmissionId.trim();
     if (!submissionId) {
@@ -312,7 +390,11 @@ export default function PayrollYearEndFilingConsole() {
         employeeId: employeeId.trim(),
         ackStatus,
         ackCode: ackCode.trim() || undefined,
-        ackNote: ackNote.trim() || undefined
+        ackNote: ackNote.trim() || undefined,
+        rejectionReasonCode:
+          ackStatus === "rejected" ? rejectionReasonCode.trim() || undefined : undefined,
+        rejectionReasonDetail:
+          ackStatus === "rejected" ? rejectionReasonDetail.trim() || undefined : undefined
       };
       const response = await fetch(
         `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/ack`,
@@ -499,8 +581,8 @@ export default function PayrollYearEndFilingConsole() {
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization, Filing Submission, Timeline, and Evidence Note</h1>
-        <p>Finalize year-end settlement, submit and acknowledge filing packages, resubmit rejected submissions, and track timeline/evidence notes per submission.</p>
+        <h1>Payroll Year-End Finalization, Filing ACK Catalog, Timeline, and Evidence Note</h1>
+        <p>Finalize year-end settlement, manage filing submissions, load ACK code/rejection reason catalog, and trace timeline/evidence notes per submission.</p>
       </header>
 
       <section className="panel-grid">
@@ -562,7 +644,42 @@ export default function PayrollYearEndFilingConsole() {
               <option value="rejected">rejected</option>
             </select>
           </label>
-          <label>Ack Code<input value={ackCode} onChange={(event) => setAckCode(event.target.value)} /></label>
+          <label>Ack Code
+            <select value={ackCode} onChange={(event) => setAckCode(event.target.value)}>
+              {ackCodeOptions.length === 0 ? (
+                <option value={ackCode}>{ackCode || "ACK-OK"}</option>
+              ) : (
+                ackCodeOptions.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.code} - {item.label}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          {ackStatus === "rejected" ? (
+            <>
+              <label>Rejection Reason Code
+                <select
+                  value={rejectionReasonCode}
+                  onChange={(event) => setRejectionReasonCode(event.target.value)}
+                >
+                  {rejectionReasonOptions.length === 0 ? (
+                    <option value={rejectionReasonCode || "OTHER"}>
+                      {rejectionReasonCode || "OTHER"}
+                    </option>
+                  ) : (
+                    rejectionReasonOptions.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.code} - {item.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
+              <label>Rejection Detail<input value={rejectionReasonDetail} onChange={(event) => setRejectionReasonDetail(event.target.value)} /></label>
+            </>
+          ) : null}
           <label>Ack Note<input value={ackNote} onChange={(event) => setAckNote(event.target.value)} /></label>
           <label>Resubmit Submission ID<input value={resubmitSubmissionId} onChange={(event) => setResubmitSubmissionId(event.target.value)} /></label>
           <label>Resubmission Reason<input value={resubmissionReason} onChange={(event) => setResubmissionReason(event.target.value)} /></label>
@@ -579,6 +696,7 @@ export default function PayrollYearEndFilingConsole() {
             <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>Acknowledge Submission</button>
             <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>Resubmit Submission</button>
             <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>Refresh Submissions</button>
+            <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>Load ACK Catalog</button>
             <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>Load Submission Timeline</button>
             <button className="btn btn-secondary" onClick={() => void runAddEvidenceNote()} disabled={pendingLabel !== null}>Add Evidence Note</button>
           </div>
@@ -649,7 +767,11 @@ export default function PayrollYearEndFilingConsole() {
                   </span>{" "}
                   {submission.submissionId} / attempt {submission.attempt} / {submission.transport} / {submission.format} / {submission.validationMode}
                   {submission.resubmissionOfSubmissionId ? ` / resubmissionOf ${submission.resubmissionOfSubmissionId}` : ""}
-                  {submission.ack ? ` / ACK ${submission.ack.ackStatus}` : ""}
+                  {submission.ack
+                    ? ` / ACK ${submission.ack.ackStatus}${submission.ack.ackCode ? `:${submission.ack.ackCode}` : ""}${
+                        submission.ack.rejectionReasonCode ? `(${submission.ack.rejectionReasonCode})` : ""
+                      }`
+                    : ""}
                   {" "}
                   <button
                     className="btn btn-secondary"

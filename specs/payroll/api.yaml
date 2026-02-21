@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.18.0
+  version: 1.19.0
 paths:
   /payroll/runs:
     get:
@@ -151,6 +151,7 @@ paths:
   /payroll/year-end/filing-submissions/{submissionId}/ack:
     post:
       summary: Acknowledge payroll year-end filing submission
+      description: Acknowledge selected filing submission with ACK code dictionary validation and optional rejection reason catalog fields.
       parameters:
         - in: path
           name: submissionId
@@ -160,6 +161,13 @@ paths:
       responses:
         "200":
           description: Filing submission acknowledged
+  /payroll/year-end/filing-ack-catalog:
+    get:
+      summary: List payroll year-end filing ACK code and rejection reason catalog
+      description: Returns accepted/rejected ACK code dictionary and rejection reason catalog used by filing acknowledgement workflows.
+      responses:
+        "200":
+          description: Filing ACK catalog listed
   /payroll/year-end/filing-submissions/{submissionId}/resubmit:
     post:
       summary: Resubmit rejected payroll year-end filing submission

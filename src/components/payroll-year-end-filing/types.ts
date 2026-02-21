@@ -137,6 +137,8 @@ export type PayrollYearEndFilingSubmission = {
     ackStatus: "accepted" | "rejected";
     ackCode: string | null;
     ackNote: string | null;
+    rejectionReasonCode: string | null;
+    rejectionReasonDetail: string | null;
     acknowledgedAt: string;
     acknowledgedByRole: string;
     acknowledgedById: string | null;
@@ -152,6 +154,26 @@ export type PayrollYearEndFilingSubmissionListResponse = {
   submissions: PayrollYearEndFilingSubmission[];
 };
 
+export type PayrollYearEndFilingAckCatalogResponse = {
+  acceptedCodes: Array<{
+    code: string;
+    label: string;
+    description: string;
+    defaultNote: string | null;
+  }>;
+  rejectedCodes: Array<{
+    code: string;
+    label: string;
+    description: string;
+    defaultNote: string | null;
+  }>;
+  rejectionReasons: Array<{
+    code: string;
+    label: string;
+    description: string;
+  }>;
+};
+
 export type PayrollYearEndFilingTimelineEntry = {
   action: "submitted" | "resubmitted" | "acknowledged" | "evidence_note_added";
   submissionId: string;
@@ -165,6 +187,8 @@ export type PayrollYearEndFilingTimelineEntry = {
   ackStatus: "accepted" | "rejected" | null;
   ackCode: string | null;
   ackNote: string | null;
+  rejectionReasonCode: string | null;
+  rejectionReasonDetail: string | null;
   evidenceNote: string | null;
 };
 

@@ -234,7 +234,9 @@ export const acknowledgePayrollYearEndFilingPackageSchema = z.object({
   submissionId: z.string().min(1),
   ackStatus: z.enum(["accepted", "rejected"]),
   ackCode: z.string().min(1).max(80).optional(),
-  ackNote: z.string().min(1).max(240).optional()
+  ackNote: z.string().min(1).max(240).optional(),
+  rejectionReasonCode: z.string().min(1).max(80).optional(),
+  rejectionReasonDetail: z.string().min(1).max(240).optional()
 });
 
 export const resubmitPayrollYearEndFilingPackageSchema = submitPayrollYearEndFilingPackageSchema.extend({
