@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.16.0
+  version: 1.17.0
 paths:
   /payroll/runs:
     get:
@@ -160,6 +160,19 @@ paths:
       responses:
         "200":
           description: Filing submission acknowledged
+  /payroll/year-end/filing-submissions/{submissionId}/resubmit:
+    post:
+      summary: Resubmit rejected payroll year-end filing submission
+      description: Creates a new filing submission attempt only when target submission is acknowledged as rejected and no pending submission exists.
+      parameters:
+        - in: path
+          name: submissionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Filing submission resubmitted
   /payroll/year-end/withholding-receipts:
     post:
       summary: Preview or issue withholding receipt for employee/year

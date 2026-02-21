@@ -115,6 +115,9 @@ export type PayrollYearEndFilingSubmission = {
   submissionId: string;
   year: number;
   employeeId: string;
+  attempt: number;
+  resubmissionOfSubmissionId: string | null;
+  resubmissionReason: string | null;
   finalizationId: string;
   format: "json" | "csv" | "jsonl" | "hometax_csv";
   validationMode: "basic" | "strict";

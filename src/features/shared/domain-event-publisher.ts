@@ -44,6 +44,7 @@ export const domainEventNames = [
   "payroll.year_end.settlement.finalized.v1",
   "payroll.year_end.filing_data.exported.v1",
   "payroll.year_end.filing_package.submitted.v1",
+  "payroll.year_end.filing_package.resubmitted.v1",
   "payroll.year_end.filing_package.acknowledged.v1",
   "payroll.year_end.withholding_receipt.previewed.v1",
   "payroll.year_end.withholding_receipt.issued.v1",
