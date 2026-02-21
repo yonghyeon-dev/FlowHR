@@ -51,8 +51,11 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <Link href="/employee#request-timeline">Request Timeline</Link>
           <Link href="/employee#request-resubmit">Resubmit Flow</Link>
           <Link href="/employee#attendance">Attendance</Link>
+          <Link href="/employee#attendance-correction-insights">Correction Insights</Link>
           <Link href="/employee#leave">Leave</Link>
+          <Link href="/employee#leave-balance-forecast">Leave Forecast</Link>
           <Link href="/employee#leave-calendar">Leave Calendar</Link>
+          <Link href="/employee#leave-calendar-insights">Calendar Insights</Link>
           <Link href="/employee#schedule">Schedule</Link>
           <Link href="/employee/payslips">Payslips</Link>
           <Link href="/employee/payslips#payslip-search-sort">Payslip Search/Sort</Link>
