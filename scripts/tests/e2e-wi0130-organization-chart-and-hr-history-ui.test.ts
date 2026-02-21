@@ -25,9 +25,9 @@ function run() {
 
   assert.match(adminLayout, /\/admin\/people/, "admin navigation should link to people directory page");
 
-  assert.match(adminPeoplePage, /조직도 트리/, "people page should include organization chart section");
-  assert.match(adminPeoplePage, /직원 비교/, "people page should include employee comparison section");
-  assert.match(adminPeoplePage, /인사 이력/, "people page should include employee history section");
+  assert.match(adminPeoplePage, /id="org-chart"/, "people page should include organization chart section");
+  assert.match(adminPeoplePage, /id="employee-compare"/, "people page should include employee comparison section");
+  assert.match(adminPeoplePage, /id="employee-history"/, "people page should include employee history section");
   assert.match(
     adminPeoplePage,
     /\/api\/people\/employees\/\$\{encodeURIComponent\(employeeId\)\}\/history/,
@@ -48,4 +48,3 @@ function run() {
 
 run();
 console.log("e2e-wi0130-organization-chart-and-hr-history-ui.test passed");
-

@@ -14,8 +14,8 @@
       "targetLines": 2500
     },
     "src/app/admin/people/page.tsx": {
-      "maxLines": 3931,
-      "targetLines": 2600
+      "maxLines": 2200,
+      "targetLines": 1600
     },
     "src/app/ops/admin-console/page.tsx": {
       "maxLines": 1674,

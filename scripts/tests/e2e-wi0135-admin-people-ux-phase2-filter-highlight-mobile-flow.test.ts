@@ -16,33 +16,27 @@ function run() {
   assert.match(peoplePage, /recentlyUpdatedDays/, "people page should track updated window filter");
   assert.match(peoplePage, /historyChangeSummary/, "people page should compute history change summary");
   assert.match(peoplePage, /changeHighlightClass/, "people page should compute change highlight class");
-  assert.match(peoplePage, /jumpPeopleSection/, "people page should provide mobile section jump helper");
   assert.match(peoplePage, /id="directory-filters"/, "people page should expose filter anchor section");
   assert.match(peoplePage, /id="org-chart"/, "people page should expose org chart anchor section");
   assert.match(peoplePage, /id="employee-compare"/, "people page should expose compare anchor section");
   assert.match(peoplePage, /id="employee-history"/, "people page should expose history anchor section");
-  assert.match(peoplePage, /id="people-mobile-flow"/, "people page should expose mobile flow anchor section");
+  assert.doesNotMatch(peoplePage, /id="people-mobile-flow"/, "people page should remove mobile flow anchor section");
+  assert.doesNotMatch(
+    peoplePage,
+    /id="people-mobile-follow-up-guide"/,
+    "people page should remove mobile follow-up guide section"
+  );
   assert.match(peoplePage, /compare-change-chip/, "people page should render compare change chip");
   assert.match(peoplePage, /history-change-summary-list/, "people page should render history summary list");
   assert.match(peoplePage, /history-change-item/, "people page should render history highlight items");
-  assert.match(peoplePage, /people-mobile-nav-grid/, "people page should render mobile navigation grid");
-  assert.match(peoplePage, /people-mobile-feedback/, "people page should render mobile navigation feedback");
 
   assert.match(adminLayout, /\/admin\/people/, "admin nav should include people directory route");
 
-  assert.match(globalCss, /\.panel-people-mobile-flow/, "people mobile flow panel style should exist");
-  assert.match(globalCss, /\.people-mobile-nav-grid/, "people mobile navigation grid style should exist");
-  assert.match(globalCss, /\.people-mobile-feedback/, "people mobile feedback style should exist");
   assert.match(globalCss, /\.compare-change-chip/, "compare change chip style should exist");
   assert.match(globalCss, /\.history-change-summary-list/, "history summary list style should exist");
   assert.match(globalCss, /\.history-change-summary-chip/, "history summary chip style should exist");
   assert.match(globalCss, /\.history-change-item\.highlight-org/, "history org highlight style should exist");
   assert.match(globalCss, /\.history-change-item\.highlight-job/, "history job highlight style should exist");
-  assert.match(
-    globalCss,
-    /#people-mobile-flow \.people-mobile-nav-grid/,
-    "people mobile nav responsive style should exist"
-  );
 }
 
 run();
