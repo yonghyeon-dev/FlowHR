@@ -33,6 +33,8 @@ export const domainEventNames = [
   "payroll.deductions.calculated.v1",
   "payroll.deduction_profile.updated.v1",
   "payroll.insurance_settlement.previewed.v1",
+  "payroll.period.close_previewed.v1",
+  "payroll.period.closed.v1",
   "payroll.confirmed.v1",
   "leave.requested.v1",
   "leave.approved.v1",

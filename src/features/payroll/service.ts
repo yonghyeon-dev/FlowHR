@@ -87,6 +87,17 @@ type PreviewPayrollInsuranceSettlementInput = PreviewPayrollInput & {
   };
 };
 
+type ClosePayrollPeriodInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  apply: boolean;
+  settlement?: {
+    priorPaidWithholdingTaxKrw: number;
+    priorPaidSocialInsuranceKrw: number;
+    priorPaidNetPayKrw: number;
+  };
+};
+
 type UpsertDeductionProfileInput = {
   profileId: string;
   name: string;
@@ -167,6 +178,39 @@ type PreviewPayrollInsuranceSettlementResult = {
       employeeDeltaKrw: number;
       employerDeltaKrw: number;
       totalDeltaKrw: number;
+    };
+  };
+};
+
+type ClosePayrollPeriodResult = {
+  summary: {
+    periodStart: string;
+    periodEnd: string;
+    apply: boolean;
+    canClose: boolean;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      blockingRunIds: string[];
+      blockingReasons: string[];
+    };
+    totalsKrw: {
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    };
+    settlementKrw: {
+      priorPaidWithholdingTaxKrw: number;
+      priorPaidSocialInsuranceKrw: number;
+      priorPaidNetPayKrw: number;
+      withholdingTaxDeltaKrw: number;
+      socialInsuranceDeltaKrw: number;
+      netPayDeltaKrw: number;
+      remittanceDeltaKrw: number;
     };
   };
 };
@@ -262,6 +306,13 @@ function isPayrollKrInsuranceSettlementEnabled() {
     process.env.FLOWHR_PAYROLL_KR_INSURANCE_SETTLEMENT_V1 ??
     process.env.PAYROLL_KR_INSURANCE_SETTLEMENT_V1 ??
     "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isPayrollClosePeriodEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_CLOSE_PERIOD_V1 ?? process.env.PAYROLL_CLOSE_PERIOD_V1 ?? "";
   const value = raw.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
 }
@@ -1211,6 +1262,161 @@ export async function listPayrollRuns(
     employeeId: input.employeeId,
     state: input.state
   });
+}
+
+export async function closePayrollPeriod(
+  context: ServiceContext,
+  input: ClosePayrollPeriodInput
+): Promise<ClosePayrollPeriodResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollClosePeriodEnabled()) {
+    throw new ServiceError(409, "payroll_close_period_v1 feature flag is disabled");
+  }
+
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+  const tenantScope = resolveTenantScope(context.actor);
+  const runs = await context.dataAccess.payroll.listInPeriod({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    organizationId: tenantScope ?? undefined
+  });
+
+  const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
+  const blockingRuns = runs.filter((run) => run.state !== "CONFIRMED");
+  const blockingRunIds = blockingRuns.map((run) => run.id);
+  const blockingReasons: string[] = [];
+  if (runs.length === 0) {
+    blockingReasons.push("no payroll runs found in selected period");
+  }
+  if (blockingRunIds.length > 0) {
+    blockingReasons.push("all payroll runs must be confirmed before period close");
+  }
+  const canClose = blockingReasons.length === 0;
+
+  const totalsKrw = confirmedRuns.reduce(
+    (acc, run) => {
+      const withholdingTaxKrw = run.withholdingTaxKrw ?? 0;
+      const socialInsuranceKrw = run.socialInsuranceKrw ?? 0;
+      const otherDeductionsKrw = run.otherDeductionsKrw ?? 0;
+      const totalDeductionsKrw =
+        run.totalDeductionsKrw ?? withholdingTaxKrw + socialInsuranceKrw + otherDeductionsKrw;
+      const netPayKrw = run.netPayKrw ?? run.grossPayKrw - totalDeductionsKrw;
+      return {
+        grossPayKrw: acc.grossPayKrw + run.grossPayKrw,
+        withholdingTaxKrw: acc.withholdingTaxKrw + withholdingTaxKrw,
+        socialInsuranceKrw: acc.socialInsuranceKrw + socialInsuranceKrw,
+        otherDeductionsKrw: acc.otherDeductionsKrw + otherDeductionsKrw,
+        totalDeductionsKrw: acc.totalDeductionsKrw + totalDeductionsKrw,
+        netPayKrw: acc.netPayKrw + netPayKrw
+      };
+    },
+    {
+      grossPayKrw: 0,
+      withholdingTaxKrw: 0,
+      socialInsuranceKrw: 0,
+      otherDeductionsKrw: 0,
+      totalDeductionsKrw: 0,
+      netPayKrw: 0
+    }
+  );
+
+  const priorPaidWithholdingTaxKrw = toKrwInteger(
+    input.settlement?.priorPaidWithholdingTaxKrw ?? 0,
+    "settlement.priorPaidWithholdingTaxKrw"
+  );
+  const priorPaidSocialInsuranceKrw = toKrwInteger(
+    input.settlement?.priorPaidSocialInsuranceKrw ?? 0,
+    "settlement.priorPaidSocialInsuranceKrw"
+  );
+  const priorPaidNetPayKrw = toKrwInteger(
+    input.settlement?.priorPaidNetPayKrw ?? 0,
+    "settlement.priorPaidNetPayKrw"
+  );
+
+  const withholdingTaxDeltaKrw = totalsKrw.withholdingTaxKrw - priorPaidWithholdingTaxKrw;
+  const socialInsuranceDeltaKrw = totalsKrw.socialInsuranceKrw - priorPaidSocialInsuranceKrw;
+  const netPayDeltaKrw = totalsKrw.netPayKrw - priorPaidNetPayKrw;
+  const remittanceDeltaKrw = withholdingTaxDeltaKrw + socialInsuranceDeltaKrw;
+
+  const organizationId = tenantScope ?? confirmedRuns[0]?.organizationId ?? null;
+  const entityId = `${input.periodStart.toISOString()}_${input.periodEnd.toISOString()}`;
+  const commonPayload = {
+    periodStart: input.periodStart.toISOString(),
+    periodEnd: input.periodEnd.toISOString(),
+    runStates: {
+      totalRuns: runs.length,
+      confirmedRuns: confirmedRuns.length,
+      previewedRuns: blockingRunIds.length,
+      blockingRunIds,
+      blockingReasons
+    },
+    totalsKrw,
+    settlementKrw: {
+      priorPaidWithholdingTaxKrw,
+      priorPaidSocialInsuranceKrw,
+      priorPaidNetPayKrw,
+      withholdingTaxDeltaKrw,
+      socialInsuranceDeltaKrw,
+      netPayDeltaKrw,
+      remittanceDeltaKrw
+    }
+  };
+
+  if (input.apply && !canClose) {
+    throw new ServiceError(409, "payroll period cannot be closed", commonPayload.runStates);
+  }
+
+  if (input.apply) {
+    await context.dataAccess.audit.append({
+      action: "payroll.period_closed",
+      entityType: "PayrollPeriod",
+      entityId,
+      organizationId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload: commonPayload
+    });
+    await getEventPublisher(context).publish({
+      name: "payroll.period.closed.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "PayrollPeriod",
+      entityId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload: commonPayload
+    });
+  } else {
+    await context.dataAccess.audit.append({
+      action: "payroll.period_close_previewed",
+      entityType: "PayrollPeriod",
+      entityId,
+      organizationId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload: commonPayload
+    });
+    await getEventPublisher(context).publish({
+      name: "payroll.period.close_previewed.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "PayrollPeriod",
+      entityId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload: commonPayload
+    });
+  }
+
+  return {
+    summary: {
+      periodStart: commonPayload.periodStart,
+      periodEnd: commonPayload.periodEnd,
+      apply: input.apply,
+      canClose,
+      runStates: commonPayload.runStates,
+      totalsKrw: commonPayload.totalsKrw,
+      settlementKrw: commonPayload.settlementKrw
+    }
+  };
 }
 
 export async function readDeductionProfile(

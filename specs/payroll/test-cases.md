@@ -29,6 +29,9 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 21. Run payroll 4-insurance settlement preview with contribution caps and verify employee/employer component breakdown.
 22. Reject 4-insurance settlement preview when `payroll_kr_insurance_settlement_v1` feature flag is disabled.
 23. Reject 4-insurance settlement preview when `requireMonthlyBoundary=true` and period is not monthly boundary in `Asia/Seoul`.
+24. Preview payroll close-period summary and verify confirmed/previewed run-state counts plus withholding/social/net settlement deltas.
+25. Apply payroll close-period and reject when unconfirmed (`PREVIEWED`) runs remain.
+26. Reject payroll close-period when `payroll_close_period_v1` feature flag is disabled.
 
 ## Accuracy Cases
 
@@ -48,6 +51,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 14. Employee payslip self-service view preserves statutory deduction totals/net values and excludes unauthorized runs.
 15. Insurance settlement mode computes employee/employer contribution totals and deltas (`priorWithheldKrw`, `priorEmployerPaidKrw`) deterministically.
 16. Insurance settlement contribution caps bind NP/HI/EI bases and keep component sums deterministic.
+17. Close-period mode computes withholding/social/net totals from confirmed runs and settlement deltas deterministically.
+18. Close-period mode blocks `apply=true` deterministically when previewed runs remain.
 
 ## Regression Linkage
 
@@ -71,3 +76,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Tax-Credit/Boundary Gate: tax-credit ordering and monthly-boundary guard checks must be deterministic and validated.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
+- Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.
