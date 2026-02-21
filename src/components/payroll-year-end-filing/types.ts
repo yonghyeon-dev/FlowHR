@@ -152,6 +152,39 @@ export type PayrollYearEndFilingSubmissionListResponse = {
   submissions: PayrollYearEndFilingSubmission[];
 };
 
+export type PayrollYearEndFilingTimelineEntry = {
+  action: "submitted" | "resubmitted" | "acknowledged" | "evidence_note_added";
+  submissionId: string;
+  occurredAt: string;
+  actorRole: string;
+  actorId: string | null;
+  attempt: number | null;
+  submissionNote: string | null;
+  resubmissionOfSubmissionId: string | null;
+  resubmissionReason: string | null;
+  ackStatus: "accepted" | "rejected" | null;
+  ackCode: string | null;
+  ackNote: string | null;
+  evidenceNote: string | null;
+};
+
+export type PayrollYearEndFilingSubmissionTimelineResponse = {
+  submission: PayrollYearEndFilingSubmission;
+  timeline: PayrollYearEndFilingTimelineEntry[];
+};
+
+export type PayrollYearEndFilingEvidenceNoteResponse = {
+  evidenceNote: {
+    submissionId: string;
+    year: number;
+    employeeId: string;
+    note: string;
+    notedAt: string;
+    notedByRole: string;
+    notedById: string | null;
+  };
+};
+
 export type ApiLog = {
   id: number;
   label: string;

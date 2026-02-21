@@ -192,6 +192,19 @@ type ListPayrollYearEndFilingSubmissionsInput = {
   employeeId: string;
 };
 
+type ListPayrollYearEndFilingSubmissionTimelineInput = {
+  year: number;
+  employeeId: string;
+  submissionId: string;
+};
+
+type AddPayrollYearEndFilingEvidenceNoteInput = {
+  year: number;
+  employeeId: string;
+  submissionId: string;
+  note: string;
+};
+
 type IssuePayrollYearEndWithholdingReceiptInput = {
   year: number;
   employeeId: string;
@@ -563,6 +576,47 @@ type AcknowledgePayrollYearEndFilingPackageResult = {
 
 type ListPayrollYearEndFilingSubmissionsResult = {
   submissions: PayrollYearEndFilingSubmissionSummary[];
+};
+
+type PayrollYearEndFilingTimelineAction =
+  | "submitted"
+  | "resubmitted"
+  | "acknowledged"
+  | "evidence_note_added";
+
+type PayrollYearEndFilingTimelineEntry = {
+  action: PayrollYearEndFilingTimelineAction;
+  submissionId: string;
+  occurredAt: string;
+  actorRole: string;
+  actorId: string | null;
+  attempt: number | null;
+  submissionNote: string | null;
+  resubmissionOfSubmissionId: string | null;
+  resubmissionReason: string | null;
+  ackStatus: PayrollYearEndFilingAckStatus | null;
+  ackCode: string | null;
+  ackNote: string | null;
+  evidenceNote: string | null;
+};
+
+type ListPayrollYearEndFilingSubmissionTimelineResult = {
+  submission: PayrollYearEndFilingSubmissionSummary;
+  timeline: PayrollYearEndFilingTimelineEntry[];
+};
+
+type PayrollYearEndFilingEvidenceNoteSummary = {
+  submissionId: string;
+  year: number;
+  employeeId: string;
+  note: string;
+  notedAt: string;
+  notedByRole: string;
+  notedById: string | null;
+};
+
+type AddPayrollYearEndFilingEvidenceNoteResult = {
+  evidenceNote: PayrollYearEndFilingEvidenceNoteSummary;
 };
 
 type IssuePayrollYearEndWithholdingReceiptResult = {
@@ -2177,6 +2231,16 @@ type YearEndFilingPackageAcknowledgedAuditPayload = {
   acknowledgedById: string | null;
 };
 
+type YearEndFilingEvidenceNoteAddedAuditPayload = {
+  submissionId: string;
+  year: number;
+  employeeId: string;
+  note: string;
+  notedAt: string;
+  notedByRole: string;
+  notedById: string | null;
+};
+
 function asYearEndFilingPackageSubmittedAuditPayload(
   payload: unknown
 ): YearEndFilingPackageSubmittedAuditPayload | null {
@@ -2226,6 +2290,29 @@ function asYearEndFilingPackageAcknowledgedAuditPayload(
     return null;
   }
   return candidate as YearEndFilingPackageAcknowledgedAuditPayload;
+}
+
+function asYearEndFilingEvidenceNoteAddedAuditPayload(
+  payload: unknown
+): YearEndFilingEvidenceNoteAddedAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<YearEndFilingEvidenceNoteAddedAuditPayload>;
+  if (
+    typeof candidate.submissionId !== "string" ||
+    typeof candidate.year !== "number" ||
+    typeof candidate.employeeId !== "string" ||
+    typeof candidate.note !== "string" ||
+    typeof candidate.notedAt !== "string" ||
+    typeof candidate.notedByRole !== "string"
+  ) {
+    return null;
+  }
+  return {
+    ...candidate,
+    notedById: typeof candidate.notedById === "string" ? candidate.notedById : null
+  } as YearEndFilingEvidenceNoteAddedAuditPayload;
 }
 
 function buildYearEndFilingSubmissionSummaries(
@@ -2981,18 +3068,130 @@ async function listYearEndFilingSubmissionSummaries(
   context: ServiceContext,
   input: ListPayrollYearEndFilingSubmissionsInput
 ) {
+  const logs = await listYearEndFilingLifecycleLogs(context, input);
+  return buildYearEndFilingSubmissionSummaries(logs);
+}
+
+async function listYearEndFilingLifecycleLogs(
+  context: ServiceContext,
+  input: {
+    year: number;
+    employeeId: string;
+  }
+) {
   const entityId = `${input.year}_${input.employeeId}`;
-  const logs = await context.dataAccess.audit.list({
+  return context.dataAccess.audit.list({
     actions: [
       "payroll.year_end.filing_package_submitted",
       "payroll.year_end.filing_package_resubmitted",
-      "payroll.year_end.filing_package_acknowledged"
+      "payroll.year_end.filing_package_acknowledged",
+      "payroll.year_end.filing_evidence_note_added"
     ],
     entityType: "PayrollYearEnd",
     entityId,
     limit: 1000
   });
-  return buildYearEndFilingSubmissionSummaries(logs);
+}
+
+function buildYearEndFilingSubmissionTimeline(
+  logs: AuditLogEntity[],
+  submissionId: string
+): PayrollYearEndFilingTimelineEntry[] {
+  const sortedLogs = [...logs].sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+  const timeline: PayrollYearEndFilingTimelineEntry[] = [];
+
+  for (const log of sortedLogs) {
+    if (
+      log.action === "payroll.year_end.filing_package_submitted" ||
+      log.action === "payroll.year_end.filing_package_resubmitted"
+    ) {
+      const payload = asYearEndFilingPackageSubmittedAuditPayload(log.payload);
+      if (!payload || payload.submissionId !== submissionId) {
+        continue;
+      }
+      timeline.push({
+        action:
+          log.action === "payroll.year_end.filing_package_submitted" ? "submitted" : "resubmitted",
+        submissionId: payload.submissionId,
+        occurredAt: payload.submittedAt,
+        actorRole: payload.submittedByRole,
+        actorId: payload.submittedById,
+        attempt: payload.attempt,
+        submissionNote: payload.submissionNote,
+        resubmissionOfSubmissionId: payload.resubmissionOfSubmissionId,
+        resubmissionReason: payload.resubmissionReason,
+        ackStatus: null,
+        ackCode: null,
+        ackNote: null,
+        evidenceNote: null
+      });
+      continue;
+    }
+
+    if (log.action === "payroll.year_end.filing_package_acknowledged") {
+      const payload = asYearEndFilingPackageAcknowledgedAuditPayload(log.payload);
+      if (!payload || payload.submissionId !== submissionId) {
+        continue;
+      }
+      timeline.push({
+        action: "acknowledged",
+        submissionId: payload.submissionId,
+        occurredAt: payload.acknowledgedAt,
+        actorRole: payload.acknowledgedByRole,
+        actorId: payload.acknowledgedById,
+        attempt: null,
+        submissionNote: null,
+        resubmissionOfSubmissionId: null,
+        resubmissionReason: null,
+        ackStatus: payload.ackStatus,
+        ackCode: payload.ackCode,
+        ackNote: payload.ackNote,
+        evidenceNote: null
+      });
+      continue;
+    }
+
+    if (log.action === "payroll.year_end.filing_evidence_note_added") {
+      const payload = asYearEndFilingEvidenceNoteAddedAuditPayload(log.payload);
+      if (!payload || payload.submissionId !== submissionId) {
+        continue;
+      }
+      timeline.push({
+        action: "evidence_note_added",
+        submissionId: payload.submissionId,
+        occurredAt: payload.notedAt,
+        actorRole: payload.notedByRole,
+        actorId: payload.notedById,
+        attempt: null,
+        submissionNote: null,
+        resubmissionOfSubmissionId: null,
+        resubmissionReason: null,
+        ackStatus: null,
+        ackCode: null,
+        ackNote: null,
+        evidenceNote: payload.note
+      });
+    }
+  }
+
+  const actionOrder: Record<PayrollYearEndFilingTimelineAction, number> = {
+    submitted: 0,
+    resubmitted: 1,
+    acknowledged: 2,
+    evidence_note_added: 3
+  };
+
+  return timeline.sort((left, right) => {
+    const timeDelta = Date.parse(left.occurredAt) - Date.parse(right.occurredAt);
+    if (timeDelta !== 0) {
+      return timeDelta;
+    }
+    const actionDelta = actionOrder[left.action] - actionOrder[right.action];
+    if (actionDelta !== 0) {
+      return actionDelta;
+    }
+    return (left.evidenceNote ?? "").localeCompare(right.evidenceNote ?? "");
+  });
 }
 
 function ensureNoPendingFilingSubmission(submissions: PayrollYearEndFilingSubmissionSummary[]) {
@@ -3285,6 +3484,101 @@ export async function listPayrollYearEndFilingSubmissions(
   await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const submissions = await listYearEndFilingSubmissionSummaries(context, input);
   return { submissions };
+}
+
+export async function listPayrollYearEndFilingSubmissionTimeline(
+  context: ServiceContext,
+  input: ListPayrollYearEndFilingSubmissionTimelineInput
+): Promise<ListPayrollYearEndFilingSubmissionTimelineResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const submissions = await listYearEndFilingSubmissionSummaries(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  const submission = submissions.find((candidate) => candidate.submissionId === input.submissionId);
+  if (!submission) {
+    throw new ServiceError(404, "filing submission not found");
+  }
+  const logs = await listYearEndFilingLifecycleLogs(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  const timeline = buildYearEndFilingSubmissionTimeline(logs, input.submissionId);
+
+  return {
+    submission,
+    timeline
+  };
+}
+
+export async function addPayrollYearEndFilingEvidenceNote(
+  context: ServiceContext,
+  input: AddPayrollYearEndFilingEvidenceNoteInput
+): Promise<AddPayrollYearEndFilingEvidenceNoteResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const submissions = await listYearEndFilingSubmissionSummaries(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  if (!submissions.some((submission) => submission.submissionId === input.submissionId)) {
+    throw new ServiceError(404, "filing submission not found");
+  }
+
+  const note = input.note.trim();
+  if (!note) {
+    throw new ServiceError(400, "evidence note must not be empty");
+  }
+  const actorRole = context.actor?.role ?? "system";
+  const actorId = context.actor?.id ?? null;
+  const notedAt = new Date().toISOString();
+  const entityId = `${input.year}_${input.employeeId}`;
+  const payload: PayrollYearEndFilingEvidenceNoteSummary = {
+    submissionId: input.submissionId,
+    year: input.year,
+    employeeId: input.employeeId,
+    note,
+    notedAt,
+    notedByRole: actorRole,
+    notedById: actorId
+  };
+
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.filing_evidence_note_added",
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.filing_evidence_note.added.v1",
+    occurredAt: notedAt,
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload: payload as unknown as Record<string, unknown>
+  });
+
+  return {
+    evidenceNote: payload
+  };
 }
 
 export async function issuePayrollYearEndWithholdingReceipt(
