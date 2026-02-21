@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.10.0
+  version: 1.11.0
 paths:
   /payroll/runs:
     get:
@@ -78,6 +78,25 @@ paths:
       responses:
         "200":
           description: Payroll period close summary generated
+  /payroll/payslips/distribute:
+    post:
+      summary: Preview or apply confirmed payslip distribution
+      description: Distributes confirmed payroll runs as payslips by period/employee scope and records delivery metadata (`in_app`/`email`). `dryRun=true` returns summary without updates.
+      responses:
+        "200":
+          description: Payslip distribution summary generated
+  /payroll/payslips/{runId}/acknowledge:
+    post:
+      summary: Confirm payslip receipt for distributed confirmed run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payslip receipt confirmed
   /payroll/runs/{runId}/confirm:
     post:
       summary: Confirm payroll run

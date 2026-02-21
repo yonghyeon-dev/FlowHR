@@ -171,6 +171,14 @@ export const closePayrollPeriodSchema = z.object({
   settlement: closePayrollPeriodSettlementSchema.optional()
 });
 
+export const distributePayrollPayslipsSchema = z.object({
+  periodStart: isoDateTime,
+  periodEnd: isoDateTime,
+  employeeId: z.string().min(1).optional(),
+  deliveryChannel: z.enum(["in_app", "email"]).default("in_app"),
+  dryRun: z.boolean().default(true)
+});
+
 export const upsertDeductionProfileSchema = z.object({
   name: z.string().min(1),
   mode: z.enum(["manual", "profile"]).default("profile"),

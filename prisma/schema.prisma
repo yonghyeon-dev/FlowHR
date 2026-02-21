@@ -442,6 +442,11 @@ model PayrollRun {
   deductionProfileId     String?
   deductionProfileVersion Int?
   sourceRecordCount      Int      @default(0)
+  payslipDeliveryChannel String?
+  payslipDistributedAt   DateTime?
+  payslipDistributedBy   String?
+  payslipReceiptConfirmedAt DateTime?
+  payslipReceiptConfirmedBy String?
   confirmedAt            DateTime?
   confirmedBy            String?
   createdAt              DateTime @default(now())

@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.10.0
+version: 1.11.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -15,6 +15,7 @@ scope:
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
+    - payslip distribution and employee receipt confirmation workflow for confirmed payroll runs
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -31,11 +32,11 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, list runs, list/manage deduction profiles, and confirm run
+      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
     - role: employee
-      permission: list own confirmed payroll runs for payslip self-service (employeeId must match actor id)
+      permission: list own confirmed payroll runs for payslip self-service and confirm own payslip receipt (employeeId must match actor id)
   endpoints:
     - method: GET
       path: /payroll/runs
@@ -55,6 +56,12 @@ api:
     - method: POST
       path: /payroll/runs/close-period
       description: Preview/apply payroll period close from confirmed runs with withholding/social/net settlement deltas and blocking reasons when unconfirmed runs remain.
+    - method: POST
+      path: /payroll/payslips/distribute
+      description: Preview/apply confirmed payslip distribution by period with delivery metadata (`in_app`/`email`) and per-run delivery status.
+    - method: POST
+      path: /payroll/payslips/{runId}/acknowledge
+      description: Confirm payslip receipt for distributed confirmed run (employee own run or payroll admin/operator override).
     - method: POST
       path: /payroll/runs/{runId}/confirm
       description: Confirm a payroll run.
@@ -80,6 +87,12 @@ api:
         description: Emitted when payroll period close summary is previewed.
       - name: payroll.period.closed.v1
         description: Emitted when payroll period close is applied.
+      - name: payroll.payslip.distribution_previewed.v1
+        description: Emitted when payslip distribution dry-run summary is generated.
+      - name: payroll.payslip.distributed.v1
+        description: Emitted when payslip delivery is applied for confirmed runs.
+      - name: payroll.payslip.receipt_confirmed.v1
+        description: Emitted when employee payslip receipt is confirmed.
     consumed:
       - name: attendance.approved.v1
         description: Approved attendance aggregate input.
@@ -97,6 +110,8 @@ db_changes:
       description: Add DeductionProfile table and profile trace columns on PayrollRun.
     - id: 202602140006_employee_fk_constraints
       description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
+    - id: 202602210001_wi0186_payroll_payslip_delivery_receipt
+      description: Add payslip delivery/receipt tracking columns on PayrollRun.
   backward_compatible: true
   notes: Phase2 adds optional profile-based deduction calculation while keeping manual mode.
 invariants:
@@ -116,6 +131,8 @@ invariants:
   - Payroll period close totals must be derived from CONFIRMED runs in period and keep deterministic aggregation for same run set.
   - Payroll period close apply is blocked when any PREVIEWED run remains in selected period.
   - Payroll period close settlement deltas must satisfy `withholdingTaxDeltaKrw = totalWithholdingTaxKrw - priorPaidWithholdingTaxKrw`, `socialInsuranceDeltaKrw = totalSocialInsuranceKrw - priorPaidSocialInsuranceKrw`, and `netPayDeltaKrw = totalNetPayKrw - priorPaidNetPayKrw`.
+  - Payslip distribution targets only CONFIRMED runs and records deterministic delivery metadata per run.
+  - Payslip receipt confirmation is allowed only for distributed CONFIRMED runs and must persist confirmation actor/time.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
   - Payroll run list API is restricted to payroll_operator/admin roles, with employee self-service allowed for own CONFIRMED runs only.
@@ -125,6 +142,7 @@ risk:
   permissions:
     - Unauthorized deduction profile mutation can impact payroll outcomes.
     - Unauthorized payroll run confirmation can lock wrong results.
+    - Unauthorized payslip distribution or receipt confirmation can break payroll compliance trail.
   payroll_accuracy:
     - Misapplied overtime/night/holiday multipliers affect compensation.
     - Miscalculated deduction aggregation affects net pay accuracy.
@@ -145,6 +163,8 @@ test_plan:
     - statutory_kr_baseline tax-credit and monthly-boundary formulas
     - insurance settlement contribution, cap, and delta formulas
     - close-period totals, blocking, and delta formulas
+    - payslip distribution target selection and idempotent delivery state updates
+    - payslip receipt confirmation ownership/distributed-state guards
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
     - deduction profile list query parsing and role guard
@@ -166,6 +186,9 @@ test_plan:
     - close-period preview returns run-state summary (confirmed/previewed) and withholding/social/net settlement deltas
     - close-period apply rejects requests when unconfirmed runs remain
     - close-period rejects requests when payroll_close_period_v1 is disabled
+    - payslip distribution dry-run/apply returns deterministic run-state summary and delivery counts
+    - payslip receipt confirmation rejects non-owner employees and undistributed runs
+    - payslip distribution/receipt APIs reject requests when payroll_payslip_delivery_v1 is disabled
   regression:
     - replay GC-001 through GC-006 fixtures
     - replay GC-007 through GC-008 statutory fixtures
@@ -174,12 +197,15 @@ test_plan:
     - statutory_kr_baseline tax-credit/boundary deterministic replay via WI-0106 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
     - close-period deterministic replay via WI-0185 e2e
+    - payslip distribution/receipt deterministic replay via WI-0186 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
     - payroll_operator role enforcement for deduction profile list API
     - payroll_operator role enforcement for preview-insurance-settlement API
     - payroll_operator role enforcement for close-period API
+    - payroll_operator role enforcement for payslip distribution API
+    - employee/payroll roles guard for payslip receipt confirmation API
   payroll_accuracy:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
@@ -188,6 +214,7 @@ test_plan:
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, and delta deterministic checks
     - close-period withholding/social/net aggregation and settlement-delta checks
+    - payslip distribution and receipt confirmation state transitions stay deterministic
 observability:
   audit_events:
     - payroll.calculated
@@ -198,6 +225,11 @@ observability:
     - payroll.period_close_previewed
     - payroll.period_closed
     - payroll.close_period.failed
+    - payroll.payslip_distribution_previewed
+    - payroll.payslip_distributed
+    - payroll.payslip_distribution.failed
+    - payroll.payslip_receipt_confirmed
+    - payroll.payslip_receipt_confirm.failed
     - payroll.deduction_profile.updated
     - payroll.confirmed
   metrics:
@@ -206,6 +238,8 @@ observability:
     - payroll_deductions_preview_latency_ms
     - payroll_insurance_settlement_preview_latency_ms
     - payroll_close_period_latency_ms
+    - payroll_payslip_distribution_latency_ms
+    - payroll_payslip_receipt_confirmation_latency_ms
     - payroll_deduction_profile_calc_latency_ms
     - payroll_deduction_profile_miss_count
   logs:
@@ -224,13 +258,15 @@ rollout:
       default: "off"
     - name: payroll_close_period_v1
       default: "off"
+    - name: payroll_payslip_delivery_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_close_period_v1, then payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
+  strategy: disable payroll_payslip_delivery_v1, then payroll_close_period_v1, then payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.10.0 adds feature-flagged `POST /payroll/runs/close-period` for withholding settlement and payroll period-close workflow, while preserving existing payroll preview/confirm/profile and insurance-settlement APIs."
+consumer_impact: "Contract v1.11.0 adds feature-flagged payslip delivery/receipt APIs (`POST /payroll/payslips/distribute`, `POST /payroll/payslips/{runId}/acknowledge`) while preserving existing payroll preview/confirm/profile, insurance-settlement, and close-period APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -247,6 +283,7 @@ references:
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
+  - work-items/WI-0186-payroll-payslip-delivery-receipt-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

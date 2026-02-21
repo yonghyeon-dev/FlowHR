@@ -32,6 +32,9 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 24. Preview payroll close-period summary and verify confirmed/previewed run-state counts plus withholding/social/net settlement deltas.
 25. Apply payroll close-period and reject when unconfirmed (`PREVIEWED`) runs remain.
 26. Reject payroll close-period when `payroll_close_period_v1` feature flag is disabled.
+27. Preview/apply payslip distribution for confirmed runs and verify newly distributed/already distributed counts.
+28. Confirm payslip receipt for distributed confirmed run and reject non-owner or undistributed run.
+29. Reject payslip distribution/receipt APIs when `payroll_payslip_delivery_v1` feature flag is disabled.
 
 ## Accuracy Cases
 
@@ -53,6 +56,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 16. Insurance settlement contribution caps bind NP/HI/EI bases and keep component sums deterministic.
 17. Close-period mode computes withholding/social/net totals from confirmed runs and settlement deltas deterministically.
 18. Close-period mode blocks `apply=true` deterministically when previewed runs remain.
+19. Payslip distribution updates run delivery fields deterministically and remains idempotent for already distributed runs.
+20. Payslip receipt confirmation updates receipt actor/time deterministically and rejects invalid state transitions.
 
 ## Regression Linkage
 
@@ -77,3 +82,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.
+- Payslip Delivery Gate: payslip delivery/receipt APIs remain feature-flagged, permission-guarded, and maintain deterministic distribution/receipt state transitions.

@@ -282,6 +282,10 @@ function clonePayroll(entity: PayrollRunEntity): PayrollRunEntity {
     periodStart: cloneDate(entity.periodStart),
     periodEnd: cloneDate(entity.periodEnd),
     deductionBreakdown: entity.deductionBreakdown ? cloneJson(entity.deductionBreakdown) : null,
+    payslipDistributedAt: entity.payslipDistributedAt ? cloneDate(entity.payslipDistributedAt) : null,
+    payslipReceiptConfirmedAt: entity.payslipReceiptConfirmedAt
+      ? cloneDate(entity.payslipReceiptConfirmedAt)
+      : null,
     confirmedAt: entity.confirmedAt ? cloneDate(entity.confirmedAt) : null,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
@@ -466,6 +470,26 @@ function updatePayrollEntity(existing: PayrollRunEntity, input: UpdatePayrollRun
   return {
     ...existing,
     state: input.state ?? existing.state,
+    payslipDeliveryChannel:
+      input.payslipDeliveryChannel !== undefined
+        ? input.payslipDeliveryChannel
+        : existing.payslipDeliveryChannel,
+    payslipDistributedAt:
+      input.payslipDistributedAt !== undefined
+        ? input.payslipDistributedAt
+        : existing.payslipDistributedAt,
+    payslipDistributedBy:
+      input.payslipDistributedBy !== undefined
+        ? input.payslipDistributedBy
+        : existing.payslipDistributedBy,
+    payslipReceiptConfirmedAt:
+      input.payslipReceiptConfirmedAt !== undefined
+        ? input.payslipReceiptConfirmedAt
+        : existing.payslipReceiptConfirmedAt,
+    payslipReceiptConfirmedBy:
+      input.payslipReceiptConfirmedBy !== undefined
+        ? input.payslipReceiptConfirmedBy
+        : existing.payslipReceiptConfirmedBy,
     confirmedAt: input.confirmedAt !== undefined ? input.confirmedAt : existing.confirmedAt,
     confirmedBy: input.confirmedBy !== undefined ? input.confirmedBy : existing.confirmedBy,
     updatedAt: new Date()
@@ -1929,6 +1953,11 @@ export const memoryDataAccess: DataAccess = {
         deductionProfileId: input.deductionProfileId ?? null,
         deductionProfileVersion: input.deductionProfileVersion ?? null,
         sourceRecordCount: input.sourceRecordCount,
+        payslipDeliveryChannel: null,
+        payslipDistributedAt: null,
+        payslipDistributedBy: null,
+        payslipReceiptConfirmedAt: null,
+        payslipReceiptConfirmedBy: null,
         confirmedAt: null,
         confirmedBy: null,
         createdAt: now,

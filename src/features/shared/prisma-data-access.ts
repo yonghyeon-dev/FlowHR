@@ -282,6 +282,11 @@ function toPayrollEntity(record: {
   deductionProfileId: string | null;
   deductionProfileVersion: number | null;
   sourceRecordCount: number;
+  payslipDeliveryChannel: string | null;
+  payslipDistributedAt: Date | null;
+  payslipDistributedBy: string | null;
+  payslipReceiptConfirmedAt: Date | null;
+  payslipReceiptConfirmedBy: string | null;
   confirmedAt: Date | null;
   confirmedBy: string | null;
   createdAt: Date;
@@ -2028,7 +2033,12 @@ const payroll: PayrollStore = {
               : (input.deductionBreakdown as Prisma.InputJsonValue),
         deductionProfileId: input.deductionProfileId ?? null,
         deductionProfileVersion: input.deductionProfileVersion ?? null,
-        sourceRecordCount: input.sourceRecordCount
+        sourceRecordCount: input.sourceRecordCount,
+        payslipDeliveryChannel: null,
+        payslipDistributedAt: null,
+        payslipDistributedBy: null,
+        payslipReceiptConfirmedAt: null,
+        payslipReceiptConfirmedBy: null
       }
     });
     return toPayrollEntity(run);
@@ -2071,7 +2081,12 @@ const payroll: PayrollStore = {
       data: {
         state: input.state,
         confirmedAt: input.confirmedAt,
-        confirmedBy: input.confirmedBy
+        confirmedBy: input.confirmedBy,
+        payslipDeliveryChannel: input.payslipDeliveryChannel,
+        payslipDistributedAt: input.payslipDistributedAt,
+        payslipDistributedBy: input.payslipDistributedBy,
+        payslipReceiptConfirmedAt: input.payslipReceiptConfirmedAt,
+        payslipReceiptConfirmedBy: input.payslipReceiptConfirmedBy
       }
     });
     return toPayrollEntity(run);
