@@ -158,6 +158,28 @@ async function run() {
       }
     });
     if (organizationId) {
+      const executionIds = (
+        await prisma.approvalExecution.findMany({
+          where: { organizationId },
+          select: { id: true }
+        })
+      ).map((row) => row.id);
+      if (executionIds.length > 0) {
+        await prisma.approvalExecutionActionLog.deleteMany({
+          where: {
+            executionId: {
+              in: executionIds
+            }
+          }
+        });
+      }
+      await prisma.approvalExecution.deleteMany({
+        where: { organizationId }
+      });
+      await prisma.approvalStageHistory.deleteMany({
+        where: { organizationId }
+      });
+
       await prisma.auditLog.deleteMany({
         where: {
           entityType: "Organization",

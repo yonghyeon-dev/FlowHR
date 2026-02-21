@@ -106,3 +106,43 @@ jobs:
           FLOWHR_ALERT_BREAK_GLASS_URL: "https://github.com/${{ github.repository }}/blob/main/docs/break-glass.md"
           FLOWHR_ALERT_ROLLBACK_WORKFLOW_URL: "https://github.com/${{ github.repository }}/actions/workflows/payroll-phase2-rollback.yml"
         run: node scripts/ops/notify-slack-failure.mjs
+
+      - name: Close open phase2 incidents on success
+        if: ${{ success() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "incident,phase2,ops",
+              per_page: 100
+            });
+
+            for (const issue of openIssues.data) {
+              if (!issue.title.startsWith("[phase2-health]")) {
+                continue;
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  "payroll-phase2-health가 성공하여 incident를 자동 종료합니다.",
+                  "",
+                  `- Success Run: ${runUrl}`,
+                  `- Ref: ${context.ref}`,
+                  `- Trigger: ${context.eventName}`
+                ].join("\n")
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "closed"
+              });
+            }

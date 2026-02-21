@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.43 (Frontend Guardrails and Admin Contracts UX Baseline)
+> **Current version**: 0.1.44 (Ops Cleanup for Production Smoke Teardown and Incident Auto-Close)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -211,10 +211,11 @@
 - WI-0172 관리자 승인 큐 UX 13차 고도화(승인 이력 실행 요약 다이제스트 + 승인 지연 실행 백로그 다이제스트 + 모바일 후속 액션 추천 고도화 6차 + 사이드 네비 앵커 + e2e)
 - WI-0173 프론트엔드 모놀리스 가드레일(페이지 라인 예산 테스트 + e2e 선행 가드 + 분해 원칙 문서화)
 - WI-0174 전자계약 Admin UX baseline(`/admin/contracts` 분리 라우트 + 템플릿 라이브러리/서명 준비도 카드 + 사이드 네비 앵커 + e2e)
+- WI-0175 운영 정리(Production Auth Smoke teardown FK 정리 + payroll-phase2-health success 시 incident auto-close + e2e)
 
 ### 진행 중
 
-- 다음: 전자계약 템플릿 API baseline (WI-0175)
+- 다음: 전자계약 템플릿 API baseline (WI-0176)
 
 ### 현재 아키텍처
 
