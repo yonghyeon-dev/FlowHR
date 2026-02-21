@@ -1170,6 +1170,61 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.queue-history-execution-summary-digest-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-history-execution-summary-digest-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-history-execution-summary-digest-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-history-execution-summary-digest-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-history-execution-summary-digest-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-history-execution-summary-digest-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-history-execution-summary-digest-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-history-execution-summary-digest-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .queue-evidence-comparison-panel {
   margin-top: 12px;
   border: 1px solid var(--line);
@@ -2144,6 +2199,54 @@ button.queue-badge:hover {
 }
 
 .queue-mobile-follow-up-recommendation-upgrade-5-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-6-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-6-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-6-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-6-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-6-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-6-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-6-actions {
   margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -7582,6 +7685,7 @@ button.queue-badge:hover {
   #approvals .queue-history-sort-hardening-plus-execution-list,
   #approvals .queue-history-sort-execution-tracker-list,
   #approvals .queue-history-execution-summary-list,
+  #approvals .queue-history-execution-summary-digest-list,
   #approvals .queue-evidence-preview-list {
     grid-template-columns: 1fr;
   }
@@ -7600,7 +7704,8 @@ button.queue-badge:hover {
   #approvals .queue-mobile-follow-up-recommendation-upgrade-2-list,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-3-list,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-4-list,
-  #approvals .queue-mobile-follow-up-recommendation-upgrade-5-list {
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-5-list,
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-6-list {
     grid-template-columns: 1fr;
   }
 
@@ -7621,6 +7726,7 @@ button.queue-badge:hover {
   #approvals .queue-history-sort-hardening-plus-execution-head,
   #approvals .queue-history-sort-execution-tracker-head,
   #approvals .queue-history-execution-summary-head,
+  #approvals .queue-history-execution-summary-digest-head,
   #approvals .queue-evidence-comparison-head,
   #approvals .queue-processing-prediction-head,
   #approvals .queue-delay-risk-prediction-head,
@@ -7636,6 +7742,7 @@ button.queue-badge:hover {
   #approvals .queue-mobile-follow-up-recommendation-upgrade-3-head,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-4-head,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-5-head,
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-6-head,
   #approvals .queue-sla-timeline-head {
     flex-direction: column;
     align-items: flex-start;

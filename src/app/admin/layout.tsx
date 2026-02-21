@@ -65,6 +65,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#approval-history-sort-hardening-plus-execution">승인 이력 정렬 보강+ 실행</Link>
           <Link href="/admin#approval-history-sort-execution-tracker">승인 이력 실행 추적</Link>
           <Link href="/admin#approval-history-execution-summary">승인 이력 실행 요약</Link>
+          <Link href="/admin#approval-history-execution-summary-digest">승인 이력 실행 요약 다이제스트</Link>
           <Link href="/admin#approval-evidence-preview">승인 근거 프리뷰</Link>
           <Link href="/admin#approval-evidence-comparison">승인 근거 비교 카드</Link>
           <Link href="/admin#approval-sla-timeline">승인 SLA 타임라인</Link>
@@ -85,6 +86,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#approval-mobile-follow-up-recommendation-upgrade-3">승인 모바일 추천 고도화 3</Link>
           <Link href="/admin#approval-mobile-follow-up-recommendation-upgrade-4">승인 모바일 추천 고도화 4</Link>
           <Link href="/admin#approval-mobile-follow-up-recommendation-upgrade-5">승인 모바일 추천 고도화 5</Link>
+          <Link href="/admin#approval-mobile-follow-up-recommendation-upgrade-6">승인 모바일 추천 고도화 6</Link>
           <Link href="/admin#approval-bulk-validation">승인 검증</Link>
           <Link href="/admin#approval-item-history">승인 이력 요약</Link>
           <Link href="/admin#approval-mobile-feedback">승인 모바일 피드백</Link>
