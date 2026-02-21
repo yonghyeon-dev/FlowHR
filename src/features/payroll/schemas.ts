@@ -258,7 +258,13 @@ export const reopenPayrollYearEndFilingPackageSchema = z.object({
 
 export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
   year: z.coerce.number().int().min(2020).max(2100),
-  employeeId: z.string().min(1)
+  employeeId: z.string().min(1),
+  status: z.enum(["submitted", "acknowledged", "canceled", "all"]).optional(),
+  ackStatus: z.enum(["accepted", "rejected", "none", "all"]).optional(),
+  validationStatus: z.enum(["pass", "fail", "all"]).optional(),
+  transport: z
+    .enum(["manual_portal", "hometax_upload", "nts_api_mock", "all"])
+    .optional()
 });
 
 export const listPayrollYearEndFilingSubmissionTimelineQuerySchema = z.object({

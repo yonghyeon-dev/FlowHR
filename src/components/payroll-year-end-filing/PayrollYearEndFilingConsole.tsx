@@ -9,12 +9,17 @@ import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 import type {
   ApiLog,
   PayrollYearEndFilingAckCatalogResponse,
+  PayrollYearEndFilingSubmissionAckStatusFilter,
   PayrollYearEndFilingEvidenceNoteResponse,
   PayrollYearEndFilingExportResponse,
   PayrollYearEndFilingSubmission,
   PayrollYearEndFilingSubmissionListResponse,
+  PayrollYearEndFilingSubmissionListSummary,
   PayrollYearEndFilingSubmissionResponse,
+  PayrollYearEndFilingSubmissionStatusFilter,
   PayrollYearEndFilingSubmissionTimelineResponse,
+  PayrollYearEndFilingSubmissionTransportFilter,
+  PayrollYearEndFilingSubmissionValidationStatusFilter,
   PayrollYearEndFilingTimelineEntry,
   PayrollYearEndFinalizationResponse
 } from "@/components/payroll-year-end-filing/types";
@@ -84,6 +89,14 @@ export default function PayrollYearEndFilingConsole() {
     "manual_portal" | "hometax_upload" | "nts_api_mock"
   >("manual_portal");
   const [submissionNote, setSubmissionNote] = useState("wi0191 filing package submit");
+  const [submissionStatusFilter, setSubmissionStatusFilter] =
+    useState<PayrollYearEndFilingSubmissionStatusFilter>("all");
+  const [submissionAckStatusFilter, setSubmissionAckStatusFilter] =
+    useState<PayrollYearEndFilingSubmissionAckStatusFilter>("all");
+  const [submissionValidationStatusFilter, setSubmissionValidationStatusFilter] =
+    useState<PayrollYearEndFilingSubmissionValidationStatusFilter>("all");
+  const [submissionTransportFilter, setSubmissionTransportFilter] =
+    useState<PayrollYearEndFilingSubmissionTransportFilter>("all");
   const [ackSubmissionId, setAckSubmissionId] = useState("");
   const [ackStatus, setAckStatus] = useState<"accepted" | "rejected">("accepted");
   const [ackCode, setAckCode] = useState("ACK-OK");
@@ -101,6 +114,8 @@ export default function PayrollYearEndFilingConsole() {
   const [statusMessage, setStatusMessage] = useState("");
   const [finalization, setFinalization] = useState<PayrollYearEndFinalizationResponse | null>(null);
   const [filingExport, setFilingExport] = useState<PayrollYearEndFilingExportResponse | null>(null);
+  const [submissionListSummary, setSubmissionListSummary] =
+    useState<PayrollYearEndFilingSubmissionListSummary | null>(null);
   const [submissions, setSubmissions] = useState<PayrollYearEndFilingSubmission[]>([]);
   const [timelineEntries, setTimelineEntries] = useState<PayrollYearEndFilingTimelineEntry[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
@@ -319,8 +334,24 @@ export default function PayrollYearEndFilingConsole() {
       setPendingLabel("year-end filing submissions list");
       const requestYear = parseRequiredInt(year, "year");
       const requestEmployeeId = employeeId.trim();
+      const query = new URLSearchParams({
+        year: String(requestYear),
+        employeeId: requestEmployeeId
+      });
+      if (submissionStatusFilter !== "all") {
+        query.set("status", submissionStatusFilter);
+      }
+      if (submissionAckStatusFilter !== "all") {
+        query.set("ackStatus", submissionAckStatusFilter);
+      }
+      if (submissionValidationStatusFilter !== "all") {
+        query.set("validationStatus", submissionValidationStatusFilter);
+      }
+      if (submissionTransportFilter !== "all") {
+        query.set("transport", submissionTransportFilter);
+      }
       const response = await fetch(
-        `/api/payroll/year-end/filing-submissions?year=${requestYear}&employeeId=${encodeURIComponent(requestEmployeeId)}`,
+        `/api/payroll/year-end/filing-submissions?${query.toString()}`,
         {
           method: "GET",
           headers: buildHeaders()
@@ -341,14 +372,24 @@ export default function PayrollYearEndFilingConsole() {
         setStatusMessage("request failed; check logs");
         return;
       }
+      setSubmissionListSummary(body.summary);
       setSubmissions(body.submissions);
-      setStatusMessage(`loaded ${body.submissions.length} submissions`);
+      setStatusMessage(
+        `loaded ${body.submissions.length}/${body.summary.totalCount} submissions (filters applied)`
+      );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "invalid input");
     } finally {
       setPendingLabel(null);
     }
+  }
+
+  function resetSubmissionFilters() {
+    setSubmissionStatusFilter("all");
+    setSubmissionAckStatusFilter("all");
+    setSubmissionValidationStatusFilter("all");
+    setSubmissionTransportFilter("all");
   }
 
   async function runLoadAckCatalog() {
@@ -690,8 +731,8 @@ export default function PayrollYearEndFilingConsole() {
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization, Filing ACK Catalog, Timeline, Evidence Note, and Cancel/Reopen</h1>
-        <p>Finalize year-end settlement, manage filing submissions, load ACK code/rejection reason catalog, and trace timeline/evidence notes plus cancel/reopen transitions per submission.</p>
+        <h1>Payroll Year-End Finalization, Filing Status Summary/Filter, ACK Catalog, and Lifecycle Console</h1>
+        <p>Finalize year-end settlement, manage filing submissions with status/ACK/validation/transport filters, and trace timeline/evidence notes plus cancel/reopen transitions per submission.</p>
       </header>
 
       <section className="panel-grid">
@@ -738,6 +779,65 @@ export default function PayrollYearEndFilingConsole() {
                   )
                 }
               >
+                <option value="manual_portal">manual_portal</option>
+                <option value="hometax_upload">hometax_upload</option>
+                <option value="nts_api_mock">nts_api_mock</option>
+              </select>
+            </label>
+            <label>Submission Status Filter
+              <select
+                value={submissionStatusFilter}
+                onChange={(event) =>
+                  setSubmissionStatusFilter(
+                    event.target.value as PayrollYearEndFilingSubmissionStatusFilter
+                  )
+                }
+              >
+                <option value="all">all</option>
+                <option value="submitted">submitted</option>
+                <option value="acknowledged">acknowledged</option>
+                <option value="canceled">canceled</option>
+              </select>
+            </label>
+            <label>ACK Status Filter
+              <select
+                value={submissionAckStatusFilter}
+                onChange={(event) =>
+                  setSubmissionAckStatusFilter(
+                    event.target.value as PayrollYearEndFilingSubmissionAckStatusFilter
+                  )
+                }
+              >
+                <option value="all">all</option>
+                <option value="accepted">accepted</option>
+                <option value="rejected">rejected</option>
+                <option value="none">none</option>
+              </select>
+            </label>
+            <label>Validation Status Filter
+              <select
+                value={submissionValidationStatusFilter}
+                onChange={(event) =>
+                  setSubmissionValidationStatusFilter(
+                    event.target.value as PayrollYearEndFilingSubmissionValidationStatusFilter
+                  )
+                }
+              >
+                <option value="all">all</option>
+                <option value="pass">pass</option>
+                <option value="fail">fail</option>
+              </select>
+            </label>
+            <label>Transport Filter
+              <select
+                value={submissionTransportFilter}
+                onChange={(event) =>
+                  setSubmissionTransportFilter(
+                    event.target.value as PayrollYearEndFilingSubmissionTransportFilter
+                  )
+                }
+              >
+                <option value="all">all</option>
                 <option value="manual_portal">manual_portal</option>
                 <option value="hometax_upload">hometax_upload</option>
                 <option value="nts_api_mock">nts_api_mock</option>
@@ -809,6 +909,7 @@ export default function PayrollYearEndFilingConsole() {
             <button className="btn btn-secondary" onClick={() => void runCancelSubmission()} disabled={pendingLabel !== null}>Cancel Submission</button>
             <button className="btn btn-secondary" onClick={() => void runReopenSubmission()} disabled={pendingLabel !== null}>Reopen Submission</button>
             <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>Refresh Submissions</button>
+            <button className="btn btn-secondary" onClick={resetSubmissionFilters} disabled={pendingLabel !== null}>Reset Filters</button>
             <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>Load ACK Catalog</button>
             <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>Load Submission Timeline</button>
             <button className="btn btn-secondary" onClick={() => void runAddEvidenceNote()} disabled={pendingLabel !== null}>Add Evidence Note</button>
@@ -871,6 +972,18 @@ export default function PayrollYearEndFilingConsole() {
 
         <article className="panel">
           <h2>Filing Submissions</h2>
+          {!submissionListSummary ? (
+            <p className="small">No submission summary yet. Run Refresh Submissions.</p>
+          ) : (
+            <ul className="simple-list">
+              <li><span>Total / Filtered</span><strong>{submissionListSummary.totalCount} / {submissionListSummary.filteredCount}</strong></li>
+              <li><span>Status</span><strong>submitted {submissionListSummary.statusCounts.submitted} / acknowledged {submissionListSummary.statusCounts.acknowledged} / canceled {submissionListSummary.statusCounts.canceled}</strong></li>
+              <li><span>ACK Status</span><strong>accepted {submissionListSummary.ackStatusCounts.accepted} / rejected {submissionListSummary.ackStatusCounts.rejected} / none {submissionListSummary.ackStatusCounts.none}</strong></li>
+              <li><span>Validation</span><strong>pass {submissionListSummary.validationStatusCounts.pass} / fail {submissionListSummary.validationStatusCounts.fail}</strong></li>
+              <li><span>Transport</span><strong>manual {submissionListSummary.transportCounts.manual_portal} / hometax {submissionListSummary.transportCounts.hometax_upload} / nts_api_mock {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
+              <li><span>Active Filters</span><strong>status={submissionStatusFilter}, ackStatus={submissionAckStatusFilter}, validation={submissionValidationStatusFilter}, transport={submissionTransportFilter}</strong></li>
+            </ul>
+          )}
           {submissions.length === 0 ? <p className="small">No filing submission yet.</p> : (
             <ul className="log-list">
               {submissions.map((submission) => (
