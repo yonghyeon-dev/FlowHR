@@ -411,11 +411,10 @@ async function run() {
     "second row should keep empty submission note for evidence-gap detection"
   );
 
-  const {
-    resolveFilingOpsAlertLevel,
-    collectFilingOpsDrilldownRows
-  } = filingOpsDashboardModule as {
+  const resolveFilingOpsAlertLevel = (filingOpsDashboardModule as unknown as {
     resolveFilingOpsAlertLevel: (value: number, watchThreshold: number, criticalThreshold: number) => string;
+  }).resolveFilingOpsAlertLevel;
+  const collectFilingOpsDrilldownRows = (filingOpsDashboardModule as unknown as {
     collectFilingOpsDrilldownRows: (options: {
       mode: "pending" | "rejected" | "validation_fail" | "evidence_gap" | "timeline_failure";
       submissions: Array<{
@@ -427,7 +426,7 @@ async function run() {
       evidenceGapSubmissionIds: string[];
       timelineFailureSubmissionIds: string[];
     }) => Array<{ submissionId: string }>;
-  };
+  }).collectFilingOpsDrilldownRows;
 
   assert.equal(
     resolveFilingOpsAlertLevel(0, 1, 3),
