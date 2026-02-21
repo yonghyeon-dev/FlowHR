@@ -2572,10 +2572,12 @@ button.queue-badge:hover {
 .panel-request-history-sort-hardening,
 .panel-request-history-sort-hardening-plus,
 .panel-request-history-sort-hardening-plus-execution,
+.panel-request-history-sort-execution-summary,
 .panel-approval-delay-risk-prediction,
 .panel-approval-delay-risk-response,
 .panel-approval-delay-risk-response-execution-guide,
 .panel-approval-delay-risk-response-execution-tracker,
+.panel-approval-delay-risk-execution-backlog,
 .panel-mobile-shortcuts,
 .panel-mobile-submit-guide,
 .panel-mobile-follow-up-guide,
@@ -2583,6 +2585,7 @@ button.queue-badge:hover {
 .panel-mobile-follow-up-recommendation-upgrade,
 .panel-mobile-follow-up-recommendation-upgrade-2,
 .panel-mobile-follow-up-recommendation-upgrade-3,
+.panel-mobile-follow-up-recommendation-upgrade-4,
 .panel-attendance-correction-insights,
 .panel-leave-balance-forecast,
 .panel-leave-calendar-insights,
@@ -3013,6 +3016,60 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.request-history-sort-execution-summary-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.request-history-sort-execution-summary-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-history-sort-execution-summary-list li p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.request-history-sort-execution-summary-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.request-history-sort-execution-summary-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.request-history-sort-execution-summary-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.request-history-sort-execution-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.request-history-sort-execution-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .approval-delay-risk-prediction-list {
   margin: 10px 0 0;
   padding: 0;
@@ -3224,6 +3281,60 @@ button.queue-badge:hover {
 }
 
 .approval-delay-risk-response-execution-tracker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.approval-delay-risk-execution-backlog-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.approval-delay-risk-execution-backlog-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.approval-delay-risk-execution-backlog-list li p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.approval-delay-risk-execution-backlog-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.approval-delay-risk-execution-backlog-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.approval-delay-risk-execution-backlog-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.approval-delay-risk-execution-backlog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.approval-delay-risk-execution-backlog-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -3513,6 +3624,54 @@ button.queue-badge:hover {
 }
 
 .mobile-follow-up-recommendation-upgrade-3-list li.tone-fail {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.mobile-follow-up-recommendation-upgrade-4-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-follow-up-recommendation-upgrade-4-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-follow-up-recommendation-upgrade-4-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.mobile-follow-up-recommendation-upgrade-4-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobile-follow-up-recommendation-upgrade-4-list li.tone-ready {
+  border-color: #b8dfc4;
+  background: #f2fbf5;
+}
+
+.mobile-follow-up-recommendation-upgrade-4-list li.tone-pending {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.mobile-follow-up-recommendation-upgrade-4-list li.tone-fail {
   border-color: #f2c4ce;
   background: #ffedf1;
 }
@@ -6656,10 +6815,12 @@ button.queue-badge:hover {
   #request-history-sort-hardening .request-history-sort-hardening-list,
   #request-history-sort-hardening-plus .request-history-sort-hardening-plus-list,
   #request-history-sort-hardening-plus-execution .request-history-sort-hardening-plus-execution-list,
+  #request-history-sort-execution-summary .request-history-sort-execution-summary-list,
   #approval-delay-risk-prediction .approval-delay-risk-prediction-list,
   #approval-delay-risk-response .approval-delay-risk-response-list,
   #approval-delay-risk-response-execution-guide .approval-delay-risk-response-execution-guide-list,
   #approval-delay-risk-response-execution-tracker .approval-delay-risk-response-execution-tracker-list,
+  #approval-delay-risk-execution-backlog .approval-delay-risk-execution-backlog-list,
   #attendance-correction-insights .attendance-correction-insight-list,
   #leave-balance-forecast .leave-balance-forecast-list,
   #leave-calendar-insights .leave-calendar-insight-list,
@@ -6668,7 +6829,8 @@ button.queue-badge:hover {
   #mobile-follow-up-recommendation .mobile-follow-up-recommendation-list,
   #mobile-follow-up-recommendation-upgrade .mobile-follow-up-recommendation-upgrade-list,
   #mobile-follow-up-recommendation-upgrade-2 .mobile-follow-up-recommendation-upgrade-2-list,
-  #mobile-follow-up-recommendation-upgrade-3 .mobile-follow-up-recommendation-upgrade-3-list {
+  #mobile-follow-up-recommendation-upgrade-3 .mobile-follow-up-recommendation-upgrade-3-list,
+  #mobile-follow-up-recommendation-upgrade-4 .mobile-follow-up-recommendation-upgrade-4-list {
     grid-template-columns: 1fr;
   }
 
@@ -6688,10 +6850,12 @@ button.queue-badge:hover {
   #request-history-sort-hardening .request-history-sort-hardening-head,
   #request-history-sort-hardening-plus .request-history-sort-hardening-plus-head,
   #request-history-sort-hardening-plus-execution .request-history-sort-hardening-plus-execution-head,
+  #request-history-sort-execution-summary .request-history-sort-execution-summary-head,
   #approval-delay-risk-prediction .approval-delay-risk-prediction-head,
   #approval-delay-risk-response .approval-delay-risk-response-head,
   #approval-delay-risk-response-execution-guide .approval-delay-risk-response-execution-guide-head,
   #approval-delay-risk-response-execution-tracker .approval-delay-risk-response-execution-tracker-head,
+  #approval-delay-risk-execution-backlog .approval-delay-risk-execution-backlog-head,
   #attendance-correction-insights .attendance-correction-insight-head,
   #leave-balance-forecast .leave-balance-forecast-head,
   #leave-calendar-insights .leave-calendar-insight-head,
@@ -6700,7 +6864,8 @@ button.queue-badge:hover {
   #mobile-follow-up-recommendation .mobile-follow-up-recommendation-head,
   #mobile-follow-up-recommendation-upgrade .mobile-follow-up-recommendation-upgrade-head,
   #mobile-follow-up-recommendation-upgrade-2 .mobile-follow-up-recommendation-upgrade-2-head,
-  #mobile-follow-up-recommendation-upgrade-3 .mobile-follow-up-recommendation-upgrade-3-head {
+  #mobile-follow-up-recommendation-upgrade-3 .mobile-follow-up-recommendation-upgrade-3-head,
+  #mobile-follow-up-recommendation-upgrade-4 .mobile-follow-up-recommendation-upgrade-4-head {
     flex-direction: column;
     align-items: flex-start;
   }
