@@ -366,6 +366,40 @@ type MobileFollowUpRecommendationUpgrade3Card = {
   targetSectionId: string;
 };
 
+type RequestHistorySortExecutionSummaryCard = {
+  key: string;
+  sourceKey: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  summaryScore: number;
+  detail: string;
+  executionChecklist: string;
+  executionLabel: string;
+  targetSectionId: string;
+};
+
+type ApprovalDelayRiskExecutionBacklogCard = {
+  key: string;
+  sourceKey: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  backlogScore: number;
+  detail: string;
+  responseWindow: string;
+  executionChecklist: string;
+  targetSectionId: string;
+};
+
+type MobileFollowUpRecommendationUpgrade4Card = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  priorityScore: number;
+  detail: string;
+  ctaLabel: string;
+  targetSectionId: string;
+};
+
 type AttendanceCorrectionInsightCard = {
   key: string;
   label: string;
@@ -1319,6 +1353,61 @@ export default function EmployeeSelfServicePage() {
       return;
     }
     if (card.key === "api-recovery-upgrade3" && stats.fail > 0) {
+      jumpToSection("request-feedback");
+      pushMobileFlowFeedback("Review API failure details before retry.");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runRequestHistorySortExecutionSummaryAction(card: RequestHistorySortExecutionSummaryCard) {
+    const sourceCard = requestHistorySortHardeningPlusExecutionCards.find(
+      (executionCard) => executionCard.key === card.sourceKey
+    );
+    if (sourceCard) {
+      runRequestHistorySortHardeningPlusExecutionAction(sourceCard);
+      jumpToSection("request-history-sort-hardening-plus-execution");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runApprovalDelayRiskExecutionBacklogAction(card: ApprovalDelayRiskExecutionBacklogCard) {
+    const sourceCard = approvalDelayRiskResponseExecutionTrackerCards.find(
+      (executionCard) => executionCard.key === card.sourceKey
+    );
+    if (sourceCard) {
+      runApprovalDelayRiskResponseExecutionTrackerAction(sourceCard);
+      jumpToSection("approval-delay-risk-response-execution-tracker");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runMobileFollowUpRecommendationUpgrade4Action(card: MobileFollowUpRecommendationUpgrade4Card) {
+    if (card.key === "sort-execution-summary") {
+      const target = requestHistorySortExecutionSummaryCards.find((summaryCard) => summaryCard.severity !== "normal");
+      if (target) {
+        runRequestHistorySortExecutionSummaryAction(target);
+        jumpToSection("request-history-sort-execution-summary");
+        return;
+      }
+    }
+    if (card.key === "delay-execution-backlog") {
+      const target = approvalDelayRiskExecutionBacklogCards.find((backlogCard) => backlogCard.severity !== "normal");
+      if (target) {
+        runApprovalDelayRiskExecutionBacklogAction(target);
+        jumpToSection("approval-delay-risk-execution-backlog");
+        return;
+      }
+    }
+    if (card.key === "resubmit-flow-upgrade4" && resubmitCandidates.length > 0 && !resubmitFlowReady) {
+      openRejectedRequestSearch();
+      jumpToSection("request-resubmit");
+      pushMobileFlowFeedback("Review rejected requests and complete resubmit validation.");
+      return;
+    }
+    if (card.key === "api-recovery-upgrade4" && stats.fail > 0) {
       jumpToSection("request-feedback");
       pushMobileFlowFeedback("Review API failure details before retry.");
       return;
@@ -3389,6 +3478,134 @@ export default function EmployeeSelfServicePage() {
     stats.fail
   ]);
 
+  const requestHistorySortExecutionSummaryCards = useMemo<RequestHistorySortExecutionSummaryCard[]>(() => {
+    return requestHistorySortHardeningPlusExecutionCards
+      .map((card) => ({
+        key: `request-history-execution-summary-${card.key}`,
+        sourceKey: card.key,
+        label: `${card.label} summary`,
+        severity: card.severity,
+        summaryScore:
+          card.readinessScore + (card.severity === "critical" ? 8 : card.severity === "watch" ? 4 : 0),
+        detail: card.detail,
+        executionChecklist: card.executionChecklist,
+        executionLabel: card.executionLabel,
+        targetSectionId: "request-history-sort-hardening-plus-execution"
+      }))
+      .sort((left, right) => {
+        const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.summaryScore - left.summaryScore;
+      });
+  }, [requestHistorySortHardeningPlusExecutionCards]);
+
+  const approvalDelayRiskExecutionBacklogCards = useMemo<ApprovalDelayRiskExecutionBacklogCard[]>(() => {
+    return approvalDelayRiskResponseExecutionTrackerCards
+      .map((card) => ({
+        key: `approval-delay-execution-backlog-${card.key}`,
+        sourceKey: card.key,
+        label: `${card.label} backlog`,
+        severity: card.severity,
+        backlogScore:
+          card.trackerScore +
+          card.pendingCount * 2 +
+          (card.severity === "critical" ? 6 : card.severity === "watch" ? 3 : 0),
+        detail: card.detail,
+        responseWindow: card.responseWindow,
+        executionChecklist: card.executionChecklist,
+        targetSectionId: "approval-delay-risk-response-execution-tracker"
+      }))
+      .sort((left, right) => {
+        const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.backlogScore - left.backlogScore;
+      });
+  }, [approvalDelayRiskResponseExecutionTrackerCards]);
+
+  const mobileFollowUpRecommendationUpgrade4Cards = useMemo<MobileFollowUpRecommendationUpgrade4Card[]>(() => {
+    const topExecutionSummary = requestHistorySortExecutionSummaryCards.find((card) => card.severity !== "normal");
+    const topDelayBacklog = approvalDelayRiskExecutionBacklogCards.find((card) => card.severity !== "normal");
+
+    const cards: MobileFollowUpRecommendationUpgrade4Card[] = [
+      {
+        key: "sort-execution-summary",
+        label: "Sort execution summary recommendation",
+        tone: topExecutionSummary
+          ? topExecutionSummary.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topExecutionSummary ? topExecutionSummary.summaryScore : 18,
+        detail: topExecutionSummary
+          ? `${topExecutionSummary.executionChecklist} (${topExecutionSummary.executionLabel})`
+          : "No sort execution summary action is required.",
+        ctaLabel: topExecutionSummary ? "Run execution summary" : "Open execution summary",
+        targetSectionId: "request-history-sort-execution-summary"
+      },
+      {
+        key: "delay-execution-backlog",
+        label: "Delay execution backlog recommendation",
+        tone: topDelayBacklog
+          ? topDelayBacklog.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topDelayBacklog ? topDelayBacklog.backlogScore : 20,
+        detail: topDelayBacklog
+          ? `${topDelayBacklog.executionChecklist} (${topDelayBacklog.responseWindow})`
+          : "No delay execution backlog action is required.",
+        ctaLabel: topDelayBacklog ? "Run backlog response" : "Open execution backlog",
+        targetSectionId: "approval-delay-risk-execution-backlog"
+      },
+      {
+        key: "resubmit-flow-upgrade4",
+        label: "Resubmit flow recommendation",
+        tone: resubmitCandidates.length === 0 ? "ready" : resubmitFlowReady ? "pending" : "fail",
+        priorityScore: resubmitCandidates.length === 0 ? 14 : resubmitFlowReady ? 68 : 92,
+        detail:
+          resubmitCandidates.length === 0
+            ? "No rejected/canceled requests require resubmission."
+            : resubmitFlowReady
+              ? "Resubmit draft is ready. Complete final submission."
+              : resubmitFirstFailCheck?.detail || "Review resubmit validation blockers.",
+        ctaLabel: resubmitCandidates.length > 0 ? "Open resubmit flow" : "Open submit guide",
+        targetSectionId: resubmitCandidates.length > 0 ? "request-resubmit" : "mobile-submit-guide"
+      },
+      {
+        key: "api-recovery-upgrade4",
+        label: "API recovery recommendation",
+        tone: stats.fail > 0 ? "fail" : "ready",
+        priorityScore: stats.fail > 0 ? 96 : 10,
+        detail:
+          stats.fail > 0
+            ? latestFailureCauseMessage || "Investigate API failure causes before retry."
+            : "No API recovery follow-up is required.",
+        ctaLabel: stats.fail > 0 ? "Open request feedback" : "Open request timeline",
+        targetSectionId: stats.fail > 0 ? "request-feedback" : "request-timeline"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const toneDiff = mobileFollowUpToneRank(right.tone) - mobileFollowUpToneRank(left.tone);
+      if (toneDiff !== 0) {
+        return toneDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    approvalDelayRiskExecutionBacklogCards,
+    latestFailureCauseMessage,
+    requestHistorySortExecutionSummaryCards,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowReady,
+    stats.fail
+  ]);
+
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
       return "비교 대상 없음";
@@ -4162,6 +4379,36 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article className="panel panel-request-history-sort-execution-summary" id="request-history-sort-execution-summary">
+          <h2>Request history sort execution summary</h2>
+          <p className="small">
+            Summarizes hardening+ execution cards with summary score so follow-up actions can be prioritized quickly.
+          </p>
+          <ul className="request-history-sort-execution-summary-list" aria-label="request history sort execution summary list">
+            {requestHistorySortExecutionSummaryCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="request-history-sort-execution-summary-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">summary {card.summaryScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="request-history-sort-execution-summary-meta">
+                  <span className="queue-history-chip">{card.executionLabel}</span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runRequestHistorySortExecutionSummaryAction(card)}
+                >
+                  run execution summary
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-approval-delay-risk-prediction" id="approval-delay-risk-prediction">
           <h2>승인 지연 위험 예측 피드백</h2>
           <p className="small">
@@ -4298,6 +4545,36 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article className="panel panel-approval-delay-risk-execution-backlog" id="approval-delay-risk-execution-backlog">
+          <h2>Approval delay execution backlog</h2>
+          <p className="small">
+            Prioritizes delay execution backlog by pending volume and response-window urgency.
+          </p>
+          <ul className="approval-delay-risk-execution-backlog-list" aria-label="approval delay risk execution backlog list">
+            {approvalDelayRiskExecutionBacklogCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="approval-delay-risk-execution-backlog-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">backlog {card.backlogScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="approval-delay-risk-execution-backlog-meta">
+                  <span className="queue-history-chip">{card.responseWindow}</span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runApprovalDelayRiskExecutionBacklogAction(card)}
+                >
+                  run backlog response
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-mobile-shortcuts" id="mobile-shortcuts">
           <h2>모바일 단축 흐름</h2>
           <p className="small">터치 중심 단축 버튼으로 입력/정정/신청/갱신을 빠르게 진행합니다.</p>
@@ -4373,6 +4650,24 @@ export default function EmployeeSelfServicePage() {
               onClick={() => jumpToSection("mobile-follow-up-recommendation-upgrade-3")}
             >
               recommendation upgrade 3
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("request-history-sort-execution-summary")}
+            >
+              execution summary
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("approval-delay-risk-execution-backlog")}
+            >
+              execution backlog
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("mobile-follow-up-recommendation-upgrade-4")}
+            >
+              recommendation upgrade 4
             </button>
             <button className="btn btn-primary btn-small" onClick={() => void refreshEmployeeSnapshot()}>
               요청 상태 새로고침
@@ -4563,6 +4858,37 @@ export default function EmployeeSelfServicePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runMobileFollowUpRecommendationUpgrade3Action(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article
+          className="panel panel-mobile-follow-up-recommendation-upgrade-4"
+          id="mobile-follow-up-recommendation-upgrade-4"
+        >
+          <h2>Mobile follow-up recommendation upgrade 4</h2>
+          <p className="small">
+            Prioritized recommendations combine execution summary, execution backlog, resubmit flow, and API recovery.
+          </p>
+          <ul
+            className="mobile-follow-up-recommendation-upgrade-4-list"
+            aria-label="mobile follow-up recommendation upgrade 4 list"
+          >
+            {mobileFollowUpRecommendationUpgrade4Cards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="mobile-follow-up-recommendation-upgrade-4-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">priority {card.priorityScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runMobileFollowUpRecommendationUpgrade4Action(card)}
                 >
                   {card.ctaLabel}
                 </button>
