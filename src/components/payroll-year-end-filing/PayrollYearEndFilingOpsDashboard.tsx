@@ -32,6 +32,41 @@ type EvidenceSummary = {
   latestEvidenceAt: string | null;
 };
 
+type DrilldownMode =
+  | "pending"
+  | "rejected"
+  | "validation_fail"
+  | "evidence_gap"
+  | "timeline_failure";
+
+type EvidenceScanResult = {
+  summary: EvidenceSummary;
+  evidenceGapSubmissionIds: string[];
+  rejectedMissingReasonDetailSubmissionIds: string[];
+  timelineFailureSubmissionIds: string[];
+};
+
+type DrilldownCounts = Record<DrilldownMode, number>;
+
+type DrilldownPreset = {
+  mode: DrilldownMode;
+  label: string;
+  description: string;
+};
+
+type AlertMetric = "pending" | "rejected" | "validationFail" | "evidenceGap" | "timelineFailure";
+export type FilingOpsAlertLevel = "normal" | "watch" | "critical";
+
+type FilingOpsAlertRule = {
+  metric: AlertMetric;
+  label: string;
+  detail: string;
+  value: number;
+  watchThreshold: number;
+  criticalThreshold: number;
+  level: FilingOpsAlertLevel;
+};
+
 const MAX_EVIDENCE_SCAN_LIMIT = 50;
 const DEFAULT_EVIDENCE_SCAN_LIMIT = 20;
 
@@ -46,6 +81,21 @@ const EMPTY_EVIDENCE_SUMMARY: EvidenceSummary = {
   timelineFailureCount: 0,
   latestEvidenceAt: null
 };
+
+const EMPTY_EVIDENCE_SCAN_RESULT: EvidenceScanResult = {
+  summary: EMPTY_EVIDENCE_SUMMARY,
+  evidenceGapSubmissionIds: [],
+  rejectedMissingReasonDetailSubmissionIds: [],
+  timelineFailureSubmissionIds: []
+};
+
+const DRILLDOWN_PRESETS: DrilldownPreset[] = [
+  { mode: "pending", label: "Pending Queue", description: "submitted status rows" },
+  { mode: "rejected", label: "Rejected ACK", description: "acknowledged + rejected rows" },
+  { mode: "validation_fail", label: "Validation Fail", description: "validation fail rows" },
+  { mode: "evidence_gap", label: "Evidence Gap", description: "rows without note evidence" },
+  { mode: "timeline_failure", label: "Timeline Failures", description: "timeline lookup failed rows" }
+];
 
 function parseRequiredInt(value: string, fieldName: string) {
   const parsed = Number(value);
@@ -63,6 +113,14 @@ function parseEvidenceScanLimit(value: string) {
   return Math.min(parsed, MAX_EVIDENCE_SCAN_LIMIT);
 }
 
+function parseThresholdInput(value: string, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
 function formatEvidenceTimestamp(value: string | null) {
   if (!value) {
     return "-";
@@ -73,6 +131,58 @@ function formatEvidenceTimestamp(value: string | null) {
 function normalizeSearch(value: string) {
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : undefined;
+}
+
+function formatAlertLevelLabel(level: FilingOpsAlertLevel) {
+  if (level === "critical") {
+    return "CRITICAL";
+  }
+  if (level === "watch") {
+    return "WATCH";
+  }
+  return "NORMAL";
+}
+
+export function resolveFilingOpsAlertLevel(
+  value: number,
+  watchThreshold: number,
+  criticalThreshold: number
+): FilingOpsAlertLevel {
+  const watch = Math.max(0, watchThreshold);
+  const critical = Math.max(watch, criticalThreshold);
+  if (value >= critical) {
+    return "critical";
+  }
+  if (value >= watch) {
+    return "watch";
+  }
+  return "normal";
+}
+
+export function collectFilingOpsDrilldownRows(options: {
+  mode: DrilldownMode;
+  submissions: PayrollYearEndFilingSubmission[];
+  evidenceGapSubmissionIds: string[];
+  timelineFailureSubmissionIds: string[];
+}) {
+  const evidenceGapIds = new Set(options.evidenceGapSubmissionIds);
+  const timelineFailureIds = new Set(options.timelineFailureSubmissionIds);
+  if (options.mode === "pending") {
+    return options.submissions.filter((submission) => submission.status === "submitted");
+  }
+  if (options.mode === "rejected") {
+    return options.submissions.filter(
+      (submission) =>
+        submission.status === "acknowledged" && submission.ack?.ackStatus === "rejected"
+    );
+  }
+  if (options.mode === "validation_fail") {
+    return options.submissions.filter((submission) => submission.validationStatus === "fail");
+  }
+  if (options.mode === "evidence_gap") {
+    return options.submissions.filter((submission) => evidenceGapIds.has(submission.submissionId));
+  }
+  return options.submissions.filter((submission) => timelineFailureIds.has(submission.submissionId));
 }
 
 export default function PayrollYearEndFilingOpsDashboard() {
@@ -95,12 +205,29 @@ export default function PayrollYearEndFilingOpsDashboard() {
   const [submissionSortDirection, setSubmissionSortDirection] =
     useState<PayrollYearEndFilingSubmissionSortDirection>("desc");
   const [evidenceScanLimit, setEvidenceScanLimit] = useState(String(DEFAULT_EVIDENCE_SCAN_LIMIT));
+
+  const [pendingWatchThresholdInput, setPendingWatchThresholdInput] = useState("1");
+  const [pendingCriticalThresholdInput, setPendingCriticalThresholdInput] = useState("3");
+  const [rejectedWatchThresholdInput, setRejectedWatchThresholdInput] = useState("1");
+  const [rejectedCriticalThresholdInput, setRejectedCriticalThresholdInput] = useState("2");
+  const [validationFailWatchThresholdInput, setValidationFailWatchThresholdInput] = useState("1");
+  const [validationFailCriticalThresholdInput, setValidationFailCriticalThresholdInput] = useState("2");
+  const [evidenceGapWatchThresholdInput, setEvidenceGapWatchThresholdInput] = useState("1");
+  const [evidenceGapCriticalThresholdInput, setEvidenceGapCriticalThresholdInput] = useState("2");
+  const [timelineFailureWatchThresholdInput, setTimelineFailureWatchThresholdInput] = useState("1");
+  const [timelineFailureCriticalThresholdInput, setTimelineFailureCriticalThresholdInput] = useState("1");
+
+  const [drilldownMode, setDrilldownMode] = useState<DrilldownMode>("pending");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [submissionListSummary, setSubmissionListSummary] =
     useState<PayrollYearEndFilingSubmissionListSummary | null>(null);
   const [submissions, setSubmissions] = useState<PayrollYearEndFilingSubmission[]>([]);
   const [evidenceSummary, setEvidenceSummary] = useState<EvidenceSummary>(EMPTY_EVIDENCE_SUMMARY);
+  const [evidenceGapSubmissionIds, setEvidenceGapSubmissionIds] = useState<string[]>([]);
+  const [rejectedMissingReasonDetailSubmissionIds, setRejectedMissingReasonDetailSubmissionIds] =
+    useState<string[]>([]);
+  const [timelineFailureSubmissionIds, setTimelineFailureSubmissionIds] = useState<string[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -200,6 +327,112 @@ export default function PayrollYearEndFilingOpsDashboard() {
     ];
   }, [evidenceSummary, evidenceScanLimit]);
 
+  const drilldownCounts = useMemo<DrilldownCounts>(() => {
+    return {
+      pending: submissions.filter((submission) => submission.status === "submitted").length,
+      rejected: submissions.filter(
+        (submission) =>
+          submission.status === "acknowledged" && submission.ack?.ackStatus === "rejected"
+      ).length,
+      validation_fail: submissions.filter((submission) => submission.validationStatus === "fail")
+        .length,
+      evidence_gap: evidenceGapSubmissionIds.length,
+      timeline_failure: timelineFailureSubmissionIds.length
+    };
+  }, [submissions, evidenceGapSubmissionIds, timelineFailureSubmissionIds]);
+
+  const drilldownRows = useMemo(() => {
+    return collectFilingOpsDrilldownRows({
+      mode: drilldownMode,
+      submissions,
+      evidenceGapSubmissionIds,
+      timelineFailureSubmissionIds
+    });
+  }, [drilldownMode, submissions, evidenceGapSubmissionIds, timelineFailureSubmissionIds]);
+
+  const alertRules = useMemo<FilingOpsAlertRule[]>(() => {
+    const summary = submissionListSummary;
+    const pendingCount = summary ? summary.statusCounts.submitted : drilldownCounts.pending;
+    const rejectedCount = summary ? summary.ackStatusCounts.rejected : drilldownCounts.rejected;
+    const validationFailCount = summary
+      ? summary.validationStatusCounts.fail
+      : drilldownCounts.validation_fail;
+    const evidenceGapCount = evidenceSummary.evidenceGapCount;
+    const timelineFailureCount = evidenceSummary.timelineFailureCount;
+
+    const baseRules = [
+      {
+        metric: "pending" as const,
+        label: "Pending Queue Alert",
+        detail: "submitted status rows in current query",
+        value: pendingCount,
+        watchThreshold: parseThresholdInput(pendingWatchThresholdInput, 1),
+        criticalThreshold: parseThresholdInput(pendingCriticalThresholdInput, 3)
+      },
+      {
+        metric: "rejected" as const,
+        label: "Rejected ACK Alert",
+        detail: "acknowledged rejected rows requiring retry",
+        value: rejectedCount,
+        watchThreshold: parseThresholdInput(rejectedWatchThresholdInput, 1),
+        criticalThreshold: parseThresholdInput(rejectedCriticalThresholdInput, 2)
+      },
+      {
+        metric: "validationFail" as const,
+        label: "Validation Fail Alert",
+        detail: "strict validation fail rows",
+        value: validationFailCount,
+        watchThreshold: parseThresholdInput(validationFailWatchThresholdInput, 1),
+        criticalThreshold: parseThresholdInput(validationFailCriticalThresholdInput, 2)
+      },
+      {
+        metric: "evidenceGap" as const,
+        label: "Evidence Gap Alert",
+        detail: "rows with no submission/ack/timeline evidence note",
+        value: evidenceGapCount,
+        watchThreshold: parseThresholdInput(evidenceGapWatchThresholdInput, 1),
+        criticalThreshold: parseThresholdInput(evidenceGapCriticalThresholdInput, 2)
+      },
+      {
+        metric: "timelineFailure" as const,
+        label: "Timeline Failure Alert",
+        detail: "timeline lookup failures while scanning evidence",
+        value: timelineFailureCount,
+        watchThreshold: parseThresholdInput(timelineFailureWatchThresholdInput, 1),
+        criticalThreshold: parseThresholdInput(timelineFailureCriticalThresholdInput, 1)
+      }
+    ];
+
+    return baseRules.map((rule) => ({
+      ...rule,
+      level: resolveFilingOpsAlertLevel(rule.value, rule.watchThreshold, rule.criticalThreshold)
+    }));
+  }, [
+    submissionListSummary,
+    drilldownCounts,
+    evidenceSummary,
+    pendingWatchThresholdInput,
+    pendingCriticalThresholdInput,
+    rejectedWatchThresholdInput,
+    rejectedCriticalThresholdInput,
+    validationFailWatchThresholdInput,
+    validationFailCriticalThresholdInput,
+    evidenceGapWatchThresholdInput,
+    evidenceGapCriticalThresholdInput,
+    timelineFailureWatchThresholdInput,
+    timelineFailureCriticalThresholdInput
+  ]);
+
+  const overallAlertLevel = useMemo<FilingOpsAlertLevel>(() => {
+    if (alertRules.some((rule) => rule.level === "critical")) {
+      return "critical";
+    }
+    if (alertRules.some((rule) => rule.level === "watch")) {
+      return "watch";
+    }
+    return "normal";
+  }, [alertRules]);
+
   function appendLog(label: string, status: number, ok: boolean) {
     setLogs((prev) => [
       {
@@ -238,7 +471,7 @@ export default function PayrollYearEndFilingOpsDashboard() {
     const scanSize = parseEvidenceScanLimit(evidenceScanLimit);
     const scanTargets = targetSubmissions.slice(0, scanSize);
     if (scanTargets.length === 0) {
-      return EMPTY_EVIDENCE_SUMMARY;
+      return EMPTY_EVIDENCE_SCAN_RESULT;
     }
 
     const timelineResponseRows = await Promise.all(
@@ -269,12 +502,12 @@ export default function PayrollYearEndFilingOpsDashboard() {
     );
 
     const timelineEvidenceSubmissionIds = new Set<string>();
+    const timelineFailureSubmissionIds: string[] = [];
     let timelineEvidenceEventCount = 0;
     let latestEvidenceAt: string | null = null;
-    let timelineFailureCount = 0;
     for (const row of timelineResponseRows) {
       if (row.failed) {
-        timelineFailureCount += 1;
+        timelineFailureSubmissionIds.push(row.submissionId);
         continue;
       }
       const evidenceRows = row.timeline.filter((entry) => entry.action === "evidence_note_added");
@@ -291,8 +524,8 @@ export default function PayrollYearEndFilingOpsDashboard() {
 
     let submissionNoteCount = 0;
     let ackNoteCount = 0;
-    let evidenceGapCount = 0;
-    let rejectedMissingReasonDetailCount = 0;
+    const evidenceGapSubmissionIds: string[] = [];
+    const rejectedMissingReasonDetailSubmissionIds: string[] = [];
     for (const submission of scanTargets) {
       const hasSubmissionNote = Boolean(submission.submissionNote?.trim());
       const hasAckNote = Boolean(submission.ack?.ackNote?.trim());
@@ -304,27 +537,32 @@ export default function PayrollYearEndFilingOpsDashboard() {
         ackNoteCount += 1;
       }
       if (!hasSubmissionNote && !hasAckNote && !hasTimelineEvidence) {
-        evidenceGapCount += 1;
+        evidenceGapSubmissionIds.push(submission.submissionId);
       }
       if (
         submission.ack?.ackStatus === "rejected" &&
         !(submission.ack.rejectionReasonDetail ?? "").trim()
       ) {
-        rejectedMissingReasonDetailCount += 1;
+        rejectedMissingReasonDetailSubmissionIds.push(submission.submissionId);
       }
     }
 
     return {
-      scannedCount: scanTargets.length,
-      submissionNoteCount,
-      ackNoteCount,
-      timelineEvidenceSubmissionCount: timelineEvidenceSubmissionIds.size,
-      timelineEvidenceEventCount,
-      evidenceGapCount,
-      rejectedMissingReasonDetailCount,
-      timelineFailureCount,
-      latestEvidenceAt
-    } satisfies EvidenceSummary;
+      summary: {
+        scannedCount: scanTargets.length,
+        submissionNoteCount,
+        ackNoteCount,
+        timelineEvidenceSubmissionCount: timelineEvidenceSubmissionIds.size,
+        timelineEvidenceEventCount,
+        evidenceGapCount: evidenceGapSubmissionIds.length,
+        rejectedMissingReasonDetailCount: rejectedMissingReasonDetailSubmissionIds.length,
+        timelineFailureCount: timelineFailureSubmissionIds.length,
+        latestEvidenceAt
+      },
+      evidenceGapSubmissionIds,
+      rejectedMissingReasonDetailSubmissionIds,
+      timelineFailureSubmissionIds
+    } satisfies EvidenceScanResult;
   }
 
   async function runRefreshOpsDashboard() {
@@ -375,20 +613,25 @@ export default function PayrollYearEndFilingOpsDashboard() {
 
       setSubmissionListSummary(body.summary);
       setSubmissions(body.submissions);
-      const nextEvidenceSummary = await buildEvidenceSummaryFromTimeline(
+      const evidenceScanResult = await buildEvidenceSummaryFromTimeline(
         body.submissions,
         requestYear,
         employeeIdValue,
         headers
       );
-      setEvidenceSummary(nextEvidenceSummary);
+      setEvidenceSummary(evidenceScanResult.summary);
+      setEvidenceGapSubmissionIds(evidenceScanResult.evidenceGapSubmissionIds);
+      setRejectedMissingReasonDetailSubmissionIds(
+        evidenceScanResult.rejectedMissingReasonDetailSubmissionIds
+      );
+      setTimelineFailureSubmissionIds(evidenceScanResult.timelineFailureSubmissionIds);
       appendLog(
         "scan filing evidence timeline",
-        nextEvidenceSummary.timelineFailureCount === 0 ? 200 : 207,
+        evidenceScanResult.summary.timelineFailureCount === 0 ? 200 : 207,
         true
       );
       setStatusMessage(
-        `loaded ${body.submissions.length}/${body.summary.totalCount} rows with evidence scan ${nextEvidenceSummary.scannedCount}`
+        `loaded ${body.submissions.length}/${body.summary.totalCount} rows with evidence scan ${evidenceScanResult.summary.scannedCount}`
       );
       setTimeout(() => setStatusMessage(""), 4000);
     } catch (error) {
@@ -396,6 +639,31 @@ export default function PayrollYearEndFilingOpsDashboard() {
     } finally {
       setPendingLabel(null);
     }
+  }
+
+  function applyDrilldownMode(mode: DrilldownMode) {
+    setDrilldownMode(mode);
+    if (mode === "pending") {
+      setSubmissionStatusFilter("submitted");
+      setSubmissionAckStatusFilter("all");
+      setSubmissionValidationStatusFilter("all");
+      return;
+    }
+    if (mode === "rejected") {
+      setSubmissionStatusFilter("acknowledged");
+      setSubmissionAckStatusFilter("rejected");
+      setSubmissionValidationStatusFilter("all");
+      return;
+    }
+    if (mode === "validation_fail") {
+      setSubmissionStatusFilter("all");
+      setSubmissionAckStatusFilter("all");
+      setSubmissionValidationStatusFilter("fail");
+      return;
+    }
+    setSubmissionStatusFilter("all");
+    setSubmissionAckStatusFilter("all");
+    setSubmissionValidationStatusFilter("all");
   }
 
   function resetFilters() {
@@ -406,6 +674,7 @@ export default function PayrollYearEndFilingOpsDashboard() {
     setSubmissionSearch("");
     setSubmissionSortBy("submittedAt");
     setSubmissionSortDirection("desc");
+    setDrilldownMode("pending");
   }
 
   return (
@@ -619,6 +888,10 @@ export default function PayrollYearEndFilingOpsDashboard() {
               <strong>{formatEvidenceTimestamp(evidenceSummary.latestEvidenceAt)}</strong>
             </li>
             <li>
+              <span>Rows Missing Rejection Detail</span>
+              <strong>{rejectedMissingReasonDetailSubmissionIds.length}</strong>
+            </li>
+            <li>
               <span>Active Filters</span>
               <strong>
                 status={submissionStatusFilter}, ack={submissionAckStatusFilter}, validation=
@@ -627,6 +900,164 @@ export default function PayrollYearEndFilingOpsDashboard() {
               </strong>
             </li>
           </ul>
+        </article>
+
+        <article className="panel" id="filing-alert-rules">
+          <h2>Filing Alert Rules</h2>
+          <p className="small">
+            overall{" "}
+            <strong
+              className={
+                overallAlertLevel === "critical"
+                  ? "fail"
+                  : overallAlertLevel === "watch"
+                    ? "muted"
+                    : "ok"
+              }
+            >
+              {formatAlertLevelLabel(overallAlertLevel)}
+            </strong>
+          </p>
+          <div className="input-grid">
+            <label>
+              Pending Watch Threshold
+              <input
+                value={pendingWatchThresholdInput}
+                onChange={(event) => setPendingWatchThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Pending Critical Threshold
+              <input
+                value={pendingCriticalThresholdInput}
+                onChange={(event) => setPendingCriticalThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Rejected Watch Threshold
+              <input
+                value={rejectedWatchThresholdInput}
+                onChange={(event) => setRejectedWatchThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Rejected Critical Threshold
+              <input
+                value={rejectedCriticalThresholdInput}
+                onChange={(event) => setRejectedCriticalThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Validation-Fail Watch Threshold
+              <input
+                value={validationFailWatchThresholdInput}
+                onChange={(event) => setValidationFailWatchThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Validation-Fail Critical Threshold
+              <input
+                value={validationFailCriticalThresholdInput}
+                onChange={(event) => setValidationFailCriticalThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Evidence-Gap Watch Threshold
+              <input
+                value={evidenceGapWatchThresholdInput}
+                onChange={(event) => setEvidenceGapWatchThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Evidence-Gap Critical Threshold
+              <input
+                value={evidenceGapCriticalThresholdInput}
+                onChange={(event) => setEvidenceGapCriticalThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Timeline-Failure Watch Threshold
+              <input
+                value={timelineFailureWatchThresholdInput}
+                onChange={(event) => setTimelineFailureWatchThresholdInput(event.target.value)}
+              />
+            </label>
+            <label>
+              Timeline-Failure Critical Threshold
+              <input
+                value={timelineFailureCriticalThresholdInput}
+                onChange={(event) => setTimelineFailureCriticalThresholdInput(event.target.value)}
+              />
+            </label>
+          </div>
+          <ul className="simple-list" aria-label="filing alert rule list">
+            {alertRules.map((rule) => (
+              <li key={rule.metric}>
+                <span>
+                  {rule.label} ({rule.detail})
+                </span>
+                <strong
+                  className={rule.level === "critical" ? "fail" : rule.level === "watch" ? "muted" : "ok"}
+                >
+                  {formatAlertLevelLabel(rule.level)} / {rule.value} (watch {rule.watchThreshold},
+                  critical {rule.criticalThreshold})
+                </strong>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel" id="filing-ops-drilldown">
+          <h2>Filing Ops Drilldown</h2>
+          <p className="small">
+            switch mode to focus queue slice and update filters before refresh.
+          </p>
+          <div className="ops-drilldown-toolbar">
+            {DRILLDOWN_PRESETS.map((preset) => (
+              <button
+                key={preset.mode}
+                className={`btn btn-secondary${drilldownMode === preset.mode ? " active" : ""}`}
+                onClick={() => applyDrilldownMode(preset.mode)}
+                disabled={pendingLabel !== null}
+              >
+                {preset.label} ({drilldownCounts[preset.mode]})
+              </button>
+            ))}
+          </div>
+          <p className="small">
+            active mode: {drilldownMode} / rows {drilldownRows.length}
+          </p>
+          {drilldownRows.length === 0 ? (
+            <p className="small">No rows in current drilldown mode.</p>
+          ) : (
+            <ul className="log-list" aria-label="filing ops drilldown list">
+              {drilldownRows.map((submission) => (
+                <li key={submission.submissionId}>
+                  <span
+                    className={
+                      submission.status === "acknowledged"
+                        ? "ok"
+                        : submission.status === "canceled"
+                          ? "fail"
+                          : "small"
+                    }
+                  >
+                    {submission.status.toUpperCase()}
+                  </span>
+                  <span>
+                    {submission.submissionId} / attempt {submission.attempt} / {submission.transport} /{" "}
+                    {submission.validationStatus}
+                    {submission.ack?.ackStatus ? ` / ACK ${submission.ack.ackStatus}` : ""}
+                    {evidenceGapSubmissionIds.includes(submission.submissionId) ? " / EVIDENCE_GAP" : ""}
+                    {timelineFailureSubmissionIds.includes(submission.submissionId)
+                      ? " / TIMELINE_FAIL"
+                      : ""}
+                  </span>
+                  <time>{new Date(submission.submittedAt).toLocaleString("ko-KR")}</time>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
 
         <article className="panel">
