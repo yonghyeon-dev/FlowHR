@@ -44,6 +44,13 @@ export const settleLeaveAccrualSchema = z.object({
   carryOverCapDays: z.number().int().min(0).optional()
 });
 
+export const autoGrantLeaveAccrualSchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  year: z.number().int().min(2000).max(9999),
+  dryRun: z.preprocess(parseBooleanLike, z.boolean().optional()),
+  includeAlreadySettled: z.preprocess(parseBooleanLike, z.boolean().optional())
+});
+
 export const readLeavePolicyQuerySchema = z.object({
   organizationId: z.string().min(1).optional()
 });

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.10.0
+  version: 1.11.0
 paths:
   /leave/requests:
     get:
@@ -254,3 +254,26 @@ paths:
       responses:
         "200":
           description: Accrual settled
+  /leave/accrual/auto-grant:
+    post:
+      summary: Run organization-level annual leave accrual auto-grant (dry-run or apply)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationId:
+                  type: string
+                year:
+                  type: integer
+                  minimum: 2000
+                  maximum: 9999
+                dryRun:
+                  type: boolean
+                includeAlreadySettled:
+                  type: boolean
+      responses:
+        "200":
+          description: Auto-grant execution summary and per-employee results

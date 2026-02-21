@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.10.0
+version: 1.11.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -12,6 +12,7 @@ scope:
     - annual leave promotion preview and internal notice draft policy
     - annual leave promotion notice dispatch automation via webhook (Discord/Slack) and email-template channel
     - annual leave promotion delivery history list/detail and per-recipient retry
+    - organization-level annual leave accrual auto-grant dry-run/apply workflow
   out:
     - external calendar synchronization
 entities:
@@ -83,6 +84,9 @@ api:
     - method: POST
       path: /leave/accrual/settle
       description: Settle annual leave accrual and carry-over for an employee.
+    - method: POST
+      path: /leave/accrual/auto-grant
+      description: Execute organization-level annual leave auto-grant with dry-run/apply mode and per-employee result summary.
   events:
     published:
       - name: leave.requested.v1
@@ -129,6 +133,8 @@ invariants:
   - Same employee/year accrual settlement cannot be applied more than once.
   - Carry-over days are capped by policy and never negative.
   - Leave accrual settlement uses leave policy defaults when grant/cap inputs are omitted.
+  - Leave accrual auto-grant computes suggested annual grant per employee from join month (`Employee.createdAt`) and policy annualGrantDays.
+  - Leave accrual auto-grant dry-run must not mutate leave balances.
   - Employee leave list queries are restricted to own employeeId.
   - LeaveRequest.employeeId and LeaveBalanceProjection.employeeId must reference existing Employee.id (FK enforced).
   - Hourly leave requests must satisfy policy increment and maximum-hour rules.
@@ -167,6 +173,8 @@ test_plan:
     - accrual settlement with duplicate-year protection
     - leave policy upsert/read returns configured values
     - accrual settlement uses policy defaults when request does not include grant/cap
+    - accrual auto-grant dry-run returns eligible/already-settled/not-eligible summary without mutating balances
+    - accrual auto-grant apply settles eligible employees for target year and keeps already-settled employees skipped
     - list leave requests by period overlap returns expected rows
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
@@ -204,6 +212,8 @@ observability:
     - leave.rejected
     - leave.canceled
     - leave.accrual_settled
+    - leave.accrual_auto_grant.dry_run
+    - leave.accrual_auto_grant.applied
     - leave.policy_read
     - leave.policy_updated
     - leave.promotion_preview_read
@@ -243,7 +253,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.10.0 introduces promotion delivery history APIs (`GET /leave/policy/promotion-deliveries`, `GET /leave/policy/promotion-deliveries/{deliveryId}`) and targeted retry API (`POST /leave/policy/promotion-deliveries/{deliveryId}/retry`) while keeping existing notify dispatch behavior backward compatible."
+consumer_impact: "Contract v1.11.0 introduces organization-level accrual auto-grant API (`POST /leave/accrual/auto-grant`) while preserving existing leave request/policy/promotion APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -255,6 +265,7 @@ references:
   - work-items/WI-0122-leave-promotion-notice-delivery-automation.md
   - work-items/WI-0124-leave-promotion-email-template-delivery.md
   - work-items/WI-0125-leave-promotion-delivery-history-retry.md
+  - work-items/WI-0182-leave-accrual-auto-grant-engine-baseline.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

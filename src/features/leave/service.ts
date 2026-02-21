@@ -69,6 +69,13 @@ type SettleLeaveAccrualInput = {
   carryOverCapDays?: number;
 };
 
+type AutoGrantLeaveAccrualInput = {
+  organizationId?: string;
+  year: number;
+  dryRun?: boolean;
+  includeAlreadySettled?: boolean;
+};
+
 type ReadLeavePolicyInput = {
   organizationId?: string;
 };
@@ -262,6 +269,31 @@ function calculateLeaveDays(startDate: Date, endDate: Date) {
 
 function roundTo2(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function calculateProRatedAnnualGrantDays(input: {
+  joinDate: Date;
+  year: number;
+  annualGrantDays: number;
+}) {
+  const adjustedJoin = new Date(input.joinDate.getTime() + SEOUL_OFFSET_MS);
+  const joinYear = adjustedJoin.getUTCFullYear();
+
+  if (joinYear > input.year) {
+    return 0;
+  }
+  if (joinYear < input.year) {
+    return input.annualGrantDays;
+  }
+
+  const joinMonthIndex = adjustedJoin.getUTCMonth();
+  const activeMonths = 12 - joinMonthIndex;
+  if (activeMonths <= 0) {
+    return 0;
+  }
+
+  const prorated = Math.floor((input.annualGrantDays * activeMonths) / 12);
+  return Math.max(1, prorated);
 }
 
 function calculateHoursBetween(startDate: Date, endDate: Date) {
@@ -1506,6 +1538,257 @@ export async function settleLeaveAccrual(
   });
 
   return balance;
+}
+
+export async function autoGrantLeaveAccrual(
+  context: ServiceContext,
+  input: AutoGrantLeaveAccrualInput
+): Promise<{
+  organizationId: string;
+  year: number;
+  dryRun: boolean;
+  policy: {
+    annualGrantDays: number;
+    carryOverCapDays: number;
+    source: "configured" | "default";
+  };
+  summary: {
+    activeEmployeeCount: number;
+    eligibleCount: number;
+    alreadySettledCount: number;
+    notEligibleCount: number;
+    appliedCount: number;
+    failedCount: number;
+    totalSuggestedGrantDays: number;
+    totalProjectedCarryOverDays: number;
+  };
+  results: Array<{
+    employeeId: string;
+    name: string | null;
+    email: string | null;
+    joinedAt: string;
+    lastAccrualYear: number | null;
+    currentRemainingDays: number;
+    suggestedAnnualGrantDays: number;
+    carryOverAppliedDays: number;
+    projectedGrantedDays: number;
+    projectedRemainingDays: number;
+    status: "ELIGIBLE" | "ALREADY_SETTLED" | "NOT_ELIGIBLE" | "APPLIED" | "FAILED";
+    reason: string | null;
+    balance:
+      | {
+          grantedDays: number;
+          usedDays: number;
+          remainingDays: number;
+          carryOverDays: number;
+          lastAccrualYear: number | null;
+          updatedAt: string;
+        }
+      | null;
+  }>;
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(
+    context,
+    Permissions.leaveAccrualSettle,
+    "leave accrual auto-grant requires permission"
+  );
+
+  if (!Number.isInteger(input.year) || input.year < 2000 || input.year > 9999) {
+    throw new ServiceError(400, "year must be a valid 4-digit year");
+  }
+
+  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
+  ensureTenantAccess(actor, organizationId);
+
+  const dryRun = input.dryRun ?? true;
+  const includeAlreadySettled = input.includeAlreadySettled ?? true;
+  const storedPolicy = await context.dataAccess.leavePolicy.findByOrganizationId(organizationId);
+  const rules = resolvePolicyRules(storedPolicy);
+  const employees = await context.dataAccess.employees.list({ organizationId, active: true });
+
+  const results: Array<{
+    employeeId: string;
+    name: string | null;
+    email: string | null;
+    joinedAt: string;
+    lastAccrualYear: number | null;
+    currentRemainingDays: number;
+    suggestedAnnualGrantDays: number;
+    carryOverAppliedDays: number;
+    projectedGrantedDays: number;
+    projectedRemainingDays: number;
+    status: "ELIGIBLE" | "ALREADY_SETTLED" | "NOT_ELIGIBLE" | "APPLIED" | "FAILED";
+    reason: string | null;
+    balance:
+      | {
+          grantedDays: number;
+          usedDays: number;
+          remainingDays: number;
+          carryOverDays: number;
+          lastAccrualYear: number | null;
+          updatedAt: string;
+        }
+      | null;
+  }> = [];
+
+  let eligibleCount = 0;
+  let alreadySettledCount = 0;
+  let notEligibleCount = 0;
+  let appliedCount = 0;
+  let failedCount = 0;
+  let totalSuggestedGrantDays = 0;
+  let totalProjectedCarryOverDays = 0;
+
+  for (const employee of employees) {
+    const currentBalance = await context.dataAccess.leaveBalance.ensure(employee.id, DEFAULT_GRANTED_DAYS);
+    const suggestedAnnualGrantDays = calculateProRatedAnnualGrantDays({
+      joinDate: employee.createdAt,
+      year: input.year,
+      annualGrantDays: rules.annualGrantDays
+    });
+    const carryOverAppliedDays = roundTo2(
+      Math.min(rules.carryOverCapDays, Math.max(0, currentBalance.remainingDays))
+    );
+    const projectedGrantedDays = roundTo2(suggestedAnnualGrantDays + carryOverAppliedDays);
+    const projectedRemainingDays = projectedGrantedDays;
+    const common = {
+      employeeId: employee.id,
+      name: employee.name,
+      email: employee.email,
+      joinedAt: employee.createdAt.toISOString(),
+      lastAccrualYear: currentBalance.lastAccrualYear,
+      currentRemainingDays: currentBalance.remainingDays,
+      suggestedAnnualGrantDays,
+      carryOverAppliedDays,
+      projectedGrantedDays,
+      projectedRemainingDays
+    };
+
+    if (currentBalance.lastAccrualYear !== null && currentBalance.lastAccrualYear >= input.year) {
+      alreadySettledCount += 1;
+      if (includeAlreadySettled) {
+        results.push({
+          ...common,
+          status: "ALREADY_SETTLED",
+          reason: "already settled for the same or newer year",
+          balance: null
+        });
+      }
+      continue;
+    }
+
+    if (suggestedAnnualGrantDays <= 0) {
+      notEligibleCount += 1;
+      results.push({
+        ...common,
+        status: "NOT_ELIGIBLE",
+        reason: "join date is after target year",
+        balance: null
+      });
+      continue;
+    }
+
+    eligibleCount += 1;
+    totalSuggestedGrantDays = roundTo2(totalSuggestedGrantDays + suggestedAnnualGrantDays);
+    totalProjectedCarryOverDays = roundTo2(totalProjectedCarryOverDays + carryOverAppliedDays);
+
+    if (dryRun) {
+      results.push({
+        ...common,
+        status: "ELIGIBLE",
+        reason: null,
+        balance: null
+      });
+      continue;
+    }
+
+    try {
+      const appliedBalance = await settleLeaveAccrual(context, {
+        employeeId: employee.id,
+        year: input.year,
+        annualGrantDays: suggestedAnnualGrantDays,
+        carryOverCapDays: rules.carryOverCapDays
+      });
+
+      appliedCount += 1;
+      results.push({
+        ...common,
+        status: "APPLIED",
+        reason: null,
+        balance: {
+          grantedDays: appliedBalance.grantedDays,
+          usedDays: appliedBalance.usedDays,
+          remainingDays: appliedBalance.remainingDays,
+          carryOverDays: appliedBalance.carryOverDays,
+          lastAccrualYear: appliedBalance.lastAccrualYear,
+          updatedAt: appliedBalance.updatedAt.toISOString()
+        }
+      });
+    } catch (error) {
+      failedCount += 1;
+      const reason =
+        error instanceof ServiceError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "unknown error";
+      results.push({
+        ...common,
+        status: "FAILED",
+        reason,
+        balance: null
+      });
+    }
+  }
+
+  await context.dataAccess.audit.append({
+    action: dryRun ? "leave.accrual_auto_grant.dry_run" : "leave.accrual_auto_grant.applied",
+    entityType: "LeaveBalanceProjection",
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      year: input.year,
+      policySource: storedPolicy ? "configured" : "default",
+      annualGrantDays: rules.annualGrantDays,
+      carryOverCapDays: rules.carryOverCapDays,
+      includeAlreadySettled,
+      activeEmployeeCount: employees.length,
+      eligibleCount,
+      alreadySettledCount,
+      notEligibleCount,
+      appliedCount,
+      failedCount,
+      totalSuggestedGrantDays,
+      totalProjectedCarryOverDays
+    }
+  });
+
+  return {
+    organizationId,
+    year: input.year,
+    dryRun,
+    policy: {
+      annualGrantDays: rules.annualGrantDays,
+      carryOverCapDays: rules.carryOverCapDays,
+      source: storedPolicy ? "configured" : "default"
+    },
+    summary: {
+      activeEmployeeCount: employees.length,
+      eligibleCount,
+      alreadySettledCount,
+      notEligibleCount,
+      appliedCount,
+      failedCount,
+      totalSuggestedGrantDays,
+      totalProjectedCarryOverDays
+    },
+    results
+  };
 }
 
 export async function readLeavePolicy(
