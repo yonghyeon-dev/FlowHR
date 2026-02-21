@@ -30,6 +30,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin#aggregates">근태 집계</Link>
           <Link href="/admin#leave-policy">휴가 정책</Link>
           <Link href="/admin/leave-accrual">연차 자동 부여</Link>
+          <Link href="/admin/leave-calendar">휴가 캘린더</Link>
           <Link href="/admin#payroll">급여</Link>
           <Link href="/admin/people">조직/인사</Link>
           <Link href="/admin/contracts">전자계약</Link>
