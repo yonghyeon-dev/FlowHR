@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.59 (Payroll Year-End Export Format Expansion and Validation Baseline)
+> **Current version**: 0.1.60 (Payroll Year-End Filing Submission Tracking and ACK Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -227,10 +227,11 @@
 - WI-0188 급여 연말정산 공제항목 입력/재정산 baseline(`POST /payroll/year-end/recalculate-settlement` + `/admin/payroll-year-end` 공제항목 입력/재정산 UX + baseline 대비 세액/원천세 delta 요약 + e2e/spec 갱신)
 - WI-0189 급여 연말정산 확정/신고 데이터 내보내기 baseline(`POST /payroll/year-end/finalize-settlement`, `POST /payroll/year-end/export-filing-data` + `/admin/payroll-year-end-filing` 전용 라우트 + 확정 선행조건/신고 익스포트 가드 + e2e/spec 갱신)
 - WI-0190 급여 연말정산 신고 익스포트 포맷/검증 확장 baseline(`POST /payroll/year-end/export-filing-data` 다중 포맷 `json/csv/jsonl/hometax_csv` + `validationMode=basic/strict` + 아티팩트 체크섬/검증 요약 + `/admin/payroll-year-end-filing` UX 확장 + e2e/spec 갱신)
+- WI-0191 급여 연말정산 신고 패키지 제출 추적/ACK baseline(`GET|POST /payroll/year-end/filing-submissions`, `POST /payroll/year-end/filing-submissions/{submissionId}/ack` + `/admin/payroll-year-end-filing` 제출/ACK/이력 패널 + audit/event 추적 + e2e/spec 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 제출 추적/ACK baseline) (WI-0191 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 재제출/상태 전이 가드 baseline) (WI-0192 예정)
 
 ### 현재 아키텍처
 

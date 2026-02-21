@@ -43,6 +43,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing.
 36. Export year-end filing data and reject export before finalization or when `payroll_year_end_filing_export_v1` feature flag is disabled.
 37. Export year-end filing data in `json`/`csv`/`jsonl`/`hometax_csv` and validate `basic`/`strict` mode behavior (strict rejects validation-failed exports).
+38. Submit/list/ack year-end filing package and reject ACK for unknown/already-acknowledged submission.
 
 ## Accuracy Cases
 
@@ -71,6 +72,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 23. Year-end deduction-item recalculation baseline-vs-recalculated delta remains deterministic for same confirmed run set and input vector.
 24. Year-end finalization guard and filing-export row/csv output remain deterministic for same finalized payload and run set.
 25. Year-end filing multi-format artifact checksum/content remains deterministic for same finalized payload and format.
+26. Year-end filing submission status transition (`submitted` -> `acknowledged`) remains deterministic.
 
 ## Regression Linkage
 
@@ -100,3 +102,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Recalculation Gate: year-end deduction-item recalculation API remains feature-flagged, permission-guarded, and deterministic for baseline-vs-recalculated deltas.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.
 - Year-End Export Format Gate: filing export multi-format artifact generation and strict validation-mode guard remain deterministic and auditable.
+- Year-End Filing Submission Gate: filing submission list/create/ack APIs remain feature-flagged, permission-guarded, and deterministic with auditable status transitions.

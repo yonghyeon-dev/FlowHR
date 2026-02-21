@@ -10,7 +10,12 @@ import {
   type Multipliers,
   type PayableMinutes
 } from "@/lib/payroll-rules";
-import type { DataAccess, DeductionProfileEntity, PayrollRunEntity } from "@/features/shared/data-access";
+import type {
+  AuditLogEntity,
+  DataAccess,
+  DeductionProfileEntity,
+  PayrollRunEntity
+} from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
@@ -133,6 +138,8 @@ type YearEndDeductionItemsInput = {
 
 type PayrollYearEndFilingExportFormat = "json" | "csv" | "jsonl" | "hometax_csv";
 type PayrollYearEndFilingValidationMode = "basic" | "strict";
+type PayrollYearEndFilingTransport = "manual_portal" | "hometax_upload" | "nts_api_mock";
+type PayrollYearEndFilingAckStatus = "accepted" | "rejected";
 
 type RecalculatePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
   deductionItems: YearEndDeductionItemsInput;
@@ -149,6 +156,29 @@ type ExportPayrollYearEndFilingDataInput = {
   employeeId: string;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
+};
+
+type SubmitPayrollYearEndFilingPackageInput = {
+  year: number;
+  employeeId: string;
+  format: PayrollYearEndFilingExportFormat;
+  validationMode: PayrollYearEndFilingValidationMode;
+  transport: PayrollYearEndFilingTransport;
+  submissionNote?: string;
+};
+
+type AcknowledgePayrollYearEndFilingPackageInput = {
+  year: number;
+  employeeId: string;
+  submissionId: string;
+  ackStatus: PayrollYearEndFilingAckStatus;
+  ackCode?: string;
+  ackNote?: string;
+};
+
+type ListPayrollYearEndFilingSubmissionsInput = {
+  year: number;
+  employeeId: string;
 };
 
 type IssuePayrollYearEndWithholdingReceiptInput = {
@@ -473,6 +503,50 @@ type ExportPayrollYearEndFilingDataResult = {
   };
 };
 
+type PayrollYearEndFilingSubmissionStatus = "submitted" | "acknowledged";
+
+type PayrollYearEndFilingSubmissionSummary = {
+  submissionId: string;
+  year: number;
+  employeeId: string;
+  finalizationId: string;
+  format: PayrollYearEndFilingExportFormat;
+  validationMode: PayrollYearEndFilingValidationMode;
+  transport: PayrollYearEndFilingTransport;
+  artifact: {
+    fileName: string;
+    contentType: string;
+    checksumSha256: string;
+    byteLength: number;
+  };
+  validationStatus: "pass" | "fail";
+  submittedAt: string;
+  submittedByRole: string;
+  submittedById: string | null;
+  status: PayrollYearEndFilingSubmissionStatus;
+  ack: {
+    ackStatus: PayrollYearEndFilingAckStatus;
+    ackCode: string | null;
+    ackNote: string | null;
+    acknowledgedAt: string;
+    acknowledgedByRole: string;
+    acknowledgedById: string | null;
+  } | null;
+  submissionNote: string | null;
+};
+
+type SubmitPayrollYearEndFilingPackageResult = {
+  submission: PayrollYearEndFilingSubmissionSummary;
+};
+
+type AcknowledgePayrollYearEndFilingPackageResult = {
+  submission: PayrollYearEndFilingSubmissionSummary;
+};
+
+type ListPayrollYearEndFilingSubmissionsResult = {
+  submissions: PayrollYearEndFilingSubmissionSummary[];
+};
+
 type IssuePayrollYearEndWithholdingReceiptResult = {
   receipt: {
     year: number;
@@ -638,6 +712,15 @@ function isPayrollYearEndFilingExportEnabled() {
   const raw =
     process.env.FLOWHR_PAYROLL_YEAR_END_FILING_EXPORT_V1 ??
     process.env.PAYROLL_YEAR_END_FILING_EXPORT_V1 ??
+    "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isPayrollYearEndFilingSubmissionEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_YEAR_END_FILING_SUBMISSION_V1 ??
+    process.env.PAYROLL_YEAR_END_FILING_SUBMISSION_V1 ??
     "";
   const value = raw.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
@@ -2042,6 +2125,141 @@ function validateYearEndFilingRecords(rows: YearEndFilingRecord[], payload: Year
   } as const;
 }
 
+type YearEndFilingPackageSubmittedAuditPayload = {
+  submissionId: string;
+  year: number;
+  employeeId: string;
+  finalizationId: string;
+  format: PayrollYearEndFilingExportFormat;
+  validationMode: PayrollYearEndFilingValidationMode;
+  transport: PayrollYearEndFilingTransport;
+  artifact: {
+    fileName: string;
+    contentType: string;
+    checksumSha256: string;
+    byteLength: number;
+  };
+  validationStatus: "pass" | "fail";
+  submittedAt: string;
+  submittedByRole: string;
+  submittedById: string | null;
+  submissionNote: string | null;
+};
+
+type YearEndFilingPackageAcknowledgedAuditPayload = {
+  submissionId: string;
+  ackStatus: PayrollYearEndFilingAckStatus;
+  ackCode: string | null;
+  ackNote: string | null;
+  acknowledgedAt: string;
+  acknowledgedByRole: string;
+  acknowledgedById: string | null;
+};
+
+function asYearEndFilingPackageSubmittedAuditPayload(
+  payload: unknown
+): YearEndFilingPackageSubmittedAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<YearEndFilingPackageSubmittedAuditPayload>;
+  if (
+    typeof candidate.submissionId !== "string" ||
+    typeof candidate.year !== "number" ||
+    typeof candidate.employeeId !== "string" ||
+    typeof candidate.finalizationId !== "string" ||
+    typeof candidate.format !== "string" ||
+    typeof candidate.validationMode !== "string" ||
+    typeof candidate.transport !== "string" ||
+    !candidate.artifact ||
+    typeof candidate.submittedAt !== "string" ||
+    typeof candidate.submittedByRole !== "string"
+  ) {
+    return null;
+  }
+  return candidate as YearEndFilingPackageSubmittedAuditPayload;
+}
+
+function asYearEndFilingPackageAcknowledgedAuditPayload(
+  payload: unknown
+): YearEndFilingPackageAcknowledgedAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<YearEndFilingPackageAcknowledgedAuditPayload>;
+  if (
+    typeof candidate.submissionId !== "string" ||
+    typeof candidate.ackStatus !== "string" ||
+    typeof candidate.acknowledgedAt !== "string" ||
+    typeof candidate.acknowledgedByRole !== "string"
+  ) {
+    return null;
+  }
+  return candidate as YearEndFilingPackageAcknowledgedAuditPayload;
+}
+
+function buildYearEndFilingSubmissionSummaries(
+  logs: AuditLogEntity[]
+): PayrollYearEndFilingSubmissionSummary[] {
+  const sortedLogs = [...logs].sort(
+    (left, right) => left.createdAt.getTime() - right.createdAt.getTime()
+  );
+  const submissions = new Map<string, PayrollYearEndFilingSubmissionSummary>();
+
+  for (const log of sortedLogs) {
+    if (log.action === "payroll.year_end.filing_package_submitted") {
+      const payload = asYearEndFilingPackageSubmittedAuditPayload(log.payload);
+      if (!payload) {
+        continue;
+      }
+      submissions.set(payload.submissionId, {
+        submissionId: payload.submissionId,
+        year: payload.year,
+        employeeId: payload.employeeId,
+        finalizationId: payload.finalizationId,
+        format: payload.format,
+        validationMode: payload.validationMode,
+        transport: payload.transport,
+        artifact: payload.artifact,
+        validationStatus: payload.validationStatus,
+        submittedAt: payload.submittedAt,
+        submittedByRole: payload.submittedByRole,
+        submittedById: payload.submittedById,
+        status: "submitted",
+        ack: null,
+        submissionNote: payload.submissionNote
+      });
+      continue;
+    }
+
+    if (log.action === "payroll.year_end.filing_package_acknowledged") {
+      const payload = asYearEndFilingPackageAcknowledgedAuditPayload(log.payload);
+      if (!payload) {
+        continue;
+      }
+      const existing = submissions.get(payload.submissionId);
+      if (!existing) {
+        continue;
+      }
+      existing.status = "acknowledged";
+      existing.ack = {
+        ackStatus: payload.ackStatus,
+        ackCode: payload.ackCode,
+        ackNote: payload.ackNote,
+        acknowledgedAt: payload.acknowledgedAt,
+        acknowledgedByRole: payload.acknowledgedByRole,
+        acknowledgedById: payload.acknowledgedById
+      };
+    }
+  }
+
+  return Array.from(submissions.values()).sort(
+    (left, right) =>
+      right.submittedAt.localeCompare(left.submittedAt) ||
+      right.submissionId.localeCompare(left.submissionId)
+  );
+}
+
 export async function closePayrollPeriod(
   context: ServiceContext,
   input: ClosePayrollPeriodInput
@@ -2721,6 +2939,189 @@ export async function exportPayrollYearEndFilingData(
   return {
     filingData: payload
   };
+}
+
+async function listYearEndFilingSubmissionSummaries(
+  context: ServiceContext,
+  input: ListPayrollYearEndFilingSubmissionsInput
+) {
+  const entityId = `${input.year}_${input.employeeId}`;
+  const logs = await context.dataAccess.audit.list({
+    actions: [
+      "payroll.year_end.filing_package_submitted",
+      "payroll.year_end.filing_package_acknowledged"
+    ],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 1000
+  });
+  return buildYearEndFilingSubmissionSummaries(logs);
+}
+
+export async function submitPayrollYearEndFilingPackage(
+  context: ServiceContext,
+  input: SubmitPayrollYearEndFilingPackageInput
+): Promise<SubmitPayrollYearEndFilingPackageResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingExportEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  const exportResult = await exportPayrollYearEndFilingData(context, {
+    year: input.year,
+    employeeId: input.employeeId,
+    format: input.format,
+    validationMode: input.validationMode
+  });
+
+  const actorRole = context.actor?.role ?? "system";
+  const actorId = context.actor?.id ?? null;
+  const entityId = `${input.year}_${input.employeeId}`;
+  const submittedAt = new Date().toISOString();
+  const submissionId = `YFS-${input.year}-${input.employeeId}-${exportResult.filingData.artifact.checksumSha256.slice(0, 10)}-${Date.now()}`;
+  const submissionNote = input.submissionNote?.trim() ? input.submissionNote.trim() : null;
+
+  const submission: PayrollYearEndFilingSubmissionSummary = {
+    submissionId,
+    year: input.year,
+    employeeId: input.employeeId,
+    finalizationId: exportResult.filingData.finalizationId,
+    format: input.format,
+    validationMode: input.validationMode,
+    transport: input.transport,
+    artifact: {
+      fileName: exportResult.filingData.artifact.fileName,
+      contentType: exportResult.filingData.artifact.contentType,
+      checksumSha256: exportResult.filingData.artifact.checksumSha256,
+      byteLength: exportResult.filingData.artifact.byteLength
+    },
+    validationStatus: exportResult.filingData.validation.status,
+    submittedAt,
+    submittedByRole: actorRole,
+    submittedById: actorId,
+    status: "submitted",
+    ack: null,
+    submissionNote
+  };
+
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.filing_package_submitted",
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload: submission
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.filing_package.submitted.v1",
+    occurredAt: submittedAt,
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload: submission as unknown as Record<string, unknown>
+  });
+
+  return { submission };
+}
+
+export async function acknowledgePayrollYearEndFilingPackage(
+  context: ServiceContext,
+  input: AcknowledgePayrollYearEndFilingPackageInput
+): Promise<AcknowledgePayrollYearEndFilingPackageResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+
+  const submissions = await listYearEndFilingSubmissionSummaries(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  const target = submissions.find((submission) => submission.submissionId === input.submissionId);
+  if (!target) {
+    throw new ServiceError(404, "filing submission not found");
+  }
+  if (target.status === "acknowledged") {
+    throw new ServiceError(409, "filing submission is already acknowledged");
+  }
+
+  const ackCode = input.ackCode?.trim() ? input.ackCode.trim() : null;
+  const ackNote = input.ackNote?.trim() ? input.ackNote.trim() : null;
+  const actorRole = context.actor?.role ?? "system";
+  const actorId = context.actor?.id ?? null;
+  const acknowledgedAt = new Date().toISOString();
+  const entityId = `${input.year}_${input.employeeId}`;
+  const ackPayload: YearEndFilingPackageAcknowledgedAuditPayload = {
+    submissionId: input.submissionId,
+    ackStatus: input.ackStatus,
+    ackCode,
+    ackNote,
+    acknowledgedAt,
+    acknowledgedByRole: actorRole,
+    acknowledgedById: actorId
+  };
+
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.filing_package_acknowledged",
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload: ackPayload
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.filing_package.acknowledged.v1",
+    occurredAt: acknowledgedAt,
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload: ackPayload as unknown as Record<string, unknown>
+  });
+
+  return {
+    submission: {
+      ...target,
+      status: "acknowledged",
+      ack: {
+        ackStatus: input.ackStatus,
+        ackCode,
+        ackNote,
+        acknowledgedAt,
+        acknowledgedByRole: actorRole,
+        acknowledgedById: actorId
+      }
+    }
+  };
+}
+
+export async function listPayrollYearEndFilingSubmissions(
+  context: ServiceContext,
+  input: ListPayrollYearEndFilingSubmissionsInput
+): Promise<ListPayrollYearEndFilingSubmissionsResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const submissions = await listYearEndFilingSubmissionSummaries(context, input);
+  return { submissions };
 }
 
 export async function issuePayrollYearEndWithholdingReceipt(

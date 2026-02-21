@@ -111,6 +111,44 @@ export type PayrollYearEndFilingExportResponse = {
   };
 };
 
+export type PayrollYearEndFilingSubmission = {
+  submissionId: string;
+  year: number;
+  employeeId: string;
+  finalizationId: string;
+  format: "json" | "csv" | "jsonl" | "hometax_csv";
+  validationMode: "basic" | "strict";
+  transport: "manual_portal" | "hometax_upload" | "nts_api_mock";
+  artifact: {
+    fileName: string;
+    contentType: string;
+    checksumSha256: string;
+    byteLength: number;
+  };
+  validationStatus: "pass" | "fail";
+  submittedAt: string;
+  submittedByRole: string;
+  submittedById: string | null;
+  status: "submitted" | "acknowledged";
+  ack: {
+    ackStatus: "accepted" | "rejected";
+    ackCode: string | null;
+    ackNote: string | null;
+    acknowledgedAt: string;
+    acknowledgedByRole: string;
+    acknowledgedById: string | null;
+  } | null;
+  submissionNote: string | null;
+};
+
+export type PayrollYearEndFilingSubmissionResponse = {
+  submission: PayrollYearEndFilingSubmission;
+};
+
+export type PayrollYearEndFilingSubmissionListResponse = {
+  submissions: PayrollYearEndFilingSubmission[];
+};
+
 export type ApiLog = {
   id: number;
   label: string;
