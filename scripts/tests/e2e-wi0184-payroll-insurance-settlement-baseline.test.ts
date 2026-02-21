@@ -95,7 +95,11 @@ async function run() {
     /path: \/payroll\/runs\/preview-insurance-settlement/,
     "payroll contract should include preview-insurance-settlement endpoint"
   );
-  assert.match(payrollContract, /version: 1\.9\.0/, "payroll contract version should be bumped to 1.9.0");
+  assert.match(
+    payrollContract,
+    /version: \d+\.\d+\.\d+/,
+    "payroll contract version should remain semver-formatted"
+  );
 
   const organization = await memoryDataAccess.organizations.create({ name: "Org Payroll Insurance" });
   await memoryDataAccess.employees.create({

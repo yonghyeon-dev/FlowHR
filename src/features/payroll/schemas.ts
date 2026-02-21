@@ -158,6 +158,19 @@ export const previewPayrollInsuranceSettlementSchema = previewPayrollSchema.exte
   settlement: statutoryInsuranceSettlementSchema.optional()
 });
 
+const closePayrollPeriodSettlementSchema = z.object({
+  priorPaidWithholdingTaxKrw: nonNegativeInteger.default(0),
+  priorPaidSocialInsuranceKrw: nonNegativeInteger.default(0),
+  priorPaidNetPayKrw: nonNegativeInteger.default(0)
+});
+
+export const closePayrollPeriodSchema = z.object({
+  periodStart: isoDateTime,
+  periodEnd: isoDateTime,
+  apply: z.boolean().default(false),
+  settlement: closePayrollPeriodSettlementSchema.optional()
+});
+
 export const upsertDeductionProfileSchema = z.object({
   name: z.string().min(1),
   mode: z.enum(["manual", "profile"]).default("profile"),

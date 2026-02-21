@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.9.0
+  version: 1.10.0
 paths:
   /payroll/runs:
     get:
@@ -71,6 +71,13 @@ paths:
       responses:
         "200":
           description: Insurance settlement preview generated
+  /payroll/runs/close-period:
+    post:
+      summary: Preview or apply payroll period close with withholding settlement delta
+      description: Summarizes confirmed payroll runs for a period and computes withholding/social/net deltas against prior-paid values. `apply=true` is rejected when unconfirmed runs remain.
+      responses:
+        "200":
+          description: Payroll period close summary generated
   /payroll/runs/{runId}/confirm:
     post:
       summary: Confirm payroll run

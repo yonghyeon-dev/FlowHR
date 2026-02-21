@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.9.0
+version: 1.10.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -14,6 +14,7 @@ scope:
     - KR statutory baseline additive tax-credit inputs and optional monthly-boundary validation (Asia/Seoul)
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
+    - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -30,7 +31,7 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview (including 4-insurance settlement preview), list runs, list/manage deduction profiles, and confirm run
+      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
     - role: employee
@@ -52,6 +53,9 @@ api:
       path: /payroll/runs/preview-insurance-settlement
       description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, and prior-withheld/prior-paid deltas.
     - method: POST
+      path: /payroll/runs/close-period
+      description: Preview/apply payroll period close from confirmed runs with withholding/social/net settlement deltas and blocking reasons when unconfirmed runs remain.
+    - method: POST
       path: /payroll/runs/{runId}/confirm
       description: Confirm a payroll run.
     - method: GET
@@ -72,6 +76,10 @@ api:
         description: Emitted when deduction profile configuration changes.
       - name: payroll.insurance_settlement.previewed.v1
         description: Emitted when 4-insurance settlement preview is calculated.
+      - name: payroll.period.close_previewed.v1
+        description: Emitted when payroll period close summary is previewed.
+      - name: payroll.period.closed.v1
+        description: Emitted when payroll period close is applied.
     consumed:
       - name: attendance.approved.v1
         description: Approved attendance aggregate input.
@@ -105,6 +113,9 @@ invariants:
   - Insurance settlement preview must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0) and keep contribution components deterministic for same inputs/rates/caps.
   - Insurance settlement deltas must satisfy employeeDeltaKrw = employeeContributionTotalKrw - priorWithheldKrw and employerDeltaKrw = employerContributionTotalKrw - priorEmployerPaidKrw.
   - Insurance settlement preview with requireMonthlyBoundary=true must reject non-monthly period boundaries in Asia/Seoul.
+  - Payroll period close totals must be derived from CONFIRMED runs in period and keep deterministic aggregation for same run set.
+  - Payroll period close apply is blocked when any PREVIEWED run remains in selected period.
+  - Payroll period close settlement deltas must satisfy `withholdingTaxDeltaKrw = totalWithholdingTaxKrw - priorPaidWithholdingTaxKrw`, `socialInsuranceDeltaKrw = totalSocialInsuranceKrw - priorPaidSocialInsuranceKrw`, and `netPayDeltaKrw = totalNetPayKrw - priorPaidNetPayKrw`.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
   - Payroll run list API is restricted to payroll_operator/admin roles, with employee self-service allowed for own CONFIRMED runs only.
@@ -122,6 +133,7 @@ risk:
     - Incorrect tax-credit ordering (after/before local income tax) can cause payout mismatch.
     - Monthly boundary misconfiguration can produce off-cycle payroll previews.
     - Insurance settlement cap/rate misconfiguration can cause employee/employer contribution mismatch.
+    - Closing period with unconfirmed runs can cause settlement mismatch.
   legal:
     - Payroll trace must support audit and dispute resolution.
 test_plan:
@@ -132,6 +144,7 @@ test_plan:
     - statutory_kr_baseline progressive bracket and contribution-cap formulas
     - statutory_kr_baseline tax-credit and monthly-boundary formulas
     - insurance settlement contribution, cap, and delta formulas
+    - close-period totals, blocking, and delta formulas
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
     - deduction profile list query parsing and role guard
@@ -150,6 +163,9 @@ test_plan:
     - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
     - preview-insurance-settlement validates monthly-boundary guard in Asia/Seoul when requireMonthlyBoundary=true
+    - close-period preview returns run-state summary (confirmed/previewed) and withholding/social/net settlement deltas
+    - close-period apply rejects requests when unconfirmed runs remain
+    - close-period rejects requests when payroll_close_period_v1 is disabled
   regression:
     - replay GC-001 through GC-006 fixtures
     - replay GC-007 through GC-008 statutory fixtures
@@ -157,11 +173,13 @@ test_plan:
     - statutory_kr_baseline progressive/cap deterministic replay via WI-0105 e2e
     - statutory_kr_baseline tax-credit/boundary deterministic replay via WI-0106 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
+    - close-period deterministic replay via WI-0185 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
     - payroll_operator role enforcement for deduction profile list API
     - payroll_operator role enforcement for preview-insurance-settlement API
+    - payroll_operator role enforcement for close-period API
   payroll_accuracy:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
@@ -169,6 +187,7 @@ test_plan:
     - progressive bracket and insurance-cap component checks
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, and delta deterministic checks
+    - close-period withholding/social/net aggregation and settlement-delta checks
 observability:
   audit_events:
     - payroll.calculated
@@ -176,6 +195,9 @@ observability:
     - payroll.deductions_calculated
     - payroll.insurance_settlement_previewed
     - payroll.preview_insurance_settlement.failed
+    - payroll.period_close_previewed
+    - payroll.period_closed
+    - payroll.close_period.failed
     - payroll.deduction_profile.updated
     - payroll.confirmed
   metrics:
@@ -183,6 +205,7 @@ observability:
     - payroll_recalculation_count
     - payroll_deductions_preview_latency_ms
     - payroll_insurance_settlement_preview_latency_ms
+    - payroll_close_period_latency_ms
     - payroll_deduction_profile_calc_latency_ms
     - payroll_deduction_profile_miss_count
   logs:
@@ -199,13 +222,15 @@ rollout:
       default: "off"
     - name: payroll_kr_insurance_settlement_v1
       default: "off"
+    - name: payroll_close_period_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
+  strategy: disable payroll_close_period_v1, then payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.9.0 adds `POST /payroll/runs/preview-insurance-settlement` for feature-flagged 4-insurance settlement preview (employee/employer breakdown + deltas) while preserving existing payroll preview/confirm/profile APIs."
+consumer_impact: "Contract v1.10.0 adds feature-flagged `POST /payroll/runs/close-period` for withholding settlement and payroll period-close workflow, while preserving existing payroll preview/confirm/profile and insurance-settlement APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -221,6 +246,7 @@ references:
   - work-items/WI-0106-payroll-tax-credit-month-boundary.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
+  - work-items/WI-0185-payroll-withholding-close-period-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent
