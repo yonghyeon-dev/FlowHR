@@ -51,6 +51,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 43. Query filing submission list with status/ackStatus/validationStatus/transport filters and verify summary counters + filtered subsets.
 44. Query filing submission list with search/sort (`search`, `sortBy`, `sortDirection`) and verify deterministic ordering + quick-action prefill coverage in admin console.
 45. Query filing list/timeline from split ops route (`/admin/payroll-year-end-filing/ops`) and verify status/evidence summary cards align with submission history.
+46. Query filing list/timeline from ops dashboard and verify alert-rule severity output and drilldown mode presets (`pending`/`rejected`/`validation_fail`/`evidence_gap`/`timeline_failure`) remain deterministic.
 
 ## Accuracy Cases
 
@@ -87,6 +88,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 31. Year-end filing submission summary/filter counters remain deterministic for same query and submission history.
 32. Year-end filing submission search/sort ordering remains deterministic for same query and submission history.
 33. Year-end filing ops dashboard status/evidence summary cards remain deterministic for same filing list/timeline replay.
+34. Year-end filing ops dashboard alert-rule severity and drilldown row subsets remain deterministic for same filing list/timeline replay.
 
 ## Regression Linkage
 
@@ -124,3 +126,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Filing Summary/Filter Gate: filing submission list query filters and summary counters remain deterministic and permission-guarded.
 - Year-End Filing Search/Sort Quick-Action Gate: filing submission list search/sort query and admin quick actions remain deterministic, permission-guarded, and auditable.
 - Year-End Filing Ops Dashboard Gate: split ops dashboard (`/admin/payroll-year-end-filing/ops`) status/evidence cards remain deterministic and are derived from permission-guarded filing list/timeline APIs.
+- Year-End Filing Ops Alert/Drilldown Gate: ops dashboard alert-rule severity and drilldown presets remain deterministic and are derived only from permission-guarded filing list/timeline data.

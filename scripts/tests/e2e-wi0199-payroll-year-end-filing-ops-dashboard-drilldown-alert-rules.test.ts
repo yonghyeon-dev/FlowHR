@@ -98,6 +98,10 @@ async function run() {
     "payroll-year-end-filing",
     "PayrollYearEndFilingOpsDashboard.tsx"
   );
+  const filingOpsDashboardModule = await import(
+    "../../src/components/payroll-year-end-filing/PayrollYearEndFilingOpsDashboard.tsx"
+  );
+  const globalsCssSource = readUtf8("src", "app", "globals.css");
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
@@ -148,19 +152,44 @@ async function run() {
     "ops dashboard should expose refresh action"
   );
   assert.match(
+    filingOpsDashboardSource,
+    /id="filing-alert-rules"/,
+    "ops dashboard should include filing alert-rules section"
+  );
+  assert.match(
+    filingOpsDashboardSource,
+    /aria-label="filing alert rule list"/,
+    "ops dashboard should expose alert-rule list container"
+  );
+  assert.match(
+    filingOpsDashboardSource,
+    /id="filing-ops-drilldown"/,
+    "ops dashboard should include filing drilldown section"
+  );
+  assert.match(
+    filingOpsDashboardSource,
+    /aria-label="filing ops drilldown list"/,
+    "ops dashboard should expose drilldown list container"
+  );
+  assert.match(
+    globalsCssSource,
+    /\.ops-drilldown-toolbar/,
+    "global styles should include drilldown toolbar style"
+  );
+  assert.match(
     payrollApiSpec,
-    /version:\s*1\.(2[3-9]|[3-9][0-9])\.0/,
-    "payroll api version should stay at or above WI-0198 baseline"
+    /version:\s*1\.24\.0/,
+    "payroll api version should be bumped for WI-0199"
   );
   assert.match(
     payrollContract,
-    /year-end filing ops dashboard (split and evidence\/status summary-card workflow|drilldown and alert-rule workflow)/,
-    "payroll contract should include WI-0198+ ops dashboard workflow scope"
+    /year-end filing ops dashboard drilldown and alert-rule workflow/,
+    "payroll contract should include WI-0199 drilldown and alert-rule workflow scope"
   );
   assert.match(
     payrollTestCases,
-    /filing ops dashboard/,
-    "payroll test cases should include WI-0198 ops dashboard functional coverage"
+    /alert-rule severity output and drilldown mode presets/,
+    "payroll test cases should include WI-0199 alert/drilldown functional coverage"
   );
 
   const organization = await memoryDataAccess.organizations.create({
@@ -217,7 +246,7 @@ async function run() {
           housingSavingsKrw: 5000
         },
         apply: true,
-        finalizedByNote: "wi0198 finalize"
+        finalizedByNote: "wi0199 finalize"
       },
       actorHeaders("payroll_operator", "PAY-YFOPS-1001", organization.id)
     )
@@ -382,6 +411,116 @@ async function run() {
     "second row should keep empty submission note for evidence-gap detection"
   );
 
+  const resolveFilingOpsAlertLevel = (filingOpsDashboardModule as unknown as {
+    resolveFilingOpsAlertLevel: (value: number, watchThreshold: number, criticalThreshold: number) => string;
+  }).resolveFilingOpsAlertLevel;
+  const collectFilingOpsDrilldownRows = (filingOpsDashboardModule as unknown as {
+    collectFilingOpsDrilldownRows: (options: {
+      mode: "pending" | "rejected" | "validation_fail" | "evidence_gap" | "timeline_failure";
+      submissions: Array<{
+        submissionId: string;
+        status: "submitted" | "acknowledged" | "canceled";
+        validationStatus: "pass" | "fail";
+        ack: { ackStatus: "accepted" | "rejected" } | null;
+      }>;
+      evidenceGapSubmissionIds: string[];
+      timelineFailureSubmissionIds: string[];
+    }) => Array<{ submissionId: string }>;
+  }).collectFilingOpsDrilldownRows;
+
+  assert.equal(
+    resolveFilingOpsAlertLevel(0, 1, 3),
+    "normal",
+    "alert level should be normal below watch threshold"
+  );
+  assert.equal(
+    resolveFilingOpsAlertLevel(1, 1, 3),
+    "watch",
+    "alert level should be watch at watch threshold"
+  );
+  assert.equal(
+    resolveFilingOpsAlertLevel(3, 1, 3),
+    "critical",
+    "alert level should be critical at critical threshold"
+  );
+  assert.equal(
+    resolveFilingOpsAlertLevel(2, -1, 1),
+    "critical",
+    "alert level should sanitize negative threshold values"
+  );
+
+  const helperRows = [
+    {
+      submissionId: "SUB-PENDING",
+      status: "submitted" as const,
+      validationStatus: "pass" as const,
+      ack: null
+    },
+    {
+      submissionId: "SUB-REJECTED",
+      status: "acknowledged" as const,
+      validationStatus: "pass" as const,
+      ack: { ackStatus: "rejected" as const }
+    },
+    {
+      submissionId: "SUB-VALIDATION-FAIL",
+      status: "acknowledged" as const,
+      validationStatus: "fail" as const,
+      ack: { ackStatus: "accepted" as const }
+    }
+  ];
+
+  assert.deepEqual(
+    collectFilingOpsDrilldownRows({
+      mode: "pending",
+      submissions: helperRows,
+      evidenceGapSubmissionIds: [],
+      timelineFailureSubmissionIds: []
+    }).map((row) => row.submissionId),
+    ["SUB-PENDING"],
+    "pending mode should include submitted rows only"
+  );
+  assert.deepEqual(
+    collectFilingOpsDrilldownRows({
+      mode: "rejected",
+      submissions: helperRows,
+      evidenceGapSubmissionIds: [],
+      timelineFailureSubmissionIds: []
+    }).map((row) => row.submissionId),
+    ["SUB-REJECTED"],
+    "rejected mode should include acknowledged+rejected rows only"
+  );
+  assert.deepEqual(
+    collectFilingOpsDrilldownRows({
+      mode: "validation_fail",
+      submissions: helperRows,
+      evidenceGapSubmissionIds: [],
+      timelineFailureSubmissionIds: []
+    }).map((row) => row.submissionId),
+    ["SUB-VALIDATION-FAIL"],
+    "validation_fail mode should include validation fail rows only"
+  );
+  assert.deepEqual(
+    collectFilingOpsDrilldownRows({
+      mode: "evidence_gap",
+      submissions: helperRows,
+      evidenceGapSubmissionIds: ["SUB-PENDING"],
+      timelineFailureSubmissionIds: []
+    }).map((row) => row.submissionId),
+    ["SUB-PENDING"],
+    "evidence_gap mode should include ID-matched rows only"
+  );
+  assert.deepEqual(
+    collectFilingOpsDrilldownRows({
+      mode: "timeline_failure",
+      submissions: helperRows,
+      evidenceGapSubmissionIds: [],
+      timelineFailureSubmissionIds: ["SUB-REJECTED"]
+    }).map((row) => row.submissionId),
+    ["SUB-REJECTED"],
+    "timeline_failure mode should include timeline-failed rows only"
+  );
+
   const timelineResponse = await filingTimelineRoute.GET(
     getRequest(
       `/api/payroll/year-end/filing-submissions/${firstSubmissionId}/timeline?year=2026&employeeId=EMP-YFOPS-1001`,
@@ -423,7 +562,7 @@ async function run() {
 run()
   .then(() => {
     console.log(
-      "e2e-wi0198-payroll-year-end-filing-ops-dashboard-split-and-evidence-status-summary-cards-baseline.test passed"
+      "e2e-wi0199-payroll-year-end-filing-ops-dashboard-drilldown-and-alert-rules-baseline.test passed"
     );
   })
   .catch((error) => {

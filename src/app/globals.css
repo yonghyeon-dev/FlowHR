@@ -416,6 +416,19 @@ textarea:focus {
   gap: 8px;
 }
 
+.ops-drilldown-toolbar {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ops-drilldown-toolbar .btn.active {
+  border-color: #7ea8ef;
+  background: #e9f2ff;
+  font-weight: 700;
+}
+
 .summary-grid {
   display: grid;
   gap: 10px;
