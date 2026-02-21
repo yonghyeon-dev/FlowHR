@@ -210,6 +210,18 @@ export const recalculatePayrollYearEndSettlementSchema = previewPayrollYearEndSe
   deductionItems: yearEndDeductionItemsSchema.default(defaultYearEndDeductionItems)
 });
 
+export const finalizePayrollYearEndSettlementSchema = previewPayrollYearEndSettlementSchema.extend({
+  deductionItems: yearEndDeductionItemsSchema.default(defaultYearEndDeductionItems),
+  apply: z.boolean().default(false),
+  finalizedByNote: z.string().min(1).max(120).optional()
+});
+
+export const exportPayrollYearEndFilingDataSchema = z.object({
+  year: payrollYearSchema,
+  employeeId: z.string().min(1),
+  format: z.enum(["json", "csv"]).default("json")
+});
+
 export const issuePayrollYearEndWithholdingReceiptSchema = z.object({
   year: payrollYearSchema,
   employeeId: z.string().min(1),

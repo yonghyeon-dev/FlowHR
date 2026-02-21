@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.13.0
+  version: 1.14.0
 paths:
   /payroll/runs:
     get:
@@ -111,6 +111,20 @@ paths:
       responses:
         "200":
           description: Year-end settlement recalculation summary generated
+  /payroll/year-end/finalize-settlement:
+    post:
+      summary: Preview or apply payroll year-end settlement finalization
+      description: Validates confirmed/distributed/receipt-confirmed prerequisites for selected employee/year and returns finalization summary. `apply=true` records finalization audit/event.
+      responses:
+        "200":
+          description: Year-end settlement finalization summary generated
+  /payroll/year-end/export-filing-data:
+    post:
+      summary: Export payroll year-end filing data for employee/year
+      description: Exports filing-ready annual payroll data for selected employee/year after settlement finalization.
+      responses:
+        "200":
+          description: Year-end filing export generated
   /payroll/year-end/withholding-receipts:
     post:
       summary: Preview or issue withholding receipt for employee/year

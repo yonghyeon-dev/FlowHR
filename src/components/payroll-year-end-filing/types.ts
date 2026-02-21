@@ -1,0 +1,94 @@
+export type PayrollYearEndFinalizationResponse = {
+  settlement: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    apply: boolean;
+    canFinalize: boolean;
+    finalized: boolean;
+    finalizationId: string;
+    finalizedAt: string | null;
+    finalizedByNote: string | null;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      undistributedRuns: number;
+      pendingReceiptRuns: number;
+      previewedRunIds: string[];
+      undistributedRunIds: string[];
+      pendingReceiptRunIds: string[];
+    };
+    annualTotalsKrw: {
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    };
+    deductionItemsKrw: {
+      personalPensionKrw: number;
+      insurancePremiumKrw: number;
+      medicalExpenseKrw: number;
+      educationExpenseKrw: number;
+      donationKrw: number;
+      housingSavingsKrw: number;
+      totalIncomeDeductionKrw: number;
+      appliedIncomeDeductionKrw: number;
+      taxableAnnualIncomeBeforeDeductionKrw: number;
+      taxableAnnualIncomeAfterDeductionKrw: number;
+    };
+    settlementKrw: {
+      annualTaxLiabilityKrw: number;
+      withholdingDeltaKrw: number;
+      taxableAnnualIncomeKrw: number;
+    };
+    blockingReasons: string[];
+  };
+};
+
+export type PayrollYearEndFilingExportResponse = {
+  filingData: {
+    year: number;
+    employeeId: string;
+    finalizationId: string;
+    finalizedAt: string;
+    exportedAt: string;
+    format: "json" | "csv";
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      undistributedRuns: number;
+      pendingReceiptRuns: number;
+    };
+    annualTotalsKrw: {
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    };
+    settlementKrw: {
+      annualTaxLiabilityKrw: number;
+      withholdingDeltaKrw: number;
+    };
+    records: Array<{
+      runId: string;
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    }>;
+    csv: string | null;
+  };
+};
+
+export type ApiLog = {
+  id: number;
+  label: string;
+  status: number;
+  ok: boolean;
+  at: string;
+};

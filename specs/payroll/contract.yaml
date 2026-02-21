@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.13.0
+version: 1.14.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -18,6 +18,7 @@ scope:
     - payslip distribution and employee receipt confirmation workflow for confirmed payroll runs
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
     - year-end deduction-item input and settlement recalculation workflow for employee annual payroll totals
+    - year-end settlement finalization and filing-data export workflow for employee annual payroll totals
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -34,7 +35,7 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate year-end settlement and withholding receipt, list runs, list/manage deduction profiles, and confirm run
+      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate/finalize year-end settlement and export filing data, list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
     - role: employee
@@ -70,6 +71,12 @@ api:
     - method: POST
       path: /payroll/year-end/recalculate-settlement
       description: Recalculate annual payroll withholding settlement using deduction-item inputs and return baseline-vs-recalculated delta summary.
+    - method: POST
+      path: /payroll/year-end/finalize-settlement
+      description: Preview or apply year-end settlement finalization with confirmed/distributed/receipt-confirmed guard chain and finalization audit trace.
+    - method: POST
+      path: /payroll/year-end/export-filing-data
+      description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload.
     - method: POST
       path: /payroll/year-end/withholding-receipts
       description: Preview or issue withholding receipt for selected employee/year; issuance requires confirmed+distributed+receipt-confirmed run chain.
@@ -108,6 +115,12 @@ api:
         description: Emitted when payroll year-end settlement summary is previewed.
       - name: payroll.year_end.settlement.recalculated.v1
         description: Emitted when payroll year-end settlement is recalculated with deduction-item inputs.
+      - name: payroll.year_end.settlement.finalize_previewed.v1
+        description: Emitted when year-end settlement finalization readiness is previewed.
+      - name: payroll.year_end.settlement.finalized.v1
+        description: Emitted when year-end settlement finalization is applied.
+      - name: payroll.year_end.filing_data.exported.v1
+        description: Emitted when finalized year-end filing data is exported.
       - name: payroll.year_end.withholding_receipt.previewed.v1
         description: Emitted when withholding receipt readiness is previewed.
       - name: payroll.year_end.withholding_receipt.issued.v1
@@ -154,6 +167,9 @@ invariants:
   - Payslip receipt confirmation is allowed only for distributed CONFIRMED runs and must persist confirmation actor/time.
   - Year-end settlement must aggregate CONFIRMED runs for selected employee/year and compute deterministic annual tax liability and withholding delta for same input.
   - Year-end settlement recalculation must apply deduction-item inputs as bounded income deductions and return deterministic baseline-vs-recalculated delta for same run/input set.
+  - Year-end settlement finalization apply must be blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
+  - Year-end filing data export must require latest finalized settlement payload for selected employee/year.
+  - Year-end filing data export records and csv output must remain deterministic for same finalized payload and run set.
   - Withholding receipt issue is blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
@@ -166,6 +182,7 @@ risk:
     - Unauthorized payroll run confirmation can lock wrong results.
     - Unauthorized payslip distribution or receipt confirmation can break payroll compliance trail.
     - Unauthorized year-end deduction-item recalculation can distort compliance decision context.
+    - Unauthorized year-end finalization or filing export can break statutory reporting evidence.
     - Unauthorized withholding receipt issuance can break statutory compliance evidence.
   payroll_accuracy:
     - Misapplied overtime/night/holiday multipliers affect compensation.
@@ -177,6 +194,7 @@ risk:
     - Insurance settlement cap/rate misconfiguration can cause employee/employer contribution mismatch.
     - Closing period with unconfirmed runs can cause settlement mismatch.
     - Mis-entered year-end deduction-item inputs can skew annual settlement deltas.
+    - Exporting filing data from stale/non-finalized settlement can cause reporting mismatch.
   legal:
     - Payroll trace must support audit and dispute resolution.
 test_plan:
@@ -192,6 +210,8 @@ test_plan:
     - payslip receipt confirmation ownership/distributed-state guards
     - year-end settlement tax-liability and withholding-delta formulas
     - year-end settlement recalculation baseline-vs-deduction-input delta formulas
+    - year-end finalization guard chain and finalization payload formulas
+    - year-end filing export row/csv formatter determinism
     - withholding receipt issue guard (confirmed/distributed/receipt-confirmed chain)
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
@@ -219,9 +239,12 @@ test_plan:
     - payslip distribution/receipt APIs reject requests when payroll_payslip_delivery_v1 is disabled
     - year-end settlement preview returns annual totals/tax-liability/withholding-delta deterministically for employee/year
     - year-end settlement recalculation returns baseline/recalculated settlement and taxable-income delta deterministically for same employee/year run set
+    - year-end settlement finalization preview/apply returns deterministic guard and finalization summary for same employee/year run set
+    - year-end filing export rejects requests before finalization and returns deterministic row/csv output after finalization
     - withholding receipt issue rejects issuance when previewed/undistributed/pending-receipt runs remain
     - year-end APIs reject requests when payroll_year_end_v1 is disabled
     - year-end recalculation API rejects requests when payroll_year_end_deduction_input_v1 is disabled
+    - year-end finalization/export APIs reject requests when payroll_year_end_filing_export_v1 is disabled
   regression:
     - replay GC-001 through GC-006 fixtures
     - replay GC-007 through GC-008 statutory fixtures
@@ -233,6 +256,7 @@ test_plan:
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
     - year-end settlement and withholding receipt deterministic replay via WI-0187 e2e
     - year-end deduction-item recalculation deterministic replay via WI-0188 e2e
+    - year-end finalization and filing-export deterministic replay via WI-0189 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -243,6 +267,7 @@ test_plan:
     - employee/payroll roles guard for payslip receipt confirmation API
     - payroll_operator role enforcement for year-end settlement preview API
     - payroll_operator role enforcement for year-end settlement recalculation API
+    - payroll_operator role enforcement for year-end finalization and filing-export APIs
     - employee/payroll role guard for year-end withholding receipt preview/issue API
   payroll_accuracy:
     - overtime/night/holiday category payout checks
@@ -255,6 +280,7 @@ test_plan:
     - payslip distribution and receipt confirmation state transitions stay deterministic
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
     - year-end deduction-item recalculation delta remains deterministic for same input vectors
+    - year-end finalization guard and filing-export row/csv output remain deterministic
 observability:
   audit_events:
     - payroll.calculated
@@ -274,6 +300,11 @@ observability:
     - payroll.year_end.settlement_preview.failed
     - payroll.year_end.settlement_recalculated
     - payroll.year_end.recalculate_settlement.failed
+    - payroll.year_end.settlement_finalize_previewed
+    - payroll.year_end.settlement_finalized
+    - payroll.year_end.finalize_settlement.failed
+    - payroll.year_end.filing_data_exported
+    - payroll.year_end.export_filing_data.failed
     - payroll.year_end.withholding_receipt_previewed
     - payroll.year_end.withholding_receipt_issued
     - payroll.year_end.withholding_receipt.failed
@@ -289,6 +320,8 @@ observability:
     - payroll_payslip_receipt_confirmation_latency_ms
     - payroll_year_end_settlement_preview_latency_ms
     - payroll_year_end_settlement_recalculation_latency_ms
+    - payroll_year_end_settlement_finalization_latency_ms
+    - payroll_year_end_filing_export_latency_ms
     - payroll_year_end_receipt_issue_latency_ms
     - payroll_deduction_profile_calc_latency_ms
     - payroll_deduction_profile_miss_count
@@ -314,13 +347,15 @@ rollout:
       default: "off"
     - name: payroll_year_end_deduction_input_v1
       default: "off"
+    - name: payroll_year_end_filing_export_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_year_end_deduction_input_v1, then payroll_year_end_v1, then payroll_payslip_delivery_v1, then payroll_close_period_v1, then payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
+  strategy: disable payroll_year_end_filing_export_v1, then payroll_year_end_deduction_input_v1, then payroll_year_end_v1, then payroll_payslip_delivery_v1, then payroll_close_period_v1, then payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.13.0 adds feature-flagged year-end deduction-input recalculation API (`POST /payroll/year-end/recalculate-settlement`) and preserves existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/withholding-receipt APIs."
+consumer_impact: "Contract v1.14.0 adds feature-flagged year-end finalization and filing-export APIs (`POST /payroll/year-end/finalize-settlement`, `POST /payroll/year-end/export-filing-data`) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -340,6 +375,7 @@ references:
   - work-items/WI-0186-payroll-payslip-delivery-receipt-baseline.md
   - work-items/WI-0187-payroll-year-end-withholding-receipt-baseline.md
   - work-items/WI-0188-payroll-year-end-deduction-input-and-recalculation-baseline.md
+  - work-items/WI-0189-payroll-year-end-finalization-and-filing-export-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent
