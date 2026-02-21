@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0142: Employee Self-Service UX Phase 7 - Request Search/Sort, Approval Wait Prediction, Mobile Follow-up Guide
 
 ## Background and Problem

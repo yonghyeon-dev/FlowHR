@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0136: Employee Self-Service UX Phase 4 - Mobile Timeline, Status Filter, Pre-submit Validation Feedback
 
 ## Background and Problem

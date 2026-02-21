@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0153: Payslip UX Phase 5 - History Sort Hardening, Delay Risk Response, Mobile Follow-up Recommendation Upgrade
 
 ## Background and Problem

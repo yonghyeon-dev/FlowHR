@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.49 (Globals CSS Bloat Class Cleanup)
+> **Current version**: 0.1.50 (Deprecated WI and E2E Archive Cleanup)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -217,10 +217,11 @@
 - WI-0178 직원 명세서 블로트 정리(`src/app/employee/payslips/page.tsx` 반복 섹션 21개 제거 + `src/app/employee/layout.tsx` payslip 앵커 축소 + e2e/라인예산 갱신)
 - WI-0179 관리자 인사 페이지 블로트 정리(`src/app/admin/people/page.tsx` 반복 섹션 22개 제거 + e2e 체인 정리 + 라인예산 갱신)
 - WI-0180 `globals.css` 블로트 정리(phase-loop dead selector 대거 제거 + CSS 회귀 테스트 추가 + e2e 체인 반영)
+- WI-0181 Deprecated WI/테스트 아카이브 정리(WI-0131~0143, WI-0145~0172 deprecated 마킹 + 관련 e2e no-op 아카이브 + active e2e 체인 제외)
 
 ### 진행 중
 
-- 다음: Deprecated WI/테스트 아카이브 정리 (WI-0181)
+- 다음: 미착수 핵심 여정 우선순위 재개(직원 셀프서비스/관리자 승인 큐/급여 명세서/조직도) (WI-0182 예정)
 
 ### 현재 아키텍처
 

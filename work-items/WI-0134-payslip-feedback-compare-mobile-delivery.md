@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0134: Payslip UX Phase 2 - Status Feedback, Compare View, and Mobile Delivery Flow
 
 ## Background and Problem

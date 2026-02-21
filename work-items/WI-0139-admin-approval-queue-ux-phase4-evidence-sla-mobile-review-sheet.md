@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0139: Admin Approval Queue UX Phase 4 - Evidence Preview, SLA Timeline, Mobile Bulk Review Sheet
 
 ## Background and Problem

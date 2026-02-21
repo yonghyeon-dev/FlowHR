@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0141: Admin Approval Queue UX Phase 5 - Evidence Comparison, SLA Alert Rules, Mobile Approval Checklist
 
 ## Background and Problem

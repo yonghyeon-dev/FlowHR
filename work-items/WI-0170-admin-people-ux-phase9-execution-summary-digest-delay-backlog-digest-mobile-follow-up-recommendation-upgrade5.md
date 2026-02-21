@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0170: Admin People UX Phase 9 - Execution Summary Digest, Delay Backlog Digest, Mobile Follow-up Recommendation Upgrade 5
 
 ## Background and Problem

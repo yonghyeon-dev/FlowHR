@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0164: Admin Approval Queue UX Phase 11 - History Sort Execution Tracker, Delay Risk Execution Backlog, Mobile Follow-up Recommendation Upgrade 4
 
 ## Background and Problem

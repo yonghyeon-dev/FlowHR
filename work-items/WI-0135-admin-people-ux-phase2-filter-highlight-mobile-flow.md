@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0135: Admin People UX Phase 2 - Filtering, Change Highlight, Mobile Navigation Flow
 
 ## Background and Problem

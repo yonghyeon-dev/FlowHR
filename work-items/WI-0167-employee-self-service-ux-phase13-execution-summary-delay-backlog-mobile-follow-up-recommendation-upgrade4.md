@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0167: Employee Self-Service UX Phase 13 - Execution Summary, Delay Execution Backlog, and Mobile Follow-up Recommendation Upgrade 4
 
 ## Background and Problem

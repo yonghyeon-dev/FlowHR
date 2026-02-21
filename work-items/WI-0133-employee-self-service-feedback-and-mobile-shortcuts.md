@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0133: Employee Self-Service Phase 3 - Request Feedback and Mobile Shortcuts
 
 ## Background and Problem

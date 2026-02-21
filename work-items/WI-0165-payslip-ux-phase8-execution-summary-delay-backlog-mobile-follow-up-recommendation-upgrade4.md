@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0165: Payslip UX Phase 8 - Execution Summary, Delay Backlog, Mobile Follow-up Recommendation Upgrade 4
 
 ## Background and Problem

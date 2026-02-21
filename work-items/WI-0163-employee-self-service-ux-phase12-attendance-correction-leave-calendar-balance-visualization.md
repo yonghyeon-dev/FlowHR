@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0163: Employee Self-Service UX Phase 12 - Attendance Correction Insights, Leave Balance Forecast, and Leave Calendar Insights
 
 ## Background and Problem

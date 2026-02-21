@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0145: Payslip UX Phase 3 - Search/Sort, Confirmation Prediction, Mobile Follow-up Guide
 
 ## Background and Problem

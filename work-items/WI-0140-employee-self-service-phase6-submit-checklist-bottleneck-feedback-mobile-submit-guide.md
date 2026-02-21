@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0140: Employee Self-Service UX Phase 6 - Submit Checklist Integration, Bottleneck Feedback, Mobile Submit Guide
 
 ## Background and Problem
