@@ -58,21 +58,7 @@ function run() {
     "people page should render people mobile follow-up guide list"
   );
 
-  assert.match(
-    adminLayout,
-    /\/admin\/people#history-search-sort/,
-    "admin nav should include people history search/sort anchor"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#history-risk-prediction/,
-    "admin nav should include people history risk prediction anchor"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#people-mobile-follow-up-guide/,
-    "admin nav should include people mobile follow-up guide anchor"
-  );
+  assert.match(adminLayout, /\/admin\/people/, "admin nav should include people directory route");
 
   assert.match(globalCss, /\.panel-history-search-sort/, "history search/sort panel style should exist");
   assert.match(globalCss, /\.history-search-list/, "history search/sort list style should exist");

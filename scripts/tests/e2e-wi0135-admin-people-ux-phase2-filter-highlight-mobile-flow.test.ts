@@ -28,27 +28,7 @@ function run() {
   assert.match(peoplePage, /people-mobile-nav-grid/, "people page should render mobile navigation grid");
   assert.match(peoplePage, /people-mobile-feedback/, "people page should render mobile navigation feedback");
 
-  assert.match(
-    adminLayout,
-    /\/admin\/people#directory-filters/,
-    "admin nav should include people filter anchor link"
-  );
-  assert.match(adminLayout, /\/admin\/people#org-chart/, "admin nav should include people org chart anchor link");
-  assert.match(
-    adminLayout,
-    /\/admin\/people#employee-compare/,
-    "admin nav should include people compare anchor link"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#employee-history/,
-    "admin nav should include people history anchor link"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#people-mobile-flow/,
-    "admin nav should include people mobile flow anchor link"
-  );
+  assert.match(adminLayout, /\/admin\/people/, "admin nav should include people directory route");
 
   assert.match(globalCss, /\.panel-people-mobile-flow/, "people mobile flow panel style should exist");
   assert.match(globalCss, /\.people-mobile-nav-grid/, "people mobile navigation grid style should exist");

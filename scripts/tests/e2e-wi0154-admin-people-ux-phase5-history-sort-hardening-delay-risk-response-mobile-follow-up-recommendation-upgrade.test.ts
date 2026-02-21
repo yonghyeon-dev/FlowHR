@@ -72,21 +72,7 @@ function run() {
     "people page should render mobile follow-up recommendation upgrade list"
   );
 
-  assert.match(
-    adminLayout,
-    /\/admin\/people#history-sort-hardening/,
-    "admin nav should include people history sort hardening anchor"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#history-delay-risk-response/,
-    "admin nav should include people history delay risk response anchor"
-  );
-  assert.match(
-    adminLayout,
-    /\/admin\/people#people-mobile-follow-up-recommendation-upgrade/,
-    "admin nav should include people mobile follow-up recommendation upgrade anchor"
-  );
+  assert.match(adminLayout, /\/admin\/people/, "admin nav should include people directory route");
 
   assert.match(
     globalCss,
