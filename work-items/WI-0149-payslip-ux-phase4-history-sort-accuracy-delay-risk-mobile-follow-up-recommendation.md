@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0149: Payslip UX Phase 4 - History Sort Accuracy, Delay Risk Prediction, Mobile Follow-up Recommendation
 
 ## Background and Problem

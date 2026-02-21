@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0137: Admin Approval Queue UX Phase 3 - Item History Summary, Bulk Pre-validation, Mobile Result Feedback
 
 ## Background and Problem

@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0143: Admin Approval Queue UX Phase 6 - Search/Sort, Processing Prediction, Mobile Follow-up Guide
 
 ## Background and Problem

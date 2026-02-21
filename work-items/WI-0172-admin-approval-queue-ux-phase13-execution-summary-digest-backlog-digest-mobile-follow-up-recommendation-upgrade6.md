@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0172: Admin Approval Queue UX Phase 13 - Execution Summary Digest, Delay Backlog Digest, Mobile Follow-up Recommendation Upgrade 6
 
 ## Background and Problem

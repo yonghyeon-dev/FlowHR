@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0138: Employee Self-Service UX Phase 5 - Integrated Summary, Resubmit Flow, Mobile Status Badges
 
 ## Background and Problem

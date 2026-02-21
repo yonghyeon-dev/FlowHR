@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0146: Admin People UX Phase 3 - History Search/Sort, Risk Prediction, Mobile Follow-up Guide
 
 ## Background and Problem

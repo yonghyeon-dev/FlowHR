@@ -1,3 +1,5 @@
+> **DEPRECATED**: ? WI? ???? ??? ??(WI-0176~0181)?? ???????.
+> ??: docs/codex-guide.md Part 1
 # WI-0159: Employee Self-Service UX Phase 11 - History Sort Hardening Plus Execution, Delay Risk Response Execution Tracker, Mobile Follow-up Recommendation Upgrade 3
 
 ## Background and Problem
