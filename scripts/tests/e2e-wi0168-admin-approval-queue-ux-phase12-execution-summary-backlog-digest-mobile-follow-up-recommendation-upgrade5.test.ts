@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0168-admin-approval-queue-ux-phase12-execution-summary-backlog-digest-mobile-follow-up-recommendation-upgrade5.test.ts deprecated (no-op)');
+
+export {};

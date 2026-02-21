@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0166-admin-people-ux-phase8-execution-summary-delay-backlog-mobile-follow-up-recommendation-upgrade4.test.ts deprecated (no-op)');
+
+export {};

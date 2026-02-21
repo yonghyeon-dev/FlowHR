@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0145-payslip-ux-phase3-search-sort-confirmation-prediction-mobile-follow-up-guide.test.ts deprecated (no-op)');
+
+export {};

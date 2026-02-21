@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0132-admin-approval-queue-ux-phase2.test.ts deprecated (no-op)');
+
+export {};

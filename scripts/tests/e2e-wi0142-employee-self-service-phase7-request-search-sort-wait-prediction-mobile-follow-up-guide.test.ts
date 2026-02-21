@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0142-employee-self-service-phase7-request-search-sort-wait-prediction-mobile-follow-up-guide.test.ts deprecated (no-op)');
+
+export {};

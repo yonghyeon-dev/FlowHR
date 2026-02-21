@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0135-admin-people-ux-phase2-filter-highlight-mobile-flow.test.ts deprecated (no-op)');
+
+export {};

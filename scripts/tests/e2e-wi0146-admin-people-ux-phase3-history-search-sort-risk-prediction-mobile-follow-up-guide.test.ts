@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0146-admin-people-ux-phase3-history-search-sort-risk-prediction-mobile-follow-up-guide.test.ts deprecated (no-op)');
+
+export {};

@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0157-payslip-ux-phase6-history-sort-hardening-plus-delay-risk-response-execution-guide-mobile-follow-up-recommendation-upgrade2.test.ts deprecated (no-op)');
+
+export {};

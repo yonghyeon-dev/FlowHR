@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0138-employee-self-service-phase5-integrated-summary-resubmit-mobile-status-badges.test.ts deprecated (no-op)');
+
+export {};

@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0163-employee-self-service-ux-phase12-attendance-correction-leave-calendar-balance-visualization.test.ts deprecated (no-op)');
+
+export {};

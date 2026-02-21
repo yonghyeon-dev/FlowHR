@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0148-admin-approval-queue-ux-phase7-history-sort-accuracy-delay-risk-mobile-follow-up-recommendation.test.ts deprecated (no-op)');
+
+export {};

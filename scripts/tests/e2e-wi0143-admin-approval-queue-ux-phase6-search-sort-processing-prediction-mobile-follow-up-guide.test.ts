@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0143-admin-approval-queue-ux-phase6-search-sort-processing-prediction-mobile-follow-up-guide.test.ts deprecated (no-op)');
+
+export {};

@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0164-admin-approval-queue-ux-phase11-history-sort-execution-tracking-mobile-follow-up-recommendation-upgrade4.test.ts deprecated (no-op)');
+
+export {};

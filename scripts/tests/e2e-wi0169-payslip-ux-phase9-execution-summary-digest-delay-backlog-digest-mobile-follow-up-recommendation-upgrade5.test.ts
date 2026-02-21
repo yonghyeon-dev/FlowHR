@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0169-payslip-ux-phase9-execution-summary-digest-delay-backlog-digest-mobile-follow-up-recommendation-upgrade5.test.ts deprecated (no-op)');
+
+export {};

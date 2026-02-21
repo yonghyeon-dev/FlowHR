@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0156-admin-approval-queue-ux-phase9-history-sort-hardening-plus-delay-risk-response-execution-guide-mobile-follow-up-recommendation-upgrade2.test.ts deprecated (no-op)');
+
+export {};

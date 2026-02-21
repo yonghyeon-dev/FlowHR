@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0140-employee-self-service-phase6-submit-checklist-bottleneck-feedback-mobile-submit-guide.test.ts deprecated (no-op)');
+
+export {};

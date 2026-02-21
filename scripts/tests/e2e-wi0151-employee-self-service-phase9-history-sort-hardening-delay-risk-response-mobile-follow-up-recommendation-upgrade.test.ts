@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0151-employee-self-service-phase9-history-sort-hardening-delay-risk-response-mobile-follow-up-recommendation-upgrade.test.ts deprecated (no-op)');
+
+export {};

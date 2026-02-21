@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0137-admin-approval-queue-ux-phase3-history-validation-mobile-feedback.test.ts deprecated (no-op)');
+
+export {};

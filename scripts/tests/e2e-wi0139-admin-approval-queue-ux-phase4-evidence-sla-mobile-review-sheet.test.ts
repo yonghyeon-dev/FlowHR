@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0139-admin-approval-queue-ux-phase4-evidence-sla-mobile-review-sheet.test.ts deprecated (no-op)');
+
+export {};

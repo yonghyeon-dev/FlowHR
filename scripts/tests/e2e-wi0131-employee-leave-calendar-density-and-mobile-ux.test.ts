@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0131-employee-leave-calendar-density-and-mobile-ux.test.ts deprecated (no-op)');
+
+export {};

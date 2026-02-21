@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0133-employee-self-service-feedback-and-mobile-shortcuts.test.ts deprecated (no-op)');
+
+export {};

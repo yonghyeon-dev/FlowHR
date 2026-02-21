@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0134-payslip-feedback-compare-mobile-delivery.test.ts deprecated (no-op)');
+
+export {};

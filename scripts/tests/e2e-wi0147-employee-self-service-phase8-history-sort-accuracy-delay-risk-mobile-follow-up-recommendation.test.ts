@@ -9,3 +9,5 @@ function run() {
 
 run();
 console.log('e2e-wi0147-employee-self-service-phase8-history-sort-accuracy-delay-risk-mobile-follow-up-recommendation.test.ts deprecated (no-op)');
+
+export {};
