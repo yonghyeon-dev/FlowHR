@@ -237,6 +237,11 @@ export const acknowledgePayrollYearEndFilingPackageSchema = z.object({
   ackNote: z.string().min(1).max(240).optional()
 });
 
+export const resubmitPayrollYearEndFilingPackageSchema = submitPayrollYearEndFilingPackageSchema.extend({
+  submissionId: z.string().min(1),
+  resubmissionReason: z.string().min(1).max(240).optional()
+});
+
 export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
   year: z.coerce.number().int().min(2020).max(2100),
   employeeId: z.string().min(1)

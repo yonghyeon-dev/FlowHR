@@ -167,6 +167,17 @@ type SubmitPayrollYearEndFilingPackageInput = {
   submissionNote?: string;
 };
 
+type ResubmitPayrollYearEndFilingPackageInput = {
+  year: number;
+  employeeId: string;
+  submissionId: string;
+  format: PayrollYearEndFilingExportFormat;
+  validationMode: PayrollYearEndFilingValidationMode;
+  transport: PayrollYearEndFilingTransport;
+  submissionNote?: string;
+  resubmissionReason?: string;
+};
+
 type AcknowledgePayrollYearEndFilingPackageInput = {
   year: number;
   employeeId: string;
@@ -509,6 +520,9 @@ type PayrollYearEndFilingSubmissionSummary = {
   submissionId: string;
   year: number;
   employeeId: string;
+  attempt: number;
+  resubmissionOfSubmissionId: string | null;
+  resubmissionReason: string | null;
   finalizationId: string;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
@@ -536,6 +550,10 @@ type PayrollYearEndFilingSubmissionSummary = {
 };
 
 type SubmitPayrollYearEndFilingPackageResult = {
+  submission: PayrollYearEndFilingSubmissionSummary;
+};
+
+type ResubmitPayrollYearEndFilingPackageResult = {
   submission: PayrollYearEndFilingSubmissionSummary;
 };
 
@@ -2129,6 +2147,9 @@ type YearEndFilingPackageSubmittedAuditPayload = {
   submissionId: string;
   year: number;
   employeeId: string;
+  attempt: number;
+  resubmissionOfSubmissionId: string | null;
+  resubmissionReason: string | null;
   finalizationId: string;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
@@ -2177,7 +2198,16 @@ function asYearEndFilingPackageSubmittedAuditPayload(
   ) {
     return null;
   }
-  return candidate as YearEndFilingPackageSubmittedAuditPayload;
+  return {
+    ...candidate,
+    attempt: typeof candidate.attempt === "number" ? candidate.attempt : 1,
+    resubmissionOfSubmissionId:
+      typeof candidate.resubmissionOfSubmissionId === "string"
+        ? candidate.resubmissionOfSubmissionId
+        : null,
+    resubmissionReason:
+      typeof candidate.resubmissionReason === "string" ? candidate.resubmissionReason : null
+  } as YearEndFilingPackageSubmittedAuditPayload;
 }
 
 function asYearEndFilingPackageAcknowledgedAuditPayload(
@@ -2207,7 +2237,10 @@ function buildYearEndFilingSubmissionSummaries(
   const submissions = new Map<string, PayrollYearEndFilingSubmissionSummary>();
 
   for (const log of sortedLogs) {
-    if (log.action === "payroll.year_end.filing_package_submitted") {
+    if (
+      log.action === "payroll.year_end.filing_package_submitted" ||
+      log.action === "payroll.year_end.filing_package_resubmitted"
+    ) {
       const payload = asYearEndFilingPackageSubmittedAuditPayload(log.payload);
       if (!payload) {
         continue;
@@ -2216,6 +2249,9 @@ function buildYearEndFilingSubmissionSummaries(
         submissionId: payload.submissionId,
         year: payload.year,
         employeeId: payload.employeeId,
+        attempt: payload.attempt,
+        resubmissionOfSubmissionId: payload.resubmissionOfSubmissionId,
+        resubmissionReason: payload.resubmissionReason,
         finalizationId: payload.finalizationId,
         format: payload.format,
         validationMode: payload.validationMode,
@@ -2949,6 +2985,7 @@ async function listYearEndFilingSubmissionSummaries(
   const logs = await context.dataAccess.audit.list({
     actions: [
       "payroll.year_end.filing_package_submitted",
+      "payroll.year_end.filing_package_resubmitted",
       "payroll.year_end.filing_package_acknowledged"
     ],
     entityType: "PayrollYearEnd",
@@ -2958,21 +2995,42 @@ async function listYearEndFilingSubmissionSummaries(
   return buildYearEndFilingSubmissionSummaries(logs);
 }
 
-export async function submitPayrollYearEndFilingPackage(
-  context: ServiceContext,
-  input: SubmitPayrollYearEndFilingPackageInput
-): Promise<SubmitPayrollYearEndFilingPackageResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+function ensureNoPendingFilingSubmission(submissions: PayrollYearEndFilingSubmissionSummary[]) {
+  if (submissions.some((submission) => submission.status === "submitted")) {
+    throw new ServiceError(
+      409,
+      "existing filing submission must be acknowledged before submit/resubmit"
+    );
   }
-  if (!isPayrollYearEndFilingExportEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
-  }
+}
 
+function buildYearEndFilingSubmissionId(input: {
+  year: number;
+  employeeId: string;
+  checksumSha256: string;
+  attempt: number;
+}) {
+  return `YFS-${input.year}-${input.employeeId}-${input.checksumSha256.slice(0, 10)}-A${input.attempt}-${Date.now()}`;
+}
+
+async function createYearEndFilingSubmission(
+  context: ServiceContext,
+  input: {
+    year: number;
+    employeeId: string;
+    format: PayrollYearEndFilingExportFormat;
+    validationMode: PayrollYearEndFilingValidationMode;
+    transport: PayrollYearEndFilingTransport;
+    submissionNote?: string;
+    attempt: number;
+    resubmissionOfSubmissionId: string | null;
+    resubmissionReason: string | null;
+    auditAction: "payroll.year_end.filing_package_submitted" | "payroll.year_end.filing_package_resubmitted";
+    eventName:
+      | "payroll.year_end.filing_package.submitted.v1"
+      | "payroll.year_end.filing_package.resubmitted.v1";
+  }
+): Promise<PayrollYearEndFilingSubmissionSummary> {
   const exportResult = await exportPayrollYearEndFilingData(context, {
     year: input.year,
     employeeId: input.employeeId,
@@ -2984,13 +3042,21 @@ export async function submitPayrollYearEndFilingPackage(
   const actorId = context.actor?.id ?? null;
   const entityId = `${input.year}_${input.employeeId}`;
   const submittedAt = new Date().toISOString();
-  const submissionId = `YFS-${input.year}-${input.employeeId}-${exportResult.filingData.artifact.checksumSha256.slice(0, 10)}-${Date.now()}`;
+  const submissionId = buildYearEndFilingSubmissionId({
+    year: input.year,
+    employeeId: input.employeeId,
+    checksumSha256: exportResult.filingData.artifact.checksumSha256,
+    attempt: input.attempt
+  });
   const submissionNote = input.submissionNote?.trim() ? input.submissionNote.trim() : null;
 
   const submission: PayrollYearEndFilingSubmissionSummary = {
     submissionId,
     year: input.year,
     employeeId: input.employeeId,
+    attempt: input.attempt,
+    resubmissionOfSubmissionId: input.resubmissionOfSubmissionId,
+    resubmissionReason: input.resubmissionReason,
     finalizationId: exportResult.filingData.finalizationId,
     format: input.format,
     validationMode: input.validationMode,
@@ -3011,7 +3077,7 @@ export async function submitPayrollYearEndFilingPackage(
   };
 
   await context.dataAccess.audit.append({
-    action: "payroll.year_end.filing_package_submitted",
+    action: input.auditAction,
     entityType: "PayrollYearEnd",
     entityId,
     actorRole,
@@ -3019,13 +3085,110 @@ export async function submitPayrollYearEndFilingPackage(
     payload: submission
   });
   await getEventPublisher(context).publish({
-    name: "payroll.year_end.filing_package.submitted.v1",
+    name: input.eventName,
     occurredAt: submittedAt,
     entityType: "PayrollYearEnd",
     entityId,
     actorRole,
     actorId: actorId ?? undefined,
     payload: submission as unknown as Record<string, unknown>
+  });
+
+  return submission;
+}
+
+export async function submitPayrollYearEndFilingPackage(
+  context: ServiceContext,
+  input: SubmitPayrollYearEndFilingPackageInput
+): Promise<SubmitPayrollYearEndFilingPackageResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingExportEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const submissions = await listYearEndFilingSubmissionSummaries(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  ensureNoPendingFilingSubmission(submissions);
+  if (submissions.length > 0) {
+    throw new ServiceError(
+      409,
+      "existing filing submission history found; use resubmit endpoint for rejected submissions"
+    );
+  }
+
+  const submission = await createYearEndFilingSubmission(context, {
+    year: input.year,
+    employeeId: input.employeeId,
+    format: input.format,
+    validationMode: input.validationMode,
+    transport: input.transport,
+    submissionNote: input.submissionNote,
+    attempt: 1,
+    resubmissionOfSubmissionId: null,
+    resubmissionReason: null,
+    auditAction: "payroll.year_end.filing_package_submitted",
+    eventName: "payroll.year_end.filing_package.submitted.v1"
+  });
+
+  return { submission };
+}
+
+export async function resubmitPayrollYearEndFilingPackage(
+  context: ServiceContext,
+  input: ResubmitPayrollYearEndFilingPackageInput
+): Promise<ResubmitPayrollYearEndFilingPackageResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingExportEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const submissions = await listYearEndFilingSubmissionSummaries(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  const target = submissions.find((submission) => submission.submissionId === input.submissionId);
+  if (!target) {
+    throw new ServiceError(404, "filing submission not found for resubmission");
+  }
+  if (target.status !== "acknowledged" || target.ack?.ackStatus !== "rejected") {
+    throw new ServiceError(409, "only rejected acknowledged submissions can be resubmitted");
+  }
+  if (
+    submissions.some(
+      (submission) => submission.resubmissionOfSubmissionId === target.submissionId
+    )
+  ) {
+    throw new ServiceError(409, "selected submission has already been resubmitted");
+  }
+  ensureNoPendingFilingSubmission(submissions);
+
+  const submission = await createYearEndFilingSubmission(context, {
+    year: input.year,
+    employeeId: input.employeeId,
+    format: input.format,
+    validationMode: input.validationMode,
+    transport: input.transport,
+    submissionNote: input.submissionNote,
+    attempt: target.attempt + 1,
+    resubmissionOfSubmissionId: target.submissionId,
+    resubmissionReason: input.resubmissionReason?.trim() ? input.resubmissionReason.trim() : null,
+    auditAction: "payroll.year_end.filing_package_resubmitted",
+    eventName: "payroll.year_end.filing_package.resubmitted.v1"
   });
 
   return { submission };

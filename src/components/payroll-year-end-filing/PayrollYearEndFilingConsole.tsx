@@ -58,6 +58,8 @@ export default function PayrollYearEndFilingConsole() {
   const [ackStatus, setAckStatus] = useState<"accepted" | "rejected">("accepted");
   const [ackCode, setAckCode] = useState("ACK-OK");
   const [ackNote, setAckNote] = useState("baseline acknowledgement");
+  const [resubmitSubmissionId, setResubmitSubmissionId] = useState("");
+  const [resubmissionReason, setResubmissionReason] = useState("resubmit after rejected ack");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [finalization, setFinalization] = useState<PayrollYearEndFinalizationResponse | null>(null);
@@ -325,12 +327,65 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
+  async function runResubmitSubmission() {
+    const submissionId = resubmitSubmissionId.trim();
+    if (!submissionId) {
+      setStatusMessage("resubmit submission ID is required");
+      return;
+    }
+
+    try {
+      setPendingLabel("year-end filing package resubmit");
+      const payload = {
+        year: parseRequiredInt(year, "year"),
+        employeeId: employeeId.trim(),
+        format: exportFormat,
+        validationMode,
+        transport: submissionTransport,
+        submissionNote: submissionNote.trim() || undefined,
+        resubmissionReason: resubmissionReason.trim() || undefined
+      };
+      const response = await fetch(
+        `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/resubmit`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "resubmit filing package",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
+      setAckSubmissionId(body.submission.submissionId);
+      setResubmitSubmissionId("");
+      setStatusMessage(`resubmitted ${body.submission.submissionId}`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   return (
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization, Filing Submission Tracking, and ACK</h1>
-        <p>Finalize year-end settlement, export filing-ready data, submit filing package, and track acknowledgement.</p>
+        <h1>Payroll Year-End Finalization, Filing Submission, ACK, and Resubmission</h1>
+        <p>Finalize year-end settlement, submit and acknowledge filing packages, then resubmit rejected submissions with transition guards.</p>
       </header>
 
       <section className="panel-grid">
@@ -394,6 +449,8 @@ export default function PayrollYearEndFilingConsole() {
           </label>
           <label>Ack Code<input value={ackCode} onChange={(event) => setAckCode(event.target.value)} /></label>
           <label>Ack Note<input value={ackNote} onChange={(event) => setAckNote(event.target.value)} /></label>
+          <label>Resubmit Submission ID<input value={resubmitSubmissionId} onChange={(event) => setResubmitSubmissionId(event.target.value)} /></label>
+          <label>Resubmission Reason<input value={resubmissionReason} onChange={(event) => setResubmissionReason(event.target.value)} /></label>
           <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
           <label>Actor ID (dev fallback)<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
           <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
@@ -403,6 +460,7 @@ export default function PayrollYearEndFilingConsole() {
             <button className="btn btn-secondary" onClick={() => void runFilingExport()} disabled={pendingLabel !== null}>Export Filing Data</button>
             <button className="btn btn-primary" onClick={() => void runSubmitFilingPackage()} disabled={pendingLabel !== null}>Submit Filing Package</button>
             <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>Acknowledge Submission</button>
+            <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>Resubmit Submission</button>
             <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>Refresh Submissions</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -470,7 +528,9 @@ export default function PayrollYearEndFilingConsole() {
                   <span className={submission.status === "acknowledged" ? "ok" : "small"}>
                     {submission.status.toUpperCase()}
                   </span>{" "}
-                  {submission.submissionId} / {submission.transport} / {submission.format} / {submission.validationMode}
+                  {submission.submissionId} / attempt {submission.attempt} / {submission.transport} / {submission.format} / {submission.validationMode}
+                  {submission.resubmissionOfSubmissionId ? ` / resubmissionOf ${submission.resubmissionOfSubmissionId}` : ""}
+                  {submission.ack ? ` / ACK ${submission.ack.ackStatus}` : ""}
                   <time>{new Date(submission.submittedAt).toLocaleString("ko-KR")}</time>
                 </li>
               ))}
