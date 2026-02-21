@@ -40,6 +40,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 32. Reject year-end settlement/receipt APIs when `payroll_year_end_v1` feature flag is disabled.
 33. Recalculate year-end settlement with deduction-item inputs and verify baseline-vs-recalculated tax/liability delta output.
 34. Reject year-end settlement recalculation API when `payroll_year_end_deduction_input_v1` feature flag is disabled.
+35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing.
+36. Export year-end filing data and reject export before finalization or when `payroll_year_end_filing_export_v1` feature flag is disabled.
 
 ## Accuracy Cases
 
@@ -66,6 +68,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 21. Year-end settlement computes annual tax-liability and withholding-delta deterministically for same confirmed run set.
 22. Withholding receipt issue guard (confirmed/distributed/receipt-confirmed) remains deterministic.
 23. Year-end deduction-item recalculation baseline-vs-recalculated delta remains deterministic for same confirmed run set and input vector.
+24. Year-end finalization guard and filing-export row/csv output remain deterministic for same finalized payload and run set.
 
 ## Regression Linkage
 
@@ -93,3 +96,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Payslip Delivery Gate: payslip delivery/receipt APIs remain feature-flagged, permission-guarded, and maintain deterministic distribution/receipt state transitions.
 - Year-End Gate: year-end settlement/withholding receipt APIs remain feature-flagged, permission-guarded, and enforce issue prerequisites deterministically.
 - Year-End Recalculation Gate: year-end deduction-item recalculation API remains feature-flagged, permission-guarded, and deterministic for baseline-vs-recalculated deltas.
+- Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.

@@ -134,6 +134,18 @@ type RecalculatePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementI
   deductionItems: YearEndDeductionItemsInput;
 };
 
+type FinalizePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
+  deductionItems: YearEndDeductionItemsInput;
+  apply: boolean;
+  finalizedByNote?: string;
+};
+
+type ExportPayrollYearEndFilingDataInput = {
+  year: number;
+  employeeId: string;
+  format: "json" | "csv";
+};
+
 type IssuePayrollYearEndWithholdingReceiptInput = {
   year: number;
   employeeId: string;
@@ -358,6 +370,83 @@ type RecalculatePayrollYearEndSettlementResult = {
   };
 };
 
+type YearEndFilingGuardRunStates = {
+  totalRuns: number;
+  confirmedRuns: number;
+  previewedRuns: number;
+  undistributedRuns: number;
+  pendingReceiptRuns: number;
+  previewedRunIds: string[];
+  undistributedRunIds: string[];
+  pendingReceiptRunIds: string[];
+};
+
+type FinalizePayrollYearEndSettlementResult = {
+  settlement: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    apply: boolean;
+    canFinalize: boolean;
+    finalized: boolean;
+    finalizationId: string;
+    finalizedAt: string | null;
+    finalizedByNote: string | null;
+    runStates: YearEndFilingGuardRunStates;
+    annualTotalsKrw: PayrollTotalsKrw;
+    deductionItemsKrw: YearEndDeductionItemsInput & {
+      totalIncomeDeductionKrw: number;
+      appliedIncomeDeductionKrw: number;
+      taxableAnnualIncomeBeforeDeductionKrw: number;
+      taxableAnnualIncomeAfterDeductionKrw: number;
+    };
+    settlementKrw: YearEndSettlementKrw;
+    blockingReasons: string[];
+  };
+};
+
+type ExportPayrollYearEndFilingDataResult = {
+  filingData: {
+    year: number;
+    employeeId: string;
+    finalizationId: string;
+    finalizedAt: string;
+    exportedAt: string;
+    format: "json" | "csv";
+    runStates: YearEndFilingGuardRunStates;
+    annualTotalsKrw: PayrollTotalsKrw;
+    deductionItemsKrw: {
+      personalPensionKrw: number;
+      insurancePremiumKrw: number;
+      medicalExpenseKrw: number;
+      educationExpenseKrw: number;
+      donationKrw: number;
+      housingSavingsKrw: number;
+      totalIncomeDeductionKrw: number;
+      appliedIncomeDeductionKrw: number;
+      taxableAnnualIncomeBeforeDeductionKrw: number;
+      taxableAnnualIncomeAfterDeductionKrw: number;
+    };
+    settlementKrw: YearEndSettlementKrw;
+    records: Array<{
+      runId: string;
+      periodStart: string;
+      periodEnd: string;
+      state: string;
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+      payslipDistributedAt: string | null;
+      payslipReceiptConfirmedAt: string | null;
+    }>;
+    csv: string | null;
+  };
+};
+
 type IssuePayrollYearEndWithholdingReceiptResult = {
   receipt: {
     year: number;
@@ -514,6 +603,15 @@ function isPayrollYearEndDeductionInputEnabled() {
   const raw =
     process.env.FLOWHR_PAYROLL_YEAR_END_DEDUCTION_INPUT_V1 ??
     process.env.PAYROLL_YEAR_END_DEDUCTION_INPUT_V1 ??
+    "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isPayrollYearEndFilingExportEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_YEAR_END_FILING_EXPORT_V1 ??
+    process.env.PAYROLL_YEAR_END_FILING_EXPORT_V1 ??
     "";
   const value = raw.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
@@ -1631,6 +1729,149 @@ function calculateYearEndSettlementKrw(
   };
 }
 
+type YearEndFilingGuard = {
+  undistributedRuns: PayrollRunEntity[];
+  pendingReceiptRuns: PayrollRunEntity[];
+  runStates: YearEndFilingGuardRunStates;
+  blockingReasons: string[];
+  canFinalize: boolean;
+};
+
+function buildYearEndFilingGuard(snapshot: YearEndRunSnapshot): YearEndFilingGuard {
+  const undistributedRuns = snapshot.confirmedRuns.filter((run) => run.payslipDistributedAt === null);
+  const pendingReceiptRuns = snapshot.confirmedRuns.filter(
+    (run) => run.payslipDistributedAt !== null && run.payslipReceiptConfirmedAt === null
+  );
+
+  const blockingReasons: string[] = [];
+  if (snapshot.confirmedRuns.length === 0) {
+    blockingReasons.push("no confirmed payroll runs found for selected year");
+  }
+  if (snapshot.previewedRuns.length > 0) {
+    blockingReasons.push("all payroll runs must be confirmed before year-end finalization");
+  }
+  if (undistributedRuns.length > 0) {
+    blockingReasons.push("all confirmed runs must be distributed before year-end finalization");
+  }
+  if (pendingReceiptRuns.length > 0) {
+    blockingReasons.push(
+      "all distributed runs must have payslip receipt confirmation before year-end finalization"
+    );
+  }
+
+  return {
+    undistributedRuns,
+    pendingReceiptRuns,
+    runStates: {
+      totalRuns: snapshot.runs.length,
+      confirmedRuns: snapshot.confirmedRuns.length,
+      previewedRuns: snapshot.previewedRuns.length,
+      undistributedRuns: undistributedRuns.length,
+      pendingReceiptRuns: pendingReceiptRuns.length,
+      previewedRunIds: snapshot.previewedRuns.map((run) => run.id),
+      undistributedRunIds: undistributedRuns.map((run) => run.id),
+      pendingReceiptRunIds: pendingReceiptRuns.map((run) => run.id)
+    },
+    blockingReasons,
+    canFinalize: blockingReasons.length === 0
+  };
+}
+
+type YearEndFinalizationAuditPayload = FinalizePayrollYearEndSettlementResult["settlement"];
+
+function asYearEndFinalizationAuditPayload(payload: unknown): YearEndFinalizationAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<YearEndFinalizationAuditPayload>;
+  if (
+    typeof candidate.year !== "number" ||
+    typeof candidate.employeeId !== "string" ||
+    typeof candidate.finalizationId !== "string" ||
+    typeof candidate.finalizedAt !== "string" ||
+    !candidate.runStates ||
+    !candidate.annualTotalsKrw ||
+    !candidate.deductionItemsKrw ||
+    !candidate.settlementKrw
+  ) {
+    return null;
+  }
+  return candidate as YearEndFinalizationAuditPayload;
+}
+
+function buildYearEndFilingRecords(runs: PayrollRunEntity[]) {
+  return runs
+    .map((run) => {
+      const withholdingTaxKrw = run.withholdingTaxKrw ?? 0;
+      const socialInsuranceKrw = run.socialInsuranceKrw ?? 0;
+      const otherDeductionsKrw = run.otherDeductionsKrw ?? 0;
+      const totalDeductionsKrw =
+        run.totalDeductionsKrw ?? withholdingTaxKrw + socialInsuranceKrw + otherDeductionsKrw;
+      const netPayKrw = run.netPayKrw ?? run.grossPayKrw - totalDeductionsKrw;
+      return {
+        runId: run.id,
+        periodStart: run.periodStart.toISOString(),
+        periodEnd: run.periodEnd.toISOString(),
+        state: run.state,
+        grossPayKrw: run.grossPayKrw,
+        withholdingTaxKrw,
+        socialInsuranceKrw,
+        otherDeductionsKrw,
+        totalDeductionsKrw,
+        netPayKrw,
+        payslipDistributedAt: run.payslipDistributedAt?.toISOString() ?? null,
+        payslipReceiptConfirmedAt: run.payslipReceiptConfirmedAt?.toISOString() ?? null
+      };
+    })
+    .sort((left, right) => left.runId.localeCompare(right.runId));
+}
+
+function buildYearEndFilingCsv(
+  rows: ReturnType<typeof buildYearEndFilingRecords>,
+  payload: YearEndFinalizationAuditPayload
+) {
+  const header = [
+    "year",
+    "employeeId",
+    "finalizationId",
+    "finalizedAt",
+    "runId",
+    "periodStart",
+    "periodEnd",
+    "state",
+    "grossPayKrw",
+    "withholdingTaxKrw",
+    "socialInsuranceKrw",
+    "otherDeductionsKrw",
+    "totalDeductionsKrw",
+    "netPayKrw",
+    "payslipDistributedAt",
+    "payslipReceiptConfirmedAt"
+  ].join(",");
+
+  const lines = rows.map((row) =>
+    [
+      payload.year,
+      payload.employeeId,
+      payload.finalizationId,
+      payload.finalizedAt,
+      row.runId,
+      row.periodStart,
+      row.periodEnd,
+      row.state,
+      row.grossPayKrw,
+      row.withholdingTaxKrw,
+      row.socialInsuranceKrw,
+      row.otherDeductionsKrw,
+      row.totalDeductionsKrw,
+      row.netPayKrw,
+      row.payslipDistributedAt ?? "",
+      row.payslipReceiptConfirmedAt ?? ""
+    ].join(",")
+  );
+  return [header, ...lines].join("\n");
+}
+
 export async function closePayrollPeriod(
   context: ServiceContext,
   input: ClosePayrollPeriodInput
@@ -2110,6 +2351,193 @@ export async function recalculatePayrollYearEndSettlement(
 
   return {
     recalculation: payload
+  };
+}
+
+export async function finalizePayrollYearEndSettlement(
+  context: ServiceContext,
+  input: FinalizePayrollYearEndSettlementInput
+): Promise<FinalizePayrollYearEndSettlementResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndDeductionInputEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_deduction_input_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingExportEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
+  }
+
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const filingGuard = buildYearEndFilingGuard(snapshot);
+  if (input.apply && !filingGuard.canFinalize) {
+    throw new ServiceError(409, "year-end settlement cannot be finalized", {
+      blockingReasons: filingGuard.blockingReasons,
+      runStates: {
+        totalRuns: filingGuard.runStates.totalRuns,
+        confirmedRuns: filingGuard.runStates.confirmedRuns,
+        previewedRuns: filingGuard.runStates.previewedRuns,
+        undistributedRuns: filingGuard.runStates.undistributedRuns,
+        pendingReceiptRuns: filingGuard.runStates.pendingReceiptRuns
+      }
+    });
+  }
+
+  const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
+  const totalIncomeDeductionKrw = getYearEndDeductionTotalKrw(normalizedDeductionItems);
+  const settled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, totalIncomeDeductionKrw);
+  const finalizationId = `YEF-${input.year}-${input.employeeId}`;
+  const finalizedAt = input.apply ? new Date().toISOString() : null;
+  const finalizedByNote = input.finalizedByNote?.trim() ? input.finalizedByNote.trim() : null;
+  const payload: FinalizePayrollYearEndSettlementResult["settlement"] = {
+    year: input.year,
+    employeeId: input.employeeId,
+    periodStart: snapshot.periodStart.toISOString(),
+    periodEnd: snapshot.periodEnd.toISOString(),
+    apply: input.apply,
+    canFinalize: filingGuard.canFinalize,
+    finalized: input.apply,
+    finalizationId,
+    finalizedAt,
+    finalizedByNote,
+    runStates: filingGuard.runStates,
+    annualTotalsKrw: snapshot.totalsKrw,
+    deductionItemsKrw: {
+      ...normalizedDeductionItems,
+      totalIncomeDeductionKrw,
+      appliedIncomeDeductionKrw: settled.appliedIncomeDeductionKrw,
+      taxableAnnualIncomeBeforeDeductionKrw: settled.taxableAnnualIncomeBeforeDeductionKrw,
+      taxableAnnualIncomeAfterDeductionKrw: settled.settlementKrw.taxableAnnualIncomeKrw
+    },
+    settlementKrw: settled.settlementKrw,
+    blockingReasons: filingGuard.blockingReasons
+  };
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  if (input.apply) {
+    await context.dataAccess.audit.append({
+      action: "payroll.year_end.settlement_finalized",
+      entityType: "PayrollYearEnd",
+      entityId,
+      organizationId: snapshot.organizationId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload
+    });
+    await getEventPublisher(context).publish({
+      name: "payroll.year_end.settlement.finalized.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "PayrollYearEnd",
+      entityId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload
+    });
+  } else {
+    await context.dataAccess.audit.append({
+      action: "payroll.year_end.settlement_finalize_previewed",
+      entityType: "PayrollYearEnd",
+      entityId,
+      organizationId: snapshot.organizationId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload
+    });
+    await getEventPublisher(context).publish({
+      name: "payroll.year_end.settlement.finalize_previewed.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "PayrollYearEnd",
+      entityId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload
+    });
+  }
+
+  return {
+    settlement: payload
+  };
+}
+
+export async function exportPayrollYearEndFilingData(
+  context: ServiceContext,
+  input: ExportPayrollYearEndFilingDataInput
+): Promise<ExportPayrollYearEndFilingDataResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingExportEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
+  }
+
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const filingGuard = buildYearEndFilingGuard(snapshot);
+  if (!filingGuard.canFinalize) {
+    throw new ServiceError(409, "year-end filing data export is blocked", {
+      blockingReasons: filingGuard.blockingReasons,
+      runStates: {
+        totalRuns: filingGuard.runStates.totalRuns,
+        confirmedRuns: filingGuard.runStates.confirmedRuns,
+        previewedRuns: filingGuard.runStates.previewedRuns,
+        undistributedRuns: filingGuard.runStates.undistributedRuns,
+        pendingReceiptRuns: filingGuard.runStates.pendingReceiptRuns
+      }
+    });
+  }
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  const finalizationLogs = await context.dataAccess.audit.list({
+    actions: ["payroll.year_end.settlement_finalized"],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 500
+  });
+  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+  const finalizedPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+  if (!finalizedPayload || !finalizedPayload.finalized || !finalizedPayload.finalizedAt) {
+    throw new ServiceError(409, "year-end settlement must be finalized before filing data export");
+  }
+
+  const records = buildYearEndFilingRecords(snapshot.confirmedRuns);
+  const exportedAt = new Date().toISOString();
+  const payload: ExportPayrollYearEndFilingDataResult["filingData"] = {
+    year: input.year,
+    employeeId: input.employeeId,
+    finalizationId: finalizedPayload.finalizationId,
+    finalizedAt: finalizedPayload.finalizedAt,
+    exportedAt,
+    format: input.format,
+    runStates: finalizedPayload.runStates,
+    annualTotalsKrw: finalizedPayload.annualTotalsKrw,
+    deductionItemsKrw: finalizedPayload.deductionItemsKrw,
+    settlementKrw: finalizedPayload.settlementKrw,
+    records,
+    csv: input.format === "csv" ? buildYearEndFilingCsv(records, finalizedPayload) : null
+  };
+
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.filing_data_exported",
+    entityType: "PayrollYearEnd",
+    entityId,
+    organizationId: snapshot.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.filing_data.exported.v1",
+    occurredAt: exportedAt,
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
+  });
+
+  return {
+    filingData: payload
   };
 }
 
