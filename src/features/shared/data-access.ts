@@ -117,6 +117,11 @@ export type PayrollRunEntity = {
   deductionProfileId: string | null;
   deductionProfileVersion: number | null;
   sourceRecordCount: number;
+  payslipDeliveryChannel: string | null;
+  payslipDistributedAt: Date | null;
+  payslipDistributedBy: string | null;
+  payslipReceiptConfirmedAt: Date | null;
+  payslipReceiptConfirmedBy: string | null;
   confirmedAt: Date | null;
   confirmedBy: string | null;
   createdAt: Date;
@@ -481,6 +486,11 @@ export type UpdatePayrollRunInput = {
   state?: PayrollState;
   confirmedAt?: Date | null;
   confirmedBy?: string | null;
+  payslipDeliveryChannel?: string | null;
+  payslipDistributedAt?: Date | null;
+  payslipDistributedBy?: string | null;
+  payslipReceiptConfirmedAt?: Date | null;
+  payslipReceiptConfirmedBy?: string | null;
 };
 
 export type UpsertDeductionProfileInput = {
