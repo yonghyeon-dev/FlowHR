@@ -950,6 +950,61 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.queue-history-sort-hardening-plus-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-history-sort-hardening-plus-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-history-sort-hardening-plus-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-history-sort-hardening-plus-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-history-sort-hardening-plus-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-history-sort-hardening-plus-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-history-sort-hardening-plus-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-history-sort-hardening-plus-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .queue-evidence-comparison-panel {
   margin-top: 12px;
   border: 1px solid var(--line);
@@ -1294,6 +1349,61 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.queue-delay-risk-response-execution-guide-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-delay-risk-response-execution-guide-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-delay-risk-response-execution-guide-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-delay-risk-response-execution-guide-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-delay-risk-response-execution-guide-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-delay-risk-response-execution-guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-delay-risk-response-execution-guide-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-delay-risk-response-execution-guide-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .queue-mobile-review-sheet {
   margin-top: 12px;
   border: 1px solid var(--line);
@@ -1512,6 +1622,54 @@ button.queue-badge:hover {
 }
 
 .queue-mobile-follow-up-recommendation-upgrade-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-2-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-2-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-2-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-2-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-2-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-2-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-2-actions {
   margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -5102,6 +5260,7 @@ button.queue-badge:hover {
   #approvals .queue-search-sort-list,
   #approvals .queue-history-sort-accuracy-list,
   #approvals .queue-history-sort-hardening-list,
+  #approvals .queue-history-sort-hardening-plus-list,
   #approvals .queue-evidence-preview-list {
     grid-template-columns: 1fr;
   }
@@ -5110,9 +5269,11 @@ button.queue-badge:hover {
   #approvals .queue-processing-prediction-list,
   #approvals .queue-delay-risk-prediction-list,
   #approvals .queue-delay-risk-response-list,
+  #approvals .queue-delay-risk-response-execution-guide-list,
   #approvals .queue-mobile-follow-up-guide-list,
   #approvals .queue-mobile-follow-up-recommendation-list,
-  #approvals .queue-mobile-follow-up-recommendation-upgrade-list {
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-list,
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-2-list {
     grid-template-columns: 1fr;
   }
 
@@ -5129,13 +5290,16 @@ button.queue-badge:hover {
   #approvals .queue-search-sort-head,
   #approvals .queue-history-sort-accuracy-head,
   #approvals .queue-history-sort-hardening-head,
+  #approvals .queue-history-sort-hardening-plus-head,
   #approvals .queue-evidence-comparison-head,
   #approvals .queue-processing-prediction-head,
   #approvals .queue-delay-risk-prediction-head,
   #approvals .queue-delay-risk-response-head,
+  #approvals .queue-delay-risk-response-execution-guide-head,
   #approvals .queue-mobile-follow-up-guide-head,
   #approvals .queue-mobile-follow-up-recommendation-head,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-head,
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-2-head,
   #approvals .queue-sla-timeline-head {
     flex-direction: column;
     align-items: flex-start;

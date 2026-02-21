@@ -370,6 +370,48 @@ type QueueMobileFollowUpRecommendationUpgradeCard = {
   targetSectionId: string;
 };
 
+type QueueHistorySortHardeningPlusCard = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  confidenceGap: number;
+  stabilizationScore: number;
+  responseLabel: string;
+  executionLabel: string;
+  detail: string;
+  searchScope: QueueSearchSortScope;
+  searchQuery: string;
+  recommendedSortOption: QueueSearchSortOption;
+  targetSectionId: string;
+};
+
+type QueueDelayRiskResponseExecutionGuideCard = {
+  key: string;
+  queue: QueueFocus;
+  label: string;
+  severity: QueueAlertLevel;
+  pendingCount: number;
+  riskScore: number;
+  responseWindow: string;
+  executionLabel: string;
+  executionChecklist: string;
+  detail: string;
+  searchScope: QueueSearchSortScope;
+  searchQuery: string;
+  recommendedSortOption: QueueSearchSortOption;
+  targetSectionId: string;
+};
+
+type QueueMobileFollowUpRecommendationUpgrade2Card = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  priorityScore: number;
+  detail: string;
+  actionLabel: string;
+  targetSectionId: string;
+};
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -1375,6 +1417,60 @@ export default function AdminDashboardPage() {
     });
   }, [queueHistorySortAccuracyCards, queueSearchSortOption]);
 
+  const queueHistorySortHardeningPlusCards = useMemo<QueueHistorySortHardeningPlusCard[]>(() => {
+    const cards = queueHistorySortHardeningCards.map((card) => {
+      let searchScope = card.searchScope;
+      let searchQuery = card.searchQuery;
+      let recommendedSortOption = card.recommendedSortOption;
+      if (card.key === "recent") {
+        searchScope = "detail";
+        searchQuery = "pending";
+        recommendedSortOption = "recent_desc";
+      }
+
+      const alignmentBonus = queueSearchSortOption === recommendedSortOption ? 12 : 0;
+      const stabilizationScore =
+        card.totalCompared === 0 ? 0 : Math.min(100, Math.max(0, 100 - card.confidenceGap + alignmentBonus));
+      const executionLabel =
+        card.totalCompared === 0
+          ? "No rows to execute."
+          : card.severity === "critical"
+            ? "Immediate hardening run required."
+            : card.severity === "watch"
+              ? "Run hardening in this cycle."
+              : "Monitor current alignment.";
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        confidenceGap: card.confidenceGap,
+        stabilizationScore,
+        responseLabel:
+          card.totalCompared === 0
+            ? "No queue rows in scope."
+            : `Apply ${queueSearchSortOptionLabel(recommendedSortOption)} and confirm top-row stability.`,
+        executionLabel,
+        detail:
+          card.totalCompared === 0
+            ? "Hardening+ skipped because there are no queue rows."
+            : `gap ${card.confidenceGap} / stabilization score ${stabilizationScore}.`,
+        searchScope,
+        searchQuery,
+        recommendedSortOption,
+        targetSectionId: "approval-search-sort"
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.stabilizationScore - left.stabilizationScore;
+    });
+  }, [queueHistorySortHardeningCards, queueSearchSortOption]);
+
   const queueEvidencePreviewCards = useMemo<QueueEvidencePreviewCard[]>(() => {
     const attendanceCards: QueueEvidencePreviewCard[] = filteredPendingAttendance.map((record) => {
       const waitedHours = attendanceWaitHoursById.get(record.id) ?? 0;
@@ -2080,6 +2176,61 @@ export default function AdminDashboardPage() {
     });
   }, [queueDelayRiskPredictionCards]);
 
+  const queueDelayRiskResponseExecutionGuideCards = useMemo<QueueDelayRiskResponseExecutionGuideCard[]>(() => {
+    const cards = queueDelayRiskResponseCards.map((card) => {
+      const executionLabel =
+        card.pendingCount === 0
+          ? "monitor"
+          : card.severity === "critical"
+            ? "triage now"
+            : card.severity === "watch"
+              ? "execute within today"
+              : "keep monitoring";
+      const executionChecklist =
+        card.pendingCount === 0
+          ? "No pending queue items in this scope."
+          : card.key === "attendance"
+            ? "Check correction context, evidence notes, and oldest pending items first."
+            : card.key === "leave"
+              ? "Check leave range, remaining days, and policy-dependent requests first."
+              : card.key === "payroll"
+                ? "Check blocked payroll previews, owner confirmation, and oldest pending items first."
+                : "Check pending queue, urgent filters, and wait-desc ordering first.";
+
+      return {
+        key: card.key,
+        queue: card.queue,
+        label: card.label,
+        severity: card.severity,
+        pendingCount: card.pendingCount,
+        riskScore: card.riskScore,
+        responseWindow: card.responseWindow,
+        executionLabel,
+        executionChecklist,
+        detail:
+          card.pendingCount === 0
+            ? "Execution guide is idle because there are no pending queue items."
+            : `Run ${executionLabel}: risk ${card.riskScore}, pending ${card.pendingCount}.`,
+        searchScope: card.searchScope,
+        searchQuery: card.searchQuery,
+        recommendedSortOption: card.recommendedSortOption,
+        targetSectionId: card.targetSectionId
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      const riskDiff = right.riskScore - left.riskScore;
+      if (riskDiff !== 0) {
+        return riskDiff;
+      }
+      return right.pendingCount - left.pendingCount;
+    });
+  }, [queueDelayRiskResponseCards]);
+
   const queueMobileFollowUpGuideCards = useMemo<QueueMobileFollowUpGuideCard[]>(() => {
     const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
     const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
@@ -2316,6 +2467,92 @@ export default function AdminDashboardPage() {
     selectedVisibleLeaveCount
   ]);
 
+  const queueMobileFollowUpRecommendationUpgrade2Cards = useMemo<QueueMobileFollowUpRecommendationUpgrade2Card[]>(() => {
+    const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
+    const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
+    const hiddenSelectionCount = hiddenAttendanceSelection + hiddenLeaveSelection;
+    const hasSearchQuery = queueSearchSortQuery.trim().length > 0;
+    const hasSearchResults = filteredQueueSearchSortRows.length > 0;
+    const topSortHardeningPlusRisk = queueHistorySortHardeningPlusCards.find(
+      (card) => card.stabilizationScore > 0 && card.severity !== "normal"
+    );
+    const topDelayExecutionRisk = queueDelayRiskResponseExecutionGuideCards.find(
+      (card) => card.pendingCount > 0 && card.severity !== "normal"
+    );
+
+    const cards: QueueMobileFollowUpRecommendationUpgrade2Card[] = [
+      {
+        key: "sort-hardening-plus-upgrade",
+        label: "sort hardening+ recommendation",
+        severity: topSortHardeningPlusRisk?.severity ?? "normal",
+        priorityScore: topSortHardeningPlusRisk ? topSortHardeningPlusRisk.stabilizationScore : 20,
+        detail: topSortHardeningPlusRisk
+          ? `${topSortHardeningPlusRisk.responseLabel} ${topSortHardeningPlusRisk.executionLabel}`
+          : "No sort hardening+ action is required.",
+        actionLabel: topSortHardeningPlusRisk ? "run hardening+" : "open hardening+ panel",
+        targetSectionId: "approval-history-sort-hardening-plus"
+      },
+      {
+        key: "delay-response-execution-guide-upgrade",
+        label: "delay response execution guide",
+        severity: topDelayExecutionRisk?.severity ?? "normal",
+        priorityScore: topDelayExecutionRisk ? topDelayExecutionRisk.riskScore : 18,
+        detail: topDelayExecutionRisk
+          ? `${topDelayExecutionRisk.executionChecklist} (${topDelayExecutionRisk.responseWindow})`
+          : "No delay-response execution guide is required.",
+        actionLabel: topDelayExecutionRisk ? "run execution guide" : "open execution guide",
+        targetSectionId: "approval-delay-risk-response-execution-guide"
+      },
+      {
+        key: "search-execution-upgrade2",
+        label: "search execution recommendation",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        priorityScore: hasSearchQuery && !hasSearchResults ? 82 : 22,
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "Current query has no matches. Reset filters and widen scope."
+            : `${filteredQueueSearchSortRows.length} queue row(s) are ready for follow-up.`,
+        actionLabel: "open search/sort",
+        targetSectionId: "approval-search-sort"
+      },
+      {
+        key: "selection-integrity-upgrade2",
+        label: "selection integrity recommendation",
+        severity:
+          hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason)
+            ? "watch"
+            : "normal",
+        priorityScore: hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason) ? 88 : 14,
+        detail:
+          hiddenSelectionCount > 0
+            ? `${hiddenSelectionCount} selected item(s) are hidden by active filters.`
+            : selectedLeaveCount > 0 && !hasLeaveRejectReason
+              ? "Leave reject reason is required before reject action."
+              : "Selection and required inputs are aligned.",
+        actionLabel: hiddenSelectionCount > 0 ? "open queue" : "open mobile checklist",
+        targetSectionId: hiddenSelectionCount > 0 ? "approvals" : "approval-mobile-checklist"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    filteredQueueSearchSortRows.length,
+    hasLeaveRejectReason,
+    queueDelayRiskResponseExecutionGuideCards,
+    queueHistorySortHardeningPlusCards,
+    queueSearchSortQuery,
+    selectedAttendanceCount,
+    selectedLeaveCount,
+    selectedVisibleAttendanceCount,
+    selectedVisibleLeaveCount
+  ]);
+
   function jumpToSection(sectionId: string) {
     if (typeof document === "undefined") {
       return;
@@ -2364,6 +2601,26 @@ export default function AdminDashboardPage() {
     });
   }
 
+  function runQueueHistorySortHardeningPlusAction(card: QueueHistorySortHardeningPlusCard) {
+    applyQueueSearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      option: card.recommendedSortOption,
+      urgentOnly: card.severity === "critical",
+      targetSectionId: card.targetSectionId
+    });
+  }
+
+  function runQueueDelayRiskResponseExecutionGuideAction(card: QueueDelayRiskResponseExecutionGuideCard) {
+    applyQueueSearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      option: card.recommendedSortOption,
+      urgentOnly: card.severity !== "normal",
+      targetSectionId: card.targetSectionId
+    });
+  }
+
   function runQueueMobileFollowUpRecommendationUpgradeAction(card: QueueMobileFollowUpRecommendationUpgradeCard) {
     if (card.key === "sort-hardening-upgrade") {
       const hardeningTarget = queueHistorySortHardeningCards.find(
@@ -2382,6 +2639,30 @@ export default function AdminDashboardPage() {
       if (delayTarget) {
         runQueueDelayRiskResponseAction(delayTarget);
         jumpToSection("approval-delay-risk-response");
+        return;
+      }
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runQueueMobileFollowUpRecommendationUpgrade2Action(card: QueueMobileFollowUpRecommendationUpgrade2Card) {
+    if (card.key === "sort-hardening-plus-upgrade") {
+      const hardeningTarget = queueHistorySortHardeningPlusCards.find(
+        (hardeningCard) => hardeningCard.stabilizationScore > 0 && hardeningCard.severity !== "normal"
+      );
+      if (hardeningTarget) {
+        runQueueHistorySortHardeningPlusAction(hardeningTarget);
+        jumpToSection("approval-history-sort-hardening-plus");
+        return;
+      }
+    }
+    if (card.key === "delay-response-execution-guide-upgrade") {
+      const executionGuideTarget = queueDelayRiskResponseExecutionGuideCards.find(
+        (guideCard) => guideCard.pendingCount > 0 && guideCard.severity !== "normal"
+      );
+      if (executionGuideTarget) {
+        runQueueDelayRiskResponseExecutionGuideAction(executionGuideTarget);
+        jumpToSection("approval-delay-risk-response-execution-guide");
         return;
       }
     }
@@ -3894,6 +4175,27 @@ export default function AdminDashboardPage() {
                 >
                   recommendation upgrade
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-history-sort-hardening-plus")}
+                >
+                  sort hardening+
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-delay-risk-response-execution-guide")}
+                >
+                  response execution guide
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-mobile-follow-up-recommendation-upgrade-2")}
+                >
+                  recommendation upgrade 2
+                </button>
               </div>
             </div>
             {filteredQueueSearchSortRows.length === 0 ? (
@@ -3992,6 +4294,46 @@ export default function AdminDashboardPage() {
                       onClick={() => runQueueHistorySortHardeningAction(card)}
                     >
                       apply hardening
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="queue-history-sort-hardening-plus-panel" id="approval-history-sort-hardening-plus">
+            <div className="queue-section-head">
+              <h3>Approval History Sort Hardening Plus</h3>
+              <p className="small muted">
+                Adds stabilization scoring and execution guidance on top of hardening presets.
+              </p>
+            </div>
+            <ul
+              className="queue-history-sort-hardening-plus-list"
+              aria-label="approval history sort hardening plus feedback list"
+            >
+              {queueHistorySortHardeningPlusCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-history-sort-hardening-plus-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>stability {card.stabilizationScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <p className="small muted">{card.responseLabel}</p>
+                  <p className="small muted">{card.executionLabel}</p>
+                  <div className="queue-history-sort-hardening-plus-meta">
+                    <span className="queue-history-chip">gap {card.confidenceGap}</span>
+                    <span className="queue-history-chip">
+                      {queueSearchSortOptionLabel(card.recommendedSortOption)}
+                    </span>
+                  </div>
+                  <div className="queue-history-sort-hardening-plus-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueHistorySortHardeningPlusAction(card)}
+                    >
+                      run hardening+
                     </button>
                   </div>
                 </li>
@@ -4286,6 +4628,47 @@ export default function AdminDashboardPage() {
             </ul>
           </section>
 
+          <section
+            className="queue-delay-risk-response-execution-guide-panel"
+            id="approval-delay-risk-response-execution-guide"
+          >
+            <div className="queue-section-head">
+              <h3>Approval Delay Response Execution Guide</h3>
+              <p className="small muted">
+                Converts delay-response signals into execution checkpoints for one-run mitigation.
+              </p>
+            </div>
+            <ul
+              className="queue-delay-risk-response-execution-guide-list"
+              aria-label="approval delay risk response execution guide list"
+            >
+              {queueDelayRiskResponseExecutionGuideCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-delay-risk-response-execution-guide-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>risk {card.riskScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <p className="small muted">{card.executionChecklist}</p>
+                  <div className="queue-delay-risk-response-execution-guide-meta">
+                    <span className="queue-history-chip">window {card.responseWindow}</span>
+                    <span className="queue-history-chip">pending {card.pendingCount}</span>
+                    <span className="queue-history-chip">{card.executionLabel}</span>
+                  </div>
+                  <div className="queue-delay-risk-response-execution-guide-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueDelayRiskResponseExecutionGuideAction(card)}
+                    >
+                      run execution guide
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="queue-mobile-review-sheet" id="approval-mobile-review-sheet">
             <div className="queue-section-head">
               <h3>모바일 일괄 검토 시트</h3>
@@ -4460,6 +4843,41 @@ export default function AdminDashboardPage() {
                       type="button"
                       className="btn btn-secondary btn-small"
                       onClick={() => runQueueMobileFollowUpRecommendationUpgradeAction(card)}
+                    >
+                      {card.actionLabel}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section
+            className="queue-mobile-follow-up-recommendation-upgrade-2-panel"
+            id="approval-mobile-follow-up-recommendation-upgrade-2"
+          >
+            <div className="queue-section-head">
+              <h3>Mobile Follow-up Recommendation Upgrade 2</h3>
+              <p className="small muted">
+                Prioritizes hardening+, execution-guide, search execution, and selection integrity in one panel.
+              </p>
+            </div>
+            <ul
+              className="queue-mobile-follow-up-recommendation-upgrade-2-list"
+              aria-label="approval mobile follow-up recommendation upgrade 2 list"
+            >
+              {queueMobileFollowUpRecommendationUpgrade2Cards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-mobile-follow-up-recommendation-upgrade-2-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>priority {card.priorityScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-mobile-follow-up-recommendation-upgrade-2-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueMobileFollowUpRecommendationUpgrade2Action(card)}
                     >
                       {card.actionLabel}
                     </button>
