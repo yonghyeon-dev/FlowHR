@@ -10,8 +10,8 @@
       "targetLines": 2500
     },
     "src/app/employee/payslips/page.tsx": {
-      "maxLines": 4649,
-      "targetLines": 3000
+      "maxLines": 3000,
+      "targetLines": 2500
     },
     "src/app/admin/people/page.tsx": {
       "maxLines": 3931,

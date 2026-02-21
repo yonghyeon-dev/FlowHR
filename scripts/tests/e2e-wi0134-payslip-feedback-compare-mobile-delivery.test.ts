@@ -13,17 +13,12 @@ function run() {
 
   assert.match(payslipPage, /id="status-feedback"/, "payslip page should include status feedback panel");
   assert.match(payslipPage, /id="compare-view"/, "payslip page should include compare view panel");
-  assert.match(payslipPage, /id="mobile-delivery"/, "payslip page should include mobile delivery panel");
+  assert.doesNotMatch(payslipPage, /id="mobile-delivery"/, "payslip page should remove mobile delivery panel");
   assert.match(payslipPage, /latestFailedLog/, "payslip page should compute latest failure log");
   assert.match(payslipPage, /compareMetrics/, "payslip page should compute compare metrics");
-  assert.match(payslipPage, /mobileDeliveryState/, "payslip page should track mobile delivery state");
   assert.match(payslipPage, /copyLatestFailureCause/, "payslip page should support failure-cause copy action");
   assert.match(payslipPage, /copyCompareSnapshot/, "payslip page should support compare snapshot copy action");
-  assert.match(
-    payslipPage,
-    /sendMobileDeliverySimulation/,
-    "payslip page should support mobile delivery simulation action"
-  );
+  assert.doesNotMatch(payslipPage, /sendMobileDeliverySimulation/, "mobile delivery simulation should be removed");
 
   assert.match(
     employeeLayout,
@@ -35,21 +30,17 @@ function run() {
     /\/employee\/payslips#compare-view/,
     "employee nav should include payslip compare anchor"
   );
-  assert.match(
+  assert.doesNotMatch(
     employeeLayout,
     /\/employee\/payslips#mobile-delivery/,
-    "employee nav should include payslip mobile delivery anchor"
+    "employee nav should remove payslip mobile delivery anchor"
   );
 
   assert.match(globalCss, /\.panel-payslip-status-feedback/, "status feedback panel style should exist");
   assert.match(globalCss, /\.payslip-status-grid/, "status feedback grid style should exist");
   assert.match(globalCss, /\.payslip-compare-delta-grid/, "compare delta grid style should exist");
-  assert.match(globalCss, /\.delivery-channel-grid/, "mobile delivery channel style should exist");
-  assert.match(globalCss, /\.mobile-delivery-step-list/, "mobile delivery step list style should exist");
-  assert.match(globalCss, /\.mobile-delivery-feedback/, "mobile delivery feedback style should exist");
   assert.match(globalCss, /#status-feedback \.payslip-status-grid/, "status feedback mobile responsive style should exist");
   assert.match(globalCss, /#compare-view \.payslip-compare-delta-grid/, "compare mobile responsive style should exist");
-  assert.match(globalCss, /#mobile-delivery \.delivery-channel-grid/, "mobile delivery responsive style should exist");
 }
 
 run();
