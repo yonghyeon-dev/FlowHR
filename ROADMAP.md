@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.47 (Payslip Page Bloat Section Removal)
+> **Current version**: 0.1.48 (Admin People Bloat Section Removal)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -215,10 +215,11 @@
 - WI-0176 직원 셀프서비스 블로트 정리(`src/app/employee/page.tsx` 반복 섹션 27개 제거 + `src/app/employee/layout.tsx` 코어 앵커 축소 + e2e/라인예산 갱신)
 - WI-0177 관리자 대시보드 블로트 정리(`src/app/admin/page.tsx` 반복 섹션 31개 제거 + `src/app/admin/layout.tsx` 코어 앵커 축소 + e2e/라인예산 갱신)
 - WI-0178 직원 명세서 블로트 정리(`src/app/employee/payslips/page.tsx` 반복 섹션 21개 제거 + `src/app/employee/layout.tsx` payslip 앵커 축소 + e2e/라인예산 갱신)
+- WI-0179 관리자 인사 페이지 블로트 정리(`src/app/admin/people/page.tsx` 반복 섹션 22개 제거 + e2e 체인 정리 + 라인예산 갱신)
 
 ### 진행 중
 
-- 다음: 관리자 인사 이력 블로트 섹션 제거 (WI-0179)
+- 다음: globals.css 블로트 클래스 정리 (WI-0180)
 
 ### 현재 아키텍처
 
