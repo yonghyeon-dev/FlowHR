@@ -1060,6 +1060,61 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.queue-history-sort-execution-tracker-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-history-sort-execution-tracker-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-history-sort-execution-tracker-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-history-sort-execution-tracker-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-history-sort-execution-tracker-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-history-sort-execution-tracker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-history-sort-execution-tracker-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-history-sort-execution-tracker-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .queue-evidence-comparison-panel {
   margin-top: 12px;
   border: 1px solid var(--line);
@@ -1514,6 +1569,61 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.queue-delay-risk-execution-backlog-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-delay-risk-execution-backlog-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-delay-risk-execution-backlog-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-delay-risk-execution-backlog-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-delay-risk-execution-backlog-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-delay-risk-execution-backlog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-delay-risk-execution-backlog-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-delay-risk-execution-backlog-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .queue-mobile-review-sheet {
   margin-top: 12px;
   border: 1px solid var(--line);
@@ -1828,6 +1938,54 @@ button.queue-badge:hover {
 }
 
 .queue-mobile-follow-up-recommendation-upgrade-3-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-4-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-4-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-4-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-4-list li.severity-watch {
+  border-color: #f3d08a;
+  background: #fff8e8;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-4-list li.severity-critical {
+  border-color: #f1b0bd;
+  background: #fff2f5;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-4-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-mobile-follow-up-recommendation-upgrade-4-actions {
   margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -6298,6 +6456,7 @@ button.queue-badge:hover {
   #approvals .queue-history-sort-hardening-list,
   #approvals .queue-history-sort-hardening-plus-list,
   #approvals .queue-history-sort-hardening-plus-execution-list,
+  #approvals .queue-history-sort-execution-tracker-list,
   #approvals .queue-evidence-preview-list {
     grid-template-columns: 1fr;
   }
@@ -6308,11 +6467,13 @@ button.queue-badge:hover {
   #approvals .queue-delay-risk-response-list,
   #approvals .queue-delay-risk-response-execution-guide-list,
   #approvals .queue-delay-risk-response-execution-tracker-list,
+  #approvals .queue-delay-risk-execution-backlog-list,
   #approvals .queue-mobile-follow-up-guide-list,
   #approvals .queue-mobile-follow-up-recommendation-list,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-list,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-2-list,
-  #approvals .queue-mobile-follow-up-recommendation-upgrade-3-list {
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-3-list,
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-4-list {
     grid-template-columns: 1fr;
   }
 
@@ -6331,17 +6492,20 @@ button.queue-badge:hover {
   #approvals .queue-history-sort-hardening-head,
   #approvals .queue-history-sort-hardening-plus-head,
   #approvals .queue-history-sort-hardening-plus-execution-head,
+  #approvals .queue-history-sort-execution-tracker-head,
   #approvals .queue-evidence-comparison-head,
   #approvals .queue-processing-prediction-head,
   #approvals .queue-delay-risk-prediction-head,
   #approvals .queue-delay-risk-response-head,
   #approvals .queue-delay-risk-response-execution-guide-head,
   #approvals .queue-delay-risk-response-execution-tracker-head,
+  #approvals .queue-delay-risk-execution-backlog-head,
   #approvals .queue-mobile-follow-up-guide-head,
   #approvals .queue-mobile-follow-up-recommendation-head,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-head,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-2-head,
   #approvals .queue-mobile-follow-up-recommendation-upgrade-3-head,
+  #approvals .queue-mobile-follow-up-recommendation-upgrade-4-head,
   #approvals .queue-sla-timeline-head {
     flex-direction: column;
     align-items: flex-start;
