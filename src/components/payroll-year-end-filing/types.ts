@@ -56,7 +56,8 @@ export type PayrollYearEndFilingExportResponse = {
     finalizationId: string;
     finalizedAt: string;
     exportedAt: string;
-    format: "json" | "csv";
+    format: "json" | "csv" | "jsonl" | "hometax_csv";
+    validationMode: "basic" | "strict";
     runStates: {
       totalRuns: number;
       confirmedRuns: number;
@@ -76,12 +77,37 @@ export type PayrollYearEndFilingExportResponse = {
     };
     records: Array<{
       runId: string;
+      periodStart: string;
+      periodEnd: string;
+      state: string;
       grossPayKrw: number;
       withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
       totalDeductionsKrw: number;
       netPayKrw: number;
+      payslipDistributedAt: string | null;
+      payslipReceiptConfirmedAt: string | null;
     }>;
     csv: string | null;
+    artifact: {
+      fileName: string;
+      contentType: string;
+      checksumSha256: string;
+      byteLength: number;
+      content: string;
+    };
+    validation: {
+      status: "pass" | "fail";
+      issues: string[];
+      checks: {
+        totalsMatch: boolean;
+        confirmedRunCountMatch: boolean;
+        uniqueRunIds: boolean;
+        receiptCoverage: boolean;
+        nonNegativeAmounts: boolean;
+      };
+    };
   };
 };
 

@@ -42,6 +42,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 34. Reject year-end settlement recalculation API when `payroll_year_end_deduction_input_v1` feature flag is disabled.
 35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing.
 36. Export year-end filing data and reject export before finalization or when `payroll_year_end_filing_export_v1` feature flag is disabled.
+37. Export year-end filing data in `json`/`csv`/`jsonl`/`hometax_csv` and validate `basic`/`strict` mode behavior (strict rejects validation-failed exports).
 
 ## Accuracy Cases
 
@@ -69,6 +70,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 22. Withholding receipt issue guard (confirmed/distributed/receipt-confirmed) remains deterministic.
 23. Year-end deduction-item recalculation baseline-vs-recalculated delta remains deterministic for same confirmed run set and input vector.
 24. Year-end finalization guard and filing-export row/csv output remain deterministic for same finalized payload and run set.
+25. Year-end filing multi-format artifact checksum/content remains deterministic for same finalized payload and format.
 
 ## Regression Linkage
 
@@ -97,3 +99,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Gate: year-end settlement/withholding receipt APIs remain feature-flagged, permission-guarded, and enforce issue prerequisites deterministically.
 - Year-End Recalculation Gate: year-end deduction-item recalculation API remains feature-flagged, permission-guarded, and deterministic for baseline-vs-recalculated deltas.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.
+- Year-End Export Format Gate: filing export multi-format artifact generation and strict validation-mode guard remain deterministic and auditable.
