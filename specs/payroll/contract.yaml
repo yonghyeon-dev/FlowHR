@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.21.0
+version: 1.22.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -25,7 +25,7 @@ scope:
     - year-end filing submission timeline and evidence-note trace workflow
     - year-end filing acknowledgement code dictionary and rejection-reason catalog workflow
     - year-end filing submission cancel/reopen transition guard workflow
-    - year-end filing submission status summary and filter workflow
+    - year-end filing submission search/sort and quick-action workflow
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -86,7 +86,7 @@ api:
       description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload with multi-format output (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode.
     - method: GET
       path: /payroll/year-end/filing-submissions
-      description: List filing submission tracking rows for selected employee/year with optional status/ackStatus/validationStatus/transport filters and summary counters.
+      description: List filing submission tracking rows for selected employee/year with optional status/ackStatus/validationStatus/transport filters, search/sort controls, and summary counters.
     - method: POST
       path: /payroll/year-end/filing-submissions
       description: Submit filing package using latest finalized/exported artifact metadata and selected transport.
@@ -287,7 +287,7 @@ test_plan:
     - year-end filing ack code dictionary and rejection reason catalog resolution formulas
     - year-end filing resubmission state-transition guard formulas
     - year-end filing cancel/reopen transition guard formulas
-    - year-end filing submission list filter and summary builder formulas
+    - year-end filing submission list filter/search/sort and summary builder formulas
     - year-end filing timeline event builder and ordering formulas
     - year-end filing evidence-note append payload formulas
     - withholding receipt issue guard (confirmed/distributed/receipt-confirmed chain)
@@ -326,7 +326,7 @@ test_plan:
     - year-end filing resubmit rejects pending/non-rejected/already-resubmitted source submissions
     - year-end filing cancel/reopen rejects invalid transitions (already canceled/acknowledged/non-canceled targets)
     - year-end filing timeline returns submit/resubmit/cancel/reopen/ack/evidence-note events for selected submission
-    - year-end filing submission list returns deterministic summary counters and filtered subsets by status/ackStatus/validationStatus/transport
+    - year-end filing submission list returns deterministic summary counters and filtered subsets by status/ackStatus/validationStatus/transport/search/sort query
     - year-end filing evidence-note rejects unknown submission and disabled flag state
     - withholding receipt issue rejects issuance when previewed/undistributed/pending-receipt runs remain
     - year-end APIs reject requests when payroll_year_end_v1 is disabled
@@ -351,6 +351,7 @@ test_plan:
     - year-end filing ack catalog/code validation deterministic replay via WI-0194 e2e
     - year-end filing cancel/reopen transition-guard deterministic replay via WI-0195 e2e
     - year-end filing submission summary/filter deterministic replay via WI-0196 e2e
+    - year-end filing submission search/sort and quick-action deterministic replay via WI-0197 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -363,7 +364,7 @@ test_plan:
     - payroll_operator role enforcement for year-end settlement recalculation API
     - payroll_operator role enforcement for year-end finalization and filing-export APIs
     - payroll_operator role enforcement for year-end filing submission/ack/list APIs
-    - payroll_operator role enforcement for year-end filing submission list filter/summarization query
+    - payroll_operator role enforcement for year-end filing submission list filter/search/sort/summarization query
     - payroll_operator role enforcement for year-end filing ack catalog API
     - payroll_operator role enforcement for year-end filing resubmit API
     - payroll_operator role enforcement for year-end filing cancel/reopen APIs
@@ -385,7 +386,7 @@ test_plan:
     - year-end filing ack code and rejection-reason catalog selection remain deterministic
     - year-end filing resubmission attempt increments and parent-linking remain deterministic
     - year-end filing cancel/reopen transitions remain deterministic and preserve single-pending invariant
-    - year-end filing submission summary/filter counters remain deterministic for same query and history
+    - year-end filing submission summary/filter/search/sort counters remain deterministic for same query and history
     - year-end filing timeline event ordering and evidence-note replay remain deterministic
 observability:
   audit_events:
@@ -487,7 +488,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.21.0 extends feature-flagged year-end filing workflow with submission list filter/summarization coverage (`GET /payroll/year-end/filing-submissions` query: status/ackStatus/validationStatus/transport + summary counters) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.22.0 extends feature-flagged year-end filing workflow with submission list search/sort and quick-action UX coverage (`GET /payroll/year-end/filing-submissions` query: status/ackStatus/validationStatus/transport/search/sortBy/sortDirection + summary counters) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -515,6 +516,7 @@ references:
   - work-items/WI-0194-payroll-year-end-filing-ack-code-dictionary-and-rejection-reason-catalog-baseline.md
   - work-items/WI-0195-payroll-year-end-filing-submission-cancel-and-reopen-guard-baseline.md
   - work-items/WI-0196-payroll-year-end-filing-submission-status-summary-and-filter-ux-baseline.md
+  - work-items/WI-0197-payroll-year-end-filing-submission-search-sort-and-quick-action-ux-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

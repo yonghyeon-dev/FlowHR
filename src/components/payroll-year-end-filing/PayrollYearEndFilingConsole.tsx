@@ -16,6 +16,8 @@ import type {
   PayrollYearEndFilingSubmissionListResponse,
   PayrollYearEndFilingSubmissionListSummary,
   PayrollYearEndFilingSubmissionResponse,
+  PayrollYearEndFilingSubmissionSortBy,
+  PayrollYearEndFilingSubmissionSortDirection,
   PayrollYearEndFilingSubmissionStatusFilter,
   PayrollYearEndFilingSubmissionTimelineResponse,
   PayrollYearEndFilingSubmissionTransportFilter,
@@ -97,6 +99,11 @@ export default function PayrollYearEndFilingConsole() {
     useState<PayrollYearEndFilingSubmissionValidationStatusFilter>("all");
   const [submissionTransportFilter, setSubmissionTransportFilter] =
     useState<PayrollYearEndFilingSubmissionTransportFilter>("all");
+  const [submissionSearch, setSubmissionSearch] = useState("");
+  const [submissionSortBy, setSubmissionSortBy] =
+    useState<PayrollYearEndFilingSubmissionSortBy>("submittedAt");
+  const [submissionSortDirection, setSubmissionSortDirection] =
+    useState<PayrollYearEndFilingSubmissionSortDirection>("desc");
   const [ackSubmissionId, setAckSubmissionId] = useState("");
   const [ackStatus, setAckStatus] = useState<"accepted" | "rejected">("accepted");
   const [ackCode, setAckCode] = useState("ACK-OK");
@@ -350,6 +357,11 @@ export default function PayrollYearEndFilingConsole() {
       if (submissionTransportFilter !== "all") {
         query.set("transport", submissionTransportFilter);
       }
+      if (submissionSearch.trim().length > 0) {
+        query.set("search", submissionSearch.trim());
+      }
+      query.set("sortBy", submissionSortBy);
+      query.set("sortDirection", submissionSortDirection);
       const response = await fetch(
         `/api/payroll/year-end/filing-submissions?${query.toString()}`,
         {
@@ -375,7 +387,7 @@ export default function PayrollYearEndFilingConsole() {
       setSubmissionListSummary(body.summary);
       setSubmissions(body.submissions);
       setStatusMessage(
-        `loaded ${body.submissions.length}/${body.summary.totalCount} submissions (filters applied)`
+        `loaded ${body.submissions.length}/${body.summary.totalCount} submissions (filters/search/sort applied)`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -390,6 +402,9 @@ export default function PayrollYearEndFilingConsole() {
     setSubmissionAckStatusFilter("all");
     setSubmissionValidationStatusFilter("all");
     setSubmissionTransportFilter("all");
+    setSubmissionSearch("");
+    setSubmissionSortBy("submittedAt");
+    setSubmissionSortDirection("desc");
   }
 
   async function runLoadAckCatalog() {
@@ -426,8 +441,11 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
-  async function runAcknowledgeSubmission() {
-    const submissionId = ackSubmissionId.trim();
+  async function runAcknowledgeSubmission(
+    submissionIdOverride?: string,
+    ackStatusOverride?: "accepted" | "rejected"
+  ) {
+    const submissionId = (submissionIdOverride ?? ackSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage("ack submission ID is required");
       return;
@@ -435,16 +453,21 @@ export default function PayrollYearEndFilingConsole() {
 
     try {
       setPendingLabel("year-end filing package ack");
+      const requestAckStatus = ackStatusOverride ?? ackStatus;
+      const requestAckCode =
+        requestAckStatus === "accepted" && ackStatusOverride === "accepted"
+          ? ackCatalog?.acceptedCodes[0]?.code ?? "ACK-OK"
+          : ackCode.trim() || undefined;
       const payload = {
         year: parseRequiredInt(year, "year"),
         employeeId: employeeId.trim(),
-        ackStatus,
-        ackCode: ackCode.trim() || undefined,
+        ackStatus: requestAckStatus,
+        ackCode: requestAckCode,
         ackNote: ackNote.trim() || undefined,
         rejectionReasonCode:
-          ackStatus === "rejected" ? rejectionReasonCode.trim() || undefined : undefined,
+          requestAckStatus === "rejected" ? rejectionReasonCode.trim() || undefined : undefined,
         rejectionReasonDetail:
-          ackStatus === "rejected" ? rejectionReasonDetail.trim() || undefined : undefined
+          requestAckStatus === "rejected" ? rejectionReasonDetail.trim() || undefined : undefined
       };
       const response = await fetch(
         `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/ack`,
@@ -472,6 +495,11 @@ export default function PayrollYearEndFilingConsole() {
       setSubmissions((prev) =>
         prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
       );
+      setAckSubmissionId(body.submission.submissionId);
+      setCancelSubmissionId(body.submission.submissionId);
+      if (body.submission.ack?.ackStatus === "rejected") {
+        setResubmitSubmissionId(body.submission.submissionId);
+      }
       setStatusMessage(`acknowledged ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -481,8 +509,8 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
-  async function runResubmitSubmission() {
-    const submissionId = resubmitSubmissionId.trim();
+  async function runResubmitSubmission(submissionIdOverride?: string) {
+    const submissionId = (submissionIdOverride ?? resubmitSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage("resubmit submission ID is required");
       return;
@@ -525,7 +553,7 @@ export default function PayrollYearEndFilingConsole() {
       setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
-      setResubmitSubmissionId("");
+      setResubmitSubmissionId(body.submission.submissionId);
       setStatusMessage(`resubmitted ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -535,8 +563,8 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
-  async function runCancelSubmission() {
-    const submissionId = cancelSubmissionId.trim();
+  async function runCancelSubmission(submissionIdOverride?: string) {
+    const submissionId = (submissionIdOverride ?? cancelSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage("cancel submission ID is required");
       return;
@@ -584,8 +612,8 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
-  async function runReopenSubmission() {
-    const submissionId = reopenSubmissionId.trim();
+  async function runReopenSubmission(submissionIdOverride?: string) {
+    const submissionId = (submissionIdOverride ?? reopenSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage("reopen submission ID is required");
       return;
@@ -731,8 +759,8 @@ export default function PayrollYearEndFilingConsole() {
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization, Filing Status Summary/Filter, ACK Catalog, and Lifecycle Console</h1>
-        <p>Finalize year-end settlement, manage filing submissions with status/ACK/validation/transport filters, and trace timeline/evidence notes plus cancel/reopen transitions per submission.</p>
+        <h1>Payroll Year-End Finalization, Filing Search/Sort, ACK Catalog, and Lifecycle Console</h1>
+        <p>Finalize year-end settlement, manage filing submissions with status/search/sort filters plus quick actions, and trace timeline/evidence notes and cancel/reopen transitions per submission.</p>
       </header>
 
       <section className="panel-grid">
@@ -841,6 +869,41 @@ export default function PayrollYearEndFilingConsole() {
                 <option value="manual_portal">manual_portal</option>
                 <option value="hometax_upload">hometax_upload</option>
                 <option value="nts_api_mock">nts_api_mock</option>
+              </select>
+            </label>
+            <label>Submission Search
+              <input
+                value={submissionSearch}
+                onChange={(event) => setSubmissionSearch(event.target.value)}
+                placeholder="submissionId, ackCode, note"
+              />
+            </label>
+            <label>Submission Sort By
+              <select
+                value={submissionSortBy}
+                onChange={(event) =>
+                  setSubmissionSortBy(event.target.value as PayrollYearEndFilingSubmissionSortBy)
+                }
+              >
+                <option value="submittedAt">submittedAt</option>
+                <option value="attempt">attempt</option>
+                <option value="status">status</option>
+                <option value="ackStatus">ackStatus</option>
+                <option value="validationStatus">validationStatus</option>
+                <option value="transport">transport</option>
+              </select>
+            </label>
+            <label>Submission Sort Direction
+              <select
+                value={submissionSortDirection}
+                onChange={(event) =>
+                  setSubmissionSortDirection(
+                    event.target.value as PayrollYearEndFilingSubmissionSortDirection
+                  )
+                }
+              >
+                <option value="desc">desc</option>
+                <option value="asc">asc</option>
               </select>
             </label>
           </div>
@@ -981,7 +1044,7 @@ export default function PayrollYearEndFilingConsole() {
               <li><span>ACK Status</span><strong>accepted {submissionListSummary.ackStatusCounts.accepted} / rejected {submissionListSummary.ackStatusCounts.rejected} / none {submissionListSummary.ackStatusCounts.none}</strong></li>
               <li><span>Validation</span><strong>pass {submissionListSummary.validationStatusCounts.pass} / fail {submissionListSummary.validationStatusCounts.fail}</strong></li>
               <li><span>Transport</span><strong>manual {submissionListSummary.transportCounts.manual_portal} / hometax {submissionListSummary.transportCounts.hometax_upload} / nts_api_mock {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
-              <li><span>Active Filters</span><strong>status={submissionStatusFilter}, ackStatus={submissionAckStatusFilter}, validation={submissionValidationStatusFilter}, transport={submissionTransportFilter}</strong></li>
+              <li><span>Active Filters</span><strong>status={submissionStatusFilter}, ackStatus={submissionAckStatusFilter}, validation={submissionValidationStatusFilter}, transport={submissionTransportFilter}, search={submissionSearch.trim() || "-"}, sort={submissionSortBy}:{submissionSortDirection}</strong></li>
             </ul>
           )}
           {submissions.length === 0 ? <p className="small">No filing submission yet.</p> : (
@@ -1006,17 +1069,62 @@ export default function PayrollYearEndFilingConsole() {
                         submission.ack.rejectionReasonCode ? `(${submission.ack.rejectionReasonCode})` : ""
                       }`
                     : ""}
-                  {" "}
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      setTimelineSubmissionId(submission.submissionId);
-                      void runLoadSubmissionTimeline(submission.submissionId);
-                    }}
-                    disabled={pendingLabel !== null}
-                  >
-                    Timeline
-                  </button>
+                  <div className="panel-actions">
+                    {submission.status === "submitted" ? (
+                      <>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            void runAcknowledgeSubmission(submission.submissionId, "accepted");
+                          }}
+                          disabled={pendingLabel !== null}
+                        >
+                          Quick ACK Accepted
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            void runCancelSubmission(submission.submissionId);
+                          }}
+                          disabled={pendingLabel !== null}
+                        >
+                          Quick Cancel
+                        </button>
+                      </>
+                    ) : null}
+                    {submission.status === "acknowledged" && submission.ack?.ackStatus === "rejected" ? (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          void runResubmitSubmission(submission.submissionId);
+                        }}
+                        disabled={pendingLabel !== null}
+                      >
+                        Quick Resubmit
+                      </button>
+                    ) : null}
+                    {submission.status === "canceled" ? (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          void runReopenSubmission(submission.submissionId);
+                        }}
+                        disabled={pendingLabel !== null}
+                      >
+                        Quick Reopen
+                      </button>
+                    ) : null}
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setTimelineSubmissionId(submission.submissionId);
+                        void runLoadSubmissionTimeline(submission.submissionId);
+                      }}
+                      disabled={pendingLabel !== null}
+                    >
+                      Timeline
+                    </button>
+                  </div>
                   <time>{new Date(submission.submittedAt).toLocaleString("ko-KR")}</time>
                 </li>
               ))}

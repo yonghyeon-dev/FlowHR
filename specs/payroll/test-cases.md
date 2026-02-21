@@ -49,6 +49,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 41. Query filing ACK catalog and reject acknowledgement when ACK code or rejection reason code is outside catalog.
 42. Cancel/reopen filing submission and reject invalid transitions (acknowledged cancel, non-canceled reopen, canceled acknowledge).
 43. Query filing submission list with status/ackStatus/validationStatus/transport filters and verify summary counters + filtered subsets.
+44. Query filing submission list with search/sort (`search`, `sortBy`, `sortDirection`) and verify deterministic ordering + quick-action prefill coverage in admin console.
 
 ## Accuracy Cases
 
@@ -83,6 +84,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 29. Year-end filing ACK code/rejection reason catalog selection remains deterministic.
 30. Year-end filing cancel/reopen transitions remain deterministic with single-pending submission invariant.
 31. Year-end filing submission summary/filter counters remain deterministic for same query and submission history.
+32. Year-end filing submission search/sort ordering remains deterministic for same query and submission history.
 
 ## Regression Linkage
 
@@ -118,3 +120,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Filing ACK Catalog Gate: filing ACK catalog API and ACK code/rejection reason validation remain deterministic and permission-guarded.
 - Year-End Filing Cancel/Reopen Gate: filing cancel/reopen APIs remain feature-flagged, permission-guarded, and deterministic with auditable state-transition guards.
 - Year-End Filing Summary/Filter Gate: filing submission list query filters and summary counters remain deterministic and permission-guarded.
+- Year-End Filing Search/Sort Quick-Action Gate: filing submission list search/sort query and admin quick actions remain deterministic, permission-guarded, and auditable.

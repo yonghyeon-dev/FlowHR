@@ -23,7 +23,10 @@ export async function GET(request: Request) {
     status: url.searchParams.get("status") ?? undefined,
     ackStatus: url.searchParams.get("ackStatus") ?? undefined,
     validationStatus: url.searchParams.get("validationStatus") ?? undefined,
-    transport: url.searchParams.get("transport") ?? undefined
+    transport: url.searchParams.get("transport") ?? undefined,
+    search: url.searchParams.get("search") ?? undefined,
+    sortBy: url.searchParams.get("sortBy") ?? undefined,
+    sortDirection: url.searchParams.get("sortDirection") ?? undefined
   });
   if (!parsed.success) {
     return fail(400, "invalid query", parsed.error.flatten());
