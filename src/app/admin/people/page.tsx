@@ -273,6 +273,41 @@ type PeopleMobileFollowUpRecommendationUpgrade4Card = {
   targetSectionId: string;
 };
 
+type HistoryExecutionSummaryDigestCard = {
+  key: string;
+  sourceKey: string;
+  label: string;
+  severity: HistoryRiskLevel;
+  digestScore: number;
+  detail: string;
+  executionChecklist: string;
+  executionLabel: string;
+  targetSectionId: string;
+};
+
+type HistoryDelayExecutionBacklogDigestCard = {
+  key: string;
+  sourceKey: string;
+  label: string;
+  severity: HistoryRiskLevel;
+  digestScore: number;
+  detail: string;
+  responseWindow: string;
+  executionChecklist: string;
+  targetSectionId: string;
+};
+
+type PeopleMobileFollowUpRecommendationUpgrade5Card = {
+  key: string;
+  label: string;
+  severity: HistoryRiskLevel;
+  priorityScore: number;
+  detail: string;
+  ctaLabel: string;
+  action: PeopleMobileFollowUpAction;
+  targetSectionId: string;
+};
+
 const profileFieldLabel: Record<ProfileField, string> = {
   organizationId: "조직",
   departmentId: "부서",
@@ -2137,6 +2172,151 @@ export default function AdminPeoplePage() {
     selectedEmployee
   ]);
 
+  const historyExecutionSummaryDigestCards = useMemo<HistoryExecutionSummaryDigestCard[]>(() => {
+    return historySortExecutionSummaryCards
+      .map((card) => ({
+        key: `history-execution-summary-digest-${card.key}`,
+        sourceKey: card.key,
+        label: `${card.label} digest`,
+        severity: card.severity,
+        digestScore: card.summaryScore + (card.severity === "critical" ? 7 : card.severity === "watch" ? 3 : 0),
+        detail: card.detail,
+        executionChecklist: card.executionChecklist,
+        executionLabel: card.executionLabel,
+        targetSectionId: "history-sort-execution-summary"
+      }))
+      .sort((left, right) => {
+        const severityDiff = historyRiskRank(right.severity) - historyRiskRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.digestScore - left.digestScore;
+      });
+  }, [historySortExecutionSummaryCards]);
+
+  const historyDelayExecutionBacklogDigestCards = useMemo<HistoryDelayExecutionBacklogDigestCard[]>(() => {
+    return historyDelayRiskExecutionBacklogCards
+      .map((card) => ({
+        key: `history-delay-execution-backlog-digest-${card.key}`,
+        sourceKey: card.key,
+        label: `${card.label} digest`,
+        severity: card.severity,
+        digestScore: card.backlogScore + (card.severity === "critical" ? 6 : card.severity === "watch" ? 2 : 0),
+        detail: card.detail,
+        responseWindow: card.responseWindow,
+        executionChecklist: card.executionChecklist,
+        targetSectionId: "history-delay-risk-execution-backlog"
+      }))
+      .sort((left, right) => {
+        const severityDiff = historyRiskRank(right.severity) - historyRiskRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.digestScore - left.digestScore;
+      });
+  }, [historyDelayRiskExecutionBacklogCards]);
+
+  const peopleMobileFollowUpRecommendationUpgrade5Cards = useMemo<
+    PeopleMobileFollowUpRecommendationUpgrade5Card[]
+  >(() => {
+    const topSummaryDigest = historyExecutionSummaryDigestCards.find((card) => card.severity !== "normal");
+    const topBacklogDigest = historyDelayExecutionBacklogDigestCards.find((card) => card.severity !== "normal");
+    const hasSearchQuery = normalizedHistorySearchQuery.length > 0;
+    const hasSearchResults = filteredHistorySearchSortRows.length > 0;
+
+    const selectedEmployeeUpgrade5 = !selectedEmployee
+      ? {
+          severity: "critical" as const,
+          priorityScore: 104,
+          detail: "No selected employee. Pick one from org chart first.",
+          ctaLabel: "select employee",
+          action: "select_employee" as const,
+          targetSectionId: "org-chart"
+        }
+      : history.length === 0
+        ? {
+            severity: "watch" as const,
+            priorityScore: 86,
+            detail: "Selected employee has no loaded history. Refresh history now.",
+            ctaLabel: "refresh history",
+            action: "load_history" as const,
+            targetSectionId: "employee-history"
+          }
+        : {
+            severity: "normal" as const,
+            priorityScore: 38,
+            detail: `${history.length} history row(s) are loaded for ${selectedEmployee.id}.`,
+            ctaLabel: "open history",
+            action: "jump" as const,
+            targetSectionId: "employee-history"
+          };
+
+    const cards: PeopleMobileFollowUpRecommendationUpgrade5Card[] = [
+      {
+        key: "history-execution-summary-digest-upgrade5",
+        label: "history execution summary digest",
+        severity: topSummaryDigest?.severity ?? "normal",
+        priorityScore: topSummaryDigest?.digestScore ?? 30,
+        detail: topSummaryDigest
+          ? `${topSummaryDigest.executionChecklist} (${topSummaryDigest.executionLabel})`
+          : "No history execution summary digest action is required.",
+        ctaLabel: "run summary digest",
+        action: "jump",
+        targetSectionId: "history-execution-summary-digest"
+      },
+      {
+        key: "delay-execution-backlog-digest-upgrade5",
+        label: "delay execution backlog digest",
+        severity: topBacklogDigest?.severity ?? "normal",
+        priorityScore: topBacklogDigest?.digestScore ?? 34,
+        detail: topBacklogDigest
+          ? `${topBacklogDigest.executionChecklist} (${topBacklogDigest.responseWindow})`
+          : "No delay execution backlog digest action is required.",
+        ctaLabel: "run backlog digest",
+        action: "jump",
+        targetSectionId: "history-delay-execution-backlog-digest"
+      },
+      {
+        key: "search-execution-upgrade5",
+        label: "search/sort execution recommendation",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        priorityScore: hasSearchQuery && !hasSearchResults ? 74 : 36,
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "Current query has no matches. Broaden scope before follow-up."
+            : `${filteredHistorySearchSortRows.length} row(s) are ready for follow-up execution.`,
+        ctaLabel: hasSearchQuery && !hasSearchResults ? "risk-first view" : "open search/sort",
+        action: hasSearchQuery && !hasSearchResults ? "risk_filter" : "jump",
+        targetSectionId: "history-search-sort"
+      },
+      {
+        key: "selected-history-upgrade5",
+        label: "selected employee recommendation",
+        severity: selectedEmployeeUpgrade5.severity,
+        priorityScore: selectedEmployeeUpgrade5.priorityScore,
+        detail: selectedEmployeeUpgrade5.detail,
+        ctaLabel: selectedEmployeeUpgrade5.ctaLabel,
+        action: selectedEmployeeUpgrade5.action,
+        targetSectionId: selectedEmployeeUpgrade5.targetSectionId
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = historyRiskRank(right.severity) - historyRiskRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    filteredHistorySearchSortRows.length,
+    history.length,
+    historyDelayExecutionBacklogDigestCards,
+    historyExecutionSummaryDigestCards,
+    normalizedHistorySearchQuery.length,
+    selectedEmployee
+  ]);
+
   const selectedDepartments = selectedEmployee?.organizationId
     ? departments.filter((department) => department.organizationId === selectedEmployee.organizationId)
     : departments;
@@ -2497,6 +2677,67 @@ export default function AdminPeoplePage() {
     jumpPeopleSection(card.targetSectionId, card.label);
   }
 
+  function runHistoryExecutionSummaryDigestAction(card: HistoryExecutionSummaryDigestCard) {
+    const sourceCard = historySortExecutionSummaryCards.find((summaryCard) => summaryCard.key === card.sourceKey);
+    if (sourceCard) {
+      runHistorySortExecutionSummaryAction(sourceCard);
+      jumpPeopleSection("history-sort-execution-summary", card.label);
+      return;
+    }
+    jumpPeopleSection(card.targetSectionId, card.label);
+  }
+
+  function runHistoryDelayExecutionBacklogDigestAction(card: HistoryDelayExecutionBacklogDigestCard) {
+    const sourceCard = historyDelayRiskExecutionBacklogCards.find((backlogCard) => backlogCard.key === card.sourceKey);
+    if (sourceCard) {
+      runHistoryDelayRiskExecutionBacklogAction(sourceCard);
+      jumpPeopleSection("history-delay-risk-execution-backlog", card.label);
+      return;
+    }
+    jumpPeopleSection(card.targetSectionId, card.label);
+  }
+
+  function runPeopleMobileFollowUpRecommendationUpgrade5Action(card: PeopleMobileFollowUpRecommendationUpgrade5Card) {
+    if (card.key === "history-execution-summary-digest-upgrade5") {
+      const digestTarget = historyExecutionSummaryDigestCards.find((digestCard) => digestCard.severity !== "normal");
+      if (digestTarget) {
+        runHistoryExecutionSummaryDigestAction(digestTarget);
+        jumpPeopleSection("history-execution-summary-digest", card.label);
+        return;
+      }
+    }
+    if (card.key === "delay-execution-backlog-digest-upgrade5") {
+      const digestTarget = historyDelayExecutionBacklogDigestCards.find((digestCard) => digestCard.severity !== "normal");
+      if (digestTarget) {
+        runHistoryDelayExecutionBacklogDigestAction(digestTarget);
+        jumpPeopleSection("history-delay-execution-backlog-digest", card.label);
+        return;
+      }
+    }
+    if (card.action === "load_history") {
+      if (selectedEmployee) {
+        void loadSelectedEmployeeHistory(selectedEmployee.id);
+      }
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    if (card.action === "risk_filter") {
+      applyHistoryRiskFirstFilter();
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    if (card.action === "select_employee") {
+      const fallbackEmployeeId = filteredEmployees[0]?.id ?? employees[0]?.id;
+      if (fallbackEmployeeId) {
+        setSelectedEmployeeId(fallbackEmployeeId);
+        void loadSelectedEmployeeHistory(fallbackEmployeeId);
+      }
+      jumpPeopleSection(card.targetSectionId, card.label);
+      return;
+    }
+    jumpPeopleSection(card.targetSectionId, card.label);
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -2768,6 +3009,27 @@ export default function AdminPeoplePage() {
               onClick={() => jumpPeopleSection("people-mobile-follow-up-recommendation-upgrade-4", "모바일 추천 고도화 4")}
             >
               추천 고도화 4
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("history-execution-summary-digest", "이력 실행 요약 다이제스트")}
+            >
+              요약 다이제스트
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("history-delay-execution-backlog-digest", "지연 실행 백로그 다이제스트")}
+            >
+              백로그 다이제스트
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => jumpPeopleSection("people-mobile-follow-up-recommendation-upgrade-5", "모바일 추천 고도화 5")}
+            >
+              추천 고도화 5
             </button>
           </div>
           <p className="people-mobile-feedback">{mobileFlowFeedback || "이동할 섹션을 선택하세요."}</p>
@@ -3201,6 +3463,34 @@ export default function AdminPeoplePage() {
           </ul>
         </article>
 
+        <article id="history-execution-summary-digest" className="panel panel-history-execution-summary-digest">
+          <h2>이력 실행 요약 다이제스트</h2>
+          <p className="small">실행 요약 신호를 다이제스트 점수로 축약해 우선 실행 순서를 빠르게 결정합니다.</p>
+          <ul className="history-execution-summary-digest-list" aria-label="people history execution summary digest list">
+            {historyExecutionSummaryDigestCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="history-execution-summary-digest-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">digest {card.digestScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="history-execution-summary-digest-meta">
+                  <span className="queue-history-chip">{card.executionLabel}</span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runHistoryExecutionSummaryDigestAction(card)}
+                >
+                  요약 다이제스트 적용
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article id="history-risk-prediction" className="panel panel-history-risk-prediction">
           <h2>변경 위험 예측 피드백</h2>
           <p className="small">조직/직급 재배치, 식별정보 변경, 비활성 전환 위험을 카드로 요약합니다.</p>
@@ -3387,6 +3677,37 @@ export default function AdminPeoplePage() {
           </ul>
         </article>
 
+        <article id="history-delay-execution-backlog-digest" className="panel panel-history-delay-execution-backlog-digest">
+          <h2>변경 지연 실행 백로그 다이제스트</h2>
+          <p className="small">실행 백로그 신호를 다이제스트 점수로 압축해 긴급 대응 순서를 빠르게 제공합니다.</p>
+          <ul
+            className="history-delay-execution-backlog-digest-list"
+            aria-label="people history delay execution backlog digest list"
+          >
+            {historyDelayExecutionBacklogDigestCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="history-delay-execution-backlog-digest-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">digest {card.digestScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="history-delay-execution-backlog-digest-meta">
+                  <span className="queue-history-chip">{card.responseWindow}</span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runHistoryDelayExecutionBacklogDigestAction(card)}
+                >
+                  백로그 다이제스트 적용
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article id="people-mobile-follow-up-guide" className="panel panel-people-mobile-follow-up-guide">
           <h2>모바일 후속 액션 가이드</h2>
           <p className="small">검색/예측/선택 상태를 바탕으로 다음 액션을 한 번에 실행합니다.</p>
@@ -3543,6 +3864,35 @@ export default function AdminPeoplePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runPeopleMobileFollowUpRecommendationUpgrade4Action(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article
+          id="people-mobile-follow-up-recommendation-upgrade-5"
+          className="panel panel-people-mobile-follow-up-recommendation-upgrade-5"
+        >
+          <h2>모바일 후속 액션 추천 고도화 5</h2>
+          <p className="small">요약 다이제스트, 지연 다이제스트, 검색 실행, 선택 상태를 통합해 최종 우선순위를 제공합니다.</p>
+          <ul
+            className="people-mobile-follow-up-recommendation-upgrade-5-list"
+            aria-label="people mobile follow-up recommendation upgrade 5 list"
+          >
+            {peopleMobileFollowUpRecommendationUpgrade5Cards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="people-mobile-follow-up-recommendation-upgrade-5-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">priority {card.priorityScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runPeopleMobileFollowUpRecommendationUpgrade5Action(card)}
                 >
                   {card.ctaLabel}
                 </button>
