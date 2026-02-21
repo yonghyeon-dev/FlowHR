@@ -173,7 +173,14 @@ async function run() {
   const dryRunBody = await readJson<{
     summary: {
       runStates: { totalRuns: number; confirmedRuns: number; previewedRuns: number };
-      distribution: { targetCount: number; alreadyDistributedCount: number; newlyDistributedCount: number };
+      distribution: {
+        targetCount: number;
+        alreadyDistributedCount: number;
+        newlyDistributedCount: number;
+        targetRunIds: string[];
+        alreadyDistributedRunIds: string[];
+        newlyDistributedRunIds: string[];
+      };
     };
   }>(dryRunResponse);
   assert.deepEqual(dryRunBody.summary.runStates, {
