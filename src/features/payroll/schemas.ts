@@ -264,7 +264,12 @@ export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
   validationStatus: z.enum(["pass", "fail", "all"]).optional(),
   transport: z
     .enum(["manual_portal", "hometax_upload", "nts_api_mock", "all"])
-    .optional()
+    .optional(),
+  search: z.string().trim().min(1).max(120).optional(),
+  sortBy: z
+    .enum(["submittedAt", "attempt", "status", "ackStatus", "validationStatus", "transport"])
+    .optional(),
+  sortDirection: z.enum(["asc", "desc"]).optional()
 });
 
 export const listPayrollYearEndFilingSubmissionTimelineQuerySchema = z.object({

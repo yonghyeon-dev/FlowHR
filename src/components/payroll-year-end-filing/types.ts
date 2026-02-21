@@ -170,6 +170,16 @@ export type PayrollYearEndFilingSubmissionTransportFilter =
   | "nts_api_mock"
   | "all";
 
+export type PayrollYearEndFilingSubmissionSortBy =
+  | "submittedAt"
+  | "attempt"
+  | "status"
+  | "ackStatus"
+  | "validationStatus"
+  | "transport";
+
+export type PayrollYearEndFilingSubmissionSortDirection = "asc" | "desc";
+
 export type PayrollYearEndFilingSubmissionListSummary = {
   totalCount: number;
   filteredCount: number;

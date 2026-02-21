@@ -207,6 +207,14 @@ type PayrollYearEndFilingSubmissionStatusFilter =
 type PayrollYearEndFilingSubmissionAckStatusFilter = PayrollYearEndFilingAckStatus | "none" | "all";
 type PayrollYearEndFilingSubmissionValidationStatusFilter = "pass" | "fail" | "all";
 type PayrollYearEndFilingSubmissionTransportFilter = PayrollYearEndFilingTransport | "all";
+type PayrollYearEndFilingSubmissionSortBy =
+  | "submittedAt"
+  | "attempt"
+  | "status"
+  | "ackStatus"
+  | "validationStatus"
+  | "transport";
+type PayrollYearEndFilingSubmissionSortDirection = "asc" | "desc";
 
 type ListPayrollYearEndFilingSubmissionsInput = {
   year: number;
@@ -215,6 +223,9 @@ type ListPayrollYearEndFilingSubmissionsInput = {
   ackStatus?: PayrollYearEndFilingSubmissionAckStatusFilter;
   validationStatus?: PayrollYearEndFilingSubmissionValidationStatusFilter;
   transport?: PayrollYearEndFilingSubmissionTransportFilter;
+  search?: string;
+  sortBy?: PayrollYearEndFilingSubmissionSortBy;
+  sortDirection?: PayrollYearEndFilingSubmissionSortDirection;
 };
 
 type ListPayrollYearEndFilingSubmissionTimelineInput = {
@@ -3584,6 +3595,43 @@ function buildYearEndFilingSubmissionTimeline(
   });
 }
 
+function getYearEndFilingSubmissionAckStatus(
+  submission: PayrollYearEndFilingSubmissionSummary
+): PayrollYearEndFilingAckStatus | "none" {
+  return submission.ack?.ackStatus ?? "none";
+}
+
+function normalizeYearEndFilingSubmissionSearch(search: string | undefined) {
+  const normalized = search?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  return normalized;
+}
+
+function matchesYearEndFilingSubmissionSearch(
+  submission: PayrollYearEndFilingSubmissionSummary,
+  normalizedSearch: string
+) {
+  const searchTokens = [
+    submission.submissionId,
+    submission.resubmissionOfSubmissionId,
+    submission.resubmissionReason,
+    submission.submissionNote,
+    submission.transport,
+    submission.validationMode,
+    submission.validationStatus,
+    submission.status,
+    String(submission.attempt),
+    submission.ack?.ackStatus ?? null,
+    submission.ack?.ackCode ?? null,
+    submission.ack?.ackNote ?? null,
+    submission.ack?.rejectionReasonCode ?? null,
+    submission.ack?.rejectionReasonDetail ?? null
+  ];
+  return searchTokens.some((token) => token?.toLowerCase().includes(normalizedSearch));
+}
+
 function matchesYearEndFilingSubmissionFilters(
   submission: PayrollYearEndFilingSubmissionSummary,
   filters: ListPayrollYearEndFilingSubmissionsInput
@@ -3610,7 +3658,106 @@ function matchesYearEndFilingSubmissionFilters(
   if (filters.transport && filters.transport !== "all" && submission.transport !== filters.transport) {
     return false;
   }
+  const normalizedSearch = normalizeYearEndFilingSubmissionSearch(filters.search);
+  if (normalizedSearch && !matchesYearEndFilingSubmissionSearch(submission, normalizedSearch)) {
+    return false;
+  }
   return true;
+}
+
+const payrollYearEndFilingSubmissionStatusSortOrder: Record<
+  PayrollYearEndFilingSubmissionStatus,
+  number
+> = {
+  submitted: 0,
+  acknowledged: 1,
+  canceled: 2
+};
+
+const payrollYearEndFilingSubmissionAckStatusSortOrder: Record<
+  PayrollYearEndFilingAckStatus | "none",
+  number
+> = {
+  none: 0,
+  accepted: 1,
+  rejected: 2
+};
+
+const payrollYearEndFilingSubmissionValidationStatusSortOrder: Record<
+  "pass" | "fail",
+  number
+> = {
+  pass: 0,
+  fail: 1
+};
+
+const payrollYearEndFilingSubmissionTransportSortOrder: Record<
+  PayrollYearEndFilingTransport,
+  number
+> = {
+  manual_portal: 0,
+  hometax_upload: 1,
+  nts_api_mock: 2
+};
+
+function compareYearEndFilingSubmissionBySortKey(
+  left: PayrollYearEndFilingSubmissionSummary,
+  right: PayrollYearEndFilingSubmissionSummary,
+  sortBy: PayrollYearEndFilingSubmissionSortBy
+) {
+  if (sortBy === "submittedAt") {
+    return left.submittedAt.localeCompare(right.submittedAt);
+  }
+  if (sortBy === "attempt") {
+    return left.attempt - right.attempt;
+  }
+  if (sortBy === "status") {
+    return (
+      payrollYearEndFilingSubmissionStatusSortOrder[left.status] -
+      payrollYearEndFilingSubmissionStatusSortOrder[right.status]
+    );
+  }
+  if (sortBy === "ackStatus") {
+    return (
+      payrollYearEndFilingSubmissionAckStatusSortOrder[getYearEndFilingSubmissionAckStatus(left)] -
+      payrollYearEndFilingSubmissionAckStatusSortOrder[getYearEndFilingSubmissionAckStatus(right)]
+    );
+  }
+  if (sortBy === "validationStatus") {
+    return (
+      payrollYearEndFilingSubmissionValidationStatusSortOrder[left.validationStatus] -
+      payrollYearEndFilingSubmissionValidationStatusSortOrder[right.validationStatus]
+    );
+  }
+  return (
+    payrollYearEndFilingSubmissionTransportSortOrder[left.transport] -
+    payrollYearEndFilingSubmissionTransportSortOrder[right.transport]
+  );
+}
+
+function sortYearEndFilingSubmissions(
+  submissions: PayrollYearEndFilingSubmissionSummary[],
+  options: {
+    sortBy?: PayrollYearEndFilingSubmissionSortBy;
+    sortDirection?: PayrollYearEndFilingSubmissionSortDirection;
+  }
+) {
+  const sortBy = options.sortBy ?? "submittedAt";
+  const direction = options.sortDirection ?? "desc";
+  const directionFactor = direction === "asc" ? 1 : -1;
+
+  return [...submissions].sort((left, right) => {
+    const primary =
+      compareYearEndFilingSubmissionBySortKey(left, right, sortBy) * directionFactor;
+    if (primary !== 0) {
+      return primary;
+    }
+    const submittedAtFallback = right.submittedAt.localeCompare(left.submittedAt);
+    if (submittedAtFallback !== 0) {
+      return submittedAtFallback;
+    }
+    return right.submissionId.localeCompare(left.submissionId);
+  });
 }
 
 function buildYearEndFilingSubmissionListSummary(input: {
@@ -4100,13 +4247,17 @@ export async function listPayrollYearEndFilingSubmissions(
 
   await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const allSubmissions = await listYearEndFilingSubmissionSummaries(context, input);
-  const submissions = allSubmissions.filter((submission) =>
+  const filteredSubmissions = allSubmissions.filter((submission) =>
     matchesYearEndFilingSubmissionFilters(submission, input)
   );
+  const submissions = sortYearEndFilingSubmissions(filteredSubmissions, {
+    sortBy: input.sortBy,
+    sortDirection: input.sortDirection
+  });
   return {
     summary: buildYearEndFilingSubmissionListSummary({
       allSubmissions,
-      filteredSubmissions: submissions
+      filteredSubmissions
     }),
     submissions
   };
