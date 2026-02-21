@@ -4336,15 +4336,18 @@ button.queue-badge:hover {
 .panel-payslip-search-sort,
 .panel-payslip-history-sort-accuracy,
 .panel-payslip-history-sort-hardening,
+.panel-payslip-history-sort-hardening-plus,
 .panel-payslip-status-feedback,
 .panel-payslip-compare,
 .panel-payslip-mobile-delivery,
 .panel-payslip-confirmation-prediction,
 .panel-payslip-delay-risk-prediction,
 .panel-payslip-delay-risk-response,
+.panel-payslip-delay-risk-response-execution-guide,
 .panel-payslip-mobile-follow-up-guide,
 .panel-payslip-mobile-follow-up-recommendation,
-.panel-payslip-mobile-follow-up-recommendation-upgrade {
+.panel-payslip-mobile-follow-up-recommendation-upgrade,
+.panel-payslip-mobile-follow-up-recommendation-upgrade-2 {
   grid-column: 1 / -1;
 }
 
@@ -4508,6 +4511,60 @@ button.queue-badge:hover {
 }
 
 .payslip-history-sort-hardening-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.payslip-history-sort-hardening-plus-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.payslip-history-sort-hardening-plus-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-history-sort-hardening-plus-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-history-sort-hardening-plus-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.payslip-history-sort-hardening-plus-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-history-sort-hardening-plus-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-history-sort-hardening-plus-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-history-sort-hardening-plus-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -4783,6 +4840,60 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.payslip-delay-risk-response-execution-guide-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.payslip-delay-risk-response-execution-guide-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-delay-risk-response-execution-guide-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-delay-risk-response-execution-guide-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.payslip-delay-risk-response-execution-guide-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-delay-risk-response-execution-guide-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-delay-risk-response-execution-guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-delay-risk-response-execution-guide-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .delivery-channel-grid {
   display: grid;
   gap: 8px;
@@ -4996,6 +5107,54 @@ button.queue-badge:hover {
 }
 
 .payslip-mobile-follow-up-recommendation-upgrade-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-2-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-2-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-2-list li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-2-list li.severity-watch {
+  border-color: #f1ddb2;
+  background: #fff7df;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-2-list li.severity-critical {
+  border-color: #f2c4ce;
+  background: #ffedf1;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-2-list li.severity-normal {
+  border-color: #d3e0f8;
+  background: #f2f7ff;
+}
+
+.payslip-mobile-follow-up-recommendation-upgrade-2-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5410,12 +5569,15 @@ button.queue-badge:hover {
   #payslip-search-sort .payslip-search-list,
   #payslip-history-sort-accuracy .payslip-history-sort-accuracy-list,
   #payslip-history-sort-hardening .payslip-history-sort-hardening-list,
+  #payslip-history-sort-hardening-plus .payslip-history-sort-hardening-plus-list,
   #payslip-confirmation-prediction .payslip-confirmation-prediction-list,
   #payslip-delay-risk-prediction .payslip-delay-risk-prediction-list,
   #payslip-delay-risk-response .payslip-delay-risk-response-list,
+  #payslip-delay-risk-response-execution-guide .payslip-delay-risk-response-execution-guide-list,
   #payslip-mobile-follow-up-guide .payslip-mobile-follow-up-guide-list,
   #payslip-mobile-follow-up-recommendation .payslip-mobile-follow-up-recommendation-list,
-  #payslip-mobile-follow-up-recommendation-upgrade .payslip-mobile-follow-up-recommendation-upgrade-list {
+  #payslip-mobile-follow-up-recommendation-upgrade .payslip-mobile-follow-up-recommendation-upgrade-list,
+  #payslip-mobile-follow-up-recommendation-upgrade-2 .payslip-mobile-follow-up-recommendation-upgrade-2-list {
     grid-template-columns: 1fr;
   }
 
@@ -5431,12 +5593,15 @@ button.queue-badge:hover {
   #payslip-search-sort .payslip-search-head,
   #payslip-history-sort-accuracy .payslip-history-sort-accuracy-head,
   #payslip-history-sort-hardening .payslip-history-sort-hardening-head,
+  #payslip-history-sort-hardening-plus .payslip-history-sort-hardening-plus-head,
   #payslip-confirmation-prediction .payslip-confirmation-prediction-head,
   #payslip-delay-risk-prediction .payslip-delay-risk-prediction-head,
   #payslip-delay-risk-response .payslip-delay-risk-response-head,
+  #payslip-delay-risk-response-execution-guide .payslip-delay-risk-response-execution-guide-head,
   #payslip-mobile-follow-up-guide .payslip-mobile-follow-up-guide-head,
   #payslip-mobile-follow-up-recommendation .payslip-mobile-follow-up-recommendation-head,
-  #payslip-mobile-follow-up-recommendation-upgrade .payslip-mobile-follow-up-recommendation-upgrade-head {
+  #payslip-mobile-follow-up-recommendation-upgrade .payslip-mobile-follow-up-recommendation-upgrade-head,
+  #payslip-mobile-follow-up-recommendation-upgrade-2 .payslip-mobile-follow-up-recommendation-upgrade-2-head {
     flex-direction: column;
     align-items: flex-start;
   }
