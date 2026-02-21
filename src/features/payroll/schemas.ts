@@ -165,6 +165,22 @@ const closePayrollPeriodSettlementSchema = z.object({
 });
 
 const payrollYearSchema = z.number().int().min(2020).max(2100);
+const yearEndDeductionItemsSchema = z.object({
+  personalPensionKrw: nonNegativeInteger.default(0),
+  insurancePremiumKrw: nonNegativeInteger.default(0),
+  medicalExpenseKrw: nonNegativeInteger.default(0),
+  educationExpenseKrw: nonNegativeInteger.default(0),
+  donationKrw: nonNegativeInteger.default(0),
+  housingSavingsKrw: nonNegativeInteger.default(0)
+});
+const defaultYearEndDeductionItems = {
+  personalPensionKrw: 0,
+  insurancePremiumKrw: 0,
+  medicalExpenseKrw: 0,
+  educationExpenseKrw: 0,
+  donationKrw: 0,
+  housingSavingsKrw: 0
+};
 
 export const closePayrollPeriodSchema = z.object({
   periodStart: isoDateTime,
@@ -188,6 +204,10 @@ export const previewPayrollYearEndSettlementSchema = z.object({
   additionalTaxCreditKrw: nonNegativeInteger.default(0),
   annualIncomeTaxRate: rate.default(0.03),
   localIncomeTaxRate: rate.default(0.1)
+});
+
+export const recalculatePayrollYearEndSettlementSchema = previewPayrollYearEndSettlementSchema.extend({
+  deductionItems: yearEndDeductionItemsSchema.default(defaultYearEndDeductionItems)
 });
 
 export const issuePayrollYearEndWithholdingReceiptSchema = z.object({

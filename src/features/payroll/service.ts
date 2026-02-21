@@ -121,6 +121,19 @@ type PreviewPayrollYearEndSettlementInput = {
   localIncomeTaxRate: number;
 };
 
+type YearEndDeductionItemsInput = {
+  personalPensionKrw: number;
+  insurancePremiumKrw: number;
+  medicalExpenseKrw: number;
+  educationExpenseKrw: number;
+  donationKrw: number;
+  housingSavingsKrw: number;
+};
+
+type RecalculatePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
+  deductionItems: YearEndDeductionItemsInput;
+};
+
 type IssuePayrollYearEndWithholdingReceiptInput = {
   year: number;
   employeeId: string;
@@ -279,36 +292,68 @@ type AcknowledgePayrollPayslipReceiptResult = {
   };
 };
 
+type YearEndSettlementKrw = {
+  nonTaxableAnnualIncomeKrw: number;
+  taxableAnnualIncomeKrw: number;
+  annualIncomeTaxBeforeCreditKrw: number;
+  additionalTaxCreditKrw: number;
+  annualIncomeTaxAfterCreditKrw: number;
+  annualLocalIncomeTaxKrw: number;
+  annualTaxLiabilityKrw: number;
+  priorWithheldTaxKrw: number;
+  withholdingDeltaKrw: number;
+};
+
+type YearEndRunStates = {
+  totalRuns: number;
+  confirmedRuns: number;
+  previewedRuns: number;
+  previewedRunIds: string[];
+};
+
+type PayrollTotalsKrw = {
+  grossPayKrw: number;
+  withholdingTaxKrw: number;
+  socialInsuranceKrw: number;
+  otherDeductionsKrw: number;
+  totalDeductionsKrw: number;
+  netPayKrw: number;
+};
+
+type YearEndSettlementSummary = {
+  year: number;
+  employeeId: string;
+  periodStart: string;
+  periodEnd: string;
+  runStates: YearEndRunStates;
+  annualTotalsKrw: PayrollTotalsKrw;
+  settlementKrw: YearEndSettlementKrw;
+};
+
 type PreviewPayrollYearEndSettlementResult = {
-  summary: {
+  summary: YearEndSettlementSummary;
+};
+
+type RecalculatePayrollYearEndSettlementResult = {
+  recalculation: {
     year: number;
     employeeId: string;
     periodStart: string;
     periodEnd: string;
-    runStates: {
-      totalRuns: number;
-      confirmedRuns: number;
-      previewedRuns: number;
-      previewedRunIds: string[];
+    runStates: YearEndRunStates;
+    annualTotalsKrw: PayrollTotalsKrw;
+    deductionItemsKrw: YearEndDeductionItemsInput & {
+      totalIncomeDeductionKrw: number;
+      appliedIncomeDeductionKrw: number;
+      taxableAnnualIncomeBeforeDeductionKrw: number;
+      taxableAnnualIncomeAfterDeductionKrw: number;
     };
-    annualTotalsKrw: {
-      grossPayKrw: number;
-      withholdingTaxKrw: number;
-      socialInsuranceKrw: number;
-      otherDeductionsKrw: number;
-      totalDeductionsKrw: number;
-      netPayKrw: number;
-    };
-    settlementKrw: {
-      nonTaxableAnnualIncomeKrw: number;
-      taxableAnnualIncomeKrw: number;
-      annualIncomeTaxBeforeCreditKrw: number;
-      additionalTaxCreditKrw: number;
-      annualIncomeTaxAfterCreditKrw: number;
-      annualLocalIncomeTaxKrw: number;
-      annualTaxLiabilityKrw: number;
-      priorWithheldTaxKrw: number;
-      withholdingDeltaKrw: number;
+    baselineSettlementKrw: YearEndSettlementKrw;
+    recalculatedSettlementKrw: YearEndSettlementKrw;
+    deltaKrw: {
+      annualTaxLiabilityDeltaKrw: number;
+      withholdingDeltaChangeKrw: number;
+      taxableIncomeReductionKrw: number;
     };
   };
 };
@@ -461,6 +506,15 @@ function isPayrollPayslipDeliveryEnabled() {
 function isPayrollYearEndEnabled() {
   const raw =
     process.env.FLOWHR_PAYROLL_YEAR_END_V1 ?? process.env.PAYROLL_YEAR_END_V1 ?? "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isPayrollYearEndDeductionInputEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_YEAR_END_DEDUCTION_INPUT_V1 ??
+    process.env.PAYROLL_YEAR_END_DEDUCTION_INPUT_V1 ??
+    "";
   const value = raw.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
 }
@@ -1451,6 +1505,132 @@ function aggregatePayrollTotalsKrw(runs: PayrollRunEntity[]) {
   );
 }
 
+type YearEndRunSnapshot = {
+  organizationId: string | null;
+  periodStart: Date;
+  periodEnd: Date;
+  runs: PayrollRunEntity[];
+  confirmedRuns: PayrollRunEntity[];
+  previewedRuns: PayrollRunEntity[];
+  totalsKrw: PayrollTotalsKrw;
+};
+
+async function loadYearEndRunSnapshot(
+  context: ServiceContext,
+  year: number,
+  employeeId: string
+): Promise<YearEndRunSnapshot> {
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, employeeId);
+  const { periodStart, periodEnd } = getYearPeriodInSeoul(year);
+  const tenantScope = resolveTenantScope(context.actor);
+  const runs = await context.dataAccess.payroll.listInPeriod({
+    periodStart,
+    periodEnd,
+    organizationId: tenantScope ?? undefined,
+    employeeId
+  });
+  const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
+  const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
+  return {
+    organizationId: employee.organizationId,
+    periodStart,
+    periodEnd,
+    runs,
+    confirmedRuns,
+    previewedRuns,
+    totalsKrw: aggregatePayrollTotalsKrw(confirmedRuns)
+  };
+}
+
+function normalizeYearEndDeductionItems(
+  deductionItems: YearEndDeductionItemsInput
+): YearEndDeductionItemsInput {
+  return {
+    personalPensionKrw: toKrwInteger(
+      deductionItems.personalPensionKrw,
+      "deductionItems.personalPensionKrw"
+    ),
+    insurancePremiumKrw: toKrwInteger(
+      deductionItems.insurancePremiumKrw,
+      "deductionItems.insurancePremiumKrw"
+    ),
+    medicalExpenseKrw: toKrwInteger(deductionItems.medicalExpenseKrw, "deductionItems.medicalExpenseKrw"),
+    educationExpenseKrw: toKrwInteger(
+      deductionItems.educationExpenseKrw,
+      "deductionItems.educationExpenseKrw"
+    ),
+    donationKrw: toKrwInteger(deductionItems.donationKrw, "deductionItems.donationKrw"),
+    housingSavingsKrw: toKrwInteger(deductionItems.housingSavingsKrw, "deductionItems.housingSavingsKrw")
+  };
+}
+
+function getYearEndDeductionTotalKrw(deductionItems: YearEndDeductionItemsInput) {
+  return (
+    deductionItems.personalPensionKrw +
+    deductionItems.insurancePremiumKrw +
+    deductionItems.medicalExpenseKrw +
+    deductionItems.educationExpenseKrw +
+    deductionItems.donationKrw +
+    deductionItems.housingSavingsKrw
+  );
+}
+
+function calculateYearEndSettlementKrw(
+  totalsKrw: PayrollTotalsKrw,
+  input: PreviewPayrollYearEndSettlementInput,
+  incomeDeductionKrw: number
+) {
+  const nonTaxableAnnualIncomeKrw = toKrwInteger(
+    input.nonTaxableAnnualIncomeKrw,
+    "nonTaxableAnnualIncomeKrw"
+  );
+  const additionalTaxCreditKrw = toKrwInteger(input.additionalTaxCreditKrw, "additionalTaxCreditKrw");
+  const annualIncomeTaxRate = toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0;
+  const localIncomeTaxRate = toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0;
+  const normalizedIncomeDeductionKrw = toKrwInteger(incomeDeductionKrw, "incomeDeductionKrw");
+
+  const taxableAnnualIncomeBeforeDeductionKrw = Math.max(
+    totalsKrw.grossPayKrw - nonTaxableAnnualIncomeKrw,
+    0
+  );
+  const appliedIncomeDeductionKrw = Math.min(
+    normalizedIncomeDeductionKrw,
+    taxableAnnualIncomeBeforeDeductionKrw
+  );
+  const taxableAnnualIncomeKrw = taxableAnnualIncomeBeforeDeductionKrw - appliedIncomeDeductionKrw;
+  const annualIncomeTaxBeforeCreditKrw = toKrwInteger(
+    Math.round(taxableAnnualIncomeKrw * annualIncomeTaxRate),
+    "annualIncomeTaxBeforeCreditKrw"
+  );
+  const annualIncomeTaxAfterCreditKrw = Math.max(
+    annualIncomeTaxBeforeCreditKrw - additionalTaxCreditKrw,
+    0
+  );
+  const annualLocalIncomeTaxKrw = toKrwInteger(
+    Math.round(annualIncomeTaxAfterCreditKrw * localIncomeTaxRate),
+    "annualLocalIncomeTaxKrw"
+  );
+  const annualTaxLiabilityKrw = annualIncomeTaxAfterCreditKrw + annualLocalIncomeTaxKrw;
+  const priorWithheldTaxKrw = totalsKrw.withholdingTaxKrw;
+  const withholdingDeltaKrw = annualTaxLiabilityKrw - priorWithheldTaxKrw;
+
+  return {
+    settlementKrw: {
+      nonTaxableAnnualIncomeKrw,
+      taxableAnnualIncomeKrw,
+      annualIncomeTaxBeforeCreditKrw,
+      additionalTaxCreditKrw,
+      annualIncomeTaxAfterCreditKrw,
+      annualLocalIncomeTaxKrw,
+      annualTaxLiabilityKrw,
+      priorWithheldTaxKrw,
+      withholdingDeltaKrw
+    },
+    taxableAnnualIncomeBeforeDeductionKrw,
+    appliedIncomeDeductionKrw
+  };
+}
+
 export async function closePayrollPeriod(
   context: ServiceContext,
   input: ClosePayrollPeriodInput
@@ -1809,71 +1989,22 @@ export async function previewPayrollYearEndSettlement(
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
 
-  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
-  const { periodStart, periodEnd } = getYearPeriodInSeoul(input.year);
-  const tenantScope = resolveTenantScope(context.actor);
-  const runs = await context.dataAccess.payroll.listInPeriod({
-    periodStart,
-    periodEnd,
-    organizationId: tenantScope ?? undefined,
-    employeeId: input.employeeId
-  });
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const settled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
 
-  const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
-  const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
-  const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
-
-  const nonTaxableAnnualIncomeKrw = toKrwInteger(
-    input.nonTaxableAnnualIncomeKrw,
-    "nonTaxableAnnualIncomeKrw"
-  );
-  const additionalTaxCreditKrw = toKrwInteger(
-    input.additionalTaxCreditKrw,
-    "additionalTaxCreditKrw"
-  );
-  const annualIncomeTaxRate = toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0;
-  const localIncomeTaxRate = toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0;
-
-  const taxableAnnualIncomeKrw = Math.max(totalsKrw.grossPayKrw - nonTaxableAnnualIncomeKrw, 0);
-  const annualIncomeTaxBeforeCreditKrw = toKrwInteger(
-    Math.round(taxableAnnualIncomeKrw * annualIncomeTaxRate),
-    "annualIncomeTaxBeforeCreditKrw"
-  );
-  const annualIncomeTaxAfterCreditKrw = Math.max(
-    annualIncomeTaxBeforeCreditKrw - additionalTaxCreditKrw,
-    0
-  );
-  const annualLocalIncomeTaxKrw = toKrwInteger(
-    Math.round(annualIncomeTaxAfterCreditKrw * localIncomeTaxRate),
-    "annualLocalIncomeTaxKrw"
-  );
-  const annualTaxLiabilityKrw = annualIncomeTaxAfterCreditKrw + annualLocalIncomeTaxKrw;
-  const priorWithheldTaxKrw = totalsKrw.withholdingTaxKrw;
-  const withholdingDeltaKrw = annualTaxLiabilityKrw - priorWithheldTaxKrw;
-
-  const payload = {
+  const payload: YearEndSettlementSummary = {
     year: input.year,
     employeeId: input.employeeId,
-    periodStart: periodStart.toISOString(),
-    periodEnd: periodEnd.toISOString(),
+    periodStart: snapshot.periodStart.toISOString(),
+    periodEnd: snapshot.periodEnd.toISOString(),
     runStates: {
-      totalRuns: runs.length,
-      confirmedRuns: confirmedRuns.length,
-      previewedRuns: previewedRuns.length,
-      previewedRunIds: previewedRuns.map((run) => run.id)
+      totalRuns: snapshot.runs.length,
+      confirmedRuns: snapshot.confirmedRuns.length,
+      previewedRuns: snapshot.previewedRuns.length,
+      previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
     },
-    annualTotalsKrw: totalsKrw,
-    settlementKrw: {
-      nonTaxableAnnualIncomeKrw,
-      taxableAnnualIncomeKrw,
-      annualIncomeTaxBeforeCreditKrw,
-      additionalTaxCreditKrw,
-      annualIncomeTaxAfterCreditKrw,
-      annualLocalIncomeTaxKrw,
-      annualTaxLiabilityKrw,
-      priorWithheldTaxKrw,
-      withholdingDeltaKrw
-    }
+    annualTotalsKrw: snapshot.totalsKrw,
+    settlementKrw: settled.settlementKrw
   };
 
   const entityId = `${input.year}_${input.employeeId}`;
@@ -1881,7 +2012,7 @@ export async function previewPayrollYearEndSettlement(
     action: "payroll.year_end.settlement_previewed",
     entityType: "PayrollYearEnd",
     entityId,
-    organizationId: employee.organizationId,
+    organizationId: snapshot.organizationId,
     actorRole: context.actor!.role,
     actorId: context.actor!.id,
     payload
@@ -1898,6 +2029,87 @@ export async function previewPayrollYearEndSettlement(
 
   return {
     summary: payload
+  };
+}
+
+export async function recalculatePayrollYearEndSettlement(
+  context: ServiceContext,
+  input: RecalculatePayrollYearEndSettlementInput
+): Promise<RecalculatePayrollYearEndSettlementResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndDeductionInputEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_deduction_input_v1 feature flag is disabled");
+  }
+
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
+  const totalIncomeDeductionKrw = getYearEndDeductionTotalKrw(normalizedDeductionItems);
+  const baselineSettled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
+  const recalculatedSettled = calculateYearEndSettlementKrw(
+    snapshot.totalsKrw,
+    input,
+    totalIncomeDeductionKrw
+  );
+
+  const payload = {
+    year: input.year,
+    employeeId: input.employeeId,
+    periodStart: snapshot.periodStart.toISOString(),
+    periodEnd: snapshot.periodEnd.toISOString(),
+    runStates: {
+      totalRuns: snapshot.runs.length,
+      confirmedRuns: snapshot.confirmedRuns.length,
+      previewedRuns: snapshot.previewedRuns.length,
+      previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
+    },
+    annualTotalsKrw: snapshot.totalsKrw,
+    deductionItemsKrw: {
+      ...normalizedDeductionItems,
+      totalIncomeDeductionKrw,
+      appliedIncomeDeductionKrw: recalculatedSettled.appliedIncomeDeductionKrw,
+      taxableAnnualIncomeBeforeDeductionKrw: recalculatedSettled.taxableAnnualIncomeBeforeDeductionKrw,
+      taxableAnnualIncomeAfterDeductionKrw: recalculatedSettled.settlementKrw.taxableAnnualIncomeKrw
+    },
+    baselineSettlementKrw: baselineSettled.settlementKrw,
+    recalculatedSettlementKrw: recalculatedSettled.settlementKrw,
+    deltaKrw: {
+      annualTaxLiabilityDeltaKrw:
+        recalculatedSettled.settlementKrw.annualTaxLiabilityKrw -
+        baselineSettled.settlementKrw.annualTaxLiabilityKrw,
+      withholdingDeltaChangeKrw:
+        recalculatedSettled.settlementKrw.withholdingDeltaKrw -
+        baselineSettled.settlementKrw.withholdingDeltaKrw,
+      taxableIncomeReductionKrw:
+        baselineSettled.settlementKrw.taxableAnnualIncomeKrw -
+        recalculatedSettled.settlementKrw.taxableAnnualIncomeKrw
+    }
+  };
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.settlement_recalculated",
+    entityType: "PayrollYearEnd",
+    entityId,
+    organizationId: snapshot.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.settlement.recalculated.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
+  });
+
+  return {
+    recalculation: payload
   };
 }
 

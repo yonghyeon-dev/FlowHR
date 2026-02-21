@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.12.0
+  version: 1.13.0
 paths:
   /payroll/runs:
     get:
@@ -104,6 +104,13 @@ paths:
       responses:
         "200":
           description: Year-end settlement summary generated
+  /payroll/year-end/recalculate-settlement:
+    post:
+      summary: Recalculate payroll year-end settlement with deduction items
+      description: Accepts employee/year deduction-item inputs and returns baseline vs recalculated year-end settlement deltas for the same confirmed annual run set.
+      responses:
+        "200":
+          description: Year-end settlement recalculation summary generated
   /payroll/year-end/withholding-receipts:
     post:
       summary: Preview or issue withholding receipt for employee/year
