@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.34 (Admin Approval Queue UX Phase 7 History Sort Accuracy and Delay Risk Prediction)
+> **Current version**: 0.1.35 (Admin People UX Phase 8 Execution Summary and Delay Backlog)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -202,10 +202,11 @@
 - WI-0163 직원 셀프서비스 UX 12차 고도화(출퇴근 정정 인사이트 + 잔여 연차 포캐스트 + 휴가 캘린더 인사이트 + 모바일/사이드 네비 점프 + e2e)
 - WI-0164 관리자 승인 큐 UX 11차 고도화(승인 이력 실행 추적 + 승인 지연 실행 백로그 + 모바일 후속 액션 추천 고도화 4차 + 사이드 네비 앵커 + e2e)
 - WI-0165 급여 명세서 UX 8차 고도화(명세 실행 요약 + 지연 실행 백로그 + 모바일 후속 액션 추천 고도화 4차 + 사이드 네비 앵커 + e2e)
+- WI-0166 관리자 조직도/인사 이력 UX 8차 고도화(이력 실행 요약 + 변경 지연 실행 백로그 + 모바일 후속 액션 추천 고도화 4차 + 사이드 네비 앵커 + e2e)
 
 ### 진행 중
 
-- 다음: 관리자 조직도/인사 이력 UX 8차 고도화(이력 실행 요약 + 변경 지연 백로그 + 모바일 후속 액션 추천 4차) (WI-0166)
+- 다음: 직원 셀프서비스 UX 13차 고도화 (WI-0167)
 
 ### 현재 아키텍처
 

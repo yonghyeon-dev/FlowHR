@@ -49,6 +49,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/people#people-mobile-follow-up-recommendation-upgrade">People 모바일 추천 고도화</Link>
           <Link href="/admin/people#people-mobile-follow-up-recommendation-upgrade-2">People 모바일 추천 고도화 2</Link>
           <Link href="/admin/people#people-mobile-follow-up-recommendation-upgrade-3">People 모바일 추천 고도화 3</Link>
+          <Link href="/admin/people#history-sort-execution-summary">People 이력 실행 요약</Link>
+          <Link href="/admin/people#history-delay-risk-execution-backlog">People 변경 지연 실행 백로그</Link>
+          <Link href="/admin/people#people-mobile-follow-up-recommendation-upgrade-4">People 모바일 추천 고도화 4</Link>
           <Link href="/admin#invites">초대/가입</Link>
           <Link href="/admin#scheduling">근무 일정</Link>
           <Link href="/admin#approvals">승인 대기</Link>
