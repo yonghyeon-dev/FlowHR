@@ -2,8 +2,8 @@
   "defaultMaxLines": 1200,
   "tracked": {
     "src/app/admin/page.tsx": {
-      "maxLines": 6985,
-      "targetLines": 4500
+      "maxLines": 3000,
+      "targetLines": 2500
     },
     "src/app/employee/page.tsx": {
       "maxLines": 3000,
