@@ -39,6 +39,7 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <Link href="/employee#schedule">Schedule</Link>
           <Link href="/employee/payslips">Payslips</Link>
           <Link href="/employee/payslip-receipts">Payslip Receipts</Link>
+          <Link href="/employee/withholding-receipt">Withholding Receipt</Link>
           <Link href="/employee/payslips#payslip-search-sort">Payslip Search/Sort</Link>
           <Link href="/employee/payslips#status-feedback">Payslip Status Feedback</Link>
           <Link href="/employee/payslips#compare-view">Payslip Compare</Link>

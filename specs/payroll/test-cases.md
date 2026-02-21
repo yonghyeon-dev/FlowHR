@@ -35,6 +35,9 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 27. Preview/apply payslip distribution for confirmed runs and verify newly distributed/already distributed counts.
 28. Confirm payslip receipt for distributed confirmed run and reject non-owner or undistributed run.
 29. Reject payslip distribution/receipt APIs when `payroll_payslip_delivery_v1` feature flag is disabled.
+30. Preview year-end settlement for employee/year and verify annual totals, tax liability, and withholding delta output.
+31. Preview/issue withholding receipt and reject issue when yearly runs include previewed/undistributed/pending-receipt runs.
+32. Reject year-end settlement/receipt APIs when `payroll_year_end_v1` feature flag is disabled.
 
 ## Accuracy Cases
 
@@ -58,6 +61,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 18. Close-period mode blocks `apply=true` deterministically when previewed runs remain.
 19. Payslip distribution updates run delivery fields deterministically and remains idempotent for already distributed runs.
 20. Payslip receipt confirmation updates receipt actor/time deterministically and rejects invalid state transitions.
+21. Year-end settlement computes annual tax-liability and withholding-delta deterministically for same confirmed run set.
+22. Withholding receipt issue guard (confirmed/distributed/receipt-confirmed) remains deterministic.
 
 ## Regression Linkage
 
@@ -83,3 +88,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.
 - Payslip Delivery Gate: payslip delivery/receipt APIs remain feature-flagged, permission-guarded, and maintain deterministic distribution/receipt state transitions.
+- Year-End Gate: year-end settlement/withholding receipt APIs remain feature-flagged, permission-guarded, and enforce issue prerequisites deterministically.

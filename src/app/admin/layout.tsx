@@ -35,6 +35,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/payroll-insurance">4대보험 정산</Link>
           <Link href="/admin/payroll-close">급여 마감</Link>
           <Link href="/admin/payroll-payslip-delivery">명세서 배포</Link>
+          <Link href="/admin/payroll-year-end">연말정산/영수증</Link>
           <Link href="/admin/people">조직/인사</Link>
           <Link href="/admin/contracts">전자계약</Link>
           <Link href="/admin/approval-policy">결재 정책</Link>

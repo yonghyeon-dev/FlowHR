@@ -112,6 +112,22 @@ type AcknowledgePayrollPayslipReceiptInput = {
   runId: string;
 };
 
+type PreviewPayrollYearEndSettlementInput = {
+  year: number;
+  employeeId: string;
+  nonTaxableAnnualIncomeKrw: number;
+  additionalTaxCreditKrw: number;
+  annualIncomeTaxRate: number;
+  localIncomeTaxRate: number;
+};
+
+type IssuePayrollYearEndWithholdingReceiptInput = {
+  year: number;
+  employeeId: string;
+  issue: boolean;
+  issuerName?: string;
+};
+
 type UpsertDeductionProfileInput = {
   profileId: string;
   name: string;
@@ -263,6 +279,74 @@ type AcknowledgePayrollPayslipReceiptResult = {
   };
 };
 
+type PreviewPayrollYearEndSettlementResult = {
+  summary: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      previewedRunIds: string[];
+    };
+    annualTotalsKrw: {
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    };
+    settlementKrw: {
+      nonTaxableAnnualIncomeKrw: number;
+      taxableAnnualIncomeKrw: number;
+      annualIncomeTaxBeforeCreditKrw: number;
+      additionalTaxCreditKrw: number;
+      annualIncomeTaxAfterCreditKrw: number;
+      annualLocalIncomeTaxKrw: number;
+      annualTaxLiabilityKrw: number;
+      priorWithheldTaxKrw: number;
+      withholdingDeltaKrw: number;
+    };
+  };
+};
+
+type IssuePayrollYearEndWithholdingReceiptResult = {
+  receipt: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    issue: boolean;
+    canIssue: boolean;
+    issued: boolean;
+    receiptNumber: string;
+    issuerName: string;
+    issuedAt: string | null;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      undistributedRuns: number;
+      pendingReceiptRuns: number;
+      previewedRunIds: string[];
+      undistributedRunIds: string[];
+      pendingReceiptRunIds: string[];
+    };
+    annualTotalsKrw: {
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    };
+    blockingReasons: string[];
+  };
+};
+
 type UpsertDeductionProfileResult = {
   profile: Awaited<ReturnType<DataAccess["deductionProfiles"]["upsert"]>>;
 };
@@ -372,6 +456,23 @@ function isPayrollPayslipDeliveryEnabled() {
     "";
   const value = raw.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isPayrollYearEndEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_YEAR_END_V1 ?? process.env.PAYROLL_YEAR_END_V1 ?? "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function getYearPeriodInSeoul(year: number) {
+  if (!Number.isInteger(year) || year < 2020 || year > 2100) {
+    throw new ServiceError(400, "year must be between 2020 and 2100");
+  }
+  return {
+    periodStart: new Date(`${year}-01-01T00:00:00+09:00`),
+    periodEnd: new Date(`${year}-12-31T23:59:59+09:00`)
+  };
 }
 
 function toRateNumber(value: number | null, fieldName: string) {
@@ -1321,6 +1422,35 @@ export async function listPayrollRuns(
   });
 }
 
+function aggregatePayrollTotalsKrw(runs: PayrollRunEntity[]) {
+  return runs.reduce(
+    (acc, run) => {
+      const withholdingTaxKrw = run.withholdingTaxKrw ?? 0;
+      const socialInsuranceKrw = run.socialInsuranceKrw ?? 0;
+      const otherDeductionsKrw = run.otherDeductionsKrw ?? 0;
+      const totalDeductionsKrw =
+        run.totalDeductionsKrw ?? withholdingTaxKrw + socialInsuranceKrw + otherDeductionsKrw;
+      const netPayKrw = run.netPayKrw ?? run.grossPayKrw - totalDeductionsKrw;
+      return {
+        grossPayKrw: acc.grossPayKrw + run.grossPayKrw,
+        withholdingTaxKrw: acc.withholdingTaxKrw + withholdingTaxKrw,
+        socialInsuranceKrw: acc.socialInsuranceKrw + socialInsuranceKrw,
+        otherDeductionsKrw: acc.otherDeductionsKrw + otherDeductionsKrw,
+        totalDeductionsKrw: acc.totalDeductionsKrw + totalDeductionsKrw,
+        netPayKrw: acc.netPayKrw + netPayKrw
+      };
+    },
+    {
+      grossPayKrw: 0,
+      withholdingTaxKrw: 0,
+      socialInsuranceKrw: 0,
+      otherDeductionsKrw: 0,
+      totalDeductionsKrw: 0,
+      netPayKrw: 0
+    }
+  );
+}
+
 export async function closePayrollPeriod(
   context: ServiceContext,
   input: ClosePayrollPeriodInput
@@ -1350,32 +1480,7 @@ export async function closePayrollPeriod(
   }
   const canClose = blockingReasons.length === 0;
 
-  const totalsKrw = confirmedRuns.reduce(
-    (acc, run) => {
-      const withholdingTaxKrw = run.withholdingTaxKrw ?? 0;
-      const socialInsuranceKrw = run.socialInsuranceKrw ?? 0;
-      const otherDeductionsKrw = run.otherDeductionsKrw ?? 0;
-      const totalDeductionsKrw =
-        run.totalDeductionsKrw ?? withholdingTaxKrw + socialInsuranceKrw + otherDeductionsKrw;
-      const netPayKrw = run.netPayKrw ?? run.grossPayKrw - totalDeductionsKrw;
-      return {
-        grossPayKrw: acc.grossPayKrw + run.grossPayKrw,
-        withholdingTaxKrw: acc.withholdingTaxKrw + withholdingTaxKrw,
-        socialInsuranceKrw: acc.socialInsuranceKrw + socialInsuranceKrw,
-        otherDeductionsKrw: acc.otherDeductionsKrw + otherDeductionsKrw,
-        totalDeductionsKrw: acc.totalDeductionsKrw + totalDeductionsKrw,
-        netPayKrw: acc.netPayKrw + netPayKrw
-      };
-    },
-    {
-      grossPayKrw: 0,
-      withholdingTaxKrw: 0,
-      socialInsuranceKrw: 0,
-      otherDeductionsKrw: 0,
-      totalDeductionsKrw: 0,
-      netPayKrw: 0
-    }
-  );
+  const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
 
   const priorPaidWithholdingTaxKrw = toKrwInteger(
     input.settlement?.priorPaidWithholdingTaxKrw ?? 0,
@@ -1692,6 +1797,260 @@ export async function acknowledgePayrollPayslipReceipt(
       receiptConfirmedBy: updated.payslipReceiptConfirmedBy!,
       alreadyConfirmed: false
     }
+  };
+}
+
+export async function previewPayrollYearEndSettlement(
+  context: ServiceContext,
+  input: PreviewPayrollYearEndSettlementInput
+): Promise<PreviewPayrollYearEndSettlementResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+  const { periodStart, periodEnd } = getYearPeriodInSeoul(input.year);
+  const tenantScope = resolveTenantScope(context.actor);
+  const runs = await context.dataAccess.payroll.listInPeriod({
+    periodStart,
+    periodEnd,
+    organizationId: tenantScope ?? undefined,
+    employeeId: input.employeeId
+  });
+
+  const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
+  const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
+  const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
+
+  const nonTaxableAnnualIncomeKrw = toKrwInteger(
+    input.nonTaxableAnnualIncomeKrw,
+    "nonTaxableAnnualIncomeKrw"
+  );
+  const additionalTaxCreditKrw = toKrwInteger(
+    input.additionalTaxCreditKrw,
+    "additionalTaxCreditKrw"
+  );
+  const annualIncomeTaxRate = toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0;
+  const localIncomeTaxRate = toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0;
+
+  const taxableAnnualIncomeKrw = Math.max(totalsKrw.grossPayKrw - nonTaxableAnnualIncomeKrw, 0);
+  const annualIncomeTaxBeforeCreditKrw = toKrwInteger(
+    Math.round(taxableAnnualIncomeKrw * annualIncomeTaxRate),
+    "annualIncomeTaxBeforeCreditKrw"
+  );
+  const annualIncomeTaxAfterCreditKrw = Math.max(
+    annualIncomeTaxBeforeCreditKrw - additionalTaxCreditKrw,
+    0
+  );
+  const annualLocalIncomeTaxKrw = toKrwInteger(
+    Math.round(annualIncomeTaxAfterCreditKrw * localIncomeTaxRate),
+    "annualLocalIncomeTaxKrw"
+  );
+  const annualTaxLiabilityKrw = annualIncomeTaxAfterCreditKrw + annualLocalIncomeTaxKrw;
+  const priorWithheldTaxKrw = totalsKrw.withholdingTaxKrw;
+  const withholdingDeltaKrw = annualTaxLiabilityKrw - priorWithheldTaxKrw;
+
+  const payload = {
+    year: input.year,
+    employeeId: input.employeeId,
+    periodStart: periodStart.toISOString(),
+    periodEnd: periodEnd.toISOString(),
+    runStates: {
+      totalRuns: runs.length,
+      confirmedRuns: confirmedRuns.length,
+      previewedRuns: previewedRuns.length,
+      previewedRunIds: previewedRuns.map((run) => run.id)
+    },
+    annualTotalsKrw: totalsKrw,
+    settlementKrw: {
+      nonTaxableAnnualIncomeKrw,
+      taxableAnnualIncomeKrw,
+      annualIncomeTaxBeforeCreditKrw,
+      additionalTaxCreditKrw,
+      annualIncomeTaxAfterCreditKrw,
+      annualLocalIncomeTaxKrw,
+      annualTaxLiabilityKrw,
+      priorWithheldTaxKrw,
+      withholdingDeltaKrw
+    }
+  };
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.settlement_previewed",
+    entityType: "PayrollYearEnd",
+    entityId,
+    organizationId: employee.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.settlement.previewed.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
+  });
+
+  return {
+    summary: payload
+  };
+}
+
+export async function issuePayrollYearEndWithholdingReceipt(
+  context: ServiceContext,
+  input: IssuePayrollYearEndWithholdingReceiptInput
+): Promise<IssuePayrollYearEndWithholdingReceiptResult> {
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
+  const permissions = await resolveActorPermissions({ actor, dataAccess: context.dataAccess });
+  const canManage = permissions.has(Permissions.payrollRunConfirm);
+  const canListAny = permissions.has(Permissions.payrollRunList);
+  const canListOwn = permissions.has(Permissions.payrollRunListOwn);
+
+  if (input.issue) {
+    if (!canManage) {
+      throw new ServiceError(403, `payroll issue requires ${Permissions.payrollRunConfirm} permission`);
+    }
+  } else {
+    if (!canManage && !canListAny && !canListOwn) {
+      throw new ServiceError(403, `payroll list requires ${Permissions.payrollRunList} permission`);
+    }
+    if (!canManage && !canListAny && actor.id !== input.employeeId) {
+      throw new ServiceError(403, "employees can only preview their own withholding receipt");
+    }
+  }
+
+  const { periodStart, periodEnd } = getYearPeriodInSeoul(input.year);
+  const tenantScope = resolveTenantScope(actor);
+  const runs = await context.dataAccess.payroll.listInPeriod({
+    periodStart,
+    periodEnd,
+    organizationId: tenantScope ?? undefined,
+    employeeId: input.employeeId
+  });
+
+  const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
+  const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
+  const undistributedRuns = confirmedRuns.filter((run) => run.payslipDistributedAt === null);
+  const pendingReceiptRuns = confirmedRuns.filter(
+    (run) => run.payslipDistributedAt !== null && run.payslipReceiptConfirmedAt === null
+  );
+  const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
+
+  const blockingReasons: string[] = [];
+  if (confirmedRuns.length === 0) {
+    blockingReasons.push("no confirmed payroll runs found for selected year");
+  }
+  if (previewedRuns.length > 0) {
+    blockingReasons.push("all payroll runs must be confirmed before withholding receipt issue");
+  }
+  if (undistributedRuns.length > 0) {
+    blockingReasons.push("all confirmed runs must be distributed before withholding receipt issue");
+  }
+  if (pendingReceiptRuns.length > 0) {
+    blockingReasons.push(
+      "all distributed runs must have payslip receipt confirmation before withholding receipt issue"
+    );
+  }
+
+  const canIssue = blockingReasons.length === 0;
+  if (input.issue && !canIssue) {
+    throw new ServiceError(409, "withholding receipt cannot be issued", {
+      blockingReasons,
+      runStates: {
+        totalRuns: runs.length,
+        confirmedRuns: confirmedRuns.length,
+        previewedRuns: previewedRuns.length,
+        undistributedRuns: undistributedRuns.length,
+        pendingReceiptRuns: pendingReceiptRuns.length
+      }
+    });
+  }
+
+  const receiptNumber = `WR-${input.year}-${input.employeeId}`;
+  const issuerName = input.issuerName?.trim() ? input.issuerName.trim() : actor.role;
+  const issuedAt = input.issue ? new Date().toISOString() : null;
+  const payload = {
+    year: input.year,
+    employeeId: input.employeeId,
+    periodStart: periodStart.toISOString(),
+    periodEnd: periodEnd.toISOString(),
+    issue: input.issue,
+    canIssue,
+    issued: input.issue,
+    receiptNumber,
+    issuerName,
+    issuedAt,
+    runStates: {
+      totalRuns: runs.length,
+      confirmedRuns: confirmedRuns.length,
+      previewedRuns: previewedRuns.length,
+      undistributedRuns: undistributedRuns.length,
+      pendingReceiptRuns: pendingReceiptRuns.length,
+      previewedRunIds: previewedRuns.map((run) => run.id),
+      undistributedRunIds: undistributedRuns.map((run) => run.id),
+      pendingReceiptRunIds: pendingReceiptRuns.map((run) => run.id)
+    },
+    annualTotalsKrw: totalsKrw,
+    blockingReasons
+  };
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  if (input.issue) {
+    await context.dataAccess.audit.append({
+      action: "payroll.year_end.withholding_receipt_issued",
+      entityType: "PayrollYearEnd",
+      entityId,
+      organizationId: employee.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+    await getEventPublisher(context).publish({
+      name: "payroll.year_end.withholding_receipt.issued.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "PayrollYearEnd",
+      entityId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+  } else {
+    await context.dataAccess.audit.append({
+      action: "payroll.year_end.withholding_receipt_previewed",
+      entityType: "PayrollYearEnd",
+      entityId,
+      organizationId: employee.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+    await getEventPublisher(context).publish({
+      name: "payroll.year_end.withholding_receipt.previewed.v1",
+      occurredAt: new Date().toISOString(),
+      entityType: "PayrollYearEnd",
+      entityId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload
+    });
+  }
+
+  return {
+    receipt: payload
   };
 }
 

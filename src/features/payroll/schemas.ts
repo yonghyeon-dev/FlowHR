@@ -164,6 +164,8 @@ const closePayrollPeriodSettlementSchema = z.object({
   priorPaidNetPayKrw: nonNegativeInteger.default(0)
 });
 
+const payrollYearSchema = z.number().int().min(2020).max(2100);
+
 export const closePayrollPeriodSchema = z.object({
   periodStart: isoDateTime,
   periodEnd: isoDateTime,
@@ -177,6 +179,22 @@ export const distributePayrollPayslipsSchema = z.object({
   employeeId: z.string().min(1).optional(),
   deliveryChannel: z.enum(["in_app", "email"]).default("in_app"),
   dryRun: z.boolean().default(true)
+});
+
+export const previewPayrollYearEndSettlementSchema = z.object({
+  year: payrollYearSchema,
+  employeeId: z.string().min(1),
+  nonTaxableAnnualIncomeKrw: nonNegativeInteger.default(0),
+  additionalTaxCreditKrw: nonNegativeInteger.default(0),
+  annualIncomeTaxRate: rate.default(0.03),
+  localIncomeTaxRate: rate.default(0.1)
+});
+
+export const issuePayrollYearEndWithholdingReceiptSchema = z.object({
+  year: payrollYearSchema,
+  employeeId: z.string().min(1),
+  issue: z.boolean().default(false),
+  issuerName: z.string().min(1).max(120).optional()
 });
 
 export const upsertDeductionProfileSchema = z.object({
