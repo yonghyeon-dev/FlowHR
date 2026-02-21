@@ -412,6 +412,49 @@ type QueueMobileFollowUpRecommendationUpgrade2Card = {
   targetSectionId: string;
 };
 
+type QueueHistorySortHardeningPlusExecutionCard = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  stabilizationScore: number;
+  readinessScore: number;
+  executionLabel: string;
+  executionChecklist: string;
+  detail: string;
+  searchScope: QueueSearchSortScope;
+  searchQuery: string;
+  recommendedSortOption: QueueSearchSortOption;
+  targetSectionId: string;
+};
+
+type QueueDelayRiskResponseExecutionTrackerCard = {
+  key: string;
+  queue: QueueFocus;
+  label: string;
+  severity: QueueAlertLevel;
+  pendingCount: number;
+  riskScore: number;
+  responseWindow: string;
+  trackerScore: number;
+  trackerLabel: string;
+  executionChecklist: string;
+  detail: string;
+  searchScope: QueueSearchSortScope;
+  searchQuery: string;
+  recommendedSortOption: QueueSearchSortOption;
+  targetSectionId: string;
+};
+
+type QueueMobileFollowUpRecommendationUpgrade3Card = {
+  key: string;
+  label: string;
+  severity: QueueAlertLevel;
+  priorityScore: number;
+  detail: string;
+  actionLabel: string;
+  targetSectionId: string;
+};
+
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -1471,6 +1514,56 @@ export default function AdminDashboardPage() {
     });
   }, [queueHistorySortHardeningCards, queueSearchSortOption]);
 
+  const queueHistorySortHardeningPlusExecutionCards = useMemo<QueueHistorySortHardeningPlusExecutionCard[]>(() => {
+    const cards = queueHistorySortHardeningPlusCards.map((card) => {
+      const aligned = queueSearchSortOption === card.recommendedSortOption;
+      const severityPenalty = card.severity === "critical" ? 26 : card.severity === "watch" ? 12 : 0;
+      const readinessScore = Math.max(0, Math.min(100, card.stabilizationScore - severityPenalty + (aligned ? 8 : 0)));
+      const executionLabel =
+        card.stabilizationScore === 0
+          ? "prepare scope"
+          : card.severity === "critical"
+            ? "execute now"
+            : card.severity === "watch"
+              ? "execute this cycle"
+              : "monitor";
+      const executionChecklist =
+        card.stabilizationScore === 0
+          ? "No queue rows in scope. Reset search options and refresh queue rows first."
+          : card.key === "priority"
+            ? "Apply priority-first sort and verify high-severity pending items are on top."
+            : card.key === "wait"
+              ? "Apply wait-desc sort and confirm oldest backlog is processed first."
+              : "Apply recent-first sort and validate recency-driven handoff order.";
+
+      return {
+        key: card.key,
+        label: card.label,
+        severity: card.severity,
+        stabilizationScore: card.stabilizationScore,
+        readinessScore,
+        executionLabel,
+        executionChecklist,
+        detail:
+          card.stabilizationScore === 0
+            ? "Execution card is idle because queue rows are empty."
+            : `stability ${card.stabilizationScore} / readiness ${readinessScore}.`,
+        searchScope: card.searchScope,
+        searchQuery: card.searchQuery,
+        recommendedSortOption: card.recommendedSortOption,
+        targetSectionId: card.targetSectionId
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.readinessScore - left.readinessScore;
+    });
+  }, [queueHistorySortHardeningPlusCards, queueSearchSortOption]);
+
   const queueEvidencePreviewCards = useMemo<QueueEvidencePreviewCard[]>(() => {
     const attendanceCards: QueueEvidencePreviewCard[] = filteredPendingAttendance.map((record) => {
       const waitedHours = attendanceWaitHoursById.get(record.id) ?? 0;
@@ -2231,6 +2324,54 @@ export default function AdminDashboardPage() {
     });
   }, [queueDelayRiskResponseCards]);
 
+  const queueDelayRiskResponseExecutionTrackerCards = useMemo<QueueDelayRiskResponseExecutionTrackerCard[]>(() => {
+    const cards = queueDelayRiskResponseExecutionGuideCards.map((card) => {
+      const trackerScore =
+        card.pendingCount === 0 ? 0 : Math.min(100, Math.max(0, card.riskScore + Math.min(30, card.pendingCount * 6)));
+      const trackerLabel =
+        card.pendingCount === 0
+          ? "idle"
+          : card.severity === "critical"
+            ? "escalate now"
+            : card.severity === "watch"
+              ? "track within today"
+              : "daily monitor";
+      const executionChecklist =
+        card.pendingCount === 0
+          ? "No pending queue items in this scope."
+          : `${card.executionChecklist} Keep ${card.responseWindow} response window in active follow-up.`;
+
+      return {
+        key: card.key,
+        queue: card.queue,
+        label: card.label,
+        severity: card.severity,
+        pendingCount: card.pendingCount,
+        riskScore: card.riskScore,
+        responseWindow: card.responseWindow,
+        trackerScore,
+        trackerLabel,
+        executionChecklist,
+        detail:
+          card.pendingCount === 0
+            ? "Execution tracker is idle because there are no pending queue items."
+            : `tracker ${trackerScore} / risk ${card.riskScore} / pending ${card.pendingCount}.`,
+        searchScope: card.searchScope,
+        searchQuery: card.searchQuery,
+        recommendedSortOption: card.recommendedSortOption,
+        targetSectionId: card.targetSectionId
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.trackerScore - left.trackerScore;
+    });
+  }, [queueDelayRiskResponseExecutionGuideCards]);
+
   const queueMobileFollowUpGuideCards = useMemo<QueueMobileFollowUpGuideCard[]>(() => {
     const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
     const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
@@ -2553,6 +2694,92 @@ export default function AdminDashboardPage() {
     selectedVisibleLeaveCount
   ]);
 
+  const queueMobileFollowUpRecommendationUpgrade3Cards = useMemo<QueueMobileFollowUpRecommendationUpgrade3Card[]>(() => {
+    const hiddenAttendanceSelection = Math.max(0, selectedAttendanceCount - selectedVisibleAttendanceCount);
+    const hiddenLeaveSelection = Math.max(0, selectedLeaveCount - selectedVisibleLeaveCount);
+    const hiddenSelectionCount = hiddenAttendanceSelection + hiddenLeaveSelection;
+    const hasSearchQuery = queueSearchSortQuery.trim().length > 0;
+    const hasSearchResults = filteredQueueSearchSortRows.length > 0;
+    const topSortExecutionRisk = queueHistorySortHardeningPlusExecutionCards.find(
+      (card) => card.stabilizationScore > 0 && card.severity !== "normal"
+    );
+    const topDelayTrackerRisk = queueDelayRiskResponseExecutionTrackerCards.find(
+      (card) => card.pendingCount > 0 && card.severity !== "normal"
+    );
+
+    const cards: QueueMobileFollowUpRecommendationUpgrade3Card[] = [
+      {
+        key: "sort-hardening-plus-execution-upgrade",
+        label: "sort hardening+ execution recommendation",
+        severity: topSortExecutionRisk?.severity ?? "normal",
+        priorityScore: topSortExecutionRisk ? topSortExecutionRisk.readinessScore : 18,
+        detail: topSortExecutionRisk
+          ? `${topSortExecutionRisk.executionChecklist} (${topSortExecutionRisk.executionLabel})`
+          : "No sort hardening+ execution action is required.",
+        actionLabel: topSortExecutionRisk ? "run hardening+ execution" : "open hardening+ execution",
+        targetSectionId: "approval-history-sort-hardening-plus-execution"
+      },
+      {
+        key: "delay-response-execution-tracker-upgrade",
+        label: "delay response execution tracker",
+        severity: topDelayTrackerRisk?.severity ?? "normal",
+        priorityScore: topDelayTrackerRisk ? topDelayTrackerRisk.trackerScore : 20,
+        detail: topDelayTrackerRisk
+          ? `${topDelayTrackerRisk.executionChecklist} (${topDelayTrackerRisk.trackerLabel})`
+          : "No delay-response execution tracker action is required.",
+        actionLabel: topDelayTrackerRisk ? "run execution tracker" : "open execution tracker",
+        targetSectionId: "approval-delay-risk-response-execution-tracker"
+      },
+      {
+        key: "search-execution-upgrade3",
+        label: "search execution recommendation",
+        severity: hasSearchQuery && !hasSearchResults ? "watch" : "normal",
+        priorityScore: hasSearchQuery && !hasSearchResults ? 84 : 24,
+        detail:
+          hasSearchQuery && !hasSearchResults
+            ? "Current query has no matches. Reset filters and widen scope."
+            : `${filteredQueueSearchSortRows.length} queue row(s) are ready for follow-up.`,
+        actionLabel: "open search/sort",
+        targetSectionId: "approval-search-sort"
+      },
+      {
+        key: "selection-integrity-upgrade3",
+        label: "selection integrity recommendation",
+        severity:
+          hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason)
+            ? "watch"
+            : "normal",
+        priorityScore: hiddenSelectionCount > 0 || (selectedLeaveCount > 0 && !hasLeaveRejectReason) ? 90 : 16,
+        detail:
+          hiddenSelectionCount > 0
+            ? `${hiddenSelectionCount} selected item(s) are hidden by active filters.`
+            : selectedLeaveCount > 0 && !hasLeaveRejectReason
+              ? "Leave reject reason is required before reject action."
+              : "Selection and required inputs are aligned.",
+        actionLabel: hiddenSelectionCount > 0 ? "open queue" : "open mobile checklist",
+        targetSectionId: hiddenSelectionCount > 0 ? "approvals" : "approval-mobile-checklist"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    filteredQueueSearchSortRows.length,
+    hasLeaveRejectReason,
+    queueDelayRiskResponseExecutionTrackerCards,
+    queueHistorySortHardeningPlusExecutionCards,
+    queueSearchSortQuery,
+    selectedAttendanceCount,
+    selectedLeaveCount,
+    selectedVisibleAttendanceCount,
+    selectedVisibleLeaveCount
+  ]);
+
   function jumpToSection(sectionId: string) {
     if (typeof document === "undefined") {
       return;
@@ -2663,6 +2890,50 @@ export default function AdminDashboardPage() {
       if (executionGuideTarget) {
         runQueueDelayRiskResponseExecutionGuideAction(executionGuideTarget);
         jumpToSection("approval-delay-risk-response-execution-guide");
+        return;
+      }
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runQueueHistorySortHardeningPlusExecutionAction(card: QueueHistorySortHardeningPlusExecutionCard) {
+    applyQueueSearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      option: card.recommendedSortOption,
+      urgentOnly: card.severity === "critical",
+      targetSectionId: card.targetSectionId
+    });
+  }
+
+  function runQueueDelayRiskResponseExecutionTrackerAction(card: QueueDelayRiskResponseExecutionTrackerCard) {
+    applyQueueSearchSortPreset({
+      scope: card.searchScope,
+      query: card.searchQuery,
+      option: card.recommendedSortOption,
+      urgentOnly: card.severity !== "normal",
+      targetSectionId: card.targetSectionId
+    });
+  }
+
+  function runQueueMobileFollowUpRecommendationUpgrade3Action(card: QueueMobileFollowUpRecommendationUpgrade3Card) {
+    if (card.key === "sort-hardening-plus-execution-upgrade") {
+      const hardeningTarget = queueHistorySortHardeningPlusExecutionCards.find(
+        (hardeningCard) => hardeningCard.stabilizationScore > 0 && hardeningCard.severity !== "normal"
+      );
+      if (hardeningTarget) {
+        runQueueHistorySortHardeningPlusExecutionAction(hardeningTarget);
+        jumpToSection("approval-history-sort-hardening-plus-execution");
+        return;
+      }
+    }
+    if (card.key === "delay-response-execution-tracker-upgrade") {
+      const trackerTarget = queueDelayRiskResponseExecutionTrackerCards.find(
+        (trackerCard) => trackerCard.pendingCount > 0 && trackerCard.severity !== "normal"
+      );
+      if (trackerTarget) {
+        runQueueDelayRiskResponseExecutionTrackerAction(trackerTarget);
+        jumpToSection("approval-delay-risk-response-execution-tracker");
         return;
       }
     }
@@ -4196,6 +4467,27 @@ export default function AdminDashboardPage() {
                 >
                   recommendation upgrade 2
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-history-sort-hardening-plus-execution")}
+                >
+                  sort hardening+ execution
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-delay-risk-response-execution-tracker")}
+                >
+                  response execution tracker
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => jumpToSection("approval-mobile-follow-up-recommendation-upgrade-3")}
+                >
+                  recommendation upgrade 3
+                </button>
               </div>
             </div>
             {filteredQueueSearchSortRows.length === 0 ? (
@@ -4334,6 +4626,46 @@ export default function AdminDashboardPage() {
                       onClick={() => runQueueHistorySortHardeningPlusAction(card)}
                     >
                       run hardening+
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section
+            className="queue-history-sort-hardening-plus-execution-panel"
+            id="approval-history-sort-hardening-plus-execution"
+          >
+            <div className="queue-section-head">
+              <h3>Approval History Sort Hardening Plus Execution</h3>
+              <p className="small muted">
+                Converts hardening+ readiness into direct execution cards with one-tap presets.
+              </p>
+            </div>
+            <ul
+              className="queue-history-sort-hardening-plus-execution-list"
+              aria-label="approval history sort hardening plus execution list"
+            >
+              {queueHistorySortHardeningPlusExecutionCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-history-sort-hardening-plus-execution-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>ready {card.readinessScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <p className="small muted">{card.executionChecklist}</p>
+                  <div className="queue-history-sort-hardening-plus-execution-meta">
+                    <span className="queue-history-chip">stability {card.stabilizationScore}</span>
+                    <span className="queue-history-chip">{card.executionLabel}</span>
+                  </div>
+                  <div className="queue-history-sort-hardening-plus-execution-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueHistorySortHardeningPlusExecutionAction(card)}
+                    >
+                      run hardening+ execution
                     </button>
                   </div>
                 </li>
@@ -4669,6 +5001,47 @@ export default function AdminDashboardPage() {
             </ul>
           </section>
 
+          <section
+            className="queue-delay-risk-response-execution-tracker-panel"
+            id="approval-delay-risk-response-execution-tracker"
+          >
+            <div className="queue-section-head">
+              <h3>Approval Delay Response Execution Tracker</h3>
+              <p className="small muted">
+                Tracks delay-response execution status with queue-specific checklist and response window signals.
+              </p>
+            </div>
+            <ul
+              className="queue-delay-risk-response-execution-tracker-list"
+              aria-label="approval delay risk response execution tracker list"
+            >
+              {queueDelayRiskResponseExecutionTrackerCards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-delay-risk-response-execution-tracker-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>tracker {card.trackerScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <p className="small muted">{card.executionChecklist}</p>
+                  <div className="queue-delay-risk-response-execution-tracker-meta">
+                    <span className="queue-history-chip">window {card.responseWindow}</span>
+                    <span className="queue-history-chip">pending {card.pendingCount}</span>
+                    <span className="queue-history-chip">{card.trackerLabel}</span>
+                  </div>
+                  <div className="queue-delay-risk-response-execution-tracker-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueDelayRiskResponseExecutionTrackerAction(card)}
+                    >
+                      run execution tracker
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="queue-mobile-review-sheet" id="approval-mobile-review-sheet">
             <div className="queue-section-head">
               <h3>모바일 일괄 검토 시트</h3>
@@ -4878,6 +5251,41 @@ export default function AdminDashboardPage() {
                       type="button"
                       className="btn btn-secondary btn-small"
                       onClick={() => runQueueMobileFollowUpRecommendationUpgrade2Action(card)}
+                    >
+                      {card.actionLabel}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section
+            className="queue-mobile-follow-up-recommendation-upgrade-3-panel"
+            id="approval-mobile-follow-up-recommendation-upgrade-3"
+          >
+            <div className="queue-section-head">
+              <h3>Mobile Follow-up Recommendation Upgrade 3</h3>
+              <p className="small muted">
+                Prioritizes hardening+ execution, delay-response execution tracking, and queue follow-up integrity.
+              </p>
+            </div>
+            <ul
+              className="queue-mobile-follow-up-recommendation-upgrade-3-list"
+              aria-label="approval mobile follow-up recommendation upgrade 3 list"
+            >
+              {queueMobileFollowUpRecommendationUpgrade3Cards.map((card) => (
+                <li key={card.key} className={`severity-${card.severity}`}>
+                  <div className="queue-mobile-follow-up-recommendation-upgrade-3-head">
+                    <strong>{card.label}</strong>
+                    <span className={`queue-sla-chip level-${card.severity}`}>priority {card.priorityScore}</span>
+                  </div>
+                  <p className="small muted">{card.detail}</p>
+                  <div className="queue-mobile-follow-up-recommendation-upgrade-3-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runQueueMobileFollowUpRecommendationUpgrade3Action(card)}
                     >
                       {card.actionLabel}
                     </button>
