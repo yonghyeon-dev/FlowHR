@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.52 (Leave Calendar Integration Baseline)
+> **Current version**: 0.1.53 (Payroll Insurance Settlement Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -220,10 +220,11 @@
 - WI-0181 Deprecated WI/테스트 아카이브 정리(WI-0131~0143, WI-0145~0172 deprecated 마킹 + 관련 e2e no-op 아카이브 + active e2e 체인 제외)
 - WI-0182 연차 자동 부여 엔진 baseline(`POST /leave/accrual/auto-grant` + `/admin/leave-accrual` 전용 라우트 + dry-run/apply 요약/상세 결과 + e2e/spec 갱신)
 - WI-0183 휴가 캘린더 연동 baseline(`GET /leave/calendar` + `/admin/leave-calendar` 전용 라우트 + 부서 필터/중복 경고 임계치 + e2e/spec 갱신)
+- WI-0184 급여 4대보험 정산 baseline(`POST /payroll/runs/preview-insurance-settlement` + `/admin/payroll-insurance` 전용 라우트 + 기여금/정산 delta 요약 + e2e/spec 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 시작(4대보험 정산 baseline) (WI-0184 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(원천세 정산/마감 워크플로 baseline) (WI-0185 예정)
 
 ### 현재 아키텍처
 
