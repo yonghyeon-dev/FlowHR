@@ -400,6 +400,40 @@ type MobileFollowUpRecommendationUpgrade4Card = {
   targetSectionId: string;
 };
 
+type RequestHistoryExecutionSummaryDigestCard = {
+  key: string;
+  sourceKey: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  digestScore: number;
+  detail: string;
+  executionChecklist: string;
+  executionLabel: string;
+  targetSectionId: string;
+};
+
+type ApprovalDelayExecutionBacklogDigestCard = {
+  key: string;
+  sourceKey: string;
+  label: string;
+  severity: RequestBottleneckSeverity;
+  digestScore: number;
+  detail: string;
+  responseWindow: string;
+  executionChecklist: string;
+  targetSectionId: string;
+};
+
+type MobileFollowUpRecommendationUpgrade5Card = {
+  key: string;
+  label: string;
+  tone: "ready" | "pending" | "fail";
+  priorityScore: number;
+  detail: string;
+  ctaLabel: string;
+  targetSectionId: string;
+};
+
 type AttendanceCorrectionInsightCard = {
   key: string;
   label: string;
@@ -1408,6 +1442,57 @@ export default function EmployeeSelfServicePage() {
       return;
     }
     if (card.key === "api-recovery-upgrade4" && stats.fail > 0) {
+      jumpToSection("request-feedback");
+      pushMobileFlowFeedback("Review API failure details before retry.");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runRequestHistoryExecutionSummaryDigestAction(card: RequestHistoryExecutionSummaryDigestCard) {
+    const sourceCard = requestHistorySortExecutionSummaryCards.find((summaryCard) => summaryCard.key === card.sourceKey);
+    if (sourceCard) {
+      runRequestHistorySortExecutionSummaryAction(sourceCard);
+      jumpToSection("request-history-sort-execution-summary");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runApprovalDelayExecutionBacklogDigestAction(card: ApprovalDelayExecutionBacklogDigestCard) {
+    const sourceCard = approvalDelayRiskExecutionBacklogCards.find((backlogCard) => backlogCard.key === card.sourceKey);
+    if (sourceCard) {
+      runApprovalDelayRiskExecutionBacklogAction(sourceCard);
+      jumpToSection("approval-delay-risk-execution-backlog");
+      return;
+    }
+    jumpToSection(card.targetSectionId);
+  }
+
+  function runMobileFollowUpRecommendationUpgrade5Action(card: MobileFollowUpRecommendationUpgrade5Card) {
+    if (card.key === "execution-summary-digest") {
+      const target = requestHistoryExecutionSummaryDigestCards.find((digestCard) => digestCard.severity !== "normal");
+      if (target) {
+        runRequestHistoryExecutionSummaryDigestAction(target);
+        jumpToSection("request-history-execution-summary-digest");
+        return;
+      }
+    }
+    if (card.key === "delay-execution-backlog-digest") {
+      const target = approvalDelayExecutionBacklogDigestCards.find((digestCard) => digestCard.severity !== "normal");
+      if (target) {
+        runApprovalDelayExecutionBacklogDigestAction(target);
+        jumpToSection("approval-delay-execution-backlog-digest");
+        return;
+      }
+    }
+    if (card.key === "resubmit-flow-upgrade5" && resubmitCandidates.length > 0 && !resubmitFlowReady) {
+      openRejectedRequestSearch();
+      jumpToSection("request-resubmit");
+      pushMobileFlowFeedback("Review rejected requests and complete resubmit validation.");
+      return;
+    }
+    if (card.key === "api-recovery-upgrade5" && stats.fail > 0) {
       jumpToSection("request-feedback");
       pushMobileFlowFeedback("Review API failure details before retry.");
       return;
@@ -3606,6 +3691,130 @@ export default function EmployeeSelfServicePage() {
     stats.fail
   ]);
 
+  const requestHistoryExecutionSummaryDigestCards = useMemo<RequestHistoryExecutionSummaryDigestCard[]>(() => {
+    return requestHistorySortExecutionSummaryCards
+      .map((card) => ({
+        key: `request-history-execution-summary-digest-${card.key}`,
+        sourceKey: card.key,
+        label: `${card.label} digest`,
+        severity: card.severity,
+        digestScore: card.summaryScore + (card.severity === "critical" ? 7 : card.severity === "watch" ? 3 : 0),
+        detail: card.detail,
+        executionChecklist: card.executionChecklist,
+        executionLabel: card.executionLabel,
+        targetSectionId: "request-history-sort-execution-summary"
+      }))
+      .sort((left, right) => {
+        const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.digestScore - left.digestScore;
+      });
+  }, [requestHistorySortExecutionSummaryCards]);
+
+  const approvalDelayExecutionBacklogDigestCards = useMemo<ApprovalDelayExecutionBacklogDigestCard[]>(() => {
+    return approvalDelayRiskExecutionBacklogCards
+      .map((card) => ({
+        key: `approval-delay-execution-backlog-digest-${card.key}`,
+        sourceKey: card.key,
+        label: `${card.label} digest`,
+        severity: card.severity,
+        digestScore: card.backlogScore + (card.severity === "critical" ? 6 : card.severity === "watch" ? 2 : 0),
+        detail: card.detail,
+        responseWindow: card.responseWindow,
+        executionChecklist: card.executionChecklist,
+        targetSectionId: "approval-delay-risk-execution-backlog"
+      }))
+      .sort((left, right) => {
+        const severityDiff = bottleneckSeverityRank(right.severity) - bottleneckSeverityRank(left.severity);
+        if (severityDiff !== 0) {
+          return severityDiff;
+        }
+        return right.digestScore - left.digestScore;
+      });
+  }, [approvalDelayRiskExecutionBacklogCards]);
+
+  const mobileFollowUpRecommendationUpgrade5Cards = useMemo<MobileFollowUpRecommendationUpgrade5Card[]>(() => {
+    const topSummaryDigest = requestHistoryExecutionSummaryDigestCards.find((card) => card.severity !== "normal");
+    const topBacklogDigest = approvalDelayExecutionBacklogDigestCards.find((card) => card.severity !== "normal");
+
+    const cards: MobileFollowUpRecommendationUpgrade5Card[] = [
+      {
+        key: "execution-summary-digest",
+        label: "Execution summary digest recommendation",
+        tone: topSummaryDigest
+          ? topSummaryDigest.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topSummaryDigest ? topSummaryDigest.digestScore : 22,
+        detail: topSummaryDigest
+          ? `${topSummaryDigest.executionChecklist} (${topSummaryDigest.executionLabel})`
+          : "No execution summary digest action is required.",
+        ctaLabel: topSummaryDigest ? "Run summary digest" : "Open summary digest",
+        targetSectionId: "request-history-execution-summary-digest"
+      },
+      {
+        key: "delay-execution-backlog-digest",
+        label: "Delay execution backlog digest recommendation",
+        tone: topBacklogDigest
+          ? topBacklogDigest.severity === "critical"
+            ? "fail"
+            : "pending"
+          : "ready",
+        priorityScore: topBacklogDigest ? topBacklogDigest.digestScore : 24,
+        detail: topBacklogDigest
+          ? `${topBacklogDigest.executionChecklist} (${topBacklogDigest.responseWindow})`
+          : "No delay execution backlog digest action is required.",
+        ctaLabel: topBacklogDigest ? "Run backlog digest" : "Open backlog digest",
+        targetSectionId: "approval-delay-execution-backlog-digest"
+      },
+      {
+        key: "resubmit-flow-upgrade5",
+        label: "Resubmit flow recommendation",
+        tone: resubmitCandidates.length === 0 ? "ready" : resubmitFlowReady ? "pending" : "fail",
+        priorityScore: resubmitCandidates.length === 0 ? 14 : resubmitFlowReady ? 72 : 94,
+        detail:
+          resubmitCandidates.length === 0
+            ? "No rejected/canceled requests require resubmission."
+            : resubmitFlowReady
+              ? "Resubmit draft is ready. Complete final submission."
+              : resubmitFirstFailCheck?.detail || "Review resubmit validation blockers.",
+        ctaLabel: resubmitCandidates.length > 0 ? "Open resubmit flow" : "Open submit guide",
+        targetSectionId: resubmitCandidates.length > 0 ? "request-resubmit" : "mobile-submit-guide"
+      },
+      {
+        key: "api-recovery-upgrade5",
+        label: "API recovery recommendation",
+        tone: stats.fail > 0 ? "fail" : "ready",
+        priorityScore: stats.fail > 0 ? 98 : 10,
+        detail:
+          stats.fail > 0
+            ? latestFailureCauseMessage || "Investigate API failure causes before retry."
+            : "No API recovery follow-up is required.",
+        ctaLabel: stats.fail > 0 ? "Open request feedback" : "Open request timeline",
+        targetSectionId: stats.fail > 0 ? "request-feedback" : "request-timeline"
+      }
+    ];
+
+    return cards.sort((left, right) => {
+      const toneDiff = mobileFollowUpToneRank(right.tone) - mobileFollowUpToneRank(left.tone);
+      if (toneDiff !== 0) {
+        return toneDiff;
+      }
+      return right.priorityScore - left.priorityScore;
+    });
+  }, [
+    approvalDelayExecutionBacklogDigestCards,
+    latestFailureCauseMessage,
+    requestHistoryExecutionSummaryDigestCards,
+    resubmitCandidates.length,
+    resubmitFirstFailCheck,
+    resubmitFlowReady,
+    stats.fail
+  ]);
+
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
       return "비교 대상 없음";
@@ -4409,6 +4618,39 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article className="panel panel-request-history-execution-summary-digest" id="request-history-execution-summary-digest">
+          <h2>Request history execution summary digest</h2>
+          <p className="small">
+            Adds digest-level prioritization on top of execution summary cards for faster follow-up triage.
+          </p>
+          <ul
+            className="request-history-execution-summary-digest-list"
+            aria-label="request history execution summary digest list"
+          >
+            {requestHistoryExecutionSummaryDigestCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="request-history-execution-summary-digest-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">digest {card.digestScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="request-history-execution-summary-digest-meta">
+                  <span className="queue-history-chip">{card.executionLabel}</span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runRequestHistoryExecutionSummaryDigestAction(card)}
+                >
+                  run summary digest
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-approval-delay-risk-prediction" id="approval-delay-risk-prediction">
           <h2>승인 지연 위험 예측 피드백</h2>
           <p className="small">
@@ -4575,6 +4817,39 @@ export default function EmployeeSelfServicePage() {
           </ul>
         </article>
 
+        <article className="panel panel-approval-delay-execution-backlog-digest" id="approval-delay-execution-backlog-digest">
+          <h2>Approval delay execution backlog digest</h2>
+          <p className="small">
+            Adds digest scoring over execution backlog cards so urgent delay responses are resolved first.
+          </p>
+          <ul
+            className="approval-delay-execution-backlog-digest-list"
+            aria-label="approval delay execution backlog digest list"
+          >
+            {approvalDelayExecutionBacklogDigestCards.map((card) => (
+              <li key={card.key} className={`severity-${card.severity}`}>
+                <div className="approval-delay-execution-backlog-digest-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">digest {card.digestScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <p className="small muted">{card.executionChecklist}</p>
+                <div className="approval-delay-execution-backlog-digest-meta">
+                  <span className="queue-history-chip">{card.responseWindow}</span>
+                  <span className="queue-history-chip">severity {card.severity}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runApprovalDelayExecutionBacklogDigestAction(card)}
+                >
+                  run backlog digest
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
         <article className="panel panel-mobile-shortcuts" id="mobile-shortcuts">
           <h2>모바일 단축 흐름</h2>
           <p className="small">터치 중심 단축 버튼으로 입력/정정/신청/갱신을 빠르게 진행합니다.</p>
@@ -4668,6 +4943,24 @@ export default function EmployeeSelfServicePage() {
               onClick={() => jumpToSection("mobile-follow-up-recommendation-upgrade-4")}
             >
               recommendation upgrade 4
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("request-history-execution-summary-digest")}
+            >
+              summary digest
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("approval-delay-execution-backlog-digest")}
+            >
+              backlog digest
+            </button>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => jumpToSection("mobile-follow-up-recommendation-upgrade-5")}
+            >
+              recommendation upgrade 5
             </button>
             <button className="btn btn-primary btn-small" onClick={() => void refreshEmployeeSnapshot()}>
               요청 상태 새로고침
@@ -4889,6 +5182,37 @@ export default function EmployeeSelfServicePage() {
                   type="button"
                   className="btn btn-secondary btn-small"
                   onClick={() => runMobileFollowUpRecommendationUpgrade4Action(card)}
+                >
+                  {card.ctaLabel}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article
+          className="panel panel-mobile-follow-up-recommendation-upgrade-5"
+          id="mobile-follow-up-recommendation-upgrade-5"
+        >
+          <h2>Mobile follow-up recommendation upgrade 5</h2>
+          <p className="small">
+            Prioritized recommendations combine execution-summary digest, backlog digest, resubmit flow, and API recovery.
+          </p>
+          <ul
+            className="mobile-follow-up-recommendation-upgrade-5-list"
+            aria-label="mobile follow-up recommendation upgrade 5 list"
+          >
+            {mobileFollowUpRecommendationUpgrade5Cards.map((card) => (
+              <li key={card.key} className={`tone-${card.tone}`}>
+                <div className="mobile-follow-up-recommendation-upgrade-5-head">
+                  <strong>{card.label}</strong>
+                  <span className="queue-history-chip">priority {card.priorityScore}</span>
+                </div>
+                <p>{card.detail}</p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => runMobileFollowUpRecommendationUpgrade5Action(card)}
                 >
                   {card.ctaLabel}
                 </button>
