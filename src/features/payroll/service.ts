@@ -185,6 +185,8 @@ type AcknowledgePayrollYearEndFilingPackageInput = {
   ackStatus: PayrollYearEndFilingAckStatus;
   ackCode?: string;
   ackNote?: string;
+  rejectionReasonCode?: string;
+  rejectionReasonDetail?: string;
 };
 
 type ListPayrollYearEndFilingSubmissionsInput = {
@@ -555,6 +557,8 @@ type PayrollYearEndFilingSubmissionSummary = {
     ackStatus: PayrollYearEndFilingAckStatus;
     ackCode: string | null;
     ackNote: string | null;
+    rejectionReasonCode: string | null;
+    rejectionReasonDetail: string | null;
     acknowledgedAt: string;
     acknowledgedByRole: string;
     acknowledgedById: string | null;
@@ -597,6 +601,8 @@ type PayrollYearEndFilingTimelineEntry = {
   ackStatus: PayrollYearEndFilingAckStatus | null;
   ackCode: string | null;
   ackNote: string | null;
+  rejectionReasonCode: string | null;
+  rejectionReasonDetail: string | null;
   evidenceNote: string | null;
 };
 
@@ -617,6 +623,25 @@ type PayrollYearEndFilingEvidenceNoteSummary = {
 
 type AddPayrollYearEndFilingEvidenceNoteResult = {
   evidenceNote: PayrollYearEndFilingEvidenceNoteSummary;
+};
+
+type PayrollYearEndFilingAckCodeCatalogItem = {
+  code: string;
+  label: string;
+  description: string;
+  defaultNote: string | null;
+};
+
+type PayrollYearEndFilingRejectionReasonCatalogItem = {
+  code: string;
+  label: string;
+  description: string;
+};
+
+type ListPayrollYearEndFilingAckCatalogResult = {
+  acceptedCodes: PayrollYearEndFilingAckCodeCatalogItem[];
+  rejectedCodes: PayrollYearEndFilingAckCodeCatalogItem[];
+  rejectionReasons: PayrollYearEndFilingRejectionReasonCatalogItem[];
 };
 
 type IssuePayrollYearEndWithholdingReceiptResult = {
@@ -687,6 +712,89 @@ const emptyTotals: PayableMinutes = {
   holiday: 0
 };
 
+const payrollYearEndAcceptedAckCodeCatalog: PayrollYearEndFilingAckCodeCatalogItem[] = [
+  {
+    code: "ACK-OK",
+    label: "Accepted",
+    description: "Submission accepted without additional correction request.",
+    defaultNote: "accepted"
+  },
+  {
+    code: "ACK-2026-OK",
+    label: "Accepted (Legacy)",
+    description: "Legacy accepted code maintained for backward-compatible replay.",
+    defaultNote: "accepted"
+  },
+  {
+    code: "ACK-ACCEPTED-WARNING",
+    label: "Accepted With Warning",
+    description: "Submission accepted with follow-up recommendation.",
+    defaultNote: "accepted with warning"
+  }
+];
+
+const payrollYearEndRejectedAckCodeCatalog: PayrollYearEndFilingAckCodeCatalogItem[] = [
+  {
+    code: "ACK-REJECT",
+    label: "Rejected",
+    description: "Submission rejected and correction is required.",
+    defaultNote: "rejected"
+  },
+  {
+    code: "ACK-REJECT-VALIDATION",
+    label: "Rejected (Validation)",
+    description: "Submission failed validation checks.",
+    defaultNote: "rejected due to validation errors"
+  },
+  {
+    code: "ACK-REJECT-FORMAT",
+    label: "Rejected (Format)",
+    description: "Submission format is invalid for filing channel.",
+    defaultNote: "rejected due to format mismatch"
+  },
+  {
+    code: "ACK-REJECT-COVERAGE",
+    label: "Rejected (Coverage)",
+    description: "Submission coverage or run mapping is incomplete.",
+    defaultNote: "rejected due to coverage mismatch"
+  }
+];
+
+const payrollYearEndRejectionReasonCatalog: PayrollYearEndFilingRejectionReasonCatalogItem[] = [
+  {
+    code: "VALIDATION_ERROR",
+    label: "Validation Error",
+    description: "Schema or value validation failed."
+  },
+  {
+    code: "FORMAT_MISMATCH",
+    label: "Format Mismatch",
+    description: "Submitted artifact format does not match required format."
+  },
+  {
+    code: "EMPLOYEE_IDENTIFIER_MISMATCH",
+    label: "Employee Identifier Mismatch",
+    description: "Employee identifier values do not match filing expectation."
+  },
+  {
+    code: "AMOUNT_MISMATCH",
+    label: "Amount Mismatch",
+    description: "Declared totals differ from reconciled payroll totals."
+  },
+  {
+    code: "MISSING_SUPPORTING_EVIDENCE",
+    label: "Missing Supporting Evidence",
+    description: "Required notes or supporting evidence are missing."
+  },
+  {
+    code: "OTHER",
+    label: "Other",
+    description: "Other rejection reason requiring manual review."
+  }
+];
+
+const payrollYearEndDefaultRejectedReasonCode = "OTHER";
+
 async function requirePayrollPermission(
   context: ServiceContext,
   permission: Permission,
@@ -701,6 +809,75 @@ async function requireDeductionProfilePermission(
   action: "read" | "write"
 ) {
   await requirePermission(context, permission, `deduction profile ${action} requires ${permission}`);
+}
+
+function buildPayrollYearEndFilingAckCatalog(): ListPayrollYearEndFilingAckCatalogResult {
+  return {
+    acceptedCodes: payrollYearEndAcceptedAckCodeCatalog.map((item) => ({ ...item })),
+    rejectedCodes: payrollYearEndRejectedAckCodeCatalog.map((item) => ({ ...item })),
+    rejectionReasons: payrollYearEndRejectionReasonCatalog.map((item) => ({ ...item }))
+  };
+}
+
+function resolvePayrollYearEndFilingAckPayload(input: {
+  ackStatus: PayrollYearEndFilingAckStatus;
+  ackCode?: string;
+  ackNote?: string;
+  rejectionReasonCode?: string;
+  rejectionReasonDetail?: string;
+}) {
+  const allowedAckCodes =
+    input.ackStatus === "accepted"
+      ? payrollYearEndAcceptedAckCodeCatalog
+      : payrollYearEndRejectedAckCodeCatalog;
+  const fallbackAckCode = allowedAckCodes[0]?.code;
+  if (!fallbackAckCode) {
+    throw new ServiceError(500, "filing ack code catalog is not configured");
+  }
+
+  const ackCodeCandidate = input.ackCode?.trim() ? input.ackCode.trim() : fallbackAckCode;
+  if (!allowedAckCodes.some((entry) => entry.code === ackCodeCandidate)) {
+    throw new ServiceError(409, "ack code is not allowed for selected ack status", {
+      ackStatus: input.ackStatus,
+      allowedAckCodes: allowedAckCodes.map((entry) => entry.code)
+    });
+  }
+
+  if (input.ackStatus === "accepted") {
+    if (input.rejectionReasonCode?.trim() || input.rejectionReasonDetail?.trim()) {
+      throw new ServiceError(409, "rejection reason fields are only allowed when ackStatus is rejected");
+    }
+    const ackNote = input.ackNote?.trim() ? input.ackNote.trim() : null;
+    return {
+      ackCode: ackCodeCandidate,
+      ackNote,
+      rejectionReasonCode: null,
+      rejectionReasonDetail: null
+    } as const;
+  }
+
+  const rejectionReasonCodeCandidate = input.rejectionReasonCode?.trim()
+    ? input.rejectionReasonCode.trim()
+    : payrollYearEndDefaultRejectedReasonCode;
+  if (
+    !payrollYearEndRejectionReasonCatalog.some(
+      (entry) => entry.code === rejectionReasonCodeCandidate
+    )
+  ) {
+    throw new ServiceError(409, "rejection reason code is not defined in catalog", {
+      rejectionReasonCode: rejectionReasonCodeCandidate,
+      allowedRejectionReasonCodes: payrollYearEndRejectionReasonCatalog.map((entry) => entry.code)
+    });
+  }
+
+  return {
+    ackCode: ackCodeCandidate,
+    ackNote: input.ackNote?.trim() ? input.ackNote.trim() : null,
+    rejectionReasonCode: rejectionReasonCodeCandidate,
+    rejectionReasonDetail: input.rejectionReasonDetail?.trim()
+      ? input.rejectionReasonDetail.trim()
+      : null
+  } as const;
 }
 
 function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
@@ -2226,6 +2403,8 @@ type YearEndFilingPackageAcknowledgedAuditPayload = {
   ackStatus: PayrollYearEndFilingAckStatus;
   ackCode: string | null;
   ackNote: string | null;
+  rejectionReasonCode: string | null;
+  rejectionReasonDetail: string | null;
   acknowledgedAt: string;
   acknowledgedByRole: string;
   acknowledgedById: string | null;
@@ -2289,7 +2468,16 @@ function asYearEndFilingPackageAcknowledgedAuditPayload(
   ) {
     return null;
   }
-  return candidate as YearEndFilingPackageAcknowledgedAuditPayload;
+  return {
+    ...candidate,
+    ackCode: typeof candidate.ackCode === "string" ? candidate.ackCode : null,
+    ackNote: typeof candidate.ackNote === "string" ? candidate.ackNote : null,
+    rejectionReasonCode:
+      typeof candidate.rejectionReasonCode === "string" ? candidate.rejectionReasonCode : null,
+    rejectionReasonDetail:
+      typeof candidate.rejectionReasonDetail === "string" ? candidate.rejectionReasonDetail : null,
+    acknowledgedById: typeof candidate.acknowledgedById === "string" ? candidate.acknowledgedById : null
+  } as YearEndFilingPackageAcknowledgedAuditPayload;
 }
 
 function asYearEndFilingEvidenceNoteAddedAuditPayload(
@@ -2369,6 +2557,8 @@ function buildYearEndFilingSubmissionSummaries(
         ackStatus: payload.ackStatus,
         ackCode: payload.ackCode,
         ackNote: payload.ackNote,
+        rejectionReasonCode: payload.rejectionReasonCode,
+        rejectionReasonDetail: payload.rejectionReasonDetail,
         acknowledgedAt: payload.acknowledgedAt,
         acknowledgedByRole: payload.acknowledgedByRole,
         acknowledgedById: payload.acknowledgedById
@@ -3123,6 +3313,8 @@ function buildYearEndFilingSubmissionTimeline(
         ackStatus: null,
         ackCode: null,
         ackNote: null,
+        rejectionReasonCode: null,
+        rejectionReasonDetail: null,
         evidenceNote: null
       });
       continue;
@@ -3146,6 +3338,8 @@ function buildYearEndFilingSubmissionTimeline(
         ackStatus: payload.ackStatus,
         ackCode: payload.ackCode,
         ackNote: payload.ackNote,
+        rejectionReasonCode: payload.rejectionReasonCode,
+        rejectionReasonDetail: payload.rejectionReasonDetail,
         evidenceNote: null
       });
       continue;
@@ -3169,6 +3363,8 @@ function buildYearEndFilingSubmissionTimeline(
         ackStatus: null,
         ackCode: null,
         ackNote: null,
+        rejectionReasonCode: null,
+        rejectionReasonDetail: null,
         evidenceNote: payload.note
       });
     }
@@ -3419,8 +3615,13 @@ export async function acknowledgePayrollYearEndFilingPackage(
     throw new ServiceError(409, "filing submission is already acknowledged");
   }
 
-  const ackCode = input.ackCode?.trim() ? input.ackCode.trim() : null;
-  const ackNote = input.ackNote?.trim() ? input.ackNote.trim() : null;
+  const resolvedAck = resolvePayrollYearEndFilingAckPayload({
+    ackStatus: input.ackStatus,
+    ackCode: input.ackCode,
+    ackNote: input.ackNote,
+    rejectionReasonCode: input.rejectionReasonCode,
+    rejectionReasonDetail: input.rejectionReasonDetail
+  });
   const actorRole = context.actor?.role ?? "system";
   const actorId = context.actor?.id ?? null;
   const acknowledgedAt = new Date().toISOString();
@@ -3428,8 +3629,10 @@ export async function acknowledgePayrollYearEndFilingPackage(
   const ackPayload: YearEndFilingPackageAcknowledgedAuditPayload = {
     submissionId: input.submissionId,
     ackStatus: input.ackStatus,
-    ackCode,
-    ackNote,
+    ackCode: resolvedAck.ackCode,
+    ackNote: resolvedAck.ackNote,
+    rejectionReasonCode: resolvedAck.rejectionReasonCode,
+    rejectionReasonDetail: resolvedAck.rejectionReasonDetail,
     acknowledgedAt,
     acknowledgedByRole: actorRole,
     acknowledgedById: actorId
@@ -3459,8 +3662,10 @@ export async function acknowledgePayrollYearEndFilingPackage(
       status: "acknowledged",
       ack: {
         ackStatus: input.ackStatus,
-        ackCode,
-        ackNote,
+        ackCode: resolvedAck.ackCode,
+        ackNote: resolvedAck.ackNote,
+        rejectionReasonCode: resolvedAck.rejectionReasonCode,
+        rejectionReasonDetail: resolvedAck.rejectionReasonDetail,
         acknowledgedAt,
         acknowledgedByRole: actorRole,
         acknowledgedById: actorId
@@ -3484,6 +3689,20 @@ export async function listPayrollYearEndFilingSubmissions(
   await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const submissions = await listYearEndFilingSubmissionSummaries(context, input);
   return { submissions };
+}
+
+export async function listPayrollYearEndFilingAckCatalog(
+  context: ServiceContext
+): Promise<ListPayrollYearEndFilingAckCatalogResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  return buildPayrollYearEndFilingAckCatalog();
 }
 
 export async function listPayrollYearEndFilingSubmissionTimeline(
