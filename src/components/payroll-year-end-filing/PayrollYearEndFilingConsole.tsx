@@ -9,6 +9,9 @@ import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 import type {
   ApiLog,
   PayrollYearEndFilingExportResponse,
+  PayrollYearEndFilingSubmission,
+  PayrollYearEndFilingSubmissionListResponse,
+  PayrollYearEndFilingSubmissionResponse,
   PayrollYearEndFinalizationResponse
 } from "@/components/payroll-year-end-filing/types";
 
@@ -47,10 +50,19 @@ export default function PayrollYearEndFilingConsole() {
   const [finalizedByNote, setFinalizedByNote] = useState("year-end baseline finalize");
   const [exportFormat, setExportFormat] = useState<"json" | "csv" | "jsonl" | "hometax_csv">("json");
   const [validationMode, setValidationMode] = useState<"basic" | "strict">("basic");
+  const [submissionTransport, setSubmissionTransport] = useState<
+    "manual_portal" | "hometax_upload" | "nts_api_mock"
+  >("manual_portal");
+  const [submissionNote, setSubmissionNote] = useState("wi0191 filing package submit");
+  const [ackSubmissionId, setAckSubmissionId] = useState("");
+  const [ackStatus, setAckStatus] = useState<"accepted" | "rejected">("accepted");
+  const [ackCode, setAckCode] = useState("ACK-OK");
+  const [ackNote, setAckNote] = useState("baseline acknowledgement");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [finalization, setFinalization] = useState<PayrollYearEndFinalizationResponse | null>(null);
   const [filingExport, setFilingExport] = useState<PayrollYearEndFilingExportResponse | null>(null);
+  const [submissions, setSubmissions] = useState<PayrollYearEndFilingSubmission[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -183,12 +195,142 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
+  async function runSubmitFilingPackage() {
+    try {
+      setPendingLabel("year-end filing package submit");
+      const payload = {
+        year: parseRequiredInt(year, "year"),
+        employeeId: employeeId.trim(),
+        format: exportFormat,
+        validationMode,
+        transport: submissionTransport,
+        submissionNote: submissionNote.trim() || undefined
+      };
+      const response = await fetch("/api/payroll/year-end/filing-submissions", {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "submit filing package",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
+      setAckSubmissionId(body.submission.submissionId);
+      setStatusMessage(`submitted ${body.submission.submissionId}`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
+  async function runRefreshSubmissions() {
+    try {
+      setPendingLabel("year-end filing submissions list");
+      const requestYear = parseRequiredInt(year, "year");
+      const requestEmployeeId = employeeId.trim();
+      const response = await fetch(
+        `/api/payroll/year-end/filing-submissions?year=${requestYear}&employeeId=${encodeURIComponent(requestEmployeeId)}`,
+        {
+          method: "GET",
+          headers: buildHeaders()
+        }
+      );
+      const body = (await response.json()) as PayrollYearEndFilingSubmissionListResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "list filing submissions",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setSubmissions(body.submissions);
+      setStatusMessage(`loaded ${body.submissions.length} submissions`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
+  async function runAcknowledgeSubmission() {
+    const submissionId = ackSubmissionId.trim();
+    if (!submissionId) {
+      setStatusMessage("ack submission ID is required");
+      return;
+    }
+
+    try {
+      setPendingLabel("year-end filing package ack");
+      const payload = {
+        year: parseRequiredInt(year, "year"),
+        employeeId: employeeId.trim(),
+        ackStatus,
+        ackCode: ackCode.trim() || undefined,
+        ackNote: ackNote.trim() || undefined
+      };
+      const response = await fetch(
+        `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/ack`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload)
+        }
+      );
+      const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "ack filing package",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setSubmissions((prev) =>
+        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
+      );
+      setStatusMessage(`acknowledged ${body.submission.submissionId}`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   return (
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization and Filing Export</h1>
-        <p>Finalize year-end settlement after guard checks and export filing-ready annual payroll data.</p>
+        <h1>Payroll Year-End Finalization, Filing Submission Tracking, and ACK</h1>
+        <p>Finalize year-end settlement, export filing-ready data, submit filing package, and track acknowledgement.</p>
       </header>
 
       <section className="panel-grid">
@@ -226,8 +368,32 @@ export default function PayrollYearEndFilingConsole() {
                 <option value="strict">strict</option>
               </select>
             </label>
+            <label>Submission Transport
+              <select
+                value={submissionTransport}
+                onChange={(event) =>
+                  setSubmissionTransport(
+                    event.target.value as "manual_portal" | "hometax_upload" | "nts_api_mock"
+                  )
+                }
+              >
+                <option value="manual_portal">manual_portal</option>
+                <option value="hometax_upload">hometax_upload</option>
+                <option value="nts_api_mock">nts_api_mock</option>
+              </select>
+            </label>
           </div>
           <label>Finalization Note<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
+          <label>Submission Note<input value={submissionNote} onChange={(event) => setSubmissionNote(event.target.value)} /></label>
+          <label>Ack Submission ID<input value={ackSubmissionId} onChange={(event) => setAckSubmissionId(event.target.value)} /></label>
+          <label>Ack Status
+            <select value={ackStatus} onChange={(event) => setAckStatus(event.target.value as "accepted" | "rejected")}>
+              <option value="accepted">accepted</option>
+              <option value="rejected">rejected</option>
+            </select>
+          </label>
+          <label>Ack Code<input value={ackCode} onChange={(event) => setAckCode(event.target.value)} /></label>
+          <label>Ack Note<input value={ackNote} onChange={(event) => setAckNote(event.target.value)} /></label>
           <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
           <label>Actor ID (dev fallback)<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
           <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
@@ -235,6 +401,9 @@ export default function PayrollYearEndFilingConsole() {
             <button className="btn btn-secondary" onClick={() => void runFinalization(false)} disabled={pendingLabel !== null}>Preview Finalization</button>
             <button className="btn btn-primary" onClick={() => void runFinalization(true)} disabled={pendingLabel !== null}>Finalize Settlement</button>
             <button className="btn btn-secondary" onClick={() => void runFilingExport()} disabled={pendingLabel !== null}>Export Filing Data</button>
+            <button className="btn btn-primary" onClick={() => void runSubmitFilingPackage()} disabled={pendingLabel !== null}>Submit Filing Package</button>
+            <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>Acknowledge Submission</button>
+            <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>Refresh Submissions</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
           {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
@@ -290,6 +459,23 @@ export default function PayrollYearEndFilingConsole() {
             <Link href="/admin/payroll-year-end" className="btn btn-secondary">Back to Year-End</Link>
             <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
           </div>
+        </article>
+
+        <article className="panel">
+          <h2>Filing Submissions</h2>
+          {submissions.length === 0 ? <p className="small">No filing submission yet.</p> : (
+            <ul className="log-list">
+              {submissions.map((submission) => (
+                <li key={submission.submissionId}>
+                  <span className={submission.status === "acknowledged" ? "ok" : "small"}>
+                    {submission.status.toUpperCase()}
+                  </span>{" "}
+                  {submission.submissionId} / {submission.transport} / {submission.format} / {submission.validationMode}
+                  <time>{new Date(submission.submittedAt).toLocaleString("ko-KR")}</time>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
       </section>
     </main>

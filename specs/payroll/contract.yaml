@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.15.0
+version: 1.16.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -20,6 +20,7 @@ scope:
     - year-end deduction-item input and settlement recalculation workflow for employee annual payroll totals
     - year-end settlement finalization and filing-data export workflow for employee annual payroll totals
     - year-end filing export multi-format artifact generation and validation-mode guard (`basic`/`strict`)
+    - year-end filing submission tracking and acknowledgement workflow for employee annual payroll totals
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -36,7 +37,7 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate/finalize year-end settlement and export filing data, list runs, list/manage deduction profiles, and confirm run
+      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate/finalize year-end settlement, export/submit/ack/list filing data packages, list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
     - role: employee
@@ -78,6 +79,15 @@ api:
     - method: POST
       path: /payroll/year-end/export-filing-data
       description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload with multi-format output (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode.
+    - method: GET
+      path: /payroll/year-end/filing-submissions
+      description: List filing submission tracking rows for selected employee/year.
+    - method: POST
+      path: /payroll/year-end/filing-submissions
+      description: Submit filing package using latest finalized/exported artifact metadata and selected transport.
+    - method: POST
+      path: /payroll/year-end/filing-submissions/{submissionId}/ack
+      description: Acknowledge filing submission outcome (`accepted`/`rejected`) with ack code and note.
     - method: POST
       path: /payroll/year-end/withholding-receipts
       description: Preview or issue withholding receipt for selected employee/year; issuance requires confirmed+distributed+receipt-confirmed run chain.
@@ -122,6 +132,10 @@ api:
         description: Emitted when year-end settlement finalization is applied.
       - name: payroll.year_end.filing_data.exported.v1
         description: Emitted when finalized year-end filing data is exported.
+      - name: payroll.year_end.filing_package.submitted.v1
+        description: Emitted when year-end filing package is submitted.
+      - name: payroll.year_end.filing_package.acknowledged.v1
+        description: Emitted when year-end filing package acknowledgement is recorded.
       - name: payroll.year_end.withholding_receipt.previewed.v1
         description: Emitted when withholding receipt readiness is previewed.
       - name: payroll.year_end.withholding_receipt.issued.v1
@@ -173,6 +187,8 @@ invariants:
   - Year-end filing data export records and csv output must remain deterministic for same finalized payload and run set.
   - Year-end filing data export artifact checksum must remain deterministic for same finalized payload, run set, and format.
   - Year-end filing data export with validationMode=`strict` must be blocked when validation checks fail.
+  - Year-end filing submission must reference existing finalized/exported artifact metadata and remain traceable by unique submissionId.
+  - Year-end filing acknowledgement is allowed only for existing non-acknowledged submission IDs.
   - Withholding receipt issue is blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
@@ -186,6 +202,7 @@ risk:
     - Unauthorized payslip distribution or receipt confirmation can break payroll compliance trail.
     - Unauthorized year-end deduction-item recalculation can distort compliance decision context.
     - Unauthorized year-end finalization or filing export can break statutory reporting evidence.
+    - Unauthorized filing submission/acknowledgement can corrupt statutory filing trail.
     - Unauthorized withholding receipt issuance can break statutory compliance evidence.
   payroll_accuracy:
     - Misapplied overtime/night/holiday multipliers affect compensation.
@@ -218,6 +235,7 @@ test_plan:
     - year-end filing export row/csv formatter determinism
     - year-end filing export multi-format artifact builder and checksum determinism
     - year-end filing export validation checks and strict-mode blocking behavior
+    - year-end filing submission summary builder and ack state transition formulas
     - withholding receipt issue guard (confirmed/distributed/receipt-confirmed chain)
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
@@ -249,6 +267,7 @@ test_plan:
     - year-end filing export rejects requests before finalization and returns deterministic row/csv output after finalization
     - year-end filing export returns deterministic artifact checksum/content for `json`/`csv`/`jsonl`/`hometax_csv`
     - year-end filing export strict validation mode rejects exports when finalized totals and current run rows mismatch
+    - year-end filing submission create/list/ack flow returns deterministic submission state transitions
     - withholding receipt issue rejects issuance when previewed/undistributed/pending-receipt runs remain
     - year-end APIs reject requests when payroll_year_end_v1 is disabled
     - year-end recalculation API rejects requests when payroll_year_end_deduction_input_v1 is disabled
@@ -266,6 +285,7 @@ test_plan:
     - year-end deduction-item recalculation deterministic replay via WI-0188 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
     - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
+    - year-end filing submission/ack deterministic replay via WI-0191 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -277,6 +297,7 @@ test_plan:
     - payroll_operator role enforcement for year-end settlement preview API
     - payroll_operator role enforcement for year-end settlement recalculation API
     - payroll_operator role enforcement for year-end finalization and filing-export APIs
+    - payroll_operator role enforcement for year-end filing submission/ack/list APIs
     - employee/payroll role guard for year-end withholding receipt preview/issue API
   payroll_accuracy:
     - overtime/night/holiday category payout checks
@@ -290,6 +311,7 @@ test_plan:
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
     - year-end deduction-item recalculation delta remains deterministic for same input vectors
     - year-end finalization guard and filing-export row/csv output remain deterministic
+    - year-end filing submission status transitions remain deterministic for same action sequence
 observability:
   audit_events:
     - payroll.calculated
@@ -314,6 +336,11 @@ observability:
     - payroll.year_end.finalize_settlement.failed
     - payroll.year_end.filing_data_exported
     - payroll.year_end.export_filing_data.failed
+    - payroll.year_end.filing_package_submitted
+    - payroll.year_end.filing_submission.failed
+    - payroll.year_end.filing_submission_list.failed
+    - payroll.year_end.filing_package_acknowledged
+    - payroll.year_end.filing_ack.failed
     - payroll.year_end.withholding_receipt_previewed
     - payroll.year_end.withholding_receipt_issued
     - payroll.year_end.withholding_receipt.failed
@@ -331,6 +358,8 @@ observability:
     - payroll_year_end_settlement_recalculation_latency_ms
     - payroll_year_end_settlement_finalization_latency_ms
     - payroll_year_end_filing_export_latency_ms
+    - payroll_year_end_filing_submission_latency_ms
+    - payroll_year_end_filing_ack_latency_ms
     - payroll_year_end_receipt_issue_latency_ms
     - payroll_deduction_profile_calc_latency_ms
     - payroll_deduction_profile_miss_count
@@ -358,13 +387,15 @@ rollout:
       default: "off"
     - name: payroll_year_end_filing_export_v1
       default: "off"
+    - name: payroll_year_end_filing_submission_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_year_end_filing_export_v1, then payroll_year_end_deduction_input_v1, then payroll_year_end_v1, then payroll_payslip_delivery_v1, then payroll_close_period_v1, then payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
+  strategy: disable payroll_year_end_filing_submission_v1, then payroll_year_end_filing_export_v1, then payroll_year_end_deduction_input_v1, then payroll_year_end_v1, then payroll_payslip_delivery_v1, then payroll_close_period_v1, then payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.15.0 extends feature-flagged year-end filing export (`POST /payroll/year-end/export-filing-data`) with multi-format artifacts (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode (`basic`/`strict`) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/withholding-receipt APIs."
+consumer_impact: "Contract v1.16.0 extends feature-flagged year-end filing workflow with submission tracking/ack endpoints (`GET|POST /payroll/year-end/filing-submissions`, `POST /payroll/year-end/filing-submissions/{submissionId}/ack`) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -386,6 +417,7 @@ references:
   - work-items/WI-0188-payroll-year-end-deduction-input-and-recalculation-baseline.md
   - work-items/WI-0189-payroll-year-end-finalization-and-filing-export-baseline.md
   - work-items/WI-0190-payroll-year-end-export-format-expansion-and-validation-baseline.md
+  - work-items/WI-0191-payroll-year-end-filing-submission-tracking-and-ack-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

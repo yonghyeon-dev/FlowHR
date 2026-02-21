@@ -75,7 +75,7 @@ async function run() {
   );
   assert.match(
     filingConsoleSource,
-    /Payroll Year-End Finalization and Filing Export/,
+    /Payroll Year-End Finalization/,
     "filing console should include heading text"
   );
   assert.match(

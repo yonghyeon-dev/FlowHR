@@ -223,6 +223,25 @@ export const exportPayrollYearEndFilingDataSchema = z.object({
   validationMode: z.enum(["basic", "strict"]).default("basic")
 });
 
+export const submitPayrollYearEndFilingPackageSchema = exportPayrollYearEndFilingDataSchema.extend({
+  transport: z.enum(["manual_portal", "hometax_upload", "nts_api_mock"]).default("manual_portal"),
+  submissionNote: z.string().min(1).max(240).optional()
+});
+
+export const acknowledgePayrollYearEndFilingPackageSchema = z.object({
+  year: payrollYearSchema,
+  employeeId: z.string().min(1),
+  submissionId: z.string().min(1),
+  ackStatus: z.enum(["accepted", "rejected"]),
+  ackCode: z.string().min(1).max(80).optional(),
+  ackNote: z.string().min(1).max(240).optional()
+});
+
+export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
+  year: z.coerce.number().int().min(2020).max(2100),
+  employeeId: z.string().min(1)
+});
+
 export const issuePayrollYearEndWithholdingReceiptSchema = z.object({
   year: payrollYearSchema,
   employeeId: z.string().min(1),
