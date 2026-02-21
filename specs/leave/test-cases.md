@@ -36,6 +36,8 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 28. Promotion delivery history detail endpoint returns recipient snapshot statuses (`FAILED`, `SKIPPED_NO_EMAIL`, etc.).
 29. Promotion delivery retry endpoint supports dry-run and real dispatch with retry-chain linkage.
 30. Promotion delivery retry defaults to failed recipients when `recipientEmployeeIds` is omitted.
+31. Accrual auto-grant dry-run returns per-employee statuses (`ELIGIBLE`, `ALREADY_SETTLED`, `NOT_ELIGIBLE`) without mutating balances.
+32. Accrual auto-grant apply settles only eligible employees and reports failed rows without aborting whole batch.
 
 ## Boundary and Accuracy Cases
 
@@ -54,6 +56,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 13. Promotion notify email-template payload keeps deterministic template id/recipient summary and excludes recipients without email.
 14. Promotion retry payload excludes recipients without email and keeps deterministic selected recipient set.
 15. Promotion retry increments recipient retry count deterministically.
+16. Accrual auto-grant `includeAlreadySettled=false` excludes already-settled rows from result list while keeping summary counts.
 
 ## Regression Linkage
 
@@ -65,6 +68,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 - Promotion notify fixtures remain deterministic for dry-run / no-target / dispatched / missing-webhook outcomes.
 - Promotion notify fixtures remain deterministic for email-template dry-run / dispatched / missing-config outcomes.
 - Promotion delivery history fixtures remain deterministic for failed-dispatch snapshots and retry-chain list/detail views.
+- Accrual auto-grant fixtures remain deterministic for dry-run/apply/already-settled summary counts.
 
 ## QA Gate Expectations
 
