@@ -1,4 +1,5 @@
 import type { Actor } from "@/lib/actor";
+import { createHash } from "node:crypto";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
 import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
@@ -130,6 +131,9 @@ type YearEndDeductionItemsInput = {
   housingSavingsKrw: number;
 };
 
+type PayrollYearEndFilingExportFormat = "json" | "csv" | "jsonl" | "hometax_csv";
+type PayrollYearEndFilingValidationMode = "basic" | "strict";
+
 type RecalculatePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
   deductionItems: YearEndDeductionItemsInput;
 };
@@ -143,7 +147,8 @@ type FinalizePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInpu
 type ExportPayrollYearEndFilingDataInput = {
   year: number;
   employeeId: string;
-  format: "json" | "csv";
+  format: PayrollYearEndFilingExportFormat;
+  validationMode: PayrollYearEndFilingValidationMode;
 };
 
 type IssuePayrollYearEndWithholdingReceiptInput = {
@@ -381,6 +386,21 @@ type YearEndFilingGuardRunStates = {
   pendingReceiptRunIds: string[];
 };
 
+type YearEndFilingRecord = {
+  runId: string;
+  periodStart: string;
+  periodEnd: string;
+  state: string;
+  grossPayKrw: number;
+  withholdingTaxKrw: number;
+  socialInsuranceKrw: number;
+  otherDeductionsKrw: number;
+  totalDeductionsKrw: number;
+  netPayKrw: number;
+  payslipDistributedAt: string | null;
+  payslipReceiptConfirmedAt: string | null;
+};
+
 type FinalizePayrollYearEndSettlementResult = {
   settlement: {
     year: number;
@@ -413,7 +433,8 @@ type ExportPayrollYearEndFilingDataResult = {
     finalizationId: string;
     finalizedAt: string;
     exportedAt: string;
-    format: "json" | "csv";
+    format: PayrollYearEndFilingExportFormat;
+    validationMode: PayrollYearEndFilingValidationMode;
     runStates: YearEndFilingGuardRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
     deductionItemsKrw: {
@@ -429,21 +450,26 @@ type ExportPayrollYearEndFilingDataResult = {
       taxableAnnualIncomeAfterDeductionKrw: number;
     };
     settlementKrw: YearEndSettlementKrw;
-    records: Array<{
-      runId: string;
-      periodStart: string;
-      periodEnd: string;
-      state: string;
-      grossPayKrw: number;
-      withholdingTaxKrw: number;
-      socialInsuranceKrw: number;
-      otherDeductionsKrw: number;
-      totalDeductionsKrw: number;
-      netPayKrw: number;
-      payslipDistributedAt: string | null;
-      payslipReceiptConfirmedAt: string | null;
-    }>;
+    records: YearEndFilingRecord[];
     csv: string | null;
+    artifact: {
+      fileName: string;
+      contentType: string;
+      checksumSha256: string;
+      byteLength: number;
+      content: string;
+    };
+    validation: {
+      status: "pass" | "fail";
+      issues: string[];
+      checks: {
+        totalsMatch: boolean;
+        confirmedRunCountMatch: boolean;
+        uniqueRunIds: boolean;
+        receiptCoverage: boolean;
+        nonNegativeAmounts: boolean;
+      };
+    };
   };
 };
 
@@ -1799,7 +1825,7 @@ function asYearEndFinalizationAuditPayload(payload: unknown): YearEndFinalizatio
   return candidate as YearEndFinalizationAuditPayload;
 }
 
-function buildYearEndFilingRecords(runs: PayrollRunEntity[]) {
+function buildYearEndFilingRecords(runs: PayrollRunEntity[]): YearEndFilingRecord[] {
   return runs
     .map((run) => {
       const withholdingTaxKrw = run.withholdingTaxKrw ?? 0;
@@ -1827,7 +1853,7 @@ function buildYearEndFilingRecords(runs: PayrollRunEntity[]) {
 }
 
 function buildYearEndFilingCsv(
-  rows: ReturnType<typeof buildYearEndFilingRecords>,
+  rows: YearEndFilingRecord[],
   payload: YearEndFinalizationAuditPayload
 ) {
   const header = [
@@ -1870,6 +1896,150 @@ function buildYearEndFilingCsv(
     ].join(",")
   );
   return [header, ...lines].join("\n");
+}
+
+function buildYearEndFilingJsonl(rows: YearEndFilingRecord[]) {
+  return rows.map((row) => JSON.stringify(row)).join("\n");
+}
+
+function buildYearEndFilingHometaxCsv(rows: YearEndFilingRecord[], payload: YearEndFinalizationAuditPayload) {
+  const header = [
+    "year",
+    "employeeId",
+    "finalizationId",
+    "runId",
+    "grossPayKrw",
+    "taxableAnnualIncomeKrw",
+    "annualTaxLiabilityKrw",
+    "withholdingDeltaKrw",
+    "withholdingTaxKrw",
+    "totalDeductionsKrw",
+    "netPayKrw",
+    "receiptConfirmedAt"
+  ].join(",");
+  const lines = rows.map((row) =>
+    [
+      payload.year,
+      payload.employeeId,
+      payload.finalizationId,
+      row.runId,
+      row.grossPayKrw,
+      payload.settlementKrw.taxableAnnualIncomeKrw,
+      payload.settlementKrw.annualTaxLiabilityKrw,
+      payload.settlementKrw.withholdingDeltaKrw,
+      row.withholdingTaxKrw,
+      row.totalDeductionsKrw,
+      row.netPayKrw,
+      row.payslipReceiptConfirmedAt ?? ""
+    ].join(",")
+  );
+  return [header, ...lines].join("\n");
+}
+
+function buildYearEndFilingArtifact(
+  format: PayrollYearEndFilingExportFormat,
+  rows: YearEndFilingRecord[],
+  payload: YearEndFinalizationAuditPayload
+) {
+  let content = "";
+  let contentType = "application/json";
+  let fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.json`;
+
+  if (format === "csv") {
+    content = buildYearEndFilingCsv(rows, payload);
+    contentType = "text/csv";
+    fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.csv`;
+  } else if (format === "jsonl") {
+    content = buildYearEndFilingJsonl(rows);
+    contentType = "application/x-ndjson";
+    fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.jsonl`;
+  } else if (format === "hometax_csv") {
+    content = buildYearEndFilingHometaxCsv(rows, payload);
+    contentType = "text/csv";
+    fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.hometax.csv`;
+  } else {
+    content = JSON.stringify(
+      {
+        year: payload.year,
+        employeeId: payload.employeeId,
+        finalizationId: payload.finalizationId,
+        finalizedAt: payload.finalizedAt,
+        records: rows
+      },
+      null,
+      2
+    );
+  }
+
+  return {
+    fileName,
+    contentType,
+    content,
+    byteLength: Buffer.byteLength(content, "utf8"),
+    checksumSha256: createHash("sha256").update(content).digest("hex")
+  };
+}
+
+function validateYearEndFilingRecords(rows: YearEndFilingRecord[], payload: YearEndFinalizationAuditPayload) {
+  const aggregated = rows.reduce(
+    (totals, row) => ({
+      grossPayKrw: totals.grossPayKrw + row.grossPayKrw,
+      withholdingTaxKrw: totals.withholdingTaxKrw + row.withholdingTaxKrw,
+      totalDeductionsKrw: totals.totalDeductionsKrw + row.totalDeductionsKrw,
+      netPayKrw: totals.netPayKrw + row.netPayKrw
+    }),
+    {
+      grossPayKrw: 0,
+      withholdingTaxKrw: 0,
+      totalDeductionsKrw: 0,
+      netPayKrw: 0
+    }
+  );
+
+  const checks = {
+    totalsMatch:
+      aggregated.grossPayKrw === payload.annualTotalsKrw.grossPayKrw &&
+      aggregated.withholdingTaxKrw === payload.annualTotalsKrw.withholdingTaxKrw &&
+      aggregated.totalDeductionsKrw === payload.annualTotalsKrw.totalDeductionsKrw &&
+      aggregated.netPayKrw === payload.annualTotalsKrw.netPayKrw,
+    confirmedRunCountMatch: rows.length === payload.runStates.confirmedRuns,
+    uniqueRunIds: new Set(rows.map((row) => row.runId)).size === rows.length,
+    receiptCoverage: rows.every(
+      (row) => typeof row.payslipReceiptConfirmedAt === "string" && row.payslipReceiptConfirmedAt.length > 0
+    ),
+    nonNegativeAmounts: rows.every(
+      (row) =>
+        row.grossPayKrw >= 0 &&
+        row.withholdingTaxKrw >= 0 &&
+        row.socialInsuranceKrw >= 0 &&
+        row.otherDeductionsKrw >= 0 &&
+        row.totalDeductionsKrw >= 0 &&
+        row.netPayKrw >= 0
+    )
+  };
+
+  const issues: string[] = [];
+  if (!checks.totalsMatch) {
+    issues.push("record totals do not match finalized annual totals");
+  }
+  if (!checks.confirmedRunCountMatch) {
+    issues.push("record count does not match confirmed run count from finalization");
+  }
+  if (!checks.uniqueRunIds) {
+    issues.push("duplicate run IDs detected in filing records");
+  }
+  if (!checks.receiptCoverage) {
+    issues.push("one or more filing records are missing payslip receipt confirmation");
+  }
+  if (!checks.nonNegativeAmounts) {
+    issues.push("one or more filing records include negative KRW amounts");
+  }
+
+  return {
+    status: issues.length === 0 ? "pass" : "fail",
+    issues,
+    checks
+  } as const;
 }
 
 export async function closePayrollPeriod(
@@ -2501,6 +2671,15 @@ export async function exportPayrollYearEndFilingData(
   }
 
   const records = buildYearEndFilingRecords(snapshot.confirmedRuns);
+  const validation = validateYearEndFilingRecords(records, finalizedPayload);
+  if (input.validationMode === "strict" && validation.status === "fail") {
+    throw new ServiceError(409, "year-end filing export validation failed", {
+      issues: validation.issues,
+      checks: validation.checks
+    });
+  }
+
+  const artifact = buildYearEndFilingArtifact(input.format, records, finalizedPayload);
   const exportedAt = new Date().toISOString();
   const payload: ExportPayrollYearEndFilingDataResult["filingData"] = {
     year: input.year,
@@ -2509,12 +2688,15 @@ export async function exportPayrollYearEndFilingData(
     finalizedAt: finalizedPayload.finalizedAt,
     exportedAt,
     format: input.format,
+    validationMode: input.validationMode,
     runStates: finalizedPayload.runStates,
     annualTotalsKrw: finalizedPayload.annualTotalsKrw,
     deductionItemsKrw: finalizedPayload.deductionItemsKrw,
     settlementKrw: finalizedPayload.settlementKrw,
     records,
-    csv: input.format === "csv" ? buildYearEndFilingCsv(records, finalizedPayload) : null
+    csv: input.format === "csv" || input.format === "hometax_csv" ? artifact.content : null,
+    artifact,
+    validation
   };
 
   await context.dataAccess.audit.append({

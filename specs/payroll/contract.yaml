@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.14.0
+version: 1.15.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -19,6 +19,7 @@ scope:
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
     - year-end deduction-item input and settlement recalculation workflow for employee annual payroll totals
     - year-end settlement finalization and filing-data export workflow for employee annual payroll totals
+    - year-end filing export multi-format artifact generation and validation-mode guard (`basic`/`strict`)
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -76,7 +77,7 @@ api:
       description: Preview or apply year-end settlement finalization with confirmed/distributed/receipt-confirmed guard chain and finalization audit trace.
     - method: POST
       path: /payroll/year-end/export-filing-data
-      description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload.
+      description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload with multi-format output (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode.
     - method: POST
       path: /payroll/year-end/withholding-receipts
       description: Preview or issue withholding receipt for selected employee/year; issuance requires confirmed+distributed+receipt-confirmed run chain.
@@ -170,6 +171,8 @@ invariants:
   - Year-end settlement finalization apply must be blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
   - Year-end filing data export must require latest finalized settlement payload for selected employee/year.
   - Year-end filing data export records and csv output must remain deterministic for same finalized payload and run set.
+  - Year-end filing data export artifact checksum must remain deterministic for same finalized payload, run set, and format.
+  - Year-end filing data export with validationMode=`strict` must be blocked when validation checks fail.
   - Withholding receipt issue is blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
@@ -195,6 +198,7 @@ risk:
     - Closing period with unconfirmed runs can cause settlement mismatch.
     - Mis-entered year-end deduction-item inputs can skew annual settlement deltas.
     - Exporting filing data from stale/non-finalized settlement can cause reporting mismatch.
+    - Filing format mapping or validation drift can cause statutory submission rejection.
   legal:
     - Payroll trace must support audit and dispute resolution.
 test_plan:
@@ -212,6 +216,8 @@ test_plan:
     - year-end settlement recalculation baseline-vs-deduction-input delta formulas
     - year-end finalization guard chain and finalization payload formulas
     - year-end filing export row/csv formatter determinism
+    - year-end filing export multi-format artifact builder and checksum determinism
+    - year-end filing export validation checks and strict-mode blocking behavior
     - withholding receipt issue guard (confirmed/distributed/receipt-confirmed chain)
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
@@ -241,6 +247,8 @@ test_plan:
     - year-end settlement recalculation returns baseline/recalculated settlement and taxable-income delta deterministically for same employee/year run set
     - year-end settlement finalization preview/apply returns deterministic guard and finalization summary for same employee/year run set
     - year-end filing export rejects requests before finalization and returns deterministic row/csv output after finalization
+    - year-end filing export returns deterministic artifact checksum/content for `json`/`csv`/`jsonl`/`hometax_csv`
+    - year-end filing export strict validation mode rejects exports when finalized totals and current run rows mismatch
     - withholding receipt issue rejects issuance when previewed/undistributed/pending-receipt runs remain
     - year-end APIs reject requests when payroll_year_end_v1 is disabled
     - year-end recalculation API rejects requests when payroll_year_end_deduction_input_v1 is disabled
@@ -257,6 +265,7 @@ test_plan:
     - year-end settlement and withholding receipt deterministic replay via WI-0187 e2e
     - year-end deduction-item recalculation deterministic replay via WI-0188 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
+    - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -355,7 +364,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.14.0 adds feature-flagged year-end finalization and filing-export APIs (`POST /payroll/year-end/finalize-settlement`, `POST /payroll/year-end/export-filing-data`) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/withholding-receipt APIs."
+consumer_impact: "Contract v1.15.0 extends feature-flagged year-end filing export (`POST /payroll/year-end/export-filing-data`) with multi-format artifacts (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode (`basic`/`strict`) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -376,6 +385,7 @@ references:
   - work-items/WI-0187-payroll-year-end-withholding-receipt-baseline.md
   - work-items/WI-0188-payroll-year-end-deduction-input-and-recalculation-baseline.md
   - work-items/WI-0189-payroll-year-end-finalization-and-filing-export-baseline.md
+  - work-items/WI-0190-payroll-year-end-export-format-expansion-and-validation-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

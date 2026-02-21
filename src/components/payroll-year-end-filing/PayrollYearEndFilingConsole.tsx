@@ -45,7 +45,8 @@ export default function PayrollYearEndFilingConsole() {
   const [donationKrw, setDonationKrw] = useState("0");
   const [housingSavingsKrw, setHousingSavingsKrw] = useState("0");
   const [finalizedByNote, setFinalizedByNote] = useState("year-end baseline finalize");
-  const [exportFormat, setExportFormat] = useState<"json" | "csv">("json");
+  const [exportFormat, setExportFormat] = useState<"json" | "csv" | "jsonl" | "hometax_csv">("json");
+  const [validationMode, setValidationMode] = useState<"basic" | "strict">("basic");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [finalization, setFinalization] = useState<PayrollYearEndFinalizationResponse | null>(null);
@@ -147,7 +148,8 @@ export default function PayrollYearEndFilingConsole() {
       const payload = {
         year: parseRequiredInt(year, "year"),
         employeeId: employeeId.trim(),
-        format: exportFormat
+        format: exportFormat,
+        validationMode
       };
       const response = await fetch("/api/payroll/year-end/export-filing-data", {
         method: "POST",
@@ -170,7 +172,9 @@ export default function PayrollYearEndFilingConsole() {
         return;
       }
       setFilingExport(body);
-      setStatusMessage(`exported ${body.filingData.records.length} records`);
+      setStatusMessage(
+        `exported ${body.filingData.records.length} records (${body.filingData.validation.status})`
+      );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "invalid input");
@@ -204,9 +208,22 @@ export default function PayrollYearEndFilingConsole() {
             <label>Donation<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
             <label>Housing Savings<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
             <label>Export Format
-              <select value={exportFormat} onChange={(event) => setExportFormat(event.target.value as "json" | "csv")}>
+              <select
+                value={exportFormat}
+                onChange={(event) =>
+                  setExportFormat(event.target.value as "json" | "csv" | "jsonl" | "hometax_csv")
+                }
+              >
                 <option value="json">json</option>
                 <option value="csv">csv</option>
+                <option value="jsonl">jsonl</option>
+                <option value="hometax_csv">hometax_csv</option>
+              </select>
+            </label>
+            <label>Validation Mode
+              <select value={validationMode} onChange={(event) => setValidationMode(event.target.value as "basic" | "strict")}>
+                <option value="basic">basic</option>
+                <option value="strict">strict</option>
               </select>
             </label>
           </div>
@@ -243,10 +260,15 @@ export default function PayrollYearEndFilingConsole() {
             <ul className="simple-list">
               <li><span>Finalization ID</span><strong>{filingExport.filingData.finalizationId}</strong></li>
               <li><span>Format</span><strong>{filingExport.filingData.format}</strong></li>
+              <li><span>Validation Mode</span><strong>{filingExport.filingData.validationMode}</strong></li>
+              <li><span>Validation Status</span><strong>{filingExport.filingData.validation.status}</strong></li>
               <li><span>Exported Records</span><strong>{filingExport.filingData.records.length}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(filingExport.filingData.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Withholding Delta</span><strong>{formatKrw(filingExport.filingData.settlementKrw.withholdingDeltaKrw)}</strong></li>
               <li><span>CSV</span><strong>{filingExport.filingData.csv ? "ready" : "-"}</strong></li>
+              <li><span>Artifact</span><strong>{filingExport.filingData.artifact.fileName}</strong></li>
+              <li><span>Checksum</span><strong>{filingExport.filingData.artifact.checksumSha256.slice(0, 16)}...</strong></li>
+              <li><span>Validation Issues</span><strong>{filingExport.filingData.validation.issues.join(" | ") || "-"}</strong></li>
             </ul>
           )}
         </article>
