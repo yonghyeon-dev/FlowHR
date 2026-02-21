@@ -26,6 +26,9 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 18. Reject statutory baseline preview when `requireMonthlyBoundary=true` and period is not monthly boundary in `Asia/Seoul`.
 19. Replay statutory golden fixtures (`GC-007`, `GC-008`) and verify deterministic deduction totals/net pay.
 20. Employee self-service payslip list returns only own `CONFIRMED` statutory runs with deduction breakdown details, and rejects `PREVIEWED`/other-employee access.
+21. Run payroll 4-insurance settlement preview with contribution caps and verify employee/employer component breakdown.
+22. Reject 4-insurance settlement preview when `payroll_kr_insurance_settlement_v1` feature flag is disabled.
+23. Reject 4-insurance settlement preview when `requireMonthlyBoundary=true` and period is not monthly boundary in `Asia/Seoul`.
 
 ## Accuracy Cases
 
@@ -43,6 +46,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 12. Tax-credit mode applies credit before local-income-tax and never produces negative income tax.
 13. Monthly-boundary guard in `Asia/Seoul` rejects non-monthly periods deterministically.
 14. Employee payslip self-service view preserves statutory deduction totals/net values and excludes unauthorized runs.
+15. Insurance settlement mode computes employee/employer contribution totals and deltas (`priorWithheldKrw`, `priorEmployerPaidKrw`) deterministically.
+16. Insurance settlement contribution caps bind NP/HI/EI bases and keep component sums deterministic.
 
 ## Regression Linkage
 
@@ -65,3 +70,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Progressive/Cap Gate: bracket ordering and insurance-cap calculations must be deterministic and validated.
 - Tax-Credit/Boundary Gate: tax-credit ordering and monthly-boundary guard checks must be deterministic and validated.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
+- Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.

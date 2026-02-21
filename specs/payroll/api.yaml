@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.8.1
+  version: 1.9.0
 paths:
   /payroll/runs:
     get:
@@ -64,6 +64,13 @@ paths:
       responses:
         "200":
           description: Deduction preview generated
+  /payroll/runs/preview-insurance-settlement:
+    post:
+      summary: Create payroll 4-insurance settlement preview (employee/employer contribution and delta)
+      description: Computes employee/employer national pension, health insurance, long-term care, employment insurance, and industrial accident components with optional caps and prior-withheld/prior-paid deltas.
+      responses:
+        "200":
+          description: Insurance settlement preview generated
   /payroll/runs/{runId}/confirm:
     post:
       summary: Confirm payroll run

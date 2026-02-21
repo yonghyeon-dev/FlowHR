@@ -52,6 +52,24 @@ const statutoryKrBaselineSchema = z.object({
   otherDeductionsKrw: nonNegativeInteger.default(0)
 });
 
+const statutoryInsuranceSettlementSchema = z.object({
+  nonTaxableIncomeKrw: nonNegativeInteger.default(0),
+  requireMonthlyBoundary: z.boolean().default(true),
+  nationalPensionEmployeeRate: rate.default(0.045),
+  nationalPensionEmployerRate: rate.default(0.045),
+  nationalPensionCapKrw: nonNegativeInteger.optional(),
+  healthInsuranceEmployeeRate: rate.default(0.03545),
+  healthInsuranceEmployerRate: rate.default(0.03545),
+  healthInsuranceCapKrw: nonNegativeInteger.optional(),
+  longTermCareRateOnHealth: rate.default(0.1295),
+  employmentInsuranceEmployeeRate: rate.default(0.009),
+  employmentInsuranceEmployerRate: rate.default(0.0115),
+  employmentInsuranceCapKrw: nonNegativeInteger.optional(),
+  industrialAccidentEmployerRate: rate.default(0.015),
+  priorWithheldKrw: nonNegativeInteger.default(0),
+  priorEmployerPaidKrw: nonNegativeInteger.default(0)
+});
+
 export const previewPayrollWithDeductionsSchema = previewPayrollSchema
   .extend({
     deductionMode: z.enum(["manual", "profile", "statutory_kr_baseline"]).default("manual"),
@@ -134,6 +152,11 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
       }
     }
   });
+
+export const previewPayrollInsuranceSettlementSchema = previewPayrollSchema.extend({
+  employeeId: z.string().min(1),
+  settlement: statutoryInsuranceSettlementSchema.optional()
+});
 
 export const upsertDeductionProfileSchema = z.object({
   name: z.string().min(1),

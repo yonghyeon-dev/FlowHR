@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.8.1
+version: 1.9.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -13,6 +13,7 @@ scope:
     - KR statutory baseline progressive income-tax brackets and insurance contribution caps
     - KR statutory baseline additive tax-credit inputs and optional monthly-boundary validation (Asia/Seoul)
     - golden fixture regression coverage for statutory KR baseline deduction outputs
+    - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -29,7 +30,7 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview, list runs, list/manage deduction profiles, and confirm run
+      permission: run payroll preview (including 4-insurance settlement preview), list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
     - role: employee
@@ -47,6 +48,9 @@ api:
     - method: POST
       path: /payroll/runs/preview-with-deductions
       description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, contribution caps, additive tax-credit fields, and optional monthly-boundary validation).
+    - method: POST
+      path: /payroll/runs/preview-insurance-settlement
+      description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, and prior-withheld/prior-paid deltas.
     - method: POST
       path: /payroll/runs/{runId}/confirm
       description: Confirm a payroll run.
@@ -66,6 +70,8 @@ api:
         description: Emitted when deduction/tax preview is calculated.
       - name: payroll.deduction_profile.updated.v1
         description: Emitted when deduction profile configuration changes.
+      - name: payroll.insurance_settlement.previewed.v1
+        description: Emitted when 4-insurance settlement preview is calculated.
     consumed:
       - name: attendance.approved.v1
         description: Approved attendance aggregate input.
@@ -96,6 +102,9 @@ invariants:
   - Insurance contribution caps (if provided) must bound each insurance contribution base deterministically.
   - Tax credits in statutory mode must apply to income tax before local income tax, and post-credit income tax must not be negative.
   - When statutory.requireMonthlyBoundary is true, payroll period must be validated against monthly boundary in Asia/Seoul.
+  - Insurance settlement preview must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0) and keep contribution components deterministic for same inputs/rates/caps.
+  - Insurance settlement deltas must satisfy employeeDeltaKrw = employeeContributionTotalKrw - priorWithheldKrw and employerDeltaKrw = employerContributionTotalKrw - priorEmployerPaidKrw.
+  - Insurance settlement preview with requireMonthlyBoundary=true must reject non-monthly period boundaries in Asia/Seoul.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
   - Payroll run list API is restricted to payroll_operator/admin roles, with employee self-service allowed for own CONFIRMED runs only.
@@ -112,6 +121,7 @@ risk:
     - Statutory baseline rates are approximation-only and require policy/legal review before production default.
     - Incorrect tax-credit ordering (after/before local income tax) can cause payout mismatch.
     - Monthly boundary misconfiguration can produce off-cycle payroll previews.
+    - Insurance settlement cap/rate misconfiguration can cause employee/employer contribution mismatch.
   legal:
     - Payroll trace must support audit and dispute resolution.
 test_plan:
@@ -121,6 +131,7 @@ test_plan:
     - statutory_kr_baseline mode deduction component and net-pay aggregation formula
     - statutory_kr_baseline progressive bracket and contribution-cap formulas
     - statutory_kr_baseline tax-credit and monthly-boundary formulas
+    - insurance settlement contribution, cap, and delta formulas
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
     - deduction profile list query parsing and role guard
@@ -136,33 +147,42 @@ test_plan:
     - list deduction profiles and filter by active/mode
     - statutory_kr_baseline validates progressive bracket ordering/open-ended final bracket
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
+    - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
+    - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
+    - preview-insurance-settlement validates monthly-boundary guard in Asia/Seoul when requireMonthlyBoundary=true
   regression:
     - replay GC-001 through GC-006 fixtures
     - replay GC-007 through GC-008 statutory fixtures
     - statutory_kr_baseline deterministic result replay via WI-0101 e2e
     - statutory_kr_baseline progressive/cap deterministic replay via WI-0105 e2e
     - statutory_kr_baseline tax-credit/boundary deterministic replay via WI-0106 e2e
+    - insurance settlement deterministic replay via WI-0184 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
     - payroll_operator role enforcement for deduction profile list API
+    - payroll_operator role enforcement for preview-insurance-settlement API
   payroll_accuracy:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
     - statutory taxable-base and component-level deterministic checks
     - progressive bracket and insurance-cap component checks
     - tax-credit and monthly-boundary component checks
+    - insurance settlement employee/employer component, cap, and delta deterministic checks
 observability:
   audit_events:
     - payroll.calculated
     - payroll.preview_with_deductions.failed
     - payroll.deductions_calculated
+    - payroll.insurance_settlement_previewed
+    - payroll.preview_insurance_settlement.failed
     - payroll.deduction_profile.updated
     - payroll.confirmed
   metrics:
     - payroll_run_duration_ms
     - payroll_recalculation_count
     - payroll_deductions_preview_latency_ms
+    - payroll_insurance_settlement_preview_latency_ms
     - payroll_deduction_profile_calc_latency_ms
     - payroll_deduction_profile_miss_count
   logs:
@@ -177,13 +197,15 @@ rollout:
       default: "off"
     - name: payroll_kr_baseline_v1
       default: "off"
+    - name: payroll_kr_insurance_settlement_v1
+      default: "off"
   migration_strategy: expand-contract
 rollback:
-  strategy: disable payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
+  strategy: disable payroll_kr_insurance_settlement_v1, then payroll_kr_baseline_v1, then payroll_deduction_profile_v1, then payroll_deductions_v1 and fallback to gross-only preview path
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.8.1 keeps API behavior unchanged and expands statutory_kr_baseline golden regression coverage (GC-007/GC-008) to harden deterministic payroll verification."
+consumer_impact: "Contract v1.9.0 adds `POST /payroll/runs/preview-insurance-settlement` for feature-flagged 4-insurance settlement preview (employee/employer breakdown + deltas) while preserving existing payroll preview/confirm/profile APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -198,6 +220,7 @@ references:
   - work-items/WI-0105-payroll-kr-progressive-cap.md
   - work-items/WI-0106-payroll-tax-credit-month-boundary.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
+  - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

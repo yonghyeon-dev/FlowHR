@@ -66,6 +66,27 @@ type StatutoryKrBaselineDeductions = {
 type PreviewPayrollWithDeductionsInput = PreviewPayrollInput &
   (ManualDeductions | ProfileDeductions | StatutoryKrBaselineDeductions);
 
+type PreviewPayrollInsuranceSettlementInput = PreviewPayrollInput & {
+  employeeId: string;
+  settlement?: {
+    nonTaxableIncomeKrw: number;
+    requireMonthlyBoundary: boolean;
+    nationalPensionEmployeeRate: number;
+    nationalPensionEmployerRate: number;
+    nationalPensionCapKrw?: number;
+    healthInsuranceEmployeeRate: number;
+    healthInsuranceEmployerRate: number;
+    healthInsuranceCapKrw?: number;
+    longTermCareRateOnHealth: number;
+    employmentInsuranceEmployeeRate: number;
+    employmentInsuranceEmployerRate: number;
+    employmentInsuranceCapKrw?: number;
+    industrialAccidentEmployerRate: number;
+    priorWithheldKrw: number;
+    priorEmployerPaidKrw: number;
+  };
+};
+
 type UpsertDeductionProfileInput = {
   profileId: string;
   name: string;
@@ -110,6 +131,43 @@ type PreviewPayrollWithDeductionsResult = {
     totalDeductionsKrw: number;
     netPayKrw: number;
     deductionBreakdown: Record<string, unknown>;
+  };
+};
+
+type PreviewPayrollInsuranceSettlementResult = {
+  summary: {
+    sourceRecordCount: number;
+    totals: PayableMinutes;
+    grossPayKrw: number;
+    taxableBaseKrw: number;
+    employeeContributionKrw: {
+      nationalPensionKrw: number;
+      healthInsuranceKrw: number;
+      longTermCareKrw: number;
+      employmentInsuranceKrw: number;
+      totalKrw: number;
+    };
+    employerContributionKrw: {
+      nationalPensionKrw: number;
+      healthInsuranceKrw: number;
+      longTermCareKrw: number;
+      employmentInsuranceKrw: number;
+      industrialAccidentKrw: number;
+      totalKrw: number;
+    };
+    contributionBasesKrw: {
+      nationalPensionBaseKrw: number;
+      healthInsuranceBaseKrw: number;
+      employmentInsuranceBaseKrw: number;
+      industrialAccidentBaseKrw: number;
+    };
+    settlementKrw: {
+      priorWithheldKrw: number;
+      priorEmployerPaidKrw: number;
+      employeeDeltaKrw: number;
+      employerDeltaKrw: number;
+      totalDeltaKrw: number;
+    };
   };
 };
 
@@ -195,6 +253,15 @@ function isPayrollDeductionProfileEnabled() {
 function isPayrollKrBaselineEnabled() {
   const raw =
     process.env.FLOWHR_PAYROLL_KR_BASELINE_V1 ?? process.env.PAYROLL_KR_BASELINE_V1 ?? "";
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+function isPayrollKrInsuranceSettlementEnabled() {
+  const raw =
+    process.env.FLOWHR_PAYROLL_KR_INSURANCE_SETTLEMENT_V1 ??
+    process.env.PAYROLL_KR_INSURANCE_SETTLEMENT_V1 ??
+    "";
   const value = raw.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
 }
@@ -807,6 +874,234 @@ export async function previewPayrollWithDeductions(
       totalDeductionsKrw,
       netPayKrw,
       deductionBreakdown
+    }
+  };
+}
+
+export async function previewPayrollInsuranceSettlement(
+  context: ServiceContext,
+  input: PreviewPayrollInsuranceSettlementInput
+): Promise<PreviewPayrollInsuranceSettlementResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunPreview, "preview");
+  if (!isPayrollKrInsuranceSettlementEnabled()) {
+    throw new ServiceError(409, "payroll_kr_insurance_settlement_v1 feature flag is disabled");
+  }
+
+  const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
+  const tenantScope = resolveTenantScope(context.actor);
+  const computed = await calculatePayrollComputation(context.dataAccess, input, tenantScope);
+
+  const nonTaxableIncomeKrw = toKrwInteger(
+    input.settlement?.nonTaxableIncomeKrw ?? 0,
+    "settlement.nonTaxableIncomeKrw"
+  );
+  const requireMonthlyBoundary = input.settlement?.requireMonthlyBoundary ?? true;
+  if (requireMonthlyBoundary) {
+    ensureMonthlyBoundaryInSeoul(input.periodStart, input.periodEnd);
+  }
+
+  const nationalPensionEmployeeRate =
+    toRateNumber(
+      input.settlement?.nationalPensionEmployeeRate ?? 0.045,
+      "settlement.nationalPensionEmployeeRate"
+    ) ?? 0;
+  const nationalPensionEmployerRate =
+    toRateNumber(
+      input.settlement?.nationalPensionEmployerRate ?? 0.045,
+      "settlement.nationalPensionEmployerRate"
+    ) ?? 0;
+  const healthInsuranceEmployeeRate =
+    toRateNumber(
+      input.settlement?.healthInsuranceEmployeeRate ?? 0.03545,
+      "settlement.healthInsuranceEmployeeRate"
+    ) ?? 0;
+  const healthInsuranceEmployerRate =
+    toRateNumber(
+      input.settlement?.healthInsuranceEmployerRate ?? 0.03545,
+      "settlement.healthInsuranceEmployerRate"
+    ) ?? 0;
+  const longTermCareRateOnHealth =
+    toRateNumber(
+      input.settlement?.longTermCareRateOnHealth ?? 0.1295,
+      "settlement.longTermCareRateOnHealth"
+    ) ?? 0;
+  const employmentInsuranceEmployeeRate =
+    toRateNumber(
+      input.settlement?.employmentInsuranceEmployeeRate ?? 0.009,
+      "settlement.employmentInsuranceEmployeeRate"
+    ) ?? 0;
+  const employmentInsuranceEmployerRate =
+    toRateNumber(
+      input.settlement?.employmentInsuranceEmployerRate ?? 0.0115,
+      "settlement.employmentInsuranceEmployerRate"
+    ) ?? 0;
+  const industrialAccidentEmployerRate =
+    toRateNumber(
+      input.settlement?.industrialAccidentEmployerRate ?? 0.015,
+      "settlement.industrialAccidentEmployerRate"
+    ) ?? 0;
+
+  const taxableBaseKrw = Math.max(computed.grossPayKrw - nonTaxableIncomeKrw, 0);
+  const nationalPensionBaseKrw = applyContributionCap(
+    taxableBaseKrw,
+    input.settlement?.nationalPensionCapKrw,
+    "settlement.nationalPensionCapKrw"
+  );
+  const healthInsuranceBaseKrw = applyContributionCap(
+    taxableBaseKrw,
+    input.settlement?.healthInsuranceCapKrw,
+    "settlement.healthInsuranceCapKrw"
+  );
+  const employmentInsuranceBaseKrw = applyContributionCap(
+    taxableBaseKrw,
+    input.settlement?.employmentInsuranceCapKrw,
+    "settlement.employmentInsuranceCapKrw"
+  );
+  const industrialAccidentBaseKrw = taxableBaseKrw;
+
+  const nationalPensionEmployeeKrw = toKrwInteger(
+    Math.round(nationalPensionBaseKrw * nationalPensionEmployeeRate),
+    "settlement.nationalPensionEmployeeKrw"
+  );
+  const nationalPensionEmployerKrw = toKrwInteger(
+    Math.round(nationalPensionBaseKrw * nationalPensionEmployerRate),
+    "settlement.nationalPensionEmployerKrw"
+  );
+  const healthInsuranceEmployeeKrw = toKrwInteger(
+    Math.round(healthInsuranceBaseKrw * healthInsuranceEmployeeRate),
+    "settlement.healthInsuranceEmployeeKrw"
+  );
+  const healthInsuranceEmployerKrw = toKrwInteger(
+    Math.round(healthInsuranceBaseKrw * healthInsuranceEmployerRate),
+    "settlement.healthInsuranceEmployerKrw"
+  );
+  const longTermCareEmployeeKrw = toKrwInteger(
+    Math.round(healthInsuranceEmployeeKrw * longTermCareRateOnHealth),
+    "settlement.longTermCareEmployeeKrw"
+  );
+  const longTermCareEmployerKrw = toKrwInteger(
+    Math.round(healthInsuranceEmployerKrw * longTermCareRateOnHealth),
+    "settlement.longTermCareEmployerKrw"
+  );
+  const employmentInsuranceEmployeeKrw = toKrwInteger(
+    Math.round(employmentInsuranceBaseKrw * employmentInsuranceEmployeeRate),
+    "settlement.employmentInsuranceEmployeeKrw"
+  );
+  const employmentInsuranceEmployerKrw = toKrwInteger(
+    Math.round(employmentInsuranceBaseKrw * employmentInsuranceEmployerRate),
+    "settlement.employmentInsuranceEmployerKrw"
+  );
+  const industrialAccidentEmployerKrw = toKrwInteger(
+    Math.round(industrialAccidentBaseKrw * industrialAccidentEmployerRate),
+    "settlement.industrialAccidentEmployerKrw"
+  );
+
+  const employeeContributionTotalKrw = toKrwInteger(
+    nationalPensionEmployeeKrw +
+      healthInsuranceEmployeeKrw +
+      longTermCareEmployeeKrw +
+      employmentInsuranceEmployeeKrw,
+    "settlement.employeeContributionTotalKrw"
+  );
+  const employerContributionTotalKrw = toKrwInteger(
+    nationalPensionEmployerKrw +
+      healthInsuranceEmployerKrw +
+      longTermCareEmployerKrw +
+      employmentInsuranceEmployerKrw +
+      industrialAccidentEmployerKrw,
+    "settlement.employerContributionTotalKrw"
+  );
+
+  const priorWithheldKrw = toKrwInteger(
+    input.settlement?.priorWithheldKrw ?? 0,
+    "settlement.priorWithheldKrw"
+  );
+  const priorEmployerPaidKrw = toKrwInteger(
+    input.settlement?.priorEmployerPaidKrw ?? 0,
+    "settlement.priorEmployerPaidKrw"
+  );
+  const employeeDeltaKrw = employeeContributionTotalKrw - priorWithheldKrw;
+  const employerDeltaKrw = employerContributionTotalKrw - priorEmployerPaidKrw;
+  const totalDeltaKrw = employeeDeltaKrw + employerDeltaKrw;
+
+  await context.dataAccess.audit.append({
+    action: "payroll.insurance_settlement_previewed",
+    entityType: "PayrollRun",
+    organizationId: employee.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      employeeId: input.employeeId,
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      sourceRecordCount: computed.recordsCount,
+      grossPayKrw: computed.grossPayKrw,
+      taxableBaseKrw,
+      requireMonthlyBoundary,
+      employeeContributionTotalKrw,
+      employerContributionTotalKrw,
+      priorWithheldKrw,
+      priorEmployerPaidKrw,
+      employeeDeltaKrw,
+      employerDeltaKrw,
+      totalDeltaKrw
+    }
+  });
+
+  await getEventPublisher(context).publish({
+    name: "payroll.insurance_settlement.previewed.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "PayrollRun",
+    entityId: input.employeeId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      employeeId: input.employeeId,
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: input.periodEnd.toISOString(),
+      sourceRecordCount: computed.recordsCount,
+      grossPayKrw: computed.grossPayKrw,
+      taxableBaseKrw,
+      employeeContributionTotalKrw,
+      employerContributionTotalKrw,
+      totalDeltaKrw
+    }
+  });
+
+  return {
+    summary: {
+      sourceRecordCount: computed.recordsCount,
+      totals: computed.totals,
+      grossPayKrw: computed.grossPayKrw,
+      taxableBaseKrw,
+      employeeContributionKrw: {
+        nationalPensionKrw: nationalPensionEmployeeKrw,
+        healthInsuranceKrw: healthInsuranceEmployeeKrw,
+        longTermCareKrw: longTermCareEmployeeKrw,
+        employmentInsuranceKrw: employmentInsuranceEmployeeKrw,
+        totalKrw: employeeContributionTotalKrw
+      },
+      employerContributionKrw: {
+        nationalPensionKrw: nationalPensionEmployerKrw,
+        healthInsuranceKrw: healthInsuranceEmployerKrw,
+        longTermCareKrw: longTermCareEmployerKrw,
+        employmentInsuranceKrw: employmentInsuranceEmployerKrw,
+        industrialAccidentKrw: industrialAccidentEmployerKrw,
+        totalKrw: employerContributionTotalKrw
+      },
+      contributionBasesKrw: {
+        nationalPensionBaseKrw,
+        healthInsuranceBaseKrw,
+        employmentInsuranceBaseKrw,
+        industrialAccidentBaseKrw
+      },
+      settlementKrw: {
+        priorWithheldKrw,
+        priorEmployerPaidKrw,
+        employeeDeltaKrw,
+        employerDeltaKrw,
+        totalDeltaKrw
+      }
     }
   };
 }
