@@ -132,7 +132,7 @@ export type PayrollYearEndFilingSubmission = {
   submittedAt: string;
   submittedByRole: string;
   submittedById: string | null;
-  status: "submitted" | "acknowledged";
+  status: "submitted" | "acknowledged" | "canceled";
   ack: {
     ackStatus: "accepted" | "rejected";
     ackCode: string | null;
@@ -175,7 +175,13 @@ export type PayrollYearEndFilingAckCatalogResponse = {
 };
 
 export type PayrollYearEndFilingTimelineEntry = {
-  action: "submitted" | "resubmitted" | "acknowledged" | "evidence_note_added";
+  action:
+    | "submitted"
+    | "resubmitted"
+    | "canceled"
+    | "reopened"
+    | "acknowledged"
+    | "evidence_note_added";
   submissionId: string;
   occurredAt: string;
   actorRole: string;

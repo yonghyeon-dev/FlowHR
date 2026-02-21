@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.19.0
+version: 1.20.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -24,6 +24,7 @@ scope:
     - year-end filing package resubmission and submission-state transition guard workflow
     - year-end filing submission timeline and evidence-note trace workflow
     - year-end filing acknowledgement code dictionary and rejection-reason catalog workflow
+    - year-end filing submission cancel/reopen transition guard workflow
   out:
     - country-specific legal tax engine implementation
     - external remittance and filing
@@ -40,7 +41,7 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate/finalize year-end settlement, export/submit/resubmit/ack/list timeline/add evidence-note/list ack-catalog filing data packages, list runs, list/manage deduction profiles, and confirm run
+      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate/finalize year-end settlement, export/submit/resubmit/cancel/reopen/ack/list timeline/add evidence-note/list ack-catalog filing data packages, list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
     - role: employee
@@ -97,9 +98,15 @@ api:
     - method: POST
       path: /payroll/year-end/filing-submissions/{submissionId}/resubmit
       description: Create next filing submission attempt from rejected acknowledged submission with transition guards.
+    - method: POST
+      path: /payroll/year-end/filing-submissions/{submissionId}/cancel
+      description: Cancel selected pending filing submission (`submitted`) with transition guard and audit trail.
+    - method: POST
+      path: /payroll/year-end/filing-submissions/{submissionId}/reopen
+      description: Reopen selected canceled filing submission when no other pending submission exists.
     - method: GET
       path: /payroll/year-end/filing-submissions/{submissionId}/timeline
-      description: List selected filing submission timeline events (submit/resubmit, ack, evidence notes) in deterministic order.
+      description: List selected filing submission timeline events (submit/resubmit/cancel/reopen, ack, evidence notes) in deterministic order.
     - method: POST
       path: /payroll/year-end/filing-submissions/{submissionId}/evidence-note
       description: Add evidence note to selected filing submission for compliance traceability.
@@ -151,6 +158,10 @@ api:
         description: Emitted when year-end filing package is submitted.
       - name: payroll.year_end.filing_package.resubmitted.v1
         description: Emitted when rejected year-end filing package is resubmitted.
+      - name: payroll.year_end.filing_package.canceled.v1
+        description: Emitted when pending year-end filing package is canceled.
+      - name: payroll.year_end.filing_package.reopened.v1
+        description: Emitted when canceled year-end filing package is reopened.
       - name: payroll.year_end.filing_package.acknowledged.v1
         description: Emitted when year-end filing package acknowledgement is recorded.
       - name: payroll.year_end.filing_evidence_note.added.v1
@@ -208,12 +219,15 @@ invariants:
   - Year-end filing data export with validationMode=`strict` must be blocked when validation checks fail.
   - Year-end filing submission must reference existing finalized/exported artifact metadata and remain traceable by unique submissionId.
   - Year-end filing acknowledgement is allowed only for existing non-acknowledged submission IDs.
+  - Year-end filing acknowledgement must reject canceled submission IDs.
   - Year-end filing acknowledgement ackCode must be selected from ackStatus-specific ACK code dictionary.
   - Year-end filing acknowledgement rejectionReasonCode (when provided) must be selected from rejection reason catalog.
   - Year-end filing workflow must allow at most one pending (`submitted`) submission per employee/year.
   - Year-end filing resubmission is allowed only when source submission is acknowledged with `rejected` status.
+  - Year-end filing cancel is allowed only when target submission status is `submitted`.
+  - Year-end filing reopen is allowed only when target submission status is `canceled` and no other pending submission exists.
   - Year-end filing evidence note is allowed only for existing filing submission IDs within same employee/year scope.
-  - Year-end filing timeline query must return deterministic chronological event order for same submission history.
+  - Year-end filing timeline query must return deterministic chronological event order for submit/resubmit/cancel/reopen/ack/evidence-note history.
   - Withholding receipt issue is blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
   - Payroll preview includes source attendance snapshot reference.
   - Recalculation after correction keeps immutable audit trail.
@@ -230,6 +244,7 @@ risk:
     - Unauthorized filing submission/acknowledgement can corrupt statutory filing trail.
     - Invalid ACK code/rejection-reason combinations can distort filing acknowledgement trace quality.
     - Unauthorized filing resubmission can bypass rejection controls and corrupt submission timeline.
+    - Unauthorized filing cancel/reopen can corrupt filing state-transition trace.
     - Unauthorized filing evidence-note write can tamper compliance evidence trail.
     - Unauthorized filing timeline read can expose sensitive filing metadata.
     - Unauthorized withholding receipt issuance can break statutory compliance evidence.
@@ -267,6 +282,7 @@ test_plan:
     - year-end filing submission summary builder and ack state transition formulas
     - year-end filing ack code dictionary and rejection reason catalog resolution formulas
     - year-end filing resubmission state-transition guard formulas
+    - year-end filing cancel/reopen transition guard formulas
     - year-end filing timeline event builder and ordering formulas
     - year-end filing evidence-note append payload formulas
     - withholding receipt issue guard (confirmed/distributed/receipt-confirmed chain)
@@ -303,7 +319,8 @@ test_plan:
     - year-end filing submission create/list/ack flow returns deterministic submission state transitions
     - year-end filing acknowledgement rejects ack codes outside ack-status catalog and unknown rejection reason codes
     - year-end filing resubmit rejects pending/non-rejected/already-resubmitted source submissions
-    - year-end filing timeline returns submit/resubmit/ack/evidence-note events for selected submission
+    - year-end filing cancel/reopen rejects invalid transitions (already canceled/acknowledged/non-canceled targets)
+    - year-end filing timeline returns submit/resubmit/cancel/reopen/ack/evidence-note events for selected submission
     - year-end filing evidence-note rejects unknown submission and disabled flag state
     - withholding receipt issue rejects issuance when previewed/undistributed/pending-receipt runs remain
     - year-end APIs reject requests when payroll_year_end_v1 is disabled
@@ -326,6 +343,7 @@ test_plan:
     - year-end filing resubmission transition-guard deterministic replay via WI-0192 e2e
     - year-end filing timeline/evidence-note deterministic replay via WI-0193 e2e
     - year-end filing ack catalog/code validation deterministic replay via WI-0194 e2e
+    - year-end filing cancel/reopen transition-guard deterministic replay via WI-0195 e2e
   authorization:
     - payroll_operator role enforcement for preview/confirm/profile APIs
     - payroll_operator role enforcement for list API
@@ -340,6 +358,7 @@ test_plan:
     - payroll_operator role enforcement for year-end filing submission/ack/list APIs
     - payroll_operator role enforcement for year-end filing ack catalog API
     - payroll_operator role enforcement for year-end filing resubmit API
+    - payroll_operator role enforcement for year-end filing cancel/reopen APIs
     - payroll_operator role enforcement for year-end filing timeline/evidence-note APIs
     - employee/payroll role guard for year-end withholding receipt preview/issue API
   payroll_accuracy:
@@ -357,6 +376,7 @@ test_plan:
     - year-end filing submission status transitions remain deterministic for same action sequence
     - year-end filing ack code and rejection-reason catalog selection remain deterministic
     - year-end filing resubmission attempt increments and parent-linking remain deterministic
+    - year-end filing cancel/reopen transitions remain deterministic and preserve single-pending invariant
     - year-end filing timeline event ordering and evidence-note replay remain deterministic
 observability:
   audit_events:
@@ -384,12 +404,16 @@ observability:
     - payroll.year_end.export_filing_data.failed
     - payroll.year_end.filing_package_submitted
     - payroll.year_end.filing_package_resubmitted
+    - payroll.year_end.filing_package_canceled
+    - payroll.year_end.filing_package_reopened
     - payroll.year_end.filing_submission.failed
     - payroll.year_end.filing_submission_list.failed
     - payroll.year_end.filing_ack_catalog.failed
     - payroll.year_end.filing_package_acknowledged
     - payroll.year_end.filing_ack.failed
     - payroll.year_end.filing_resubmit.failed
+    - payroll.year_end.filing_cancel.failed
+    - payroll.year_end.filing_reopen.failed
     - payroll.year_end.filing_evidence_note_added
     - payroll.year_end.filing_timeline.failed
     - payroll.year_end.filing_evidence_note.failed
@@ -413,6 +437,8 @@ observability:
     - payroll_year_end_filing_submission_latency_ms
     - payroll_year_end_filing_ack_catalog_lookup_latency_ms
     - payroll_year_end_filing_resubmission_latency_ms
+    - payroll_year_end_filing_cancel_latency_ms
+    - payroll_year_end_filing_reopen_latency_ms
     - payroll_year_end_filing_timeline_lookup_latency_ms
     - payroll_year_end_filing_evidence_note_latency_ms
     - payroll_year_end_filing_ack_latency_ms
@@ -451,7 +477,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.19.0 extends feature-flagged year-end filing workflow with acknowledgement code dictionary endpoint (`GET /payroll/year-end/filing-ack-catalog`) and ACK code/rejection-reason catalog validation for acknowledgement requests while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.20.0 extends feature-flagged year-end filing workflow with cancel/reopen transition-guard endpoints (`POST /payroll/year-end/filing-submissions/{submissionId}/cancel`, `POST /payroll/year-end/filing-submissions/{submissionId}/reopen`) while preserving existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -477,6 +503,7 @@ references:
   - work-items/WI-0192-payroll-year-end-filing-resubmission-and-state-transition-guard-baseline.md
   - work-items/WI-0193-payroll-year-end-filing-submission-timeline-and-evidence-note-baseline.md
   - work-items/WI-0194-payroll-year-end-filing-ack-code-dictionary-and-rejection-reason-catalog-baseline.md
+  - work-items/WI-0195-payroll-year-end-filing-submission-cancel-and-reopen-guard-baseline.md
   - adr/ADR-0002-payroll-phase2-auto-deduction-policy.md
 approval:
   spec_owner: payroll-agent

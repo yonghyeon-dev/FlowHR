@@ -189,6 +189,18 @@ type AcknowledgePayrollYearEndFilingPackageInput = {
   rejectionReasonDetail?: string;
 };
 
+type CancelPayrollYearEndFilingPackageInput = {
+  year: number;
+  employeeId: string;
+  submissionId: string;
+};
+
+type ReopenPayrollYearEndFilingPackageInput = {
+  year: number;
+  employeeId: string;
+  submissionId: string;
+};
+
 type ListPayrollYearEndFilingSubmissionsInput = {
   year: number;
   employeeId: string;
@@ -529,7 +541,7 @@ type ExportPayrollYearEndFilingDataResult = {
   };
 };
 
-type PayrollYearEndFilingSubmissionStatus = "submitted" | "acknowledged";
+type PayrollYearEndFilingSubmissionStatus = "submitted" | "acknowledged" | "canceled";
 
 type PayrollYearEndFilingSubmissionSummary = {
   submissionId: string;
@@ -578,6 +590,14 @@ type AcknowledgePayrollYearEndFilingPackageResult = {
   submission: PayrollYearEndFilingSubmissionSummary;
 };
 
+type CancelPayrollYearEndFilingPackageResult = {
+  submission: PayrollYearEndFilingSubmissionSummary;
+};
+
+type ReopenPayrollYearEndFilingPackageResult = {
+  submission: PayrollYearEndFilingSubmissionSummary;
+};
+
 type ListPayrollYearEndFilingSubmissionsResult = {
   submissions: PayrollYearEndFilingSubmissionSummary[];
 };
@@ -585,6 +605,8 @@ type ListPayrollYearEndFilingSubmissionsResult = {
 type PayrollYearEndFilingTimelineAction =
   | "submitted"
   | "resubmitted"
+  | "canceled"
+  | "reopened"
   | "acknowledged"
   | "evidence_note_added";
 
@@ -2410,6 +2432,20 @@ type YearEndFilingPackageAcknowledgedAuditPayload = {
   acknowledgedById: string | null;
 };
 
+type YearEndFilingPackageCanceledAuditPayload = {
+  submissionId: string;
+  canceledAt: string;
+  canceledByRole: string;
+  canceledById: string | null;
+};
+
+type YearEndFilingPackageReopenedAuditPayload = {
+  submissionId: string;
+  reopenedAt: string;
+  reopenedByRole: string;
+  reopenedById: string | null;
+};
+
 type YearEndFilingEvidenceNoteAddedAuditPayload = {
   submissionId: string;
   year: number;
@@ -2478,6 +2514,46 @@ function asYearEndFilingPackageAcknowledgedAuditPayload(
       typeof candidate.rejectionReasonDetail === "string" ? candidate.rejectionReasonDetail : null,
     acknowledgedById: typeof candidate.acknowledgedById === "string" ? candidate.acknowledgedById : null
   } as YearEndFilingPackageAcknowledgedAuditPayload;
+}
+
+function asYearEndFilingPackageCanceledAuditPayload(
+  payload: unknown
+): YearEndFilingPackageCanceledAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<YearEndFilingPackageCanceledAuditPayload>;
+  if (
+    typeof candidate.submissionId !== "string" ||
+    typeof candidate.canceledAt !== "string" ||
+    typeof candidate.canceledByRole !== "string"
+  ) {
+    return null;
+  }
+  return {
+    ...candidate,
+    canceledById: typeof candidate.canceledById === "string" ? candidate.canceledById : null
+  } as YearEndFilingPackageCanceledAuditPayload;
+}
+
+function asYearEndFilingPackageReopenedAuditPayload(
+  payload: unknown
+): YearEndFilingPackageReopenedAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<YearEndFilingPackageReopenedAuditPayload>;
+  if (
+    typeof candidate.submissionId !== "string" ||
+    typeof candidate.reopenedAt !== "string" ||
+    typeof candidate.reopenedByRole !== "string"
+  ) {
+    return null;
+  }
+  return {
+    ...candidate,
+    reopenedById: typeof candidate.reopenedById === "string" ? candidate.reopenedById : null
+  } as YearEndFilingPackageReopenedAuditPayload;
 }
 
 function asYearEndFilingEvidenceNoteAddedAuditPayload(
@@ -2563,6 +2639,34 @@ function buildYearEndFilingSubmissionSummaries(
         acknowledgedByRole: payload.acknowledgedByRole,
         acknowledgedById: payload.acknowledgedById
       };
+      continue;
+    }
+
+    if (log.action === "payroll.year_end.filing_package_canceled") {
+      const payload = asYearEndFilingPackageCanceledAuditPayload(log.payload);
+      if (!payload) {
+        continue;
+      }
+      const existing = submissions.get(payload.submissionId);
+      if (!existing) {
+        continue;
+      }
+      existing.status = "canceled";
+      existing.ack = null;
+      continue;
+    }
+
+    if (log.action === "payroll.year_end.filing_package_reopened") {
+      const payload = asYearEndFilingPackageReopenedAuditPayload(log.payload);
+      if (!payload) {
+        continue;
+      }
+      const existing = submissions.get(payload.submissionId);
+      if (!existing) {
+        continue;
+      }
+      existing.status = "submitted";
+      existing.ack = null;
     }
   }
 
@@ -3274,6 +3378,8 @@ async function listYearEndFilingLifecycleLogs(
     actions: [
       "payroll.year_end.filing_package_submitted",
       "payroll.year_end.filing_package_resubmitted",
+      "payroll.year_end.filing_package_canceled",
+      "payroll.year_end.filing_package_reopened",
       "payroll.year_end.filing_package_acknowledged",
       "payroll.year_end.filing_evidence_note_added"
     ],
@@ -3345,6 +3451,56 @@ function buildYearEndFilingSubmissionTimeline(
       continue;
     }
 
+    if (log.action === "payroll.year_end.filing_package_canceled") {
+      const payload = asYearEndFilingPackageCanceledAuditPayload(log.payload);
+      if (!payload || payload.submissionId !== submissionId) {
+        continue;
+      }
+      timeline.push({
+        action: "canceled",
+        submissionId: payload.submissionId,
+        occurredAt: payload.canceledAt,
+        actorRole: payload.canceledByRole,
+        actorId: payload.canceledById,
+        attempt: null,
+        submissionNote: null,
+        resubmissionOfSubmissionId: null,
+        resubmissionReason: null,
+        ackStatus: null,
+        ackCode: null,
+        ackNote: null,
+        rejectionReasonCode: null,
+        rejectionReasonDetail: null,
+        evidenceNote: null
+      });
+      continue;
+    }
+
+    if (log.action === "payroll.year_end.filing_package_reopened") {
+      const payload = asYearEndFilingPackageReopenedAuditPayload(log.payload);
+      if (!payload || payload.submissionId !== submissionId) {
+        continue;
+      }
+      timeline.push({
+        action: "reopened",
+        submissionId: payload.submissionId,
+        occurredAt: payload.reopenedAt,
+        actorRole: payload.reopenedByRole,
+        actorId: payload.reopenedById,
+        attempt: null,
+        submissionNote: null,
+        resubmissionOfSubmissionId: null,
+        resubmissionReason: null,
+        ackStatus: null,
+        ackCode: null,
+        ackNote: null,
+        rejectionReasonCode: null,
+        rejectionReasonDetail: null,
+        evidenceNote: null
+      });
+      continue;
+    }
+
     if (log.action === "payroll.year_end.filing_evidence_note_added") {
       const payload = asYearEndFilingEvidenceNoteAddedAuditPayload(log.payload);
       if (!payload || payload.submissionId !== submissionId) {
@@ -3373,8 +3529,10 @@ function buildYearEndFilingSubmissionTimeline(
   const actionOrder: Record<PayrollYearEndFilingTimelineAction, number> = {
     submitted: 0,
     resubmitted: 1,
-    acknowledged: 2,
-    evidence_note_added: 3
+    canceled: 2,
+    reopened: 3,
+    acknowledged: 4,
+    evidence_note_added: 5
   };
 
   return timeline.sort((left, right) => {
@@ -3611,6 +3769,9 @@ export async function acknowledgePayrollYearEndFilingPackage(
   if (!target) {
     throw new ServiceError(404, "filing submission not found");
   }
+  if (target.status === "canceled") {
+    throw new ServiceError(409, "canceled filing submission cannot be acknowledged");
+  }
   if (target.status === "acknowledged") {
     throw new ServiceError(409, "filing submission is already acknowledged");
   }
@@ -3670,6 +3831,146 @@ export async function acknowledgePayrollYearEndFilingPackage(
         acknowledgedByRole: actorRole,
         acknowledgedById: actorId
       }
+    }
+  };
+}
+
+export async function cancelPayrollYearEndFilingPackage(
+  context: ServiceContext,
+  input: CancelPayrollYearEndFilingPackageInput
+): Promise<CancelPayrollYearEndFilingPackageResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const submissions = await listYearEndFilingSubmissionSummaries(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  const target = submissions.find((submission) => submission.submissionId === input.submissionId);
+  if (!target) {
+    throw new ServiceError(404, "filing submission not found");
+  }
+  if (target.status === "canceled") {
+    throw new ServiceError(409, "filing submission is already canceled");
+  }
+  if (target.status === "acknowledged") {
+    throw new ServiceError(409, "acknowledged filing submission cannot be canceled");
+  }
+
+  const actorRole = context.actor?.role ?? "system";
+  const actorId = context.actor?.id ?? null;
+  const canceledAt = new Date().toISOString();
+  const entityId = `${input.year}_${input.employeeId}`;
+  const payload: YearEndFilingPackageCanceledAuditPayload = {
+    submissionId: input.submissionId,
+    canceledAt,
+    canceledByRole: actorRole,
+    canceledById: actorId
+  };
+
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.filing_package_canceled",
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.filing_package.canceled.v1",
+    occurredAt: canceledAt,
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload: payload as unknown as Record<string, unknown>
+  });
+
+  return {
+    submission: {
+      ...target,
+      status: "canceled",
+      ack: null
+    }
+  };
+}
+
+export async function reopenPayrollYearEndFilingPackage(
+  context: ServiceContext,
+  input: ReopenPayrollYearEndFilingPackageInput
+): Promise<ReopenPayrollYearEndFilingPackageResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+  if (!isPayrollYearEndFilingSubmissionEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
+  }
+
+  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const submissions = await listYearEndFilingSubmissionSummaries(context, {
+    year: input.year,
+    employeeId: input.employeeId
+  });
+  const target = submissions.find((submission) => submission.submissionId === input.submissionId);
+  if (!target) {
+    throw new ServiceError(404, "filing submission not found");
+  }
+  if (target.status !== "canceled") {
+    throw new ServiceError(409, "only canceled filing submission can be reopened");
+  }
+  if (
+    submissions.some(
+      (submission) =>
+        submission.status === "submitted" && submission.submissionId !== target.submissionId
+    )
+  ) {
+    throw new ServiceError(
+      409,
+      "another pending filing submission exists; acknowledge or cancel it before reopening"
+    );
+  }
+
+  const actorRole = context.actor?.role ?? "system";
+  const actorId = context.actor?.id ?? null;
+  const reopenedAt = new Date().toISOString();
+  const entityId = `${input.year}_${input.employeeId}`;
+  const payload: YearEndFilingPackageReopenedAuditPayload = {
+    submissionId: input.submissionId,
+    reopenedAt,
+    reopenedByRole: actorRole,
+    reopenedById: actorId
+  };
+
+  await context.dataAccess.audit.append({
+    action: "payroll.year_end.filing_package_reopened",
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload
+  });
+  await getEventPublisher(context).publish({
+    name: "payroll.year_end.filing_package.reopened.v1",
+    occurredAt: reopenedAt,
+    entityType: "PayrollYearEnd",
+    entityId,
+    actorRole,
+    actorId: actorId ?? undefined,
+    payload: payload as unknown as Record<string, unknown>
+  });
+
+  return {
+    submission: {
+      ...target,
+      status: "submitted",
+      ack: null
     }
   };
 }
