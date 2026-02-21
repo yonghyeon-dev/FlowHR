@@ -39,6 +39,7 @@ export const domainEventNames = [
   "payroll.payslip.distributed.v1",
   "payroll.payslip.receipt_confirmed.v1",
   "payroll.year_end.settlement.previewed.v1",
+  "payroll.year_end.settlement.recalculated.v1",
   "payroll.year_end.withholding_receipt.previewed.v1",
   "payroll.year_end.withholding_receipt.issued.v1",
   "payroll.confirmed.v1",

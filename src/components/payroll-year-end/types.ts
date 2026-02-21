@@ -32,6 +32,68 @@ export type PayrollYearEndSettlementResponse = {
   };
 };
 
+export type PayrollYearEndRecalculationResponse = {
+  recalculation: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      previewedRunIds: string[];
+    };
+    annualTotalsKrw: {
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    };
+    deductionItemsKrw: {
+      personalPensionKrw: number;
+      insurancePremiumKrw: number;
+      medicalExpenseKrw: number;
+      educationExpenseKrw: number;
+      donationKrw: number;
+      housingSavingsKrw: number;
+      totalIncomeDeductionKrw: number;
+      appliedIncomeDeductionKrw: number;
+      taxableAnnualIncomeBeforeDeductionKrw: number;
+      taxableAnnualIncomeAfterDeductionKrw: number;
+    };
+    baselineSettlementKrw: {
+      nonTaxableAnnualIncomeKrw: number;
+      taxableAnnualIncomeKrw: number;
+      annualIncomeTaxBeforeCreditKrw: number;
+      additionalTaxCreditKrw: number;
+      annualIncomeTaxAfterCreditKrw: number;
+      annualLocalIncomeTaxKrw: number;
+      annualTaxLiabilityKrw: number;
+      priorWithheldTaxKrw: number;
+      withholdingDeltaKrw: number;
+    };
+    recalculatedSettlementKrw: {
+      nonTaxableAnnualIncomeKrw: number;
+      taxableAnnualIncomeKrw: number;
+      annualIncomeTaxBeforeCreditKrw: number;
+      additionalTaxCreditKrw: number;
+      annualIncomeTaxAfterCreditKrw: number;
+      annualLocalIncomeTaxKrw: number;
+      annualTaxLiabilityKrw: number;
+      priorWithheldTaxKrw: number;
+      withholdingDeltaKrw: number;
+    };
+    deltaKrw: {
+      annualTaxLiabilityDeltaKrw: number;
+      withholdingDeltaChangeKrw: number;
+      taxableIncomeReductionKrw: number;
+    };
+  };
+};
+
 export type PayrollWithholdingReceiptResponse = {
   receipt: {
     year: number;

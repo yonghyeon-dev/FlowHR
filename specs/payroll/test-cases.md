@@ -38,6 +38,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 30. Preview year-end settlement for employee/year and verify annual totals, tax liability, and withholding delta output.
 31. Preview/issue withholding receipt and reject issue when yearly runs include previewed/undistributed/pending-receipt runs.
 32. Reject year-end settlement/receipt APIs when `payroll_year_end_v1` feature flag is disabled.
+33. Recalculate year-end settlement with deduction-item inputs and verify baseline-vs-recalculated tax/liability delta output.
+34. Reject year-end settlement recalculation API when `payroll_year_end_deduction_input_v1` feature flag is disabled.
 
 ## Accuracy Cases
 
@@ -63,6 +65,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 20. Payslip receipt confirmation updates receipt actor/time deterministically and rejects invalid state transitions.
 21. Year-end settlement computes annual tax-liability and withholding-delta deterministically for same confirmed run set.
 22. Withholding receipt issue guard (confirmed/distributed/receipt-confirmed) remains deterministic.
+23. Year-end deduction-item recalculation baseline-vs-recalculated delta remains deterministic for same confirmed run set and input vector.
 
 ## Regression Linkage
 
@@ -89,3 +92,4 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.
 - Payslip Delivery Gate: payslip delivery/receipt APIs remain feature-flagged, permission-guarded, and maintain deterministic distribution/receipt state transitions.
 - Year-End Gate: year-end settlement/withholding receipt APIs remain feature-flagged, permission-guarded, and enforce issue prerequisites deterministically.
+- Year-End Recalculation Gate: year-end deduction-item recalculation API remains feature-flagged, permission-guarded, and deterministic for baseline-vs-recalculated deltas.
