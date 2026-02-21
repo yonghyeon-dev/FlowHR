@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.66 (Payroll Year-End Filing Submission Search/Sort and Quick Action UX Baseline)
+> **Current version**: 0.1.67 (Payroll Year-End Filing Ops Dashboard Split and Evidence/Status Summary Cards Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -234,10 +234,11 @@
 - WI-0195 급여 연말정산 신고 패키지 제출 취소/재오픈 가드 baseline(`POST /payroll/year-end/filing-submissions/{submissionId}/cancel`, `POST /payroll/year-end/filing-submissions/{submissionId}/reopen` + canceled 상태 전이 가드 + ack 차단 + `/admin/payroll-year-end-filing` 취소/재오픈 UX + e2e/spec 갱신)
 - WI-0196 급여 연말정산 신고 패키지 상태 요약/필터 UX baseline(`GET /payroll/year-end/filing-submissions` 필터(status/ackStatus/validationStatus/transport) + summary 카운터 응답 + `/admin/payroll-year-end-filing` 필터/KPI 요약 UX + e2e/spec 갱신)
 - WI-0197 급여 연말정산 신고 패키지 검색/정렬/빠른 액션 UX baseline(`GET /payroll/year-end/filing-submissions` 검색/정렬(search/sortBy/sortDirection) + `/admin/payroll-year-end-filing` 검색/정렬 선택 + 행 단위 quick action(ack/cancel/reopen/resubmit) + e2e/spec 갱신)
+- WI-0198 급여 연말정산 신고 패키지 운영 대시보드 분리 baseline(`GET /admin/payroll-year-end-filing/ops` 전용 라우트 + 상태/증빙 요약 카드 + 리스트/타임라인 기반 증빙 커버리지 스캔 + 기존 실행 콘솔 분리 + e2e/spec 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 운영 대시보드 분리 및 증빙/상태 요약 카드 baseline) (WI-0198 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 운영 대시보드 드릴다운/경고 규칙 baseline) (WI-0199 예정)
 
 ### 현재 아키텍처
 
