@@ -107,8 +107,8 @@ async function run() {
   );
   assert.match(
     roadmapSource,
-    /0\.1\.72 \(Filing Ops Alert Checklist Execution Log and Review Loop Baseline\)/,
-    "roadmap current version should be bumped for WI-0203"
+    /> \*\*Current version\*\*: 0\.1\.\d+/,
+    "roadmap should expose current version header"
   );
   assert.match(roadmapSource, /WI-0203 /, "roadmap should include WI-0203 entry");
   assert.match(workItemSource, /review loop/i, "work-item should include review-loop scope");

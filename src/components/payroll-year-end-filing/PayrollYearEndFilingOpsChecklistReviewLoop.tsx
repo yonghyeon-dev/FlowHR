@@ -19,6 +19,7 @@ import {
   type AlertExecutionLogEntry,
   type AlertExecutionLogStatus
 } from "@/components/payroll-year-end-filing/filing-alert-execution-review-loop";
+import { buildChecklistReviewSnapshotRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-approval-snapshot";
 
 const STAGE_LABELS = {
   execute: "Execute",
@@ -105,6 +106,14 @@ export default function PayrollYearEndFilingOpsChecklistReviewLoop() {
     return `/admin/payroll-year-end-filing/ops/checklist?${query.toString()}`;
   }, [metric, level, currentValue, ownerRole, ownerActorId]);
 
+  const reviewSnapshotHref = buildChecklistReviewSnapshotRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId
+  });
+
   function toggleTask(taskId: string) {
     setCompletedTaskIds((prev) =>
       prev.includes(taskId) ? prev.filter((value) => value !== taskId) : [...prev, taskId]
@@ -139,6 +148,9 @@ export default function PayrollYearEndFilingOpsChecklistReviewLoop() {
         </Link>
         <Link href={checklistHref} className="btn btn-secondary btn-small">
           Back to Checklist
+        </Link>
+        <Link href={reviewSnapshotHref} className="btn btn-secondary btn-small">
+          Open Approval Snapshot
         </Link>
         <button className="btn btn-secondary btn-small" onClick={markRequiredComplete}>
           Mark Required Complete
