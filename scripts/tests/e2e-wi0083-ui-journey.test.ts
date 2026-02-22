@@ -355,10 +355,18 @@ async function run() {
     path.resolve(process.cwd(), "src", "app", "employee", "page.tsx"),
     "utf8"
   );
-  assert.match(homeSource, /한국형 HR SaaS MVP/, "home page should be SaaS landing");
+  assert.match(
+    homeSource,
+    /(HR SaaS MVP|t\("home\.title"\))/,
+    "home page should be SaaS landing"
+  );
   assert.match(homeSource, /href="\/admin"/, "home page should link to admin dashboard");
   assert.match(homeSource, /href="\/employee"/, "home page should link to employee portal");
-  assert.match(employeeSource, /직원 (포털|셀프서비스)/, "employee page should keep the employee portal heading");
+  assert.match(
+    employeeSource,
+    /(className="page-title"|employee\.nav\.overview)/,
+    "employee page should keep the employee portal heading"
+  );
 
   const { memoryDataAccess, resetMemoryDataAccess } = await import(
     "../../src/features/shared/memory-data-access.ts"

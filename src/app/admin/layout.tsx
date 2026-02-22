@@ -2,6 +2,8 @@
 import type { ReactNode } from "react";
 
 import SessionMenu from "@/components/SessionMenu";
+import { createTranslator } from "@/lib/i18n/messages";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 type AdminLayoutProps = {
   children: ReactNode;
@@ -13,46 +15,48 @@ function isDevToolsEnabled() {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default async function AdminLayout({ children }: AdminLayoutProps) {
   const showDevTools = isDevToolsEnabled();
+  const locale = await getRequestLocale();
+  const t = createTranslator(locale);
 
   return (
     <div className="saas-shell">
       <aside className="saas-sidebar">
         <div className="saas-brand">
           <Link href="/">FlowHR</Link>
-          <span className="saas-badge">Admin</span>
+          <span className="saas-badge">{t("admin.badge")}</span>
         </div>
 
-        <nav className="saas-nav" aria-label="관리자 네비게이션">
-          <Link href="/admin">대시보드</Link>
-          <Link href="/admin#approvals">승인 대기</Link>
-          <Link href="/admin#aggregates">근태 집계</Link>
-          <Link href="/admin#leave-policy">휴가 정책</Link>
-          <Link href="/admin/leave-accrual">연차 자동 부여</Link>
-          <Link href="/admin/leave-calendar">휴가 캘린더</Link>
-          <Link href="/admin#payroll">급여</Link>
-          <Link href="/admin/payroll-insurance">4대보험 정산</Link>
-          <Link href="/admin/payroll-close">급여 마감</Link>
-          <Link href="/admin/payroll-payslip-delivery">명세서 배포</Link>
-          <Link href="/admin/payroll-year-end">연말정산/영수증</Link>
-          <Link href="/admin/payroll-year-end-filing">연말정산 확정/신고</Link>
-          <Link href="/admin/payroll-year-end-filing/ops">연말정산 신고 운영</Link>
-          <Link href="/admin/people">조직/인사</Link>
-          <Link href="/admin/contracts">전자계약</Link>
-          <Link href="/admin/approval-policy">결재 정책</Link>
+        <nav className="saas-nav" aria-label={t("admin.nav.aria")}>
+          <Link href="/admin">{t("admin.nav.dashboard")}</Link>
+          <Link href="/admin#approvals">{t("admin.nav.approvals")}</Link>
+          <Link href="/admin#aggregates">{t("admin.nav.aggregates")}</Link>
+          <Link href="/admin#leave-policy">{t("admin.nav.leavePolicy")}</Link>
+          <Link href="/admin/leave-accrual">{t("admin.nav.leaveAccrual")}</Link>
+          <Link href="/admin/leave-calendar">{t("admin.nav.leaveCalendar")}</Link>
+          <Link href="/admin#payroll">{t("admin.nav.payroll")}</Link>
+          <Link href="/admin/payroll-insurance">{t("admin.nav.insurance")}</Link>
+          <Link href="/admin/payroll-close">{t("admin.nav.payrollClose")}</Link>
+          <Link href="/admin/payroll-payslip-delivery">{t("admin.nav.payslipDelivery")}</Link>
+          <Link href="/admin/payroll-year-end">{t("admin.nav.yearEnd")}</Link>
+          <Link href="/admin/payroll-year-end-filing">{t("admin.nav.yearEndFiling")}</Link>
+          <Link href="/admin/payroll-year-end-filing/ops">{t("admin.nav.yearEndFilingOps")}</Link>
+          <Link href="/admin/people">{t("admin.nav.people")}</Link>
+          <Link href="/admin/contracts">{t("admin.nav.contracts")}</Link>
+          <Link href="/admin/approval-policy">{t("admin.nav.approvalPolicy")}</Link>
         </nav>
 
         <div className="saas-sidebar-footer">
           <SessionMenu />
-          <Link href="/employee">직원 포털</Link>
+          <Link href="/employee">{t("admin.nav.employeePortal")}</Link>
           {showDevTools ? (
             <>
               <Link className="muted-link" href="/ops/mvp-console">
-                (dev) ops 콘솔
+                {t("admin.nav.devOpsConsole")}
               </Link>
               <Link className="muted-link" href="/ops/leave-promotion">
-                (dev) 연차촉진 공지
+                {t("admin.nav.devLeavePromotion")}
               </Link>
             </>
           ) : null}

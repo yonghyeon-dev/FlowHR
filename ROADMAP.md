@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.68 (Payroll Year-End Filing Ops Dashboard Drilldown and Alert Rules Baseline)
+> **Current version**: 0.1.69 (Browser Locale Dynamic UI Language Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -236,10 +236,11 @@
 - WI-0197 급여 연말정산 신고 패키지 검색/정렬/빠른 액션 UX baseline(`GET /payroll/year-end/filing-submissions` 검색/정렬(search/sortBy/sortDirection) + `/admin/payroll-year-end-filing` 검색/정렬 선택 + 행 단위 quick action(ack/cancel/reopen/resubmit) + e2e/spec 갱신)
 - WI-0198 급여 연말정산 신고 패키지 운영 대시보드 분리 baseline(`GET /admin/payroll-year-end-filing/ops` 전용 라우트 + 상태/증빙 요약 카드 + 리스트/타임라인 기반 증빙 커버리지 스캔 + 기존 실행 콘솔 분리 + e2e/spec 갱신)
 - WI-0199 급여 연말정산 신고 패키지 운영 대시보드 드릴다운/경고 규칙 baseline(`/admin/payroll-year-end-filing/ops` 드릴다운 모드(pending/rejected/validation/evidence-gap/timeline-failure) + 임계치 기반 alert severity(WATCH/CRITICAL) + 필터 프리셋 연동 + e2e/spec 갱신)
+- WI-0200 브라우저 로케일 기반 UI 언어 동적 적용 baseline(`Accept-Language` 기반 locale 결정 + `html lang` 동적 반영 + `/`, `/login`, `/admin`/`/employee` shell/`SessionMenu` i18n + e2e 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 운영 대시보드 알림 대응 가이드/소유자 할당 baseline) (WI-0200 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 패키지 운영 대시보드 알림 대응 가이드/소유자 할당 baseline) (WI-0201 예정)
 
 ### 현재 아키텍처
 

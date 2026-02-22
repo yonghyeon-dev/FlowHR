@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/lib/i18n/provider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type SessionSnapshot = {
@@ -53,6 +54,7 @@ function parseSession(session: unknown): SessionSnapshot | null {
 }
 
 export default function LoginPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -138,69 +140,65 @@ export default function LoginPage() {
     <main className="landing-page">
       <section className="hero-panel">
         <p className="eyebrow">FlowHR</p>
-        <h1>로그인</h1>
-        <p className="hero-copy">
-          Supabase Auth 세션으로 API를 호출합니다. 로컬 개발에서는 Dev Header 모드가 계속 지원됩니다.
-        </p>
+        <h1>{t("login.title")}</h1>
+        <p className="hero-copy">{t("login.copy")}</p>
         <div className="hero-meta">
           <Link className="btn btn-secondary" href="/">
-            홈
+            {t("login.backHome")}
           </Link>
           <Link className="btn btn-secondary" href={target}>
-            {target === "/admin" ? "관리자" : "직원"} 화면으로
+            {target === "/admin" ? t("login.goToAdmin") : t("login.goToEmployee")}
           </Link>
         </div>
       </section>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>세션 상태</h2>
+          <h2>{t("login.sessionTitle")}</h2>
           {snapshot ? (
-            <ul className="simple-list" aria-label="세션 정보">
+            <ul className="simple-list" aria-label={t("login.sessionAria")}>
               <li>
-                <span className="muted">User ID</span>
+                <span className="muted">{t("login.userId")}</span>
                 <strong>{snapshot.userId}</strong>
               </li>
               <li>
-                <span className="muted">Email</span>
+                <span className="muted">{t("login.email")}</span>
                 <strong>{snapshot.email ?? "-"}</strong>
               </li>
               <li>
-                <span className="muted">Role</span>
+                <span className="muted">{t("login.role")}</span>
                 <strong>{snapshot.role ?? "-"}</strong>
               </li>
               <li>
-                <span className="muted">Organization</span>
+                <span className="muted">{t("login.organization")}</span>
                 <strong>{snapshot.organizationId ?? "-"}</strong>
               </li>
               <li>
-                <span className="muted">Actor ID(선택)</span>
+                <span className="muted">{t("login.actorIdOptional")}</span>
                 <strong>{snapshot.actorId ?? "-"}</strong>
               </li>
             </ul>
           ) : (
-            <p className="small muted">현재 로그인되어 있지 않습니다.</p>
+            <p className="small muted">{t("login.notSignedIn")}</p>
           )}
 
           <div className="actions">
             <button className="btn btn-secondary" onClick={() => void signOut()} disabled={pending || !snapshot}>
-              로그아웃
+              {t("login.signOut")}
             </button>
           </div>
         </article>
 
         <article className="panel">
-          <h2>로그인</h2>
-          <p className="small">
-            이메일/비밀번호 로그인을 사용합니다. (Supabase 설정에서 해당 Provider가 활성화되어 있어야 합니다.)
-          </p>
+          <h2>{t("login.signInTitle")}</h2>
+          <p className="small">{t("login.signInCopy")}</p>
           <div className="input-grid">
             <label>
-              Email
+              {t("login.email")}
               <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" />
             </label>
             <label>
-              Password
+              {t("login.password")}
               <input
                 type="password"
                 value={password}
@@ -216,7 +214,7 @@ export default function LoginPage() {
           ) : null}
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void signIn()} disabled={pending || !email.trim() || !password}>
-              로그인
+              {t("login.signIn")}
             </button>
           </div>
         </article>
