@@ -25,6 +25,7 @@ import {
   type ClosurePacketReleaseDigestAckLedgerExceptionEntry,
   type ClosurePacketReleaseDigestAckLedgerExceptionLogRecord
 } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest-ack-ledger-exception-log";
+import { buildCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceiptRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest-ack-ledger-exception-log-closure-receipt";
 import {
   buildClosurePacketReleaseDigestAckLedgerExceptionEntryDraftMap,
   buildClosurePacketReleaseDigestAckLedgerExceptionLogGateState,
@@ -260,6 +261,35 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
     ackLedgerVerified: summary.ackLedgerVerified,
     ackChannelsReconciled: summary.ackChannelsReconciled
   });
+  const closureReceiptHref =
+    buildCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceiptRouteHref({
+      metric,
+      level,
+      value: currentValue,
+      ownerRole,
+      ownerActorId,
+      handoffReady: summary.handoffReady,
+      exportReady: summary.exportReady,
+      archiveReady: summary.archiveReady,
+      routingReady: summary.routingReady,
+      signatureReady: summary.signatureReady,
+      packageLocked: summary.packageLocked,
+      handoverAcknowledged: summary.handoverAcknowledged,
+      receiptVerified: summary.receiptVerified,
+      digestReady: summary.digestReady,
+      closeReportPublished: summary.closeReportPublished,
+      publicationReady: summary.publicationReady,
+      distributionReady: summary.distributionReady,
+      signoffReady: summary.signoffReady,
+      closurePacketSealed: summary.closurePacketSealed,
+      dispatchReady: summary.dispatchReady,
+      releaseDigestPublished: summary.releaseDigestPublished,
+      releaseDigestDeliveryReady: summary.releaseDigestDeliveryReady,
+      ackLedgerVerified: summary.ackLedgerVerified,
+      ackChannelsReconciled: summary.ackChannelsReconciled,
+      exceptionLogClosed: summary.exceptionLogClosed,
+      allExceptionsResolved: summary.allExceptionsResolved
+    });
 
   return (
     <section className="panel" id="filing-alert-close-report-closure-packet-release-digest-ack-ledger-exception-log-hub">
@@ -273,6 +303,9 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
         </Link>
         <Link href={ackLedgerHref} className="btn btn-secondary btn-small">
           Back to Ack Ledger
+        </Link>
+        <Link href={closureReceiptHref} className="btn btn-secondary btn-small">
+          Open Exception Closure Receipt
         </Link>
         <Link href={selfHref} className="btn btn-secondary btn-small">
           Refresh Exception Context

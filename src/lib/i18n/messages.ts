@@ -56,6 +56,8 @@ const messages = {
       "closure packet release digest acknowledgment ledger",
     "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedgerExceptionLog":
       "acknowledgment ledger exception log",
+    "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceipt":
+      "exception closure receipt",
     "admin.nav.people": "조직/인사",
     "admin.nav.contracts": "전자계약",
     "admin.nav.approvalPolicy": "결재 정책",
@@ -170,6 +172,8 @@ const messages = {
       "Closure Packet Release Digest Acknowledgment Ledger",
     "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedgerExceptionLog":
       "Acknowledgment Ledger Exception Log",
+    "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceipt":
+      "Exception Closure Receipt",
     "admin.nav.people": "People / Organization",
     "admin.nav.contracts": "E-Contracts",
     "admin.nav.approvalPolicy": "Approval Policy",
