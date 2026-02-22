@@ -81,6 +81,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger">
             {t("admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedger")}
           </Link>
+          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger/exception-log">
+            {t("admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedgerExceptionLog")}
+          </Link>
           <Link href="/admin/people">{t("admin.nav.people")}</Link>
           <Link href="/admin/contracts">{t("admin.nav.contracts")}</Link>
           <Link href="/admin/approval-policy">{t("admin.nav.approvalPolicy")}</Link>
