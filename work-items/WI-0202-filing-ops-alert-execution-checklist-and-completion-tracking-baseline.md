@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0202: Filing Ops Alert Execution Checklist and Completion Tracking Baseline
 
 ## Background and Problem
@@ -43,3 +45,4 @@ WI-0201 added alert response action guidance and owner assignment on filing ops 
 - [x] Alert metric execution checklist rows can be tracked to completion in UI.
 - [x] Completion progress summary and completion timestamp are shown.
 - [x] WI-0202 e2e exists and is wired in MVP/FULL suites.
+

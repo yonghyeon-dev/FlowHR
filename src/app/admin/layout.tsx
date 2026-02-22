@@ -42,52 +42,26 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/payroll-year-end">{t("admin.nav.yearEnd")}</Link>
           <Link href="/admin/payroll-year-end-filing">{t("admin.nav.yearEndFiling")}</Link>
           <Link href="/admin/payroll-year-end-filing/ops">{t("admin.nav.yearEndFilingOps")}</Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist">
-            {t("admin.nav.yearEndFilingOpsChecklist")}
+          <Link href="/admin/payroll-year-end-filing/ops/alert">
+            {t("admin.nav.yearEndFilingOpsFlatAlert")}
           </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review">
-            {t("admin.nav.yearEndFilingOpsChecklistReview")}
+          <Link href="/admin/payroll-year-end-filing/ops/checklist-flow">
+            {t("admin.nav.yearEndFilingOpsFlatChecklist")}
           </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot">
-            {t("admin.nav.yearEndFilingOpsChecklistReviewSnapshot")}
+          <Link href="/admin/payroll-year-end-filing/ops/review">
+            {t("admin.nav.yearEndFilingOpsFlatReview")}
           </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff">
-            {t("admin.nav.yearEndFilingOpsChecklistReviewHandoff")}
+          <Link href="/admin/payroll-year-end-filing/ops/close-off">
+            {t("admin.nav.yearEndFilingOpsFlatCloseOff")}
           </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off">
-            {t("admin.nav.yearEndFilingOpsChecklistReviewCloseOff")}
+          <Link href="/admin/payroll-year-end-filing/ops/delivery">
+            {t("admin.nav.yearEndFilingOpsFlatDelivery")}
           </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature">
-            {t("admin.nav.yearEndFilingOpsChecklistRoutingSignatureBundle")}
+          <Link href="/admin/payroll-year-end-filing/ops/archive">
+            {t("admin.nav.yearEndFilingOpsFlatArchive")}
           </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock">
-            {t("admin.nav.yearEndFilingOpsChecklistDeliveryLockHandover")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt">
-            {t("admin.nav.yearEndFilingOpsChecklistCompletionReceiptArchiveDigest")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report">
-            {t("admin.nav.yearEndFilingOpsChecklistCompletionCloseReport")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff">
-            {t("admin.nav.yearEndFilingOpsChecklistCloseReportDistributionSignoff")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet">
-            {t("admin.nav.yearEndFilingOpsChecklistCloseReportDistributionSignoffClosurePacket")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest">
-            {t("admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigest")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger">
-            {t("admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedger")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger/exception-log">
-            {t("admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedgerExceptionLog")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger/exception-log/closure-receipt">
-            {t(
-              "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceipt"
-            )}
+          <Link href="/admin/payroll-year-end-filing/ops/report">
+            {t("admin.nav.yearEndFilingOpsFlatReport")}
           </Link>
           <Link href="/admin/people">{t("admin.nav.people")}</Link>
           <Link href="/admin/contracts">{t("admin.nav.contracts")}</Link>

@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0204: Filing Ops Checklist Retrospective Comment and Review Approval Snapshot Baseline
 
 ## Background and Problem
@@ -46,3 +48,4 @@ WI-0203 introduced checklist execution logs and review loop stage summary, but o
 - [x] Retrospective comments and review approval decisions are manageable in UI.
 - [x] Approval snapshot summary and ready-to-close state are deterministic and visible.
 - [x] WI-0204 e2e exists and is wired in MVP/FULL suites.
+

@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0201: Filing Ops Alert Response Guide and Owner Assignment Baseline
 
 ## Background and Problem
@@ -45,3 +47,4 @@ WI-0199 introduced drilldown and alert severity for payroll year-end filing ops,
 - [x] Owner assignment role/actor ID can be edited per metric and reflected in summary.
 - [x] Response rows can jump to corresponding drilldown mode.
 - [x] WI-0201 e2e exists and is wired into MVP/FULL suites.
+

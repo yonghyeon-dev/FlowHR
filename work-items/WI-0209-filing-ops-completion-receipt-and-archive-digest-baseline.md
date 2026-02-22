@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0209: Filing Ops Completion Receipt and Archive Digest Baseline
 
 ## Background and Problem
@@ -49,3 +51,4 @@ WI-0208 finalized delivery package lock and final handover acknowledgment, but o
 - [x] Completion receipt and archive digest states are manageable in UI.
 - [x] Archive readiness summary and blockers are deterministic and visible.
 - [x] WI-0209 e2e exists and is wired in MVP/FULL suites.
+

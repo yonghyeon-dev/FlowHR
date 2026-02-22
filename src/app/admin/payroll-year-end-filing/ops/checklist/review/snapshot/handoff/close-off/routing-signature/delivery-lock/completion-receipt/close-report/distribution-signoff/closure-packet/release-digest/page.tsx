@@ -1,5 +1,0 @@
-import PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigest from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigest";
-
-export default function AdminPayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigestPage() {
-  return <PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigest />;
-}

@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.85 (Filing Ops Exception Closure Receipt Baseline)
+> **Current version**: 0.1.87 (Filing Ops Legacy Cleanup and Flat Workflow Consolidation)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -253,10 +253,12 @@
 - WI-0214 연말정산 신고 운영 release digest acknowledgment ledger baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger` 전용 라우트 + acknowledgment ledger status(pending/logged/verified) + ack channel state(pending/acknowledged/reconciled) + acknowledgment readiness blocker 요약 + e2e 갱신)
 - WI-0215 연말정산 신고 운영 ack ledger exception log baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger/exception-log` 전용 라우트 + exception log status(pending/recorded/closed) + exception category state(open/investigating/resolved) + exception closure blocker 요약 + e2e 갱신)
 - WI-0216 연말정산 신고 운영 ack ledger exception closure receipt baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger/exception-log/closure-receipt` 전용 라우트 + exception closure receipt status(pending/issued/verified) + exception closure channel state(pending/sent/acknowledged) + exception closure receipt blocker 요약 + e2e 갱신)
+- WI-0217 연말정산 신고 운영 플랫 워크플로우 라우트/컨텍스트 baseline(`GET /admin/payroll-year-end-filing/ops/[step]` 동적 스텝 라우트(alert/checklist-flow/review/close-off/delivery/archive/report) + `FilingWorkflowContext` 기반 공통 상태(currentStep/gates/metadata/actionLog) + 공통 컴포넌트(`FilingDashboard`,`FilingStepPanel`,`FilingGateCard`,`FilingActionLog`,`FilingExportBundle`) + Admin 플랫 네비 + e2e 갱신)
+- WI-0218 연말정산 신고 운영 컴포넌트 통합/레거시 정리 baseline(`/admin/payroll-year-end-filing/ops`→`/ops/alert` 리다이렉트 + `/ops/checklist/**` 딥 라우트 제거 + `PayrollYearEndFilingOps*`/`filing-alert-*` 컴포넌트군 제거 + WI-0198~0199, WI-0201~0216 아카이브 no-op + WI-0218 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 exception closure archive digest baseline) (WI-0217 예정)
+- 다음: 핵심 SaaS 여정 UI 확장 재개(직원 셀프서비스 정보 구조 단순화 및 승인 큐 UX 정리) (WI-0219 예정)
 
 ### 현재 아키텍처
 

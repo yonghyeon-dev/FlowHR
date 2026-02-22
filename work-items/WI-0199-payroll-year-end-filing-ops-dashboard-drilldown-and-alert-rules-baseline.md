@@ -1,4 +1,4 @@
-# WI-0199: Payroll Year-End Filing Ops Dashboard Drilldown and Alert Rules Baseline
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).`n> Reference: docs/codex-guide.md Part 1.5`n# WI-0199: Payroll Year-End Filing Ops Dashboard Drilldown and Alert Rules Baseline
 
 ## Background and Problem
 
@@ -66,3 +66,4 @@ WI-0199 adds drilldown and alert-rule baseline so operators can triage pending/r
 - [x] Existing filing list/timeline flow remains unchanged and permission-guarded.
 - [x] WI-0199 e2e exists and is wired into MVP/FULL suites.
 - [x] Payroll contract/api/test-cases/roadmap/work-item docs are synced.
+
