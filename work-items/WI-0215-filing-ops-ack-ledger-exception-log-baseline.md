@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0215: Filing Ops Ack Ledger Exception Log Baseline
 
 ## Background and Problem
@@ -49,3 +51,4 @@ WI-0214 introduced acknowledgment ledger verification and channel reconciliation
 - [x] Exception log and exception category states are manageable in UI.
 - [x] Exception closure readiness summary and blockers are deterministic and visible.
 - [x] WI-0215 e2e exists and is wired in MVP/FULL suites.
+

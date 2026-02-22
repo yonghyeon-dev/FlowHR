@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0198: Payroll Year-End Filing Ops Dashboard Split and Evidence/Status Summary Cards Baseline
 
 ## Background and Problem
@@ -61,3 +63,4 @@ Following `docs/codex-guide.md`, WI-0198 splits monitoring concerns into a dedic
 - [x] Existing execution console remains functional and links to ops dashboard.
 - [x] WI-0198 e2e exists and is wired into MVP/FULL suites.
 - [x] Payroll contract/api/test-cases/roadmap/work-item docs are synced.
+

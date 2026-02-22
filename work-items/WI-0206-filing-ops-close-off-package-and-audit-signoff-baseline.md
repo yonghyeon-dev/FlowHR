@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0206: Filing Ops Close-off Package and Audit Sign-off Baseline
 
 ## Background and Problem
@@ -46,3 +48,4 @@ WI-0205 added handoff and export snapshot evidence, but operators still need a d
 - [x] Audit sign-off entries and archive package context are manageable in UI.
 - [x] Ready-to-archive summary and blockers are deterministic and visible.
 - [x] WI-0206 e2e exists and is wired in MVP/FULL suites.
+

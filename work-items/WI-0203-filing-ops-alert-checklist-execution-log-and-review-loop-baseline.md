@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0203: Filing Ops Alert Checklist Execution Log and Review Loop Baseline
 
 ## Background and Problem
@@ -46,3 +48,4 @@ WI-0202 added alert checklist completion tracking, but operations still lacks a 
 - [x] Execution logs can be appended with status and actor context.
 - [x] Review summary stage transitions (`execute`/`review`/`close`) are visible and deterministic.
 - [x] WI-0203 e2e exists and is wired in MVP/FULL suites.
+

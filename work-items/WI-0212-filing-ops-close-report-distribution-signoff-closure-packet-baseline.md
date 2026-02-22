@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0212: Filing Ops Distribution Sign-off Closure Packet Baseline
 
 ## Background and Problem
@@ -49,3 +51,4 @@ WI-0211 introduced close report distribution sign-off, but operations still need
 - [x] Closure packet and dispatch channel states are manageable in UI.
 - [x] Closure packet readiness summary and blockers are deterministic and visible.
 - [x] WI-0212 e2e exists and is wired in MVP/FULL suites.
+

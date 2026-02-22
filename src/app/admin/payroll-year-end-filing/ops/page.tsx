@@ -1,5 +1,5 @@
-import PayrollYearEndFilingOpsDashboard from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsDashboard";
+import { redirect } from "next/navigation";
 
 export default function AdminPayrollYearEndFilingOpsPage() {
-  return <PayrollYearEndFilingOpsDashboard />;
+  redirect("/admin/payroll-year-end-filing/ops/alert");
 }

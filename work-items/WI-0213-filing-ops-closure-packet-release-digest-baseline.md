@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0213: Filing Ops Closure Packet Release Digest Baseline
 
 ## Background and Problem
@@ -49,3 +51,4 @@ WI-0212 introduced distribution sign-off closure packet sealing and dispatch, bu
 - [x] Release digest and channel states are manageable in UI.
 - [x] Release digest readiness summary and blockers are deterministic and visible.
 - [x] WI-0213 e2e exists and is wired in MVP/FULL suites.
+

@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0205: Filing Ops Checklist Review Handoff and Export Snapshot Baseline
 
 ## Background and Problem
@@ -46,3 +48,4 @@ WI-0204 added retrospective comments and role-based approval snapshot, but close
 - [x] Handoff packet and export snapshot can be composed in UI.
 - [x] Close-readiness summary is deterministic and visible.
 - [x] WI-0205 e2e exists and is wired in MVP/FULL suites.
+

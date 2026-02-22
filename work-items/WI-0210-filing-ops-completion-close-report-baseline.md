@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0210: Filing Ops Completion Close Report Baseline
 
 ## Background and Problem
@@ -49,3 +51,4 @@ WI-0209 established completion receipt and archive digest readiness, but operati
 - [x] Completion close report and publication channel states are manageable in UI.
 - [x] Close readiness summary and blockers are deterministic and visible.
 - [x] WI-0210 e2e exists and is wired in MVP/FULL suites.
+

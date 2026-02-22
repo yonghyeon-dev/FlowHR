@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0214: Filing Ops Release Digest Acknowledgment Ledger Baseline
 
 ## Background and Problem
@@ -49,3 +51,4 @@ WI-0213 introduced release digest publication and channel delivery, but operatio
 - [x] Acknowledgment ledger and channel states are manageable in UI.
 - [x] Readiness summary and blockers are deterministic and visible.
 - [x] WI-0214 e2e exists and is wired in MVP/FULL suites.
+

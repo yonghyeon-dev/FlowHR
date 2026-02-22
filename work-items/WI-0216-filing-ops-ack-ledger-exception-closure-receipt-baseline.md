@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0216: Filing Ops Ack Ledger Exception Closure Receipt Baseline
 
 ## Background and Problem
@@ -49,3 +51,4 @@ WI-0215 introduced an acknowledgment exception log loop, but operations still ne
 - [x] Closure receipt and closure channel states are manageable in UI.
 - [x] Closure-receipt readiness summary and blockers are deterministic and visible.
 - [x] WI-0216 e2e exists and is wired in MVP/FULL suites.
+

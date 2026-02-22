@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0211: Filing Ops Close Report Distribution Sign-off Baseline
 
 ## Background and Problem
@@ -50,3 +52,4 @@ WI-0210 introduced completion close report publishing, but operations still need
 - [x] Distribution channels and role sign-off states are manageable in UI.
 - [x] Readiness summary and blockers are deterministic and visible.
 - [x] WI-0211 e2e exists and is wired in MVP/FULL suites.
+

@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0208: Filing Ops Delivery Package Lock and Final Handover Baseline
 
 ## Background and Problem
@@ -48,3 +50,4 @@ WI-0207 introduced approval routing and delivery signature bundle, but operators
 - [x] Delivery lock and final handover states are manageable in UI.
 - [x] Completion summary and blockers are deterministic and visible.
 - [x] WI-0208 e2e exists and is wired in MVP/FULL suites.
+

@@ -1,3 +1,5 @@
+﻿> **DEPRECATED**: This WI deliverable was consolidated by filing-ops de-bloat cleanup (WI-0218).
+> Reference: docs/codex-guide.md Part 1.5
 # WI-0207: Filing Ops Close-off Approval Routing and Delivery Signature Bundle Baseline
 
 ## Background and Problem
@@ -48,3 +50,4 @@ WI-0206 introduced close-off package and audit sign-off, but operators still nee
 - [x] Routing stages and signature channels are manageable in UI.
 - [x] Ready-to-deliver summary and blockers are deterministic and visible.
 - [x] WI-0207 e2e exists and is wired in MVP/FULL suites.
+
