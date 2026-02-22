@@ -14,6 +14,7 @@ import {
 } from "@/components/payroll-year-end-filing/filing-alert-execution-checklist";
 import { buildChecklistReviewRouteHref } from "@/components/payroll-year-end-filing/filing-alert-execution-review-loop";
 import { buildChecklistReviewSnapshotRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-approval-snapshot";
+import { buildReviewCloseOffRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-close-off-package";
 import {
   buildFilingExportSnapshot,
   buildReviewHandoffPacket,
@@ -181,6 +182,15 @@ export default function PayrollYearEndFilingOpsReviewHandoffExportSnapshot() {
       }),
     [approvedCount, pendingCount, reworkCount, totalCount, handoffPacket, exportSnapshot]
   );
+  const closeOffPackageHref = buildReviewCloseOffRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    handoffReady: summary.handoffReady,
+    exportReady: summary.exportReady
+  });
 
   function updateHandoffDraft(key: keyof HandoffDraft, value: string) {
     setHandoffDraft((prev) => ({ ...prev, [key]: value }));
@@ -230,6 +240,9 @@ export default function PayrollYearEndFilingOpsReviewHandoffExportSnapshot() {
         </Link>
         <Link href={approvalSnapshotHref} className="btn btn-secondary btn-small">
           Back to Approval Snapshot
+        </Link>
+        <Link href={closeOffPackageHref} className="btn btn-secondary btn-small">
+          Open Close-off Package
         </Link>
       </div>
 
