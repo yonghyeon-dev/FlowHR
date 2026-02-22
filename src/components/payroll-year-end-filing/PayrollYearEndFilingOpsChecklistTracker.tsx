@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import styles from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsChecklistTracker.module.css";
 import type { FilingOpsAlertLevel } from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsDashboard";
 import {
   buildAlertExecutionChecklistRows,
@@ -128,7 +129,7 @@ export default function PayrollYearEndFilingOpsChecklistTracker() {
         </button>
       </div>
 
-      <div className="alert-execution-controls">
+      <div className={styles.alertExecutionControls}>
         <label>
           Metric
           <select value={metric} onChange={(event) => setMetric(normalizeMetric(event.target.value))}>
@@ -181,14 +182,17 @@ function renderChecklistRow(
   toggleTask: (taskId: string) => void
 ) {
   return (
-    <li key={row.taskId} className={`filing-alert-checklist-row${checked ? " done" : ""}`}>
-      <label className="filing-alert-checklist-toggle">
+    <li
+      key={row.taskId}
+      className={`${styles.checklistRow}${checked ? ` ${styles.checklistRowDone}` : ""}`}
+    >
+      <label className={styles.checklistToggle}>
         <input type="checkbox" checked={checked} onChange={() => toggleTask(row.taskId)} />
         <span>
           <strong>{row.label}</strong>
           <p className="small">{row.detail}</p>
           <span
-            className={`filing-alert-checklist-badge${row.required ? "" : " optional"}`}
+            className={`${styles.checklistBadge}${row.required ? "" : ` ${styles.checklistBadgeOptional}`}`}
             aria-label={row.required ? "required task" : "optional task"}
           >
             {row.required ? "required" : "optional"}

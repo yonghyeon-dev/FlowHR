@@ -24,13 +24,18 @@ async function run() {
     "payroll-year-end-filing",
     "PayrollYearEndFilingOpsChecklistTracker.tsx"
   );
+  const checklistTrackerCssModuleSource = readUtf8(
+    "src",
+    "components",
+    "payroll-year-end-filing",
+    "PayrollYearEndFilingOpsChecklistTracker.module.css"
+  );
   const filingOpsDashboardSource = readUtf8(
     "src",
     "components",
     "payroll-year-end-filing",
     "PayrollYearEndFilingOpsDashboard.tsx"
   );
-  const globalsCssSource = readUtf8("src", "app", "globals.css");
   const roadmapSource = readUtf8("ROADMAP.md");
   const workItemSource = readUtf8(
     "work-items",
@@ -79,14 +84,14 @@ async function run() {
     "ops dashboard should provide quick link to checklist tracker"
   );
   assert.match(
-    globalsCssSource,
-    /\.filing-alert-checklist-row/,
-    "global styles should include checklist row style"
+    checklistTrackerCssModuleSource,
+    /\.checklistRow/,
+    "checklist css module should include checklist row style"
   );
   assert.match(
-    globalsCssSource,
-    /\.alert-execution-controls/,
-    "global styles should include checklist controls style"
+    checklistTrackerCssModuleSource,
+    /\.alertExecutionControls/,
+    "checklist css module should include checklist controls style"
   );
   assert.match(
     roadmapSource,
@@ -102,7 +107,7 @@ async function run() {
   );
 
   const checklistModule = await import(
-    "../../src/components/payroll-year-end-filing/PayrollYearEndFilingOpsChecklistTracker.tsx"
+    "../../src/components/payroll-year-end-filing/filing-alert-execution-checklist.ts"
   );
 
   const rows = checklistModule.buildAlertExecutionChecklistRows({
