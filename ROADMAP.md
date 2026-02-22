@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.88 (Core Journey IA Simplification and Approval Queue Split)
+> **Current version**: 0.1.89 (Payroll KR Precision Kickoff)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -256,10 +256,11 @@
 - WI-0217 연말정산 신고 운영 플랫 워크플로우 라우트/컨텍스트 baseline(`GET /admin/payroll-year-end-filing/ops/[step]` 동적 스텝 라우트(alert/checklist-flow/review/close-off/delivery/archive/report) + `FilingWorkflowContext` 기반 공통 상태(currentStep/gates/metadata/actionLog) + 공통 컴포넌트(`FilingDashboard`,`FilingStepPanel`,`FilingGateCard`,`FilingActionLog`,`FilingExportBundle`) + Admin 플랫 네비 + e2e 갱신)
 - WI-0218 연말정산 신고 운영 컴포넌트 통합/레거시 정리 baseline(`/admin/payroll-year-end-filing/ops`→`/ops/alert` 리다이렉트 + `/ops/checklist/**` 딥 라우트 제거 + `PayrollYearEndFilingOps*`/`filing-alert-*` 컴포넌트군 제거 + WI-0198~0199, WI-0201~0216 아카이브 no-op + WI-0218 회귀 테스트 추가)
 - WI-0219 핵심 여정 IA 단순화 + 승인 큐 컴포넌트 분리 baseline(`src/app/admin/page.tsx` 승인 큐 패널을 `src/components/admin-approval/*`로 분리 + dead bulk-selection 로직 정리 + `src/app/employee/page.tsx` 핵심 여정 바로가기(`EmployeeJourneyShortcutPanel`) 추가 + WI-0219 회귀 테스트 추가)
+- WI-0220 급여 엔진 KR 정밀 계산 착수 baseline(`POST /payroll/runs/preview-with-deductions` `statutory_kr_baseline`에 `incomeTaxLookupTable`(간이세액표 룩업) + `insuranceRounding`(4대보험 항목별 단위/모드 라운딩) 추가 + payroll spec/rfc 갱신 + WI-0220 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 급여 엔진 KR 정밀 계산 착수(간이세액표/4대보험 정밀 규칙) (WI-0220 예정)
+- 다음: 급여 엔진 KR 정밀 계산 확장(세액표 운영 데이터셋/검증 가드) (WI-0221 예정)
 
 ### 현재 아키텍처
 

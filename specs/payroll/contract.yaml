@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.24.0
+version: 1.25.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -12,6 +12,7 @@ scope:
     - KR statutory baseline deduction mode for payroll preview (income tax + 4-insurance approximation)
     - KR statutory baseline progressive income-tax brackets and insurance contribution caps
     - KR statutory baseline additive tax-credit inputs and optional monthly-boundary validation (Asia/Seoul)
+    - KR statutory baseline simple withholding lookup-table input and configurable insurance rounding rules
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
@@ -60,7 +61,7 @@ api:
       description: Generate payroll gross pay preview for a period.
     - method: POST
       path: /payroll/runs/preview-with-deductions
-      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, contribution caps, additive tax-credit fields, and optional monthly-boundary validation).
+      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table, contribution caps, additive tax-credit fields, configurable insurance rounding, and optional monthly-boundary validation).
     - method: POST
       path: /payroll/runs/preview-insurance-settlement
       description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, and prior-withheld/prior-paid deltas.
@@ -201,7 +202,10 @@ invariants:
   - Statutory KR baseline mode must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0).
   - Statutory KR baseline mode must keep deduction and net-pay outputs deterministic for same inputs/rates.
   - When incomeTaxBrackets is provided, statutory income tax must be calculated by bracket segments and include open-ended final bracket.
+  - When incomeTaxLookupTable is provided, statutory income tax must be selected from first matching lookup row by taxable base, and the lookup table must include open-ended final row.
+  - Statutory mode must reject requests that provide both incomeTaxBrackets and incomeTaxLookupTable.
   - Insurance contribution caps (if provided) must bound each insurance contribution base deterministically.
+  - Insurance rounding rules (if provided) must apply deterministic unit/mode rounding per insurance component.
   - Tax credits in statutory mode must apply to income tax before local income tax, and post-credit income tax must not be negative.
   - When statutory.requireMonthlyBoundary is true, payroll period must be validated against monthly boundary in Asia/Seoul.
   - Insurance settlement preview must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0) and keep contribution components deterministic for same inputs/rates/caps.
@@ -274,6 +278,8 @@ test_plan:
     - manual/profile mode deduction and net-pay aggregation formula
     - statutory_kr_baseline mode deduction component and net-pay aggregation formula
     - statutory_kr_baseline progressive bracket and contribution-cap formulas
+    - statutory_kr_baseline simple withholding lookup-table selection formula
+    - statutory_kr_baseline insurance rounding unit/mode formulas
     - statutory_kr_baseline tax-credit and monthly-boundary formulas
     - insurance settlement contribution, cap, and delta formulas
     - close-period totals, blocking, and delta formulas
@@ -307,6 +313,7 @@ test_plan:
     - employees can list their own CONFIRMED runs for payslip self-service, but are blocked from other employees and PREVIEWED runs
     - list deduction profiles and filter by active/mode
     - statutory_kr_baseline validates progressive bracket ordering/open-ended final bracket
+    - statutory_kr_baseline validates lookup-table ordering/open-ended final row and mutual exclusivity with brackets
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
     - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
@@ -340,6 +347,7 @@ test_plan:
     - statutory_kr_baseline deterministic result replay via WI-0101 e2e
     - statutory_kr_baseline progressive/cap deterministic replay via WI-0105 e2e
     - statutory_kr_baseline tax-credit/boundary deterministic replay via WI-0106 e2e
+    - statutory_kr_baseline simple lookup-table + insurance rounding deterministic replay via WI-0220 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
@@ -379,6 +387,7 @@ test_plan:
     - deduction sum and net-pay deterministic checks
     - statutory taxable-base and component-level deterministic checks
     - progressive bracket and insurance-cap component checks
+    - lookup-table income-tax selection and insurance rounding-rule component checks
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, and delta deterministic checks
     - close-period withholding/social/net aggregation and settlement-delta checks
@@ -492,7 +501,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.24.0 extends feature-flagged year-end filing workflow with ops drilldown and alert-rule baseline on the split dashboard (`/admin/payroll-year-end-filing/ops`) while reusing filing list/timeline APIs, and preserves all existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.25.0 additively extends `statutory_kr_baseline` preview inputs with optional simple withholding lookup-table and insurance rounding rules, while preserving all existing payroll preview/confirm/profile, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -506,6 +515,7 @@ references:
   - work-items/WI-0101-payroll-kr-statutory-baseline.md
   - work-items/WI-0105-payroll-kr-progressive-cap.md
   - work-items/WI-0106-payroll-tax-credit-month-boundary.md
+  - work-items/WI-0220-payroll-kr-precision-simple-tax-table-and-insurance-rounding.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
