@@ -47,6 +47,7 @@ const messages = {
     "admin.nav.yearEndFilingOpsChecklistCompletionReceiptArchiveDigest":
       "완료 확인서/archive digest",
     "admin.nav.yearEndFilingOpsChecklistCompletionCloseReport": "완료 close report",
+    "admin.nav.yearEndFilingOpsChecklistCloseReportDistributionSignoff": "close report 배포 sign-off",
     "admin.nav.people": "조직/인사",
     "admin.nav.contracts": "전자계약",
     "admin.nav.approvalPolicy": "결재 정책",
@@ -151,6 +152,8 @@ const messages = {
     "admin.nav.yearEndFilingOpsChecklistCompletionReceiptArchiveDigest":
       "Completion Receipt + Archive Digest",
     "admin.nav.yearEndFilingOpsChecklistCompletionCloseReport": "Completion Close Report",
+    "admin.nav.yearEndFilingOpsChecklistCloseReportDistributionSignoff":
+      "Close Report Distribution Sign-off",
     "admin.nav.people": "People / Organization",
     "admin.nav.contracts": "E-Contracts",
     "admin.nav.approvalPolicy": "Approval Policy",
