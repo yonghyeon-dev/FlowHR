@@ -23,6 +23,7 @@ import {
   type AuditSignOffStatus
 } from "@/components/payroll-year-end-filing/filing-alert-review-close-off-package";
 import type { ReviewHandoffRole } from "@/components/payroll-year-end-filing/filing-alert-review-handoff-export-snapshot";
+import { buildCloseOffRoutingSignatureBundleRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-routing-signature-bundle";
 
 type SignOffDraft = {
   status: AuditSignOffStatus;
@@ -158,6 +159,16 @@ export default function PayrollYearEndFilingOpsReviewCloseOffPackage() {
       }),
     [signOffEntries, handoffReady, exportReady]
   );
+  const routingSignatureBundleHref = buildCloseOffRoutingSignatureBundleRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    handoffReady: summary.handoffReady,
+    exportReady: summary.exportReady,
+    archiveReady: summary.readyToArchive
+  });
 
   function updateSignOffDraft(role: ReviewHandoffRole, key: keyof SignOffDraft, value: string) {
     setSignOffDrafts((prev) => ({
@@ -195,6 +206,9 @@ export default function PayrollYearEndFilingOpsReviewCloseOffPackage() {
         </Link>
         <Link href={handoffSnapshotHref} className="btn btn-secondary btn-small">
           Back to Handoff Snapshot
+        </Link>
+        <Link href={routingSignatureBundleHref} className="btn btn-secondary btn-small">
+          Open Routing + Signature Bundle
         </Link>
       </div>
 
