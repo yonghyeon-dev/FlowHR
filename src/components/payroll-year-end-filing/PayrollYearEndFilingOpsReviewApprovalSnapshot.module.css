@@ -1,0 +1,118 @@
+.snapshotContextGrid {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.snapshotStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #c7d6ea;
+  background: #edf5ff;
+  color: #294c83;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.snapshotStatusReady {
+  border-color: #9fd2b0;
+  background: #e9f8ee;
+  color: #1b6a3b;
+}
+
+.snapshotStatusHold {
+  border-color: #f3c29a;
+  background: #fff1e3;
+  color: #8f4f14;
+}
+
+.retrospectiveForm {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.retrospectiveForm textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.retrospectiveActions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.retrospectiveList {
+  margin-top: 10px;
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.retrospectiveRow {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.approvalGrid {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.approvalRow {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.approvalControls {
+  margin-top: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.approvalControls textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.decisionBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #d2dbe8;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.decisionApproved {
+  border-color: #9acfb5;
+  background: #e8f7ee;
+  color: #1a6f3d;
+}
+
+.decisionRework {
+  border-color: #efb2a8;
+  background: #fff0ed;
+  color: #8b2c22;
+}
+
+.decisionPending {
+  border-color: #d4dde9;
+  background: #f1f5fb;
+  color: #445a7a;
+}
