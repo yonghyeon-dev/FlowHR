@@ -55,6 +55,10 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 47. Run statutory baseline preview with `incomeTaxLookupTable` and verify lookup-row tax selection plus deterministic withholding aggregation.
 48. Run statutory baseline preview with `insuranceRounding` and verify per-component rounding unit/mode is applied deterministically.
 49. Reject statutory baseline preview when `incomeTaxBrackets` and `incomeTaxLookupTable` are both provided.
+50. Run statutory baseline preview with `incomeTaxLookupPresetId` and verify preset dataset row selection output.
+51. Reject statutory baseline preview when unknown `incomeTaxLookupPresetId` is provided.
+52. Reject statutory baseline preview when `incomeTaxLookupPresetId` is mixed with `incomeTaxBrackets` or `incomeTaxLookupTable`.
+53. Reject statutory baseline preview when lookup-table rows contain non-monotonic `taxKrw` values.
 
 ## Accuracy Cases
 
@@ -94,6 +98,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 34. Year-end filing ops dashboard alert-rule severity and drilldown row subsets remain deterministic for same filing list/timeline replay.
 35. Statutory baseline lookup-table mode selects the first matching row by taxable base and remains deterministic under replay.
 36. Statutory baseline insurance rounding mode/unit settings produce deterministic component rounding under replay.
+37. Statutory baseline preset mode resolves to deterministic lookup rows for same preset ID and taxable base.
+38. Statutory baseline lookup-table validation guard rejects malformed non-monotonic tax rows deterministically.
 
 ## Regression Linkage
 
@@ -116,6 +122,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Progressive/Cap Gate: bracket ordering and insurance-cap calculations must be deterministic and validated.
 - Tax-Credit/Boundary Gate: tax-credit ordering and monthly-boundary guard checks must be deterministic and validated.
 - Lookup/Rounding Gate: `incomeTaxLookupTable` selection and `insuranceRounding` unit/mode checks must be deterministic and validated.
+- Preset/Validation Gate: `incomeTaxLookupPresetId` resolution and lookup-table monotonic-tax validation must be deterministic and validated.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.
