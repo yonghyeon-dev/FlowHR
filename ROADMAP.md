@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.80 (Filing Ops Close Report Distribution Sign-off Baseline)
+> **Current version**: 0.1.81 (Filing Ops Distribution Sign-off Closure Packet Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -248,10 +248,11 @@
 - WI-0209 연말정산 신고 운영 completion receipt/archive digest baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt` 전용 라우트 + completion receipt status(pending/issued/verified) + archive digest channel state(pending/prepared/sealed) + archive digest readiness blocker 요약 + e2e 갱신)
 - WI-0210 연말정산 신고 운영 completion close report baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report` 전용 라우트 + close report status(pending/drafted/published) + publication channel state(pending/queued/published) + final close blocker 요약 + e2e 갱신)
 - WI-0211 연말정산 신고 운영 close report distribution sign-off baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff` 전용 라우트 + distribution channel state(pending/distributed/confirmed) + role sign-off state(pending/signed/rejected) + distribution sign-off blocker 요약 + e2e 갱신)
+- WI-0212 연말정산 신고 운영 distribution sign-off closure packet baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet` 전용 라우트 + closure packet status(pending/assembled/sealed) + closure packet dispatch state(pending/prepared/released) + closure packet readiness blocker 요약 + e2e 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 distribution sign-off closure packet baseline) (WI-0212 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 closure packet release digest baseline) (WI-0213 예정)
 
 ### 현재 아키텍처
 
