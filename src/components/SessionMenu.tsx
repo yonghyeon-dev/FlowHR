@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { useI18n } from "@/lib/i18n/provider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type SessionMenuProps = {
@@ -14,6 +15,7 @@ type SessionMenuProps = {
 export default function SessionMenu({ className }: SessionMenuProps) {
   const router = useRouter();
   const { snapshot, error } = useSupabaseSession();
+  const { t } = useI18n();
   const [pending, setPending] = useState(false);
 
   async function signOut() {
@@ -29,7 +31,7 @@ export default function SessionMenu({ className }: SessionMenuProps) {
   }
 
   return (
-    <div className={className ?? "session-menu"} aria-label="세션 메뉴">
+    <div className={className ?? "session-menu"} aria-label={t("sessionMenu.aria")}>
       {snapshot ? (
         <>
           <div className="session-meta">
@@ -42,24 +44,23 @@ export default function SessionMenu({ className }: SessionMenuProps) {
             </div>
           </div>
           <button className="btn btn-secondary btn-small" onClick={() => void signOut()} disabled={pending}>
-            로그아웃
+            {t("sessionMenu.signOut")}
           </button>
         </>
       ) : (
         <>
           <div className="session-meta">
             <div className="session-id">
-              <strong>로그인 필요</strong>
+              <strong>{t("sessionMenu.loginRequired")}</strong>
             </div>
-            <div className="session-sub muted">세션이 없습니다.</div>
+            <div className="session-sub muted">{t("sessionMenu.noSession")}</div>
           </div>
           <Link className="btn btn-secondary btn-small" href="/login">
-            로그인
+            {t("sessionMenu.signIn")}
           </Link>
         </>
       )}
-      {error ? <div className="session-error">세션 오류: {error}</div> : null}
+      {error ? <div className="session-error">{t("sessionMenu.errorPrefix")}: {error}</div> : null}
     </div>
   );
 }
-
