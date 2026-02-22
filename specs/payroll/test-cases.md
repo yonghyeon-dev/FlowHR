@@ -60,6 +60,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 52. Reject statutory baseline preview when `incomeTaxLookupPresetId` is mixed with `incomeTaxBrackets` or `incomeTaxLookupTable`.
 53. Reject statutory baseline preview when lookup-table rows contain non-monotonic `taxKrw` values.
 54. Admin payroll preview exposes lookup-preset selector/guide and forwards selected `incomeTaxLookupPresetId` deterministically.
+55. Validate statutory baseline taxable/non-taxable split rule: reject when `nonTaxableIncomeKrw` exceeds gross pay or when provided `taxableIncomeKrw` does not satisfy `taxable + nonTaxable = gross`.
 
 ## Accuracy Cases
 
@@ -102,6 +103,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 37. Statutory baseline preset mode resolves to deterministic lookup rows for same preset ID and taxable base.
 38. Statutory baseline lookup-table validation guard rejects malformed non-monotonic tax rows deterministically.
 39. Admin payroll preview preset selector/guide wiring remains deterministic for same state/input replay.
+40. Statutory baseline taxable/non-taxable split validation and `incomeSplitKrw` breakdown output remain deterministic for same input replay.
 
 ## Regression Linkage
 
@@ -126,6 +128,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Lookup/Rounding Gate: `incomeTaxLookupTable` selection and `insuranceRounding` unit/mode checks must be deterministic and validated.
 - Preset/Validation Gate: `incomeTaxLookupPresetId` resolution and lookup-table monotonic-tax validation must be deterministic and validated.
 - Admin Preview Preset UX Gate: `/admin` payroll statutory baseline preset selector/guide and payload wiring must remain deterministic and locale-aware (`ko`/`en`).
+- Taxable Split Gate: `taxableIncomeKrw` + `nonTaxableIncomeKrw` split validation against `grossPayKrw` must be deterministic and enforced when explicit taxable split is provided.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.

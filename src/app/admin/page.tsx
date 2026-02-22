@@ -25,6 +25,7 @@ import {
   type QueueSearchSortRow,
   type QueueSearchSortScope
 } from "@/components/admin-approval/approval-queue-types";
+import { PayrollKrIncomeSplitGuideField } from "@/components/payroll/PayrollKrIncomeSplitGuideField";
 import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
@@ -299,6 +300,7 @@ export default function AdminDashboardPage() {
     "gross"
   );
   const [payrollNonTaxableIncomeKrw, setPayrollNonTaxableIncomeKrw] = useState("0");
+  const [payrollTaxableIncomeKrw, setPayrollTaxableIncomeKrw] = useState("");
   const [payrollOtherDeductionsKrw, setPayrollOtherDeductionsKrw] = useState("0");
   const [payrollAdditionalTaxCreditKrw, setPayrollAdditionalTaxCreditKrw] = useState("0");
   const [payrollDependentCount, setPayrollDependentCount] = useState("0");
@@ -1038,6 +1040,10 @@ export default function AdminDashboardPage() {
       deductionMode: "statutory_kr_baseline" as const,
       statutory: {
         nonTaxableIncomeKrw: Math.max(0, Number(payrollNonTaxableIncomeKrw) || 0),
+        taxableIncomeKrw:
+          payrollTaxableIncomeKrw.trim().length > 0
+            ? Math.max(0, Math.trunc(Number(payrollTaxableIncomeKrw) || 0))
+            : undefined,
         otherDeductionsKrw: Math.max(0, Number(payrollOtherDeductionsKrw) || 0),
         additionalTaxCreditKrw: Math.max(0, Math.trunc(Number(payrollAdditionalTaxCreditKrw) || 0)),
         dependentCount: Math.max(0, Math.trunc(Number(payrollDependentCount) || 0)),
@@ -1948,6 +1954,12 @@ export default function AdminDashboardPage() {
                     onChange={(event) => setPayrollNonTaxableIncomeKrw(event.target.value)}
                   />
                 </label>
+                <div className="full">
+                  <PayrollKrIncomeSplitGuideField
+                    taxableIncomeKrw={payrollTaxableIncomeKrw}
+                    onTaxableIncomeKrwChange={setPayrollTaxableIncomeKrw}
+                  />
+                </div>
                 <label>
                   기타 공제(KRW)
                   <input

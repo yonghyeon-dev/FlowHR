@@ -48,6 +48,7 @@ const statutoryInsuranceRoundingSchema = z.object({
 
 const statutoryKrBaselineSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
+  taxableIncomeKrw: nonNegativeInteger.optional(),
   incomeTaxBrackets: z.array(statutoryIncomeTaxBracketSchema).min(1).optional(),
   incomeTaxLookupTable: z.array(statutoryIncomeTaxLookupRowSchema).min(1).optional(),
   incomeTaxLookupPresetId: z.string().min(1).max(80).optional(),
