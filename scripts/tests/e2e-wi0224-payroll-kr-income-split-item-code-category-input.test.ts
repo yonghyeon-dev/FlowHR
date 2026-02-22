@@ -58,44 +58,41 @@ async function run() {
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
   const payrollRfc = readUtf8("specs", "payroll", "rfc.md");
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
-  const splitGuideComponent = readUtf8(
+  const itemFieldsComponent = readUtf8(
     "src",
     "components",
     "payroll",
-    "PayrollKrIncomeSplitGuideField.tsx"
+    "PayrollKrIncomeSplitItemFields.tsx"
   );
 
-  assert.match(payrollApiSpec, /taxableIncomeKrw/);
-  assert.match(payrollContract, /taxableIncomeKrw/);
-  assert.match(payrollContract, /nonTaxableIncomeKrw must not exceed grossPayKrw/);
-  assert.match(payrollTestCases, /taxable\/non-taxable split rule/);
-  assert.match(payrollRfc, /WI-0223/);
-  assert.match(adminPage, /payrollTaxableIncomeKrw/);
-  assert.match(adminPage, /PayrollKrIncomeSplitGuideField/);
-  assert.match(
-    splitGuideComponent,
-    /taxable \+ non-taxable must equal grossPayKrw/i,
-    "split guide copy should explain sum-validation rule"
-  );
+  assert.match(payrollApiSpec, /taxableIncomeItems/);
+  assert.match(payrollApiSpec, /nonTaxableIncomeItems/);
+  assert.match(payrollContract, /income split item code\/category input/i);
+  assert.match(payrollContract, /codes must be unique\(case-insensitive\)/);
+  assert.match(payrollTestCases, /income split item input/i);
+  assert.match(payrollRfc, /WI-0224/);
+  assert.match(adminPage, /payrollTaxableItemCode/);
+  assert.match(adminPage, /PayrollKrIncomeSplitItemFields/);
+  assert.match(itemFieldsComponent, /code\/category\/amount/i);
 
   resetMemoryDataAccess();
   runtimeEnv.FLOWHR_PAYROLL_DEDUCTIONS_V1 = "true";
   runtimeEnv.FLOWHR_PAYROLL_KR_BASELINE_V1 = "true";
 
-  await memoryDataAccess.employees.create({ id: "EMP-3223" });
+  await memoryDataAccess.employees.create({ id: "EMP-3224" });
 
   const createResponse = await attendanceCreateRoute.POST(
     jsonRequest(
       "POST",
       "/api/attendance/records",
       {
-        employeeId: "EMP-3223",
-        checkInAt: "2026-02-15T09:00:00+09:00",
-        checkOutAt: "2026-02-15T18:00:00+09:00",
+        employeeId: "EMP-3224",
+        checkInAt: "2026-02-16T09:00:00+09:00",
+        checkOutAt: "2026-02-16T18:00:00+09:00",
         breakMinutes: 60,
         isHoliday: false
       },
-      actorHeaders("employee", "EMP-3223")
+      actorHeaders("employee", "EMP-3224")
     )
   );
   assert.equal(createResponse.status, 201);
@@ -104,7 +101,7 @@ async function run() {
   const approveResponse = await attendanceApproveRoute.POST(
     new Request(`http://localhost/api/attendance/records/${createdBody.record.id}/approve`, {
       method: "POST",
-      headers: actorHeaders("manager", "MGR-3223")
+      headers: actorHeaders("manager", "MGR-3224")
     }),
     { params: Promise.resolve({ recordId: createdBody.record.id }) } as RouteContext<{
       recordId: string;
@@ -119,98 +116,104 @@ async function run() {
       {
         periodStart: "2026-02-01T00:00:00+09:00",
         periodEnd: "2026-02-28T23:59:59+09:00",
-        employeeId: "EMP-3223",
+        employeeId: "EMP-3224",
         hourlyRateKrw: 12000,
         deductionMode: "statutory_kr_baseline",
         statutory: {
-          nonTaxableIncomeKrw: 10000,
-          taxableIncomeKrw: 86000,
-          incomeTaxLookupPresetId: "kr_simple_monthly_v2026_01"
+          incomeTaxLookupPresetId: "kr_simple_monthly_v2026_01",
+          taxableIncomeItems: [{ code: "TX_SALARY", category: "salary", amountKrw: 86000 }],
+          nonTaxableIncomeItems: [{ code: "NT_MEAL", category: "allowance", amountKrw: 10000 }]
         }
       },
-      actorHeaders("payroll_operator", "PAY-3223")
+      actorHeaders("payroll_operator", "PAY-3224")
     )
   );
-  assert.equal(successResponse.status, 200, "valid split should be accepted");
+  assert.equal(successResponse.status, 200, "item-based split input should be accepted");
   const successBody = await readJson<{
     summary: {
-      grossPayKrw: number;
       deductionBreakdown: {
         additional: {
           taxableBaseKrw: number;
-          incomeSplitKrw: {
-            grossPayKrw: number;
-            taxableIncomeKrw: number;
-            nonTaxableIncomeKrw: number;
-            taxableSource: string;
-            validated: boolean;
+          incomeSplitKrw: { taxableIncomeKrw: number; nonTaxableIncomeKrw: number };
+          incomeSplitItems: {
+            taxableIncomeItemTotalKrw: number;
+            nonTaxableIncomeItemTotalKrw: number;
+            taxableIncomeItems: Array<{ code: string; category: string; amountKrw: number }>;
+            nonTaxableIncomeItems: Array<{ code: string; category: string; amountKrw: number }>;
           };
         };
       };
     };
   }>(successResponse);
-
-  assert.equal(successBody.summary.grossPayKrw, 96000);
   assert.equal(successBody.summary.deductionBreakdown.additional.taxableBaseKrw, 86000);
-  assert.deepEqual(successBody.summary.deductionBreakdown.additional.incomeSplitKrw, {
-    grossPayKrw: 96000,
-    taxableIncomeKrw: 86000,
-    nonTaxableIncomeKrw: 10000,
-    taxableSource: "explicit",
-    nonTaxableSource: "explicit_or_default",
-    validated: true
-  });
+  assert.equal(successBody.summary.deductionBreakdown.additional.incomeSplitKrw.taxableIncomeKrw, 86000);
+  assert.equal(
+    successBody.summary.deductionBreakdown.additional.incomeSplitKrw.nonTaxableIncomeKrw,
+    10000
+  );
+  assert.equal(
+    successBody.summary.deductionBreakdown.additional.incomeSplitItems.taxableIncomeItemTotalKrw,
+    86000
+  );
+  assert.equal(
+    successBody.summary.deductionBreakdown.additional.incomeSplitItems.nonTaxableIncomeItemTotalKrw,
+    10000
+  );
 
-  const splitMismatchResponse = await payrollPreviewWithDeductionsRoute.POST(
+  const duplicateCodeResponse = await payrollPreviewWithDeductionsRoute.POST(
     jsonRequest(
       "POST",
       "/api/payroll/runs/preview-with-deductions",
       {
         periodStart: "2026-02-01T00:00:00+09:00",
         periodEnd: "2026-02-28T23:59:59+09:00",
-        employeeId: "EMP-3223",
+        employeeId: "EMP-3224",
         hourlyRateKrw: 12000,
         deductionMode: "statutory_kr_baseline",
         statutory: {
-          nonTaxableIncomeKrw: 10000,
-          taxableIncomeKrw: 85000
+          taxableIncomeItems: [
+            { code: "TX_DUP", category: "salary", amountKrw: 40000 },
+            { code: "tx_dup", category: "bonus", amountKrw: 46000 }
+          ],
+          nonTaxableIncomeItems: [{ code: "NT_MEAL", category: "allowance", amountKrw: 10000 }]
         }
       },
-      actorHeaders("payroll_operator", "PAY-3223")
+      actorHeaders("payroll_operator", "PAY-3224")
     )
   );
-  assert.equal(splitMismatchResponse.status, 400, "mismatched split sum should be rejected");
-  const splitMismatchBody = await readJson<{ error: string }>(splitMismatchResponse);
-  assert.match(
-    splitMismatchBody.error,
-    /taxableIncomeKrw plus statutory\.nonTaxableIncomeKrw must equal grossPayKrw/
-  );
+  assert.equal(duplicateCodeResponse.status, 400, "duplicate taxable item code should be rejected");
 
-  const nonTaxableExceedResponse = await payrollPreviewWithDeductionsRoute.POST(
+  const mismatchTotalResponse = await payrollPreviewWithDeductionsRoute.POST(
     jsonRequest(
       "POST",
       "/api/payroll/runs/preview-with-deductions",
       {
         periodStart: "2026-02-01T00:00:00+09:00",
         periodEnd: "2026-02-28T23:59:59+09:00",
-        employeeId: "EMP-3223",
+        employeeId: "EMP-3224",
         hourlyRateKrw: 12000,
         deductionMode: "statutory_kr_baseline",
         statutory: {
-          nonTaxableIncomeKrw: 120000
+          taxableIncomeKrw: 85000,
+          taxableIncomeItems: [{ code: "TX_SALARY", category: "salary", amountKrw: 86000 }],
+          nonTaxableIncomeItems: [{ code: "NT_MEAL", category: "allowance", amountKrw: 10000 }]
         }
       },
-      actorHeaders("payroll_operator", "PAY-3223")
+      actorHeaders("payroll_operator", "PAY-3224")
     )
   );
-  assert.equal(nonTaxableExceedResponse.status, 400, "non-taxable above gross should be rejected");
-  const nonTaxableExceedBody = await readJson<{ error: string }>(nonTaxableExceedResponse);
-  assert.match(nonTaxableExceedBody.error, /nonTaxableIncomeKrw cannot exceed grossPayKrw/);
+  assert.equal(
+    mismatchTotalResponse.status,
+    400,
+    "taxable item total mismatch with taxableIncomeKrw should be rejected"
+  );
+  const mismatchTotalBody = await readJson<{ error: string }>(mismatchTotalResponse);
+  assert.match(mismatchTotalBody.error, /taxableIncomeItems sum must match statutory\.taxableIncomeKrw/);
 }
 
 run()
   .then(() => {
-    console.log("e2e-wi0223-payroll-kr-taxable-non-taxable-split-rule.test passed");
+    console.log("e2e-wi0224-payroll-kr-income-split-item-code-category-input.test passed");
   })
   .catch((error) => {
     console.error(error);

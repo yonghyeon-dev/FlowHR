@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.27.0
+  version: 1.28.0
 paths:
   /payroll/runs:
     get:
@@ -60,7 +60,7 @@ paths:
   /payroll/runs/preview-with-deductions:
     post:
       summary: Create payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode)
-      description: In profile mode, `expectedProfileVersion` can be provided to reject stale profile usage with `409`. In statutory_kr_baseline mode, baseline KR withholding/social insurance components are derived from configurable rates with optional `incomeTaxBrackets`, `incomeTaxLookupTable`, or `incomeTaxLookupPresetId` (mutually exclusive), insurance cap fields (`nationalPensionCapKrw`, `healthInsuranceCapKrw`, `employmentInsuranceCapKrw`), additive tax-credit fields (`additionalTaxCreditKrw`, `dependentCount`, `dependentTaxCreditPerPersonKrw`), optional split input `taxableIncomeKrw`, optional insurance rounding rules (`insuranceRounding`), and optional monthly-boundary guard (`requireMonthlyBoundary`). When `taxableIncomeKrw` is provided, `taxableIncomeKrw + nonTaxableIncomeKrw` must equal `grossPayKrw`.
+      description: In profile mode, `expectedProfileVersion` can be provided to reject stale profile usage with `409`. In statutory_kr_baseline mode, baseline KR withholding/social insurance components are derived from configurable rates with optional `incomeTaxBrackets`, `incomeTaxLookupTable`, or `incomeTaxLookupPresetId` (mutually exclusive), insurance cap fields (`nationalPensionCapKrw`, `healthInsuranceCapKrw`, `employmentInsuranceCapKrw`), additive tax-credit fields (`additionalTaxCreditKrw`, `dependentCount`, `dependentTaxCreditPerPersonKrw`), optional split input `taxableIncomeKrw`, optional income split item arrays (`taxableIncomeItems`, `nonTaxableIncomeItems` with `code`/`category`/`amountKrw`), optional insurance rounding rules (`insuranceRounding`), and optional monthly-boundary guard (`requireMonthlyBoundary`). Split guards require `nonTaxableIncomeKrw <= grossPayKrw` and explicit taxable split sum match.
       responses:
         "200":
           description: Deduction preview generated

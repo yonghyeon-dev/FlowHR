@@ -38,6 +38,12 @@ const statutoryIncomeTaxLookupRowSchema = z.object({
   taxKrw: nonNegativeInteger
 });
 
+const statutoryIncomeSplitItemSchema = z.object({
+  code: z.string().trim().min(1).max(40),
+  category: z.string().trim().min(1).max(40),
+  amountKrw: nonNegativeInteger
+});
+
 const statutoryInsuranceRoundingSchema = z.object({
   mode: z.enum(["round", "floor", "ceil"]).default("round"),
   nationalPensionUnitKrw: z.number().int().positive().default(1),
@@ -49,6 +55,8 @@ const statutoryInsuranceRoundingSchema = z.object({
 const statutoryKrBaselineSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
   taxableIncomeKrw: nonNegativeInteger.optional(),
+  taxableIncomeItems: z.array(statutoryIncomeSplitItemSchema).max(20).optional(),
+  nonTaxableIncomeItems: z.array(statutoryIncomeSplitItemSchema).max(20).optional(),
   incomeTaxBrackets: z.array(statutoryIncomeTaxBracketSchema).min(1).optional(),
   incomeTaxLookupTable: z.array(statutoryIncomeTaxLookupRowSchema).min(1).optional(),
   incomeTaxLookupPresetId: z.string().min(1).max(80).optional(),
@@ -142,6 +150,8 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
       const brackets = value.statutory?.incomeTaxBrackets;
       const lookupTable = value.statutory?.incomeTaxLookupTable;
       const lookupPresetId = value.statutory?.incomeTaxLookupPresetId;
+      const taxableIncomeItems = value.statutory?.taxableIncomeItems;
+      const nonTaxableIncomeItems = value.statutory?.nonTaxableIncomeItems;
       if (brackets && lookupTable) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -229,6 +239,31 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
             message: "incomeTaxLookupTable must end with an open-ended row(upToKrw=null)"
           });
         }
+      }
+
+      function validateIncomeSplitItemCodes(
+        fieldName: "taxableIncomeItems" | "nonTaxableIncomeItems",
+        items: Array<{ code: string }>
+      ) {
+        const seen = new Set<string>();
+        for (const [index, item] of items.entries()) {
+          const normalized = item.code.trim().toLowerCase();
+          if (seen.has(normalized)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["statutory", fieldName, index, "code"],
+              message: `${fieldName} code must be unique(case-insensitive)`
+            });
+          }
+          seen.add(normalized);
+        }
+      }
+
+      if (taxableIncomeItems) {
+        validateIncomeSplitItemCodes("taxableIncomeItems", taxableIncomeItems);
+      }
+      if (nonTaxableIncomeItems) {
+        validateIncomeSplitItemCodes("nonTaxableIncomeItems", nonTaxableIncomeItems);
       }
     }
   });
