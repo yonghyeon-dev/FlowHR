@@ -3,6 +3,28 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { ApprovalQueuePanel } from "@/components/admin-approval/ApprovalQueuePanel";
+import {
+  matchesQueueSearch,
+  matchesQueueSearchSort,
+  queueAlertLevelRank,
+  sortQueueSearchSortRows,
+  summarizeQueueAlertByRule,
+  toQueueAlertLevelByRule
+} from "@/components/admin-approval/approval-queue-helpers";
+import {
+  type ApprovalActivity,
+  type AttendanceQueueSort,
+  type LeaveQueueSort,
+  type PayrollQueueSort,
+  type QueueBadgeSummary,
+  type QueueFocus,
+  type QueueMobileApprovalFeedback,
+  type QueueSearchScope,
+  type QueueSearchSortOption,
+  type QueueSearchSortRow,
+  type QueueSearchSortScope
+} from "@/components/admin-approval/approval-queue-types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
@@ -14,18 +36,6 @@ type ApiLog = {
   durationMs: number;
   at: string;
   body: unknown;
-};
-
-type ApprovalActivity = {
-  id: number;
-  queue: "attendance" | "leave" | "payroll";
-  actionKind: "approve" | "reject" | "confirm" | "other";
-  action: string;
-  itemId: string;
-  ok: boolean;
-  status: number;
-  createdAtMs: number;
-  at: string;
 };
 
 type EmployeeSummary = {
@@ -134,77 +144,6 @@ type LeaveBalanceDto = {
   updatedAt: string;
 };
 
-type QueueFocus = "all" | "attendance" | "leave" | "payroll";
-type QueueSearchScope = "all" | "employee" | "request_id" | "content";
-type QueueAlertLevel = "normal" | "watch" | "critical";
-type AttendanceQueueSort = "checkin_desc" | "checkin_asc" | "stale_desc" | "employee_asc";
-type LeaveQueueSort = "start_desc" | "start_asc" | "stale_desc" | "employee_asc";
-type PayrollQueueSort = "period_desc" | "stale_desc" | "gross_desc" | "employee_asc";
-type QueueBadgeSummary = {
-  focus: QueueFocus;
-  label: string;
-  pending: number;
-  visible: number;
-  selected: number;
-  watch: number;
-  critical: number;
-  oldestHours: number;
-  alertLevel: QueueAlertLevel;
-};
-
-type QueueItemHistorySummary = {
-  key: string;
-  queue: "attendance" | "leave" | "payroll";
-  itemId: string;
-  total: number;
-  success: number;
-  fail: number;
-  approved: number;
-  rejected: number;
-  confirmed: number;
-  lastAction: string;
-  lastStatus: number;
-  lastAt: string;
-  lastCreatedAtMs: number;
-};
-
-type QueuePreActionCheck = {
-  id: string;
-  label: string;
-  ok: boolean;
-  detail: string;
-};
-
-type QueueMobileApprovalFeedback = {
-  queue: "attendance" | "leave" | "payroll" | "mixed";
-  action: string;
-  okCount: number;
-  failCount: number;
-  total: number;
-  at: string;
-};
-
-type QueueSearchSortScope = "all" | "queue" | "employee" | "request_id" | "detail";
-type QueueSearchSortOption =
-  | "priority_desc"
-  | "wait_desc"
-  | "recent_desc"
-  | "employee_asc"
-  | "queue_asc";
-
-type QueueSearchSortRow = {
-  key: string;
-  queue: "attendance" | "leave" | "payroll";
-  queueLabel: string;
-  itemId: string;
-  employeeId: string;
-  waitHours: number;
-  waitedAtMs: number;
-  severity: QueueAlertLevel;
-  selected: boolean;
-  detail: string;
-};
-
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -238,13 +177,6 @@ function formatDateTime(value: string | null) {
     return value;
   }
   return parsed.toLocaleString("ko-KR");
-}
-
-function formatKrw(value: number | null) {
-  if (value === null) {
-    return "-";
-  }
-  return `${value.toLocaleString("ko-KR")}원`;
 }
 
 function formatDays(value: number) {
@@ -285,136 +217,6 @@ function toWaitHours(value: string | null, referenceMs: number) {
     return 0;
   }
   return Math.max(0, (referenceMs - timestamp) / 3_600_000);
-}
-
-function toQueueAlertLevelByRule(
-  waitHours: number,
-  watchThresholdHours: number,
-  criticalThresholdHours: number
-): QueueAlertLevel {
-  if (waitHours >= criticalThresholdHours) {
-    return "critical";
-  }
-  if (waitHours >= watchThresholdHours) {
-    return "watch";
-  }
-  return "normal";
-}
-
-function queueAlertLevelRank(level: QueueAlertLevel) {
-  if (level === "critical") {
-    return 2;
-  }
-  if (level === "watch") {
-    return 1;
-  }
-  return 0;
-}
-
-function matchesQueueSearchSort(
-  scope: QueueSearchSortScope,
-  normalizedQuery: string,
-  row: QueueSearchSortRow
-) {
-  if (!normalizedQuery) {
-    return true;
-  }
-  const queue = row.queueLabel.toLowerCase();
-  const employee = row.employeeId.toLowerCase();
-  const requestId = row.itemId.toLowerCase();
-  const detail = row.detail.toLowerCase();
-
-  if (scope === "queue") {
-    return queue.includes(normalizedQuery);
-  }
-  if (scope === "employee") {
-    return employee.includes(normalizedQuery);
-  }
-  if (scope === "request_id") {
-    return requestId.includes(normalizedQuery);
-  }
-  if (scope === "detail") {
-    return detail.includes(normalizedQuery);
-  }
-  return `${queue} ${employee} ${requestId} ${detail}`.includes(normalizedQuery);
-}
-
-function sortQueueSearchSortRows(rows: QueueSearchSortRow[], option: QueueSearchSortOption) {
-  return [...rows].sort((left, right) => {
-    if (option === "queue_asc") {
-      const queueDiff = left.queueLabel.localeCompare(right.queueLabel, "ko");
-      if (queueDiff !== 0) {
-        return queueDiff;
-      }
-      return right.waitHours - left.waitHours;
-    }
-    if (option === "employee_asc") {
-      const employeeDiff = left.employeeId.localeCompare(right.employeeId, "ko");
-      if (employeeDiff !== 0) {
-        return employeeDiff;
-      }
-      return right.waitHours - left.waitHours;
-    }
-    if (option === "recent_desc") {
-      return right.waitedAtMs - left.waitedAtMs;
-    }
-    if (option === "wait_desc") {
-      return right.waitHours - left.waitHours;
-    }
-    const severityDiff = queueAlertLevelRank(right.severity) - queueAlertLevelRank(left.severity);
-    if (severityDiff !== 0) {
-      return severityDiff;
-    }
-    const waitDiff = right.waitHours - left.waitHours;
-    if (waitDiff !== 0) {
-      return waitDiff;
-    }
-    return Number(right.selected) - Number(left.selected);
-  });
-}
-
-function summarizeQueueAlertByRule(
-  waitHoursValues: number[],
-  watchThresholdHours: number,
-  criticalThresholdHours: number
-) {
-  const oldestHours = waitHoursValues.length > 0 ? Math.max(...waitHoursValues) : 0;
-  const critical = waitHoursValues.filter(
-    (value) => toQueueAlertLevelByRule(value, watchThresholdHours, criticalThresholdHours) === "critical"
-  ).length;
-  const watch = waitHoursValues.filter(
-    (value) => toQueueAlertLevelByRule(value, watchThresholdHours, criticalThresholdHours) === "watch"
-  ).length;
-  const alertLevel: QueueAlertLevel = critical > 0 ? "critical" : watch > 0 ? "watch" : "normal";
-  return { oldestHours, critical, watch, alertLevel };
-}
-
-function matchesQueueSearch(
-  scope: QueueSearchScope,
-  normalizedQuery: string,
-  fields: { employee: string; requestId: string; content: string }
-) {
-  if (!normalizedQuery) {
-    return true;
-  }
-  const employee = fields.employee.toLowerCase();
-  const requestId = fields.requestId.toLowerCase();
-  const content = fields.content.toLowerCase();
-
-  if (scope === "employee") {
-    return employee.includes(normalizedQuery);
-  }
-  if (scope === "request_id") {
-    return requestId.includes(normalizedQuery);
-  }
-  if (scope === "content") {
-    return content.includes(normalizedQuery);
-  }
-  return `${employee} ${requestId} ${content}`.includes(normalizedQuery);
-}
-
-function toQueueItemHistoryKey(queue: "attendance" | "leave" | "payroll", itemId: string) {
-  return `${queue}:${itemId}`;
 }
 
 export default function AdminDashboardPage() {
@@ -460,21 +262,21 @@ export default function AdminDashboardPage() {
   const [pendingAttendance, setPendingAttendance] = useState<AttendanceRecordDto[]>([]);
   const [pendingLeave, setPendingLeave] = useState<LeaveRequestDto[]>([]);
   const [previewedPayroll, setPreviewedPayroll] = useState<PayrollRunDto[]>([]);
-  const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<string[]>([]);
-  const [selectedLeaveIds, setSelectedLeaveIds] = useState<string[]>([]);
+  const [selectedAttendanceIds] = useState<string[]>([]);
+  const [selectedLeaveIds] = useState<string[]>([]);
   const [approvalQueueFocus, setApprovalQueueFocus] = useState<QueueFocus>("all");
   const [approvalQueueSearch, setApprovalQueueSearch] = useState("");
   const [approvalQueueSearchScope, setApprovalQueueSearchScope] = useState<QueueSearchScope>("all");
   const [approvalQueueOnlyUrgent, setApprovalQueueOnlyUrgent] = useState(false);
   const [approvalQueueSelectedOnly, setApprovalQueueSelectedOnly] = useState(false);
-  const [attendanceQueueSort, setAttendanceQueueSort] = useState<AttendanceQueueSort>("checkin_desc");
-  const [leaveQueueSort, setLeaveQueueSort] = useState<LeaveQueueSort>("start_desc");
-  const [payrollQueueSort, setPayrollQueueSort] = useState<PayrollQueueSort>("period_desc");
+  const [attendanceQueueSort] = useState<AttendanceQueueSort>("checkin_desc");
+  const [leaveQueueSort] = useState<LeaveQueueSort>("start_desc");
+  const [payrollQueueSort] = useState<PayrollQueueSort>("period_desc");
   const [queueSearchSortScope, setQueueSearchSortScope] = useState<QueueSearchSortScope>("all");
   const [queueSearchSortQuery, setQueueSearchSortQuery] = useState("");
   const [queueSearchSortOption, setQueueSearchSortOption] = useState<QueueSearchSortOption>("priority_desc");
-  const [queueSlaWatchHoursInput, setQueueSlaWatchHoursInput] = useState("24");
-  const [queueSlaCriticalHoursInput, setQueueSlaCriticalHoursInput] = useState("48");
+  const queueSlaWatchHoursInput = "24";
+  const queueSlaCriticalHoursInput = "48";
 
   const [aggregateEmployeeId, setAggregateEmployeeId] = useState("");
   const [aggregates, setAggregates] = useState<AttendanceAggregateDto[]>([]);
@@ -509,8 +311,7 @@ export default function AdminDashboardPage() {
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
-  const [mobileApprovalFeedback, setMobileApprovalFeedback] =
-    useState<QueueMobileApprovalFeedback | null>(null);
+  const [, setMobileApprovalFeedback] = useState<QueueMobileApprovalFeedback | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -546,9 +347,6 @@ export default function AdminDashboardPage() {
     return { total, success, fail };
   }, [logs]);
 
-  const selectedAttendanceCount = selectedAttendanceIds.length;
-  const selectedLeaveCount = selectedLeaveIds.length;
-  const selectedQueueTotalCount = selectedAttendanceCount + selectedLeaveCount;
   const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
   const queueNowMs = Date.now();
 
@@ -739,173 +537,6 @@ export default function AdminDashboardPage() {
     resolveQueueAlertLevel
   ]);
 
-  const showAttendanceQueue = approvalQueueFocus === "all" || approvalQueueFocus === "attendance";
-  const showLeaveQueue = approvalQueueFocus === "all" || approvalQueueFocus === "leave";
-  const showPayrollQueue = approvalQueueFocus === "all" || approvalQueueFocus === "payroll";
-
-  const selectedVisibleAttendanceCount = filteredPendingAttendance.filter((record) =>
-    selectedAttendanceIds.includes(record.id)
-  ).length;
-  const selectedVisibleLeaveCount = filteredPendingLeave.filter((request) =>
-    selectedLeaveIds.includes(request.id)
-  ).length;
-
-  const hasAttendanceSelection = selectedAttendanceCount > 0;
-  const hasLeaveSelection = selectedLeaveCount > 0;
-  const hasOnlyVisibleAttendanceSelected = selectedAttendanceCount === selectedVisibleAttendanceCount;
-  const hasOnlyVisibleLeaveSelected = selectedLeaveCount === selectedVisibleLeaveCount;
-  const hasLeaveRejectReason = leaveRejectReason.trim().length > 0;
-  const hasAttendanceRejectReason = attendanceRejectReason.trim().length > 0;
-
-  const canApproveSelectedAttendance = hasAttendanceSelection && hasOnlyVisibleAttendanceSelected;
-  const canRejectSelectedAttendance = hasAttendanceSelection && hasOnlyVisibleAttendanceSelected;
-  const canApproveSelectedLeave = hasLeaveSelection && hasOnlyVisibleLeaveSelected;
-  const canRejectSelectedLeave = hasLeaveSelection && hasOnlyVisibleLeaveSelected && hasLeaveRejectReason;
-
-  const attendanceBulkValidationChecks = useMemo<QueuePreActionCheck[]>(
-    () => [
-      {
-        id: "attendance-selected",
-        label: "attendance selection",
-        ok: hasAttendanceSelection,
-        detail: hasAttendanceSelection ? `${selectedAttendanceCount} selected` : "no selected item"
-      },
-      {
-        id: "attendance-visible-only",
-        label: "selection synced with current filter",
-        ok: hasOnlyVisibleAttendanceSelected,
-        detail: hasOnlyVisibleAttendanceSelected
-          ? "all selected items are visible"
-          : `${selectedAttendanceCount - selectedVisibleAttendanceCount} hidden selected`
-      },
-      {
-        id: "attendance-reject-reason",
-        label: "reject reason (recommended)",
-        ok: hasAttendanceRejectReason,
-        detail: hasAttendanceRejectReason ? "reason provided" : "reason is optional but recommended"
-      }
-    ],
-    [
-      hasAttendanceRejectReason,
-      hasAttendanceSelection,
-      hasOnlyVisibleAttendanceSelected,
-      selectedAttendanceCount,
-      selectedVisibleAttendanceCount
-    ]
-  );
-
-  const leaveBulkValidationChecks = useMemo<QueuePreActionCheck[]>(
-    () => [
-      {
-        id: "leave-selected",
-        label: "leave selection",
-        ok: hasLeaveSelection,
-        detail: hasLeaveSelection ? `${selectedLeaveCount} selected` : "no selected item"
-      },
-      {
-        id: "leave-visible-only",
-        label: "selection synced with current filter",
-        ok: hasOnlyVisibleLeaveSelected,
-        detail: hasOnlyVisibleLeaveSelected
-          ? "all selected items are visible"
-          : `${selectedLeaveCount - selectedVisibleLeaveCount} hidden selected`
-      },
-      {
-        id: "leave-reject-reason",
-        label: "reject reason (required for bulk reject)",
-        ok: hasLeaveRejectReason,
-        detail: hasLeaveRejectReason ? "reason ready" : "bulk reject is disabled until reason is filled"
-      }
-    ],
-    [
-      hasLeaveRejectReason,
-      hasLeaveSelection,
-      hasOnlyVisibleLeaveSelected,
-      selectedLeaveCount,
-      selectedVisibleLeaveCount
-    ]
-  );
-
-  const approvalItemHistorySummaryMap = useMemo(() => {
-    const map = new Map<string, QueueItemHistorySummary>();
-    for (const activity of approvalActivities) {
-      const key = toQueueItemHistoryKey(activity.queue, activity.itemId);
-      const existing = map.get(key);
-      if (!existing) {
-        map.set(key, {
-          key,
-          queue: activity.queue,
-          itemId: activity.itemId,
-          total: 1,
-          success: activity.ok ? 1 : 0,
-          fail: activity.ok ? 0 : 1,
-          approved: activity.actionKind === "approve" ? 1 : 0,
-          rejected: activity.actionKind === "reject" ? 1 : 0,
-          confirmed: activity.actionKind === "confirm" ? 1 : 0,
-          lastAction: activity.action,
-          lastStatus: activity.status,
-          lastAt: activity.at,
-          lastCreatedAtMs: activity.createdAtMs
-        });
-        continue;
-      }
-
-      existing.total += 1;
-      if (activity.ok) {
-        existing.success += 1;
-      } else {
-        existing.fail += 1;
-      }
-      if (activity.actionKind === "approve") {
-        existing.approved += 1;
-      } else if (activity.actionKind === "reject") {
-        existing.rejected += 1;
-      } else if (activity.actionKind === "confirm") {
-        existing.confirmed += 1;
-      }
-      if (activity.createdAtMs >= existing.lastCreatedAtMs) {
-        existing.lastAction = activity.action;
-        existing.lastStatus = activity.status;
-        existing.lastAt = activity.at;
-        existing.lastCreatedAtMs = activity.createdAtMs;
-      }
-    }
-    return map;
-  }, [approvalActivities]);
-
-  const approvalItemHistoryRows = useMemo(
-    () =>
-      [...approvalItemHistorySummaryMap.values()]
-        .sort((left, right) => right.lastCreatedAtMs - left.lastCreatedAtMs)
-        .slice(0, 12),
-    [approvalItemHistorySummaryMap]
-  );
-
-  const queueFeedbackByQueue = useMemo(() => {
-    const map = new Map<
-      "attendance" | "leave" | "payroll",
-      { queue: "attendance" | "leave" | "payroll"; ok: number; fail: number }
-    >();
-    for (const activity of approvalActivities.slice(0, 12)) {
-      const existing = map.get(activity.queue) ?? { queue: activity.queue, ok: 0, fail: 0 };
-      if (activity.ok) {
-        existing.ok += 1;
-      } else {
-        existing.fail += 1;
-      }
-      map.set(activity.queue, existing);
-    }
-    return [...map.values()];
-  }, [approvalActivities]);
-
-  function formatQueueItemHistoryInline(queue: "attendance" | "leave" | "payroll", itemId: string) {
-    const summary = approvalItemHistorySummaryMap.get(toQueueItemHistoryKey(queue, itemId));
-    if (!summary) {
-      return "history 0";
-    }
-    return `history ${summary.total} / ok ${summary.success} / fail ${summary.fail}`;
-  }
-
   const queueBadgeSummaries = useMemo<QueueBadgeSummary[]>(
     () => [
       {
@@ -916,7 +547,7 @@ export default function AdminDashboardPage() {
           filteredPendingAttendance.length +
           filteredPendingLeave.length +
           filteredPreviewedPayroll.length,
-        selected: selectedVisibleAttendanceCount + selectedVisibleLeaveCount,
+        selected: 0,
         ...summarizeQueueAlertByRule(
           [
           ...attendanceWaitHoursValues,
@@ -932,7 +563,7 @@ export default function AdminDashboardPage() {
         label: "출퇴근",
         pending: pendingAttendance.length,
         visible: filteredPendingAttendance.length,
-        selected: selectedVisibleAttendanceCount,
+        selected: 0,
         ...summarizeQueueAlertByRule(
           attendanceWaitHoursValues,
           queueSlaWatchHours,
@@ -944,7 +575,7 @@ export default function AdminDashboardPage() {
         label: "휴가",
         pending: pendingLeave.length,
         visible: filteredPendingLeave.length,
-        selected: selectedVisibleLeaveCount,
+        selected: 0,
         ...summarizeQueueAlertByRule(leaveWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
       },
       {
@@ -971,9 +602,7 @@ export default function AdminDashboardPage() {
       payrollWaitHoursValues,
       previewedPayroll.length,
       queueSlaCriticalHours,
-      queueSlaWatchHours,
-      selectedVisibleAttendanceCount,
-      selectedVisibleLeaveCount
+      queueSlaWatchHours
     ]
   );
 
@@ -1007,7 +636,7 @@ export default function AdminDashboardPage() {
       waitHours: attendanceWaitHoursById.get(record.id) ?? 0,
       waitedAtMs: toTimestamp(record.checkInAt),
       severity: resolveQueueAlertLevel(attendanceWaitHoursById.get(record.id) ?? 0),
-      selected: selectedAttendanceIds.includes(record.id),
+      selected: false,
       detail: `${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`
     }));
     const leaveRows = filteredPendingLeave.map((request) => ({
@@ -1019,7 +648,7 @@ export default function AdminDashboardPage() {
       waitHours: leaveWaitHoursById.get(request.id) ?? 0,
       waitedAtMs: toTimestamp(request.startDate),
       severity: resolveQueueAlertLevel(leaveWaitHoursById.get(request.id) ?? 0),
-      selected: selectedLeaveIds.includes(request.id),
+      selected: false,
       detail: `${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`
     }));
     const payrollRows = filteredPreviewedPayroll.map((run) => ({
@@ -1042,9 +671,7 @@ export default function AdminDashboardPage() {
     filteredPreviewedPayroll,
     leaveWaitHoursById,
     payrollWaitHoursById,
-    resolveQueueAlertLevel,
-    selectedAttendanceIds,
-    selectedLeaveIds
+    resolveQueueAlertLevel
   ]);
 
   const filteredQueueSearchSortRows = useMemo(() => {
@@ -1055,35 +682,6 @@ export default function AdminDashboardPage() {
 
     return sortQueueSearchSortRows(filteredRows, queueSearchSortOption).slice(0, 18);
   }, [queueSearchSortOption, queueSearchSortQuery, queueSearchSortRows, queueSearchSortScope]);
-
-
-  function jumpToSection(sectionId: string) {
-    if (typeof document === "undefined") {
-      return;
-    }
-    const target = document.getElementById(sectionId);
-    if (!target) {
-      return;
-    }
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `#${sectionId}`);
-    }
-  }
-
-  function applyQueueSearchSortPreset(preset: {
-    scope: QueueSearchSortScope;
-    query: string;
-    option: QueueSearchSortOption;
-    urgentOnly: boolean;
-    targetSectionId: string;
-  }) {
-    setQueueSearchSortScope(preset.scope);
-    setQueueSearchSortQuery(preset.query);
-    setQueueSearchSortOption(preset.option);
-    setApprovalQueueOnlyUrgent(preset.urgentOnly);
-    jumpToSection(preset.targetSectionId);
-  }
 
 
   async function callApi(
@@ -1382,277 +980,17 @@ export default function AdminDashboardPage() {
       const parsed = attendanceRes.body as { records?: AttendanceRecordDto[] };
       const records = Array.isArray(parsed.records) ? parsed.records : [];
       setPendingAttendance(records);
-      setSelectedAttendanceIds((prev) => prev.filter((id) => records.some((record) => record.id === id)));
     }
     if (leaveRes.response.ok) {
       const parsed = leaveRes.body as { requests?: LeaveRequestDto[] };
       const requests = Array.isArray(parsed.requests) ? parsed.requests : [];
       setPendingLeave(requests);
-      setSelectedLeaveIds((prev) => prev.filter((id) => requests.some((request) => request.id === id)));
     }
     if (payrollRes.response.ok) {
       const parsed = payrollRes.body as { runs?: PayrollRunDto[] };
       const runs = Array.isArray(parsed.runs) ? parsed.runs : [];
       setPreviewedPayroll(runs);
     }
-  }
-
-  function toggleAttendanceSelection(recordId: string, checked: boolean) {
-    setSelectedAttendanceIds((prev) => {
-      if (checked) {
-        return prev.includes(recordId) ? prev : [...prev, recordId];
-      }
-      return prev.filter((id) => id !== recordId);
-    });
-  }
-
-  function toggleLeaveSelection(requestId: string, checked: boolean) {
-    setSelectedLeaveIds((prev) => {
-      if (checked) {
-        return prev.includes(requestId) ? prev : [...prev, requestId];
-      }
-      return prev.filter((id) => id !== requestId);
-    });
-  }
-
-  function selectAllAttendance() {
-    setSelectedAttendanceIds(filteredPendingAttendance.map((record) => record.id));
-  }
-
-  function clearAttendanceSelection() {
-    setSelectedAttendanceIds([]);
-  }
-
-  function selectAllLeave() {
-    setSelectedLeaveIds(filteredPendingLeave.map((request) => request.id));
-  }
-
-  function clearLeaveSelection() {
-    setSelectedLeaveIds([]);
-  }
-
-  async function approveAttendance(recordId: string) {
-    const { response } = await callApi("출퇴근 승인", "POST", `/api/attendance/records/${recordId}/approve`);
-    appendApprovalActivity({
-      queue: "attendance",
-      actionKind: "approve",
-      action: "승인",
-      itemId: recordId,
-      ok: response.ok,
-      status: response.status
-    });
-    publishMobileApprovalFeedback({
-      queue: "attendance",
-      action: "attendance-single-approve",
-      okCount: response.ok ? 1 : 0,
-      failCount: response.ok ? 0 : 1
-    });
-    await refreshInbox();
-  }
-
-  async function rejectAttendance(recordId: string) {
-    const reason = attendanceRejectReason.trim();
-    const payload = reason.length > 0 ? { reason } : undefined;
-    const { response } = await callApi("출퇴근 반려", "POST", `/api/attendance/records/${recordId}/reject`, payload);
-    appendApprovalActivity({
-      queue: "attendance",
-      actionKind: "reject",
-      action: "반려",
-      itemId: recordId,
-      ok: response.ok,
-      status: response.status
-    });
-    publishMobileApprovalFeedback({
-      queue: "attendance",
-      action: "attendance-single-reject",
-      okCount: response.ok ? 1 : 0,
-      failCount: response.ok ? 0 : 1
-    });
-    await refreshInbox();
-  }
-
-  async function approveLeave(requestId: string) {
-    const { response } = await callApi("휴가 승인", "POST", `/api/leave/requests/${requestId}/approve`);
-    appendApprovalActivity({
-      queue: "leave",
-      actionKind: "approve",
-      action: "승인",
-      itemId: requestId,
-      ok: response.ok,
-      status: response.status
-    });
-    publishMobileApprovalFeedback({
-      queue: "leave",
-      action: "leave-single-approve",
-      okCount: response.ok ? 1 : 0,
-      failCount: response.ok ? 0 : 1
-    });
-    await refreshInbox();
-  }
-
-  async function rejectLeave(requestId: string) {
-    const reason = leaveRejectReason.trim();
-    if (!reason) {
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: "휴가 반려",
-          status: 400,
-          ok: false,
-          durationMs: 0,
-          at: new Date().toLocaleString("ko-KR"),
-          body: { error: "반려 사유는 필수입니다." }
-        },
-        ...prev
-      ]);
-      return;
-    }
-    const { response } = await callApi("휴가 반려", "POST", `/api/leave/requests/${requestId}/reject`, { reason });
-    appendApprovalActivity({
-      queue: "leave",
-      actionKind: "reject",
-      action: "반려",
-      itemId: requestId,
-      ok: response.ok,
-      status: response.status
-    });
-    publishMobileApprovalFeedback({
-      queue: "leave",
-      action: "leave-single-reject",
-      okCount: response.ok ? 1 : 0,
-      failCount: response.ok ? 0 : 1
-    });
-    await refreshInbox();
-  }
-
-  async function approveSelectedAttendance() {
-    if (!canApproveSelectedAttendance || selectedAttendanceIds.length === 0) {
-      return;
-    }
-    const targets = [...selectedAttendanceIds];
-    const results = await Promise.all(
-      targets.map((recordId) => callApi("출퇴근 승인(일괄)", "POST", `/api/attendance/records/${recordId}/approve`))
-    );
-    results.forEach(({ response }, index) => {
-      appendApprovalActivity({
-        queue: "attendance",
-        actionKind: "approve",
-        action: "승인(일괄)",
-        itemId: targets[index],
-        ok: response.ok,
-        status: response.status
-      });
-    });
-    const okCount = results.filter(({ response }) => response.ok).length;
-    publishMobileApprovalFeedback({
-      queue: "attendance",
-      action: "attendance-bulk-approve",
-      okCount,
-      failCount: results.length - okCount
-    });
-    await refreshInbox();
-  }
-
-  async function rejectSelectedAttendance() {
-    if (!canRejectSelectedAttendance || selectedAttendanceIds.length === 0) {
-      return;
-    }
-    const reason = attendanceRejectReason.trim();
-    const payload = reason.length > 0 ? { reason } : undefined;
-    const targets = [...selectedAttendanceIds];
-    const results = await Promise.all(
-      targets.map((recordId) => callApi("출퇴근 반려(일괄)", "POST", `/api/attendance/records/${recordId}/reject`, payload))
-    );
-    results.forEach(({ response }, index) => {
-      appendApprovalActivity({
-        queue: "attendance",
-        actionKind: "reject",
-        action: "반려(일괄)",
-        itemId: targets[index],
-        ok: response.ok,
-        status: response.status
-      });
-    });
-    const okCount = results.filter(({ response }) => response.ok).length;
-    publishMobileApprovalFeedback({
-      queue: "attendance",
-      action: "attendance-bulk-reject",
-      okCount,
-      failCount: results.length - okCount
-    });
-    await refreshInbox();
-  }
-
-  async function approveSelectedLeave() {
-    if (!canApproveSelectedLeave || selectedLeaveIds.length === 0) {
-      return;
-    }
-    const targets = [...selectedLeaveIds];
-    const results = await Promise.all(
-      targets.map((requestId) => callApi("휴가 승인(일괄)", "POST", `/api/leave/requests/${requestId}/approve`))
-    );
-    results.forEach(({ response }, index) => {
-      appendApprovalActivity({
-        queue: "leave",
-        actionKind: "approve",
-        action: "승인(일괄)",
-        itemId: targets[index],
-        ok: response.ok,
-        status: response.status
-      });
-    });
-    const okCount = results.filter(({ response }) => response.ok).length;
-    publishMobileApprovalFeedback({
-      queue: "leave",
-      action: "leave-bulk-approve",
-      okCount,
-      failCount: results.length - okCount
-    });
-    await refreshInbox();
-  }
-
-  async function rejectSelectedLeave() {
-    if (!canRejectSelectedLeave || selectedLeaveIds.length === 0) {
-      return;
-    }
-    const reason = leaveRejectReason.trim();
-    if (!reason) {
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: "휴가 반려(일괄)",
-          status: 400,
-          ok: false,
-          durationMs: 0,
-          at: new Date().toLocaleString("ko-KR"),
-          body: { error: "반려 사유는 필수입니다." }
-        },
-        ...prev
-      ]);
-      return;
-    }
-    const targets = [...selectedLeaveIds];
-    const results = await Promise.all(
-      targets.map((requestId) => callApi("휴가 반려(일괄)", "POST", `/api/leave/requests/${requestId}/reject`, { reason }))
-    );
-    results.forEach(({ response }, index) => {
-      appendApprovalActivity({
-        queue: "leave",
-        actionKind: "reject",
-        action: "반려(일괄)",
-        itemId: targets[index],
-        ok: response.ok,
-        status: response.status
-      });
-    });
-    const okCount = results.filter(({ response }) => response.ok).length;
-    publishMobileApprovalFeedback({
-      queue: "leave",
-      action: "leave-bulk-reject",
-      okCount,
-      failCount: results.length - okCount
-    });
-    await refreshInbox();
   }
 
   async function confirmPayroll(runId: string) {
@@ -2340,312 +1678,62 @@ export default function AdminDashboardPage() {
           )}
         </article>
 
-        <article className="panel" id="approvals">
-          <div className="approval-queue-header">
-            <div>
-              <h2>승인 대기함</h2>
-              <p className="small">승인 큐 필터/검색/정렬로 대기열을 빠르게 좁혀 일괄 처리합니다.</p>
-            </div>
-            <button className="btn btn-primary" onClick={() => void refreshInbox()}>
-              대기함 새로고침
-            </button>
-          </div>
-
-          <div className="queue-badge-strip" role="tablist" aria-label="승인 큐 필터">
-            {queueBadgeSummaries.map((badge) => (
-              <button
-                key={badge.focus}
-                type="button"
-                role="tab"
-                aria-selected={approvalQueueFocus === badge.focus}
-                className={`queue-badge${approvalQueueFocus === badge.focus ? " active" : ""}`}
-                onClick={() => setApprovalQueueFocus(badge.focus)}
-              >
-                <span className="queue-badge-title">{badge.label}</span>
-                <span className="queue-badge-count">대기 {badge.pending}</span>
-                <span className={`queue-badge-alert alert-${badge.alertLevel}`}>
-                  {badge.alertLevel === "critical"
-                    ? `긴급 ${badge.critical}`
-                    : badge.alertLevel === "watch"
-                      ? `주의 ${badge.watch}`
-                      : "정상"}
-                </span>
-                <span className="queue-badge-meta">
-                  검색 {badge.visible} / 최장 {Math.round(badge.oldestHours)}h
-                  {badge.selected > 0 ? ` / 선택 ${badge.selected}` : ""}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="queue-alert-strip" aria-label="승인 큐 알림 요약">
-            <article className="queue-alert-card tone-critical">
-              <p>긴급 대기</p>
-              <strong>{queueAlertOverview.totalCritical}건</strong>
-            </article>
-            <article className="queue-alert-card tone-watch">
-              <p>주의 대기</p>
-              <strong>{queueAlertOverview.totalWatch}건</strong>
-            </article>
-            <article className="queue-alert-card tone-hot">
-              <p>최우선 큐</p>
-              <strong>{queueAlertOverview.hottestQueue?.label ?? "-"}</strong>
-            </article>
-          </div>
-
-          <div className="input-grid" style={{ marginTop: 12 }}>
-            <label>
-              기간 시작
-              <input
-                type="datetime-local"
-                value={periodStart}
-                onChange={(event) => setPeriodStart(event.target.value)}
-              />
-            </label>
-            <label>
-              기간 종료
-              <input
-                type="datetime-local"
-                value={periodEnd}
-                onChange={(event) => setPeriodEnd(event.target.value)}
-              />
-            </label>
-            <label>
-              검색 범위
-              <select
-                value={approvalQueueSearchScope}
-                onChange={(event) => setApprovalQueueSearchScope(event.target.value as QueueSearchScope)}
-              >
-                <option value="all">전체 필드</option>
-                <option value="employee">직원 ID</option>
-                <option value="request_id">요청 ID</option>
-                <option value="content">메모/사유</option>
-              </select>
-            </label>
-            <label className="full">
-              큐 검색
-              <input
-                value={approvalQueueSearch}
-                onChange={(event) => setApprovalQueueSearch(event.target.value)}
-                placeholder="직원ID, 요청ID, 상태, 메모/사유 검색"
-              />
-            </label>
-            <div className="queue-toggle-row full" role="group" aria-label="승인 큐 빠른 필터">
-              <button
-                type="button"
-                className={`queue-toggle-chip${approvalQueueOnlyUrgent ? " active" : ""}`}
-                onClick={() => setApprovalQueueOnlyUrgent((prev) => !prev)}
-              >
-                긴급만 보기
-              </button>
-              <button
-                type="button"
-                className={`queue-toggle-chip${approvalQueueSelectedOnly ? " active" : ""}`}
-                onClick={() => setApprovalQueueSelectedOnly((prev) => !prev)}
-              >
-                선택 항목만
-              </button>
-              <button
-                type="button"
-                className="queue-toggle-chip"
-                onClick={() => {
-                  setApprovalQueueOnlyUrgent(false);
-                  setApprovalQueueSelectedOnly(false);
-                  setApprovalQueueSearch("");
-                }}
-              >
-                필터 초기화
-              </button>
-            </div>
-            <label className="full">
-              출퇴근 반려 사유 (선택)
-              <input
-                value={attendanceRejectReason}
-                onChange={(event) => setAttendanceRejectReason(event.target.value)}
-                placeholder="사유 없이 반려할 수 없게 하고 싶으면 정책에서 필수로 변경하세요."
-              />
-            </label>
-            <label className="full">
-              휴가 반려 사유 (필수)
-              <input
-                value={leaveRejectReason}
-                onChange={(event) => setLeaveRejectReason(event.target.value)}
-                placeholder="예: 근무 일정 충돌"
-              />
-            </label>
-          </div>
-
-          <p className="small" style={{ marginTop: 10 }}>
-            {activeQueueBadgeSummary.label} 큐: 대기 {activeQueueBadgeSummary.pending}건 / 검색 결과{" "}
-            {activeQueueBadgeSummary.visible}건
-            {activeQueueBadgeSummary.selected > 0 ? ` / 선택 ${activeQueueBadgeSummary.selected}건` : ""}
-            {" / "}
-            {activeQueueBadgeSummary.alertLevel === "critical"
-              ? `긴급 ${activeQueueBadgeSummary.critical}건`
-              : activeQueueBadgeSummary.alertLevel === "watch"
-                ? `주의 ${activeQueueBadgeSummary.watch}건`
-                : "정상"}
-            {approvalQueueSelectedOnly && activeQueueBadgeSummary.focus !== "payroll"
-              ? " / 선택 필터 ON"
-              : ""}
-          </p>
-          {approvalQueueSelectedOnly && (approvalQueueFocus === "all" || approvalQueueFocus === "payroll") ? (
-            <p className="small muted" style={{ marginTop: 6 }}>
-              급여 큐는 선택 필터가 없어 검색 조건만 적용됩니다.
-            </p>
-          ) : null}
-
-          <section className="queue-search-sort-panel" id="approval-search-sort">
-            <div className="queue-section-head">
-              <h3>Approval Queue Search/Sort</h3>
-              <p className="small muted">
-                Use one panel to search pending items across queues and re-order triage quickly.
-              </p>
-              <p className="small muted">모바일 빠른 승인 액션</p>
-            </div>
-            <div className="queue-search-sort-controls" aria-label="approval queue search and sort controls">
-              <label>
-                검색 범위
-                <select
-                  value={queueSearchSortScope}
-                  onChange={(event) => setQueueSearchSortScope(event.target.value as QueueSearchSortScope)}
-                >
-                  <option value="all">all fields</option>
-                  <option value="queue">queue</option>
-                  <option value="employee">employee</option>
-                  <option value="request_id">request id</option>
-                  <option value="detail">detail</option>
-                </select>
-              </label>
-              <label>
-                Sort
-                <select
-                  value={queueSearchSortOption}
-                  onChange={(event) => setQueueSearchSortOption(event.target.value as QueueSearchSortOption)}
-                >
-                  <option value="priority_desc">정체 우선순</option>
-                  <option value="wait_desc">wait time desc</option>
-                  <option value="recent_desc">recent first</option>
-                  <option value="employee_asc">employee asc</option>
-                  <option value="queue_asc">queue asc</option>
-                </select>
-              </label>
-              <label className="full">
-                Search query
-                <input
-                  value={queueSearchSortQuery}
-                  onChange={(event) => setQueueSearchSortQuery(event.target.value)}
-                  placeholder="employee id, request id, state, memo"
-                />
-              </label>
-              <div className="queue-search-sort-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-small"
-                  onClick={() => {
-                    setQueueSearchSortScope("detail");
-                    setQueueSearchSortQuery("PENDING");
-                    setQueueSearchSortOption("priority_desc");
-                  }}
-                >
-                  pending first
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-small"
-                  onClick={() => {
-                    setQueueSearchSortScope("all");
-                    setQueueSearchSortOption("wait_desc");
-                    setApprovalQueueOnlyUrgent(true);
-                  }}
-                >
-                  긴급만 보기
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-small"
-                  onClick={() => {
-                    setQueueSearchSortScope("all");
-                    setQueueSearchSortQuery("");
-                    setQueueSearchSortOption("priority_desc");
-                  }}
-                >
-                  reset
-                </button>
-              </div>
-            </div>
-            {filteredQueueSearchSortRows.length === 0 ? (
-              <p className="small muted">No rows match current search/sort options.</p>
-            ) : (
-              <ul className="queue-search-sort-list" aria-label="approval queue search and sort list">
-                {filteredQueueSearchSortRows.map((row) => (
-                  <li key={row.key} className={`severity-${row.severity}${row.selected ? " is-selected" : ""}`}>
-                    <div className="queue-search-sort-head">
-                      <strong>
-                        [{row.queueLabel}] {row.itemId}
-                      </strong>
-                      <span className={`queue-sla-chip level-${row.severity}`}>wait {Math.round(row.waitHours)}h</span>
-                    </div>
-                    <p className="small muted">{row.detail}</p>
-                    <div className="queue-search-sort-meta">
-                      <span className="queue-history-chip">{row.employeeId}</span>
-                      <span className="queue-history-chip">severity {row.severity}</span>
-                      {row.selected ? <span className="queue-history-chip">selected</span> : null}
-                    </div>
-                    <div className="queue-search-sort-item-actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        onClick={() => setApprovalQueueFocus(row.queue)}
-                      >
-                        focus queue
-                      </button>
-                      <Link className="btn btn-secondary btn-small" href="/admin#approvals">
-                        open queue
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-
-          <hr className="divider" />
-          <div className="actions">
-            <p className="small" style={{ margin: 0 }}>
-              최근 처리 이력 ({approvalActivities.length}건)
-            </p>
-            <button
-              type="button"
-              className="btn btn-secondary btn-small"
-              onClick={() => {
-                setApprovalActivities([]);
-                setMobileApprovalFeedback(null);
-              }}
-              disabled={approvalActivities.length === 0}
-            >
-              이력 초기화
-            </button>
-          </div>
-          {approvalActivities.length === 0 ? (
-            <p className="small muted">아직 처리 이력이 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="승인 처리 이력">
-              {approvalActivities.map((activity) => (
-                <li key={activity.id}>
-                  <span>
-                    <span className={activity.ok ? "ok" : "fail"}>{activity.ok ? "OK" : "FAIL"}</span>{" "}
-                    <strong>[{activity.queue}]</strong> {activity.action} · {activity.itemId}{" "}
-                    <span className="muted">
-                      ({activity.status} · {activity.at})
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
+        <ApprovalQueuePanel
+          queueBadgeSummaries={queueBadgeSummaries}
+          approvalQueueFocus={approvalQueueFocus}
+          queueAlertOverview={queueAlertOverview}
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          approvalQueueSearchScope={approvalQueueSearchScope}
+          approvalQueueSearch={approvalQueueSearch}
+          approvalQueueOnlyUrgent={approvalQueueOnlyUrgent}
+          approvalQueueSelectedOnly={approvalQueueSelectedOnly}
+          attendanceRejectReason={attendanceRejectReason}
+          leaveRejectReason={leaveRejectReason}
+          activeQueueBadgeSummary={activeQueueBadgeSummary}
+          queueSearchSortScope={queueSearchSortScope}
+          queueSearchSortOption={queueSearchSortOption}
+          queueSearchSortQuery={queueSearchSortQuery}
+          filteredQueueSearchSortRows={filteredQueueSearchSortRows}
+          approvalActivities={approvalActivities}
+          onRefreshInbox={() => void refreshInbox()}
+          onApprovalQueueFocusChange={setApprovalQueueFocus}
+          onPeriodStartChange={setPeriodStart}
+          onPeriodEndChange={setPeriodEnd}
+          onApprovalQueueSearchScopeChange={setApprovalQueueSearchScope}
+          onApprovalQueueSearchChange={setApprovalQueueSearch}
+          onToggleUrgentOnly={() => setApprovalQueueOnlyUrgent((prev) => !prev)}
+          onToggleSelectedOnly={() => setApprovalQueueSelectedOnly((prev) => !prev)}
+          onResetQuickFilters={() => {
+            setApprovalQueueOnlyUrgent(false);
+            setApprovalQueueSelectedOnly(false);
+            setApprovalQueueSearch("");
+          }}
+          onAttendanceRejectReasonChange={setAttendanceRejectReason}
+          onLeaveRejectReasonChange={setLeaveRejectReason}
+          onQueueSearchSortScopeChange={setQueueSearchSortScope}
+          onQueueSearchSortOptionChange={setQueueSearchSortOption}
+          onQueueSearchSortQueryChange={setQueueSearchSortQuery}
+          onApplyPendingPreset={() => {
+            setQueueSearchSortScope("detail");
+            setQueueSearchSortQuery("PENDING");
+            setQueueSearchSortOption("priority_desc");
+          }}
+          onApplyUrgentPreset={() => {
+            setQueueSearchSortScope("all");
+            setQueueSearchSortOption("wait_desc");
+            setApprovalQueueOnlyUrgent(true);
+          }}
+          onResetSearchSortPreset={() => {
+            setQueueSearchSortScope("all");
+            setQueueSearchSortQuery("");
+            setQueueSearchSortOption("priority_desc");
+          }}
+          onClearApprovalActivities={() => {
+            setApprovalActivities([]);
+            setMobileApprovalFeedback(null);
+          }}
+        />
 
         <article className="panel" id="aggregates">
           <h2>근태 집계</h2>

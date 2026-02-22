@@ -8,10 +8,28 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const approvalQueuePanelSource = readUtf8(
+    "src",
+    "components",
+    "admin-approval",
+    "ApprovalQueuePanel.tsx"
+  );
+  const approvalQueueSearchSortSource = readUtf8(
+    "src",
+    "components",
+    "admin-approval",
+    "ApprovalQueueSearchSortPanel.tsx"
+  );
+  const queueUiSource = [adminPageSource, approvalQueuePanelSource, approvalQueueSearchSortSource].join("\n");
   const globalCssSource = readUtf8("src", "app", "globals.css");
 
-  assert.match(adminPageSource, /승인 큐 필터/, "admin approvals panel should expose queue focus badges");
-  assert.match(adminPageSource, /큐 검색/, "admin approvals panel should expose queue search input");
+  assert.match(
+    adminPageSource,
+    /ApprovalQueuePanel/,
+    "admin page should delegate approval queue panel rendering to extracted component"
+  );
+  assert.match(queueUiSource, /승인 큐 필터/, "admin approvals panel should expose queue focus badges");
+  assert.match(queueUiSource, /큐 검색/, "admin approvals panel should expose queue search input");
   assert.match(adminPageSource, /attendanceQueueSort/, "admin approvals panel should support attendance sorting");
   assert.match(adminPageSource, /leaveQueueSort/, "admin approvals panel should support leave sorting");
   assert.match(adminPageSource, /payrollQueueSort/, "admin approvals panel should support payroll sorting");

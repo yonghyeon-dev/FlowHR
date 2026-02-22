@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { EmployeeJourneyShortcutPanel } from "@/components/employee-self-service/EmployeeJourneyShortcutPanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
@@ -1829,6 +1830,8 @@ export default function EmployeeSelfServicePage() {
       </section>
 
       <section className="panel-grid">
+        <EmployeeJourneyShortcutPanel onJumpToSection={jumpToSection} />
+
         <article className="panel" id="account">
           <h2>내 계정</h2>
           {isProductionRuntime ? (
