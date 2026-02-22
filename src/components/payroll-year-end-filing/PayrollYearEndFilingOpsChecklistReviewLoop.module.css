@@ -1,0 +1,99 @@
+.reviewHeader {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.stageBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  border: 1px solid #ccdae8;
+  background: #edf5ff;
+  color: #264b83;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.stageBadgeExecute {
+  border-color: #f2cca4;
+  background: #fff4e8;
+  color: #8a4c0f;
+}
+
+.stageBadgeReview {
+  border-color: #f0c99b;
+  background: #ffefe0;
+  color: #8a4a12;
+}
+
+.stageBadgeClose {
+  border-color: #9fd3b0;
+  background: #e9f8ee;
+  color: #19653b;
+}
+
+.logForm {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.logForm textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.logFormActions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.logList {
+  margin-top: 10px;
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.logRow {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #ccd8ec;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.statusDone {
+  border-color: #9acfb4;
+  background: #e8f7ee;
+  color: #1a6f3d;
+}
+
+.statusBlocked {
+  border-color: #f3b7b0;
+  background: #fff0ee;
+  color: #8d2c25;
+}
+
+.statusFollowUp {
+  border-color: #f2cba0;
+  background: #fff3e5;
+  color: #915214;
+}
