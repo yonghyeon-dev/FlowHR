@@ -1,0 +1,5 @@
+import PayrollYearEndFilingOpsReviewCompletionReceiptArchiveDigest from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsReviewCompletionReceiptArchiveDigest";
+
+export default function AdminPayrollYearEndFilingOpsReviewCompletionReceiptArchiveDigestPage() {
+  return <PayrollYearEndFilingOpsReviewCompletionReceiptArchiveDigest />;
+}
