@@ -15,6 +15,7 @@ import {
   type AlertExecutionChecklistRow,
   type AlertMetric
 } from "@/components/payroll-year-end-filing/filing-alert-execution-checklist";
+import { buildChecklistReviewRouteHref } from "@/components/payroll-year-end-filing/filing-alert-execution-review-loop";
 
 export {
   buildAlertExecutionChecklistRows,
@@ -111,6 +112,14 @@ export default function PayrollYearEndFilingOpsChecklistTracker() {
     setCompletedTaskIds(checklistRows.map((row) => row.taskId));
   }
 
+  const reviewLoopHref = buildChecklistReviewRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId
+  });
+
   return (
     <section className="panel" id="filing-alert-execution-checklist">
       <h2>Payroll Filing Alert Execution Checklist</h2>
@@ -127,6 +136,9 @@ export default function PayrollYearEndFilingOpsChecklistTracker() {
         <button className="btn btn-secondary btn-small" onClick={() => setCompletedTaskIds([])}>
           Reset
         </button>
+        <Link href={reviewLoopHref} className="btn btn-secondary btn-small">
+          Open Review Loop
+        </Link>
       </div>
 
       <div className={styles.alertExecutionControls}>
