@@ -24,6 +24,7 @@ import {
   type ArchiveDigestEntry,
   type CompletionReceiptRecord
 } from "@/components/payroll-year-end-filing/filing-alert-review-completion-receipt-archive-digest";
+import { buildCompletionReceiptCloseReportRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-completion-close-report";
 import {
   buildDigestDraftMap,
   buildGateState,
@@ -164,6 +165,22 @@ export default function PayrollYearEndFilingOpsReviewCompletionReceiptArchiveDig
     routingReady: gates.routingReady,
     signatureReady: gates.signatureReady
   });
+  const closeReportHref = buildCompletionReceiptCloseReportRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    handoffReady: summary.handoffReady,
+    exportReady: summary.exportReady,
+    archiveReady: summary.archiveReady,
+    routingReady: summary.routingReady,
+    signatureReady: summary.signatureReady,
+    packageLocked: summary.packageLocked,
+    handoverAcknowledged: summary.handoverAcknowledged,
+    receiptVerified: summary.receiptVerified,
+    digestReady: summary.digestReady
+  });
 
   return (
     <section className="panel" id="filing-alert-completion-receipt-archive-digest">
@@ -175,6 +192,9 @@ export default function PayrollYearEndFilingOpsReviewCompletionReceiptArchiveDig
         </Link>
         <Link href={deliveryLockHref} className="btn btn-secondary btn-small">
           Back to Delivery Lock + Final Handover
+        </Link>
+        <Link href={closeReportHref} className="btn btn-secondary btn-small">
+          Open Completion Close Report
         </Link>
       </div>
 
