@@ -50,6 +50,16 @@ type StatutoryKrBaselineDeductions = {
   statutory?: {
     nonTaxableIncomeKrw: number;
     taxableIncomeKrw?: number;
+    taxableIncomeItems?: Array<{
+      code: string;
+      category: string;
+      amountKrw: number;
+    }>;
+    nonTaxableIncomeItems?: Array<{
+      code: string;
+      category: string;
+      amountKrw: number;
+    }>;
     incomeTaxBrackets?: Array<{
       upToKrw: number | null;
       rate: number;
@@ -793,6 +803,12 @@ type IncomeTaxLookupRow = {
   taxKrw: number;
 };
 
+type StatutoryIncomeSplitItem = {
+  code: string;
+  category: string;
+  amountKrw: number;
+};
+
 type InsuranceRoundingMode = "round" | "floor" | "ceil";
 
 type InsuranceRoundingRules = {
@@ -1197,6 +1213,41 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
       400,
       "statutory.incomeTaxLookupTable must include open-ended row(upToKrw=null) as last entry"
     );
+  }
+
+  return normalized;
+}
+
+function normalizeStatutoryIncomeSplitItems(
+  items: StatutoryIncomeSplitItem[] | undefined,
+  fieldName: "statutory.taxableIncomeItems" | "statutory.nonTaxableIncomeItems"
+) {
+  if (!items || items.length === 0) {
+    return null;
+  }
+
+  const normalized: StatutoryIncomeSplitItem[] = [];
+  const seenCodes = new Set<string>();
+  for (const [index, item] of items.entries()) {
+    const code = item.code.trim();
+    const category = item.category.trim();
+    const amountKrw = toKrwInteger(item.amountKrw, `${fieldName}[${index}].amountKrw`);
+    if (!code) {
+      throw new ServiceError(400, `${fieldName}[${index}].code must not be blank`);
+    }
+    if (!category) {
+      throw new ServiceError(400, `${fieldName}[${index}].category must not be blank`);
+    }
+    const normalizedCode = code.toLowerCase();
+    if (seenCodes.has(normalizedCode)) {
+      throw new ServiceError(400, `${fieldName} contains duplicate code: ${code}`);
+    }
+    seenCodes.add(normalizedCode);
+    normalized.push({
+      code,
+      category,
+      amountKrw
+    });
   }
 
   return normalized;
@@ -1630,26 +1681,72 @@ export async function previewPayrollWithDeductions(
     const insuranceRoundingRules = normalizeInsuranceRoundingRules(
       input.statutory?.insuranceRounding
     );
+    const taxableIncomeItems = normalizeStatutoryIncomeSplitItems(
+      input.statutory?.taxableIncomeItems,
+      "statutory.taxableIncomeItems"
+    );
+    const nonTaxableIncomeItems = normalizeStatutoryIncomeSplitItems(
+      input.statutory?.nonTaxableIncomeItems,
+      "statutory.nonTaxableIncomeItems"
+    );
+    const taxableIncomeItemTotalKrw =
+      taxableIncomeItems?.reduce((sum, item) => sum + item.amountKrw, 0) ?? 0;
+    const nonTaxableIncomeItemTotalKrw =
+      nonTaxableIncomeItems?.reduce((sum, item) => sum + item.amountKrw, 0) ?? 0;
     const taxableIncomeKrwInput =
       input.statutory?.taxableIncomeKrw === undefined
         ? null
         : toKrwInteger(input.statutory.taxableIncomeKrw, "statutory.taxableIncomeKrw");
-    if (nonTaxableIncomeKrw > computed.grossPayKrw) {
+
+    if (
+      taxableIncomeItems &&
+      taxableIncomeKrwInput !== null &&
+      taxableIncomeKrwInput !== taxableIncomeItemTotalKrw
+    ) {
+      throw new ServiceError(
+        400,
+        "statutory.taxableIncomeItems sum must match statutory.taxableIncomeKrw when taxableIncomeKrw is provided"
+      );
+    }
+
+    if (
+      nonTaxableIncomeItems &&
+      nonTaxableIncomeKrw > 0 &&
+      nonTaxableIncomeKrw !== nonTaxableIncomeItemTotalKrw
+    ) {
+      throw new ServiceError(
+        400,
+        "statutory.nonTaxableIncomeItems sum must match statutory.nonTaxableIncomeKrw when nonTaxableIncomeKrw is provided"
+      );
+    }
+
+    const effectiveNonTaxableIncomeKrw =
+      nonTaxableIncomeItems?.length ? nonTaxableIncomeItemTotalKrw : nonTaxableIncomeKrw;
+    const effectiveTaxableIncomeKrwInput =
+      taxableIncomeKrwInput ?? (taxableIncomeItems?.length ? taxableIncomeItemTotalKrw : null);
+
+    if (effectiveNonTaxableIncomeKrw > computed.grossPayKrw) {
       throw new ServiceError(400, "statutory.nonTaxableIncomeKrw cannot exceed grossPayKrw");
     }
-    const derivedTaxableIncomeKrw = computed.grossPayKrw - nonTaxableIncomeKrw;
+    const derivedTaxableIncomeKrw = computed.grossPayKrw - effectiveNonTaxableIncomeKrw;
     if (
-      taxableIncomeKrwInput !== null &&
-      taxableIncomeKrwInput + nonTaxableIncomeKrw !== computed.grossPayKrw
+      effectiveTaxableIncomeKrwInput !== null &&
+      effectiveTaxableIncomeKrwInput + effectiveNonTaxableIncomeKrw !== computed.grossPayKrw
     ) {
       throw new ServiceError(
         400,
         "statutory.taxableIncomeKrw plus statutory.nonTaxableIncomeKrw must equal grossPayKrw"
       );
     }
-    const taxableBaseKrw = taxableIncomeKrwInput ?? derivedTaxableIncomeKrw;
-    const taxableSource =
-      taxableIncomeKrwInput === null ? "derived_from_gross_minus_non_taxable" : "explicit";
+    const taxableBaseKrw = effectiveTaxableIncomeKrwInput ?? derivedTaxableIncomeKrw;
+    const taxableSource = taxableIncomeKrwInput !== null
+      ? "explicit"
+      : taxableIncomeItems?.length
+        ? "from_taxable_income_items"
+        : "derived_from_gross_minus_non_taxable";
+    const nonTaxableSource = nonTaxableIncomeItems?.length
+      ? "from_non_taxable_income_items"
+      : "explicit_or_default";
     const taxMethod = incomeTaxLookupTable
       ? incomeTaxLookupPreset
         ? "simple_lookup_table_preset"
@@ -1738,10 +1835,17 @@ export async function previewPayrollWithDeductions(
       taxableBaseKrw,
       incomeSplitKrw: {
         grossPayKrw: computed.grossPayKrw,
-        nonTaxableIncomeKrw,
+        nonTaxableIncomeKrw: effectiveNonTaxableIncomeKrw,
         taxableIncomeKrw: taxableBaseKrw,
         taxableSource,
+        nonTaxableSource,
         validated: true
+      },
+      incomeSplitItems: {
+        taxableIncomeItems: taxableIncomeItems ?? [],
+        nonTaxableIncomeItems: nonTaxableIncomeItems ?? [],
+        taxableIncomeItemTotalKrw,
+        nonTaxableIncomeItemTotalKrw
       },
       incomeTaxBrackets: incomeTaxBrackets,
       incomeTaxLookupTable: incomeTaxLookupTable,

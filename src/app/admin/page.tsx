@@ -26,6 +26,7 @@ import {
   type QueueSearchSortScope
 } from "@/components/admin-approval/approval-queue-types";
 import { PayrollKrIncomeSplitGuideField } from "@/components/payroll/PayrollKrIncomeSplitGuideField";
+import { PayrollKrIncomeSplitItemFields } from "@/components/payroll/PayrollKrIncomeSplitItemFields";
 import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
@@ -301,6 +302,12 @@ export default function AdminDashboardPage() {
   );
   const [payrollNonTaxableIncomeKrw, setPayrollNonTaxableIncomeKrw] = useState("0");
   const [payrollTaxableIncomeKrw, setPayrollTaxableIncomeKrw] = useState("");
+  const [payrollTaxableItemCode, setPayrollTaxableItemCode] = useState("");
+  const [payrollTaxableItemCategory, setPayrollTaxableItemCategory] = useState("");
+  const [payrollTaxableItemAmountKrw, setPayrollTaxableItemAmountKrw] = useState("");
+  const [payrollNonTaxableItemCode, setPayrollNonTaxableItemCode] = useState("");
+  const [payrollNonTaxableItemCategory, setPayrollNonTaxableItemCategory] = useState("");
+  const [payrollNonTaxableItemAmountKrw, setPayrollNonTaxableItemAmountKrw] = useState("");
   const [payrollOtherDeductionsKrw, setPayrollOtherDeductionsKrw] = useState("0");
   const [payrollAdditionalTaxCreditKrw, setPayrollAdditionalTaxCreditKrw] = useState("0");
   const [payrollDependentCount, setPayrollDependentCount] = useState("0");
@@ -1023,6 +1030,33 @@ export default function AdminDashboardPage() {
   }
 
   async function previewPayroll() {
+    function buildIncomeSplitItem(code: string, category: string, amountKrwRaw: string) {
+      const codeValue = code.trim();
+      const categoryValue = category.trim();
+      const amountValue = amountKrwRaw.trim();
+      if (!codeValue && !categoryValue && !amountValue) {
+        return null;
+      }
+      const parsedAmount =
+        amountValue.length > 0 ? Math.max(0, Math.trunc(Number(amountValue) || 0)) : -1;
+      return {
+        code: codeValue,
+        category: categoryValue,
+        amountKrw: parsedAmount
+      };
+    }
+
+    const taxableIncomeItem = buildIncomeSplitItem(
+      payrollTaxableItemCode,
+      payrollTaxableItemCategory,
+      payrollTaxableItemAmountKrw
+    );
+    const nonTaxableIncomeItem = buildIncomeSplitItem(
+      payrollNonTaxableItemCode,
+      payrollNonTaxableItemCategory,
+      payrollNonTaxableItemAmountKrw
+    );
+
     const basePayload = {
       periodStart: toIso(periodStart),
       periodEnd: toIso(periodEnd),
@@ -1044,6 +1078,8 @@ export default function AdminDashboardPage() {
           payrollTaxableIncomeKrw.trim().length > 0
             ? Math.max(0, Math.trunc(Number(payrollTaxableIncomeKrw) || 0))
             : undefined,
+        taxableIncomeItems: taxableIncomeItem ? [taxableIncomeItem] : undefined,
+        nonTaxableIncomeItems: nonTaxableIncomeItem ? [nonTaxableIncomeItem] : undefined,
         otherDeductionsKrw: Math.max(0, Number(payrollOtherDeductionsKrw) || 0),
         additionalTaxCreditKrw: Math.max(0, Math.trunc(Number(payrollAdditionalTaxCreditKrw) || 0)),
         dependentCount: Math.max(0, Math.trunc(Number(payrollDependentCount) || 0)),
@@ -1958,6 +1994,22 @@ export default function AdminDashboardPage() {
                   <PayrollKrIncomeSplitGuideField
                     taxableIncomeKrw={payrollTaxableIncomeKrw}
                     onTaxableIncomeKrwChange={setPayrollTaxableIncomeKrw}
+                  />
+                </div>
+                <div className="full">
+                  <PayrollKrIncomeSplitItemFields
+                    taxableCode={payrollTaxableItemCode}
+                    onTaxableCodeChange={setPayrollTaxableItemCode}
+                    taxableCategory={payrollTaxableItemCategory}
+                    onTaxableCategoryChange={setPayrollTaxableItemCategory}
+                    taxableAmountKrw={payrollTaxableItemAmountKrw}
+                    onTaxableAmountKrwChange={setPayrollTaxableItemAmountKrw}
+                    nonTaxableCode={payrollNonTaxableItemCode}
+                    onNonTaxableCodeChange={setPayrollNonTaxableItemCode}
+                    nonTaxableCategory={payrollNonTaxableItemCategory}
+                    onNonTaxableCategoryChange={setPayrollNonTaxableItemCategory}
+                    nonTaxableAmountKrw={payrollNonTaxableItemAmountKrw}
+                    onNonTaxableAmountKrwChange={setPayrollNonTaxableItemAmountKrw}
                   />
                 </div>
                 <label>

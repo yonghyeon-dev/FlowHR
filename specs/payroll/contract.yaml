@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.27.0
+version: 1.28.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -15,6 +15,7 @@ scope:
     - KR statutory baseline simple withholding lookup-table input and configurable insurance rounding rules
     - KR statutory baseline managed lookup-table preset dataset selection and validation guard
     - KR statutory baseline taxable/non-taxable split validation rule (`taxableIncomeKrw` + `nonTaxableIncomeKrw`)
+    - KR statutory baseline income split item code/category input (`taxableIncomeItems`, `nonTaxableIncomeItems`)
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
@@ -63,7 +64,7 @@ api:
       description: Generate payroll gross pay preview for a period.
     - method: POST
       path: /payroll/runs/preview-with-deductions
-      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table or preset dataset ID, contribution caps, additive tax-credit fields, optional taxable/non-taxable split input validation, configurable insurance rounding, and optional monthly-boundary validation).
+      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table or preset dataset ID, contribution caps, additive tax-credit fields, optional taxable/non-taxable split input validation, optional income split item code/category/amount input arrays, configurable insurance rounding, and optional monthly-boundary validation).
     - method: POST
       path: /payroll/runs/preview-insurance-settlement
       description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, and prior-withheld/prior-paid deltas.
@@ -204,6 +205,9 @@ invariants:
   - Statutory KR baseline mode must derive taxable base as grossPayKrw - nonTaxableIncomeKrw with explicit split guards.
   - In statutory mode, nonTaxableIncomeKrw must not exceed grossPayKrw.
   - In statutory mode, when taxableIncomeKrw is provided, taxableIncomeKrw + nonTaxableIncomeKrw must equal grossPayKrw.
+  - In statutory mode, taxableIncomeItems/nonTaxableIncomeItems codes must be unique(case-insensitive) within each list.
+  - In statutory mode, when taxableIncomeItems are provided with taxableIncomeKrw, item-total and taxableIncomeKrw must match.
+  - In statutory mode, when nonTaxableIncomeItems are provided with nonTaxableIncomeKrw (>0), item-total and nonTaxableIncomeKrw must match.
   - Statutory KR baseline mode must keep deduction and net-pay outputs deterministic for same inputs/rates.
   - When incomeTaxBrackets is provided, statutory income tax must be calculated by bracket segments and include open-ended final bracket.
   - When incomeTaxLookupTable is provided, statutory income tax must be selected from first matching lookup row by taxable base, and the lookup table must include open-ended final row.
@@ -271,6 +275,7 @@ risk:
     - Statutory baseline rates are approximation-only and require policy/legal review before production default.
     - Incorrect tax-credit ordering (after/before local income tax) can cause payout mismatch.
     - Taxable/non-taxable split mismatch can cause taxable-base distortion and withholding errors.
+    - Income split item code/category mismatch or duplicate codes can break taxable/non-taxable traceability.
     - Monthly boundary misconfiguration can produce off-cycle payroll previews.
     - Insurance settlement cap/rate misconfiguration can cause employee/employer contribution mismatch.
     - Closing period with unconfirmed runs can cause settlement mismatch.
@@ -288,6 +293,7 @@ test_plan:
     - statutory_kr_baseline simple withholding lookup-table selection formula
     - statutory_kr_baseline lookup-table preset dataset resolution formula
     - statutory_kr_baseline taxable/non-taxable split validation formula
+    - statutory_kr_baseline income split item list/total validation formula
     - statutory_kr_baseline insurance rounding unit/mode formulas
     - statutory_kr_baseline tax-credit and monthly-boundary formulas
     - insurance settlement contribution, cap, and delta formulas
@@ -325,6 +331,7 @@ test_plan:
     - statutory_kr_baseline validates lookup-table ordering/open-ended final row, monotonic tax values, and mutual exclusivity with brackets/preset
     - statutory_kr_baseline resolves managed lookup-table preset ID and rejects unknown preset IDs
     - statutory_kr_baseline validates taxable/non-taxable split guard (`nonTaxableIncomeKrw <= grossPayKrw`, explicit taxable split sum match)
+    - statutory_kr_baseline validates income split item list code uniqueness and item-total consistency with split totals
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
     - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
@@ -361,6 +368,7 @@ test_plan:
     - statutory_kr_baseline simple lookup-table + insurance rounding deterministic replay via WI-0220 e2e
     - statutory_kr_baseline lookup-table preset dataset and validation-guard deterministic replay via WI-0221 e2e
     - statutory_kr_baseline taxable/non-taxable split deterministic replay via WI-0223 e2e
+    - statutory_kr_baseline income split item code/category input deterministic replay via WI-0224 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
@@ -403,6 +411,7 @@ test_plan:
     - lookup-table income-tax selection and insurance rounding-rule component checks
     - lookup-table preset dataset resolution and malformed lookup-table guard checks
     - taxable/non-taxable split validation and explicit split-sum checks
+    - income split item code uniqueness and item-total consistency checks
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, and delta deterministic checks
     - close-period withholding/social/net aggregation and settlement-delta checks
@@ -516,7 +525,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.27.0 additively extends `statutory_kr_baseline` preview inputs with optional explicit taxable-income split input (`taxableIncomeKrw`) and taxable/non-taxable sum validation guard, while preserving all existing payroll preview/confirm/profile/statutory preset, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.28.0 additively extends `statutory_kr_baseline` preview inputs with optional income split item arrays (`taxableIncomeItems`, `nonTaxableIncomeItems`) for code/category/amount traceability and split-total consistency guards, while preserving all existing payroll preview/confirm/profile/statutory preset/split, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -533,6 +542,7 @@ references:
   - work-items/WI-0220-payroll-kr-precision-simple-tax-table-and-insurance-rounding.md
   - work-items/WI-0221-payroll-kr-tax-table-preset-and-validation-guard.md
   - work-items/WI-0223-payroll-kr-taxable-non-taxable-split-rule.md
+  - work-items/WI-0224-payroll-kr-income-split-item-code-category-input.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md

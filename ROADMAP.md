@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.92 (Payroll KR Taxable Split Guard)
+> **Current version**: 0.1.93 (Payroll KR Split Item Input)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -260,10 +260,11 @@
 - WI-0221 급여 엔진 KR 세액표 운영 데이터셋/검증 가드 baseline(`statutory_kr_baseline`에 `incomeTaxLookupPresetId` 프리셋 입력 추가 + `incomeTaxBrackets`/`incomeTaxLookupTable`/`incomeTaxLookupPresetId` 상호배타 가드 + 룩업 테이블 단조 세액 검증 + WI-0221 회귀 테스트 추가)
 - WI-0222 급여 관리자 프리뷰 KR 세액표 프리셋 선택/가이드 UX baseline(`src/components/payroll/PayrollKrPresetGuidePanel.tsx` 신규 + `/admin` 법정공제 프리뷰 preset selector/payload 연동 + locale-aware(`ko`/`en`) 가이드 문구 + WI-0222 회귀 테스트 추가)
 - WI-0223 급여 엔진 KR 과세/비과세 분리 검증 baseline(`statutory_kr_baseline`에 선택 입력 `taxableIncomeKrw` 추가 + `nonTaxableIncomeKrw <= grossPayKrw`, `taxable + nonTaxable = gross` 가드 + `incomeSplitKrw` breakdown + `/admin` 과세소득 입력 연동 + WI-0223 회귀 테스트 추가)
+- WI-0224 급여 엔진 KR 과세/비과세 항목 코드/카테고리 입력 baseline(`taxableIncomeItems`/`nonTaxableIncomeItems` 입력 추가 + 항목 코드 중복/항목합계 정합성 가드 + `incomeSplitItems` breakdown + `/admin` 항목 코드/카테고리/금액 입력 연동 + WI-0224 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 급여 KR 정밀 계산 고도화(과세 분리 항목 코드/카테고리 입력) 착수 (WI-0224 예정)
+- 다음: 급여 KR 정밀 계산 고도화(항목 코드 사전/템플릿 preset) 착수 (WI-0225 예정)
 
 ### 현재 아키텍처
 
