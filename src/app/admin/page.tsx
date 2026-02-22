@@ -27,6 +27,7 @@ import {
 } from "@/components/admin-approval/approval-queue-types";
 import { PayrollKrIncomeSplitGuideField } from "@/components/payroll/PayrollKrIncomeSplitGuideField";
 import { PayrollKrIncomeSplitItemFields } from "@/components/payroll/PayrollKrIncomeSplitItemFields";
+import { PayrollKrIncomeSplitItemPresetField } from "@/components/payroll/PayrollKrIncomeSplitItemPresetField";
 import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
@@ -308,6 +309,7 @@ export default function AdminDashboardPage() {
   const [payrollNonTaxableItemCode, setPayrollNonTaxableItemCode] = useState("");
   const [payrollNonTaxableItemCategory, setPayrollNonTaxableItemCategory] = useState("");
   const [payrollNonTaxableItemAmountKrw, setPayrollNonTaxableItemAmountKrw] = useState("");
+  const [payrollIncomeSplitItemPresetId, setPayrollIncomeSplitItemPresetId] = useState("");
   const [payrollOtherDeductionsKrw, setPayrollOtherDeductionsKrw] = useState("0");
   const [payrollAdditionalTaxCreditKrw, setPayrollAdditionalTaxCreditKrw] = useState("0");
   const [payrollDependentCount, setPayrollDependentCount] = useState("0");
@@ -1056,6 +1058,7 @@ export default function AdminDashboardPage() {
       payrollNonTaxableItemCategory,
       payrollNonTaxableItemAmountKrw
     );
+    const incomeSplitItemPresetId = payrollIncomeSplitItemPresetId.trim();
 
     const basePayload = {
       periodStart: toIso(periodStart),
@@ -1078,8 +1081,15 @@ export default function AdminDashboardPage() {
           payrollTaxableIncomeKrw.trim().length > 0
             ? Math.max(0, Math.trunc(Number(payrollTaxableIncomeKrw) || 0))
             : undefined,
-        taxableIncomeItems: taxableIncomeItem ? [taxableIncomeItem] : undefined,
-        nonTaxableIncomeItems: nonTaxableIncomeItem ? [nonTaxableIncomeItem] : undefined,
+        taxableIncomeItems:
+          incomeSplitItemPresetId.length > 0 ? undefined : taxableIncomeItem ? [taxableIncomeItem] : undefined,
+        nonTaxableIncomeItems:
+          incomeSplitItemPresetId.length > 0
+            ? undefined
+            : nonTaxableIncomeItem
+              ? [nonTaxableIncomeItem]
+              : undefined,
+        incomeSplitItemPresetId: incomeSplitItemPresetId || undefined,
         otherDeductionsKrw: Math.max(0, Number(payrollOtherDeductionsKrw) || 0),
         additionalTaxCreditKrw: Math.max(0, Math.trunc(Number(payrollAdditionalTaxCreditKrw) || 0)),
         dependentCount: Math.max(0, Math.trunc(Number(payrollDependentCount) || 0)),
@@ -1997,6 +2007,12 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div className="full">
+                  <PayrollKrIncomeSplitItemPresetField
+                    selectedPresetId={payrollIncomeSplitItemPresetId}
+                    onPresetChange={setPayrollIncomeSplitItemPresetId}
+                  />
+                </div>
+                <div className="full">
                   <PayrollKrIncomeSplitItemFields
                     taxableCode={payrollTaxableItemCode}
                     onTaxableCodeChange={setPayrollTaxableItemCode}
@@ -2010,6 +2026,7 @@ export default function AdminDashboardPage() {
                     onNonTaxableCategoryChange={setPayrollNonTaxableItemCategory}
                     nonTaxableAmountKrw={payrollNonTaxableItemAmountKrw}
                     onNonTaxableAmountKrwChange={setPayrollNonTaxableItemAmountKrw}
+                    disabled={payrollIncomeSplitItemPresetId.trim().length > 0}
                   />
                 </div>
                 <label>

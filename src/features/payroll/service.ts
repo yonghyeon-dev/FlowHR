@@ -20,6 +20,7 @@ import type { DomainEventPublisher } from "@/features/shared/domain-event-publis
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
 import { getPayrollKrIncomeTaxLookupPreset } from "@/features/payroll/kr-income-tax-lookup-presets";
+import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
 
 type PreviewPayrollInput = {
   periodStart: Date;
@@ -60,6 +61,7 @@ type StatutoryKrBaselineDeductions = {
       category: string;
       amountKrw: number;
     }>;
+    incomeSplitItemPresetId?: string;
     incomeTaxBrackets?: Array<{
       upToKrw: number | null;
       rate: number;
@@ -1681,22 +1683,65 @@ export async function previewPayrollWithDeductions(
     const insuranceRoundingRules = normalizeInsuranceRoundingRules(
       input.statutory?.insuranceRounding
     );
-    const taxableIncomeItems = normalizeStatutoryIncomeSplitItems(
+    const requestedTaxableIncomeItems = normalizeStatutoryIncomeSplitItems(
       input.statutory?.taxableIncomeItems,
       "statutory.taxableIncomeItems"
     );
-    const nonTaxableIncomeItems = normalizeStatutoryIncomeSplitItems(
+    const requestedNonTaxableIncomeItems = normalizeStatutoryIncomeSplitItems(
       input.statutory?.nonTaxableIncomeItems,
       "statutory.nonTaxableIncomeItems"
     );
-    const taxableIncomeItemTotalKrw =
-      taxableIncomeItems?.reduce((sum, item) => sum + item.amountKrw, 0) ?? 0;
-    const nonTaxableIncomeItemTotalKrw =
-      nonTaxableIncomeItems?.reduce((sum, item) => sum + item.amountKrw, 0) ?? 0;
+    const incomeSplitItemPresetId = input.statutory?.incomeSplitItemPresetId?.trim() || null;
+    const incomeSplitItemPreset = incomeSplitItemPresetId
+      ? getPayrollKrIncomeSplitItemPreset(incomeSplitItemPresetId)
+      : null;
+    if (incomeSplitItemPresetId && !incomeSplitItemPreset) {
+      throw new ServiceError(
+        400,
+        `statutory.incomeSplitItemPresetId is not supported: ${incomeSplitItemPresetId}`
+      );
+    }
+    if (incomeSplitItemPreset && (requestedTaxableIncomeItems || requestedNonTaxableIncomeItems)) {
+      throw new ServiceError(
+        400,
+        "statutory.incomeSplitItemPresetId and statutory.taxableIncomeItems/nonTaxableIncomeItems are mutually exclusive"
+      );
+    }
     const taxableIncomeKrwInput =
       input.statutory?.taxableIncomeKrw === undefined
         ? null
         : toKrwInteger(input.statutory.taxableIncomeKrw, "statutory.taxableIncomeKrw");
+    if (nonTaxableIncomeKrw > computed.grossPayKrw) {
+      throw new ServiceError(400, "statutory.nonTaxableIncomeKrw cannot exceed grossPayKrw");
+    }
+    const derivedTaxableIncomeKrwFromNumericNonTaxable = computed.grossPayKrw - nonTaxableIncomeKrw;
+    const splitTaxableIncomeKrw =
+      taxableIncomeKrwInput ?? derivedTaxableIncomeKrwFromNumericNonTaxable;
+
+    const taxableIncomeItems = incomeSplitItemPreset
+      ? [
+          {
+            code: incomeSplitItemPreset.taxableTemplate.code,
+            category: incomeSplitItemPreset.taxableTemplate.category,
+            amountKrw: splitTaxableIncomeKrw
+          }
+        ]
+      : requestedTaxableIncomeItems;
+    const nonTaxableIncomeItems = incomeSplitItemPreset
+      ? nonTaxableIncomeKrw > 0
+        ? [
+            {
+              code: incomeSplitItemPreset.nonTaxableTemplate.code,
+              category: incomeSplitItemPreset.nonTaxableTemplate.category,
+              amountKrw: nonTaxableIncomeKrw
+            }
+          ]
+        : []
+      : requestedNonTaxableIncomeItems;
+    const taxableIncomeItemTotalKrw =
+      taxableIncomeItems?.reduce((sum, item) => sum + item.amountKrw, 0) ?? 0;
+    const nonTaxableIncomeItemTotalKrw =
+      nonTaxableIncomeItems?.reduce((sum, item) => sum + item.amountKrw, 0) ?? 0;
 
     if (
       taxableIncomeItems &&
@@ -1724,10 +1769,10 @@ export async function previewPayrollWithDeductions(
       nonTaxableIncomeItems?.length ? nonTaxableIncomeItemTotalKrw : nonTaxableIncomeKrw;
     const effectiveTaxableIncomeKrwInput =
       taxableIncomeKrwInput ?? (taxableIncomeItems?.length ? taxableIncomeItemTotalKrw : null);
-
     if (effectiveNonTaxableIncomeKrw > computed.grossPayKrw) {
       throw new ServiceError(400, "statutory.nonTaxableIncomeKrw cannot exceed grossPayKrw");
     }
+
     const derivedTaxableIncomeKrw = computed.grossPayKrw - effectiveNonTaxableIncomeKrw;
     if (
       effectiveTaxableIncomeKrwInput !== null &&
@@ -1741,11 +1786,15 @@ export async function previewPayrollWithDeductions(
     const taxableBaseKrw = effectiveTaxableIncomeKrwInput ?? derivedTaxableIncomeKrw;
     const taxableSource = taxableIncomeKrwInput !== null
       ? "explicit"
-      : taxableIncomeItems?.length
+      : incomeSplitItemPreset
+        ? "from_income_split_item_preset"
+        : taxableIncomeItems?.length
         ? "from_taxable_income_items"
         : "derived_from_gross_minus_non_taxable";
     const nonTaxableSource = nonTaxableIncomeItems?.length
-      ? "from_non_taxable_income_items"
+      ? incomeSplitItemPreset
+        ? "from_income_split_item_preset"
+        : "from_non_taxable_income_items"
       : "explicit_or_default";
     const taxMethod = incomeTaxLookupTable
       ? incomeTaxLookupPreset
@@ -1847,6 +1896,16 @@ export async function previewPayrollWithDeductions(
         taxableIncomeItemTotalKrw,
         nonTaxableIncomeItemTotalKrw
       },
+      incomeSplitItemPreset: incomeSplitItemPreset
+        ? {
+            id: incomeSplitItemPreset.id,
+            label: incomeSplitItemPreset.label,
+            effectiveFrom: incomeSplitItemPreset.effectiveFrom,
+            source: incomeSplitItemPreset.source,
+            taxableTemplate: incomeSplitItemPreset.taxableTemplate,
+            nonTaxableTemplate: incomeSplitItemPreset.nonTaxableTemplate
+          }
+        : null,
       incomeTaxBrackets: incomeTaxBrackets,
       incomeTaxLookupTable: incomeTaxLookupTable,
       incomeTaxLookupTableChecksum,
