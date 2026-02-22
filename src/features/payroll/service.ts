@@ -49,6 +49,7 @@ type StatutoryKrBaselineDeductions = {
   deductionMode: "statutory_kr_baseline";
   statutory?: {
     nonTaxableIncomeKrw: number;
+    taxableIncomeKrw?: number;
     incomeTaxBrackets?: Array<{
       upToKrw: number | null;
       rate: number;
@@ -1629,8 +1630,26 @@ export async function previewPayrollWithDeductions(
     const insuranceRoundingRules = normalizeInsuranceRoundingRules(
       input.statutory?.insuranceRounding
     );
-
-    const taxableBaseKrw = Math.max(computed.grossPayKrw - nonTaxableIncomeKrw, 0);
+    const taxableIncomeKrwInput =
+      input.statutory?.taxableIncomeKrw === undefined
+        ? null
+        : toKrwInteger(input.statutory.taxableIncomeKrw, "statutory.taxableIncomeKrw");
+    if (nonTaxableIncomeKrw > computed.grossPayKrw) {
+      throw new ServiceError(400, "statutory.nonTaxableIncomeKrw cannot exceed grossPayKrw");
+    }
+    const derivedTaxableIncomeKrw = computed.grossPayKrw - nonTaxableIncomeKrw;
+    if (
+      taxableIncomeKrwInput !== null &&
+      taxableIncomeKrwInput + nonTaxableIncomeKrw !== computed.grossPayKrw
+    ) {
+      throw new ServiceError(
+        400,
+        "statutory.taxableIncomeKrw plus statutory.nonTaxableIncomeKrw must equal grossPayKrw"
+      );
+    }
+    const taxableBaseKrw = taxableIncomeKrwInput ?? derivedTaxableIncomeKrw;
+    const taxableSource =
+      taxableIncomeKrwInput === null ? "derived_from_gross_minus_non_taxable" : "explicit";
     const taxMethod = incomeTaxLookupTable
       ? incomeTaxLookupPreset
         ? "simple_lookup_table_preset"
@@ -1717,6 +1736,13 @@ export async function previewPayrollWithDeductions(
       statutoryModel: "kr_baseline_v1",
       taxMethod,
       taxableBaseKrw,
+      incomeSplitKrw: {
+        grossPayKrw: computed.grossPayKrw,
+        nonTaxableIncomeKrw,
+        taxableIncomeKrw: taxableBaseKrw,
+        taxableSource,
+        validated: true
+      },
       incomeTaxBrackets: incomeTaxBrackets,
       incomeTaxLookupTable: incomeTaxLookupTable,
       incomeTaxLookupTableChecksum,
