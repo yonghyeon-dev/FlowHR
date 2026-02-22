@@ -27,6 +27,7 @@ import {
   type DeliverySignatureStatus
 } from "@/components/payroll-year-end-filing/filing-alert-review-routing-signature-bundle";
 import type { ReviewHandoffRole } from "@/components/payroll-year-end-filing/filing-alert-review-handoff-export-snapshot";
+import { buildRoutingSignatureDeliveryLockRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-delivery-lock-handover";
 
 type RoutingDraft = {
   status: ApprovalRoutingStatus;
@@ -243,6 +244,18 @@ export default function PayrollYearEndFilingOpsReviewRoutingSignatureBundle() {
       }),
     [routingEntries, signatureEntries, handoffReady, exportReady, archiveReady]
   );
+  const deliveryLockHandoverHref = buildRoutingSignatureDeliveryLockRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    handoffReady: summary.handoffReady,
+    exportReady: summary.exportReady,
+    archiveReady: summary.archiveReady,
+    routingReady: summary.routingReady,
+    signatureReady: summary.signatureReady
+  });
 
   function updateRoutingDraft(stage: ApprovalRoutingStage, key: keyof RoutingDraft, value: string) {
     setRoutingDrafts((prev) => ({
@@ -303,6 +316,9 @@ export default function PayrollYearEndFilingOpsReviewRoutingSignatureBundle() {
         </Link>
         <Link href={closeOffHref} className="btn btn-secondary btn-small">
           Back to Close-off Package
+        </Link>
+        <Link href={deliveryLockHandoverHref} className="btn btn-secondary btn-small">
+          Open Delivery Lock + Final Handover
         </Link>
       </div>
 
