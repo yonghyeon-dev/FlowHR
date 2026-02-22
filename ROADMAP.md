@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.79 (Filing Ops Completion Close Report Baseline)
+> **Current version**: 0.1.80 (Filing Ops Close Report Distribution Sign-off Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -247,10 +247,11 @@
 - WI-0208 연말정산 신고 운영 전달 패키지 lock/final handover baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock` 전용 라우트 + package lock state(draft/locked/released) + final handover status(pending/sent/ack) + completion blocker 요약 + e2e 갱신)
 - WI-0209 연말정산 신고 운영 completion receipt/archive digest baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt` 전용 라우트 + completion receipt status(pending/issued/verified) + archive digest channel state(pending/prepared/sealed) + archive digest readiness blocker 요약 + e2e 갱신)
 - WI-0210 연말정산 신고 운영 completion close report baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report` 전용 라우트 + close report status(pending/drafted/published) + publication channel state(pending/queued/published) + final close blocker 요약 + e2e 갱신)
+- WI-0211 연말정산 신고 운영 close report distribution sign-off baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff` 전용 라우트 + distribution channel state(pending/distributed/confirmed) + role sign-off state(pending/signed/rejected) + distribution sign-off blocker 요약 + e2e 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 close report distribution sign-off baseline) (WI-0211 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 distribution sign-off closure packet baseline) (WI-0212 예정)
 
 ### 현재 아키텍처
 

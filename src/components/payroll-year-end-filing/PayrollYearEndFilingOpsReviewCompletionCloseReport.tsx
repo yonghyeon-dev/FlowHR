@@ -33,6 +33,7 @@ import {
   type CloseReportPublicationDraft
 } from "@/components/payroll-year-end-filing/filing-alert-review-completion-close-report-ui";
 import { buildDeliveryLockCompletionReceiptRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-completion-receipt-archive-digest";
+import { buildCloseReportDistributionSignoffRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff";
 
 function readinessBadgeClass(ready: boolean) {
   return `${styles.statusBadge} ${ready ? styles.statusReady : styles.statusHold}`;
@@ -174,6 +175,24 @@ export default function PayrollYearEndFilingOpsReviewCompletionCloseReport() {
     packageLocked: gates.packageLocked,
     handoverAcknowledged: gates.handoverAcknowledged
   });
+  const distributionSignoffHref = buildCloseReportDistributionSignoffRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    handoffReady: summary.handoffReady,
+    exportReady: summary.exportReady,
+    archiveReady: summary.archiveReady,
+    routingReady: summary.routingReady,
+    signatureReady: summary.signatureReady,
+    packageLocked: summary.packageLocked,
+    handoverAcknowledged: summary.handoverAcknowledged,
+    receiptVerified: summary.receiptVerified,
+    digestReady: summary.digestReady,
+    closeReportPublished: summary.closeReportPublished,
+    publicationReady: summary.publicationReady
+  });
 
   return (
     <section className="panel" id="filing-alert-completion-close-report-hub">
@@ -185,6 +204,9 @@ export default function PayrollYearEndFilingOpsReviewCompletionCloseReport() {
         </Link>
         <Link href={completionReceiptHref} className="btn btn-secondary btn-small">
           Back to Completion Receipt + Archive Digest
+        </Link>
+        <Link href={distributionSignoffHref} className="btn btn-secondary btn-small">
+          Open Distribution Sign-off
         </Link>
       </div>
 
