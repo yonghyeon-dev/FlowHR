@@ -52,6 +52,8 @@ const messages = {
       "distribution sign-off closure packet",
     "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigest":
       "closure packet release digest",
+    "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedger":
+      "closure packet release digest acknowledgment ledger",
     "admin.nav.people": "조직/인사",
     "admin.nav.contracts": "전자계약",
     "admin.nav.approvalPolicy": "결재 정책",
@@ -162,6 +164,8 @@ const messages = {
       "Distribution Sign-off Closure Packet",
     "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigest":
       "Closure Packet Release Digest",
+    "admin.nav.yearEndFilingOpsChecklistClosurePacketReleaseDigestAckLedger":
+      "Closure Packet Release Digest Acknowledgment Ledger",
     "admin.nav.people": "People / Organization",
     "admin.nav.contracts": "E-Contracts",
     "admin.nav.approvalPolicy": "Approval Policy",

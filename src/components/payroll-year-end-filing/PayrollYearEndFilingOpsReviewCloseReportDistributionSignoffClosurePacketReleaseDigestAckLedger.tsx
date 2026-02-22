@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import PayrollYearEndFilingOpsClosurePacketReleaseDigestChannelPanel from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsClosurePacketReleaseDigestChannelPanel";
-import PayrollYearEndFilingOpsClosurePacketReleaseDigestPanel from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsClosurePacketReleaseDigestPanel";
+import PayrollYearEndFilingOpsClosurePacketReleaseDigestAckLedgerChannelPanel from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsClosurePacketReleaseDigestAckLedgerChannelPanel";
+import PayrollYearEndFilingOpsClosurePacketReleaseDigestAckLedgerPanel from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsClosurePacketReleaseDigestAckLedgerPanel";
 import styles from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsReviewCompletionReceiptArchiveDigest.module.css";
 import type { FilingOpsAlertLevel } from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsDashboard";
 import type { AlertMetric } from "@/components/payroll-year-end-filing/filing-alert-execution-checklist";
@@ -14,32 +14,32 @@ import {
   normalizeMetric,
   parseOptionalInt
 } from "@/components/payroll-year-end-filing/filing-alert-execution-checklist";
-import { buildCloseReportDistributionSignoffClosurePacketRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet";
 import {
-  applyClosurePacketReleaseDigest,
-  applyClosurePacketReleaseDigestChannelStatus,
-  buildClosurePacketReleaseDigestRecord,
-  buildDefaultClosurePacketReleaseDigestChannelEntries,
-  summarizeClosurePacketReleaseDigest,
-  type ClosurePacketReleaseDigestChannel,
-  type ClosurePacketReleaseDigestChannelEntry,
-  type ClosurePacketReleaseDigestRecord
-} from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest";
-import { buildCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest-ack-ledger";
+  applyClosurePacketReleaseDigestAckChannelStatus,
+  applyClosurePacketReleaseDigestAckLedger,
+  buildCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerRouteHref,
+  buildClosurePacketReleaseDigestAckLedgerRecord,
+  buildDefaultClosurePacketReleaseDigestAckChannelEntries,
+  summarizeClosurePacketReleaseDigestAckLedger,
+  type ClosurePacketReleaseDigestAckChannel,
+  type ClosurePacketReleaseDigestAckChannelEntry,
+  type ClosurePacketReleaseDigestAckLedgerRecord
+} from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest-ack-ledger";
 import {
-  buildClosurePacketReleaseDigestChannelDraftMap,
-  buildClosurePacketReleaseDigestGateState,
-  CLOSURE_PACKET_RELEASE_DIGEST_GATE_FIELDS,
-  type ClosurePacketReleaseDigestChannelDraft,
-  type ClosurePacketReleaseDigestDraft,
-  type ClosurePacketReleaseDigestGateState
-} from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest-ui";
+  buildClosurePacketReleaseDigestAckChannelDraftMap,
+  buildClosurePacketReleaseDigestAckLedgerGateState,
+  CLOSURE_PACKET_RELEASE_DIGEST_ACK_LEDGER_GATE_FIELDS,
+  type ClosurePacketReleaseDigestAckChannelDraft,
+  type ClosurePacketReleaseDigestAckLedgerDraft,
+  type ClosurePacketReleaseDigestAckLedgerGateState
+} from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest-ack-ledger-ui";
+import { buildCloseReportDistributionSignoffClosurePacketReleaseDigestRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest";
 
 function readinessBadgeClass(ready: boolean) {
   return `${styles.statusBadge} ${ready ? styles.statusReady : styles.statusHold}`;
 }
 
-export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigest() {
+export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedger() {
   const searchParams = useSearchParams();
 
   const metricParam = searchParams.get("metric");
@@ -62,14 +62,16 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
   const signoffReadyParam = searchParams.get("signoffReady");
   const closurePacketSealedParam = searchParams.get("closurePacketSealed");
   const dispatchReadyParam = searchParams.get("dispatchReady");
+  const releaseDigestPublishedParam = searchParams.get("releaseDigestPublished");
+  const releaseDigestDeliveryReadyParam = searchParams.get("releaseDigestDeliveryReady");
 
   const [metric, setMetric] = useState<AlertMetric>(() => normalizeMetric(metricParam));
   const [level, setLevel] = useState<FilingOpsAlertLevel>(() => normalizeAlertLevel(levelParam));
   const [ownerRole, setOwnerRole] = useState(() => (ownerRoleParam ?? "").trim());
   const [ownerActorId, setOwnerActorId] = useState(() => (ownerActorIdParam ?? "").trim());
   const [currentValueInput, setCurrentValueInput] = useState(valueParam ?? "");
-  const [gates, setGates] = useState<ClosurePacketReleaseDigestGateState>(() =>
-    buildClosurePacketReleaseDigestGateState({
+  const [gates, setGates] = useState<ClosurePacketReleaseDigestAckLedgerGateState>(() =>
+    buildClosurePacketReleaseDigestAckLedgerGateState({
       handoffReadyParam,
       exportReadyParam,
       archiveReadyParam,
@@ -84,39 +86,39 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
       distributionReadyParam,
       signoffReadyParam,
       closurePacketSealedParam,
-      dispatchReadyParam
+      dispatchReadyParam,
+      releaseDigestPublishedParam,
+      releaseDigestDeliveryReadyParam
     })
   );
-  const [releaseDigestRecord, setReleaseDigestRecord] = useState<ClosurePacketReleaseDigestRecord>(() =>
-    buildClosurePacketReleaseDigestRecord({
-      digestId: `release-digest-${normalizeMetric(metricParam)}`,
+  const [ackLedgerRecord, setAckLedgerRecord] = useState<ClosurePacketReleaseDigestAckLedgerRecord>(() =>
+    buildClosurePacketReleaseDigestAckLedgerRecord({
+      ledgerId: `ack-ledger-${normalizeMetric(metricParam)}`,
       status: "pending",
       ownerRole: "manager",
       ownerActorId: ownerActorIdParam ?? "",
-      summary: ""
+      note: ""
     })
   );
-  const [releaseDigestDraft, setReleaseDigestDraft] = useState<ClosurePacketReleaseDigestDraft>({
+  const [ackLedgerDraft, setAckLedgerDraft] = useState<ClosurePacketReleaseDigestAckLedgerDraft>({
     status: "pending",
     ownerRole: "manager",
     ownerActorId: ownerActorIdParam ?? "",
-    summary: ""
+    note: ""
   });
-  const [releaseDigestChannelEntries, setReleaseDigestChannelEntries] = useState<
-    ClosurePacketReleaseDigestChannelEntry[]
-  >(() => buildDefaultClosurePacketReleaseDigestChannelEntries());
-  const [releaseDigestChannelDrafts, setReleaseDigestChannelDrafts] = useState<
-    Record<ClosurePacketReleaseDigestChannel, ClosurePacketReleaseDigestChannelDraft>
-  >(() =>
-    buildClosurePacketReleaseDigestChannelDraftMap(buildDefaultClosurePacketReleaseDigestChannelEntries())
+  const [ackChannelEntries, setAckChannelEntries] = useState<ClosurePacketReleaseDigestAckChannelEntry[]>(() =>
+    buildDefaultClosurePacketReleaseDigestAckChannelEntries()
   );
+  const [ackChannelDrafts, setAckChannelDrafts] = useState<
+    Record<ClosurePacketReleaseDigestAckChannel, ClosurePacketReleaseDigestAckChannelDraft>
+  >(() => buildClosurePacketReleaseDigestAckChannelDraftMap(buildDefaultClosurePacketReleaseDigestAckChannelEntries()));
 
   useEffect(() => {
     const normalizedMetric = normalizeMetric(metricParam);
     const normalizedLevel = normalizeAlertLevel(levelParam);
     const normalizedOwnerRole = (ownerRoleParam ?? "").trim();
     const normalizedOwnerActorId = (ownerActorIdParam ?? "").trim();
-    const defaultReleaseDigestChannels = buildDefaultClosurePacketReleaseDigestChannelEntries();
+    const defaultAckChannels = buildDefaultClosurePacketReleaseDigestAckChannelEntries();
 
     setMetric(normalizedMetric);
     setLevel(normalizedLevel);
@@ -124,7 +126,7 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
     setOwnerActorId(normalizedOwnerActorId);
     setCurrentValueInput(valueParam ?? "");
     setGates(
-      buildClosurePacketReleaseDigestGateState({
+      buildClosurePacketReleaseDigestAckLedgerGateState({
         handoffReadyParam,
         exportReadyParam,
         archiveReadyParam,
@@ -139,26 +141,28 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
         distributionReadyParam,
         signoffReadyParam,
         closurePacketSealedParam,
-        dispatchReadyParam
+        dispatchReadyParam,
+        releaseDigestPublishedParam,
+        releaseDigestDeliveryReadyParam
       })
     );
-    setReleaseDigestRecord(
-      buildClosurePacketReleaseDigestRecord({
-        digestId: `release-digest-${normalizedMetric}`,
+    setAckLedgerRecord(
+      buildClosurePacketReleaseDigestAckLedgerRecord({
+        ledgerId: `ack-ledger-${normalizedMetric}`,
         status: "pending",
         ownerRole: "manager",
         ownerActorId: normalizedOwnerActorId,
-        summary: ""
+        note: ""
       })
     );
-    setReleaseDigestDraft({
+    setAckLedgerDraft({
       status: "pending",
       ownerRole: "manager",
       ownerActorId: normalizedOwnerActorId,
-      summary: ""
+      note: ""
     });
-    setReleaseDigestChannelEntries(defaultReleaseDigestChannels);
-    setReleaseDigestChannelDrafts(buildClosurePacketReleaseDigestChannelDraftMap(defaultReleaseDigestChannels));
+    setAckChannelEntries(defaultAckChannels);
+    setAckChannelDrafts(buildClosurePacketReleaseDigestAckChannelDraftMap(defaultAckChannels));
   }, [
     archiveReadyParam,
     closeReportPublishedParam,
@@ -176,6 +180,8 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
     packageLockedParam,
     publicationReadyParam,
     receiptVerifiedParam,
+    releaseDigestDeliveryReadyParam,
+    releaseDigestPublishedParam,
     routingReadyParam,
     signoffReadyParam,
     signatureReadyParam,
@@ -184,10 +190,10 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
 
   const currentValue = parseOptionalInt(currentValueInput);
   const summary = useMemo(
-    () => summarizeClosurePacketReleaseDigest({ releaseDigestRecord, releaseDigestChannelEntries, ...gates }),
-    [gates, releaseDigestChannelEntries, releaseDigestRecord]
+    () => summarizeClosurePacketReleaseDigestAckLedger({ ackLedgerRecord, ackChannelEntries, ...gates }),
+    [ackChannelEntries, ackLedgerRecord, gates]
   );
-  const closurePacketHref = buildCloseReportDistributionSignoffClosurePacketRouteHref({
+  const releaseDigestHref = buildCloseReportDistributionSignoffClosurePacketReleaseDigestRouteHref({
     metric,
     level,
     value: currentValue,
@@ -205,9 +211,11 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
     closeReportPublished: gates.closeReportPublished,
     publicationReady: gates.publicationReady,
     distributionReady: gates.distributionReady,
-    signoffReady: gates.signoffReady
+    signoffReady: gates.signoffReady,
+    closurePacketSealed: gates.closurePacketSealed,
+    dispatchReady: gates.dispatchReady
   });
-  const ackLedgerHref = buildCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerRouteHref({
+  const selfHref = buildCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerRouteHref({
     metric,
     level,
     value: currentValue,
@@ -233,18 +241,20 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
   });
 
   return (
-    <section className="panel" id="filing-alert-close-report-closure-packet-release-digest-hub">
-      <h2>Payroll Filing Closure Packet Release Digest</h2>
-      <p className="small">Publish release digest and complete digest channel delivery after closure packet sealing.</p>
+    <section className="panel" id="filing-alert-close-report-closure-packet-release-digest-ack-ledger-hub">
+      <h2>Payroll Filing Release Digest Acknowledgment Ledger</h2>
+      <p className="small">
+        Record acknowledgment ledger entries and reconcile channel confirmation after release digest publication.
+      </p>
       <div className="panel-actions">
         <Link href="/admin/payroll-year-end-filing/ops" className="btn btn-secondary btn-small">
           Back to Ops Dashboard
         </Link>
-        <Link href={closurePacketHref} className="btn btn-secondary btn-small">
-          Back to Closure Packet
+        <Link href={releaseDigestHref} className="btn btn-secondary btn-small">
+          Back to Release Digest
         </Link>
-        <Link href={ackLedgerHref} className="btn btn-secondary btn-small">
-          Open Ack Ledger
+        <Link href={selfHref} className="btn btn-secondary btn-small">
+          Refresh Ack Ledger Context
         </Link>
       </div>
 
@@ -254,57 +264,57 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
           value {currentValue ?? "-"}
         </p>
         <p className="small">
-          release digest readiness
-          <span className={readinessBadgeClass(summary.readyForReleaseDigest)}>
-            {summary.readyForReleaseDigest ? "ready" : "hold"}
+          ack ledger readiness
+          <span className={readinessBadgeClass(summary.readyForAckLedger)}>
+            {summary.readyForAckLedger ? "ready" : "hold"}
           </span>
         </p>
       </div>
 
-      <PayrollYearEndFilingOpsClosurePacketReleaseDigestPanel
-        releaseDigestRecord={releaseDigestRecord}
-        releaseDigestDraft={releaseDigestDraft}
-        onReleaseDigestDraftChange={setReleaseDigestDraft}
-        onApplyReleaseDigest={() =>
-          setReleaseDigestRecord((prev) =>
-            applyClosurePacketReleaseDigest({
+      <PayrollYearEndFilingOpsClosurePacketReleaseDigestAckLedgerPanel
+        ackLedgerRecord={ackLedgerRecord}
+        ackLedgerDraft={ackLedgerDraft}
+        onAckLedgerDraftChange={setAckLedgerDraft}
+        onApplyAckLedger={() =>
+          setAckLedgerRecord((prev) =>
+            applyClosurePacketReleaseDigestAckLedger({
               current: prev,
-              status: releaseDigestDraft.status,
-              ownerRole: releaseDigestDraft.ownerRole,
-              ownerActorId: releaseDigestDraft.ownerActorId,
-              summary: releaseDigestDraft.summary
+              status: ackLedgerDraft.status,
+              ownerRole: ackLedgerDraft.ownerRole,
+              ownerActorId: ackLedgerDraft.ownerActorId,
+              note: ackLedgerDraft.note
             })
           )
         }
       />
 
-      <PayrollYearEndFilingOpsClosurePacketReleaseDigestChannelPanel
-        releaseDigestChannelEntries={releaseDigestChannelEntries}
-        releaseDigestChannelDrafts={releaseDigestChannelDrafts}
-        onReleaseDigestChannelDraftChange={(channel, next) =>
-          setReleaseDigestChannelDrafts((prev) => ({
+      <PayrollYearEndFilingOpsClosurePacketReleaseDigestAckLedgerChannelPanel
+        ackChannelEntries={ackChannelEntries}
+        ackChannelDrafts={ackChannelDrafts}
+        onAckChannelDraftChange={(channel, next) =>
+          setAckChannelDrafts((prev) => ({
             ...prev,
             [channel]: next
           }))
         }
-        onApplyReleaseDigestChannel={(channel) =>
-          setReleaseDigestChannelEntries((prev) =>
-            applyClosurePacketReleaseDigestChannelStatus({
+        onApplyAckChannel={(channel) =>
+          setAckChannelEntries((prev) =>
+            applyClosurePacketReleaseDigestAckChannelStatus({
               entries: prev,
               channel,
-              status: releaseDigestChannelDrafts[channel].status,
-              artifactId: releaseDigestChannelDrafts[channel].artifactId,
-              referenceId: releaseDigestChannelDrafts[channel].referenceId,
-              note: releaseDigestChannelDrafts[channel].note
+              status: ackChannelDrafts[channel].status,
+              ackCode: ackChannelDrafts[channel].ackCode,
+              referenceId: ackChannelDrafts[channel].referenceId,
+              note: ackChannelDrafts[channel].note
             })
           )
         }
       />
 
-      <article className="panel" id="filing-alert-close-report-closure-packet-release-digest-readiness">
-        <h3>Release Digest Readiness</h3>
+      <article className="panel" id="filing-alert-close-report-closure-packet-release-digest-ack-ledger-readiness">
+        <h3>Acknowledgment Ledger Readiness</h3>
         <div className={styles.controlGrid}>
-          {CLOSURE_PACKET_RELEASE_DIGEST_GATE_FIELDS.map((field) => (
+          {CLOSURE_PACKET_RELEASE_DIGEST_ACK_LEDGER_GATE_FIELDS.map((field) => (
             <label key={field.key}>
               {field.label}
               <select
@@ -317,15 +327,18 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
             </label>
           ))}
         </div>
-        <p className={`small ${summary.readyForReleaseDigest ? "ok" : "fail"}`}>
-          releaseDigestPublished {summary.releaseDigestPublished ? "yes" : "no"}, delivered{" "}
-          {summary.releaseDigestDeliveredCount}/{summary.releaseDigestTotalCount}, queued{" "}
-          {summary.releaseDigestQueuedCount}
+        <p className={`small ${summary.readyForAckLedger ? "ok" : "fail"}`}>
+          ackLedgerVerified {summary.ackLedgerVerified ? "yes" : "no"}, reconciled{" "}
+          {summary.ackChannelReconciledCount}/{summary.ackChannelTotalCount}, acknowledged{" "}
+          {summary.ackChannelAcknowledgedCount}
         </p>
         {summary.blockers.length === 0 ? (
-          <p className="small ok">Closure packet release digest is fully ready.</p>
+          <p className="small ok">Release digest acknowledgment ledger is fully ready.</p>
         ) : (
-          <ul className={styles.blockerList} aria-label="filing close report closure packet release digest blockers">
+          <ul
+            className={styles.blockerList}
+            aria-label="filing close report closure packet release digest acknowledgment ledger blockers"
+          >
             {summary.blockers.map((blocker) => (
               <li key={blocker} className="small">
                 {blocker}
