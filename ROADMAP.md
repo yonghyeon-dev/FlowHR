@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.73 (Filing Ops Checklist Retrospective Comment and Review Approval Snapshot Baseline)
+> **Current version**: 0.1.74 (Filing Ops Checklist Review Handoff and Export Snapshot Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -241,10 +241,11 @@
 - WI-0202 연말정산 신고 운영 알림 실행 체크리스트/완료 추적 baseline(`/admin/payroll-year-end-filing/ops/checklist` 전용 라우트 + 지표별 실행 체크리스트 + 완료율/완료시각 추적 + ops 대시보드 연동 링크 + e2e 갱신)
 - WI-0203 연말정산 신고 운영 체크리스트 실행 로그/검토 루프 baseline(`/admin/payroll-year-end-filing/ops/checklist/review` 전용 라우트 + 실행 로그(done/blocked/follow_up) + required 기준 stage(execute/review/close) 요약 + 체크리스트 연동 링크 + e2e 갱신)
 - WI-0204 연말정산 신고 운영 체크리스트 회고 코멘트/검토 승인 스냅샷 baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot` 전용 라우트 + retrospective 코멘트 + role별 승인결정(pending/approved/rework) + ready-to-close 스냅샷 요약 + e2e 갱신)
+- WI-0205 연말정산 신고 운영 검토 인수인계/익스포트 스냅샷 baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff` 전용 라우트 + handoff packet(from/to role, note, escalation, dueAt) + export snapshot(format/validation/checksum/artifact) + close-ready 요약 + e2e 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 검토 승인 handoff/export snapshot baseline) (WI-0205 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 close-off 패키지/감사 서명 baseline) (WI-0206 예정)
 
 ### 현재 아키텍처
 

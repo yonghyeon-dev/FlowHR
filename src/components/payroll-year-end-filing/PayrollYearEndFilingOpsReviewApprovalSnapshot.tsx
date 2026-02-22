@@ -9,6 +9,7 @@ import type { FilingOpsAlertLevel } from "@/components/payroll-year-end-filing/P
 import type { AlertMetric } from "@/components/payroll-year-end-filing/filing-alert-execution-checklist";
 import { normalizeAlertLevel, normalizeMetric, parseOptionalInt } from "@/components/payroll-year-end-filing/filing-alert-execution-checklist";
 import { buildChecklistReviewRouteHref } from "@/components/payroll-year-end-filing/filing-alert-execution-review-loop";
+import { buildReviewSnapshotHandoffRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-handoff-export-snapshot";
 import {
   applyReviewApprovalDecision,
   buildRetrospectiveCommentEntry,
@@ -117,8 +118,18 @@ export default function PayrollYearEndFilingOpsReviewApprovalSnapshot() {
     ownerRole,
     ownerActorId
   });
-
   const summary = useMemo(() => summarizeReviewApprovalSnapshot(approvals), [approvals]);
+  const handoffExportSnapshotHref = buildReviewSnapshotHandoffRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    approvedCount: summary.approvedCount,
+    pendingCount: summary.pendingCount,
+    reworkCount: summary.reworkCount,
+    totalCount: summary.totalCount
+  });
 
   function appendComment() {
     const next = buildRetrospectiveCommentEntry({
@@ -166,6 +177,9 @@ export default function PayrollYearEndFilingOpsReviewApprovalSnapshot() {
         </Link>
         <Link href={reviewLoopHref} className="btn btn-secondary btn-small">
           Back to Review Loop
+        </Link>
+        <Link href={handoffExportSnapshotHref} className="btn btn-secondary btn-small">
+          Open Handoff + Export Snapshot
         </Link>
       </div>
 
