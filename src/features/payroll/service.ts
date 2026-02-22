@@ -21,6 +21,7 @@ import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain
 import { ServiceError } from "@/features/shared/service-error";
 import { getPayrollKrIncomeTaxLookupPreset } from "@/features/payroll/kr-income-tax-lookup-presets";
 import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
+import { findPayrollKrIncomeSplitItemCodeDictionaryEntry } from "@/features/payroll/kr-income-split-item-code-dictionary";
 
 type PreviewPayrollInput = {
   periodStart: Date;
@@ -1230,6 +1231,7 @@ function normalizeStatutoryIncomeSplitItems(
 
   const normalized: StatutoryIncomeSplitItem[] = [];
   const seenCodes = new Set<string>();
+  const dictionaryKind = fieldName === "statutory.taxableIncomeItems" ? "taxable" : "non_taxable";
   for (const [index, item] of items.entries()) {
     const code = item.code.trim();
     const category = item.category.trim();
@@ -1244,10 +1246,20 @@ function normalizeStatutoryIncomeSplitItems(
     if (seenCodes.has(normalizedCode)) {
       throw new ServiceError(400, `${fieldName} contains duplicate code: ${code}`);
     }
+    const dictionaryEntry = findPayrollKrIncomeSplitItemCodeDictionaryEntry(code, dictionaryKind);
+    if (!dictionaryEntry) {
+      throw new ServiceError(400, `${fieldName}[${index}].code is not supported by dictionary: ${code}`);
+    }
+    if (category.toLowerCase() !== dictionaryEntry.category.toLowerCase()) {
+      throw new ServiceError(
+        400,
+        `${fieldName}[${index}].category must match dictionary category(${dictionaryEntry.category}) for code ${dictionaryEntry.code}`
+      );
+    }
     seenCodes.add(normalizedCode);
     normalized.push({
-      code,
-      category,
+      code: dictionaryEntry.code,
+      category: dictionaryEntry.category,
       amountKrw
     });
   }

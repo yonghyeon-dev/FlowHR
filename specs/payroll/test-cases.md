@@ -65,6 +65,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 57. Validate statutory baseline income split item preset input (`incomeSplitItemPresetId`) for supported-preset resolution and mutual exclusivity with manual item arrays.
 58. Admin payroll preview multi-item input table wires deterministic multi-row `taxableIncomeItems`/`nonTaxableIncomeItems` payload and preserves row-level validation.
 59. Admin payroll preview split-item table code input supports dictionary autocomplete and category auto-fill while preserving deterministic payload composition.
+60. Statutory baseline split-item input validates code/category pairs against server dictionary by item kind and rejects unsupported/mismatched entries.
 
 ## Accuracy Cases
 
@@ -112,6 +113,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 42. Statutory baseline income split item preset resolution and preset-backed `incomeSplitItems` output remain deterministic for same input replay.
 43. Admin multi-item split input table payload composition remains deterministic for same UI state/input replay.
 44. Admin item-code dictionary autocomplete and category auto-fill remain deterministic for same UI state/input replay.
+45. Server dictionary validation guard for split-item code/category parity remains deterministic for same invalid/valid replay vectors.
 
 ## Regression Linkage
 
@@ -141,6 +143,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Income Split Item Preset Gate: `incomeSplitItemPresetId` resolution and manual-item mutual-exclusion guard must be deterministic and validated.
 - Income Split Item Table UX Gate: `/admin` multi-item split table add/remove row wiring must compose deterministic payload with row-level validation parity.
 - Income Split Item Autocomplete Gate: `/admin` split item code dictionary autocomplete/category auto-fill must preserve deterministic payload wiring.
+- Income Split Item Dictionary Validation Gate: server must reject unsupported split-item code and category mismatch by taxable/non-taxable dictionary kind.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.

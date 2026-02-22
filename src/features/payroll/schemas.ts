@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defaultMultipliers } from "@/lib/payroll-rules";
+import { findPayrollKrIncomeSplitItemCodeDictionaryEntry } from "@/features/payroll/kr-income-split-item-code-dictionary";
 
 const isoDateTime = z.string().datetime({ offset: true });
 const nonNegativeInteger = z.number().int().min(0);
@@ -269,11 +270,43 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
         }
       }
 
+      function validateIncomeSplitItemDictionary(
+        fieldName: "taxableIncomeItems" | "nonTaxableIncomeItems",
+        kind: "taxable" | "non_taxable",
+        items: Array<{ code: string; category: string }>
+      ) {
+        for (const [index, item] of items.entries()) {
+          const dictionaryEntry = findPayrollKrIncomeSplitItemCodeDictionaryEntry(item.code, kind);
+          if (!dictionaryEntry) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["statutory", fieldName, index, "code"],
+              message: `${fieldName} code is not supported by dictionary: ${item.code}`
+            });
+            continue;
+          }
+          const normalizedCategory = item.category.trim().toLowerCase();
+          if (normalizedCategory !== dictionaryEntry.category.toLowerCase()) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["statutory", fieldName, index, "category"],
+              message: `${fieldName} category must match dictionary category(${dictionaryEntry.category}) for code ${dictionaryEntry.code}`
+            });
+          }
+        }
+      }
+
       if (taxableIncomeItems) {
         validateIncomeSplitItemCodes("taxableIncomeItems", taxableIncomeItems);
+        validateIncomeSplitItemDictionary("taxableIncomeItems", "taxable", taxableIncomeItems);
       }
       if (nonTaxableIncomeItems) {
         validateIncomeSplitItemCodes("nonTaxableIncomeItems", nonTaxableIncomeItems);
+        validateIncomeSplitItemDictionary(
+          "nonTaxableIncomeItems",
+          "non_taxable",
+          nonTaxableIncomeItems
+        );
       }
     }
   });

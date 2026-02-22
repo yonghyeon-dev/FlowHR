@@ -53,47 +53,43 @@ async function run() {
     "../../src/app/api/payroll/runs/preview-with-deductions/route.ts"
   );
 
+  const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
   const payrollRfc = readUtf8("specs", "payroll", "rfc.md");
-  const adminPage = readUtf8("src", "app", "admin", "page.tsx");
-  const itemsTableComponent = readUtf8(
-    "src",
-    "components",
-    "payroll",
-    "PayrollKrIncomeSplitItemsTable.tsx"
-  );
+  const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const payrollSchemas = readUtf8("src", "features", "payroll", "schemas.ts");
   const workItem = readUtf8(
     "work-items",
-    "WI-0226-payroll-kr-multi-item-input-table-ux.md"
+    "WI-0228-payroll-kr-item-code-dictionary-server-validation.md"
   );
 
-  assert.match(payrollContract, /WI-0226/i);
-  assert.match(payrollTestCases, /multi-item input table/i);
-  assert.match(payrollRfc, /WI-0226/i);
-  assert.match(adminPage, /PayrollKrIncomeSplitItemsTable/);
-  assert.match(adminPage, /payrollTaxableItems/);
-  assert.match(itemsTableComponent, /Add row|행 추가/);
-  assert.match(workItem, /multi-item input table UX/i);
+  assert.match(payrollApiSpec, /dictionary validation guard/i);
+  assert.match(payrollContract, /dictionary validation guard/i);
+  assert.match(payrollTestCases, /dictionary validation guard/i);
+  assert.match(payrollRfc, /WI-0228/);
+  assert.match(payrollService, /code is not supported by dictionary/);
+  assert.match(payrollSchemas, /findPayrollKrIncomeSplitItemCodeDictionaryEntry/);
+  assert.match(workItem, /server validation guard/i);
 
   resetMemoryDataAccess();
   runtimeEnv.FLOWHR_PAYROLL_DEDUCTIONS_V1 = "true";
   runtimeEnv.FLOWHR_PAYROLL_KR_BASELINE_V1 = "true";
 
-  await memoryDataAccess.employees.create({ id: "EMP-3226" });
+  await memoryDataAccess.employees.create({ id: "EMP-3228" });
 
   const createResponse = await attendanceCreateRoute.POST(
     jsonRequest(
       "POST",
       "/api/attendance/records",
       {
-        employeeId: "EMP-3226",
+        employeeId: "EMP-3228",
         checkInAt: "2026-02-16T09:00:00+09:00",
         checkOutAt: "2026-02-16T18:00:00+09:00",
         breakMinutes: 60,
         isHoliday: false
       },
-      actorHeaders("employee", "EMP-3226")
+      actorHeaders("employee", "EMP-3228")
     )
   );
   assert.equal(createResponse.status, 201);
@@ -102,7 +98,7 @@ async function run() {
   const approveResponse = await attendanceApproveRoute.POST(
     new Request(`http://localhost/api/attendance/records/${createdBody.record.id}/approve`, {
       method: "POST",
-      headers: actorHeaders("manager", "MGR-3226")
+      headers: actorHeaders("manager", "MGR-3228")
     }),
     { params: Promise.resolve({ recordId: createdBody.record.id }) } as RouteContext<{
       recordId: string;
@@ -117,84 +113,103 @@ async function run() {
       {
         periodStart: "2026-02-01T00:00:00+09:00",
         periodEnd: "2026-02-28T23:59:59+09:00",
-        employeeId: "EMP-3226",
+        employeeId: "EMP-3228",
         hourlyRateKrw: 12000,
         deductionMode: "statutory_kr_baseline",
         statutory: {
           incomeTaxLookupPresetId: "kr_simple_monthly_v2026_01",
-          taxableIncomeKrw: 86000,
-          nonTaxableIncomeKrw: 10000,
-          taxableIncomeItems: [
-            { code: "TX_SALARY", category: "salary", amountKrw: 50000 },
-            { code: "TX_BONUS", category: "bonus", amountKrw: 36000 }
-          ],
-          nonTaxableIncomeItems: [
-            { code: "NT_MEAL", category: "allowance", amountKrw: 5000 },
-            { code: "NT_COMMUTE", category: "allowance", amountKrw: 5000 }
-          ]
+          taxableIncomeItems: [{ code: "tx_salary", category: "salary", amountKrw: 86000 }],
+          nonTaxableIncomeItems: [{ code: "nt_meal", category: "allowance", amountKrw: 10000 }]
         }
       },
-      actorHeaders("payroll_operator", "PAY-3226")
+      actorHeaders("payroll_operator", "PAY-3228")
     )
   );
-  assert.equal(successResponse.status, 200, "multi-row split item payload should be accepted");
+  assert.equal(successResponse.status, 200, "dictionary-backed code casing variation should be accepted");
   const successBody = await readJson<{
     summary: {
       deductionBreakdown: {
         additional: {
           incomeSplitItems: {
-            taxableIncomeItems: Array<{ code: string }>;
-            nonTaxableIncomeItems: Array<{ code: string }>;
-            taxableIncomeItemTotalKrw: number;
-            nonTaxableIncomeItemTotalKrw: number;
+            taxableIncomeItems: Array<{ code: string; category: string }>;
+            nonTaxableIncomeItems: Array<{ code: string; category: string }>;
           };
         };
       };
     };
   }>(successResponse);
   assert.equal(
-    successBody.summary.deductionBreakdown.additional.incomeSplitItems.taxableIncomeItems.length,
-    2
+    successBody.summary.deductionBreakdown.additional.incomeSplitItems.taxableIncomeItems[0]?.code,
+    "TX_SALARY"
   );
   assert.equal(
-    successBody.summary.deductionBreakdown.additional.incomeSplitItems.nonTaxableIncomeItems.length,
-    2
-  );
-  assert.equal(
-    successBody.summary.deductionBreakdown.additional.incomeSplitItems.taxableIncomeItemTotalKrw,
-    86000
-  );
-  assert.equal(
-    successBody.summary.deductionBreakdown.additional.incomeSplitItems.nonTaxableIncomeItemTotalKrw,
-    10000
+    successBody.summary.deductionBreakdown.additional.incomeSplitItems.nonTaxableIncomeItems[0]
+      ?.code,
+    "NT_MEAL"
   );
 
-  const invalidRowResponse = await payrollPreviewWithDeductionsRoute.POST(
+  const unsupportedCodeResponse = await payrollPreviewWithDeductionsRoute.POST(
     jsonRequest(
       "POST",
       "/api/payroll/runs/preview-with-deductions",
       {
         periodStart: "2026-02-01T00:00:00+09:00",
         periodEnd: "2026-02-28T23:59:59+09:00",
-        employeeId: "EMP-3226",
+        employeeId: "EMP-3228",
         hourlyRateKrw: 12000,
         deductionMode: "statutory_kr_baseline",
         statutory: {
-          taxableIncomeItems: [{ code: "TX_INVALID", category: "", amountKrw: 86000 }],
+          taxableIncomeItems: [{ code: "TX_UNKNOWN", category: "salary", amountKrw: 86000 }],
           nonTaxableIncomeItems: [{ code: "NT_MEAL", category: "allowance", amountKrw: 10000 }]
         }
       },
-      actorHeaders("payroll_operator", "PAY-3226")
+      actorHeaders("payroll_operator", "PAY-3228")
     )
   );
-  assert.equal(invalidRowResponse.status, 400, "blank category row should be rejected");
-  const invalidRowBody = await readJson<{ error: string }>(invalidRowResponse);
-  assert.equal(invalidRowBody.error, "invalid payload");
+  assert.equal(unsupportedCodeResponse.status, 400, "unsupported dictionary code should be rejected");
+  const unsupportedCodeBody = await readJson<{
+    error: string;
+    details?: { formErrors?: string[]; fieldErrors?: Record<string, string[]> };
+  }>(unsupportedCodeResponse);
+  assert.equal(unsupportedCodeBody.error, "invalid payload");
+  assert.match(
+    JSON.stringify(unsupportedCodeBody.details ?? {}),
+    /code is not supported by dictionary/i
+  );
+
+  const categoryMismatchResponse = await payrollPreviewWithDeductionsRoute.POST(
+    jsonRequest(
+      "POST",
+      "/api/payroll/runs/preview-with-deductions",
+      {
+        periodStart: "2026-02-01T00:00:00+09:00",
+        periodEnd: "2026-02-28T23:59:59+09:00",
+        employeeId: "EMP-3228",
+        hourlyRateKrw: 12000,
+        deductionMode: "statutory_kr_baseline",
+        statutory: {
+          taxableIncomeItems: [{ code: "TX_SALARY", category: "bonus", amountKrw: 86000 }],
+          nonTaxableIncomeItems: [{ code: "NT_MEAL", category: "allowance", amountKrw: 10000 }]
+        }
+      },
+      actorHeaders("payroll_operator", "PAY-3228")
+    )
+  );
+  assert.equal(categoryMismatchResponse.status, 400, "category mismatch should be rejected");
+  const categoryMismatchBody = await readJson<{
+    error: string;
+    details?: { formErrors?: string[]; fieldErrors?: Record<string, string[]> };
+  }>(categoryMismatchResponse);
+  assert.equal(categoryMismatchBody.error, "invalid payload");
+  assert.match(
+    JSON.stringify(categoryMismatchBody.details ?? {}),
+    /category must match dictionary category/i
+  );
 }
 
 run()
   .then(() => {
-    console.log("e2e-wi0226-payroll-kr-multi-item-input-table-ux.test passed");
+    console.log("e2e-wi0228-payroll-kr-item-code-dictionary-server-validation.test passed");
   })
   .catch((error) => {
     console.error(error);

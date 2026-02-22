@@ -1,8 +1,8 @@
-# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 + WI-0105 + WI-0106 + WI-0110 + WI-0220 + WI-0221 + WI-0223 + WI-0224 + WI-0225 + WI-0226 + WI-0227 Contract)
+# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 + WI-0105 + WI-0106 + WI-0110 + WI-0220 + WI-0221 + WI-0223 + WI-0224 + WI-0225 + WI-0226 + WI-0227 + WI-0228 Contract)
 
 ## Goal
 
-Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode with progressive/lookup-table/preset/cap/tax-credit/month-boundary/insurance-rounding/taxable-split/item-code/item-preset options and admin multi-item input table plus code-dictionary autocomplete wiring.
+Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode with progressive/lookup-table/preset/cap/tax-credit/month-boundary/insurance-rounding/taxable-split/item-code/item-preset options, admin multi-item input table plus code-dictionary autocomplete wiring, and server-side code/category dictionary validation guard.
 
 ## Key Decisions
 
@@ -23,6 +23,7 @@ Provide payroll gross pay preview based on attendance aggregates, phase2 deducti
 - WI-0225 extends statutory baseline with optional income split item preset ID (`incomeSplitItemPresetId`) and server-managed code/category template application guard.
 - WI-0226 upgrades admin payroll preview to multi-item split input table UX while preserving WI-0224/0225 split-item contract compatibility.
 - WI-0227 upgrades admin payroll split-item input with dictionary-backed code autocomplete and category auto-fill UX while preserving existing payload contract.
+- WI-0228 validates manual split-item code/category pairs against server dictionary by taxable/non-taxable kind and normalizes accepted values for deterministic replay.
 
 ## Non-Goals
 
