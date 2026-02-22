@@ -447,6 +447,53 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+.alert-execution-controls {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.filing-alert-checklist-row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #f8fbff;
+}
+
+.filing-alert-checklist-row.done {
+  border-color: #2f8758;
+  background: #effaf3;
+}
+
+.filing-alert-checklist-toggle {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.filing-alert-checklist-toggle input {
+  margin-top: 4px;
+}
+
+.filing-alert-checklist-badge {
+  display: inline-block;
+  margin-top: 4px;
+  border: 1px solid #c6d5f1;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  color: #2a4f8d;
+  background: #edf3ff;
+}
+
+.filing-alert-checklist-badge.optional {
+  border-color: #d8dbe1;
+  color: #5b6678;
+  background: #f5f7fb;
+}
+
 .summary-grid {
   display: grid;
   gap: 10px;

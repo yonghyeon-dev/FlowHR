@@ -1293,6 +1293,16 @@ export default function PayrollYearEndFilingOpsDashboard() {
                     >
                       Focus Queue Slice
                     </button>
+                    <Link
+                      className="btn btn-secondary btn-small"
+                      href={`/admin/payroll-year-end-filing/ops/checklist?metric=${row.metric}&level=${
+                        row.level
+                      }&value=${row.value}&ownerRole=${row.ownerRole}&ownerActorId=${encodeURIComponent(
+                        row.ownerActorId
+                      )}`}
+                    >
+                      Open Checklist
+                    </Link>
                   </div>
                 </li>
               ))}
