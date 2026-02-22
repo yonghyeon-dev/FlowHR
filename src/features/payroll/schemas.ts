@@ -50,6 +50,7 @@ const statutoryKrBaselineSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
   incomeTaxBrackets: z.array(statutoryIncomeTaxBracketSchema).min(1).optional(),
   incomeTaxLookupTable: z.array(statutoryIncomeTaxLookupRowSchema).min(1).optional(),
+  incomeTaxLookupPresetId: z.string().min(1).max(80).optional(),
   additionalTaxCreditKrw: nonNegativeInteger.default(0),
   dependentCount: nonNegativeInteger.default(0),
   dependentTaxCreditPerPersonKrw: nonNegativeInteger.default(0),
@@ -139,11 +140,26 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
     if (value.deductionMode === "statutory_kr_baseline") {
       const brackets = value.statutory?.incomeTaxBrackets;
       const lookupTable = value.statutory?.incomeTaxLookupTable;
+      const lookupPresetId = value.statutory?.incomeTaxLookupPresetId;
       if (brackets && lookupTable) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["statutory"],
           message: "incomeTaxBrackets and incomeTaxLookupTable are mutually exclusive"
+        });
+      }
+      if (brackets && lookupPresetId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["statutory"],
+          message: "incomeTaxBrackets and incomeTaxLookupPresetId are mutually exclusive"
+        });
+      }
+      if (lookupTable && lookupPresetId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["statutory"],
+          message: "incomeTaxLookupTable and incomeTaxLookupPresetId are mutually exclusive"
         });
       }
       if (brackets) {
@@ -177,6 +193,7 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
       }
       if (lookupTable) {
         let lastFiniteUpper = -1;
+        let lastTaxKrw = -1;
         for (const [index, row] of lookupTable.entries()) {
           if (row.upToKrw === null) {
             if (index !== lookupTable.length - 1) {
@@ -195,6 +212,14 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
           } else {
             lastFiniteUpper = row.upToKrw;
           }
+          if (row.taxKrw < lastTaxKrw) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["statutory", "incomeTaxLookupTable", index, "taxKrw"],
+              message: "incomeTaxLookupTable taxKrw values must be non-decreasing"
+            });
+          }
+          lastTaxKrw = row.taxKrw;
         }
         if (lookupTable[lookupTable.length - 1]?.upToKrw !== null) {
           ctx.addIssue({

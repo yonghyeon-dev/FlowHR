@@ -19,6 +19,7 @@ import type {
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
+import { getPayrollKrIncomeTaxLookupPreset } from "@/features/payroll/kr-income-tax-lookup-presets";
 
 type PreviewPayrollInput = {
   periodStart: Date;
@@ -56,6 +57,7 @@ type StatutoryKrBaselineDeductions = {
       upToKrw: number | null;
       taxKrw: number;
     }>;
+    incomeTaxLookupPresetId?: string;
     additionalTaxCreditKrw: number;
     dependentCount: number;
     dependentTaxCreditPerPersonKrw: number;
@@ -1151,9 +1153,18 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
 
   const normalized: IncomeTaxLookupRow[] = [];
   let lastFiniteUpper = -1;
+  let lastTaxKrw = -1;
   let hasOpenEnded = false;
   for (const [index, row] of lookupTable.entries()) {
     const taxKrw = toKrwInteger(row.taxKrw, `statutory.incomeTaxLookupTable[${index}].taxKrw`);
+    if (taxKrw < lastTaxKrw) {
+      throw new ServiceError(
+        400,
+        "statutory.incomeTaxLookupTable taxKrw must be non-decreasing"
+      );
+    }
+    lastTaxKrw = taxKrw;
+
     if (row.upToKrw === null) {
       if (index !== lookupTable.length - 1) {
         throw new ServiceError(
@@ -1563,13 +1574,35 @@ export async function previewPayrollWithDeductions(
     const incomeTaxRate =
       toRateNumber(input.statutory?.incomeTaxRate ?? 0.03, "statutory.incomeTaxRate") ?? 0;
     const incomeTaxBrackets = normalizeIncomeTaxBrackets(input.statutory?.incomeTaxBrackets);
-    const incomeTaxLookupTable = normalizeIncomeTaxLookupTable(input.statutory?.incomeTaxLookupTable);
-    if (incomeTaxBrackets && incomeTaxLookupTable) {
+    const requestedIncomeTaxLookupTable = normalizeIncomeTaxLookupTable(
+      input.statutory?.incomeTaxLookupTable
+    );
+    const incomeTaxLookupPresetId = input.statutory?.incomeTaxLookupPresetId?.trim() || null;
+    const incomeTaxLookupPreset = incomeTaxLookupPresetId
+      ? getPayrollKrIncomeTaxLookupPreset(incomeTaxLookupPresetId)
+      : null;
+    if (incomeTaxLookupPresetId && !incomeTaxLookupPreset) {
       throw new ServiceError(
         400,
-        "statutory.incomeTaxBrackets and statutory.incomeTaxLookupTable are mutually exclusive"
+        `statutory.incomeTaxLookupPresetId is not supported: ${incomeTaxLookupPresetId}`
       );
     }
+    const presetIncomeTaxLookupTable = normalizeIncomeTaxLookupTable(incomeTaxLookupPreset?.rows);
+    if (
+      (incomeTaxBrackets && requestedIncomeTaxLookupTable) ||
+      (incomeTaxBrackets && presetIncomeTaxLookupTable) ||
+      (requestedIncomeTaxLookupTable && presetIncomeTaxLookupTable)
+    ) {
+      throw new ServiceError(
+        400,
+        "statutory.incomeTaxBrackets/statutory.incomeTaxLookupTable/statutory.incomeTaxLookupPresetId are mutually exclusive"
+      );
+    }
+    const incomeTaxLookupTable =
+      requestedIncomeTaxLookupTable ?? presetIncomeTaxLookupTable ?? null;
+    const incomeTaxLookupTableChecksum = incomeTaxLookupTable
+      ? createHash("sha256").update(JSON.stringify(incomeTaxLookupTable)).digest("hex")
+      : null;
     const localIncomeTaxRate =
       toRateNumber(input.statutory?.localIncomeTaxRate ?? 0.1, "statutory.localIncomeTaxRate") ??
       0;
@@ -1599,7 +1632,9 @@ export async function previewPayrollWithDeductions(
 
     const taxableBaseKrw = Math.max(computed.grossPayKrw - nonTaxableIncomeKrw, 0);
     const taxMethod = incomeTaxLookupTable
-      ? "simple_lookup_table"
+      ? incomeTaxLookupPreset
+        ? "simple_lookup_table_preset"
+        : "simple_lookup_table"
       : incomeTaxBrackets
         ? "progressive_brackets"
         : "flat_rate";
@@ -1684,6 +1719,15 @@ export async function previewPayrollWithDeductions(
       taxableBaseKrw,
       incomeTaxBrackets: incomeTaxBrackets,
       incomeTaxLookupTable: incomeTaxLookupTable,
+      incomeTaxLookupTableChecksum,
+      incomeTaxLookupPreset: incomeTaxLookupPreset
+        ? {
+            id: incomeTaxLookupPreset.id,
+            label: incomeTaxLookupPreset.label,
+            effectiveFrom: incomeTaxLookupPreset.effectiveFrom,
+            source: incomeTaxLookupPreset.source
+          }
+        : null,
       selectedIncomeTaxLookupRow,
       contributionBasesKrw: {
         nationalPensionBaseKrw,
