@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.75 (Filing Ops Close-off Package and Audit Sign-off Baseline)
+> **Current version**: 0.1.76 (Filing Ops Close-off Approval Routing and Delivery Signature Bundle Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -243,10 +243,11 @@
 - WI-0204 연말정산 신고 운영 체크리스트 회고 코멘트/검토 승인 스냅샷 baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot` 전용 라우트 + retrospective 코멘트 + role별 승인결정(pending/approved/rework) + ready-to-close 스냅샷 요약 + e2e 갱신)
 - WI-0205 연말정산 신고 운영 검토 인수인계/익스포트 스냅샷 baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff` 전용 라우트 + handoff packet(from/to role, note, escalation, dueAt) + export snapshot(format/validation/checksum/artifact) + close-ready 요약 + e2e 갱신)
 - WI-0206 연말정산 신고 운영 close-off 패키지/감사 서명 baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off` 전용 라우트 + audit sign-off grid(pending/signed/rejected) + archive package(bundle id, note) + ready-to-archive blocker 요약 + e2e 갱신)
+- WI-0207 연말정산 신고 운영 close-off 승인 라우팅/전달 서명 번들 baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature` 전용 라우트 + approval routing stage(status/owner/eta) + delivery signature channel(status/signer/reference) + ready-to-deliver blocker 요약 + e2e 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 close-off 패키지 승인 라우팅/전달 서명 번들 baseline) (WI-0207 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 전달 패키지 lock/final handover baseline) (WI-0208 예정)
 
 ### 현재 아키텍처
 
