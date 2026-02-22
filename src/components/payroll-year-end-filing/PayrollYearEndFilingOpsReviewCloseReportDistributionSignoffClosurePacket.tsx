@@ -25,6 +25,7 @@ import {
   type ClosurePacketDispatchChannel,
   type ClosurePacketDispatchEntry
 } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet";
+import { buildCloseReportDistributionSignoffClosurePacketReleaseDigestRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-close-report-distribution-signoff-closure-packet-release-digest";
 import {
   buildClosurePacketDispatchDraftMap,
   buildCloseReportDistributionSignoffClosurePacketGateState,
@@ -200,6 +201,28 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
     closeReportPublished: gates.closeReportPublished,
     publicationReady: gates.publicationReady
   });
+  const releaseDigestHref = buildCloseReportDistributionSignoffClosurePacketReleaseDigestRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    handoffReady: summary.handoffReady,
+    exportReady: summary.exportReady,
+    archiveReady: summary.archiveReady,
+    routingReady: summary.routingReady,
+    signatureReady: summary.signatureReady,
+    packageLocked: summary.packageLocked,
+    handoverAcknowledged: summary.handoverAcknowledged,
+    receiptVerified: summary.receiptVerified,
+    digestReady: summary.digestReady,
+    closeReportPublished: summary.closeReportPublished,
+    publicationReady: summary.publicationReady,
+    distributionReady: summary.distributionReady,
+    signoffReady: summary.signoffReady,
+    closurePacketSealed: summary.closurePacketSealed,
+    dispatchReady: summary.dispatchReady
+  });
 
   return (
     <section className="panel" id="filing-alert-close-report-distribution-signoff-closure-packet-hub">
@@ -211,6 +234,9 @@ export default function PayrollYearEndFilingOpsReviewCloseReportDistributionSign
         </Link>
         <Link href={distributionSignoffHref} className="btn btn-secondary btn-small">
           Back to Distribution Sign-off
+        </Link>
+        <Link href={releaseDigestHref} className="btn btn-secondary btn-small">
+          Open Release Digest
         </Link>
       </div>
 
