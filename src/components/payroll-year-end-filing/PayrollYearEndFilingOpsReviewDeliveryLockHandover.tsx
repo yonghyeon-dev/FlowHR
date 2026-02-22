@@ -25,6 +25,7 @@ import {
   type FinalHandoverRecord,
   type FinalHandoverStatus
 } from "@/components/payroll-year-end-filing/filing-alert-review-delivery-lock-handover";
+import { buildDeliveryLockCompletionReceiptRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-completion-receipt-archive-digest";
 import { buildCloseOffRoutingSignatureBundleRouteHref } from "@/components/payroll-year-end-filing/filing-alert-review-routing-signature-bundle";
 import type { ReviewHandoffRole } from "@/components/payroll-year-end-filing/filing-alert-review-handoff-export-snapshot";
 
@@ -214,6 +215,20 @@ export default function PayrollYearEndFilingOpsReviewDeliveryLockHandover() {
       }),
     [lockEntry, handoverRecord, handoffReady, exportReady, archiveReady, routingReady, signatureReady]
   );
+  const completionReceiptHref = buildDeliveryLockCompletionReceiptRouteHref({
+    metric,
+    level,
+    value: currentValue,
+    ownerRole,
+    ownerActorId,
+    handoffReady: summary.handoffReady,
+    exportReady: summary.exportReady,
+    archiveReady: summary.archiveReady,
+    routingReady: summary.routingReady,
+    signatureReady: summary.signatureReady,
+    packageLocked: summary.packageLocked,
+    handoverAcknowledged: summary.handoverAcknowledged
+  });
 
   function applyLock() {
     setLockEntry((prev) =>
@@ -251,6 +266,9 @@ export default function PayrollYearEndFilingOpsReviewDeliveryLockHandover() {
         </Link>
         <Link href={routingSignatureHref} className="btn btn-secondary btn-small">
           Back to Routing + Signature Bundle
+        </Link>
+        <Link href={completionReceiptHref} className="btn btn-secondary btn-small">
+          Open Completion Receipt + Archive Digest
         </Link>
       </div>
 
