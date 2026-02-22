@@ -429,6 +429,24 @@ textarea:focus {
   font-weight: 700;
 }
 
+.alert-response-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.alert-owner-grid {
+  min-width: 320px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.alert-owner-grid .btn {
+  grid-column: 1 / -1;
+}
+
 .summary-grid {
   display: grid;
   gap: 10px;

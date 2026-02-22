@@ -56,6 +56,7 @@ type DrilldownPreset = {
 
 type AlertMetric = "pending" | "rejected" | "validationFail" | "evidenceGap" | "timelineFailure";
 export type FilingOpsAlertLevel = "normal" | "watch" | "critical";
+type FilingOpsAlertOwnerRole = "payroll_operator" | "manager" | "admin";
 
 type FilingOpsAlertRule = {
   metric: AlertMetric;
@@ -65,6 +66,34 @@ type FilingOpsAlertRule = {
   watchThreshold: number;
   criticalThreshold: number;
   level: FilingOpsAlertLevel;
+};
+
+type FilingOpsAlertOwnerAssignment = {
+  ownerRole: FilingOpsAlertOwnerRole;
+  ownerActorId: string;
+};
+
+type FilingOpsAlertResponseGuide = {
+  metric: AlertMetric;
+  watchAction: string;
+  criticalAction: string;
+  escalationPath: string;
+  targetFollowUpHours: number;
+  defaultOwnerRole: FilingOpsAlertOwnerRole;
+  defaultOwnerActorId: string;
+};
+
+type FilingOpsAlertResponseRow = {
+  metric: AlertMetric;
+  label: string;
+  level: FilingOpsAlertLevel;
+  value: number;
+  responseAction: string;
+  escalationPath: string;
+  targetFollowUpHours: number;
+  ownerRole: FilingOpsAlertOwnerRole;
+  ownerActorId: string;
+  unassigned: boolean;
 };
 
 const MAX_EVIDENCE_SCAN_LIMIT = 50;
@@ -96,6 +125,87 @@ const DRILLDOWN_PRESETS: DrilldownPreset[] = [
   { mode: "evidence_gap", label: "Evidence Gap", description: "rows without note evidence" },
   { mode: "timeline_failure", label: "Timeline Failures", description: "timeline lookup failed rows" }
 ];
+
+const ALERT_RESPONSE_GUIDES: Record<AlertMetric, FilingOpsAlertResponseGuide> = {
+  pending: {
+    metric: "pending",
+    watchAction: "triage top pending rows and verify submission metadata before EOD",
+    criticalAction: "declare pending queue incident and clear highest-attempt rows first",
+    escalationPath: "payroll-ops -> manager on duty",
+    targetFollowUpHours: 8,
+    defaultOwnerRole: "payroll_operator",
+    defaultOwnerActorId: "PAY-QUEUE-OWNER"
+  },
+  rejected: {
+    metric: "rejected",
+    watchAction: "verify reject reason and prepare corrected resubmission package",
+    criticalAction: "open rejection war-room and assign retry owner immediately",
+    escalationPath: "payroll-ops -> tax-reporting manager",
+    targetFollowUpHours: 4,
+    defaultOwnerRole: "manager",
+    defaultOwnerActorId: "MGR-FILING-RETRY"
+  },
+  validationFail: {
+    metric: "validationFail",
+    watchAction: "inspect strict validation issues and patch artifact fields",
+    criticalAction: "block new submissions until validation fail root-cause is resolved",
+    escalationPath: "payroll-ops -> platform payroll lead",
+    targetFollowUpHours: 2,
+    defaultOwnerRole: "manager",
+    defaultOwnerActorId: "MGR-VALIDATION-GATE"
+  },
+  evidenceGap: {
+    metric: "evidenceGap",
+    watchAction: "append submission or acknowledgement note for missing evidence rows",
+    criticalAction: "freeze ACK processing and backfill missing evidence trace first",
+    escalationPath: "payroll-ops -> compliance owner",
+    targetFollowUpHours: 6,
+    defaultOwnerRole: "payroll_operator",
+    defaultOwnerActorId: "PAY-EVIDENCE-TRACE"
+  },
+  timelineFailure: {
+    metric: "timelineFailure",
+    watchAction: "retry timeline lookup and verify actor header/tenant scope",
+    criticalAction: "escalate timeline API incident and fail-open manual trace log",
+    escalationPath: "payroll-ops -> admin incident commander",
+    targetFollowUpHours: 1,
+    defaultOwnerRole: "admin",
+    defaultOwnerActorId: "ADM-TIMELINE-IC"
+  }
+};
+
+const DEFAULT_ALERT_OWNER_ASSIGNMENTS: Record<AlertMetric, FilingOpsAlertOwnerAssignment> = {
+  pending: {
+    ownerRole: ALERT_RESPONSE_GUIDES.pending.defaultOwnerRole,
+    ownerActorId: ALERT_RESPONSE_GUIDES.pending.defaultOwnerActorId
+  },
+  rejected: {
+    ownerRole: ALERT_RESPONSE_GUIDES.rejected.defaultOwnerRole,
+    ownerActorId: ALERT_RESPONSE_GUIDES.rejected.defaultOwnerActorId
+  },
+  validationFail: {
+    ownerRole: ALERT_RESPONSE_GUIDES.validationFail.defaultOwnerRole,
+    ownerActorId: ALERT_RESPONSE_GUIDES.validationFail.defaultOwnerActorId
+  },
+  evidenceGap: {
+    ownerRole: ALERT_RESPONSE_GUIDES.evidenceGap.defaultOwnerRole,
+    ownerActorId: ALERT_RESPONSE_GUIDES.evidenceGap.defaultOwnerActorId
+  },
+  timelineFailure: {
+    ownerRole: ALERT_RESPONSE_GUIDES.timelineFailure.defaultOwnerRole,
+    ownerActorId: ALERT_RESPONSE_GUIDES.timelineFailure.defaultOwnerActorId
+  }
+};
+
+function copyDefaultAlertOwnerAssignments(): Record<AlertMetric, FilingOpsAlertOwnerAssignment> {
+  return {
+    pending: { ...DEFAULT_ALERT_OWNER_ASSIGNMENTS.pending },
+    rejected: { ...DEFAULT_ALERT_OWNER_ASSIGNMENTS.rejected },
+    validationFail: { ...DEFAULT_ALERT_OWNER_ASSIGNMENTS.validationFail },
+    evidenceGap: { ...DEFAULT_ALERT_OWNER_ASSIGNMENTS.evidenceGap },
+    timelineFailure: { ...DEFAULT_ALERT_OWNER_ASSIGNMENTS.timelineFailure }
+  };
+}
 
 function parseRequiredInt(value: string, fieldName: string) {
   const parsed = Number(value);
@@ -143,6 +253,16 @@ function formatAlertLevelLabel(level: FilingOpsAlertLevel) {
   return "NORMAL";
 }
 
+function alertLevelPriority(level: FilingOpsAlertLevel) {
+  if (level === "critical") {
+    return 2;
+  }
+  if (level === "watch") {
+    return 1;
+  }
+  return 0;
+}
+
 export function resolveFilingOpsAlertLevel(
   value: number,
   watchThreshold: number,
@@ -185,6 +305,65 @@ export function collectFilingOpsDrilldownRows(options: {
   return options.submissions.filter((submission) => timelineFailureIds.has(submission.submissionId));
 }
 
+export function resolveDrilldownModeFromAlertMetric(metric: AlertMetric): DrilldownMode {
+  if (metric === "pending") {
+    return "pending";
+  }
+  if (metric === "rejected") {
+    return "rejected";
+  }
+  if (metric === "validationFail") {
+    return "validation_fail";
+  }
+  if (metric === "evidenceGap") {
+    return "evidence_gap";
+  }
+  return "timeline_failure";
+}
+
+export function buildFilingOpsAlertResponseRows(options: {
+  alertRules: FilingOpsAlertRule[];
+  ownerAssignments: Record<AlertMetric, FilingOpsAlertOwnerAssignment>;
+}) {
+  const rows = options.alertRules.map((rule) => {
+    const guide = ALERT_RESPONSE_GUIDES[rule.metric];
+    const owner = options.ownerAssignments[rule.metric] ?? {
+      ownerRole: guide.defaultOwnerRole,
+      ownerActorId: guide.defaultOwnerActorId
+    };
+    const responseAction =
+      rule.level === "critical"
+        ? guide.criticalAction
+        : rule.level === "watch"
+          ? guide.watchAction
+          : "monitor metric and keep routine filing checks";
+    const ownerActorId = owner.ownerActorId.trim();
+    return {
+      metric: rule.metric,
+      label: rule.label,
+      level: rule.level,
+      value: rule.value,
+      responseAction,
+      escalationPath: guide.escalationPath,
+      targetFollowUpHours: guide.targetFollowUpHours,
+      ownerRole: owner.ownerRole,
+      ownerActorId,
+      unassigned: ownerActorId.length === 0
+    } satisfies FilingOpsAlertResponseRow;
+  });
+
+  return rows.sort((left, right) => {
+    const levelDiff = alertLevelPriority(right.level) - alertLevelPriority(left.level);
+    if (levelDiff !== 0) {
+      return levelDiff;
+    }
+    if (left.value !== right.value) {
+      return right.value - left.value;
+    }
+    return left.label.localeCompare(right.label);
+  });
+}
+
 export default function PayrollYearEndFilingOpsDashboard() {
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
@@ -218,6 +397,8 @@ export default function PayrollYearEndFilingOpsDashboard() {
   const [timelineFailureCriticalThresholdInput, setTimelineFailureCriticalThresholdInput] = useState("1");
 
   const [drilldownMode, setDrilldownMode] = useState<DrilldownMode>("pending");
+  const [alertOwnerAssignments, setAlertOwnerAssignments] =
+    useState<Record<AlertMetric, FilingOpsAlertOwnerAssignment>>(copyDefaultAlertOwnerAssignments());
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [submissionListSummary, setSubmissionListSummary] =
@@ -432,6 +613,23 @@ export default function PayrollYearEndFilingOpsDashboard() {
     }
     return "normal";
   }, [alertRules]);
+
+  const alertResponseRows = useMemo(() => {
+    return buildFilingOpsAlertResponseRows({
+      alertRules,
+      ownerAssignments: alertOwnerAssignments
+    });
+  }, [alertRules, alertOwnerAssignments]);
+
+  const activeAlertResponseRows = useMemo(
+    () => alertResponseRows.filter((row) => row.level !== "normal"),
+    [alertResponseRows]
+  );
+
+  const activeAlertUnassignedCount = useMemo(
+    () => activeAlertResponseRows.filter((row) => row.unassigned).length,
+    [activeAlertResponseRows]
+  );
 
   function appendLog(label: string, status: number, ok: boolean) {
     setLogs((prev) => [
@@ -664,6 +862,30 @@ export default function PayrollYearEndFilingOpsDashboard() {
     setSubmissionStatusFilter("all");
     setSubmissionAckStatusFilter("all");
     setSubmissionValidationStatusFilter("all");
+  }
+
+  function updateAlertOwnerRole(metric: AlertMetric, ownerRole: FilingOpsAlertOwnerRole) {
+    setAlertOwnerAssignments((previous) => ({
+      ...previous,
+      [metric]: {
+        ...previous[metric],
+        ownerRole
+      }
+    }));
+  }
+
+  function updateAlertOwnerActorId(metric: AlertMetric, ownerActorId: string) {
+    setAlertOwnerAssignments((previous) => ({
+      ...previous,
+      [metric]: {
+        ...previous[metric],
+        ownerActorId
+      }
+    }));
+  }
+
+  function resetAlertOwnerAssignments() {
+    setAlertOwnerAssignments(copyDefaultAlertOwnerAssignments());
   }
 
   function resetFilters() {
@@ -1005,6 +1227,77 @@ export default function PayrollYearEndFilingOpsDashboard() {
               </li>
             ))}
           </ul>
+        </article>
+
+        <article className="panel" id="filing-alert-response-guide">
+          <h2>Filing Alert Response Guide and Owners</h2>
+          <p className="small">
+            active alerts {activeAlertResponseRows.length} / unassigned owners {activeAlertUnassignedCount}
+          </p>
+          <div className="panel-actions">
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={resetAlertOwnerAssignments}
+              disabled={pendingLabel !== null}
+            >
+              Reset Owner Template
+            </button>
+          </div>
+          {alertResponseRows.length === 0 ? (
+            <p className="small">No alert response rows.</p>
+          ) : (
+            <ul className="simple-list" aria-label="filing alert response guide list">
+              {alertResponseRows.map((row) => (
+                <li key={row.metric} className="alert-response-row">
+                  <div>
+                    <strong>
+                      {row.label}: {formatAlertLevelLabel(row.level)} ({row.value})
+                    </strong>
+                    <p className="small">
+                      action: {row.responseAction} / escalate: {row.escalationPath} / follow-up within{" "}
+                      {row.targetFollowUpHours}h
+                    </p>
+                    <p className={`small ${row.unassigned ? "fail" : "ok"}`}>
+                      owner {row.unassigned ? "unassigned" : `${row.ownerRole}:${row.ownerActorId}`}
+                    </p>
+                  </div>
+                  <div className="alert-owner-grid">
+                    <label>
+                      Owner Role
+                      <select
+                        value={row.ownerRole}
+                        onChange={(event) =>
+                          updateAlertOwnerRole(
+                            row.metric,
+                            event.target.value as FilingOpsAlertOwnerRole
+                          )
+                        }
+                      >
+                        <option value="payroll_operator">payroll_operator</option>
+                        <option value="manager">manager</option>
+                        <option value="admin">admin</option>
+                      </select>
+                    </label>
+                    <label>
+                      Owner Actor ID
+                      <input
+                        value={row.ownerActorId}
+                        onChange={(event) => updateAlertOwnerActorId(row.metric, event.target.value)}
+                        placeholder="ASSIGNEE-1001"
+                      />
+                    </label>
+                    <button
+                      className="btn btn-secondary btn-small"
+                      onClick={() => applyDrilldownMode(resolveDrilldownModeFromAlertMetric(row.metric))}
+                      disabled={pendingLabel !== null}
+                    >
+                      Focus Queue Slice
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
 
         <article className="panel" id="filing-ops-drilldown">
