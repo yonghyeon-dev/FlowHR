@@ -42,6 +42,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin/payroll-year-end">{t("admin.nav.yearEnd")}</Link>
           <Link href="/admin/payroll-year-end-filing">{t("admin.nav.yearEndFiling")}</Link>
           <Link href="/admin/payroll-year-end-filing/ops">{t("admin.nav.yearEndFilingOps")}</Link>
+          <Link href="/admin/payroll-year-end-filing/ops/checklist">
+            {t("admin.nav.yearEndFilingOpsChecklist")}
+          </Link>
           <Link href="/admin/people">{t("admin.nav.people")}</Link>
           <Link href="/admin/contracts">{t("admin.nav.contracts")}</Link>
           <Link href="/admin/approval-policy">{t("admin.nav.approvalPolicy")}</Link>

@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-21
-> **Current version**: 0.1.70 (Filing Ops Alert Response Guide and Owner Assignment Baseline)
+> **Current version**: 0.1.71 (Filing Ops Alert Execution Checklist and Completion Tracking Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -238,10 +238,11 @@
 - WI-0199 급여 연말정산 신고 패키지 운영 대시보드 드릴다운/경고 규칙 baseline(`/admin/payroll-year-end-filing/ops` 드릴다운 모드(pending/rejected/validation/evidence-gap/timeline-failure) + 임계치 기반 alert severity(WATCH/CRITICAL) + 필터 프리셋 연동 + e2e/spec 갱신)
 - WI-0200 브라우저 로케일 기반 UI 언어 동적 적용 baseline(`Accept-Language` 기반 locale 결정 + `html lang` 동적 반영 + `/`, `/login`, `/admin`/`/employee` shell/`SessionMenu` i18n + e2e 갱신)
 - WI-0201 연말정산 신고 운영 대시보드 알림 대응 가이드/소유자 할당 baseline(`/admin/payroll-year-end-filing/ops` 지표별 대응 액션(watch/critical) + 에스컬레이션 경로 + owner(role/actor) 할당 + 드릴다운 점프 + e2e 갱신)
+- WI-0202 연말정산 신고 운영 알림 실행 체크리스트/완료 추적 baseline(`/admin/payroll-year-end-filing/ops/checklist` 전용 라우트 + 지표별 실행 체크리스트 + 완료율/완료시각 추적 + ops 대시보드 연동 링크 + e2e 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 대시보드 알림 실행 체크리스트/완료 추적 baseline) (WI-0202 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 알림 체크리스트 실행 로그/검토 루프 baseline) (WI-0203 예정)
 
 ### 현재 아키텍처
 
