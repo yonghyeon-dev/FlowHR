@@ -16,6 +16,7 @@ type PayrollKrIncomeSplitItemFieldsProps = {
   onNonTaxableCategoryChange: (nextValue: string) => void;
   nonTaxableAmountKrw: string;
   onNonTaxableAmountKrwChange: (nextValue: string) => void;
+  disabled?: boolean;
 };
 
 type IncomeSplitItemCopy = {
@@ -25,6 +26,7 @@ type IncomeSplitItemCopy = {
   categoryLabel: string;
   amountLabel: string;
   guide: string;
+  disabledGuide: string;
 };
 
 const incomeSplitItemCopy: Record<FlowLocale, IncomeSplitItemCopy> = {
@@ -35,7 +37,8 @@ const incomeSplitItemCopy: Record<FlowLocale, IncomeSplitItemCopy> = {
     categoryLabel: "카테고리",
     amountLabel: "금액(KRW)",
     guide:
-      "코드/카테고리/금액 3개를 모두 입력하면 항목 배열에 포함됩니다. 항목 합계는 분리 총액 규칙과 함께 검증됩니다."
+      "코드/카테고리/금액 3개를 모두 입력하면 항목 배열에 포함됩니다. 항목 합계는 분리 총액 규칙과 함께 검증됩니다.",
+    disabledGuide: "항목 프리셋 사용 중에는 수동 항목 입력이 비활성화됩니다."
   },
   en: {
     taxableTitle: "Taxable item (optional)",
@@ -44,7 +47,8 @@ const incomeSplitItemCopy: Record<FlowLocale, IncomeSplitItemCopy> = {
     categoryLabel: "Category",
     amountLabel: "Amount (KRW)",
     guide:
-      "An item is included only when code/category/amount are all provided. Item totals are validated with split totals."
+      "An item is included only when code/category/amount are all provided. Item totals are validated with split totals.",
+    disabledGuide: "Manual item inputs are disabled while an item preset is selected."
   }
 };
 
@@ -60,7 +64,8 @@ export function PayrollKrIncomeSplitItemFields({
   nonTaxableCategory,
   onNonTaxableCategoryChange,
   nonTaxableAmountKrw,
-  onNonTaxableAmountKrwChange
+  onNonTaxableAmountKrwChange,
+  disabled = false
 }: PayrollKrIncomeSplitItemFieldsProps) {
   const { locale } = useI18n();
   const copy = incomeSplitItemCopy[locale];
@@ -68,16 +73,22 @@ export function PayrollKrIncomeSplitItemFields({
   return (
     <div>
       <p className="small muted">{copy.guide}</p>
+      {disabled ? <p className="small muted">{copy.disabledGuide}</p> : null}
       <div className="input-grid compact">
         <label>
           {copy.taxableTitle} {copy.codeLabel}
-          <input value={taxableCode} onChange={(event) => onTaxableCodeChange(event.target.value)} />
+          <input
+            value={taxableCode}
+            onChange={(event) => onTaxableCodeChange(event.target.value)}
+            disabled={disabled}
+          />
         </label>
         <label>
           {copy.taxableTitle} {copy.categoryLabel}
           <input
             value={taxableCategory}
             onChange={(event) => onTaxableCategoryChange(event.target.value)}
+            disabled={disabled}
           />
         </label>
         <label>
@@ -87,6 +98,7 @@ export function PayrollKrIncomeSplitItemFields({
             min={0}
             value={taxableAmountKrw}
             onChange={(event) => onTaxableAmountKrwChange(event.target.value)}
+            disabled={disabled}
           />
         </label>
         <label>
@@ -94,6 +106,7 @@ export function PayrollKrIncomeSplitItemFields({
           <input
             value={nonTaxableCode}
             onChange={(event) => onNonTaxableCodeChange(event.target.value)}
+            disabled={disabled}
           />
         </label>
         <label>
@@ -101,6 +114,7 @@ export function PayrollKrIncomeSplitItemFields({
           <input
             value={nonTaxableCategory}
             onChange={(event) => onNonTaxableCategoryChange(event.target.value)}
+            disabled={disabled}
           />
         </label>
         <label>
@@ -110,6 +124,7 @@ export function PayrollKrIncomeSplitItemFields({
             min={0}
             value={nonTaxableAmountKrw}
             onChange={(event) => onNonTaxableAmountKrwChange(event.target.value)}
+            disabled={disabled}
           />
         </label>
       </div>

@@ -1,8 +1,8 @@
-# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 + WI-0105 + WI-0106 + WI-0110 + WI-0220 + WI-0221 + WI-0223 + WI-0224 Contract)
+# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 + WI-0105 + WI-0106 + WI-0110 + WI-0220 + WI-0221 + WI-0223 + WI-0224 + WI-0225 Contract)
 
 ## Goal
 
-Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode with progressive/lookup-table/preset/cap/tax-credit/month-boundary/insurance-rounding/taxable-split/item-code options.
+Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode with progressive/lookup-table/preset/cap/tax-credit/month-boundary/insurance-rounding/taxable-split/item-code/item-preset options.
 
 ## Key Decisions
 
@@ -20,6 +20,7 @@ Provide payroll gross pay preview based on attendance aggregates, phase2 deducti
 - WI-0221 extends statutory baseline with optional managed lookup-table preset ID and stricter lookup-table validation guards while preserving WI-0220 compatibility.
 - WI-0223 extends statutory baseline with optional taxable-income split input (`taxableIncomeKrw`) and explicit taxable/non-taxable sum validation against gross pay.
 - WI-0224 extends statutory baseline with optional taxable/non-taxable income item arrays (`code`/`category`/`amountKrw`) and item-total validation guard integration with split totals.
+- WI-0225 extends statutory baseline with optional income split item preset ID (`incomeSplitItemPresetId`) and server-managed code/category template application guard.
 
 ## Non-Goals
 

@@ -57,6 +57,7 @@ const statutoryKrBaselineSchema = z.object({
   taxableIncomeKrw: nonNegativeInteger.optional(),
   taxableIncomeItems: z.array(statutoryIncomeSplitItemSchema).max(20).optional(),
   nonTaxableIncomeItems: z.array(statutoryIncomeSplitItemSchema).max(20).optional(),
+  incomeSplitItemPresetId: z.string().min(1).max(80).optional(),
   incomeTaxBrackets: z.array(statutoryIncomeTaxBracketSchema).min(1).optional(),
   incomeTaxLookupTable: z.array(statutoryIncomeTaxLookupRowSchema).min(1).optional(),
   incomeTaxLookupPresetId: z.string().min(1).max(80).optional(),
@@ -152,6 +153,7 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
       const lookupPresetId = value.statutory?.incomeTaxLookupPresetId;
       const taxableIncomeItems = value.statutory?.taxableIncomeItems;
       const nonTaxableIncomeItems = value.statutory?.nonTaxableIncomeItems;
+      const incomeSplitItemPresetId = value.statutory?.incomeSplitItemPresetId;
       if (brackets && lookupTable) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -171,6 +173,14 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
           code: z.ZodIssueCode.custom,
           path: ["statutory"],
           message: "incomeTaxLookupTable and incomeTaxLookupPresetId are mutually exclusive"
+        });
+      }
+      if (incomeSplitItemPresetId && (taxableIncomeItems || nonTaxableIncomeItems)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["statutory"],
+          message:
+            "incomeSplitItemPresetId and taxableIncomeItems/nonTaxableIncomeItems are mutually exclusive"
         });
       }
       if (brackets) {
