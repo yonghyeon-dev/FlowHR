@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  findPayrollKrIncomeSplitItemCodeDictionaryEntry,
+  listPayrollKrIncomeSplitItemCodeDictionary,
+  type PayrollKrIncomeSplitItemCodeDictionaryEntry,
+  type PayrollKrIncomeSplitItemCodeKind
+} from "@/features/payroll/kr-income-split-item-code-dictionary";
 import { type FlowLocale } from "@/lib/i18n/locales";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -25,6 +31,8 @@ type IncomeSplitItemsTableCopy = {
   codeLabel: string;
   categoryLabel: string;
   amountLabel: string;
+  codeAutocompleteGuide: string;
+  categoryAutofillGuide: string;
   addRowLabel: string;
   removeRowLabel: string;
   rowLabelPrefix: string;
@@ -40,6 +48,8 @@ const incomeSplitItemsTableCopy: Record<FlowLocale, IncomeSplitItemsTableCopy> =
     codeLabel: "코드",
     categoryLabel: "카테고리",
     amountLabel: "금액(KRW)",
+    codeAutocompleteGuide: "코드 입력 시 사전 항목 autocomplete가 제공됩니다.",
+    categoryAutofillGuide: "사전 코드 선택 시 카테고리가 자동으로 채워집니다.",
     addRowLabel: "행 추가",
     removeRowLabel: "행 삭제",
     rowLabelPrefix: "행",
@@ -54,6 +64,8 @@ const incomeSplitItemsTableCopy: Record<FlowLocale, IncomeSplitItemsTableCopy> =
     codeLabel: "Code",
     categoryLabel: "Category",
     amountLabel: "Amount (KRW)",
+    codeAutocompleteGuide: "Code input provides dictionary autocomplete suggestions.",
+    categoryAutofillGuide: "Category is auto-filled when a dictionary code is selected.",
     addRowLabel: "Add row",
     removeRowLabel: "Remove row",
     rowLabelPrefix: "Row",
@@ -106,10 +118,22 @@ type ItemRowsSectionProps = {
   items: PayrollKrIncomeSplitItemDraft[];
   onChange: (nextItems: PayrollKrIncomeSplitItemDraft[]) => void;
   copy: IncomeSplitItemsTableCopy;
+  kind: PayrollKrIncomeSplitItemCodeKind;
+  datalistId: string;
+  codeDictionary: PayrollKrIncomeSplitItemCodeDictionaryEntry[];
   disabled: boolean;
 };
 
-function ItemRowsSection({ title, items, onChange, copy, disabled }: ItemRowsSectionProps) {
+function ItemRowsSection({
+  title,
+  items,
+  onChange,
+  copy,
+  kind,
+  datalistId,
+  codeDictionary,
+  disabled
+}: ItemRowsSectionProps) {
   const safeItems = ensureAtLeastOneRow(items);
 
   return (
@@ -118,54 +142,82 @@ function ItemRowsSection({ title, items, onChange, copy, disabled }: ItemRowsSec
         <strong>{title}</strong> ({copy.rowCountLabel}: {safeItems.length}/{incomeSplitItemRowLimit})
       </p>
       <div className="input-grid compact">
-        {safeItems.map((item, index) => (
-          <div className="full" key={`${title}-${index}`}>
-            <div className="input-grid compact">
-              <label>
-                {copy.rowLabelPrefix} {index + 1} {copy.codeLabel}
-                <input
-                  value={item.code}
-                  onChange={(event) =>
-                    onChange(updateItemAt(safeItems, index, { code: event.target.value }))
-                  }
-                  disabled={disabled}
-                />
-              </label>
-              <label>
-                {copy.rowLabelPrefix} {index + 1} {copy.categoryLabel}
-                <input
-                  value={item.category}
-                  onChange={(event) =>
-                    onChange(updateItemAt(safeItems, index, { category: event.target.value }))
-                  }
-                  disabled={disabled}
-                />
-              </label>
-              <label>
-                {copy.rowLabelPrefix} {index + 1} {copy.amountLabel}
-                <input
-                  type="number"
-                  min={0}
-                  value={item.amountKrw}
-                  onChange={(event) =>
-                    onChange(updateItemAt(safeItems, index, { amountKrw: event.target.value }))
-                  }
-                  disabled={disabled}
-                />
-              </label>
-              <div>
-                <button
-                  type="button"
-                  onClick={() => onChange(removeItemAt(safeItems, index))}
-                  disabled={disabled || safeItems.length <= 1}
-                >
-                  {copy.removeRowLabel}
-                </button>
+        {safeItems.map((item, index) => {
+          const matchedEntry = findPayrollKrIncomeSplitItemCodeDictionaryEntry(item.code, kind);
+          return (
+            <div className="full" key={`${title}-${index}`}>
+              <div className="input-grid compact">
+                <label>
+                  {copy.rowLabelPrefix} {index + 1} {copy.codeLabel}
+                  <input
+                    list={datalistId}
+                    value={item.code}
+                    onChange={(event) => {
+                      const nextCode = event.target.value;
+                      const nextDictionaryEntry = findPayrollKrIncomeSplitItemCodeDictionaryEntry(
+                        nextCode,
+                        kind
+                      );
+                      onChange(
+                        updateItemAt(safeItems, index, {
+                          code: nextCode,
+                          category: nextDictionaryEntry ? nextDictionaryEntry.category : item.category
+                        })
+                      );
+                    }}
+                    disabled={disabled}
+                  />
+                  {matchedEntry ? (
+                    <span className="small muted">
+                      {matchedEntry.label} / {matchedEntry.category}
+                    </span>
+                  ) : null}
+                </label>
+                <label>
+                  {copy.rowLabelPrefix} {index + 1} {copy.categoryLabel}
+                  <input
+                    value={item.category}
+                    onChange={(event) =>
+                      onChange(updateItemAt(safeItems, index, { category: event.target.value }))
+                    }
+                    disabled={disabled}
+                  />
+                </label>
+                <label>
+                  {copy.rowLabelPrefix} {index + 1} {copy.amountLabel}
+                  <input
+                    type="number"
+                    min={0}
+                    value={item.amountKrw}
+                    onChange={(event) =>
+                      onChange(updateItemAt(safeItems, index, { amountKrw: event.target.value }))
+                    }
+                    disabled={disabled}
+                  />
+                </label>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => onChange(removeItemAt(safeItems, index))}
+                    disabled={disabled || safeItems.length <= 1}
+                  >
+                    {copy.removeRowLabel}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+      <datalist id={datalistId}>
+        {codeDictionary.map((entry) => (
+          <option
+            key={`${datalistId}-${entry.code}`}
+            value={entry.code}
+            label={`${entry.label} / ${entry.category}`}
+          />
+        ))}
+      </datalist>
       <div>
         <button
           type="button"
@@ -188,16 +240,24 @@ export function PayrollKrIncomeSplitItemsTable({
 }: PayrollKrIncomeSplitItemsTableProps) {
   const { locale } = useI18n();
   const copy = incomeSplitItemsTableCopy[locale];
+  const taxableCodeDictionary = listPayrollKrIncomeSplitItemCodeDictionary("taxable");
+  const nonTaxableCodeDictionary = listPayrollKrIncomeSplitItemCodeDictionary("non_taxable");
 
   return (
     <div>
       <p className="small muted">{copy.guide}</p>
+      <p className="small muted">
+        {copy.codeAutocompleteGuide} {copy.categoryAutofillGuide}
+      </p>
       {disabled ? <p className="small muted">{copy.disabledGuide}</p> : null}
       <ItemRowsSection
         title={copy.taxableTitle}
         items={taxableItems}
         onChange={onTaxableItemsChange}
         copy={copy}
+        kind="taxable"
+        datalistId="payroll-income-split-taxable-code-options"
+        codeDictionary={taxableCodeDictionary}
         disabled={disabled}
       />
       <ItemRowsSection
@@ -205,6 +265,9 @@ export function PayrollKrIncomeSplitItemsTable({
         items={nonTaxableItems}
         onChange={onNonTaxableItemsChange}
         copy={copy}
+        kind="non_taxable"
+        datalistId="payroll-income-split-non-taxable-code-options"
+        codeDictionary={nonTaxableCodeDictionary}
         disabled={disabled}
       />
     </div>

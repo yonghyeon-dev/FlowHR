@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.30.0
+version: 1.31.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -18,6 +18,7 @@ scope:
     - KR statutory baseline income split item code/category input (`taxableIncomeItems`, `nonTaxableIncomeItems`)
     - KR statutory baseline income split item preset dataset selection (`incomeSplitItemPresetId`)
     - KR statutory baseline admin multi-item input table UX wiring for split item arrays
+    - KR statutory baseline admin item-code dictionary autocomplete UX wiring
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
@@ -340,6 +341,7 @@ test_plan:
     - statutory_kr_baseline validates income split item list code uniqueness and item-total consistency with split totals
     - statutory_kr_baseline resolves income split item preset ID and rejects unknown/mutually-exclusive manual item combinations
     - admin payroll preview multi-item table UX keeps deterministic split-item array payload wiring
+    - admin payroll preview item-code dictionary autocomplete keeps deterministic code/category payload composition
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
     - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
@@ -379,6 +381,7 @@ test_plan:
     - statutory_kr_baseline income split item code/category input deterministic replay via WI-0224 e2e
     - statutory_kr_baseline income split item preset dataset deterministic replay via WI-0225 e2e
     - statutory_kr_baseline admin multi-item split input table deterministic replay via WI-0226 e2e
+    - statutory_kr_baseline admin item-code dictionary autocomplete deterministic replay via WI-0227 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
@@ -424,6 +427,7 @@ test_plan:
     - income split item code uniqueness and item-total consistency checks
     - income split item preset resolution and manual-item mutual-exclusion checks
     - multi-item split input table payload composition and row-level validation checks
+    - item-code dictionary autocomplete and category auto-fill payload consistency checks
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, and delta deterministic checks
     - close-period withholding/social/net aggregation and settlement-delta checks
@@ -537,7 +541,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.30.0 clarifies `statutory_kr_baseline` split-item array usage for admin multi-item table UX (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.31.0 additively documents admin item-code dictionary autocomplete UX for `statutory_kr_baseline` split-item inputs (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -557,6 +561,7 @@ references:
   - work-items/WI-0224-payroll-kr-income-split-item-code-category-input.md
   - work-items/WI-0225-payroll-kr-income-split-item-preset-dataset.md
   - work-items/WI-0226-payroll-kr-multi-item-input-table-ux.md
+  - work-items/WI-0227-payroll-kr-item-code-autocomplete-ux.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
