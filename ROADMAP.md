@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.84 (Filing Ops Ack Ledger Exception Log Baseline)
+> **Current version**: 0.1.85 (Filing Ops Exception Closure Receipt Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -252,10 +252,11 @@
 - WI-0213 연말정산 신고 운영 closure packet release digest baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest` 전용 라우트 + release digest status(pending/compiled/published) + release digest channel state(pending/queued/delivered) + release digest readiness blocker 요약 + e2e 갱신)
 - WI-0214 연말정산 신고 운영 release digest acknowledgment ledger baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger` 전용 라우트 + acknowledgment ledger status(pending/logged/verified) + ack channel state(pending/acknowledged/reconciled) + acknowledgment readiness blocker 요약 + e2e 갱신)
 - WI-0215 연말정산 신고 운영 ack ledger exception log baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger/exception-log` 전용 라우트 + exception log status(pending/recorded/closed) + exception category state(open/investigating/resolved) + exception closure blocker 요약 + e2e 갱신)
+- WI-0216 연말정산 신고 운영 ack ledger exception closure receipt baseline(`/admin/payroll-year-end-filing/ops/checklist/review/snapshot/handoff/close-off/routing-signature/delivery-lock/completion-receipt/close-report/distribution-signoff/closure-packet/release-digest/ack-ledger/exception-log/closure-receipt` 전용 라우트 + exception closure receipt status(pending/issued/verified) + exception closure channel state(pending/sent/acknowledged) + exception closure receipt blocker 요약 + e2e 갱신)
 
 ### 진행 중
 
-- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 exception closure receipt baseline) (WI-0216 예정)
+- 다음: Phase 4 급여 엔진 고도화 지속(연말정산 신고 운영 exception closure archive digest baseline) (WI-0217 예정)
 
 ### 현재 아키텍처
 

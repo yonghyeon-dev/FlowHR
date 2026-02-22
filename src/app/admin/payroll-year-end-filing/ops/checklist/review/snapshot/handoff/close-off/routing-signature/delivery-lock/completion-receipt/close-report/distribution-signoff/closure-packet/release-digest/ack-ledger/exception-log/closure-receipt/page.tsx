@@ -1,0 +1,7 @@
+import PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceipt from "@/components/payroll-year-end-filing/PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceipt";
+
+export default function AdminPayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceiptPage() {
+  return (
+    <PayrollYearEndFilingOpsReviewCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerExceptionLogClosureReceipt />
+  );
+}
