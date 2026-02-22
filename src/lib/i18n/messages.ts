@@ -10,7 +10,7 @@ const messages = {
     "home.cta.admin": "愿由ъ옄 ??쒕낫??",
     "home.cta.employee": "吏곸썝 ?ы꽭",
     "home.cta.payslip": "湲됱뿬 紐낆꽭??",
-    "home.cta.login": "濡쒓렇??",
+    "home.cta.login": "로그인",
     "home.admin.title": "愿由ъ옄 ??쒕낫??",
     "home.admin.copy":
       "吏곸썝/議곗쭅, ?뱀씤 ?湲고븿(異쒗눜洹셋룻쑕媛), 洹쇳깭 吏묎퀎, 湲됱뿬 ?꾨━酉??뺤젙源뚯? ???먮쫫?쇰줈 泥섎━?⑸땲??",
