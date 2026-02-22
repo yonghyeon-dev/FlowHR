@@ -59,6 +59,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 51. Reject statutory baseline preview when unknown `incomeTaxLookupPresetId` is provided.
 52. Reject statutory baseline preview when `incomeTaxLookupPresetId` is mixed with `incomeTaxBrackets` or `incomeTaxLookupTable`.
 53. Reject statutory baseline preview when lookup-table rows contain non-monotonic `taxKrw` values.
+54. Admin payroll preview exposes lookup-preset selector/guide and forwards selected `incomeTaxLookupPresetId` deterministically.
 
 ## Accuracy Cases
 
@@ -100,6 +101,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 36. Statutory baseline insurance rounding mode/unit settings produce deterministic component rounding under replay.
 37. Statutory baseline preset mode resolves to deterministic lookup rows for same preset ID and taxable base.
 38. Statutory baseline lookup-table validation guard rejects malformed non-monotonic tax rows deterministically.
+39. Admin payroll preview preset selector/guide wiring remains deterministic for same state/input replay.
 
 ## Regression Linkage
 
@@ -123,6 +125,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Tax-Credit/Boundary Gate: tax-credit ordering and monthly-boundary guard checks must be deterministic and validated.
 - Lookup/Rounding Gate: `incomeTaxLookupTable` selection and `insuranceRounding` unit/mode checks must be deterministic and validated.
 - Preset/Validation Gate: `incomeTaxLookupPresetId` resolution and lookup-table monotonic-tax validation must be deterministic and validated.
+- Admin Preview Preset UX Gate: `/admin` payroll statutory baseline preset selector/guide and payload wiring must remain deterministic and locale-aware (`ko`/`en`).
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.

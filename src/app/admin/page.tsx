@@ -25,6 +25,7 @@ import {
   type QueueSearchSortRow,
   type QueueSearchSortScope
 } from "@/components/admin-approval/approval-queue-types";
+import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
@@ -303,6 +304,7 @@ export default function AdminDashboardPage() {
   const [payrollDependentCount, setPayrollDependentCount] = useState("0");
   const [payrollDependentTaxCreditPerPersonKrw, setPayrollDependentTaxCreditPerPersonKrw] =
     useState("0");
+  const [payrollIncomeTaxLookupPresetId, setPayrollIncomeTaxLookupPresetId] = useState("");
   const [payrollRequireMonthlyBoundary, setPayrollRequireMonthlyBoundary] = useState(false);
   const [payrollNationalPensionCapKrw, setPayrollNationalPensionCapKrw] = useState("");
   const [payrollHealthInsuranceCapKrw, setPayrollHealthInsuranceCapKrw] = useState("");
@@ -1043,6 +1045,7 @@ export default function AdminDashboardPage() {
           0,
           Math.trunc(Number(payrollDependentTaxCreditPerPersonKrw) || 0)
         ),
+        incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetId.trim() || undefined,
         requireMonthlyBoundary: payrollRequireMonthlyBoundary,
         nationalPensionCapKrw:
           payrollNationalPensionCapKrw.trim().length > 0
@@ -1983,6 +1986,12 @@ export default function AdminDashboardPage() {
                     }
                   />
                 </label>
+                <div className="full">
+                  <PayrollKrPresetGuidePanel
+                    selectedPresetId={payrollIncomeTaxLookupPresetId}
+                    onPresetChange={setPayrollIncomeTaxLookupPresetId}
+                  />
+                </div>
                 <label>
                   월경계 강제검증(서울)
                   <select

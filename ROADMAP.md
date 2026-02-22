@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.90 (Payroll KR Tax-Table Preset Guard)
+> **Current version**: 0.1.91 (Payroll KR Preset Admin Preview UX)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -258,10 +258,11 @@
 - WI-0219 핵심 여정 IA 단순화 + 승인 큐 컴포넌트 분리 baseline(`src/app/admin/page.tsx` 승인 큐 패널을 `src/components/admin-approval/*`로 분리 + dead bulk-selection 로직 정리 + `src/app/employee/page.tsx` 핵심 여정 바로가기(`EmployeeJourneyShortcutPanel`) 추가 + WI-0219 회귀 테스트 추가)
 - WI-0220 급여 엔진 KR 정밀 계산 착수 baseline(`POST /payroll/runs/preview-with-deductions` `statutory_kr_baseline`에 `incomeTaxLookupTable`(간이세액표 룩업) + `insuranceRounding`(4대보험 항목별 단위/모드 라운딩) 추가 + payroll spec/rfc 갱신 + WI-0220 회귀 테스트 추가)
 - WI-0221 급여 엔진 KR 세액표 운영 데이터셋/검증 가드 baseline(`statutory_kr_baseline`에 `incomeTaxLookupPresetId` 프리셋 입력 추가 + `incomeTaxBrackets`/`incomeTaxLookupTable`/`incomeTaxLookupPresetId` 상호배타 가드 + 룩업 테이블 단조 세액 검증 + WI-0221 회귀 테스트 추가)
+- WI-0222 급여 관리자 프리뷰 KR 세액표 프리셋 선택/가이드 UX baseline(`src/components/payroll/PayrollKrPresetGuidePanel.tsx` 신규 + `/admin` 법정공제 프리뷰 preset selector/payload 연동 + locale-aware(`ko`/`en`) 가이드 문구 + WI-0222 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 급여 관리자 프리뷰 UX에서 KR 세액표 프리셋 선택/가이드 고도화 (WI-0222 예정)
+- 다음: 급여 KR 정밀 계산 고도화(비과세/과세 항목 분리 규칙) 착수 (WI-0223 예정)
 
 ### 현재 아키텍처
 
