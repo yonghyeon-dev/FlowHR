@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-23
-> **Current version**: 0.1.110 (Mobile Admin Approval Queue Baseline)
+> **Current version**: 0.1.111 (Mobile Employee Self-Service Request Submit Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -286,10 +286,11 @@
 - WI-0247 모바일 알림 히스토리 프리셋 고정/최근사용 baseline(`apps/mobile` 프리셋 pin/unpin + recent 프리셋 추적 + `notificationStore` preset-state 영속화 + `Pinned/Recent presets` 섹션 + WI-0247 회귀 테스트 추가)
 - WI-0248 모바일 알림 히스토리 프리셋 가져오기/내보내기 baseline(`apps/mobile` 프리셋 transfer payload(`type/version/state`) 직렬화/파서 + `NotificationPresetTransferCard` 내보내기/가져오기 UI + 프리셋 상태 import 적용 + WI-0248 회귀 테스트 추가)
 - WI-0249 모바일 관리자 승인 대기 큐 baseline(`apps/mobile` `ApprovalQueueScreen` 신규 + 승인 대기 검색/상태·우선순위 필터/정렬 + approve/reject quick action + `approvalQueueStore` 영속화 + Admin 홈 진입 연결 + WI-0249 회귀 테스트 추가)
+- WI-0250 모바일 직원 셀프서비스 요청 제출 baseline(`apps/mobile` `EmployeeRequestSubmitScreen` 신규 + 출퇴근 정정/휴가 요청 submit form + 입력 검증/로컬 영속화 + Employee 홈 빠른 진입 연결 + WI-0250 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 모바일 직원 셀프서비스 요청 제출 baseline(`WI-X`) 착수 (WI-0250 예정)
+- 다음: 모바일 직원 셀프서비스 요청 이력/상태 추적 baseline(`WI-X`) 착수 (WI-0251 예정)
 
 ### 현재 아키텍처
 
@@ -301,7 +302,7 @@
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | phase2 수동/프로필 + KR baseline 근사 | 한국 세법 + 4대보험 |
 | UI | 관리자 대시보드(`/admin`) + 결재 정책(`/admin/approval-policy`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
-| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 + 알림센터 실시간 업데이트 + 히스토리 검색/보관/일괄 액션 + 프리셋 pin/recent + import/export transfer + 관리자 승인 대기 큐 baseline (WI-0249) | 네이티브 앱 (iOS/Android) |
+| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 + 알림센터 실시간 업데이트 + 히스토리 검색/보관/일괄 액션 + 프리셋 pin/recent + import/export transfer + 관리자 승인 대기 큐 + 직원 요청 제출 baseline (WI-0250) | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 
 ---

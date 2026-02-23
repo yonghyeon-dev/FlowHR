@@ -4,10 +4,17 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0250~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0251~에서 확장됩니다.`);
 }
 
-export default function EmployeeHomeScreen({ session, onLogout, onOpenNotifications, onOpenNotificationHistory }) {
+export default function EmployeeHomeScreen({
+  session,
+  onLogout,
+  onOpenAttendanceCorrectionRequest,
+  onOpenLeaveRequest,
+  onOpenNotifications,
+  onOpenNotificationHistory
+}) {
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -16,14 +23,14 @@ export default function EmployeeHomeScreen({ session, onLogout, onOpenNotificati
 
         <ShellCard title="출퇴근 정정">
           <Text style={styles.desc}>최근 기록 확인 후 정정 요청으로 빠르게 이동합니다.</Text>
-          <Pressable style={styles.btn} onPress={() => action("출퇴근 정정")}>
+          <Pressable style={styles.btn} onPress={onOpenAttendanceCorrectionRequest}>
             <Text style={styles.btnText}>정정 요청 시작</Text>
           </Pressable>
         </ShellCard>
 
         <ShellCard title="휴가 요청">
           <Text style={styles.desc}>잔여 연차와 캘린더를 확인하고 요청 흐름으로 이동합니다.</Text>
-          <Pressable style={styles.btn} onPress={() => action("휴가 요청")}>
+          <Pressable style={styles.btn} onPress={onOpenLeaveRequest}>
             <Text style={styles.btnText}>휴가 요청 시작</Text>
           </Pressable>
         </ShellCard>
