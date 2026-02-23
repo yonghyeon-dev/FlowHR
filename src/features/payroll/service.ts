@@ -19,7 +19,10 @@ import type {
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
-import { getPayrollKrIncomeTaxLookupPreset } from "@/features/payroll/kr-income-tax-lookup-presets";
+import {
+  getPayrollKrIncomeTaxLookupPreset,
+  resolvePayrollKrIncomeTaxLookupPresetByAsOf
+} from "@/features/payroll/kr-income-tax-lookup-presets";
 import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
 import { findPayrollKrIncomeSplitItemCodeDictionaryEntry } from "@/features/payroll/kr-income-split-item-code-dictionary";
 
@@ -72,6 +75,8 @@ type StatutoryKrBaselineDeductions = {
       taxKrw: number;
     }>;
     incomeTaxLookupPresetId?: string;
+    incomeTaxLookupPresetAuto?: boolean;
+    incomeTaxLookupAsOf?: string;
     additionalTaxCreditKrw: number;
     dependentCount: number;
     dependentTaxCreditPerPersonKrw: number;
@@ -1924,14 +1929,37 @@ export async function previewPayrollWithDeductions(
     const requestedIncomeTaxLookupTable = normalizeIncomeTaxLookupTable(
       input.statutory?.incomeTaxLookupTable
     );
+    const incomeTaxLookupPresetAuto = input.statutory?.incomeTaxLookupPresetAuto ?? false;
+    const incomeTaxLookupAsOfInput = input.statutory?.incomeTaxLookupAsOf;
+    const incomeTaxLookupAsOf = incomeTaxLookupAsOfInput
+      ? new Date(incomeTaxLookupAsOfInput)
+      : input.periodEnd;
+    if (incomeTaxLookupAsOfInput && Number.isNaN(incomeTaxLookupAsOf.getTime())) {
+      throw new ServiceError(400, "statutory.incomeTaxLookupAsOf must be a valid datetime");
+    }
     const incomeTaxLookupPresetId = input.statutory?.incomeTaxLookupPresetId?.trim() || null;
+    if (incomeTaxLookupPresetAuto && incomeTaxLookupPresetId) {
+      throw new ServiceError(
+        400,
+        "statutory.incomeTaxLookupPresetAuto and statutory.incomeTaxLookupPresetId are mutually exclusive"
+      );
+    }
+    const autoSelectedIncomeTaxLookupPreset = incomeTaxLookupPresetAuto
+      ? resolvePayrollKrIncomeTaxLookupPresetByAsOf(incomeTaxLookupAsOf)
+      : null;
     const incomeTaxLookupPreset = incomeTaxLookupPresetId
       ? getPayrollKrIncomeTaxLookupPreset(incomeTaxLookupPresetId)
-      : null;
+      : autoSelectedIncomeTaxLookupPreset;
     if (incomeTaxLookupPresetId && !incomeTaxLookupPreset) {
       throw new ServiceError(
         400,
         `statutory.incomeTaxLookupPresetId is not supported: ${incomeTaxLookupPresetId}`
+      );
+    }
+    if (incomeTaxLookupPresetAuto && !autoSelectedIncomeTaxLookupPreset) {
+      throw new ServiceError(
+        400,
+        "statutory.incomeTaxLookupPresetAuto could not resolve preset for reference date"
       );
     }
     const presetIncomeTaxLookupTable = normalizeIncomeTaxLookupTable(incomeTaxLookupPreset?.rows);
@@ -1942,7 +1970,7 @@ export async function previewPayrollWithDeductions(
     ) {
       throw new ServiceError(
         400,
-        "statutory.incomeTaxBrackets/statutory.incomeTaxLookupTable/statutory.incomeTaxLookupPresetId are mutually exclusive"
+        "statutory.incomeTaxBrackets/statutory.incomeTaxLookupTable/statutory.incomeTaxLookupPresetId/statutory.incomeTaxLookupPresetAuto are mutually exclusive"
       );
     }
     const incomeTaxLookupTable =
@@ -2210,6 +2238,12 @@ export async function previewPayrollWithDeductions(
             source: incomeTaxLookupPreset.source
           }
         : null,
+      incomeTaxLookupPresetAuto: {
+        enabled: incomeTaxLookupPresetAuto,
+        autoSelected: incomeTaxLookupPresetAuto && Boolean(autoSelectedIncomeTaxLookupPreset),
+        resolvedBy: incomeTaxLookupAsOfInput ? "statutory.incomeTaxLookupAsOf" : "periodEnd",
+        asOf: incomeTaxLookupAsOf.toISOString()
+      },
       selectedIncomeTaxLookupRow,
       contributionBasesKrw: {
         nationalPensionBaseKrw,
