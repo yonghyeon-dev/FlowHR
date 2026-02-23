@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
-> **Last updated**: 2026-02-22
-> **Current version**: 0.1.100 (Payroll KR Preset Share-Link Reset/Reapply UX)
+> **Last updated**: 2026-02-23
+> **Current version**: 0.1.101 (Mobile App Shell Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -276,10 +276,11 @@
 - WI-0237 관리자 온보딩 마법사 baseline(`src/app/admin/onboarding` 신규 라우트 + 조직 컨텍스트/부서·직원 일괄 등록/휴가 정책 기본값 적용 흐름 + 온보딩 체크리스트/진척도 + locale-aware copy + 컴포넌트/유틸 분리 + WI-0237 회귀 테스트 추가)
 - WI-0238 직원 인앱 가이드 baseline(`src/app/employee/guide` 신규 라우트 + 최근 14일 근태/휴가/명세 활동 기반 체크리스트 + 빠른 이동 링크/권장 경로 + locale-aware copy + 컴포넌트/훅/체크리스트 분리 + WI-0238 회귀 테스트 추가)
 - WI-0239 반응형 모바일 웹 UX baseline(`SaasMobileMenu` 공통 컴포넌트 추가 + Admin/Employee 레이아웃 모바일 토글 메뉴 적용 + `globals.css` 모바일 shell/action 반응형 정리 + `shell.mobileMenu` i18n + WI-0239 회귀 테스트 추가)
+- WI-0240 모바일 앱 Shell baseline(`apps/mobile` Expo 스캐폴드 + 로그인 컨텍스트/세션 저장 + Admin/Employee 홈 셸 + 공통 API 클라이언트 + WI-0240 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 모바일 앱 Shell baseline(`WI-T`) 착수 (WI-0240 예정)
+- 다음: 모바일 푸시 알림 baseline(`WI-U`) 착수 (WI-0241 예정)
 
 ### 현재 아키텍처
 
@@ -291,7 +292,7 @@
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | phase2 수동/프로필 + KR baseline 근사 | 한국 세법 + 4대보험 |
 | UI | 관리자 대시보드(`/admin`) + 결재 정책(`/admin/approval-policy`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
-| 모바일 | 없음 | 네이티브 앱 (iOS/Android) |
+| 모바일 | ⚠️ `apps/mobile` Expo 앱 셸 baseline (WI-0240) | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 
 ---
