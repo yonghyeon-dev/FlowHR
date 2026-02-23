@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.55.0
+version: 1.56.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -14,6 +14,7 @@ scope:
     - KR statutory baseline additive tax-credit inputs and optional monthly-boundary validation (Asia/Seoul)
     - KR statutory baseline simple withholding lookup-table input and configurable insurance rounding rules
     - KR statutory baseline managed lookup-table preset dataset selection and validation guard
+    - KR statutory baseline lookup-table preset auto-selection by effective date reference (`incomeTaxLookupPresetAuto`, `incomeTaxLookupAsOf`)
     - KR statutory baseline taxable/non-taxable split validation rule (`taxableIncomeKrw` + `nonTaxableIncomeKrw`)
     - KR statutory baseline income split item code/category input (`taxableIncomeItems`, `nonTaxableIncomeItems`)
     - KR statutory baseline income split item preset dataset selection (`incomeSplitItemPresetId`)
@@ -252,7 +253,9 @@ invariants:
   - When incomeTaxBrackets is provided, statutory income tax must be calculated by bracket segments and include open-ended final bracket.
   - When incomeTaxLookupTable is provided, statutory income tax must be selected from first matching lookup row by taxable base, and the lookup table must include open-ended final row.
   - When incomeTaxLookupPresetId is provided, statutory income tax must resolve from known preset dataset rows and keep deterministic row selection by taxable base.
-  - Statutory mode must reject requests that mix incomeTaxBrackets/incomeTaxLookupTable/incomeTaxLookupPresetId in the same request.
+  - When incomeTaxLookupPresetAuto is true, statutory income tax must resolve from the latest preset dataset whose effectiveFrom is less than or equal to the effective date reference (`incomeTaxLookupAsOf` when provided, otherwise periodEnd).
+  - Statutory mode must reject requests that mix incomeTaxBrackets/incomeTaxLookupTable/incomeTaxLookupPresetId/incomeTaxLookupPresetAuto in the same request.
+  - incomeTaxLookupAsOf is valid only when incomeTaxLookupPresetAuto is true.
   - Lookup-table rows must keep monotonic non-decreasing taxKrw to prevent malformed operational dataset input.
   - Insurance contribution caps (if provided) must bound each insurance contribution base deterministically.
   - Insurance rounding rules (if provided) must apply deterministic unit/mode rounding per insurance component.
@@ -400,6 +403,7 @@ test_plan:
     - statutory_kr_baseline validates progressive bracket ordering/open-ended final bracket
     - statutory_kr_baseline validates lookup-table ordering/open-ended final row, monotonic tax values, and mutual exclusivity with brackets/preset
     - statutory_kr_baseline resolves managed lookup-table preset ID and rejects unknown preset IDs
+    - statutory_kr_baseline preset auto-selection resolves deterministic preset by effective date reference (`incomeTaxLookupAsOf` or periodEnd fallback)
     - statutory_kr_baseline validates taxable/non-taxable split guard (`nonTaxableIncomeKrw <= grossPayKrw`, explicit taxable split sum match)
     - statutory_kr_baseline validates income split item list code uniqueness and item-total consistency with split totals
     - statutory_kr_baseline resolves income split item preset ID and rejects unknown/mutually-exclusive manual item combinations
@@ -457,6 +461,7 @@ test_plan:
     - statutory_kr_baseline tax-credit/boundary deterministic replay via WI-0106 e2e
     - statutory_kr_baseline simple lookup-table + insurance rounding deterministic replay via WI-0220 e2e
     - statutory_kr_baseline lookup-table preset dataset and validation-guard deterministic replay via WI-0221 e2e
+    - statutory_kr_baseline lookup-table preset auto-selection by effective date reference deterministic replay via WI-0282 e2e
     - statutory_kr_baseline taxable/non-taxable split deterministic replay via WI-0223 e2e
     - statutory_kr_baseline income split item code/category input deterministic replay via WI-0224 e2e
     - statutory_kr_baseline income split item preset dataset deterministic replay via WI-0225 e2e
@@ -531,6 +536,7 @@ test_plan:
     - progressive bracket and insurance-cap component checks
     - lookup-table income-tax selection and insurance rounding-rule component checks
     - lookup-table preset dataset resolution and malformed lookup-table guard checks
+    - lookup-table preset auto-selection by effective date reference (`incomeTaxLookupPresetAuto` + optional `incomeTaxLookupAsOf`) checks
     - taxable/non-taxable split validation and explicit split-sum checks
     - income split item code uniqueness and item-total consistency checks
     - income split item preset resolution and manual-item mutual-exclusion checks
@@ -669,7 +675,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.55.0 additively introduces finalized year-end settlement self-service read coverage (WI-0275) on `GET /payroll/year-end/finalized-settlement` with own/tenant authorization guards and deterministic settlement-hash/liability snapshot output, while preserving existing withholding document read/download, year-end settlement/finalization/export/filing/preflight/reconciliation/hash-guard workflows (no breaking API change)."
+consumer_impact: "Contract v1.56.0 additively introduces statutory KR lookup preset auto-selection by effective date reference (`incomeTaxLookupPresetAuto`, optional `incomeTaxLookupAsOf`, fallback periodEnd) for `POST /payroll/runs/preview-with-deductions` (WI-0282), while preserving existing manual bracket/lookup/preset workflows and year-end settlement/finalization/export/filing coverage (no breaking API change)."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -685,6 +691,7 @@ references:
   - work-items/WI-0106-payroll-tax-credit-month-boundary.md
   - work-items/WI-0220-payroll-kr-precision-simple-tax-table-and-insurance-rounding.md
   - work-items/WI-0221-payroll-kr-tax-table-preset-and-validation-guard.md
+  - work-items/WI-0282-payroll-kr-lookup-preset-effective-date-auto-resolution.md
   - work-items/WI-0223-payroll-kr-taxable-non-taxable-split-rule.md
   - work-items/WI-0224-payroll-kr-income-split-item-code-category-input.md
   - work-items/WI-0225-payroll-kr-income-split-item-preset-dataset.md

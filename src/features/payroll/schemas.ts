@@ -66,6 +66,8 @@ const statutoryKrBaselineSchema = z.object({
   incomeTaxBrackets: z.array(statutoryIncomeTaxBracketSchema).min(1).optional(),
   incomeTaxLookupTable: z.array(statutoryIncomeTaxLookupRowSchema).min(1).optional(),
   incomeTaxLookupPresetId: z.string().min(1).max(80).optional(),
+  incomeTaxLookupPresetAuto: z.boolean().default(false),
+  incomeTaxLookupAsOf: isoDateTime.optional(),
   additionalTaxCreditKrw: nonNegativeInteger.default(0),
   dependentCount: nonNegativeInteger.default(0),
   dependentTaxCreditPerPersonKrw: nonNegativeInteger.default(0),
@@ -157,6 +159,8 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
       const brackets = value.statutory?.incomeTaxBrackets;
       const lookupTable = value.statutory?.incomeTaxLookupTable;
       const lookupPresetId = value.statutory?.incomeTaxLookupPresetId;
+      const lookupPresetAuto = value.statutory?.incomeTaxLookupPresetAuto ?? false;
+      const lookupAsOf = value.statutory?.incomeTaxLookupAsOf;
       const taxableIncomeItems = value.statutory?.taxableIncomeItems;
       const nonTaxableIncomeItems = value.statutory?.nonTaxableIncomeItems;
       const incomeSplitItemPresetId = value.statutory?.incomeSplitItemPresetId;
@@ -179,6 +183,21 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
           code: z.ZodIssueCode.custom,
           path: ["statutory"],
           message: "incomeTaxLookupTable and incomeTaxLookupPresetId are mutually exclusive"
+        });
+      }
+      if (lookupPresetAuto && (brackets || lookupTable || lookupPresetId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["statutory"],
+          message:
+            "incomeTaxLookupPresetAuto and incomeTaxBrackets/incomeTaxLookupTable/incomeTaxLookupPresetId are mutually exclusive"
+        });
+      }
+      if (lookupAsOf && !lookupPresetAuto) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["statutory", "incomeTaxLookupAsOf"],
+          message: "incomeTaxLookupAsOf is supported only when incomeTaxLookupPresetAuto is true"
         });
       }
       if (incomeSplitItemPresetId && (taxableIncomeItems || nonTaxableIncomeItems)) {
