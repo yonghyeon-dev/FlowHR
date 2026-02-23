@@ -74,6 +74,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 66. Admin preset share-link reset/reapply UX deterministically supports clearing share-applied preset/split values and re-applying current shared query context.
 67. Export year-end filing data rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
 68. Filing submit/resubmit rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
+69. Filing acknowledge rejects stale `expectedSettlementHash` mismatch (`409`) and records acknowledgement only when expected hash matches submission settlement hash.
 
 ## Accuracy Cases
 
@@ -137,6 +138,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 57. Year-end finalization settlementHash and expectedSettlementHash stale-apply guard remain deterministic for same input replay vectors.
 58. Year-end filing export expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
 59. Year-end filing submit/resubmit expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
+60. Year-end filing acknowledge expectedSettlementHash guard decisions remain deterministic for same submission replay vectors.
 
 ## Regression Linkage
 
@@ -185,6 +187,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Settlement Hash Gate: finalize API emits deterministic `settlementHash` and blocks `apply=true` when `expectedSettlementHash` mismatches.
 - Year-End Export Settlement Hash Gate: export API blocks stale `expectedSettlementHash` mismatch and returns deterministic `settlementHash` trace on success.
 - Year-End Filing Submission Settlement Hash Gate: submit/resubmit APIs block stale `expectedSettlementHash` mismatch and return deterministic `settlementHash` trace in submission payloads.
+- Year-End Filing ACK Settlement Hash Gate: acknowledge API blocks stale `expectedSettlementHash` mismatch against submission settlement hash.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.

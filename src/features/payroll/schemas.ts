@@ -422,6 +422,7 @@ export const acknowledgePayrollYearEndFilingPackageSchema = z.object({
   year: payrollYearSchema,
   employeeId: z.string().min(1),
   submissionId: z.string().min(1),
+  expectedSettlementHash: yearEndSettlementHashSchema.optional(),
   ackStatus: z.enum(["accepted", "rejected"]),
   ackCode: z.string().min(1).max(80).optional(),
   ackNote: z.string().min(1).max(240).optional(),

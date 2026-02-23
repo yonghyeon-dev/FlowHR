@@ -279,6 +279,7 @@ type AcknowledgePayrollYearEndFilingPackageInput = {
   year: number;
   employeeId: string;
   submissionId: string;
+  expectedSettlementHash?: string;
   ackStatus: PayrollYearEndFilingAckStatus;
   ackCode?: string;
   ackNote?: string;
@@ -3354,6 +3355,8 @@ type YearEndFilingPackageSubmittedAuditPayload = {
 
 type YearEndFilingPackageAcknowledgedAuditPayload = {
   submissionId: string;
+  settlementHash: string | null;
+  expectedSettlementHash: string | null;
   ackStatus: PayrollYearEndFilingAckStatus;
   ackCode: string | null;
   ackNote: string | null;
@@ -3441,6 +3444,12 @@ function asYearEndFilingPackageAcknowledgedAuditPayload(
   }
   return {
     ...candidate,
+    settlementHash: normalizeYearEndSettlementHash(
+      (candidate as { settlementHash?: unknown }).settlementHash
+    ),
+    expectedSettlementHash: normalizeYearEndSettlementHash(
+      (candidate as { expectedSettlementHash?: unknown }).expectedSettlementHash
+    ),
     ackCode: typeof candidate.ackCode === "string" ? candidate.ackCode : null,
     ackNote: typeof candidate.ackNote === "string" ? candidate.ackNote : null,
     rejectionReasonCode:
@@ -4996,6 +5005,14 @@ export async function acknowledgePayrollYearEndFilingPackage(
   if (target.status === "acknowledged") {
     throw new ServiceError(409, "filing submission is already acknowledged");
   }
+  const expectedSettlementHash = normalizeYearEndSettlementHash(input.expectedSettlementHash);
+  const submissionSettlementHash = normalizeYearEndSettlementHash(target.settlementHash);
+  if (expectedSettlementHash && expectedSettlementHash !== submissionSettlementHash) {
+    throw new ServiceError(409, "filing submission settlement hash mismatch", {
+      expectedSettlementHash,
+      submissionSettlementHash
+    });
+  }
 
   const resolvedAck = resolvePayrollYearEndFilingAckPayload({
     ackStatus: input.ackStatus,
@@ -5010,6 +5027,8 @@ export async function acknowledgePayrollYearEndFilingPackage(
   const entityId = `${input.year}_${input.employeeId}`;
   const ackPayload: YearEndFilingPackageAcknowledgedAuditPayload = {
     submissionId: input.submissionId,
+    settlementHash: submissionSettlementHash,
+    expectedSettlementHash: expectedSettlementHash,
     ackStatus: input.ackStatus,
     ackCode: resolvedAck.ackCode,
     ackNote: resolvedAck.ackNote,

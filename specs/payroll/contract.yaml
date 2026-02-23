@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.47.0
+version: 1.48.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -38,6 +38,7 @@ scope:
     - year-end finalization settlement-hash and stale apply guard workflow (`settlementHash`, `expectedSettlementHash`)
     - year-end filing export settlement-hash guard workflow (`expectedSettlementHash`) and settlement-hash trace propagation
     - year-end filing submit/resubmit settlement-hash guard workflow (`expectedSettlementHash`) and submission settlement-hash trace propagation
+    - year-end filing acknowledgement settlement-hash guard workflow (`expectedSettlementHash`) for submission snapshot consistency
     - year-end deduction item caps and cap-applied breakdown for recalculation/finalization/export payloads
     - year-end tax credit caps and cap-applied breakdown for preview/recalculation/finalization/export payloads
     - year-end settlement finalization and filing-data export workflow for employee annual payroll totals
@@ -115,7 +116,7 @@ api:
       description: Submit filing package using latest finalized/exported artifact metadata and selected transport. Optional `expectedSettlementHash` rejects stale submission attempts with `409`, and submission payload includes settlementHash trace.
     - method: POST
       path: /payroll/year-end/filing-submissions/{submissionId}/ack
-      description: Acknowledge filing submission outcome (`accepted`/`rejected`) with ack code and note.
+      description: Acknowledge filing submission outcome (`accepted`/`rejected`) with ack code and note. Optional `expectedSettlementHash` must match submission settlementHash.
     - method: GET
       path: /payroll/year-end/filing-ack-catalog
       description: List acknowledgement code dictionary and rejection reason catalog for filing acknowledgement workflow.
@@ -459,6 +460,7 @@ test_plan:
     - year-end finalization settlementHash and stale-apply guard deterministic replay via WI-0265 e2e
     - year-end filing export settlementHash guard deterministic replay via WI-0266 e2e
     - year-end filing submit/resubmit settlementHash guard deterministic replay via WI-0267 e2e
+    - year-end filing acknowledge settlementHash guard deterministic replay via WI-0268 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
     - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
     - year-end filing submission/ack deterministic replay via WI-0191 e2e
@@ -513,7 +515,7 @@ test_plan:
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
     - year-end withholding delta refund/additional-due breakdown remains deterministic for same input vectors
     - year-end finalization settlementHash and stale-apply guard decisions remain deterministic for same input vectors
-    - year-end filing export/submit/resubmit settlementHash guard decisions remain deterministic for same finalized snapshot vectors
+    - year-end filing export/submit/resubmit/acknowledge settlementHash guard decisions remain deterministic for same finalized snapshot vectors
     - year-end deduction-item recalculation delta remains deterministic for same input vectors
     - year-end deduction eligibility validation guard decisions remain deterministic for same input vectors
     - year-end non-taxable annual income upper-bound guard decisions remain deterministic for same input vectors
@@ -626,7 +628,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.47.0 additively documents year-end filing submit/resubmit settlement-hash guard input (`expectedSettlementHash`) and submission settlement-hash trace output (`settlementHash`) on `/payroll/year-end/filing-submissions` and `/payroll/year-end/filing-submissions/{submissionId}/resubmit` (no breaking API change), while preserving existing year-end finalization/export settlement-hash guards and withholding breakdown/non-taxable upper-bound/deduction-eligibility/deduction-cap/tax-credit-cap workflows across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.48.0 additively documents year-end filing acknowledge settlement-hash guard input (`expectedSettlementHash`) on `/payroll/year-end/filing-submissions/{submissionId}/ack` (no breaking API change), while preserving existing year-end finalization/export and filing submit/resubmit settlement-hash guard workflows plus withholding breakdown/non-taxable upper-bound/deduction-eligibility/deduction-cap/tax-credit-cap workflows across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -663,6 +665,7 @@ references:
   - work-items/WI-0265-payroll-year-end-settlement-hash-and-stale-apply-guard.md
   - work-items/WI-0266-payroll-year-end-export-settlement-hash-guard.md
   - work-items/WI-0267-payroll-year-end-filing-submission-settlement-hash-guard.md
+  - work-items/WI-0268-payroll-year-end-filing-ack-settlement-hash-guard.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md

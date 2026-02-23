@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.47.0
+  version: 1.48.0
 paths:
   /payroll/runs:
     get:
@@ -193,7 +193,7 @@ paths:
   /payroll/year-end/filing-submissions/{submissionId}/ack:
     post:
       summary: Acknowledge payroll year-end filing submission
-      description: Acknowledge selected filing submission with ACK code dictionary validation and optional rejection reason catalog fields.
+      description: Acknowledge selected filing submission with ACK code dictionary validation and optional rejection reason catalog fields. Optional `expectedSettlementHash` guards acknowledgement against stale/incorrect submission snapshot context (`409` on mismatch).
       parameters:
         - in: path
           name: submissionId

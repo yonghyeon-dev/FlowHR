@@ -88,6 +88,7 @@ export default function PayrollYearEndFilingConsole() {
   const [exportFormat, setExportFormat] = useState<"json" | "csv" | "jsonl" | "hometax_csv">("json");
   const [validationMode, setValidationMode] = useState<"basic" | "strict">("basic");
   const [expectedExportSettlementHash, setExpectedExportSettlementHash] = useState("");
+  const [expectedAckSettlementHash, setExpectedAckSettlementHash] = useState("");
   const [submissionTransport, setSubmissionTransport] = useState<
     "manual_portal" | "hometax_upload" | "nts_api_mock"
   >("manual_portal");
@@ -245,6 +246,7 @@ export default function PayrollYearEndFilingConsole() {
       }
       setFinalization(body);
       setExpectedExportSettlementHash(body.settlement.settlementHash);
+      setExpectedAckSettlementHash(body.settlement.settlementHash);
       setStatusMessage(body.settlement.finalized ? `finalized ${body.settlement.finalizationId}` : "preview loaded");
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -465,6 +467,7 @@ export default function PayrollYearEndFilingConsole() {
       const payload = {
         year: parseRequiredInt(year, "year"),
         employeeId: employeeId.trim(),
+        expectedSettlementHash: expectedAckSettlementHash.trim() || undefined,
         ackStatus: requestAckStatus,
         ackCode: requestAckCode,
         ackNote: ackNote.trim() || undefined,
@@ -917,6 +920,13 @@ export default function PayrollYearEndFilingConsole() {
             <input
               value={expectedExportSettlementHash}
               onChange={(event) => setExpectedExportSettlementHash(event.target.value)}
+              placeholder="64-char sha256 hash (optional)"
+            />
+          </label>
+          <label>Expected Settlement Hash (ACK Guard)
+            <input
+              value={expectedAckSettlementHash}
+              onChange={(event) => setExpectedAckSettlementHash(event.target.value)}
               placeholder="64-char sha256 hash (optional)"
             />
           </label>
