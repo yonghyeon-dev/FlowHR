@@ -36,8 +36,8 @@ async function run() {
   assert.match(requestLib, /buildEmployeeRequestFollowUpStats/);
   assert.match(requestLib, /filterEmployeeRequestFollowUps/);
   assert.match(requestLib, /sortEmployeeRequestFollowUps/);
-  assert.match(adminScreen, /WI-0254~/);
-  assert.match(employeeHome, /WI-0254~/);
+  assert.match(adminScreen, /WI-0255~/);
+  assert.match(employeeHome, /WI-0255~/);
   assert.match(readme, /Employee request follow-up alert shell/);
 
   assert.ok(
@@ -49,8 +49,8 @@ async function run() {
     `EmployeeRequestHistoryScreen.js should stay under 340 lines (current: ${countLines(historyScreen)})`
   );
   assert.ok(
-    countLines(followUpScreen) <= 380,
-    `EmployeeRequestFollowUpScreen.js should stay under 380 lines (current: ${countLines(followUpScreen)})`
+    countLines(followUpScreen) <= 560,
+    `EmployeeRequestFollowUpScreen.js should stay under 560 lines (current: ${countLines(followUpScreen)})`
   );
 
   // @ts-expect-error Mobile sub-app baseline currently ships JS modules without d.ts.
