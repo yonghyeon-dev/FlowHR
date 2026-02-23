@@ -38,8 +38,8 @@ async function run() {
   assert.match(requestStore, /flowhr\.mobile\.employee\.request\.v1/);
   assert.match(requestStore, /loadEmployeeRequests/);
   assert.match(requestStore, /saveEmployeeRequests/);
-  assert.match(adminScreen, /WI-0252~/);
-  assert.match(employeeScreen, /WI-0252~/);
+  assert.match(adminScreen, /WI-0253~/);
+  assert.match(employeeScreen, /WI-0253~/);
   assert.match(readme, /Employee request submit shell/);
 
   assert.ok(

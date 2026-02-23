@@ -13,6 +13,7 @@
   - Admin approval queue shell
   - Employee request submit shell
   - Employee request history/status shell
+  - Employee request follow-up alert shell
 - Shared API client wrapper for FlowHR backend requests
 - Push notification baseline
   - permission bootstrap

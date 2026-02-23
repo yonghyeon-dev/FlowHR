@@ -28,6 +28,19 @@ export const EMPLOYEE_REQUEST_SORT_OPTIONS = [
   { key: "status", label: "Status order" }
 ];
 
+export const EMPLOYEE_REQUEST_FOLLOW_UP_SEVERITY_OPTIONS = [
+  { key: "all", label: "All severities" },
+  { key: "critical", label: "Critical" },
+  { key: "watch", label: "Watch" },
+  { key: "info", label: "Info" }
+];
+
+export const EMPLOYEE_REQUEST_FOLLOW_UP_SORT_OPTIONS = [
+  { key: "priority", label: "Priority first" },
+  { key: "newest", label: "Newest update first" },
+  { key: "oldest", label: "Oldest update first" }
+];
+
 const REQUEST_TYPE_SET = new Set(EMPLOYEE_REQUEST_TYPE_OPTIONS.map((option) => option.key));
 const LEAVE_UNIT_SET = new Set(EMPLOYEE_LEAVE_UNIT_OPTIONS.map((option) => option.key));
 const REQUEST_STATUS_SET = new Set(EMPLOYEE_REQUEST_STATUS_OPTIONS.map((option) => option.key).filter((key) => key !== "all"));
@@ -39,6 +52,16 @@ const STATUS_ORDER = {
   rejected: 3,
   canceled: 4
 };
+
+const FOLLOW_UP_SEVERITY_ORDER = {
+  critical: 0,
+  watch: 1,
+  info: 2
+};
+
+const FOLLOW_UP_SEVERITY_SET = new Set(
+  EMPLOYEE_REQUEST_FOLLOW_UP_SEVERITY_OPTIONS.map((option) => option.key).filter((key) => key !== "all")
+);
 
 function asIsoDate(value) {
   const normalized = normalizeText(value);
@@ -85,6 +108,72 @@ function normalizeTimeline(items, fallbackStatus, fallbackAt) {
 
 function statusLabel(status) {
   return EMPLOYEE_REQUEST_STATUS_OPTIONS.find((option) => option.key === status)?.label ?? status;
+}
+
+function severityLabel(severity) {
+  return EMPLOYEE_REQUEST_FOLLOW_UP_SEVERITY_OPTIONS.find((option) => option.key === severity)?.label ?? severity;
+}
+
+function normalizeSeverity(value) {
+  if (FOLLOW_UP_SEVERITY_SET.has(value)) {
+    return value;
+  }
+  return "info";
+}
+
+function toMillis(value) {
+  const stamp = new Date(value).getTime();
+  if (Number.isFinite(stamp)) {
+    return stamp;
+  }
+  return 0;
+}
+
+function lastTimelineAt(item) {
+  const timeline = Array.isArray(item?.statusTimeline) ? item.statusTimeline : [];
+  const last = timeline[timeline.length - 1];
+  return normalizeText(last?.at) || normalizeText(item?.createdAt);
+}
+
+function followUpMeta(status) {
+  if (status === "submitted") {
+    return {
+      severity: "watch",
+      title: "Waiting for review",
+      message: "Move this request into in-review queue.",
+      actions: ["moveToReview", "openHistory"]
+    };
+  }
+  if (status === "inReview") {
+    return {
+      severity: "watch",
+      title: "Decision needed",
+      message: "Approve or reject after checking details.",
+      actions: ["approve", "reject", "openHistory"]
+    };
+  }
+  if (status === "rejected") {
+    return {
+      severity: "critical",
+      title: "Request rejected",
+      message: "Reopen review or submit a revised request.",
+      actions: ["reopenReview", "openSubmit", "openHistory"]
+    };
+  }
+  if (status === "canceled") {
+    return {
+      severity: "info",
+      title: "Request canceled",
+      message: "Reopen review if this cancellation was accidental.",
+      actions: ["reopenReview", "openHistory"]
+    };
+  }
+  return {
+    severity: "info",
+    title: "Request approved",
+    message: "No follow-up is required.",
+    actions: ["openHistory"]
+  };
 }
 
 function matchesQuery(item, query) {
@@ -271,4 +360,92 @@ export function normalizeEmployeeRequestRecord(item, index = 0) {
 
 export function formatEmployeeRequestStatus(status) {
   return statusLabel(normalizeStatus(status));
+}
+
+export function buildEmployeeRequestFollowUps(items, options = {}) {
+  const { includeResolved = false } = options;
+  return items
+    .map((item) => {
+      const status = normalizeStatus(item?.status);
+      const meta = followUpMeta(status);
+      const updatedAt = lastTimelineAt(item);
+      return {
+        id: `follow-up-${item.id}-${status}`,
+        requestId: String(item?.id ?? ""),
+        requestType: item?.requestType,
+        status,
+        severity: normalizeSeverity(meta.severity),
+        title: meta.title,
+        message: meta.message,
+        reason: normalizeText(item?.reason),
+        createdAt: normalizeText(item?.createdAt),
+        updatedAt,
+        actions: meta.actions,
+        actionRequired: status !== "approved"
+      };
+    })
+    .filter((item) => (includeResolved ? true : item.actionRequired))
+    .sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
+}
+
+export function buildEmployeeRequestFollowUpStats(items) {
+  let total = 0;
+  let critical = 0;
+  let watch = 0;
+  let info = 0;
+  let actionRequired = 0;
+  for (const item of items) {
+    total += 1;
+    if (item.severity === "critical") {
+      critical += 1;
+    } else if (item.severity === "watch") {
+      watch += 1;
+    } else {
+      info += 1;
+    }
+    if (item.actionRequired) {
+      actionRequired += 1;
+    }
+  }
+  return { total, critical, watch, info, actionRequired };
+}
+
+export function filterEmployeeRequestFollowUps(items, options = {}) {
+  const { severity = "all", status = "all", query = "" } = options;
+  const keyword = normalizeText(query).toLowerCase();
+  return items.filter((item) => {
+    if (severity !== "all" && item.severity !== severity) {
+      return false;
+    }
+    if (status !== "all" && item.status !== status) {
+      return false;
+    }
+    if (!keyword) {
+      return true;
+    }
+    const haystack = `${item.title} ${item.message} ${item.reason} ${item.status} ${item.requestType}`.toLowerCase();
+    return haystack.includes(keyword);
+  });
+}
+
+export function sortEmployeeRequestFollowUps(items, sortKey = "priority") {
+  const next = [...items];
+  if (sortKey === "oldest") {
+    return next.sort((a, b) => toMillis(a.updatedAt) - toMillis(b.updatedAt));
+  }
+  if (sortKey === "newest") {
+    return next.sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
+  }
+  return next.sort((a, b) => {
+    const aRank = FOLLOW_UP_SEVERITY_ORDER[normalizeSeverity(a.severity)] ?? 999;
+    const bRank = FOLLOW_UP_SEVERITY_ORDER[normalizeSeverity(b.severity)] ?? 999;
+    if (aRank !== bRank) {
+      return aRank - bRank;
+    }
+    return toMillis(b.updatedAt) - toMillis(a.updatedAt);
+  });
+}
+
+export function formatEmployeeRequestFollowUpSeverity(severity) {
+  return severityLabel(normalizeSeverity(severity));
 }

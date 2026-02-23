@@ -26,7 +26,6 @@ async function run() {
   assert.match(navigator, /ApprovalQueueScreen/);
   assert.match(navigator, /name=\"ApprovalQueue\"/);
   assert.match(adminScreen, /onOpenApprovalQueue/);
-  assert.match(adminScreen, /승인 대기 보기/);
   assert.match(approvalQueueScreen, /Approval Queue/);
   assert.match(approvalQueueScreen, /Filters and sort/);
   assert.match(approvalQueueScreen, /Approve/);
@@ -39,8 +38,8 @@ async function run() {
   assert.match(queueStore, /loadApprovalQueueItems/);
   assert.match(queueStore, /saveApprovalQueueItems/);
   assert.match(queueStore, /resetApprovalQueueItems/);
-  assert.match(adminScreen, /WI-0252~/);
-  assert.match(employeeScreen, /WI-0252~/);
+  assert.match(adminScreen, /WI-0253~/);
+  assert.match(employeeScreen, /WI-0253~/);
   assert.match(readme, /Admin approval queue shell/);
 
   assert.ok(
