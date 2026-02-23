@@ -268,10 +268,11 @@
 - WI-0229 급여 관리자 KR 프리셋/수동 입력 정합성 UX 가이드 baseline(`PayrollKrIncomeSplitConsistencyGuidePanel` 추가 + 수동 행 partial/duplicate/사전불일치 요약 + 프리셋 모드 수동행 무시/초기화 가이드 + `/admin` 제출 전 client preflight 가드 + WI-0229 회귀 테스트 추가)
 - WI-0230 급여 관리자 KR 프리셋 모드 샘플 payload 프리뷰 baseline(`PayrollKrIncomeSplitPresetPayloadPreviewPanel` 추가 + `incomeSplitItemPresetId` 선택 시 요청 payload shape/서버 템플릿 적용 샘플 표시 + API 계약 변경 없이 안내 강화 + WI-0230 회귀 테스트 추가)
 - WI-0231 급여 관리자 KR 프리셋 모드 샘플 payload 복사/공유 UX baseline(`PayrollKrIncomeSplitPresetPayloadPreviewPanel` copy/share 액션 추가 + 요청/템플릿/통합 프리뷰 복사 + Web Share API/클립보드 fallback + `/admin#payroll` replay href 포함 + WI-0231 회귀 테스트 추가)
+- WI-0232 급여 관리자 KR 프리셋 모드 공유 링크 입력 자동 반영 UX baseline(`parsePayrollKrPresetShareContext` 추가 + `/admin` 쿼리(`incomeSplitItemPresetId`/`taxableIncomeKrw`/`nonTaxableIncomeKrw`) 자동 반영 + 유효값 존재 시 `statutory_kr_baseline` 자동 전환 + WI-0232 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 급여 KR 정밀 계산 고도화(프리셋 모드 공유 링크 입력 자동 반영 UX) 착수 (WI-0232 예정)
+- 다음: 급여 KR 정밀 계산 고도화(프리셋 공유 링크 유효성 힌트/오류 피드백 UX) 착수 (WI-0233 예정)
 
 ### 현재 아키텍처
 
