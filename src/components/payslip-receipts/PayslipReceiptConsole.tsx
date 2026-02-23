@@ -5,16 +5,16 @@ import { useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 import type {
   ApiLog,
   PayrollRunReceiptDto,
   PayrollRunsResponse,
   ReceiptAcknowledgeResponse
 } from "@/components/payslip-receipts/types";
+import { payslipReceiptCopyByLocale } from "@/components/payslip-receipts/copy";
 import {
   defaultMonthRange,
-  formatDateTime,
-  formatKrw,
   toSeoulEndIso,
   toSeoulStartIso
 } from "@/components/payslip-receipts/types";
@@ -32,6 +32,14 @@ function buildQuery(params: Record<string, string | undefined>) {
 }
 
 export default function PayslipReceiptConsole() {
+  const { locale } = useI18n();
+  const copy = payslipReceiptCopyByLocale[locale];
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const formatKrwByLocale = (value: number | null) =>
+    value === null ? "-" : `${value.toLocaleString(runtimeLocale)} KRW`;
+  const formatDateTimeByLocale = (value: string | null) =>
+    value ? new Date(value).toLocaleString(runtimeLocale) : "-";
+
   const range = defaultMonthRange();
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
@@ -89,12 +97,12 @@ export default function PayslipReceiptConsole() {
 
   async function loadRuns() {
     if (!employeeId.trim()) {
-      setStatusMessage("employeeId is required");
+      setStatusMessage(copy.employeeIdRequiredStatus);
       return;
     }
 
     try {
-      setPendingLabel("load payslip receipt list");
+      setPendingLabel(copy.pendingLoadPayslipList);
       const query = buildQuery({
         from: toSeoulStartIso(periodStartDate),
         to: toSeoulEndIso(periodEndDate),
@@ -119,22 +127,22 @@ export default function PayslipReceiptConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "list receipt-eligible payslips",
+          label: copy.logListReceiptEligiblePayslips,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
 
       if (!response.ok || !body || typeof body !== "object") {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
 
       const parsed = body as PayrollRunsResponse;
       setRuns(parsed.runs ?? []);
-      setStatusMessage(`loaded ${parsed.runs?.length ?? 0} confirmed payslips`);
+      setStatusMessage(`${copy.loadedConfirmedPayslipsPrefix} ${parsed.runs?.length ?? 0}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } finally {
       setPendingLabel(null);
@@ -143,7 +151,7 @@ export default function PayslipReceiptConsole() {
 
   async function acknowledgeReceipt(runId: string) {
     try {
-      setPendingLabel(`confirm receipt ${runId}`);
+      setPendingLabel(`${copy.pendingConfirmReceiptPrefix} ${runId}`);
       const response = await fetch(`/api/payroll/payslips/${runId}/acknowledge`, {
         method: "POST",
         headers: actorHeaders()
@@ -162,24 +170,24 @@ export default function PayslipReceiptConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: `acknowledge payslip receipt (${runId})`,
+          label: `${copy.logAcknowledgePayslipReceiptPrefix} (${runId})`,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
 
       if (!response.ok || !body || typeof body !== "object") {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
 
       const parsed = body as ReceiptAcknowledgeResponse;
       setStatusMessage(
         parsed.receipt.alreadyConfirmed
-          ? `receipt already confirmed for ${runId}`
-          : `receipt confirmed for ${runId}`
+          ? `${copy.receiptAlreadyConfirmedPrefix} ${runId}`
+          : `${copy.receiptConfirmedPrefix} ${runId}`
       );
       await loadRuns();
     } finally {
@@ -190,73 +198,75 @@ export default function PayslipReceiptConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Employee</p>
-        <h1>Payslip Receipt Confirmation</h1>
-        <p>Review distributed payslips and confirm receipt for payroll close compliance.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>Filters</h2>
+          <h2>{copy.filtersTitle}</h2>
           <div className="input-grid">
             <label>
-              Employee ID
+              {copy.employeeIdLabel}
               <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
             </label>
             <label>
-              Period Start
+              {copy.periodStartLabel}
               <input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} />
             </label>
             <label>
-              Period End
+              {copy.periodEndLabel}
               <input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} />
             </label>
           </div>
           <label>
-            Access Token (optional)
-            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" />
+            {copy.accessTokenLabel}
+            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} />
           </label>
           <label>
-            Organization ID (dev fallback)
+            {copy.organizationIdFallbackLabel}
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
           </label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void loadRuns()} disabled={pendingLabel !== null}>
-              Load Payslips
+              {copy.loadPayslipsAction}
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
 
         <article className="panel">
-          <h2>Receipt Status</h2>
+          <h2>{copy.receiptStatusTitle}</h2>
           <ul className="simple-list">
-            <li><span>Total Confirmed Runs</span><strong>{receiptSummary.total}</strong></li>
-            <li><span>Distributed</span><strong>{receiptSummary.distributed}</strong></li>
-            <li><span>Receipt Confirmed</span><strong>{receiptSummary.confirmed}</strong></li>
-            <li><span>Pending Confirmation</span><strong>{receiptSummary.pending}</strong></li>
+            <li><span>{copy.totalConfirmedRunsLabel}</span><strong>{receiptSummary.total}</strong></li>
+            <li><span>{copy.distributedLabel}</span><strong>{receiptSummary.distributed}</strong></li>
+            <li><span>{copy.receiptConfirmedLabel}</span><strong>{receiptSummary.confirmed}</strong></li>
+            <li><span>{copy.pendingConfirmationLabel}</span><strong>{receiptSummary.pending}</strong></li>
           </ul>
         </article>
 
         <article className="panel">
-          <h2>Runs</h2>
+          <h2>{copy.runsTitle}</h2>
           {runs.length === 0 ? (
-            <p className="small">No confirmed payslips loaded yet.</p>
+            <p className="small">{copy.noConfirmedPayslipsLoaded}</p>
           ) : (
             <ul className="log-list">
               {runs.map((run) => (
                 <li key={run.id}>
-                  <strong>{run.id}</strong> ({formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)})
+                  <strong>{run.id}</strong> ({formatDateTimeByLocale(run.periodStart)} ~ {formatDateTimeByLocale(run.periodEnd)})
                   <br />
-                  Net {formatKrw(run.netPayKrw)} / Delivered {formatDateTime(run.payslipDistributedAt)} / Receipt {formatDateTime(run.payslipReceiptConfirmedAt)}
+                  {copy.netLabel} {formatKrwByLocale(run.netPayKrw)} / {copy.deliveredLabel}{" "}
+                  {formatDateTimeByLocale(run.payslipDistributedAt)} / {copy.receiptLabel}{" "}
+                  {formatDateTimeByLocale(run.payslipReceiptConfirmedAt)}
                   <div className="panel-actions">
                     <button
                       className="btn btn-secondary"
                       onClick={() => void acknowledgeReceipt(run.id)}
                       disabled={pendingLabel !== null || run.payslipDistributedAt === null}
                     >
-                      Confirm Receipt
+                      {copy.confirmReceiptAction}
                     </button>
                   </div>
                 </li>
@@ -266,25 +276,25 @@ export default function PayslipReceiptConsole() {
         </article>
 
         <article className="panel">
-          <h2>API Logs</h2>
+          <h2>{copy.apiLogsTitle}</h2>
           <p className="small">
-            total {stats.total} / success {stats.success} / fail {stats.fail}
-            {pendingLabel ? ` / running ${pendingLabel}` : ""}
+            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">No API call yet.</p>
+            <p className="small">{copy.noApiCallYet}</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/employee" className="btn btn-secondary">Back to Employee</Link>
+            <Link href="/employee" className="btn btn-secondary">{copy.backToEmployeeAction}</Link>
           </div>
         </article>
       </section>

@@ -72,6 +72,7 @@ async function run() {
     "payslip-receipts",
     "PayslipReceiptConsole.tsx"
   );
+  const employeeCopySource = readUtf8("src", "components", "payslip-receipts", "copy.ts");
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
@@ -80,7 +81,9 @@ async function run() {
   assert.match(adminPageSource, /PayrollPayslipDeliveryConsole/, "admin page should render payslip delivery console");
   assert.match(employeePageSource, /PayslipReceiptConsole/, "employee page should render payslip receipt console");
   assert.match(adminConsoleSource, /Payroll Payslip Delivery/, "admin console should include heading text");
-  assert.match(employeeConsoleSource, /Payslip Receipt Confirmation/, "employee console should include heading text");
+  assert.match(employeeConsoleSource, /payslipReceiptCopyByLocale/, "employee console should wire locale copy map");
+  assert.match(employeeConsoleSource, /copy\.title/, "employee console should render title from locale copy");
+  assert.match(employeeCopySource, /title:\s*"Payslip Receipt Confirmation"/, "employee copy should include english heading text");
   assert.match(payrollApiSpec, /\/payroll\/payslips\/distribute:/, "api spec should include payslip distribution endpoint");
   assert.match(payrollApiSpec, /\/payroll\/payslips\/\{runId\}\/acknowledge:/, "api spec should include payslip receipt endpoint");
   assert.match(payrollContract, /path: \/payroll\/payslips\/distribute/, "contract should include payslip distribution endpoint");

@@ -61,6 +61,7 @@ async function run() {
   const adminLayoutSource = readUtf8("src", "app", "admin", "layout.tsx");
   const leaveCalendarPageSource = readUtf8("src", "app", "admin", "leave-calendar", "page.tsx");
   const leaveCalendarConsoleSource = readUtf8("src", "components", "leave-calendar", "LeaveCalendarConsole.tsx");
+  const leaveCalendarCopySource = readUtf8("src", "components", "leave-calendar", "copy.ts");
   const leaveApiSpec = readUtf8("specs", "leave", "api.yaml");
   const leaveContract = readUtf8("specs", "leave", "contract.yaml");
 
@@ -72,8 +73,18 @@ async function run() {
   );
   assert.match(
     leaveCalendarConsoleSource,
-    /Leave Calendar/,
-    "leave calendar console should include heading text"
+    /leaveCalendarCopyByLocale/,
+    "leave calendar console should wire locale copy map"
+  );
+  assert.match(
+    leaveCalendarConsoleSource,
+    /copy\.title/,
+    "leave calendar console should render title from locale copy"
+  );
+  assert.match(
+    leaveCalendarCopySource,
+    /title:\s*"Leave Calendar"/,
+    "leave calendar copy should include english heading text"
   );
   assert.match(leaveApiSpec, /\/leave\/calendar:/, "leave api spec should document leave calendar endpoint");
   assert.match(
