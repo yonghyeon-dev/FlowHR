@@ -68,6 +68,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 60. Statutory baseline split-item input validates code/category pairs against server dictionary by item kind and rejects unsupported/mismatched entries.
 61. Admin statutory preview preset/manual consistency guide and client preflight guard show deterministic blocking hints for invalid manual split rows.
 62. Admin preset mode sample payload preview shows deterministic request shape and server template application hints for selected `incomeSplitItemPresetId`.
+63. Admin preset mode sample payload preview copy/share UX deterministically emits request/template/combined clipboard payloads and share-fallback replay context for selected `incomeSplitItemPresetId`.
 
 ## Accuracy Cases
 
@@ -118,6 +119,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 45. Server dictionary validation guard for split-item code/category parity remains deterministic for same invalid/valid replay vectors.
 46. Admin preset/manual split-item preflight consistency hints remain deterministic for same UI state/input replay.
 47. Admin preset-mode sample payload preview content remains deterministic for same UI state/input replay.
+48. Admin preset-mode sample payload copy/share content (including replay href context) remains deterministic for same UI state/input replay.
 
 ## Regression Linkage
 
@@ -150,6 +152,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Income Split Item Dictionary Validation Gate: server must reject unsupported split-item code and category mismatch by taxable/non-taxable dictionary kind.
 - Income Split Item Consistency UX Gate: `/admin` must expose deterministic preset/manual consistency hints and block invalid manual row submit before API call.
 - Income Split Item Preset Payload Preview Gate: `/admin` preset mode must expose deterministic sample request/template preview without changing transmitted contract fields.
+- Preset Payload Copy/Share UX Gate: `/admin` preset mode must expose deterministic copy/share actions (request/template/combined + share fallback) without changing transmitted contract fields.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.
