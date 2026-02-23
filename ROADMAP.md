@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-23
-> **Current version**: 0.1.103 (Mobile Email Template Engine Baseline)
+> **Current version**: 0.1.104 (Mobile Notification Center Realtime Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -279,10 +279,11 @@
 - WI-0240 모바일 앱 Shell baseline(`apps/mobile` Expo 스캐폴드 + 로그인 컨텍스트/세션 저장 + Admin/Employee 홈 셸 + 공통 API 클라이언트 + WI-0240 회귀 테스트 추가)
 - WI-0241 모바일 푸시 알림 baseline(`apps/mobile` 푸시 권한/토큰 bootstrap + 알림 선호 저장 + 알림 센터 셸 + Admin/Employee 진입 액션 + WI-0241 회귀 테스트 추가)
 - WI-0242 모바일 이메일 템플릿 엔진 baseline(`apps/mobile` 거래성 템플릿 카탈로그/치환 렌더러 + locale(`ko`/`en`) 프리뷰 + Admin 템플릿 화면/히스토리 저장 + WI-0242 회귀 테스트 추가)
+- WI-0243 인앱 알림 센터 실시간 업데이트 baseline(`apps/mobile` 알림 피드 helper + 30초 polling + 수동 새로고침/라이브 토글 + 카테고리 필터/미확인 카운트 + WI-0243 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 인앱 알림 센터 실시간 업데이트 baseline(`WI-W`) 착수 (WI-0243 예정)
+- 다음: 모바일 알림 히스토리 검색/보관 baseline(`WI-X`) 착수 (WI-0244 예정)
 
 ### 현재 아키텍처
 
@@ -294,7 +295,7 @@
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | phase2 수동/프로필 + KR baseline 근사 | 한국 세법 + 4대보험 |
 | UI | 관리자 대시보드(`/admin`) + 결재 정책(`/admin/approval-policy`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
-| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 프리뷰 baseline (WI-0242) | 네이티브 앱 (iOS/Android) |
+| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 + 알림센터 실시간 업데이트 baseline (WI-0243) | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 
 ---
