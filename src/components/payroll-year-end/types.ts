@@ -60,9 +60,26 @@ export type PayrollYearEndRecalculationResponse = {
       donationKrw: number;
       housingSavingsKrw: number;
       totalIncomeDeductionKrw: number;
+      cappedIncomeDeductionKrw: number;
       appliedIncomeDeductionKrw: number;
       taxableAnnualIncomeBeforeDeductionKrw: number;
       taxableAnnualIncomeAfterDeductionKrw: number;
+      capRulesKrw: {
+        personalPensionKrw: number;
+        insurancePremiumKrw: number;
+        medicalExpenseKrw: number;
+        educationExpenseKrw: number;
+        donationKrw: number;
+        housingSavingsKrw: number;
+      };
+      capAppliedByItemKrw: {
+        personalPensionKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        insurancePremiumKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        medicalExpenseKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        educationExpenseKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        donationKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        housingSavingsKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+      };
     };
     baselineSettlementKrw: {
       nonTaxableAnnualIncomeKrw: number;

@@ -171,6 +171,26 @@ type YearEndDeductionItemsInput = {
   housingSavingsKrw: number;
 };
 
+type YearEndDeductionItemKey = keyof YearEndDeductionItemsInput;
+
+type YearEndDeductionItemCapRule = {
+  capKrw: number;
+};
+
+type YearEndDeductionCapRulesKrw = Record<YearEndDeductionItemKey, YearEndDeductionItemCapRule>;
+
+type YearEndDeductionCapAppliedItemKrw = {
+  inputKrw: number;
+  capKrw: number;
+  appliedKrw: number;
+  capped: boolean;
+};
+
+type YearEndDeductionCapAppliedBreakdownKrw = Record<
+  YearEndDeductionItemKey,
+  YearEndDeductionCapAppliedItemKrw
+>;
+
 type PayrollYearEndFilingExportFormat = "json" | "csv" | "jsonl" | "hometax_csv";
 type PayrollYearEndFilingValidationMode = "basic" | "strict";
 type PayrollYearEndFilingTransport = "manual_portal" | "hometax_upload" | "nts_api_mock";
@@ -497,6 +517,16 @@ type YearEndSettlementSummary = {
   settlementKrw: YearEndSettlementKrw;
 };
 
+type YearEndDeductionSummaryKrw = YearEndDeductionItemsInput & {
+  totalIncomeDeductionKrw: number;
+  cappedIncomeDeductionKrw: number;
+  appliedIncomeDeductionKrw: number;
+  taxableAnnualIncomeBeforeDeductionKrw: number;
+  taxableAnnualIncomeAfterDeductionKrw: number;
+  capRulesKrw: YearEndDeductionItemsInput;
+  capAppliedByItemKrw: YearEndDeductionCapAppliedBreakdownKrw;
+};
+
 type PreviewPayrollYearEndSettlementResult = {
   summary: YearEndSettlementSummary;
 };
@@ -509,12 +539,7 @@ type RecalculatePayrollYearEndSettlementResult = {
     periodEnd: string;
     runStates: YearEndRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
-    deductionItemsKrw: YearEndDeductionItemsInput & {
-      totalIncomeDeductionKrw: number;
-      appliedIncomeDeductionKrw: number;
-      taxableAnnualIncomeBeforeDeductionKrw: number;
-      taxableAnnualIncomeAfterDeductionKrw: number;
-    };
+    deductionItemsKrw: YearEndDeductionSummaryKrw;
     baselineSettlementKrw: YearEndSettlementKrw;
     recalculatedSettlementKrw: YearEndSettlementKrw;
     deltaKrw: {
@@ -565,12 +590,7 @@ type FinalizePayrollYearEndSettlementResult = {
     finalizedByNote: string | null;
     runStates: YearEndFilingGuardRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
-    deductionItemsKrw: YearEndDeductionItemsInput & {
-      totalIncomeDeductionKrw: number;
-      appliedIncomeDeductionKrw: number;
-      taxableAnnualIncomeBeforeDeductionKrw: number;
-      taxableAnnualIncomeAfterDeductionKrw: number;
-    };
+    deductionItemsKrw: YearEndDeductionSummaryKrw;
     settlementKrw: YearEndSettlementKrw;
     blockingReasons: string[];
   };
@@ -587,18 +607,7 @@ type ExportPayrollYearEndFilingDataResult = {
     validationMode: PayrollYearEndFilingValidationMode;
     runStates: YearEndFilingGuardRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
-    deductionItemsKrw: {
-      personalPensionKrw: number;
-      insurancePremiumKrw: number;
-      medicalExpenseKrw: number;
-      educationExpenseKrw: number;
-      donationKrw: number;
-      housingSavingsKrw: number;
-      totalIncomeDeductionKrw: number;
-      appliedIncomeDeductionKrw: number;
-      taxableAnnualIncomeBeforeDeductionKrw: number;
-      taxableAnnualIncomeAfterDeductionKrw: number;
-    };
+    deductionItemsKrw: YearEndDeductionSummaryKrw;
     settlementKrw: YearEndSettlementKrw;
     records: YearEndFilingRecord[];
     csv: string | null;
@@ -872,6 +881,16 @@ const emptyTotals: PayableMinutes = {
   overtime: 0,
   night: 0,
   holiday: 0
+};
+
+// Baseline annual caps for deduction-item simulation in year-end recalculation/finalization.
+const yearEndDeductionCapRulesKrw: YearEndDeductionCapRulesKrw = {
+  personalPensionKrw: { capKrw: 7_000_000 },
+  insurancePremiumKrw: { capKrw: 1_000_000 },
+  medicalExpenseKrw: { capKrw: 15_000_000 },
+  educationExpenseKrw: { capKrw: 9_000_000 },
+  donationKrw: { capKrw: 10_000_000 },
+  housingSavingsKrw: { capKrw: 4_000_000 }
 };
 
 const payrollYearEndAcceptedAckCodeCatalog: PayrollYearEndFilingAckCodeCatalogItem[] = [
@@ -2651,6 +2670,72 @@ function getYearEndDeductionTotalKrw(deductionItems: YearEndDeductionItemsInput)
   );
 }
 
+function applyYearEndDeductionCapRule(
+  inputKrw: number,
+  rule: YearEndDeductionItemCapRule
+): YearEndDeductionCapAppliedItemKrw {
+  const appliedKrw = Math.min(inputKrw, rule.capKrw);
+  return {
+    inputKrw,
+    capKrw: rule.capKrw,
+    appliedKrw,
+    capped: appliedKrw !== inputKrw
+  };
+}
+
+function applyYearEndDeductionCaps(deductionItems: YearEndDeductionItemsInput) {
+  const capAppliedByItemKrw: YearEndDeductionCapAppliedBreakdownKrw = {
+    personalPensionKrw: applyYearEndDeductionCapRule(
+      deductionItems.personalPensionKrw,
+      yearEndDeductionCapRulesKrw.personalPensionKrw
+    ),
+    insurancePremiumKrw: applyYearEndDeductionCapRule(
+      deductionItems.insurancePremiumKrw,
+      yearEndDeductionCapRulesKrw.insurancePremiumKrw
+    ),
+    medicalExpenseKrw: applyYearEndDeductionCapRule(
+      deductionItems.medicalExpenseKrw,
+      yearEndDeductionCapRulesKrw.medicalExpenseKrw
+    ),
+    educationExpenseKrw: applyYearEndDeductionCapRule(
+      deductionItems.educationExpenseKrw,
+      yearEndDeductionCapRulesKrw.educationExpenseKrw
+    ),
+    donationKrw: applyYearEndDeductionCapRule(
+      deductionItems.donationKrw,
+      yearEndDeductionCapRulesKrw.donationKrw
+    ),
+    housingSavingsKrw: applyYearEndDeductionCapRule(
+      deductionItems.housingSavingsKrw,
+      yearEndDeductionCapRulesKrw.housingSavingsKrw
+    )
+  };
+  const totalIncomeDeductionKrw = getYearEndDeductionTotalKrw(deductionItems);
+  const cappedIncomeDeductionKrw = toKrwInteger(
+    capAppliedByItemKrw.personalPensionKrw.appliedKrw +
+      capAppliedByItemKrw.insurancePremiumKrw.appliedKrw +
+      capAppliedByItemKrw.medicalExpenseKrw.appliedKrw +
+      capAppliedByItemKrw.educationExpenseKrw.appliedKrw +
+      capAppliedByItemKrw.donationKrw.appliedKrw +
+      capAppliedByItemKrw.housingSavingsKrw.appliedKrw,
+    "deductionItems.cappedIncomeDeductionKrw"
+  );
+  const capRulesKrw: YearEndDeductionItemsInput = {
+    personalPensionKrw: yearEndDeductionCapRulesKrw.personalPensionKrw.capKrw,
+    insurancePremiumKrw: yearEndDeductionCapRulesKrw.insurancePremiumKrw.capKrw,
+    medicalExpenseKrw: yearEndDeductionCapRulesKrw.medicalExpenseKrw.capKrw,
+    educationExpenseKrw: yearEndDeductionCapRulesKrw.educationExpenseKrw.capKrw,
+    donationKrw: yearEndDeductionCapRulesKrw.donationKrw.capKrw,
+    housingSavingsKrw: yearEndDeductionCapRulesKrw.housingSavingsKrw.capKrw
+  };
+  return {
+    totalIncomeDeductionKrw,
+    cappedIncomeDeductionKrw,
+    capRulesKrw,
+    capAppliedByItemKrw
+  };
+}
+
 function calculateYearEndSettlementKrw(
   totalsKrw: PayrollTotalsKrw,
   input: PreviewPayrollYearEndSettlementInput,
@@ -3690,12 +3775,12 @@ export async function recalculatePayrollYearEndSettlement(
 
   const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
-  const totalIncomeDeductionKrw = getYearEndDeductionTotalKrw(normalizedDeductionItems);
+  const deductionCapApplied = applyYearEndDeductionCaps(normalizedDeductionItems);
   const baselineSettled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
   const recalculatedSettled = calculateYearEndSettlementKrw(
     snapshot.totalsKrw,
     input,
-    totalIncomeDeductionKrw
+    deductionCapApplied.cappedIncomeDeductionKrw
   );
 
   const payload = {
@@ -3712,10 +3797,13 @@ export async function recalculatePayrollYearEndSettlement(
     annualTotalsKrw: snapshot.totalsKrw,
     deductionItemsKrw: {
       ...normalizedDeductionItems,
-      totalIncomeDeductionKrw,
+      totalIncomeDeductionKrw: deductionCapApplied.totalIncomeDeductionKrw,
+      cappedIncomeDeductionKrw: deductionCapApplied.cappedIncomeDeductionKrw,
       appliedIncomeDeductionKrw: recalculatedSettled.appliedIncomeDeductionKrw,
       taxableAnnualIncomeBeforeDeductionKrw: recalculatedSettled.taxableAnnualIncomeBeforeDeductionKrw,
-      taxableAnnualIncomeAfterDeductionKrw: recalculatedSettled.settlementKrw.taxableAnnualIncomeKrw
+      taxableAnnualIncomeAfterDeductionKrw: recalculatedSettled.settlementKrw.taxableAnnualIncomeKrw,
+      capRulesKrw: deductionCapApplied.capRulesKrw,
+      capAppliedByItemKrw: deductionCapApplied.capAppliedByItemKrw
     },
     baselineSettlementKrw: baselineSettled.settlementKrw,
     recalculatedSettlementKrw: recalculatedSettled.settlementKrw,
@@ -3788,8 +3876,12 @@ export async function finalizePayrollYearEndSettlement(
   }
 
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
-  const totalIncomeDeductionKrw = getYearEndDeductionTotalKrw(normalizedDeductionItems);
-  const settled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, totalIncomeDeductionKrw);
+  const deductionCapApplied = applyYearEndDeductionCaps(normalizedDeductionItems);
+  const settled = calculateYearEndSettlementKrw(
+    snapshot.totalsKrw,
+    input,
+    deductionCapApplied.cappedIncomeDeductionKrw
+  );
   const finalizationId = `YEF-${input.year}-${input.employeeId}`;
   const finalizedAt = input.apply ? new Date().toISOString() : null;
   const finalizedByNote = input.finalizedByNote?.trim() ? input.finalizedByNote.trim() : null;
@@ -3808,10 +3900,13 @@ export async function finalizePayrollYearEndSettlement(
     annualTotalsKrw: snapshot.totalsKrw,
     deductionItemsKrw: {
       ...normalizedDeductionItems,
-      totalIncomeDeductionKrw,
+      totalIncomeDeductionKrw: deductionCapApplied.totalIncomeDeductionKrw,
+      cappedIncomeDeductionKrw: deductionCapApplied.cappedIncomeDeductionKrw,
       appliedIncomeDeductionKrw: settled.appliedIncomeDeductionKrw,
       taxableAnnualIncomeBeforeDeductionKrw: settled.taxableAnnualIncomeBeforeDeductionKrw,
-      taxableAnnualIncomeAfterDeductionKrw: settled.settlementKrw.taxableAnnualIncomeKrw
+      taxableAnnualIncomeAfterDeductionKrw: settled.settlementKrw.taxableAnnualIncomeKrw,
+      capRulesKrw: deductionCapApplied.capRulesKrw,
+      capAppliedByItemKrw: deductionCapApplied.capAppliedByItemKrw
     },
     settlementKrw: settled.settlementKrw,
     blockingReasons: filingGuard.blockingReasons
