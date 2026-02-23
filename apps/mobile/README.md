@@ -15,6 +15,10 @@
   - permission bootstrap
   - preference toggles
   - in-app notification center shell
+- Email template baseline
+  - transactional template catalog
+  - locale switch (`ko`/`en`) and variable preview
+  - preview history persistence
 
 ## Run (local)
 

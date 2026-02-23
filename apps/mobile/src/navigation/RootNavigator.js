@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StyleSheet, Text, View } from "react-native";
 
 import AdminHomeScreen from "../screens/AdminHomeScreen";
+import EmailTemplateScreen from "../screens/EmailTemplateScreen";
 import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
 import LoginScreen from "../screens/LoginScreen";
 import NotificationCenterScreen from "../screens/NotificationCenterScreen";
@@ -73,6 +74,7 @@ export default function RootNavigator() {
                 session={session}
                 onLogout={actions.logout}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
+                onOpenEmailTemplates={() => navigation.navigate("EmailTemplates")}
               />
             )}
           </Stack.Screen>
@@ -91,6 +93,11 @@ export default function RootNavigator() {
         {session ? (
           <Stack.Screen name="Notifications" options={{ title: "Notification Center" }}>
             {() => <NotificationCenterScreen session={session} />}
+          </Stack.Screen>
+        ) : null}
+        {session?.role === "ADMIN" ? (
+          <Stack.Screen name="EmailTemplates" options={{ title: "Email Templates" }}>
+            {() => <EmailTemplateScreen session={session} />}
           </Stack.Screen>
         ) : null}
       </Stack.Navigator>

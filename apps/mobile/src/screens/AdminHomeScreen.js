@@ -4,10 +4,10 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0242~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0243~에서 확장됩니다.`);
 }
 
-export default function AdminHomeScreen({ session, onLogout, onOpenNotifications }) {
+export default function AdminHomeScreen({ session, onLogout, onOpenNotifications, onOpenEmailTemplates }) {
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -39,6 +39,13 @@ export default function AdminHomeScreen({ session, onLogout, onOpenNotifications
           <Text style={styles.desc}>승인 요청/결과/명세 발행 알림을 확인하고 선호를 조정합니다.</Text>
           <Pressable style={styles.btn} onPress={onOpenNotifications}>
             <Text style={styles.btnText}>알림 센터 열기</Text>
+          </Pressable>
+        </ShellCard>
+
+        <ShellCard title="이메일 템플릿">
+          <Text style={styles.desc}>거래성 메일 템플릿 문구를 locale별로 프리뷰하고 저장합니다.</Text>
+          <Pressable style={styles.btn} onPress={onOpenEmailTemplates}>
+            <Text style={styles.btnText}>템플릿 프리뷰 열기</Text>
           </Pressable>
         </ShellCard>
 
