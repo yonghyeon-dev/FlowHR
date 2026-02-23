@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.44.0
+  version: 1.45.0
 paths:
   /payroll/runs:
     get:
@@ -114,7 +114,7 @@ paths:
   /payroll/year-end/finalize-settlement:
     post:
       summary: Preview or apply payroll year-end settlement finalization
-      description: Validates confirmed/distributed/receipt-confirmed prerequisites, deduction eligibility flags, and non-taxable annual income upper bound for selected employee/year, then returns finalization summary with withholding refund/additional-due and deduction/tax-credit cap-applied breakdown. `apply=true` records finalization audit/event.
+      description: Validates confirmed/distributed/receipt-confirmed prerequisites, deduction eligibility flags, and non-taxable annual income upper bound for selected employee/year, then returns finalization summary with withholding refund/additional-due and deduction/tax-credit cap-applied breakdown plus `settlementHash`. `apply=true` can include optional `expectedSettlementHash` for stale apply guard and records finalization audit/event.
       responses:
         "200":
           description: Year-end settlement finalization summary generated

@@ -40,7 +40,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 32. Reject year-end settlement/receipt APIs when `payroll_year_end_v1` feature flag is disabled.
 33. Recalculate year-end settlement with deduction-item inputs and verify baseline-vs-recalculated tax/liability delta output plus withholding refund/additional-due breakdown, non-taxable annual income upper-bound guard, deduction eligibility validation guard, and year-end deduction/tax-credit caps breakdown.
 34. Reject year-end settlement recalculation API when `payroll_year_end_deduction_input_v1` feature flag is disabled.
-35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing.
+35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing; verify settlementHash replay determinism and expectedSettlementHash mismatch guard.
 36. Export year-end filing data and reject export before finalization or when `payroll_year_end_filing_export_v1` feature flag is disabled.
 37. Export year-end filing data in `json`/`csv`/`jsonl`/`hometax_csv` and validate `basic`/`strict` mode behavior (strict rejects validation-failed exports).
 38. Submit/list/ack year-end filing package and reject ACK for unknown/already-acknowledged submission.
@@ -132,6 +132,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 54. Year-end deduction eligibility validation guard remains deterministic for same input replay across recalculation/finalization responses.
 55. Year-end non-taxable annual income upper-bound guard remains deterministic for same input replay across preview/recalculation/finalization responses.
 56. Year-end withholding refund/additional-due breakdown remains deterministic for same input replay across preview/recalculation/finalization/export responses.
+57. Year-end finalization settlementHash and expectedSettlementHash stale-apply guard remain deterministic for same input replay vectors.
 
 ## Regression Linkage
 
@@ -177,6 +178,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Deduction Eligibility Gate: year-end deduction eligibility validation guard remains deterministic and auditable across recalculation/finalization APIs.
 - Year-End Non-Taxable Upper-Bound Gate: year-end settlement APIs reject nonTaxableAnnualIncomeKrw that exceeds annual gross pay and keep decisions deterministic/auditable.
 - Year-End Withholding Breakdown Gate: year-end settlement APIs expose deterministic `additionalWithholdingDueKrw`/`withholdingRefundKrw` fields that reconcile with withholdingDeltaKrw.
+- Year-End Settlement Hash Gate: finalize API emits deterministic `settlementHash` and blocks `apply=true` when `expectedSettlementHash` mismatches.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.
