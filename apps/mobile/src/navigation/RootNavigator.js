@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from "react-native";
 import AdminHomeScreen from "../screens/AdminHomeScreen";
 import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
 import LoginScreen from "../screens/LoginScreen";
+import NotificationCenterScreen from "../screens/NotificationCenterScreen";
 import { clearSession, loadSession, saveSession } from "../lib/sessionStore";
 import { colors } from "../theme/tokens";
 
@@ -67,12 +68,29 @@ export default function RootNavigator() {
         ) : null}
         {session?.role === "ADMIN" ? (
           <Stack.Screen name="AdminHome" options={{ title: "Admin Home" }}>
-            {() => <AdminHomeScreen session={session} onLogout={actions.logout} />}
+            {({ navigation }) => (
+              <AdminHomeScreen
+                session={session}
+                onLogout={actions.logout}
+                onOpenNotifications={() => navigation.navigate("Notifications")}
+              />
+            )}
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
           <Stack.Screen name="EmployeeHome" options={{ title: "Employee Home" }}>
-            {() => <EmployeeHomeScreen session={session} onLogout={actions.logout} />}
+            {({ navigation }) => (
+              <EmployeeHomeScreen
+                session={session}
+                onLogout={actions.logout}
+                onOpenNotifications={() => navigation.navigate("Notifications")}
+              />
+            )}
+          </Stack.Screen>
+        ) : null}
+        {session ? (
+          <Stack.Screen name="Notifications" options={{ title: "Notification Center" }}>
+            {() => <NotificationCenterScreen session={session} />}
           </Stack.Screen>
         ) : null}
       </Stack.Navigator>

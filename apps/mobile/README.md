@@ -11,6 +11,10 @@
   - Admin home shell
   - Employee home shell
 - Shared API client wrapper for FlowHR backend requests
+- Push notification baseline
+  - permission bootstrap
+  - preference toggles
+  - in-app notification center shell
 
 ## Run (local)
 

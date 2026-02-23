@@ -4,10 +4,10 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0241~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0242~에서 확장됩니다.`);
 }
 
-export default function AdminHomeScreen({ session, onLogout }) {
+export default function AdminHomeScreen({ session, onLogout, onOpenNotifications }) {
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -32,6 +32,13 @@ export default function AdminHomeScreen({ session, onLogout }) {
           <Text style={styles.desc}>조직/직원 초기 세팅 흐름을 모바일 진입점으로 연결합니다.</Text>
           <Pressable style={styles.btn} onPress={() => action("온보딩 마법사")}>
             <Text style={styles.btnText}>온보딩 시작</Text>
+          </Pressable>
+        </ShellCard>
+
+        <ShellCard title="알림 센터">
+          <Text style={styles.desc}>승인 요청/결과/명세 발행 알림을 확인하고 선호를 조정합니다.</Text>
+          <Pressable style={styles.btn} onPress={onOpenNotifications}>
+            <Text style={styles.btnText}>알림 센터 열기</Text>
           </Pressable>
         </ShellCard>
 
