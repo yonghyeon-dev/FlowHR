@@ -11,7 +11,9 @@ import type {
   WithholdingReceiptDocumentResponse,
   WithholdingReceiptResponse
 } from "@/components/withholding-receipt/types";
-import { currentYear, formatKrw } from "@/components/withholding-receipt/types";
+import { currentYear } from "@/components/withholding-receipt/types";
+import { type FlowLocale } from "@/lib/i18n/locales";
+import { useI18n } from "@/lib/i18n/provider";
 
 function parseRequiredInt(value: string, fieldName: string) {
   const parsed = Number(value);
@@ -21,7 +23,214 @@ function parseRequiredInt(value: string, fieldName: string) {
   return parsed;
 }
 
+type WithholdingReceiptCopy = {
+  heroEyebrow: string;
+  title: string;
+  description: string;
+  inputTitle: string;
+  yearLabel: string;
+  employeeIdLabel: string;
+  documentFormatLabel: string;
+  accessTokenLabel: string;
+  organizationIdFallbackLabel: string;
+  actionPreviewReceipt: string;
+  actionLoadFinalizedSettlement: string;
+  actionLoadIssuedDocument: string;
+  pendingReceiptPreview: string;
+  pendingReceiptDocument: string;
+  pendingFinalizedSettlement: string;
+  logPreviewReceipt: string;
+  logLoadDocument: string;
+  logLoadFinalizedSettlement: string;
+  requestFailedStatus: string;
+  requestFailedCheckLogsStatus: string;
+  invalidInputStatus: string;
+  loadedReceiptPrefix: string;
+  loadedDocumentPrefix: string;
+  loadedFinalizedSettlementPrefix: string;
+  sessionErrorPrefix: string;
+  receiptSummaryTitle: string;
+  noReceiptSummary: string;
+  noFinalizedSettlement: string;
+  noIssuedDocument: string;
+  receiptNumberLabel: string;
+  canIssueIssuedLabel: string;
+  grossNetLabel: string;
+  withholdingSocialLabel: string;
+  pendingReceiptRunsLabel: string;
+  blockingReasonsLabel: string;
+  finalizationIdLabel: string;
+  finalizedAtLabel: string;
+  settlementHashLabel: string;
+  taxLiabilityLabel: string;
+  priorWithheldLabel: string;
+  withholdingDeltaLabel: string;
+  additionalDueRefundLabel: string;
+  runGuardSnapshotLabel: string;
+  runGuardConfirmedLabel: string;
+  runGuardPreviewedLabel: string;
+  runGuardUndistributedLabel: string;
+  runGuardPendingReceiptLabel: string;
+  documentFileLabel: string;
+  formatTypeLabel: string;
+  issuedAtLabel: string;
+  generatedAtLabel: string;
+  contentSha256Label: string;
+  actionDownloadLoadedDocument: string;
+  apiLogsTitle: string;
+  apiLogsTotalLabel: string;
+  apiLogsSuccessLabel: string;
+  apiLogsFailLabel: string;
+  apiLogsRunningLabel: string;
+  apiLogsEmpty: string;
+  okLabel: string;
+  failLabel: string;
+  yesLabel: string;
+  noLabel: string;
+  actionBackToEmployee: string;
+};
+
+const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy> = {
+  ko: {
+    heroEyebrow: "FlowHR 직원",
+    title: "원천징수영수증",
+    description: "연간 원천징수영수증 발급 가능 상태와 정산 요약을 확인합니다.",
+    inputTitle: "입력",
+    yearLabel: "연도",
+    employeeIdLabel: "직원 ID",
+    documentFormatLabel: "문서 포맷",
+    accessTokenLabel: "액세스 토큰(선택)",
+    organizationIdFallbackLabel: "조직 ID(dev fallback)",
+    actionPreviewReceipt: "영수증 프리뷰",
+    actionLoadFinalizedSettlement: "확정 정산 불러오기",
+    actionLoadIssuedDocument: "발급 문서 불러오기",
+    pendingReceiptPreview: "원천징수영수증 프리뷰",
+    pendingReceiptDocument: "원천징수영수증 문서 조회",
+    pendingFinalizedSettlement: "연말 확정 정산 조회",
+    logPreviewReceipt: "원천징수영수증 프리뷰",
+    logLoadDocument: "원천징수영수증 문서 조회",
+    logLoadFinalizedSettlement: "연말 확정 정산 조회",
+    requestFailedStatus: "요청이 실패했습니다",
+    requestFailedCheckLogsStatus: "요청이 실패했습니다. 로그를 확인하세요.",
+    invalidInputStatus: "입력값이 올바르지 않습니다",
+    loadedReceiptPrefix: "영수증 로드 완료",
+    loadedDocumentPrefix: "문서 로드 완료",
+    loadedFinalizedSettlementPrefix: "확정 정산 로드 완료",
+    sessionErrorPrefix: "세션 오류",
+    receiptSummaryTitle: "영수증 요약",
+    noReceiptSummary: "아직 영수증 요약이 없습니다.",
+    noFinalizedSettlement: "아직 확정 정산을 불러오지 않았습니다.",
+    noIssuedDocument: "아직 발급 문서를 불러오지 않았습니다.",
+    receiptNumberLabel: "영수증 번호",
+    canIssueIssuedLabel: "발급 가능 / 발급 완료",
+    grossNetLabel: "총급여 / 실수령",
+    withholdingSocialLabel: "원천징수 / 사회보험",
+    pendingReceiptRunsLabel: "수신확인 대기 Run",
+    blockingReasonsLabel: "차단 사유",
+    finalizationIdLabel: "확정 ID",
+    finalizedAtLabel: "확정 시각",
+    settlementHashLabel: "정산 해시",
+    taxLiabilityLabel: "세부담",
+    priorWithheldLabel: "기납부 원천징수",
+    withholdingDeltaLabel: "원천징수 차액",
+    additionalDueRefundLabel: "추가 납부 / 환급",
+    runGuardSnapshotLabel: "Run 가드 스냅샷",
+    runGuardConfirmedLabel: "확정",
+    runGuardPreviewedLabel: "프리뷰",
+    runGuardUndistributedLabel: "미배포",
+    runGuardPendingReceiptLabel: "수신확인 대기",
+    documentFileLabel: "문서 파일",
+    formatTypeLabel: "포맷 / 타입",
+    issuedAtLabel: "발급 시각",
+    generatedAtLabel: "생성 시각",
+    contentSha256Label: "콘텐츠 SHA256",
+    actionDownloadLoadedDocument: "불러온 문서 다운로드",
+    apiLogsTitle: "API 로그",
+    apiLogsTotalLabel: "총",
+    apiLogsSuccessLabel: "성공",
+    apiLogsFailLabel: "실패",
+    apiLogsRunningLabel: "실행 중",
+    apiLogsEmpty: "아직 API 호출이 없습니다.",
+    okLabel: "성공",
+    failLabel: "실패",
+    yesLabel: "예",
+    noLabel: "아니오",
+    actionBackToEmployee: "직원 화면으로"
+  },
+  en: {
+    heroEyebrow: "FlowHR Employee",
+    title: "Withholding Receipt",
+    description: "Preview your yearly withholding receipt readiness and settlement totals.",
+    inputTitle: "Input",
+    yearLabel: "Year",
+    employeeIdLabel: "Employee ID",
+    documentFormatLabel: "Document Format",
+    accessTokenLabel: "Access Token (optional)",
+    organizationIdFallbackLabel: "Organization ID (dev fallback)",
+    actionPreviewReceipt: "Preview Receipt",
+    actionLoadFinalizedSettlement: "Load Finalized Settlement",
+    actionLoadIssuedDocument: "Load Issued Document",
+    pendingReceiptPreview: "withholding receipt preview",
+    pendingReceiptDocument: "withholding receipt document",
+    pendingFinalizedSettlement: "year-end finalized settlement",
+    logPreviewReceipt: "preview withholding receipt",
+    logLoadDocument: "load withholding receipt document",
+    logLoadFinalizedSettlement: "load finalized year-end settlement",
+    requestFailedStatus: "request failed",
+    requestFailedCheckLogsStatus: "request failed; check logs",
+    invalidInputStatus: "invalid input",
+    loadedReceiptPrefix: "loaded receipt",
+    loadedDocumentPrefix: "loaded document",
+    loadedFinalizedSettlementPrefix: "loaded finalized settlement",
+    sessionErrorPrefix: "Session error",
+    receiptSummaryTitle: "Receipt Summary",
+    noReceiptSummary: "No receipt summary yet.",
+    noFinalizedSettlement: "No finalized settlement loaded.",
+    noIssuedDocument: "No issued document loaded.",
+    receiptNumberLabel: "Receipt Number",
+    canIssueIssuedLabel: "Can Issue / Issued",
+    grossNetLabel: "Gross / Net",
+    withholdingSocialLabel: "Withholding / Social",
+    pendingReceiptRunsLabel: "Pending Receipt Runs",
+    blockingReasonsLabel: "Blocking Reasons",
+    finalizationIdLabel: "Finalization ID",
+    finalizedAtLabel: "Finalized At",
+    settlementHashLabel: "Settlement Hash",
+    taxLiabilityLabel: "Tax Liability",
+    priorWithheldLabel: "Prior Withheld",
+    withholdingDeltaLabel: "Withholding Delta",
+    additionalDueRefundLabel: "Additional Due / Refund",
+    runGuardSnapshotLabel: "Run Guard Snapshot",
+    runGuardConfirmedLabel: "confirmed",
+    runGuardPreviewedLabel: "previewed",
+    runGuardUndistributedLabel: "undistributed",
+    runGuardPendingReceiptLabel: "pending receipt",
+    documentFileLabel: "Document File",
+    formatTypeLabel: "Format / Type",
+    issuedAtLabel: "Issued At",
+    generatedAtLabel: "Generated At",
+    contentSha256Label: "Content SHA256",
+    actionDownloadLoadedDocument: "Download Loaded Document",
+    apiLogsTitle: "API Logs",
+    apiLogsTotalLabel: "total",
+    apiLogsSuccessLabel: "success",
+    apiLogsFailLabel: "fail",
+    apiLogsRunningLabel: "running",
+    apiLogsEmpty: "No API call yet.",
+    okLabel: "OK",
+    failLabel: "FAIL",
+    yesLabel: "YES",
+    noLabel: "NO",
+    actionBackToEmployee: "Back to Employee"
+  }
+};
+
 export default function WithholdingReceiptConsole() {
+  const { locale } = useI18n();
+  const copy = withholdingReceiptCopyByLocale[locale];
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const formatKrwByLocale = (value: number) => `${value.toLocaleString(runtimeLocale)} KRW`;
+
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
   const [accessToken, setAccessToken] = useState("");
@@ -69,9 +278,9 @@ export default function WithholdingReceiptConsole() {
 
   async function previewReceipt() {
     try {
-      setPendingLabel("withholding receipt preview");
+      setPendingLabel(copy.pendingReceiptPreview);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel),
         employeeId: employeeId.trim(),
         issue: false
       };
@@ -82,18 +291,24 @@ export default function WithholdingReceiptConsole() {
       });
       const body = (await response.json()) as WithholdingReceiptResponse | { error: string };
       setLogs((prev) => [
-        { id: Date.now(), label: "preview withholding receipt", status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        {
+          id: Date.now(),
+          label: copy.logPreviewReceipt,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
       setReceipt(body);
-      setStatusMessage(`loaded receipt ${body.receipt.receiptNumber}`);
+      setStatusMessage(`${copy.loadedReceiptPrefix} ${body.receipt.receiptNumber}`);
       setTimeout(() => setStatusMessage(""), 3000);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } catch {
+      setStatusMessage(copy.invalidInputStatus);
     } finally {
       setPendingLabel(null);
     }
@@ -113,41 +328,38 @@ export default function WithholdingReceiptConsole() {
 
   async function loadIssuedDocument() {
     try {
-      setPendingLabel("withholding receipt document");
+      setPendingLabel(copy.pendingReceiptDocument);
       const query = new URLSearchParams({
-        year: String(parseRequiredInt(year, "year")),
+        year: String(parseRequiredInt(year, copy.yearLabel)),
         employeeId: employeeId.trim(),
         format: documentFormat
       });
-      const response = await fetch(
-        `/api/payroll/year-end/withholding-receipts?${query.toString()}`,
-        {
-          method: "GET",
-          headers: buildHeaders()
-        }
-      );
+      const response = await fetch(`/api/payroll/year-end/withholding-receipts?${query.toString()}`, {
+        method: "GET",
+        headers: buildHeaders()
+      });
       const body = (await response.json()) as
         | WithholdingReceiptDocumentResponse
         | { error: string };
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "load withholding receipt document",
+          label: copy.logLoadDocument,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
       setReceiptDocument(body);
-      setStatusMessage(`loaded document ${body.document.fileName}`);
+      setStatusMessage(`${copy.loadedDocumentPrefix} ${body.document.fileName}`);
       setTimeout(() => setStatusMessage(""), 3000);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } catch {
+      setStatusMessage(copy.invalidInputStatus);
     } finally {
       setPendingLabel(null);
     }
@@ -155,60 +367,61 @@ export default function WithholdingReceiptConsole() {
 
   async function loadFinalizedSettlement() {
     try {
-      setPendingLabel("year-end finalized settlement");
+      setPendingLabel(copy.pendingFinalizedSettlement);
       const query = new URLSearchParams({
-        year: String(parseRequiredInt(year, "year")),
+        year: String(parseRequiredInt(year, copy.yearLabel)),
         employeeId: employeeId.trim()
       });
-      const response = await fetch(
-        `/api/payroll/year-end/finalized-settlement?${query.toString()}`,
-        {
-          method: "GET",
-          headers: buildHeaders()
-        }
-      );
+      const response = await fetch(`/api/payroll/year-end/finalized-settlement?${query.toString()}`, {
+        method: "GET",
+        headers: buildHeaders()
+      });
       const body = (await response.json()) as
         | FinalizedYearEndSettlementResponse
         | { error: string };
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "load finalized year-end settlement",
+          label: copy.logLoadFinalizedSettlement,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
       setFinalizedSettlement(body);
-      setStatusMessage(`loaded finalized settlement ${body.settlement.finalizationId}`);
+      setStatusMessage(`${copy.loadedFinalizedSettlementPrefix} ${body.settlement.finalizationId}`);
       setTimeout(() => setStatusMessage(""), 3000);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } catch {
+      setStatusMessage(copy.invalidInputStatus);
     } finally {
       setPendingLabel(null);
     }
   }
 
+  const runGuardSnapshot = finalizedSettlement
+    ? `${copy.runGuardConfirmedLabel} ${finalizedSettlement.settlement.runStates.confirmedRuns}, ${copy.runGuardPreviewedLabel} ${finalizedSettlement.settlement.runStates.previewedRuns}, ${copy.runGuardUndistributedLabel} ${finalizedSettlement.settlement.runStates.undistributedRuns}, ${copy.runGuardPendingReceiptLabel} ${finalizedSettlement.settlement.runStates.pendingReceiptRuns}`
+    : "";
+
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Employee</p>
-        <h1>Withholding Receipt</h1>
-        <p>Preview your yearly withholding receipt readiness and settlement totals.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
       <section className="panel-grid">
         <article className="panel">
-          <h2>Input</h2>
+          <h2>{copy.inputTitle}</h2>
           <div className="input-grid">
-            <label>Year<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>Employee ID<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
+            <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
+            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
             <label>
-              Document Format
+              {copy.documentFormatLabel}
               <select
                 value={documentFormat}
                 onChange={(event) => setDocumentFormat(event.target.value === "text" ? "text" : "json")}
@@ -218,55 +431,55 @@ export default function WithholdingReceiptConsole() {
               </select>
             </label>
           </div>
-          <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
-          <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
+          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void previewReceipt()} disabled={pendingLabel !== null}>Preview Receipt</button>
-            <button className="btn btn-secondary" onClick={() => void loadFinalizedSettlement()} disabled={pendingLabel !== null}>Load Finalized Settlement</button>
-            <button className="btn btn-secondary" onClick={() => void loadIssuedDocument()} disabled={pendingLabel !== null}>Load Issued Document</button>
+            <button className="btn btn-primary" onClick={() => void previewReceipt()} disabled={pendingLabel !== null}>{copy.actionPreviewReceipt}</button>
+            <button className="btn btn-secondary" onClick={() => void loadFinalizedSettlement()} disabled={pendingLabel !== null}>{copy.actionLoadFinalizedSettlement}</button>
+            <button className="btn btn-secondary" onClick={() => void loadIssuedDocument()} disabled={pendingLabel !== null}>{copy.actionLoadIssuedDocument}</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
         <article className="panel">
-          <h2>Receipt Summary</h2>
-          {!receipt ? <p className="small">No receipt summary yet.</p> : (
+          <h2>{copy.receiptSummaryTitle}</h2>
+          {!receipt ? <p className="small">{copy.noReceiptSummary}</p> : (
             <ul className="simple-list">
-              <li><span>Receipt Number</span><strong>{receipt.receipt.receiptNumber}</strong></li>
-              <li><span>Can Issue / Issued</span><strong>{receipt.receipt.canIssue ? "YES" : "NO"} / {receipt.receipt.issued ? "YES" : "NO"}</strong></li>
-              <li><span>Gross / Net</span><strong>{formatKrw(receipt.receipt.annualTotalsKrw.grossPayKrw)} / {formatKrw(receipt.receipt.annualTotalsKrw.netPayKrw)}</strong></li>
-              <li><span>Withholding / Social</span><strong>{formatKrw(receipt.receipt.annualTotalsKrw.withholdingTaxKrw)} / {formatKrw(receipt.receipt.annualTotalsKrw.socialInsuranceKrw)}</strong></li>
-              <li><span>Pending Receipt Runs</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
-              <li><span>Blocking Reasons</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.receiptNumberLabel}</span><strong>{receipt.receipt.receiptNumber}</strong></li>
+              <li><span>{copy.canIssueIssuedLabel}</span><strong>{receipt.receipt.canIssue ? copy.yesLabel : copy.noLabel} / {receipt.receipt.issued ? copy.yesLabel : copy.noLabel}</strong></li>
+              <li><span>{copy.grossNetLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.grossPayKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.netPayKrw)}</strong></li>
+              <li><span>{copy.withholdingSocialLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.withholdingTaxKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.socialInsuranceKrw)}</strong></li>
+              <li><span>{copy.pendingReceiptRunsLabel}</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
+              <li><span>{copy.blockingReasonsLabel}</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
             </ul>
           )}
-          {!finalizedSettlement ? <p className="small">No finalized settlement loaded.</p> : (
+          {!finalizedSettlement ? <p className="small">{copy.noFinalizedSettlement}</p> : (
             <ul className="simple-list">
-              <li><span>Finalization ID</span><strong>{finalizedSettlement.settlement.finalizationId}</strong></li>
-              <li><span>Finalized At</span><strong>{finalizedSettlement.settlement.finalizedAt}</strong></li>
-              <li><span>Settlement Hash</span><strong>{finalizedSettlement.settlement.settlementHash.slice(0, 16)}...</strong></li>
-              <li><span>Tax Liability</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>Prior Withheld</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.priorWithheldTaxKrw)}</strong></li>
-              <li><span>Withholding Delta</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.withholdingDeltaKrw)}</strong></li>
-              <li><span>Additional Due / Refund</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.additionalWithholdingDueKrw)} / {formatKrw(finalizedSettlement.settlement.settlementKrw.withholdingRefundKrw)}</strong></li>
-              <li><span>Run Guard Snapshot</span><strong>{`confirmed ${finalizedSettlement.settlement.runStates.confirmedRuns}, previewed ${finalizedSettlement.settlement.runStates.previewedRuns}, undistributed ${finalizedSettlement.settlement.runStates.undistributedRuns}, pending receipt ${finalizedSettlement.settlement.runStates.pendingReceiptRuns}`}</strong></li>
+              <li><span>{copy.finalizationIdLabel}</span><strong>{finalizedSettlement.settlement.finalizationId}</strong></li>
+              <li><span>{copy.finalizedAtLabel}</span><strong>{finalizedSettlement.settlement.finalizedAt}</strong></li>
+              <li><span>{copy.settlementHashLabel}</span><strong>{finalizedSettlement.settlement.settlementHash.slice(0, 16)}...</strong></li>
+              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
+              <li><span>{copy.priorWithheldLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.priorWithheldTaxKrw)}</strong></li>
+              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.withholdingDeltaKrw)}</strong></li>
+              <li><span>{copy.additionalDueRefundLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.additionalWithholdingDueKrw)} / {formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.withholdingRefundKrw)}</strong></li>
+              <li><span>{copy.runGuardSnapshotLabel}</span><strong>{runGuardSnapshot}</strong></li>
             </ul>
           )}
-          {!receiptDocument ? <p className="small">No issued document loaded.</p> : (
+          {!receiptDocument ? <p className="small">{copy.noIssuedDocument}</p> : (
             <>
               <ul className="simple-list">
-                <li><span>Document File</span><strong>{receiptDocument.document.fileName}</strong></li>
-                <li><span>Format / Type</span><strong>{receiptDocument.document.format} / {receiptDocument.document.contentType}</strong></li>
-                <li><span>Issued At</span><strong>{receiptDocument.document.issuedAt}</strong></li>
-                <li><span>Generated At</span><strong>{receiptDocument.document.generatedAt}</strong></li>
-                <li><span>Content SHA256</span><strong>{receiptDocument.document.contentSha256.slice(0, 16)}...</strong></li>
+                <li><span>{copy.documentFileLabel}</span><strong>{receiptDocument.document.fileName}</strong></li>
+                <li><span>{copy.formatTypeLabel}</span><strong>{receiptDocument.document.format} / {receiptDocument.document.contentType}</strong></li>
+                <li><span>{copy.issuedAtLabel}</span><strong>{receiptDocument.document.issuedAt}</strong></li>
+                <li><span>{copy.generatedAtLabel}</span><strong>{receiptDocument.document.generatedAt}</strong></li>
+                <li><span>{copy.contentSha256Label}</span><strong>{receiptDocument.document.contentSha256.slice(0, 16)}...</strong></li>
               </ul>
               <div className="panel-actions">
                 <button
                   className="btn btn-secondary"
                   onClick={() => downloadDocument(receiptDocument.document)}
                 >
-                  Download Loaded Document
+                  {copy.actionDownloadLoadedDocument}
                 </button>
               </div>
               <pre className="small">{receiptDocument.document.content.slice(0, 1000)}</pre>
@@ -274,20 +487,23 @@ export default function WithholdingReceiptConsole() {
           )}
         </article>
         <article className="panel">
-          <h2>API Logs</h2>
-          <p className="small">total {stats.total} / success {stats.success} / fail {stats.fail}{pendingLabel ? ` / running ${pendingLabel}` : ""}</p>
-          {logs.length === 0 ? <p className="small">No API call yet.</p> : (
+          <h2>{copy.apiLogsTitle}</h2>
+          <p className="small">
+            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
+          </p>
+          {logs.length === 0 ? <p className="small">{copy.apiLogsEmpty}</p> : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/employee" className="btn btn-secondary">Back to Employee</Link>
+            <Link href="/employee" className="btn btn-secondary">{copy.actionBackToEmployee}</Link>
           </div>
         </article>
       </section>
