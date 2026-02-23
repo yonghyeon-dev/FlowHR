@@ -45,9 +45,20 @@ function summarizeCappedDeductionItems(
     .filter(([, value]) => value.capped)
     .map(([key, value]) => {
       const label = deductionItemLabels[key] ?? key;
-      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)})`;
+      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)}) [${value.applicationReasonCode}]`;
     });
   return cappedLines.length ? cappedLines.join(" | ") : "-";
+}
+
+function summarizeDeductionReasonCodes(
+  capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"]
+) {
+  return Object.entries(capAppliedByItemKrw)
+    .map(([key, value]) => {
+      const label = deductionItemLabels[key] ?? key;
+      return `${label}:${value.applicationReasonCode}`;
+    })
+    .join(" | ");
 }
 
 const taxCreditItemLabels: Record<string, string> = {
@@ -63,9 +74,20 @@ function summarizeCappedTaxCreditItems(
     .filter(([, value]) => value.capped)
     .map(([key, value]) => {
       const label = taxCreditItemLabels[key] ?? key;
-      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)})`;
+      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)}) [${value.applicationReasonCode}]`;
     });
   return cappedLines.length ? cappedLines.join(" | ") : "-";
+}
+
+function summarizeTaxCreditReasonCodes(
+  capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"]
+) {
+  return Object.entries(capAppliedByItemKrw)
+    .map(([key, value]) => {
+      const label = taxCreditItemLabels[key] ?? key;
+      return `${label}:${value.applicationReasonCode}`;
+    })
+    .join(" | ");
 }
 
 export default function PayrollYearEndConsole() {
@@ -333,6 +355,7 @@ export default function PayrollYearEndConsole() {
               <li><span>Gross / Net</span><strong>{formatKrw(settlement.summary.annualTotalsKrw.grossPayKrw)} / {formatKrw(settlement.summary.annualTotalsKrw.netPayKrw)}</strong></li>
               <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(settlement.summary.settlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(settlement.summary.settlementKrw.totalTaxCreditAppliedKrw)}</strong></li>
               <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
+              <li><span>Tax Credit Reason Codes</span><strong>{summarizeTaxCreditReasonCodes(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(settlement.summary.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Prior Withheld</span><strong>{formatKrw(settlement.summary.settlementKrw.priorWithheldTaxKrw)}</strong></li>
               <li><span>Withholding Delta</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingDeltaKrw)}</strong></li>
@@ -351,8 +374,10 @@ export default function PayrollYearEndConsole() {
               <li><span>Applied Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw)}</strong></li>
               <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditAppliedKrw)}</strong></li>
               <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
+              <li><span>Tax Credit Reason Codes</span><strong>{summarizeTaxCreditReasonCodes(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
               <li><span>Taxable Income</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeBeforeDeductionKrw)}{" -> "}{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeAfterDeductionKrw)}</strong></li>
               <li><span>Capped Items</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw)}</strong></li>
+              <li><span>Deduction Reason Codes</span><strong>{summarizeDeductionReasonCodes(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw)}</strong></li>
               <li><span>Deduction Eligibility</span><strong>{Object.entries(recalculation.recalculation.deductionEligibility).filter(([, value]) => value).map(([key]) => key).join(", ") || "-"}</strong></li>
               <li><span>Eligibility Blocking Reasons</span><strong>{recalculation.recalculation.deductionEligibilityBlockingReasons.join(" | ") || "-"}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw)}</strong></li>

@@ -200,6 +200,8 @@ type YearEndTaxCreditCapAppliedItemKrw = {
   capKrw: number;
   appliedKrw: number;
   capped: boolean;
+  applicationReasonCode: YearEndAppliedReasonCode;
+  applicationReason: string;
 };
 
 type YearEndTaxCreditCapAppliedBreakdownKrw = Record<
@@ -220,7 +222,11 @@ type YearEndDeductionCapAppliedItemKrw = {
   capKrw: number;
   appliedKrw: number;
   capped: boolean;
+  applicationReasonCode: YearEndAppliedReasonCode;
+  applicationReason: string;
 };
+
+type YearEndAppliedReasonCode = "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED";
 
 type YearEndDeductionCapAppliedBreakdownKrw = Record<
   YearEndDeductionItemKey,
@@ -2797,11 +2803,22 @@ function applyYearEndTaxCreditCapRule(
   rule: YearEndTaxCreditItemCapRule
 ): YearEndTaxCreditCapAppliedItemKrw {
   const appliedKrw = Math.min(inputKrw, rule.capKrw);
+  let applicationReasonCode: YearEndAppliedReasonCode = "APPLIED_AS_ENTERED";
+  let applicationReason = "input applied as entered";
+  if (inputKrw === 0) {
+    applicationReasonCode = "NO_INPUT";
+    applicationReason = "input amount is zero";
+  } else if (appliedKrw !== inputKrw) {
+    applicationReasonCode = "CAPPED_BY_RULE";
+    applicationReason = "input exceeds annual cap rule";
+  }
   return {
     inputKrw,
     capKrw: rule.capKrw,
     appliedKrw,
-    capped: appliedKrw !== inputKrw
+    capped: appliedKrw !== inputKrw,
+    applicationReasonCode,
+    applicationReason
   };
 }
 
@@ -2850,11 +2867,22 @@ function applyYearEndDeductionCapRule(
   rule: YearEndDeductionItemCapRule
 ): YearEndDeductionCapAppliedItemKrw {
   const appliedKrw = Math.min(inputKrw, rule.capKrw);
+  let applicationReasonCode: YearEndAppliedReasonCode = "APPLIED_AS_ENTERED";
+  let applicationReason = "input applied as entered";
+  if (inputKrw === 0) {
+    applicationReasonCode = "NO_INPUT";
+    applicationReason = "input amount is zero";
+  } else if (appliedKrw !== inputKrw) {
+    applicationReasonCode = "CAPPED_BY_RULE";
+    applicationReason = "input exceeds annual cap rule";
+  }
   return {
     inputKrw,
     capKrw: rule.capKrw,
     appliedKrw,
-    capped: appliedKrw !== inputKrw
+    capped: appliedKrw !== inputKrw,
+    applicationReasonCode,
+    applicationReason
   };
 }
 

@@ -31,9 +31,9 @@ export type PayrollYearEndSettlementResponse = {
         additionalTaxCreditKrw: number;
       };
       taxCreditAppliedByItemKrw: {
-        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
       };
       annualIncomeTaxAfterCreditKrw: number;
       annualLocalIncomeTaxKrw: number;
@@ -96,12 +96,12 @@ export type PayrollYearEndRecalculationResponse = {
         housingSavingsKrw: number;
       };
       capAppliedByItemKrw: {
-        personalPensionKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        insurancePremiumKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        medicalExpenseKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        educationExpenseKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        donationKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        housingSavingsKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        personalPensionKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        insurancePremiumKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        medicalExpenseKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        educationExpenseKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        donationKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        housingSavingsKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
       };
     };
     baselineSettlementKrw: {
@@ -117,9 +117,9 @@ export type PayrollYearEndRecalculationResponse = {
         additionalTaxCreditKrw: number;
       };
       taxCreditAppliedByItemKrw: {
-        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
       };
       annualIncomeTaxAfterCreditKrw: number;
       annualLocalIncomeTaxKrw: number;
@@ -142,9 +142,9 @@ export type PayrollYearEndRecalculationResponse = {
         additionalTaxCreditKrw: number;
       };
       taxCreditAppliedByItemKrw: {
-        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
-        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
+        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean; applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED"; applicationReason: string };
       };
       annualIncomeTaxAfterCreditKrw: number;
       annualLocalIncomeTaxKrw: number;
