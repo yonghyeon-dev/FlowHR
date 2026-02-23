@@ -1070,7 +1070,7 @@ export default function AdminDashboardPage() {
           ok: false,
           durationMs: 0,
           at: new Date().toLocaleString("ko-KR"),
-          body: { error: "Organization ID가 필요합니다." }
+          body: { error: "조직 ID가 필요합니다." }
         },
         ...prev
       ]);
@@ -1136,7 +1136,7 @@ export default function AdminDashboardPage() {
           ok: false,
           durationMs: 0,
           at: new Date().toLocaleString("ko-KR"),
-          body: { error: "Organization ID가 필요합니다." }
+          body: { error: "조직 ID가 필요합니다." }
         },
         ...prev
       ]);
@@ -1233,7 +1233,13 @@ export default function AdminDashboardPage() {
 
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          현재 환경은 <strong>production</strong>입니다. API 호출을 위해 로그인 세션(Bearer)이 필요합니다:{" "}
+          {isKoLocale
+            ? "현재 환경은 "
+            : "Current environment is "}
+          <strong>{isKoLocale ? "운영(production)" : "production"}</strong>
+          {isKoLocale
+            ? ". API 호출을 위해 로그인 세션(Bearer 토큰)이 필요합니다: "
+            : ". Login session (Bearer token) is required for API calls: "}
           <Link href="/login">/login</Link>
         </p>
       ) : null}
@@ -1252,7 +1258,7 @@ export default function AdminDashboardPage() {
           <strong>{previewedPayroll.length}</strong>
         </article>
         <article className="kpi-card">
-          <p>API 호출</p>
+          <p>{isKoLocale ? "API 호출" : "API calls"}</p>
           <strong>
             {stats.total} ({logStatusLabels.success} {stats.success} / {logStatusLabels.fail} {stats.fail})
           </strong>
@@ -1267,12 +1273,16 @@ export default function AdminDashboardPage() {
         <article className="panel" id="onboarding">
           <h2>조직 온보딩</h2>
           <p className="small">
-            조직(테넌트)을 먼저 만들고 선택해야 직원/근태/휴가/급여 흐름을 정상 검증할 수 있습니다. 이 패널의 조직
-            생성/목록 조회 호출은 tenantScope 제한을 피하기 위해 Dev Header 모드에서{" "}
-            <code>x-actor-organization-id</code> 헤더를 생략합니다.
+            {isKoLocale
+              ? "조직(테넌트)을 먼저 만들고 선택해야 직원/근태/휴가/급여 흐름을 정상 검증할 수 있습니다. 이 패널의 조직 생성/목록 조회 호출은 tenantScope 제한을 피하기 위해 Dev Header 모드에서 "
+              : "You need to create and select an organization (tenant) first to validate employee/attendance/leave/payroll flows. Organization create/list requests in this panel omit "}
+            <code>x-actor-organization-id</code>
+            {isKoLocale
+              ? " 헤더를 생략합니다."
+              : " header in Dev Header mode to bypass tenantScope restriction."}
           </p>
           <p className="small">
-            현재 선택된 Organization ID: <code>{organizationId.trim() || "-"}</code>
+            {isKoLocale ? "현재 선택된 조직 ID" : "Current organization ID"}: <code>{organizationId.trim() || "-"}</code>
           </p>
 
           <div className="input-grid">
@@ -1323,10 +1333,16 @@ export default function AdminDashboardPage() {
               {supabaseSession
                 ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"}`
                 : "현재 로그인되어 있지 않습니다."}{" "}
-              <span className="muted">(Bearer {usesBearerToken ? "ON" : "OFF"})</span>
+              <span className="muted">
+                (Bearer {isKoLocale ? (usesBearerToken ? "사용" : "미사용") : usesBearerToken ? "ON" : "OFF"})
+              </span>
             </p>
           ) : (
-            <p className="small muted">로컬 개발: Dev Header(x-actor-*) 모드가 기본입니다.</p>
+            <p className="small muted">
+              {isKoLocale
+                ? "로컬 개발: Dev Header(x-actor-*) 모드가 기본입니다."
+                : "Local dev: Dev Header (x-actor-*) mode is default."}
+            </p>
           )}
           {supabaseSessionError ? (
             <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
@@ -1341,7 +1357,7 @@ export default function AdminDashboardPage() {
               </summary>
               <div className="input-grid" style={{ marginTop: 12 }}>
                 <label>
-                  Organization ID
+                  {isKoLocale ? "조직 ID" : "Organization ID"}
                   <input
                     value={organizationId}
                     placeholder="예: ORG-00001"
@@ -1349,15 +1365,19 @@ export default function AdminDashboardPage() {
                   />
                 </label>
                 <label>
-                  Admin Actor ID
+                  {isKoLocale ? "관리자 액터 ID" : "Admin actor ID"}
                   <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
                 </label>
                 {showDevTools ? (
                   <label className="full">
-                    Bearer Access Token (override)
+                    {isKoLocale ? "Bearer 액세스 토큰 (재정의)" : "Bearer access token (override)"}
                     <textarea
                       rows={3}
-                      placeholder="비어 있으면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
+                      placeholder={
+                        isKoLocale
+                          ? "비어 있으면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
+                          : "If empty, Dev Header (local) or session (Bearer) will be used."
+                      }
                       value={accessToken}
                       onChange={(event) => setAccessToken(event.target.value)}
                     />
@@ -1366,7 +1386,7 @@ export default function AdminDashboardPage() {
               </div>
               {showDevTools ? (
                 <p className="small muted" style={{ marginTop: 10 }}>
-                  (dev) Runtime Supabase URL: <code>{supabaseUrl}</code>
+                  {isKoLocale ? "(dev) 런타임 Supabase URL" : "(dev) runtime Supabase URL"}: <code>{supabaseUrl}</code>
                 </p>
               ) : null}
             </details>
@@ -1448,8 +1468,9 @@ export default function AdminDashboardPage() {
         <article className="panel" id="invites">
           <h2>초대/가입</h2>
           <p className="small">
-            직원에게 전달할 초대 링크를 생성합니다. <strong>Actor ID</strong>에 <code>Employee.id</code>를 넣으면 직원 포털이 해당
-            직원으로 매핑됩니다.
+            {isKoLocale
+              ? "직원에게 전달할 초대 링크를 생성합니다. 액터 ID에 직원 ID(Employee.id)를 넣으면 직원 포털이 해당 직원으로 매핑됩니다."
+              : "Generate invite links for employees. If actor ID contains Employee.id, employee portal maps to that employee."}
           </p>
           <div className="input-grid">
             <label className="full">
@@ -1480,7 +1501,7 @@ export default function AdminDashboardPage() {
               </select>
             </label>
             <label>
-              Actor ID (선택)
+              {isKoLocale ? "액터 ID (선택)" : "Actor ID (optional)"}
               <input
                 value={inviteActorId}
                 onChange={(event) => setInviteActorId(event.target.value)}
@@ -1488,7 +1509,7 @@ export default function AdminDashboardPage() {
               />
             </label>
             <label className="full">
-              Organization ID
+              {isKoLocale ? "조직 ID" : "Organization ID"}
               <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
             </label>
           </div>
@@ -1882,7 +1903,9 @@ export default function AdminDashboardPage() {
                 }
               >
                 <option value="gross">총지급만</option>
-                <option value="statutory_kr_baseline">법정공제(KR baseline)</option>
+                <option value="statutory_kr_baseline">
+                  {isKoLocale ? "법정공제(한국 baseline)" : "Statutory deductions (KR baseline)"}
+                </option>
               </select>
             </label>
             <label>
@@ -2084,7 +2107,7 @@ export default function AdminDashboardPage() {
             {logs.length === 0 ? (
               <p className="small muted">아직 호출 이력이 없습니다.</p>
             ) : (
-              <ul className="simple-list" aria-label="API 호출 로그">
+              <ul className="simple-list" aria-label={isKoLocale ? "API 호출 로그" : "API call logs"}>
                 {logs.slice(0, 12).map((log) => (
                   <li key={log.id}>
                     <span>
