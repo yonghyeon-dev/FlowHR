@@ -562,3 +562,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 
 - WI-0283 payroll admin preset auto-resolution UX visibility baseline(src/components/payroll/PayrollKrPresetGuidePanel.tsx auto/manual mode controls + /admin#payroll payload wiring for incomeTaxLookupPresetAuto and optional incomeTaxLookupAsOf + manual preset fallback guard + WI-0283 regression test)
 - WI-0291 payroll KR simple withholding dependent-tier engine baseline(`incomeTaxLookupTable[].dependentTaxKrw` validation/selection + managed preset dependent tiers + payroll spec v1.58.0 + WI-0291 regression test)
+- WI-0292 employee year-end input locale dynamic UI baseline(`/employee/year-end-input` ko/en locale copy wiring via useI18n + runtime log locale mapping(ko-KR/en-US) + WI-0292 regression test)

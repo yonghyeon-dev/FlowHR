@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 
 import type { FinalizedYearEndSettlementResponse } from "@/components/withholding-receipt/types";
 import { currentYear, formatKrw } from "@/components/withholding-receipt/types";
+import { type FlowLocale } from "@/lib/i18n/locales";
+import { useI18n } from "@/lib/i18n/provider";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
@@ -44,7 +46,168 @@ type ApiLog = {
   at: string;
 };
 
+type EmployeeYearEndInputCopy = {
+  heroEyebrow: string;
+  title: string;
+  description: string;
+  inputTitle: string;
+  yearLabel: string;
+  employeeIdLabel: string;
+  nonTaxableAnnualIncomeLabel: string;
+  earnedIncomeTaxCreditLabel: string;
+  childTaxCreditLabel: string;
+  additionalTaxCreditLabel: string;
+  personalPensionLabel: string;
+  insurancePremiumLabel: string;
+  medicalExpenseLabel: string;
+  educationExpenseLabel: string;
+  donationLabel: string;
+  housingSavingsLabel: string;
+  annualIncomeTaxRateLabel: string;
+  localIncomeTaxRateLabel: string;
+  accessTokenLabel: string;
+  organizationIdFallbackLabel: string;
+  loadFinalizedSettlementAction: string;
+  pendingFinalizedSettlement: string;
+  loadFinalizedSettlementLogLabel: string;
+  requestFailedStatus: string;
+  requestFailedCheckLogsStatus: string;
+  loadedStatusPrefix: string;
+  simulationTitle: string;
+  loadFirstGuide: string;
+  summaryFinalization: string;
+  summaryGrossPay: string;
+  summaryAppliedDeduction: string;
+  summaryTaxableAnnualIncome: string;
+  summaryAppliedTaxCredit: string;
+  summaryEstimatedLiability: string;
+  summaryBaselineLiability: string;
+  summaryLiabilityChange: string;
+  summaryWithholdingDelta: string;
+  summaryAdditionalDueRefund: string;
+  capsGuide: string;
+  apiLogsTitle: string;
+  apiLogsTotalPrefix: string;
+  apiLogsRunningPrefix: string;
+  apiLogsEmpty: string;
+  okLabel: string;
+  failLabel: string;
+  openWithholdingReceiptAction: string;
+  backToEmployeeAction: string;
+  sessionErrorPrefix: string;
+};
+
+const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputCopy> = {
+  ko: {
+    heroEyebrow: "FlowHR 직원",
+    title: "연말정산 입력 시뮬레이터",
+    description: "확정된 정산 결과를 불러와 공제/세액공제 입력 영향도를 제출 전에 시뮬레이션합니다.",
+    inputTitle: "입력",
+    yearLabel: "연도",
+    employeeIdLabel: "직원 ID",
+    nonTaxableAnnualIncomeLabel: "비과세 연간 소득",
+    earnedIncomeTaxCreditLabel: "근로소득 세액공제",
+    childTaxCreditLabel: "자녀 세액공제",
+    additionalTaxCreditLabel: "추가 세액공제",
+    personalPensionLabel: "개인연금",
+    insurancePremiumLabel: "보험료",
+    medicalExpenseLabel: "의료비",
+    educationExpenseLabel: "교육비",
+    donationLabel: "기부금",
+    housingSavingsLabel: "주택저축",
+    annualIncomeTaxRateLabel: "연간 소득세율",
+    localIncomeTaxRateLabel: "지방소득세율",
+    accessTokenLabel: "액세스 토큰(선택)",
+    organizationIdFallbackLabel: "조직 ID(dev fallback)",
+    loadFinalizedSettlementAction: "확정 정산 불러오기",
+    pendingFinalizedSettlement: "확정 정산 조회",
+    loadFinalizedSettlementLogLabel: "확정 정산 조회",
+    requestFailedStatus: "요청이 실패했습니다",
+    requestFailedCheckLogsStatus: "요청이 실패했습니다. 로그를 확인하세요.",
+    loadedStatusPrefix: "조회 완료",
+    simulationTitle: "시뮬레이션 결과",
+    loadFirstGuide: "먼저 확정 정산을 불러오세요.",
+    summaryFinalization: "확정 ID",
+    summaryGrossPay: "총급여",
+    summaryAppliedDeduction: "적용 공제",
+    summaryTaxableAnnualIncome: "과세 연간 소득",
+    summaryAppliedTaxCredit: "적용 세액공제",
+    summaryEstimatedLiability: "예상 세부담",
+    summaryBaselineLiability: "기준 세부담",
+    summaryLiabilityChange: "세부담 증감",
+    summaryWithholdingDelta: "원천징수 차액",
+    summaryAdditionalDueRefund: "추가 납부 / 환급",
+    capsGuide:
+      "한도: 소득공제(개인연금 7,000,000 / 보험료 1,000,000 / 의료비 15,000,000 / 교육비 9,000,000 / 기부금 10,000,000 / 주택저축 4,000,000), 세액공제(근로 740,000 / 자녀 900,000 / 추가 1,000,000).",
+    apiLogsTitle: "API 로그",
+    apiLogsTotalPrefix: "총",
+    apiLogsRunningPrefix: "실행 중",
+    apiLogsEmpty: "아직 API 호출이 없습니다.",
+    okLabel: "성공",
+    failLabel: "실패",
+    openWithholdingReceiptAction: "원천징수영수증 열기",
+    backToEmployeeAction: "직원 화면으로",
+    sessionErrorPrefix: "세션 오류"
+  },
+  en: {
+    heroEyebrow: "FlowHR Employee",
+    title: "Year-End Input Simulator",
+    description:
+      "Load your finalized settlement and simulate deduction/tax-credit input effects before HR submission.",
+    inputTitle: "Input",
+    yearLabel: "Year",
+    employeeIdLabel: "Employee ID",
+    nonTaxableAnnualIncomeLabel: "Non-taxable Annual Income",
+    earnedIncomeTaxCreditLabel: "Earned Income Tax Credit",
+    childTaxCreditLabel: "Child Tax Credit",
+    additionalTaxCreditLabel: "Additional Tax Credit",
+    personalPensionLabel: "Personal Pension",
+    insurancePremiumLabel: "Insurance Premium",
+    medicalExpenseLabel: "Medical Expense",
+    educationExpenseLabel: "Education Expense",
+    donationLabel: "Donation",
+    housingSavingsLabel: "Housing Savings",
+    annualIncomeTaxRateLabel: "Annual Income Tax Rate",
+    localIncomeTaxRateLabel: "Local Income Tax Rate",
+    accessTokenLabel: "Access Token (optional)",
+    organizationIdFallbackLabel: "Organization ID (dev fallback)",
+    loadFinalizedSettlementAction: "Load Finalized Settlement",
+    pendingFinalizedSettlement: "finalized settlement load",
+    loadFinalizedSettlementLogLabel: "load finalized settlement",
+    requestFailedStatus: "request failed",
+    requestFailedCheckLogsStatus: "request failed; check logs",
+    loadedStatusPrefix: "loaded",
+    simulationTitle: "Simulation Result",
+    loadFirstGuide: "Load finalized settlement first.",
+    summaryFinalization: "Finalization",
+    summaryGrossPay: "Gross Pay",
+    summaryAppliedDeduction: "Applied Deduction",
+    summaryTaxableAnnualIncome: "Taxable Annual Income",
+    summaryAppliedTaxCredit: "Applied Tax Credit",
+    summaryEstimatedLiability: "Estimated Liability",
+    summaryBaselineLiability: "Baseline Liability",
+    summaryLiabilityChange: "Liability Change",
+    summaryWithholdingDelta: "Withholding Delta",
+    summaryAdditionalDueRefund: "Additional Due / Refund",
+    capsGuide:
+      "Caps: deduction(personal pension 7,000,000 / insurance 1,000,000 / medical 15,000,000 / education 9,000,000 / donation 10,000,000 / housing 4,000,000), tax credit(earned 740,000 / child 900,000 / additional 1,000,000).",
+    apiLogsTitle: "API Logs",
+    apiLogsTotalPrefix: "total",
+    apiLogsRunningPrefix: "running",
+    apiLogsEmpty: "No API call yet.",
+    okLabel: "OK",
+    failLabel: "FAIL",
+    openWithholdingReceiptAction: "Open Withholding Receipt",
+    backToEmployeeAction: "Back to Employee",
+    sessionErrorPrefix: "Session error"
+  }
+};
+
 export default function EmployeeYearEndInputConsole() {
+  const { locale } = useI18n();
+  const copy = employeeYearEndInputCopyByLocale[locale];
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
   const [accessToken, setAccessToken] = useState("");
@@ -94,7 +257,7 @@ export default function EmployeeYearEndInputConsole() {
   }
 
   async function loadFinalizedSettlement() {
-    setPendingLabel("finalized settlement");
+    setPendingLabel(copy.pendingFinalizedSettlement);
     try {
       const query = new URLSearchParams({
         year: String(parseNonNegativeInt(year)),
@@ -108,22 +271,22 @@ export default function EmployeeYearEndInputConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "load finalized settlement",
+          label: copy.loadFinalizedSettlementLogLabel,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
       setFinalizedSettlement(body);
-      setStatusMessage(`loaded ${body.settlement.finalizationId}`);
+      setStatusMessage(`${copy.loadedStatusPrefix} ${body.settlement.finalizationId}`);
       setTimeout(() => setStatusMessage(null), 2500);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "request failed");
+      setStatusMessage(error instanceof Error ? error.message : copy.requestFailedStatus);
     } finally {
       setPendingLabel(null);
     }
@@ -228,79 +391,76 @@ export default function EmployeeYearEndInputConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Employee</p>
-        <h1>Year-End Input Simulator</h1>
-        <p>Load your finalized settlement and simulate deduction/tax-credit input effects before HR submission.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
       <section className="panel-grid">
         <article className="panel">
-          <h2>Input</h2>
+          <h2>{copy.inputTitle}</h2>
           <div className="input-grid">
-            <label>Year<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>Employee ID<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
-            <label>Non-taxable Annual Income<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
-            <label>Earned Income Tax Credit<input value={earnedIncomeTaxCreditKrw} onChange={(event) => setEarnedIncomeTaxCreditKrw(event.target.value)} /></label>
-            <label>Child Tax Credit<input value={childTaxCreditKrw} onChange={(event) => setChildTaxCreditKrw(event.target.value)} /></label>
-            <label>Additional Tax Credit<input value={additionalTaxCreditKrw} onChange={(event) => setAdditionalTaxCreditKrw(event.target.value)} /></label>
-            <label>Personal Pension<input value={personalPensionKrw} onChange={(event) => setPersonalPensionKrw(event.target.value)} /></label>
-            <label>Insurance Premium<input value={insurancePremiumKrw} onChange={(event) => setInsurancePremiumKrw(event.target.value)} /></label>
-            <label>Medical Expense<input value={medicalExpenseKrw} onChange={(event) => setMedicalExpenseKrw(event.target.value)} /></label>
-            <label>Education Expense<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
-            <label>Donation<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
-            <label>Housing Savings<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
-            <label>Annual Income Tax Rate<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
-            <label>Local Income Tax Rate<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
+            <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
+            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
+            <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
+            <label>{copy.earnedIncomeTaxCreditLabel}<input value={earnedIncomeTaxCreditKrw} onChange={(event) => setEarnedIncomeTaxCreditKrw(event.target.value)} /></label>
+            <label>{copy.childTaxCreditLabel}<input value={childTaxCreditKrw} onChange={(event) => setChildTaxCreditKrw(event.target.value)} /></label>
+            <label>{copy.additionalTaxCreditLabel}<input value={additionalTaxCreditKrw} onChange={(event) => setAdditionalTaxCreditKrw(event.target.value)} /></label>
+            <label>{copy.personalPensionLabel}<input value={personalPensionKrw} onChange={(event) => setPersonalPensionKrw(event.target.value)} /></label>
+            <label>{copy.insurancePremiumLabel}<input value={insurancePremiumKrw} onChange={(event) => setInsurancePremiumKrw(event.target.value)} /></label>
+            <label>{copy.medicalExpenseLabel}<input value={medicalExpenseKrw} onChange={(event) => setMedicalExpenseKrw(event.target.value)} /></label>
+            <label>{copy.educationExpenseLabel}<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
+            <label>{copy.donationLabel}<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
+            <label>{copy.housingSavingsLabel}<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
+            <label>{copy.annualIncomeTaxRateLabel}<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
+            <label>{copy.localIncomeTaxRateLabel}<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
           </div>
-          <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
-          <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
+          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void loadFinalizedSettlement()} disabled={pendingLabel !== null}>
-              Load Finalized Settlement
+              {copy.loadFinalizedSettlementAction}
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
         <article className="panel">
-          <h2>Simulation Result</h2>
-          {!simulation ? <p className="small">Load finalized settlement first.</p> : (
+          <h2>{copy.simulationTitle}</h2>
+          {!simulation ? <p className="small">{copy.loadFirstGuide}</p> : (
             <ul className="simple-list">
-              <li><span>Finalization</span><strong>{finalizedSettlement?.settlement.finalizationId}</strong></li>
-              <li><span>Gross Pay</span><strong>{formatKrw(simulation.annualGrossPayKrw)}</strong></li>
-              <li><span>Applied Deduction</span><strong>{formatKrw(simulation.totalAppliedDeductionKrw)}</strong></li>
-              <li><span>Taxable Annual Income</span><strong>{formatKrw(simulation.taxableAnnualIncomeKrw)}</strong></li>
-              <li><span>Applied Tax Credit</span><strong>{formatKrw(simulation.totalAppliedTaxCreditKrw)}</strong></li>
-              <li><span>Estimated Liability</span><strong>{formatKrw(simulation.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>Baseline Liability</span><strong>{formatKrw(simulation.baselineTaxLiabilityKrw)}</strong></li>
-              <li><span>Liability Change</span><strong>{formatKrw(simulation.liabilityChangeKrw)}</strong></li>
-              <li><span>Withholding Delta</span><strong>{formatKrw(simulation.withholdingDeltaKrw)}</strong></li>
-              <li><span>Additional Due / Refund</span><strong>{formatKrw(simulation.additionalWithholdingDueKrw)} / {formatKrw(simulation.withholdingRefundKrw)}</strong></li>
+              <li><span>{copy.summaryFinalization}</span><strong>{finalizedSettlement?.settlement.finalizationId}</strong></li>
+              <li><span>{copy.summaryGrossPay}</span><strong>{formatKrw(simulation.annualGrossPayKrw)}</strong></li>
+              <li><span>{copy.summaryAppliedDeduction}</span><strong>{formatKrw(simulation.totalAppliedDeductionKrw)}</strong></li>
+              <li><span>{copy.summaryTaxableAnnualIncome}</span><strong>{formatKrw(simulation.taxableAnnualIncomeKrw)}</strong></li>
+              <li><span>{copy.summaryAppliedTaxCredit}</span><strong>{formatKrw(simulation.totalAppliedTaxCreditKrw)}</strong></li>
+              <li><span>{copy.summaryEstimatedLiability}</span><strong>{formatKrw(simulation.annualTaxLiabilityKrw)}</strong></li>
+              <li><span>{copy.summaryBaselineLiability}</span><strong>{formatKrw(simulation.baselineTaxLiabilityKrw)}</strong></li>
+              <li><span>{copy.summaryLiabilityChange}</span><strong>{formatKrw(simulation.liabilityChangeKrw)}</strong></li>
+              <li><span>{copy.summaryWithholdingDelta}</span><strong>{formatKrw(simulation.withholdingDeltaKrw)}</strong></li>
+              <li><span>{copy.summaryAdditionalDueRefund}</span><strong>{formatKrw(simulation.additionalWithholdingDueKrw)} / {formatKrw(simulation.withholdingRefundKrw)}</strong></li>
             </ul>
           )}
-          <p className="small">
-            Caps: deduction(personal pension 7,000,000 / insurance 1,000,000 / medical 15,000,000 / education 9,000,000 / donation 10,000,000 / housing 4,000,000),
-            tax credit(earned 740,000 / child 900,000 / additional 1,000,000).
-          </p>
+          <p className="small">{copy.capsGuide}</p>
         </article>
         <article className="panel">
-          <h2>API Logs</h2>
+          <h2>{copy.apiLogsTitle}</h2>
           <p className="small">
-            total {logs.length}
-            {pendingLabel ? ` / running ${pendingLabel}` : ""}
+            {copy.apiLogsTotalPrefix} {logs.length}
+            {pendingLabel ? ` / ${copy.apiLogsRunningPrefix} ${pendingLabel}` : ""}
           </p>
-          {logs.length === 0 ? <p className="small">No API call yet.</p> : (
+          {logs.length === 0 ? <p className="small">{copy.apiLogsEmpty}</p> : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/employee/withholding-receipt" className="btn btn-secondary">Open Withholding Receipt</Link>
-            <Link href="/employee" className="btn btn-secondary">Back to Employee</Link>
+            <Link href="/employee/withholding-receipt" className="btn btn-secondary">{copy.openWithholdingReceiptAction}</Link>
+            <Link href="/employee" className="btn btn-secondary">{copy.backToEmployeeAction}</Link>
           </div>
         </article>
       </section>
