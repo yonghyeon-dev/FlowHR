@@ -1,14 +1,26 @@
 ﻿import * as SecureStore from "expo-secure-store";
 
+import {
+  NOTIFICATION_HISTORY_PRESET_RECENT_LIMIT,
+  sanitizeNotificationPresetKeys
+} from "./notificationHistory";
+
 const PREF_KEY = "flowhr.mobile.notification.preference.v1";
 const INBOX_KEY = "flowhr.mobile.notification.inbox.v1";
+const HISTORY_PRESET_STATE_KEY = "flowhr.mobile.notification.history.preset-state.v1";
 let inMemoryPreference = null;
 let inMemoryInbox = null;
+let inMemoryHistoryPresetState = null;
 
 export const defaultNotificationPreference = {
   approvalRequest: true,
   approvalResult: true,
   payslipReady: true
+};
+
+export const defaultNotificationHistoryPresetState = {
+  pinnedPresetKeys: ["allOpen", "approvalUnread"],
+  recentPresetKeys: []
 };
 
 const seedInbox = [
@@ -50,6 +62,19 @@ function parseJson(raw, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function normalizeNotificationHistoryPresetState(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const pinnedPresetKeys = sanitizeNotificationPresetKeys(source.pinnedPresetKeys);
+  const recentPresetKeys = sanitizeNotificationPresetKeys(source.recentPresetKeys)
+    .filter((key) => !pinnedPresetKeys.includes(key))
+    .slice(0, NOTIFICATION_HISTORY_PRESET_RECENT_LIMIT);
+  return {
+    ...defaultNotificationHistoryPresetState,
+    pinnedPresetKeys,
+    recentPresetKeys
+  };
 }
 
 export async function loadNotificationPreference() {
@@ -99,4 +124,27 @@ export async function saveNotificationInbox(items) {
     // fallback in unsupported environments
   }
   return items;
+}
+
+export async function loadNotificationHistoryPresetState() {
+  try {
+    const raw = await SecureStore.getItemAsync(HISTORY_PRESET_STATE_KEY);
+    const parsed = parseJson(raw, defaultNotificationHistoryPresetState);
+    const normalized = normalizeNotificationHistoryPresetState(parsed);
+    inMemoryHistoryPresetState = normalized;
+    return normalized;
+  } catch {
+    return normalizeNotificationHistoryPresetState(inMemoryHistoryPresetState ?? defaultNotificationHistoryPresetState);
+  }
+}
+
+export async function saveNotificationHistoryPresetState(state) {
+  const normalized = normalizeNotificationHistoryPresetState(state);
+  inMemoryHistoryPresetState = normalized;
+  try {
+    await SecureStore.setItemAsync(HISTORY_PRESET_STATE_KEY, JSON.stringify(normalized));
+  } catch {
+    // fallback in unsupported environments
+  }
+  return normalized;
 }

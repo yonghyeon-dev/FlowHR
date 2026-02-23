@@ -19,6 +19,7 @@
   - notification history search/archive
   - notification history bulk actions (select/read/archive/unarchive)
   - notification history quick preset filters
+  - notification history preset pin/recent persistence
 - Email template baseline
   - transactional template catalog
   - locale switch (`ko`/`en`) and variable preview

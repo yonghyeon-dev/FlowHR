@@ -49,6 +49,10 @@ export const NOTIFICATION_HISTORY_PRESET_FILTERS = [
   }
 ];
 
+export const NOTIFICATION_HISTORY_PRESET_RECENT_LIMIT = 4;
+
+const NOTIFICATION_HISTORY_PRESET_KEY_SET = new Set(NOTIFICATION_HISTORY_PRESET_FILTERS.map((preset) => preset.key));
+
 function hasArchive(item) {
   return Boolean(item?.archivedAt);
 }
@@ -193,6 +197,39 @@ export function mergeNotificationSelection(selectionMap, ids) {
 export function getNotificationPresetFilter(presetKey) {
   const preset = NOTIFICATION_HISTORY_PRESET_FILTERS.find((item) => item.key === presetKey);
   return preset?.filter ?? null;
+}
+
+export function sanitizeNotificationPresetKeys(keys) {
+  const source = Array.isArray(keys) ? keys : [];
+  const unique = [];
+  for (const key of source) {
+    if (!NOTIFICATION_HISTORY_PRESET_KEY_SET.has(key)) {
+      continue;
+    }
+    if (!unique.includes(key)) {
+      unique.push(key);
+    }
+  }
+  return unique;
+}
+
+export function toggleNotificationPresetPin(pinnedPresetKeys, presetKey) {
+  const pinned = sanitizeNotificationPresetKeys(pinnedPresetKeys);
+  if (!NOTIFICATION_HISTORY_PRESET_KEY_SET.has(presetKey)) {
+    return pinned;
+  }
+  if (pinned.includes(presetKey)) {
+    return pinned.filter((key) => key !== presetKey);
+  }
+  return [...pinned, presetKey];
+}
+
+export function pushNotificationPresetRecent(recentPresetKeys, presetKey, limit = NOTIFICATION_HISTORY_PRESET_RECENT_LIMIT) {
+  const recent = sanitizeNotificationPresetKeys(recentPresetKeys);
+  if (!NOTIFICATION_HISTORY_PRESET_KEY_SET.has(presetKey)) {
+    return recent.slice(0, limit);
+  }
+  return [presetKey, ...recent.filter((key) => key !== presetKey)].slice(0, limit);
 }
 
 export function buildNotificationPresetCounts(items) {
