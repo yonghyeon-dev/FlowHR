@@ -104,6 +104,8 @@ export const EMPLOYEE_REQUEST_FOLLOW_UP_BUNDLE_PRESET_OPTIONS = [
 ];
 
 export const EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_RECENT_LIMIT = 4;
+export const EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_TRANSFER_TYPE = "flowhr.employee-request-follow-up-preset-state";
+export const EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_TRANSFER_VERSION = 1;
 
 const REQUEST_TYPE_SET = new Set(EMPLOYEE_REQUEST_TYPE_OPTIONS.map((option) => option.key));
 const LEAVE_UNIT_SET = new Set(EMPLOYEE_LEAVE_UNIT_OPTIONS.map((option) => option.key));
@@ -595,6 +597,55 @@ export function normalizeEmployeeRequestFollowUpPresetState(state) {
   return {
     pinnedPresetKeys,
     recentPresetKeys
+  };
+}
+
+function hasFollowUpPresetStateShape(value) {
+  return Boolean(value && typeof value === "object" && ("pinnedPresetKeys" in value || "recentPresetKeys" in value));
+}
+
+export function serializeEmployeeRequestFollowUpPresetState(state, now = new Date()) {
+  const payload = {
+    type: EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_TRANSFER_TYPE,
+    version: EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_TRANSFER_VERSION,
+    exportedAt: now.toISOString(),
+    state: normalizeEmployeeRequestFollowUpPresetState(state)
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+export function parseEmployeeRequestFollowUpPresetState(raw) {
+  const text = String(raw ?? "").trim();
+  if (!text) {
+    return { ok: false, code: "empty_payload" };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, code: "invalid_json" };
+  }
+
+  if (hasFollowUpPresetStateShape(parsed)) {
+    return { ok: true, state: normalizeEmployeeRequestFollowUpPresetState(parsed) };
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { ok: false, code: "invalid_payload" };
+  }
+  if (parsed.type !== EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_TRANSFER_TYPE) {
+    return { ok: false, code: "unsupported_type" };
+  }
+  if (parsed.version !== EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_TRANSFER_VERSION) {
+    return { ok: false, code: "unsupported_version" };
+  }
+  if (!hasFollowUpPresetStateShape(parsed.state)) {
+    return { ok: false, code: "invalid_state" };
+  }
+  return {
+    ok: true,
+    state: normalizeEmployeeRequestFollowUpPresetState(parsed.state),
+    exportedAt: typeof parsed.exportedAt === "string" ? parsed.exportedAt : null
   };
 }
 

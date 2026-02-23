@@ -36,8 +36,8 @@ async function run() {
   assert.match(requestLib, /buildEmployeeRequestFollowUpStats/);
   assert.match(requestLib, /filterEmployeeRequestFollowUps/);
   assert.match(requestLib, /sortEmployeeRequestFollowUps/);
-  assert.match(adminScreen, /WI-0255~/);
-  assert.match(employeeHome, /WI-0255~/);
+  assert.match(adminScreen, /WI-0256~/);
+  assert.match(employeeHome, /WI-0256~/);
   assert.match(readme, /Employee request follow-up alert shell/);
 
   assert.ok(
