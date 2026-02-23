@@ -41,6 +41,37 @@ export const EMPLOYEE_REQUEST_FOLLOW_UP_SORT_OPTIONS = [
   { key: "oldest", label: "Oldest update first" }
 ];
 
+export const EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS = [
+  {
+    key: "triage",
+    label: "Submit triage",
+    note: "Move submitted requests to in-review queue quickly.",
+    primaryAction: "moveToReview",
+    secondaryAction: "openHistory"
+  },
+  {
+    key: "decision",
+    label: "Decision execution",
+    note: "Run review checklist and finalize approval/rejection.",
+    primaryAction: "approve",
+    secondaryAction: "reject"
+  },
+  {
+    key: "recovery",
+    label: "Recovery flow",
+    note: "Reopen review or revise request with a new submission.",
+    primaryAction: "reopenReview",
+    secondaryAction: "openSubmit"
+  },
+  {
+    key: "closure",
+    label: "Closure check",
+    note: "No urgent action is required for approved requests.",
+    primaryAction: "openHistory",
+    secondaryAction: null
+  }
+];
+
 const REQUEST_TYPE_SET = new Set(EMPLOYEE_REQUEST_TYPE_OPTIONS.map((option) => option.key));
 const LEAVE_UNIT_SET = new Set(EMPLOYEE_LEAVE_UNIT_OPTIONS.map((option) => option.key));
 const REQUEST_STATUS_SET = new Set(EMPLOYEE_REQUEST_STATUS_OPTIONS.map((option) => option.key).filter((key) => key !== "all"));
@@ -62,6 +93,14 @@ const FOLLOW_UP_SEVERITY_ORDER = {
 const FOLLOW_UP_SEVERITY_SET = new Set(
   EMPLOYEE_REQUEST_FOLLOW_UP_SEVERITY_OPTIONS.map((option) => option.key).filter((key) => key !== "all")
 );
+
+const FOLLOW_UP_TEMPLATE_BY_STATUS = {
+  submitted: "triage",
+  inReview: "decision",
+  rejected: "recovery",
+  canceled: "recovery",
+  approved: "closure"
+};
 
 function asIsoDate(value) {
   const normalized = normalizeText(value);
@@ -448,4 +487,25 @@ export function sortEmployeeRequestFollowUps(items, sortKey = "priority") {
 
 export function formatEmployeeRequestFollowUpSeverity(severity) {
   return severityLabel(normalizeSeverity(severity));
+}
+
+export function recommendEmployeeRequestFollowUpTemplate(followUp) {
+  const status = normalizeStatus(followUp?.status);
+  const key = FOLLOW_UP_TEMPLATE_BY_STATUS[status] ?? "closure";
+  return (
+    EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS.find((item) => item.key === key) ??
+    EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS[EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS.length - 1]
+  );
+}
+
+export function buildEmployeeRequestFollowUpTemplateStats(items) {
+  const counts = {};
+  for (const item of items) {
+    const template = recommendEmployeeRequestFollowUpTemplate(item);
+    counts[template.key] = (counts[template.key] ?? 0) + 1;
+  }
+  return EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS.map((template) => ({
+    ...template,
+    count: counts[template.key] ?? 0
+  })).sort((a, b) => b.count - a.count);
 }

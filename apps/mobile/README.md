@@ -14,6 +14,7 @@
   - Employee request submit shell
   - Employee request history/status shell
   - Employee request follow-up alert shell
+  - Employee request follow-up recommendation template shell
 - Shared API client wrapper for FlowHR backend requests
 - Push notification baseline
   - permission bootstrap
