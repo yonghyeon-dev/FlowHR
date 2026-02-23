@@ -53,9 +53,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/approval-policy", label: t("admin.nav.approvalPolicy") }
   ];
 
-  const footerLinks: SaasMobileMenuLink[] = [{ href: "/employee", label: t("admin.nav.employeePortal") }];
+  const mobileFooterLinks: SaasMobileMenuLink[] = [{ href: "/employee", label: t("admin.nav.employeePortal") }];
   if (showDevTools) {
-    footerLinks.push(
+    mobileFooterLinks.push(
       { href: "/ops/mvp-console", label: t("admin.nav.devOpsConsole"), muted: true },
       { href: "/ops/leave-promotion", label: t("admin.nav.devLeavePromotion"), muted: true }
     );
@@ -68,7 +68,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
         menuLabel={t("shell.mobileMenu")}
         navAriaLabel={t("admin.nav.aria")}
         navLinks={adminLinks}
-        footerLinks={footerLinks}
+        footerLinks={mobileFooterLinks}
       />
       <div className="saas-shell">
         <aside className="saas-sidebar">
@@ -87,11 +87,17 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
 
           <div className="saas-sidebar-footer">
             <SessionMenu />
-            {footerLinks.map((item) => (
-              <Link key={item.href} href={item.href} className={item.muted ? "muted-link" : undefined}>
-                {item.label}
-              </Link>
-            ))}
+            <Link href="/employee">{t("admin.nav.employeePortal")}</Link>
+            {showDevTools ? (
+              <>
+                <Link className="muted-link" href="/ops/mvp-console">
+                  {t("admin.nav.devOpsConsole")}
+                </Link>
+                <Link className="muted-link" href="/ops/leave-promotion">
+                  {t("admin.nav.devLeavePromotion")}
+                </Link>
+              </>
+            ) : null}
           </div>
         </aside>
 

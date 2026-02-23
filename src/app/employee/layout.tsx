@@ -64,20 +64,30 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
           </div>
 
           <nav className="saas-nav" aria-label={t("employee.nav.aria")}>
-            {navLinks.map((item) => (
-              <Link key={item.href} href={item.href}>
-                {item.label}
-              </Link>
-            ))}
+            <Link href="/employee">{t("employee.nav.overview")}</Link>
+            <Link href="/employee/guide">{t("employee.nav.guide")}</Link>
+            <Link href="/employee#account">{t("employee.nav.account")}</Link>
+            <Link href="/employee#self-service-overview">{t("employee.nav.selfServiceOverview")}</Link>
+            <Link href="/employee#submit-checklist">{t("employee.nav.submitChecklist")}</Link>
+            <Link href="/employee#request-feedback">{t("employee.nav.requestFeedback")}</Link>
+            <Link href="/employee#request-search-sort">{t("employee.nav.requestSearchSort")}</Link>
+            <Link href="/employee#request-timeline">{t("employee.nav.requestTimeline")}</Link>
+            <Link href="/employee#request-resubmit">{t("employee.nav.requestResubmit")}</Link>
+            <Link href="/employee#attendance">{t("employee.nav.attendance")}</Link>
+            <Link href="/employee#leave">{t("employee.nav.leave")}</Link>
+            <Link href="/employee#leave-calendar">{t("employee.nav.leaveCalendar")}</Link>
+            <Link href="/employee#schedule">{t("employee.nav.schedule")}</Link>
+            <Link href="/employee/payslips">{t("employee.nav.payslips")}</Link>
+            <Link href="/employee/payslip-receipts">{t("employee.nav.payslipReceipts")}</Link>
+            <Link href="/employee/withholding-receipt">{t("employee.nav.withholdingReceipt")}</Link>
+            <Link href="/employee/payslips#payslip-search-sort">{t("employee.nav.payslipSearchSort")}</Link>
+            <Link href="/employee/payslips#status-feedback">{t("employee.nav.statusFeedback")}</Link>
+            <Link href="/employee/payslips#compare-view">{t("employee.nav.compareView")}</Link>
           </nav>
 
           <div className="saas-sidebar-footer">
             <SessionMenu />
-            {footerLinks.map((item) => (
-              <Link key={item.href} href={item.href}>
-                {item.label}
-              </Link>
-            ))}
+            {showDevTools ? <Link href="/admin">{t("employee.nav.admin")}</Link> : null}
           </div>
         </aside>
 
