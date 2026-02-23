@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-23
-> **Current version**: 0.1.117 (Mobile Analytics Dashboard Baseline)
+> **Current version**: 0.1.118 (Mobile Analytics Dashboard Share/Filter Preset Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -293,10 +293,11 @@
 - WI-0254 모바일 직원 요청 후속 액션 번들/저장 preset baseline(`apps/mobile` follow-up bundle preset catalog(`allActionRequired/triageQueue/decisionQueue/recoveryQueue`) + pinned/recent preset state 로컬 저장 + `EmployeeRequestFollowUpScreen` preset 적용/빠른 실행/핀 토글 + WI-0254 회귀 테스트 추가)
 - WI-0255 모바일 직원 요청 후속 preset 가져오기/내보내기 baseline(`apps/mobile` follow-up preset transfer payload(`type/version/state`) 직렬화/파서 + `EmployeeRequestFollowUpPresetTransferCard` import/export UI + preset import 즉시 적용 + WI-0255 회귀 테스트 추가)
 - WI-0256 모바일 분석 대시보드 baseline(`apps/mobile` `mobileAnalytics` helper(기간 필터/KPI snapshot/일별 trend/export payload) + `MobileAnalyticsDashboardScreen` 신규 + 관리자/직원 홈 대시보드 진입 + WI-0256 회귀 테스트 추가)
+- WI-0257 모바일 분석 대시보드 공유/필터 preset baseline(`apps/mobile` analytics filter preset catalog(`allActionRequired/approvalRisk/requestFlow/notificationPulse`) + pin/recent preset 저장 + preset transfer payload import/export + `MobileAnalyticsFilterPresetCard` + `MobileAnalyticsDashboardScreen` focus 필터 연동 + WI-0257 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 모바일 분석 대시보드 공유/필터 preset baseline(`WI-X`) 착수 (WI-0257 예정)
+- 다음: 모바일 분석 대시보드 비교/리포트 baseline(`WI-X`) 착수 (WI-0258 예정)
 
 ### 현재 아키텍처
 
@@ -308,7 +309,7 @@
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | phase2 수동/프로필 + KR baseline 근사 | 한국 세법 + 4대보험 |
 | UI | 관리자 대시보드(`/admin`) + 결재 정책(`/admin/approval-policy`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
-| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 + 알림센터 실시간 업데이트 + 히스토리 검색/보관/일괄 액션 + 프리셋 pin/recent + import/export transfer + 관리자 승인 대기 큐 + 직원 요청 제출 + 요청 이력/상태 추적 + 요청 알림/후속 액션 + 후속 템플릿/자동 추천 + 후속 액션 번들/저장 preset + 후속 preset import/export transfer + 모바일 분석 대시보드 baseline (WI-0256) | 네이티브 앱 (iOS/Android) |
+| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 + 알림센터 실시간 업데이트 + 히스토리 검색/보관/일괄 액션 + 프리셋 pin/recent + import/export transfer + 관리자 승인 대기 큐 + 직원 요청 제출 + 요청 이력/상태 추적 + 요청 알림/후속 액션 + 후속 템플릿/자동 추천 + 후속 액션 번들/저장 preset + 후속 preset import/export transfer + 모바일 분석 대시보드 + 분석 대시보드 공유/필터 preset baseline (WI-0257) | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 
 ---

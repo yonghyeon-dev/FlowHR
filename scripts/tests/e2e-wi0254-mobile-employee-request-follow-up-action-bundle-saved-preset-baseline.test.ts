@@ -38,8 +38,8 @@ async function run() {
   assert.match(requestStore, /loadEmployeeRequestFollowUpPresetState/);
   assert.match(requestStore, /saveEmployeeRequestFollowUpPresetState/);
 
-  assert.match(adminScreen, /WI-0257~/);
-  assert.match(employeeScreen, /WI-0257~/);
+  assert.match(adminScreen, /WI-0258~/);
+  assert.match(employeeScreen, /WI-0258~/);
   assert.match(readme, /Employee request follow-up action bundle saved preset shell/);
 
   assert.ok(
