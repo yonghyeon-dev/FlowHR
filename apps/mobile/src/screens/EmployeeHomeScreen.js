@@ -1,45 +1,50 @@
-import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+﻿import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0244~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0245~에서 확장됩니다.`);
 }
 
-export default function EmployeeHomeScreen({ session, onLogout, onOpenNotifications }) {
+export default function EmployeeHomeScreen({ session, onLogout, onOpenNotifications, onOpenNotificationHistory }) {
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>직원 앱 셸</Text>
-        <Text style={styles.subtitle}>90초 셀프서비스 여정을 모바일 홈에서 바로 시작합니다.</Text>
+        <Text style={styles.title}>직원 홈</Text>
+        <Text style={styles.subtitle}>90초 셀프서비스 여정을 모바일에서 빠르게 시작합니다.</Text>
 
         <ShellCard title="출퇴근 정정">
-          <Text style={styles.desc}>최근 기록 확인 후 정정 요청으로 빠르게 진입합니다.</Text>
+          <Text style={styles.desc}>최근 기록 확인 후 정정 요청으로 빠르게 이동합니다.</Text>
           <Pressable style={styles.btn} onPress={() => action("출퇴근 정정")}>
             <Text style={styles.btnText}>정정 요청 시작</Text>
           </Pressable>
         </ShellCard>
 
-        <ShellCard title="휴가 신청">
-          <Text style={styles.desc}>잔여 연차와 캘린더를 함께 보며 신청 흐름으로 이동합니다.</Text>
-          <Pressable style={styles.btn} onPress={() => action("휴가 신청")}>
-            <Text style={styles.btnText}>휴가 신청 시작</Text>
+        <ShellCard title="휴가 요청">
+          <Text style={styles.desc}>잔여 연차와 캘린더를 확인하고 요청 흐름으로 이동합니다.</Text>
+          <Pressable style={styles.btn} onPress={() => action("휴가 요청")}>
+            <Text style={styles.btnText}>휴가 요청 시작</Text>
           </Pressable>
         </ShellCard>
 
         <ShellCard title="명세서 확인">
-          <Text style={styles.desc}>최신 확정 명세서와 수령 확인 상태를 확인합니다.</Text>
+          <Text style={styles.desc}>최신 확정 명세서와 확인 상태를 점검합니다.</Text>
           <Pressable style={styles.btn} onPress={() => action("명세서 확인")}>
             <Text style={styles.btnText}>명세서 보기</Text>
           </Pressable>
         </ShellCard>
 
         <ShellCard title="알림 센터">
-          <Text style={styles.desc}>승인/명세 상태 알림을 모아보고, 알림 선호를 바로 변경합니다.</Text>
-          <Pressable style={styles.btn} onPress={onOpenNotifications}>
-            <Text style={styles.btnText}>알림 센터 열기</Text>
-          </Pressable>
+          <Text style={styles.desc}>승인/급여 상태 알림을 모아보고, 이력 검색/보관을 관리합니다.</Text>
+          <View style={styles.row}>
+            <Pressable style={styles.btn} onPress={onOpenNotifications}>
+              <Text style={styles.btnText}>알림 센터 열기</Text>
+            </Pressable>
+            <Pressable style={styles.btn} onPress={onOpenNotificationHistory}>
+              <Text style={styles.btnText}>알림 히스토리 열기</Text>
+            </Pressable>
+          </View>
         </ShellCard>
 
         <View style={styles.meta}>
@@ -77,6 +82,9 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 20,
     fontSize: 13
+  },
+  row: {
+    gap: spacing.sm
   },
   btn: {
     borderWidth: 1,

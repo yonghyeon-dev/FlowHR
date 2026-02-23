@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+﻿import * as SecureStore from "expo-secure-store";
 
 const PREF_KEY = "flowhr.mobile.notification.preference.v1";
 const INBOX_KEY = "flowhr.mobile.notification.inbox.v1";
@@ -14,27 +14,30 @@ export const defaultNotificationPreference = {
 const seedInbox = [
   {
     id: "seed-approval-request",
-    title: "승인 요청 도착",
-    body: "결재 대기 2건이 있습니다.",
+    title: "Approval request arrived",
+    body: "You have 2 requests waiting in queue.",
     category: "approvalRequest",
     createdAt: "2026-02-23T06:00:00.000Z",
-    read: false
+    read: false,
+    archivedAt: null
   },
   {
     id: "seed-approval-result",
-    title: "요청 처리 완료",
-    body: "휴가 요청이 승인되었습니다.",
+    title: "Request processed",
+    body: "Your leave request has been approved.",
     category: "approvalResult",
     createdAt: "2026-02-23T05:30:00.000Z",
-    read: false
+    read: false,
+    archivedAt: null
   },
   {
     id: "seed-payslip",
-    title: "급여 명세서 발행",
-    body: "이번 달 확정 명세서가 도착했습니다.",
+    title: "Payslip issued",
+    body: "The finalized payslip for this month is ready.",
     category: "payslipReady",
     createdAt: "2026-02-22T23:50:00.000Z",
-    read: true
+    read: true,
+    archivedAt: null
   }
 ];
 

@@ -1,18 +1,18 @@
-const CATEGORY_SEED = [
+﻿const CATEGORY_SEED = [
   {
     key: "approvalRequest",
-    title: "승인 요청 도착",
-    body: "새 승인 요청이 접수되었습니다."
+    title: "New approval request",
+    body: "A new item entered the approval queue."
   },
   {
     key: "approvalResult",
-    title: "요청 처리 결과",
-    body: "요청 상태가 업데이트되었습니다."
+    title: "Approval result updated",
+    body: "Your request status has been updated."
   },
   {
     key: "payslipReady",
-    title: "명세서 발행 안내",
-    body: "이번 달 명세서가 발행되었습니다."
+    title: "Payslip ready",
+    body: "This month's payslip has been issued."
   }
 ];
 
@@ -50,7 +50,8 @@ export function appendLiveMockNotification(items, now = new Date()) {
     body: slot.body,
     category: slot.key,
     createdAt: now.toISOString(),
-    read: false
+    read: false,
+    archivedAt: null
   };
   return [next, ...items];
 }

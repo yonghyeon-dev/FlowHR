@@ -16,6 +16,7 @@
   - preference toggles
   - in-app notification center shell
   - realtime refresh/polling + category filter
+  - notification history search/archive
 - Email template baseline
   - transactional template catalog
   - locale switch (`ko`/`en`) and variable preview
