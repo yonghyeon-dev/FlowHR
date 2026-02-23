@@ -20,6 +20,7 @@
   - notification history bulk actions (select/read/archive/unarchive)
   - notification history quick preset filters
   - notification history preset pin/recent persistence
+  - notification history preset import/export transfer
 - Email template baseline
   - transactional template catalog
   - locale switch (`ko`/`en`) and variable preview

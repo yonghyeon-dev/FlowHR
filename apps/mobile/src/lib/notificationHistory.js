@@ -50,6 +50,8 @@ export const NOTIFICATION_HISTORY_PRESET_FILTERS = [
 ];
 
 export const NOTIFICATION_HISTORY_PRESET_RECENT_LIMIT = 4;
+export const NOTIFICATION_HISTORY_PRESET_TRANSFER_TYPE = "flowhr.notification-history-preset-state";
+export const NOTIFICATION_HISTORY_PRESET_TRANSFER_VERSION = 1;
 
 const NOTIFICATION_HISTORY_PRESET_KEY_SET = new Set(NOTIFICATION_HISTORY_PRESET_FILTERS.map((preset) => preset.key));
 
@@ -230,6 +232,67 @@ export function pushNotificationPresetRecent(recentPresetKeys, presetKey, limit 
     return recent.slice(0, limit);
   }
   return [presetKey, ...recent.filter((key) => key !== presetKey)].slice(0, limit);
+}
+
+function hasPresetStateShape(value) {
+  return Boolean(value && typeof value === "object" && ("pinnedPresetKeys" in value || "recentPresetKeys" in value));
+}
+
+export function normalizeNotificationHistoryPresetState(state) {
+  const source = state && typeof state === "object" ? state : {};
+  const pinnedPresetKeys = sanitizeNotificationPresetKeys(source.pinnedPresetKeys);
+  const recentPresetKeys = sanitizeNotificationPresetKeys(source.recentPresetKeys)
+    .filter((key) => !pinnedPresetKeys.includes(key))
+    .slice(0, NOTIFICATION_HISTORY_PRESET_RECENT_LIMIT);
+  return {
+    pinnedPresetKeys,
+    recentPresetKeys
+  };
+}
+
+export function serializeNotificationHistoryPresetState(state, now = new Date()) {
+  const payload = {
+    type: NOTIFICATION_HISTORY_PRESET_TRANSFER_TYPE,
+    version: NOTIFICATION_HISTORY_PRESET_TRANSFER_VERSION,
+    exportedAt: now.toISOString(),
+    state: normalizeNotificationHistoryPresetState(state)
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+export function parseNotificationHistoryPresetState(raw) {
+  const text = String(raw ?? "").trim();
+  if (!text) {
+    return { ok: false, code: "empty_payload" };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, code: "invalid_json" };
+  }
+
+  if (hasPresetStateShape(parsed)) {
+    return { ok: true, state: normalizeNotificationHistoryPresetState(parsed) };
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { ok: false, code: "invalid_payload" };
+  }
+  if (parsed.type !== NOTIFICATION_HISTORY_PRESET_TRANSFER_TYPE) {
+    return { ok: false, code: "unsupported_type" };
+  }
+  if (parsed.version !== NOTIFICATION_HISTORY_PRESET_TRANSFER_VERSION) {
+    return { ok: false, code: "unsupported_version" };
+  }
+  if (!hasPresetStateShape(parsed.state)) {
+    return { ok: false, code: "invalid_state" };
+  }
+  return {
+    ok: true,
+    state: normalizeNotificationHistoryPresetState(parsed.state),
+    exportedAt: typeof parsed.exportedAt === "string" ? parsed.exportedAt : null
+  };
 }
 
 export function buildNotificationPresetCounts(items) {
