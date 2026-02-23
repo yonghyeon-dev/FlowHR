@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
 import { type FlowLocale } from "@/lib/i18n/locales";
 import { useI18n } from "@/lib/i18n/provider";
@@ -19,28 +20,43 @@ type PresetPayloadPreviewCopy = {
   taxableAmountExplicit: string;
   taxableAmountDerived: string;
   nonTaxableOmittedWhenZero: string;
+  copyRequestButton: string;
+  copyTemplateButton: string;
+  copyCombinedButton: string;
+  shareButton: string;
+  copySuccess: string;
+  shareSuccess: string;
+  shareFallbackCopySuccess: string;
+  actionFailed: string;
+  shareUnavailable: string;
+  shareSummaryLabel: string;
+};
+
+const PRESET_MODE_OMITTED_LABEL = "(omitted in preset mode)";
+
+const defaultCopy: PresetPayloadPreviewCopy = {
+  title: "Preset mode sample payload preview",
+  notSelected: "Sample payload preview appears when an item preset is selected.",
+  requestPreviewLabel: "Request payload (sample)",
+  serverTemplateLabel: "Server template application (sample)",
+  taxableAmountExplicit: "Uses explicit taxableIncomeKrw value",
+  taxableAmountDerived: "Computed on server as grossPayKrw - nonTaxableIncomeKrw",
+  nonTaxableOmittedWhenZero: "When nonTaxableIncomeKrw=0, non-taxable template row is not generated",
+  copyRequestButton: "Copy request payload",
+  copyTemplateButton: "Copy template preview",
+  copyCombinedButton: "Copy combined preview",
+  shareButton: "Share preview",
+  copySuccess: "Copied sample payload preview to clipboard.",
+  shareSuccess: "Shared sample payload preview.",
+  shareFallbackCopySuccess: "Share is unavailable, so preview content was copied to clipboard.",
+  actionFailed: "Failed to copy/share sample payload preview.",
+  shareUnavailable: "This browser does not support share or clipboard APIs.",
+  shareSummaryLabel: "Preset preview"
 };
 
 const presetPayloadPreviewCopy: Record<FlowLocale, PresetPayloadPreviewCopy> = {
-  ko: {
-    title: "프리셋 모드 샘플 payload 프리뷰",
-    notSelected: "항목 프리셋이 선택되면 샘플 payload 프리뷰가 표시됩니다.",
-    requestPreviewLabel: "요청 payload(샘플)",
-    serverTemplateLabel: "서버 템플릿 적용 결과(샘플)",
-    taxableAmountExplicit: "taxableIncomeKrw 명시값 사용",
-    taxableAmountDerived: "grossPayKrw - nonTaxableIncomeKrw 로 서버에서 계산",
-    nonTaxableOmittedWhenZero: "nonTaxableIncomeKrw=0일 때 비과세 템플릿 행은 생성되지 않음"
-  },
-  en: {
-    title: "Preset mode sample payload preview",
-    notSelected: "Sample payload preview appears when an item preset is selected.",
-    requestPreviewLabel: "Request payload (sample)",
-    serverTemplateLabel: "Server template application (sample)",
-    taxableAmountExplicit: "Uses explicit taxableIncomeKrw value",
-    taxableAmountDerived: "Computed on server as grossPayKrw - nonTaxableIncomeKrw",
-    nonTaxableOmittedWhenZero:
-      "When nonTaxableIncomeKrw=0, non-taxable template row is not generated"
-  }
+  ko: defaultCopy,
+  en: defaultCopy
 };
 
 function parseOptionalInteger(value: string) {
@@ -55,6 +71,20 @@ function parseOptionalInteger(value: string) {
   return Math.max(0, Math.trunc(parsed));
 }
 
+function buildPreviewShareHref(params: {
+  presetId: string;
+  taxableIncomeKrw: number | null;
+  nonTaxableIncomeKrw: number;
+}) {
+  const search = new URLSearchParams();
+  search.set("incomeSplitItemPresetId", params.presetId);
+  if (params.taxableIncomeKrw !== null) {
+    search.set("taxableIncomeKrw", String(params.taxableIncomeKrw));
+  }
+  search.set("nonTaxableIncomeKrw", String(params.nonTaxableIncomeKrw));
+  return `/admin?${search.toString()}#payroll`;
+}
+
 export function PayrollKrIncomeSplitPresetPayloadPreviewPanel({
   selectedPresetId,
   taxableIncomeKrw,
@@ -65,6 +95,7 @@ export function PayrollKrIncomeSplitPresetPayloadPreviewPanel({
   const selectedPreset = getPayrollKrIncomeSplitItemPreset(selectedPresetId.trim());
   const parsedTaxableIncomeKrw = parseOptionalInteger(taxableIncomeKrw);
   const parsedNonTaxableIncomeKrw = parseOptionalInteger(nonTaxableIncomeKrw) ?? 0;
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const requestPayloadPreview = useMemo(() => {
     if (!selectedPreset) {
@@ -76,8 +107,8 @@ export function PayrollKrIncomeSplitPresetPayloadPreviewPanel({
         incomeSplitItemPresetId: selectedPreset.id,
         taxableIncomeKrw: parsedTaxableIncomeKrw ?? undefined,
         nonTaxableIncomeKrw: parsedNonTaxableIncomeKrw,
-        taxableIncomeItems: "(omitted in preset mode)",
-        nonTaxableIncomeItems: "(omitted in preset mode)"
+        taxableIncomeItems: PRESET_MODE_OMITTED_LABEL,
+        nonTaxableIncomeItems: PRESET_MODE_OMITTED_LABEL
       }
     };
   }, [selectedPreset, parsedTaxableIncomeKrw, parsedNonTaxableIncomeKrw]);
@@ -104,6 +135,104 @@ export function PayrollKrIncomeSplitPresetPayloadPreviewPanel({
     };
   }, [selectedPreset, parsedTaxableIncomeKrw, parsedNonTaxableIncomeKrw, copy]);
 
+  const requestPayloadText = useMemo(
+    () => (requestPayloadPreview ? JSON.stringify(requestPayloadPreview, null, 2) : ""),
+    [requestPayloadPreview]
+  );
+  const serverTemplateText = useMemo(
+    () => (serverTemplatePreview ? JSON.stringify(serverTemplatePreview, null, 2) : ""),
+    [serverTemplatePreview]
+  );
+
+  const combinedPreviewText = useMemo(() => {
+    if (!requestPayloadText || !serverTemplateText) {
+      return "";
+    }
+    return [copy.requestPreviewLabel, requestPayloadText, copy.serverTemplateLabel, serverTemplateText].join(
+      "\n\n"
+    );
+  }, [copy.requestPreviewLabel, copy.serverTemplateLabel, requestPayloadText, serverTemplateText]);
+
+  const sharePreviewText = useMemo(() => {
+    if (!selectedPreset || !combinedPreviewText) {
+      return "";
+    }
+    const shareHref = buildPreviewShareHref({
+      presetId: selectedPreset.id,
+      taxableIncomeKrw: parsedTaxableIncomeKrw,
+      nonTaxableIncomeKrw: parsedNonTaxableIncomeKrw
+    });
+    return [`${copy.shareSummaryLabel}: ${selectedPreset.id}`, shareHref, combinedPreviewText].join("\n\n");
+  }, [
+    combinedPreviewText,
+    copy.shareSummaryLabel,
+    parsedNonTaxableIncomeKrw,
+    parsedTaxableIncomeKrw,
+    selectedPreset
+  ]);
+
+  useEffect(() => {
+    if (!actionMessage) {
+      return;
+    }
+    const timer = window.setTimeout(() => setActionMessage(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [actionMessage]);
+
+  const writeClipboard = useCallback(async (content: string) => {
+    if (!content.trim()) {
+      return false;
+    }
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      return false;
+    }
+    try {
+      await navigator.clipboard.writeText(content);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const copyPreview = useCallback(
+    async (content: string) => {
+      const copied = await writeClipboard(content);
+      setActionMessage(copied ? copy.copySuccess : copy.actionFailed);
+    },
+    [copy.actionFailed, copy.copySuccess, writeClipboard]
+  );
+
+  const sharePresetPreview = useCallback(async () => {
+    if (!sharePreviewText) {
+      return;
+    }
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: selectedPreset ? `${copy.shareSummaryLabel}: ${selectedPreset.id}` : copy.shareSummaryLabel,
+          text: sharePreviewText
+        });
+        setActionMessage(copy.shareSuccess);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    const copied = await writeClipboard(sharePreviewText);
+    setActionMessage(copied ? copy.shareFallbackCopySuccess : copy.shareUnavailable);
+  }, [
+    copy.shareFallbackCopySuccess,
+    copy.shareSuccess,
+    copy.shareSummaryLabel,
+    copy.shareUnavailable,
+    selectedPreset,
+    sharePreviewText,
+    writeClipboard
+  ]);
+
   return (
     <div>
       <p className="small">
@@ -115,12 +244,31 @@ export function PayrollKrIncomeSplitPresetPayloadPreviewPanel({
         <div className="input-grid compact">
           <div className="full">
             <p className="small">{copy.requestPreviewLabel}</p>
-            <pre className="small">{JSON.stringify(requestPayloadPreview, null, 2)}</pre>
+            <pre className="small">{requestPayloadText}</pre>
           </div>
           <div className="full">
             <p className="small">{copy.serverTemplateLabel}</p>
-            <pre className="small">{JSON.stringify(serverTemplatePreview, null, 2)}</pre>
+            <pre className="small">{serverTemplateText}</pre>
           </div>
+          <div className="full actions">
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => void copyPreview(requestPayloadText)} disabled={!requestPayloadText}>
+              {copy.copyRequestButton}
+            </button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => void copyPreview(serverTemplateText)} disabled={!serverTemplateText}>
+              {copy.copyTemplateButton}
+            </button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => void copyPreview(combinedPreviewText)} disabled={!combinedPreviewText}>
+              {copy.copyCombinedButton}
+            </button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => void sharePresetPreview()} disabled={!sharePreviewText}>
+              {copy.shareButton}
+            </button>
+          </div>
+          {actionMessage ? (
+            <p className="small muted full" role="status" aria-live="polite">
+              {actionMessage}
+            </p>
+          ) : null}
         </div>
       )}
     </div>

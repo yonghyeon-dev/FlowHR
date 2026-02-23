@@ -1,8 +1,8 @@
-# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 + WI-0105 + WI-0106 + WI-0110 + WI-0220 + WI-0221 + WI-0223 + WI-0224 + WI-0225 + WI-0226 + WI-0227 + WI-0228 + WI-0229 + WI-0230 Contract)
+# Payroll RFC (WI-0001 + WI-0005 + WI-0006 + WI-0010 + WI-0101 + WI-0105 + WI-0106 + WI-0110 + WI-0220 + WI-0221 + WI-0223 + WI-0224 + WI-0225 + WI-0226 + WI-0227 + WI-0228 + WI-0229 + WI-0230 + WI-0231 Contract)
 
 ## Goal
 
-Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode with progressive/lookup-table/preset/cap/tax-credit/month-boundary/insurance-rounding/taxable-split/item-code/item-preset options, admin multi-item input table plus code-dictionary autocomplete wiring, server-side code/category dictionary validation guard, preset/manual consistency preflight UX guidance, and preset-mode sample payload preview guidance.
+Provide payroll gross pay preview based on attendance aggregates, phase2 deduction/tax expansion, deduction profile auto-calculation mode, and KR statutory baseline deduction mode with progressive/lookup-table/preset/cap/tax-credit/month-boundary/insurance-rounding/taxable-split/item-code/item-preset options, admin multi-item input table plus code-dictionary autocomplete wiring, server-side code/category dictionary validation guard, preset/manual consistency preflight UX guidance, preset-mode sample payload preview guidance, and preset preview copy/share UX guidance.
 
 ## Key Decisions
 
@@ -26,6 +26,7 @@ Provide payroll gross pay preview based on attendance aggregates, phase2 deducti
 - WI-0228 validates manual split-item code/category pairs against server dictionary by taxable/non-taxable kind and normalizes accepted values for deterministic replay.
 - WI-0229 adds admin preset/manual split-item consistency guide with client preflight blocking hints before statutory preview submit.
 - WI-0230 adds admin preset-mode sample payload preview panel that documents request shape and template-application amount rules without changing API contract.
+- WI-0231 adds admin preset-mode sample payload copy/share actions (request/template/combined copy, Web Share API with clipboard fallback, and replay href bundle) without changing API contract.
 
 ## Non-Goals
 
