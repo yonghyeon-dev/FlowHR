@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           <Link href="/admin">{t("admin.nav.dashboard")}</Link>
           <Link href="/admin/kpi">{t("admin.nav.kpi")}</Link>
           <Link href="/admin/attendance-live">{t("admin.nav.attendanceLive")}</Link>
+          <Link href="/admin/onboarding">{t("admin.nav.onboarding")}</Link>
           <Link href="/admin#approvals">{t("admin.nav.approvals")}</Link>
           <Link href="/admin#aggregates">{t("admin.nav.aggregates")}</Link>
           <Link href="/admin#leave-policy">{t("admin.nav.leavePolicy")}</Link>
