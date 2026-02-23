@@ -38,8 +38,8 @@ async function run() {
   assert.match(queueStore, /loadApprovalQueueItems/);
   assert.match(queueStore, /saveApprovalQueueItems/);
   assert.match(queueStore, /resetApprovalQueueItems/);
-  assert.match(adminScreen, /WI-0257~/);
-  assert.match(employeeScreen, /WI-0257~/);
+  assert.match(adminScreen, /WI-0258~/);
+  assert.match(employeeScreen, /WI-0258~/);
   assert.match(readme, /Admin approval queue shell/);
 
   assert.ok(

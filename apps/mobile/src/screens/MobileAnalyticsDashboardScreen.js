@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import MobileAnalyticsFilterPresetCard from "../components/MobileAnalyticsFilterPresetCard";
 import ShellCard from "../components/ShellCard";
 import { loadApprovalQueueItems } from "../lib/approvalQueueStore";
 import { loadEmployeeRequests } from "../lib/employeeRequestStore";
@@ -8,10 +9,19 @@ import {
   buildMobileAnalyticsSnapshot,
   buildMobileAnalyticsTrendSeries,
   formatMobileAnalyticsRate,
+  MOBILE_ANALYTICS_FOCUS_OPTIONS,
   MOBILE_ANALYTICS_PERIOD_OPTIONS,
+  pushMobileAnalyticsFilterPresetRecent,
+  resolveMobileAnalyticsFilterFromPreset,
+  resolveMobileAnalyticsFocusLabel,
+  resolveMobileAnalyticsFocusCount,
   resolveMobileAnalyticsPeriodDays,
   serializeMobileAnalyticsSnapshot
 } from "../lib/mobileAnalytics";
+import {
+  loadMobileAnalyticsFilterPresetState,
+  saveMobileAnalyticsFilterPresetState
+} from "../lib/mobileAnalyticsStore";
 import { loadNotificationInbox } from "../lib/notificationStore";
 import { colors, spacing } from "../theme/tokens";
 
@@ -34,7 +44,8 @@ export default function MobileAnalyticsDashboardScreen({
   const [approvals, setApprovals] = useState([]);
   const [requests, setRequests] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [periodKey, setPeriodKey] = useState("7d");
+  const [filterState, setFilterState] = useState({ periodKey: "7d", focus: "all" });
+  const [presetState, setPresetState] = useState({ pinnedPresetKeys: [], recentPresetKeys: [] });
   const [exportPayload, setExportPayload] = useState("");
   const [snapshotAt, setSnapshotAt] = useState(new Date());
 
@@ -52,11 +63,13 @@ export default function MobileAnalyticsDashboardScreen({
 
   useEffect(() => {
     let active = true;
-    refreshAll()
-      .then(() => {
-        if (active) {
-          setLoading(false);
+    Promise.all([refreshAll(), loadMobileAnalyticsFilterPresetState()])
+      .then(([, savedPresetState]) => {
+        if (!active) {
+          return;
         }
+        setPresetState(savedPresetState);
+        setLoading(false);
       })
       .catch(() => {
         if (active) {
@@ -68,7 +81,7 @@ export default function MobileAnalyticsDashboardScreen({
     };
   }, []);
 
-  const periodDays = useMemo(() => resolveMobileAnalyticsPeriodDays(periodKey, 7), [periodKey]);
+  const periodDays = useMemo(() => resolveMobileAnalyticsPeriodDays(filterState.periodKey, 7), [filterState.periodKey]);
   const source = useMemo(
     () => ({ approvals, requests, notifications }),
     [approvals, notifications, requests]
@@ -76,6 +89,10 @@ export default function MobileAnalyticsDashboardScreen({
   const snapshot = useMemo(
     () => buildMobileAnalyticsSnapshot(source, { periodDays, now: snapshotAt }),
     [periodDays, snapshotAt, source]
+  );
+  const focusCount = useMemo(
+    () => resolveMobileAnalyticsFocusCount(snapshot, filterState.focus),
+    [filterState.focus, snapshot]
   );
   const trendSeries = useMemo(
     () => buildMobileAnalyticsTrendSeries(source, { periodDays, now: snapshotAt }),
@@ -98,6 +115,39 @@ export default function MobileAnalyticsDashboardScreen({
     setExportPayload("");
   }
 
+  async function applyFilterPreset(presetKey) {
+    const nextFilter = resolveMobileAnalyticsFilterFromPreset(presetKey, filterState);
+    setFilterState(nextFilter);
+
+    const nextRecent = pushMobileAnalyticsFilterPresetRecent(presetState.recentPresetKeys, presetKey).filter(
+      (key) => !presetState.pinnedPresetKeys.includes(key)
+    );
+    const nextPresetState = {
+      pinnedPresetKeys: presetState.pinnedPresetKeys,
+      recentPresetKeys: nextRecent
+    };
+    const saved = await saveMobileAnalyticsFilterPresetState(nextPresetState);
+    setPresetState(saved);
+  }
+
+  async function toggleFilterPresetPin(presetKey) {
+    const nextPinned = presetState.pinnedPresetKeys.includes(presetKey)
+      ? presetState.pinnedPresetKeys.filter((key) => key !== presetKey)
+      : [...presetState.pinnedPresetKeys, presetKey];
+    const nextPresetState = {
+      pinnedPresetKeys: nextPinned,
+      recentPresetKeys: presetState.recentPresetKeys.filter((key) => !nextPinned.includes(key))
+    };
+    const saved = await saveMobileAnalyticsFilterPresetState(nextPresetState);
+    setPresetState(saved);
+  }
+
+  async function importFilterPresetTransfer(nextState) {
+    const saved = await saveMobileAnalyticsFilterPresetState(nextState.presetState);
+    setPresetState(saved);
+    setFilterState(nextState.filterState);
+  }
+
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -109,9 +159,20 @@ export default function MobileAnalyticsDashboardScreen({
             {MOBILE_ANALYTICS_PERIOD_OPTIONS.map((item) => (
               <Chip
                 key={item.key}
-                active={periodKey === item.key}
+                active={filterState.periodKey === item.key}
                 label={item.label}
-                onPress={() => setPeriodKey(item.key)}
+                onPress={() => setFilterState((prev) => ({ ...prev, periodKey: item.key }))}
+              />
+            ))}
+          </View>
+          <Text style={styles.meta}>focus: {resolveMobileAnalyticsFocusLabel(filterState.focus)}</Text>
+          <View style={styles.chipRow}>
+            {MOBILE_ANALYTICS_FOCUS_OPTIONS.map((item) => (
+              <Chip
+                key={item.key}
+                active={filterState.focus === item.key}
+                label={item.label}
+                onPress={() => setFilterState((prev) => ({ ...prev, focus: item.key }))}
               />
             ))}
           </View>
@@ -129,7 +190,17 @@ export default function MobileAnalyticsDashboardScreen({
           </Text>
         </ShellCard>
 
-        <ShellCard title="KPI snapshot" subtitle={loading ? "Loading..." : `${snapshot.kpi.actionRequired} action(s) required`}>
+        <MobileAnalyticsFilterPresetCard
+          source={source}
+          snapshotAt={snapshotAt}
+          filterState={filterState}
+          presetState={presetState}
+          onApplyPreset={applyFilterPreset}
+          onTogglePresetPin={toggleFilterPresetPin}
+          onImportPresetTransfer={importFilterPresetTransfer}
+        />
+
+        <ShellCard title="KPI snapshot" subtitle={loading ? "Loading..." : `${focusCount} focus item(s)`}>
           <Text style={styles.kpi}>action required: {snapshot.kpi.actionRequired}</Text>
           <Text style={styles.meta}>approvals pending: {snapshot.kpi.approvalsPending}</Text>
           <Text style={styles.meta}>requests pending action: {snapshot.kpi.requestsPendingAction}</Text>
@@ -140,24 +211,30 @@ export default function MobileAnalyticsDashboardScreen({
         </ShellCard>
 
         <ShellCard title="Domain breakdown">
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Approval queue</Text>
-            <Text style={styles.meta}>pending: {snapshot.domain.approval.pending}</Text>
-            <Text style={styles.meta}>high pending: {snapshot.domain.approval.highPriorityPending}</Text>
-            <Text style={styles.meta}>stalled 24h+: {snapshot.domain.approval.stalledOver24h}</Text>
-          </View>
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Employee requests</Text>
-            <Text style={styles.meta}>submitted: {snapshot.domain.request.submitted}</Text>
-            <Text style={styles.meta}>in review: {snapshot.domain.request.inReview}</Text>
-            <Text style={styles.meta}>approved: {snapshot.domain.request.approved}</Text>
-          </View>
-          <View style={styles.panel}>
-            <Text style={styles.panelTitle}>Notifications</Text>
-            <Text style={styles.meta}>active: {snapshot.domain.notification.total}</Text>
-            <Text style={styles.meta}>unread: {snapshot.domain.notification.unread}</Text>
-            <Text style={styles.meta}>approval request unread: {snapshot.domain.notification.categories.approvalRequest?.unread ?? 0}</Text>
-          </View>
+          {filterState.focus === "all" || filterState.focus === "approval" ? (
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Approval queue</Text>
+              <Text style={styles.meta}>pending: {snapshot.domain.approval.pending}</Text>
+              <Text style={styles.meta}>high pending: {snapshot.domain.approval.highPriorityPending}</Text>
+              <Text style={styles.meta}>stalled 24h+: {snapshot.domain.approval.stalledOver24h}</Text>
+            </View>
+          ) : null}
+          {filterState.focus === "all" || filterState.focus === "request" ? (
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Employee requests</Text>
+              <Text style={styles.meta}>submitted: {snapshot.domain.request.submitted}</Text>
+              <Text style={styles.meta}>in review: {snapshot.domain.request.inReview}</Text>
+              <Text style={styles.meta}>approved: {snapshot.domain.request.approved}</Text>
+            </View>
+          ) : null}
+          {filterState.focus === "all" || filterState.focus === "notification" ? (
+            <View style={styles.panel}>
+              <Text style={styles.panelTitle}>Notifications</Text>
+              <Text style={styles.meta}>active: {snapshot.domain.notification.total}</Text>
+              <Text style={styles.meta}>unread: {snapshot.domain.notification.unread}</Text>
+              <Text style={styles.meta}>approval request unread: {snapshot.domain.notification.categories.approvalRequest?.unread ?? 0}</Text>
+            </View>
+          ) : null}
         </ShellCard>
 
         <ShellCard title="Daily trend" subtitle={`${trendSeries.length} day(s)`}>

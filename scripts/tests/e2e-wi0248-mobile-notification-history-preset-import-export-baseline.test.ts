@@ -32,8 +32,8 @@ async function run() {
   assert.match(historyLib, /parseNotificationHistoryPresetState/);
   assert.match(historyLib, /NOTIFICATION_HISTORY_PRESET_TRANSFER_TYPE/);
   assert.match(store, /HISTORY_PRESET_STATE_KEY/);
-  assert.match(adminScreen, /WI-0257~/);
-  assert.match(employeeScreen, /WI-0257~/);
+  assert.match(adminScreen, /WI-0258~/);
+  assert.match(employeeScreen, /WI-0258~/);
   assert.match(readme, /notification history preset import\/export/);
 
   assert.ok(

@@ -30,8 +30,8 @@ async function run() {
   assert.match(requestLib, /serializeEmployeeRequestFollowUpPresetState/);
   assert.match(requestLib, /parseEmployeeRequestFollowUpPresetState/);
   assert.match(requestLib, /EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_TRANSFER_TYPE/);
-  assert.match(adminScreen, /WI-0257~/);
-  assert.match(employeeScreen, /WI-0257~/);
+  assert.match(adminScreen, /WI-0258~/);
+  assert.match(employeeScreen, /WI-0258~/);
   assert.match(readme, /Employee request follow-up preset import\/export transfer shell/);
 
   assert.ok(
