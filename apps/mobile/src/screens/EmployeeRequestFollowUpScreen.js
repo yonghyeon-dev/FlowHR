@@ -5,13 +5,16 @@ import ShellCard from "../components/ShellCard";
 import {
   EMPLOYEE_REQUEST_FOLLOW_UP_SEVERITY_OPTIONS,
   EMPLOYEE_REQUEST_FOLLOW_UP_SORT_OPTIONS,
+  EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS,
   EMPLOYEE_REQUEST_STATUS_OPTIONS,
   applyEmployeeRequestStatus,
   buildEmployeeRequestFollowUpStats,
   buildEmployeeRequestFollowUps,
+  buildEmployeeRequestFollowUpTemplateStats,
   filterEmployeeRequestFollowUps,
   formatEmployeeRequestFollowUpSeverity,
   formatEmployeeRequestStatus,
+  recommendEmployeeRequestFollowUpTemplate,
   sortEmployeeRequestFollowUps
 } from "../lib/employeeRequest";
 import { loadEmployeeRequests, saveEmployeeRequests } from "../lib/employeeRequestStore";
@@ -103,6 +106,7 @@ export default function EmployeeRequestFollowUpScreen({
   }, [dismissedMap, requests]);
 
   const stats = useMemo(() => buildEmployeeRequestFollowUpStats(followUps), [followUps]);
+  const templateStats = useMemo(() => buildEmployeeRequestFollowUpTemplateStats(followUps), [followUps]);
 
   const visibleFollowUps = useMemo(() => {
     const filtered = filterEmployeeRequestFollowUps(followUps, {
@@ -137,6 +141,19 @@ export default function EmployeeRequestFollowUpScreen({
 
   function clearDismissed() {
     setDismissedMap({});
+  }
+
+  async function applyTemplateActionToFirst(templateKey, actionType = "primary") {
+    const target = visibleFollowUps.find((item) => recommendEmployeeRequestFollowUpTemplate(item).key === templateKey);
+    if (!target) {
+      return;
+    }
+    const template = recommendEmployeeRequestFollowUpTemplate(target);
+    const action = actionType === "secondary" ? template.secondaryAction : template.primaryAction;
+    if (!action) {
+      return;
+    }
+    await handleFollowUpAction(target, action);
   }
 
   return (
@@ -210,31 +227,68 @@ export default function EmployeeRequestFollowUpScreen({
           </View>
         </ShellCard>
 
+        <ShellCard title="Recommendation templates">
+          {templateStats
+            .filter((template) => template.count > 0)
+            .map((template) => (
+              <View key={template.key} style={styles.templateItem}>
+                <Text style={styles.templateTitle}>
+                  {template.label} ({template.count})
+                </Text>
+                <Text style={styles.templateMeta}>{template.note}</Text>
+                <View style={styles.actionRow}>
+                  <Pressable style={actionButtonStyle(template.primaryAction)} onPress={() => applyTemplateActionToFirst(template.key, "primary")}>
+                    <Text style={actionTextStyle(template.primaryAction)}>{ACTION_LABEL[template.primaryAction]}</Text>
+                  </Pressable>
+                  {template.secondaryAction ? (
+                    <Pressable style={styles.actionBtn} onPress={() => applyTemplateActionToFirst(template.key, "secondary")}>
+                      <Text style={styles.actionBtnText}>{ACTION_LABEL[template.secondaryAction]}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          {templateStats.every((template) => template.count === 0) ? (
+            <Text style={styles.meta}>No recommendation templates are active.</Text>
+          ) : null}
+          <Text style={styles.meta}>catalog size: {EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS.length}</Text>
+        </ShellCard>
+
         <ShellCard title="Action inbox" subtitle={loading ? "Loading..." : `${visibleFollowUps.length} alert(s)`}>
           {visibleFollowUps.length === 0 ? <Text style={styles.meta}>No active follow-up alerts match current filters.</Text> : null}
-          {visibleFollowUps.map((item) => (
-            <View key={item.id} style={styles.item}>
-              <Text style={styles.itemTitle}>{item.title}</Text>
-              <Text style={styles.itemMeta}>
-                {REQUEST_TYPE_LABEL[item.requestType] ?? item.requestType} · {formatEmployeeRequestStatus(item.status)}
-              </Text>
-              <Text style={styles.itemMeta}>
-                severity: {formatEmployeeRequestFollowUpSeverity(item.severity)} · updated: {item.updatedAt}
-              </Text>
-              <Text style={styles.itemBody}>{item.message}</Text>
-              <Text style={styles.itemMeta}>reason: {item.reason || "-"}</Text>
-              <View style={styles.actionRow}>
-                {item.actions.map((action) => (
-                  <Pressable key={`${item.id}-${action}`} style={actionButtonStyle(action)} onPress={() => handleFollowUpAction(item, action)}>
-                    <Text style={actionTextStyle(action)}>{ACTION_LABEL[action] ?? action}</Text>
+          {visibleFollowUps.map((item) => {
+            const template = recommendEmployeeRequestFollowUpTemplate(item);
+            return (
+              <View key={item.id} style={styles.item}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Text style={styles.itemMeta}>
+                  {REQUEST_TYPE_LABEL[item.requestType] ?? item.requestType} · {formatEmployeeRequestStatus(item.status)}
+                </Text>
+                <Text style={styles.itemMeta}>
+                  severity: {formatEmployeeRequestFollowUpSeverity(item.severity)} · updated: {item.updatedAt}
+                </Text>
+                <Text style={styles.itemMeta}>recommended template: {template.label}</Text>
+                <Text style={styles.itemBody}>{item.message}</Text>
+                <Text style={styles.itemMeta}>reason: {item.reason || "-"}</Text>
+                <View style={styles.actionRow}>
+                  <Pressable
+                    style={actionButtonStyle(template.primaryAction)}
+                    onPress={() => handleFollowUpAction(item, template.primaryAction)}
+                  >
+                    <Text style={actionTextStyle(template.primaryAction)}>{ACTION_LABEL[template.primaryAction]}</Text>
                   </Pressable>
-                ))}
-                <Pressable style={styles.actionBtn} onPress={() => dismissFollowUp(item.id)}>
-                  <Text style={styles.actionBtnText}>Dismiss</Text>
-                </Pressable>
+                  {item.actions.map((action) => (
+                    <Pressable key={`${item.id}-${action}`} style={actionButtonStyle(action)} onPress={() => handleFollowUpAction(item, action)}>
+                      <Text style={actionTextStyle(action)}>{ACTION_LABEL[action] ?? action}</Text>
+                    </Pressable>
+                  ))}
+                  <Pressable style={styles.actionBtn} onPress={() => dismissFollowUp(item.id)}>
+                    <Text style={styles.actionBtnText}>Dismiss</Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </ShellCard>
       </ScrollView>
     </SafeAreaView>
@@ -291,6 +345,16 @@ const styles = StyleSheet.create({
   itemTitle: { color: colors.ink, fontSize: 14, fontWeight: "700" },
   itemMeta: { color: colors.muted, fontSize: 11 },
   itemBody: { color: colors.ink, fontSize: 12 },
+  templateItem: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    padding: spacing.sm,
+    gap: 5
+  },
+  templateTitle: { color: colors.ink, fontSize: 13, fontWeight: "700" },
+  templateMeta: { color: colors.muted, fontSize: 11 },
   actionRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   actionBtn: {
     borderWidth: 1,

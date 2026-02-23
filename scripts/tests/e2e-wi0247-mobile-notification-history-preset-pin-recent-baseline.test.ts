@@ -39,8 +39,8 @@ async function run() {
   assert.match(store, /loadNotificationHistoryPresetState/);
   assert.match(store, /saveNotificationHistoryPresetState/);
 
-  assert.match(adminScreen, /WI-0253~/);
-  assert.match(employeeScreen, /WI-0253~/);
+  assert.match(adminScreen, /WI-0254~/);
+  assert.match(employeeScreen, /WI-0254~/);
   assert.match(readme, /notification history preset pin\/recent persistence/);
 
   assert.ok(
