@@ -14,6 +14,12 @@ async function run() {
     "payroll",
     "year-end-audit-payload-helpers.ts"
   );
+  const filingLifecycleHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "year-end-filing-lifecycle-helpers.ts"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0297-payroll-service-modular-split-phase2.md"
@@ -27,14 +33,6 @@ async function run() {
     payrollService,
     /return resolveYearEndSettlementHashFromFinalizationPayloadCore\(payload\);/
   );
-  assert.match(
-    payrollService,
-    /return asYearEndFilingPackageSubmittedAuditPayloadCore\(\s*payload\s*\)/m
-  );
-  assert.match(
-    payrollService,
-    /return asYearEndFilingPackageAcknowledgedAuditPayloadCore\(\s*payload\s*\)/m
-  );
 
   assert.match(auditHelpers, /export function buildYearEndSettlementHash/);
   assert.match(auditHelpers, /export function normalizeYearEndSettlementHash/);
@@ -42,6 +40,14 @@ async function run() {
   assert.match(
     auditHelpers,
     /export function asYearEndFilingEvidenceNoteAddedAuditPayload/
+  );
+  assert.match(
+    filingLifecycleHelpers,
+    /asYearEndFilingPackageSubmittedAuditPayload\(log\.payload\)/
+  );
+  assert.match(
+    filingLifecycleHelpers,
+    /asYearEndFilingPackageAcknowledgedAuditPayload\(log\.payload\)/
   );
 
   assert.match(workItem, /WI-0297/i);
