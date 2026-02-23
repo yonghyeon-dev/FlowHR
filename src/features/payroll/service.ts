@@ -153,11 +153,18 @@ type AcknowledgePayrollPayslipReceiptInput = {
   runId: string;
 };
 
+type YearEndTaxCreditItemsInput = {
+  earnedIncomeTaxCreditKrw: number;
+  childTaxCreditKrw: number;
+  additionalTaxCreditKrw: number;
+};
+
 type PreviewPayrollYearEndSettlementInput = {
   year: number;
   employeeId: string;
   nonTaxableAnnualIncomeKrw: number;
   additionalTaxCreditKrw: number;
+  taxCredits?: Partial<YearEndTaxCreditItemsInput>;
   annualIncomeTaxRate: number;
   localIncomeTaxRate: number;
 };
@@ -170,6 +177,26 @@ type YearEndDeductionItemsInput = {
   donationKrw: number;
   housingSavingsKrw: number;
 };
+
+type YearEndTaxCreditItemKey = keyof YearEndTaxCreditItemsInput;
+
+type YearEndTaxCreditItemCapRule = {
+  capKrw: number;
+};
+
+type YearEndTaxCreditCapRulesKrw = Record<YearEndTaxCreditItemKey, YearEndTaxCreditItemCapRule>;
+
+type YearEndTaxCreditCapAppliedItemKrw = {
+  inputKrw: number;
+  capKrw: number;
+  appliedKrw: number;
+  capped: boolean;
+};
+
+type YearEndTaxCreditCapAppliedBreakdownKrw = Record<
+  YearEndTaxCreditItemKey,
+  YearEndTaxCreditCapAppliedItemKrw
+>;
 
 type YearEndDeductionItemKey = keyof YearEndDeductionItemsInput;
 
@@ -484,6 +511,10 @@ type YearEndSettlementKrw = {
   taxableAnnualIncomeKrw: number;
   annualIncomeTaxBeforeCreditKrw: number;
   additionalTaxCreditKrw: number;
+  totalTaxCreditInputKrw: number;
+  totalTaxCreditAppliedKrw: number;
+  taxCreditRulesKrw: YearEndTaxCreditItemsInput;
+  taxCreditAppliedByItemKrw: YearEndTaxCreditCapAppliedBreakdownKrw;
   annualIncomeTaxAfterCreditKrw: number;
   annualLocalIncomeTaxKrw: number;
   annualTaxLiabilityKrw: number;
@@ -881,6 +912,13 @@ const emptyTotals: PayableMinutes = {
   overtime: 0,
   night: 0,
   holiday: 0
+};
+
+// Baseline annual caps for year-end tax-credit simulation in settlement calculation.
+const yearEndTaxCreditCapRulesKrw: YearEndTaxCreditCapRulesKrw = {
+  earnedIncomeTaxCreditKrw: { capKrw: 740_000 },
+  childTaxCreditKrw: { capKrw: 900_000 },
+  additionalTaxCreditKrw: { capKrw: 1_000_000 }
 };
 
 // Baseline annual caps for deduction-item simulation in year-end recalculation/finalization.
@@ -2670,6 +2708,78 @@ function getYearEndDeductionTotalKrw(deductionItems: YearEndDeductionItemsInput)
   );
 }
 
+function normalizeYearEndTaxCreditItems(
+  input: PreviewPayrollYearEndSettlementInput
+): YearEndTaxCreditItemsInput {
+  return {
+    earnedIncomeTaxCreditKrw: toKrwInteger(
+      input.taxCredits?.earnedIncomeTaxCreditKrw ?? 0,
+      "taxCredits.earnedIncomeTaxCreditKrw"
+    ),
+    childTaxCreditKrw: toKrwInteger(
+      input.taxCredits?.childTaxCreditKrw ?? 0,
+      "taxCredits.childTaxCreditKrw"
+    ),
+    additionalTaxCreditKrw: toKrwInteger(
+      input.taxCredits?.additionalTaxCreditKrw ?? input.additionalTaxCreditKrw,
+      "taxCredits.additionalTaxCreditKrw"
+    )
+  };
+}
+
+function applyYearEndTaxCreditCapRule(
+  inputKrw: number,
+  rule: YearEndTaxCreditItemCapRule
+): YearEndTaxCreditCapAppliedItemKrw {
+  const appliedKrw = Math.min(inputKrw, rule.capKrw);
+  return {
+    inputKrw,
+    capKrw: rule.capKrw,
+    appliedKrw,
+    capped: appliedKrw !== inputKrw
+  };
+}
+
+function applyYearEndTaxCreditCaps(taxCredits: YearEndTaxCreditItemsInput) {
+  const capAppliedByItemKrw: YearEndTaxCreditCapAppliedBreakdownKrw = {
+    earnedIncomeTaxCreditKrw: applyYearEndTaxCreditCapRule(
+      taxCredits.earnedIncomeTaxCreditKrw,
+      yearEndTaxCreditCapRulesKrw.earnedIncomeTaxCreditKrw
+    ),
+    childTaxCreditKrw: applyYearEndTaxCreditCapRule(
+      taxCredits.childTaxCreditKrw,
+      yearEndTaxCreditCapRulesKrw.childTaxCreditKrw
+    ),
+    additionalTaxCreditKrw: applyYearEndTaxCreditCapRule(
+      taxCredits.additionalTaxCreditKrw,
+      yearEndTaxCreditCapRulesKrw.additionalTaxCreditKrw
+    )
+  };
+  const totalInputTaxCreditKrw = toKrwInteger(
+    capAppliedByItemKrw.earnedIncomeTaxCreditKrw.inputKrw +
+      capAppliedByItemKrw.childTaxCreditKrw.inputKrw +
+      capAppliedByItemKrw.additionalTaxCreditKrw.inputKrw,
+    "taxCredits.totalInputTaxCreditKrw"
+  );
+  const totalAppliedTaxCreditKrw = toKrwInteger(
+    capAppliedByItemKrw.earnedIncomeTaxCreditKrw.appliedKrw +
+      capAppliedByItemKrw.childTaxCreditKrw.appliedKrw +
+      capAppliedByItemKrw.additionalTaxCreditKrw.appliedKrw,
+    "taxCredits.totalAppliedTaxCreditKrw"
+  );
+  const capRulesKrw: YearEndTaxCreditItemsInput = {
+    earnedIncomeTaxCreditKrw: yearEndTaxCreditCapRulesKrw.earnedIncomeTaxCreditKrw.capKrw,
+    childTaxCreditKrw: yearEndTaxCreditCapRulesKrw.childTaxCreditKrw.capKrw,
+    additionalTaxCreditKrw: yearEndTaxCreditCapRulesKrw.additionalTaxCreditKrw.capKrw
+  };
+  return {
+    totalInputTaxCreditKrw,
+    totalAppliedTaxCreditKrw,
+    capRulesKrw,
+    capAppliedByItemKrw
+  };
+}
+
 function applyYearEndDeductionCapRule(
   inputKrw: number,
   rule: YearEndDeductionItemCapRule
@@ -2745,7 +2855,8 @@ function calculateYearEndSettlementKrw(
     input.nonTaxableAnnualIncomeKrw,
     "nonTaxableAnnualIncomeKrw"
   );
-  const additionalTaxCreditKrw = toKrwInteger(input.additionalTaxCreditKrw, "additionalTaxCreditKrw");
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
+  const taxCreditCapApplied = applyYearEndTaxCreditCaps(normalizedTaxCredits);
   const annualIncomeTaxRate = toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0;
   const localIncomeTaxRate = toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0;
   const normalizedIncomeDeductionKrw = toKrwInteger(incomeDeductionKrw, "incomeDeductionKrw");
@@ -2764,7 +2875,7 @@ function calculateYearEndSettlementKrw(
     "annualIncomeTaxBeforeCreditKrw"
   );
   const annualIncomeTaxAfterCreditKrw = Math.max(
-    annualIncomeTaxBeforeCreditKrw - additionalTaxCreditKrw,
+    annualIncomeTaxBeforeCreditKrw - taxCreditCapApplied.totalAppliedTaxCreditKrw,
     0
   );
   const annualLocalIncomeTaxKrw = toKrwInteger(
@@ -2780,7 +2891,11 @@ function calculateYearEndSettlementKrw(
       nonTaxableAnnualIncomeKrw,
       taxableAnnualIncomeKrw,
       annualIncomeTaxBeforeCreditKrw,
-      additionalTaxCreditKrw,
+      additionalTaxCreditKrw: taxCreditCapApplied.capAppliedByItemKrw.additionalTaxCreditKrw.appliedKrw,
+      totalTaxCreditInputKrw: taxCreditCapApplied.totalInputTaxCreditKrw,
+      totalTaxCreditAppliedKrw: taxCreditCapApplied.totalAppliedTaxCreditKrw,
+      taxCreditRulesKrw: taxCreditCapApplied.capRulesKrw,
+      taxCreditAppliedByItemKrw: taxCreditCapApplied.capAppliedByItemKrw,
       annualIncomeTaxAfterCreditKrw,
       annualLocalIncomeTaxKrw,
       annualTaxLiabilityKrw,

@@ -328,6 +328,11 @@ const closePayrollPeriodSettlementSchema = z.object({
 });
 
 const payrollYearSchema = z.number().int().min(2020).max(2100);
+const yearEndTaxCreditsSchema = z.object({
+  earnedIncomeTaxCreditKrw: nonNegativeInteger.default(0),
+  childTaxCreditKrw: nonNegativeInteger.default(0),
+  additionalTaxCreditKrw: nonNegativeInteger.default(0)
+});
 const yearEndDeductionItemsSchema = z.object({
   personalPensionKrw: nonNegativeInteger.default(0),
   insurancePremiumKrw: nonNegativeInteger.default(0),
@@ -365,6 +370,7 @@ export const previewPayrollYearEndSettlementSchema = z.object({
   employeeId: z.string().min(1),
   nonTaxableAnnualIncomeKrw: nonNegativeInteger.default(0),
   additionalTaxCreditKrw: nonNegativeInteger.default(0),
+  taxCredits: yearEndTaxCreditsSchema.optional(),
   annualIncomeTaxRate: rate.default(0.03),
   localIncomeTaxRate: rate.default(0.1)
 });
