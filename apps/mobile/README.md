@@ -17,6 +17,7 @@
   - Employee request follow-up recommendation template shell
   - Employee request follow-up action bundle saved preset shell
   - Employee request follow-up preset import/export transfer shell
+  - Mobile analytics dashboard shell
 - Shared API client wrapper for FlowHR backend requests
 - Push notification baseline
   - permission bootstrap

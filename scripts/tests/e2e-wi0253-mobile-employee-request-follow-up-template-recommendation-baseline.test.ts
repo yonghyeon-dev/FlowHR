@@ -27,8 +27,8 @@ async function run() {
   assert.match(requestLib, /EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS/);
   assert.match(requestLib, /recommendEmployeeRequestFollowUpTemplate/);
   assert.match(requestLib, /buildEmployeeRequestFollowUpTemplateStats/);
-  assert.match(adminScreen, /WI-0256~/);
-  assert.match(employeeScreen, /WI-0256~/);
+  assert.match(adminScreen, /WI-0257~/);
+  assert.match(employeeScreen, /WI-0257~/);
   assert.match(readme, /Employee request follow-up recommendation template shell/);
 
   assert.ok(
