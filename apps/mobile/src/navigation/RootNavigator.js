@@ -1,0 +1,100 @@
+import { useEffect, useMemo, useState } from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { StyleSheet, Text, View } from "react-native";
+
+import AdminHomeScreen from "../screens/AdminHomeScreen";
+import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
+import LoginScreen from "../screens/LoginScreen";
+import { clearSession, loadSession, saveSession } from "../lib/sessionStore";
+import { colors } from "../theme/tokens";
+
+const Stack = createNativeStackNavigator();
+
+export default function RootNavigator() {
+  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    loadSession()
+      .then((stored) => {
+        if (active) {
+          setSession(stored);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const actions = useMemo(
+    () => ({
+      async login(nextSession) {
+        const saved = await saveSession(nextSession);
+        setSession(saved);
+      },
+      async logout() {
+        await clearSession();
+        setSession(null);
+      }
+    }),
+    []
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.splash}>
+        <Text style={styles.splashTitle}>FlowHR Mobile</Text>
+        <Text style={styles.splashSub}>Loading app shell...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        {!session ? (
+          <Stack.Screen name="Login" options={{ headerShown: false }}>
+            {() => <LoginScreen onLogin={actions.login} />}
+          </Stack.Screen>
+        ) : null}
+        {session?.role === "ADMIN" ? (
+          <Stack.Screen name="AdminHome" options={{ title: "Admin Home" }}>
+            {() => <AdminHomeScreen session={session} onLogout={actions.logout} />}
+          </Stack.Screen>
+        ) : null}
+        {session?.role === "EMPLOYEE" ? (
+          <Stack.Screen name="EmployeeHome" options={{ title: "Employee Home" }}>
+            {() => <EmployeeHomeScreen session={session} onLogout={actions.logout} />}
+          </Stack.Screen>
+        ) : null}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8
+  },
+  splashTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.ink
+  },
+  splashSub: {
+    fontSize: 14,
+    color: colors.muted
+  }
+});

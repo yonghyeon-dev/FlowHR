@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "FlowHR Mobile",
+    "slug": "flowhr-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#f7fbff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.flowhr.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#f7fbff"
+      },
+      "package": "com.flowhr.mobile"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
