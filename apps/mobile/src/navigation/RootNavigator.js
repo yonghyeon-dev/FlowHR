@@ -7,6 +7,7 @@ import ApprovalQueueScreen from "../screens/ApprovalQueueScreen";
 import AdminHomeScreen from "../screens/AdminHomeScreen";
 import EmailTemplateScreen from "../screens/EmailTemplateScreen";
 import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
+import EmployeeRequestHistoryScreen from "../screens/EmployeeRequestHistoryScreen";
 import EmployeeRequestSubmitScreen from "../screens/EmployeeRequestSubmitScreen";
 import LoginScreen from "../screens/LoginScreen";
 import NotificationCenterScreen from "../screens/NotificationCenterScreen";
@@ -101,6 +102,7 @@ export default function RootNavigator() {
                 onOpenLeaveRequest={() =>
                   navigation.navigate("EmployeeRequestSubmit", { requestType: "leaveRequest" })
                 }
+                onOpenRequestHistory={() => navigation.navigate("EmployeeRequestHistory")}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
               />
@@ -108,11 +110,17 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
+          <Stack.Screen name="EmployeeRequestHistory" options={{ title: "Request History" }}>
+            {() => <EmployeeRequestHistoryScreen session={session} />}
+          </Stack.Screen>
+        ) : null}
+        {session?.role === "EMPLOYEE" ? (
           <Stack.Screen name="EmployeeRequestSubmit" options={{ title: "Request Submit" }}>
-            {({ route }) => (
+            {({ route, navigation }) => (
               <EmployeeRequestSubmitScreen
                 session={session}
                 initialRequestType={route.params?.requestType ?? "attendanceCorrection"}
+                onOpenRequestHistory={() => navigation.navigate("EmployeeRequestHistory")}
               />
             )}
           </Stack.Screen>
