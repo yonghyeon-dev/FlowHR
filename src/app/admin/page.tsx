@@ -29,6 +29,10 @@ import { PayrollKrIncomeSplitGuideField } from "@/components/payroll/PayrollKrIn
 import { PayrollKrIncomeSplitConsistencyGuidePanel } from "@/components/payroll/PayrollKrIncomeSplitConsistencyGuidePanel";
 import { PayrollKrIncomeSplitPresetPayloadPreviewPanel } from "@/components/payroll/PayrollKrIncomeSplitPresetPayloadPreviewPanel";
 import {
+  PayrollKrPresetShareLinkFeedbackPanel,
+  type PayrollKrPresetShareLinkFeedback
+} from "@/components/payroll/PayrollKrPresetShareLinkFeedbackPanel";
+import {
   createEmptyPayrollKrIncomeSplitItemDraft,
   PayrollKrIncomeSplitItemsTable,
   type PayrollKrIncomeSplitItemDraft
@@ -38,7 +42,8 @@ import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetG
 import { analyzePayrollKrIncomeSplitDraftConsistency } from "@/features/payroll/kr-income-split-item-consistency";
 import {
   hasPayrollKrPresetShareContext,
-  parsePayrollKrPresetShareContext
+  parsePayrollKrPresetShareContext,
+  resolvePayrollKrPresetShareContext
 } from "@/features/payroll/kr-preset-share-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
@@ -337,6 +342,8 @@ export default function AdminDashboardPage() {
   const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
   const [, setMobileApprovalFeedback] = useState<QueueMobileApprovalFeedback | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [payrollPresetShareLinkFeedback, setPayrollPresetShareLinkFeedback] =
+    useState<PayrollKrPresetShareLinkFeedback | null>(null);
   const payrollPresetShareContextAppliedRef = useRef(false);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -374,7 +381,17 @@ export default function AdminDashboardPage() {
     }
     payrollPresetShareContextAppliedRef.current = true;
 
+    const resolution = resolvePayrollKrPresetShareContext(window.location.search);
     const context = parsePayrollKrPresetShareContext(window.location.search);
+    setPayrollPresetShareLinkFeedback({
+      hasAnyQuery: resolution.hasAnyQuery,
+      applied: {
+        presetId: context.presetId,
+        taxableIncomeKrw: context.taxableIncomeKrw,
+        nonTaxableIncomeKrw: context.nonTaxableIncomeKrw
+      },
+      invalid: resolution.invalid
+    });
     if (!hasPayrollKrPresetShareContext(context)) {
       return;
     }
@@ -2083,6 +2100,9 @@ export default function AdminDashboardPage() {
                     taxableIncomeKrw={payrollTaxableIncomeKrw}
                     nonTaxableIncomeKrw={payrollNonTaxableIncomeKrw}
                   />
+                </div>
+                <div className="full">
+                  <PayrollKrPresetShareLinkFeedbackPanel feedback={payrollPresetShareLinkFeedback} />
                 </div>
                 <div className="full">
                   <PayrollKrIncomeSplitItemsTable

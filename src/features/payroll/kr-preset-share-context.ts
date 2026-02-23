@@ -8,11 +8,18 @@ export type PayrollKrPresetShareContext = {
   nonTaxableIncomeKrw: string | null;
 };
 
-function normalizeNonNegativeInteger(value: string | null): string | null {
-  if (value === null) {
+export type PayrollKrPresetShareContextResolution = {
+  context: PayrollKrPresetShareContext;
+  query: PayrollKrPresetShareContext;
+  invalid: PayrollKrPresetShareContext;
+  hasAnyQuery: boolean;
+};
+
+function normalizeNonNegativeInteger(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
     return null;
   }
-  const trimmed = value.trim();
   if (!NON_NEGATIVE_INTEGER_RE.test(trimmed)) {
     return null;
   }
@@ -20,22 +27,70 @@ function normalizeNonNegativeInteger(value: string | null): string | null {
   return normalized.length > 0 ? normalized : "0";
 }
 
-export function parsePayrollKrPresetShareContext(search: string): PayrollKrPresetShareContext {
+function normalizeOptionalQueryValue(value: string | null) {
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function resolvePayrollKrPresetShareContext(search: string): PayrollKrPresetShareContextResolution {
   const params = new URLSearchParams(search);
-  const presetCandidate = (params.get("incomeSplitItemPresetId") ?? "").trim();
-  const resolvedPreset = presetCandidate
-    ? getPayrollKrIncomeSplitItemPreset(presetCandidate)?.id ?? null
+  const query: PayrollKrPresetShareContext = {
+    presetId: normalizeOptionalQueryValue(params.get("incomeSplitItemPresetId")),
+    taxableIncomeKrw: normalizeOptionalQueryValue(params.get("taxableIncomeKrw")),
+    nonTaxableIncomeKrw: normalizeOptionalQueryValue(params.get("nonTaxableIncomeKrw"))
+  };
+
+  const resolvedPreset = query.presetId
+    ? getPayrollKrIncomeSplitItemPreset(query.presetId)?.id ?? null
+    : null;
+  const normalizedTaxableIncomeKrw = query.taxableIncomeKrw
+    ? normalizeNonNegativeInteger(query.taxableIncomeKrw)
+    : null;
+  const normalizedNonTaxableIncomeKrw = query.nonTaxableIncomeKrw
+    ? normalizeNonNegativeInteger(query.nonTaxableIncomeKrw)
     : null;
 
-  return {
+  const context: PayrollKrPresetShareContext = {
     presetId: resolvedPreset,
-    taxableIncomeKrw: normalizeNonNegativeInteger(params.get("taxableIncomeKrw")),
-    nonTaxableIncomeKrw: normalizeNonNegativeInteger(params.get("nonTaxableIncomeKrw"))
+    taxableIncomeKrw: normalizedTaxableIncomeKrw,
+    nonTaxableIncomeKrw: normalizedNonTaxableIncomeKrw
   };
+
+  return {
+    context,
+    query,
+    invalid: {
+      presetId: query.presetId && !resolvedPreset ? query.presetId : null,
+      taxableIncomeKrw:
+        query.taxableIncomeKrw && normalizedTaxableIncomeKrw === null ? query.taxableIncomeKrw : null,
+      nonTaxableIncomeKrw:
+        query.nonTaxableIncomeKrw && normalizedNonTaxableIncomeKrw === null
+          ? query.nonTaxableIncomeKrw
+          : null
+    },
+    hasAnyQuery: Boolean(query.presetId || query.taxableIncomeKrw || query.nonTaxableIncomeKrw)
+  };
+}
+
+export function parsePayrollKrPresetShareContext(search: string): PayrollKrPresetShareContext {
+  return resolvePayrollKrPresetShareContext(search).context;
 }
 
 export function hasPayrollKrPresetShareContext(context: PayrollKrPresetShareContext) {
   return Boolean(
     context.presetId || context.taxableIncomeKrw !== null || context.nonTaxableIncomeKrw !== null
+  );
+}
+
+export function hasPayrollKrPresetShareInvalidValues(
+  resolution: PayrollKrPresetShareContextResolution
+) {
+  return Boolean(
+    resolution.invalid.presetId ||
+      resolution.invalid.taxableIncomeKrw ||
+      resolution.invalid.nonTaxableIncomeKrw
   );
 }
