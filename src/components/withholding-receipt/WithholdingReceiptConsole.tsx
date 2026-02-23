@@ -5,7 +5,11 @@ import { useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
-import type { ApiLog, WithholdingReceiptResponse } from "@/components/withholding-receipt/types";
+import type {
+  ApiLog,
+  WithholdingReceiptDocumentResponse,
+  WithholdingReceiptResponse
+} from "@/components/withholding-receipt/types";
 import { currentYear, formatKrw } from "@/components/withholding-receipt/types";
 
 function parseRequiredInt(value: string, fieldName: string) {
@@ -21,9 +25,11 @@ export default function WithholdingReceiptConsole() {
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
   const [accessToken, setAccessToken] = useState("");
   const [year, setYear] = useState(String(currentYear()));
+  const [documentFormat, setDocumentFormat] = useState<"json" | "text">("json");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [receipt, setReceipt] = useState<WithholdingReceiptResponse | null>(null);
+  const [receiptDocument, setReceiptDocument] = useState<WithholdingReceiptDocumentResponse | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -90,6 +96,60 @@ export default function WithholdingReceiptConsole() {
     }
   }
 
+  function downloadDocument(document: WithholdingReceiptDocumentResponse["document"]) {
+    const blob = new Blob([document.content], { type: document.contentType });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = window.document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = document.fileName;
+    window.document.body.appendChild(anchor);
+    anchor.click();
+    window.document.body.removeChild(anchor);
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  async function loadIssuedDocument() {
+    try {
+      setPendingLabel("withholding receipt document");
+      const query = new URLSearchParams({
+        year: String(parseRequiredInt(year, "year")),
+        employeeId: employeeId.trim(),
+        format: documentFormat
+      });
+      const response = await fetch(
+        `/api/payroll/year-end/withholding-receipts?${query.toString()}`,
+        {
+          method: "GET",
+          headers: buildHeaders()
+        }
+      );
+      const body = (await response.json()) as
+        | WithholdingReceiptDocumentResponse
+        | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "load withholding receipt document",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setReceiptDocument(body);
+      setStatusMessage(`loaded document ${body.document.fileName}`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   return (
     <main className="saas-content">
       <header className="hero">
@@ -103,11 +163,22 @@ export default function WithholdingReceiptConsole() {
           <div className="input-grid">
             <label>Year<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>Employee ID<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
+            <label>
+              Document Format
+              <select
+                value={documentFormat}
+                onChange={(event) => setDocumentFormat(event.target.value === "text" ? "text" : "json")}
+              >
+                <option value="json">json</option>
+                <option value="text">text</option>
+              </select>
+            </label>
           </div>
           <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
           <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void previewReceipt()} disabled={pendingLabel !== null}>Preview Receipt</button>
+            <button className="btn btn-secondary" onClick={() => void loadIssuedDocument()} disabled={pendingLabel !== null}>Load Issued Document</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
           {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
@@ -123,6 +194,26 @@ export default function WithholdingReceiptConsole() {
               <li><span>Pending Receipt Runs</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
               <li><span>Blocking Reasons</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
             </ul>
+          )}
+          {!receiptDocument ? <p className="small">No issued document loaded.</p> : (
+            <>
+              <ul className="simple-list">
+                <li><span>Document File</span><strong>{receiptDocument.document.fileName}</strong></li>
+                <li><span>Format / Type</span><strong>{receiptDocument.document.format} / {receiptDocument.document.contentType}</strong></li>
+                <li><span>Issued At</span><strong>{receiptDocument.document.issuedAt}</strong></li>
+                <li><span>Generated At</span><strong>{receiptDocument.document.generatedAt}</strong></li>
+                <li><span>Content SHA256</span><strong>{receiptDocument.document.contentSha256.slice(0, 16)}...</strong></li>
+              </ul>
+              <div className="panel-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => downloadDocument(receiptDocument.document)}
+                >
+                  Download Loaded Document
+                </button>
+              </div>
+              <pre className="small">{receiptDocument.document.content.slice(0, 1000)}</pre>
+            </>
           )}
         </article>
         <article className="panel">

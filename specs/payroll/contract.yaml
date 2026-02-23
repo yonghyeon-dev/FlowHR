@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.53.0
+version: 1.54.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -31,6 +31,7 @@ scope:
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
     - payslip distribution and employee receipt confirmation workflow for confirmed payroll runs
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
+    - year-end issued withholding receipt document read/download workflow (`format=json|text`) for employee self-service and operator support
     - year-end deduction-item input and settlement recalculation workflow for employee annual payroll totals
     - year-end insurance reconciliation report workflow (confirmed-run social-insurance totals vs finalized deduction trace)
     - year-end preflight checklist workflow before finalization (run/distribution/receipt/submission/non-taxable/hash checks)
@@ -71,11 +72,11 @@ entities:
 api:
   auth:
     - role: payroll_operator
-      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate/finalize year-end settlement, export/submit/resubmit/cancel/reopen/ack/list/filter/summarize timeline/add evidence-note/list ack-catalog filing data packages, list runs, list/manage deduction profiles, and confirm run
+      permission: run payroll preview (including 4-insurance settlement preview), preview/apply period close, distribute payslips, preview/issue/recalculate/finalize year-end settlement, read issued withholding receipt document, export/submit/resubmit/cancel/reopen/ack/list/filter/summarize timeline/add evidence-note/list ack-catalog filing data packages, list runs, list/manage deduction profiles, and confirm run
     - role: admin
       permission: full payroll operations
     - role: employee
-      permission: list own confirmed payroll runs for payslip self-service, confirm own payslip receipt, and preview own year-end withholding receipt (employeeId must match actor id)
+      permission: list own confirmed payroll runs for payslip self-service, confirm own payslip receipt, and preview/read own year-end withholding receipt artifacts (employeeId must match actor id)
   endpoints:
     - method: GET
       path: /payroll/runs
@@ -146,6 +147,9 @@ api:
     - method: POST
       path: /payroll/year-end/filing-submissions/{submissionId}/evidence-note
       description: Add evidence note to selected filing submission for compliance traceability.
+    - method: GET
+      path: /payroll/year-end/withholding-receipts
+      description: Read latest issued withholding receipt document artifact by employee/year with `format=json|text`, deterministic content hash, and own/tenant authorization guard.
     - method: POST
       path: /payroll/year-end/withholding-receipts
       description: Preview or issue withholding receipt for selected employee/year; issuance requires confirmed+distributed+receipt-confirmed run chain.
@@ -374,6 +378,7 @@ test_plan:
     - year-end filing timeline event builder and ordering formulas
     - year-end filing evidence-note append payload formulas
     - withholding receipt issue guard (confirmed/distributed/receipt-confirmed chain)
+    - withholding receipt issued-document artifact formatter (`json|text`) and deterministic content-hash formula
     - rounding behavior for KRW totals
     - payroll run list query parsing and role guard
     - deduction profile list query parsing and role guard
@@ -434,6 +439,7 @@ test_plan:
     - year-end filing submission list returns deterministic summary counters and filtered subsets by status/ackStatus/validationStatus/transport/search/sort query
     - year-end filing evidence-note rejects unknown submission and disabled flag state
     - withholding receipt issue rejects issuance when previewed/undistributed/pending-receipt runs remain
+    - issued withholding receipt document read API rejects missing-issued snapshot and unauthorized other-employee access
     - year-end APIs reject requests when payroll_year_end_v1 is disabled
     - year-end recalculation API rejects requests when payroll_year_end_deduction_input_v1 is disabled
     - year-end finalization/export APIs reject requests when payroll_year_end_filing_export_v1 is disabled
@@ -477,6 +483,7 @@ test_plan:
     - year-end insurance reconciliation report deterministic replay via WI-0271 e2e
     - year-end preflight checklist deterministic replay via WI-0272 e2e
     - year-end hash-guard unified regression suite deterministic replay via WI-0273 e2e
+    - year-end issued withholding receipt document read/download deterministic replay via WI-0274 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
     - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
     - year-end filing submission/ack deterministic replay via WI-0191 e2e
@@ -508,6 +515,7 @@ test_plan:
     - payroll_operator role enforcement for year-end filing cancel/reopen APIs
     - payroll_operator role enforcement for year-end filing timeline/evidence-note APIs
     - employee/payroll role guard for year-end withholding receipt preview/issue API
+    - employee/payroll role guard for year-end issued withholding receipt document read API
   payroll_accuracy:
     - overtime/night/holiday category payout checks
     - deduction sum and net-pay deterministic checks
@@ -533,6 +541,7 @@ test_plan:
     - close-period withholding/social/net aggregation and settlement-delta checks
     - payslip distribution and receipt confirmation state transitions stay deterministic
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
+    - year-end issued withholding receipt document content/hash output remains deterministic for same issued snapshot replay
     - year-end withholding delta refund/additional-due breakdown remains deterministic for same input vectors
     - year-end finalization settlementHash and stale-apply guard decisions remain deterministic for same input vectors
     - year-end filing export/submit/resubmit/acknowledge settlementHash guard decisions remain deterministic for same finalized snapshot vectors
@@ -590,6 +599,7 @@ observability:
     - payroll.year_end.withholding_receipt_previewed
     - payroll.year_end.withholding_receipt_issued
     - payroll.year_end.withholding_receipt.failed
+    - payroll.year_end.withholding_receipt_document.failed
     - payroll.deduction_profile.updated
     - payroll.confirmed
   metrics:
@@ -648,7 +658,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.53.0 additively documents unified year-end hash-guard regression coverage (WI-0273) for finalize/export/submit/ack/resubmit/list settlement-hash filter paths (no runtime breaking API change), while preserving existing preflight checklist/reporting, deduction/tax-credit explainability, settlement-hash guards, and settlement-hash list filter workflows plus withholding breakdown/non-taxable upper-bound/deduction-eligibility/deduction-cap/tax-credit-cap behaviors across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.54.0 additively introduces issued withholding receipt document read/download coverage (WI-0274) on `GET /payroll/year-end/withholding-receipts` with `format=json|text`, deterministic content hash output, and own/tenant authorization guard semantics, while preserving existing year-end settlement/finalization/export/filing/preflight/reconciliation/hash-guard workflows (no breaking API change)."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -691,6 +701,7 @@ references:
   - work-items/WI-0271-payroll-year-end-insurance-reconciliation-report.md
   - work-items/WI-0272-payroll-year-end-preflight-checklist.md
   - work-items/WI-0273-payroll-year-end-hash-guard-regression-suite.md
+  - work-items/WI-0274-payroll-year-end-withholding-receipt-document-download.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
