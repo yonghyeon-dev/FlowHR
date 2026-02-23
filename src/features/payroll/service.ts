@@ -200,6 +200,8 @@ type YearEndTaxCreditCapAppliedItemKrw = {
   capKrw: number;
   appliedKrw: number;
   capped: boolean;
+  applicationReasonCode: YearEndAppliedReasonCode;
+  applicationReason: string;
 };
 
 type YearEndTaxCreditCapAppliedBreakdownKrw = Record<
@@ -220,7 +222,11 @@ type YearEndDeductionCapAppliedItemKrw = {
   capKrw: number;
   appliedKrw: number;
   capped: boolean;
+  applicationReasonCode: YearEndAppliedReasonCode;
+  applicationReason: string;
 };
+
+type YearEndAppliedReasonCode = "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED";
 
 type YearEndDeductionCapAppliedBreakdownKrw = Record<
   YearEndDeductionItemKey,
@@ -279,6 +285,7 @@ type AcknowledgePayrollYearEndFilingPackageInput = {
   year: number;
   employeeId: string;
   submissionId: string;
+  expectedSettlementHash?: string;
   ackStatus: PayrollYearEndFilingAckStatus;
   ackCode?: string;
   ackNote?: string;
@@ -320,6 +327,7 @@ type ListPayrollYearEndFilingSubmissionsInput = {
   ackStatus?: PayrollYearEndFilingSubmissionAckStatusFilter;
   validationStatus?: PayrollYearEndFilingSubmissionValidationStatusFilter;
   transport?: PayrollYearEndFilingSubmissionTransportFilter;
+  settlementHash?: string;
   search?: string;
   sortBy?: PayrollYearEndFilingSubmissionSortBy;
   sortDirection?: PayrollYearEndFilingSubmissionSortDirection;
@@ -343,6 +351,17 @@ type IssuePayrollYearEndWithholdingReceiptInput = {
   employeeId: string;
   issue: boolean;
   issuerName?: string;
+};
+
+type GetPayrollYearEndInsuranceReconciliationReportInput = {
+  year: number;
+  employeeId: string;
+};
+
+type GetPayrollYearEndPreflightChecklistInput = {
+  year: number;
+  employeeId: string;
+  nonTaxableAnnualIncomeKrw?: number;
 };
 
 type UpsertDeductionProfileInput = {
@@ -868,6 +887,89 @@ type IssuePayrollYearEndWithholdingReceiptResult = {
       netPayKrw: number;
     };
     blockingReasons: string[];
+  };
+};
+
+type GetPayrollYearEndInsuranceReconciliationReportResult = {
+  report: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      confirmedRunIds: string[];
+      previewedRunIds: string[];
+    };
+    annualRunSocialInsuranceKrw: number;
+    finalization: {
+      finalized: boolean;
+      finalizationId: string | null;
+      settlementHash: string | null;
+      finalizedAt: string | null;
+      insurancePremiumInputKrw: number | null;
+      insurancePremiumAppliedKrw: number | null;
+      insurancePremiumCapKrw: number | null;
+      applicationReasonCode: YearEndAppliedReasonCode | null;
+      applicationReason: string | null;
+    };
+    reconciliation: {
+      baselineKrw: number;
+      comparedKrw: number;
+      deltaKrw: number;
+      status: "matched" | "mismatch" | "pending_finalization";
+    };
+    monthlyBreakdown: Array<{
+      month: string;
+      runCount: number;
+      confirmedRunCount: number;
+      previewedRunCount: number;
+      grossPayKrw: number;
+      socialInsuranceKrw: number;
+      withholdingTaxKrw: number;
+    }>;
+  };
+};
+
+type GetPayrollYearEndPreflightChecklistResult = {
+  checklist: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    summary: {
+      readyToFinalize: boolean;
+      passCount: number;
+      failCount: number;
+      warnCount: number;
+    };
+    metrics: {
+      annualGrossPayKrw: number;
+      nonTaxableAnnualIncomeKrw: number;
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      undistributedRuns: number;
+      pendingReceiptRuns: number;
+      pendingSubmissionCount: number;
+      rejectedSubmissionCount: number;
+      settlementHash: string | null;
+    };
+    checks: Array<{
+      key:
+        | "confirmed_runs_present"
+        | "no_previewed_runs"
+        | "no_undistributed_runs"
+        | "no_pending_receipts"
+        | "non_taxable_within_annual_gross"
+        | "no_pending_filing_submissions"
+        | "settlement_hash_available";
+      label: string;
+      status: "pass" | "fail" | "warn";
+      detail: string;
+    }>;
   };
 };
 
@@ -2795,11 +2897,22 @@ function applyYearEndTaxCreditCapRule(
   rule: YearEndTaxCreditItemCapRule
 ): YearEndTaxCreditCapAppliedItemKrw {
   const appliedKrw = Math.min(inputKrw, rule.capKrw);
+  let applicationReasonCode: YearEndAppliedReasonCode = "APPLIED_AS_ENTERED";
+  let applicationReason = "input applied as entered";
+  if (inputKrw === 0) {
+    applicationReasonCode = "NO_INPUT";
+    applicationReason = "input amount is zero";
+  } else if (appliedKrw !== inputKrw) {
+    applicationReasonCode = "CAPPED_BY_RULE";
+    applicationReason = "input exceeds annual cap rule";
+  }
   return {
     inputKrw,
     capKrw: rule.capKrw,
     appliedKrw,
-    capped: appliedKrw !== inputKrw
+    capped: appliedKrw !== inputKrw,
+    applicationReasonCode,
+    applicationReason
   };
 }
 
@@ -2848,11 +2961,22 @@ function applyYearEndDeductionCapRule(
   rule: YearEndDeductionItemCapRule
 ): YearEndDeductionCapAppliedItemKrw {
   const appliedKrw = Math.min(inputKrw, rule.capKrw);
+  let applicationReasonCode: YearEndAppliedReasonCode = "APPLIED_AS_ENTERED";
+  let applicationReason = "input applied as entered";
+  if (inputKrw === 0) {
+    applicationReasonCode = "NO_INPUT";
+    applicationReason = "input amount is zero";
+  } else if (appliedKrw !== inputKrw) {
+    applicationReasonCode = "CAPPED_BY_RULE";
+    applicationReason = "input exceeds annual cap rule";
+  }
   return {
     inputKrw,
     capKrw: rule.capKrw,
     appliedKrw,
-    capped: appliedKrw !== inputKrw
+    capped: appliedKrw !== inputKrw,
+    applicationReasonCode,
+    applicationReason
   };
 }
 
@@ -3027,6 +3151,47 @@ function buildYearEndFilingGuard(snapshot: YearEndRunSnapshot): YearEndFilingGua
     blockingReasons,
     canFinalize: blockingReasons.length === 0
   };
+}
+
+function buildYearEndInsuranceReconciliationMonthlyBreakdown(runs: PayrollRunEntity[]) {
+  const byMonth = new Map<
+    string,
+    {
+      month: string;
+      runCount: number;
+      confirmedRunCount: number;
+      previewedRunCount: number;
+      grossPayKrw: number;
+      socialInsuranceKrw: number;
+      withholdingTaxKrw: number;
+    }
+  >();
+
+  for (const run of runs) {
+    const monthParts = toSeoulDateTimeParts(run.periodStart);
+    const month = `${monthParts.year}-${String(monthParts.month).padStart(2, "0")}`;
+    const existing = byMonth.get(month) ?? {
+      month,
+      runCount: 0,
+      confirmedRunCount: 0,
+      previewedRunCount: 0,
+      grossPayKrw: 0,
+      socialInsuranceKrw: 0,
+      withholdingTaxKrw: 0
+    };
+    existing.runCount += 1;
+    if (run.state === "CONFIRMED") {
+      existing.confirmedRunCount += 1;
+    } else {
+      existing.previewedRunCount += 1;
+    }
+    existing.grossPayKrw += run.grossPayKrw;
+    existing.socialInsuranceKrw += run.socialInsuranceKrw ?? 0;
+    existing.withholdingTaxKrw += run.withholdingTaxKrw ?? 0;
+    byMonth.set(month, existing);
+  }
+
+  return Array.from(byMonth.values()).sort((left, right) => left.month.localeCompare(right.month));
 }
 
 type YearEndFinalizationAuditPayload = FinalizePayrollYearEndSettlementResult["settlement"];
@@ -3354,6 +3519,8 @@ type YearEndFilingPackageSubmittedAuditPayload = {
 
 type YearEndFilingPackageAcknowledgedAuditPayload = {
   submissionId: string;
+  settlementHash: string | null;
+  expectedSettlementHash: string | null;
   ackStatus: PayrollYearEndFilingAckStatus;
   ackCode: string | null;
   ackNote: string | null;
@@ -3441,6 +3608,12 @@ function asYearEndFilingPackageAcknowledgedAuditPayload(
   }
   return {
     ...candidate,
+    settlementHash: normalizeYearEndSettlementHash(
+      (candidate as { settlementHash?: unknown }).settlementHash
+    ),
+    expectedSettlementHash: normalizeYearEndSettlementHash(
+      (candidate as { expectedSettlementHash?: unknown }).expectedSettlementHash
+    ),
     ackCode: typeof candidate.ackCode === "string" ? candidate.ackCode : null,
     ackNote: typeof candidate.ackNote === "string" ? candidate.ackNote : null,
     rejectionReasonCode:
@@ -4566,6 +4739,17 @@ function normalizeYearEndFilingSubmissionSearch(search: string | undefined) {
   return normalized;
 }
 
+function normalizeYearEndFilingSubmissionSettlementHashFilter(settlementHash: string | undefined) {
+  const normalized = settlementHash?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (!/^[a-f0-9]{8,64}$/.test(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
 function matchesYearEndFilingSubmissionSearch(
   submission: PayrollYearEndFilingSubmissionSummary,
   normalizedSearch: string
@@ -4614,6 +4798,15 @@ function matchesYearEndFilingSubmissionFilters(
     return false;
   }
   if (filters.transport && filters.transport !== "all" && submission.transport !== filters.transport) {
+    return false;
+  }
+  const normalizedSettlementHash = normalizeYearEndFilingSubmissionSettlementHashFilter(
+    filters.settlementHash
+  );
+  if (
+    normalizedSettlementHash &&
+    !(submission.settlementHash ?? "").toLowerCase().startsWith(normalizedSettlementHash)
+  ) {
     return false;
   }
   const normalizedSearch = normalizeYearEndFilingSubmissionSearch(filters.search);
@@ -4996,6 +5189,14 @@ export async function acknowledgePayrollYearEndFilingPackage(
   if (target.status === "acknowledged") {
     throw new ServiceError(409, "filing submission is already acknowledged");
   }
+  const expectedSettlementHash = normalizeYearEndSettlementHash(input.expectedSettlementHash);
+  const submissionSettlementHash = normalizeYearEndSettlementHash(target.settlementHash);
+  if (expectedSettlementHash && expectedSettlementHash !== submissionSettlementHash) {
+    throw new ServiceError(409, "filing submission settlement hash mismatch", {
+      expectedSettlementHash,
+      submissionSettlementHash
+    });
+  }
 
   const resolvedAck = resolvePayrollYearEndFilingAckPayload({
     ackStatus: input.ackStatus,
@@ -5010,6 +5211,8 @@ export async function acknowledgePayrollYearEndFilingPackage(
   const entityId = `${input.year}_${input.employeeId}`;
   const ackPayload: YearEndFilingPackageAcknowledgedAuditPayload = {
     submissionId: input.submissionId,
+    settlementHash: submissionSettlementHash,
+    expectedSettlementHash: expectedSettlementHash,
     ackStatus: input.ackStatus,
     ackCode: resolvedAck.ackCode,
     ackNote: resolvedAck.ackNote,
@@ -5332,6 +5535,216 @@ export async function addPayrollYearEndFilingEvidenceNote(
 
   return {
     evidenceNote: payload
+  };
+}
+
+export async function getPayrollYearEndInsuranceReconciliationReport(
+  context: ServiceContext,
+  input: GetPayrollYearEndInsuranceReconciliationReportInput
+): Promise<GetPayrollYearEndInsuranceReconciliationReportResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const annualRunSocialInsuranceKrw = snapshot.confirmedRuns.reduce(
+    (total, run) => total + (run.socialInsuranceKrw ?? 0),
+    0
+  );
+  const entityId = `${input.year}_${input.employeeId}`;
+  const finalizationLogs = await context.dataAccess.audit.list({
+    actions: ["payroll.year_end.settlement_finalized"],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 500
+  });
+  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+  const finalizedPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+  const insuranceCapApplied = finalizedPayload?.deductionItemsKrw.capAppliedByItemKrw.insurancePremiumKrw;
+  const insurancePremiumAppliedKrw = insuranceCapApplied?.appliedKrw ?? null;
+  const status: GetPayrollYearEndInsuranceReconciliationReportResult["report"]["reconciliation"]["status"] =
+    insurancePremiumAppliedKrw === null
+      ? "pending_finalization"
+      : annualRunSocialInsuranceKrw === insurancePremiumAppliedKrw
+        ? "matched"
+        : "mismatch";
+  const comparedKrw = insurancePremiumAppliedKrw ?? 0;
+
+  return {
+    report: {
+      year: input.year,
+      employeeId: input.employeeId,
+      periodStart: snapshot.periodStart.toISOString(),
+      periodEnd: snapshot.periodEnd.toISOString(),
+      runStates: {
+        totalRuns: snapshot.runs.length,
+        confirmedRuns: snapshot.confirmedRuns.length,
+        previewedRuns: snapshot.previewedRuns.length,
+        confirmedRunIds: snapshot.confirmedRuns.map((run) => run.id),
+        previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
+      },
+      annualRunSocialInsuranceKrw,
+      finalization: {
+        finalized: Boolean(finalizedPayload?.finalized && finalizedPayload.finalizedAt),
+        finalizationId: finalizedPayload?.finalizationId ?? null,
+        settlementHash: finalizedPayload
+          ? resolveYearEndSettlementHashFromFinalizationPayload(finalizedPayload)
+          : null,
+        finalizedAt: finalizedPayload?.finalizedAt ?? null,
+        insurancePremiumInputKrw: insuranceCapApplied?.inputKrw ?? null,
+        insurancePremiumAppliedKrw,
+        insurancePremiumCapKrw: insuranceCapApplied?.capKrw ?? null,
+        applicationReasonCode: insuranceCapApplied?.applicationReasonCode ?? null,
+        applicationReason: insuranceCapApplied?.applicationReason ?? null
+      },
+      reconciliation: {
+        baselineKrw: annualRunSocialInsuranceKrw,
+        comparedKrw,
+        deltaKrw: annualRunSocialInsuranceKrw - comparedKrw,
+        status
+      },
+      monthlyBreakdown: buildYearEndInsuranceReconciliationMonthlyBreakdown(snapshot.runs)
+    }
+  };
+}
+
+export async function getPayrollYearEndPreflightChecklist(
+  context: ServiceContext,
+  input: GetPayrollYearEndPreflightChecklistInput
+): Promise<GetPayrollYearEndPreflightChecklistResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const filingGuard = buildYearEndFilingGuard(snapshot);
+  const annualGrossPayKrw = snapshot.totalsKrw.grossPayKrw;
+  const nonTaxableAnnualIncomeKrw = toKrwInteger(
+    input.nonTaxableAnnualIncomeKrw ?? 0,
+    "nonTaxableAnnualIncomeKrw"
+  );
+  const nonTaxableWithinAnnualGross = nonTaxableAnnualIncomeKrw <= annualGrossPayKrw;
+
+  const submissions = isPayrollYearEndFilingSubmissionEnabled()
+    ? await listYearEndFilingSubmissionSummaries(context, {
+      year: input.year,
+      employeeId: input.employeeId
+    })
+    : [];
+  const pendingSubmissionCount = submissions.filter((submission) => submission.status === "submitted").length;
+  const rejectedSubmissionCount = submissions.filter(
+    (submission) => submission.status === "acknowledged" && submission.ack?.ackStatus === "rejected"
+  ).length;
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  const finalizationLogs = await context.dataAccess.audit.list({
+    actions: ["payroll.year_end.settlement_finalized"],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 200
+  });
+  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+  const finalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+  const settlementHash = finalizationPayload
+    ? resolveYearEndSettlementHashFromFinalizationPayload(finalizationPayload)
+    : null;
+
+  const checks: GetPayrollYearEndPreflightChecklistResult["checklist"]["checks"] = [
+    {
+      key: "confirmed_runs_present",
+      label: "Confirmed Runs Present",
+      status: snapshot.confirmedRuns.length > 0 ? "pass" : "fail",
+      detail:
+        snapshot.confirmedRuns.length > 0
+          ? `${snapshot.confirmedRuns.length} confirmed runs found`
+          : "no confirmed payroll runs found for selected year"
+    },
+    {
+      key: "no_previewed_runs",
+      label: "No Previewed Runs",
+      status: snapshot.previewedRuns.length === 0 ? "pass" : "fail",
+      detail:
+        snapshot.previewedRuns.length === 0
+          ? "all runs are confirmed"
+          : `${snapshot.previewedRuns.length} previewed runs remain`
+    },
+    {
+      key: "no_undistributed_runs",
+      label: "No Undistributed Runs",
+      status: filingGuard.undistributedRuns.length === 0 ? "pass" : "fail",
+      detail:
+        filingGuard.undistributedRuns.length === 0
+          ? "all confirmed runs are distributed"
+          : `${filingGuard.undistributedRuns.length} confirmed runs are not distributed`
+    },
+    {
+      key: "no_pending_receipts",
+      label: "No Pending Payslip Receipts",
+      status: filingGuard.pendingReceiptRuns.length === 0 ? "pass" : "fail",
+      detail:
+        filingGuard.pendingReceiptRuns.length === 0
+          ? "all distributed runs are receipt-confirmed"
+          : `${filingGuard.pendingReceiptRuns.length} distributed runs are pending receipt confirmation`
+    },
+    {
+      key: "non_taxable_within_annual_gross",
+      label: "Non-Taxable Income Guard",
+      status: nonTaxableWithinAnnualGross ? "pass" : "fail",
+      detail: nonTaxableWithinAnnualGross
+        ? `non-taxable annual income ${nonTaxableAnnualIncomeKrw.toLocaleString("ko-KR")} KRW is within annual gross ${annualGrossPayKrw.toLocaleString("ko-KR")} KRW`
+        : `non-taxable annual income ${nonTaxableAnnualIncomeKrw.toLocaleString("ko-KR")} KRW exceeds annual gross ${annualGrossPayKrw.toLocaleString("ko-KR")} KRW`
+    },
+    {
+      key: "no_pending_filing_submissions",
+      label: "No Pending Filing Submissions",
+      status: pendingSubmissionCount === 0 ? "pass" : "fail",
+      detail:
+        pendingSubmissionCount === 0
+          ? "no pending filing submissions"
+          : `${pendingSubmissionCount} pending filing submissions require acknowledge/cancel before finalize handoff`
+    },
+    {
+      key: "settlement_hash_available",
+      label: "Settlement Hash Trace",
+      status: settlementHash ? "pass" : "warn",
+      detail: settlementHash
+        ? `latest settlement hash available (${settlementHash.slice(0, 12)}...)`
+        : "no finalized settlement hash found yet"
+    }
+  ];
+
+  const passCount = checks.filter((check) => check.status === "pass").length;
+  const failCount = checks.filter((check) => check.status === "fail").length;
+  const warnCount = checks.filter((check) => check.status === "warn").length;
+
+  return {
+    checklist: {
+      year: input.year,
+      employeeId: input.employeeId,
+      periodStart: snapshot.periodStart.toISOString(),
+      periodEnd: snapshot.periodEnd.toISOString(),
+      summary: {
+        readyToFinalize: failCount === 0,
+        passCount,
+        failCount,
+        warnCount
+      },
+      metrics: {
+        annualGrossPayKrw,
+        nonTaxableAnnualIncomeKrw,
+        totalRuns: snapshot.runs.length,
+        confirmedRuns: snapshot.confirmedRuns.length,
+        previewedRuns: snapshot.previewedRuns.length,
+        undistributedRuns: filingGuard.undistributedRuns.length,
+        pendingReceiptRuns: filingGuard.pendingReceiptRuns.length,
+        pendingSubmissionCount,
+        rejectedSubmissionCount,
+        settlementHash
+      },
+      checks
+    }
   };
 }
 

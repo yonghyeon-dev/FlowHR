@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.47.0
+  version: 1.53.0
 paths:
   /payroll/runs:
     get:
@@ -100,35 +100,76 @@ paths:
   /payroll/year-end/preview-settlement:
     post:
       summary: Preview payroll year-end settlement for employee
-      description: Aggregates confirmed payroll runs for the selected year and employee, validates that non-taxable annual income does not exceed annual gross pay, and computes annual withholding settlement delta with refund/additional-due breakdown plus year-end tax credit cap-applied breakdown.
+      description: Aggregates confirmed payroll runs for the selected year and employee, validates that non-taxable annual income does not exceed annual gross pay, and computes annual withholding settlement delta with refund/additional-due breakdown plus year-end tax credit cap-applied breakdown and per-item application reason codes.
       responses:
         "200":
           description: Year-end settlement summary generated
   /payroll/year-end/recalculate-settlement:
     post:
       summary: Recalculate payroll year-end settlement with deduction items
-      description: Accepts employee/year deduction-item inputs, validates deduction eligibility flags and non-taxable annual income upper bound, applies year-end deduction caps and year-end tax credit caps, and returns baseline vs recalculated settlement with refund/additional-due and cap-applied breakdowns for the same confirmed annual run set.
+      description: Accepts employee/year deduction-item inputs, validates deduction eligibility flags and non-taxable annual income upper bound, applies year-end deduction caps and year-end tax credit caps, and returns baseline vs recalculated settlement with refund/additional-due and cap-applied breakdowns plus per-item application reason codes for the same confirmed annual run set.
       responses:
         "200":
           description: Year-end settlement recalculation summary generated
   /payroll/year-end/finalize-settlement:
     post:
       summary: Preview or apply payroll year-end settlement finalization
-      description: Validates confirmed/distributed/receipt-confirmed prerequisites, deduction eligibility flags, and non-taxable annual income upper bound for selected employee/year, then returns finalization summary with withholding refund/additional-due and deduction/tax-credit cap-applied breakdown plus `settlementHash`. `apply=true` can include optional `expectedSettlementHash` for stale apply guard and records finalization audit/event.
+      description: Validates confirmed/distributed/receipt-confirmed prerequisites, deduction eligibility flags, and non-taxable annual income upper bound for selected employee/year, then returns finalization summary with withholding refund/additional-due and deduction/tax-credit cap-applied breakdown plus per-item application reason codes and `settlementHash`. `apply=true` can include optional `expectedSettlementHash` for stale apply guard and records finalization audit/event.
       responses:
         "200":
           description: Year-end settlement finalization summary generated
   /payroll/year-end/export-filing-data:
     post:
       summary: Export payroll year-end filing data for employee/year
-      description: Exports filing-ready annual payroll data for selected employee/year after settlement finalization, including withholding refund/additional-due and deduction/tax-credit cap-applied breakdown from finalization payload, with multi-format output (`json`, `csv`, `jsonl`, `hometax_csv`) and validation mode (`basic`/`strict`). Optional `expectedSettlementHash` enforces stale export guard (`409` on mismatch), and successful export payload includes `settlementHash` trace for filing-package handoff.
+      description: Exports filing-ready annual payroll data for selected employee/year after settlement finalization, including withholding refund/additional-due and deduction/tax-credit cap-applied breakdown with per-item application reason codes from finalization payload, with multi-format output (`json`, `csv`, `jsonl`, `hometax_csv`) and validation mode (`basic`/`strict`). Optional `expectedSettlementHash` enforces stale export guard (`409` on mismatch), and successful export payload includes `settlementHash` trace for filing-package handoff.
       responses:
         "200":
           description: Year-end filing export generated
+  /payroll/year-end/insurance-reconciliation-report:
+    get:
+      summary: Get payroll year-end insurance reconciliation report for employee/year
+      description: Returns annual/monthly reconciliation report between confirmed-run social-insurance totals and latest finalized year-end insurance-premium deduction trace (with settlement hash and reason-code context).
+      parameters:
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Year-end insurance reconciliation report generated
+  /payroll/year-end/preflight-checklist:
+    get:
+      summary: Get payroll year-end preflight checklist for employee/year
+      description: Returns preflight checklist before finalization with run/distribution/receipt/submission guards, non-taxable annual income upper-bound check, and settlement-hash availability trace.
+      parameters:
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: employeeId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: nonTaxableAnnualIncomeKrw
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Year-end preflight checklist generated
   /payroll/year-end/filing-submissions:
     get:
       summary: List payroll year-end filing submissions for employee/year
-      description: Returns filing submissions with optional status/ackStatus/validationStatus/transport filters, search/sort query controls, and summary counters for operator queue review and ops drilldown/alert metrics.
+      description: Returns filing submissions with optional status/ackStatus/validationStatus/transport/settlementHash filters, search/sort query controls, and summary counters for operator queue review and ops drilldown/alert metrics.
       parameters:
         - in: query
           name: year
@@ -165,6 +206,11 @@ paths:
             type: string
             enum: [manual_portal, hometax_upload, nts_api_mock, all]
         - in: query
+          name: settlementHash
+          required: false
+          schema:
+            type: string
+        - in: query
           name: search
           required: false
           schema:
@@ -193,7 +239,7 @@ paths:
   /payroll/year-end/filing-submissions/{submissionId}/ack:
     post:
       summary: Acknowledge payroll year-end filing submission
-      description: Acknowledge selected filing submission with ACK code dictionary validation and optional rejection reason catalog fields.
+      description: Acknowledge selected filing submission with ACK code dictionary validation and optional rejection reason catalog fields. Optional `expectedSettlementHash` guards acknowledgement against stale/incorrect submission snapshot context (`409` on mismatch).
       parameters:
         - in: path
           name: submissionId

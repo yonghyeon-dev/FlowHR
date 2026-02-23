@@ -74,6 +74,12 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 66. Admin preset share-link reset/reapply UX deterministically supports clearing share-applied preset/split values and re-applying current shared query context.
 67. Export year-end filing data rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
 68. Filing submit/resubmit rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
+69. Filing acknowledge rejects stale `expectedSettlementHash` mismatch (`409`) and records acknowledgement only when expected hash matches submission settlement hash.
+70. Filing submission list supports `settlementHash` prefix filter and returns deterministic filtered subset and counters.
+71. Year-end preview/recalculate/finalize/export responses include per-item deduction/tax-credit `applicationReasonCode` and `applicationReason` fields for explainability.
+72. Year-end insurance reconciliation report returns annual run social-insurance baseline, finalized insurance-premium comparison, reconciliation status, and monthly breakdown for selected employee/year.
+73. Year-end preflight checklist returns deterministic pass/fail/warn checks and ready-to-finalize summary for run/distribution/receipt/submission/non-taxable/hash guards.
+74. Unified year-end hash guard regression suite validates finalize/export/submit/ack/resubmit/list settlement-hash filter guards in a single deterministic replay scenario.
 
 ## Accuracy Cases
 
@@ -137,6 +143,12 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 57. Year-end finalization settlementHash and expectedSettlementHash stale-apply guard remain deterministic for same input replay vectors.
 58. Year-end filing export expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
 59. Year-end filing submit/resubmit expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
+60. Year-end filing acknowledge expectedSettlementHash guard decisions remain deterministic for same submission replay vectors.
+61. Year-end filing submission list settlementHash prefix filtering remains deterministic for same query and history replay.
+62. Year-end deduction/tax-credit cap-applied reason-code outputs remain deterministic for same input replay across preview/recalculate/finalize/export APIs.
+63. Year-end insurance reconciliation report delta/status and monthly breakdown remain deterministic for same run/finalization replay.
+64. Year-end preflight checklist summary and check-detail outputs remain deterministic for same run/submission/finalization/non-taxable input replay.
+65. Unified year-end hash guard regression suite remains deterministic for same finalized snapshot and submission action replay sequence.
 
 ## Regression Linkage
 
@@ -185,6 +197,12 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Settlement Hash Gate: finalize API emits deterministic `settlementHash` and blocks `apply=true` when `expectedSettlementHash` mismatches.
 - Year-End Export Settlement Hash Gate: export API blocks stale `expectedSettlementHash` mismatch and returns deterministic `settlementHash` trace on success.
 - Year-End Filing Submission Settlement Hash Gate: submit/resubmit APIs block stale `expectedSettlementHash` mismatch and return deterministic `settlementHash` trace in submission payloads.
+- Year-End Filing ACK Settlement Hash Gate: acknowledge API blocks stale `expectedSettlementHash` mismatch against submission settlement hash.
+- Year-End Filing Settlement Hash Filter Gate: filing submission list API supports deterministic `settlementHash` prefix filtering for snapshot traceability.
+- Year-End Application Reason Code Gate: preview/recalculate/finalize/export APIs expose deterministic per-item `applicationReasonCode`/`applicationReason` fields.
+- Year-End Insurance Reconciliation Gate: insurance reconciliation report API returns deterministic annual/monthly comparison and status summary.
+- Year-End Preflight Checklist Gate: preflight checklist API returns deterministic finalize-readiness and guard-detail outputs.
+- Year-End Hash Guard Regression Suite Gate: unified e2e replay covers finalize/export/submit/ack/resubmit/list settlement-hash guards end-to-end.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.

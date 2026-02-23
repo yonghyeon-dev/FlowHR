@@ -350,6 +350,7 @@ const yearEndDeductionEligibilitySchema = z.object({
   housingSavingsEligible: z.boolean().default(true)
 });
 const yearEndSettlementHashSchema = z.string().regex(/^[a-f0-9]{64}$/i);
+const yearEndSettlementHashFilterSchema = z.string().regex(/^[a-f0-9]{8,64}$/i);
 const defaultYearEndDeductionItems = {
   personalPensionKrw: 0,
   insurancePremiumKrw: 0,
@@ -422,6 +423,7 @@ export const acknowledgePayrollYearEndFilingPackageSchema = z.object({
   year: payrollYearSchema,
   employeeId: z.string().min(1),
   submissionId: z.string().min(1),
+  expectedSettlementHash: yearEndSettlementHashSchema.optional(),
   ackStatus: z.enum(["accepted", "rejected"]),
   ackCode: z.string().min(1).max(80).optional(),
   ackNote: z.string().min(1).max(240).optional(),
@@ -455,6 +457,7 @@ export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
   transport: z
     .enum(["manual_portal", "hometax_upload", "nts_api_mock", "all"])
     .optional(),
+  settlementHash: yearEndSettlementHashFilterSchema.optional(),
   search: z.string().trim().min(1).max(120).optional(),
   sortBy: z
     .enum(["submittedAt", "attempt", "status", "ackStatus", "validationStatus", "transport"])
@@ -480,6 +483,17 @@ export const issuePayrollYearEndWithholdingReceiptSchema = z.object({
   employeeId: z.string().min(1),
   issue: z.boolean().default(false),
   issuerName: z.string().min(1).max(120).optional()
+});
+
+export const getPayrollYearEndInsuranceReconciliationReportQuerySchema = z.object({
+  year: z.coerce.number().int().min(2020).max(2100),
+  employeeId: z.string().min(1)
+});
+
+export const getPayrollYearEndPreflightChecklistQuerySchema = z.object({
+  year: z.coerce.number().int().min(2020).max(2100),
+  employeeId: z.string().min(1),
+  nonTaxableAnnualIncomeKrw: z.coerce.number().int().min(0).optional()
 });
 
 export const upsertDeductionProfileSchema = z.object({
