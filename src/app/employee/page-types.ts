@@ -72,7 +72,7 @@ export type LeaveCalendarDayCell = {
 export type RequestFeedbackRow = {
   id: string;
   channel: "attendance" | "leave";
-  status: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
   at: string;
   message: string;
   tone: "ok" | "pending" | "fail";
