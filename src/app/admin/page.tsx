@@ -3,6 +3,33 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  buildQuery,
+  firstDayOfMonthLocal,
+  formatDateTime,
+  formatDays,
+  isTruthyFlag,
+  lastDayOfMonthLocal,
+  minutesToHours,
+  toIso,
+  toLocalInputValue,
+  toTimestamp,
+  toWaitHours
+} from "@/app/admin/page-helpers";
+import type {
+  ApiLog,
+  AttendanceAggregateDto,
+  AttendanceRecordDto,
+  EmployeeSummary,
+  InviteDeliveryMode,
+  InviteResultDto,
+  InviteRole,
+  LeaveBalanceDto,
+  LeaveRequestDto,
+  OrganizationSummary,
+  PayrollRunDto,
+  WorkScheduleDto
+} from "@/app/admin/page-types";
 import { ApprovalQueuePanel } from "@/components/admin-approval/ApprovalQueuePanel";
 import {
   matchesQueueSearch,
@@ -47,197 +74,6 @@ import {
 } from "@/features/payroll/kr-preset-share-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
-
-type ApiLog = {
-  id: number;
-  label: string;
-  status: number;
-  ok: boolean;
-  durationMs: number;
-  at: string;
-  body: unknown;
-};
-
-type EmployeeSummary = {
-  id: string;
-  organizationId: string | null;
-  name: string | null;
-  email: string | null;
-  active: boolean;
-};
-
-type OrganizationSummary = {
-  id: string;
-  name: string;
-};
-
-type AttendanceRecordDto = {
-  id: string;
-  employeeId: string;
-  checkInAt: string;
-  checkOutAt: string | null;
-  breakMinutes: number;
-  isHoliday: boolean;
-  notes: string | null;
-  state: "PENDING" | "APPROVED" | "REJECTED";
-};
-
-type WorkScheduleDto = {
-  id: string;
-  employeeId: string;
-  startAt: string;
-  endAt: string;
-  breakMinutes: number;
-  isHoliday: boolean;
-  notes: string | null;
-};
-
-type InviteRole = "admin" | "manager" | "employee" | "payroll_operator";
-type InviteDeliveryMode = "link" | "email";
-
-type InviteResultDto = {
-  userId: string;
-  email: string;
-  role: InviteRole;
-  organizationId: string;
-  actorId: string | null;
-  redirectTo: string;
-  deliveryMode: InviteDeliveryMode;
-  actionLink: string | null;
-};
-
-type LeaveRequestDto = {
-  id: string;
-  employeeId: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
-  startDate: string;
-  endDate: string;
-  unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
-  hours: number | null;
-  days: number;
-  reason: string | null;
-  decisionReason: string | null;
-  state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
-};
-
-type PayrollRunDto = {
-  id: string;
-  organizationId: string | null;
-  employeeId: string | null;
-  periodStart: string;
-  periodEnd: string;
-  state: "PREVIEWED" | "CONFIRMED";
-  grossPayKrw: number;
-  totalDeductionsKrw: number | null;
-  netPayKrw: number | null;
-  sourceRecordCount: number;
-  confirmedAt: string | null;
-  confirmedBy: string | null;
-};
-
-type AttendanceAggregateDto = {
-  employeeId: string;
-  periodStart: string;
-  periodEnd: string;
-  counts: {
-    total: number;
-    pending: number;
-    approved: number;
-    rejected: number;
-    payable: number;
-  };
-  totals: {
-    regular: number;
-    overtime: number;
-    night: number;
-    holiday: number;
-  };
-};
-
-type LeaveBalanceDto = {
-  employeeId: string;
-  grantedDays: number;
-  usedDays: number;
-  remainingDays: number;
-  carryOverDays: number;
-  lastAccrualYear: number | null;
-  updatedAt: string;
-};
-
-function isTruthyFlag(value: string | undefined) {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
-function toLocalInputValue(value: Date) {
-  const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
-  return adjusted.toISOString().slice(0, 16);
-}
-
-function firstDayOfMonthLocal() {
-  const now = new Date();
-  return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0));
-}
-
-function lastDayOfMonthLocal() {
-  const now = new Date();
-  return toLocalInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 0));
-}
-
-function toIso(value: string) {
-  return new Date(value).toISOString();
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString("ko-KR");
-}
-
-function formatDays(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
-}
-
-function buildQuery(params: Record<string, string | undefined>) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value.trim() === "") {
-      continue;
-    }
-    search.set(key, value);
-  }
-  const query = search.toString();
-  return query.length > 0 ? `?${query}` : "";
-}
-
-function minutesToHours(minutes: number) {
-  const hours = minutes / 60;
-  return `${hours.toFixed(1)}h`;
-}
-
-function toTimestamp(value: string | null) {
-  if (!value) {
-    return 0;
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return 0;
-  }
-  return parsed.getTime();
-}
-
-function toWaitHours(value: string | null, referenceMs: number) {
-  const timestamp = toTimestamp(value);
-  if (timestamp <= 0) {
-    return 0;
-  }
-  return Math.max(0, (referenceMs - timestamp) / 3_600_000);
-}
 
 export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
