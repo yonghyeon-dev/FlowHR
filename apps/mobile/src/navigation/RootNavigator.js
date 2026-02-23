@@ -7,6 +7,7 @@ import ApprovalQueueScreen from "../screens/ApprovalQueueScreen";
 import AdminHomeScreen from "../screens/AdminHomeScreen";
 import EmailTemplateScreen from "../screens/EmailTemplateScreen";
 import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
+import EmployeeRequestFollowUpScreen from "../screens/EmployeeRequestFollowUpScreen";
 import EmployeeRequestHistoryScreen from "../screens/EmployeeRequestHistoryScreen";
 import EmployeeRequestSubmitScreen from "../screens/EmployeeRequestSubmitScreen";
 import LoginScreen from "../screens/LoginScreen";
@@ -103,6 +104,7 @@ export default function RootNavigator() {
                   navigation.navigate("EmployeeRequestSubmit", { requestType: "leaveRequest" })
                 }
                 onOpenRequestHistory={() => navigation.navigate("EmployeeRequestHistory")}
+                onOpenRequestFollowUp={() => navigation.navigate("EmployeeRequestFollowUp")}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
               />
@@ -110,8 +112,26 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
+          <Stack.Screen name="EmployeeRequestFollowUp" options={{ title: "Request Follow-Up" }}>
+            {({ navigation }) => (
+              <EmployeeRequestFollowUpScreen
+                session={session}
+                onOpenRequestHistory={() => navigation.navigate("EmployeeRequestHistory")}
+                onOpenRequestSubmit={(requestType) =>
+                  navigation.navigate("EmployeeRequestSubmit", { requestType: requestType ?? "attendanceCorrection" })
+                }
+              />
+            )}
+          </Stack.Screen>
+        ) : null}
+        {session?.role === "EMPLOYEE" ? (
           <Stack.Screen name="EmployeeRequestHistory" options={{ title: "Request History" }}>
-            {() => <EmployeeRequestHistoryScreen session={session} />}
+            {({ navigation }) => (
+              <EmployeeRequestHistoryScreen
+                session={session}
+                onOpenRequestFollowUp={() => navigation.navigate("EmployeeRequestFollowUp")}
+              />
+            )}
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
@@ -121,6 +141,7 @@ export default function RootNavigator() {
                 session={session}
                 initialRequestType={route.params?.requestType ?? "attendanceCorrection"}
                 onOpenRequestHistory={() => navigation.navigate("EmployeeRequestHistory")}
+                onOpenRequestFollowUp={() => navigation.navigate("EmployeeRequestFollowUp")}
               />
             )}
           </Stack.Screen>

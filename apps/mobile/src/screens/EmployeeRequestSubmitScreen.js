@@ -23,7 +23,8 @@ function ChoiceChip({ active, label, onPress }) {
 export default function EmployeeRequestSubmitScreen({
   session,
   initialRequestType = "attendanceCorrection",
-  onOpenRequestHistory
+  onOpenRequestHistory,
+  onOpenRequestFollowUp
 }) {
   const [loading, setLoading] = useState(true);
   const [requestType, setRequestType] = useState(initialRequestType);
@@ -181,6 +182,9 @@ export default function EmployeeRequestSubmitScreen({
           <View style={styles.row}>
             <Pressable style={styles.secondaryBtn} onPress={onOpenRequestHistory}>
               <Text style={styles.secondaryBtnText}>Open request history</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryBtn} onPress={onOpenRequestFollowUp}>
+              <Text style={styles.secondaryBtnText}>Open follow-up inbox</Text>
             </Pressable>
           </View>
 

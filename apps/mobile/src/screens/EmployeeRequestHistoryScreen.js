@@ -7,6 +7,8 @@ import {
   EMPLOYEE_REQUEST_STATUS_OPTIONS,
   EMPLOYEE_REQUEST_TYPE_OPTIONS,
   applyEmployeeRequestStatus,
+  buildEmployeeRequestFollowUpStats,
+  buildEmployeeRequestFollowUps,
   buildEmployeeRequestStats,
   filterEmployeeRequests,
   formatEmployeeRequestStatus,
@@ -33,7 +35,7 @@ function FilterChip({ active, label, onPress }) {
   );
 }
 
-export default function EmployeeRequestHistoryScreen({ session }) {
+export default function EmployeeRequestHistoryScreen({ session, onOpenRequestFollowUp }) {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [query, setQuery] = useState("");
@@ -67,6 +69,7 @@ export default function EmployeeRequestHistoryScreen({ session }) {
   }, []);
 
   const stats = useMemo(() => buildEmployeeRequestStats(requests), [requests]);
+  const followUpStats = useMemo(() => buildEmployeeRequestFollowUpStats(buildEmployeeRequestFollowUps(requests)), [requests]);
   const visibleRequests = useMemo(
     () => sortEmployeeRequests(filterEmployeeRequests(requests, { requestType: requestTypeFilter, status: statusFilter, query }), sortKey),
     [query, requestTypeFilter, requests, sortKey, statusFilter]
@@ -140,6 +143,14 @@ export default function EmployeeRequestHistoryScreen({ session }) {
           title="Snapshot"
           subtitle={`total ${stats.total} | submitted ${stats.submitted} | review ${stats.inReview} | approved ${stats.approved} | rejected ${stats.rejected}`}
         >
+          <Text style={styles.meta}>
+            follow-up alerts: {followUpStats.total} (critical {followUpStats.critical} / watch {followUpStats.watch})
+          </Text>
+          <View style={styles.row}>
+            <Pressable style={styles.secondaryBtn} onPress={onOpenRequestFollowUp}>
+              <Text style={styles.secondaryBtnText}>Open follow-up inbox</Text>
+            </Pressable>
+          </View>
           <Text style={styles.meta}>tenant: {session.tenantId}</Text>
           <Text style={styles.meta}>actor: {session.actorId}</Text>
         </ShellCard>

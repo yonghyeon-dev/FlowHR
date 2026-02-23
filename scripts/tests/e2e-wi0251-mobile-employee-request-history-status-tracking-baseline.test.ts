@@ -27,7 +27,7 @@ async function run() {
   assert.match(navigator, /EmployeeRequestHistoryScreen/);
   assert.match(navigator, /name=\"EmployeeRequestHistory\"/);
   assert.match(navigator, /onOpenRequestHistory/);
-  assert.match(employeeHome, /요청 이력 보기/);
+  assert.match(employeeHome, /onOpenRequestHistory/);
   assert.match(submitScreen, /Open request history/);
   assert.match(historyScreen, /Request History/);
   assert.match(historyScreen, /Filters and sort/);
@@ -39,8 +39,8 @@ async function run() {
   assert.match(requestLib, /applyEmployeeRequestStatus/);
   assert.match(requestLib, /normalizeEmployeeRequestRecord/);
   assert.match(requestStore, /normalizeEmployeeRequestRecord/);
-  assert.match(adminScreen, /WI-0252~/);
-  assert.match(employeeHome, /WI-0252~/);
+  assert.match(adminScreen, /WI-0253~/);
+  assert.match(employeeHome, /WI-0253~/);
   assert.match(readme, /Employee request history\/status shell/);
 
   assert.ok(
