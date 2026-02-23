@@ -29,6 +29,27 @@ function parseRate(value: string, fieldName: string) {
   return parsed;
 }
 
+const deductionItemLabels: Record<string, string> = {
+  personalPensionKrw: "Personal Pension",
+  insurancePremiumKrw: "Insurance Premium",
+  medicalExpenseKrw: "Medical Expense",
+  educationExpenseKrw: "Education Expense",
+  donationKrw: "Donation",
+  housingSavingsKrw: "Housing Savings"
+};
+
+function summarizeCappedDeductionItems(
+  capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"]
+) {
+  const cappedLines = Object.entries(capAppliedByItemKrw)
+    .filter(([, value]) => value.capped)
+    .map(([key, value]) => {
+      const label = deductionItemLabels[key] ?? key;
+      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)})`;
+    });
+  return cappedLines.length ? cappedLines.join(" | ") : "-";
+}
+
 export default function PayrollYearEndConsole() {
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
@@ -258,8 +279,10 @@ export default function PayrollYearEndConsole() {
           {!recalculation ? <p className="small">No recalculation yet.</p> : (
             <ul className="simple-list">
               <li><span>Income Deduction Input</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.totalIncomeDeductionKrw)}</strong></li>
+              <li><span>Capped Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.cappedIncomeDeductionKrw)}</strong></li>
               <li><span>Applied Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw)}</strong></li>
               <li><span>Taxable Income</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeBeforeDeductionKrw)}{" -> "}{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeAfterDeductionKrw)}</strong></li>
+              <li><span>Capped Items</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw)}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Tax Liability Delta</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw)}</strong></li>
               <li><span>Withholding Delta Change</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.withholdingDeltaChangeKrw)}</strong></li>
