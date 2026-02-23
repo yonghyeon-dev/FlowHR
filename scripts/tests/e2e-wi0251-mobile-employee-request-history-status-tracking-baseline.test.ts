@@ -39,8 +39,8 @@ async function run() {
   assert.match(requestLib, /applyEmployeeRequestStatus/);
   assert.match(requestLib, /normalizeEmployeeRequestRecord/);
   assert.match(requestStore, /normalizeEmployeeRequestRecord/);
-  assert.match(adminScreen, /WI-0254~/);
-  assert.match(employeeHome, /WI-0254~/);
+  assert.match(adminScreen, /WI-0255~/);
+  assert.match(employeeHome, /WI-0255~/);
   assert.match(readme, /Employee request history\/status shell/);
 
   assert.ok(

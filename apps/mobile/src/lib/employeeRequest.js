@@ -72,6 +72,39 @@ export const EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS = [
   }
 ];
 
+export const EMPLOYEE_REQUEST_FOLLOW_UP_BUNDLE_PRESET_OPTIONS = [
+  {
+    key: "allActionRequired",
+    label: "All action required",
+    note: "Show every follow-up alert that still needs action.",
+    filter: { severity: "all", status: "all", sortKey: "priority", query: "" },
+    quickAction: null
+  },
+  {
+    key: "triageQueue",
+    label: "Triage queue",
+    note: "Focus submitted requests and move them to review quickly.",
+    filter: { severity: "watch", status: "submitted", sortKey: "priority", query: "" },
+    quickAction: "moveToReview"
+  },
+  {
+    key: "decisionQueue",
+    label: "Decision queue",
+    note: "Handle in-review requests and finalize decision.",
+    filter: { severity: "watch", status: "inReview", sortKey: "priority", query: "" },
+    quickAction: "approve"
+  },
+  {
+    key: "recoveryQueue",
+    label: "Recovery queue",
+    note: "Recover rejected requests via reopen flow.",
+    filter: { severity: "critical", status: "rejected", sortKey: "priority", query: "" },
+    quickAction: "reopenReview"
+  }
+];
+
+export const EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_RECENT_LIMIT = 4;
+
 const REQUEST_TYPE_SET = new Set(EMPLOYEE_REQUEST_TYPE_OPTIONS.map((option) => option.key));
 const LEAVE_UNIT_SET = new Set(EMPLOYEE_LEAVE_UNIT_OPTIONS.map((option) => option.key));
 const REQUEST_STATUS_SET = new Set(EMPLOYEE_REQUEST_STATUS_OPTIONS.map((option) => option.key).filter((key) => key !== "all"));
@@ -93,6 +126,8 @@ const FOLLOW_UP_SEVERITY_ORDER = {
 const FOLLOW_UP_SEVERITY_SET = new Set(
   EMPLOYEE_REQUEST_FOLLOW_UP_SEVERITY_OPTIONS.map((option) => option.key).filter((key) => key !== "all")
 );
+const FOLLOW_UP_SORT_KEY_SET = new Set(EMPLOYEE_REQUEST_FOLLOW_UP_SORT_OPTIONS.map((option) => option.key));
+const FOLLOW_UP_BUNDLE_PRESET_KEY_SET = new Set(EMPLOYEE_REQUEST_FOLLOW_UP_BUNDLE_PRESET_OPTIONS.map((option) => option.key));
 
 const FOLLOW_UP_TEMPLATE_BY_STATUS = {
   submitted: "triage",
@@ -158,6 +193,27 @@ function normalizeSeverity(value) {
     return value;
   }
   return "info";
+}
+
+function normalizeFollowUpFilterSeverity(value) {
+  if (value === "all") {
+    return "all";
+  }
+  return normalizeSeverity(value);
+}
+
+function normalizeFollowUpSortKey(value) {
+  if (FOLLOW_UP_SORT_KEY_SET.has(value)) {
+    return value;
+  }
+  return "priority";
+}
+
+function normalizeFollowUpFilterStatus(value) {
+  if (value === "all") {
+    return "all";
+  }
+  return normalizeStatus(value);
 }
 
 function toMillis(value) {
@@ -489,6 +545,77 @@ export function formatEmployeeRequestFollowUpSeverity(severity) {
   return severityLabel(normalizeSeverity(severity));
 }
 
+export function getEmployeeRequestFollowUpBundlePreset(presetKey) {
+  return EMPLOYEE_REQUEST_FOLLOW_UP_BUNDLE_PRESET_OPTIONS.find((item) => item.key === presetKey) ?? null;
+}
+
+export function sanitizeEmployeeRequestFollowUpPresetKeys(keys) {
+  const source = Array.isArray(keys) ? keys : [];
+  const unique = [];
+  for (const key of source) {
+    if (!FOLLOW_UP_BUNDLE_PRESET_KEY_SET.has(key)) {
+      continue;
+    }
+    if (!unique.includes(key)) {
+      unique.push(key);
+    }
+  }
+  return unique;
+}
+
+export function toggleEmployeeRequestFollowUpPresetPin(pinnedPresetKeys, presetKey) {
+  const pinned = sanitizeEmployeeRequestFollowUpPresetKeys(pinnedPresetKeys);
+  if (!FOLLOW_UP_BUNDLE_PRESET_KEY_SET.has(presetKey)) {
+    return pinned;
+  }
+  if (pinned.includes(presetKey)) {
+    return pinned.filter((key) => key !== presetKey);
+  }
+  return [...pinned, presetKey];
+}
+
+export function pushEmployeeRequestFollowUpPresetRecent(
+  recentPresetKeys,
+  presetKey,
+  limit = EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_RECENT_LIMIT
+) {
+  const recent = sanitizeEmployeeRequestFollowUpPresetKeys(recentPresetKeys);
+  if (!FOLLOW_UP_BUNDLE_PRESET_KEY_SET.has(presetKey)) {
+    return recent.slice(0, limit);
+  }
+  return [presetKey, ...recent.filter((key) => key !== presetKey)].slice(0, limit);
+}
+
+export function normalizeEmployeeRequestFollowUpPresetState(state) {
+  const source = state && typeof state === "object" ? state : {};
+  const pinnedPresetKeys = sanitizeEmployeeRequestFollowUpPresetKeys(source.pinnedPresetKeys);
+  const recentPresetKeys = sanitizeEmployeeRequestFollowUpPresetKeys(source.recentPresetKeys)
+    .filter((key) => !pinnedPresetKeys.includes(key))
+    .slice(0, EMPLOYEE_REQUEST_FOLLOW_UP_PRESET_RECENT_LIMIT);
+  return {
+    pinnedPresetKeys,
+    recentPresetKeys
+  };
+}
+
+export function resolveEmployeeRequestFollowUpFilterFromPreset(presetKey, currentFilter = {}) {
+  const preset = getEmployeeRequestFollowUpBundlePreset(presetKey);
+  if (!preset) {
+    return {
+      severity: normalizeFollowUpFilterSeverity(currentFilter.severity ?? "all"),
+      status: normalizeFollowUpFilterStatus(currentFilter.status ?? "all"),
+      sortKey: normalizeFollowUpSortKey(currentFilter.sortKey ?? "priority"),
+      query: normalizeText(currentFilter.query ?? "")
+    };
+  }
+  return {
+    severity: normalizeFollowUpFilterSeverity(preset.filter?.severity ?? "all"),
+    status: normalizeFollowUpFilterStatus(preset.filter?.status ?? "all"),
+    sortKey: normalizeFollowUpSortKey(preset.filter?.sortKey ?? "priority"),
+    query: normalizeText(preset.filter?.query ?? "")
+  };
+}
+
 export function recommendEmployeeRequestFollowUpTemplate(followUp) {
   const status = normalizeStatus(followUp?.status);
   const key = FOLLOW_UP_TEMPLATE_BY_STATUS[status] ?? "closure";
@@ -507,5 +634,16 @@ export function buildEmployeeRequestFollowUpTemplateStats(items) {
   return EMPLOYEE_REQUEST_FOLLOW_UP_TEMPLATE_OPTIONS.map((template) => ({
     ...template,
     count: counts[template.key] ?? 0
+  })).sort((a, b) => b.count - a.count);
+}
+
+export function buildEmployeeRequestFollowUpBundleStats(items) {
+  return EMPLOYEE_REQUEST_FOLLOW_UP_BUNDLE_PRESET_OPTIONS.map((preset) => ({
+    ...preset,
+    count: filterEmployeeRequestFollowUps(items, {
+      severity: preset.filter?.severity ?? "all",
+      status: preset.filter?.status ?? "all",
+      query: preset.filter?.query ?? ""
+    }).length
   })).sort((a, b) => b.count - a.count);
 }
