@@ -4,7 +4,7 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0251~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0252~에서 확장됩니다.`);
 }
 
 export default function EmployeeHomeScreen({
@@ -12,6 +12,7 @@ export default function EmployeeHomeScreen({
   onLogout,
   onOpenAttendanceCorrectionRequest,
   onOpenLeaveRequest,
+  onOpenRequestHistory,
   onOpenNotifications,
   onOpenNotificationHistory
 }) {
@@ -32,6 +33,13 @@ export default function EmployeeHomeScreen({
           <Text style={styles.desc}>잔여 연차와 캘린더를 확인하고 요청 흐름으로 이동합니다.</Text>
           <Pressable style={styles.btn} onPress={onOpenLeaveRequest}>
             <Text style={styles.btnText}>휴가 요청 시작</Text>
+          </Pressable>
+        </ShellCard>
+
+        <ShellCard title="요청 이력/상태">
+          <Text style={styles.desc}>제출한 정정/휴가 요청의 처리 상태와 타임라인을 추적합니다.</Text>
+          <Pressable style={styles.btn} onPress={onOpenRequestHistory}>
+            <Text style={styles.btnText}>요청 이력 보기</Text>
           </Pressable>
         </ShellCard>
 

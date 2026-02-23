@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 
-import { normalizeEmployeeRequestDraft } from "./employeeRequest";
+import { normalizeEmployeeRequestRecord } from "./employeeRequest";
 
 const EMPLOYEE_REQUEST_KEY = "flowhr.mobile.employee.request.v1";
 let inMemoryEmployeeRequests = null;
@@ -16,28 +16,11 @@ function parseJson(raw, fallback) {
   }
 }
 
-function normalizeRecord(item, index) {
-  const draft = normalizeEmployeeRequestDraft(item);
-  return {
-    id: String(item?.id ?? `req-${index + 1}`),
-    actorId: String(item?.actorId ?? ""),
-    requestType: draft.requestType,
-    requestDate: draft.requestDate,
-    leaveEndDate: draft.requestType === "leaveRequest" ? draft.leaveEndDate : null,
-    leaveUnit: draft.requestType === "leaveRequest" ? draft.leaveUnit : null,
-    leaveHours: draft.requestType === "leaveRequest" ? draft.leaveHours : null,
-    reason: draft.reason,
-    note: draft.note,
-    status: item?.status === "submitted" ? "submitted" : "submitted",
-    createdAt: String(item?.createdAt ?? new Date().toISOString())
-  };
-}
-
 function normalizeRecords(items) {
   if (!Array.isArray(items)) {
     return [];
   }
-  return items.map((item, index) => normalizeRecord(item, index));
+  return items.map((item, index) => normalizeEmployeeRequestRecord(item, index));
 }
 
 export async function loadEmployeeRequests() {
