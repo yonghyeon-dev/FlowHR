@@ -3304,6 +3304,68 @@ button.queue-badge:hover {
   color: var(--muted);
 }
 
+.attendance-live-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attendance-live-table th,
+.attendance-live-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.attendance-live-status,
+.attendance-live-alert {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.attendance-live-status.status-scheduled {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel-soft) 70%, white 30%);
+}
+
+.attendance-live-status.status-present,
+.attendance-live-status.status-checked_out {
+  color: #18603b;
+  background: #daf8e6;
+}
+
+.attendance-live-status.status-late {
+  color: #915b00;
+  background: #fff1d8;
+}
+
+.attendance-live-status.status-absent {
+  color: #9f1f21;
+  background: #ffe4e4;
+}
+
+.attendance-live-alert.alert-normal {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel-soft) 70%, white 30%);
+}
+
+.attendance-live-alert.alert-watch {
+  color: #915b00;
+  background: #fff1d8;
+}
+
+.attendance-live-alert.alert-critical {
+  color: #9f1f21;
+  background: #ffe4e4;
+}
+
 .panel-payslip-print {
   grid-column: 1 / -1;
 }
