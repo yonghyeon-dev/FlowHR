@@ -35,6 +35,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
     { href: "/employee#leave", label: t("employee.nav.leave") },
     { href: "/employee#leave-calendar", label: t("employee.nav.leaveCalendar") },
     { href: "/employee#schedule", label: t("employee.nav.schedule") },
+    { href: "/employee/contracts", label: t("employee.nav.contracts") },
     { href: "/employee/payslips", label: t("employee.nav.payslips") },
     { href: "/employee/payslip-receipts", label: t("employee.nav.payslipReceipts") },
     { href: "/employee/withholding-receipt", label: t("employee.nav.withholdingReceipt") },
@@ -77,6 +78,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
             <Link href="/employee#leave">{t("employee.nav.leave")}</Link>
             <Link href="/employee#leave-calendar">{t("employee.nav.leaveCalendar")}</Link>
             <Link href="/employee#schedule">{t("employee.nav.schedule")}</Link>
+            <Link href="/employee/contracts">{t("employee.nav.contracts")}</Link>
             <Link href="/employee/payslips">{t("employee.nav.payslips")}</Link>
             <Link href="/employee/payslip-receipts">{t("employee.nav.payslipReceipts")}</Link>
             <Link href="/employee/withholding-receipt">{t("employee.nav.withholdingReceipt")}</Link>

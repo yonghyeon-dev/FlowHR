@@ -4393,6 +4393,33 @@ button.queue-badge:hover {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.contract-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.contract-form-wide {
+  grid-column: 1 / -1;
+}
+
+.contract-action-row {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inline-error {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid #f2c4ce;
+  border-radius: 10px;
+  background: #fff2f5;
+  color: #7b1c2f;
+  font-size: 0.85rem;
+}
+
 .contract-template-list {
   margin: 10px 0 0;
   padding: 0;

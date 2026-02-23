@@ -1,0 +1,147 @@
+owner: contracts-agent
+version: 0.1.0
+scope:
+  in:
+    - contract template CRUD with version increment rules
+    - contract document draft-to-send lifecycle with employee response states
+    - employee self-service contract inbox read/respond flow
+    - signature hash evidence capture on SIGN action
+    - approval execution integration before contract send
+    - manual expiry and renewal operation
+  out:
+    - external e-sign provider integration
+    - scheduler/cron-based auto expiry or auto renewal
+    - legal-compliance country packs and clause policy engine
+entities:
+  - name: ContractTemplate
+    description: Organization scoped template with category/body/status/version.
+  - name: ContractDocument
+    description: Employee-targeted contract instance with lifecycle, approval, and signature evidence fields.
+api:
+  auth:
+    - role: admin
+      permission: create/update templates and execute contract lifecycle actions
+    - role: manager
+      permission: create documents and participate in approval flow
+    - role: payroll_operator
+      permission: create documents and participate in approval flow
+    - role: employee
+      permission: read and respond to own contract documents only
+  endpoints:
+    - method: GET
+      path: /contracts/templates
+      description: List templates by optional filters.
+    - method: POST
+      path: /contracts/templates
+      description: Create template with initial version=1.
+    - method: PATCH
+      path: /contracts/templates/{templateId}
+      description: Update template and bump version when content changes.
+    - method: GET
+      path: /contracts/documents
+      description: List contract documents for admin scope or employee own scope.
+    - method: POST
+      path: /contracts/documents
+      description: Create draft contract document.
+    - method: POST
+      path: /contracts/documents/{documentId}/request-approval
+      description: Request approval for document send.
+    - method: POST
+      path: /contracts/documents/{documentId}/approval
+      description: Approve/reject document request via approval execution integration.
+    - method: POST
+      path: /contracts/documents/{documentId}/send
+      description: Send document after approval guard check.
+    - method: POST
+      path: /contracts/documents/{documentId}/respond
+      description: Employee sign/reject action with signature hash evidence support.
+    - method: POST
+      path: /contracts/documents/{documentId}/expire
+      description: Manual expire operation.
+    - method: POST
+      path: /contracts/documents/{documentId}/renew
+      description: Create renewed draft and mark source as renewed.
+  operations: []
+  events:
+    published:
+      - name: contract.template.created.v1
+        description: Emitted when a contract template is created.
+      - name: contract.template.updated.v1
+        description: Emitted when a contract template is updated.
+      - name: contract.document.created.v1
+        description: Emitted when a contract document draft is created.
+      - name: contract.document.approval.requested.v1
+        description: Emitted when document approval is requested.
+      - name: contract.document.approval.decided.v1
+        description: Emitted when approval action is applied.
+      - name: contract.document.sent.v1
+        description: Emitted when document is sent.
+      - name: contract.document.responded.v1
+        description: Emitted when employee signs/rejects document.
+      - name: contract.document.expired.v1
+        description: Emitted when document is manually expired.
+      - name: contract.document.renewed.v1
+        description: Emitted when source document is renewed and successor draft is created.
+    consumed: []
+db_changes:
+  migrations: []
+  backward_compatible: true
+  notes: Uses audit-backed event snapshots without DB schema migration in this baseline.
+invariants:
+  - Contract template version starts at 1 and increases only when content fields change.
+  - Contract document send is blocked when approval is required and not approved.
+  - Employee actor can respond only to own SENT document.
+  - SIGN response records deterministic signature hash and evidence hash.
+  - expectedDocumentHash mismatch returns conflict and blocks SIGN/REJECT mutation.
+  - Renew operation creates a new DRAFT document and marks source status as RENEWED.
+risk:
+  permissions:
+    - Misconfigured actor claims can expose cross-employee documents.
+  legal:
+    - Signature hash evidence is not equal to legally certified third-party signature.
+  payroll_accuracy:
+    - Contract approval integration reuses existing approval execution lane and must remain deterministic.
+test_plan:
+  unit:
+    - template version bump rule and document hash derivation
+    - signature hash determinism and expectedDocumentHash mismatch guard
+  integration:
+    - template create/update/list lifecycle
+    - document create/request-approval/approval/send lifecycle
+    - employee sign/reject own document flow
+    - manual expire and renew flow
+  regression:
+    - approval-required send guard remains enforced
+    - employee cannot respond to non-own document
+  authorization:
+    - admin/manager/payroll_operator contract action checks
+    - employee own-scope checks for list/respond
+  payroll_accuracy:
+    - approval execution integration state mapping remains deterministic
+observability:
+  audit_events:
+    - contract.template.created
+    - contract.template.updated
+    - contract.document.created
+    - contract.document.approval.requested
+    - contract.document.approval.decided
+    - contract.document.sent
+    - contract.document.responded
+    - contract.document.expired
+    - contract.document.renewed
+  metrics:
+    - contract_template_count
+    - contract_document_pending_approval_count
+    - contract_document_signed_count
+rollout:
+  strategy: dark-launch
+  steps:
+    - deploy API and UI routes
+    - validate end-to-end contract lifecycle in staging memory mode
+rollback:
+  strategy: disable-routes-and-revert
+  steps:
+    - revert contracts API and UI routes
+    - keep audit logs for traceability
+breaking_changes: false
+consumer_impact: "Contract v0.1.0 introduces additive contracts domain APIs and UI routes for template/document lifecycle without breaking existing APIs."
