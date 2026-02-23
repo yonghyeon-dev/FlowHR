@@ -332,6 +332,8 @@ export default function AdminDashboardPage() {
   const [payrollDependentTaxCreditPerPersonKrw, setPayrollDependentTaxCreditPerPersonKrw] =
     useState("0");
   const [payrollIncomeTaxLookupPresetId, setPayrollIncomeTaxLookupPresetId] = useState("");
+  const [payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto] = useState(false);
+  const [payrollIncomeTaxLookupAsOf, setPayrollIncomeTaxLookupAsOf] = useState("");
   const [payrollRequireMonthlyBoundary, setPayrollRequireMonthlyBoundary] = useState(false);
   const [payrollNationalPensionCapKrw, setPayrollNationalPensionCapKrw] = useState("");
   const [payrollHealthInsuranceCapKrw, setPayrollHealthInsuranceCapKrw] = useState("");
@@ -1196,7 +1198,14 @@ export default function AdminDashboardPage() {
           0,
           Math.trunc(Number(payrollDependentTaxCreditPerPersonKrw) || 0)
         ),
-        incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetId.trim() || undefined,
+        incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetAuto
+          ? undefined
+          : payrollIncomeTaxLookupPresetId.trim() || undefined,
+        incomeTaxLookupPresetAuto: payrollIncomeTaxLookupPresetAuto,
+        incomeTaxLookupAsOf:
+          payrollIncomeTaxLookupPresetAuto && payrollIncomeTaxLookupAsOf.trim().length > 0
+            ? toIso(payrollIncomeTaxLookupAsOf)
+            : undefined,
         requireMonthlyBoundary: payrollRequireMonthlyBoundary,
         nationalPensionCapKrw:
           payrollNationalPensionCapKrw.trim().length > 0
@@ -2187,6 +2196,15 @@ export default function AdminDashboardPage() {
                   <PayrollKrPresetGuidePanel
                     selectedPresetId={payrollIncomeTaxLookupPresetId}
                     onPresetChange={setPayrollIncomeTaxLookupPresetId}
+                    presetAutoEnabled={payrollIncomeTaxLookupPresetAuto}
+                    onPresetAutoEnabledChange={(enabled) => {
+                      setPayrollIncomeTaxLookupPresetAuto(enabled);
+                      if (enabled) {
+                        setPayrollIncomeTaxLookupPresetId("");
+                      }
+                    }}
+                    presetAsOfInput={payrollIncomeTaxLookupAsOf}
+                    onPresetAsOfInputChange={setPayrollIncomeTaxLookupAsOf}
                   />
                 </div>
                 <label>

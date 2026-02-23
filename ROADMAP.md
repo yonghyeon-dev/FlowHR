@@ -559,3 +559,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 ---
 
 > **Note**: WI 번호 범위는 예약하지 않습니다. 새로운 작업은 `work-items/`에 다음 번호로 생성합니다.
+
+- WI-0283 payroll admin preset auto-resolution UX visibility baseline(src/components/payroll/PayrollKrPresetGuidePanel.tsx auto/manual mode controls + /admin#payroll payload wiring for incomeTaxLookupPresetAuto and optional incomeTaxLookupAsOf + manual preset fallback guard + WI-0283 regression test)

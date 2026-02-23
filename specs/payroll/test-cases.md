@@ -83,6 +83,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 75. Issued withholding receipt document read API returns deterministic artifact metadata/content (`format=json|text`, `contentSha256`) and rejects missing-issued snapshot or unauthorized employee access.
 76. Finalized year-end settlement read API returns deterministic finalization snapshot (`finalizationId`, `settlementHash`, liability/delta) and rejects missing-finalization snapshot or unauthorized employee access.
 77. Run statutory baseline preview with preset auto-selection (`incomeTaxLookupPresetAuto`) and optional effective date reference (`incomeTaxLookupAsOf`) and verify deterministic preset resolution fallback (`periodEnd`) plus mixed-mode guard.
+78. Admin payroll preview supports lookup preset auto-selection toggle (`incomeTaxLookupPresetAuto`) and optional reference datetime input (`incomeTaxLookupAsOf`) wiring while preserving deterministic manual preset fallback.
 
 ## Accuracy Cases
 
@@ -155,6 +156,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 66. Year-end issued withholding receipt document content/hash output remains deterministic for same issued snapshot replay.
 67. Year-end finalized settlement read snapshot output remains deterministic for same finalization replay.
 68. Statutory baseline lookup preset auto-selection remains deterministic for same effective date reference (`incomeTaxLookupAsOf`) and periodEnd fallback replay vectors.
+69. Admin payroll preview auto/manual preset mode toggle keeps deterministic statutory payload wiring for `incomeTaxLookupPresetId` vs `incomeTaxLookupPresetAuto` + optional `incomeTaxLookupAsOf`.
 
 ## Regression Linkage
 
@@ -179,6 +181,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Lookup/Rounding Gate: `incomeTaxLookupTable` selection and `insuranceRounding` unit/mode checks must be deterministic and validated.
 - Preset/Validation Gate: `incomeTaxLookupPresetId` resolution and lookup-table monotonic-tax validation must be deterministic and validated.
 - Preset Auto-Selection Gate: `incomeTaxLookupPresetAuto` with optional `incomeTaxLookupAsOf` must resolve deterministic preset by effective date reference, reject mixed manual lookup modes, and preserve periodEnd fallback behavior.
+- Admin Preset Auto-Selection UX Gate: `/admin` payroll preview must expose deterministic manual/auto preset mode controls and wire `incomeTaxLookupPresetId` vs `incomeTaxLookupPresetAuto` + optional `incomeTaxLookupAsOf` without payload ambiguity.
 - Admin Preview Preset UX Gate: `/admin` payroll statutory baseline preset selector/guide and payload wiring must remain deterministic and locale-aware (`ko`/`en`).
 - Taxable Split Gate: `taxableIncomeKrw` + `nonTaxableIncomeKrw` split validation against `grossPayKrw` must be deterministic and enforced when explicit taxable split is provided.
 - Income Split Item Gate: `taxableIncomeItems`/`nonTaxableIncomeItems` code-uniqueness and item-total consistency with split totals must be deterministic and validated.
