@@ -274,10 +274,11 @@
 - WI-0235 관리자 KPI 대시보드 baseline(`src/app/admin/kpi` 신규 라우트 + `/api/approval/executions`/`/api/attendance/aggregates`/`/api/leave/requests`/`/api/payroll/runs` 기반 KPI 카드/이전 기간 비교 + API 로그 패널 + locale-aware copy + 컴포넌트 300줄 제한 분리 + WI-0235 회귀 테스트 추가)
 - WI-0236 관리자 실시간 근태 현황 baseline(`src/app/admin/attendance-live` 신규 라우트 + `/api/people/employees`/`/api/people/departments`/`/api/scheduling/schedules`/`/api/attendance/records` 기반 출근/지각/미출근 스냅샷 + 부서/상태/검색 필터 + 경고 배지 + 컴포넌트 분리 + WI-0236 회귀 테스트 추가)
 - WI-0237 관리자 온보딩 마법사 baseline(`src/app/admin/onboarding` 신규 라우트 + 조직 컨텍스트/부서·직원 일괄 등록/휴가 정책 기본값 적용 흐름 + 온보딩 체크리스트/진척도 + locale-aware copy + 컴포넌트/유틸 분리 + WI-0237 회귀 테스트 추가)
+- WI-0238 직원 인앱 가이드 baseline(`src/app/employee/guide` 신규 라우트 + 최근 14일 근태/휴가/명세 활동 기반 체크리스트 + 빠른 이동 링크/권장 경로 + locale-aware copy + 컴포넌트/훅/체크리스트 분리 + WI-0238 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 직원 인앱 가이드 baseline(`WI-R`) 착수 (WI-0238 예정)
+- 다음: 반응형 모바일 웹 UX baseline(`WI-S`) 착수 (WI-0239 예정)
 
 ### 현재 아키텍처
 
