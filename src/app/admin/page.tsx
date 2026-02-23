@@ -12,10 +12,18 @@ import {
   lastDayOfMonthLocal,
   minutesToHours,
   toIso,
-  toLocalInputValue,
-  toTimestamp,
-  toWaitHours
+  toLocalInputValue
 } from "@/app/admin/page-helpers";
+import {
+  buildQueueSearchSortRows,
+  filterPendingAttendanceQueue,
+  filterPendingLeaveQueue,
+  filterPreviewedPayrollQueue,
+  filterQueueSearchSortRows,
+  resolveQueueSlaCriticalHours,
+  resolveQueueSlaWatchHours,
+  toWaitHoursById
+} from "@/app/admin/page-queue-helpers";
 import type {
   ApiLog,
   AttendanceAggregateDto,
@@ -32,10 +40,7 @@ import type {
 } from "@/app/admin/page-types";
 import { ApprovalQueuePanel } from "@/components/admin-approval/ApprovalQueuePanel";
 import {
-  matchesQueueSearch,
-  matchesQueueSearchSort,
   queueAlertLevelRank,
-  sortQueueSearchSortRows,
   summarizeQueueAlertByRule,
   toQueueAlertLevelByRule
 } from "@/components/admin-approval/approval-queue-helpers";
@@ -274,24 +279,15 @@ export default function AdminDashboardPage() {
   const queueNowMs = Date.now();
 
   const attendanceWaitHoursById = useMemo(
-    () =>
-      new Map(
-        pendingAttendance.map((record) => [record.id, toWaitHours(record.checkInAt, queueNowMs)] as const)
-      ),
+    () => toWaitHoursById(pendingAttendance, (record) => record.id, (record) => record.checkInAt, queueNowMs),
     [pendingAttendance, queueNowMs]
   );
   const leaveWaitHoursById = useMemo(
-    () =>
-      new Map(
-        pendingLeave.map((request) => [request.id, toWaitHours(request.startDate, queueNowMs)] as const)
-      ),
+    () => toWaitHoursById(pendingLeave, (request) => request.id, (request) => request.startDate, queueNowMs),
     [pendingLeave, queueNowMs]
   );
   const payrollWaitHoursById = useMemo(
-    () =>
-      new Map(
-        previewedPayroll.map((run) => [run.id, toWaitHours(run.periodStart, queueNowMs)] as const)
-      ),
+    () => toWaitHoursById(previewedPayroll, (run) => run.id, (run) => run.periodStart, queueNowMs),
     [previewedPayroll, queueNowMs]
   );
   const attendanceWaitHoursValues = useMemo(
@@ -303,21 +299,14 @@ export default function AdminDashboardPage() {
     () => [...payrollWaitHoursById.values()],
     [payrollWaitHoursById]
   );
-  const queueSlaWatchHours = useMemo(() => {
-    const parsed = Math.floor(Number(queueSlaWatchHoursInput));
-    if (!Number.isFinite(parsed)) {
-      return 24;
-    }
-    return Math.max(1, parsed);
-  }, [queueSlaWatchHoursInput]);
-  const queueSlaCriticalHours = useMemo(() => {
-    const parsed = Math.floor(Number(queueSlaCriticalHoursInput));
-    const fallback = Math.max(queueSlaWatchHours + 1, 48);
-    if (!Number.isFinite(parsed)) {
-      return fallback;
-    }
-    return Math.max(queueSlaWatchHours + 1, parsed);
-  }, [queueSlaCriticalHoursInput, queueSlaWatchHours]);
+  const queueSlaWatchHours = useMemo(
+    () => resolveQueueSlaWatchHours(queueSlaWatchHoursInput),
+    [queueSlaWatchHoursInput]
+  );
+  const queueSlaCriticalHours = useMemo(
+    () => resolveQueueSlaCriticalHours(queueSlaCriticalHoursInput, queueSlaWatchHours),
+    [queueSlaCriticalHoursInput, queueSlaWatchHours]
+  );
   const resolveQueueAlertLevel = useMemo(
     () =>
       (waitHours: number) =>
@@ -326,38 +315,16 @@ export default function AdminDashboardPage() {
   );
 
   const filteredPendingAttendance = useMemo(() => {
-    const filtered = pendingAttendance.filter((record) => {
-      const waitHours = attendanceWaitHoursById.get(record.id) ?? 0;
-      const alertLevel = resolveQueueAlertLevel(waitHours);
-      if (approvalQueueOnlyUrgent && alertLevel === "normal") {
-        return false;
-      }
-      if (approvalQueueSelectedOnly && !selectedAttendanceIds.includes(record.id)) {
-        return false;
-      }
-
-      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
-        employee: record.employeeId,
-        requestId: record.id,
-        content: `${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`
-      });
-    });
-
-    return [...filtered].sort((left, right) => {
-      if (attendanceQueueSort === "employee_asc") {
-        return left.employeeId.localeCompare(right.employeeId, "ko");
-      }
-      if (attendanceQueueSort === "stale_desc") {
-        const leftWait = attendanceWaitHoursById.get(left.id) ?? 0;
-        const rightWait = attendanceWaitHoursById.get(right.id) ?? 0;
-        return rightWait - leftWait;
-      }
-      const leftTime = toTimestamp(left.checkInAt);
-      const rightTime = toTimestamp(right.checkInAt);
-      if (attendanceQueueSort === "checkin_asc") {
-        return leftTime - rightTime;
-      }
-      return rightTime - leftTime;
+    return filterPendingAttendanceQueue({
+      pendingAttendance,
+      attendanceWaitHoursById,
+      approvalQueueOnlyUrgent,
+      approvalQueueSelectedOnly,
+      selectedAttendanceIds,
+      approvalQueueSearchScope,
+      normalizedQueueSearch,
+      attendanceQueueSort,
+      resolveQueueAlertLevel
     });
   }, [
     approvalQueueOnlyUrgent,
@@ -372,38 +339,16 @@ export default function AdminDashboardPage() {
   ]);
 
   const filteredPendingLeave = useMemo(() => {
-    const filtered = pendingLeave.filter((request) => {
-      const waitHours = leaveWaitHoursById.get(request.id) ?? 0;
-      const alertLevel = resolveQueueAlertLevel(waitHours);
-      if (approvalQueueOnlyUrgent && alertLevel === "normal") {
-        return false;
-      }
-      if (approvalQueueSelectedOnly && !selectedLeaveIds.includes(request.id)) {
-        return false;
-      }
-
-      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
-        employee: request.employeeId,
-        requestId: request.id,
-        content: `${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`
-      });
-    });
-
-    return [...filtered].sort((left, right) => {
-      if (leaveQueueSort === "employee_asc") {
-        return left.employeeId.localeCompare(right.employeeId, "ko");
-      }
-      if (leaveQueueSort === "stale_desc") {
-        const leftWait = leaveWaitHoursById.get(left.id) ?? 0;
-        const rightWait = leaveWaitHoursById.get(right.id) ?? 0;
-        return rightWait - leftWait;
-      }
-      const leftTime = toTimestamp(left.startDate);
-      const rightTime = toTimestamp(right.startDate);
-      if (leaveQueueSort === "start_asc") {
-        return leftTime - rightTime;
-      }
-      return rightTime - leftTime;
+    return filterPendingLeaveQueue({
+      pendingLeave,
+      leaveWaitHoursById,
+      approvalQueueOnlyUrgent,
+      approvalQueueSelectedOnly,
+      selectedLeaveIds,
+      approvalQueueSearchScope,
+      normalizedQueueSearch,
+      leaveQueueSort,
+      resolveQueueAlertLevel
     });
   }, [
     approvalQueueOnlyUrgent,
@@ -418,36 +363,15 @@ export default function AdminDashboardPage() {
   ]);
 
   const filteredPreviewedPayroll = useMemo(() => {
-    const filtered = previewedPayroll.filter((run) => {
-      if (approvalQueueOnlyUrgent && resolveQueueAlertLevel(payrollWaitHoursById.get(run.id) ?? 0) === "normal") {
-        return false;
-      }
-      if (approvalQueueSelectedOnly) {
-        return false;
-      }
-
-      return matchesQueueSearch(approvalQueueSearchScope, normalizedQueueSearch, {
-        employee: run.employeeId ?? "",
-        requestId: run.id,
-        content: `${run.state} ${run.periodStart} ${run.periodEnd} ${run.grossPayKrw}`
-      });
-    });
-
-    return [...filtered].sort((left, right) => {
-      if (payrollQueueSort === "employee_asc") {
-        return (left.employeeId ?? "").localeCompare(right.employeeId ?? "", "ko");
-      }
-      if (payrollQueueSort === "stale_desc") {
-        const leftWait = payrollWaitHoursById.get(left.id) ?? 0;
-        const rightWait = payrollWaitHoursById.get(right.id) ?? 0;
-        return rightWait - leftWait;
-      }
-      if (payrollQueueSort === "gross_desc") {
-        return right.grossPayKrw - left.grossPayKrw;
-      }
-      const leftPeriod = toTimestamp(left.periodStart);
-      const rightPeriod = toTimestamp(right.periodStart);
-      return rightPeriod - leftPeriod;
+    return filterPreviewedPayrollQueue({
+      previewedPayroll,
+      payrollWaitHoursById,
+      approvalQueueOnlyUrgent,
+      approvalQueueSelectedOnly,
+      approvalQueueSearchScope,
+      normalizedQueueSearch,
+      payrollQueueSort,
+      resolveQueueAlertLevel
     });
   }, [
     approvalQueueOnlyUrgent,
@@ -550,43 +474,15 @@ export default function AdminDashboardPage() {
   }, [queueBadgeSummaries]);
 
   const queueSearchSortRows = useMemo<QueueSearchSortRow[]>(() => {
-    const attendanceRows = filteredPendingAttendance.map((record) => ({
-      key: `attendance:${record.id}`,
-      queue: "attendance" as const,
-      queueLabel: "attendance",
-      itemId: record.id,
-      employeeId: record.employeeId,
-      waitHours: attendanceWaitHoursById.get(record.id) ?? 0,
-      waitedAtMs: toTimestamp(record.checkInAt),
-      severity: resolveQueueAlertLevel(attendanceWaitHoursById.get(record.id) ?? 0),
-      selected: false,
-      detail: `${record.state} ${record.notes ?? ""} ${record.checkInAt} ${record.checkOutAt ?? ""}`
-    }));
-    const leaveRows = filteredPendingLeave.map((request) => ({
-      key: `leave:${request.id}`,
-      queue: "leave" as const,
-      queueLabel: "leave",
-      itemId: request.id,
-      employeeId: request.employeeId,
-      waitHours: leaveWaitHoursById.get(request.id) ?? 0,
-      waitedAtMs: toTimestamp(request.startDate),
-      severity: resolveQueueAlertLevel(leaveWaitHoursById.get(request.id) ?? 0),
-      selected: false,
-      detail: `${request.leaveType} ${request.state} ${request.startDate} ${request.endDate} ${request.reason ?? ""}`
-    }));
-    const payrollRows = filteredPreviewedPayroll.map((run) => ({
-      key: `payroll:${run.id}`,
-      queue: "payroll" as const,
-      queueLabel: "payroll",
-      itemId: run.id,
-      employeeId: run.employeeId ?? "-",
-      waitHours: payrollWaitHoursById.get(run.id) ?? 0,
-      waitedAtMs: toTimestamp(run.periodStart),
-      severity: resolveQueueAlertLevel(payrollWaitHoursById.get(run.id) ?? 0),
-      selected: false,
-      detail: `${run.state} ${run.periodStart} ${run.periodEnd} ${run.grossPayKrw}`
-    }));
-    return [...attendanceRows, ...leaveRows, ...payrollRows];
+    return buildQueueSearchSortRows({
+      filteredPendingAttendance,
+      filteredPendingLeave,
+      filteredPreviewedPayroll,
+      attendanceWaitHoursById,
+      leaveWaitHoursById,
+      payrollWaitHoursById,
+      resolveQueueAlertLevel
+    });
   }, [
     attendanceWaitHoursById,
     filteredPendingAttendance,
@@ -598,12 +494,12 @@ export default function AdminDashboardPage() {
   ]);
 
   const filteredQueueSearchSortRows = useMemo(() => {
-    const normalizedQuery = queueSearchSortQuery.trim().toLowerCase();
-    const filteredRows = queueSearchSortRows.filter((row) =>
-      matchesQueueSearchSort(queueSearchSortScope, normalizedQuery, row)
-    );
-
-    return sortQueueSearchSortRows(filteredRows, queueSearchSortOption).slice(0, 18);
+    return filterQueueSearchSortRows({
+      queueSearchSortRows,
+      queueSearchSortScope,
+      queueSearchSortQuery,
+      queueSearchSortOption
+    });
   }, [queueSearchSortOption, queueSearchSortQuery, queueSearchSortRows, queueSearchSortScope]);
 
 
