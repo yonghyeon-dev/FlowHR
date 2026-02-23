@@ -23,6 +23,18 @@ export type PayrollYearEndSettlementResponse = {
       taxableAnnualIncomeKrw: number;
       annualIncomeTaxBeforeCreditKrw: number;
       additionalTaxCreditKrw: number;
+      totalTaxCreditInputKrw: number;
+      totalTaxCreditAppliedKrw: number;
+      taxCreditRulesKrw: {
+        earnedIncomeTaxCreditKrw: number;
+        childTaxCreditKrw: number;
+        additionalTaxCreditKrw: number;
+      };
+      taxCreditAppliedByItemKrw: {
+        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+      };
       annualIncomeTaxAfterCreditKrw: number;
       annualLocalIncomeTaxKrw: number;
       annualTaxLiabilityKrw: number;
@@ -86,6 +98,18 @@ export type PayrollYearEndRecalculationResponse = {
       taxableAnnualIncomeKrw: number;
       annualIncomeTaxBeforeCreditKrw: number;
       additionalTaxCreditKrw: number;
+      totalTaxCreditInputKrw: number;
+      totalTaxCreditAppliedKrw: number;
+      taxCreditRulesKrw: {
+        earnedIncomeTaxCreditKrw: number;
+        childTaxCreditKrw: number;
+        additionalTaxCreditKrw: number;
+      };
+      taxCreditAppliedByItemKrw: {
+        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+      };
       annualIncomeTaxAfterCreditKrw: number;
       annualLocalIncomeTaxKrw: number;
       annualTaxLiabilityKrw: number;
@@ -97,6 +121,18 @@ export type PayrollYearEndRecalculationResponse = {
       taxableAnnualIncomeKrw: number;
       annualIncomeTaxBeforeCreditKrw: number;
       additionalTaxCreditKrw: number;
+      totalTaxCreditInputKrw: number;
+      totalTaxCreditAppliedKrw: number;
+      taxCreditRulesKrw: {
+        earnedIncomeTaxCreditKrw: number;
+        childTaxCreditKrw: number;
+        additionalTaxCreditKrw: number;
+      };
+      taxCreditAppliedByItemKrw: {
+        earnedIncomeTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        childTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+        additionalTaxCreditKrw: { inputKrw: number; capKrw: number; appliedKrw: number; capped: boolean };
+      };
       annualIncomeTaxAfterCreditKrw: number;
       annualLocalIncomeTaxKrw: number;
       annualTaxLiabilityKrw: number;

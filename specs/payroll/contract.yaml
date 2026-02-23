@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.40.0
+version: 1.41.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -33,6 +33,7 @@ scope:
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
     - year-end deduction-item input and settlement recalculation workflow for employee annual payroll totals
     - year-end deduction item caps and cap-applied breakdown for recalculation/finalization/export payloads
+    - year-end tax credit caps and cap-applied breakdown for preview/recalculation/finalization/export payloads
     - year-end settlement finalization and filing-data export workflow for employee annual payroll totals
     - year-end filing export multi-format artifact generation and validation-mode guard (`basic`/`strict`)
     - year-end filing submission tracking and acknowledgement workflow for employee annual payroll totals
@@ -90,16 +91,16 @@ api:
       description: Confirm payslip receipt for distributed confirmed run (employee own run or payroll admin/operator override).
     - method: POST
       path: /payroll/year-end/preview-settlement
-      description: Preview annual payroll withholding settlement for selected employee and year with tax liability and withholding delta summary.
+      description: Preview annual payroll withholding settlement for selected employee and year with tax liability/withholding delta summary and tax credit cap-applied breakdown.
     - method: POST
       path: /payroll/year-end/recalculate-settlement
-      description: Recalculate annual payroll withholding settlement using deduction-item inputs, apply year-end deduction item caps per item, and return baseline-vs-recalculated delta summary with cap-applied breakdown.
+      description: Recalculate annual payroll withholding settlement using deduction-item inputs, apply year-end deduction item caps and year-end tax credit caps, and return baseline-vs-recalculated delta summary with cap-applied breakdown.
     - method: POST
       path: /payroll/year-end/finalize-settlement
-      description: Preview or apply year-end settlement finalization with confirmed/distributed/receipt-confirmed guard chain, finalization audit trace, and deduction cap-applied breakdown.
+      description: Preview or apply year-end settlement finalization with confirmed/distributed/receipt-confirmed guard chain, finalization audit trace, and deduction/tax-credit cap-applied breakdown.
     - method: POST
       path: /payroll/year-end/export-filing-data
-      description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload, including deduction cap-applied breakdown, with multi-format output (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode.
+      description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload, including deduction/tax-credit cap-applied breakdown, with multi-format output (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode.
     - method: GET
       path: /payroll/year-end/filing-submissions
       description: List filing submission tracking rows for selected employee/year with optional status/ackStatus/validationStatus/transport filters, search/sort controls, and summary counters.
@@ -242,6 +243,7 @@ invariants:
   - Payslip receipt confirmation is allowed only for distributed CONFIRMED runs and must persist confirmation actor/time.
   - Year-end settlement must aggregate CONFIRMED runs for selected employee/year and compute deterministic annual tax liability and withholding delta for same input.
   - Year-end settlement recalculation must apply year-end deduction item caps per deduction item and return deterministic baseline-vs-recalculated delta for same run/input set.
+  - Year-end settlement must apply year-end tax credit caps per tax-credit item and keep tax-credit cap-applied breakdown deterministic for same input.
   - Year-end settlement finalization apply must be blocked unless all selected year runs are confirmed, distributed, and receipt-confirmed.
   - Year-end filing data export must require latest finalized settlement payload for selected employee/year.
   - Year-end filing data export records and csv output must remain deterministic for same finalized payload and run set.
@@ -296,6 +298,7 @@ risk:
     - Closing period with unconfirmed runs can cause settlement mismatch.
     - Mis-entered year-end deduction-item inputs can skew annual settlement deltas.
     - Incorrect year-end deduction item caps or cap-application logic can distort annual tax-liability and withholding-delta outputs.
+    - Incorrect year-end tax credit cap rules or cap-application logic can distort annual tax-liability and withholding-delta outputs.
     - Exporting filing data from stale/non-finalized settlement can cause reporting mismatch.
     - Filing format mapping or validation drift can cause statutory submission rejection.
   legal:
@@ -320,6 +323,7 @@ test_plan:
     - year-end settlement tax-liability and withholding-delta formulas
     - year-end settlement recalculation baseline-vs-deduction-input delta formulas
     - year-end deduction item caps and cap-applied breakdown formulas
+    - year-end tax credit caps and cap-applied breakdown formulas
     - year-end finalization guard chain and finalization payload formulas
     - year-end filing export row/csv formatter determinism
     - year-end filing export multi-format artifact builder and checksum determinism
@@ -373,6 +377,7 @@ test_plan:
     - year-end settlement preview returns annual totals/tax-liability/withholding-delta deterministically for employee/year
     - year-end settlement recalculation returns baseline/recalculated settlement and taxable-income delta deterministically for same employee/year run set
     - year-end settlement recalculation/finalization/export includes deterministic year-end deduction item caps and per-item cap-applied breakdown for same employee/year run set
+    - year-end settlement preview/recalculation/finalization/export includes deterministic year-end tax credit caps and per-item cap-applied breakdown for same employee/year run set
     - year-end settlement finalization preview/apply returns deterministic guard and finalization summary for same employee/year run set
     - year-end filing export rejects requests before finalization and returns deterministic row/csv output after finalization
     - year-end filing export returns deterministic artifact checksum/content for `json`/`csv`/`jsonl`/`hometax_csv`
@@ -415,6 +420,7 @@ test_plan:
     - year-end settlement and withholding receipt deterministic replay via WI-0187 e2e
     - year-end deduction-item recalculation deterministic replay via WI-0188 e2e
     - year-end deduction item cap accuracy deterministic replay via WI-0260 e2e
+    - year-end tax credit cap accuracy deterministic replay via WI-0261 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
     - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
     - year-end filing submission/ack deterministic replay via WI-0191 e2e
@@ -469,6 +475,7 @@ test_plan:
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
     - year-end deduction-item recalculation delta remains deterministic for same input vectors
     - year-end deduction item caps and cap-applied breakdown remain deterministic for same input vectors
+    - year-end tax credit caps and cap-applied breakdown remain deterministic for same input vectors
     - year-end finalization guard and filing-export row/csv output remain deterministic
     - year-end filing submission status transitions remain deterministic for same action sequence
     - year-end filing ack code and rejection-reason catalog selection remain deterministic
@@ -576,7 +583,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.40.0 additively documents year-end deduction item caps and per-item cap-applied breakdown fields on `/payroll/year-end/recalculate-settlement`, `/payroll/year-end/finalize-settlement`, and `/payroll/year-end/export-filing-data` responses (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.41.0 additively documents year-end tax credit caps and per-item cap-applied breakdown fields on `/payroll/year-end/preview-settlement`, `/payroll/year-end/recalculate-settlement`, `/payroll/year-end/finalize-settlement`, and `/payroll/year-end/export-filing-data` responses (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -606,6 +613,7 @@ references:
   - work-items/WI-0234-payroll-kr-preset-share-link-reset-reapply-ux.md
   - work-items/WI-0259-payroll-insurance-settlement-rounding-accuracy.md
   - work-items/WI-0260-payroll-year-end-deduction-cap-accuracy.md
+  - work-items/WI-0261-payroll-year-end-tax-credit-cap-accuracy-v1.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md

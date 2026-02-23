@@ -50,6 +50,24 @@ function summarizeCappedDeductionItems(
   return cappedLines.length ? cappedLines.join(" | ") : "-";
 }
 
+const taxCreditItemLabels: Record<string, string> = {
+  earnedIncomeTaxCreditKrw: "Earned Income Credit",
+  childTaxCreditKrw: "Child Credit",
+  additionalTaxCreditKrw: "Additional Credit"
+};
+
+function summarizeCappedTaxCreditItems(
+  capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"]
+) {
+  const cappedLines = Object.entries(capAppliedByItemKrw)
+    .filter(([, value]) => value.capped)
+    .map(([key, value]) => {
+      const label = taxCreditItemLabels[key] ?? key;
+      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)})`;
+    });
+  return cappedLines.length ? cappedLines.join(" | ") : "-";
+}
+
 export default function PayrollYearEndConsole() {
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
@@ -57,6 +75,8 @@ export default function PayrollYearEndConsole() {
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [year, setYear] = useState(String(currentYear()));
   const [nonTaxableAnnualIncomeKrw, setNonTaxableAnnualIncomeKrw] = useState("0");
+  const [earnedIncomeTaxCreditKrw, setEarnedIncomeTaxCreditKrw] = useState("0");
+  const [childTaxCreditKrw, setChildTaxCreditKrw] = useState("0");
   const [additionalTaxCreditKrw, setAdditionalTaxCreditKrw] = useState("0");
   const [annualIncomeTaxRate, setAnnualIncomeTaxRate] = useState("0.03");
   const [localIncomeTaxRate, setLocalIncomeTaxRate] = useState("0.1");
@@ -113,10 +133,21 @@ export default function PayrollYearEndConsole() {
         year: parseRequiredInt(year, "year"),
         employeeId: employeeId.trim(),
         nonTaxableAnnualIncomeKrw: parseRequiredInt(
-          nonTaxableAnnualIncomeKrw,
+        nonTaxableAnnualIncomeKrw,
           "nonTaxableAnnualIncomeKrw"
         ),
         additionalTaxCreditKrw: parseRequiredInt(additionalTaxCreditKrw, "additionalTaxCreditKrw"),
+        taxCredits: {
+          earnedIncomeTaxCreditKrw: parseRequiredInt(
+            earnedIncomeTaxCreditKrw,
+            "taxCredits.earnedIncomeTaxCreditKrw"
+          ),
+          childTaxCreditKrw: parseRequiredInt(childTaxCreditKrw, "taxCredits.childTaxCreditKrw"),
+          additionalTaxCreditKrw: parseRequiredInt(
+            additionalTaxCreditKrw,
+            "taxCredits.additionalTaxCreditKrw"
+          )
+        },
         annualIncomeTaxRate: parseRate(annualIncomeTaxRate, "annualIncomeTaxRate"),
         localIncomeTaxRate: parseRate(localIncomeTaxRate, "localIncomeTaxRate")
       };
@@ -151,10 +182,21 @@ export default function PayrollYearEndConsole() {
         year: parseRequiredInt(year, "year"),
         employeeId: employeeId.trim(),
         nonTaxableAnnualIncomeKrw: parseRequiredInt(
-          nonTaxableAnnualIncomeKrw,
+        nonTaxableAnnualIncomeKrw,
           "nonTaxableAnnualIncomeKrw"
         ),
         additionalTaxCreditKrw: parseRequiredInt(additionalTaxCreditKrw, "additionalTaxCreditKrw"),
+        taxCredits: {
+          earnedIncomeTaxCreditKrw: parseRequiredInt(
+            earnedIncomeTaxCreditKrw,
+            "taxCredits.earnedIncomeTaxCreditKrw"
+          ),
+          childTaxCreditKrw: parseRequiredInt(childTaxCreditKrw, "taxCredits.childTaxCreditKrw"),
+          additionalTaxCreditKrw: parseRequiredInt(
+            additionalTaxCreditKrw,
+            "taxCredits.additionalTaxCreditKrw"
+          )
+        },
         annualIncomeTaxRate: parseRate(annualIncomeTaxRate, "annualIncomeTaxRate"),
         localIncomeTaxRate: parseRate(localIncomeTaxRate, "localIncomeTaxRate"),
         deductionItems: {
@@ -239,6 +281,8 @@ export default function PayrollYearEndConsole() {
             <label>Year<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>Employee ID<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
             <label>Non-taxable Annual Income<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
+            <label>Earned Income Tax Credit<input value={earnedIncomeTaxCreditKrw} onChange={(event) => setEarnedIncomeTaxCreditKrw(event.target.value)} /></label>
+            <label>Child Tax Credit<input value={childTaxCreditKrw} onChange={(event) => setChildTaxCreditKrw(event.target.value)} /></label>
             <label>Additional Tax Credit<input value={additionalTaxCreditKrw} onChange={(event) => setAdditionalTaxCreditKrw(event.target.value)} /></label>
             <label>Annual Income Tax Rate<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
             <label>Local Income Tax Rate<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
@@ -267,6 +311,8 @@ export default function PayrollYearEndConsole() {
           {!settlement ? <p className="small">No settlement yet.</p> : (
             <ul className="simple-list">
               <li><span>Gross / Net</span><strong>{formatKrw(settlement.summary.annualTotalsKrw.grossPayKrw)} / {formatKrw(settlement.summary.annualTotalsKrw.netPayKrw)}</strong></li>
+              <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(settlement.summary.settlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(settlement.summary.settlementKrw.totalTaxCreditAppliedKrw)}</strong></li>
+              <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(settlement.summary.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Prior Withheld</span><strong>{formatKrw(settlement.summary.settlementKrw.priorWithheldTaxKrw)}</strong></li>
               <li><span>Withholding Delta</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingDeltaKrw)}</strong></li>
@@ -281,6 +327,8 @@ export default function PayrollYearEndConsole() {
               <li><span>Income Deduction Input</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.totalIncomeDeductionKrw)}</strong></li>
               <li><span>Capped Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.cappedIncomeDeductionKrw)}</strong></li>
               <li><span>Applied Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw)}</strong></li>
+              <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditAppliedKrw)}</strong></li>
+              <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
               <li><span>Taxable Income</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeBeforeDeductionKrw)}{" -> "}{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeAfterDeductionKrw)}</strong></li>
               <li><span>Capped Items</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw)}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw)}</strong></li>

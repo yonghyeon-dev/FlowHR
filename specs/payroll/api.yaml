@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.40.0
+  version: 1.41.0
 paths:
   /payroll/runs:
     get:
@@ -100,28 +100,28 @@ paths:
   /payroll/year-end/preview-settlement:
     post:
       summary: Preview payroll year-end settlement for employee
-      description: Aggregates confirmed payroll runs for the selected year and employee, then computes annual withholding settlement delta.
+      description: Aggregates confirmed payroll runs for the selected year and employee, then computes annual withholding settlement delta with year-end tax credit cap-applied breakdown.
       responses:
         "200":
           description: Year-end settlement summary generated
   /payroll/year-end/recalculate-settlement:
     post:
       summary: Recalculate payroll year-end settlement with deduction items
-      description: Accepts employee/year deduction-item inputs, applies year-end deduction caps per item, and returns baseline vs recalculated settlement with cap-applied breakdown for the same confirmed annual run set.
+      description: Accepts employee/year deduction-item inputs, applies year-end deduction caps and year-end tax credit caps, and returns baseline vs recalculated settlement with cap-applied breakdowns for the same confirmed annual run set.
       responses:
         "200":
           description: Year-end settlement recalculation summary generated
   /payroll/year-end/finalize-settlement:
     post:
       summary: Preview or apply payroll year-end settlement finalization
-      description: Validates confirmed/distributed/receipt-confirmed prerequisites for selected employee/year and returns finalization summary with deduction cap-applied breakdown. `apply=true` records finalization audit/event.
+      description: Validates confirmed/distributed/receipt-confirmed prerequisites for selected employee/year and returns finalization summary with deduction/tax-credit cap-applied breakdown. `apply=true` records finalization audit/event.
       responses:
         "200":
           description: Year-end settlement finalization summary generated
   /payroll/year-end/export-filing-data:
     post:
       summary: Export payroll year-end filing data for employee/year
-      description: Exports filing-ready annual payroll data for selected employee/year after settlement finalization, including deduction cap-applied breakdown from finalization payload, with multi-format output (`json`, `csv`, `jsonl`, `hometax_csv`) and validation mode (`basic`/`strict`).
+      description: Exports filing-ready annual payroll data for selected employee/year after settlement finalization, including deduction/tax-credit cap-applied breakdown from finalization payload, with multi-format output (`json`, `csv`, `jsonl`, `hometax_csv`) and validation mode (`basic`/`strict`).
       responses:
         "200":
           description: Year-end filing export generated
