@@ -31,8 +31,8 @@ async function run() {
   assert.match(historyLib, /NOTIFICATION_HISTORY_PRESET_FILTERS/);
   assert.match(historyLib, /getNotificationPresetFilter/);
   assert.match(historyLib, /buildNotificationPresetCounts/);
-  assert.match(adminScreen, /WI-0249~/);
-  assert.match(employeeScreen, /WI-0249~/);
+  assert.match(adminScreen, /WI-0250~/);
+  assert.match(employeeScreen, /WI-0250~/);
   assert.match(readme, /notification history quick preset filters/);
 
   assert.ok(

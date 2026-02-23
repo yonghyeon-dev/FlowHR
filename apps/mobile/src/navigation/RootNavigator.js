@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StyleSheet, Text, View } from "react-native";
 
+import ApprovalQueueScreen from "../screens/ApprovalQueueScreen";
 import AdminHomeScreen from "../screens/AdminHomeScreen";
 import EmailTemplateScreen from "../screens/EmailTemplateScreen";
 import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
@@ -74,11 +75,17 @@ export default function RootNavigator() {
               <AdminHomeScreen
                 session={session}
                 onLogout={actions.logout}
+                onOpenApprovalQueue={() => navigation.navigate("ApprovalQueue")}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
                 onOpenEmailTemplates={() => navigation.navigate("EmailTemplates")}
               />
             )}
+          </Stack.Screen>
+        ) : null}
+        {session?.role === "ADMIN" ? (
+          <Stack.Screen name="ApprovalQueue" options={{ title: "Approval Queue" }}>
+            {() => <ApprovalQueueScreen session={session} />}
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
