@@ -27,6 +27,7 @@ import {
 } from "@/components/admin-approval/approval-queue-types";
 import { PayrollKrIncomeSplitGuideField } from "@/components/payroll/PayrollKrIncomeSplitGuideField";
 import { PayrollKrIncomeSplitConsistencyGuidePanel } from "@/components/payroll/PayrollKrIncomeSplitConsistencyGuidePanel";
+import { PayrollKrIncomeSplitPresetPayloadPreviewPanel } from "@/components/payroll/PayrollKrIncomeSplitPresetPayloadPreviewPanel";
 import {
   createEmptyPayrollKrIncomeSplitItemDraft,
   PayrollKrIncomeSplitItemsTable,
@@ -2043,6 +2044,13 @@ export default function AdminDashboardPage() {
                   <PayrollKrIncomeSplitItemPresetField
                     selectedPresetId={payrollIncomeSplitItemPresetId}
                     onPresetChange={setPayrollIncomeSplitItemPresetId}
+                  />
+                </div>
+                <div className="full">
+                  <PayrollKrIncomeSplitPresetPayloadPreviewPanel
+                    selectedPresetId={payrollIncomeSplitItemPresetId}
+                    taxableIncomeKrw={payrollTaxableIncomeKrw}
+                    nonTaxableIncomeKrw={payrollNonTaxableIncomeKrw}
                   />
                 </div>
                 <div className="full">

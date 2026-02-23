@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.33.0
+version: 1.34.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -21,6 +21,7 @@ scope:
     - KR statutory baseline admin item-code dictionary autocomplete UX wiring
     - KR statutory baseline split-item dictionary server validation guard (code-kind/category parity)
     - KR statutory baseline admin preset/manual split-item consistency UX guide and client preflight guard
+    - KR statutory baseline admin preset-mode sample payload preview for deterministic request/template understanding
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
@@ -346,6 +347,7 @@ test_plan:
     - admin payroll preview item-code dictionary autocomplete keeps deterministic code/category payload composition
     - statutory_kr_baseline validates split-item code/category parity against server dictionary by taxable/non-taxable kind
     - admin payroll preview preset/manual split-item consistency guide shows deterministic pre-submit blocking hints
+    - admin payroll preview preset-mode sample payload panel shows deterministic request shape and template application hints
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
     - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
@@ -388,6 +390,7 @@ test_plan:
     - statutory_kr_baseline admin item-code dictionary autocomplete deterministic replay via WI-0227 e2e
     - statutory_kr_baseline split-item dictionary server validation deterministic replay via WI-0228 e2e
     - statutory_kr_baseline preset/manual split-item consistency UX guide deterministic replay via WI-0229 e2e
+    - statutory_kr_baseline preset-mode sample payload preview deterministic replay via WI-0230 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
@@ -436,6 +439,7 @@ test_plan:
     - item-code dictionary autocomplete and category auto-fill payload consistency checks
     - item-code dictionary server validation guard checks for unsupported code and category mismatch
     - preset/manual split-item client preflight blocking checks for partial/duplicate/unsupported/category-mismatch rows
+    - preset-mode sample payload preview checks for request shape parity and template-amount rule hint determinism
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, and delta deterministic checks
     - close-period withholding/social/net aggregation and settlement-delta checks
@@ -549,7 +553,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.33.0 additively documents admin preset/manual split-item consistency UX guide and client preflight guard for `statutory_kr_baseline` inputs (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.34.0 additively documents admin preset-mode sample payload preview UX for `statutory_kr_baseline` inputs (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -572,6 +576,7 @@ references:
   - work-items/WI-0227-payroll-kr-item-code-autocomplete-ux.md
   - work-items/WI-0228-payroll-kr-item-code-dictionary-server-validation.md
   - work-items/WI-0229-payroll-kr-preset-manual-consistency-ux-guide.md
+  - work-items/WI-0230-payroll-kr-preset-sample-payload-preview.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
