@@ -178,6 +178,15 @@ type YearEndDeductionItemsInput = {
   housingSavingsKrw: number;
 };
 
+type YearEndDeductionEligibilityInput = {
+  personalPensionEligible: boolean;
+  insurancePremiumEligible: boolean;
+  medicalExpenseEligible: boolean;
+  educationExpenseEligible: boolean;
+  donationEligible: boolean;
+  housingSavingsEligible: boolean;
+};
+
 type YearEndTaxCreditItemKey = keyof YearEndTaxCreditItemsInput;
 
 type YearEndTaxCreditItemCapRule = {
@@ -225,10 +234,12 @@ type PayrollYearEndFilingAckStatus = "accepted" | "rejected";
 
 type RecalculatePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
   deductionItems: YearEndDeductionItemsInput;
+  deductionEligibility?: Partial<YearEndDeductionEligibilityInput>;
 };
 
 type FinalizePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
   deductionItems: YearEndDeductionItemsInput;
+  deductionEligibility?: Partial<YearEndDeductionEligibilityInput>;
   apply: boolean;
   finalizedByNote?: string;
 };
@@ -570,6 +581,8 @@ type RecalculatePayrollYearEndSettlementResult = {
     periodEnd: string;
     runStates: YearEndRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
+    deductionEligibility: YearEndDeductionEligibilityInput;
+    deductionEligibilityBlockingReasons: string[];
     deductionItemsKrw: YearEndDeductionSummaryKrw;
     baselineSettlementKrw: YearEndSettlementKrw;
     recalculatedSettlementKrw: YearEndSettlementKrw;
@@ -621,6 +634,8 @@ type FinalizePayrollYearEndSettlementResult = {
     finalizedByNote: string | null;
     runStates: YearEndFilingGuardRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
+    deductionEligibility: YearEndDeductionEligibilityInput;
+    deductionEligibilityBlockingReasons: string[];
     deductionItemsKrw: YearEndDeductionSummaryKrw;
     settlementKrw: YearEndSettlementKrw;
     blockingReasons: string[];
@@ -2697,6 +2712,45 @@ function normalizeYearEndDeductionItems(
   };
 }
 
+function normalizeYearEndDeductionEligibility(
+  deductionEligibility?: Partial<YearEndDeductionEligibilityInput>
+): YearEndDeductionEligibilityInput {
+  return {
+    personalPensionEligible: deductionEligibility?.personalPensionEligible ?? true,
+    insurancePremiumEligible: deductionEligibility?.insurancePremiumEligible ?? true,
+    medicalExpenseEligible: deductionEligibility?.medicalExpenseEligible ?? true,
+    educationExpenseEligible: deductionEligibility?.educationExpenseEligible ?? true,
+    donationEligible: deductionEligibility?.donationEligible ?? true,
+    housingSavingsEligible: deductionEligibility?.housingSavingsEligible ?? true
+  };
+}
+
+function collectYearEndDeductionEligibilityBlockingReasons(
+  deductionItems: YearEndDeductionItemsInput,
+  deductionEligibility: YearEndDeductionEligibilityInput
+) {
+  const blockingReasons: string[] = [];
+  if (deductionItems.personalPensionKrw > 0 && !deductionEligibility.personalPensionEligible) {
+    blockingReasons.push("personalPensionKrw deduction is not eligible for selected employee/year");
+  }
+  if (deductionItems.insurancePremiumKrw > 0 && !deductionEligibility.insurancePremiumEligible) {
+    blockingReasons.push("insurancePremiumKrw deduction is not eligible for selected employee/year");
+  }
+  if (deductionItems.medicalExpenseKrw > 0 && !deductionEligibility.medicalExpenseEligible) {
+    blockingReasons.push("medicalExpenseKrw deduction is not eligible for selected employee/year");
+  }
+  if (deductionItems.educationExpenseKrw > 0 && !deductionEligibility.educationExpenseEligible) {
+    blockingReasons.push("educationExpenseKrw deduction is not eligible for selected employee/year");
+  }
+  if (deductionItems.donationKrw > 0 && !deductionEligibility.donationEligible) {
+    blockingReasons.push("donationKrw deduction is not eligible for selected employee/year");
+  }
+  if (deductionItems.housingSavingsKrw > 0 && !deductionEligibility.housingSavingsEligible) {
+    blockingReasons.push("housingSavingsKrw deduction is not eligible for selected employee/year");
+  }
+  return blockingReasons;
+}
+
 function getYearEndDeductionTotalKrw(deductionItems: YearEndDeductionItemsInput) {
   return (
     deductionItems.personalPensionKrw +
@@ -3890,6 +3944,17 @@ export async function recalculatePayrollYearEndSettlement(
 
   const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
+  const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
+  const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
+    normalizedDeductionItems,
+    normalizedDeductionEligibility
+  );
+  if (deductionEligibilityBlockingReasons.length > 0) {
+    throw new ServiceError(409, "year-end deduction eligibility validation failed", {
+      deductionEligibility: normalizedDeductionEligibility,
+      blockingReasons: deductionEligibilityBlockingReasons
+    });
+  }
   const deductionCapApplied = applyYearEndDeductionCaps(normalizedDeductionItems);
   const baselineSettled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
   const recalculatedSettled = calculateYearEndSettlementKrw(
@@ -3910,6 +3975,8 @@ export async function recalculatePayrollYearEndSettlement(
       previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
     },
     annualTotalsKrw: snapshot.totalsKrw,
+    deductionEligibility: normalizedDeductionEligibility,
+    deductionEligibilityBlockingReasons,
     deductionItemsKrw: {
       ...normalizedDeductionItems,
       totalIncomeDeductionKrw: deductionCapApplied.totalIncomeDeductionKrw,
@@ -3991,6 +4058,17 @@ export async function finalizePayrollYearEndSettlement(
   }
 
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
+  const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
+  const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
+    normalizedDeductionItems,
+    normalizedDeductionEligibility
+  );
+  if (deductionEligibilityBlockingReasons.length > 0) {
+    throw new ServiceError(409, "year-end deduction eligibility validation failed", {
+      deductionEligibility: normalizedDeductionEligibility,
+      blockingReasons: deductionEligibilityBlockingReasons
+    });
+  }
   const deductionCapApplied = applyYearEndDeductionCaps(normalizedDeductionItems);
   const settled = calculateYearEndSettlementKrw(
     snapshot.totalsKrw,
@@ -4013,6 +4091,8 @@ export async function finalizePayrollYearEndSettlement(
     finalizedByNote,
     runStates: filingGuard.runStates,
     annualTotalsKrw: snapshot.totalsKrw,
+    deductionEligibility: normalizedDeductionEligibility,
+    deductionEligibilityBlockingReasons,
     deductionItemsKrw: {
       ...normalizedDeductionItems,
       totalIncomeDeductionKrw: deductionCapApplied.totalIncomeDeductionKrw,

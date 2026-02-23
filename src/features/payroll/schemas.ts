@@ -341,6 +341,14 @@ const yearEndDeductionItemsSchema = z.object({
   donationKrw: nonNegativeInteger.default(0),
   housingSavingsKrw: nonNegativeInteger.default(0)
 });
+const yearEndDeductionEligibilitySchema = z.object({
+  personalPensionEligible: z.boolean().default(true),
+  insurancePremiumEligible: z.boolean().default(true),
+  medicalExpenseEligible: z.boolean().default(true),
+  educationExpenseEligible: z.boolean().default(true),
+  donationEligible: z.boolean().default(true),
+  housingSavingsEligible: z.boolean().default(true)
+});
 const defaultYearEndDeductionItems = {
   personalPensionKrw: 0,
   insurancePremiumKrw: 0,
@@ -348,6 +356,14 @@ const defaultYearEndDeductionItems = {
   educationExpenseKrw: 0,
   donationKrw: 0,
   housingSavingsKrw: 0
+};
+const defaultYearEndDeductionEligibility = {
+  personalPensionEligible: true,
+  insurancePremiumEligible: true,
+  medicalExpenseEligible: true,
+  educationExpenseEligible: true,
+  donationEligible: true,
+  housingSavingsEligible: true
 };
 
 export const closePayrollPeriodSchema = z.object({
@@ -376,11 +392,13 @@ export const previewPayrollYearEndSettlementSchema = z.object({
 });
 
 export const recalculatePayrollYearEndSettlementSchema = previewPayrollYearEndSettlementSchema.extend({
-  deductionItems: yearEndDeductionItemsSchema.default(defaultYearEndDeductionItems)
+  deductionItems: yearEndDeductionItemsSchema.default(defaultYearEndDeductionItems),
+  deductionEligibility: yearEndDeductionEligibilitySchema.default(defaultYearEndDeductionEligibility)
 });
 
 export const finalizePayrollYearEndSettlementSchema = previewPayrollYearEndSettlementSchema.extend({
   deductionItems: yearEndDeductionItemsSchema.default(defaultYearEndDeductionItems),
+  deductionEligibility: yearEndDeductionEligibilitySchema.default(defaultYearEndDeductionEligibility),
   apply: z.boolean().default(false),
   finalizedByNote: z.string().min(1).max(120).optional()
 });

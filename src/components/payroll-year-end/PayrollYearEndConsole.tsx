@@ -86,6 +86,12 @@ export default function PayrollYearEndConsole() {
   const [educationExpenseKrw, setEducationExpenseKrw] = useState("0");
   const [donationKrw, setDonationKrw] = useState("0");
   const [housingSavingsKrw, setHousingSavingsKrw] = useState("0");
+  const [personalPensionEligible, setPersonalPensionEligible] = useState(true);
+  const [insurancePremiumEligible, setInsurancePremiumEligible] = useState(true);
+  const [medicalExpenseEligible, setMedicalExpenseEligible] = useState(true);
+  const [educationExpenseEligible, setEducationExpenseEligible] = useState(true);
+  const [donationEligible, setDonationEligible] = useState(true);
+  const [housingSavingsEligible, setHousingSavingsEligible] = useState(true);
   const [issuerName, setIssuerName] = useState("payroll-team");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
@@ -199,6 +205,14 @@ export default function PayrollYearEndConsole() {
         },
         annualIncomeTaxRate: parseRate(annualIncomeTaxRate, "annualIncomeTaxRate"),
         localIncomeTaxRate: parseRate(localIncomeTaxRate, "localIncomeTaxRate"),
+        deductionEligibility: {
+          personalPensionEligible,
+          insurancePremiumEligible,
+          medicalExpenseEligible,
+          educationExpenseEligible,
+          donationEligible,
+          housingSavingsEligible
+        },
         deductionItems: {
           personalPensionKrw: parseRequiredInt(personalPensionKrw, "personalPensionKrw"),
           insurancePremiumKrw: parseRequiredInt(insurancePremiumKrw, "insurancePremiumKrw"),
@@ -293,6 +307,12 @@ export default function PayrollYearEndConsole() {
             <label>Education Expense<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
             <label>Donation<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
             <label>Housing Savings<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
+            <label className="checkbox"><input type="checkbox" checked={personalPensionEligible} onChange={(event) => setPersonalPensionEligible(event.target.checked)} />Personal Pension Eligible</label>
+            <label className="checkbox"><input type="checkbox" checked={insurancePremiumEligible} onChange={(event) => setInsurancePremiumEligible(event.target.checked)} />Insurance Premium Eligible</label>
+            <label className="checkbox"><input type="checkbox" checked={medicalExpenseEligible} onChange={(event) => setMedicalExpenseEligible(event.target.checked)} />Medical Expense Eligible</label>
+            <label className="checkbox"><input type="checkbox" checked={educationExpenseEligible} onChange={(event) => setEducationExpenseEligible(event.target.checked)} />Education Expense Eligible</label>
+            <label className="checkbox"><input type="checkbox" checked={donationEligible} onChange={(event) => setDonationEligible(event.target.checked)} />Donation Eligible</label>
+            <label className="checkbox"><input type="checkbox" checked={housingSavingsEligible} onChange={(event) => setHousingSavingsEligible(event.target.checked)} />Housing Savings Eligible</label>
           </div>
           <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
           <label>Actor ID (dev fallback)<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
@@ -331,6 +351,8 @@ export default function PayrollYearEndConsole() {
               <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
               <li><span>Taxable Income</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeBeforeDeductionKrw)}{" -> "}{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeAfterDeductionKrw)}</strong></li>
               <li><span>Capped Items</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw)}</strong></li>
+              <li><span>Deduction Eligibility</span><strong>{Object.entries(recalculation.recalculation.deductionEligibility).filter(([, value]) => value).map(([key]) => key).join(", ") || "-"}</strong></li>
+              <li><span>Eligibility Blocking Reasons</span><strong>{recalculation.recalculation.deductionEligibilityBlockingReasons.join(" | ") || "-"}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Tax Liability Delta</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw)}</strong></li>
               <li><span>Withholding Delta Change</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.withholdingDeltaChangeKrw)}</strong></li>
