@@ -16,6 +16,14 @@ function readUtf8(...parts: string[]) {
   return fs.readFileSync(path.resolve(process.cwd(), ...parts), "utf8");
 }
 
+function parsePayrollSpecMinorVersion(content: string, sourceName: string): number {
+  const match = content.match(/version:\s*1\.(\d+)\.(\d+)/);
+  assert.ok(match, `${sourceName} must declare payroll contract version in 1.x.y format`);
+  const minor = Number(match[1]);
+  assert.ok(Number.isFinite(minor), `${sourceName} payroll contract minor version must be numeric`);
+  return minor;
+}
+
 function actorHeaders(role: string, actorId: string, organizationId?: string) {
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -54,9 +62,15 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
-  assert.match(payrollApiSpec, /version:\s*1\.57\.0/);
+  assert.ok(
+    parsePayrollSpecMinorVersion(payrollApiSpec, "specs/payroll/api.yaml") >= 57,
+    "payroll api spec version must be >= 1.57.x for inputVectorHash workflow coverage"
+  );
   assert.match(payrollApiSpec, /inputVectorHash/i);
-  assert.match(payrollContract, /version:\s*1\.57\.0/);
+  assert.ok(
+    parsePayrollSpecMinorVersion(payrollContract, "specs/payroll/contract.yaml") >= 57,
+    "payroll contract version must be >= 1.57.x for inputVectorHash workflow coverage"
+  );
   assert.match(payrollContract, /input-vector hash workflow/i);
   assert.match(payrollTestCases, /inputVectorHash/);
 
