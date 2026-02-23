@@ -47,6 +47,37 @@ export type WithholdingReceiptDocumentResponse = {
   };
 };
 
+export type FinalizedYearEndSettlementResponse = {
+  settlement: {
+    year: number;
+    employeeId: string;
+    finalizationId: string;
+    finalizedAt: string;
+    settlementHash: string;
+    annualTotalsKrw: {
+      grossPayKrw: number;
+      withholdingTaxKrw: number;
+      socialInsuranceKrw: number;
+      otherDeductionsKrw: number;
+      totalDeductionsKrw: number;
+      netPayKrw: number;
+    };
+    settlementKrw: {
+      annualTaxLiabilityKrw: number;
+      priorWithheldTaxKrw: number;
+      withholdingDeltaKrw: number;
+      additionalWithholdingDueKrw: number;
+      withholdingRefundKrw: number;
+    };
+    runStates: {
+      confirmedRuns: number;
+      previewedRuns: number;
+      undistributedRuns: number;
+      pendingReceiptRuns: number;
+    };
+  };
+};
+
 export type ApiLog = {
   id: number;
   label: string;

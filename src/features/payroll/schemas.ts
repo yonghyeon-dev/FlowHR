@@ -491,6 +491,11 @@ export const getPayrollYearEndWithholdingReceiptDocumentQuerySchema = z.object({
   format: z.enum(["json", "text"]).default("json")
 });
 
+export const getPayrollYearEndFinalizedSettlementQuerySchema = z.object({
+  year: z.coerce.number().int().min(2020).max(2100),
+  employeeId: z.string().min(1)
+});
+
 export const getPayrollYearEndInsuranceReconciliationReportQuerySchema = z.object({
   year: z.coerce.number().int().min(2020).max(2100),
   employeeId: z.string().min(1)

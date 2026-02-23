@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.54.0
+  version: 1.55.0
 paths:
   /payroll/runs:
     get:
@@ -166,6 +166,24 @@ paths:
       responses:
         "200":
           description: Year-end preflight checklist generated
+  /payroll/year-end/finalized-settlement:
+    get:
+      summary: Get finalized payroll year-end settlement for employee/year
+      description: Returns latest finalized year-end settlement snapshot for selected employee/year from audit-backed finalization payload with settlement hash trace, annual totals, and withholding refund/additional-due breakdown.
+      parameters:
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Finalized year-end settlement summary generated
   /payroll/year-end/filing-submissions:
     get:
       summary: List payroll year-end filing submissions for employee/year

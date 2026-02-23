@@ -7,6 +7,7 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import type {
   ApiLog,
+  FinalizedYearEndSettlementResponse,
   WithholdingReceiptDocumentResponse,
   WithholdingReceiptResponse
 } from "@/components/withholding-receipt/types";
@@ -30,6 +31,8 @@ export default function WithholdingReceiptConsole() {
   const [statusMessage, setStatusMessage] = useState("");
   const [receipt, setReceipt] = useState<WithholdingReceiptResponse | null>(null);
   const [receiptDocument, setReceiptDocument] = useState<WithholdingReceiptDocumentResponse | null>(null);
+  const [finalizedSettlement, setFinalizedSettlement] =
+    useState<FinalizedYearEndSettlementResponse | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -150,6 +153,47 @@ export default function WithholdingReceiptConsole() {
     }
   }
 
+  async function loadFinalizedSettlement() {
+    try {
+      setPendingLabel("year-end finalized settlement");
+      const query = new URLSearchParams({
+        year: String(parseRequiredInt(year, "year")),
+        employeeId: employeeId.trim()
+      });
+      const response = await fetch(
+        `/api/payroll/year-end/finalized-settlement?${query.toString()}`,
+        {
+          method: "GET",
+          headers: buildHeaders()
+        }
+      );
+      const body = (await response.json()) as
+        | FinalizedYearEndSettlementResponse
+        | { error: string };
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "load finalized year-end settlement",
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString("ko-KR")
+        },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setFinalizedSettlement(body);
+      setStatusMessage(`loaded finalized settlement ${body.settlement.finalizationId}`);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   return (
     <main className="saas-content">
       <header className="hero">
@@ -178,6 +222,7 @@ export default function WithholdingReceiptConsole() {
           <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void previewReceipt()} disabled={pendingLabel !== null}>Preview Receipt</button>
+            <button className="btn btn-secondary" onClick={() => void loadFinalizedSettlement()} disabled={pendingLabel !== null}>Load Finalized Settlement</button>
             <button className="btn btn-secondary" onClick={() => void loadIssuedDocument()} disabled={pendingLabel !== null}>Load Issued Document</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -193,6 +238,18 @@ export default function WithholdingReceiptConsole() {
               <li><span>Withholding / Social</span><strong>{formatKrw(receipt.receipt.annualTotalsKrw.withholdingTaxKrw)} / {formatKrw(receipt.receipt.annualTotalsKrw.socialInsuranceKrw)}</strong></li>
               <li><span>Pending Receipt Runs</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
               <li><span>Blocking Reasons</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
+            </ul>
+          )}
+          {!finalizedSettlement ? <p className="small">No finalized settlement loaded.</p> : (
+            <ul className="simple-list">
+              <li><span>Finalization ID</span><strong>{finalizedSettlement.settlement.finalizationId}</strong></li>
+              <li><span>Finalized At</span><strong>{finalizedSettlement.settlement.finalizedAt}</strong></li>
+              <li><span>Settlement Hash</span><strong>{finalizedSettlement.settlement.settlementHash.slice(0, 16)}...</strong></li>
+              <li><span>Tax Liability</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
+              <li><span>Prior Withheld</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.priorWithheldTaxKrw)}</strong></li>
+              <li><span>Withholding Delta</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.withholdingDeltaKrw)}</strong></li>
+              <li><span>Additional Due / Refund</span><strong>{formatKrw(finalizedSettlement.settlement.settlementKrw.additionalWithholdingDueKrw)} / {formatKrw(finalizedSettlement.settlement.settlementKrw.withholdingRefundKrw)}</strong></li>
+              <li><span>Run Guard Snapshot</span><strong>{`confirmed ${finalizedSettlement.settlement.runStates.confirmedRuns}, previewed ${finalizedSettlement.settlement.runStates.previewedRuns}, undistributed ${finalizedSettlement.settlement.runStates.undistributedRuns}, pending receipt ${finalizedSettlement.settlement.runStates.pendingReceiptRuns}`}</strong></li>
             </ul>
           )}
           {!receiptDocument ? <p className="small">No issued document loaded.</p> : (
