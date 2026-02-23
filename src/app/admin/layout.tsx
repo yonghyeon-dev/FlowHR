@@ -1,6 +1,7 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
+import SaasMobileMenu, { type SaasMobileMenuLink } from "@/components/layout/SaasMobileMenu";
 import SessionMenu from "@/components/SessionMenu";
 import { createTranslator } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -20,74 +21,82 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   const locale = await getRequestLocale();
   const t = createTranslator(locale);
 
+  const adminLinks: SaasMobileMenuLink[] = [
+    { href: "/admin", label: t("admin.nav.dashboard") },
+    { href: "/admin/kpi", label: t("admin.nav.kpi") },
+    { href: "/admin/attendance-live", label: t("admin.nav.attendanceLive") },
+    { href: "/admin/onboarding", label: t("admin.nav.onboarding") },
+    { href: "/admin#approvals", label: t("admin.nav.approvals") },
+    { href: "/admin#aggregates", label: t("admin.nav.aggregates") },
+    { href: "/admin#leave-policy", label: t("admin.nav.leavePolicy") },
+    { href: "/admin/leave-accrual", label: t("admin.nav.leaveAccrual") },
+    { href: "/admin/leave-calendar", label: t("admin.nav.leaveCalendar") },
+    { href: "/admin#payroll", label: t("admin.nav.payroll") },
+    { href: "/admin/payroll-insurance", label: t("admin.nav.insurance") },
+    { href: "/admin/payroll-close", label: t("admin.nav.payrollClose") },
+    { href: "/admin/payroll-payslip-delivery", label: t("admin.nav.payslipDelivery") },
+    { href: "/admin/payroll-year-end", label: t("admin.nav.yearEnd") },
+    { href: "/admin/payroll-year-end-filing", label: t("admin.nav.yearEndFiling") },
+    { href: "/admin/payroll-year-end-filing/ops", label: t("admin.nav.yearEndFilingOps") },
+    { href: "/admin/payroll-year-end-filing/ops/alert", label: t("admin.nav.yearEndFilingOpsFlatAlert") },
+    {
+      href: "/admin/payroll-year-end-filing/ops/checklist-flow",
+      label: t("admin.nav.yearEndFilingOpsFlatChecklist")
+    },
+    { href: "/admin/payroll-year-end-filing/ops/review", label: t("admin.nav.yearEndFilingOpsFlatReview") },
+    { href: "/admin/payroll-year-end-filing/ops/close-off", label: t("admin.nav.yearEndFilingOpsFlatCloseOff") },
+    { href: "/admin/payroll-year-end-filing/ops/delivery", label: t("admin.nav.yearEndFilingOpsFlatDelivery") },
+    { href: "/admin/payroll-year-end-filing/ops/archive", label: t("admin.nav.yearEndFilingOpsFlatArchive") },
+    { href: "/admin/payroll-year-end-filing/ops/report", label: t("admin.nav.yearEndFilingOpsFlatReport") },
+    { href: "/admin/people", label: t("admin.nav.people") },
+    { href: "/admin/contracts", label: t("admin.nav.contracts") },
+    { href: "/admin/approval-policy", label: t("admin.nav.approvalPolicy") }
+  ];
+
+  const footerLinks: SaasMobileMenuLink[] = [{ href: "/employee", label: t("admin.nav.employeePortal") }];
+  if (showDevTools) {
+    footerLinks.push(
+      { href: "/ops/mvp-console", label: t("admin.nav.devOpsConsole"), muted: true },
+      { href: "/ops/leave-promotion", label: t("admin.nav.devLeavePromotion"), muted: true }
+    );
+  }
+
   return (
-    <div className="saas-shell">
-      <aside className="saas-sidebar">
-        <div className="saas-brand">
-          <Link href="/">FlowHR</Link>
-          <span className="saas-badge">{t("admin.badge")}</span>
-        </div>
+    <>
+      <SaasMobileMenu
+        badge={t("admin.badge")}
+        menuLabel={t("shell.mobileMenu")}
+        navAriaLabel={t("admin.nav.aria")}
+        navLinks={adminLinks}
+        footerLinks={footerLinks}
+      />
+      <div className="saas-shell">
+        <aside className="saas-sidebar">
+          <div className="saas-brand">
+            <Link href="/">FlowHR</Link>
+            <span className="saas-badge">{t("admin.badge")}</span>
+          </div>
 
-        <nav className="saas-nav" aria-label={t("admin.nav.aria")}>
-          <Link href="/admin">{t("admin.nav.dashboard")}</Link>
-          <Link href="/admin/kpi">{t("admin.nav.kpi")}</Link>
-          <Link href="/admin/attendance-live">{t("admin.nav.attendanceLive")}</Link>
-          <Link href="/admin/onboarding">{t("admin.nav.onboarding")}</Link>
-          <Link href="/admin#approvals">{t("admin.nav.approvals")}</Link>
-          <Link href="/admin#aggregates">{t("admin.nav.aggregates")}</Link>
-          <Link href="/admin#leave-policy">{t("admin.nav.leavePolicy")}</Link>
-          <Link href="/admin/leave-accrual">{t("admin.nav.leaveAccrual")}</Link>
-          <Link href="/admin/leave-calendar">{t("admin.nav.leaveCalendar")}</Link>
-          <Link href="/admin#payroll">{t("admin.nav.payroll")}</Link>
-          <Link href="/admin/payroll-insurance">{t("admin.nav.insurance")}</Link>
-          <Link href="/admin/payroll-close">{t("admin.nav.payrollClose")}</Link>
-          <Link href="/admin/payroll-payslip-delivery">{t("admin.nav.payslipDelivery")}</Link>
-          <Link href="/admin/payroll-year-end">{t("admin.nav.yearEnd")}</Link>
-          <Link href="/admin/payroll-year-end-filing">{t("admin.nav.yearEndFiling")}</Link>
-          <Link href="/admin/payroll-year-end-filing/ops">{t("admin.nav.yearEndFilingOps")}</Link>
-          <Link href="/admin/payroll-year-end-filing/ops/alert">
-            {t("admin.nav.yearEndFilingOpsFlatAlert")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/checklist-flow">
-            {t("admin.nav.yearEndFilingOpsFlatChecklist")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/review">
-            {t("admin.nav.yearEndFilingOpsFlatReview")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/close-off">
-            {t("admin.nav.yearEndFilingOpsFlatCloseOff")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/delivery">
-            {t("admin.nav.yearEndFilingOpsFlatDelivery")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/archive">
-            {t("admin.nav.yearEndFilingOpsFlatArchive")}
-          </Link>
-          <Link href="/admin/payroll-year-end-filing/ops/report">
-            {t("admin.nav.yearEndFilingOpsFlatReport")}
-          </Link>
-          <Link href="/admin/people">{t("admin.nav.people")}</Link>
-          <Link href="/admin/contracts">{t("admin.nav.contracts")}</Link>
-          <Link href="/admin/approval-policy">{t("admin.nav.approvalPolicy")}</Link>
-        </nav>
-
-        <div className="saas-sidebar-footer">
-          <SessionMenu />
-          <Link href="/employee">{t("admin.nav.employeePortal")}</Link>
-          {showDevTools ? (
-            <>
-              <Link className="muted-link" href="/ops/mvp-console">
-                {t("admin.nav.devOpsConsole")}
+          <nav className="saas-nav" aria-label={t("admin.nav.aria")}>
+            {adminLinks.map((item) => (
+              <Link key={item.href} href={item.href}>
+                {item.label}
               </Link>
-              <Link className="muted-link" href="/ops/leave-promotion">
-                {t("admin.nav.devLeavePromotion")}
-              </Link>
-            </>
-          ) : null}
-        </div>
-      </aside>
+            ))}
+          </nav>
 
-      <div className="saas-main">{children}</div>
-    </div>
+          <div className="saas-sidebar-footer">
+            <SessionMenu />
+            {footerLinks.map((item) => (
+              <Link key={item.href} href={item.href} className={item.muted ? "muted-link" : undefined}>
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </aside>
+
+        <div className="saas-main">{children}</div>
+      </div>
+    </>
   );
 }
