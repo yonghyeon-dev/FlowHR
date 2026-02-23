@@ -11,6 +11,7 @@ import EmployeeRequestFollowUpScreen from "../screens/EmployeeRequestFollowUpScr
 import EmployeeRequestHistoryScreen from "../screens/EmployeeRequestHistoryScreen";
 import EmployeeRequestSubmitScreen from "../screens/EmployeeRequestSubmitScreen";
 import LoginScreen from "../screens/LoginScreen";
+import MobileAnalyticsDashboardScreen from "../screens/MobileAnalyticsDashboardScreen";
 import NotificationCenterScreen from "../screens/NotificationCenterScreen";
 import NotificationHistoryScreen from "../screens/NotificationHistoryScreen";
 import { clearSession, loadSession, saveSession } from "../lib/sessionStore";
@@ -79,6 +80,7 @@ export default function RootNavigator() {
                 session={session}
                 onLogout={actions.logout}
                 onOpenApprovalQueue={() => navigation.navigate("ApprovalQueue")}
+                onOpenMobileAnalytics={() => navigation.navigate("MobileAnalyticsDashboard")}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
                 onOpenEmailTemplates={() => navigation.navigate("EmailTemplates")}
@@ -105,6 +107,7 @@ export default function RootNavigator() {
                 }
                 onOpenRequestHistory={() => navigation.navigate("EmployeeRequestHistory")}
                 onOpenRequestFollowUp={() => navigation.navigate("EmployeeRequestFollowUp")}
+                onOpenMobileAnalytics={() => navigation.navigate("MobileAnalyticsDashboard")}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
               />
@@ -142,6 +145,19 @@ export default function RootNavigator() {
                 initialRequestType={route.params?.requestType ?? "attendanceCorrection"}
                 onOpenRequestHistory={() => navigation.navigate("EmployeeRequestHistory")}
                 onOpenRequestFollowUp={() => navigation.navigate("EmployeeRequestFollowUp")}
+              />
+            )}
+          </Stack.Screen>
+        ) : null}
+        {session ? (
+          <Stack.Screen name="MobileAnalyticsDashboard" options={{ title: "Analytics Dashboard" }}>
+            {({ navigation }) => (
+              <MobileAnalyticsDashboardScreen
+                session={session}
+                onOpenApprovalQueue={session.role === "ADMIN" ? () => navigation.navigate("ApprovalQueue") : undefined}
+                onOpenRequestHistory={session.role === "EMPLOYEE" ? () => navigation.navigate("EmployeeRequestHistory") : undefined}
+                onOpenRequestFollowUp={session.role === "EMPLOYEE" ? () => navigation.navigate("EmployeeRequestFollowUp") : undefined}
+                onOpenNotifications={() => navigation.navigate("Notifications")}
               />
             )}
           </Stack.Screen>

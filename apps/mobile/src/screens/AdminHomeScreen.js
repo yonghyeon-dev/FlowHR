@@ -4,13 +4,14 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0256~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0257~에서 확장됩니다.`);
 }
 
 export default function AdminHomeScreen({
   session,
   onLogout,
   onOpenApprovalQueue,
+  onOpenMobileAnalytics,
   onOpenNotifications,
   onOpenNotificationHistory,
   onOpenEmailTemplates
@@ -32,6 +33,13 @@ export default function AdminHomeScreen({
           <Text style={styles.desc}>출근/지각/미출근 스냅샷을 빠르게 점검합니다.</Text>
           <Pressable style={styles.btn} onPress={() => action("실시간 근태 현황")}>
             <Text style={styles.btnText}>근태 현황 보기</Text>
+          </Pressable>
+        </ShellCard>
+
+        <ShellCard title="분석 대시보드">
+          <Text style={styles.desc}>승인/요청/알림 KPI를 한 화면에서 점검하고 즉시 이동합니다.</Text>
+          <Pressable style={styles.btn} onPress={onOpenMobileAnalytics}>
+            <Text style={styles.btnText}>분석 대시보드 열기</Text>
           </Pressable>
         </ShellCard>
 

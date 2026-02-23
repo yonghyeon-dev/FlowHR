@@ -4,7 +4,7 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0256~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0257~에서 확장됩니다.`);
 }
 
 export default function EmployeeHomeScreen({
@@ -14,6 +14,7 @@ export default function EmployeeHomeScreen({
   onOpenLeaveRequest,
   onOpenRequestHistory,
   onOpenRequestFollowUp,
+  onOpenMobileAnalytics,
   onOpenNotifications,
   onOpenNotificationHistory
 }) {
@@ -51,6 +52,13 @@ export default function EmployeeHomeScreen({
           <Text style={styles.desc}>최신 확정 명세서와 확인 상태를 점검합니다.</Text>
           <Pressable style={styles.btn} onPress={() => action("명세서 확인")}>
             <Text style={styles.btnText}>명세서 보기</Text>
+          </Pressable>
+        </ShellCard>
+
+        <ShellCard title="분석 대시보드">
+          <Text style={styles.desc}>내 요청/알림 흐름을 기간별 KPI와 트렌드로 확인합니다.</Text>
+          <Pressable style={styles.btn} onPress={onOpenMobileAnalytics}>
+            <Text style={styles.btnText}>분석 대시보드 열기</Text>
           </Pressable>
         </ShellCard>
 
