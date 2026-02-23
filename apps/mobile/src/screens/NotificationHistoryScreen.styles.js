@@ -40,32 +40,6 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   chipText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
   chipTextActive: { color: colors.primary },
-  presetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm
-  },
-  pinBtn: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 999,
-    backgroundColor: "#fff",
-    paddingHorizontal: 10,
-    paddingVertical: 6
-  },
-  pinBtnActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft
-  },
-  pinBtnText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "700"
-  },
-  pinBtnTextActive: {
-    color: colors.primary
-  },
   meta: { color: colors.muted, fontSize: 12 },
   item: {
     borderWidth: 1,

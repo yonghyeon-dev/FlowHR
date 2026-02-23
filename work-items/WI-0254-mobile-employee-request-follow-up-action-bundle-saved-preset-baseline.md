@@ -1,5 +1,8 @@
 # WI-0254: Mobile Employee Request Follow-Up Action Bundle Saved Preset Baseline
 
+> **DEPRECATED (WI-0258)**: 모바일 적층 정리에서 follow-up action bundle/preset 레이어는 제거되었습니다.
+> 참조: `docs/codex-guide.md` (Part 3 금지 규칙), `work-items/WI-0258-mobile-preset-layering-cleanup-baseline.md`
+
 ## Background
 
 WI-0253 added follow-up template recommendations, but users still needed a faster way to

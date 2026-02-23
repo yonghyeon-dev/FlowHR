@@ -1,5 +1,8 @@
 # WI-0255: Mobile Employee Request Follow-Up Preset Import/Export Baseline
 
+> **DEPRECATED (WI-0258)**: 모바일 적층 정리에서 follow-up preset import/export 레이어는 제거되었습니다.
+> 참조: `docs/codex-guide.md` (Part 3 금지 규칙), `work-items/WI-0258-mobile-preset-layering-cleanup-baseline.md`
+
 ## Background
 
 WI-0254 introduced saved follow-up presets (pin/recent), but there was no way to transfer
