@@ -1,4 +1,6 @@
-﻿import type {
+﻿import type { CSSProperties } from "react";
+
+import type {
   AttendanceLiveRow,
   AttendanceLiveStatus,
   AttendanceLiveSummary
@@ -87,43 +89,21 @@ export function AdminAttendanceLiveContextPanel(props: ContextPanelProps) {
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
         <div className="input-grid">
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onSetOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {copy.adminActorIdLabel}
-            <input value={adminActorId} onChange={(event) => onSetAdminActorId(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <input value={accessToken} onChange={(event) => onSetAccessToken(event.target.value)} />
-          </label>
-          <label>
-            {copy.periodStartLabel}
-            <input type="datetime-local" value={periodStart} onChange={(event) => onSetPeriodStart(event.target.value)} />
-          </label>
-          <label>
-            {copy.periodEndLabel}
-            <input type="datetime-local" value={periodEnd} onChange={(event) => onSetPeriodEnd(event.target.value)} />
-          </label>
+          <label>{copy.organizationIdLabel}<input value={organizationId} onChange={(event) => onSetOrganizationId(event.target.value)} /></label>
+          <label>{copy.adminActorIdLabel}<input value={adminActorId} onChange={(event) => onSetAdminActorId(event.target.value)} /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => onSetAccessToken(event.target.value)} /></label>
+          <label>{copy.periodStartLabel}<input type="datetime-local" value={periodStart} onChange={(event) => onSetPeriodStart(event.target.value)} /></label>
+          <label>{copy.periodEndLabel}<input type="datetime-local" value={periodEnd} onChange={(event) => onSetPeriodEnd(event.target.value)} /></label>
           <label>
             {copy.departmentLabel}
             <select value={departmentFilter} onChange={(event) => onSetDepartmentFilter(event.target.value)}>
               <option value="">{copy.departmentAll}</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
+              {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
             </select>
           </label>
           <label>
             {copy.statusLabel}
-            <select
-              value={statusFilter}
-              onChange={(event) => onSetStatusFilter(event.target.value as AttendanceLiveFilterStatus)}
-            >
+            <select value={statusFilter} onChange={(event) => onSetStatusFilter(event.target.value as AttendanceLiveFilterStatus)}>
               <option value="all">{copy.statusAll}</option>
               <option value="scheduled">{copy.statuses.scheduled}</option>
               <option value="present">{copy.statuses.present}</option>
@@ -132,36 +112,13 @@ export function AdminAttendanceLiveContextPanel(props: ContextPanelProps) {
               <option value="checked_out">{copy.statuses.checked_out}</option>
             </select>
           </label>
-          <label>
-            {copy.lateThresholdLabel}
-            <input
-              type="number"
-              min={1}
-              value={lateThresholdMinutes}
-              onChange={(event) => onSetLateThresholdMinutes(event.target.value)}
-            />
-          </label>
-          <label>
-            {copy.criticalThresholdLabel}
-            <input
-              type="number"
-              min={1}
-              value={criticalThresholdMinutes}
-              onChange={(event) => onSetCriticalThresholdMinutes(event.target.value)}
-            />
-          </label>
-          <label className="full">
-            {copy.searchLabel}
-            <input value={searchQuery} onChange={(event) => onSetSearchQuery(event.target.value)} />
-          </label>
+          <label>{copy.lateThresholdLabel}<input type="number" min={1} value={lateThresholdMinutes} onChange={(event) => onSetLateThresholdMinutes(event.target.value)} /></label>
+          <label>{copy.criticalThresholdLabel}<input type="number" min={1} value={criticalThresholdMinutes} onChange={(event) => onSetCriticalThresholdMinutes(event.target.value)} /></label>
+          <label className="full">{copy.searchLabel}<input value={searchQuery} onChange={(event) => onSetSearchQuery(event.target.value)} /></label>
         </div>
         <div className="actions">
-          <button className="btn btn-secondary" onClick={onSetToday}>
-            {copy.todayButton}
-          </button>
-          <button className="btn btn-primary" onClick={onRefresh} disabled={refreshDisabled}>
-            {copy.refreshButton}
-          </button>
+          <button className="btn btn-secondary" onClick={onSetToday}>{copy.todayButton}</button>
+          <button className="btn btn-primary" onClick={onRefresh} disabled={refreshDisabled}>{copy.refreshButton}</button>
         </div>
         {pendingLabel ? <p className="small muted">{pendingLabel}</p> : null}
       </article>
@@ -202,45 +159,19 @@ export function AdminAttendanceLiveTablePanel({ copy, rows, locale }: TablePanel
         <p className="small muted">{copy.tableNoRows}</p>
       ) : (
         <div style={{ overflowX: "auto" }}>
-          <table className="attendance-live-table">
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Department</th>
-                <th>Schedule</th>
-                <th>Check-in</th>
-                <th>Check-out</th>
-                <th>Late</th>
-                <th>Status</th>
-                <th>Alert</th>
-              </tr>
-            </thead>
+          <table style={TABLE_STYLE}>
+            <thead><tr><th style={CELL_STYLE}>Employee</th><th style={CELL_STYLE}>Department</th><th style={CELL_STYLE}>Schedule</th><th style={CELL_STYLE}>Check-in</th><th style={CELL_STYLE}>Check-out</th><th style={CELL_STYLE}>Late</th><th style={CELL_STYLE}>Status</th><th style={CELL_STYLE}>Alert</th></tr></thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.scheduleId}>
-                  <td>{row.employeeName ?? row.employeeId}</td>
-                  <td>{row.departmentName ?? "-"}</td>
-                  <td>
-                    {formatDateTime(row.scheduleStartAt, locale)}<br />
-                    <span className="muted">{formatDateTime(row.scheduleEndAt, locale)}</span>
-                  </td>
-                  <td>{formatDateTime(row.checkInAt, locale)}</td>
-                  <td>{formatDateTime(row.checkOutAt, locale)}</td>
-                  <td>{formatMinutes(row.minutesLate)}</td>
-                  <td>
-                    <span className={`attendance-live-status status-${row.status}`}>
-                      {copy.statuses[row.status]}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`attendance-live-alert alert-${row.alertLevel}`}>
-                      {row.alertLevel === "critical"
-                        ? copy.alertCritical
-                        : row.alertLevel === "watch"
-                          ? copy.alertWatch
-                          : copy.alertNormal}
-                    </span>
-                  </td>
+                  <td style={CELL_STYLE}>{row.employeeName ?? row.employeeId}</td>
+                  <td style={CELL_STYLE}>{row.departmentName ?? "-"}</td>
+                  <td style={CELL_STYLE}>{formatDateTime(row.scheduleStartAt, locale)}<br /><span className="muted">{formatDateTime(row.scheduleEndAt, locale)}</span></td>
+                  <td style={CELL_STYLE}>{formatDateTime(row.checkInAt, locale)}</td>
+                  <td style={CELL_STYLE}>{formatDateTime(row.checkOutAt, locale)}</td>
+                  <td style={CELL_STYLE}>{formatMinutes(row.minutesLate)}</td>
+                  <td style={CELL_STYLE}><span style={statusBadgeStyle(row.status)}>{copy.statuses[row.status]}</span></td>
+                  <td style={CELL_STYLE}><span style={alertBadgeStyle(row.alertLevel)}>{row.alertLevel === "critical" ? copy.alertCritical : row.alertLevel === "watch" ? copy.alertWatch : copy.alertNormal}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -260,17 +191,58 @@ export function AdminAttendanceLiveLogsPanel({ copy, logs }: LogsPanelProps) {
   return (
     <article className="panel">
       <h2>{copy.logsTitle}</h2>
-      {logs.length === 0 ? (
-        <p className="small muted">{copy.logsEmpty}</p>
-      ) : (
+      {logs.length === 0 ? <p className="small muted">{copy.logsEmpty}</p> : (
         <ul className="log-list">
-          {logs.map((log) => (
-            <li key={log.id}>
-              <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status} / {log.durationMs}ms / {log.at}
-            </li>
-          ))}
+          {logs.map((log) => <li key={log.id}><span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status} / {log.durationMs}ms / {log.at}</li>)}
         </ul>
       )}
     </article>
   );
+}
+
+const TABLE_STYLE: CSSProperties = { width: "100%", borderCollapse: "collapse" };
+const CELL_STYLE: CSSProperties = {
+  padding: 10,
+  borderBottom: "1px solid var(--line)",
+  textAlign: "left",
+  verticalAlign: "top",
+  whiteSpace: "nowrap"
+};
+
+const BADGE_BASE_STYLE: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 76,
+  padding: "4px 8px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 600
+};
+const BADGE_NORMAL_STYLE: CSSProperties = { ...BADGE_BASE_STYLE, color: "var(--muted)", background: "color-mix(in srgb, var(--panel-soft) 70%, white 30%)" };
+const BADGE_WARNING_STYLE: CSSProperties = { ...BADGE_BASE_STYLE, color: "#915b00", background: "#fff1d8" };
+const BADGE_CRITICAL_STYLE: CSSProperties = { ...BADGE_BASE_STYLE, color: "#9f1f21", background: "#ffe4e4" };
+const BADGE_OK_STYLE: CSSProperties = { ...BADGE_BASE_STYLE, color: "#18603b", background: "#daf8e6" };
+
+function statusBadgeStyle(status: AttendanceLiveStatus): CSSProperties {
+  if (status === "late") {
+    return BADGE_WARNING_STYLE;
+  }
+  if (status === "absent") {
+    return BADGE_CRITICAL_STYLE;
+  }
+  if (status === "present" || status === "checked_out") {
+    return BADGE_OK_STYLE;
+  }
+  return BADGE_NORMAL_STYLE;
+}
+
+function alertBadgeStyle(level: "normal" | "watch" | "critical"): CSSProperties {
+  if (level === "watch") {
+    return BADGE_WARNING_STYLE;
+  }
+  if (level === "critical") {
+    return BADGE_CRITICAL_STYLE;
+  }
+  return BADGE_NORMAL_STYLE;
 }
