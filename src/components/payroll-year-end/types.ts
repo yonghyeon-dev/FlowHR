@@ -40,6 +40,8 @@ export type PayrollYearEndSettlementResponse = {
       annualTaxLiabilityKrw: number;
       priorWithheldTaxKrw: number;
       withholdingDeltaKrw: number;
+      additionalWithholdingDueKrw: number;
+      withholdingRefundKrw: number;
     };
   };
 };
@@ -124,6 +126,8 @@ export type PayrollYearEndRecalculationResponse = {
       annualTaxLiabilityKrw: number;
       priorWithheldTaxKrw: number;
       withholdingDeltaKrw: number;
+      additionalWithholdingDueKrw: number;
+      withholdingRefundKrw: number;
     };
     recalculatedSettlementKrw: {
       nonTaxableAnnualIncomeKrw: number;
@@ -147,6 +151,8 @@ export type PayrollYearEndRecalculationResponse = {
       annualTaxLiabilityKrw: number;
       priorWithheldTaxKrw: number;
       withholdingDeltaKrw: number;
+      additionalWithholdingDueKrw: number;
+      withholdingRefundKrw: number;
     };
     deltaKrw: {
       annualTaxLiabilityDeltaKrw: number;

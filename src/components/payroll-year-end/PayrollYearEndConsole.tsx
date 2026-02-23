@@ -336,6 +336,8 @@ export default function PayrollYearEndConsole() {
               <li><span>Tax Liability</span><strong>{formatKrw(settlement.summary.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Prior Withheld</span><strong>{formatKrw(settlement.summary.settlementKrw.priorWithheldTaxKrw)}</strong></li>
               <li><span>Withholding Delta</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingDeltaKrw)}</strong></li>
+              <li><span>Additional Withholding Due</span><strong>{formatKrw(settlement.summary.settlementKrw.additionalWithholdingDueKrw)}</strong></li>
+              <li><span>Withholding Refund</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingRefundKrw)}</strong></li>
               <li><span>Previewed Runs</span><strong>{settlement.summary.runStates.previewedRunIds.join(", ") || "-"}</strong></li>
             </ul>
           )}
@@ -356,6 +358,8 @@ export default function PayrollYearEndConsole() {
               <li><span>Tax Liability</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Tax Liability Delta</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw)}</strong></li>
               <li><span>Withholding Delta Change</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.withholdingDeltaChangeKrw)}</strong></li>
+              <li><span>Additional Due</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.additionalWithholdingDueKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.additionalWithholdingDueKrw)}</strong></li>
+              <li><span>Refund</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.withholdingRefundKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.withholdingRefundKrw)}</strong></li>
             </ul>
           )}
         </article>
