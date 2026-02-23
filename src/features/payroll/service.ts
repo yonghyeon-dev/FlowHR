@@ -25,6 +25,26 @@ import {
 } from "@/features/payroll/kr-income-tax-lookup-presets";
 import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
 import { findPayrollKrIncomeSplitItemCodeDictionaryEntry } from "@/features/payroll/kr-income-split-item-code-dictionary";
+import {
+  applyYearEndDeductionCaps as applyYearEndDeductionCapsCore,
+  applyYearEndTaxCreditCaps as applyYearEndTaxCreditCapsCore,
+  buildYearEndInputVectorHash as buildYearEndInputVectorHashCore,
+  collectYearEndDeductionEligibilityBlockingReasons as collectYearEndDeductionEligibilityBlockingReasonsCore,
+  normalizeYearEndDeductionEligibility as normalizeYearEndDeductionEligibilityCore,
+  normalizeYearEndDeductionItems as normalizeYearEndDeductionItemsCore,
+  normalizeYearEndTaxCreditItems as normalizeYearEndTaxCreditItemsCore
+} from "@/features/payroll/year-end-calculation-helpers";
+import {
+  buildYearEndFilingArtifact as buildYearEndFilingArtifactCore,
+  buildYearEndFilingRecords as buildYearEndFilingRecordsCore,
+  buildYearEndWithholdingReceiptDocumentArtifact as buildYearEndWithholdingReceiptDocumentArtifactCore,
+  validateYearEndFilingRecords as validateYearEndFilingRecordsCore
+} from "@/features/payroll/year-end-filing-artifact-helpers";
+import {
+  buildYearEndFilingSubmissionListSummary as buildYearEndFilingSubmissionListSummaryCore,
+  matchesYearEndFilingSubmissionFilters as matchesYearEndFilingSubmissionFiltersCore,
+  sortYearEndFilingSubmissions as sortYearEndFilingSubmissionsCore
+} from "@/features/payroll/year-end-filing-submission-query-helpers";
 
 type PreviewPayrollInput = {
   periodStart: Date;
@@ -198,12 +218,6 @@ type YearEndDeductionEligibilityInput = {
 
 type YearEndTaxCreditItemKey = keyof YearEndTaxCreditItemsInput;
 
-type YearEndTaxCreditItemCapRule = {
-  capKrw: number;
-};
-
-type YearEndTaxCreditCapRulesKrw = Record<YearEndTaxCreditItemKey, YearEndTaxCreditItemCapRule>;
-
 type YearEndTaxCreditCapAppliedItemKrw = {
   inputKrw: number;
   capKrw: number;
@@ -219,12 +233,6 @@ type YearEndTaxCreditCapAppliedBreakdownKrw = Record<
 >;
 
 type YearEndDeductionItemKey = keyof YearEndDeductionItemsInput;
-
-type YearEndDeductionItemCapRule = {
-  capKrw: number;
-};
-
-type YearEndDeductionCapRulesKrw = Record<YearEndDeductionItemKey, YearEndDeductionItemCapRule>;
 
 type YearEndDeductionCapAppliedItemKrw = {
   inputKrw: number;
@@ -1101,23 +1109,6 @@ const emptyTotals: PayableMinutes = {
   overtime: 0,
   night: 0,
   holiday: 0
-};
-
-// Baseline annual caps for year-end tax-credit simulation in settlement calculation.
-const yearEndTaxCreditCapRulesKrw: YearEndTaxCreditCapRulesKrw = {
-  earnedIncomeTaxCreditKrw: { capKrw: 740_000 },
-  childTaxCreditKrw: { capKrw: 900_000 },
-  additionalTaxCreditKrw: { capKrw: 1_000_000 }
-};
-
-// Baseline annual caps for deduction-item simulation in year-end recalculation/finalization.
-const yearEndDeductionCapRulesKrw: YearEndDeductionCapRulesKrw = {
-  personalPensionKrw: { capKrw: 7_000_000 },
-  insurancePremiumKrw: { capKrw: 1_000_000 },
-  medicalExpenseKrw: { capKrw: 15_000_000 },
-  educationExpenseKrw: { capKrw: 9_000_000 },
-  donationKrw: { capKrw: 10_000_000 },
-  housingSavingsKrw: { capKrw: 4_000_000 }
 };
 
 const payrollYearEndAcceptedAckCodeCatalog: PayrollYearEndFilingAckCodeCatalogItem[] = [
@@ -2992,92 +2983,29 @@ async function loadYearEndRunSnapshot(
 function normalizeYearEndDeductionItems(
   deductionItems: YearEndDeductionItemsInput
 ): YearEndDeductionItemsInput {
-  return {
-    personalPensionKrw: toKrwInteger(
-      deductionItems.personalPensionKrw,
-      "deductionItems.personalPensionKrw"
-    ),
-    insurancePremiumKrw: toKrwInteger(
-      deductionItems.insurancePremiumKrw,
-      "deductionItems.insurancePremiumKrw"
-    ),
-    medicalExpenseKrw: toKrwInteger(deductionItems.medicalExpenseKrw, "deductionItems.medicalExpenseKrw"),
-    educationExpenseKrw: toKrwInteger(
-      deductionItems.educationExpenseKrw,
-      "deductionItems.educationExpenseKrw"
-    ),
-    donationKrw: toKrwInteger(deductionItems.donationKrw, "deductionItems.donationKrw"),
-    housingSavingsKrw: toKrwInteger(deductionItems.housingSavingsKrw, "deductionItems.housingSavingsKrw")
-  };
+  return normalizeYearEndDeductionItemsCore(deductionItems, toKrwInteger);
 }
 
 function normalizeYearEndDeductionEligibility(
   deductionEligibility?: Partial<YearEndDeductionEligibilityInput>
 ): YearEndDeductionEligibilityInput {
-  return {
-    personalPensionEligible: deductionEligibility?.personalPensionEligible ?? true,
-    insurancePremiumEligible: deductionEligibility?.insurancePremiumEligible ?? true,
-    medicalExpenseEligible: deductionEligibility?.medicalExpenseEligible ?? true,
-    educationExpenseEligible: deductionEligibility?.educationExpenseEligible ?? true,
-    donationEligible: deductionEligibility?.donationEligible ?? true,
-    housingSavingsEligible: deductionEligibility?.housingSavingsEligible ?? true
-  };
+  return normalizeYearEndDeductionEligibilityCore(deductionEligibility);
 }
 
 function collectYearEndDeductionEligibilityBlockingReasons(
   deductionItems: YearEndDeductionItemsInput,
   deductionEligibility: YearEndDeductionEligibilityInput
 ) {
-  const blockingReasons: string[] = [];
-  if (deductionItems.personalPensionKrw > 0 && !deductionEligibility.personalPensionEligible) {
-    blockingReasons.push("personalPensionKrw deduction is not eligible for selected employee/year");
-  }
-  if (deductionItems.insurancePremiumKrw > 0 && !deductionEligibility.insurancePremiumEligible) {
-    blockingReasons.push("insurancePremiumKrw deduction is not eligible for selected employee/year");
-  }
-  if (deductionItems.medicalExpenseKrw > 0 && !deductionEligibility.medicalExpenseEligible) {
-    blockingReasons.push("medicalExpenseKrw deduction is not eligible for selected employee/year");
-  }
-  if (deductionItems.educationExpenseKrw > 0 && !deductionEligibility.educationExpenseEligible) {
-    blockingReasons.push("educationExpenseKrw deduction is not eligible for selected employee/year");
-  }
-  if (deductionItems.donationKrw > 0 && !deductionEligibility.donationEligible) {
-    blockingReasons.push("donationKrw deduction is not eligible for selected employee/year");
-  }
-  if (deductionItems.housingSavingsKrw > 0 && !deductionEligibility.housingSavingsEligible) {
-    blockingReasons.push("housingSavingsKrw deduction is not eligible for selected employee/year");
-  }
-  return blockingReasons;
-}
-
-function getYearEndDeductionTotalKrw(deductionItems: YearEndDeductionItemsInput) {
-  return (
-    deductionItems.personalPensionKrw +
-    deductionItems.insurancePremiumKrw +
-    deductionItems.medicalExpenseKrw +
-    deductionItems.educationExpenseKrw +
-    deductionItems.donationKrw +
-    deductionItems.housingSavingsKrw
+  return collectYearEndDeductionEligibilityBlockingReasonsCore(
+    deductionItems,
+    deductionEligibility
   );
 }
 
 function normalizeYearEndTaxCreditItems(
   input: PreviewPayrollYearEndSettlementInput
 ): YearEndTaxCreditItemsInput {
-  return {
-    earnedIncomeTaxCreditKrw: toKrwInteger(
-      input.taxCredits?.earnedIncomeTaxCreditKrw ?? 0,
-      "taxCredits.earnedIncomeTaxCreditKrw"
-    ),
-    childTaxCreditKrw: toKrwInteger(
-      input.taxCredits?.childTaxCreditKrw ?? 0,
-      "taxCredits.childTaxCreditKrw"
-    ),
-    additionalTaxCreditKrw: toKrwInteger(
-      input.taxCredits?.additionalTaxCreditKrw ?? input.additionalTaxCreditKrw,
-      "taxCredits.additionalTaxCreditKrw"
-    )
-  };
+  return normalizeYearEndTaxCreditItemsCore(input, toKrwInteger);
 }
 
 function buildYearEndInputVectorHash(input: {
@@ -3090,159 +3018,15 @@ function buildYearEndInputVectorHash(input: {
   deductionItems: YearEndDeductionItemsInput | null;
   deductionEligibility: YearEndDeductionEligibilityInput | null;
 }) {
-  const normalizedPayload = {
-    version: "v1",
-    year: input.year,
-    employeeId: input.employeeId,
-    nonTaxableAnnualIncomeKrw: input.nonTaxableAnnualIncomeKrw,
-    annualIncomeTaxRate: input.annualIncomeTaxRate,
-    localIncomeTaxRate: input.localIncomeTaxRate,
-    taxCredits: input.taxCredits,
-    deductionItems: input.deductionItems,
-    deductionEligibility: input.deductionEligibility
-  };
-  return createHash("sha256").update(JSON.stringify(normalizedPayload)).digest("hex");
-}
-
-function applyYearEndTaxCreditCapRule(
-  inputKrw: number,
-  rule: YearEndTaxCreditItemCapRule
-): YearEndTaxCreditCapAppliedItemKrw {
-  const appliedKrw = Math.min(inputKrw, rule.capKrw);
-  let applicationReasonCode: YearEndAppliedReasonCode = "APPLIED_AS_ENTERED";
-  let applicationReason = "input applied as entered";
-  if (inputKrw === 0) {
-    applicationReasonCode = "NO_INPUT";
-    applicationReason = "input amount is zero";
-  } else if (appliedKrw !== inputKrw) {
-    applicationReasonCode = "CAPPED_BY_RULE";
-    applicationReason = "input exceeds annual cap rule";
-  }
-  return {
-    inputKrw,
-    capKrw: rule.capKrw,
-    appliedKrw,
-    capped: appliedKrw !== inputKrw,
-    applicationReasonCode,
-    applicationReason
-  };
+  return buildYearEndInputVectorHashCore(input);
 }
 
 function applyYearEndTaxCreditCaps(taxCredits: YearEndTaxCreditItemsInput) {
-  const capAppliedByItemKrw: YearEndTaxCreditCapAppliedBreakdownKrw = {
-    earnedIncomeTaxCreditKrw: applyYearEndTaxCreditCapRule(
-      taxCredits.earnedIncomeTaxCreditKrw,
-      yearEndTaxCreditCapRulesKrw.earnedIncomeTaxCreditKrw
-    ),
-    childTaxCreditKrw: applyYearEndTaxCreditCapRule(
-      taxCredits.childTaxCreditKrw,
-      yearEndTaxCreditCapRulesKrw.childTaxCreditKrw
-    ),
-    additionalTaxCreditKrw: applyYearEndTaxCreditCapRule(
-      taxCredits.additionalTaxCreditKrw,
-      yearEndTaxCreditCapRulesKrw.additionalTaxCreditKrw
-    )
-  };
-  const totalInputTaxCreditKrw = toKrwInteger(
-    capAppliedByItemKrw.earnedIncomeTaxCreditKrw.inputKrw +
-      capAppliedByItemKrw.childTaxCreditKrw.inputKrw +
-      capAppliedByItemKrw.additionalTaxCreditKrw.inputKrw,
-    "taxCredits.totalInputTaxCreditKrw"
-  );
-  const totalAppliedTaxCreditKrw = toKrwInteger(
-    capAppliedByItemKrw.earnedIncomeTaxCreditKrw.appliedKrw +
-      capAppliedByItemKrw.childTaxCreditKrw.appliedKrw +
-      capAppliedByItemKrw.additionalTaxCreditKrw.appliedKrw,
-    "taxCredits.totalAppliedTaxCreditKrw"
-  );
-  const capRulesKrw: YearEndTaxCreditItemsInput = {
-    earnedIncomeTaxCreditKrw: yearEndTaxCreditCapRulesKrw.earnedIncomeTaxCreditKrw.capKrw,
-    childTaxCreditKrw: yearEndTaxCreditCapRulesKrw.childTaxCreditKrw.capKrw,
-    additionalTaxCreditKrw: yearEndTaxCreditCapRulesKrw.additionalTaxCreditKrw.capKrw
-  };
-  return {
-    totalInputTaxCreditKrw,
-    totalAppliedTaxCreditKrw,
-    capRulesKrw,
-    capAppliedByItemKrw
-  };
-}
-
-function applyYearEndDeductionCapRule(
-  inputKrw: number,
-  rule: YearEndDeductionItemCapRule
-): YearEndDeductionCapAppliedItemKrw {
-  const appliedKrw = Math.min(inputKrw, rule.capKrw);
-  let applicationReasonCode: YearEndAppliedReasonCode = "APPLIED_AS_ENTERED";
-  let applicationReason = "input applied as entered";
-  if (inputKrw === 0) {
-    applicationReasonCode = "NO_INPUT";
-    applicationReason = "input amount is zero";
-  } else if (appliedKrw !== inputKrw) {
-    applicationReasonCode = "CAPPED_BY_RULE";
-    applicationReason = "input exceeds annual cap rule";
-  }
-  return {
-    inputKrw,
-    capKrw: rule.capKrw,
-    appliedKrw,
-    capped: appliedKrw !== inputKrw,
-    applicationReasonCode,
-    applicationReason
-  };
+  return applyYearEndTaxCreditCapsCore(taxCredits, toKrwInteger);
 }
 
 function applyYearEndDeductionCaps(deductionItems: YearEndDeductionItemsInput) {
-  const capAppliedByItemKrw: YearEndDeductionCapAppliedBreakdownKrw = {
-    personalPensionKrw: applyYearEndDeductionCapRule(
-      deductionItems.personalPensionKrw,
-      yearEndDeductionCapRulesKrw.personalPensionKrw
-    ),
-    insurancePremiumKrw: applyYearEndDeductionCapRule(
-      deductionItems.insurancePremiumKrw,
-      yearEndDeductionCapRulesKrw.insurancePremiumKrw
-    ),
-    medicalExpenseKrw: applyYearEndDeductionCapRule(
-      deductionItems.medicalExpenseKrw,
-      yearEndDeductionCapRulesKrw.medicalExpenseKrw
-    ),
-    educationExpenseKrw: applyYearEndDeductionCapRule(
-      deductionItems.educationExpenseKrw,
-      yearEndDeductionCapRulesKrw.educationExpenseKrw
-    ),
-    donationKrw: applyYearEndDeductionCapRule(
-      deductionItems.donationKrw,
-      yearEndDeductionCapRulesKrw.donationKrw
-    ),
-    housingSavingsKrw: applyYearEndDeductionCapRule(
-      deductionItems.housingSavingsKrw,
-      yearEndDeductionCapRulesKrw.housingSavingsKrw
-    )
-  };
-  const totalIncomeDeductionKrw = getYearEndDeductionTotalKrw(deductionItems);
-  const cappedIncomeDeductionKrw = toKrwInteger(
-    capAppliedByItemKrw.personalPensionKrw.appliedKrw +
-      capAppliedByItemKrw.insurancePremiumKrw.appliedKrw +
-      capAppliedByItemKrw.medicalExpenseKrw.appliedKrw +
-      capAppliedByItemKrw.educationExpenseKrw.appliedKrw +
-      capAppliedByItemKrw.donationKrw.appliedKrw +
-      capAppliedByItemKrw.housingSavingsKrw.appliedKrw,
-    "deductionItems.cappedIncomeDeductionKrw"
-  );
-  const capRulesKrw: YearEndDeductionItemsInput = {
-    personalPensionKrw: yearEndDeductionCapRulesKrw.personalPensionKrw.capKrw,
-    insurancePremiumKrw: yearEndDeductionCapRulesKrw.insurancePremiumKrw.capKrw,
-    medicalExpenseKrw: yearEndDeductionCapRulesKrw.medicalExpenseKrw.capKrw,
-    educationExpenseKrw: yearEndDeductionCapRulesKrw.educationExpenseKrw.capKrw,
-    donationKrw: yearEndDeductionCapRulesKrw.donationKrw.capKrw,
-    housingSavingsKrw: yearEndDeductionCapRulesKrw.housingSavingsKrw.capKrw
-  };
-  return {
-    totalIncomeDeductionKrw,
-    cappedIncomeDeductionKrw,
-    capRulesKrw,
-    capAppliedByItemKrw
-  };
+  return applyYearEndDeductionCapsCore(deductionItems, toKrwInteger);
 }
 
 function calculateYearEndSettlementKrw(
@@ -3513,163 +3297,11 @@ function buildYearEndWithholdingReceiptDocumentArtifact(
   receipt: PayrollYearEndWithholdingReceiptSummary,
   format: PayrollYearEndWithholdingReceiptDocumentFormat
 ) {
-  if (format === "text") {
-    const lines = [
-      "FlowHR Withholding Receipt",
-      "",
-      `Year: ${receipt.year}`,
-      `Employee ID: ${receipt.employeeId}`,
-      `Receipt Number: ${receipt.receiptNumber}`,
-      `Issued At: ${receipt.issuedAt ?? "-"}`,
-      `Issuer: ${receipt.issuerName}`,
-      "",
-      "Annual Totals (KRW)",
-      `- Gross Pay: ${receipt.annualTotalsKrw.grossPayKrw.toLocaleString("ko-KR")}`,
-      `- Withholding Tax: ${receipt.annualTotalsKrw.withholdingTaxKrw.toLocaleString("ko-KR")}`,
-      `- Social Insurance: ${receipt.annualTotalsKrw.socialInsuranceKrw.toLocaleString("ko-KR")}`,
-      `- Other Deductions: ${receipt.annualTotalsKrw.otherDeductionsKrw.toLocaleString("ko-KR")}`,
-      `- Total Deductions: ${receipt.annualTotalsKrw.totalDeductionsKrw.toLocaleString("ko-KR")}`,
-      `- Net Pay: ${receipt.annualTotalsKrw.netPayKrw.toLocaleString("ko-KR")}`,
-      "",
-      "Run States",
-      `- Total: ${receipt.runStates.totalRuns}`,
-      `- Confirmed: ${receipt.runStates.confirmedRuns}`,
-      `- Previewed: ${receipt.runStates.previewedRuns}`,
-      `- Undistributed: ${receipt.runStates.undistributedRuns}`,
-      `- Pending Receipt: ${receipt.runStates.pendingReceiptRuns}`,
-      "",
-      `Blocking Reasons: ${receipt.blockingReasons.join(" | ") || "-"}`,
-      ""
-    ];
-    return {
-      content: lines.join("\n"),
-      contentType: "text/plain; charset=utf-8",
-      fileName: `withholding-receipt-${receipt.year}-${receipt.employeeId}.txt`
-    };
-  }
-
-  return {
-    content: JSON.stringify(
-      {
-        receipt
-      },
-      null,
-      2
-    ),
-    contentType: "application/json; charset=utf-8",
-    fileName: `withholding-receipt-${receipt.year}-${receipt.employeeId}.json`
-  };
+  return buildYearEndWithholdingReceiptDocumentArtifactCore(receipt, format);
 }
 
 function buildYearEndFilingRecords(runs: PayrollRunEntity[]): YearEndFilingRecord[] {
-  return runs
-    .map((run) => {
-      const withholdingTaxKrw = run.withholdingTaxKrw ?? 0;
-      const socialInsuranceKrw = run.socialInsuranceKrw ?? 0;
-      const otherDeductionsKrw = run.otherDeductionsKrw ?? 0;
-      const totalDeductionsKrw =
-        run.totalDeductionsKrw ?? withholdingTaxKrw + socialInsuranceKrw + otherDeductionsKrw;
-      const netPayKrw = run.netPayKrw ?? run.grossPayKrw - totalDeductionsKrw;
-      return {
-        runId: run.id,
-        periodStart: run.periodStart.toISOString(),
-        periodEnd: run.periodEnd.toISOString(),
-        state: run.state,
-        grossPayKrw: run.grossPayKrw,
-        withholdingTaxKrw,
-        socialInsuranceKrw,
-        otherDeductionsKrw,
-        totalDeductionsKrw,
-        netPayKrw,
-        payslipDistributedAt: run.payslipDistributedAt?.toISOString() ?? null,
-        payslipReceiptConfirmedAt: run.payslipReceiptConfirmedAt?.toISOString() ?? null
-      };
-    })
-    .sort((left, right) => left.runId.localeCompare(right.runId));
-}
-
-function buildYearEndFilingCsv(
-  rows: YearEndFilingRecord[],
-  payload: YearEndFinalizationAuditPayload
-) {
-  const header = [
-    "year",
-    "employeeId",
-    "finalizationId",
-    "finalizedAt",
-    "runId",
-    "periodStart",
-    "periodEnd",
-    "state",
-    "grossPayKrw",
-    "withholdingTaxKrw",
-    "socialInsuranceKrw",
-    "otherDeductionsKrw",
-    "totalDeductionsKrw",
-    "netPayKrw",
-    "payslipDistributedAt",
-    "payslipReceiptConfirmedAt"
-  ].join(",");
-
-  const lines = rows.map((row) =>
-    [
-      payload.year,
-      payload.employeeId,
-      payload.finalizationId,
-      payload.finalizedAt,
-      row.runId,
-      row.periodStart,
-      row.periodEnd,
-      row.state,
-      row.grossPayKrw,
-      row.withholdingTaxKrw,
-      row.socialInsuranceKrw,
-      row.otherDeductionsKrw,
-      row.totalDeductionsKrw,
-      row.netPayKrw,
-      row.payslipDistributedAt ?? "",
-      row.payslipReceiptConfirmedAt ?? ""
-    ].join(",")
-  );
-  return [header, ...lines].join("\n");
-}
-
-function buildYearEndFilingJsonl(rows: YearEndFilingRecord[]) {
-  return rows.map((row) => JSON.stringify(row)).join("\n");
-}
-
-function buildYearEndFilingHometaxCsv(rows: YearEndFilingRecord[], payload: YearEndFinalizationAuditPayload) {
-  const header = [
-    "year",
-    "employeeId",
-    "finalizationId",
-    "runId",
-    "grossPayKrw",
-    "taxableAnnualIncomeKrw",
-    "annualTaxLiabilityKrw",
-    "withholdingDeltaKrw",
-    "withholdingTaxKrw",
-    "totalDeductionsKrw",
-    "netPayKrw",
-    "receiptConfirmedAt"
-  ].join(",");
-  const lines = rows.map((row) =>
-    [
-      payload.year,
-      payload.employeeId,
-      payload.finalizationId,
-      row.runId,
-      row.grossPayKrw,
-      payload.settlementKrw.taxableAnnualIncomeKrw,
-      payload.settlementKrw.annualTaxLiabilityKrw,
-      payload.settlementKrw.withholdingDeltaKrw,
-      row.withholdingTaxKrw,
-      row.totalDeductionsKrw,
-      row.netPayKrw,
-      row.payslipReceiptConfirmedAt ?? ""
-    ].join(",")
-  );
-  return [header, ...lines].join("\n");
+  return buildYearEndFilingRecordsCore(runs);
 }
 
 function buildYearEndFilingArtifact(
@@ -3677,105 +3309,11 @@ function buildYearEndFilingArtifact(
   rows: YearEndFilingRecord[],
   payload: YearEndFinalizationAuditPayload
 ) {
-  let content = "";
-  let contentType = "application/json";
-  let fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.json`;
-
-  if (format === "csv") {
-    content = buildYearEndFilingCsv(rows, payload);
-    contentType = "text/csv";
-    fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.csv`;
-  } else if (format === "jsonl") {
-    content = buildYearEndFilingJsonl(rows);
-    contentType = "application/x-ndjson";
-    fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.jsonl`;
-  } else if (format === "hometax_csv") {
-    content = buildYearEndFilingHometaxCsv(rows, payload);
-    contentType = "text/csv";
-    fileName = `payroll-year-end-${payload.year}-${payload.employeeId}.hometax.csv`;
-  } else {
-    content = JSON.stringify(
-      {
-        year: payload.year,
-        employeeId: payload.employeeId,
-        finalizationId: payload.finalizationId,
-        finalizedAt: payload.finalizedAt,
-        records: rows
-      },
-      null,
-      2
-    );
-  }
-
-  return {
-    fileName,
-    contentType,
-    content,
-    byteLength: Buffer.byteLength(content, "utf8"),
-    checksumSha256: createHash("sha256").update(content).digest("hex")
-  };
+  return buildYearEndFilingArtifactCore(format, rows, payload);
 }
 
 function validateYearEndFilingRecords(rows: YearEndFilingRecord[], payload: YearEndFinalizationAuditPayload) {
-  const aggregated = rows.reduce(
-    (totals, row) => ({
-      grossPayKrw: totals.grossPayKrw + row.grossPayKrw,
-      withholdingTaxKrw: totals.withholdingTaxKrw + row.withholdingTaxKrw,
-      totalDeductionsKrw: totals.totalDeductionsKrw + row.totalDeductionsKrw,
-      netPayKrw: totals.netPayKrw + row.netPayKrw
-    }),
-    {
-      grossPayKrw: 0,
-      withholdingTaxKrw: 0,
-      totalDeductionsKrw: 0,
-      netPayKrw: 0
-    }
-  );
-
-  const checks = {
-    totalsMatch:
-      aggregated.grossPayKrw === payload.annualTotalsKrw.grossPayKrw &&
-      aggregated.withholdingTaxKrw === payload.annualTotalsKrw.withholdingTaxKrw &&
-      aggregated.totalDeductionsKrw === payload.annualTotalsKrw.totalDeductionsKrw &&
-      aggregated.netPayKrw === payload.annualTotalsKrw.netPayKrw,
-    confirmedRunCountMatch: rows.length === payload.runStates.confirmedRuns,
-    uniqueRunIds: new Set(rows.map((row) => row.runId)).size === rows.length,
-    receiptCoverage: rows.every(
-      (row) => typeof row.payslipReceiptConfirmedAt === "string" && row.payslipReceiptConfirmedAt.length > 0
-    ),
-    nonNegativeAmounts: rows.every(
-      (row) =>
-        row.grossPayKrw >= 0 &&
-        row.withholdingTaxKrw >= 0 &&
-        row.socialInsuranceKrw >= 0 &&
-        row.otherDeductionsKrw >= 0 &&
-        row.totalDeductionsKrw >= 0 &&
-        row.netPayKrw >= 0
-    )
-  };
-
-  const issues: string[] = [];
-  if (!checks.totalsMatch) {
-    issues.push("record totals do not match finalized annual totals");
-  }
-  if (!checks.confirmedRunCountMatch) {
-    issues.push("record count does not match confirmed run count from finalization");
-  }
-  if (!checks.uniqueRunIds) {
-    issues.push("duplicate run IDs detected in filing records");
-  }
-  if (!checks.receiptCoverage) {
-    issues.push("one or more filing records are missing payslip receipt confirmation");
-  }
-  if (!checks.nonNegativeAmounts) {
-    issues.push("one or more filing records include negative KRW amounts");
-  }
-
-  return {
-    status: issues.length === 0 ? "pass" : "fail",
-    issues,
-    checks
-  } as const;
+  return validateYearEndFilingRecordsCore(rows, payload);
 }
 
 type YearEndFilingPackageSubmittedAuditPayload = {
@@ -5069,165 +4607,11 @@ function buildYearEndFilingSubmissionTimeline(
   });
 }
 
-function getYearEndFilingSubmissionAckStatus(
-  submission: PayrollYearEndFilingSubmissionSummary
-): PayrollYearEndFilingAckStatus | "none" {
-  return submission.ack?.ackStatus ?? "none";
-}
-
-function normalizeYearEndFilingSubmissionSearch(search: string | undefined) {
-  const normalized = search?.trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-  return normalized;
-}
-
-function normalizeYearEndFilingSubmissionSettlementHashFilter(settlementHash: string | undefined) {
-  const normalized = settlementHash?.trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-  if (!/^[a-f0-9]{8,64}$/.test(normalized)) {
-    return null;
-  }
-  return normalized;
-}
-
-function matchesYearEndFilingSubmissionSearch(
-  submission: PayrollYearEndFilingSubmissionSummary,
-  normalizedSearch: string
-) {
-  const searchTokens = [
-    submission.submissionId,
-    submission.resubmissionOfSubmissionId,
-    submission.resubmissionReason,
-    submission.submissionNote,
-    submission.settlementHash,
-    submission.transport,
-    submission.validationMode,
-    submission.validationStatus,
-    submission.status,
-    String(submission.attempt),
-    submission.ack?.ackStatus ?? null,
-    submission.ack?.ackCode ?? null,
-    submission.ack?.ackNote ?? null,
-    submission.ack?.rejectionReasonCode ?? null,
-    submission.ack?.rejectionReasonDetail ?? null
-  ];
-  return searchTokens.some((token) => token?.toLowerCase().includes(normalizedSearch));
-}
-
 function matchesYearEndFilingSubmissionFilters(
   submission: PayrollYearEndFilingSubmissionSummary,
   filters: ListPayrollYearEndFilingSubmissionsInput
 ) {
-  if (filters.status && filters.status !== "all" && submission.status !== filters.status) {
-    return false;
-  }
-  if (filters.ackStatus && filters.ackStatus !== "all") {
-    if (filters.ackStatus === "none") {
-      if (submission.ack !== null) {
-        return false;
-      }
-    } else if (submission.ack?.ackStatus !== filters.ackStatus) {
-      return false;
-    }
-  }
-  if (
-    filters.validationStatus &&
-    filters.validationStatus !== "all" &&
-    submission.validationStatus !== filters.validationStatus
-  ) {
-    return false;
-  }
-  if (filters.transport && filters.transport !== "all" && submission.transport !== filters.transport) {
-    return false;
-  }
-  const normalizedSettlementHash = normalizeYearEndFilingSubmissionSettlementHashFilter(
-    filters.settlementHash
-  );
-  if (
-    normalizedSettlementHash &&
-    !(submission.settlementHash ?? "").toLowerCase().startsWith(normalizedSettlementHash)
-  ) {
-    return false;
-  }
-  const normalizedSearch = normalizeYearEndFilingSubmissionSearch(filters.search);
-  if (normalizedSearch && !matchesYearEndFilingSubmissionSearch(submission, normalizedSearch)) {
-    return false;
-  }
-  return true;
-}
-
-const payrollYearEndFilingSubmissionStatusSortOrder: Record<
-  PayrollYearEndFilingSubmissionStatus,
-  number
-> = {
-  submitted: 0,
-  acknowledged: 1,
-  canceled: 2
-};
-
-const payrollYearEndFilingSubmissionAckStatusSortOrder: Record<
-  PayrollYearEndFilingAckStatus | "none",
-  number
-> = {
-  none: 0,
-  accepted: 1,
-  rejected: 2
-};
-
-const payrollYearEndFilingSubmissionValidationStatusSortOrder: Record<
-  "pass" | "fail",
-  number
-> = {
-  pass: 0,
-  fail: 1
-};
-
-const payrollYearEndFilingSubmissionTransportSortOrder: Record<
-  PayrollYearEndFilingTransport,
-  number
-> = {
-  manual_portal: 0,
-  hometax_upload: 1,
-  nts_api_mock: 2
-};
-
-function compareYearEndFilingSubmissionBySortKey(
-  left: PayrollYearEndFilingSubmissionSummary,
-  right: PayrollYearEndFilingSubmissionSummary,
-  sortBy: PayrollYearEndFilingSubmissionSortBy
-) {
-  if (sortBy === "submittedAt") {
-    return left.submittedAt.localeCompare(right.submittedAt);
-  }
-  if (sortBy === "attempt") {
-    return left.attempt - right.attempt;
-  }
-  if (sortBy === "status") {
-    return (
-      payrollYearEndFilingSubmissionStatusSortOrder[left.status] -
-      payrollYearEndFilingSubmissionStatusSortOrder[right.status]
-    );
-  }
-  if (sortBy === "ackStatus") {
-    return (
-      payrollYearEndFilingSubmissionAckStatusSortOrder[getYearEndFilingSubmissionAckStatus(left)] -
-      payrollYearEndFilingSubmissionAckStatusSortOrder[getYearEndFilingSubmissionAckStatus(right)]
-    );
-  }
-  if (sortBy === "validationStatus") {
-    return (
-      payrollYearEndFilingSubmissionValidationStatusSortOrder[left.validationStatus] -
-      payrollYearEndFilingSubmissionValidationStatusSortOrder[right.validationStatus]
-    );
-  }
-  return (
-    payrollYearEndFilingSubmissionTransportSortOrder[left.transport] -
-    payrollYearEndFilingSubmissionTransportSortOrder[right.transport]
-  );
+  return matchesYearEndFilingSubmissionFiltersCore(submission, filters);
 }
 
 function sortYearEndFilingSubmissions(
@@ -5237,68 +4621,14 @@ function sortYearEndFilingSubmissions(
     sortDirection?: PayrollYearEndFilingSubmissionSortDirection;
   }
 ) {
-  const sortBy = options.sortBy ?? "submittedAt";
-  const direction = options.sortDirection ?? "desc";
-  const directionFactor = direction === "asc" ? 1 : -1;
-
-  return [...submissions].sort((left, right) => {
-    const primary =
-      compareYearEndFilingSubmissionBySortKey(left, right, sortBy) * directionFactor;
-    if (primary !== 0) {
-      return primary;
-    }
-    const submittedAtFallback = right.submittedAt.localeCompare(left.submittedAt);
-    if (submittedAtFallback !== 0) {
-      return submittedAtFallback;
-    }
-    return right.submissionId.localeCompare(left.submissionId);
-  });
+  return sortYearEndFilingSubmissionsCore(submissions, options);
 }
 
 function buildYearEndFilingSubmissionListSummary(input: {
   allSubmissions: PayrollYearEndFilingSubmissionSummary[];
   filteredSubmissions: PayrollYearEndFilingSubmissionSummary[];
 }): PayrollYearEndFilingSubmissionListSummary {
-  const statusCounts: PayrollYearEndFilingSubmissionListSummary["statusCounts"] = {
-    submitted: 0,
-    acknowledged: 0,
-    canceled: 0
-  };
-  const ackStatusCounts: PayrollYearEndFilingSubmissionListSummary["ackStatusCounts"] = {
-    accepted: 0,
-    rejected: 0,
-    none: 0
-  };
-  const validationStatusCounts: PayrollYearEndFilingSubmissionListSummary["validationStatusCounts"] =
-    {
-      pass: 0,
-      fail: 0
-    };
-  const transportCounts: PayrollYearEndFilingSubmissionListSummary["transportCounts"] = {
-    manual_portal: 0,
-    hometax_upload: 0,
-    nts_api_mock: 0
-  };
-
-  for (const submission of input.allSubmissions) {
-    statusCounts[submission.status] += 1;
-    validationStatusCounts[submission.validationStatus] += 1;
-    transportCounts[submission.transport] += 1;
-    if (!submission.ack) {
-      ackStatusCounts.none += 1;
-    } else {
-      ackStatusCounts[submission.ack.ackStatus] += 1;
-    }
-  }
-
-  return {
-    totalCount: input.allSubmissions.length,
-    filteredCount: input.filteredSubmissions.length,
-    statusCounts,
-    ackStatusCounts,
-    validationStatusCounts,
-    transportCounts
-  };
+  return buildYearEndFilingSubmissionListSummaryCore(input);
 }
 
 function ensureNoPendingFilingSubmission(submissions: PayrollYearEndFilingSubmissionSummary[]) {
