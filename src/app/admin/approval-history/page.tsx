@@ -174,10 +174,7 @@ export default function AdminApprovalHistoryPage() {
       query.set("limit", limit.trim());
     }
 
-    const { response, body } = await callApi(
-      "寃곗옱 ?④퀎 ?대젰 議고쉶",
-      `/api/approval/stage-history?${query.toString()}`
-    );
+    const { response, body } = await callApi("결재 단계 이력 조회", `/api/approval/stage-history?${query.toString()}`);
     if (!response.ok || !body || typeof body !== "object") {
       return;
     }
@@ -189,16 +186,16 @@ export default function AdminApprovalHistoryPage() {
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>寃곗옱 ?④퀎 ?대젰</h1>
+        <h1>결재 단계 이력</h1>
         <p>
-          ?뱀씤 寃뚯씠???됯? 寃곌낵(?덉슜/李⑤떒, ?쒗뵆由?留ㅼ묶, ?꾩엫 ?곸슜)瑜?議고쉶?⑸땲??
-          {showDevTools ? " 媛쒕컻 紐⑤뱶?먯꽌???ㅻ뜑 湲곕컲 Actor 而⑦뀓?ㅽ듃瑜??ъ슜?⑸땲??" : ""}
+          승인 게이트 평가 결과(허용/차단, 템플릿 매칭, 위임 적용)를 조회합니다.
+          {showDevTools ? " 개발 모드에서는 헤더 기반 Actor 컨텍스트를 사용합니다." : ""}
         </p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>而⑦뀓?ㅽ듃/?꾪꽣</h2>
+          <h2>컨텍스트/필터</h2>
           <label>
             Organization ID
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
@@ -264,16 +261,16 @@ export default function AdminApprovalHistoryPage() {
           </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadHistory()} disabled={!organizationId.trim()}>
-              ?대젰 議고쉶
+              이력 조회
             </button>
           </div>
-          {supabaseSessionError ? <p className="small fail">Session ?ㅻ쪟: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">Session 오류: {supabaseSessionError}</p> : null}
         </article>
 
         <article className="panel">
-          <h2>議고쉶 寃곌낵 ({history.length})</h2>
+          <h2>조회 결과 ({history.length})</h2>
           {history.length === 0 ? (
-            <p className="small">議고쉶???대젰???놁뒿?덈떎.</p>
+            <p className="small">조회된 이력이 없습니다.</p>
           ) : (
             <ul className="simple-list">
               {history.map((entry) => (
@@ -281,9 +278,9 @@ export default function AdminApprovalHistoryPage() {
                   <strong>{entry.domain}</strong> / {entry.targetEntityType}:{entry.targetEntityId}
                   <br />
                   <span className={entry.allowed ? "ok" : "fail"}>
-                    {entry.allowed ? "?덉슜" : "李⑤떒"} ({entry.resolution})
+                    {entry.allowed ? "허용" : "차단"} ({entry.resolution})
                   </span>
-                  {" 쨌 "}required [{entry.requiredRoles.join(", ")}] / fallback {entry.fallbackRole}
+                  {" / "}required [{entry.requiredRoles.join(", ")}] / fallback {entry.fallbackRole}
                   <br />
                   actor {entry.actorRole}
                   {entry.actorId ? ` (${entry.actorId})` : ""} / stage {entry.stageIndex}({entry.stageLabel})
@@ -307,18 +304,19 @@ export default function AdminApprovalHistoryPage() {
         </article>
 
         <article className="panel">
-          <h2>?붿껌 濡쒓렇</h2>
+          <h2>요청 로그</h2>
           <p className="small">
-            珥?{stats.total}嫄?쨌 ?깃났 {stats.success}嫄?쨌 ?ㅽ뙣 {stats.fail}嫄?            {pendingLabel ? ` 쨌 吏꾪뻾以?${pendingLabel}` : ""}
+            총 {stats.total}건 / 성공 {stats.success}건 / 실패 {stats.fail}건
+            {pendingLabel ? ` / 진행중 ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">?꾩쭅 API ?몄텧 ?대젰???놁뒿?덈떎.</p>
+            <p className="small">아직 API 호출 이력이 없습니다.</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} 쨌{" "}
-                  {log.status} 쨌 {log.at}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status} /{" "}
+                  {log.at}
                 </li>
               ))}
             </ul>
@@ -328,9 +326,11 @@ export default function AdminApprovalHistoryPage() {
               결재 실행 현황
             </Link>
             <Link href="/admin/approval-templates" className="btn btn-secondary">
-              寃곗옱???쒗뵆由우쑝濡?            </Link>
+              결재 템플릿으로
+            </Link>
             <Link href="/admin" className="btn btn-secondary">
-              愿由ъ옄 ?덉쑝濡?            </Link>
+              관리자 홈으로
+            </Link>
           </div>
         </article>
       </section>
