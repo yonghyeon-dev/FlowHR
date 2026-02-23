@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.51.0
+version: 1.52.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -33,6 +33,7 @@ scope:
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
     - year-end deduction-item input and settlement recalculation workflow for employee annual payroll totals
     - year-end insurance reconciliation report workflow (confirmed-run social-insurance totals vs finalized deduction trace)
+    - year-end preflight checklist workflow before finalization (run/distribution/receipt/submission/non-taxable/hash checks)
     - year-end deduction eligibility validation guard workflow for recalculation/finalization inputs
     - year-end non-taxable annual income upper-bound guard workflow for preview/recalculation/finalization inputs
     - year-end withholding delta breakdown workflow (`additionalWithholdingDueKrw`/`withholdingRefundKrw`) for preview/recalculation/finalization/export outputs
@@ -114,6 +115,9 @@ api:
     - method: GET
       path: /payroll/year-end/insurance-reconciliation-report
       description: Return annual/monthly reconciliation report between confirmed-run social-insurance totals and latest finalized insurance-premium deduction trace.
+    - method: GET
+      path: /payroll/year-end/preflight-checklist
+      description: Return preflight checklist before finalization with run/distribution/receipt/submission/non-taxable/hash checks.
     - method: GET
       path: /payroll/year-end/filing-submissions
       description: List filing submission tracking rows for selected employee/year with optional status/ackStatus/validationStatus/transport/settlementHash(prefix) filters, search/sort controls, and summary counters.
@@ -470,6 +474,7 @@ test_plan:
     - year-end filing submission settlementHash list-filter deterministic replay via WI-0269 e2e
     - year-end deduction/tax-credit application-reason-code explainability deterministic replay via WI-0270 e2e
     - year-end insurance reconciliation report deterministic replay via WI-0271 e2e
+    - year-end preflight checklist deterministic replay via WI-0272 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
     - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
     - year-end filing submission/ack deterministic replay via WI-0191 e2e
@@ -492,6 +497,7 @@ test_plan:
     - payroll_operator role enforcement for year-end settlement preview API
     - payroll_operator role enforcement for year-end settlement recalculation API
     - payroll_operator role enforcement for year-end insurance reconciliation report API
+    - payroll_operator role enforcement for year-end preflight checklist API
     - payroll_operator role enforcement for year-end finalization and filing-export APIs
     - payroll_operator role enforcement for year-end filing submission/ack/list APIs
     - payroll_operator role enforcement for year-end filing submission list filter/search/sort/summarization query
@@ -521,6 +527,7 @@ test_plan:
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, and delta deterministic checks
     - year-end insurance reconciliation delta/status and monthly breakdown remain deterministic for same run/finalization replay
+    - year-end preflight checklist ready/fail/warn and guard-detail outputs remain deterministic for same run/submission/finalization replay
     - close-period withholding/social/net aggregation and settlement-delta checks
     - payslip distribution and receipt confirmation state transitions stay deterministic
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
@@ -639,7 +646,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.51.0 additively documents year-end insurance reconciliation report API (`GET /payroll/year-end/insurance-reconciliation-report`) for annual/monthly social-insurance vs finalized deduction trace visibility (no breaking API change), while preserving existing year-end deduction/tax-credit explainability outputs, settlement-hash guards, and settlement-hash list filter workflows plus withholding breakdown/non-taxable upper-bound/deduction-eligibility/deduction-cap/tax-credit-cap behaviors across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.52.0 additively documents year-end preflight checklist API (`GET /payroll/year-end/preflight-checklist`) for finalize-readiness and guard-detail visibility (no breaking API change), while preserving existing insurance reconciliation/reporting, deduction/tax-credit explainability, settlement-hash guards, and settlement-hash list filter workflows plus withholding breakdown/non-taxable upper-bound/deduction-eligibility/deduction-cap/tax-credit-cap behaviors across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -680,6 +687,7 @@ references:
   - work-items/WI-0269-payroll-year-end-filing-submission-settlement-hash-filter.md
   - work-items/WI-0270-payroll-year-end-application-reason-code-explainability.md
   - work-items/WI-0271-payroll-year-end-insurance-reconciliation-report.md
+  - work-items/WI-0272-payroll-year-end-preflight-checklist.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md

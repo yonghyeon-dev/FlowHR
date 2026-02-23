@@ -237,6 +237,46 @@ export type PayrollYearEndInsuranceReconciliationReportResponse = {
   };
 };
 
+export type PayrollYearEndPreflightChecklistResponse = {
+  checklist: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    summary: {
+      readyToFinalize: boolean;
+      passCount: number;
+      failCount: number;
+      warnCount: number;
+    };
+    metrics: {
+      annualGrossPayKrw: number;
+      nonTaxableAnnualIncomeKrw: number;
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      undistributedRuns: number;
+      pendingReceiptRuns: number;
+      pendingSubmissionCount: number;
+      rejectedSubmissionCount: number;
+      settlementHash: string | null;
+    };
+    checks: Array<{
+      key:
+        | "confirmed_runs_present"
+        | "no_previewed_runs"
+        | "no_undistributed_runs"
+        | "no_pending_receipts"
+        | "non_taxable_within_annual_gross"
+        | "no_pending_filing_submissions"
+        | "settlement_hash_available";
+      label: string;
+      status: "pass" | "fail" | "warn";
+      detail: string;
+    }>;
+  };
+};
+
 export type ApiLog = {
   id: number;
   label: string;

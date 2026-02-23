@@ -471,6 +471,7 @@ export default function PayrollYearEndConsole() {
             </ul>
           )}
           <div className="panel-actions">
+            <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">Open Preflight Checklist</Link>
             <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
           </div>
         </article>

@@ -358,6 +358,12 @@ type GetPayrollYearEndInsuranceReconciliationReportInput = {
   employeeId: string;
 };
 
+type GetPayrollYearEndPreflightChecklistInput = {
+  year: number;
+  employeeId: string;
+  nonTaxableAnnualIncomeKrw?: number;
+};
+
 type UpsertDeductionProfileInput = {
   profileId: string;
   name: string;
@@ -923,6 +929,46 @@ type GetPayrollYearEndInsuranceReconciliationReportResult = {
       grossPayKrw: number;
       socialInsuranceKrw: number;
       withholdingTaxKrw: number;
+    }>;
+  };
+};
+
+type GetPayrollYearEndPreflightChecklistResult = {
+  checklist: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    summary: {
+      readyToFinalize: boolean;
+      passCount: number;
+      failCount: number;
+      warnCount: number;
+    };
+    metrics: {
+      annualGrossPayKrw: number;
+      nonTaxableAnnualIncomeKrw: number;
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      undistributedRuns: number;
+      pendingReceiptRuns: number;
+      pendingSubmissionCount: number;
+      rejectedSubmissionCount: number;
+      settlementHash: string | null;
+    };
+    checks: Array<{
+      key:
+        | "confirmed_runs_present"
+        | "no_previewed_runs"
+        | "no_undistributed_runs"
+        | "no_pending_receipts"
+        | "non_taxable_within_annual_gross"
+        | "no_pending_filing_submissions"
+        | "settlement_hash_available";
+      label: string;
+      status: "pass" | "fail" | "warn";
+      detail: string;
     }>;
   };
 };
@@ -5559,6 +5605,145 @@ export async function getPayrollYearEndInsuranceReconciliationReport(
         status
       },
       monthlyBreakdown: buildYearEndInsuranceReconciliationMonthlyBreakdown(snapshot.runs)
+    }
+  };
+}
+
+export async function getPayrollYearEndPreflightChecklist(
+  context: ServiceContext,
+  input: GetPayrollYearEndPreflightChecklistInput
+): Promise<GetPayrollYearEndPreflightChecklistResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const filingGuard = buildYearEndFilingGuard(snapshot);
+  const annualGrossPayKrw = snapshot.totalsKrw.grossPayKrw;
+  const nonTaxableAnnualIncomeKrw = toKrwInteger(
+    input.nonTaxableAnnualIncomeKrw ?? 0,
+    "nonTaxableAnnualIncomeKrw"
+  );
+  const nonTaxableWithinAnnualGross = nonTaxableAnnualIncomeKrw <= annualGrossPayKrw;
+
+  const submissions = isPayrollYearEndFilingSubmissionEnabled()
+    ? await listYearEndFilingSubmissionSummaries(context, {
+      year: input.year,
+      employeeId: input.employeeId
+    })
+    : [];
+  const pendingSubmissionCount = submissions.filter((submission) => submission.status === "submitted").length;
+  const rejectedSubmissionCount = submissions.filter(
+    (submission) => submission.status === "acknowledged" && submission.ack?.ackStatus === "rejected"
+  ).length;
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  const finalizationLogs = await context.dataAccess.audit.list({
+    actions: ["payroll.year_end.settlement_finalized"],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 200
+  });
+  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+  const finalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+  const settlementHash = finalizationPayload
+    ? resolveYearEndSettlementHashFromFinalizationPayload(finalizationPayload)
+    : null;
+
+  const checks: GetPayrollYearEndPreflightChecklistResult["checklist"]["checks"] = [
+    {
+      key: "confirmed_runs_present",
+      label: "Confirmed Runs Present",
+      status: snapshot.confirmedRuns.length > 0 ? "pass" : "fail",
+      detail:
+        snapshot.confirmedRuns.length > 0
+          ? `${snapshot.confirmedRuns.length} confirmed runs found`
+          : "no confirmed payroll runs found for selected year"
+    },
+    {
+      key: "no_previewed_runs",
+      label: "No Previewed Runs",
+      status: snapshot.previewedRuns.length === 0 ? "pass" : "fail",
+      detail:
+        snapshot.previewedRuns.length === 0
+          ? "all runs are confirmed"
+          : `${snapshot.previewedRuns.length} previewed runs remain`
+    },
+    {
+      key: "no_undistributed_runs",
+      label: "No Undistributed Runs",
+      status: filingGuard.undistributedRuns.length === 0 ? "pass" : "fail",
+      detail:
+        filingGuard.undistributedRuns.length === 0
+          ? "all confirmed runs are distributed"
+          : `${filingGuard.undistributedRuns.length} confirmed runs are not distributed`
+    },
+    {
+      key: "no_pending_receipts",
+      label: "No Pending Payslip Receipts",
+      status: filingGuard.pendingReceiptRuns.length === 0 ? "pass" : "fail",
+      detail:
+        filingGuard.pendingReceiptRuns.length === 0
+          ? "all distributed runs are receipt-confirmed"
+          : `${filingGuard.pendingReceiptRuns.length} distributed runs are pending receipt confirmation`
+    },
+    {
+      key: "non_taxable_within_annual_gross",
+      label: "Non-Taxable Income Guard",
+      status: nonTaxableWithinAnnualGross ? "pass" : "fail",
+      detail: nonTaxableWithinAnnualGross
+        ? `non-taxable annual income ${nonTaxableAnnualIncomeKrw.toLocaleString("ko-KR")} KRW is within annual gross ${annualGrossPayKrw.toLocaleString("ko-KR")} KRW`
+        : `non-taxable annual income ${nonTaxableAnnualIncomeKrw.toLocaleString("ko-KR")} KRW exceeds annual gross ${annualGrossPayKrw.toLocaleString("ko-KR")} KRW`
+    },
+    {
+      key: "no_pending_filing_submissions",
+      label: "No Pending Filing Submissions",
+      status: pendingSubmissionCount === 0 ? "pass" : "fail",
+      detail:
+        pendingSubmissionCount === 0
+          ? "no pending filing submissions"
+          : `${pendingSubmissionCount} pending filing submissions require acknowledge/cancel before finalize handoff`
+    },
+    {
+      key: "settlement_hash_available",
+      label: "Settlement Hash Trace",
+      status: settlementHash ? "pass" : "warn",
+      detail: settlementHash
+        ? `latest settlement hash available (${settlementHash.slice(0, 12)}...)`
+        : "no finalized settlement hash found yet"
+    }
+  ];
+
+  const passCount = checks.filter((check) => check.status === "pass").length;
+  const failCount = checks.filter((check) => check.status === "fail").length;
+  const warnCount = checks.filter((check) => check.status === "warn").length;
+
+  return {
+    checklist: {
+      year: input.year,
+      employeeId: input.employeeId,
+      periodStart: snapshot.periodStart.toISOString(),
+      periodEnd: snapshot.periodEnd.toISOString(),
+      summary: {
+        readyToFinalize: failCount === 0,
+        passCount,
+        failCount,
+        warnCount
+      },
+      metrics: {
+        annualGrossPayKrw,
+        nonTaxableAnnualIncomeKrw,
+        totalRuns: snapshot.runs.length,
+        confirmedRuns: snapshot.confirmedRuns.length,
+        previewedRuns: snapshot.previewedRuns.length,
+        undistributedRuns: filingGuard.undistributedRuns.length,
+        pendingReceiptRuns: filingGuard.pendingReceiptRuns.length,
+        pendingSubmissionCount,
+        rejectedSubmissionCount,
+        settlementHash
+      },
+      checks
     }
   };
 }

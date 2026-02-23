@@ -490,6 +490,12 @@ export const getPayrollYearEndInsuranceReconciliationReportQuerySchema = z.objec
   employeeId: z.string().min(1)
 });
 
+export const getPayrollYearEndPreflightChecklistQuerySchema = z.object({
+  year: z.coerce.number().int().min(2020).max(2100),
+  employeeId: z.string().min(1),
+  nonTaxableAnnualIncomeKrw: z.coerce.number().int().min(0).optional()
+});
+
 export const upsertDeductionProfileSchema = z.object({
   name: z.string().min(1),
   mode: z.enum(["manual", "profile"]).default("profile"),
