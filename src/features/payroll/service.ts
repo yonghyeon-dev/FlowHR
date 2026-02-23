@@ -24,7 +24,17 @@ import {
   resolvePayrollKrIncomeTaxLookupPresetByAsOf
 } from "@/features/payroll/kr-income-tax-lookup-presets";
 import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
-import { findPayrollKrIncomeSplitItemCodeDictionaryEntry } from "@/features/payroll/kr-income-split-item-code-dictionary";
+import {
+  applyContributionCap as applyContributionCapCore,
+  calculateLookupIncomeTaxKrw as calculateLookupIncomeTaxKrwCore,
+  calculateProgressiveIncomeTaxKrw as calculateProgressiveIncomeTaxKrwCore,
+  normalizeIncomeTaxBrackets as normalizeIncomeTaxBracketsCore,
+  normalizeIncomeTaxLookupTable as normalizeIncomeTaxLookupTableCore,
+  normalizeInsuranceRoundingRules as normalizeInsuranceRoundingRulesCore,
+  normalizeSettlementInsuranceRoundingRules as normalizeSettlementInsuranceRoundingRulesCore,
+  normalizeStatutoryIncomeSplitItems as normalizeStatutoryIncomeSplitItemsCore,
+  roundKrwByRule as roundKrwByRuleCore
+} from "@/features/payroll/kr-statutory-helpers";
 import {
   applyYearEndDeductionCaps as applyYearEndDeductionCapsCore,
   applyYearEndTaxCreditCaps as applyYearEndTaxCreditCapsCore,
@@ -1407,212 +1417,26 @@ function toRateNumber(value: number | null, fieldName: string) {
 }
 
 function normalizeIncomeTaxBrackets(brackets?: IncomeTaxBracket[]): IncomeTaxBracket[] | null {
-  if (!brackets || brackets.length === 0) {
-    return null;
-  }
-
-  const normalized: IncomeTaxBracket[] = [];
-  let lastFiniteUpper = -1;
-  let hasOpenEnded = false;
-  for (const [index, bracket] of brackets.entries()) {
-    const rate = toRateNumber(bracket.rate, `statutory.incomeTaxBrackets[${index}].rate`) ?? 0;
-    if (bracket.upToKrw === null) {
-      if (index !== brackets.length - 1) {
-        throw new ServiceError(
-          400,
-          "statutory.incomeTaxBrackets open-ended bracket(upToKrw=null) must be last"
-        );
-      }
-      hasOpenEnded = true;
-      normalized.push({ upToKrw: null, rate });
-      continue;
-    }
-
-    const upToKrw = toKrwInteger(
-      bracket.upToKrw,
-      `statutory.incomeTaxBrackets[${index}].upToKrw`
-    );
-    if (upToKrw <= lastFiniteUpper) {
-      throw new ServiceError(
-        400,
-        "statutory.incomeTaxBrackets upToKrw must be strictly increasing"
-      );
-    }
-    lastFiniteUpper = upToKrw;
-    normalized.push({ upToKrw, rate });
-  }
-
-  if (!hasOpenEnded) {
-    throw new ServiceError(
-      400,
-      "statutory.incomeTaxBrackets must include open-ended bracket(upToKrw=null) as last entry"
-    );
-  }
-
-  return normalized;
+  return normalizeIncomeTaxBracketsCore(brackets, toRateNumber, toKrwInteger) as
+    | IncomeTaxBracket[]
+    | null;
 }
 
 function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): IncomeTaxLookupRow[] | null {
-  if (!lookupTable || lookupTable.length === 0) {
-    return null;
-  }
-
-  const normalized: IncomeTaxLookupRow[] = [];
-  let lastFiniteUpper = -1;
-  let lastTaxKrw = -1;
-  let hasOpenEnded = false;
-  for (const [index, row] of lookupTable.entries()) {
-    const taxKrw = toKrwInteger(row.taxKrw, `statutory.incomeTaxLookupTable[${index}].taxKrw`);
-    if (taxKrw < lastTaxKrw) {
-      throw new ServiceError(
-        400,
-        "statutory.incomeTaxLookupTable taxKrw must be non-decreasing"
-      );
-    }
-    lastTaxKrw = taxKrw;
-    const dependentTaxKrw = row.dependentTaxKrw?.map((tier, tierIndex) => ({
-      dependentCount: toKrwInteger(
-        tier.dependentCount,
-        `statutory.incomeTaxLookupTable[${index}].dependentTaxKrw[${tierIndex}].dependentCount`
-      ),
-      taxKrw: toKrwInteger(
-        tier.taxKrw,
-        `statutory.incomeTaxLookupTable[${index}].dependentTaxKrw[${tierIndex}].taxKrw`
-      )
-    }));
-
-    if (dependentTaxKrw && dependentTaxKrw.length > 0) {
-      if (dependentTaxKrw[0]?.dependentCount !== 0) {
-        throw new ServiceError(
-          400,
-          "statutory.incomeTaxLookupTable dependentTaxKrw must start at dependentCount=0"
-        );
-      }
-      let lastDependentCount = -1;
-      let lastDependentTaxKrw = Number.POSITIVE_INFINITY;
-      for (const tier of dependentTaxKrw) {
-        if (tier.dependentCount <= lastDependentCount) {
-          throw new ServiceError(
-            400,
-            "statutory.incomeTaxLookupTable dependentTaxKrw dependentCount must be strictly increasing"
-          );
-        }
-        if (tier.taxKrw > lastDependentTaxKrw) {
-          throw new ServiceError(
-            400,
-            "statutory.incomeTaxLookupTable dependentTaxKrw taxKrw must be non-increasing"
-          );
-        }
-        lastDependentCount = tier.dependentCount;
-        lastDependentTaxKrw = tier.taxKrw;
-      }
-    }
-
-    if (row.upToKrw === null) {
-      if (index !== lookupTable.length - 1) {
-        throw new ServiceError(
-          400,
-          "statutory.incomeTaxLookupTable open-ended row(upToKrw=null) must be last"
-        );
-      }
-      hasOpenEnded = true;
-      normalized.push({
-        upToKrw: null,
-        taxKrw,
-        dependentTaxKrw: dependentTaxKrw && dependentTaxKrw.length > 0 ? dependentTaxKrw : undefined
-      });
-      continue;
-    }
-
-    const upToKrw = toKrwInteger(
-      row.upToKrw,
-      `statutory.incomeTaxLookupTable[${index}].upToKrw`
-    );
-    if (upToKrw <= lastFiniteUpper) {
-      throw new ServiceError(
-        400,
-        "statutory.incomeTaxLookupTable upToKrw must be strictly increasing"
-      );
-    }
-    lastFiniteUpper = upToKrw;
-    normalized.push({
-      upToKrw,
-      taxKrw,
-      dependentTaxKrw: dependentTaxKrw && dependentTaxKrw.length > 0 ? dependentTaxKrw : undefined
-    });
-  }
-
-  if (!hasOpenEnded) {
-    throw new ServiceError(
-      400,
-      "statutory.incomeTaxLookupTable must include open-ended row(upToKrw=null) as last entry"
-    );
-  }
-
-  return normalized;
+  return normalizeIncomeTaxLookupTableCore(lookupTable, toKrwInteger) as IncomeTaxLookupRow[] | null;
 }
 
 function normalizeStatutoryIncomeSplitItems(
   items: StatutoryIncomeSplitItem[] | undefined,
   fieldName: "statutory.taxableIncomeItems" | "statutory.nonTaxableIncomeItems"
 ) {
-  if (!items || items.length === 0) {
-    return null;
-  }
-
-  const normalized: StatutoryIncomeSplitItem[] = [];
-  const seenCodes = new Set<string>();
-  const dictionaryKind = fieldName === "statutory.taxableIncomeItems" ? "taxable" : "non_taxable";
-  for (const [index, item] of items.entries()) {
-    const code = item.code.trim();
-    const category = item.category.trim();
-    const amountKrw = toKrwInteger(item.amountKrw, `${fieldName}[${index}].amountKrw`);
-    if (!code) {
-      throw new ServiceError(400, `${fieldName}[${index}].code must not be blank`);
-    }
-    if (!category) {
-      throw new ServiceError(400, `${fieldName}[${index}].category must not be blank`);
-    }
-    const normalizedCode = code.toLowerCase();
-    if (seenCodes.has(normalizedCode)) {
-      throw new ServiceError(400, `${fieldName} contains duplicate code: ${code}`);
-    }
-    const dictionaryEntry = findPayrollKrIncomeSplitItemCodeDictionaryEntry(code, dictionaryKind);
-    if (!dictionaryEntry) {
-      throw new ServiceError(400, `${fieldName}[${index}].code is not supported by dictionary: ${code}`);
-    }
-    if (category.toLowerCase() !== dictionaryEntry.category.toLowerCase()) {
-      throw new ServiceError(
-        400,
-        `${fieldName}[${index}].category must match dictionary category(${dictionaryEntry.category}) for code ${dictionaryEntry.code}`
-      );
-    }
-    seenCodes.add(normalizedCode);
-    normalized.push({
-      code: dictionaryEntry.code,
-      category: dictionaryEntry.category,
-      amountKrw
-    });
-  }
-
-  return normalized;
+  return normalizeStatutoryIncomeSplitItemsCore(items, fieldName, toKrwInteger) as
+    | StatutoryIncomeSplitItem[]
+    | null;
 }
 
 function calculateProgressiveIncomeTaxKrw(taxableBaseKrw: number, brackets: IncomeTaxBracket[]) {
-  let tax = 0;
-  let lowerBound = 0;
-  for (const bracket of brackets) {
-    if (taxableBaseKrw <= lowerBound) {
-      break;
-    }
-    const upperBound = bracket.upToKrw === null ? Number.POSITIVE_INFINITY : bracket.upToKrw;
-    const segment = Math.min(taxableBaseKrw, upperBound) - lowerBound;
-    if (segment > 0) {
-      tax += segment * bracket.rate;
-    }
-    lowerBound = upperBound;
-  }
-  return toKrwInteger(Math.round(tax), "statutory.incomeTaxKrw");
+  return calculateProgressiveIncomeTaxKrwCore(taxableBaseKrw, brackets, toKrwInteger);
 }
 
 type LookupIncomeTaxResolution = {
@@ -1632,96 +1456,26 @@ function calculateLookupIncomeTaxKrw(
   dependentCount: number,
   lookupTable: IncomeTaxLookupRow[]
 ): LookupIncomeTaxResolution {
-  for (const row of lookupTable) {
-    if (row.upToKrw === null || taxableBaseKrw <= row.upToKrw) {
-      if (!row.dependentTaxKrw || row.dependentTaxKrw.length === 0) {
-        return {
-          taxKrw: row.taxKrw,
-          selectedIncomeTaxLookupRow: {
-            upToKrw: row.upToKrw,
-            taxKrw: row.taxKrw
-          },
-          selectedIncomeTaxLookupDependentTier: null
-        };
-      }
-
-      let selectedTier = row.dependentTaxKrw[0];
-      for (const tier of row.dependentTaxKrw) {
-        if (tier.dependentCount <= dependentCount) {
-          selectedTier = tier;
-          continue;
-        }
-        break;
-      }
-      return {
-        taxKrw: selectedTier.taxKrw,
-        selectedIncomeTaxLookupRow: {
-          upToKrw: row.upToKrw,
-          taxKrw: row.taxKrw
-        },
-        selectedIncomeTaxLookupDependentTier: {
-          dependentCount: selectedTier.dependentCount,
-          taxKrw: selectedTier.taxKrw
-        }
-      };
-    }
-  }
-
-  throw new ServiceError(400, "statutory.incomeTaxLookupTable does not include an applicable row");
+  return calculateLookupIncomeTaxKrwCore(
+    taxableBaseKrw,
+    dependentCount,
+    lookupTable
+  ) as LookupIncomeTaxResolution;
 }
 
 function applyContributionCap(baseKrw: number, capKrw: number | undefined, fieldName: string) {
-  if (capKrw === undefined) {
-    return baseKrw;
-  }
-  const normalizedCap = toKrwInteger(capKrw, fieldName);
-  return Math.min(baseKrw, normalizedCap);
-}
-
-function toPositiveKrwUnit(value: number | undefined, fieldName: string) {
-  if (value === undefined) {
-    return 1;
-  }
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new ServiceError(400, `${fieldName} must be a positive integer`);
-  }
-  return value;
+  return applyContributionCapCore(baseKrw, capKrw, fieldName, toKrwInteger);
 }
 
 function normalizeInsuranceRoundingRules(
   rules?: InsuranceRoundingInput,
   fieldPrefix = "statutory.insuranceRounding"
 ): InsuranceRoundingRules {
-  return {
-    mode: rules?.mode ?? "round",
-    nationalPensionUnitKrw: toPositiveKrwUnit(
-      rules?.nationalPensionUnitKrw,
-      `${fieldPrefix}.nationalPensionUnitKrw`
-    ),
-    healthInsuranceUnitKrw: toPositiveKrwUnit(
-      rules?.healthInsuranceUnitKrw,
-      `${fieldPrefix}.healthInsuranceUnitKrw`
-    ),
-    longTermCareUnitKrw: toPositiveKrwUnit(
-      rules?.longTermCareUnitKrw,
-      `${fieldPrefix}.longTermCareUnitKrw`
-    ),
-    employmentInsuranceUnitKrw: toPositiveKrwUnit(
-      rules?.employmentInsuranceUnitKrw,
-      `${fieldPrefix}.employmentInsuranceUnitKrw`
-    )
-  };
+  return normalizeInsuranceRoundingRulesCore(rules, fieldPrefix) as InsuranceRoundingRules;
 }
 
 function normalizeSettlementInsuranceRoundingRules(rules?: InsuranceSettlementRoundingInput) {
-  const normalized = normalizeInsuranceRoundingRules(rules, "settlement.insuranceRounding");
-  return {
-    ...normalized,
-    industrialAccidentUnitKrw: toPositiveKrwUnit(
-      rules?.industrialAccidentUnitKrw,
-      "settlement.insuranceRounding.industrialAccidentUnitKrw"
-    )
-  };
+  return normalizeSettlementInsuranceRoundingRulesCore(rules);
 }
 
 function roundKrwByRule(
@@ -1730,13 +1484,7 @@ function roundKrwByRule(
   mode: InsuranceRoundingMode,
   unitKrw: number
 ) {
-  if (!Number.isFinite(rawValueKrw) || rawValueKrw < 0) {
-    throw new ServiceError(400, `${fieldName} must be a non-negative finite number before rounding`);
-  }
-  const scaled = rawValueKrw / unitKrw;
-  const roundedScaled =
-    mode === "floor" ? Math.floor(scaled) : mode === "ceil" ? Math.ceil(scaled) : Math.round(scaled);
-  return toKrwInteger(roundedScaled * unitKrw, fieldName);
+  return roundKrwByRuleCore(rawValueKrw, fieldName, mode, unitKrw, toKrwInteger);
 }
 
 type SeoulDateTimeParts = {
