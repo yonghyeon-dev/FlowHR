@@ -14,9 +14,6 @@
   - Employee request submit shell
   - Employee request history/status shell
   - Employee request follow-up alert shell
-  - Employee request follow-up recommendation template shell
-  - Employee request follow-up action bundle saved preset shell
-  - Employee request follow-up preset import/export transfer shell
   - Mobile analytics dashboard shell
   - Mobile analytics dashboard share/filter preset shell
 - Shared API client wrapper for FlowHR backend requests
@@ -27,9 +24,6 @@
   - realtime refresh/polling + category filter
   - notification history search/archive
   - notification history bulk actions (select/read/archive/unarchive)
-  - notification history quick preset filters
-  - notification history preset pin/recent persistence
-  - notification history preset import/export transfer
 - Email template baseline
   - transactional template catalog
   - locale switch (`ko`/`en`) and variable preview

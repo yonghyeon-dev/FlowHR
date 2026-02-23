@@ -1,5 +1,8 @@
 # WI-0246: Mobile Notification History Quick Preset Filters Baseline
 
+> **DEPRECATED (WI-0258)**: 모바일 적층 정리에서 quick preset 레이어는 제거되었습니다.
+> 참조: `docs/codex-guide.md` (Part 3 금지 규칙), `work-items/WI-0258-mobile-preset-layering-cleanup-baseline.md`
+
 ## Background
 
 WI-0245 delivered bulk actions, but operators still spend time repeatedly setting

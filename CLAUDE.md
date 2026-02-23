@@ -10,6 +10,12 @@
 - UI/고객 가치가 없는 “운영 관제 심화” 기능은 MVP 범위 밖입니다.
   - 필요한 경우에도 `feature flag` + `/ops/*` 경로로만 제공하고, 기본 UI에서는 숨깁니다.
 
+## 세션 시작 필수 확인
+
+- Codex 세션 시작 시 `docs/codex-guide.md`를 먼저 읽고, 금지 규칙/라인 수 예산/적층 방지 원칙을 우선 적용합니다.
+- `ROADMAP.md`와 `docs/codex-guide.md`가 충돌하면, 적층 방지와 핵심 SaaS 여정 우선 원칙을 따릅니다.
+- 핵심 기능 직후 `preset/pin/recent/import-export` 확장 체인은 자동으로 시작하지 않습니다.
+
 ## Dev Tools 노출 규칙
 
 - `/ops/*`는 개발/운영 검증용 도구입니다.

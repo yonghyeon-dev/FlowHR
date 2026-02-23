@@ -1,5 +1,8 @@
 # WI-0247: Mobile Notification History Preset Pin/Recent Baseline
 
+> **DEPRECATED (WI-0258)**: 모바일 적층 정리에서 preset pin/recent 레이어는 제거되었습니다.
+> 참조: `docs/codex-guide.md` (Part 3 금지 규칙), `work-items/WI-0258-mobile-preset-layering-cleanup-baseline.md`
+
 ## Background
 
 WI-0246 added quick preset filters, but operators still need two productivity boosts:
