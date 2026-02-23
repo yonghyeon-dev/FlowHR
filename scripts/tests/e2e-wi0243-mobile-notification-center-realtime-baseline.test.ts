@@ -21,8 +21,8 @@ async function run() {
 
   assert.match(roadmap, /WI-0243/);
   assert.match(workItem, /Mobile Notification Center Realtime Update Baseline/);
-  assert.match(adminScreen, /WI-0250~/);
-  assert.match(employeeScreen, /WI-0250~/);
+  assert.match(adminScreen, /WI-0251~/);
+  assert.match(employeeScreen, /WI-0251~/);
 
   assert.match(notificationScreen, /LIVE_SYNC_MS/);
   assert.match(notificationScreen, /setInterval/);

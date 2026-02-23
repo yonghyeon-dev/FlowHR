@@ -27,8 +27,8 @@ async function run() {
   assert.match(navigator, /name=\"NotificationHistory\"/);
   assert.match(adminScreen, /onOpenNotificationHistory/);
   assert.match(employeeScreen, /onOpenNotificationHistory/);
-  assert.match(adminScreen, /WI-0250~/);
-  assert.match(employeeScreen, /WI-0250~/);
+  assert.match(adminScreen, /WI-0251~/);
+  assert.match(employeeScreen, /WI-0251~/);
 
   assert.match(centerScreen, /filterNotificationHistory/);
   assert.match(centerScreen, /onOpenHistory/);

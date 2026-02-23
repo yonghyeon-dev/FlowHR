@@ -11,6 +11,7 @@
   - Admin home shell
   - Employee home shell
   - Admin approval queue shell
+  - Employee request submit shell
 - Shared API client wrapper for FlowHR backend requests
 - Push notification baseline
   - permission bootstrap

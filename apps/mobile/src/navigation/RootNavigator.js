@@ -7,6 +7,7 @@ import ApprovalQueueScreen from "../screens/ApprovalQueueScreen";
 import AdminHomeScreen from "../screens/AdminHomeScreen";
 import EmailTemplateScreen from "../screens/EmailTemplateScreen";
 import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
+import EmployeeRequestSubmitScreen from "../screens/EmployeeRequestSubmitScreen";
 import LoginScreen from "../screens/LoginScreen";
 import NotificationCenterScreen from "../screens/NotificationCenterScreen";
 import NotificationHistoryScreen from "../screens/NotificationHistoryScreen";
@@ -94,8 +95,24 @@ export default function RootNavigator() {
               <EmployeeHomeScreen
                 session={session}
                 onLogout={actions.logout}
+                onOpenAttendanceCorrectionRequest={() =>
+                  navigation.navigate("EmployeeRequestSubmit", { requestType: "attendanceCorrection" })
+                }
+                onOpenLeaveRequest={() =>
+                  navigation.navigate("EmployeeRequestSubmit", { requestType: "leaveRequest" })
+                }
                 onOpenNotifications={() => navigation.navigate("Notifications")}
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
+              />
+            )}
+          </Stack.Screen>
+        ) : null}
+        {session?.role === "EMPLOYEE" ? (
+          <Stack.Screen name="EmployeeRequestSubmit" options={{ title: "Request Submit" }}>
+            {({ route }) => (
+              <EmployeeRequestSubmitScreen
+                session={session}
+                initialRequestType={route.params?.requestType ?? "attendanceCorrection"}
               />
             )}
           </Stack.Screen>
