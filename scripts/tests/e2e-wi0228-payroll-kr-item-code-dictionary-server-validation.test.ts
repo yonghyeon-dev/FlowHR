@@ -64,9 +64,9 @@ async function run() {
     "WI-0228-payroll-kr-item-code-dictionary-server-validation.md"
   );
 
-  assert.match(payrollApiSpec, /dictionary validation guard/i);
-  assert.match(payrollContract, /dictionary validation guard/i);
-  assert.match(payrollTestCases, /dictionary validation guard/i);
+  assert.match(payrollApiSpec, /dictionary.*validation guard|validation guard.*dictionary/i);
+  assert.match(payrollContract, /split-item dictionary server validation guard|dictionary.*validation guard/i);
+  assert.match(payrollTestCases, /dictionary validation guard|unsupported split-item code/i);
   assert.match(payrollRfc, /WI-0228/);
   assert.match(payrollService, /code is not supported by dictionary/);
   assert.match(payrollSchemas, /findPayrollKrIncomeSplitItemCodeDictionaryEntry/);

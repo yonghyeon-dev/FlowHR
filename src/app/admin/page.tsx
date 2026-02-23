@@ -26,6 +26,7 @@ import {
   type QueueSearchSortScope
 } from "@/components/admin-approval/approval-queue-types";
 import { PayrollKrIncomeSplitGuideField } from "@/components/payroll/PayrollKrIncomeSplitGuideField";
+import { PayrollKrIncomeSplitConsistencyGuidePanel } from "@/components/payroll/PayrollKrIncomeSplitConsistencyGuidePanel";
 import {
   createEmptyPayrollKrIncomeSplitItemDraft,
   PayrollKrIncomeSplitItemsTable,
@@ -33,6 +34,7 @@ import {
 } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
 import { PayrollKrIncomeSplitItemPresetField } from "@/components/payroll/PayrollKrIncomeSplitItemPresetField";
 import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
+import { analyzePayrollKrIncomeSplitDraftConsistency } from "@/features/payroll/kr-income-split-item-consistency";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
@@ -1059,6 +1061,33 @@ export default function AdminDashboardPage() {
     const taxableIncomeItems = buildIncomeSplitItems(payrollTaxableItems);
     const nonTaxableIncomeItems = buildIncomeSplitItems(payrollNonTaxableItems);
     const incomeSplitItemPresetId = payrollIncomeSplitItemPresetId.trim();
+    const incomeSplitConsistencySummary = analyzePayrollKrIncomeSplitDraftConsistency({
+      taxableItems: payrollTaxableItems,
+      nonTaxableItems: payrollNonTaxableItems
+    });
+
+    if (
+      payrollPreviewMode === "statutory_kr_baseline" &&
+      incomeSplitItemPresetId.length === 0 &&
+      incomeSplitConsistencySummary.hasBlockingIssues
+    ) {
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: "Payroll preview (client consistency guard)",
+          status: 400,
+          ok: false,
+          durationMs: 0,
+          at: new Date().toLocaleString("ko-KR"),
+          body: {
+            error: "Fix split-item rows before submit.",
+            details: incomeSplitConsistencySummary
+          }
+        },
+        ...prev
+      ]);
+      return;
+    }
 
     const basePayload = {
       periodStart: toIso(periodStart),
@@ -2023,6 +2052,17 @@ export default function AdminDashboardPage() {
                     nonTaxableItems={payrollNonTaxableItems}
                     onNonTaxableItemsChange={setPayrollNonTaxableItems}
                     disabled={payrollIncomeSplitItemPresetId.trim().length > 0}
+                  />
+                </div>
+                <div className="full">
+                  <PayrollKrIncomeSplitConsistencyGuidePanel
+                    taxableItems={payrollTaxableItems}
+                    nonTaxableItems={payrollNonTaxableItems}
+                    selectedPresetId={payrollIncomeSplitItemPresetId}
+                    onClearManualItems={() => {
+                      setPayrollTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
+                      setPayrollNonTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
+                    }}
                   />
                 </div>
                 <label>

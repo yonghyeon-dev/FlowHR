@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-22
-> **Current version**: 0.1.97 (Payroll KR Item Code Dictionary Server Validation Guard)
+> **Current version**: 0.1.98 (Payroll KR Preset/Manual Consistency UX Guide)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -265,10 +265,11 @@
 - WI-0226 급여 관리자 KR 과세/비과세 다중 항목 입력 테이블 UX baseline(`/admin` 법정공제 프리뷰에서 과세/비과세 항목 다중 행(add/remove) 입력 지원 + 빈 행 제외 payload 변환 + preset 선택 시 수동 테이블 비활성화 + WI-0226 회귀 테스트 추가)
 - WI-0227 급여 관리자 KR 항목 코드 사전 autocomplete UX baseline(`kr-income-split-item-code-dictionary` 추가 + `/admin` 다중 항목 테이블 코드 입력에 datalist 기반 autocomplete + 코드 선택 시 카테고리 자동 채움 + WI-0227 회귀 테스트 추가)
 - WI-0228 급여 엔진 KR 항목 코드 사전 서버 검증 가드 baseline(`statutory_kr_baseline` 수동 항목 입력에서 과세/비과세 kind별 코드 사전 검증 + 코드-카테고리 불일치 차단 + 통과 항목 코드/카테고리 canonical 정규화 + WI-0228 회귀 테스트 추가)
+- WI-0229 급여 관리자 KR 프리셋/수동 입력 정합성 UX 가이드 baseline(`PayrollKrIncomeSplitConsistencyGuidePanel` 추가 + 수동 행 partial/duplicate/사전불일치 요약 + 프리셋 모드 수동행 무시/초기화 가이드 + `/admin` 제출 전 client preflight 가드 + WI-0229 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 급여 KR 정밀 계산 고도화(항목 코드 사전 프리셋/수동 입력 정합성 UX 가이드) 착수 (WI-0229 예정)
+- 다음: 급여 KR 정밀 계산 고도화(프리셋 모드 자동 샘플 payload 프리뷰) 착수 (WI-0230 예정)
 
 ### 현재 아키텍처
 
