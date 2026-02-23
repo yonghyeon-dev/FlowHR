@@ -45,6 +45,18 @@ import {
   matchesYearEndFilingSubmissionFilters as matchesYearEndFilingSubmissionFiltersCore,
   sortYearEndFilingSubmissions as sortYearEndFilingSubmissionsCore
 } from "@/features/payroll/year-end-filing-submission-query-helpers";
+import {
+  asYearEndFilingEvidenceNoteAddedAuditPayload as asYearEndFilingEvidenceNoteAddedAuditPayloadCore,
+  asYearEndFilingPackageAcknowledgedAuditPayload as asYearEndFilingPackageAcknowledgedAuditPayloadCore,
+  asYearEndFilingPackageCanceledAuditPayload as asYearEndFilingPackageCanceledAuditPayloadCore,
+  asYearEndFilingPackageReopenedAuditPayload as asYearEndFilingPackageReopenedAuditPayloadCore,
+  asYearEndFilingPackageSubmittedAuditPayload as asYearEndFilingPackageSubmittedAuditPayloadCore,
+  asYearEndFinalizationAuditPayload as asYearEndFinalizationAuditPayloadCore,
+  asYearEndWithholdingReceiptSummaryPayload as asYearEndWithholdingReceiptSummaryPayloadCore,
+  buildYearEndSettlementHash as buildYearEndSettlementHashCore,
+  normalizeYearEndSettlementHash as normalizeYearEndSettlementHashCore,
+  resolveYearEndSettlementHashFromFinalizationPayload as resolveYearEndSettlementHashFromFinalizationPayloadCore
+} from "@/features/payroll/year-end-audit-payload-helpers";
 
 type PreviewPayrollInput = {
   periodStart: Date;
@@ -3201,96 +3213,27 @@ function buildYearEndSettlementHash(payload: {
   deductionItemsKrw: YearEndDeductionSummaryKrw;
   settlementKrw: YearEndSettlementKrw;
 }) {
-  const normalizedPayload = {
-    year: payload.year,
-    employeeId: payload.employeeId,
-    runStates: {
-      ...payload.runStates,
-      previewedRunIds: [...payload.runStates.previewedRunIds].sort(),
-      undistributedRunIds: [...payload.runStates.undistributedRunIds].sort(),
-      pendingReceiptRunIds: [...payload.runStates.pendingReceiptRunIds].sort()
-    },
-    annualTotalsKrw: payload.annualTotalsKrw,
-    deductionEligibility: payload.deductionEligibility,
-    deductionItemsKrw: payload.deductionItemsKrw,
-    settlementKrw: payload.settlementKrw
-  };
-  return createHash("sha256").update(JSON.stringify(normalizedPayload)).digest("hex");
+  return buildYearEndSettlementHashCore(payload);
 }
 
-const yearEndSettlementHashPattern = /^[a-f0-9]{64}$/i;
-
 function normalizeYearEndSettlementHash(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const normalized = value.trim().toLowerCase();
-  if (!yearEndSettlementHashPattern.test(normalized)) {
-    return null;
-  }
-  return normalized;
+  return normalizeYearEndSettlementHashCore(value);
 }
 
 function resolveYearEndSettlementHashFromFinalizationPayload(
   payload: YearEndFinalizationAuditPayload
 ): string {
-  const settlementHash = normalizeYearEndSettlementHash(
-    (payload as { settlementHash?: unknown }).settlementHash
-  );
-  if (settlementHash) {
-    return settlementHash;
-  }
-  return buildYearEndSettlementHash({
-    year: payload.year,
-    employeeId: payload.employeeId,
-    runStates: payload.runStates,
-    annualTotalsKrw: payload.annualTotalsKrw,
-    deductionEligibility: payload.deductionEligibility,
-    deductionItemsKrw: payload.deductionItemsKrw,
-    settlementKrw: payload.settlementKrw
-  });
+  return resolveYearEndSettlementHashFromFinalizationPayloadCore(payload);
 }
 
 function asYearEndFinalizationAuditPayload(payload: unknown): YearEndFinalizationAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<YearEndFinalizationAuditPayload>;
-  if (
-    typeof candidate.year !== "number" ||
-    typeof candidate.employeeId !== "string" ||
-    typeof candidate.finalizationId !== "string" ||
-    typeof candidate.finalizedAt !== "string" ||
-    !candidate.runStates ||
-    !candidate.annualTotalsKrw ||
-    !candidate.deductionItemsKrw ||
-    !candidate.settlementKrw
-  ) {
-    return null;
-  }
-  return candidate as YearEndFinalizationAuditPayload;
+  return asYearEndFinalizationAuditPayloadCore(payload) as YearEndFinalizationAuditPayload | null;
 }
 
 function asYearEndWithholdingReceiptSummaryPayload(
   payload: unknown
 ): PayrollYearEndWithholdingReceiptSummary | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<PayrollYearEndWithholdingReceiptSummary>;
-  if (
-    typeof candidate.year !== "number" ||
-    typeof candidate.employeeId !== "string" ||
-    typeof candidate.receiptNumber !== "string" ||
-    typeof candidate.issuerName !== "string" ||
-    typeof candidate.issued !== "boolean" ||
-    typeof candidate.issuedAt !== "string" ||
-    !candidate.runStates ||
-    !candidate.annualTotalsKrw
-  ) {
-    return null;
-  }
-  return candidate as PayrollYearEndWithholdingReceiptSummary;
+  return asYearEndWithholdingReceiptSummaryPayloadCore(payload) as PayrollYearEndWithholdingReceiptSummary | null;
 }
 
 function buildYearEndWithholdingReceiptDocumentArtifact(
@@ -3382,133 +3325,41 @@ type YearEndFilingEvidenceNoteAddedAuditPayload = {
 function asYearEndFilingPackageSubmittedAuditPayload(
   payload: unknown
 ): YearEndFilingPackageSubmittedAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<YearEndFilingPackageSubmittedAuditPayload>;
-  if (
-    typeof candidate.submissionId !== "string" ||
-    typeof candidate.year !== "number" ||
-    typeof candidate.employeeId !== "string" ||
-    typeof candidate.finalizationId !== "string" ||
-    typeof candidate.format !== "string" ||
-    typeof candidate.validationMode !== "string" ||
-    typeof candidate.transport !== "string" ||
-    !candidate.artifact ||
-    typeof candidate.submittedAt !== "string" ||
-    typeof candidate.submittedByRole !== "string"
-  ) {
-    return null;
-  }
-  return {
-    ...candidate,
-    attempt: typeof candidate.attempt === "number" ? candidate.attempt : 1,
-    settlementHash: normalizeYearEndSettlementHash(
-      (candidate as { settlementHash?: unknown }).settlementHash
-    ),
-    resubmissionOfSubmissionId:
-      typeof candidate.resubmissionOfSubmissionId === "string"
-        ? candidate.resubmissionOfSubmissionId
-        : null,
-    resubmissionReason:
-      typeof candidate.resubmissionReason === "string" ? candidate.resubmissionReason : null
-  } as YearEndFilingPackageSubmittedAuditPayload;
+  return asYearEndFilingPackageSubmittedAuditPayloadCore(
+    payload
+  ) as YearEndFilingPackageSubmittedAuditPayload | null;
 }
 
 function asYearEndFilingPackageAcknowledgedAuditPayload(
   payload: unknown
 ): YearEndFilingPackageAcknowledgedAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<YearEndFilingPackageAcknowledgedAuditPayload>;
-  if (
-    typeof candidate.submissionId !== "string" ||
-    typeof candidate.ackStatus !== "string" ||
-    typeof candidate.acknowledgedAt !== "string" ||
-    typeof candidate.acknowledgedByRole !== "string"
-  ) {
-    return null;
-  }
-  return {
-    ...candidate,
-    settlementHash: normalizeYearEndSettlementHash(
-      (candidate as { settlementHash?: unknown }).settlementHash
-    ),
-    expectedSettlementHash: normalizeYearEndSettlementHash(
-      (candidate as { expectedSettlementHash?: unknown }).expectedSettlementHash
-    ),
-    ackCode: typeof candidate.ackCode === "string" ? candidate.ackCode : null,
-    ackNote: typeof candidate.ackNote === "string" ? candidate.ackNote : null,
-    rejectionReasonCode:
-      typeof candidate.rejectionReasonCode === "string" ? candidate.rejectionReasonCode : null,
-    rejectionReasonDetail:
-      typeof candidate.rejectionReasonDetail === "string" ? candidate.rejectionReasonDetail : null,
-    acknowledgedById: typeof candidate.acknowledgedById === "string" ? candidate.acknowledgedById : null
-  } as YearEndFilingPackageAcknowledgedAuditPayload;
+  return asYearEndFilingPackageAcknowledgedAuditPayloadCore(
+    payload
+  ) as YearEndFilingPackageAcknowledgedAuditPayload | null;
 }
 
 function asYearEndFilingPackageCanceledAuditPayload(
   payload: unknown
 ): YearEndFilingPackageCanceledAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<YearEndFilingPackageCanceledAuditPayload>;
-  if (
-    typeof candidate.submissionId !== "string" ||
-    typeof candidate.canceledAt !== "string" ||
-    typeof candidate.canceledByRole !== "string"
-  ) {
-    return null;
-  }
-  return {
-    ...candidate,
-    canceledById: typeof candidate.canceledById === "string" ? candidate.canceledById : null
-  } as YearEndFilingPackageCanceledAuditPayload;
+  return asYearEndFilingPackageCanceledAuditPayloadCore(
+    payload
+  ) as YearEndFilingPackageCanceledAuditPayload | null;
 }
 
 function asYearEndFilingPackageReopenedAuditPayload(
   payload: unknown
 ): YearEndFilingPackageReopenedAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<YearEndFilingPackageReopenedAuditPayload>;
-  if (
-    typeof candidate.submissionId !== "string" ||
-    typeof candidate.reopenedAt !== "string" ||
-    typeof candidate.reopenedByRole !== "string"
-  ) {
-    return null;
-  }
-  return {
-    ...candidate,
-    reopenedById: typeof candidate.reopenedById === "string" ? candidate.reopenedById : null
-  } as YearEndFilingPackageReopenedAuditPayload;
+  return asYearEndFilingPackageReopenedAuditPayloadCore(
+    payload
+  ) as YearEndFilingPackageReopenedAuditPayload | null;
 }
 
 function asYearEndFilingEvidenceNoteAddedAuditPayload(
   payload: unknown
 ): YearEndFilingEvidenceNoteAddedAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<YearEndFilingEvidenceNoteAddedAuditPayload>;
-  if (
-    typeof candidate.submissionId !== "string" ||
-    typeof candidate.year !== "number" ||
-    typeof candidate.employeeId !== "string" ||
-    typeof candidate.note !== "string" ||
-    typeof candidate.notedAt !== "string" ||
-    typeof candidate.notedByRole !== "string"
-  ) {
-    return null;
-  }
-  return {
-    ...candidate,
-    notedById: typeof candidate.notedById === "string" ? candidate.notedById : null
-  } as YearEndFilingEvidenceNoteAddedAuditPayload;
+  return asYearEndFilingEvidenceNoteAddedAuditPayloadCore(
+    payload
+  ) as YearEndFilingEvidenceNoteAddedAuditPayload | null;
 }
 
 function buildYearEndFilingSubmissionSummaries(
