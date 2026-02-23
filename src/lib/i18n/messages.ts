@@ -4,6 +4,7 @@ const messages = {
   ko: {
     "role.admin": "관리자",
     "role.employee": "직원",
+    "shell.mobileMenu": "모바일 메뉴",
 
     "home.title": "한국형 HR SaaS MVP",
     "home.copy": "근태, 휴가, 급여, 결재를 한 제품 안에서 끝까지 연결합니다. (Shiftee/Flex 상위호환 목표)",
@@ -108,6 +109,7 @@ const messages = {
   en: {
     "role.admin": "Admin",
     "role.employee": "Employee",
+    "shell.mobileMenu": "Mobile Menu",
 
     "home.title": "Korean HR SaaS MVP",
     "home.copy":
