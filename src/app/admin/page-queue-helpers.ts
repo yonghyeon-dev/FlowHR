@@ -229,6 +229,11 @@ type BuildQueueSearchSortRowsArgs = {
   leaveWaitHoursById: Map<string, number>;
   payrollWaitHoursById: Map<string, number>;
   resolveQueueAlertLevel: ResolveQueueAlertLevel;
+  queueLabels: {
+    attendance: string;
+    leave: string;
+    payroll: string;
+  };
 };
 
 export function buildQueueSearchSortRows({
@@ -238,12 +243,13 @@ export function buildQueueSearchSortRows({
   attendanceWaitHoursById,
   leaveWaitHoursById,
   payrollWaitHoursById,
-  resolveQueueAlertLevel
+  resolveQueueAlertLevel,
+  queueLabels
 }: BuildQueueSearchSortRowsArgs): QueueSearchSortRow[] {
   const attendanceRows = filteredPendingAttendance.map((record) => ({
     key: `attendance:${record.id}`,
     queue: "attendance" as const,
-    queueLabel: "attendance",
+    queueLabel: queueLabels.attendance,
     itemId: record.id,
     employeeId: record.employeeId,
     waitHours: attendanceWaitHoursById.get(record.id) ?? 0,
@@ -256,7 +262,7 @@ export function buildQueueSearchSortRows({
   const leaveRows = filteredPendingLeave.map((request) => ({
     key: `leave:${request.id}`,
     queue: "leave" as const,
-    queueLabel: "leave",
+    queueLabel: queueLabels.leave,
     itemId: request.id,
     employeeId: request.employeeId,
     waitHours: leaveWaitHoursById.get(request.id) ?? 0,
@@ -269,7 +275,7 @@ export function buildQueueSearchSortRows({
   const payrollRows = filteredPreviewedPayroll.map((run) => ({
     key: `payroll:${run.id}`,
     queue: "payroll" as const,
-    queueLabel: "payroll",
+    queueLabel: queueLabels.payroll,
     itemId: run.id,
     employeeId: run.employeeId ?? "-",
     waitHours: payrollWaitHoursById.get(run.id) ?? 0,
