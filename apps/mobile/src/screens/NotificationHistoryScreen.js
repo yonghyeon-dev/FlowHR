@@ -1,41 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
 
 import ShellCard from "../components/ShellCard";
 import { sortNotificationsNewest } from "../lib/notificationFeed";
 import {
+  NOTIFICATION_HISTORY_ARCHIVE_OPTIONS,
+  NOTIFICATION_HISTORY_CATEGORY_OPTIONS,
+  NOTIFICATION_HISTORY_READ_OPTIONS,
+  applyNotificationBulkAction,
   buildNotificationHistoryStats,
   filterNotificationHistory,
+  formatNotificationArchiveMeta,
+  mergeNotificationSelection,
+  pruneNotificationSelection,
   toggleNotificationArchive
 } from "../lib/notificationHistory";
 import { loadNotificationInbox, saveNotificationInbox } from "../lib/notificationStore";
-import { colors, spacing } from "../theme/tokens";
-
-const CATEGORY_OPTIONS = [
-  { key: "all", label: "All categories" },
-  { key: "approvalRequest", label: "Approval request" },
-  { key: "approvalResult", label: "Approval result" },
-  { key: "payslipReady", label: "Payslip ready" }
-];
-
-const READ_OPTIONS = [
-  { key: "all", label: "All read states" },
-  { key: "unread", label: "Unread only" },
-  { key: "read", label: "Read only" }
-];
-
-const ARCHIVE_OPTIONS = [
-  { key: "all", label: "All archive states" },
-  { key: "active", label: "Active only" },
-  { key: "archived", label: "Archived only" }
-];
-
-function formatArchiveMeta(item) {
-  if (!item.archivedAt) {
-    return "active";
-  }
-  return `archived at ${item.archivedAt}`;
-}
+import styles from "./NotificationHistoryScreen.styles";
 
 function FilterChip({ active, label, onPress }) {
   return (
@@ -52,6 +33,7 @@ export default function NotificationHistoryScreen({ session }) {
   const [category, setCategory] = useState("all");
   const [readState, setReadState] = useState("all");
   const [archiveState, setArchiveState] = useState("all");
+  const [selectedIds, setSelectedIds] = useState({});
 
   async function refreshHistory() {
     const messages = await loadNotificationInbox();
@@ -78,6 +60,10 @@ export default function NotificationHistoryScreen({ session }) {
     };
   }, []);
 
+  useEffect(() => {
+    setSelectedIds((current) => pruneNotificationSelection(current, inbox));
+  }, [inbox]);
+
   const stats = useMemo(() => buildNotificationHistoryStats(inbox), [inbox]);
   const filteredHistory = useMemo(
     () =>
@@ -90,17 +76,56 @@ export default function NotificationHistoryScreen({ session }) {
     [archiveState, category, inbox, query, readState]
   );
 
+  const selectedCount = useMemo(() => Object.keys(selectedIds).length, [selectedIds]);
+  const selectedVisibleCount = useMemo(
+    () => filteredHistory.filter((item) => selectedIds[item.id]).length,
+    [filteredHistory, selectedIds]
+  );
+
   async function toggleArchive(item) {
     const next = toggleNotificationArchive(inbox, item.id, !item.archivedAt);
     setInbox(next);
     await saveNotificationInbox(next);
   }
 
+  function toggleSelection(itemId) {
+    setSelectedIds((current) => {
+      if (current[itemId]) {
+        const { [itemId]: _discard, ...rest } = current;
+        return rest;
+      }
+      return {
+        ...current,
+        [itemId]: true
+      };
+    });
+  }
+
+  function selectVisibleItems() {
+    const ids = filteredHistory.map((item) => item.id);
+    setSelectedIds((current) => mergeNotificationSelection(current, ids));
+  }
+
+  function clearSelection() {
+    setSelectedIds({});
+  }
+
+  async function applyBulkAction(action) {
+    const targetIds = Object.keys(selectedIds);
+    if (targetIds.length === 0) {
+      return;
+    }
+    const next = applyNotificationBulkAction(inbox, targetIds, action);
+    setInbox(sortNotificationsNewest(next));
+    await saveNotificationInbox(next);
+    clearSelection();
+  }
+
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Notification History</Text>
-        <Text style={styles.subtitle}>Search, filter, and archive in-app notifications without bloating the live feed.</Text>
+        <Text style={styles.subtitle}>Search, filter, and run bulk archive/read actions for mobile notifications.</Text>
 
         <ShellCard title="Search">
           <TextInput
@@ -124,7 +149,7 @@ export default function NotificationHistoryScreen({ session }) {
         <ShellCard title="Filters">
           <Text style={styles.filterLabel}>Category</Text>
           <View style={styles.chipRow}>
-            {CATEGORY_OPTIONS.map((option) => (
+            {NOTIFICATION_HISTORY_CATEGORY_OPTIONS.map((option) => (
               <FilterChip
                 key={option.key}
                 active={category === option.key}
@@ -135,7 +160,7 @@ export default function NotificationHistoryScreen({ session }) {
           </View>
           <Text style={styles.filterLabel}>Read state</Text>
           <View style={styles.chipRow}>
-            {READ_OPTIONS.map((option) => (
+            {NOTIFICATION_HISTORY_READ_OPTIONS.map((option) => (
               <FilterChip
                 key={option.key}
                 active={readState === option.key}
@@ -146,7 +171,7 @@ export default function NotificationHistoryScreen({ session }) {
           </View>
           <Text style={styles.filterLabel}>Archive state</Text>
           <View style={styles.chipRow}>
-            {ARCHIVE_OPTIONS.map((option) => (
+            {NOTIFICATION_HISTORY_ARCHIVE_OPTIONS.map((option) => (
               <FilterChip
                 key={option.key}
                 active={archiveState === option.key}
@@ -157,23 +182,60 @@ export default function NotificationHistoryScreen({ session }) {
           </View>
         </ShellCard>
 
-        <ShellCard
-          title="Snapshot"
-          subtitle={`total ${stats.total} · active ${stats.active} · archived ${stats.archived} · unread ${stats.unread}`}
-        >
+        <ShellCard title="Snapshot" subtitle={`total ${stats.total} · active ${stats.active} · archived ${stats.archived} · unread ${stats.unread}`}>
           <Text style={styles.meta}>tenant: {session.tenantId}</Text>
           <Text style={styles.meta}>actor: {session.actorId}</Text>
         </ShellCard>
 
+        <ShellCard title="Bulk actions" subtitle={`selected ${selectedCount} · visible selected ${selectedVisibleCount}`}>
+          <View style={styles.inlineActions}>
+            <Pressable style={styles.secondaryBtn} onPress={selectVisibleItems}>
+              <Text style={styles.secondaryBtnText}>Select visible</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryBtn} onPress={clearSelection}>
+              <Text style={styles.secondaryBtnText}>Clear selection</Text>
+            </Pressable>
+          </View>
+          <View style={styles.inlineActions}>
+            <Pressable style={styles.secondaryBtn} onPress={() => applyBulkAction("markRead")}>
+              <Text style={styles.secondaryBtnText}>Mark read selected</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryBtn} onPress={() => applyBulkAction("archive")}>
+              <Text style={styles.secondaryBtnText}>Archive selected</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryBtn} onPress={() => applyBulkAction("unarchive")}>
+              <Text style={styles.secondaryBtnText}>Unarchive selected</Text>
+            </Pressable>
+          </View>
+        </ShellCard>
+
         <ShellCard title="History list" subtitle={loading ? "Loading..." : `${filteredHistory.length} item(s)`}>
+          {filteredHistory.length === 0 ? <Text style={styles.meta}>No items match current filters.</Text> : null}
           {filteredHistory.map((item) => (
-            <View key={item.id} style={[styles.item, item.archivedAt ? styles.itemArchived : null]}>
-              <Text style={styles.itemTitle}>{item.title}</Text>
+            <View
+              key={item.id}
+              style={[
+                styles.item,
+                item.archivedAt ? styles.itemArchived : null,
+                selectedIds[item.id] ? styles.itemSelected : null
+              ]}
+            >
+              <View style={styles.itemHeader}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Pressable
+                  style={[styles.selectBtn, selectedIds[item.id] ? styles.selectBtnActive : null]}
+                  onPress={() => toggleSelection(item.id)}
+                >
+                  <Text style={[styles.selectBtnText, selectedIds[item.id] ? styles.selectBtnTextActive : null]}>
+                    {selectedIds[item.id] ? "Selected" : "Select"}
+                  </Text>
+                </Pressable>
+              </View>
               <Text style={styles.itemBody}>{item.body}</Text>
               <Text style={styles.itemMeta}>
                 {item.category} · {item.createdAt}
               </Text>
-              <Text style={styles.itemMeta}>{formatArchiveMeta(item)}</Text>
+              <Text style={styles.itemMeta}>{formatNotificationArchiveMeta(item)}</Text>
               <Pressable style={styles.secondaryBtn} onPress={() => toggleArchive(item)}>
                 <Text style={styles.secondaryBtnText}>{item.archivedAt ? "Unarchive" : "Archive"}</Text>
               </Pressable>
@@ -184,59 +246,3 @@ export default function NotificationHistoryScreen({ session }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, gap: spacing.md },
-  title: { fontSize: 24, fontWeight: "800", color: colors.ink },
-  subtitle: { color: colors.muted, fontSize: 14 },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    color: colors.ink
-  },
-  inlineActions: { flexDirection: "row", gap: spacing.sm },
-  secondaryBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    paddingVertical: 9,
-    alignItems: "center"
-  },
-  secondaryBtnText: { color: colors.ink, fontWeight: "600", fontSize: 12 },
-  filterLabel: { color: colors.muted, fontSize: 12, fontWeight: "700" },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 999,
-    backgroundColor: "#fff",
-    paddingHorizontal: 10,
-    paddingVertical: 7
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
-  chipText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
-  chipTextActive: { color: colors.primary },
-  meta: { color: colors.muted, fontSize: 12 },
-  item: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    padding: spacing.sm,
-    gap: 5
-  },
-  itemArchived: {
-    opacity: 0.65
-  },
-  itemTitle: { color: colors.ink, fontSize: 14, fontWeight: "700" },
-  itemBody: { color: colors.muted, fontSize: 13 },
-  itemMeta: { color: colors.muted, fontSize: 11 }
-});
-
