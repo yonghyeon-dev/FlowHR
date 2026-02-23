@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApprovalQueuePanel } from "@/components/admin-approval/ApprovalQueuePanel";
 import {
@@ -36,6 +36,10 @@ import {
 import { PayrollKrIncomeSplitItemPresetField } from "@/components/payroll/PayrollKrIncomeSplitItemPresetField";
 import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
 import { analyzePayrollKrIncomeSplitDraftConsistency } from "@/features/payroll/kr-income-split-item-consistency";
+import {
+  hasPayrollKrPresetShareContext,
+  parsePayrollKrPresetShareContext
+} from "@/features/payroll/kr-preset-share-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 
@@ -333,6 +337,7 @@ export default function AdminDashboardPage() {
   const [approvalActivities, setApprovalActivities] = useState<ApprovalActivity[]>([]);
   const [, setMobileApprovalFeedback] = useState<QueueMobileApprovalFeedback | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const payrollPresetShareContextAppliedRef = useRef(false);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
@@ -359,6 +364,32 @@ export default function AdminDashboardPage() {
       setOrganizationId(orgId.trim());
     }
   }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
+
+  useEffect(() => {
+    if (payrollPresetShareContextAppliedRef.current) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      return;
+    }
+    payrollPresetShareContextAppliedRef.current = true;
+
+    const context = parsePayrollKrPresetShareContext(window.location.search);
+    if (!hasPayrollKrPresetShareContext(context)) {
+      return;
+    }
+
+    setPayrollPreviewMode("statutory_kr_baseline");
+    if (context.presetId) {
+      setPayrollIncomeSplitItemPresetId(context.presetId);
+    }
+    if (context.taxableIncomeKrw !== null) {
+      setPayrollTaxableIncomeKrw(context.taxableIncomeKrw);
+    }
+    if (context.nonTaxableIncomeKrw !== null) {
+      setPayrollNonTaxableIncomeKrw(context.nonTaxableIncomeKrw);
+    }
+  }, []);
 
   const stats = useMemo(() => {
     const total = logs.length;
