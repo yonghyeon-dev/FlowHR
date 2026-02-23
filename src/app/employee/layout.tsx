@@ -30,6 +30,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
 
         <nav className="saas-nav" aria-label={t("employee.nav.aria")}>
           <Link href="/employee">{t("employee.nav.overview")}</Link>
+          <Link href="/employee/guide">{t("employee.nav.guide")}</Link>
           <Link href="/employee#account">{t("employee.nav.account")}</Link>
           <Link href="/employee#self-service-overview">{t("employee.nav.selfServiceOverview")}</Link>
           <Link href="/employee#submit-checklist">{t("employee.nav.submitChecklist")}</Link>
