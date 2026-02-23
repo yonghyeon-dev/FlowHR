@@ -30,3 +30,4 @@ This WI continues decomposition by moving year-end settlement hash and audit pay
 
 - Related issue: `#363`
 - Refactor-only WI (no contract version bump required)
+- PR template delivery-balance next UI path format aligned.
