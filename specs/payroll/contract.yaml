@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.37.0
+version: 1.38.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -25,6 +25,7 @@ scope:
     - KR statutory baseline admin preset-mode sample payload copy/share UX for deterministic handoff and replay context
     - KR statutory baseline admin preset-mode share-link auto-apply UX for deterministic replay input hydration
     - KR statutory baseline admin preset-mode share-link validation feedback UX for deterministic applied/ignored query visibility
+    - KR statutory baseline admin preset-mode share-link reset/reapply UX for deterministic operator reset and replay control
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
@@ -354,6 +355,7 @@ test_plan:
     - admin payroll preview preset-mode sample payload panel supports deterministic copy/share UX with replay href context
     - admin payroll preview preset share-link query parser auto-applies valid preset/split inputs and ignores invalid values deterministically
     - admin payroll preview preset share-link feedback panel shows applied query values and ignored invalid query values deterministically
+    - admin payroll preview preset share-link reset/reapply actions deterministically clear share-applied values and re-hydrate from current query
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
     - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
@@ -400,6 +402,7 @@ test_plan:
     - statutory_kr_baseline preset-mode sample payload copy/share UX deterministic replay via WI-0231 e2e
     - statutory_kr_baseline preset share-link auto-apply UX deterministic replay via WI-0232 e2e
     - statutory_kr_baseline preset share-link validation feedback UX deterministic replay via WI-0233 e2e
+    - statutory_kr_baseline preset share-link reset/reapply UX deterministic replay via WI-0234 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
@@ -565,7 +568,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.37.0 additively documents admin preset-mode share-link validation feedback UX for `statutory_kr_baseline` inputs (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.38.0 additively documents admin preset-mode share-link reset/reapply UX for `statutory_kr_baseline` inputs (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -592,6 +595,7 @@ references:
   - work-items/WI-0231-payroll-kr-preset-payload-copy-share-ux.md
   - work-items/WI-0232-payroll-kr-preset-share-link-auto-apply-ux.md
   - work-items/WI-0233-payroll-kr-preset-share-link-validation-feedback-ux.md
+  - work-items/WI-0234-payroll-kr-preset-share-link-reset-reapply-ux.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md

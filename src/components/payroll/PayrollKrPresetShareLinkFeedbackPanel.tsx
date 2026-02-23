@@ -23,6 +23,8 @@ type ShareLinkFeedbackCopy = {
   invalidLabel: string;
   noneApplied: string;
   noneInvalid: string;
+  resetButton: string;
+  reapplyButton: string;
   presetField: string;
   taxableField: string;
   nonTaxableField: string;
@@ -34,6 +36,8 @@ const defaultCopy: ShareLinkFeedbackCopy = {
   invalidLabel: "Ignored invalid query values",
   noneApplied: "No applicable query values were applied.",
   noneInvalid: "No invalid query values.",
+  resetButton: "Reset share-applied values",
+  reapplyButton: "Re-apply query values",
   presetField: "incomeSplitItemPresetId",
   taxableField: "taxableIncomeKrw",
   nonTaxableField: "nonTaxableIncomeKrw"
@@ -46,7 +50,9 @@ const shareLinkFeedbackCopy: Record<FlowLocale, ShareLinkFeedbackCopy> = {
     appliedLabel: "적용된 값",
     invalidLabel: "무시된 invalid 쿼리 값",
     noneApplied: "적용 가능한 쿼리 값이 없습니다.",
-    noneInvalid: "무시된 invalid 쿼리 값이 없습니다."
+    noneInvalid: "무시된 invalid 쿼리 값이 없습니다.",
+    resetButton: "공유값 초기화",
+    reapplyButton: "쿼리값 재적용"
   },
   en: defaultCopy
 };
@@ -62,9 +68,13 @@ function buildPairs(copy: ShareLinkFeedbackCopy, values: PayrollKrPresetShareLin
 }
 
 export function PayrollKrPresetShareLinkFeedbackPanel({
-  feedback
+  feedback,
+  onResetAppliedValues,
+  onReapplyQueryValues
 }: {
   feedback: PayrollKrPresetShareLinkFeedback | null;
+  onResetAppliedValues?: () => void;
+  onReapplyQueryValues?: () => void;
 }) {
   const { locale } = useI18n();
   const copy = shareLinkFeedbackCopy[locale];
@@ -88,6 +98,20 @@ export function PayrollKrPresetShareLinkFeedbackPanel({
       <p className="small muted">
         {copy.invalidLabel}: {invalidPairs.length > 0 ? invalidPairs.join(" / ") : copy.noneInvalid}
       </p>
+      {onResetAppliedValues || onReapplyQueryValues ? (
+        <div className="actions">
+          {onResetAppliedValues ? (
+            <button type="button" className="btn btn-secondary btn-small" onClick={onResetAppliedValues}>
+              {copy.resetButton}
+            </button>
+          ) : null}
+          {onReapplyQueryValues ? (
+            <button type="button" className="btn btn-secondary btn-small" onClick={onReapplyQueryValues}>
+              {copy.reapplyButton}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
