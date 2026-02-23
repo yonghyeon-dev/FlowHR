@@ -4,10 +4,10 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0241~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0242~에서 확장됩니다.`);
 }
 
-export default function EmployeeHomeScreen({ session, onLogout }) {
+export default function EmployeeHomeScreen({ session, onLogout, onOpenNotifications }) {
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -32,6 +32,13 @@ export default function EmployeeHomeScreen({ session, onLogout }) {
           <Text style={styles.desc}>최신 확정 명세서와 수령 확인 상태를 확인합니다.</Text>
           <Pressable style={styles.btn} onPress={() => action("명세서 확인")}>
             <Text style={styles.btnText}>명세서 보기</Text>
+          </Pressable>
+        </ShellCard>
+
+        <ShellCard title="알림 센터">
+          <Text style={styles.desc}>승인/명세 상태 알림을 모아보고, 알림 선호를 바로 변경합니다.</Text>
+          <Pressable style={styles.btn} onPress={onOpenNotifications}>
+            <Text style={styles.btnText}>알림 센터 열기</Text>
           </Pressable>
         </ShellCard>
 
