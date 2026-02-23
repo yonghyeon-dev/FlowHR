@@ -21,6 +21,14 @@ function parseRequiredInt(value: string, fieldName: string) {
   return parsed;
 }
 
+function parseRequiredPositiveInt(value: string, fieldName: string) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${fieldName} must be a positive integer`);
+  }
+  return parsed;
+}
+
 function parseOptionalInt(value: string) {
   const normalized = value.trim();
   if (!normalized) {
@@ -31,6 +39,10 @@ function parseOptionalInt(value: string) {
     throw new Error("optional cap values must be non-negative integers");
   }
   return parsed;
+}
+
+function formatKrwRaw(value: number) {
+  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} KRW`;
 }
 
 export default function PayrollInsuranceSettlementConsole() {
@@ -48,6 +60,12 @@ export default function PayrollInsuranceSettlementConsole() {
   const [nationalPensionCapKrw, setNationalPensionCapKrw] = useState("");
   const [healthInsuranceCapKrw, setHealthInsuranceCapKrw] = useState("");
   const [employmentInsuranceCapKrw, setEmploymentInsuranceCapKrw] = useState("");
+  const [insuranceRoundingMode, setInsuranceRoundingMode] = useState<"round" | "floor" | "ceil">("round");
+  const [nationalPensionUnitKrw, setNationalPensionUnitKrw] = useState("1");
+  const [healthInsuranceUnitKrw, setHealthInsuranceUnitKrw] = useState("1");
+  const [longTermCareUnitKrw, setLongTermCareUnitKrw] = useState("1");
+  const [employmentInsuranceUnitKrw, setEmploymentInsuranceUnitKrw] = useState("1");
+  const [industrialAccidentUnitKrw, setIndustrialAccidentUnitKrw] = useState("1");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [result, setResult] = useState<PayrollInsuranceSettlementResponse | null>(null);
@@ -91,6 +109,29 @@ export default function PayrollInsuranceSettlementConsole() {
         settlement: {
           nonTaxableIncomeKrw: parseRequiredInt(nonTaxableIncomeKrw, "nonTaxableIncomeKrw"),
           requireMonthlyBoundary: true,
+          insuranceRounding: {
+            mode: insuranceRoundingMode,
+            nationalPensionUnitKrw: parseRequiredPositiveInt(
+              nationalPensionUnitKrw,
+              "insuranceRounding.nationalPensionUnitKrw"
+            ),
+            healthInsuranceUnitKrw: parseRequiredPositiveInt(
+              healthInsuranceUnitKrw,
+              "insuranceRounding.healthInsuranceUnitKrw"
+            ),
+            longTermCareUnitKrw: parseRequiredPositiveInt(
+              longTermCareUnitKrw,
+              "insuranceRounding.longTermCareUnitKrw"
+            ),
+            employmentInsuranceUnitKrw: parseRequiredPositiveInt(
+              employmentInsuranceUnitKrw,
+              "insuranceRounding.employmentInsuranceUnitKrw"
+            ),
+            industrialAccidentUnitKrw: parseRequiredPositiveInt(
+              industrialAccidentUnitKrw,
+              "insuranceRounding.industrialAccidentUnitKrw"
+            )
+          },
           nationalPensionCapKrw: parseOptionalInt(nationalPensionCapKrw),
           healthInsuranceCapKrw: parseOptionalInt(healthInsuranceCapKrw),
           employmentInsuranceCapKrw: parseOptionalInt(employmentInsuranceCapKrw),
@@ -210,6 +251,37 @@ export default function PayrollInsuranceSettlementConsole() {
               Employment Insurance Cap (optional)
               <input value={employmentInsuranceCapKrw} onChange={(event) => setEmploymentInsuranceCapKrw(event.target.value)} />
             </label>
+            <label>
+              Rounding Mode
+              <select
+                value={insuranceRoundingMode}
+                onChange={(event) => setInsuranceRoundingMode(event.target.value as "round" | "floor" | "ceil")}
+              >
+                <option value="round">round</option>
+                <option value="floor">floor</option>
+                <option value="ceil">ceil</option>
+              </select>
+            </label>
+            <label>
+              NP Unit (KRW)
+              <input value={nationalPensionUnitKrw} onChange={(event) => setNationalPensionUnitKrw(event.target.value)} />
+            </label>
+            <label>
+              HI Unit (KRW)
+              <input value={healthInsuranceUnitKrw} onChange={(event) => setHealthInsuranceUnitKrw(event.target.value)} />
+            </label>
+            <label>
+              LTC Unit (KRW)
+              <input value={longTermCareUnitKrw} onChange={(event) => setLongTermCareUnitKrw(event.target.value)} />
+            </label>
+            <label>
+              EI Unit (KRW)
+              <input value={employmentInsuranceUnitKrw} onChange={(event) => setEmploymentInsuranceUnitKrw(event.target.value)} />
+            </label>
+            <label>
+              IA Unit (KRW)
+              <input value={industrialAccidentUnitKrw} onChange={(event) => setIndustrialAccidentUnitKrw(event.target.value)} />
+            </label>
           </div>
           <label>
             Access Token (optional)
@@ -242,6 +314,16 @@ export default function PayrollInsuranceSettlementConsole() {
               <li><span>Employee Total</span><strong>{formatKrw(result.summary.employeeContributionKrw.totalKrw)}</strong></li>
               <li><span>Employer Total</span><strong>{formatKrw(result.summary.employerContributionKrw.totalKrw)}</strong></li>
               <li><span>Total Delta</span><strong>{formatKrw(result.summary.settlementKrw.totalDeltaKrw)}</strong></li>
+              <li>
+                <span>Rounding</span>
+                <strong>
+                  {result.summary.rounding.mode} / NP {result.summary.rounding.unitsKrw.nationalPensionUnitKrw} / HI{" "}
+                  {result.summary.rounding.unitsKrw.healthInsuranceUnitKrw} / LTC{" "}
+                  {result.summary.rounding.unitsKrw.longTermCareUnitKrw} / EI{" "}
+                  {result.summary.rounding.unitsKrw.employmentInsuranceUnitKrw} / IA{" "}
+                  {result.summary.rounding.unitsKrw.industrialAccidentUnitKrw}
+                </strong>
+              </li>
             </ul>
           )}
         </article>
@@ -254,6 +336,8 @@ export default function PayrollInsuranceSettlementConsole() {
             <ul className="simple-list">
               <li><span>Employee NP/HI/LTC/EI</span><strong>{formatKrw(result.summary.employeeContributionKrw.nationalPensionKrw)} / {formatKrw(result.summary.employeeContributionKrw.healthInsuranceKrw)} / {formatKrw(result.summary.employeeContributionKrw.longTermCareKrw)} / {formatKrw(result.summary.employeeContributionKrw.employmentInsuranceKrw)}</strong></li>
               <li><span>Employer NP/HI/LTC/EI/IA</span><strong>{formatKrw(result.summary.employerContributionKrw.nationalPensionKrw)} / {formatKrw(result.summary.employerContributionKrw.healthInsuranceKrw)} / {formatKrw(result.summary.employerContributionKrw.longTermCareKrw)} / {formatKrw(result.summary.employerContributionKrw.employmentInsuranceKrw)} / {formatKrw(result.summary.employerContributionKrw.industrialAccidentKrw)}</strong></li>
+              <li><span>Employee Raw NP/HI/LTC/EI</span><strong>{formatKrwRaw(result.summary.rawContributionKrw.employee.nationalPensionKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employee.healthInsuranceKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employee.longTermCareKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employee.employmentInsuranceKrw)}</strong></li>
+              <li><span>Employer Raw NP/HI/LTC/EI/IA</span><strong>{formatKrwRaw(result.summary.rawContributionKrw.employer.nationalPensionKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.healthInsuranceKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.longTermCareKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.employmentInsuranceKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.industrialAccidentKrw)}</strong></li>
               <li><span>Bases NP/HI/EI/IA</span><strong>{formatKrw(result.summary.contributionBasesKrw.nationalPensionBaseKrw)} / {formatKrw(result.summary.contributionBasesKrw.healthInsuranceBaseKrw)} / {formatKrw(result.summary.contributionBasesKrw.employmentInsuranceBaseKrw)} / {formatKrw(result.summary.contributionBasesKrw.industrialAccidentBaseKrw)}</strong></li>
               <li><span>Prior Withheld / Paid</span><strong>{formatKrw(result.summary.settlementKrw.priorWithheldKrw)} / {formatKrw(result.summary.settlementKrw.priorEmployerPaidKrw)}</strong></li>
             </ul>

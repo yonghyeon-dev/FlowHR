@@ -104,6 +104,14 @@ type PreviewPayrollInsuranceSettlementInput = PreviewPayrollInput & {
   settlement?: {
     nonTaxableIncomeKrw: number;
     requireMonthlyBoundary: boolean;
+    insuranceRounding?: {
+      mode: "round" | "floor" | "ceil";
+      nationalPensionUnitKrw: number;
+      healthInsuranceUnitKrw: number;
+      longTermCareUnitKrw: number;
+      employmentInsuranceUnitKrw: number;
+      industrialAccidentUnitKrw: number;
+    };
     nationalPensionEmployeeRate: number;
     nationalPensionEmployerRate: number;
     nationalPensionCapKrw?: number;
@@ -328,6 +336,31 @@ type PreviewPayrollInsuranceSettlementResult = {
     totals: PayableMinutes;
     grossPayKrw: number;
     taxableBaseKrw: number;
+    rounding: {
+      mode: InsuranceRoundingMode;
+      unitsKrw: {
+        nationalPensionUnitKrw: number;
+        healthInsuranceUnitKrw: number;
+        longTermCareUnitKrw: number;
+        employmentInsuranceUnitKrw: number;
+        industrialAccidentUnitKrw: number;
+      };
+    };
+    rawContributionKrw: {
+      employee: {
+        nationalPensionKrw: number;
+        healthInsuranceKrw: number;
+        longTermCareKrw: number;
+        employmentInsuranceKrw: number;
+      };
+      employer: {
+        nationalPensionKrw: number;
+        healthInsuranceKrw: number;
+        longTermCareKrw: number;
+        employmentInsuranceKrw: number;
+        industrialAccidentKrw: number;
+      };
+    };
     employeeContributionKrw: {
       nationalPensionKrw: number;
       healthInsuranceKrw: number;
@@ -830,6 +863,10 @@ type InsuranceRoundingInput = {
   employmentInsuranceUnitKrw?: number;
 };
 
+type InsuranceSettlementRoundingInput = InsuranceRoundingInput & {
+  industrialAccidentUnitKrw?: number;
+};
+
 const emptyTotals: PayableMinutes = {
   regular: 0,
   overtime: 0,
@@ -1312,24 +1349,38 @@ function toPositiveKrwUnit(value: number | undefined, fieldName: string) {
   return value;
 }
 
-function normalizeInsuranceRoundingRules(rules?: InsuranceRoundingInput): InsuranceRoundingRules {
+function normalizeInsuranceRoundingRules(
+  rules?: InsuranceRoundingInput,
+  fieldPrefix = "statutory.insuranceRounding"
+): InsuranceRoundingRules {
   return {
     mode: rules?.mode ?? "round",
     nationalPensionUnitKrw: toPositiveKrwUnit(
       rules?.nationalPensionUnitKrw,
-      "statutory.insuranceRounding.nationalPensionUnitKrw"
+      `${fieldPrefix}.nationalPensionUnitKrw`
     ),
     healthInsuranceUnitKrw: toPositiveKrwUnit(
       rules?.healthInsuranceUnitKrw,
-      "statutory.insuranceRounding.healthInsuranceUnitKrw"
+      `${fieldPrefix}.healthInsuranceUnitKrw`
     ),
     longTermCareUnitKrw: toPositiveKrwUnit(
       rules?.longTermCareUnitKrw,
-      "statutory.insuranceRounding.longTermCareUnitKrw"
+      `${fieldPrefix}.longTermCareUnitKrw`
     ),
     employmentInsuranceUnitKrw: toPositiveKrwUnit(
       rules?.employmentInsuranceUnitKrw,
-      "statutory.insuranceRounding.employmentInsuranceUnitKrw"
+      `${fieldPrefix}.employmentInsuranceUnitKrw`
+    )
+  };
+}
+
+function normalizeSettlementInsuranceRoundingRules(rules?: InsuranceSettlementRoundingInput) {
+  const normalized = normalizeInsuranceRoundingRules(rules, "settlement.insuranceRounding");
+  return {
+    ...normalized,
+    industrialAccidentUnitKrw: toPositiveKrwUnit(
+      rules?.industrialAccidentUnitKrw,
+      "settlement.insuranceRounding.industrialAccidentUnitKrw"
     )
   };
 }
@@ -2116,6 +2167,9 @@ export async function previewPayrollInsuranceSettlement(
     "settlement.nonTaxableIncomeKrw"
   );
   const requireMonthlyBoundary = input.settlement?.requireMonthlyBoundary ?? true;
+  const insuranceRoundingRules = normalizeSettlementInsuranceRoundingRules(
+    input.settlement?.insuranceRounding
+  );
   if (requireMonthlyBoundary) {
     ensureMonthlyBoundaryInSeoul(input.periodStart, input.periodEnd);
   }
@@ -2179,41 +2233,70 @@ export async function previewPayrollInsuranceSettlement(
   );
   const industrialAccidentBaseKrw = taxableBaseKrw;
 
-  const nationalPensionEmployeeKrw = toKrwInteger(
-    Math.round(nationalPensionBaseKrw * nationalPensionEmployeeRate),
-    "settlement.nationalPensionEmployeeKrw"
+  const nationalPensionEmployeeRawKrw = nationalPensionBaseKrw * nationalPensionEmployeeRate;
+  const nationalPensionEmployeeKrw = roundKrwByRule(
+    nationalPensionEmployeeRawKrw,
+    "settlement.nationalPensionEmployeeKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.nationalPensionUnitKrw
   );
-  const nationalPensionEmployerKrw = toKrwInteger(
-    Math.round(nationalPensionBaseKrw * nationalPensionEmployerRate),
-    "settlement.nationalPensionEmployerKrw"
+  const nationalPensionEmployerRawKrw = nationalPensionBaseKrw * nationalPensionEmployerRate;
+  const nationalPensionEmployerKrw = roundKrwByRule(
+    nationalPensionEmployerRawKrw,
+    "settlement.nationalPensionEmployerKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.nationalPensionUnitKrw
   );
-  const healthInsuranceEmployeeKrw = toKrwInteger(
-    Math.round(healthInsuranceBaseKrw * healthInsuranceEmployeeRate),
-    "settlement.healthInsuranceEmployeeKrw"
+  const healthInsuranceEmployeeRawKrw = healthInsuranceBaseKrw * healthInsuranceEmployeeRate;
+  const healthInsuranceEmployeeKrw = roundKrwByRule(
+    healthInsuranceEmployeeRawKrw,
+    "settlement.healthInsuranceEmployeeKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.healthInsuranceUnitKrw
   );
-  const healthInsuranceEmployerKrw = toKrwInteger(
-    Math.round(healthInsuranceBaseKrw * healthInsuranceEmployerRate),
-    "settlement.healthInsuranceEmployerKrw"
+  const healthInsuranceEmployerRawKrw = healthInsuranceBaseKrw * healthInsuranceEmployerRate;
+  const healthInsuranceEmployerKrw = roundKrwByRule(
+    healthInsuranceEmployerRawKrw,
+    "settlement.healthInsuranceEmployerKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.healthInsuranceUnitKrw
   );
-  const longTermCareEmployeeKrw = toKrwInteger(
-    Math.round(healthInsuranceEmployeeKrw * longTermCareRateOnHealth),
-    "settlement.longTermCareEmployeeKrw"
+  const longTermCareEmployeeRawKrw = healthInsuranceEmployeeKrw * longTermCareRateOnHealth;
+  const longTermCareEmployeeKrw = roundKrwByRule(
+    longTermCareEmployeeRawKrw,
+    "settlement.longTermCareEmployeeKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.longTermCareUnitKrw
   );
-  const longTermCareEmployerKrw = toKrwInteger(
-    Math.round(healthInsuranceEmployerKrw * longTermCareRateOnHealth),
-    "settlement.longTermCareEmployerKrw"
+  const longTermCareEmployerRawKrw = healthInsuranceEmployerKrw * longTermCareRateOnHealth;
+  const longTermCareEmployerKrw = roundKrwByRule(
+    longTermCareEmployerRawKrw,
+    "settlement.longTermCareEmployerKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.longTermCareUnitKrw
   );
-  const employmentInsuranceEmployeeKrw = toKrwInteger(
-    Math.round(employmentInsuranceBaseKrw * employmentInsuranceEmployeeRate),
-    "settlement.employmentInsuranceEmployeeKrw"
+  const employmentInsuranceEmployeeRawKrw =
+    employmentInsuranceBaseKrw * employmentInsuranceEmployeeRate;
+  const employmentInsuranceEmployeeKrw = roundKrwByRule(
+    employmentInsuranceEmployeeRawKrw,
+    "settlement.employmentInsuranceEmployeeKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.employmentInsuranceUnitKrw
   );
-  const employmentInsuranceEmployerKrw = toKrwInteger(
-    Math.round(employmentInsuranceBaseKrw * employmentInsuranceEmployerRate),
-    "settlement.employmentInsuranceEmployerKrw"
+  const employmentInsuranceEmployerRawKrw =
+    employmentInsuranceBaseKrw * employmentInsuranceEmployerRate;
+  const employmentInsuranceEmployerKrw = roundKrwByRule(
+    employmentInsuranceEmployerRawKrw,
+    "settlement.employmentInsuranceEmployerKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.employmentInsuranceUnitKrw
   );
-  const industrialAccidentEmployerKrw = toKrwInteger(
-    Math.round(industrialAccidentBaseKrw * industrialAccidentEmployerRate),
-    "settlement.industrialAccidentEmployerKrw"
+  const industrialAccidentEmployerRawKrw = industrialAccidentBaseKrw * industrialAccidentEmployerRate;
+  const industrialAccidentEmployerKrw = roundKrwByRule(
+    industrialAccidentEmployerRawKrw,
+    "settlement.industrialAccidentEmployerKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.industrialAccidentUnitKrw
   );
 
   const employeeContributionTotalKrw = toKrwInteger(
@@ -2258,6 +2341,16 @@ export async function previewPayrollInsuranceSettlement(
       grossPayKrw: computed.grossPayKrw,
       taxableBaseKrw,
       requireMonthlyBoundary,
+      insuranceRounding: {
+        mode: insuranceRoundingRules.mode,
+        unitsKrw: {
+          nationalPensionUnitKrw: insuranceRoundingRules.nationalPensionUnitKrw,
+          healthInsuranceUnitKrw: insuranceRoundingRules.healthInsuranceUnitKrw,
+          longTermCareUnitKrw: insuranceRoundingRules.longTermCareUnitKrw,
+          employmentInsuranceUnitKrw: insuranceRoundingRules.employmentInsuranceUnitKrw,
+          industrialAccidentUnitKrw: insuranceRoundingRules.industrialAccidentUnitKrw
+        }
+      },
       employeeContributionTotalKrw,
       employerContributionTotalKrw,
       priorWithheldKrw,
@@ -2282,6 +2375,7 @@ export async function previewPayrollInsuranceSettlement(
       sourceRecordCount: computed.recordsCount,
       grossPayKrw: computed.grossPayKrw,
       taxableBaseKrw,
+      insuranceRoundingMode: insuranceRoundingRules.mode,
       employeeContributionTotalKrw,
       employerContributionTotalKrw,
       totalDeltaKrw
@@ -2294,6 +2388,31 @@ export async function previewPayrollInsuranceSettlement(
       totals: computed.totals,
       grossPayKrw: computed.grossPayKrw,
       taxableBaseKrw,
+      rounding: {
+        mode: insuranceRoundingRules.mode,
+        unitsKrw: {
+          nationalPensionUnitKrw: insuranceRoundingRules.nationalPensionUnitKrw,
+          healthInsuranceUnitKrw: insuranceRoundingRules.healthInsuranceUnitKrw,
+          longTermCareUnitKrw: insuranceRoundingRules.longTermCareUnitKrw,
+          employmentInsuranceUnitKrw: insuranceRoundingRules.employmentInsuranceUnitKrw,
+          industrialAccidentUnitKrw: insuranceRoundingRules.industrialAccidentUnitKrw
+        }
+      },
+      rawContributionKrw: {
+        employee: {
+          nationalPensionKrw: nationalPensionEmployeeRawKrw,
+          healthInsuranceKrw: healthInsuranceEmployeeRawKrw,
+          longTermCareKrw: longTermCareEmployeeRawKrw,
+          employmentInsuranceKrw: employmentInsuranceEmployeeRawKrw
+        },
+        employer: {
+          nationalPensionKrw: nationalPensionEmployerRawKrw,
+          healthInsuranceKrw: healthInsuranceEmployerRawKrw,
+          longTermCareKrw: longTermCareEmployerRawKrw,
+          employmentInsuranceKrw: employmentInsuranceEmployerRawKrw,
+          industrialAccidentKrw: industrialAccidentEmployerRawKrw
+        }
+      },
       employeeContributionKrw: {
         nationalPensionKrw: nationalPensionEmployeeKrw,
         healthInsuranceKrw: healthInsuranceEmployeeKrw,

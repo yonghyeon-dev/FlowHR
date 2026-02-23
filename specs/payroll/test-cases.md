@@ -91,6 +91,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 14. Employee payslip self-service view preserves statutory deduction totals/net values and excludes unauthorized runs.
 15. Insurance settlement mode computes employee/employer contribution totals and deltas (`priorWithheldKrw`, `priorEmployerPaidKrw`) deterministically.
 16. Insurance settlement contribution caps bind NP/HI/EI bases and keep component sums deterministic.
+- Insurance settlement rounding rules apply deterministic mode/unit rounding for NP/HI/LTC/EI/IA components when `settlement.insuranceRounding` is provided.
 17. Close-period mode computes withholding/social/net totals from confirmed runs and settlement deltas deterministically.
 18. Close-period mode blocks `apply=true` deterministically when previewed runs remain.
 19. Payslip distribution updates run delivery fields deterministically and remains idempotent for already distributed runs.

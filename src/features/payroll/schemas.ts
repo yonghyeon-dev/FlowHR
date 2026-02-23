@@ -53,6 +53,10 @@ const statutoryInsuranceRoundingSchema = z.object({
   employmentInsuranceUnitKrw: z.number().int().positive().default(1)
 });
 
+const settlementInsuranceRoundingSchema = statutoryInsuranceRoundingSchema.extend({
+  industrialAccidentUnitKrw: z.number().int().positive().default(1)
+});
+
 const statutoryKrBaselineSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
   taxableIncomeKrw: nonNegativeInteger.optional(),
@@ -82,6 +86,7 @@ const statutoryKrBaselineSchema = z.object({
 const statutoryInsuranceSettlementSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
   requireMonthlyBoundary: z.boolean().default(true),
+  insuranceRounding: settlementInsuranceRoundingSchema.optional(),
   nationalPensionEmployeeRate: rate.default(0.045),
   nationalPensionEmployerRate: rate.default(0.045),
   nationalPensionCapKrw: nonNegativeInteger.optional(),
