@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import EmployeeRequestFollowUpPresetTransferCard from "../components/EmployeeRequestFollowUpPresetTransferCard";
 import ShellCard from "../components/ShellCard";
 import {
   EMPLOYEE_REQUEST_FOLLOW_UP_BUNDLE_PRESET_OPTIONS,
@@ -203,6 +204,11 @@ export default function EmployeeRequestFollowUpScreen({
     await saveEmployeeRequestFollowUpPresetState(nextState);
   }
 
+  async function importBundlePresetState(nextState) {
+    const saved = await saveEmployeeRequestFollowUpPresetState(nextState);
+    setPresetState(saved);
+  }
+
   async function runBundleQuickAction(presetKey) {
     const preset = getEmployeeRequestFollowUpBundlePreset(presetKey);
     if (!preset?.quickAction) {
@@ -370,6 +376,11 @@ export default function EmployeeRequestFollowUpScreen({
           ))}
           <Text style={styles.meta}>preset catalog size: {EMPLOYEE_REQUEST_FOLLOW_UP_BUNDLE_PRESET_OPTIONS.length}</Text>
         </ShellCard>
+
+        <EmployeeRequestFollowUpPresetTransferCard
+          presetState={presetState}
+          onImportPresetState={importBundlePresetState}
+        />
 
         <ShellCard title="Recommendation templates">
           {templateStats

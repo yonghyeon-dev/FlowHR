@@ -4,7 +4,7 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0255~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0256~에서 확장됩니다.`);
 }
 
 export default function AdminHomeScreen({

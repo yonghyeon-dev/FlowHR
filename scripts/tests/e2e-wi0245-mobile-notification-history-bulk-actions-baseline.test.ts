@@ -33,8 +33,8 @@ async function run() {
   assert.match(historyLib, /applyNotificationBulkAction/);
   assert.match(historyLib, /mergeNotificationSelection/);
   assert.match(historyLib, /pruneNotificationSelection/);
-  assert.match(adminScreen, /WI-0255~/);
-  assert.match(employeeScreen, /WI-0255~/);
+  assert.match(adminScreen, /WI-0256~/);
+  assert.match(employeeScreen, /WI-0256~/);
   assert.match(readme, /notification history bulk actions/);
 
   assert.ok(
