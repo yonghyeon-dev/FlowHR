@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import NotificationPresetTransferCard from "../components/NotificationPresetTransferCard";
 import ShellCard from "../components/ShellCard";
 import { sortNotificationsNewest } from "../lib/notificationFeed";
 import {
@@ -44,10 +45,7 @@ export default function NotificationHistoryScreen({ session }) {
   const [activePreset, setActivePreset] = useState("allOpen");
   const [selectedIds, setSelectedIds] = useState({});
   const [presetState, setPresetState] = useState(defaultNotificationHistoryPresetState);
-  async function refreshHistory() {
-    const messages = await loadNotificationInbox();
-    setInbox(sortNotificationsNewest(messages));
-  }
+  async function refreshHistory() { setInbox(sortNotificationsNewest(await loadNotificationInbox())); }
   useEffect(() => {
     let active = true;
     Promise.all([loadNotificationInbox(), loadNotificationHistoryPresetState()])
@@ -90,11 +88,8 @@ export default function NotificationHistoryScreen({ session }) {
       }),
     [archiveState, category, inbox, query, readState]
   );
-  const selectedCount = useMemo(() => Object.keys(selectedIds).length, [selectedIds]);
-  const selectedVisibleCount = useMemo(
-    () => filteredHistory.filter((item) => selectedIds[item.id]).length,
-    [filteredHistory, selectedIds]
-  );
+  const selectedCount = Object.keys(selectedIds).length;
+  const selectedVisibleCount = filteredHistory.filter((item) => selectedIds[item.id]).length;
   const pinnedPresetKeys = presetState.pinnedPresetKeys ?? [];
   const recentPresetKeys = useMemo(
     () => (presetState.recentPresetKeys ?? []).filter((key) => !pinnedPresetKeys.includes(key)),
@@ -144,6 +139,11 @@ export default function NotificationHistoryScreen({ session }) {
     };
     await persistPresetState(nextPresetState);
   }
+  async function importPresetState(nextPresetState) {
+    await persistPresetState(nextPresetState);
+    setActivePreset("custom");
+    clearSelection();
+  }
   function updateQuery(value) {
     setQuery(value);
     setActivePreset("custom");
@@ -176,9 +176,7 @@ export default function NotificationHistoryScreen({ session }) {
     const ids = filteredHistory.map((item) => item.id);
     setSelectedIds((current) => mergeNotificationSelection(current, ids));
   }
-  function clearSelection() {
-    setSelectedIds({});
-  }
+  function clearSelection() { setSelectedIds({}); }
   async function applyBulkAction(action) {
     const targetIds = Object.keys(selectedIds);
     if (targetIds.length === 0) {
@@ -239,6 +237,7 @@ export default function NotificationHistoryScreen({ session }) {
             {recentPresetKeys.map((presetKey) => <FilterChip key={presetKey} active={activePreset === presetKey} label={presetLabel(presetKey)} onPress={() => applyPreset(presetKey)} />)}
           </View>
         </ShellCard>
+        <NotificationPresetTransferCard presetState={presetState} onImportPresetState={importPresetState} />
         <ShellCard title="Filters">
           <Text style={styles.filterLabel}>Category</Text>
           <View style={styles.chipRow}>
