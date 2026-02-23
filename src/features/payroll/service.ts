@@ -11,7 +11,6 @@ import {
   type PayableMinutes
 } from "@/lib/payroll-rules";
 import type {
-  AuditLogEntity,
   DataAccess,
   DeductionProfileEntity,
   PayrollRunEntity
@@ -56,17 +55,16 @@ import {
   sortYearEndFilingSubmissions as sortYearEndFilingSubmissionsCore
 } from "@/features/payroll/year-end-filing-submission-query-helpers";
 import {
-  asYearEndFilingEvidenceNoteAddedAuditPayload as asYearEndFilingEvidenceNoteAddedAuditPayloadCore,
-  asYearEndFilingPackageAcknowledgedAuditPayload as asYearEndFilingPackageAcknowledgedAuditPayloadCore,
-  asYearEndFilingPackageCanceledAuditPayload as asYearEndFilingPackageCanceledAuditPayloadCore,
-  asYearEndFilingPackageReopenedAuditPayload as asYearEndFilingPackageReopenedAuditPayloadCore,
-  asYearEndFilingPackageSubmittedAuditPayload as asYearEndFilingPackageSubmittedAuditPayloadCore,
   asYearEndFinalizationAuditPayload as asYearEndFinalizationAuditPayloadCore,
   asYearEndWithholdingReceiptSummaryPayload as asYearEndWithholdingReceiptSummaryPayloadCore,
   buildYearEndSettlementHash as buildYearEndSettlementHashCore,
   normalizeYearEndSettlementHash as normalizeYearEndSettlementHashCore,
   resolveYearEndSettlementHashFromFinalizationPayload as resolveYearEndSettlementHashFromFinalizationPayloadCore
 } from "@/features/payroll/year-end-audit-payload-helpers";
+import {
+  buildYearEndFilingSubmissionSummaries as buildYearEndFilingSubmissionSummariesCore,
+  buildYearEndFilingSubmissionTimeline as buildYearEndFilingSubmissionTimelineCore
+} from "@/features/payroll/year-end-filing-lifecycle-helpers";
 
 type PreviewPayrollInput = {
   periodStart: Date;
@@ -3007,208 +3005,6 @@ function validateYearEndFilingRecords(rows: YearEndFilingRecord[], payload: Year
   return validateYearEndFilingRecordsCore(rows, payload);
 }
 
-type YearEndFilingPackageSubmittedAuditPayload = {
-  submissionId: string;
-  year: number;
-  employeeId: string;
-  attempt: number;
-  resubmissionOfSubmissionId: string | null;
-  resubmissionReason: string | null;
-  finalizationId: string;
-  settlementHash: string | null;
-  format: PayrollYearEndFilingExportFormat;
-  validationMode: PayrollYearEndFilingValidationMode;
-  transport: PayrollYearEndFilingTransport;
-  artifact: {
-    fileName: string;
-    contentType: string;
-    checksumSha256: string;
-    byteLength: number;
-  };
-  validationStatus: "pass" | "fail";
-  submittedAt: string;
-  submittedByRole: string;
-  submittedById: string | null;
-  submissionNote: string | null;
-};
-
-type YearEndFilingPackageAcknowledgedAuditPayload = {
-  submissionId: string;
-  settlementHash: string | null;
-  expectedSettlementHash: string | null;
-  ackStatus: PayrollYearEndFilingAckStatus;
-  ackCode: string | null;
-  ackNote: string | null;
-  rejectionReasonCode: string | null;
-  rejectionReasonDetail: string | null;
-  acknowledgedAt: string;
-  acknowledgedByRole: string;
-  acknowledgedById: string | null;
-};
-
-type YearEndFilingPackageCanceledAuditPayload = {
-  submissionId: string;
-  canceledAt: string;
-  canceledByRole: string;
-  canceledById: string | null;
-};
-
-type YearEndFilingPackageReopenedAuditPayload = {
-  submissionId: string;
-  reopenedAt: string;
-  reopenedByRole: string;
-  reopenedById: string | null;
-};
-
-type YearEndFilingEvidenceNoteAddedAuditPayload = {
-  submissionId: string;
-  year: number;
-  employeeId: string;
-  note: string;
-  notedAt: string;
-  notedByRole: string;
-  notedById: string | null;
-};
-
-function asYearEndFilingPackageSubmittedAuditPayload(
-  payload: unknown
-): YearEndFilingPackageSubmittedAuditPayload | null {
-  return asYearEndFilingPackageSubmittedAuditPayloadCore(
-    payload
-  ) as YearEndFilingPackageSubmittedAuditPayload | null;
-}
-
-function asYearEndFilingPackageAcknowledgedAuditPayload(
-  payload: unknown
-): YearEndFilingPackageAcknowledgedAuditPayload | null {
-  return asYearEndFilingPackageAcknowledgedAuditPayloadCore(
-    payload
-  ) as YearEndFilingPackageAcknowledgedAuditPayload | null;
-}
-
-function asYearEndFilingPackageCanceledAuditPayload(
-  payload: unknown
-): YearEndFilingPackageCanceledAuditPayload | null {
-  return asYearEndFilingPackageCanceledAuditPayloadCore(
-    payload
-  ) as YearEndFilingPackageCanceledAuditPayload | null;
-}
-
-function asYearEndFilingPackageReopenedAuditPayload(
-  payload: unknown
-): YearEndFilingPackageReopenedAuditPayload | null {
-  return asYearEndFilingPackageReopenedAuditPayloadCore(
-    payload
-  ) as YearEndFilingPackageReopenedAuditPayload | null;
-}
-
-function asYearEndFilingEvidenceNoteAddedAuditPayload(
-  payload: unknown
-): YearEndFilingEvidenceNoteAddedAuditPayload | null {
-  return asYearEndFilingEvidenceNoteAddedAuditPayloadCore(
-    payload
-  ) as YearEndFilingEvidenceNoteAddedAuditPayload | null;
-}
-
-function buildYearEndFilingSubmissionSummaries(
-  logs: AuditLogEntity[]
-): PayrollYearEndFilingSubmissionSummary[] {
-  const sortedLogs = [...logs].sort(
-    (left, right) => left.createdAt.getTime() - right.createdAt.getTime()
-  );
-  const submissions = new Map<string, PayrollYearEndFilingSubmissionSummary>();
-
-  for (const log of sortedLogs) {
-    if (
-      log.action === "payroll.year_end.filing_package_submitted" ||
-      log.action === "payroll.year_end.filing_package_resubmitted"
-    ) {
-      const payload = asYearEndFilingPackageSubmittedAuditPayload(log.payload);
-      if (!payload) {
-        continue;
-      }
-      submissions.set(payload.submissionId, {
-        submissionId: payload.submissionId,
-        year: payload.year,
-        employeeId: payload.employeeId,
-        attempt: payload.attempt,
-        resubmissionOfSubmissionId: payload.resubmissionOfSubmissionId,
-        resubmissionReason: payload.resubmissionReason,
-        finalizationId: payload.finalizationId,
-        settlementHash: payload.settlementHash,
-        format: payload.format,
-        validationMode: payload.validationMode,
-        transport: payload.transport,
-        artifact: payload.artifact,
-        validationStatus: payload.validationStatus,
-        submittedAt: payload.submittedAt,
-        submittedByRole: payload.submittedByRole,
-        submittedById: payload.submittedById,
-        status: "submitted",
-        ack: null,
-        submissionNote: payload.submissionNote
-      });
-      continue;
-    }
-
-    if (log.action === "payroll.year_end.filing_package_acknowledged") {
-      const payload = asYearEndFilingPackageAcknowledgedAuditPayload(log.payload);
-      if (!payload) {
-        continue;
-      }
-      const existing = submissions.get(payload.submissionId);
-      if (!existing) {
-        continue;
-      }
-      existing.status = "acknowledged";
-      existing.ack = {
-        ackStatus: payload.ackStatus,
-        ackCode: payload.ackCode,
-        ackNote: payload.ackNote,
-        rejectionReasonCode: payload.rejectionReasonCode,
-        rejectionReasonDetail: payload.rejectionReasonDetail,
-        acknowledgedAt: payload.acknowledgedAt,
-        acknowledgedByRole: payload.acknowledgedByRole,
-        acknowledgedById: payload.acknowledgedById
-      };
-      continue;
-    }
-
-    if (log.action === "payroll.year_end.filing_package_canceled") {
-      const payload = asYearEndFilingPackageCanceledAuditPayload(log.payload);
-      if (!payload) {
-        continue;
-      }
-      const existing = submissions.get(payload.submissionId);
-      if (!existing) {
-        continue;
-      }
-      existing.status = "canceled";
-      existing.ack = null;
-      continue;
-    }
-
-    if (log.action === "payroll.year_end.filing_package_reopened") {
-      const payload = asYearEndFilingPackageReopenedAuditPayload(log.payload);
-      if (!payload) {
-        continue;
-      }
-      const existing = submissions.get(payload.submissionId);
-      if (!existing) {
-        continue;
-      }
-      existing.status = "submitted";
-      existing.ack = null;
-    }
-  }
-
-  return Array.from(submissions.values()).sort(
-    (left, right) =>
-      right.submittedAt.localeCompare(left.submittedAt) ||
-      right.submissionId.localeCompare(left.submissionId)
-  );
-}
-
 export async function closePayrollPeriod(
   context: ServiceContext,
   input: ClosePayrollPeriodInput
@@ -4021,7 +3817,7 @@ async function listYearEndFilingSubmissionSummaries(
   input: ListPayrollYearEndFilingSubmissionsInput
 ) {
   const logs = await listYearEndFilingLifecycleLogs(context, input);
-  return buildYearEndFilingSubmissionSummaries(logs);
+  return buildYearEndFilingSubmissionSummariesCore(logs) as PayrollYearEndFilingSubmissionSummary[];
 }
 
 async function listYearEndFilingLifecycleLogs(
@@ -4044,165 +3840,6 @@ async function listYearEndFilingLifecycleLogs(
     entityType: "PayrollYearEnd",
     entityId,
     limit: 1000
-  });
-}
-
-function buildYearEndFilingSubmissionTimeline(
-  logs: AuditLogEntity[],
-  submissionId: string
-): PayrollYearEndFilingTimelineEntry[] {
-  const sortedLogs = [...logs].sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
-  const timeline: PayrollYearEndFilingTimelineEntry[] = [];
-
-  for (const log of sortedLogs) {
-    if (
-      log.action === "payroll.year_end.filing_package_submitted" ||
-      log.action === "payroll.year_end.filing_package_resubmitted"
-    ) {
-      const payload = asYearEndFilingPackageSubmittedAuditPayload(log.payload);
-      if (!payload || payload.submissionId !== submissionId) {
-        continue;
-      }
-      timeline.push({
-        action:
-          log.action === "payroll.year_end.filing_package_submitted" ? "submitted" : "resubmitted",
-        submissionId: payload.submissionId,
-        occurredAt: payload.submittedAt,
-        actorRole: payload.submittedByRole,
-        actorId: payload.submittedById,
-        attempt: payload.attempt,
-        submissionNote: payload.submissionNote,
-        resubmissionOfSubmissionId: payload.resubmissionOfSubmissionId,
-        resubmissionReason: payload.resubmissionReason,
-        ackStatus: null,
-        ackCode: null,
-        ackNote: null,
-        rejectionReasonCode: null,
-        rejectionReasonDetail: null,
-        evidenceNote: null
-      });
-      continue;
-    }
-
-    if (log.action === "payroll.year_end.filing_package_acknowledged") {
-      const payload = asYearEndFilingPackageAcknowledgedAuditPayload(log.payload);
-      if (!payload || payload.submissionId !== submissionId) {
-        continue;
-      }
-      timeline.push({
-        action: "acknowledged",
-        submissionId: payload.submissionId,
-        occurredAt: payload.acknowledgedAt,
-        actorRole: payload.acknowledgedByRole,
-        actorId: payload.acknowledgedById,
-        attempt: null,
-        submissionNote: null,
-        resubmissionOfSubmissionId: null,
-        resubmissionReason: null,
-        ackStatus: payload.ackStatus,
-        ackCode: payload.ackCode,
-        ackNote: payload.ackNote,
-        rejectionReasonCode: payload.rejectionReasonCode,
-        rejectionReasonDetail: payload.rejectionReasonDetail,
-        evidenceNote: null
-      });
-      continue;
-    }
-
-    if (log.action === "payroll.year_end.filing_package_canceled") {
-      const payload = asYearEndFilingPackageCanceledAuditPayload(log.payload);
-      if (!payload || payload.submissionId !== submissionId) {
-        continue;
-      }
-      timeline.push({
-        action: "canceled",
-        submissionId: payload.submissionId,
-        occurredAt: payload.canceledAt,
-        actorRole: payload.canceledByRole,
-        actorId: payload.canceledById,
-        attempt: null,
-        submissionNote: null,
-        resubmissionOfSubmissionId: null,
-        resubmissionReason: null,
-        ackStatus: null,
-        ackCode: null,
-        ackNote: null,
-        rejectionReasonCode: null,
-        rejectionReasonDetail: null,
-        evidenceNote: null
-      });
-      continue;
-    }
-
-    if (log.action === "payroll.year_end.filing_package_reopened") {
-      const payload = asYearEndFilingPackageReopenedAuditPayload(log.payload);
-      if (!payload || payload.submissionId !== submissionId) {
-        continue;
-      }
-      timeline.push({
-        action: "reopened",
-        submissionId: payload.submissionId,
-        occurredAt: payload.reopenedAt,
-        actorRole: payload.reopenedByRole,
-        actorId: payload.reopenedById,
-        attempt: null,
-        submissionNote: null,
-        resubmissionOfSubmissionId: null,
-        resubmissionReason: null,
-        ackStatus: null,
-        ackCode: null,
-        ackNote: null,
-        rejectionReasonCode: null,
-        rejectionReasonDetail: null,
-        evidenceNote: null
-      });
-      continue;
-    }
-
-    if (log.action === "payroll.year_end.filing_evidence_note_added") {
-      const payload = asYearEndFilingEvidenceNoteAddedAuditPayload(log.payload);
-      if (!payload || payload.submissionId !== submissionId) {
-        continue;
-      }
-      timeline.push({
-        action: "evidence_note_added",
-        submissionId: payload.submissionId,
-        occurredAt: payload.notedAt,
-        actorRole: payload.notedByRole,
-        actorId: payload.notedById,
-        attempt: null,
-        submissionNote: null,
-        resubmissionOfSubmissionId: null,
-        resubmissionReason: null,
-        ackStatus: null,
-        ackCode: null,
-        ackNote: null,
-        rejectionReasonCode: null,
-        rejectionReasonDetail: null,
-        evidenceNote: payload.note
-      });
-    }
-  }
-
-  const actionOrder: Record<PayrollYearEndFilingTimelineAction, number> = {
-    submitted: 0,
-    resubmitted: 1,
-    canceled: 2,
-    reopened: 3,
-    acknowledged: 4,
-    evidence_note_added: 5
-  };
-
-  return timeline.sort((left, right) => {
-    const timeDelta = Date.parse(left.occurredAt) - Date.parse(right.occurredAt);
-    if (timeDelta !== 0) {
-      return timeDelta;
-    }
-    const actionDelta = actionOrder[left.action] - actionOrder[right.action];
-    if (actionDelta !== 0) {
-      return actionDelta;
-    }
-    return (left.evidenceNote ?? "").localeCompare(right.evidenceNote ?? "");
   });
 }
 
@@ -4482,7 +4119,19 @@ export async function acknowledgePayrollYearEndFilingPackage(
   const actorId = context.actor?.id ?? null;
   const acknowledgedAt = new Date().toISOString();
   const entityId = `${input.year}_${input.employeeId}`;
-  const ackPayload: YearEndFilingPackageAcknowledgedAuditPayload = {
+  const ackPayload: {
+    submissionId: string;
+    settlementHash: string | null;
+    expectedSettlementHash: string | null;
+    ackStatus: PayrollYearEndFilingAckStatus;
+    ackCode: string | null;
+    ackNote: string | null;
+    rejectionReasonCode: string | null;
+    rejectionReasonDetail: string | null;
+    acknowledgedAt: string;
+    acknowledgedByRole: string;
+    acknowledgedById: string | null;
+  } = {
     submissionId: input.submissionId,
     settlementHash: submissionSettlementHash,
     expectedSettlementHash: expectedSettlementHash,
@@ -4564,7 +4213,12 @@ export async function cancelPayrollYearEndFilingPackage(
   const actorId = context.actor?.id ?? null;
   const canceledAt = new Date().toISOString();
   const entityId = `${input.year}_${input.employeeId}`;
-  const payload: YearEndFilingPackageCanceledAuditPayload = {
+  const payload: {
+    submissionId: string;
+    canceledAt: string;
+    canceledByRole: string;
+    canceledById: string | null;
+  } = {
     submissionId: input.submissionId,
     canceledAt,
     canceledByRole: actorRole,
@@ -4638,7 +4292,12 @@ export async function reopenPayrollYearEndFilingPackage(
   const actorId = context.actor?.id ?? null;
   const reopenedAt = new Date().toISOString();
   const entityId = `${input.year}_${input.employeeId}`;
-  const payload: YearEndFilingPackageReopenedAuditPayload = {
+  const payload: {
+    submissionId: string;
+    reopenedAt: string;
+    reopenedByRole: string;
+    reopenedById: string | null;
+  } = {
     submissionId: input.submissionId,
     reopenedAt,
     reopenedByRole: actorRole,
@@ -4741,7 +4400,7 @@ export async function listPayrollYearEndFilingSubmissionTimeline(
     year: input.year,
     employeeId: input.employeeId
   });
-  const timeline = buildYearEndFilingSubmissionTimeline(logs, input.submissionId);
+  const timeline = buildYearEndFilingSubmissionTimelineCore(logs, input.submissionId) as PayrollYearEndFilingTimelineEntry[];
 
   return {
     submission,
