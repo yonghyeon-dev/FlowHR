@@ -4,6 +4,7 @@ export type PayrollYearEndSettlementResponse = {
     employeeId: string;
     periodStart: string;
     periodEnd: string;
+    inputVectorHash: string;
     runStates: {
       totalRuns: number;
       confirmedRuns: number;
@@ -52,6 +53,7 @@ export type PayrollYearEndRecalculationResponse = {
     employeeId: string;
     periodStart: string;
     periodEnd: string;
+    inputVectorHash: string;
     runStates: {
       totalRuns: number;
       confirmedRuns: number;

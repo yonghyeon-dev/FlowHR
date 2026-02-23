@@ -39,6 +39,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
     { href: "/employee/payslips", label: t("employee.nav.payslips") },
     { href: "/employee/payslip-receipts", label: t("employee.nav.payslipReceipts") },
     { href: "/employee/withholding-receipt", label: t("employee.nav.withholdingReceipt") },
+    { href: "/employee/year-end-input", label: t("employee.nav.yearEndInput") },
     { href: "/employee/payslips#payslip-search-sort", label: t("employee.nav.payslipSearchSort") },
     { href: "/employee/payslips#status-feedback", label: t("employee.nav.statusFeedback") },
     { href: "/employee/payslips#compare-view", label: t("employee.nav.compareView") }
@@ -82,6 +83,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
             <Link href="/employee/payslips">{t("employee.nav.payslips")}</Link>
             <Link href="/employee/payslip-receipts">{t("employee.nav.payslipReceipts")}</Link>
             <Link href="/employee/withholding-receipt">{t("employee.nav.withholdingReceipt")}</Link>
+            <Link href="/employee/year-end-input">{t("employee.nav.yearEndInput")}</Link>
             <Link href="/employee/payslips#payslip-search-sort">{t("employee.nav.payslipSearchSort")}</Link>
             <Link href="/employee/payslips#status-feedback">{t("employee.nav.statusFeedback")}</Link>
             <Link href="/employee/payslips#compare-view">{t("employee.nav.compareView")}</Link>

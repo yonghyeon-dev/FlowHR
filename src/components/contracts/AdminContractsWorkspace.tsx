@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type ContractTemplate = {
@@ -177,6 +178,9 @@ export default function AdminContractsWorkspace() {
         <div>
           <h1 className="page-title">E-Contract Workspace</h1>
           <p className="page-subtitle">Template CRUD, approval-gated send, employee signature, and renewal lifecycle.</p>
+          <div className="contract-action-row">
+            <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">Open Template Builder</Link>
+          </div>
         </div>
       </header>
 

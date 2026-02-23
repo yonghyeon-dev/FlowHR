@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: FlowHR Contracts API
-  version: 0.1.0
+  version: 0.2.0
 paths:
   /contracts/templates:
     get:
@@ -37,6 +37,10 @@ paths:
     post:
       summary: Employee contract response
       description: Employee signs or rejects sent contract. SIGN action records signature hash evidence.
+  /contracts/documents/{documentId}/signature-evidence:
+    get:
+      summary: Read contract signature evidence artifact
+      description: Returns signed-contract signature evidence artifact (`format=json|text`) with deterministic `contentSha256` for employee owner or privileged contract-admin actors.
   /contracts/documents/{documentId}/expire:
     post:
       summary: Manually expire contract document

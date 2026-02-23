@@ -73,6 +73,10 @@ type StatutoryKrBaselineDeductions = {
     incomeTaxLookupTable?: Array<{
       upToKrw: number | null;
       taxKrw: number;
+      dependentTaxKrw?: Array<{
+        dependentCount: number;
+        taxKrw: number;
+      }>;
     }>;
     incomeTaxLookupPresetId?: string;
     incomeTaxLookupPresetAuto?: boolean;
@@ -597,6 +601,7 @@ type YearEndSettlementSummary = {
   employeeId: string;
   periodStart: string;
   periodEnd: string;
+  inputVectorHash: string;
   runStates: YearEndRunStates;
   annualTotalsKrw: PayrollTotalsKrw;
   settlementKrw: YearEndSettlementKrw;
@@ -622,6 +627,7 @@ type RecalculatePayrollYearEndSettlementResult = {
     employeeId: string;
     periodStart: string;
     periodEnd: string;
+    inputVectorHash: string;
     runStates: YearEndRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
     deductionEligibility: YearEndDeductionEligibilityInput;
@@ -675,6 +681,7 @@ type FinalizePayrollYearEndSettlementResult = {
     finalizationId: string;
     finalizedAt: string | null;
     finalizedByNote: string | null;
+    inputVectorHash: string;
     runStates: YearEndFilingGuardRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
     deductionEligibility: YearEndDeductionEligibilityInput;
@@ -1055,6 +1062,10 @@ type IncomeTaxBracket = {
 type IncomeTaxLookupRow = {
   upToKrw: number | null;
   taxKrw: number;
+  dependentTaxKrw?: Array<{
+    dependentCount: number;
+    taxKrw: number;
+  }>;
 };
 
 type StatutoryIncomeSplitItem = {
@@ -1456,6 +1467,43 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
       );
     }
     lastTaxKrw = taxKrw;
+    const dependentTaxKrw = row.dependentTaxKrw?.map((tier, tierIndex) => ({
+      dependentCount: toKrwInteger(
+        tier.dependentCount,
+        `statutory.incomeTaxLookupTable[${index}].dependentTaxKrw[${tierIndex}].dependentCount`
+      ),
+      taxKrw: toKrwInteger(
+        tier.taxKrw,
+        `statutory.incomeTaxLookupTable[${index}].dependentTaxKrw[${tierIndex}].taxKrw`
+      )
+    }));
+
+    if (dependentTaxKrw && dependentTaxKrw.length > 0) {
+      if (dependentTaxKrw[0]?.dependentCount !== 0) {
+        throw new ServiceError(
+          400,
+          "statutory.incomeTaxLookupTable dependentTaxKrw must start at dependentCount=0"
+        );
+      }
+      let lastDependentCount = -1;
+      let lastDependentTaxKrw = Number.POSITIVE_INFINITY;
+      for (const tier of dependentTaxKrw) {
+        if (tier.dependentCount <= lastDependentCount) {
+          throw new ServiceError(
+            400,
+            "statutory.incomeTaxLookupTable dependentTaxKrw dependentCount must be strictly increasing"
+          );
+        }
+        if (tier.taxKrw > lastDependentTaxKrw) {
+          throw new ServiceError(
+            400,
+            "statutory.incomeTaxLookupTable dependentTaxKrw taxKrw must be non-increasing"
+          );
+        }
+        lastDependentCount = tier.dependentCount;
+        lastDependentTaxKrw = tier.taxKrw;
+      }
+    }
 
     if (row.upToKrw === null) {
       if (index !== lookupTable.length - 1) {
@@ -1465,7 +1513,11 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
         );
       }
       hasOpenEnded = true;
-      normalized.push({ upToKrw: null, taxKrw });
+      normalized.push({
+        upToKrw: null,
+        taxKrw,
+        dependentTaxKrw: dependentTaxKrw && dependentTaxKrw.length > 0 ? dependentTaxKrw : undefined
+      });
       continue;
     }
 
@@ -1480,7 +1532,11 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
       );
     }
     lastFiniteUpper = upToKrw;
-    normalized.push({ upToKrw, taxKrw });
+    normalized.push({
+      upToKrw,
+      taxKrw,
+      dependentTaxKrw: dependentTaxKrw && dependentTaxKrw.length > 0 ? dependentTaxKrw : undefined
+    });
   }
 
   if (!hasOpenEnded) {
@@ -1556,10 +1612,55 @@ function calculateProgressiveIncomeTaxKrw(taxableBaseKrw: number, brackets: Inco
   return toKrwInteger(Math.round(tax), "statutory.incomeTaxKrw");
 }
 
-function calculateLookupIncomeTaxKrw(taxableBaseKrw: number, lookupTable: IncomeTaxLookupRow[]) {
+type LookupIncomeTaxResolution = {
+  taxKrw: number;
+  selectedIncomeTaxLookupRow: {
+    upToKrw: number | null;
+    taxKrw: number;
+  };
+  selectedIncomeTaxLookupDependentTier: {
+    dependentCount: number;
+    taxKrw: number;
+  } | null;
+};
+
+function calculateLookupIncomeTaxKrw(
+  taxableBaseKrw: number,
+  dependentCount: number,
+  lookupTable: IncomeTaxLookupRow[]
+): LookupIncomeTaxResolution {
   for (const row of lookupTable) {
     if (row.upToKrw === null || taxableBaseKrw <= row.upToKrw) {
-      return row.taxKrw;
+      if (!row.dependentTaxKrw || row.dependentTaxKrw.length === 0) {
+        return {
+          taxKrw: row.taxKrw,
+          selectedIncomeTaxLookupRow: {
+            upToKrw: row.upToKrw,
+            taxKrw: row.taxKrw
+          },
+          selectedIncomeTaxLookupDependentTier: null
+        };
+      }
+
+      let selectedTier = row.dependentTaxKrw[0];
+      for (const tier of row.dependentTaxKrw) {
+        if (tier.dependentCount <= dependentCount) {
+          selectedTier = tier;
+          continue;
+        }
+        break;
+      }
+      return {
+        taxKrw: selectedTier.taxKrw,
+        selectedIncomeTaxLookupRow: {
+          upToKrw: row.upToKrw,
+          taxKrw: row.taxKrw
+        },
+        selectedIncomeTaxLookupDependentTier: {
+          dependentCount: selectedTier.dependentCount,
+          taxKrw: selectedTier.taxKrw
+        }
+      };
     }
   }
 
@@ -2124,14 +2225,19 @@ export async function previewPayrollWithDeductions(
       : incomeTaxBrackets
         ? "progressive_brackets"
         : "flat_rate";
-    const preCreditIncomeTaxKrw = incomeTaxLookupTable
-      ? calculateLookupIncomeTaxKrw(taxableBaseKrw, incomeTaxLookupTable)
+    const lookupIncomeTaxResolution = incomeTaxLookupTable
+      ? calculateLookupIncomeTaxKrw(taxableBaseKrw, dependentCount, incomeTaxLookupTable)
+      : null;
+    const preCreditIncomeTaxKrw = lookupIncomeTaxResolution
+      ? lookupIncomeTaxResolution.taxKrw
       : incomeTaxBrackets
         ? calculateProgressiveIncomeTaxKrw(taxableBaseKrw, incomeTaxBrackets)
         : toKrwInteger(Math.round(taxableBaseKrw * incomeTaxRate), "statutory.incomeTaxKrw");
-    const selectedIncomeTaxLookupRow = incomeTaxLookupTable
-      ? incomeTaxLookupTable.find((row) => row.upToKrw === null || taxableBaseKrw <= row.upToKrw) ??
-        null
+    const selectedIncomeTaxLookupRow = lookupIncomeTaxResolution
+      ? lookupIncomeTaxResolution.selectedIncomeTaxLookupRow
+      : null;
+    const selectedIncomeTaxLookupDependentTier = lookupIncomeTaxResolution
+      ? lookupIncomeTaxResolution.selectedIncomeTaxLookupDependentTier
       : null;
     const dependentTaxCreditKrw = dependentCount * dependentTaxCreditPerPersonKrw;
     const totalTaxCreditKrw = additionalTaxCreditKrw + dependentTaxCreditKrw;
@@ -2245,6 +2351,7 @@ export async function previewPayrollWithDeductions(
         asOf: incomeTaxLookupAsOf.toISOString()
       },
       selectedIncomeTaxLookupRow,
+      selectedIncomeTaxLookupDependentTier,
       contributionBasesKrw: {
         nationalPensionBaseKrw,
         healthInsuranceBaseKrw,
@@ -2971,6 +3078,30 @@ function normalizeYearEndTaxCreditItems(
       "taxCredits.additionalTaxCreditKrw"
     )
   };
+}
+
+function buildYearEndInputVectorHash(input: {
+  year: number;
+  employeeId: string;
+  nonTaxableAnnualIncomeKrw: number;
+  annualIncomeTaxRate: number;
+  localIncomeTaxRate: number;
+  taxCredits: YearEndTaxCreditItemsInput;
+  deductionItems: YearEndDeductionItemsInput | null;
+  deductionEligibility: YearEndDeductionEligibilityInput | null;
+}) {
+  const normalizedPayload = {
+    version: "v1",
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: input.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: input.annualIncomeTaxRate,
+    localIncomeTaxRate: input.localIncomeTaxRate,
+    taxCredits: input.taxCredits,
+    deductionItems: input.deductionItems,
+    deductionEligibility: input.deductionEligibility
+  };
+  return createHash("sha256").update(JSON.stringify(normalizedPayload)).digest("hex");
 }
 
 function applyYearEndTaxCreditCapRule(
@@ -4301,12 +4432,24 @@ export async function previewPayrollYearEndSettlement(
 
   const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const settled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
+  const inputVectorHash = buildYearEndInputVectorHash({
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: settled.settlementKrw.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
+    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
+    taxCredits: normalizedTaxCredits,
+    deductionItems: null,
+    deductionEligibility: null
+  });
 
   const payload: YearEndSettlementSummary = {
     year: input.year,
     employeeId: input.employeeId,
     periodStart: snapshot.periodStart.toISOString(),
     periodEnd: snapshot.periodEnd.toISOString(),
+    inputVectorHash,
     runStates: {
       totalRuns: snapshot.runs.length,
       confirmedRuns: snapshot.confirmedRuns.length,
@@ -4357,6 +4500,7 @@ export async function recalculatePayrollYearEndSettlement(
   const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
   const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
   const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
     normalizedDeductionItems,
     normalizedDeductionEligibility
@@ -4374,12 +4518,23 @@ export async function recalculatePayrollYearEndSettlement(
     input,
     deductionCapApplied.cappedIncomeDeductionKrw
   );
+  const inputVectorHash = buildYearEndInputVectorHash({
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: recalculatedSettled.settlementKrw.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
+    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
+    taxCredits: normalizedTaxCredits,
+    deductionItems: normalizedDeductionItems,
+    deductionEligibility: normalizedDeductionEligibility
+  });
 
   const payload = {
     year: input.year,
     employeeId: input.employeeId,
     periodStart: snapshot.periodStart.toISOString(),
     periodEnd: snapshot.periodEnd.toISOString(),
+    inputVectorHash,
     runStates: {
       totalRuns: snapshot.runs.length,
       confirmedRuns: snapshot.confirmedRuns.length,
@@ -4471,6 +4626,7 @@ export async function finalizePayrollYearEndSettlement(
 
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
   const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
   const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
     normalizedDeductionItems,
     normalizedDeductionEligibility
@@ -4497,6 +4653,16 @@ export async function finalizePayrollYearEndSettlement(
     capRulesKrw: deductionCapApplied.capRulesKrw,
     capAppliedByItemKrw: deductionCapApplied.capAppliedByItemKrw
   };
+  const inputVectorHash = buildYearEndInputVectorHash({
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: settled.settlementKrw.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
+    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
+    taxCredits: normalizedTaxCredits,
+    deductionItems: normalizedDeductionItems,
+    deductionEligibility: normalizedDeductionEligibility
+  });
   const settlementHash = buildYearEndSettlementHash({
     year: input.year,
     employeeId: input.employeeId,
@@ -4518,6 +4684,29 @@ export async function finalizePayrollYearEndSettlement(
       computedSettlementHash: settlementHash
     });
   }
+  const entityId = `${input.year}_${input.employeeId}`;
+  if (input.apply) {
+    const finalizationLogs = await context.dataAccess.audit.list({
+      actions: ["payroll.year_end.settlement_finalized"],
+      entityType: "PayrollYearEnd",
+      entityId,
+      limit: 200
+    });
+    const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+    const latestFinalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+    if (latestFinalizationPayload?.finalized && latestFinalizationPayload.finalizedAt) {
+      const latestSettlementHash = resolveYearEndSettlementHashFromFinalizationPayload(
+        latestFinalizationPayload
+      );
+      if (latestSettlementHash === settlementHash) {
+        throw new ServiceError(409, "year-end settlement already finalized for same hash", {
+          settlementHash,
+          latestFinalizationId: latestFinalizationPayload.finalizationId,
+          latestFinalizedAt: latestFinalizationPayload.finalizedAt
+        });
+      }
+    }
+  }
   const finalizationId = `YEF-${input.year}-${input.employeeId}`;
   const finalizedAt = input.apply ? new Date().toISOString() : null;
   const finalizedByNote = input.finalizedByNote?.trim() ? input.finalizedByNote.trim() : null;
@@ -4532,6 +4721,7 @@ export async function finalizePayrollYearEndSettlement(
     finalizationId,
     finalizedAt,
     finalizedByNote,
+    inputVectorHash,
     runStates: filingGuard.runStates,
     annualTotalsKrw: snapshot.totalsKrw,
     deductionEligibility: normalizedDeductionEligibility,
@@ -4542,7 +4732,6 @@ export async function finalizePayrollYearEndSettlement(
     blockingReasons: filingGuard.blockingReasons
   };
 
-  const entityId = `${input.year}_${input.employeeId}`;
   if (input.apply) {
     await context.dataAccess.audit.append({
       action: "payroll.year_end.settlement_finalized",

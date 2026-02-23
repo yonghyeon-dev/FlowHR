@@ -1,11 +1,12 @@
 owner: contracts-agent
-version: 0.1.0
+version: 0.2.0
 scope:
   in:
     - contract template CRUD with version increment rules
     - contract document draft-to-send lifecycle with employee response states
     - employee self-service contract inbox read/respond flow
     - signature hash evidence capture on SIGN action
+    - signature evidence read/download workflow (`GET /contracts/documents/{documentId}/signature-evidence`)
     - approval execution integration before contract send
     - manual expiry and renewal operation
   out:
@@ -55,6 +56,9 @@ api:
     - method: POST
       path: /contracts/documents/{documentId}/respond
       description: Employee sign/reject action with signature hash evidence support.
+    - method: GET
+      path: /contracts/documents/{documentId}/signature-evidence
+      description: Read signed-contract signature evidence artifact (`format=json|text`) with deterministic `contentSha256`.
     - method: POST
       path: /contracts/documents/{documentId}/expire
       description: Manual expire operation.
@@ -92,6 +96,8 @@ invariants:
   - Contract document send is blocked when approval is required and not approved.
   - Employee actor can respond only to own SENT document.
   - SIGN response records deterministic signature hash and evidence hash.
+  - Signature evidence read/download is allowed only for signed document owner employee or privileged contract-admin actors.
+  - Signature evidence artifact `contentSha256` equals sha256 of returned artifact `content`.
   - expectedDocumentHash mismatch returns conflict and blocks SIGN/REJECT mutation.
   - Renew operation creates a new DRAFT document and marks source status as RENEWED.
 risk:
@@ -109,13 +115,16 @@ test_plan:
     - template create/update/list lifecycle
     - document create/request-approval/approval/send lifecycle
     - employee sign/reject own document flow
+    - signed-document signature evidence read/download flow (`format=json|text`)
     - manual expire and renew flow
   regression:
     - approval-required send guard remains enforced
     - employee cannot respond to non-own document
+    - signature evidence artifact hash (`contentSha256`) remains deterministic for same signed snapshot replay
   authorization:
     - admin/manager/payroll_operator contract action checks
-    - employee own-scope checks for list/respond
+    - employee own-scope checks for list/respond/signature-evidence
+    - non-owner employee cannot read signature evidence of another employee document
   payroll_accuracy:
     - approval execution integration state mapping remains deterministic
 observability:
@@ -133,6 +142,7 @@ observability:
     - contract_template_count
     - contract_document_pending_approval_count
     - contract_document_signed_count
+    - contract_signature_evidence_download_count
 rollout:
   strategy: dark-launch
   steps:
@@ -144,4 +154,14 @@ rollback:
     - revert contracts API and UI routes
     - keep audit logs for traceability
 breaking_changes: false
-consumer_impact: "Contract v0.1.0 introduces additive contracts domain APIs and UI routes for template/document lifecycle without breaking existing APIs."
+consumer_impact: "Contract v0.2.0 additively introduces signed-contract signature evidence read/download API (`GET /contracts/documents/{documentId}/signature-evidence`, `format=json|text`) with deterministic artifact hash metadata (`contentSha256`), while preserving existing contracts APIs (no breaking change)."
+references:
+  - work-items/WI-0276-contract-template-crud-and-versioning.md
+  - work-items/WI-0277-contract-document-draft-and-send-lifecycle.md
+  - work-items/WI-0278-employee-contract-inbox-self-service.md
+  - work-items/WI-0279-contract-signature-hash-evidence-capture.md
+  - work-items/WI-0280-contract-approval-integration-with-existing-approval-execution.md
+  - work-items/WI-0281-manual-contract-expiry-and-renewal-management.md
+  - work-items/WI-0288-contract-template-builder-v1.md
+  - work-items/WI-0289-contract-signature-evidence-read-download.md
+  - work-items/WI-0290-payroll-contract-core-journey-e2e-bundle.md

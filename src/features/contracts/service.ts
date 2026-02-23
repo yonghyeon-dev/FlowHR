@@ -142,6 +142,28 @@ type ExpireContractDocumentInput = {
   expiredAt?: Date;
 };
 
+type GetContractDocumentSignatureEvidenceInput = {
+  format: "json" | "text";
+};
+
+type GetContractDocumentSignatureEvidenceResult = {
+  evidence: {
+    documentId: string;
+    employeeId: string;
+    status: ContractDocumentStatus;
+    respondedAt: string;
+    signatureHash: string;
+    signatureEvidenceHash: string;
+    documentHash: string;
+    format: "json" | "text";
+    fileName: string;
+    contentType: string;
+    contentSha256: string;
+    generatedAt: string;
+    content: string;
+  };
+};
+
 const CONTRACT_TEMPLATE_ENTITY_TYPE = "ContractTemplate";
 const CONTRACT_DOCUMENT_ENTITY_TYPE = "ContractDocument";
 const CONTRACT_APPROVAL_DOMAIN = "PAYROLL";
@@ -482,6 +504,51 @@ function hashContractDocument(input: {
       input.templateBody
     ].join("|")
   );
+}
+
+function buildContractSignatureEvidenceArtifact(
+  document: ContractDocumentRecord,
+  format: "json" | "text"
+): {
+  fileName: string;
+  contentType: string;
+  content: string;
+} {
+  const baseName = `contract-signature-evidence-${document.id}`;
+  if (format === "text") {
+    const lines = [
+      "FlowHR Contract Signature Evidence",
+      `Document ID: ${document.id}`,
+      `Employee ID: ${document.employeeId}`,
+      `Status: ${document.status}`,
+      `Responded At: ${document.respondedAt ?? "-"}`,
+      `Document Hash: ${document.documentHash}`,
+      `Signature Hash: ${document.signatureHash ?? "-"}`,
+      `Signature Evidence Hash: ${document.signatureEvidenceHash ?? "-"}`
+    ];
+    return {
+      fileName: `${baseName}.txt`,
+      contentType: "text/plain; charset=utf-8",
+      content: lines.join("\n")
+    };
+  }
+  return {
+    fileName: `${baseName}.json`,
+    contentType: "application/json; charset=utf-8",
+    content: JSON.stringify(
+      {
+        documentId: document.id,
+        employeeId: document.employeeId,
+        status: document.status,
+        respondedAt: document.respondedAt,
+        documentHash: document.documentHash,
+        signatureHash: document.signatureHash,
+        signatureEvidenceHash: document.signatureEvidenceHash
+      },
+      null,
+      2
+    )
+  };
 }
 
 async function findTemplateForActor(
@@ -1088,5 +1155,51 @@ export async function renewContractDocument(
   return {
     sourceDocument: source,
     renewedDocument
+  };
+}
+
+export async function getContractDocumentSignatureEvidence(
+  context: ServiceContext,
+  documentId: string,
+  input: GetContractDocumentSignatureEvidenceInput
+): Promise<GetContractDocumentSignatureEvidenceResult> {
+  const actor = requireActor(context);
+  const document = await findDocumentForActor(context, documentId);
+
+  const isOwnEmployee = actor.role === "employee" && actor.id === document.employeeId;
+  const isPrivileged = isContractAdminRole(actor.role);
+  if (!isOwnEmployee && !isPrivileged) {
+    throw new ServiceError(403, "contract signature evidence permission denied");
+  }
+
+  if (
+    document.status !== "SIGNED" ||
+    !document.respondedAt ||
+    !document.signatureHash ||
+    !document.signatureEvidenceHash
+  ) {
+    throw new ServiceError(404, "signed contract signature evidence not found");
+  }
+
+  const artifact = buildContractSignatureEvidenceArtifact(document, input.format);
+  const generatedAt = nowIso();
+  const contentSha256 = hash(artifact.content);
+
+  return {
+    evidence: {
+      documentId: document.id,
+      employeeId: document.employeeId,
+      status: document.status,
+      respondedAt: document.respondedAt,
+      signatureHash: document.signatureHash,
+      signatureEvidenceHash: document.signatureEvidenceHash,
+      documentHash: document.documentHash,
+      format: input.format,
+      fileName: artifact.fileName,
+      contentType: artifact.contentType,
+      contentSha256,
+      generatedAt,
+      content: artifact.content
+    }
   };
 }
