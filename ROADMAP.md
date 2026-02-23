@@ -271,10 +271,11 @@
 - WI-0232 급여 관리자 KR 프리셋 모드 공유 링크 입력 자동 반영 UX baseline(`parsePayrollKrPresetShareContext` 추가 + `/admin` 쿼리(`incomeSplitItemPresetId`/`taxableIncomeKrw`/`nonTaxableIncomeKrw`) 자동 반영 + 유효값 존재 시 `statutory_kr_baseline` 자동 전환 + WI-0232 회귀 테스트 추가)
 - WI-0233 급여 관리자 KR 프리셋 공유 링크 유효성 힌트/오류 피드백 UX baseline(`PayrollKrPresetShareLinkFeedbackPanel` 추가 + 적용값/무시된 invalid 쿼리값 요약 표시 + parser resolution(`query`/`invalid`) 확장 + WI-0233 회귀 테스트 추가)
 - WI-0234 급여 관리자 KR 프리셋 공유 링크 초기화/재적용 UX baseline(`PayrollKrPresetShareLinkFeedbackPanel` reset/reapply 액션 추가 + `/admin` 공유값 초기화/현재 쿼리 재적용 핸들러 연결 + API 계약 변경 없음 + WI-0234 회귀 테스트 추가)
+- WI-0235 관리자 KPI 대시보드 baseline(`src/app/admin/kpi` 신규 라우트 + `/api/approval/executions`/`/api/attendance/aggregates`/`/api/leave/requests`/`/api/payroll/runs` 기반 KPI 카드/이전 기간 비교 + API 로그 패널 + locale-aware copy + 컴포넌트 300줄 제한 분리 + WI-0235 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 급여 KR 정밀 계산 고도화(프리셋 공유 링크 canonical URL 정리 UX) 착수 (WI-0235 예정)
+- 다음: 관리자 실시간 근태 현황 baseline(`WI-P`) 착수 (WI-0236 예정)
 
 ### 현재 아키텍처
 
