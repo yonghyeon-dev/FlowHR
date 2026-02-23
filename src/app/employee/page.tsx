@@ -1566,8 +1566,11 @@ export default function EmployeeSelfServicePage() {
 
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          현재 환경은 <strong>{isKoLocale ? "운영(production)" : "production"}</strong>입니다. 출퇴근/휴가 API 호출을 위해 로그인
-          세션(Bearer)이 필요합니다:{" "}
+          {isKoLocale ? "현재 환경은 " : "Current environment is "}
+          <strong>{isKoLocale ? "운영(production)" : "production"}</strong>
+          {isKoLocale
+            ? "입니다. 출퇴근/휴가 API 호출을 위해 로그인 세션(Bearer 토큰)이 필요합니다: "
+            : ". Login session (Bearer token) is required for attendance/leave API calls: "}
           <Link href="/login">/login</Link>
         </p>
       ) : null}
@@ -1586,7 +1589,7 @@ export default function EmployeeSelfServicePage() {
           <strong>{pendingLeaveCount}</strong>
         </article>
         <article className="kpi-card">
-          <p>API 성공률</p>
+          <p>{isKoLocale ? "API 성공률" : "API success rate"}</p>
           <strong>{stats.successRate}%</strong>
         </article>
         <article className="kpi-card">
@@ -1605,10 +1608,16 @@ export default function EmployeeSelfServicePage() {
               {supabaseSession
                 ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"}`
                 : "현재 로그인되어 있지 않습니다."}{" "}
-              <span className="muted">(Bearer {usesBearerToken ? "ON" : "OFF"})</span>
+              <span className="muted">
+                (Bearer {isKoLocale ? (usesBearerToken ? "사용" : "미사용") : usesBearerToken ? "ON" : "OFF"})
+              </span>
             </p>
           ) : (
-            <p className="small muted">로컬 개발: Dev Header(x-actor-*) 모드가 기본입니다.</p>
+            <p className="small muted">
+              {isKoLocale
+                ? "로컬 개발: Dev Header(x-actor-*) 모드가 기본입니다."
+                : "Local dev: Dev Header (x-actor-*) mode is default."}
+            </p>
           )}
           {supabaseSessionError ? (
             <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
@@ -1623,7 +1632,7 @@ export default function EmployeeSelfServicePage() {
               </summary>
               <div className="input-grid" style={{ marginTop: 12 }}>
                 <label>
-                  Organization ID (선택)
+                  {isKoLocale ? "조직 ID (선택)" : "Organization ID (optional)"}
                   <input
                     value={organizationId}
                     placeholder="예: ORG-00001"
@@ -1636,10 +1645,14 @@ export default function EmployeeSelfServicePage() {
                 </label>
                 {showDevTools ? (
                   <label className="full">
-                    Bearer Access Token (override)
+                    {isKoLocale ? "Bearer 액세스 토큰 (재정의)" : "Bearer access token (override)"}
                     <textarea
                       rows={3}
-                      placeholder="비어 있으면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
+                      placeholder={
+                        isKoLocale
+                          ? "비어 있으면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
+                          : "If empty, Dev Header (local) or session (Bearer) will be used."
+                      }
                       value={accessToken}
                       onChange={(event) => setAccessToken(event.target.value)}
                     />
@@ -1664,8 +1677,15 @@ export default function EmployeeSelfServicePage() {
               </div>
               {showDevTools ? (
                 <p className="small muted" style={{ marginTop: 10 }}>
-                  (dev) Runtime Supabase URL: <code>{supabaseUrl}</code> / Auth Mode{" "}
-                  {usesBearerToken ? "Bearer Token" : "Dev Header"}
+                  {isKoLocale ? "(dev) 런타임 Supabase URL" : "(dev) runtime Supabase URL"}:{" "}
+                  <code>{supabaseUrl}</code> / {isKoLocale ? "인증 모드" : "Auth mode"}{" "}
+                  {usesBearerToken
+                    ? isKoLocale
+                      ? "Bearer 토큰"
+                      : "Bearer token"
+                    : isKoLocale
+                      ? "Dev Header"
+                      : "Dev Header"}
                 </p>
               ) : null}
             </details>
@@ -1819,7 +1839,7 @@ export default function EmployeeSelfServicePage() {
                 onChange={(event) => setRequestSearchScope(event.target.value as RequestSearchScope)}
               >
                 <option value="all">전체</option>
-                <option value="request_id">요청 ID</option>
+                <option value="request_id">{isKoLocale ? "요청 식별자" : "Request ID"}</option>
                 <option value="status">상태</option>
                 <option value="content">내용</option>
               </select>
@@ -1829,7 +1849,7 @@ export default function EmployeeSelfServicePage() {
               <input
                 value={requestSearchQuery}
                 onChange={(event) => setRequestSearchQuery(event.target.value)}
-                placeholder="예: pending, REQ-..., 메모/사유"
+                placeholder={isKoLocale ? "예: 대기, REQ-..., 메모/사유" : "e.g. pending, REQ-..., note/reason"}
               />
             </label>
             <label>
@@ -1997,7 +2017,7 @@ export default function EmployeeSelfServicePage() {
               현재 재제출 후보가 없습니다.
             </p>
           )}
-          <ul className="resubmit-candidate-list" aria-label={isKoLocale ? "??? ?? ??" : "resubmit candidate list"}>
+          <ul className="resubmit-candidate-list" aria-label={isKoLocale ? "재제출 후보 목록" : "resubmit candidate list"}>
             {resubmitCandidates.length === 0 ? (
               <li>
                 <strong>{listBadgeLabels.empty}</strong>
@@ -2164,9 +2184,9 @@ export default function EmployeeSelfServicePage() {
             <label>
               휴가 유형
               <select value={leaveType} onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}>
-                <option value="ANNUAL">연차(ANNUAL)</option>
-                <option value="SICK">병가(SICK)</option>
-                <option value="UNPAID">무급(UNPAID)</option>
+                <option value="ANNUAL">{toLeaveTypeLabel("ANNUAL")}</option>
+                <option value="SICK">{toLeaveTypeLabel("SICK")}</option>
+                <option value="UNPAID">{toLeaveTypeLabel("UNPAID")}</option>
               </select>
             </label>
             <label>
@@ -2397,10 +2417,15 @@ export default function EmployeeSelfServicePage() {
 
         {showDevTools ? (
           <article className="panel panel-log">
-            <h2>API 실행 로그</h2>
+            <h2>{isKoLocale ? "API 실행 로그" : "API execution logs"}</h2>
             <p className="small">
-              현재 실행 중: <strong>{pendingLabel ?? "없음"}</strong> / 총 호출 {stats.total}건 (성공{" "}
-              {stats.success}건, 실패 {stats.fail}건)
+              {isKoLocale ? "현재 실행 중" : "Running now"}: <strong>{pendingLabel ?? (isKoLocale ? "없음" : "none")}</strong>{" "}
+              / {isKoLocale ? "총 호출" : "Total calls"} {stats.total}
+              {isKoLocale ? "건 (성공 " : " ("}
+              {stats.success}
+              {isKoLocale ? "건, 실패 " : " success, "}
+              {stats.fail}
+              {isKoLocale ? "건)" : " fail)"}
             </p>
             <div className="actions">
               <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
