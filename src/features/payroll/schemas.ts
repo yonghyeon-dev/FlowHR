@@ -349,6 +349,7 @@ const yearEndDeductionEligibilitySchema = z.object({
   donationEligible: z.boolean().default(true),
   housingSavingsEligible: z.boolean().default(true)
 });
+const yearEndSettlementHashSchema = z.string().regex(/^[a-f0-9]{64}$/i);
 const defaultYearEndDeductionItems = {
   personalPensionKrw: 0,
   insurancePremiumKrw: 0,
@@ -400,7 +401,8 @@ export const finalizePayrollYearEndSettlementSchema = previewPayrollYearEndSettl
   deductionItems: yearEndDeductionItemsSchema.default(defaultYearEndDeductionItems),
   deductionEligibility: yearEndDeductionEligibilitySchema.default(defaultYearEndDeductionEligibility),
   apply: z.boolean().default(false),
-  finalizedByNote: z.string().min(1).max(120).optional()
+  finalizedByNote: z.string().min(1).max(120).optional(),
+  expectedSettlementHash: yearEndSettlementHashSchema.optional()
 });
 
 export const exportPayrollYearEndFilingDataSchema = z.object({

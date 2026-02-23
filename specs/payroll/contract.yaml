@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.44.0
+version: 1.45.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -35,6 +35,7 @@ scope:
     - year-end deduction eligibility validation guard workflow for recalculation/finalization inputs
     - year-end non-taxable annual income upper-bound guard workflow for preview/recalculation/finalization inputs
     - year-end withholding delta breakdown workflow (`additionalWithholdingDueKrw`/`withholdingRefundKrw`) for preview/recalculation/finalization/export outputs
+    - year-end finalization settlement-hash and stale apply guard workflow (`settlementHash`, `expectedSettlementHash`)
     - year-end deduction item caps and cap-applied breakdown for recalculation/finalization/export payloads
     - year-end tax credit caps and cap-applied breakdown for preview/recalculation/finalization/export payloads
     - year-end settlement finalization and filing-data export workflow for employee annual payroll totals
@@ -100,7 +101,7 @@ api:
       description: Recalculate annual payroll withholding settlement using deduction-item inputs, validate deduction eligibility flags and non-taxable annual income upper bound, apply year-end deduction item caps and year-end tax credit caps, and return baseline-vs-recalculated delta summary with withholding refund/additional-due and cap-applied breakdown.
     - method: POST
       path: /payroll/year-end/finalize-settlement
-      description: Preview or apply year-end settlement finalization with confirmed/distributed/receipt-confirmed guard chain, deduction eligibility validation guard, non-taxable annual income upper-bound validation, withholding refund/additional-due breakdown, finalization audit trace, and deduction/tax-credit cap-applied breakdown.
+      description: Preview or apply year-end settlement finalization with confirmed/distributed/receipt-confirmed guard chain, deduction eligibility validation guard, non-taxable annual income upper-bound validation, withholding refund/additional-due breakdown, deterministic settlementHash output, optional expectedSettlementHash stale-apply guard, finalization audit trace, and deduction/tax-credit cap-applied breakdown.
     - method: POST
       path: /payroll/year-end/export-filing-data
       description: Export filing-ready year-end payroll data for selected employee/year using latest finalized settlement payload, including withholding refund/additional-due and deduction/tax-credit cap-applied breakdown, with multi-format output (`json`/`csv`/`jsonl`/`hometax_csv`) and validation mode.
@@ -247,6 +248,7 @@ invariants:
   - Year-end settlement must aggregate CONFIRMED runs for selected employee/year and compute deterministic annual tax liability and withholding delta for same input.
   - Year-end settlement nonTaxableAnnualIncomeKrw input must not exceed annual gross pay aggregated from selected confirmed run set.
   - Year-end settlement withholding breakdown must satisfy `withholdingDeltaKrw = additionalWithholdingDueKrw - withholdingRefundKrw` and only one of additional/refund may be positive for same payload.
+  - Year-end finalization must return deterministic settlementHash for same input/run snapshot, and `apply=true` with mismatched expectedSettlementHash must be blocked.
   - Year-end deduction eligibility flags must block recalculation/finalization when an ineligible deduction item has non-zero input.
   - Year-end settlement recalculation must apply year-end deduction item caps per deduction item and return deterministic baseline-vs-recalculated delta for same run/input set.
   - Year-end settlement must apply year-end tax credit caps per tax-credit item and keep tax-credit cap-applied breakdown deterministic for same input.
@@ -305,6 +307,7 @@ risk:
     - Mis-entered year-end deduction-item inputs can skew annual settlement deltas.
     - Non-taxable annual income input exceeding annual gross pay can produce invalid taxable-base assumptions.
     - Missing or inconsistent withholding breakdown fields can obscure whether employee owes additional withholding or should receive refund.
+    - Missing stale-apply guard can finalize a changed settlement snapshot without operator awareness.
     - Missing or incorrect deduction eligibility flags can allow ineligible deduction items and skew annual settlement deltas.
     - Incorrect year-end deduction item caps or cap-application logic can distort annual tax-liability and withholding-delta outputs.
     - Incorrect year-end tax credit cap rules or cap-application logic can distort annual tax-liability and withholding-delta outputs.
@@ -331,6 +334,7 @@ test_plan:
     - payslip receipt confirmation ownership/distributed-state guards
     - year-end settlement tax-liability and withholding-delta formulas
     - year-end settlement withholding breakdown formulas (`additionalWithholdingDueKrw`/`withholdingRefundKrw`)
+    - year-end settlementHash generation and stale-apply expectedSettlementHash guard formula
     - year-end non-taxable annual income upper-bound guard formula
     - year-end settlement recalculation baseline-vs-deduction-input delta formulas
     - year-end deduction eligibility validation guard formulas
@@ -388,6 +392,7 @@ test_plan:
     - payslip distribution/receipt APIs reject requests when payroll_payslip_delivery_v1 is disabled
     - year-end settlement preview returns annual totals/tax-liability/withholding-delta deterministically for employee/year
     - year-end settlement preview/recalculation/finalization/export includes deterministic withholding refund/additional-due breakdown for same employee/year run set
+    - year-end finalization preview/apply returns deterministic settlementHash for same input/run snapshot and rejects `apply=true` when expectedSettlementHash mismatches
     - year-end settlement preview/recalculation/finalization rejects requests when nonTaxableAnnualIncomeKrw exceeds annual gross pay for selected employee/year
     - year-end settlement recalculation returns baseline/recalculated settlement and taxable-income delta deterministically for same employee/year run set
     - year-end settlement recalculation/finalization rejects ineligible deduction-item inputs deterministically when deduction eligibility flags are false for non-zero deduction items
@@ -439,6 +444,7 @@ test_plan:
     - year-end deduction eligibility validation guard deterministic replay via WI-0262 e2e
     - year-end non-taxable annual income upper-bound guard deterministic replay via WI-0263 e2e
     - year-end withholding delta refund/additional-due breakdown deterministic replay via WI-0264 e2e
+    - year-end finalization settlementHash and stale-apply guard deterministic replay via WI-0265 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
     - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
     - year-end filing submission/ack deterministic replay via WI-0191 e2e
@@ -492,6 +498,7 @@ test_plan:
     - payslip distribution and receipt confirmation state transitions stay deterministic
     - year-end tax-liability/withholding-delta and receipt-issue guard transitions stay deterministic
     - year-end withholding delta refund/additional-due breakdown remains deterministic for same input vectors
+    - year-end finalization settlementHash and stale-apply guard decisions remain deterministic for same input vectors
     - year-end deduction-item recalculation delta remains deterministic for same input vectors
     - year-end deduction eligibility validation guard decisions remain deterministic for same input vectors
     - year-end non-taxable annual income upper-bound guard decisions remain deterministic for same input vectors
@@ -604,7 +611,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.44.0 additively documents year-end withholding delta breakdown fields (`additionalWithholdingDueKrw`, `withholdingRefundKrw`) across `/payroll/year-end/preview-settlement`, `/payroll/year-end/recalculate-settlement`, `/payroll/year-end/finalize-settlement`, and `/payroll/year-end/export-filing-data` (no breaking API change), while preserving non-taxable upper-bound, deduction-eligibility, and deduction/tax-credit cap workflows across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.45.0 additively documents year-end finalization settlement hash output (`settlementHash`) and stale-apply guard input (`expectedSettlementHash`) on `/payroll/year-end/finalize-settlement` (no breaking API change), while preserving withholding breakdown, non-taxable upper-bound, deduction-eligibility, and deduction/tax-credit cap workflows across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -638,6 +645,7 @@ references:
   - work-items/WI-0262-payroll-year-end-deduction-eligibility-validation-guards.md
   - work-items/WI-0263-payroll-year-end-non-taxable-income-upper-bound-guard.md
   - work-items/WI-0264-payroll-year-end-withholding-delta-breakdown-ux.md
+  - work-items/WI-0265-payroll-year-end-settlement-hash-and-stale-apply-guard.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
