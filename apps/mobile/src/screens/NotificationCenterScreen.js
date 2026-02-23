@@ -2,9 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import ShellCard from "../components/ShellCard";
-import { loadNotificationInbox, loadNotificationPreference, saveNotificationInbox, saveNotificationPreference } from "../lib/notificationStore";
+import {
+  appendLiveMockNotification,
+  buildNotificationCategoryStats,
+  filterNotificationsByCategory,
+  formatSyncClock,
+  sortNotificationsNewest
+} from "../lib/notificationFeed";
+import {
+  loadNotificationInbox,
+  loadNotificationPreference,
+  saveNotificationInbox,
+  saveNotificationPreference
+} from "../lib/notificationStore";
 import { mapFlowHrNotification, permissionLabel, registerDevicePushTokenAsync, requestPushPermissionAsync } from "../lib/notifications";
 import { colors, spacing } from "../theme/tokens";
+
+const LIVE_SYNC_MS = 30000;
 
 const PREFERENCE_LABEL = {
   approvalRequest: "승인 요청 알림",
@@ -12,12 +26,32 @@ const PREFERENCE_LABEL = {
   payslipReady: "명세서 발행 알림"
 };
 
+const CATEGORY_LABEL = {
+  all: "전체",
+  approvalRequest: "승인 요청",
+  approvalResult: "승인 결과",
+  payslipReady: "명세서"
+};
+
+function normalizeInbox(messages) {
+  return sortNotificationsNewest(messages.map(mapFlowHrNotification));
+}
+
 export default function NotificationCenterScreen({ session }) {
   const [loading, setLoading] = useState(true);
   const [permission, setPermission] = useState("undetermined");
   const [pushToken, setPushToken] = useState("");
   const [preference, setPreference] = useState({});
   const [inbox, setInbox] = useState([]);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [liveSyncEnabled, setLiveSyncEnabled] = useState(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState("");
+
+  async function refreshInbox() {
+    const messages = await loadNotificationInbox();
+    setInbox(normalizeInbox(messages));
+    setLastSyncedAt(new Date().toISOString());
+  }
 
   useEffect(() => {
     let active = true;
@@ -27,7 +61,8 @@ export default function NotificationCenterScreen({ session }) {
           return;
         }
         setPreference(pref);
-        setInbox(messages.map(mapFlowHrNotification));
+        setInbox(normalizeInbox(messages));
+        setLastSyncedAt(new Date().toISOString());
         setLoading(false);
       })
       .catch(() => {
@@ -40,7 +75,19 @@ export default function NotificationCenterScreen({ session }) {
     };
   }, []);
 
-  const unreadCount = useMemo(() => inbox.filter((item) => !item.read).length, [inbox]);
+  useEffect(() => {
+    if (!liveSyncEnabled) {
+      return () => {};
+    }
+    const timer = setInterval(() => {
+      refreshInbox().catch(() => {});
+    }, LIVE_SYNC_MS);
+    return () => clearInterval(timer);
+  }, [liveSyncEnabled]);
+
+  const categoryStats = useMemo(() => buildNotificationCategoryStats(inbox), [inbox]);
+  const filteredInbox = useMemo(() => filterNotificationsByCategory(inbox, activeCategory), [activeCategory, inbox]);
+  const unreadCount = categoryStats.all?.unread ?? 0;
 
   async function enablePush() {
     const status = await requestPushPermissionAsync();
@@ -65,16 +112,32 @@ export default function NotificationCenterScreen({ session }) {
     await saveNotificationInbox(next);
   }
 
+  async function appendLiveEvent() {
+    const next = appendLiveMockNotification(inbox);
+    setInbox(next);
+    await saveNotificationInbox(next);
+    setLastSyncedAt(new Date().toISOString());
+  }
+
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>알림 센터</Text>
-        <Text style={styles.subtitle}>푸시 권한, 알림 선호, 최근 알림 내역을 한 화면에서 관리합니다.</Text>
+        <Text style={styles.subtitle}>실시간 업데이트 기준으로 푸시 권한, 선호, 알림 피드를 관리합니다.</Text>
 
         <ShellCard title="푸시 권한 상태" subtitle={`상태: ${permissionLabel(permission)}`}>
           <Pressable style={styles.btn} onPress={enablePush}>
             <Text style={styles.btnText}>권한 요청 / 갱신</Text>
           </Pressable>
+          <View style={styles.controlRow}>
+            <Pressable style={styles.secondaryBtn} onPress={() => refreshInbox()}>
+              <Text style={styles.secondaryBtnText}>지금 새로고침</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryBtn} onPress={() => setLiveSyncEnabled((value) => !value)}>
+              <Text style={styles.secondaryBtnText}>{liveSyncEnabled ? "라이브 동기화 ON" : "라이브 동기화 OFF"}</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.meta}>last sync: {formatSyncClock(lastSyncedAt)}</Text>
           <Text style={styles.meta}>tenant: {session.tenantId}</Text>
           <Text style={styles.meta}>actor: {session.actorId}</Text>
           {pushToken ? <Text style={styles.token}>push token: {pushToken}</Text> : null}
@@ -93,16 +156,38 @@ export default function NotificationCenterScreen({ session }) {
           ))}
         </ShellCard>
 
-        <ShellCard title="최근 알림" subtitle={loading ? "로딩 중..." : `미확인 ${unreadCount}건`}>
+        <ShellCard title="피드 필터" subtitle={`현재 필터: ${CATEGORY_LABEL[activeCategory]} · 미확인 ${unreadCount}건`}>
+          <View style={styles.categoryRow}>
+            {Object.entries(CATEGORY_LABEL).map(([key, label]) => {
+              const stat = categoryStats[key] ?? { total: 0, unread: 0 };
+              return (
+                <Pressable
+                  key={key}
+                  style={[styles.categoryChip, activeCategory === key ? styles.categoryChipActive : null]}
+                  onPress={() => setActiveCategory(key)}
+                >
+                  <Text style={[styles.categoryText, activeCategory === key ? styles.categoryTextActive : null]}>
+                    {label} {stat.unread > 0 ? `(${stat.unread})` : ""}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Pressable style={styles.secondaryBtn} onPress={appendLiveEvent}>
+            <Text style={styles.secondaryBtnText}>실시간 이벤트 시뮬레이션</Text>
+          </Pressable>
+        </ShellCard>
+
+        <ShellCard title="최근 알림" subtitle={loading ? "로딩 중..." : `${filteredInbox.length}건`}>
           <Pressable style={styles.secondaryBtn} onPress={markAllRead}>
             <Text style={styles.secondaryBtnText}>모두 읽음 처리</Text>
           </Pressable>
-          {inbox.map((item) => (
+          {filteredInbox.map((item) => (
             <View key={item.id} style={[styles.item, item.read ? styles.itemRead : null]}>
               <Text style={styles.itemTitle}>{item.title}</Text>
               <Text style={styles.itemBody}>{item.body}</Text>
               <Text style={styles.itemMeta}>
-                {item.category} · {item.createdAt}
+                {CATEGORY_LABEL[item.category] ?? item.category} · {item.createdAt}
               </Text>
             </View>
           ))}
@@ -113,23 +198,10 @@ export default function NotificationCenterScreen({ session }) {
 }
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-    backgroundColor: colors.bg
-  },
-  content: {
-    padding: spacing.lg,
-    gap: spacing.md
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: colors.ink
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 14
-  },
+  page: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: spacing.lg, gap: spacing.md },
+  title: { fontSize: 24, fontWeight: "800", color: colors.ink },
+  subtitle: { color: colors.muted, fontSize: 14 },
   btn: {
     borderWidth: 1,
     borderColor: colors.primary,
@@ -138,11 +210,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center"
   },
-  btnText: {
-    color: colors.primary,
-    fontWeight: "700"
-  },
+  btnText: { color: colors.primary, fontWeight: "700" },
+  controlRow: { flexDirection: "row", gap: spacing.sm },
   secondaryBtn: {
+    flex: 1,
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: 12,
@@ -150,18 +221,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     alignItems: "center"
   },
-  secondaryBtnText: {
-    color: colors.ink,
-    fontWeight: "600"
-  },
-  meta: {
-    color: colors.muted,
-    fontSize: 12
-  },
-  token: {
-    color: colors.primary,
-    fontSize: 12
-  },
+  secondaryBtnText: { color: colors.ink, fontWeight: "600", fontSize: 12 },
+  meta: { color: colors.muted, fontSize: 12 },
+  token: { color: colors.primary, fontSize: 12 },
   preferenceRow: {
     borderWidth: 1,
     borderColor: colors.line,
@@ -173,11 +235,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between"
   },
-  preferenceLabel: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: "600"
-  },
+  preferenceLabel: { color: colors.ink, fontSize: 14, fontWeight: "600" },
   toggle: {
     borderWidth: 1,
     borderColor: colors.line,
@@ -186,18 +244,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4
   },
-  toggleOn: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft
+  toggleOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  toggleText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  toggleTextOn: { color: colors.primary },
+  categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  categoryChip: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 999,
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 7
   },
-  toggleText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "700"
-  },
-  toggleTextOn: {
-    color: colors.primary
-  },
+  categoryChipActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  categoryText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  categoryTextActive: { color: colors.primary },
   item: {
     borderWidth: 1,
     borderColor: colors.line,
@@ -206,20 +267,8 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     gap: 5
   },
-  itemRead: {
-    opacity: 0.65
-  },
-  itemTitle: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: "700"
-  },
-  itemBody: {
-    color: colors.muted,
-    fontSize: 13
-  },
-  itemMeta: {
-    color: colors.muted,
-    fontSize: 11
-  }
+  itemRead: { opacity: 0.65 },
+  itemTitle: { color: colors.ink, fontSize: 14, fontWeight: "700" },
+  itemBody: { color: colors.muted, fontSize: 13 },
+  itemMeta: { color: colors.muted, fontSize: 11 }
 });
