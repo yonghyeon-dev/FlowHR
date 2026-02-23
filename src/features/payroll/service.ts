@@ -2909,6 +2909,13 @@ function calculateYearEndSettlementKrw(
     input.nonTaxableAnnualIncomeKrw,
     "nonTaxableAnnualIncomeKrw"
   );
+  if (nonTaxableAnnualIncomeKrw > totalsKrw.grossPayKrw) {
+    throw new ServiceError(409, "year-end non-taxable annual income exceeds annual gross pay", {
+      nonTaxableAnnualIncomeKrw,
+      annualGrossPayKrw: totalsKrw.grossPayKrw,
+      overflowKrw: nonTaxableAnnualIncomeKrw - totalsKrw.grossPayKrw
+    });
+  }
   const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
   const taxCreditCapApplied = applyYearEndTaxCreditCaps(normalizedTaxCredits);
   const annualIncomeTaxRate = toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0;
