@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: FlowHR Contracts API
+  version: 0.1.0
+paths:
+  /contracts/templates:
+    get:
+      summary: List contract templates
+      description: Lists contract templates by organization/category/status/search filters.
+    post:
+      summary: Create contract template
+      description: Creates a new contract template with initial version=1.
+  /contracts/templates/{templateId}:
+    patch:
+      summary: Update contract template
+      description: Updates template fields and bumps version when content fields change.
+  /contracts/documents:
+    get:
+      summary: List contract documents
+      description: Lists contract documents for admin scope or employee own inbox.
+    post:
+      summary: Create contract document draft
+      description: Creates a draft contract document for selected employee/template.
+  /contracts/documents/{documentId}/request-approval:
+    post:
+      summary: Request contract send approval
+      description: Moves draft document into approval-requested state.
+  /contracts/documents/{documentId}/approval:
+    post:
+      summary: Approve or reject contract approval request
+      description: Applies generic approval execution action and updates contract approval state.
+  /contracts/documents/{documentId}/send:
+    post:
+      summary: Send contract document
+      description: Sends contract document; approval-complete is required unless bypass is explicitly set.
+  /contracts/documents/{documentId}/respond:
+    post:
+      summary: Employee contract response
+      description: Employee signs or rejects sent contract. SIGN action records signature hash evidence.
+  /contracts/documents/{documentId}/expire:
+    post:
+      summary: Manually expire contract document
+      description: Marks sent contract as expired for manual renewal flow.
+  /contracts/documents/{documentId}/renew:
+    post:
+      summary: Renew contract document
+      description: Creates renewal draft from a terminal contract document and marks source as renewed.

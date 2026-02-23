@@ -8,50 +8,40 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const adminContractsPage = readUtf8("src", "app", "admin", "contracts", "page.tsx");
+  const adminContractsWorkspace = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
   const globalCss = readUtf8("src", "app", "globals.css");
 
   assert.match(
     adminContractsPage,
-    /contractTemplateRows/,
-    "admin contracts page should define contract template rows"
+    /AdminContractsWorkspace/,
+    "admin contracts page should render contracts workspace component"
   );
   assert.match(
-    adminContractsPage,
-    /filteredContractTemplates/,
-    "admin contracts page should compute filtered contract templates"
+    adminContractsWorkspace,
+    /E-Contract Workspace/,
+    "contracts workspace should render workspace title"
   );
   assert.match(
-    adminContractsPage,
-    /contractSignatureReadinessCards/,
-    "admin contracts page should compute contract signature readiness cards"
+    adminContractsWorkspace,
+    /id=\"contract-template-library\"/,
+    "contracts workspace should expose template library section"
   );
   assert.match(
-    adminContractsPage,
-    /runContractReadinessAction/,
-    "admin contracts page should expose readiness action handler"
-  );
-
-  assert.match(
-    adminContractsPage,
-    /id="contract-template-library"/,
-    "admin contracts page should expose contract template library section"
-  );
-  assert.match(
-    adminContractsPage,
-    /id="contract-signature-readiness"/,
-    "admin contracts page should expose contract signature readiness section"
+    adminContractsWorkspace,
+    /id=\"contract-signature-readiness\"/,
+    "contracts workspace should expose lifecycle section"
   );
 
   assert.match(
-    adminContractsPage,
+    adminContractsWorkspace,
     /aria-label="contract template list"/,
-    "admin contracts page should render contract template list"
+    "contracts workspace should render contract template list"
   );
   assert.match(
-    adminContractsPage,
-    /aria-label="contract signature readiness list"/,
-    "admin contracts page should render contract signature readiness list"
+    adminContractsWorkspace,
+    /aria-label="contract document list"/,
+    "contracts workspace should render contract document list"
   );
 
   assert.match(
@@ -73,12 +63,12 @@ function run() {
   assert.match(
     globalCss,
     /\.panel-contract-signature-readiness/,
-    "contract signature readiness panel style should exist"
+    "contract lifecycle panel style should exist"
   );
   assert.match(
     globalCss,
     /\.contract-signature-readiness-list/,
-    "contract signature readiness list style should exist"
+    "contract lifecycle list style should exist"
   );
   assert.match(
     globalCss,

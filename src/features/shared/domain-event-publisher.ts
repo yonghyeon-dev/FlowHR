@@ -58,7 +58,16 @@ export const domainEventNames = [
   "leave.canceled.v1",
   "leave.accrual.settled.v1",
   "leave.policy.updated.v1",
-  "leave.promotion.notice.dispatched.v1"
+  "leave.promotion.notice.dispatched.v1",
+  "contract.template.created.v1",
+  "contract.template.updated.v1",
+  "contract.document.created.v1",
+  "contract.document.approval.requested.v1",
+  "contract.document.approval.decided.v1",
+  "contract.document.sent.v1",
+  "contract.document.responded.v1",
+  "contract.document.expired.v1",
+  "contract.document.renewed.v1"
 ] as const;
 
 export type DomainEventName = (typeof domainEventNames)[number];
