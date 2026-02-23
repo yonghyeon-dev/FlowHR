@@ -321,6 +321,7 @@ type ListPayrollYearEndFilingSubmissionsInput = {
   ackStatus?: PayrollYearEndFilingSubmissionAckStatusFilter;
   validationStatus?: PayrollYearEndFilingSubmissionValidationStatusFilter;
   transport?: PayrollYearEndFilingSubmissionTransportFilter;
+  settlementHash?: string;
   search?: string;
   sortBy?: PayrollYearEndFilingSubmissionSortBy;
   sortDirection?: PayrollYearEndFilingSubmissionSortDirection;
@@ -4575,6 +4576,17 @@ function normalizeYearEndFilingSubmissionSearch(search: string | undefined) {
   return normalized;
 }
 
+function normalizeYearEndFilingSubmissionSettlementHashFilter(settlementHash: string | undefined) {
+  const normalized = settlementHash?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (!/^[a-f0-9]{8,64}$/.test(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
 function matchesYearEndFilingSubmissionSearch(
   submission: PayrollYearEndFilingSubmissionSummary,
   normalizedSearch: string
@@ -4623,6 +4635,15 @@ function matchesYearEndFilingSubmissionFilters(
     return false;
   }
   if (filters.transport && filters.transport !== "all" && submission.transport !== filters.transport) {
+    return false;
+  }
+  const normalizedSettlementHash = normalizeYearEndFilingSubmissionSettlementHashFilter(
+    filters.settlementHash
+  );
+  if (
+    normalizedSettlementHash &&
+    !(submission.settlementHash ?? "").toLowerCase().startsWith(normalizedSettlementHash)
+  ) {
     return false;
   }
   const normalizedSearch = normalizeYearEndFilingSubmissionSearch(filters.search);

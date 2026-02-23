@@ -350,6 +350,7 @@ const yearEndDeductionEligibilitySchema = z.object({
   housingSavingsEligible: z.boolean().default(true)
 });
 const yearEndSettlementHashSchema = z.string().regex(/^[a-f0-9]{64}$/i);
+const yearEndSettlementHashFilterSchema = z.string().regex(/^[a-f0-9]{8,64}$/i);
 const defaultYearEndDeductionItems = {
   personalPensionKrw: 0,
   insurancePremiumKrw: 0,
@@ -456,6 +457,7 @@ export const listPayrollYearEndFilingSubmissionsQuerySchema = z.object({
   transport: z
     .enum(["manual_portal", "hometax_upload", "nts_api_mock", "all"])
     .optional(),
+  settlementHash: yearEndSettlementHashFilterSchema.optional(),
   search: z.string().trim().min(1).max(120).optional(),
   sortBy: z
     .enum(["submittedAt", "attempt", "status", "ackStatus", "validationStatus", "transport"])

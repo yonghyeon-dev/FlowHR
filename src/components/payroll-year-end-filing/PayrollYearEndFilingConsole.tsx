@@ -101,6 +101,7 @@ export default function PayrollYearEndFilingConsole() {
     useState<PayrollYearEndFilingSubmissionValidationStatusFilter>("all");
   const [submissionTransportFilter, setSubmissionTransportFilter] =
     useState<PayrollYearEndFilingSubmissionTransportFilter>("all");
+  const [submissionSettlementHashFilter, setSubmissionSettlementHashFilter] = useState("");
   const [submissionSearch, setSubmissionSearch] = useState("");
   const [submissionSortBy, setSubmissionSortBy] =
     useState<PayrollYearEndFilingSubmissionSortBy>("submittedAt");
@@ -153,6 +154,26 @@ export default function PayrollYearEndFilingConsole() {
   }, [ackStatus, ackCatalog]);
 
   const rejectionReasonOptions = useMemo(() => ackCatalog?.rejectionReasons ?? [], [ackCatalog]);
+  const settlementHashFilterChips = useMemo(() => {
+    const chips: string[] = [];
+    const seen = new Set<string>();
+    for (const submission of submissions) {
+      const hash = submission.settlementHash?.trim().toLowerCase();
+      if (!hash) {
+        continue;
+      }
+      const chip = hash.slice(0, 12);
+      if (seen.has(chip)) {
+        continue;
+      }
+      seen.add(chip);
+      chips.push(chip);
+      if (chips.length >= 6) {
+        break;
+      }
+    }
+    return chips;
+  }, [submissions]);
 
   useEffect(() => {
     if (ackCodeOptions.length === 0) {
@@ -342,7 +363,7 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
-  async function runRefreshSubmissions() {
+  async function runRefreshSubmissions(settlementHashFilterOverride?: string) {
     try {
       setPendingLabel("year-end filing submissions list");
       const requestYear = parseRequiredInt(year, "year");
@@ -362,6 +383,12 @@ export default function PayrollYearEndFilingConsole() {
       }
       if (submissionTransportFilter !== "all") {
         query.set("transport", submissionTransportFilter);
+      }
+      const settlementHashFilter = (
+        settlementHashFilterOverride ?? submissionSettlementHashFilter
+      ).trim();
+      if (settlementHashFilter.length > 0) {
+        query.set("settlementHash", settlementHashFilter);
       }
       if (submissionSearch.trim().length > 0) {
         query.set("search", submissionSearch.trim());
@@ -408,6 +435,7 @@ export default function PayrollYearEndFilingConsole() {
     setSubmissionAckStatusFilter("all");
     setSubmissionValidationStatusFilter("all");
     setSubmissionTransportFilter("all");
+    setSubmissionSettlementHashFilter("");
     setSubmissionSearch("");
     setSubmissionSortBy("submittedAt");
     setSubmissionSortDirection("desc");
@@ -886,6 +914,13 @@ export default function PayrollYearEndFilingConsole() {
                 placeholder="submissionId, ackCode, note"
               />
             </label>
+            <label>Settlement Hash Filter
+              <input
+                value={submissionSettlementHashFilter}
+                onChange={(event) => setSubmissionSettlementHashFilter(event.target.value)}
+                placeholder="hash prefix (8-64 hex)"
+              />
+            </label>
             <label>Submission Sort By
               <select
                 value={submissionSortBy}
@@ -915,6 +950,33 @@ export default function PayrollYearEndFilingConsole() {
               </select>
             </label>
           </div>
+          {settlementHashFilterChips.length > 0 ? (
+            <div className="panel-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSubmissionSettlementHashFilter("");
+                  void runRefreshSubmissions("");
+                }}
+                disabled={pendingLabel !== null}
+              >
+                Clear Hash Filter
+              </button>
+              {settlementHashFilterChips.map((chip) => (
+                <button
+                  key={chip}
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setSubmissionSettlementHashFilter(chip);
+                    void runRefreshSubmissions(chip);
+                  }}
+                  disabled={pendingLabel !== null}
+                >
+                  hash:{chip}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <label>Finalization Note<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
           <label>Expected Settlement Hash (Export/Submit Guard)
             <input
@@ -1069,7 +1131,7 @@ export default function PayrollYearEndFilingConsole() {
               <li><span>ACK Status</span><strong>accepted {submissionListSummary.ackStatusCounts.accepted} / rejected {submissionListSummary.ackStatusCounts.rejected} / none {submissionListSummary.ackStatusCounts.none}</strong></li>
               <li><span>Validation</span><strong>pass {submissionListSummary.validationStatusCounts.pass} / fail {submissionListSummary.validationStatusCounts.fail}</strong></li>
               <li><span>Transport</span><strong>manual {submissionListSummary.transportCounts.manual_portal} / hometax {submissionListSummary.transportCounts.hometax_upload} / nts_api_mock {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
-              <li><span>Active Filters</span><strong>status={submissionStatusFilter}, ackStatus={submissionAckStatusFilter}, validation={submissionValidationStatusFilter}, transport={submissionTransportFilter}, search={submissionSearch.trim() || "-"}, sort={submissionSortBy}:{submissionSortDirection}</strong></li>
+              <li><span>Active Filters</span><strong>status={submissionStatusFilter}, ackStatus={submissionAckStatusFilter}, validation={submissionValidationStatusFilter}, transport={submissionTransportFilter}, settlementHash={submissionSettlementHashFilter.trim() || "-"}, search={submissionSearch.trim() || "-"}, sort={submissionSortBy}:{submissionSortDirection}</strong></li>
             </ul>
           )}
           {submissions.length === 0 ? <p className="small">No filing submission yet.</p> : (

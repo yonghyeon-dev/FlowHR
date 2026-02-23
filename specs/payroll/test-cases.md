@@ -75,6 +75,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 67. Export year-end filing data rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
 68. Filing submit/resubmit rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
 69. Filing acknowledge rejects stale `expectedSettlementHash` mismatch (`409`) and records acknowledgement only when expected hash matches submission settlement hash.
+70. Filing submission list supports `settlementHash` prefix filter and returns deterministic filtered subset and counters.
 
 ## Accuracy Cases
 
@@ -139,6 +140,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 58. Year-end filing export expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
 59. Year-end filing submit/resubmit expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
 60. Year-end filing acknowledge expectedSettlementHash guard decisions remain deterministic for same submission replay vectors.
+61. Year-end filing submission list settlementHash prefix filtering remains deterministic for same query and history replay.
 
 ## Regression Linkage
 
@@ -188,6 +190,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Export Settlement Hash Gate: export API blocks stale `expectedSettlementHash` mismatch and returns deterministic `settlementHash` trace on success.
 - Year-End Filing Submission Settlement Hash Gate: submit/resubmit APIs block stale `expectedSettlementHash` mismatch and return deterministic `settlementHash` trace in submission payloads.
 - Year-End Filing ACK Settlement Hash Gate: acknowledge API blocks stale `expectedSettlementHash` mismatch against submission settlement hash.
+- Year-End Filing Settlement Hash Filter Gate: filing submission list API supports deterministic `settlementHash` prefix filtering for snapshot traceability.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.

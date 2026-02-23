@@ -24,6 +24,7 @@ export async function GET(request: Request) {
     ackStatus: url.searchParams.get("ackStatus") ?? undefined,
     validationStatus: url.searchParams.get("validationStatus") ?? undefined,
     transport: url.searchParams.get("transport") ?? undefined,
+    settlementHash: url.searchParams.get("settlementHash") ?? undefined,
     search: url.searchParams.get("search") ?? undefined,
     sortBy: url.searchParams.get("sortBy") ?? undefined,
     sortDirection: url.searchParams.get("sortDirection") ?? undefined
