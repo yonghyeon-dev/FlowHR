@@ -531,6 +531,8 @@ type YearEndSettlementKrw = {
   annualTaxLiabilityKrw: number;
   priorWithheldTaxKrw: number;
   withholdingDeltaKrw: number;
+  additionalWithholdingDueKrw: number;
+  withholdingRefundKrw: number;
 };
 
 type YearEndRunStates = {
@@ -2946,6 +2948,8 @@ function calculateYearEndSettlementKrw(
   const annualTaxLiabilityKrw = annualIncomeTaxAfterCreditKrw + annualLocalIncomeTaxKrw;
   const priorWithheldTaxKrw = totalsKrw.withholdingTaxKrw;
   const withholdingDeltaKrw = annualTaxLiabilityKrw - priorWithheldTaxKrw;
+  const additionalWithholdingDueKrw = Math.max(withholdingDeltaKrw, 0);
+  const withholdingRefundKrw = Math.max(-withholdingDeltaKrw, 0);
 
   return {
     settlementKrw: {
@@ -2961,7 +2965,9 @@ function calculateYearEndSettlementKrw(
       annualLocalIncomeTaxKrw,
       annualTaxLiabilityKrw,
       priorWithheldTaxKrw,
-      withholdingDeltaKrw
+      withholdingDeltaKrw,
+      additionalWithholdingDueKrw,
+      withholdingRefundKrw
     },
     taxableAnnualIncomeBeforeDeductionKrw,
     appliedIncomeDeductionKrw
