@@ -79,15 +79,29 @@ import {
 } from "@/features/payroll/kr-preset-share-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
 
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [organizationName, setOrganizationName] = useState("FlowHR Demo Org");
+  const [organizationName, setOrganizationName] = useState(
+    isKoLocale ? "FlowHR 데모 조직" : "FlowHR Demo Org"
+  );
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
+
+  useEffect(() => {
+    setOrganizationName((previous) => {
+      if (previous !== "FlowHR Demo Org" && previous !== "FlowHR 데모 조직") {
+        return previous;
+      }
+      return isKoLocale ? "FlowHR 데모 조직" : "FlowHR Demo Org";
+    });
+  }, [isKoLocale]);
 
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
@@ -200,7 +214,7 @@ export default function AdminDashboardPage() {
         : "";
 
   const usesBearerToken = bearerToken.trim().length > 0;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? (isKoLocale ? "미설정" : "not configured");
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -274,6 +288,31 @@ export default function AdminDashboardPage() {
     const fail = total - success;
     return { total, success, fail };
   }, [logs]);
+
+  const queueLabels = useMemo(
+    () => ({
+      all: isKoLocale ? "전체" : "All",
+      attendance: isKoLocale ? "출퇴근" : "Attendance",
+      leave: isKoLocale ? "휴가" : "Leave",
+      payroll: isKoLocale ? "급여" : "Payroll"
+    }),
+    [isKoLocale]
+  );
+  const workTypeLabels = useMemo(
+    () => ({
+      holiday: isKoLocale ? "휴일" : "Holiday",
+      work: isKoLocale ? "근무" : "Work"
+    }),
+    [isKoLocale]
+  );
+  const logStatusLabels = useMemo(
+    () => ({
+      success: isKoLocale ? "성공" : "OK",
+      fail: isKoLocale ? "실패" : "FAIL"
+    }),
+    [isKoLocale]
+  );
+  const updatedAtLabel = isKoLocale ? "업데이트" : "updated";
 
   const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
   const queueNowMs = Date.now();
@@ -388,7 +427,7 @@ export default function AdminDashboardPage() {
     () => [
       {
         focus: "all",
-        label: "전체",
+        label: queueLabels.all,
         pending: pendingAttendance.length + pendingLeave.length + previewedPayroll.length,
         visible:
           filteredPendingAttendance.length +
@@ -407,7 +446,7 @@ export default function AdminDashboardPage() {
       },
       {
         focus: "attendance",
-        label: "출퇴근",
+        label: queueLabels.attendance,
         pending: pendingAttendance.length,
         visible: filteredPendingAttendance.length,
         selected: 0,
@@ -419,7 +458,7 @@ export default function AdminDashboardPage() {
       },
       {
         focus: "leave",
-        label: "휴가",
+        label: queueLabels.leave,
         pending: pendingLeave.length,
         visible: filteredPendingLeave.length,
         selected: 0,
@@ -427,7 +466,7 @@ export default function AdminDashboardPage() {
       },
       {
         focus: "payroll",
-        label: "급여",
+        label: queueLabels.payroll,
         pending: previewedPayroll.length,
         visible: filteredPreviewedPayroll.length,
         selected: 0,
@@ -448,6 +487,10 @@ export default function AdminDashboardPage() {
       pendingLeave.length,
       payrollWaitHoursValues,
       previewedPayroll.length,
+      queueLabels.all,
+      queueLabels.attendance,
+      queueLabels.leave,
+      queueLabels.payroll,
       queueSlaCriticalHours,
       queueSlaWatchHours
     ]
@@ -481,7 +524,8 @@ export default function AdminDashboardPage() {
       attendanceWaitHoursById,
       leaveWaitHoursById,
       payrollWaitHoursById,
-      resolveQueueAlertLevel
+      resolveQueueAlertLevel,
+      queueLabels
     });
   }, [
     attendanceWaitHoursById,
@@ -490,6 +534,7 @@ export default function AdminDashboardPage() {
     filteredPreviewedPayroll,
     leaveWaitHoursById,
     payrollWaitHoursById,
+    queueLabels,
     resolveQueueAlertLevel
   ]);
 
@@ -1187,7 +1232,7 @@ export default function AdminDashboardPage() {
         <article className="kpi-card">
           <p>API 호출</p>
           <strong>
-            {stats.total} (OK {stats.success} / FAIL {stats.fail})
+            {stats.total} ({logStatusLabels.success} {stats.success} / {logStatusLabels.fail} {stats.fail})
           </strong>
         </article>
         <article className="kpi-card">
@@ -1398,7 +1443,9 @@ export default function AdminDashboardPage() {
               <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as InviteRole)}>
                 <option value="employee">employee</option>
                 <option value="manager">manager</option>
-                <option value="payroll_operator">payroll_operator</option>
+                <option value="payroll_operator">
+                  {isKoLocale ? "급여 담당(payroll_operator)" : "Payroll Operator"}
+                </option>
                 <option value="admin">admin</option>
               </select>
             </label>
@@ -1549,7 +1596,9 @@ export default function AdminDashboardPage() {
               {schedules.map((schedule) => (
                 <li key={schedule.id}>
                   <span>
-                    <span className="ok">{schedule.isHoliday ? "HOLIDAY" : "WORK"}</span>{" "}
+                    <span className="ok">
+                      {schedule.isHoliday ? workTypeLabels.holiday : workTypeLabels.work}
+                    </span>{" "}
                     <strong>{schedule.employeeId}</strong>{" "}
                     <span className="muted">
                       {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (휴게{" "}
@@ -1790,7 +1839,7 @@ export default function AdminDashboardPage() {
             <p className="small">
               결과: 잔여 {formatDays(accrualResult.remainingDays)}일 (부여{" "}
               {formatDays(accrualResult.grantedDays)}일, 사용 {formatDays(accrualResult.usedDays)}일, 이월{" "}
-              {formatDays(accrualResult.carryOverDays)}일) / updated{" "}
+              {formatDays(accrualResult.carryOverDays)}일) / {updatedAtLabel}{" "}
               {formatDateTime(accrualResult.updatedAt)}
             </p>
           ) : (
@@ -2020,7 +2069,7 @@ export default function AdminDashboardPage() {
                   <li key={log.id}>
                     <span>
                       <span className={log.ok ? "ok" : "fail"}>
-                        {log.ok ? "OK" : "FAIL"} {log.status}
+                        {log.ok ? logStatusLabels.success : logStatusLabels.fail} {log.status}
                       </span>{" "}
                       <strong>{log.label}</strong>{" "}
                       <span className="muted">
