@@ -409,7 +409,8 @@ export const exportPayrollYearEndFilingDataSchema = z.object({
   year: payrollYearSchema,
   employeeId: z.string().min(1),
   format: z.enum(["json", "csv", "jsonl", "hometax_csv"]).default("json"),
-  validationMode: z.enum(["basic", "strict"]).default("basic")
+  validationMode: z.enum(["basic", "strict"]).default("basic"),
+  expectedSettlementHash: yearEndSettlementHashSchema.optional()
 });
 
 export const submitPayrollYearEndFilingPackageSchema = exportPayrollYearEndFilingDataSchema.extend({

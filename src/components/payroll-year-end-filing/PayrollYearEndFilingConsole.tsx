@@ -87,6 +87,7 @@ export default function PayrollYearEndFilingConsole() {
   const [finalizedByNote, setFinalizedByNote] = useState("year-end baseline finalize");
   const [exportFormat, setExportFormat] = useState<"json" | "csv" | "jsonl" | "hometax_csv">("json");
   const [validationMode, setValidationMode] = useState<"basic" | "strict">("basic");
+  const [expectedExportSettlementHash, setExpectedExportSettlementHash] = useState("");
   const [submissionTransport, setSubmissionTransport] = useState<
     "manual_portal" | "hometax_upload" | "nts_api_mock"
   >("manual_portal");
@@ -243,6 +244,7 @@ export default function PayrollYearEndFilingConsole() {
         return;
       }
       setFinalization(body);
+      setExpectedExportSettlementHash(body.settlement.settlementHash);
       setStatusMessage(body.settlement.finalized ? `finalized ${body.settlement.finalizationId}` : "preview loaded");
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -259,7 +261,8 @@ export default function PayrollYearEndFilingConsole() {
         year: parseRequiredInt(year, "year"),
         employeeId: employeeId.trim(),
         format: exportFormat,
-        validationMode
+        validationMode,
+        expectedSettlementHash: expectedExportSettlementHash.trim() || undefined
       };
       const response = await fetch("/api/payroll/year-end/export-filing-data", {
         method: "POST",
@@ -908,6 +911,13 @@ export default function PayrollYearEndFilingConsole() {
             </label>
           </div>
           <label>Finalization Note<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
+          <label>Expected Settlement Hash (Export Guard)
+            <input
+              value={expectedExportSettlementHash}
+              onChange={(event) => setExpectedExportSettlementHash(event.target.value)}
+              placeholder="64-char sha256 hash (optional)"
+            />
+          </label>
           <label>Submission Note<input value={submissionNote} onChange={(event) => setSubmissionNote(event.target.value)} /></label>
           <label>Ack Submission ID<input value={ackSubmissionId} onChange={(event) => setAckSubmissionId(event.target.value)} /></label>
           <label>Ack Status
@@ -987,6 +997,7 @@ export default function PayrollYearEndFilingConsole() {
             <ul className="simple-list">
               <li><span>Can Finalize / Finalized</span><strong>{finalization.settlement.canFinalize ? "YES" : "NO"} / {finalization.settlement.finalized ? "YES" : "NO"}</strong></li>
               <li><span>Finalization ID</span><strong>{finalization.settlement.finalizationId}</strong></li>
+              <li><span>Settlement Hash</span><strong>{finalization.settlement.settlementHash}</strong></li>
               <li><span>Tax Liability</span><strong>{formatKrw(finalization.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>Withholding Delta</span><strong>{formatKrw(finalization.settlement.settlementKrw.withholdingDeltaKrw)}</strong></li>
               <li><span>Applied Deduction</span><strong>{formatKrw(finalization.settlement.deductionItemsKrw.appliedIncomeDeductionKrw)}</strong></li>
@@ -1000,6 +1011,7 @@ export default function PayrollYearEndFilingConsole() {
           {!filingExport ? <p className="small">No export yet.</p> : (
             <ul className="simple-list">
               <li><span>Finalization ID</span><strong>{filingExport.filingData.finalizationId}</strong></li>
+              <li><span>Settlement Hash</span><strong>{filingExport.filingData.settlementHash}</strong></li>
               <li><span>Format</span><strong>{filingExport.filingData.format}</strong></li>
               <li><span>Validation Mode</span><strong>{filingExport.filingData.validationMode}</strong></li>
               <li><span>Validation Status</span><strong>{filingExport.filingData.validation.status}</strong></li>

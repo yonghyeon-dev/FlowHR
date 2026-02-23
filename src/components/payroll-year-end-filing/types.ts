@@ -8,6 +8,7 @@ export type PayrollYearEndFinalizationResponse = {
     canFinalize: boolean;
     finalized: boolean;
     finalizationId: string;
+    settlementHash: string;
     finalizedAt: string | null;
     finalizedByNote: string | null;
     runStates: {
@@ -54,6 +55,7 @@ export type PayrollYearEndFilingExportResponse = {
     year: number;
     employeeId: string;
     finalizationId: string;
+    settlementHash: string;
     finalizedAt: string;
     exportedAt: string;
     format: "json" | "csv" | "jsonl" | "hometax_csv";
