@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApprovalQueuePanel } from "@/components/admin-approval/ApprovalQueuePanel";
 import {
@@ -372,17 +372,9 @@ export default function AdminDashboardPage() {
     }
   }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
 
-  useEffect(() => {
-    if (payrollPresetShareContextAppliedRef.current) {
-      return;
-    }
-    if (typeof window === "undefined") {
-      return;
-    }
-    payrollPresetShareContextAppliedRef.current = true;
-
-    const resolution = resolvePayrollKrPresetShareContext(window.location.search);
-    const context = parsePayrollKrPresetShareContext(window.location.search);
+  const applyPayrollPresetShareContext = useCallback((search: string) => {
+    const resolution = resolvePayrollKrPresetShareContext(search);
+    const context = parsePayrollKrPresetShareContext(search);
     setPayrollPresetShareLinkFeedback({
       hasAnyQuery: resolution.hasAnyQuery,
       applied: {
@@ -393,7 +385,7 @@ export default function AdminDashboardPage() {
       invalid: resolution.invalid
     });
     if (!hasPayrollKrPresetShareContext(context)) {
-      return;
+      return false;
     }
 
     setPayrollPreviewMode("statutory_kr_baseline");
@@ -406,7 +398,32 @@ export default function AdminDashboardPage() {
     if (context.nonTaxableIncomeKrw !== null) {
       setPayrollNonTaxableIncomeKrw(context.nonTaxableIncomeKrw);
     }
+    return true;
   }, []);
+
+  const resetPayrollPresetShareContext = useCallback(() => {
+    setPayrollIncomeSplitItemPresetId("");
+    setPayrollTaxableIncomeKrw("");
+    setPayrollNonTaxableIncomeKrw("0");
+  }, []);
+
+  const reapplyPayrollPresetShareContext = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    applyPayrollPresetShareContext(window.location.search);
+  }, [applyPayrollPresetShareContext]);
+
+  useEffect(() => {
+    if (payrollPresetShareContextAppliedRef.current) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      return;
+    }
+    payrollPresetShareContextAppliedRef.current = true;
+    applyPayrollPresetShareContext(window.location.search);
+  }, [applyPayrollPresetShareContext]);
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -2102,7 +2119,11 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div className="full">
-                  <PayrollKrPresetShareLinkFeedbackPanel feedback={payrollPresetShareLinkFeedback} />
+                  <PayrollKrPresetShareLinkFeedbackPanel
+                    feedback={payrollPresetShareLinkFeedback}
+                    onResetAppliedValues={resetPayrollPresetShareContext}
+                    onReapplyQueryValues={reapplyPayrollPresetShareContext}
+                  />
                 </div>
                 <div className="full">
                   <PayrollKrIncomeSplitItemsTable

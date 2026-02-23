@@ -71,6 +71,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 63. Admin preset mode sample payload preview copy/share UX deterministically emits request/template/combined clipboard payloads and share-fallback replay context for selected `incomeSplitItemPresetId`.
 64. Admin preset share-link auto-apply UX deterministically parses shared query context (`incomeSplitItemPresetId`, `taxableIncomeKrw`, `nonTaxableIncomeKrw`) and pre-fills statutory preview inputs with invalid-value ignore behavior.
 65. Admin preset share-link validation feedback UX deterministically summarizes applied values and ignored invalid query values from shared query context.
+66. Admin preset share-link reset/reapply UX deterministically supports clearing share-applied preset/split values and re-applying current shared query context.
 
 ## Accuracy Cases
 
@@ -124,6 +125,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 48. Admin preset-mode sample payload copy/share content (including replay href context) remains deterministic for same UI state/input replay.
 49. Admin preset share-link auto-apply parsing and statutory preview prefill behavior remain deterministic for same query replay.
 50. Admin preset share-link validation feedback summary (applied/ignored invalid values) remains deterministic for same query replay.
+51. Admin preset share-link reset/reapply actions (clear defaults + query re-hydration) remain deterministic for same UI state/query replay.
 
 ## Regression Linkage
 
@@ -159,6 +161,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Preset Payload Copy/Share UX Gate: `/admin` preset mode must expose deterministic copy/share actions (request/template/combined + share fallback) without changing transmitted contract fields.
 - Preset Share-Link Auto-Apply UX Gate: `/admin` preset mode must deterministically parse shared query values, auto-switch statutory mode when applicable, and ignore invalid preset/numeric query values.
 - Preset Share-Link Validation Feedback UX Gate: `/admin` preset mode must expose deterministic feedback for applied values and ignored invalid shared query values.
+- Preset Share-Link Reset/Reapply UX Gate: `/admin` preset mode must expose deterministic reset/reapply actions that clear share-applied values and re-hydrate from current shared query values.
 - Employee Payslip Gate: employee role can list only their own CONFIRMED payroll runs; other employees and PREVIEWED runs are blocked (403).
 - Insurance Settlement Gate: `POST /payroll/runs/preview-insurance-settlement` remains feature-flagged, permission-guarded, and deterministic under repeated replay.
 - Close-Period Gate: `POST /payroll/runs/close-period` remains feature-flagged, permission-guarded, and blocks apply when unconfirmed runs exist.
