@@ -258,6 +258,7 @@ type SubmitPayrollYearEndFilingPackageInput = {
   employeeId: string;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
+  expectedSettlementHash?: string;
   transport: PayrollYearEndFilingTransport;
   submissionNote?: string;
 };
@@ -268,6 +269,7 @@ type ResubmitPayrollYearEndFilingPackageInput = {
   submissionId: string;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
+  expectedSettlementHash?: string;
   transport: PayrollYearEndFilingTransport;
   submissionNote?: string;
   resubmissionReason?: string;
@@ -694,6 +696,7 @@ type PayrollYearEndFilingSubmissionSummary = {
   resubmissionOfSubmissionId: string | null;
   resubmissionReason: string | null;
   finalizationId: string;
+  settlementHash: string | null;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
   transport: PayrollYearEndFilingTransport;
@@ -3332,6 +3335,7 @@ type YearEndFilingPackageSubmittedAuditPayload = {
   resubmissionOfSubmissionId: string | null;
   resubmissionReason: string | null;
   finalizationId: string;
+  settlementHash: string | null;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
   transport: PayrollYearEndFilingTransport;
@@ -3408,6 +3412,9 @@ function asYearEndFilingPackageSubmittedAuditPayload(
   return {
     ...candidate,
     attempt: typeof candidate.attempt === "number" ? candidate.attempt : 1,
+    settlementHash: normalizeYearEndSettlementHash(
+      (candidate as { settlementHash?: unknown }).settlementHash
+    ),
     resubmissionOfSubmissionId:
       typeof candidate.resubmissionOfSubmissionId === "string"
         ? candidate.resubmissionOfSubmissionId
@@ -3532,6 +3539,7 @@ function buildYearEndFilingSubmissionSummaries(
         resubmissionOfSubmissionId: payload.resubmissionOfSubmissionId,
         resubmissionReason: payload.resubmissionReason,
         finalizationId: payload.finalizationId,
+        settlementHash: payload.settlementHash,
         format: payload.format,
         validationMode: payload.validationMode,
         transport: payload.transport,
@@ -4567,6 +4575,7 @@ function matchesYearEndFilingSubmissionSearch(
     submission.resubmissionOfSubmissionId,
     submission.resubmissionReason,
     submission.submissionNote,
+    submission.settlementHash,
     submission.transport,
     submission.validationMode,
     submission.validationStatus,
@@ -4780,6 +4789,7 @@ async function createYearEndFilingSubmission(
     employeeId: string;
     format: PayrollYearEndFilingExportFormat;
     validationMode: PayrollYearEndFilingValidationMode;
+    expectedSettlementHash?: string;
     transport: PayrollYearEndFilingTransport;
     submissionNote?: string;
     attempt: number;
@@ -4795,7 +4805,8 @@ async function createYearEndFilingSubmission(
     year: input.year,
     employeeId: input.employeeId,
     format: input.format,
-    validationMode: input.validationMode
+    validationMode: input.validationMode,
+    expectedSettlementHash: input.expectedSettlementHash
   });
 
   const actorRole = context.actor?.role ?? "system";
@@ -4818,6 +4829,7 @@ async function createYearEndFilingSubmission(
     resubmissionOfSubmissionId: input.resubmissionOfSubmissionId,
     resubmissionReason: input.resubmissionReason,
     finalizationId: exportResult.filingData.finalizationId,
+    settlementHash: exportResult.filingData.settlementHash,
     format: input.format,
     validationMode: input.validationMode,
     transport: input.transport,
@@ -4889,6 +4901,7 @@ export async function submitPayrollYearEndFilingPackage(
     employeeId: input.employeeId,
     format: input.format,
     validationMode: input.validationMode,
+    expectedSettlementHash: input.expectedSettlementHash,
     transport: input.transport,
     submissionNote: input.submissionNote,
     attempt: 1,
@@ -4942,6 +4955,7 @@ export async function resubmitPayrollYearEndFilingPackage(
     employeeId: input.employeeId,
     format: input.format,
     validationMode: input.validationMode,
+    expectedSettlementHash: input.expectedSettlementHash,
     transport: input.transport,
     submissionNote: input.submissionNote,
     attempt: target.attempt + 1,

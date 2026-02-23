@@ -304,6 +304,7 @@ export default function PayrollYearEndFilingConsole() {
         employeeId: employeeId.trim(),
         format: exportFormat,
         validationMode,
+        expectedSettlementHash: expectedExportSettlementHash.trim() || undefined,
         transport: submissionTransport,
         submissionNote: submissionNote.trim() || undefined
       };
@@ -526,6 +527,7 @@ export default function PayrollYearEndFilingConsole() {
         employeeId: employeeId.trim(),
         format: exportFormat,
         validationMode,
+        expectedSettlementHash: expectedExportSettlementHash.trim() || undefined,
         transport: submissionTransport,
         submissionNote: submissionNote.trim() || undefined,
         resubmissionReason: resubmissionReason.trim() || undefined
@@ -911,7 +913,7 @@ export default function PayrollYearEndFilingConsole() {
             </label>
           </div>
           <label>Finalization Note<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
-          <label>Expected Settlement Hash (Export Guard)
+          <label>Expected Settlement Hash (Export/Submit Guard)
             <input
               value={expectedExportSettlementHash}
               onChange={(event) => setExpectedExportSettlementHash(event.target.value)}
@@ -1076,6 +1078,7 @@ export default function PayrollYearEndFilingConsole() {
                     {submission.status.toUpperCase()}
                   </span>{" "}
                   {submission.submissionId} / attempt {submission.attempt} / {submission.transport} / {submission.format} / {submission.validationMode}
+                  {submission.settlementHash ? ` / hash ${submission.settlementHash.slice(0, 12)}...` : ""}
                   {submission.resubmissionOfSubmissionId ? ` / resubmissionOf ${submission.resubmissionOfSubmissionId}` : ""}
                   {submission.ack
                     ? ` / ACK ${submission.ack.ackStatus}${submission.ack.ackCode ? `:${submission.ack.ackCode}` : ""}${

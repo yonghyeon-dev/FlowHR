@@ -43,8 +43,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing; verify settlementHash replay determinism and expectedSettlementHash mismatch guard.
 36. Export year-end filing data and reject export before finalization or when `payroll_year_end_filing_export_v1` feature flag is disabled.
 37. Export year-end filing data in `json`/`csv`/`jsonl`/`hometax_csv`, validate `basic`/`strict` mode behavior (strict rejects validation-failed exports), and verify optional `expectedSettlementHash` stale-export guard plus `settlementHash` trace output.
-38. Submit/list/ack year-end filing package and reject ACK for unknown/already-acknowledged submission.
-39. Resubmit rejected filing package and reject resubmit for pending/non-rejected/already-resubmitted sources.
+38. Submit/list/ack year-end filing package and reject ACK for unknown/already-acknowledged submission; verify optional `expectedSettlementHash` stale-submit guard and `settlementHash` trace in submission payload.
+39. Resubmit rejected filing package and reject resubmit for pending/non-rejected/already-resubmitted sources; verify optional `expectedSettlementHash` stale-resubmit guard and `settlementHash` trace in resubmission payload.
 40. Query filing submission timeline and append evidence note; reject timeline/note for unknown submission.
 41. Query filing ACK catalog and reject acknowledgement when ACK code or rejection reason code is outside catalog.
 42. Cancel/reopen filing submission and reject invalid transitions (acknowledged cancel, non-canceled reopen, canceled acknowledge).
@@ -73,6 +73,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 65. Admin preset share-link validation feedback UX deterministically summarizes applied values and ignored invalid query values from shared query context.
 66. Admin preset share-link reset/reapply UX deterministically supports clearing share-applied preset/split values and re-applying current shared query context.
 67. Export year-end filing data rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
+68. Filing submit/resubmit rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
 
 ## Accuracy Cases
 
@@ -135,6 +136,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 56. Year-end withholding refund/additional-due breakdown remains deterministic for same input replay across preview/recalculation/finalization/export responses.
 57. Year-end finalization settlementHash and expectedSettlementHash stale-apply guard remain deterministic for same input replay vectors.
 58. Year-end filing export expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
+59. Year-end filing submit/resubmit expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
 
 ## Regression Linkage
 
@@ -182,6 +184,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Withholding Breakdown Gate: year-end settlement APIs expose deterministic `additionalWithholdingDueKrw`/`withholdingRefundKrw` fields that reconcile with withholdingDeltaKrw.
 - Year-End Settlement Hash Gate: finalize API emits deterministic `settlementHash` and blocks `apply=true` when `expectedSettlementHash` mismatches.
 - Year-End Export Settlement Hash Gate: export API blocks stale `expectedSettlementHash` mismatch and returns deterministic `settlementHash` trace on success.
+- Year-End Filing Submission Settlement Hash Gate: submit/resubmit APIs block stale `expectedSettlementHash` mismatch and return deterministic `settlementHash` trace in submission payloads.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.

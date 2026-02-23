@@ -121,6 +121,7 @@ export type PayrollYearEndFilingSubmission = {
   resubmissionOfSubmissionId: string | null;
   resubmissionReason: string | null;
   finalizationId: string;
+  settlementHash: string | null;
   format: "json" | "csv" | "jsonl" | "hometax_csv";
   validationMode: "basic" | "strict";
   transport: "manual_portal" | "hometax_upload" | "nts_api_mock";
