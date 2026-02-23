@@ -38,7 +38,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 30. Preview year-end settlement for employee/year and verify annual totals, tax liability, and withholding delta output.
 31. Preview/issue withholding receipt and reject issue when yearly runs include previewed/undistributed/pending-receipt runs.
 32. Reject year-end settlement/receipt APIs when `payroll_year_end_v1` feature flag is disabled.
-33. Recalculate year-end settlement with deduction-item inputs and verify baseline-vs-recalculated tax/liability delta output plus year-end deduction item caps and year-end tax credit caps breakdown.
+33. Recalculate year-end settlement with deduction-item inputs and verify baseline-vs-recalculated tax/liability delta output plus deduction eligibility validation guard and year-end deduction/tax-credit caps breakdown.
 34. Reject year-end settlement recalculation API when `payroll_year_end_deduction_input_v1` feature flag is disabled.
 35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing.
 36. Export year-end filing data and reject export before finalization or when `payroll_year_end_filing_export_v1` feature flag is disabled.
@@ -129,6 +129,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 51. Admin preset share-link reset/reapply actions (clear defaults + query re-hydration) remain deterministic for same UI state/query replay.
 52. Year-end deduction item caps and per-item cap-applied breakdown remain deterministic for same input replay across recalculation/finalization/export responses.
 53. Year-end tax credit caps and per-item cap-applied breakdown remain deterministic for same input replay across preview/recalculation/finalization/export responses.
+54. Year-end deduction eligibility validation guard remains deterministic for same input replay across recalculation/finalization responses.
 
 ## Regression Linkage
 
@@ -171,6 +172,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Payslip Delivery Gate: payslip delivery/receipt APIs remain feature-flagged, permission-guarded, and maintain deterministic distribution/receipt state transitions.
 - Year-End Gate: year-end settlement/withholding receipt APIs remain feature-flagged, permission-guarded, and enforce issue prerequisites deterministically.
 - Year-End Recalculation Gate: year-end deduction-item recalculation API remains feature-flagged, permission-guarded, and deterministic for baseline-vs-recalculated deltas.
+- Year-End Deduction Eligibility Gate: year-end deduction eligibility validation guard remains deterministic and auditable across recalculation/finalization APIs.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.

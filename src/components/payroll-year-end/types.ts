@@ -64,6 +64,15 @@ export type PayrollYearEndRecalculationResponse = {
       totalDeductionsKrw: number;
       netPayKrw: number;
     };
+    deductionEligibility: {
+      personalPensionEligible: boolean;
+      insurancePremiumEligible: boolean;
+      medicalExpenseEligible: boolean;
+      educationExpenseEligible: boolean;
+      donationEligible: boolean;
+      housingSavingsEligible: boolean;
+    };
+    deductionEligibilityBlockingReasons: string[];
     deductionItemsKrw: {
       personalPensionKrw: number;
       insurancePremiumKrw: number;
