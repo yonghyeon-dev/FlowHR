@@ -485,6 +485,11 @@ export const issuePayrollYearEndWithholdingReceiptSchema = z.object({
   issuerName: z.string().min(1).max(120).optional()
 });
 
+export const getPayrollYearEndInsuranceReconciliationReportQuerySchema = z.object({
+  year: z.coerce.number().int().min(2020).max(2100),
+  employeeId: z.string().min(1)
+});
+
 export const upsertDeductionProfileSchema = z.object({
   name: z.string().min(1),
   mode: z.enum(["manual", "profile"]).default("profile"),

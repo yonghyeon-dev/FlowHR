@@ -7,6 +7,7 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import type {
   ApiLog,
+  PayrollYearEndInsuranceReconciliationReportResponse,
   PayrollYearEndRecalculationResponse,
   PayrollWithholdingReceiptResponse,
   PayrollYearEndSettlementResponse
@@ -119,6 +120,8 @@ export default function PayrollYearEndConsole() {
   const [statusMessage, setStatusMessage] = useState("");
   const [settlement, setSettlement] = useState<PayrollYearEndSettlementResponse | null>(null);
   const [recalculation, setRecalculation] = useState<PayrollYearEndRecalculationResponse | null>(null);
+  const [insuranceReconciliationReport, setInsuranceReconciliationReport] =
+    useState<PayrollYearEndInsuranceReconciliationReportResponse | null>(null);
   const [receipt, setReceipt] = useState<PayrollWithholdingReceiptResponse | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
@@ -303,6 +306,45 @@ export default function PayrollYearEndConsole() {
     }
   }
 
+  async function runLoadInsuranceReconciliationReport() {
+    try {
+      setPendingLabel("year-end insurance reconciliation report");
+      const requestYear = parseRequiredInt(year, "year");
+      const requestEmployeeId = employeeId.trim();
+      const query = new URLSearchParams({
+        year: String(requestYear),
+        employeeId: requestEmployeeId
+      });
+      const response = await fetch(
+        `/api/payroll/year-end/insurance-reconciliation-report?${query.toString()}`,
+        {
+          method: "GET",
+          headers: buildHeaders()
+        }
+      );
+      const body = (await response.json()) as
+        | PayrollYearEndInsuranceReconciliationReportResponse
+        | { error: string };
+      setLogs((prev) => [
+        { id: Date.now(), label: "year-end insurance reconciliation report", status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        ...prev
+      ]);
+      if (!response.ok || "error" in body) {
+        setStatusMessage("request failed; check logs");
+        return;
+      }
+      setInsuranceReconciliationReport(body);
+      setStatusMessage(
+        `loaded insurance reconciliation (${body.report.reconciliation.status}, delta ${formatKrw(body.report.reconciliation.deltaKrw)})`
+      );
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   return (
     <main className="saas-content">
       <header className="hero">
@@ -342,6 +384,7 @@ export default function PayrollYearEndConsole() {
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runSettlementPreview()} disabled={pendingLabel !== null}>Preview Settlement</button>
             <button className="btn btn-secondary" onClick={() => void runSettlementRecalculation()} disabled={pendingLabel !== null}>Recalculate Settlement</button>
+            <button className="btn btn-secondary" onClick={() => void runLoadInsuranceReconciliationReport()} disabled={pendingLabel !== null}>Load Insurance Reconciliation</button>
             <button className="btn btn-secondary" onClick={() => void runReceipt(false)} disabled={pendingLabel !== null}>Preview Receipt</button>
             <button className="btn btn-primary" onClick={() => void runReceipt(true)} disabled={pendingLabel !== null}>Issue Receipt</button>
           </div>
@@ -385,6 +428,20 @@ export default function PayrollYearEndConsole() {
               <li><span>Withholding Delta Change</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.withholdingDeltaChangeKrw)}</strong></li>
               <li><span>Additional Due</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.additionalWithholdingDueKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.additionalWithholdingDueKrw)}</strong></li>
               <li><span>Refund</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.withholdingRefundKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.withholdingRefundKrw)}</strong></li>
+            </ul>
+          )}
+        </article>
+        <article className="panel">
+          <h2>Insurance Reconciliation</h2>
+          {!insuranceReconciliationReport ? <p className="small">No reconciliation report yet.</p> : (
+            <ul className="simple-list">
+              <li><span>Status</span><strong>{insuranceReconciliationReport.report.reconciliation.status}</strong></li>
+              <li><span>Annual Social Insurance (Runs)</span><strong>{formatKrw(insuranceReconciliationReport.report.annualRunSocialInsuranceKrw)}</strong></li>
+              <li><span>Compared Insurance Premium (Finalization)</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.comparedKrw)}</strong></li>
+              <li><span>Delta</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.deltaKrw)}</strong></li>
+              <li><span>Finalization / Hash</span><strong>{insuranceReconciliationReport.report.finalization.finalizationId ?? "-"} / {insuranceReconciliationReport.report.finalization.settlementHash?.slice(0, 12) ?? "-"}</strong></li>
+              <li><span>Insurance Reason Code</span><strong>{insuranceReconciliationReport.report.finalization.applicationReasonCode ?? "-"}</strong></li>
+              <li><span>Monthly Breakdown</span><strong>{insuranceReconciliationReport.report.monthlyBreakdown.map((row) => `${row.month}:${formatKrw(row.socialInsuranceKrw)}`).join(" | ") || "-"}</strong></li>
             </ul>
           )}
         </article>

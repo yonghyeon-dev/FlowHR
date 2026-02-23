@@ -353,6 +353,11 @@ type IssuePayrollYearEndWithholdingReceiptInput = {
   issuerName?: string;
 };
 
+type GetPayrollYearEndInsuranceReconciliationReportInput = {
+  year: number;
+  employeeId: string;
+};
+
 type UpsertDeductionProfileInput = {
   profileId: string;
   name: string;
@@ -876,6 +881,49 @@ type IssuePayrollYearEndWithholdingReceiptResult = {
       netPayKrw: number;
     };
     blockingReasons: string[];
+  };
+};
+
+type GetPayrollYearEndInsuranceReconciliationReportResult = {
+  report: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      confirmedRunIds: string[];
+      previewedRunIds: string[];
+    };
+    annualRunSocialInsuranceKrw: number;
+    finalization: {
+      finalized: boolean;
+      finalizationId: string | null;
+      settlementHash: string | null;
+      finalizedAt: string | null;
+      insurancePremiumInputKrw: number | null;
+      insurancePremiumAppliedKrw: number | null;
+      insurancePremiumCapKrw: number | null;
+      applicationReasonCode: YearEndAppliedReasonCode | null;
+      applicationReason: string | null;
+    };
+    reconciliation: {
+      baselineKrw: number;
+      comparedKrw: number;
+      deltaKrw: number;
+      status: "matched" | "mismatch" | "pending_finalization";
+    };
+    monthlyBreakdown: Array<{
+      month: string;
+      runCount: number;
+      confirmedRunCount: number;
+      previewedRunCount: number;
+      grossPayKrw: number;
+      socialInsuranceKrw: number;
+      withholdingTaxKrw: number;
+    }>;
   };
 };
 
@@ -3057,6 +3105,47 @@ function buildYearEndFilingGuard(snapshot: YearEndRunSnapshot): YearEndFilingGua
     blockingReasons,
     canFinalize: blockingReasons.length === 0
   };
+}
+
+function buildYearEndInsuranceReconciliationMonthlyBreakdown(runs: PayrollRunEntity[]) {
+  const byMonth = new Map<
+    string,
+    {
+      month: string;
+      runCount: number;
+      confirmedRunCount: number;
+      previewedRunCount: number;
+      grossPayKrw: number;
+      socialInsuranceKrw: number;
+      withholdingTaxKrw: number;
+    }
+  >();
+
+  for (const run of runs) {
+    const monthParts = toSeoulDateTimeParts(run.periodStart);
+    const month = `${monthParts.year}-${String(monthParts.month).padStart(2, "0")}`;
+    const existing = byMonth.get(month) ?? {
+      month,
+      runCount: 0,
+      confirmedRunCount: 0,
+      previewedRunCount: 0,
+      grossPayKrw: 0,
+      socialInsuranceKrw: 0,
+      withholdingTaxKrw: 0
+    };
+    existing.runCount += 1;
+    if (run.state === "CONFIRMED") {
+      existing.confirmedRunCount += 1;
+    } else {
+      existing.previewedRunCount += 1;
+    }
+    existing.grossPayKrw += run.grossPayKrw;
+    existing.socialInsuranceKrw += run.socialInsuranceKrw ?? 0;
+    existing.withholdingTaxKrw += run.withholdingTaxKrw ?? 0;
+    byMonth.set(month, existing);
+  }
+
+  return Array.from(byMonth.values()).sort((left, right) => left.month.localeCompare(right.month));
 }
 
 type YearEndFinalizationAuditPayload = FinalizePayrollYearEndSettlementResult["settlement"];
@@ -5400,6 +5489,77 @@ export async function addPayrollYearEndFilingEvidenceNote(
 
   return {
     evidenceNote: payload
+  };
+}
+
+export async function getPayrollYearEndInsuranceReconciliationReport(
+  context: ServiceContext,
+  input: GetPayrollYearEndInsuranceReconciliationReportInput
+): Promise<GetPayrollYearEndInsuranceReconciliationReportResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
+  const annualRunSocialInsuranceKrw = snapshot.confirmedRuns.reduce(
+    (total, run) => total + (run.socialInsuranceKrw ?? 0),
+    0
+  );
+  const entityId = `${input.year}_${input.employeeId}`;
+  const finalizationLogs = await context.dataAccess.audit.list({
+    actions: ["payroll.year_end.settlement_finalized"],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 500
+  });
+  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+  const finalizedPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+  const insuranceCapApplied = finalizedPayload?.deductionItemsKrw.capAppliedByItemKrw.insurancePremiumKrw;
+  const insurancePremiumAppliedKrw = insuranceCapApplied?.appliedKrw ?? null;
+  const status: GetPayrollYearEndInsuranceReconciliationReportResult["report"]["reconciliation"]["status"] =
+    insurancePremiumAppliedKrw === null
+      ? "pending_finalization"
+      : annualRunSocialInsuranceKrw === insurancePremiumAppliedKrw
+        ? "matched"
+        : "mismatch";
+  const comparedKrw = insurancePremiumAppliedKrw ?? 0;
+
+  return {
+    report: {
+      year: input.year,
+      employeeId: input.employeeId,
+      periodStart: snapshot.periodStart.toISOString(),
+      periodEnd: snapshot.periodEnd.toISOString(),
+      runStates: {
+        totalRuns: snapshot.runs.length,
+        confirmedRuns: snapshot.confirmedRuns.length,
+        previewedRuns: snapshot.previewedRuns.length,
+        confirmedRunIds: snapshot.confirmedRuns.map((run) => run.id),
+        previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
+      },
+      annualRunSocialInsuranceKrw,
+      finalization: {
+        finalized: Boolean(finalizedPayload?.finalized && finalizedPayload.finalizedAt),
+        finalizationId: finalizedPayload?.finalizationId ?? null,
+        settlementHash: finalizedPayload
+          ? resolveYearEndSettlementHashFromFinalizationPayload(finalizedPayload)
+          : null,
+        finalizedAt: finalizedPayload?.finalizedAt ?? null,
+        insurancePremiumInputKrw: insuranceCapApplied?.inputKrw ?? null,
+        insurancePremiumAppliedKrw,
+        insurancePremiumCapKrw: insuranceCapApplied?.capKrw ?? null,
+        applicationReasonCode: insuranceCapApplied?.applicationReasonCode ?? null,
+        applicationReason: insuranceCapApplied?.applicationReason ?? null
+      },
+      reconciliation: {
+        baselineKrw: annualRunSocialInsuranceKrw,
+        comparedKrw,
+        deltaKrw: annualRunSocialInsuranceKrw - comparedKrw,
+        status
+      },
+      monthlyBreakdown: buildYearEndInsuranceReconciliationMonthlyBreakdown(snapshot.runs)
+    }
   };
 }
 

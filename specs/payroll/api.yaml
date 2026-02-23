@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.50.0
+  version: 1.51.0
 paths:
   /payroll/runs:
     get:
@@ -125,6 +125,24 @@ paths:
       responses:
         "200":
           description: Year-end filing export generated
+  /payroll/year-end/insurance-reconciliation-report:
+    get:
+      summary: Get payroll year-end insurance reconciliation report for employee/year
+      description: Returns annual/monthly reconciliation report between confirmed-run social-insurance totals and latest finalized year-end insurance-premium deduction trace (with settlement hash and reason-code context).
+      parameters:
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Year-end insurance reconciliation report generated
   /payroll/year-end/filing-submissions:
     get:
       summary: List payroll year-end filing submissions for employee/year

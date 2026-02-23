@@ -77,6 +77,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 69. Filing acknowledge rejects stale `expectedSettlementHash` mismatch (`409`) and records acknowledgement only when expected hash matches submission settlement hash.
 70. Filing submission list supports `settlementHash` prefix filter and returns deterministic filtered subset and counters.
 71. Year-end preview/recalculate/finalize/export responses include per-item deduction/tax-credit `applicationReasonCode` and `applicationReason` fields for explainability.
+72. Year-end insurance reconciliation report returns annual run social-insurance baseline, finalized insurance-premium comparison, reconciliation status, and monthly breakdown for selected employee/year.
 
 ## Accuracy Cases
 
@@ -143,6 +144,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 60. Year-end filing acknowledge expectedSettlementHash guard decisions remain deterministic for same submission replay vectors.
 61. Year-end filing submission list settlementHash prefix filtering remains deterministic for same query and history replay.
 62. Year-end deduction/tax-credit cap-applied reason-code outputs remain deterministic for same input replay across preview/recalculate/finalize/export APIs.
+63. Year-end insurance reconciliation report delta/status and monthly breakdown remain deterministic for same run/finalization replay.
 
 ## Regression Linkage
 
@@ -194,6 +196,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Filing ACK Settlement Hash Gate: acknowledge API blocks stale `expectedSettlementHash` mismatch against submission settlement hash.
 - Year-End Filing Settlement Hash Filter Gate: filing submission list API supports deterministic `settlementHash` prefix filtering for snapshot traceability.
 - Year-End Application Reason Code Gate: preview/recalculate/finalize/export APIs expose deterministic per-item `applicationReasonCode`/`applicationReason` fields.
+- Year-End Insurance Reconciliation Gate: insurance reconciliation report API returns deterministic annual/monthly comparison and status summary.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.

@@ -194,6 +194,49 @@ export type PayrollWithholdingReceiptResponse = {
   };
 };
 
+export type PayrollYearEndInsuranceReconciliationReportResponse = {
+  report: {
+    year: number;
+    employeeId: string;
+    periodStart: string;
+    periodEnd: string;
+    runStates: {
+      totalRuns: number;
+      confirmedRuns: number;
+      previewedRuns: number;
+      confirmedRunIds: string[];
+      previewedRunIds: string[];
+    };
+    annualRunSocialInsuranceKrw: number;
+    finalization: {
+      finalized: boolean;
+      finalizationId: string | null;
+      settlementHash: string | null;
+      finalizedAt: string | null;
+      insurancePremiumInputKrw: number | null;
+      insurancePremiumAppliedKrw: number | null;
+      insurancePremiumCapKrw: number | null;
+      applicationReasonCode: "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED" | null;
+      applicationReason: string | null;
+    };
+    reconciliation: {
+      baselineKrw: number;
+      comparedKrw: number;
+      deltaKrw: number;
+      status: "matched" | "mismatch" | "pending_finalization";
+    };
+    monthlyBreakdown: Array<{
+      month: string;
+      runCount: number;
+      confirmedRunCount: number;
+      previewedRunCount: number;
+      grossPayKrw: number;
+      socialInsuranceKrw: number;
+      withholdingTaxKrw: number;
+    }>;
+  };
+};
+
 export type ApiLog = {
   id: number;
   label: string;
