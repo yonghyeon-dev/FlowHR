@@ -8,6 +8,7 @@ import EmailTemplateScreen from "../screens/EmailTemplateScreen";
 import EmployeeHomeScreen from "../screens/EmployeeHomeScreen";
 import LoginScreen from "../screens/LoginScreen";
 import NotificationCenterScreen from "../screens/NotificationCenterScreen";
+import NotificationHistoryScreen from "../screens/NotificationHistoryScreen";
 import { clearSession, loadSession, saveSession } from "../lib/sessionStore";
 import { colors } from "../theme/tokens";
 
@@ -74,6 +75,7 @@ export default function RootNavigator() {
                 session={session}
                 onLogout={actions.logout}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
+                onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
                 onOpenEmailTemplates={() => navigation.navigate("EmailTemplates")}
               />
             )}
@@ -86,13 +88,24 @@ export default function RootNavigator() {
                 session={session}
                 onLogout={actions.logout}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
+                onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
               />
             )}
           </Stack.Screen>
         ) : null}
         {session ? (
           <Stack.Screen name="Notifications" options={{ title: "Notification Center" }}>
-            {() => <NotificationCenterScreen session={session} />}
+            {({ navigation }) => (
+              <NotificationCenterScreen
+                session={session}
+                onOpenHistory={() => navigation.navigate("NotificationHistory")}
+              />
+            )}
+          </Stack.Screen>
+        ) : null}
+        {session ? (
+          <Stack.Screen name="NotificationHistory" options={{ title: "Notification History" }}>
+            {() => <NotificationHistoryScreen session={session} />}
           </Stack.Screen>
         ) : null}
         {session?.role === "ADMIN" ? (

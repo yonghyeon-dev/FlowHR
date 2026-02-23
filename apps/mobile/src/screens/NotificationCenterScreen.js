@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import ShellCard from "../components/ShellCard";
@@ -9,35 +9,41 @@ import {
   formatSyncClock,
   sortNotificationsNewest
 } from "../lib/notificationFeed";
+import { filterNotificationHistory } from "../lib/notificationHistory";
 import {
   loadNotificationInbox,
   loadNotificationPreference,
   saveNotificationInbox,
   saveNotificationPreference
 } from "../lib/notificationStore";
-import { mapFlowHrNotification, permissionLabel, registerDevicePushTokenAsync, requestPushPermissionAsync } from "../lib/notifications";
+import {
+  mapFlowHrNotification,
+  permissionLabel,
+  registerDevicePushTokenAsync,
+  requestPushPermissionAsync
+} from "../lib/notifications";
 import { colors, spacing } from "../theme/tokens";
 
 const LIVE_SYNC_MS = 30000;
 
 const PREFERENCE_LABEL = {
-  approvalRequest: "승인 요청 알림",
-  approvalResult: "승인 결과 알림",
-  payslipReady: "명세서 발행 알림"
+  approvalRequest: "Approval request",
+  approvalResult: "Approval result",
+  payslipReady: "Payslip ready"
 };
 
 const CATEGORY_LABEL = {
-  all: "전체",
-  approvalRequest: "승인 요청",
-  approvalResult: "승인 결과",
-  payslipReady: "명세서"
+  all: "All",
+  approvalRequest: "Approval request",
+  approvalResult: "Approval result",
+  payslipReady: "Payslip ready"
 };
 
 function normalizeInbox(messages) {
   return sortNotificationsNewest(messages.map(mapFlowHrNotification));
 }
 
-export default function NotificationCenterScreen({ session }) {
+export default function NotificationCenterScreen({ session, onOpenHistory }) {
   const [loading, setLoading] = useState(true);
   const [permission, setPermission] = useState("undetermined");
   const [pushToken, setPushToken] = useState("");
@@ -85,8 +91,12 @@ export default function NotificationCenterScreen({ session }) {
     return () => clearInterval(timer);
   }, [liveSyncEnabled]);
 
-  const categoryStats = useMemo(() => buildNotificationCategoryStats(inbox), [inbox]);
-  const filteredInbox = useMemo(() => filterNotificationsByCategory(inbox, activeCategory), [activeCategory, inbox]);
+  const activeInbox = useMemo(() => filterNotificationHistory(inbox, { archiveState: "active" }), [inbox]);
+  const categoryStats = useMemo(() => buildNotificationCategoryStats(activeInbox), [activeInbox]);
+  const filteredInbox = useMemo(
+    () => filterNotificationsByCategory(activeInbox, activeCategory),
+    [activeCategory, activeInbox]
+  );
   const unreadCount = categoryStats.all?.unread ?? 0;
 
   async function enablePush() {
@@ -122,19 +132,19 @@ export default function NotificationCenterScreen({ session }) {
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>알림 센터</Text>
-        <Text style={styles.subtitle}>실시간 업데이트 기준으로 푸시 권한, 선호, 알림 피드를 관리합니다.</Text>
+        <Text style={styles.title}>Notification Center</Text>
+        <Text style={styles.subtitle}>Live polling, push preference controls, and active in-app feed.</Text>
 
-        <ShellCard title="푸시 권한 상태" subtitle={`상태: ${permissionLabel(permission)}`}>
+        <ShellCard title="Push permission" subtitle={`status: ${permissionLabel(permission)}`}>
           <Pressable style={styles.btn} onPress={enablePush}>
-            <Text style={styles.btnText}>권한 요청 / 갱신</Text>
+            <Text style={styles.btnText}>Request / Refresh permission</Text>
           </Pressable>
           <View style={styles.controlRow}>
             <Pressable style={styles.secondaryBtn} onPress={() => refreshInbox()}>
-              <Text style={styles.secondaryBtnText}>지금 새로고침</Text>
+              <Text style={styles.secondaryBtnText}>Refresh now</Text>
             </Pressable>
             <Pressable style={styles.secondaryBtn} onPress={() => setLiveSyncEnabled((value) => !value)}>
-              <Text style={styles.secondaryBtnText}>{liveSyncEnabled ? "라이브 동기화 ON" : "라이브 동기화 OFF"}</Text>
+              <Text style={styles.secondaryBtnText}>{liveSyncEnabled ? "Live sync ON" : "Live sync OFF"}</Text>
             </Pressable>
           </View>
           <Text style={styles.meta}>last sync: {formatSyncClock(lastSyncedAt)}</Text>
@@ -143,7 +153,7 @@ export default function NotificationCenterScreen({ session }) {
           {pushToken ? <Text style={styles.token}>push token: {pushToken}</Text> : null}
         </ShellCard>
 
-        <ShellCard title="알림 선호 설정">
+        <ShellCard title="Notification preferences">
           {Object.entries(PREFERENCE_LABEL).map(([key, label]) => (
             <Pressable key={key} style={styles.preferenceRow} onPress={() => togglePreference(key)}>
               <Text style={styles.preferenceLabel}>{label}</Text>
@@ -156,7 +166,7 @@ export default function NotificationCenterScreen({ session }) {
           ))}
         </ShellCard>
 
-        <ShellCard title="피드 필터" subtitle={`현재 필터: ${CATEGORY_LABEL[activeCategory]} · 미확인 ${unreadCount}건`}>
+        <ShellCard title="Feed filters" subtitle={`active filter: ${CATEGORY_LABEL[activeCategory]} · unread ${unreadCount}`}>
           <View style={styles.categoryRow}>
             {Object.entries(CATEGORY_LABEL).map(([key, label]) => {
               const stat = categoryStats[key] ?? { total: 0, unread: 0 };
@@ -174,14 +184,19 @@ export default function NotificationCenterScreen({ session }) {
             })}
           </View>
           <Pressable style={styles.secondaryBtn} onPress={appendLiveEvent}>
-            <Text style={styles.secondaryBtnText}>실시간 이벤트 시뮬레이션</Text>
+            <Text style={styles.secondaryBtnText}>Append simulated live event</Text>
           </Pressable>
         </ShellCard>
 
-        <ShellCard title="최근 알림" subtitle={loading ? "로딩 중..." : `${filteredInbox.length}건`}>
-          <Pressable style={styles.secondaryBtn} onPress={markAllRead}>
-            <Text style={styles.secondaryBtnText}>모두 읽음 처리</Text>
-          </Pressable>
+        <ShellCard title="Active feed" subtitle={loading ? "Loading..." : `${filteredInbox.length} item(s)`}>
+          <View style={styles.controlRow}>
+            <Pressable style={styles.secondaryBtn} onPress={markAllRead}>
+              <Text style={styles.secondaryBtnText}>Mark all read</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryBtn} onPress={onOpenHistory}>
+              <Text style={styles.secondaryBtnText}>History search/archive</Text>
+            </Pressable>
+          </View>
           {filteredInbox.map((item) => (
             <View key={item.id} style={[styles.item, item.read ? styles.itemRead : null]}>
               <Text style={styles.itemTitle}>{item.title}</Text>

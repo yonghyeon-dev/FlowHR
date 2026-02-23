@@ -1,4 +1,4 @@
-import * as Device from "expo-device";
+﻿import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 
 Notifications.setNotificationHandler({
@@ -33,21 +33,22 @@ export async function registerDevicePushTokenAsync(projectId) {
 
 export function permissionLabel(status) {
   if (status === "granted") {
-    return "허용됨";
+    return "Granted";
   }
   if (status === "denied") {
-    return "거부됨";
+    return "Denied";
   }
-  return "미설정";
+  return "Undetermined";
 }
 
 export function mapFlowHrNotification(payload) {
   return {
     id: payload?.id ?? `msg-${Date.now()}`,
-    title: payload?.title ?? "FlowHR 알림",
+    title: payload?.title ?? "FlowHR notification",
     body: payload?.body ?? "",
     category: payload?.category ?? "general",
     createdAt: payload?.createdAt ?? new Date().toISOString(),
-    read: Boolean(payload?.read)
+    read: Boolean(payload?.read),
+    archivedAt: payload?.archivedAt ?? null
   };
 }
