@@ -4,12 +4,13 @@ import ShellCard from "../components/ShellCard";
 import { colors, spacing } from "../theme/tokens";
 
 function action(label) {
-  Alert.alert("Coming Soon", `${label} 화면은 WI-0249~에서 확장됩니다.`);
+  Alert.alert("Coming Soon", `${label} 화면은 WI-0250~에서 확장됩니다.`);
 }
 
 export default function AdminHomeScreen({
   session,
   onLogout,
+  onOpenApprovalQueue,
   onOpenNotifications,
   onOpenNotificationHistory,
   onOpenEmailTemplates
@@ -22,7 +23,7 @@ export default function AdminHomeScreen({
 
         <ShellCard title="승인 대기 큐">
           <Text style={styles.desc}>정체 항목과 우선순위 배지를 모바일에서 바로 확인합니다.</Text>
-          <Pressable style={styles.btn} onPress={() => action("승인 대기 큐")}>
+          <Pressable style={styles.btn} onPress={onOpenApprovalQueue}>
             <Text style={styles.btnText}>승인 대기 보기</Text>
           </Pressable>
         </ShellCard>

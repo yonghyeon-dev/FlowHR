@@ -10,6 +10,7 @@
 - Core shell screens:
   - Admin home shell
   - Employee home shell
+  - Admin approval queue shell
 - Shared API client wrapper for FlowHR backend requests
 - Push notification baseline
   - permission bootstrap
