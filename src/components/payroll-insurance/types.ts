@@ -9,6 +9,31 @@ export type PayrollInsuranceSettlementResponse = {
     };
     grossPayKrw: number;
     taxableBaseKrw: number;
+    rounding: {
+      mode: "round" | "floor" | "ceil";
+      unitsKrw: {
+        nationalPensionUnitKrw: number;
+        healthInsuranceUnitKrw: number;
+        longTermCareUnitKrw: number;
+        employmentInsuranceUnitKrw: number;
+        industrialAccidentUnitKrw: number;
+      };
+    };
+    rawContributionKrw: {
+      employee: {
+        nationalPensionKrw: number;
+        healthInsuranceKrw: number;
+        longTermCareKrw: number;
+        employmentInsuranceKrw: number;
+      };
+      employer: {
+        nationalPensionKrw: number;
+        healthInsuranceKrw: number;
+        longTermCareKrw: number;
+        employmentInsuranceKrw: number;
+        industrialAccidentKrw: number;
+      };
+    };
     employeeContributionKrw: {
       nationalPensionKrw: number;
       healthInsuranceKrw: number;

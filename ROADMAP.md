@@ -295,10 +295,11 @@
 - WI-0256 모바일 분석 대시보드 baseline(`apps/mobile` `mobileAnalytics` helper(기간 필터/KPI snapshot/일별 trend/export payload) + `MobileAnalyticsDashboardScreen` 신규 + 관리자/직원 홈 대시보드 진입 + WI-0256 회귀 테스트 추가)
 - WI-0257 모바일 분석 대시보드 공유/필터 preset baseline(`apps/mobile` analytics filter preset catalog(`allActionRequired/approvalRisk/requestFlow/notificationPulse`) + pin/recent preset 저장 + preset transfer payload import/export + `MobileAnalyticsFilterPresetCard` + `MobileAnalyticsDashboardScreen` focus 필터 연동 + WI-0257 회귀 테스트 추가)
 - WI-0258 모바일 적층 정리 baseline(`docs/codex-guide.md` 세션 강제 참조 + 모바일 알림 히스토리의 프리셋 pin/recent/import-export 제거 + 모바일 요청 follow-up의 템플릿/번들 프리셋/import-export 제거 + 화면/스토어 단순화 + WI-0258 회귀 테스트 추가)
+- WI-0259 급여 4대보험 정산 라운딩 정확도 보강 baseline(`POST /payroll/runs/preview-insurance-settlement`에 `settlement.insuranceRounding`(mode + NP/HI/LTC/EI/IA 단위) 추가 + 라운딩/원시(raw) 기여금 trace 응답 추가 + `/admin/payroll-insurance` 입력/결과 패널 연동 + payroll spec/contract 1.39.0 갱신 + WI-0259 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 급여 핵심 병목 복귀 — 4대보험/연말정산 정확도 보강(`WI-E`/`WI-F`) 착수 (WI-0259 예정)
+- 다음: 급여 핵심 병목 지속 — 연말정산(소득공제/세액공제) 정확도 보강(`WI-F`) 착수 (WI-0260 예정)
 
 ### 현재 아키텍처
 

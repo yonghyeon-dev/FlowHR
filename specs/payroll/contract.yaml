@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.38.0
+version: 1.39.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -27,7 +27,7 @@ scope:
     - KR statutory baseline admin preset-mode share-link validation feedback UX for deterministic applied/ignored query visibility
     - KR statutory baseline admin preset-mode share-link reset/reapply UX for deterministic operator reset and replay control
     - golden fixture regression coverage for statutory KR baseline deduction outputs
-    - KR 4-insurance settlement preview with employee/employer contribution deltas and prior-withheld reconciliation
+    - KR 4-insurance settlement preview with employee/employer contribution deltas, optional settlement insurance rounding, and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
     - payslip distribution and employee receipt confirmation workflow for confirmed payroll runs
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
@@ -77,7 +77,7 @@ api:
       description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table or preset dataset ID, contribution caps, additive tax-credit fields, optional taxable/non-taxable split input validation, optional income split item code/category/amount input arrays, optional income split item preset dataset ID, configurable insurance rounding, and optional monthly-boundary validation).
     - method: POST
       path: /payroll/runs/preview-insurance-settlement
-      description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, and prior-withheld/prior-paid deltas.
+      description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, optional settlement insurance rounding (`mode` + component units), raw contribution trace, and prior-withheld/prior-paid deltas.
     - method: POST
       path: /payroll/runs/close-period
       description: Preview/apply payroll period close from confirmed runs with withholding/social/net settlement deltas and blocking reasons when unconfirmed runs remain.
@@ -230,7 +230,8 @@ invariants:
   - Insurance rounding rules (if provided) must apply deterministic unit/mode rounding per insurance component.
   - Tax credits in statutory mode must apply to income tax before local income tax, and post-credit income tax must not be negative.
   - When statutory.requireMonthlyBoundary is true, payroll period must be validated against monthly boundary in Asia/Seoul.
-  - Insurance settlement preview must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0) and keep contribution components deterministic for same inputs/rates/caps.
+  - Insurance settlement preview must derive taxable base as max(grossPayKrw - nonTaxableIncomeKrw, 0) and keep contribution components deterministic for same inputs/rates/caps/rounding.
+  - Insurance settlement rounding rules (if provided) must apply deterministic mode/unit rounding per NP/HI/LTC/EI/IA component.
   - Insurance settlement deltas must satisfy employeeDeltaKrw = employeeContributionTotalKrw - priorWithheldKrw and employerDeltaKrw = employerContributionTotalKrw - priorEmployerPaidKrw.
   - Insurance settlement preview with requireMonthlyBoundary=true must reject non-monthly period boundaries in Asia/Seoul.
   - Payroll period close totals must be derived from CONFIRMED runs in period and keep deterministic aggregation for same run set.
@@ -357,7 +358,7 @@ test_plan:
     - admin payroll preview preset share-link feedback panel shows applied query values and ignored invalid query values deterministically
     - admin payroll preview preset share-link reset/reapply actions deterministically clear share-applied values and re-hydrate from current query
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
-    - preview-insurance-settlement returns employee/employer contributions, capped bases, and prior-withheld/prior-paid deltas
+    - preview-insurance-settlement returns employee/employer contributions, capped bases, rounding/raw trace, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
     - preview-insurance-settlement validates monthly-boundary guard in Asia/Seoul when requireMonthlyBoundary=true
     - close-period preview returns run-state summary (confirmed/previewed) and withholding/social/net settlement deltas
@@ -404,6 +405,7 @@ test_plan:
     - statutory_kr_baseline preset share-link validation feedback UX deterministic replay via WI-0233 e2e
     - statutory_kr_baseline preset share-link reset/reapply UX deterministic replay via WI-0234 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
+    - insurance settlement rounding mode/unit deterministic replay via WI-0259 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
     - year-end settlement and withholding receipt deterministic replay via WI-0187 e2e
@@ -568,7 +570,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.38.0 additively documents admin preset-mode share-link reset/reapply UX for `statutory_kr_baseline` inputs (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.39.0 additively documents settlement insurance rounding inputs (`settlement.insuranceRounding`) and rounding/raw trace output for `/payroll/runs/preview-insurance-settlement` (no breaking API change), while preserving all existing payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -596,6 +598,7 @@ references:
   - work-items/WI-0232-payroll-kr-preset-share-link-auto-apply-ux.md
   - work-items/WI-0233-payroll-kr-preset-share-link-validation-feedback-ux.md
   - work-items/WI-0234-payroll-kr-preset-share-link-reset-reapply-ux.md
+  - work-items/WI-0259-payroll-insurance-settlement-rounding-accuracy.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
