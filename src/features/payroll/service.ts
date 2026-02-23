@@ -361,6 +361,11 @@ type GetPayrollYearEndWithholdingReceiptDocumentInput = {
   format: PayrollYearEndWithholdingReceiptDocumentFormat;
 };
 
+type GetPayrollYearEndFinalizedSettlementInput = {
+  year: number;
+  employeeId: string;
+};
+
 type GetPayrollYearEndInsuranceReconciliationReportInput = {
   year: number;
   employeeId: string;
@@ -914,6 +919,21 @@ type GetPayrollYearEndWithholdingReceiptDocumentResult = {
     generatedAt: string;
     receipt: PayrollYearEndWithholdingReceiptSummary;
     content: string;
+  };
+};
+
+type GetPayrollYearEndFinalizedSettlementResult = {
+  settlement: {
+    year: number;
+    employeeId: string;
+    finalizationId: string;
+    finalizedAt: string;
+    settlementHash: string;
+    annualTotalsKrw: PayrollTotalsKrw;
+    settlementKrw: YearEndSettlementKrw;
+    deductionEligibility: YearEndDeductionEligibilityInput;
+    deductionItemsKrw: YearEndDeductionSummaryKrw;
+    runStates: YearEndFilingGuardRunStates;
   };
 };
 
@@ -5906,6 +5926,67 @@ export async function getPayrollYearEndWithholdingReceiptDocument(
       generatedAt,
       receipt,
       content: artifact.content
+    }
+  };
+}
+
+export async function getPayrollYearEndFinalizedSettlement(
+  context: ServiceContext,
+  input: GetPayrollYearEndFinalizedSettlementInput
+): Promise<GetPayrollYearEndFinalizedSettlementResult> {
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
+  const permissions = await resolveActorPermissions({ actor, dataAccess: context.dataAccess });
+  const canManage = permissions.has(Permissions.payrollRunConfirm);
+  const canListAny = permissions.has(Permissions.payrollRunList);
+  const canListOwn = permissions.has(Permissions.payrollRunListOwn);
+
+  if (!canManage && !canListAny && !canListOwn) {
+    throw new ServiceError(403, `payroll list requires ${Permissions.payrollRunList} permission`);
+  }
+  if (!canManage && !canListAny && actor.id !== input.employeeId) {
+    throw new ServiceError(403, "employees can only read their own finalized year-end settlement");
+  }
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  const finalizationLogs = await context.dataAccess.audit.list({
+    actions: ["payroll.year_end.settlement_finalized"],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 200
+  });
+  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+  const finalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+  if (
+    !finalizationPayload ||
+    !finalizationPayload.finalizedAt ||
+    !finalizationPayload.finalized
+  ) {
+    throw new ServiceError(404, "finalized year-end settlement not found");
+  }
+
+  const settlementHash = resolveYearEndSettlementHashFromFinalizationPayload(finalizationPayload);
+
+  return {
+    settlement: {
+      year: finalizationPayload.year,
+      employeeId: finalizationPayload.employeeId,
+      finalizationId: finalizationPayload.finalizationId,
+      finalizedAt: finalizationPayload.finalizedAt,
+      settlementHash,
+      annualTotalsKrw: finalizationPayload.annualTotalsKrw,
+      settlementKrw: finalizationPayload.settlementKrw,
+      deductionEligibility: finalizationPayload.deductionEligibility,
+      deductionItemsKrw: finalizationPayload.deductionItemsKrw,
+      runStates: finalizationPayload.runStates
     }
   };
 }
