@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.52.0
+version: 1.53.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -52,6 +52,7 @@ scope:
     - year-end filing acknowledgement code dictionary and rejection-reason catalog workflow
     - year-end filing submission cancel/reopen transition guard workflow
     - year-end filing submission settlement-hash filter workflow (`settlementHash`) for list query and admin quick-filter chips
+    - year-end hash-guard unified regression suite (finalize/export/submit/ack/resubmit/list settlement-hash filters)
     - year-end filing submission search/sort and quick-action workflow
     - year-end filing ops dashboard drilldown and alert-rule workflow
   out:
@@ -475,6 +476,7 @@ test_plan:
     - year-end deduction/tax-credit application-reason-code explainability deterministic replay via WI-0270 e2e
     - year-end insurance reconciliation report deterministic replay via WI-0271 e2e
     - year-end preflight checklist deterministic replay via WI-0272 e2e
+    - year-end hash-guard unified regression suite deterministic replay via WI-0273 e2e
     - year-end finalization and filing-export deterministic replay via WI-0189 e2e
     - year-end filing multi-format/validation deterministic replay via WI-0190 e2e
     - year-end filing submission/ack deterministic replay via WI-0191 e2e
@@ -646,7 +648,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.52.0 additively documents year-end preflight checklist API (`GET /payroll/year-end/preflight-checklist`) for finalize-readiness and guard-detail visibility (no breaking API change), while preserving existing insurance reconciliation/reporting, deduction/tax-credit explainability, settlement-hash guards, and settlement-hash list filter workflows plus withholding breakdown/non-taxable upper-bound/deduction-eligibility/deduction-cap/tax-credit-cap behaviors across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
+consumer_impact: "Contract v1.53.0 additively documents unified year-end hash-guard regression coverage (WI-0273) for finalize/export/submit/ack/resubmit/list settlement-hash filter paths (no runtime breaking API change), while preserving existing preflight checklist/reporting, deduction/tax-credit explainability, settlement-hash guards, and settlement-hash list filter workflows plus withholding breakdown/non-taxable upper-bound/deduction-eligibility/deduction-cap/tax-credit-cap behaviors across payroll preview/confirm/profile/statutory preset/split/item-array, insurance-settlement, close-period, payslip delivery/receipt, and year-end preview/recalculate/finalize/export/submission/timeline/evidence-note/resubmit/cancel/reopen/ack/withholding-receipt APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -688,6 +690,7 @@ references:
   - work-items/WI-0270-payroll-year-end-application-reason-code-explainability.md
   - work-items/WI-0271-payroll-year-end-insurance-reconciliation-report.md
   - work-items/WI-0272-payroll-year-end-preflight-checklist.md
+  - work-items/WI-0273-payroll-year-end-hash-guard-regression-suite.md
   - work-items/WI-0110-payroll-statutory-golden-regression.md
   - work-items/WI-0184-payroll-insurance-settlement-baseline.md
   - work-items/WI-0185-payroll-withholding-close-period-baseline.md
