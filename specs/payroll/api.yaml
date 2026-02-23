@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.45.0
+  version: 1.46.0
 paths:
   /payroll/runs:
     get:
@@ -121,7 +121,7 @@ paths:
   /payroll/year-end/export-filing-data:
     post:
       summary: Export payroll year-end filing data for employee/year
-      description: Exports filing-ready annual payroll data for selected employee/year after settlement finalization, including withholding refund/additional-due and deduction/tax-credit cap-applied breakdown from finalization payload, with multi-format output (`json`, `csv`, `jsonl`, `hometax_csv`) and validation mode (`basic`/`strict`).
+      description: Exports filing-ready annual payroll data for selected employee/year after settlement finalization, including withholding refund/additional-due and deduction/tax-credit cap-applied breakdown from finalization payload, with multi-format output (`json`, `csv`, `jsonl`, `hometax_csv`) and validation mode (`basic`/`strict`). Optional `expectedSettlementHash` enforces stale export guard (`409` on mismatch), and successful export payload includes `settlementHash` trace for filing-package handoff.
       responses:
         "200":
           description: Year-end filing export generated

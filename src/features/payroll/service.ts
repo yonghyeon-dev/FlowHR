@@ -250,6 +250,7 @@ type ExportPayrollYearEndFilingDataInput = {
   employeeId: string;
   format: PayrollYearEndFilingExportFormat;
   validationMode: PayrollYearEndFilingValidationMode;
+  expectedSettlementHash?: string;
 };
 
 type SubmitPayrollYearEndFilingPackageInput = {
@@ -651,6 +652,7 @@ type ExportPayrollYearEndFilingDataResult = {
     year: number;
     employeeId: string;
     finalizationId: string;
+    settlementHash: string;
     finalizedAt: string;
     exportedAt: string;
     format: PayrollYearEndFilingExportFormat;
@@ -3052,6 +3054,39 @@ function buildYearEndSettlementHash(payload: {
   return createHash("sha256").update(JSON.stringify(normalizedPayload)).digest("hex");
 }
 
+const yearEndSettlementHashPattern = /^[a-f0-9]{64}$/i;
+
+function normalizeYearEndSettlementHash(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (!yearEndSettlementHashPattern.test(normalized)) {
+    return null;
+  }
+  return normalized;
+}
+
+function resolveYearEndSettlementHashFromFinalizationPayload(
+  payload: YearEndFinalizationAuditPayload
+): string {
+  const settlementHash = normalizeYearEndSettlementHash(
+    (payload as { settlementHash?: unknown }).settlementHash
+  );
+  if (settlementHash) {
+    return settlementHash;
+  }
+  return buildYearEndSettlementHash({
+    year: payload.year,
+    employeeId: payload.employeeId,
+    runStates: payload.runStates,
+    annualTotalsKrw: payload.annualTotalsKrw,
+    deductionEligibility: payload.deductionEligibility,
+    deductionItemsKrw: payload.deductionItemsKrw,
+    settlementKrw: payload.settlementKrw
+  });
+}
+
 function asYearEndFinalizationAuditPayload(payload: unknown): YearEndFinalizationAuditPayload | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -4256,6 +4291,14 @@ export async function exportPayrollYearEndFilingData(
   if (!finalizedPayload || !finalizedPayload.finalized || !finalizedPayload.finalizedAt) {
     throw new ServiceError(409, "year-end settlement must be finalized before filing data export");
   }
+  const settledSettlementHash = resolveYearEndSettlementHashFromFinalizationPayload(finalizedPayload);
+  const expectedSettlementHash = normalizeYearEndSettlementHash(input.expectedSettlementHash);
+  if (expectedSettlementHash && expectedSettlementHash !== settledSettlementHash) {
+    throw new ServiceError(409, "year-end settlement hash mismatch", {
+      expectedSettlementHash,
+      computedSettlementHash: settledSettlementHash
+    });
+  }
 
   const records = buildYearEndFilingRecords(snapshot.confirmedRuns);
   const validation = validateYearEndFilingRecords(records, finalizedPayload);
@@ -4272,6 +4315,7 @@ export async function exportPayrollYearEndFilingData(
     year: input.year,
     employeeId: input.employeeId,
     finalizationId: finalizedPayload.finalizationId,
+    settlementHash: settledSettlementHash,
     finalizedAt: finalizedPayload.finalizedAt,
     exportedAt,
     format: input.format,

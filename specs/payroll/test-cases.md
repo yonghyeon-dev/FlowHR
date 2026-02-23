@@ -42,7 +42,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 34. Reject year-end settlement recalculation API when `payroll_year_end_deduction_input_v1` feature flag is disabled.
 35. Preview/apply year-end settlement finalization and reject apply when confirmed/distributed/receipt-confirmed prerequisites are missing; verify settlementHash replay determinism and expectedSettlementHash mismatch guard.
 36. Export year-end filing data and reject export before finalization or when `payroll_year_end_filing_export_v1` feature flag is disabled.
-37. Export year-end filing data in `json`/`csv`/`jsonl`/`hometax_csv` and validate `basic`/`strict` mode behavior (strict rejects validation-failed exports).
+37. Export year-end filing data in `json`/`csv`/`jsonl`/`hometax_csv`, validate `basic`/`strict` mode behavior (strict rejects validation-failed exports), and verify optional `expectedSettlementHash` stale-export guard plus `settlementHash` trace output.
 38. Submit/list/ack year-end filing package and reject ACK for unknown/already-acknowledged submission.
 39. Resubmit rejected filing package and reject resubmit for pending/non-rejected/already-resubmitted sources.
 40. Query filing submission timeline and append evidence note; reject timeline/note for unknown submission.
@@ -72,6 +72,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 64. Admin preset share-link auto-apply UX deterministically parses shared query context (`incomeSplitItemPresetId`, `taxableIncomeKrw`, `nonTaxableIncomeKrw`) and pre-fills statutory preview inputs with invalid-value ignore behavior.
 65. Admin preset share-link validation feedback UX deterministically summarizes applied values and ignored invalid query values from shared query context.
 66. Admin preset share-link reset/reapply UX deterministically supports clearing share-applied preset/split values and re-applying current shared query context.
+67. Export year-end filing data rejects stale `expectedSettlementHash` mismatch (`409`) and returns deterministic `settlementHash` aligned with latest finalized settlement payload.
 
 ## Accuracy Cases
 
@@ -133,6 +134,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 55. Year-end non-taxable annual income upper-bound guard remains deterministic for same input replay across preview/recalculation/finalization responses.
 56. Year-end withholding refund/additional-due breakdown remains deterministic for same input replay across preview/recalculation/finalization/export responses.
 57. Year-end finalization settlementHash and expectedSettlementHash stale-apply guard remain deterministic for same input replay vectors.
+58. Year-end filing export expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
 
 ## Regression Linkage
 
@@ -179,6 +181,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Year-End Non-Taxable Upper-Bound Gate: year-end settlement APIs reject nonTaxableAnnualIncomeKrw that exceeds annual gross pay and keep decisions deterministic/auditable.
 - Year-End Withholding Breakdown Gate: year-end settlement APIs expose deterministic `additionalWithholdingDueKrw`/`withholdingRefundKrw` fields that reconcile with withholdingDeltaKrw.
 - Year-End Settlement Hash Gate: finalize API emits deterministic `settlementHash` and blocks `apply=true` when `expectedSettlementHash` mismatches.
+- Year-End Export Settlement Hash Gate: export API blocks stale `expectedSettlementHash` mismatch and returns deterministic `settlementHash` trace on success.
 - Year-End Deduction Cap Gate: year-end deduction item caps and cap-applied breakdown remain deterministic and auditable across recalculation/finalization/export APIs.
 - Year-End Tax Credit Cap Gate: year-end tax credit caps and cap-applied breakdown remain deterministic and auditable across preview/recalculation/finalization/export APIs.
 - Year-End Finalization/Export Gate: year-end finalization and filing-export APIs remain feature-flagged, permission-guarded, and deterministic with finalized-settlement precondition.
