@@ -353,6 +353,14 @@ type IssuePayrollYearEndWithholdingReceiptInput = {
   issuerName?: string;
 };
 
+type PayrollYearEndWithholdingReceiptDocumentFormat = "json" | "text";
+
+type GetPayrollYearEndWithholdingReceiptDocumentInput = {
+  year: number;
+  employeeId: string;
+  format: PayrollYearEndWithholdingReceiptDocumentFormat;
+};
+
 type GetPayrollYearEndInsuranceReconciliationReportInput = {
   year: number;
   employeeId: string;
@@ -856,37 +864,56 @@ type ListPayrollYearEndFilingAckCatalogResult = {
   rejectionReasons: PayrollYearEndFilingRejectionReasonCatalogItem[];
 };
 
+type PayrollYearEndWithholdingReceiptSummary = {
+  year: number;
+  employeeId: string;
+  periodStart: string;
+  periodEnd: string;
+  issue: boolean;
+  canIssue: boolean;
+  issued: boolean;
+  receiptNumber: string;
+  issuerName: string;
+  issuedAt: string | null;
+  runStates: {
+    totalRuns: number;
+    confirmedRuns: number;
+    previewedRuns: number;
+    undistributedRuns: number;
+    pendingReceiptRuns: number;
+    previewedRunIds: string[];
+    undistributedRunIds: string[];
+    pendingReceiptRunIds: string[];
+  };
+  annualTotalsKrw: {
+    grossPayKrw: number;
+    withholdingTaxKrw: number;
+    socialInsuranceKrw: number;
+    otherDeductionsKrw: number;
+    totalDeductionsKrw: number;
+    netPayKrw: number;
+  };
+  blockingReasons: string[];
+};
+
 type IssuePayrollYearEndWithholdingReceiptResult = {
-  receipt: {
+  receipt: PayrollYearEndWithholdingReceiptSummary;
+};
+
+type GetPayrollYearEndWithholdingReceiptDocumentResult = {
+  document: {
     year: number;
     employeeId: string;
-    periodStart: string;
-    periodEnd: string;
-    issue: boolean;
-    canIssue: boolean;
-    issued: boolean;
     receiptNumber: string;
+    issuedAt: string;
     issuerName: string;
-    issuedAt: string | null;
-    runStates: {
-      totalRuns: number;
-      confirmedRuns: number;
-      previewedRuns: number;
-      undistributedRuns: number;
-      pendingReceiptRuns: number;
-      previewedRunIds: string[];
-      undistributedRunIds: string[];
-      pendingReceiptRunIds: string[];
-    };
-    annualTotalsKrw: {
-      grossPayKrw: number;
-      withholdingTaxKrw: number;
-      socialInsuranceKrw: number;
-      otherDeductionsKrw: number;
-      totalDeductionsKrw: number;
-      netPayKrw: number;
-    };
-    blockingReasons: string[];
+    format: PayrollYearEndWithholdingReceiptDocumentFormat;
+    fileName: string;
+    contentType: string;
+    contentSha256: string;
+    generatedAt: string;
+    receipt: PayrollYearEndWithholdingReceiptSummary;
+    content: string;
   };
 };
 
@@ -3273,6 +3300,80 @@ function asYearEndFinalizationAuditPayload(payload: unknown): YearEndFinalizatio
     return null;
   }
   return candidate as YearEndFinalizationAuditPayload;
+}
+
+function asYearEndWithholdingReceiptSummaryPayload(
+  payload: unknown
+): PayrollYearEndWithholdingReceiptSummary | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<PayrollYearEndWithholdingReceiptSummary>;
+  if (
+    typeof candidate.year !== "number" ||
+    typeof candidate.employeeId !== "string" ||
+    typeof candidate.receiptNumber !== "string" ||
+    typeof candidate.issuerName !== "string" ||
+    typeof candidate.issued !== "boolean" ||
+    typeof candidate.issuedAt !== "string" ||
+    !candidate.runStates ||
+    !candidate.annualTotalsKrw
+  ) {
+    return null;
+  }
+  return candidate as PayrollYearEndWithholdingReceiptSummary;
+}
+
+function buildYearEndWithholdingReceiptDocumentArtifact(
+  receipt: PayrollYearEndWithholdingReceiptSummary,
+  format: PayrollYearEndWithholdingReceiptDocumentFormat
+) {
+  if (format === "text") {
+    const lines = [
+      "FlowHR Withholding Receipt",
+      "",
+      `Year: ${receipt.year}`,
+      `Employee ID: ${receipt.employeeId}`,
+      `Receipt Number: ${receipt.receiptNumber}`,
+      `Issued At: ${receipt.issuedAt ?? "-"}`,
+      `Issuer: ${receipt.issuerName}`,
+      "",
+      "Annual Totals (KRW)",
+      `- Gross Pay: ${receipt.annualTotalsKrw.grossPayKrw.toLocaleString("ko-KR")}`,
+      `- Withholding Tax: ${receipt.annualTotalsKrw.withholdingTaxKrw.toLocaleString("ko-KR")}`,
+      `- Social Insurance: ${receipt.annualTotalsKrw.socialInsuranceKrw.toLocaleString("ko-KR")}`,
+      `- Other Deductions: ${receipt.annualTotalsKrw.otherDeductionsKrw.toLocaleString("ko-KR")}`,
+      `- Total Deductions: ${receipt.annualTotalsKrw.totalDeductionsKrw.toLocaleString("ko-KR")}`,
+      `- Net Pay: ${receipt.annualTotalsKrw.netPayKrw.toLocaleString("ko-KR")}`,
+      "",
+      "Run States",
+      `- Total: ${receipt.runStates.totalRuns}`,
+      `- Confirmed: ${receipt.runStates.confirmedRuns}`,
+      `- Previewed: ${receipt.runStates.previewedRuns}`,
+      `- Undistributed: ${receipt.runStates.undistributedRuns}`,
+      `- Pending Receipt: ${receipt.runStates.pendingReceiptRuns}`,
+      "",
+      `Blocking Reasons: ${receipt.blockingReasons.join(" | ") || "-"}`,
+      ""
+    ];
+    return {
+      content: lines.join("\n"),
+      contentType: "text/plain; charset=utf-8",
+      fileName: `withholding-receipt-${receipt.year}-${receipt.employeeId}.txt`
+    };
+  }
+
+  return {
+    content: JSON.stringify(
+      {
+        receipt
+      },
+      null,
+      2
+    ),
+    contentType: "application/json; charset=utf-8",
+    fileName: `withholding-receipt-${receipt.year}-${receipt.employeeId}.json`
+  };
 }
 
 function buildYearEndFilingRecords(runs: PayrollRunEntity[]): YearEndFilingRecord[] {
@@ -5744,6 +5845,67 @@ export async function getPayrollYearEndPreflightChecklist(
         settlementHash
       },
       checks
+    }
+  };
+}
+
+export async function getPayrollYearEndWithholdingReceiptDocument(
+  context: ServiceContext,
+  input: GetPayrollYearEndWithholdingReceiptDocumentInput
+): Promise<GetPayrollYearEndWithholdingReceiptDocumentResult> {
+  if (!isPayrollYearEndEnabled()) {
+    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
+  }
+
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
+  const permissions = await resolveActorPermissions({ actor, dataAccess: context.dataAccess });
+  const canManage = permissions.has(Permissions.payrollRunConfirm);
+  const canListAny = permissions.has(Permissions.payrollRunList);
+  const canListOwn = permissions.has(Permissions.payrollRunListOwn);
+
+  if (!canManage && !canListAny && !canListOwn) {
+    throw new ServiceError(403, `payroll list requires ${Permissions.payrollRunList} permission`);
+  }
+  if (!canManage && !canListAny && actor.id !== input.employeeId) {
+    throw new ServiceError(403, "employees can only read their own withholding receipt document");
+  }
+
+  const entityId = `${input.year}_${input.employeeId}`;
+  const issuedLogs = await context.dataAccess.audit.list({
+    actions: ["payroll.year_end.withholding_receipt_issued"],
+    entityType: "PayrollYearEnd",
+    entityId,
+    limit: 200
+  });
+  const latestIssuedLog = issuedLogs[issuedLogs.length - 1] ?? null;
+  const receipt = asYearEndWithholdingReceiptSummaryPayload(latestIssuedLog?.payload ?? null);
+  if (!receipt || !receipt.issued || !receipt.issuedAt) {
+    throw new ServiceError(404, "issued withholding receipt not found");
+  }
+
+  const artifact = buildYearEndWithholdingReceiptDocumentArtifact(receipt, input.format);
+  const generatedAt = new Date().toISOString();
+  const contentSha256 = createHash("sha256").update(artifact.content).digest("hex");
+
+  return {
+    document: {
+      year: input.year,
+      employeeId: input.employeeId,
+      receiptNumber: receipt.receiptNumber,
+      issuedAt: receipt.issuedAt,
+      issuerName: receipt.issuerName,
+      format: input.format,
+      fileName: artifact.fileName,
+      contentType: artifact.contentType,
+      contentSha256,
+      generatedAt,
+      receipt,
+      content: artifact.content
     }
   };
 }

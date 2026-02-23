@@ -30,6 +30,23 @@ export type WithholdingReceiptResponse = {
   };
 };
 
+export type WithholdingReceiptDocumentResponse = {
+  document: {
+    year: number;
+    employeeId: string;
+    receiptNumber: string;
+    issuedAt: string;
+    issuerName: string;
+    format: "json" | "text";
+    fileName: string;
+    contentType: string;
+    contentSha256: string;
+    generatedAt: string;
+    receipt: WithholdingReceiptResponse["receipt"];
+    content: string;
+  };
+};
+
 export type ApiLog = {
   id: number;
   label: string;
