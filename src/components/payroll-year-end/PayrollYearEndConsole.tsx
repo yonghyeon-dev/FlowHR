@@ -396,6 +396,7 @@ export default function PayrollYearEndConsole() {
           {!settlement ? <p className="small">No settlement yet.</p> : (
             <ul className="simple-list">
               <li><span>Gross / Net</span><strong>{formatKrw(settlement.summary.annualTotalsKrw.grossPayKrw)} / {formatKrw(settlement.summary.annualTotalsKrw.netPayKrw)}</strong></li>
+              <li><span>Input Vector Hash</span><strong>{settlement.summary.inputVectorHash.slice(0, 16)}...</strong></li>
               <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(settlement.summary.settlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(settlement.summary.settlementKrw.totalTaxCreditAppliedKrw)}</strong></li>
               <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
               <li><span>Tax Credit Reason Codes</span><strong>{summarizeTaxCreditReasonCodes(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
@@ -413,6 +414,7 @@ export default function PayrollYearEndConsole() {
           {!recalculation ? <p className="small">No recalculation yet.</p> : (
             <ul className="simple-list">
               <li><span>Income Deduction Input</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.totalIncomeDeductionKrw)}</strong></li>
+              <li><span>Input Vector Hash</span><strong>{recalculation.recalculation.inputVectorHash.slice(0, 16)}...</strong></li>
               <li><span>Capped Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.cappedIncomeDeductionKrw)}</strong></li>
               <li><span>Applied Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw)}</strong></li>
               <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditAppliedKrw)}</strong></li>

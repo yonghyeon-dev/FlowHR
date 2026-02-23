@@ -1,4 +1,4 @@
-# Contracts Test Cases (Contract v0.1.0)
+# Contracts Test Cases (Contract v0.2.0)
 
 1. Create contract template and verify version starts at 1.
 2. Update template name/body/category and verify version increments when content changes.
@@ -15,3 +15,4 @@
 13. Employee cannot respond to another employee document (`403`).
 14. Manual expire operation transitions SENT document to `EXPIRED`.
 15. Renew operation from terminal document creates a new DRAFT document and marks source as `RENEWED`.
+16. Signed-contract signature evidence read/download API returns deterministic artifact metadata/content (`format=json|text`, `contentSha256`) and blocks non-owner employee access (`403`).

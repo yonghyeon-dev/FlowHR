@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.56.0
+version: 1.57.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -35,12 +35,14 @@ scope:
     - year-end issued withholding receipt document read/download workflow (`format=json|text`) for employee self-service and operator support
     - year-end finalized settlement self-service read workflow for employee annual settlement summary and hash trace
     - year-end deduction-item input and settlement recalculation workflow for employee annual payroll totals
+    - year-end settlement input-vector hash workflow (`inputVectorHash`) for preview/recalculation/finalization traceability
     - year-end insurance reconciliation report workflow (confirmed-run social-insurance totals vs finalized deduction trace)
     - year-end preflight checklist workflow before finalization (run/distribution/receipt/submission/non-taxable/hash checks)
     - year-end deduction eligibility validation guard workflow for recalculation/finalization inputs
     - year-end non-taxable annual income upper-bound guard workflow for preview/recalculation/finalization inputs
     - year-end withholding delta breakdown workflow (`additionalWithholdingDueKrw`/`withholdingRefundKrw`) for preview/recalculation/finalization/export outputs
     - year-end finalization settlement-hash and stale apply guard workflow (`settlementHash`, `expectedSettlementHash`)
+    - year-end finalization duplicate apply conflict guard workflow (reject re-finalization when same `settlementHash` is already finalized)
     - year-end filing export settlement-hash guard workflow (`expectedSettlementHash`) and settlement-hash trace propagation
     - year-end filing submit/resubmit settlement-hash guard workflow (`expectedSettlementHash`) and submission settlement-hash trace propagation
     - year-end filing acknowledgement settlement-hash guard workflow (`expectedSettlementHash`) for submission snapshot consistency
@@ -274,6 +276,8 @@ invariants:
   - Year-end settlement nonTaxableAnnualIncomeKrw input must not exceed annual gross pay aggregated from selected confirmed run set.
   - Year-end settlement withholding breakdown must satisfy `withholdingDeltaKrw = additionalWithholdingDueKrw - withholdingRefundKrw` and only one of additional/refund may be positive for same payload.
   - Year-end finalization must return deterministic settlementHash for same input/run snapshot, and `apply=true` with mismatched expectedSettlementHash must be blocked.
+  - Year-end preview/recalculation/finalization must return deterministic inputVectorHash for same normalized input vector.
+  - Year-end finalization apply must reject duplicate re-finalization when latest finalized settlementHash is identical.
   - Year-end deduction eligibility flags must block recalculation/finalization when an ineligible deduction item has non-zero input.
   - Year-end settlement recalculation must apply year-end deduction item caps per deduction item and return deterministic baseline-vs-recalculated delta for same run/input set.
   - Year-end settlement must apply year-end tax credit caps per tax-credit item and keep tax-credit cap-applied breakdown deterministic for same input.
@@ -675,7 +679,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.56.0 additively introduces statutory KR lookup preset auto-selection by effective date reference (`incomeTaxLookupPresetAuto`, optional `incomeTaxLookupAsOf`, fallback periodEnd) for `POST /payroll/runs/preview-with-deductions` (WI-0282), while preserving existing manual bracket/lookup/preset workflows and year-end settlement/finalization/export/filing coverage (no breaking API change)."
+consumer_impact: "Contract v1.57.0 additively introduces deterministic year-end `inputVectorHash` trace output across preview/recalculation/finalization and duplicate finalization apply conflict guard when the same `settlementHash` is already finalized (WI-0285, WI-0286), while preserving existing year-end API compatibility (no breaking API change)."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -692,6 +696,10 @@ references:
   - work-items/WI-0220-payroll-kr-precision-simple-tax-table-and-insurance-rounding.md
   - work-items/WI-0221-payroll-kr-tax-table-preset-and-validation-guard.md
   - work-items/WI-0282-payroll-kr-lookup-preset-effective-date-auto-resolution.md
+  - work-items/WI-0285-payroll-year-end-input-vector-hash-trace.md
+  - work-items/WI-0286-payroll-year-end-finalization-reapply-conflict-guard.md
+  - work-items/WI-0287-employee-year-end-input-self-service-route.md
+  - work-items/WI-0290-payroll-contract-core-journey-e2e-bundle.md
   - work-items/WI-0223-payroll-kr-taxable-non-taxable-split-rule.md
   - work-items/WI-0224-payroll-kr-income-split-item-code-category-input.md
   - work-items/WI-0225-payroll-kr-income-split-item-preset-dataset.md

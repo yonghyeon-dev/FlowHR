@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.56.0
+  version: 1.57.0
 paths:
   /payroll/runs:
     get:
@@ -100,21 +100,21 @@ paths:
   /payroll/year-end/preview-settlement:
     post:
       summary: Preview payroll year-end settlement for employee
-      description: Aggregates confirmed payroll runs for the selected year and employee, validates that non-taxable annual income does not exceed annual gross pay, and computes annual withholding settlement delta with refund/additional-due breakdown plus year-end tax credit cap-applied breakdown and per-item application reason codes.
+      description: Aggregates confirmed payroll runs for the selected year and employee, validates that non-taxable annual income does not exceed annual gross pay, and computes annual withholding settlement delta with refund/additional-due breakdown plus year-end tax credit cap-applied breakdown and per-item application reason codes. Response includes deterministic `inputVectorHash` for replay traceability.
       responses:
         "200":
           description: Year-end settlement summary generated
   /payroll/year-end/recalculate-settlement:
     post:
       summary: Recalculate payroll year-end settlement with deduction items
-      description: Accepts employee/year deduction-item inputs, validates deduction eligibility flags and non-taxable annual income upper bound, applies year-end deduction caps and year-end tax credit caps, and returns baseline vs recalculated settlement with refund/additional-due and cap-applied breakdowns plus per-item application reason codes for the same confirmed annual run set.
+      description: Accepts employee/year deduction-item inputs, validates deduction eligibility flags and non-taxable annual income upper bound, applies year-end deduction caps and year-end tax credit caps, and returns baseline vs recalculated settlement with refund/additional-due and cap-applied breakdowns plus per-item application reason codes for the same confirmed annual run set. Response includes deterministic `inputVectorHash` for replay traceability.
       responses:
         "200":
           description: Year-end settlement recalculation summary generated
   /payroll/year-end/finalize-settlement:
     post:
       summary: Preview or apply payroll year-end settlement finalization
-      description: Validates confirmed/distributed/receipt-confirmed prerequisites, deduction eligibility flags, and non-taxable annual income upper bound for selected employee/year, then returns finalization summary with withholding refund/additional-due and deduction/tax-credit cap-applied breakdown plus per-item application reason codes and `settlementHash`. `apply=true` can include optional `expectedSettlementHash` for stale apply guard and records finalization audit/event.
+      description: Validates confirmed/distributed/receipt-confirmed prerequisites, deduction eligibility flags, and non-taxable annual income upper bound for selected employee/year, then returns finalization summary with withholding refund/additional-due and deduction/tax-credit cap-applied breakdown plus per-item application reason codes, `settlementHash`, and deterministic `inputVectorHash`. `apply=true` can include optional `expectedSettlementHash` for stale apply guard, rejects duplicate re-finalization when same `settlementHash` is already finalized, and records finalization audit/event.
       responses:
         "200":
           description: Year-end settlement finalization summary generated

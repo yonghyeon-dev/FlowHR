@@ -99,3 +99,7 @@ export const expireContractDocumentSchema = z.object({
   reason: z.string().trim().max(2_000).optional(),
   expiredAt: isoDateTime.optional()
 });
+
+export const getContractDocumentSignatureEvidenceQuerySchema = z.object({
+  format: z.enum(["json", "text"]).default("json")
+});

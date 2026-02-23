@@ -597,6 +597,7 @@ type YearEndSettlementSummary = {
   employeeId: string;
   periodStart: string;
   periodEnd: string;
+  inputVectorHash: string;
   runStates: YearEndRunStates;
   annualTotalsKrw: PayrollTotalsKrw;
   settlementKrw: YearEndSettlementKrw;
@@ -622,6 +623,7 @@ type RecalculatePayrollYearEndSettlementResult = {
     employeeId: string;
     periodStart: string;
     periodEnd: string;
+    inputVectorHash: string;
     runStates: YearEndRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
     deductionEligibility: YearEndDeductionEligibilityInput;
@@ -675,6 +677,7 @@ type FinalizePayrollYearEndSettlementResult = {
     finalizationId: string;
     finalizedAt: string | null;
     finalizedByNote: string | null;
+    inputVectorHash: string;
     runStates: YearEndFilingGuardRunStates;
     annualTotalsKrw: PayrollTotalsKrw;
     deductionEligibility: YearEndDeductionEligibilityInput;
@@ -2973,6 +2976,30 @@ function normalizeYearEndTaxCreditItems(
   };
 }
 
+function buildYearEndInputVectorHash(input: {
+  year: number;
+  employeeId: string;
+  nonTaxableAnnualIncomeKrw: number;
+  annualIncomeTaxRate: number;
+  localIncomeTaxRate: number;
+  taxCredits: YearEndTaxCreditItemsInput;
+  deductionItems: YearEndDeductionItemsInput | null;
+  deductionEligibility: YearEndDeductionEligibilityInput | null;
+}) {
+  const normalizedPayload = {
+    version: "v1",
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: input.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: input.annualIncomeTaxRate,
+    localIncomeTaxRate: input.localIncomeTaxRate,
+    taxCredits: input.taxCredits,
+    deductionItems: input.deductionItems,
+    deductionEligibility: input.deductionEligibility
+  };
+  return createHash("sha256").update(JSON.stringify(normalizedPayload)).digest("hex");
+}
+
 function applyYearEndTaxCreditCapRule(
   inputKrw: number,
   rule: YearEndTaxCreditItemCapRule
@@ -4301,12 +4328,24 @@ export async function previewPayrollYearEndSettlement(
 
   const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const settled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
+  const inputVectorHash = buildYearEndInputVectorHash({
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: settled.settlementKrw.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
+    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
+    taxCredits: normalizedTaxCredits,
+    deductionItems: null,
+    deductionEligibility: null
+  });
 
   const payload: YearEndSettlementSummary = {
     year: input.year,
     employeeId: input.employeeId,
     periodStart: snapshot.periodStart.toISOString(),
     periodEnd: snapshot.periodEnd.toISOString(),
+    inputVectorHash,
     runStates: {
       totalRuns: snapshot.runs.length,
       confirmedRuns: snapshot.confirmedRuns.length,
@@ -4357,6 +4396,7 @@ export async function recalculatePayrollYearEndSettlement(
   const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
   const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
   const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
     normalizedDeductionItems,
     normalizedDeductionEligibility
@@ -4374,12 +4414,23 @@ export async function recalculatePayrollYearEndSettlement(
     input,
     deductionCapApplied.cappedIncomeDeductionKrw
   );
+  const inputVectorHash = buildYearEndInputVectorHash({
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: recalculatedSettled.settlementKrw.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
+    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
+    taxCredits: normalizedTaxCredits,
+    deductionItems: normalizedDeductionItems,
+    deductionEligibility: normalizedDeductionEligibility
+  });
 
   const payload = {
     year: input.year,
     employeeId: input.employeeId,
     periodStart: snapshot.periodStart.toISOString(),
     periodEnd: snapshot.periodEnd.toISOString(),
+    inputVectorHash,
     runStates: {
       totalRuns: snapshot.runs.length,
       confirmedRuns: snapshot.confirmedRuns.length,
@@ -4471,6 +4522,7 @@ export async function finalizePayrollYearEndSettlement(
 
   const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
   const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
   const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
     normalizedDeductionItems,
     normalizedDeductionEligibility
@@ -4497,6 +4549,16 @@ export async function finalizePayrollYearEndSettlement(
     capRulesKrw: deductionCapApplied.capRulesKrw,
     capAppliedByItemKrw: deductionCapApplied.capAppliedByItemKrw
   };
+  const inputVectorHash = buildYearEndInputVectorHash({
+    year: input.year,
+    employeeId: input.employeeId,
+    nonTaxableAnnualIncomeKrw: settled.settlementKrw.nonTaxableAnnualIncomeKrw,
+    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
+    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
+    taxCredits: normalizedTaxCredits,
+    deductionItems: normalizedDeductionItems,
+    deductionEligibility: normalizedDeductionEligibility
+  });
   const settlementHash = buildYearEndSettlementHash({
     year: input.year,
     employeeId: input.employeeId,
@@ -4518,6 +4580,29 @@ export async function finalizePayrollYearEndSettlement(
       computedSettlementHash: settlementHash
     });
   }
+  const entityId = `${input.year}_${input.employeeId}`;
+  if (input.apply) {
+    const finalizationLogs = await context.dataAccess.audit.list({
+      actions: ["payroll.year_end.settlement_finalized"],
+      entityType: "PayrollYearEnd",
+      entityId,
+      limit: 200
+    });
+    const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
+    const latestFinalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
+    if (latestFinalizationPayload?.finalized && latestFinalizationPayload.finalizedAt) {
+      const latestSettlementHash = resolveYearEndSettlementHashFromFinalizationPayload(
+        latestFinalizationPayload
+      );
+      if (latestSettlementHash === settlementHash) {
+        throw new ServiceError(409, "year-end settlement already finalized for same hash", {
+          settlementHash,
+          latestFinalizationId: latestFinalizationPayload.finalizationId,
+          latestFinalizedAt: latestFinalizationPayload.finalizedAt
+        });
+      }
+    }
+  }
   const finalizationId = `YEF-${input.year}-${input.employeeId}`;
   const finalizedAt = input.apply ? new Date().toISOString() : null;
   const finalizedByNote = input.finalizedByNote?.trim() ? input.finalizedByNote.trim() : null;
@@ -4532,6 +4617,7 @@ export async function finalizePayrollYearEndSettlement(
     finalizationId,
     finalizedAt,
     finalizedByNote,
+    inputVectorHash,
     runStates: filingGuard.runStates,
     annualTotalsKrw: snapshot.totalsKrw,
     deductionEligibility: normalizedDeductionEligibility,
@@ -4542,7 +4628,6 @@ export async function finalizePayrollYearEndSettlement(
     blockingReasons: filingGuard.blockingReasons
   };
 
-  const entityId = `${input.year}_${input.employeeId}`;
   if (input.apply) {
     await context.dataAccess.audit.append({
       action: "payroll.year_end.settlement_finalized",

@@ -84,6 +84,8 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 76. Finalized year-end settlement read API returns deterministic finalization snapshot (`finalizationId`, `settlementHash`, liability/delta) and rejects missing-finalization snapshot or unauthorized employee access.
 77. Run statutory baseline preview with preset auto-selection (`incomeTaxLookupPresetAuto`) and optional effective date reference (`incomeTaxLookupAsOf`) and verify deterministic preset resolution fallback (`periodEnd`) plus mixed-mode guard.
 78. Admin payroll preview supports lookup preset auto-selection toggle (`incomeTaxLookupPresetAuto`) and optional reference datetime input (`incomeTaxLookupAsOf`) wiring while preserving deterministic manual preset fallback.
+79. Year-end preview/recalculation/finalization responses include deterministic `inputVectorHash` for same normalized input vector replay.
+80. Year-end finalization rejects duplicate `apply=true` when latest finalized snapshot already has the same `settlementHash`.
 
 ## Accuracy Cases
 
@@ -138,24 +140,26 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 48. Admin preset-mode sample payload copy/share content (including replay href context) remains deterministic for same UI state/input replay.
 49. Admin preset share-link auto-apply parsing and statutory preview prefill behavior remain deterministic for same query replay.
 50. Admin preset share-link validation feedback summary (applied/ignored invalid values) remains deterministic for same query replay.
-51. Admin preset share-link reset/reapply actions (clear defaults + query re-hydration) remain deterministic for same UI state/query replay.
-52. Year-end deduction item caps and per-item cap-applied breakdown remain deterministic for same input replay across recalculation/finalization/export responses.
-53. Year-end tax credit caps and per-item cap-applied breakdown remain deterministic for same input replay across preview/recalculation/finalization/export responses.
-54. Year-end deduction eligibility validation guard remains deterministic for same input replay across recalculation/finalization responses.
-55. Year-end non-taxable annual income upper-bound guard remains deterministic for same input replay across preview/recalculation/finalization responses.
-56. Year-end withholding refund/additional-due breakdown remains deterministic for same input replay across preview/recalculation/finalization/export responses.
-57. Year-end finalization settlementHash and expectedSettlementHash stale-apply guard remain deterministic for same input replay vectors.
-58. Year-end filing export expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
-59. Year-end filing submit/resubmit expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
-60. Year-end filing acknowledge expectedSettlementHash guard decisions remain deterministic for same submission replay vectors.
-61. Year-end filing submission list settlementHash prefix filtering remains deterministic for same query and history replay.
-62. Year-end deduction/tax-credit cap-applied reason-code outputs remain deterministic for same input replay across preview/recalculate/finalize/export APIs.
-63. Year-end insurance reconciliation report delta/status and monthly breakdown remain deterministic for same run/finalization replay.
-64. Year-end preflight checklist summary and check-detail outputs remain deterministic for same run/submission/finalization/non-taxable input replay.
-65. Unified year-end hash guard regression suite remains deterministic for same finalized snapshot and submission action replay sequence.
-66. Year-end issued withholding receipt document content/hash output remains deterministic for same issued snapshot replay.
-67. Year-end finalized settlement read snapshot output remains deterministic for same finalization replay.
-68. Statutory baseline lookup preset auto-selection remains deterministic for same effective date reference (`incomeTaxLookupAsOf`) and periodEnd fallback replay vectors.
+51. Year-end `inputVectorHash` output remains deterministic for same normalized input vectors across preview/recalculation/finalization.
+52. Year-end finalization duplicate-apply guard decisions remain deterministic for same finalized snapshot replay.
+53. Admin preset share-link reset/reapply actions (clear defaults + query re-hydration) remain deterministic for same UI state/query replay.
+54. Year-end deduction item caps and per-item cap-applied breakdown remain deterministic for same input replay across recalculation/finalization/export responses.
+55. Year-end tax credit caps and per-item cap-applied breakdown remain deterministic for same input replay across preview/recalculation/finalization/export responses.
+56. Year-end deduction eligibility validation guard remains deterministic for same input replay across recalculation/finalization responses.
+57. Year-end non-taxable annual income upper-bound guard remains deterministic for same input replay across preview/recalculation/finalization responses.
+58. Year-end withholding refund/additional-due breakdown remains deterministic for same input replay across preview/recalculation/finalization/export responses.
+59. Year-end finalization settlementHash and expectedSettlementHash stale-apply guard remain deterministic for same input replay vectors.
+60. Year-end filing export expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
+61. Year-end filing submit/resubmit expectedSettlementHash guard and settlementHash trace output remain deterministic for same finalized payload replay vectors.
+62. Year-end filing acknowledge expectedSettlementHash guard decisions remain deterministic for same submission replay vectors.
+63. Year-end filing submission list settlementHash prefix filtering remains deterministic for same query and history replay.
+64. Year-end deduction/tax-credit cap-applied reason-code outputs remain deterministic for same input replay across preview/recalculate/finalize/export APIs.
+65. Year-end insurance reconciliation report delta/status and monthly breakdown remain deterministic for same run/finalization replay.
+66. Year-end preflight checklist summary and check-detail outputs remain deterministic for same run/submission/finalization/non-taxable input replay.
+67. Unified year-end hash guard regression suite remains deterministic for same finalized snapshot and submission action replay sequence.
+68. Year-end issued withholding receipt document content/hash output remains deterministic for same issued snapshot replay.
+69. Year-end finalized settlement read snapshot output remains deterministic for same finalization replay.
+70. Statutory baseline lookup preset auto-selection remains deterministic for same effective date reference (`incomeTaxLookupAsOf`) and periodEnd fallback replay vectors.
 69. Admin payroll preview auto/manual preset mode toggle keeps deterministic statutory payload wiring for `incomeTaxLookupPresetId` vs `incomeTaxLookupPresetAuto` + optional `incomeTaxLookupAsOf`.
 
 ## Regression Linkage
