@@ -17,6 +17,7 @@ function run() {
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
   const employeeLayout = readUtf8("src", "app", "employee", "layout.tsx");
   const mobileMenu = readUtf8("src", "components", "layout", "SaasMobileMenu.tsx");
+  const mobileMenuCss = readUtf8("src", "components", "layout", "SaasMobileMenu.module.css");
   const globalCss = readUtf8("src", "app", "globals.css");
 
   assert.match(roadmap, /WI-0239/);
@@ -33,16 +34,19 @@ function run() {
   assert.match(employeeLayout, /menuLabel=\{t\("shell\.mobileMenu"\)\}/);
   assert.match(employeeLayout, /href: "\/employee\/guide"/);
 
-  assert.match(mobileMenu, /<details className="saas-mobile-menu">/);
-  assert.match(mobileMenu, /className="saas-mobile-nav"/);
-  assert.match(mobileMenu, /className="saas-mobile-footer"/);
+  assert.match(mobileMenu, /import styles from "\.\/SaasMobileMenu\.module\.css";/);
+  assert.match(mobileMenu, /className=\{styles\.header\}/);
+  assert.match(mobileMenu, /className=\{styles\.menu\}/);
+  assert.match(mobileMenu, /className=\{styles\.nav\}/);
+  assert.match(mobileMenu, /className=\{styles\.footer\}/);
 
-  assert.match(globalCss, /\.saas-mobile-header\s*\{/);
-  assert.match(globalCss, /\.saas-mobile-menu summary\s*\{/);
+  assert.match(mobileMenuCss, /\.header\s*\{/);
+  assert.match(mobileMenuCss, /\.menu summary\s*\{/);
+
   assert.match(globalCss, /@media \(max-width: 980px\)\s*\{/);
+  assert.match(globalCss, /\.saas-shell\s*\{\s*display:\s*block;/);
   assert.match(globalCss, /\.saas-sidebar\s*\{\s*display:\s*none;/);
-  assert.match(globalCss, /@media \(max-width: 640px\)\s*\{/);
-  assert.match(globalCss, /\.panel-actions \.btn\s*\{/);
+  assert.match(globalCss, /\.saas-content\s*\{\s*width:\s*100%;/);
 
   assert.ok(
     countLines(adminLayout) <= 300,

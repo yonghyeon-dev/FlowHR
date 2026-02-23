@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./SaasMobileMenu.module.css";
 
 export type SaasMobileMenuLink = {
   href: string;
@@ -18,24 +19,24 @@ export default function SaasMobileMenu(props: SaasMobileMenuProps) {
   const { badge, menuLabel, navAriaLabel, navLinks, footerLinks } = props;
 
   return (
-    <header className="saas-mobile-header">
-      <div className="saas-mobile-top">
+    <header className={styles.header}>
+      <div className={styles.top}>
         <Link href="/">FlowHR</Link>
         <span className="saas-badge">{badge}</span>
       </div>
-      <details className="saas-mobile-menu">
+      <details className={styles.menu}>
         <summary>{menuLabel}</summary>
-        <nav className="saas-mobile-nav" aria-label={navAriaLabel}>
+        <nav className={styles.nav} aria-label={navAriaLabel}>
           {navLinks.map((item) => (
-            <Link key={item.href} href={item.href} className={item.muted ? "muted-link" : undefined}>
+            <Link key={item.href} href={item.href} className={item.muted ? styles.muted : undefined}>
               {item.label}
             </Link>
           ))}
         </nav>
         {footerLinks.length > 0 ? (
-          <div className="saas-mobile-footer">
+          <div className={styles.footer}>
             {footerLinks.map((item) => (
-              <Link key={item.href} href={item.href} className={item.muted ? "muted-link" : undefined}>
+              <Link key={item.href} href={item.href} className={item.muted ? styles.muted : undefined}>
                 {item.label}
               </Link>
             ))}
