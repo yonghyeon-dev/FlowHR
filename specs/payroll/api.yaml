@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.57.0
+  version: 1.58.0
 paths:
   /payroll/runs:
     get:
@@ -60,7 +60,13 @@ paths:
   /payroll/runs/preview-with-deductions:
     post:
       summary: Create payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode)
-      description: In profile mode, `expectedProfileVersion` can be provided to reject stale profile usage with `409`. In statutory_kr_baseline mode, baseline KR withholding/social insurance components are derived from configurable rates with optional `incomeTaxBrackets`, `incomeTaxLookupTable`, `incomeTaxLookupPresetId`, or preset auto-selection (`incomeTaxLookupPresetAuto` with optional effective date reference `incomeTaxLookupAsOf`, defaulting to `periodEnd`) (mutually exclusive), insurance cap fields (`nationalPensionCapKrw`, `healthInsuranceCapKrw`, `employmentInsuranceCapKrw`), additive tax-credit fields (`additionalTaxCreditKrw`, `dependentCount`, `dependentTaxCreditPerPersonKrw`), optional split input `taxableIncomeKrw`, optional income split item arrays (`taxableIncomeItems`, `nonTaxableIncomeItems` with `code`/`category`/`amountKrw`, multi-row up to 20 entries per list), optional income split item preset (`incomeSplitItemPresetId`), optional insurance rounding rules (`insuranceRounding`), and optional monthly-boundary guard (`requireMonthlyBoundary`). Split guards require `nonTaxableIncomeKrw <= grossPayKrw` and explicit taxable split sum match; `incomeSplitItemPresetId` cannot be combined with manual income split item arrays. Admin UI may provide dictionary-based code autocomplete, preset/manual consistency preflight, preset-mode sample payload preview, copy/share UX, share-link auto-apply UX, share-link validation feedback UX, and share-link reset/reapply UX while keeping API payload unchanged, and server-side dictionary validation guard enforces code/category parity per split item kind.
+      description: >
+        In profile mode, `expectedProfileVersion` can be provided to reject stale profile usage with `409`.
+        In statutory_kr_baseline mode, baseline KR withholding/social insurance components are derived from configurable rates with optional `incomeTaxBrackets`, `incomeTaxLookupTable`, `incomeTaxLookupPresetId`, or preset auto-selection (`incomeTaxLookupPresetAuto` with optional effective date reference `incomeTaxLookupAsOf`, defaulting to `periodEnd`) (mutually exclusive).
+        `incomeTaxLookupTable` rows can include optional dependent-tier overrides (`dependentTaxKrw` list with `{dependentCount,taxKrw}` entries) to apply dependent-aware simple withholding lookup while preserving base `taxKrw` row selection by taxable base.
+        Other supported fields include insurance cap fields (`nationalPensionCapKrw`, `healthInsuranceCapKrw`, `employmentInsuranceCapKrw`), additive tax-credit fields (`additionalTaxCreditKrw`, `dependentCount`, `dependentTaxCreditPerPersonKrw`), optional split input `taxableIncomeKrw`, optional income split item arrays (`taxableIncomeItems`, `nonTaxableIncomeItems` with `code`/`category`/`amountKrw`, multi-row up to 20 entries per list), optional income split item preset (`incomeSplitItemPresetId`), optional insurance rounding rules (`insuranceRounding`), and optional monthly-boundary guard (`requireMonthlyBoundary`).
+        Split guards require `nonTaxableIncomeKrw <= grossPayKrw` and explicit taxable split sum match; `incomeSplitItemPresetId` cannot be combined with manual income split item arrays.
+        Admin UI may provide dictionary-based code autocomplete, preset/manual consistency preflight, preset-mode sample payload preview, copy/share UX, share-link auto-apply UX, share-link validation feedback UX, and share-link reset/reapply UX while keeping API payload unchanged, and server-side dictionary validation guard enforces code/category parity per split item kind.
       responses:
         "200":
           description: Deduction preview generated

@@ -36,7 +36,16 @@ const statutoryIncomeTaxBracketSchema = z.object({
 
 const statutoryIncomeTaxLookupRowSchema = z.object({
   upToKrw: nonNegativeInteger.nullable(),
-  taxKrw: nonNegativeInteger
+  taxKrw: nonNegativeInteger,
+  dependentTaxKrw: z
+    .array(
+      z.object({
+        dependentCount: nonNegativeInteger,
+        taxKrw: nonNegativeInteger
+      })
+    )
+    .max(20)
+    .optional()
 });
 
 const statutoryIncomeSplitItemSchema = z.object({
@@ -264,6 +273,42 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
               path: ["statutory", "incomeTaxLookupTable", index, "taxKrw"],
               message: "incomeTaxLookupTable taxKrw values must be non-decreasing"
             });
+          }
+          if (row.dependentTaxKrw && row.dependentTaxKrw.length > 0) {
+            if (row.dependentTaxKrw[0]?.dependentCount !== 0) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["statutory", "incomeTaxLookupTable", index, "dependentTaxKrw"],
+                message: "dependentTaxKrw must start from dependentCount=0"
+              });
+            }
+            let lastDependentCount = -1;
+            let lastDependentTaxKrw = Number.POSITIVE_INFINITY;
+            for (const [tierIndex, tier] of row.dependentTaxKrw.entries()) {
+              if (tier.dependentCount <= lastDependentCount) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: [
+                    "statutory",
+                    "incomeTaxLookupTable",
+                    index,
+                    "dependentTaxKrw",
+                    tierIndex,
+                    "dependentCount"
+                  ],
+                  message: "dependentTaxKrw dependentCount values must be strictly increasing"
+                });
+              }
+              if (tier.taxKrw > lastDependentTaxKrw) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: ["statutory", "incomeTaxLookupTable", index, "dependentTaxKrw", tierIndex, "taxKrw"],
+                  message: "dependentTaxKrw taxKrw values must be non-increasing"
+                });
+              }
+              lastDependentCount = tier.dependentCount;
+              lastDependentTaxKrw = tier.taxKrw;
+            }
           }
           lastTaxKrw = row.taxKrw;
         }

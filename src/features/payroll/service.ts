@@ -73,6 +73,10 @@ type StatutoryKrBaselineDeductions = {
     incomeTaxLookupTable?: Array<{
       upToKrw: number | null;
       taxKrw: number;
+      dependentTaxKrw?: Array<{
+        dependentCount: number;
+        taxKrw: number;
+      }>;
     }>;
     incomeTaxLookupPresetId?: string;
     incomeTaxLookupPresetAuto?: boolean;
@@ -1058,6 +1062,10 @@ type IncomeTaxBracket = {
 type IncomeTaxLookupRow = {
   upToKrw: number | null;
   taxKrw: number;
+  dependentTaxKrw?: Array<{
+    dependentCount: number;
+    taxKrw: number;
+  }>;
 };
 
 type StatutoryIncomeSplitItem = {
@@ -1459,6 +1467,43 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
       );
     }
     lastTaxKrw = taxKrw;
+    const dependentTaxKrw = row.dependentTaxKrw?.map((tier, tierIndex) => ({
+      dependentCount: toKrwInteger(
+        tier.dependentCount,
+        `statutory.incomeTaxLookupTable[${index}].dependentTaxKrw[${tierIndex}].dependentCount`
+      ),
+      taxKrw: toKrwInteger(
+        tier.taxKrw,
+        `statutory.incomeTaxLookupTable[${index}].dependentTaxKrw[${tierIndex}].taxKrw`
+      )
+    }));
+
+    if (dependentTaxKrw && dependentTaxKrw.length > 0) {
+      if (dependentTaxKrw[0]?.dependentCount !== 0) {
+        throw new ServiceError(
+          400,
+          "statutory.incomeTaxLookupTable dependentTaxKrw must start at dependentCount=0"
+        );
+      }
+      let lastDependentCount = -1;
+      let lastDependentTaxKrw = Number.POSITIVE_INFINITY;
+      for (const tier of dependentTaxKrw) {
+        if (tier.dependentCount <= lastDependentCount) {
+          throw new ServiceError(
+            400,
+            "statutory.incomeTaxLookupTable dependentTaxKrw dependentCount must be strictly increasing"
+          );
+        }
+        if (tier.taxKrw > lastDependentTaxKrw) {
+          throw new ServiceError(
+            400,
+            "statutory.incomeTaxLookupTable dependentTaxKrw taxKrw must be non-increasing"
+          );
+        }
+        lastDependentCount = tier.dependentCount;
+        lastDependentTaxKrw = tier.taxKrw;
+      }
+    }
 
     if (row.upToKrw === null) {
       if (index !== lookupTable.length - 1) {
@@ -1468,7 +1513,11 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
         );
       }
       hasOpenEnded = true;
-      normalized.push({ upToKrw: null, taxKrw });
+      normalized.push({
+        upToKrw: null,
+        taxKrw,
+        dependentTaxKrw: dependentTaxKrw && dependentTaxKrw.length > 0 ? dependentTaxKrw : undefined
+      });
       continue;
     }
 
@@ -1483,7 +1532,11 @@ function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): Inco
       );
     }
     lastFiniteUpper = upToKrw;
-    normalized.push({ upToKrw, taxKrw });
+    normalized.push({
+      upToKrw,
+      taxKrw,
+      dependentTaxKrw: dependentTaxKrw && dependentTaxKrw.length > 0 ? dependentTaxKrw : undefined
+    });
   }
 
   if (!hasOpenEnded) {
@@ -1559,10 +1612,55 @@ function calculateProgressiveIncomeTaxKrw(taxableBaseKrw: number, brackets: Inco
   return toKrwInteger(Math.round(tax), "statutory.incomeTaxKrw");
 }
 
-function calculateLookupIncomeTaxKrw(taxableBaseKrw: number, lookupTable: IncomeTaxLookupRow[]) {
+type LookupIncomeTaxResolution = {
+  taxKrw: number;
+  selectedIncomeTaxLookupRow: {
+    upToKrw: number | null;
+    taxKrw: number;
+  };
+  selectedIncomeTaxLookupDependentTier: {
+    dependentCount: number;
+    taxKrw: number;
+  } | null;
+};
+
+function calculateLookupIncomeTaxKrw(
+  taxableBaseKrw: number,
+  dependentCount: number,
+  lookupTable: IncomeTaxLookupRow[]
+): LookupIncomeTaxResolution {
   for (const row of lookupTable) {
     if (row.upToKrw === null || taxableBaseKrw <= row.upToKrw) {
-      return row.taxKrw;
+      if (!row.dependentTaxKrw || row.dependentTaxKrw.length === 0) {
+        return {
+          taxKrw: row.taxKrw,
+          selectedIncomeTaxLookupRow: {
+            upToKrw: row.upToKrw,
+            taxKrw: row.taxKrw
+          },
+          selectedIncomeTaxLookupDependentTier: null
+        };
+      }
+
+      let selectedTier = row.dependentTaxKrw[0];
+      for (const tier of row.dependentTaxKrw) {
+        if (tier.dependentCount <= dependentCount) {
+          selectedTier = tier;
+          continue;
+        }
+        break;
+      }
+      return {
+        taxKrw: selectedTier.taxKrw,
+        selectedIncomeTaxLookupRow: {
+          upToKrw: row.upToKrw,
+          taxKrw: row.taxKrw
+        },
+        selectedIncomeTaxLookupDependentTier: {
+          dependentCount: selectedTier.dependentCount,
+          taxKrw: selectedTier.taxKrw
+        }
+      };
     }
   }
 
@@ -2127,14 +2225,19 @@ export async function previewPayrollWithDeductions(
       : incomeTaxBrackets
         ? "progressive_brackets"
         : "flat_rate";
-    const preCreditIncomeTaxKrw = incomeTaxLookupTable
-      ? calculateLookupIncomeTaxKrw(taxableBaseKrw, incomeTaxLookupTable)
+    const lookupIncomeTaxResolution = incomeTaxLookupTable
+      ? calculateLookupIncomeTaxKrw(taxableBaseKrw, dependentCount, incomeTaxLookupTable)
+      : null;
+    const preCreditIncomeTaxKrw = lookupIncomeTaxResolution
+      ? lookupIncomeTaxResolution.taxKrw
       : incomeTaxBrackets
         ? calculateProgressiveIncomeTaxKrw(taxableBaseKrw, incomeTaxBrackets)
         : toKrwInteger(Math.round(taxableBaseKrw * incomeTaxRate), "statutory.incomeTaxKrw");
-    const selectedIncomeTaxLookupRow = incomeTaxLookupTable
-      ? incomeTaxLookupTable.find((row) => row.upToKrw === null || taxableBaseKrw <= row.upToKrw) ??
-        null
+    const selectedIncomeTaxLookupRow = lookupIncomeTaxResolution
+      ? lookupIncomeTaxResolution.selectedIncomeTaxLookupRow
+      : null;
+    const selectedIncomeTaxLookupDependentTier = lookupIncomeTaxResolution
+      ? lookupIncomeTaxResolution.selectedIncomeTaxLookupDependentTier
       : null;
     const dependentTaxCreditKrw = dependentCount * dependentTaxCreditPerPersonKrw;
     const totalTaxCreditKrw = additionalTaxCreditKrw + dependentTaxCreditKrw;
@@ -2248,6 +2351,7 @@ export async function previewPayrollWithDeductions(
         asOf: incomeTaxLookupAsOf.toISOString()
       },
       selectedIncomeTaxLookupRow,
+      selectedIncomeTaxLookupDependentTier,
       contributionBasesKrw: {
         nationalPensionBaseKrw,
         healthInsuranceBaseKrw,

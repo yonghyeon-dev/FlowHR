@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.57.0
+version: 1.58.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -13,6 +13,7 @@ scope:
     - KR statutory baseline progressive income-tax brackets and insurance contribution caps
     - KR statutory baseline additive tax-credit inputs and optional monthly-boundary validation (Asia/Seoul)
     - KR statutory baseline simple withholding lookup-table input and configurable insurance rounding rules
+    - KR statutory baseline dependent-aware simple withholding lookup-tier rows (`incomeTaxLookupTable[].dependentTaxKrw`)
     - KR statutory baseline managed lookup-table preset dataset selection and validation guard
     - KR statutory baseline lookup-table preset auto-selection by effective date reference (`incomeTaxLookupPresetAuto`, `incomeTaxLookupAsOf`)
     - KR statutory baseline taxable/non-taxable split validation rule (`taxableIncomeKrw` + `nonTaxableIncomeKrw`)
@@ -93,7 +94,7 @@ api:
       description: Generate payroll gross pay preview for a period.
     - method: POST
       path: /payroll/runs/preview-with-deductions
-      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table or preset dataset ID, contribution caps, additive tax-credit fields, optional taxable/non-taxable split input validation, optional income split item code/category/amount input arrays, optional income split item preset dataset ID, configurable insurance rounding, and optional monthly-boundary validation).
+      description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table or preset dataset ID, optional dependent-aware lookup-tier rows (`dependentTaxKrw`) for lookup-table mode, contribution caps, additive tax-credit fields, optional taxable/non-taxable split input validation, optional income split item code/category/amount input arrays, optional income split item preset dataset ID, configurable insurance rounding, and optional monthly-boundary validation).
     - method: POST
       path: /payroll/runs/preview-insurance-settlement
       description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, optional settlement insurance rounding (`mode` + component units), raw contribution trace, and prior-withheld/prior-paid deltas.
@@ -254,6 +255,8 @@ invariants:
   - Statutory KR baseline mode must keep deduction and net-pay outputs deterministic for same inputs/rates.
   - When incomeTaxBrackets is provided, statutory income tax must be calculated by bracket segments and include open-ended final bracket.
   - When incomeTaxLookupTable is provided, statutory income tax must be selected from first matching lookup row by taxable base, and the lookup table must include open-ended final row.
+  - When incomeTaxLookupTable row includes `dependentTaxKrw`, dependent tiers must start at `dependentCount=0`, keep strictly increasing dependentCount order, and keep non-increasing taxKrw by dependentCount.
+  - When incomeTaxLookupTable row includes `dependentTaxKrw`, statutory income tax must use the highest tier whose dependentCount is less than or equal to request `dependentCount`; base row `taxKrw` remains trace output for selected taxable-base row.
   - When incomeTaxLookupPresetId is provided, statutory income tax must resolve from known preset dataset rows and keep deterministic row selection by taxable base.
   - When incomeTaxLookupPresetAuto is true, statutory income tax must resolve from the latest preset dataset whose effectiveFrom is less than or equal to the effective date reference (`incomeTaxLookupAsOf` when provided, otherwise periodEnd).
   - Statutory mode must reject requests that mix incomeTaxBrackets/incomeTaxLookupTable/incomeTaxLookupPresetId/incomeTaxLookupPresetAuto in the same request.
@@ -406,6 +409,7 @@ test_plan:
     - list deduction profiles and filter by active/mode
     - statutory_kr_baseline validates progressive bracket ordering/open-ended final bracket
     - statutory_kr_baseline validates lookup-table ordering/open-ended final row, monotonic tax values, and mutual exclusivity with brackets/preset
+    - statutory_kr_baseline validates dependent lookup-tier ordering/range rules (`dependentTaxKrw`) and applies dependent-aware lookup tax selection deterministically
     - statutory_kr_baseline resolves managed lookup-table preset ID and rejects unknown preset IDs
     - statutory_kr_baseline preset auto-selection resolves deterministic preset by effective date reference (`incomeTaxLookupAsOf` or periodEnd fallback)
     - statutory_kr_baseline validates taxable/non-taxable split guard (`nonTaxableIncomeKrw <= grossPayKrw`, explicit taxable split sum match)
@@ -466,6 +470,7 @@ test_plan:
     - statutory_kr_baseline simple lookup-table + insurance rounding deterministic replay via WI-0220 e2e
     - statutory_kr_baseline lookup-table preset dataset and validation-guard deterministic replay via WI-0221 e2e
     - statutory_kr_baseline lookup-table preset auto-selection by effective date reference deterministic replay via WI-0282 e2e
+    - statutory_kr_baseline dependent-aware lookup-tier deterministic replay via WI-0291 e2e
     - statutory_kr_baseline taxable/non-taxable split deterministic replay via WI-0223 e2e
     - statutory_kr_baseline income split item code/category input deterministic replay via WI-0224 e2e
     - statutory_kr_baseline income split item preset dataset deterministic replay via WI-0225 e2e
@@ -679,7 +684,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.57.0 additively introduces deterministic year-end `inputVectorHash` trace output across preview/recalculation/finalization and duplicate finalization apply conflict guard when the same `settlementHash` is already finalized (WI-0285, WI-0286), while preserving existing year-end API compatibility (no breaking API change)."
+consumer_impact: "Contract v1.58.0 additively introduces dependent-aware simple withholding lookup tiers (`incomeTaxLookupTable[].dependentTaxKrw`) for statutory KR baseline preview while preserving existing lookup-row and year-end API compatibility (no breaking API change)."
 references:
   - specs/common/time-and-payroll-rules.md
   - specs/payroll/phase2-compatibility-matrix.md
@@ -696,6 +701,7 @@ references:
   - work-items/WI-0220-payroll-kr-precision-simple-tax-table-and-insurance-rounding.md
   - work-items/WI-0221-payroll-kr-tax-table-preset-and-validation-guard.md
   - work-items/WI-0282-payroll-kr-lookup-preset-effective-date-auto-resolution.md
+  - work-items/WI-0291-payroll-kr-simple-withholding-dependent-tier-engine.md
   - work-items/WI-0285-payroll-year-end-input-vector-hash-trace.md
   - work-items/WI-0286-payroll-year-end-finalization-reapply-conflict-guard.md
   - work-items/WI-0287-employee-year-end-input-self-service-route.md

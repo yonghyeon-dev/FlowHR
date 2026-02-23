@@ -1,6 +1,10 @@
 export type PayrollKrIncomeTaxLookupPresetRow = {
   upToKrw: number | null;
   taxKrw: number;
+  dependentTaxKrw?: Array<{
+    dependentCount: number;
+    taxKrw: number;
+  }>;
 };
 
 export type PayrollKrIncomeTaxLookupPreset = {
@@ -18,11 +22,56 @@ const payrollKrIncomeTaxLookupPresets: PayrollKrIncomeTaxLookupPreset[] = [
     effectiveFrom: "2026-01-01",
     source: "flowhr-curated-operations-dataset",
     rows: [
-      { upToKrw: 50000, taxKrw: 2500 },
-      { upToKrw: 100000, taxKrw: 7200 },
-      { upToKrw: 150000, taxKrw: 13500 },
-      { upToKrw: 200000, taxKrw: 21500 },
-      { upToKrw: null, taxKrw: 30000 }
+      {
+        upToKrw: 50000,
+        taxKrw: 2500,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 2500 },
+          { dependentCount: 1, taxKrw: 2500 },
+          { dependentCount: 2, taxKrw: 2300 },
+          { dependentCount: 3, taxKrw: 2100 }
+        ]
+      },
+      {
+        upToKrw: 100000,
+        taxKrw: 7200,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 7200 },
+          { dependentCount: 1, taxKrw: 7200 },
+          { dependentCount: 2, taxKrw: 6800 },
+          { dependentCount: 3, taxKrw: 6400 }
+        ]
+      },
+      {
+        upToKrw: 150000,
+        taxKrw: 13500,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 13500 },
+          { dependentCount: 1, taxKrw: 13500 },
+          { dependentCount: 2, taxKrw: 12900 },
+          { dependentCount: 3, taxKrw: 12300 }
+        ]
+      },
+      {
+        upToKrw: 200000,
+        taxKrw: 21500,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 21500 },
+          { dependentCount: 1, taxKrw: 21500 },
+          { dependentCount: 2, taxKrw: 20700 },
+          { dependentCount: 3, taxKrw: 19900 }
+        ]
+      },
+      {
+        upToKrw: null,
+        taxKrw: 30000,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 30000 },
+          { dependentCount: 1, taxKrw: 30000 },
+          { dependentCount: 2, taxKrw: 29000 },
+          { dependentCount: 3, taxKrw: 28000 }
+        ]
+      }
     ]
   },
   {
@@ -31,11 +80,56 @@ const payrollKrIncomeTaxLookupPresets: PayrollKrIncomeTaxLookupPreset[] = [
     effectiveFrom: "2026-07-01",
     source: "flowhr-curated-operations-dataset",
     rows: [
-      { upToKrw: 50000, taxKrw: 2700 },
-      { upToKrw: 100000, taxKrw: 7600 },
-      { upToKrw: 150000, taxKrw: 14100 },
-      { upToKrw: 200000, taxKrw: 22300 },
-      { upToKrw: null, taxKrw: 31200 }
+      {
+        upToKrw: 50000,
+        taxKrw: 2700,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 2700 },
+          { dependentCount: 1, taxKrw: 2700 },
+          { dependentCount: 2, taxKrw: 2500 },
+          { dependentCount: 3, taxKrw: 2300 }
+        ]
+      },
+      {
+        upToKrw: 100000,
+        taxKrw: 7600,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 7600 },
+          { dependentCount: 1, taxKrw: 7600 },
+          { dependentCount: 2, taxKrw: 7200 },
+          { dependentCount: 3, taxKrw: 6800 }
+        ]
+      },
+      {
+        upToKrw: 150000,
+        taxKrw: 14100,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 14100 },
+          { dependentCount: 1, taxKrw: 14100 },
+          { dependentCount: 2, taxKrw: 13500 },
+          { dependentCount: 3, taxKrw: 12900 }
+        ]
+      },
+      {
+        upToKrw: 200000,
+        taxKrw: 22300,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 22300 },
+          { dependentCount: 1, taxKrw: 22300 },
+          { dependentCount: 2, taxKrw: 21500 },
+          { dependentCount: 3, taxKrw: 20700 }
+        ]
+      },
+      {
+        upToKrw: null,
+        taxKrw: 31200,
+        dependentTaxKrw: [
+          { dependentCount: 0, taxKrw: 31200 },
+          { dependentCount: 1, taxKrw: 31200 },
+          { dependentCount: 2, taxKrw: 30200 },
+          { dependentCount: 3, taxKrw: 29200 }
+        ]
+      }
     ]
   }
 ];
