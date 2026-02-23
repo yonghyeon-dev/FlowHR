@@ -11,6 +11,7 @@ Core CI checks passed, but preview deployment failures created noisy status and 
 
 - update `vercel.json` to keep automatic deployment enabled on `main` only
 - disable automatic Vercel deployments for non-main branches to reduce preview deployment volume
+- disable Vercel GitHub integration status publishing to prevent PR status noise from account rate limits
 - add regression test to lock deployment policy contract in repo
 - update roadmap tracking for WI-0284
 

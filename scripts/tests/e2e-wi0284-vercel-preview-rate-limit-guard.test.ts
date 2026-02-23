@@ -7,6 +7,9 @@ type VercelConfig = {
   git?: {
     deploymentEnabled?: Record<string, unknown>;
   };
+  github?: {
+    enabled?: boolean;
+  };
 };
 
 function run() {
@@ -24,6 +27,11 @@ function run() {
     parsed.git?.deploymentEnabled?.["*"],
     false,
     "vercel non-main branch deployments should be disabled to avoid preview rate-limit noise"
+  );
+  assert.equal(
+    parsed.github?.enabled,
+    false,
+    "vercel github integration should be disabled to prevent noisy preview status checks under rate limits"
   );
 }
 
