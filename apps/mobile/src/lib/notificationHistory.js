@@ -2,6 +2,25 @@ function normalizeText(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+export const NOTIFICATION_HISTORY_CATEGORY_OPTIONS = [
+  { key: "all", label: "All categories" },
+  { key: "approvalRequest", label: "Approval request" },
+  { key: "approvalResult", label: "Approval result" },
+  { key: "payslipReady", label: "Payslip ready" }
+];
+
+export const NOTIFICATION_HISTORY_READ_OPTIONS = [
+  { key: "all", label: "All read states" },
+  { key: "unread", label: "Unread only" },
+  { key: "read", label: "Read only" }
+];
+
+export const NOTIFICATION_HISTORY_ARCHIVE_OPTIONS = [
+  { key: "all", label: "All archive states" },
+  { key: "active", label: "Active only" },
+  { key: "archived", label: "Archived only" }
+];
+
 function hasArchive(item) {
   return Boolean(item?.archivedAt);
 }
@@ -75,6 +94,13 @@ export function buildNotificationHistoryStats(items) {
   };
 }
 
+export function formatNotificationArchiveMeta(item) {
+  if (!item.archivedAt) {
+    return "active";
+  }
+  return `archived at ${item.archivedAt}`;
+}
+
 export function toggleNotificationArchive(items, notificationId, archived, now = new Date()) {
   const stamp = archived ? now.toISOString() : null;
   return items.map((item) => {
@@ -86,5 +112,53 @@ export function toggleNotificationArchive(items, notificationId, archived, now =
       archivedAt: stamp
     };
   });
+}
+
+export function applyNotificationBulkAction(items, notificationIds, action, now = new Date()) {
+  const ids = new Set(notificationIds);
+  const stamp = now.toISOString();
+  return items.map((item) => {
+    if (!ids.has(item.id)) {
+      return item;
+    }
+    if (action === "markRead") {
+      return {
+        ...item,
+        read: true
+      };
+    }
+    if (action === "archive") {
+      return {
+        ...item,
+        archivedAt: stamp
+      };
+    }
+    if (action === "unarchive") {
+      return {
+        ...item,
+        archivedAt: null
+      };
+    }
+    return item;
+  });
+}
+
+export function pruneNotificationSelection(selectionMap, items) {
+  const known = new Set(items.map((item) => item.id));
+  const next = {};
+  for (const id of Object.keys(selectionMap)) {
+    if (known.has(id) && selectionMap[id]) {
+      next[id] = true;
+    }
+  }
+  return next;
+}
+
+export function mergeNotificationSelection(selectionMap, ids) {
+  const next = { ...selectionMap };
+  for (const id of ids) {
+    next[id] = true;
+  }
+  return next;
 }
 

@@ -17,6 +17,7 @@
   - in-app notification center shell
   - realtime refresh/polling + category filter
   - notification history search/archive
+  - notification history bulk actions (select/read/archive/unarchive)
 - Email template baseline
   - transactional template catalog
   - locale switch (`ko`/`en`) and variable preview
