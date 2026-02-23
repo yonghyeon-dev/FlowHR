@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-23
-> **Current version**: 0.1.106 (Mobile Notification History Bulk Actions Baseline)
+> **Current version**: 0.1.107 (Mobile Notification History Quick Preset Filters Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -282,10 +282,11 @@
 - WI-0243 인앱 알림 센터 실시간 업데이트 baseline(`apps/mobile` 알림 피드 helper + 30초 polling + 수동 새로고침/라이브 토글 + 카테고리 필터/미확인 카운트 + WI-0243 회귀 테스트 추가)
 - WI-0244 모바일 알림 히스토리 검색/보관 baseline(`apps/mobile` 알림 히스토리 helper + 검색/카테고리/읽음/보관 필터 + 보관/복원 액션 + `NotificationHistory` 전용 화면/라우팅 + WI-0244 회귀 테스트 추가)
 - WI-0245 모바일 알림 히스토리 일괄 액션 baseline(`apps/mobile` 알림 히스토리 다건 선택 + select-visible/clear-selection + mark-read/archive/unarchive bulk 액션 + WI-0245 회귀 테스트 추가)
+- WI-0246 모바일 알림 히스토리 빠른 프리셋 필터 baseline(`apps/mobile` 프리셋 필터 카탈로그(`allOpen`/`approvalUnread`/`resultUnread`/`payslipUnread`/`archived`) + 프리셋별 카운트 + active/custom 프리셋 상태 + WI-0246 회귀 테스트 추가)
 
 ### 진행 중
 
-- 다음: 모바일 알림 히스토리 빠른 프리셋 필터 baseline(`WI-X`) 착수 (WI-0246 예정)
+- 다음: 모바일 알림 히스토리 프리셋 고정/최근사용 baseline(`WI-X`) 착수 (WI-0247 예정)
 
 ### 현재 아키텍처
 
@@ -297,7 +298,7 @@
 | 역할 | 5개 역할 + permission mapping(seed) | 동적 역할 + 커스텀 권한 |
 | 급여 계산 | phase2 수동/프로필 + KR baseline 근사 | 한국 세법 + 4대보험 |
 | UI | 관리자 대시보드(`/admin`) + 결재 정책(`/admin/approval-policy`) + 직원 포털(`/employee`) + 명세서(`/employee/payslips`) + 홈(`/`) | 관리자/직원 여정 완성 + 결재/정책/명세서 고도화 |
-| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 + 알림센터 실시간 업데이트 + 히스토리 검색/보관 + 일괄 액션 baseline (WI-0245) | 네이티브 앱 (iOS/Android) |
+| 모바일 | ⚠️ `apps/mobile` 셸 + 푸시 + 이메일 템플릿 + 알림센터 실시간 업데이트 + 히스토리 검색/보관 + 일괄 액션 + 빠른 프리셋 필터 baseline (WI-0246) | 네이티브 앱 (iOS/Android) |
 | 멀티테넌트 | baseline 적용 (Supabase RLS + FLOWHR_TENANCY_V1 플래그) | 조직별 완전 격리 |
 
 ---

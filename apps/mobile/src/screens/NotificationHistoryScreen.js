@@ -6,11 +6,14 @@ import { sortNotificationsNewest } from "../lib/notificationFeed";
 import {
   NOTIFICATION_HISTORY_ARCHIVE_OPTIONS,
   NOTIFICATION_HISTORY_CATEGORY_OPTIONS,
+  NOTIFICATION_HISTORY_PRESET_FILTERS,
   NOTIFICATION_HISTORY_READ_OPTIONS,
   applyNotificationBulkAction,
+  buildNotificationPresetCounts,
   buildNotificationHistoryStats,
   filterNotificationHistory,
   formatNotificationArchiveMeta,
+  getNotificationPresetFilter,
   mergeNotificationSelection,
   pruneNotificationSelection,
   toggleNotificationArchive
@@ -32,7 +35,8 @@ export default function NotificationHistoryScreen({ session }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [readState, setReadState] = useState("all");
-  const [archiveState, setArchiveState] = useState("all");
+  const [archiveState, setArchiveState] = useState("active");
+  const [activePreset, setActivePreset] = useState("allOpen");
   const [selectedIds, setSelectedIds] = useState({});
 
   async function refreshHistory() {
@@ -65,6 +69,7 @@ export default function NotificationHistoryScreen({ session }) {
   }, [inbox]);
 
   const stats = useMemo(() => buildNotificationHistoryStats(inbox), [inbox]);
+  const presetCounts = useMemo(() => buildNotificationPresetCounts(inbox), [inbox]);
   const filteredHistory = useMemo(
     () =>
       filterNotificationHistory(inbox, {
@@ -86,6 +91,39 @@ export default function NotificationHistoryScreen({ session }) {
     const next = toggleNotificationArchive(inbox, item.id, !item.archivedAt);
     setInbox(next);
     await saveNotificationInbox(next);
+  }
+
+  function applyPreset(presetKey) {
+    const preset = getNotificationPresetFilter(presetKey);
+    if (!preset) {
+      return;
+    }
+    setActivePreset(presetKey);
+    setQuery(preset.query);
+    setCategory(preset.category);
+    setReadState(preset.readState);
+    setArchiveState(preset.archiveState);
+    clearSelection();
+  }
+
+  function updateQuery(value) {
+    setQuery(value);
+    setActivePreset("custom");
+  }
+
+  function updateCategory(value) {
+    setCategory(value);
+    setActivePreset("custom");
+  }
+
+  function updateReadState(value) {
+    setReadState(value);
+    setActivePreset("custom");
+  }
+
+  function updateArchiveState(value) {
+    setArchiveState(value);
+    setActivePreset("custom");
   }
 
   function toggleSelection(itemId) {
@@ -130,19 +168,32 @@ export default function NotificationHistoryScreen({ session }) {
         <ShellCard title="Search">
           <TextInput
             value={query}
-            onChangeText={setQuery}
+            onChangeText={updateQuery}
             placeholder="Search title/body keyword"
             autoCapitalize="none"
             autoCorrect={false}
             style={styles.searchInput}
           />
           <View style={styles.inlineActions}>
-            <Pressable style={styles.secondaryBtn} onPress={() => setQuery("")}>
+            <Pressable style={styles.secondaryBtn} onPress={() => updateQuery("")}>
               <Text style={styles.secondaryBtnText}>Clear query</Text>
             </Pressable>
             <Pressable style={styles.secondaryBtn} onPress={() => refreshHistory()}>
               <Text style={styles.secondaryBtnText}>Refresh</Text>
             </Pressable>
+          </View>
+        </ShellCard>
+
+        <ShellCard title="Quick presets" subtitle={`active preset: ${activePreset}`}>
+          <View style={styles.chipRow}>
+            {NOTIFICATION_HISTORY_PRESET_FILTERS.map((preset) => (
+              <FilterChip
+                key={preset.key}
+                active={activePreset === preset.key}
+                label={`${preset.label} (${presetCounts[preset.key] ?? 0})`}
+                onPress={() => applyPreset(preset.key)}
+              />
+            ))}
           </View>
         </ShellCard>
 
@@ -154,7 +205,7 @@ export default function NotificationHistoryScreen({ session }) {
                 key={option.key}
                 active={category === option.key}
                 label={option.label}
-                onPress={() => setCategory(option.key)}
+                onPress={() => updateCategory(option.key)}
               />
             ))}
           </View>
@@ -165,7 +216,7 @@ export default function NotificationHistoryScreen({ session }) {
                 key={option.key}
                 active={readState === option.key}
                 label={option.label}
-                onPress={() => setReadState(option.key)}
+                onPress={() => updateReadState(option.key)}
               />
             ))}
           </View>
@@ -176,7 +227,7 @@ export default function NotificationHistoryScreen({ session }) {
                 key={option.key}
                 active={archiveState === option.key}
                 label={option.label}
-                onPress={() => setArchiveState(option.key)}
+                onPress={() => updateArchiveState(option.key)}
               />
             ))}
           </View>

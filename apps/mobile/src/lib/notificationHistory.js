@@ -21,6 +21,34 @@ export const NOTIFICATION_HISTORY_ARCHIVE_OPTIONS = [
   { key: "archived", label: "Archived only" }
 ];
 
+export const NOTIFICATION_HISTORY_PRESET_FILTERS = [
+  {
+    key: "allOpen",
+    label: "All open",
+    filter: { category: "all", readState: "all", archiveState: "active", query: "" }
+  },
+  {
+    key: "approvalUnread",
+    label: "Approval unread",
+    filter: { category: "approvalRequest", readState: "unread", archiveState: "active", query: "" }
+  },
+  {
+    key: "resultUnread",
+    label: "Result unread",
+    filter: { category: "approvalResult", readState: "unread", archiveState: "active", query: "" }
+  },
+  {
+    key: "payslipUnread",
+    label: "Payslip unread",
+    filter: { category: "payslipReady", readState: "unread", archiveState: "active", query: "" }
+  },
+  {
+    key: "archived",
+    label: "Archived",
+    filter: { category: "all", readState: "all", archiveState: "archived", query: "" }
+  }
+];
+
 function hasArchive(item) {
   return Boolean(item?.archivedAt);
 }
@@ -160,5 +188,18 @@ export function mergeNotificationSelection(selectionMap, ids) {
     next[id] = true;
   }
   return next;
+}
+
+export function getNotificationPresetFilter(presetKey) {
+  const preset = NOTIFICATION_HISTORY_PRESET_FILTERS.find((item) => item.key === presetKey);
+  return preset?.filter ?? null;
+}
+
+export function buildNotificationPresetCounts(items) {
+  const counts = {};
+  for (const preset of NOTIFICATION_HISTORY_PRESET_FILTERS) {
+    counts[preset.key] = filterNotificationHistory(items, preset.filter).length;
+  }
+  return counts;
 }
 

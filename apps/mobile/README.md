@@ -18,6 +18,7 @@
   - realtime refresh/polling + category filter
   - notification history search/archive
   - notification history bulk actions (select/read/archive/unarchive)
+  - notification history quick preset filters
 - Email template baseline
   - transactional template catalog
   - locale switch (`ko`/`en`) and variable preview
