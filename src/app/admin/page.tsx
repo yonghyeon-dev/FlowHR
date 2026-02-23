@@ -312,6 +312,28 @@ export default function AdminDashboardPage() {
     }),
     [isKoLocale]
   );
+  const inviteRoleLabels = useMemo(
+    () =>
+      ({
+        employee: isKoLocale ? "직원(employee)" : "Employee",
+        manager: isKoLocale ? "매니저(manager)" : "Manager",
+        payroll_operator: isKoLocale ? "급여 담당(payroll_operator)" : "Payroll Operator",
+        admin: isKoLocale ? "관리자(admin)" : "Admin"
+      }) as const,
+    [isKoLocale]
+  );
+  const inviteDeliveryModeLabels = useMemo(
+    () =>
+      ({
+        link: isKoLocale ? "링크(link)" : "Link",
+        email: isKoLocale ? "이메일(email)" : "Email"
+      }) as const,
+    [isKoLocale]
+  );
+  const toInviteRoleLabel = (role: string) =>
+    inviteRoleLabels[role as keyof typeof inviteRoleLabels] ?? role;
+  const toInviteDeliveryModeLabel = (mode: string) =>
+    inviteDeliveryModeLabels[mode as keyof typeof inviteDeliveryModeLabels] ?? mode;
   const updatedAtLabel = isKoLocale ? "업데이트" : "updated";
 
   const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
@@ -1441,22 +1463,20 @@ export default function AdminDashboardPage() {
             <label>
               역할
               <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as InviteRole)}>
-                <option value="employee">employee</option>
-                <option value="manager">manager</option>
-                <option value="payroll_operator">
-                  {isKoLocale ? "급여 담당(payroll_operator)" : "Payroll Operator"}
-                </option>
-                <option value="admin">admin</option>
+                <option value="employee">{inviteRoleLabels.employee}</option>
+                <option value="manager">{inviteRoleLabels.manager}</option>
+                <option value="payroll_operator">{inviteRoleLabels.payroll_operator}</option>
+                <option value="admin">{inviteRoleLabels.admin}</option>
               </select>
             </label>
             <label>
-              Delivery
+              전달 방식
               <select
                 value={inviteDeliveryMode}
                 onChange={(event) => setInviteDeliveryMode(event.target.value as InviteDeliveryMode)}
               >
-                <option value="link">link</option>
-                <option value="email">email</option>
+                <option value="link">{inviteDeliveryModeLabels.link}</option>
+                <option value="email">{inviteDeliveryModeLabels.email}</option>
               </select>
             </label>
             <label>
@@ -1484,8 +1504,8 @@ export default function AdminDashboardPage() {
           {inviteResult ? (
             <>
               <p className="small">
-                생성됨: <strong>{inviteResult.email}</strong> · role={inviteResult.role} · delivery=
-                {inviteResult.deliveryMode} · org={inviteResult.organizationId}
+                생성됨: <strong>{inviteResult.email}</strong> · role={toInviteRoleLabel(inviteResult.role)} · delivery=
+                {toInviteDeliveryModeLabel(inviteResult.deliveryMode)} · org={inviteResult.organizationId}
                 {inviteResult.actorId ? ` · actor=${inviteResult.actorId}` : ""}
               </p>
               {inviteResult.actionLink ? (
