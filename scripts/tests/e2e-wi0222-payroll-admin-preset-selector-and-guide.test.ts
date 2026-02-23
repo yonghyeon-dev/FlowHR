@@ -37,7 +37,7 @@ function run() {
   );
   assert.match(
     adminPageSource,
-    /incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetId\.trim\(\) \|\| undefined,/,
+    /incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetAuto\s*\?\s*undefined\s*:\s*payrollIncomeTaxLookupPresetId\.trim\(\) \|\| undefined,/,
     "admin payroll preview should send selected preset ID in payload"
   );
   assert.match(
@@ -63,7 +63,7 @@ function run() {
   );
   assert.match(
     presetGuidePanelSource,
-    /incomeTaxBrackets, incomeTaxLookupTable, and incomeTaxLookupPresetId are mutually exclusive\./,
+    /incomeTaxBrackets, incomeTaxLookupTable, incomeTaxLookupPresetId, and incomeTaxLookupPresetAuto are mutually exclusive\./,
     "preset guide panel should explain mutual-exclusion guard"
   );
   assert.ok(
