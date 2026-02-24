@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { useI18n } from "@/lib/i18n/provider";
+
 import {
   type QueueFocus,
   type QueueSearchSortOption,
@@ -23,6 +25,69 @@ type ApprovalQueueSearchSortPanelProps = {
   onFocusQueue: (focus: QueueFocus) => void;
 };
 
+const searchSortCopyByLocale = {
+  ko: {
+    title: "승인 큐 검색/정렬",
+    description: "하나의 패널에서 큐 전체를 검색하고 우선순위를 빠르게 재정렬합니다.",
+    mobileHint: "모바일 빠른 승인 흐름 지원",
+    controlsAriaLabel: "승인 큐 검색 정렬 제어",
+    scope: "검색 범위",
+    scopeAll: "전체 필드",
+    scopeQueue: "큐",
+    scopeEmployee: "직원",
+    scopeRequestId: "요청 ID",
+    scopeDetail: "상세",
+    sort: "정렬",
+    sortPriority: "우선순위 높은 순",
+    sortWait: "대기시간 긴 순",
+    sortRecent: "최근 항목 우선",
+    sortEmployee: "직원 오름차순",
+    sortQueue: "큐 오름차순",
+    query: "검색어",
+    queryPlaceholder: "직원 ID, 요청 ID, 상태, 메모",
+    pendingFirst: "대기 우선",
+    urgentOnly: "긴급만 보기",
+    reset: "초기화",
+    empty: "현재 검색/정렬 조건과 일치하는 항목이 없습니다.",
+    listAriaLabel: "승인 큐 검색 결과",
+    wait: "대기",
+    severity: "위험도",
+    selected: "선택됨",
+    focusQueue: "큐 포커스",
+    openQueue: "큐 열기"
+  },
+  en: {
+    title: "Approval Queue Search/Sort",
+    description: "Search all pending items in one place and reorder triage quickly.",
+    mobileHint: "Optimized for mobile quick-review flow",
+    controlsAriaLabel: "approval queue search and sort controls",
+    scope: "Scope",
+    scopeAll: "all fields",
+    scopeQueue: "queue",
+    scopeEmployee: "employee",
+    scopeRequestId: "request id",
+    scopeDetail: "detail",
+    sort: "Sort",
+    sortPriority: "priority desc",
+    sortWait: "wait desc",
+    sortRecent: "recent first",
+    sortEmployee: "employee asc",
+    sortQueue: "queue asc",
+    query: "Search query",
+    queryPlaceholder: "employee id, request id, status, memo",
+    pendingFirst: "pending first",
+    urgentOnly: "urgent only",
+    reset: "reset",
+    empty: "No rows match current search/sort options.",
+    listAriaLabel: "approval queue search and sort list",
+    wait: "wait",
+    severity: "severity",
+    selected: "selected",
+    focusQueue: "focus queue",
+    openQueue: "open queue"
+  }
+} as const;
+
 export function ApprovalQueueSearchSortPanel({
   queueSearchSortScope,
   queueSearchSortOption,
@@ -36,84 +101,91 @@ export function ApprovalQueueSearchSortPanel({
   onResetSearchSortPreset,
   onFocusQueue
 }: ApprovalQueueSearchSortPanelProps) {
+  const { locale } = useI18n();
+  const copy = searchSortCopyByLocale[locale];
+
   return (
     <section className="queue-search-sort-panel" id="approval-search-sort">
       <div className="queue-section-head">
-        <h3>Approval Queue Search/Sort</h3>
-        <p className="small muted">Use one panel to search pending items across queues and re-order triage quickly.</p>
-        <p className="small muted">모바일 빠른 승인 액션</p>
+        <h3>{copy.title}</h3>
+        <p className="small muted">{copy.description}</p>
+        <p className="small muted">{copy.mobileHint}</p>
       </div>
-      <div className="queue-search-sort-controls" aria-label="approval queue search and sort controls">
+      <div className="queue-search-sort-controls" aria-label={copy.controlsAriaLabel}>
         <label>
-          검색 범위
+          {copy.scope}
           <select
             value={queueSearchSortScope}
             onChange={(event) => onQueueSearchSortScopeChange(event.target.value as QueueSearchSortScope)}
           >
-            <option value="all">all fields</option>
-            <option value="queue">queue</option>
-            <option value="employee">employee</option>
-            <option value="request_id">request id</option>
-            <option value="detail">detail</option>
+            <option value="all">{copy.scopeAll}</option>
+            <option value="queue">{copy.scopeQueue}</option>
+            <option value="employee">{copy.scopeEmployee}</option>
+            <option value="request_id">{copy.scopeRequestId}</option>
+            <option value="detail">{copy.scopeDetail}</option>
           </select>
         </label>
         <label>
-          Sort
+          {copy.sort}
           <select
             value={queueSearchSortOption}
             onChange={(event) => onQueueSearchSortOptionChange(event.target.value as QueueSearchSortOption)}
           >
-            <option value="priority_desc">정체 우선순</option>
-            <option value="wait_desc">wait time desc</option>
-            <option value="recent_desc">recent first</option>
-            <option value="employee_asc">employee asc</option>
-            <option value="queue_asc">queue asc</option>
+            <option value="priority_desc">{copy.sortPriority}</option>
+            <option value="wait_desc">{copy.sortWait}</option>
+            <option value="recent_desc">{copy.sortRecent}</option>
+            <option value="employee_asc">{copy.sortEmployee}</option>
+            <option value="queue_asc">{copy.sortQueue}</option>
           </select>
         </label>
         <label className="full">
-          Search query
+          {copy.query}
           <input
             value={queueSearchSortQuery}
             onChange={(event) => onQueueSearchSortQueryChange(event.target.value)}
-            placeholder="employee id, request id, state, memo"
+            placeholder={copy.queryPlaceholder}
           />
         </label>
         <div className="queue-search-sort-actions">
           <button type="button" className="btn btn-secondary btn-small" onClick={onApplyPendingPreset}>
-            pending first
+            {copy.pendingFirst}
           </button>
           <button type="button" className="btn btn-secondary btn-small" onClick={onApplyUrgentPreset}>
-            긴급만 보기
+            {copy.urgentOnly}
           </button>
           <button type="button" className="btn btn-secondary btn-small" onClick={onResetSearchSortPreset}>
-            reset
+            {copy.reset}
           </button>
         </div>
       </div>
       {filteredQueueSearchSortRows.length === 0 ? (
-        <p className="small muted">No rows match current search/sort options.</p>
+        <p className="small muted">{copy.empty}</p>
       ) : (
-        <ul className="queue-search-sort-list" aria-label="approval queue search and sort list">
+        <ul className="queue-search-sort-list" aria-label={copy.listAriaLabel}>
           {filteredQueueSearchSortRows.map((row) => (
             <li key={row.key} className={`severity-${row.severity}${row.selected ? " is-selected" : ""}`}>
               <div className="queue-search-sort-head">
                 <strong>
                   [{row.queueLabel}] {row.itemId}
                 </strong>
-                <span className={`queue-sla-chip level-${row.severity}`}>wait {Math.round(row.waitHours)}h</span>
+                <span className={`queue-sla-chip level-${row.severity}`}>
+                  {copy.wait} {Math.round(row.waitHours)}h
+                </span>
               </div>
               <p className="small muted">{row.detail}</p>
               <div className="queue-search-sort-meta">
                 <span className="queue-history-chip">{row.employeeId}</span>
-                <span className="queue-history-chip">severity {row.severity}</span>
-                {row.selected ? <span className="queue-history-chip">selected</span> : null}
+                <span className="queue-history-chip">
+                  {copy.severity} {row.severity}
+                </span>
+                {row.selected ? <span className="queue-history-chip">{copy.selected}</span> : null}
               </div>
               <div className="queue-search-sort-item-actions">
                 <button type="button" className="btn btn-secondary btn-small" onClick={() => onFocusQueue(row.queue)}>
-                  focus queue
+                  {copy.focusQueue}
                 </button>
                 <Link className="btn btn-secondary btn-small" href="/admin#approvals">
-                  open queue
+                  {copy.openQueue}
                 </Link>
               </div>
             </li>

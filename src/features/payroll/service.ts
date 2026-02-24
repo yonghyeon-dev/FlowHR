@@ -16,7 +16,6 @@ import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-
 import {
   applyYearEndDeductionCaps,
   asYearEndFinalizationAuditPayload,
-  asYearEndWithholdingReceiptSummaryPayload,
   buildYearEndFilingSubmissionTimeline,
   buildPayrollYearEndFilingAckCatalog,
   buildYearEndFilingArtifact,
@@ -27,9 +26,6 @@ import {
   buildYearEndInputVectorHash,
   buildYearEndInsuranceReconciliationMonthlyBreakdown,
   buildYearEndSettlementHash,
-  buildYearEndWithholdingReceiptGuard,
-  buildYearEndWithholdingReceiptSummary,
-  buildYearEndWithholdingReceiptDocumentArtifact,
   calculateYearEndSettlementKrw,
   collectYearEndDeductionEligibilityBlockingReasons,
   ensureNoPendingFilingSubmission,
@@ -137,7 +133,6 @@ import type {
   PayrollYearEndFilingSubmissionListSummary,
   PayrollYearEndFilingSubmissionSummary,
   PayrollYearEndFilingTimelineEntry,
-  PayrollYearEndWithholdingReceiptSummary,
   PreviewPayrollInsuranceSettlementResult,
   PreviewPayrollResult,
   PreviewPayrollWithDeductionsResult,
@@ -148,7 +143,6 @@ import type {
   SubmitPayrollYearEndFilingPackageResult,
   UpsertDeductionProfileResult,
   YearEndDeductionSummaryKrw,
-  YearEndFilingGuardRunStates,
   YearEndFilingRecord,
   YearEndSettlementKrw,
   YearEndSettlementSummary,
@@ -158,6 +152,11 @@ import {
   loadYearEndRunSnapshot,
   type YearEndRunSnapshot
 } from "@/features/payroll/service-year-end-run-snapshot-helpers";
+import {
+  getPayrollYearEndFinalizedSettlementFromHelper,
+  getPayrollYearEndWithholdingReceiptDocumentFromHelper,
+  issuePayrollYearEndWithholdingReceiptFromHelper
+} from "@/features/payroll/service-year-end-withholding-flow-helpers";
 import {
   type ServiceContext,
   getEventPublisher,
@@ -2840,246 +2839,21 @@ export async function getPayrollYearEndWithholdingReceiptDocument(
   context: ServiceContext,
   input: GetPayrollYearEndWithholdingReceiptDocumentInput
 ): Promise<GetPayrollYearEndWithholdingReceiptDocumentResult> {
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
-  const permissions = await resolveActorPermissions({ actor, dataAccess: context.dataAccess });
-  const canManage = permissions.has(Permissions.payrollRunConfirm);
-  const canListAny = permissions.has(Permissions.payrollRunList);
-  const canListOwn = permissions.has(Permissions.payrollRunListOwn);
-
-  if (!canManage && !canListAny && !canListOwn) {
-    throw new ServiceError(403, `payroll list requires ${Permissions.payrollRunList} permission`);
-  }
-  if (!canManage && !canListAny && actor.id !== input.employeeId) {
-    throw new ServiceError(403, "employees can only read their own withholding receipt document");
-  }
-
-  const entityId = `${input.year}_${input.employeeId}`;
-  const issuedLogs = await context.dataAccess.audit.list({
-    actions: ["payroll.year_end.withholding_receipt_issued"],
-    entityType: "PayrollYearEnd",
-    entityId,
-    limit: 200
-  });
-  const latestIssuedLog = issuedLogs[issuedLogs.length - 1] ?? null;
-  const receipt = asYearEndWithholdingReceiptSummaryPayload(latestIssuedLog?.payload ?? null);
-  if (!receipt || !receipt.issued || !receipt.issuedAt) {
-    throw new ServiceError(404, "issued withholding receipt not found");
-  }
-
-  const artifact = buildYearEndWithholdingReceiptDocumentArtifact(receipt, input.format);
-  const generatedAt = new Date().toISOString();
-  const contentSha256 = createHash("sha256").update(artifact.content).digest("hex");
-
-  return {
-    document: {
-      year: input.year,
-      employeeId: input.employeeId,
-      receiptNumber: receipt.receiptNumber,
-      issuedAt: receipt.issuedAt,
-      issuerName: receipt.issuerName,
-      format: input.format,
-      fileName: artifact.fileName,
-      contentType: artifact.contentType,
-      contentSha256,
-      generatedAt,
-      receipt,
-      content: artifact.content
-    }
-  };
+  return await getPayrollYearEndWithholdingReceiptDocumentFromHelper(context, input);
 }
 
 export async function getPayrollYearEndFinalizedSettlement(
   context: ServiceContext,
   input: GetPayrollYearEndFinalizedSettlementInput
 ): Promise<GetPayrollYearEndFinalizedSettlementResult> {
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
-  const permissions = await resolveActorPermissions({ actor, dataAccess: context.dataAccess });
-  const canManage = permissions.has(Permissions.payrollRunConfirm);
-  const canListAny = permissions.has(Permissions.payrollRunList);
-  const canListOwn = permissions.has(Permissions.payrollRunListOwn);
-
-  if (!canManage && !canListAny && !canListOwn) {
-    throw new ServiceError(403, `payroll list requires ${Permissions.payrollRunList} permission`);
-  }
-  if (!canManage && !canListAny && actor.id !== input.employeeId) {
-    throw new ServiceError(403, "employees can only read their own finalized year-end settlement");
-  }
-
-  const entityId = `${input.year}_${input.employeeId}`;
-  const finalizationLogs = await context.dataAccess.audit.list({
-    actions: ["payroll.year_end.settlement_finalized"],
-    entityType: "PayrollYearEnd",
-    entityId,
-    limit: 200
-  });
-  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
-  const finalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
-  if (
-    !finalizationPayload ||
-    !finalizationPayload.finalizedAt ||
-    !finalizationPayload.finalized
-  ) {
-    throw new ServiceError(404, "finalized year-end settlement not found");
-  }
-
-  const settlementHash = resolveYearEndSettlementHashFromFinalizationPayload(finalizationPayload);
-
-  return {
-    settlement: {
-      year: finalizationPayload.year,
-      employeeId: finalizationPayload.employeeId,
-      finalizationId: finalizationPayload.finalizationId,
-      finalizedAt: finalizationPayload.finalizedAt,
-      settlementHash,
-      annualTotalsKrw: finalizationPayload.annualTotalsKrw,
-      settlementKrw: finalizationPayload.settlementKrw,
-      deductionEligibility: finalizationPayload.deductionEligibility,
-      deductionItemsKrw: finalizationPayload.deductionItemsKrw,
-      runStates: finalizationPayload.runStates
-    }
-  };
+  return await getPayrollYearEndFinalizedSettlementFromHelper(context, input);
 }
 
 export async function issuePayrollYearEndWithholdingReceipt(
   context: ServiceContext,
   input: IssuePayrollYearEndWithholdingReceiptInput
 ): Promise<IssuePayrollYearEndWithholdingReceiptResult> {
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
-  const permissions = await resolveActorPermissions({ actor, dataAccess: context.dataAccess });
-  const canManage = permissions.has(Permissions.payrollRunConfirm);
-  const canListAny = permissions.has(Permissions.payrollRunList);
-  const canListOwn = permissions.has(Permissions.payrollRunListOwn);
-
-  if (input.issue) {
-    if (!canManage) {
-      throw new ServiceError(403, `payroll issue requires ${Permissions.payrollRunConfirm} permission`);
-    }
-  } else {
-    if (!canManage && !canListAny && !canListOwn) {
-      throw new ServiceError(403, `payroll list requires ${Permissions.payrollRunList} permission`);
-    }
-    if (!canManage && !canListAny && actor.id !== input.employeeId) {
-      throw new ServiceError(403, "employees can only preview their own withholding receipt");
-    }
-  }
-
-  const { periodStart, periodEnd } = getYearPeriodInSeoul(input.year);
-  const tenantScope = resolveTenantScope(actor);
-  const runs = await context.dataAccess.payroll.listInPeriod({
-    periodStart,
-    periodEnd,
-    organizationId: tenantScope ?? undefined,
-    employeeId: input.employeeId
-  });
-
-  const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
-  const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
-  const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
-  const withholdingReceiptGuard = buildYearEndWithholdingReceiptGuard({
-    runs,
-    confirmedRuns,
-    previewedRuns
-  }) as {
-    runStates: YearEndFilingGuardRunStates;
-    blockingReasons: string[];
-    canIssue: boolean;
-  };
-
-  if (input.issue && !withholdingReceiptGuard.canIssue) {
-    throw new ServiceError(409, "withholding receipt cannot be issued", {
-      blockingReasons: withholdingReceiptGuard.blockingReasons,
-      runStates: withholdingReceiptGuard.runStates
-    });
-  }
-
-  const receiptNumber = `WR-${input.year}-${input.employeeId}`;
-  const issuerName = input.issuerName?.trim() ? input.issuerName.trim() : actor.role;
-  const issuedAt = input.issue ? new Date().toISOString() : null;
-  const payload = buildYearEndWithholdingReceiptSummary({
-    year: input.year,
-    employeeId: input.employeeId,
-    periodStart: periodStart.toISOString(),
-    periodEnd: periodEnd.toISOString(),
-    issue: input.issue,
-    receiptNumber,
-    issuerName,
-    issuedAt,
-    runStates: withholdingReceiptGuard.runStates,
-    annualTotalsKrw: totalsKrw,
-    blockingReasons: withholdingReceiptGuard.blockingReasons
-  }) as PayrollYearEndWithholdingReceiptSummary;
-
-  const entityId = `${input.year}_${input.employeeId}`;
-  if (input.issue) {
-    await context.dataAccess.audit.append({
-      action: "payroll.year_end.withholding_receipt_issued",
-      entityType: "PayrollYearEnd",
-      entityId,
-      organizationId: employee.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-    await getEventPublisher(context).publish({
-      name: "payroll.year_end.withholding_receipt.issued.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "PayrollYearEnd",
-      entityId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-  } else {
-    await context.dataAccess.audit.append({
-      action: "payroll.year_end.withholding_receipt_previewed",
-      entityType: "PayrollYearEnd",
-      entityId,
-      organizationId: employee.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-    await getEventPublisher(context).publish({
-      name: "payroll.year_end.withholding_receipt.previewed.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "PayrollYearEnd",
-      entityId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-  }
-
-  return {
-    receipt: payload
-  };
+  return await issuePayrollYearEndWithholdingReceiptFromHelper(context, input);
 }
 
 export async function readDeductionProfile(

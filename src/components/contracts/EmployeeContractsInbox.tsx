@@ -8,6 +8,7 @@ import {
   employeeContractsCopyByLocale,
   toDateText,
 } from "@/components/contracts/copy";
+import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { readJson } from "@/components/contracts/http";
 import {
   type ContractSignatureEvidenceResponse,
@@ -17,6 +18,7 @@ import { useI18n } from "@/lib/i18n/provider";
 
 export default function EmployeeContractsInbox() {
   const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = employeeContractsCopyByLocale[locale];
   const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
@@ -34,6 +36,7 @@ export default function EmployeeContractsInbox() {
     () => documents.find((document) => document.id === selectedDocumentId) ?? documents[0] ?? null,
     [documents, selectedDocumentId]
   );
+
 
   const reload = useCallback(async () => {
     setError(null);
@@ -189,6 +192,8 @@ export default function EmployeeContractsInbox() {
                   <strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong>
                 </li>
               </ul>
+
+              <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
 
               <label>
                 {copy.signatureInputLabel}

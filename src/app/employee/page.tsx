@@ -435,6 +435,52 @@ export default function EmployeeSelfServicePage() {
     setLeaveEndDate(toLocalInputValue(end));
   }
 
+  function prefillLeaveFormFromCalendarDate(dateKey: string) {
+    const [yearText, monthText, dayText] = dateKey.split("-");
+    const yearNumber = Number(yearText);
+    const monthNumber = Number(monthText);
+    const dayNumber = Number(dayText);
+    if (
+      !Number.isInteger(yearNumber) ||
+      !Number.isInteger(monthNumber) ||
+      !Number.isInteger(dayNumber) ||
+      monthNumber < 1 ||
+      monthNumber > 12 ||
+      dayNumber < 1 ||
+      dayNumber > 31
+    ) {
+      pushMobileFlowFeedback(
+        isKoLocale ? "선택한 날짜를 해석할 수 없습니다." : "Unable to parse selected calendar date."
+      );
+      return;
+    }
+
+    const start = new Date(yearNumber, monthNumber - 1, dayNumber, 9, 0, 0);
+    const end = new Date(yearNumber, monthNumber - 1, dayNumber, 18, 0, 0);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      pushMobileFlowFeedback(
+        isKoLocale ? "선택한 날짜를 해석할 수 없습니다." : "Unable to parse selected calendar date."
+      );
+      return;
+    }
+
+    setLeaveType("ANNUAL");
+    setLeaveUnit("FULL_DAY");
+    setLeaveStartDate(toLocalInputValue(start));
+    setLeaveEndDate(toLocalInputValue(end));
+    setLeaveReason(
+      isKoLocale
+        ? `${dateKey} 캘린더 선택으로 자동 입력`
+        : `Auto-prefilled from calendar selection (${dateKey})`
+    );
+    jumpToSection("leave");
+    pushMobileFlowFeedback(
+      isKoLocale
+        ? `${dateKey} 휴가 신청 초안이 자동 입력되었습니다.`
+        : `Leave request draft for ${dateKey} was auto-prefilled.`
+    );
+  }
+
   async function setCalendarMonthFromAnchor(anchor: Date, monthOffset: number) {
     const monthStart = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset, 1, 0, 0, 0);
     const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset + 1, 0, 23, 59, 0);
@@ -1653,6 +1699,7 @@ export default function EmployeeSelfServicePage() {
           onApplyLeaveQuickPreset={applyLeaveQuickPreset}
           onCreateLeave={() => void createLeave()}
           onCancelLeave={() => void cancelLeave()}
+          onPrefillLeaveFromCalendarDate={prefillLeaveFormFromCalendarDate}
           onMoveCalendarMonth={(delta) => void moveCalendarMonth(delta)}
           onResetCalendarToCurrentMonth={() => void resetCalendarToCurrentMonth()}
           onClearLogs={clearLogs}

@@ -21,6 +21,7 @@ import {
 } from "@/app/employee/payslips/page-locale-helpers";
 
 import {
+  buildCompareInsightCards,
   buildQuery,
   escapeCsv,
   firstDayOfMonthLocal,
@@ -41,6 +42,7 @@ import {
   type ApiLog,
   type AttendanceAggregateDto,
   type BreakdownRecord,
+  type CompareInsightCard,
   type CompareMetric,
   type DeductionExplainItem,
   type DeductionExplainSection,
@@ -231,6 +233,15 @@ export default function EmployeePayslipsPage() {
       diffRate: safeDiffRate(row.selectedValue, row.compareValue)
     }));
   }, [compareRun, pageCopy.compare.metrics.deduction, pageCopy.compare.metrics.gross, pageCopy.compare.metrics.net, selectedRun]);
+
+  const compareInsightCards = useMemo<CompareInsightCard[]>(() => {
+    return buildCompareInsightCards(compareMetrics, isKoLocale);
+  }, [compareMetrics, isKoLocale]);
+
+  const compareInsightTitle = isKoLocale ? "전월 대비 설명" : "Month-over-month explanation";
+  const compareInsightAriaLabel = isKoLocale
+    ? "전월 대비 설명 카드"
+    : "Month-over-month explanation cards";
 
   const compareWindowLabel = useMemo(() => {
     if (!selectedRun || !compareRun) {
@@ -616,6 +627,10 @@ export default function EmployeePayslipsPage() {
         id: metric.id,
         diffValue: metric.diffValue,
         diffRate: metric.diffRate
+      })),
+      insights: compareInsightCards.map((card) => ({
+        title: card.title,
+        message: card.message
       }))
     };
 
@@ -1074,6 +1089,17 @@ export default function EmployeePayslipsPage() {
                   </article>
                 ))}
               </div>
+              <section className="payslip-compare-insight" aria-label={compareInsightAriaLabel}>
+                <h3>{compareInsightTitle}</h3>
+                <div className="payslip-compare-insight-grid">
+                  {compareInsightCards.map((card) => (
+                    <article key={card.key} className={`payslip-compare-insight-card tone-${card.tone}`}>
+                      <p>{card.title}</p>
+                      <strong>{card.message}</strong>
+                    </article>
+                  ))}
+                </div>
+              </section>
               <div className="compare-table-wrap">
                 <table className="compare-table" aria-label={pageCopy.compare.tableAriaLabel}>
                   <thead>

@@ -109,6 +109,7 @@ type EmployeeAttendanceLeavePanelsProps = {
   onApplyLeaveQuickPreset: (preset: LeaveQuickPreset) => void;
   onCreateLeave: () => void;
   onCancelLeave: () => void;
+  onPrefillLeaveFromCalendarDate: (dateKey: string) => void;
   onMoveCalendarMonth: (delta: number) => void;
   onResetCalendarToCurrentMonth: () => void;
   onClearLogs: () => void;
@@ -195,6 +196,7 @@ export function EmployeeAttendanceLeavePanels({
   onApplyLeaveQuickPreset,
   onCreateLeave,
   onCancelLeave,
+  onPrefillLeaveFromCalendarDate,
   onMoveCalendarMonth,
   onResetCalendarToCurrentMonth,
   onClearLogs
@@ -457,6 +459,7 @@ export function EmployeeAttendanceLeavePanels({
           </div>
         </div>
         <p className="small leave-projection">{leaveUsageProjectionLabel}</p>
+        <p className="small muted">{leaveCalendarCopy.clickToPrefill}</p>
         <div className="leave-calendar-toolbar">
           <strong>
             {leaveCalendarMonthLabel} {leaveCalendarCopy.densityViewLabel}
@@ -486,11 +489,22 @@ export function EmployeeAttendanceLeavePanels({
                 "leave-calendar-day",
                 `density-${cell.density}`,
                 `tone-${cell.tone}`,
+                "is-clickable",
                 cell.inCurrentMonth ? "in-month" : "out-month",
                 cell.isToday ? "today" : ""
               ]
                 .join(" ")
                 .trim()}
+              role="button"
+              tabIndex={0}
+              aria-label={`${cell.dateKey} ${leaveCalendarCopy.clickToPrefill}`}
+              onClick={() => onPrefillLeaveFromCalendarDate(cell.dateKey)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onPrefillLeaveFromCalendarDate(cell.dateKey);
+                }
+              }}
               title={
                 cell.requestCount === 0
                   ? `${cell.dateKey}: ${leaveCalendarCopy.noScheduleInDateLabel}`

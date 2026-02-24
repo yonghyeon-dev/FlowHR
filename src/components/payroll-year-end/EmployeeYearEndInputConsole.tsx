@@ -38,6 +38,10 @@ function parseRate(value: string, fallback: number) {
   return parsed;
 }
 
+function isNonNegativeIntegerText(value: string) {
+  return /^\d+$/.test(value.trim());
+}
+
 type ApiLog = {
   id: number;
   label: string;
@@ -206,6 +210,7 @@ const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputC
 export default function EmployeeYearEndInputConsole() {
   const { locale } = useI18n();
   const copy = employeeYearEndInputCopyByLocale[locale];
+  const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
 
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -229,6 +234,110 @@ export default function EmployeeYearEndInputConsole() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [finalizedSettlement, setFinalizedSettlement] =
     useState<FinalizedYearEndSettlementResponse | null>(null);
+
+  const yearValid = useMemo(() => {
+    const normalized = year.trim();
+    if (!/^\d{4}$/.test(normalized)) {
+      return false;
+    }
+    const parsed = Number(normalized);
+    return Number.isInteger(parsed) && parsed >= 2000 && parsed <= 2100;
+  }, [year]);
+
+  const employeeIdValid = useMemo(() => employeeId.trim().length > 0, [employeeId]);
+
+  const annualIncomeTaxRateValid = useMemo(() => {
+    const parsed = Number(annualIncomeTaxRate);
+    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1;
+  }, [annualIncomeTaxRate]);
+
+  const localIncomeTaxRateValid = useMemo(() => {
+    const parsed = Number(localIncomeTaxRate);
+    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1;
+  }, [localIncomeTaxRate]);
+
+  const integerInputsValid = useMemo(() => {
+    return [
+      nonTaxableAnnualIncomeKrw,
+      earnedIncomeTaxCreditKrw,
+      childTaxCreditKrw,
+      additionalTaxCreditKrw,
+      personalPensionKrw,
+      insurancePremiumKrw,
+      medicalExpenseKrw,
+      educationExpenseKrw,
+      donationKrw,
+      housingSavingsKrw
+    ].every(isNonNegativeIntegerText);
+  }, [
+    additionalTaxCreditKrw,
+    childTaxCreditKrw,
+    donationKrw,
+    earnedIncomeTaxCreditKrw,
+    educationExpenseKrw,
+    housingSavingsKrw,
+    insurancePremiumKrw,
+    medicalExpenseKrw,
+    nonTaxableAnnualIncomeKrw,
+    personalPensionKrw
+  ]);
+
+  const nonTaxableWithinGrossValid = useMemo(() => {
+    if (!finalizedSettlement) {
+      return true;
+    }
+    return (
+      parseNonNegativeInt(nonTaxableAnnualIncomeKrw) <=
+      finalizedSettlement.settlement.annualTotalsKrw.grossPayKrw
+    );
+  }, [finalizedSettlement, nonTaxableAnnualIncomeKrw]);
+
+  const validationChecks = useMemo(() => {
+    return [
+      {
+        id: "year",
+        label: isKoLocale ? "연도(2000~2100)" : "Year (2000~2100)",
+        pass: yearValid
+      },
+      {
+        id: "employee",
+        label: isKoLocale ? "직원 ID 입력" : "Employee ID provided",
+        pass: employeeIdValid
+      },
+      {
+        id: "rates",
+        label: isKoLocale ? "세율(0~1 범위)" : "Tax rates in 0~1 range",
+        pass: annualIncomeTaxRateValid && localIncomeTaxRateValid
+      },
+      {
+        id: "integers",
+        label: isKoLocale ? "금액 입력(0 이상 정수)" : "Amount fields are non-negative integers",
+        pass: integerInputsValid
+      },
+      {
+        id: "non-taxable",
+        label: isKoLocale
+          ? "비과세 연소득 <= 연 총지급(정산 로드 후)"
+          : "Non-taxable annual income <= annual gross pay",
+        pass: nonTaxableWithinGrossValid
+      }
+    ];
+  }, [
+    annualIncomeTaxRateValid,
+    employeeIdValid,
+    integerInputsValid,
+    isKoLocale,
+    localIncomeTaxRateValid,
+    nonTaxableWithinGrossValid,
+    yearValid
+  ]);
+
+  const validationPassCount = useMemo(
+    () => validationChecks.filter((check) => check.pass).length,
+    [validationChecks]
+  );
+
+  const coreLoadValid = yearValid && employeeIdValid;
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
@@ -417,10 +526,38 @@ export default function EmployeeYearEndInputConsole() {
           <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
           <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void loadFinalizedSettlement()} disabled={pendingLabel !== null}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void loadFinalizedSettlement()}
+              disabled={pendingLabel !== null || !coreLoadValid}
+            >
               {copy.loadFinalizedSettlementAction}
             </button>
           </div>
+          <div className="pre-submit-check-wrap" style={{ marginTop: 10 }}>
+            <p className="small" style={{ margin: 0 }}>
+              {isKoLocale ? "실시간 입력 검증" : "Real-time input validation"} ({validationPassCount}/
+              {validationChecks.length})
+            </p>
+            <ul
+              className="pre-submit-check-list"
+              aria-label={isKoLocale ? "연말정산 입력 검증 체크리스트" : "Year-end input validation checklist"}
+            >
+              {validationChecks.map((check) => (
+                <li key={check.id} className={check.pass ? "pass" : "fail"}>
+                  <strong>{check.pass ? (isKoLocale ? "통과" : "PASS") : isKoLocale ? "실패" : "FAIL"}</strong>
+                  <span>{check.label}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {!coreLoadValid ? (
+            <p className="small fail">
+              {isKoLocale
+                ? "연도와 직원 ID를 먼저 확인해 주세요."
+                : "Check year and employee ID before loading finalized settlement."}
+            </p>
+          ) : null}
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
           {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>

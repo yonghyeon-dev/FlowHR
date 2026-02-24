@@ -1521,6 +1521,23 @@ button.queue-badge:hover {
   gap: 6px;
 }
 
+.leave-calendar-day.is-clickable {
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.leave-calendar-day.is-clickable:hover {
+  border-color: #6d97e8;
+  box-shadow: 0 3px 10px rgba(36, 88, 171, 0.12);
+  transform: translateY(-1px);
+}
+
+.leave-calendar-day.is-clickable:focus-visible {
+  outline: none;
+  border-color: #2f66ca;
+  box-shadow: 0 0 0 2px rgba(47, 102, 202, 0.28);
+}
+
 .leave-calendar-day .leave-day-head {
   display: flex;
   align-items: center;
@@ -3594,6 +3611,61 @@ button.queue-badge:hover {
   font-size: 0.74rem;
 }
 
+.payslip-compare-insight {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.payslip-compare-insight h3 {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.payslip-compare-insight-grid {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.payslip-compare-insight-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 8px;
+}
+
+.payslip-compare-insight-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.payslip-compare-insight-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.payslip-compare-insight-card.tone-up {
+  border-color: #a9c9ff;
+  background: #edf4ff;
+}
+
+.payslip-compare-insight-card.tone-down {
+  border-color: #efb8c3;
+  background: #fff1f4;
+}
+
+.payslip-compare-insight-card.tone-flat {
+  border-color: #d9dde8;
+  background: #f8faff;
+}
+
 .payslip-confirmation-prediction-list {
   margin: 10px 0 0;
   padding: 0;
@@ -4506,6 +4578,82 @@ button.queue-badge:hover {
   font-size: 0.78rem;
 }
 
+.contract-journey-panel {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.contract-journey-panel h3 {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.contract-journey-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.contract-journey-list li {
+  border: 1px solid #dbe7fb;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contract-journey-list li strong {
+  font-size: 0.78rem;
+}
+
+.contract-journey-list li span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-align: right;
+}
+
+.contract-journey-list li.tone-done {
+  border-color: #b9e3cb;
+  background: #f1fbf5;
+}
+
+.contract-journey-list li.tone-active {
+  border-color: #a9c9ff;
+  background: #edf4ff;
+}
+
+.contract-journey-list li.tone-risk {
+  border-color: #efb8c3;
+  background: #fff1f4;
+}
+
+.contract-recovery-guide {
+  margin-top: 10px;
+  border: 1px dashed #d6deed;
+  border-radius: 10px;
+  background: #f7faff;
+  padding: 9px 10px;
+}
+
+.contract-recovery-guide h3 {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.contract-recovery-guide p {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .no-print {
   display: block;
 }
@@ -4956,6 +5104,19 @@ button.queue-badge:hover {
 
   #compare-view .payslip-compare-delta-grid {
     grid-template-columns: 1fr;
+  }
+
+  #compare-view .payslip-compare-insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contract-journey-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .contract-journey-list li span {
+    text-align: left;
   }
 
   #mobile-delivery .delivery-channel-grid,
