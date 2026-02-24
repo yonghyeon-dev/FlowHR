@@ -77,7 +77,8 @@ export default function EmployeeSelfServicePage() {
     preSubmitStatusLabels,
     requestStatusLabels,
     runtimeLocale,
-    surfaceCopy
+    surfaceCopy,
+    validationCopy
   } = localeLabelBundle;
 
   const [accessToken, setAccessToken] = useState("");
@@ -148,6 +149,17 @@ export default function EmployeeSelfServicePage() {
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
   const { attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } =
     surfaceCopy;
+  const {
+    feedback: feedbackCopy,
+    defaults: defaultsCopy,
+    summaryCards: summaryCardCopy,
+    requestFeedback: requestFeedbackCopy,
+    correctionValidation: correctionValidationCopy,
+    attendanceChecks: attendanceCheckCopy,
+    leaveChecks: leaveCheckCopy,
+    resubmitFlowChecks: resubmitFlowCheckCopy,
+    submitChecklistCards: submitChecklistCardCopy
+  } = validationCopy;
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -473,7 +485,7 @@ export default function EmployeeSelfServicePage() {
       query: "pending",
       sortOption: "pending_first",
       targetSectionId: "request-search-sort",
-      feedback: isKoLocale ? "대기 요청 필터가 적용되었습니다." : "Pending requests filter is now applied."
+      feedback: feedbackCopy.pendingRequestFilterApplied
     });
   }
 
@@ -494,49 +506,31 @@ export default function EmployeeSelfServicePage() {
     if (candidate.channel === "attendance") {
       const targetAttendance = attendance.find((record) => record.id === candidate.recordId);
       if (!targetAttendance) {
-        pushMobileFlowFeedback(
-          isKoLocale
-            ? "선택한 출퇴근 재제출 대상이 최신 목록에 없습니다."
-            : "Selected attendance resubmit candidate is not in the latest list."
-        );
+        pushMobileFlowFeedback(feedbackCopy.selectedAttendanceResubmitMissing);
         return;
       }
       applyAttendanceRecordToCorrectionForm(targetAttendance);
-      setAttendanceNotes(targetAttendance.notes?.trim() || (isKoLocale ? "재제출 정정" : "Resubmit correction"));
+      setAttendanceNotes(targetAttendance.notes?.trim() || defaultsCopy.resubmitCorrectionNote);
       setLastAppliedResubmitCandidateKey(candidate.key);
       jumpToSection("attendance");
-      pushMobileFlowFeedback(
-        isKoLocale
-          ? "출퇴근 재제출 초안을 정정 폼에 반영했습니다."
-          : "Applied attendance resubmit draft to correction form."
-      );
+      pushMobileFlowFeedback(feedbackCopy.attendanceResubmitDraftApplied);
       return;
     }
 
     const targetLeave = leaveRequests.find((request) => request.id === candidate.recordId);
     if (!targetLeave) {
-      pushMobileFlowFeedback(
-        isKoLocale
-          ? "선택한 휴가 재제출 대상이 최신 목록에 없습니다."
-          : "Selected leave resubmit candidate is not in the latest list."
-      );
+      pushMobileFlowFeedback(feedbackCopy.selectedLeaveResubmitMissing);
       return;
     }
     applyLeaveRequestToResubmitDraft(targetLeave);
     setLastAppliedResubmitCandidateKey(candidate.key);
     jumpToSection("leave");
-    pushMobileFlowFeedback(
-      isKoLocale
-        ? "휴가 재제출 초안을 신청 폼에 반영했습니다."
-        : "Applied leave resubmit draft to request form."
-    );
+    pushMobileFlowFeedback(feedbackCopy.leaveResubmitDraftApplied);
   }
 
   function applySelectedResubmitCandidate() {
     if (!selectedResubmitCandidate) {
-      pushMobileFlowFeedback(
-        isKoLocale ? "재제출 후보를 먼저 선택해 주세요." : "Select a resubmit candidate first."
-      );
+      pushMobileFlowFeedback(feedbackCopy.selectResubmitCandidateFirst);
       return;
     }
     applyResubmitCandidateToDraft(selectedResubmitCandidate);
@@ -544,9 +538,7 @@ export default function EmployeeSelfServicePage() {
 
   function applyLatestResubmitCandidate() {
     if (resubmitCandidates.length === 0) {
-      pushMobileFlowFeedback(
-        isKoLocale ? "재제출할 반려/취소 건이 없습니다." : "No rejected/canceled request to resubmit."
-      );
+      pushMobileFlowFeedback(feedbackCopy.noResubmitTarget);
       return;
     }
     const latest = resubmitCandidates[0];
@@ -557,37 +549,23 @@ export default function EmployeeSelfServicePage() {
   function clearResubmitSelection() {
     setSelectedResubmitCandidateKey("");
     setLastAppliedResubmitCandidateKey("");
-    pushMobileFlowFeedback(
-      isKoLocale ? "재제출 후보 선택을 초기화했습니다." : "Reset resubmit candidate selection."
-    );
+    pushMobileFlowFeedback(feedbackCopy.resetResubmitSelection);
   }
 
   async function copyFailureCause(message: string | null) {
     if (!message) {
-      pushMobileFlowFeedback(
-        isKoLocale ? "복사할 실패 원인이 없습니다." : "No failure cause available to copy."
-      );
+      pushMobileFlowFeedback(feedbackCopy.noFailureCauseToCopy);
       return;
     }
     if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-      pushMobileFlowFeedback(
-        isKoLocale
-          ? "클립보드 복사를 지원하지 않는 환경입니다."
-          : "Clipboard copy is not available in this environment."
-      );
+      pushMobileFlowFeedback(feedbackCopy.clipboardUnavailable);
       return;
     }
     try {
       await navigator.clipboard.writeText(message);
-      pushMobileFlowFeedback(
-        isKoLocale
-          ? "최근 실패 원인을 클립보드에 복사했습니다."
-          : "Copied the latest failure cause to clipboard."
-      );
+      pushMobileFlowFeedback(feedbackCopy.copiedLatestFailureCause);
     } catch {
-      pushMobileFlowFeedback(
-        isKoLocale ? "실패 원인 복사에 실패했습니다." : "Failed to copy failure cause."
-      );
+      pushMobileFlowFeedback(feedbackCopy.copyFailureCauseFailed);
     }
   }
 
@@ -597,14 +575,14 @@ export default function EmployeeSelfServicePage() {
 
   const latestPayload = useMemo(() => {
     if (!newestLog) {
-      return isKoLocale ? "아직 호출 이력이 없습니다." : "No API call history yet.";
+      return defaultsCopy.noApiCallHistory;
     }
     try {
       return JSON.stringify(newestLog.body, null, 2);
     } catch {
       return String(newestLog.body);
     }
-  }, [isKoLocale, newestLog]);
+  }, [defaultsCopy.noApiCallHistory, newestLog]);
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -647,13 +625,13 @@ export default function EmployeeSelfServicePage() {
 
   const attendanceSummary = useMemo(() => {
     if (!latestAttendance) {
-      return isKoLocale ? "기록 없음" : "No record";
+      return defaultsCopy.noRecord;
     }
     if (!latestAttendance.checkOutAt) {
-      return isKoLocale ? "근무 중" : "Working";
+      return defaultsCopy.working;
     }
-    return isKoLocale ? "퇴근 완료" : "Checked out";
-  }, [isKoLocale, latestAttendance]);
+    return defaultsCopy.checkedOut;
+  }, [defaultsCopy.checkedOut, defaultsCopy.noRecord, defaultsCopy.working, latestAttendance]);
 
   const leaveUsageRatePercent = useMemo(() => {
     if (!leaveBalance || leaveBalance.grantedDays <= 0) {
@@ -873,7 +851,7 @@ export default function EmployeeSelfServicePage() {
         recordId: record.id,
         status: "REJECTED" as const,
         at: record.checkOutAt ?? record.checkInAt,
-        reason: record.notes?.trim() || (isKoLocale ? "사유 미기록" : "No reason provided"),
+        reason: record.notes?.trim() || defaultsCopy.noReasonProvided,
         summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
       }));
 
@@ -888,14 +866,14 @@ export default function EmployeeSelfServicePage() {
         reason:
           request.decisionReason?.trim() ||
           request.reason?.trim() ||
-          (isKoLocale ? "사유 미기록" : "No reason provided"),
+          defaultsCopy.noReasonProvided,
         summary: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
       }));
 
     return [...attendanceCandidates, ...leaveCandidates]
       .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
       .slice(0, 12);
-  }, [attendance, isKoLocale, leaveRequests, toLeaveTypeLabel]);
+  }, [attendance, defaultsCopy.noReasonProvided, leaveRequests, toLeaveTypeLabel]);
 
   const selectedResubmitCandidate = useMemo(() => {
     if (resubmitCandidates.length === 0) {
@@ -930,57 +908,47 @@ export default function EmployeeSelfServicePage() {
     return [
       {
         key: "pending",
-        label: isKoLocale ? "대기 요청" : "Pending requests",
+        label: summaryCardCopy.pendingRequestsLabel,
         value: `${totalPendingRequestCount}`,
-        detail: isKoLocale
-          ? `출퇴근 ${attendanceStatusSummary.pending} / 휴가 ${leaveStatusSummary.pending}`
-          : `Attendance ${attendanceStatusSummary.pending} / Leave ${leaveStatusSummary.pending}`,
+        detail: summaryCardCopy.pendingRequestsDetail(attendanceStatusSummary.pending, leaveStatusSummary.pending),
         tone: totalPendingRequestCount > 0 ? "pending" : "ok"
       },
       {
         key: "completion",
-        label: isKoLocale ? "처리 완료율" : "Completion rate",
+        label: summaryCardCopy.completionRateLabel,
         value: `${requestCompletionRatePercent}%`,
-        detail: isKoLocale
-          ? `승인 ${totalApprovedRequestCount} / 조치 필요 ${totalRejectedOrCanceledRequestCount}`
-          : `Approved ${totalApprovedRequestCount} / Needs action ${totalRejectedOrCanceledRequestCount}`,
+        detail: summaryCardCopy.completionRateDetail(totalApprovedRequestCount, totalRejectedOrCanceledRequestCount),
         tone: requestCompletionRatePercent >= 70 ? "ok" : requestCompletionRatePercent >= 40 ? "pending" : "fail"
       },
       {
         key: "resubmit",
-        label: isKoLocale ? "재제출 필요" : "Resubmit needed",
+        label: summaryCardCopy.resubmitNeededLabel,
         value: `${resubmitNeededCount}`,
         detail:
           resubmitNeededCount > 0
-            ? isKoLocale
-              ? `${resubmitNeededCount}건 반려/취소`
-              : `${resubmitNeededCount} rejected or canceled request(s)`
-            : isKoLocale
-              ? "반려/취소 요청 없음"
-              : "No rejected or canceled request",
+            ? summaryCardCopy.resubmitNeededDetail(resubmitNeededCount)
+            : summaryCardCopy.noResubmitNeededDetail,
         tone: resubmitNeededCount > 0 ? "fail" : "ok"
       },
       {
         key: "api-failures",
-        label: isKoLocale ? "API 실패" : "API failures",
+        label: summaryCardCopy.apiFailuresLabel,
         value: `${apiFailureCount}`,
-        detail: isKoLocale
-          ? `성공 ${stats.success} / 실패 ${stats.fail}`
-          : `Success ${stats.success} / Failed ${stats.fail}`,
+        detail: summaryCardCopy.apiFailuresDetail(stats.success, stats.fail),
         tone: apiFailureCount > 0 ? "fail" : "info"
       }
     ];
   }, [
     attendanceStatusSummary.pending,
-    isKoLocale,
     leaveStatusSummary.pending,
     requestCompletionRatePercent,
-    totalApprovedRequestCount,
-    totalPendingRequestCount,
-    totalRejectedOrCanceledRequestCount,
     resubmitCandidates.length,
     stats.fail,
-    stats.success
+    stats.success,
+    summaryCardCopy,
+    totalApprovedRequestCount,
+    totalPendingRequestCount,
+    totalRejectedOrCanceledRequestCount
   ]);
 
   const latestLeaveRequest = useMemo(() => {
@@ -1000,10 +968,10 @@ export default function EmployeeSelfServicePage() {
         at: latestAttendance.checkOutAt ?? latestAttendance.checkInAt,
         message:
           latestAttendance.state === "REJECTED"
-            ? `반려 사유: ${latestAttendance.notes?.trim() || "사유 미기록"}`
+            ? `${requestFeedbackCopy.rejectionReasonPrefix}: ${latestAttendance.notes?.trim() || defaultsCopy.noReasonProvided}`
             : latestAttendance.state === "PENDING"
-              ? "승인 대기 중입니다."
-              : "정상 처리되었습니다.",
+              ? requestFeedbackCopy.pendingMessage
+              : requestFeedbackCopy.successMessage,
         tone:
           latestAttendance.state === "APPROVED"
             ? "ok"
@@ -1016,7 +984,7 @@ export default function EmployeeSelfServicePage() {
       const rejectReason =
         latestLeaveRequest.decisionReason?.trim() ||
         latestLeaveRequest.reason?.trim() ||
-        "사유 미기록";
+        defaultsCopy.noReasonProvided;
       rows.push({
         id: `leave-${latestLeaveRequest.id}`,
         channel: "leave",
@@ -1024,12 +992,12 @@ export default function EmployeeSelfServicePage() {
         at: latestLeaveRequest.endDate,
         message:
           latestLeaveRequest.state === "REJECTED"
-            ? `반려 사유: ${rejectReason}`
+            ? `${requestFeedbackCopy.rejectionReasonPrefix}: ${rejectReason}`
             : latestLeaveRequest.state === "CANCELED"
-              ? `취소 사유: ${rejectReason}`
+              ? `${requestFeedbackCopy.cancelReasonPrefix}: ${rejectReason}`
               : latestLeaveRequest.state === "PENDING"
-                ? "승인 대기 중입니다."
-                : "정상 처리되었습니다.",
+                ? requestFeedbackCopy.pendingMessage
+                : requestFeedbackCopy.successMessage,
         tone:
           latestLeaveRequest.state === "APPROVED"
             ? "ok"
@@ -1040,7 +1008,7 @@ export default function EmployeeSelfServicePage() {
     }
 
     return rows.sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
-  }, [latestAttendance, latestLeaveRequest]);
+  }, [defaultsCopy.noReasonProvided, latestAttendance, latestLeaveRequest, requestFeedbackCopy.cancelReasonPrefix, requestFeedbackCopy.pendingMessage, requestFeedbackCopy.rejectionReasonPrefix, requestFeedbackCopy.successMessage]);
 
   const requestSearchRows = useMemo<RequestSearchRow[]>(() => {
     const attendanceRows = attendance.map((record) => {
@@ -1054,7 +1022,7 @@ export default function EmployeeSelfServicePage() {
         status: record.state,
         at,
         summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`,
-        detail: record.notes?.trim() || (isKoLocale ? "메모 없음" : "No note"),
+        detail: record.notes?.trim() || defaultsCopy.noNote,
         pendingHours
       };
     });
@@ -1085,13 +1053,13 @@ export default function EmployeeSelfServicePage() {
         detail:
           request.reason?.trim() ||
           request.decisionReason?.trim() ||
-          (isKoLocale ? "사유 미기록" : "No reason"),
+          defaultsCopy.noReason,
         pendingHours
       };
     });
 
     return [...attendanceRows, ...leaveRows].sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
-  }, [attendance, isKoLocale, leaveRequests, requestNowMs, toLeaveTypeLabel]);
+  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, isKoLocale, leaveRequests, requestNowMs, toLeaveTypeLabel]);
 
   const filteredRequestSearchRows = useMemo(() => {
     const filtered = requestSearchRows.filter((row) =>
@@ -1114,7 +1082,7 @@ export default function EmployeeSelfServicePage() {
       channel: "attendance" as const,
       status: record.state,
       at: record.checkOutAt ?? record.checkInAt,
-      title: isKoLocale ? "출퇴근 요청" : "Attendance request",
+      title: defaultsCopy.attendanceRequestTitle,
       detail: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
     }));
 
@@ -1123,14 +1091,14 @@ export default function EmployeeSelfServicePage() {
       channel: "leave" as const,
       status: request.state,
       at: request.endDate,
-      title: isKoLocale ? "휴가 요청" : "Leave request",
+      title: defaultsCopy.leaveRequestTitle,
       detail: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
     }));
 
     return [...attendanceItems, ...leaveItems]
       .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
       .slice(0, 12);
-  }, [attendance, isKoLocale, leaveRequests, toLeaveTypeLabel]);
+  }, [attendance, defaultsCopy.attendanceRequestTitle, defaultsCopy.leaveRequestTitle, leaveRequests, toLeaveTypeLabel]);
 
   const filteredMobileRequestTimeline = useMemo(() => {
     return mobileRequestTimeline.filter((item) => {
@@ -1166,10 +1134,10 @@ export default function EmployeeSelfServicePage() {
     if (latestRejectedAttendance) {
       byId.set(`attendance-${latestRejectedAttendance.id}`, {
         id: `attendance-${latestRejectedAttendance.id}`,
-        source: isKoLocale ? "출퇴근 반려" : "Attendance rejected",
+        source: defaultsCopy.attendanceRejectedSource,
         message:
           latestRejectedAttendance.notes?.trim() ||
-          (isKoLocale ? "반려 사유가 기록되지 않았습니다." : "Rejection reason was not recorded."),
+          defaultsCopy.rejectionReasonMissing,
         at: formatDateTime(latestRejectedAttendance.checkOutAt ?? latestRejectedAttendance.checkInAt)
       });
     }
@@ -1182,38 +1150,34 @@ export default function EmployeeSelfServicePage() {
         id: `leave-${latestRejectedLeave.id}`,
         source:
           latestRejectedLeave.state === "REJECTED"
-            ? isKoLocale
-              ? "휴가 반려"
-              : "Leave rejected"
-            : isKoLocale
-              ? "휴가 취소"
-              : "Leave canceled",
+            ? defaultsCopy.leaveRejectedSource
+            : defaultsCopy.leaveCanceledSource,
         message:
           latestRejectedLeave.decisionReason?.trim() ||
           latestRejectedLeave.reason?.trim() ||
-          (isKoLocale ? "사유가 기록되지 않았습니다." : "Reason was not recorded."),
+          defaultsCopy.reasonMissing,
         at: formatDateTime(latestRejectedLeave.endDate)
       });
     }
 
     return [...byId.values()].slice(0, 6);
-  }, [attendance, isKoLocale, leaveRequests, logs]);
+  }, [attendance, defaultsCopy.attendanceRejectedSource, defaultsCopy.leaveCanceledSource, defaultsCopy.leaveRejectedSource, defaultsCopy.reasonMissing, defaultsCopy.rejectionReasonMissing, isKoLocale, leaveRequests, logs]);
 
   const latestFailureCauseMessage = requestFailureCauses[0]?.message ?? null;
 
   const correctionValidation = useMemo(() => {
     if (!lastAttendanceId.trim()) {
-      return { isValid: false, message: "정정 대상 기록 ID를 선택해 주세요." };
+      return { isValid: false, message: correctionValidationCopy.missingTargetRecordId };
     }
 
     const checkInMs = new Date(checkInAt).getTime();
     if (Number.isNaN(checkInMs)) {
-      return { isValid: false, message: "출근 시각 형식이 올바르지 않습니다." };
+      return { isValid: false, message: correctionValidationCopy.invalidCheckInFormat };
     }
 
     const normalizedBreakMinutes = Math.max(0, Math.trunc(coerceNumber(breakMinutes)));
     if (normalizedBreakMinutes > 12 * 60) {
-      return { isValid: false, message: "휴게 시간이 과도합니다. 12시간 이하로 입력해 주세요." };
+      return { isValid: false, message: correctionValidationCopy.excessiveBreakMinutes };
     }
 
     if (checkOutAt.trim().length === 0) {
@@ -1222,46 +1186,49 @@ export default function EmployeeSelfServicePage() {
 
     const checkOutMs = new Date(checkOutAt).getTime();
     if (Number.isNaN(checkOutMs)) {
-      return { isValid: false, message: "퇴근 시각 형식이 올바르지 않습니다." };
+      return { isValid: false, message: correctionValidationCopy.invalidCheckOutFormat };
     }
     if (checkOutMs <= checkInMs) {
-      return { isValid: false, message: "퇴근 시각은 출근 시각 이후여야 합니다." };
+      return { isValid: false, message: correctionValidationCopy.invalidTimeOrder };
     }
 
     const totalMinutes = Math.round((checkOutMs - checkInMs) / 60_000);
     if (normalizedBreakMinutes >= totalMinutes) {
-      return { isValid: false, message: "휴게 시간이 근무 시간보다 크거나 같습니다." };
+      return { isValid: false, message: correctionValidationCopy.breakExceedsWorkMinutes };
     }
 
     return { isValid: true, message: null };
-  }, [breakMinutes, checkInAt, checkOutAt, lastAttendanceId]);
+  }, [breakMinutes, checkInAt, checkOutAt, correctionValidationCopy.breakExceedsWorkMinutes, correctionValidationCopy.excessiveBreakMinutes, correctionValidationCopy.invalidCheckInFormat, correctionValidationCopy.invalidCheckOutFormat, correctionValidationCopy.invalidTimeOrder, correctionValidationCopy.missingTargetRecordId, lastAttendanceId]);
 
   const attendancePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(() => {
     const checks: PreSubmitCheckItem[] = [];
     checks.push({
       id: "attendance-target",
       pass: lastAttendanceId.trim().length > 0,
-      label: "정정 대상 선택",
-      detail: lastAttendanceId.trim().length > 0 ? "정정 대상 기록이 선택되었습니다." : "정정 대상 기록 ID를 선택해 주세요."
+      label: attendanceCheckCopy.targetLabel,
+      detail:
+        lastAttendanceId.trim().length > 0
+          ? attendanceCheckCopy.targetSelectedDetail
+          : attendanceCheckCopy.targetMissingDetail
     });
 
     const checkInMs = new Date(checkInAt).getTime();
     checks.push({
       id: "attendance-checkin",
       pass: !Number.isNaN(checkInMs),
-      label: "출근 시각 형식",
-      detail: !Number.isNaN(checkInMs) ? "출근 시각 형식이 유효합니다." : "출근 시각 형식이 올바르지 않습니다."
+      label: attendanceCheckCopy.checkInFormatLabel,
+      detail: !Number.isNaN(checkInMs) ? attendanceCheckCopy.checkInFormatValidDetail : attendanceCheckCopy.checkInFormatInvalidDetail
     });
 
     const normalizedBreakMinutes = Math.max(0, Math.trunc(coerceNumber(breakMinutes)));
     checks.push({
       id: "attendance-break",
       pass: normalizedBreakMinutes <= 12 * 60,
-      label: "휴게 시간 범위",
+      label: attendanceCheckCopy.breakRangeLabel,
       detail:
         normalizedBreakMinutes <= 12 * 60
-          ? `휴게 ${normalizedBreakMinutes}분`
-          : "휴게 시간이 과도합니다. 12시간 이하로 입력해 주세요."
+          ? attendanceCheckCopy.breakRangeValidDetail(normalizedBreakMinutes)
+          : attendanceCheckCopy.breakRangeInvalidDetail
     });
 
     if (checkOutAt.trim().length > 0) {
@@ -1269,21 +1236,24 @@ export default function EmployeeSelfServicePage() {
       checks.push({
         id: "attendance-checkout-format",
         pass: !Number.isNaN(checkOutMs),
-        label: "퇴근 시각 형식",
-        detail: !Number.isNaN(checkOutMs) ? "퇴근 시각 형식이 유효합니다." : "퇴근 시각 형식이 올바르지 않습니다."
+        label: attendanceCheckCopy.checkOutFormatLabel,
+        detail:
+          !Number.isNaN(checkOutMs)
+            ? attendanceCheckCopy.checkOutFormatValidDetail
+            : attendanceCheckCopy.checkOutFormatInvalidDetail
       });
       checks.push({
         id: "attendance-time-order",
         pass: !Number.isNaN(checkOutMs) && !Number.isNaN(checkInMs) && checkOutMs > checkInMs,
-        label: "출퇴근 시간 순서",
+        label: attendanceCheckCopy.timeOrderLabel,
         detail: !Number.isNaN(checkOutMs) && !Number.isNaN(checkInMs) && checkOutMs > checkInMs
-          ? "출퇴근 시간 순서가 유효합니다."
-          : "퇴근 시각은 출근 시각 이후여야 합니다."
+          ? attendanceCheckCopy.timeOrderValidDetail
+          : attendanceCheckCopy.timeOrderInvalidDetail
       });
     }
 
     return checks;
-  }, [breakMinutes, checkInAt, checkOutAt, lastAttendanceId]);
+  }, [attendanceCheckCopy, breakMinutes, checkInAt, checkOutAt, lastAttendanceId]);
 
   const attendancePreSubmitValid = useMemo(
     () => attendancePreSubmitChecks.every((check) => check.pass),
@@ -1316,22 +1286,22 @@ export default function EmployeeSelfServicePage() {
     checks.push({
       id: "leave-start-format",
       pass: validStart,
-      label: "시작일 형식",
-      detail: validStart ? "시작일 형식이 유효합니다." : "시작일 형식이 올바르지 않습니다."
+      label: leaveCheckCopy.startDateFormatLabel,
+      detail: validStart ? leaveCheckCopy.startDateFormatValidDetail : leaveCheckCopy.startDateFormatInvalidDetail
     });
     checks.push({
       id: "leave-end-format",
       pass: validEnd,
-      label: "종료일 형식",
-      detail: validEnd ? "종료일 형식이 유효합니다." : "종료일 형식이 올바르지 않습니다."
+      label: leaveCheckCopy.endDateFormatLabel,
+      detail: validEnd ? leaveCheckCopy.endDateFormatValidDetail : leaveCheckCopy.endDateFormatInvalidDetail
     });
     checks.push({
       id: "leave-range",
       pass: validStart && validEnd && endMs >= startMs,
-      label: "신청 기간",
+      label: leaveCheckCopy.requestRangeLabel,
       detail: validStart && validEnd && endMs >= startMs
-        ? "신청 기간이 유효합니다."
-        : "종료일은 시작일과 같거나 이후여야 합니다."
+        ? leaveCheckCopy.requestRangeValidDetail
+        : leaveCheckCopy.requestRangeInvalidDetail
     });
 
     if (leaveUnit === "HOUR") {
@@ -1339,30 +1309,36 @@ export default function EmployeeSelfServicePage() {
       checks.push({
         id: "leave-hours",
         pass: hours > 0 && hours <= 12,
-        label: "시간 단위 입력",
-        detail: hours > 0 && hours <= 12 ? `${hours.toFixed(1)}시간` : "시간 단위는 0보다 크고 12 이하여야 합니다."
+        label: leaveCheckCopy.hourlyInputLabel,
+        detail:
+          hours > 0 && hours <= 12
+            ? leaveCheckCopy.hourlyInputValidDetail(hours)
+            : leaveCheckCopy.hourlyInputInvalidDetail
       });
     }
 
     checks.push({
       id: "leave-estimated-days",
       pass: estimatedLeaveRequestedDays > 0,
-      label: "신청 일수 계산",
+      label: leaveCheckCopy.estimatedDaysLabel,
       detail:
         estimatedLeaveRequestedDays > 0
-          ? `예상 신청 ${formatDays(estimatedLeaveRequestedDays)}일`
-          : "신청 일수를 계산할 수 없습니다."
+          ? leaveCheckCopy.estimatedDaysValidDetail(formatDays(estimatedLeaveRequestedDays))
+          : leaveCheckCopy.estimatedDaysInvalidDetail
     });
 
     if (leaveType === "ANNUAL" && leaveBalance) {
       checks.push({
         id: "leave-balance",
         pass: leaveBalance.remainingDays >= estimatedLeaveRequestedDays,
-        label: "잔여 연차 검증",
+        label: leaveCheckCopy.annualBalanceLabel,
         detail:
           leaveBalance.remainingDays >= estimatedLeaveRequestedDays
-            ? `잔여 ${formatDays(leaveBalance.remainingDays)}일`
-            : `잔여 ${formatDays(leaveBalance.remainingDays)}일, 요청 ${formatDays(estimatedLeaveRequestedDays)}일`
+            ? leaveCheckCopy.annualBalanceSufficientDetail(formatDays(leaveBalance.remainingDays))
+            : leaveCheckCopy.annualBalanceInsufficientDetail(
+                formatDays(leaveBalance.remainingDays),
+                formatDays(estimatedLeaveRequestedDays)
+              )
       });
     }
 
@@ -1370,6 +1346,7 @@ export default function EmployeeSelfServicePage() {
   }, [
     estimatedLeaveRequestedDays,
     leaveBalance,
+    leaveCheckCopy,
     leaveEndDate,
     leaveHours,
     leaveStartDate,
@@ -1400,22 +1377,24 @@ export default function EmployeeSelfServicePage() {
       {
         id: "resubmit-candidate",
         pass: hasCandidate,
-        label: "재제출 후보 선택",
-        detail: hasCandidate ? "재제출 대상이 선택되었습니다." : "반려/취소 요청에서 재제출 대상을 선택해 주세요."
+        label: resubmitFlowCheckCopy.candidateLabel,
+        detail:
+          hasCandidate ? resubmitFlowCheckCopy.candidateSelectedDetail : resubmitFlowCheckCopy.candidateMissingDetail
       },
       {
         id: "resubmit-draft",
         pass: isDraftApplied,
-        label: "초안 반영",
-        detail: isDraftApplied ? "선택 후보 초안을 신청 폼에 반영했습니다." : "선택 초안 적용 버튼으로 폼을 먼저 채워 주세요."
+        label: resubmitFlowCheckCopy.draftAppliedLabel,
+        detail:
+          isDraftApplied ? resubmitFlowCheckCopy.draftAppliedDetail : resubmitFlowCheckCopy.draftMissingDetail
       },
       {
         id: "resubmit-submit-ready",
         pass: isSubmissionReady,
-        label: "제출 가능 상태",
+        label: resubmitFlowCheckCopy.submitReadyLabel,
         detail: isSubmissionReady
-          ? "검증을 통과했습니다. 해당 폼에서 재제출할 수 있습니다."
-          : "재제출 전 입력값 검증을 다시 확인해 주세요."
+          ? resubmitFlowCheckCopy.submitReadyDetail
+          : resubmitFlowCheckCopy.submitNotReadyDetail
       }
     ];
   }, [
@@ -1423,6 +1402,15 @@ export default function EmployeeSelfServicePage() {
     correctionValidation.isValid,
     lastAppliedResubmitCandidateKey,
     leavePreSubmitValid,
+    resubmitFlowCheckCopy.candidateLabel,
+    resubmitFlowCheckCopy.candidateMissingDetail,
+    resubmitFlowCheckCopy.candidateSelectedDetail,
+    resubmitFlowCheckCopy.draftAppliedDetail,
+    resubmitFlowCheckCopy.draftAppliedLabel,
+    resubmitFlowCheckCopy.draftMissingDetail,
+    resubmitFlowCheckCopy.submitNotReadyDetail,
+    resubmitFlowCheckCopy.submitReadyDetail,
+    resubmitFlowCheckCopy.submitReadyLabel,
     selectedResubmitCandidate
   ]);
 
@@ -1446,35 +1434,35 @@ export default function EmployeeSelfServicePage() {
     return [
       {
         key: "attendance",
-        label: "출퇴근 정정 제출",
+        label: submitChecklistCardCopy.attendanceCorrectionLabel,
         passCount: attendancePassCount,
         totalCount: attendancePreSubmitChecks.length,
         ready: attendanceReady,
         detail: attendanceReady
-          ? "정정 제출이 가능합니다."
-          : correctionValidation.message || attendanceFirstFailCheck?.detail || "정정 입력을 보완해 주세요.",
+          ? submitChecklistCardCopy.attendanceReadyDetail
+          : correctionValidation.message || attendanceFirstFailCheck?.detail || submitChecklistCardCopy.attendanceFallbackDetail,
         targetSectionId: "attendance"
       },
       {
         key: "leave",
-        label: "휴가 신청 제출",
+        label: submitChecklistCardCopy.leaveSubmissionLabel,
         passCount: leavePassCount,
         totalCount: leavePreSubmitChecks.length,
         ready: leavePreSubmitValid,
         detail: leavePreSubmitValid
-          ? `예상 ${formatDays(estimatedLeaveRequestedDays)}일 신청 가능합니다.`
-          : leaveFirstFailCheck?.detail || "휴가 신청 입력을 보완해 주세요.",
+          ? submitChecklistCardCopy.leaveReadyDetail(formatDays(estimatedLeaveRequestedDays))
+          : leaveFirstFailCheck?.detail || submitChecklistCardCopy.leaveFallbackDetail,
         targetSectionId: "leave"
       },
       {
         key: "resubmit",
-        label: "요청 재제출",
+        label: submitChecklistCardCopy.requestResubmitLabel,
         passCount: resubmitPassCount,
         totalCount: resubmitFlowChecks.length,
         ready: resubmitFlowReady,
         detail: resubmitFlowReady
-          ? "재제출 흐름 검증을 통과했습니다."
-          : resubmitFirstFailCheck?.detail || "재제출 후보 선택 및 초안 반영이 필요합니다.",
+          ? submitChecklistCardCopy.requestResubmitReadyDetail
+          : resubmitFirstFailCheck?.detail || submitChecklistCardCopy.requestResubmitFallbackDetail,
         targetSectionId: "request-resubmit"
       }
     ];
@@ -1491,7 +1479,8 @@ export default function EmployeeSelfServicePage() {
     leavePreSubmitValid,
     resubmitFirstFailCheck,
     resubmitFlowChecks,
-    resubmitFlowReady
+    resubmitFlowReady,
+    submitChecklistCardCopy
   ]);
 
   const correctionDeltaLabel = useMemo(() => {
@@ -1510,10 +1499,10 @@ export default function EmployeeSelfServicePage() {
     });
 
     if (originalNetMinutes === null || draftNetMinutes === null) {
-      return isKoLocale ? "비교 불가" : "Not comparable";
+      return defaultsCopy.notComparable;
     }
     return formatEmployeeDeltaMinutes(draftNetMinutes - originalNetMinutes, isKoLocale);
-  }, [attendanceCopy.noComparisonTarget, breakMinutes, checkInAt, checkOutAt, isKoLocale, selectedCorrectionRecord]);
+  }, [attendanceCopy.noComparisonTarget, breakMinutes, checkInAt, checkOutAt, defaultsCopy.notComparable, isKoLocale, selectedCorrectionRecord]);
 
   function applyAttendanceRecordToCorrectionForm(record: AttendanceRecordDto) {
     setSelectedCorrectionRecordId(record.id);
