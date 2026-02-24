@@ -75,7 +75,11 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(filingConsoleSource, /Resubmit Submission/, "filing console should expose resubmit action");
+  assert.match(
+    filingConsoleSource,
+    /copy\.resubmitSubmissionAction/,
+    "filing console should expose resubmit action with locale copy"
+  );
   assert.match(payrollApiSpec, /\/payroll\/year-end\/filing-submissions\/\{submissionId\}\/resubmit:/, "api spec should include resubmit endpoint");
   assert.match(payrollContract, /payroll\.year_end\.filing_package\.resubmitted\.v1/, "contract should include resubmitted event");
 
