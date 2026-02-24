@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
-> **Last updated**: 2026-02-23
-> **Current version**: 0.1.119 (Mobile Preset Layering Cleanup Baseline)
+> **Last updated**: 2026-02-24
+> **Current version**: 0.1.120 (Payroll Statutory Adapter Helper Split Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -585,3 +585,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0312 payroll decomposition phase10 baseline(`src/features/payroll/year-end-calculation-helpers.ts` extraction for year-end settlement tax/withholding math + `src/features/payroll/service.ts` settlement wrapper rewiring + WI-0312 regression test)
 - WI-0313 admin page decomposition phase3 baseline(`src/app/admin/page-locale-helpers.ts` extraction for locale label bundle + demo-organization-name fallback helper + `src/app/admin/page.tsx` rewiring + WI-0313 regression test)
 - WI-0314 employee locale dynamic UI gap fix phase4 baseline(`src/app/employee/page-locale-helpers.ts` extraction for locale label bundle + locale-aware weekday/note presets/error helpers + `src/app/employee/page.tsx` panel copy ko/en dynamic rewiring + WI-0314 regression test)
+- WI-0315 payroll decomposition phase11 baseline(`src/features/payroll/service-statutory-adapter-helpers.ts` extraction for KR statutory wrapper/type adapters + `src/features/payroll/service.ts` helper/type delegation rewiring + WI-0315 regression test)
