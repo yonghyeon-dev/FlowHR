@@ -24,17 +24,6 @@ import {
 } from "@/features/payroll/kr-income-tax-lookup-presets";
 import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
 import {
-  applyContributionCap as applyContributionCapCore,
-  calculateLookupIncomeTaxKrw as calculateLookupIncomeTaxKrwCore,
-  calculateProgressiveIncomeTaxKrw as calculateProgressiveIncomeTaxKrwCore,
-  normalizeIncomeTaxBrackets as normalizeIncomeTaxBracketsCore,
-  normalizeIncomeTaxLookupTable as normalizeIncomeTaxLookupTableCore,
-  normalizeInsuranceRoundingRules as normalizeInsuranceRoundingRulesCore,
-  normalizeSettlementInsuranceRoundingRules as normalizeSettlementInsuranceRoundingRulesCore,
-  normalizeStatutoryIncomeSplitItems as normalizeStatutoryIncomeSplitItemsCore,
-  roundKrwByRule as roundKrwByRuleCore
-} from "@/features/payroll/kr-statutory-helpers";
-import {
   applyYearEndDeductionCaps as applyYearEndDeductionCapsCore,
   buildYearEndInputVectorHash as buildYearEndInputVectorHashCore,
   calculateYearEndSettlementKrw as calculateYearEndSettlementKrwCore,
@@ -101,6 +90,18 @@ import {
   toRateNumber,
   toSeoulDateTimeParts
 } from "@/features/payroll/service-runtime-helpers";
+import {
+  applyContributionCap,
+  calculateLookupIncomeTaxKrw,
+  calculateProgressiveIncomeTaxKrw,
+  normalizeIncomeTaxBrackets,
+  normalizeIncomeTaxLookupTable,
+  normalizeInsuranceRoundingRules,
+  normalizeSettlementInsuranceRoundingRules,
+  normalizeStatutoryIncomeSplitItems,
+  roundKrwByRule,
+  type InsuranceRoundingMode
+} from "@/features/payroll/service-statutory-adapter-helpers";
 
 type PreviewPayrollInput = {
   periodStart: Date;
@@ -1109,48 +1110,6 @@ type PayrollComputation = {
   grossPayKrw: number;
 };
 
-type IncomeTaxBracket = {
-  upToKrw: number | null;
-  rate: number;
-};
-
-type IncomeTaxLookupRow = {
-  upToKrw: number | null;
-  taxKrw: number;
-  dependentTaxKrw?: Array<{
-    dependentCount: number;
-    taxKrw: number;
-  }>;
-};
-
-type StatutoryIncomeSplitItem = {
-  code: string;
-  category: string;
-  amountKrw: number;
-};
-
-type InsuranceRoundingMode = "round" | "floor" | "ceil";
-
-type InsuranceRoundingRules = {
-  mode: InsuranceRoundingMode;
-  nationalPensionUnitKrw: number;
-  healthInsuranceUnitKrw: number;
-  longTermCareUnitKrw: number;
-  employmentInsuranceUnitKrw: number;
-};
-
-type InsuranceRoundingInput = {
-  mode?: InsuranceRoundingMode;
-  nationalPensionUnitKrw?: number;
-  healthInsuranceUnitKrw?: number;
-  longTermCareUnitKrw?: number;
-  employmentInsuranceUnitKrw?: number;
-};
-
-type InsuranceSettlementRoundingInput = InsuranceRoundingInput & {
-  industrialAccidentUnitKrw?: number;
-};
-
 const emptyTotals: PayableMinutes = {
   regular: 0,
   overtime: 0,
@@ -1186,77 +1145,6 @@ function resolvePayrollYearEndFilingAckPayload(input: {
   rejectionReasonDetail?: string;
 }) {
   return resolvePayrollYearEndFilingAckPayloadCore(input);
-}
-
-function normalizeIncomeTaxBrackets(brackets?: IncomeTaxBracket[]): IncomeTaxBracket[] | null {
-  return normalizeIncomeTaxBracketsCore(brackets, toRateNumber, toKrwInteger) as
-    | IncomeTaxBracket[]
-    | null;
-}
-
-function normalizeIncomeTaxLookupTable(lookupTable?: IncomeTaxLookupRow[]): IncomeTaxLookupRow[] | null {
-  return normalizeIncomeTaxLookupTableCore(lookupTable, toKrwInteger) as IncomeTaxLookupRow[] | null;
-}
-
-function normalizeStatutoryIncomeSplitItems(
-  items: StatutoryIncomeSplitItem[] | undefined,
-  fieldName: "statutory.taxableIncomeItems" | "statutory.nonTaxableIncomeItems"
-) {
-  return normalizeStatutoryIncomeSplitItemsCore(items, fieldName, toKrwInteger) as
-    | StatutoryIncomeSplitItem[]
-    | null;
-}
-
-function calculateProgressiveIncomeTaxKrw(taxableBaseKrw: number, brackets: IncomeTaxBracket[]) {
-  return calculateProgressiveIncomeTaxKrwCore(taxableBaseKrw, brackets, toKrwInteger);
-}
-
-type LookupIncomeTaxResolution = {
-  taxKrw: number;
-  selectedIncomeTaxLookupRow: {
-    upToKrw: number | null;
-    taxKrw: number;
-  };
-  selectedIncomeTaxLookupDependentTier: {
-    dependentCount: number;
-    taxKrw: number;
-  } | null;
-};
-
-function calculateLookupIncomeTaxKrw(
-  taxableBaseKrw: number,
-  dependentCount: number,
-  lookupTable: IncomeTaxLookupRow[]
-): LookupIncomeTaxResolution {
-  return calculateLookupIncomeTaxKrwCore(
-    taxableBaseKrw,
-    dependentCount,
-    lookupTable
-  ) as LookupIncomeTaxResolution;
-}
-
-function applyContributionCap(baseKrw: number, capKrw: number | undefined, fieldName: string) {
-  return applyContributionCapCore(baseKrw, capKrw, fieldName, toKrwInteger);
-}
-
-function normalizeInsuranceRoundingRules(
-  rules?: InsuranceRoundingInput,
-  fieldPrefix = "statutory.insuranceRounding"
-): InsuranceRoundingRules {
-  return normalizeInsuranceRoundingRulesCore(rules, fieldPrefix) as InsuranceRoundingRules;
-}
-
-function normalizeSettlementInsuranceRoundingRules(rules?: InsuranceSettlementRoundingInput) {
-  return normalizeSettlementInsuranceRoundingRulesCore(rules);
-}
-
-function roundKrwByRule(
-  rawValueKrw: number,
-  fieldName: string,
-  mode: InsuranceRoundingMode,
-  unitKrw: number
-) {
-  return roundKrwByRuleCore(rawValueKrw, fieldName, mode, unitKrw, toKrwInteger);
 }
 
 async function calculatePayrollComputation(
