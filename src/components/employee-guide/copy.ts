@@ -7,6 +7,7 @@ export type EmployeeGuideActionLink = {
 };
 
 export type EmployeeGuideCopy = {
+  heroEyebrow: string;
   title: string;
   description: string;
   productionWarning: string;
@@ -39,9 +40,17 @@ export type EmployeeGuideCopy = {
   logsEmpty: string;
   doneLabel: string;
   todoLabel: string;
+  okLabel: string;
+  failLabel: string;
+  requestLabels: {
+    attendanceRecords: string;
+    leaveRequests: string;
+    confirmedPayslips: string;
+  };
 };
 
 const defaultCopy: EmployeeGuideCopy = {
+  heroEyebrow: "FlowHR Employee",
   title: "Employee In-App Guide",
   description: "Follow the first-login path for attendance correction, leave requests, and payslip checks.",
   productionWarning: "Production runtime requires a bearer token session for API calls.",
@@ -83,12 +92,20 @@ const defaultCopy: EmployeeGuideCopy = {
   logsTitle: "API logs",
   logsEmpty: "No logs yet.",
   doneLabel: "DONE",
-  todoLabel: "TODO"
+  todoLabel: "TODO",
+  okLabel: "OK",
+  failLabel: "FAIL",
+  requestLabels: {
+    attendanceRecords: "attendance records",
+    leaveRequests: "leave requests",
+    confirmedPayslips: "confirmed payslips"
+  }
 };
 
 export const employeeGuideCopyByLocale: Record<FlowLocale, EmployeeGuideCopy> = {
   ko: {
     ...defaultCopy,
+    heroEyebrow: "FlowHR 직원",
     title: "직원 인앱 가이드",
     description: "첫 로그인 이후 근태 정정, 휴가 신청, 명세 확인까지 핵심 흐름을 빠르게 안내합니다.",
     productionWarning: "프로덕션 환경에서는 API 호출을 위해 Bearer 토큰 세션이 필요합니다.",
@@ -130,7 +147,14 @@ export const employeeGuideCopyByLocale: Record<FlowLocale, EmployeeGuideCopy> = 
     logsTitle: "API 로그",
     logsEmpty: "아직 로그가 없습니다.",
     doneLabel: "완료",
-    todoLabel: "진행 필요"
+    todoLabel: "진행 필요",
+    okLabel: "성공",
+    failLabel: "실패",
+    requestLabels: {
+      attendanceRecords: "근태 기록 조회",
+      leaveRequests: "휴가 요청 조회",
+      confirmedPayslips: "확정 명세 조회"
+    }
   },
   en: defaultCopy
 };

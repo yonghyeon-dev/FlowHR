@@ -37,6 +37,15 @@ type LeavePolicyLite = {
 type UseAdminOnboardingDataInput = {
   loadingLabel: string;
   runtimeLocale: string;
+  requestLabels: {
+    organizations: string;
+    departments: string;
+    employees: string;
+    leavePolicy: string;
+    createDepartmentPrefix: string;
+    createEmployeePrefix: string;
+    upsertLeavePolicy: string;
+  };
 };
 
 export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
@@ -142,7 +151,10 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     try {
       let organizationRows: OrganizationLite[] = [];
       try {
-        const organizationsBody = await requestJson("organizations", "/api/people/organizations");
+        const organizationsBody = await requestJson(
+          input.requestLabels.organizations,
+          "/api/people/organizations"
+        );
         organizationRows = parseArray<OrganizationLite>(organizationsBody, "organizations");
       } catch {
         organizationRows = [];
@@ -164,15 +176,15 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
 
       const orgQuery = buildQuery({ organizationId: targetOrganizationId });
       const [departmentsBody, employeesBody, leavePolicyBody] = await Promise.all([
-        requestJson("departments", `/api/people/departments${orgQuery}`),
+        requestJson(input.requestLabels.departments, `/api/people/departments${orgQuery}`),
         requestJson(
-          "employees",
+          input.requestLabels.employees,
           `/api/people/employees${buildQuery({
             ...{ organizationId: targetOrganizationId },
             active: "true"
           })}`
         ),
-        requestJson("leave policy", `/api/leave/policy${orgQuery}`)
+        requestJson(input.requestLabels.leavePolicy, `/api/leave/policy${orgQuery}`)
       ]);
 
       const departmentRows = parseArray<DepartmentLite>(departmentsBody, "departments");
@@ -196,7 +208,17 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     } finally {
       setPendingLabel(null);
     }
-  }, [input.loadingLabel, organizationId, requestJson, setOrganizationId, usesBearerToken]);
+  }, [
+    input.loadingLabel,
+    input.requestLabels.departments,
+    input.requestLabels.employees,
+    input.requestLabels.leavePolicy,
+    input.requestLabels.organizations,
+    organizationId,
+    requestJson,
+    setOrganizationId,
+    usesBearerToken
+  ]);
 
   useEffect(() => {
     void loadSetup();
@@ -220,7 +242,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       return;
     }
     for (const draft of parseDepartmentSeedInput(departmentSeedInput)) {
-      await requestJson(`create department ${draft.code}`, "/api/people/departments", {
+      await requestJson(`${input.requestLabels.createDepartmentPrefix} ${draft.code}`, "/api/people/departments", {
         method: "POST",
         body: {
           organizationId: targetOrganizationId,
@@ -231,7 +253,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       });
     }
     await loadSetup();
-  }, [departmentSeedInput, loadSetup, organizationId, requestJson]);
+  }, [departmentSeedInput, input.requestLabels.createDepartmentPrefix, loadSetup, organizationId, requestJson]);
 
   const applyEmployees = useCallback(async () => {
     const targetOrganizationId = organizationId.trim();
@@ -243,7 +265,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       const departmentId = draft.departmentCode
         ? (departmentIdByCode.get(draft.departmentCode.toLowerCase()) ?? null)
         : null;
-      await requestJson(`create employee ${draft.id}`, "/api/people/employees", {
+      await requestJson(`${input.requestLabels.createEmployeePrefix} ${draft.id}`, "/api/people/employees", {
         method: "POST",
         body: {
           id: draft.id,
@@ -256,14 +278,21 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       });
     }
     await loadSetup();
-  }, [departments, employeeSeedInput, loadSetup, organizationId, requestJson]);
+  }, [
+    departments,
+    employeeSeedInput,
+    input.requestLabels.createEmployeePrefix,
+    loadSetup,
+    organizationId,
+    requestJson
+  ]);
 
   const applyLeavePolicy = useCallback(async () => {
     const targetOrganizationId = organizationId.trim();
     if (!targetOrganizationId) {
       return;
     }
-    await requestJson("upsert leave policy", "/api/leave/policy", {
+    await requestJson(input.requestLabels.upsertLeavePolicy, "/api/leave/policy", {
       method: "PUT",
       body: {
         organizationId: targetOrganizationId,
@@ -285,7 +314,8 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     loadSetup,
     maxHoursPerRequest,
     organizationId,
-    requestJson
+    requestJson,
+    input.requestLabels.upsertLeavePolicy
   ]);
 
   const refreshDisabled =

@@ -22,6 +22,11 @@ type PayrollRunLite = { id: string; state: "PREVIEWED" | "CONFIRMED" };
 type UseEmployeeGuideDataInput = {
   loadingLabel: string;
   runtimeLocale: string;
+  requestLabels: {
+    attendanceRecords: string;
+    leaveRequests: string;
+    confirmedPayslips: string;
+  };
 };
 
 export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
@@ -135,9 +140,9 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
       });
 
       const [attendanceBody, leaveBody, payslipBody] = await Promise.all([
-        requestJson("attendance records", `/api/attendance/records${attendanceQuery}`),
-        requestJson("leave requests", `/api/leave/requests${leaveQuery}`),
-        requestJson("confirmed payslips", `/api/payroll/runs${payslipQuery}`)
+        requestJson(input.requestLabels.attendanceRecords, `/api/attendance/records${attendanceQuery}`),
+        requestJson(input.requestLabels.leaveRequests, `/api/leave/requests${leaveQuery}`),
+        requestJson(input.requestLabels.confirmedPayslips, `/api/payroll/runs${payslipQuery}`)
       ]);
 
       const attendanceRows = parseArray<AttendanceRecordLite>(attendanceBody, "records");
@@ -150,7 +155,17 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
     } finally {
       setPendingLabel(null);
     }
-  }, [employeeId, input.loadingLabel, organizationId, requestJson, supabaseSession?.actorId, usesBearerToken]);
+  }, [
+    employeeId,
+    input.loadingLabel,
+    input.requestLabels.attendanceRecords,
+    input.requestLabels.confirmedPayslips,
+    input.requestLabels.leaveRequests,
+    organizationId,
+    requestJson,
+    supabaseSession?.actorId,
+    usesBearerToken
+  ]);
 
   useEffect(() => {
     void loadGuide();

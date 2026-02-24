@@ -21,10 +21,8 @@ import {
   buildYearEndFilingArtifact,
   buildYearEndFilingGuard,
   buildYearEndFilingRecords,
-  buildYearEndFilingSubmissionId,
   buildYearEndFilingSubmissionListSummary,
   buildYearEndInputVectorHash,
-  buildYearEndInsuranceReconciliationMonthlyBreakdown,
   buildYearEndSettlementHash,
   calculateYearEndSettlementKrw,
   collectYearEndDeductionEligibilityBlockingReasons,
@@ -90,11 +88,8 @@ import type {
   ListPayrollYearEndFilingSubmissionTimelineInput,
   ListPayrollYearEndFilingSubmissionsInput,
   PayrollYearEndFilingAckStatus,
-  PayrollYearEndFilingExportFormat,
   PayrollYearEndFilingSubmissionSortBy,
   PayrollYearEndFilingSubmissionSortDirection,
-  PayrollYearEndFilingTransport,
-  PayrollYearEndFilingValidationMode,
   PayrollYearEndWithholdingReceiptDocumentFormat,
   PreviewPayrollInput,
   PreviewPayrollInsuranceSettlementInput,
@@ -130,9 +125,6 @@ import type {
   ListPayrollYearEndFilingSubmissionsResult,
   PayrollTotalsKrw,
   PayrollYearEndFilingEvidenceNoteSummary,
-  PayrollYearEndFilingSubmissionListSummary,
-  PayrollYearEndFilingSubmissionSummary,
-  PayrollYearEndFilingTimelineEntry,
   PreviewPayrollInsuranceSettlementResult,
   PreviewPayrollResult,
   PreviewPayrollWithDeductionsResult,
@@ -143,7 +135,6 @@ import type {
   SubmitPayrollYearEndFilingPackageResult,
   UpsertDeductionProfileResult,
   YearEndDeductionSummaryKrw,
-  YearEndFilingRecord,
   YearEndSettlementKrw,
   YearEndSettlementSummary,
 } from "@/features/payroll/service-output-types";
@@ -158,9 +149,20 @@ import {
   issuePayrollYearEndWithholdingReceiptFromHelper
 } from "@/features/payroll/service-year-end-withholding-flow-helpers";
 import {
+  getPayrollYearEndInsuranceReconciliationReportFromHelper,
+  getPayrollYearEndPreflightChecklistFromHelper
+} from "@/features/payroll/service-year-end-reporting-helpers";
+import {
+  createYearEndFilingSubmissionFromHelper
+} from "@/features/payroll/service-year-end-filing-submission-helpers";
+import {
+  listDeductionProfilesFromHelper,
+  readDeductionProfileFromHelper,
+  upsertDeductionProfileFromHelper
+} from "@/features/payroll/service-deduction-profile-helpers";
+import {
   type ServiceContext,
   getEventPublisher,
-  requireDeductionProfilePermission,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
 import { calculatePayrollComputation } from "@/features/payroll/service-computation-helpers";
@@ -2040,93 +2042,6 @@ export async function exportPayrollYearEndFilingData(
   };
 }
 
-async function createYearEndFilingSubmission(
-  context: ServiceContext,
-  input: {
-    year: number;
-    employeeId: string;
-    format: PayrollYearEndFilingExportFormat;
-    validationMode: PayrollYearEndFilingValidationMode;
-    expectedSettlementHash?: string;
-    transport: PayrollYearEndFilingTransport;
-    submissionNote?: string;
-    attempt: number;
-    resubmissionOfSubmissionId: string | null;
-    resubmissionReason: string | null;
-    auditAction: "payroll.year_end.filing_package_submitted" | "payroll.year_end.filing_package_resubmitted";
-    eventName:
-      | "payroll.year_end.filing_package.submitted.v1"
-      | "payroll.year_end.filing_package.resubmitted.v1";
-  }
-): Promise<PayrollYearEndFilingSubmissionSummary> {
-  const exportResult = await exportPayrollYearEndFilingData(context, {
-    year: input.year,
-    employeeId: input.employeeId,
-    format: input.format,
-    validationMode: input.validationMode,
-    expectedSettlementHash: input.expectedSettlementHash
-  });
-
-  const actorRole = context.actor?.role ?? "system";
-  const actorId = context.actor?.id ?? null;
-  const entityId = `${input.year}_${input.employeeId}`;
-  const submittedAt = new Date().toISOString();
-  const submissionId = buildYearEndFilingSubmissionId({
-    year: input.year,
-    employeeId: input.employeeId,
-    checksumSha256: exportResult.filingData.artifact.checksumSha256,
-    attempt: input.attempt
-  });
-  const submissionNote = input.submissionNote?.trim() ? input.submissionNote.trim() : null;
-
-  const submission: PayrollYearEndFilingSubmissionSummary = {
-    submissionId,
-    year: input.year,
-    employeeId: input.employeeId,
-    attempt: input.attempt,
-    resubmissionOfSubmissionId: input.resubmissionOfSubmissionId,
-    resubmissionReason: input.resubmissionReason,
-    finalizationId: exportResult.filingData.finalizationId,
-    settlementHash: exportResult.filingData.settlementHash,
-    format: input.format,
-    validationMode: input.validationMode,
-    transport: input.transport,
-    artifact: {
-      fileName: exportResult.filingData.artifact.fileName,
-      contentType: exportResult.filingData.artifact.contentType,
-      checksumSha256: exportResult.filingData.artifact.checksumSha256,
-      byteLength: exportResult.filingData.artifact.byteLength
-    },
-    validationStatus: exportResult.filingData.validation.status,
-    submittedAt,
-    submittedByRole: actorRole,
-    submittedById: actorId,
-    status: "submitted",
-    ack: null,
-    submissionNote
-  };
-
-  await context.dataAccess.audit.append({
-    action: input.auditAction,
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload: submission
-  });
-  await getEventPublisher(context).publish({
-    name: input.eventName,
-    occurredAt: submittedAt,
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload: submission as unknown as Record<string, unknown>
-  });
-
-  return submission;
-}
-
 export async function submitPayrollYearEndFilingPackage(
   context: ServiceContext,
   input: SubmitPayrollYearEndFilingPackageInput
@@ -2154,20 +2069,24 @@ export async function submitPayrollYearEndFilingPackage(
     );
   }
 
-  const submission = await createYearEndFilingSubmission(context, {
-    year: input.year,
-    employeeId: input.employeeId,
-    format: input.format,
-    validationMode: input.validationMode,
-    expectedSettlementHash: input.expectedSettlementHash,
-    transport: input.transport,
-    submissionNote: input.submissionNote,
-    attempt: 1,
-    resubmissionOfSubmissionId: null,
-    resubmissionReason: null,
-    auditAction: "payroll.year_end.filing_package_submitted",
-    eventName: "payroll.year_end.filing_package.submitted.v1"
-  });
+  const submission = await createYearEndFilingSubmissionFromHelper(
+    context,
+    {
+      year: input.year,
+      employeeId: input.employeeId,
+      format: input.format,
+      validationMode: input.validationMode,
+      expectedSettlementHash: input.expectedSettlementHash,
+      transport: input.transport,
+      submissionNote: input.submissionNote,
+      attempt: 1,
+      resubmissionOfSubmissionId: null,
+      resubmissionReason: null,
+      auditAction: "payroll.year_end.filing_package_submitted",
+      eventName: "payroll.year_end.filing_package.submitted.v1"
+    },
+    exportPayrollYearEndFilingData
+  );
 
   return { submission };
 }
@@ -2208,20 +2127,24 @@ export async function resubmitPayrollYearEndFilingPackage(
   }
   ensureNoPendingFilingSubmission(submissions);
 
-  const submission = await createYearEndFilingSubmission(context, {
-    year: input.year,
-    employeeId: input.employeeId,
-    format: input.format,
-    validationMode: input.validationMode,
-    expectedSettlementHash: input.expectedSettlementHash,
-    transport: input.transport,
-    submissionNote: input.submissionNote,
-    attempt: target.attempt + 1,
-    resubmissionOfSubmissionId: target.submissionId,
-    resubmissionReason: input.resubmissionReason?.trim() ? input.resubmissionReason.trim() : null,
-    auditAction: "payroll.year_end.filing_package_resubmitted",
-    eventName: "payroll.year_end.filing_package.resubmitted.v1"
-  });
+  const submission = await createYearEndFilingSubmissionFromHelper(
+    context,
+    {
+      year: input.year,
+      employeeId: input.employeeId,
+      format: input.format,
+      validationMode: input.validationMode,
+      expectedSettlementHash: input.expectedSettlementHash,
+      transport: input.transport,
+      submissionNote: input.submissionNote,
+      attempt: target.attempt + 1,
+      resubmissionOfSubmissionId: target.submissionId,
+      resubmissionReason: input.resubmissionReason?.trim() ? input.resubmissionReason.trim() : null,
+      auditAction: "payroll.year_end.filing_package_resubmitted",
+      eventName: "payroll.year_end.filing_package.resubmitted.v1"
+    },
+    exportPayrollYearEndFilingData
+  );
 
   return { submission };
 }
@@ -2629,210 +2552,14 @@ export async function getPayrollYearEndInsuranceReconciliationReport(
   context: ServiceContext,
   input: GetPayrollYearEndInsuranceReconciliationReportInput
 ): Promise<GetPayrollYearEndInsuranceReconciliationReportResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-
-  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const annualRunSocialInsuranceKrw = snapshot.confirmedRuns.reduce(
-    (total, run) => total + (run.socialInsuranceKrw ?? 0),
-    0
-  );
-  const entityId = `${input.year}_${input.employeeId}`;
-  const finalizationLogs = await context.dataAccess.audit.list({
-    actions: ["payroll.year_end.settlement_finalized"],
-    entityType: "PayrollYearEnd",
-    entityId,
-    limit: 500
-  });
-  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
-  const finalizedPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
-  const insuranceCapApplied = finalizedPayload?.deductionItemsKrw.capAppliedByItemKrw.insurancePremiumKrw;
-  const insurancePremiumAppliedKrw = insuranceCapApplied?.appliedKrw ?? null;
-  const status: GetPayrollYearEndInsuranceReconciliationReportResult["report"]["reconciliation"]["status"] =
-    insurancePremiumAppliedKrw === null
-      ? "pending_finalization"
-      : annualRunSocialInsuranceKrw === insurancePremiumAppliedKrw
-        ? "matched"
-        : "mismatch";
-  const comparedKrw = insurancePremiumAppliedKrw ?? 0;
-
-  return {
-    report: {
-      year: input.year,
-      employeeId: input.employeeId,
-      periodStart: snapshot.periodStart.toISOString(),
-      periodEnd: snapshot.periodEnd.toISOString(),
-      runStates: {
-        totalRuns: snapshot.runs.length,
-        confirmedRuns: snapshot.confirmedRuns.length,
-        previewedRuns: snapshot.previewedRuns.length,
-        confirmedRunIds: snapshot.confirmedRuns.map((run) => run.id),
-        previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
-      },
-      annualRunSocialInsuranceKrw,
-      finalization: {
-        finalized: Boolean(finalizedPayload?.finalized && finalizedPayload.finalizedAt),
-        finalizationId: finalizedPayload?.finalizationId ?? null,
-        settlementHash: finalizedPayload
-          ? resolveYearEndSettlementHashFromFinalizationPayload(finalizedPayload)
-          : null,
-        finalizedAt: finalizedPayload?.finalizedAt ?? null,
-        insurancePremiumInputKrw: insuranceCapApplied?.inputKrw ?? null,
-        insurancePremiumAppliedKrw,
-        insurancePremiumCapKrw: insuranceCapApplied?.capKrw ?? null,
-        applicationReasonCode: insuranceCapApplied?.applicationReasonCode ?? null,
-        applicationReason: insuranceCapApplied?.applicationReason ?? null
-      },
-      reconciliation: {
-        baselineKrw: annualRunSocialInsuranceKrw,
-        comparedKrw,
-        deltaKrw: annualRunSocialInsuranceKrw - comparedKrw,
-        status
-      },
-      monthlyBreakdown: buildYearEndInsuranceReconciliationMonthlyBreakdown(snapshot.runs)
-    }
-  };
+  return await getPayrollYearEndInsuranceReconciliationReportFromHelper(context, input);
 }
 
 export async function getPayrollYearEndPreflightChecklist(
   context: ServiceContext,
   input: GetPayrollYearEndPreflightChecklistInput
 ): Promise<GetPayrollYearEndPreflightChecklistResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunList, "list");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-
-  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const filingGuard = buildYearEndFilingGuard(snapshot);
-  const annualGrossPayKrw = snapshot.totalsKrw.grossPayKrw;
-  const nonTaxableAnnualIncomeKrw = toKrwInteger(
-    input.nonTaxableAnnualIncomeKrw ?? 0,
-    "nonTaxableAnnualIncomeKrw"
-  );
-  const nonTaxableWithinAnnualGross = nonTaxableAnnualIncomeKrw <= annualGrossPayKrw;
-
-  const submissions = isPayrollYearEndFilingSubmissionEnabled()
-    ? await listYearEndFilingSubmissionSummaries(context, {
-      year: input.year,
-      employeeId: input.employeeId
-    })
-    : [];
-  const pendingSubmissionCount = submissions.filter((submission) => submission.status === "submitted").length;
-  const rejectedSubmissionCount = submissions.filter(
-    (submission) => submission.status === "acknowledged" && submission.ack?.ackStatus === "rejected"
-  ).length;
-
-  const entityId = `${input.year}_${input.employeeId}`;
-  const finalizationLogs = await context.dataAccess.audit.list({
-    actions: ["payroll.year_end.settlement_finalized"],
-    entityType: "PayrollYearEnd",
-    entityId,
-    limit: 200
-  });
-  const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
-  const finalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
-  const settlementHash = finalizationPayload
-    ? resolveYearEndSettlementHashFromFinalizationPayload(finalizationPayload)
-    : null;
-
-  const checks: GetPayrollYearEndPreflightChecklistResult["checklist"]["checks"] = [
-    {
-      key: "confirmed_runs_present",
-      label: "Confirmed Runs Present",
-      status: snapshot.confirmedRuns.length > 0 ? "pass" : "fail",
-      detail:
-        snapshot.confirmedRuns.length > 0
-          ? `${snapshot.confirmedRuns.length} confirmed runs found`
-          : "no confirmed payroll runs found for selected year"
-    },
-    {
-      key: "no_previewed_runs",
-      label: "No Previewed Runs",
-      status: snapshot.previewedRuns.length === 0 ? "pass" : "fail",
-      detail:
-        snapshot.previewedRuns.length === 0
-          ? "all runs are confirmed"
-          : `${snapshot.previewedRuns.length} previewed runs remain`
-    },
-    {
-      key: "no_undistributed_runs",
-      label: "No Undistributed Runs",
-      status: filingGuard.undistributedRuns.length === 0 ? "pass" : "fail",
-      detail:
-        filingGuard.undistributedRuns.length === 0
-          ? "all confirmed runs are distributed"
-          : `${filingGuard.undistributedRuns.length} confirmed runs are not distributed`
-    },
-    {
-      key: "no_pending_receipts",
-      label: "No Pending Payslip Receipts",
-      status: filingGuard.pendingReceiptRuns.length === 0 ? "pass" : "fail",
-      detail:
-        filingGuard.pendingReceiptRuns.length === 0
-          ? "all distributed runs are receipt-confirmed"
-          : `${filingGuard.pendingReceiptRuns.length} distributed runs are pending receipt confirmation`
-    },
-    {
-      key: "non_taxable_within_annual_gross",
-      label: "Non-Taxable Income Guard",
-      status: nonTaxableWithinAnnualGross ? "pass" : "fail",
-      detail: nonTaxableWithinAnnualGross
-        ? `non-taxable annual income ${nonTaxableAnnualIncomeKrw.toLocaleString("ko-KR")} KRW is within annual gross ${annualGrossPayKrw.toLocaleString("ko-KR")} KRW`
-        : `non-taxable annual income ${nonTaxableAnnualIncomeKrw.toLocaleString("ko-KR")} KRW exceeds annual gross ${annualGrossPayKrw.toLocaleString("ko-KR")} KRW`
-    },
-    {
-      key: "no_pending_filing_submissions",
-      label: "No Pending Filing Submissions",
-      status: pendingSubmissionCount === 0 ? "pass" : "fail",
-      detail:
-        pendingSubmissionCount === 0
-          ? "no pending filing submissions"
-          : `${pendingSubmissionCount} pending filing submissions require acknowledge/cancel before finalize handoff`
-    },
-    {
-      key: "settlement_hash_available",
-      label: "Settlement Hash Trace",
-      status: settlementHash ? "pass" : "warn",
-      detail: settlementHash
-        ? `latest settlement hash available (${settlementHash.slice(0, 12)}...)`
-        : "no finalized settlement hash found yet"
-    }
-  ];
-
-  const passCount = checks.filter((check) => check.status === "pass").length;
-  const failCount = checks.filter((check) => check.status === "fail").length;
-  const warnCount = checks.filter((check) => check.status === "warn").length;
-
-  return {
-    checklist: {
-      year: input.year,
-      employeeId: input.employeeId,
-      periodStart: snapshot.periodStart.toISOString(),
-      periodEnd: snapshot.periodEnd.toISOString(),
-      summary: {
-        readyToFinalize: failCount === 0,
-        passCount,
-        failCount,
-        warnCount
-      },
-      metrics: {
-        annualGrossPayKrw,
-        nonTaxableAnnualIncomeKrw,
-        totalRuns: snapshot.runs.length,
-        confirmedRuns: snapshot.confirmedRuns.length,
-        previewedRuns: snapshot.previewedRuns.length,
-        undistributedRuns: filingGuard.undistributedRuns.length,
-        pendingReceiptRuns: filingGuard.pendingReceiptRuns.length,
-        pendingSubmissionCount,
-        rejectedSubmissionCount,
-        settlementHash
-      },
-      checks
-    }
-  };
+  return await getPayrollYearEndPreflightChecklistFromHelper(context, input);
 }
 
 export async function getPayrollYearEndWithholdingReceiptDocument(
@@ -2860,108 +2587,19 @@ export async function readDeductionProfile(
   context: ServiceContext,
   profileId: string
 ): Promise<DeductionProfileEntity> {
-  await requireDeductionProfilePermission(context, Permissions.payrollDeductionProfileRead, "read");
-  if (!profileId.trim()) {
-    throw new ServiceError(400, "profileId is required");
-  }
-
-  const tenantScope = resolveTenantScope(context.actor);
-  const profile = await context.dataAccess.deductionProfiles.findById(profileId);
-  if (!profile) {
-    throw new ServiceError(404, "deduction profile not found");
-  }
-  ensureTenantMatch(tenantScope, profile.organizationId, "deduction profile not found");
-
-  await context.dataAccess.audit.append({
-    action: "payroll.deduction_profile.read",
-    entityType: "DeductionProfile",
-    entityId: profile.id,
-    organizationId: profile.organizationId,
-    actorRole: context.actor!.role,
-    actorId: context.actor!.id
-  });
-
-  return profile;
+  return await readDeductionProfileFromHelper(context, profileId);
 }
 
 export async function upsertDeductionProfile(
   context: ServiceContext,
   input: UpsertDeductionProfileInput
 ): Promise<UpsertDeductionProfileResult> {
-  await requireDeductionProfilePermission(context, Permissions.payrollDeductionProfileWrite, "write");
-  if (!input.profileId.trim()) {
-    throw new ServiceError(400, "profileId is required");
-  }
-  if (!input.name.trim()) {
-    throw new ServiceError(400, "name is required");
-  }
-
-  const tenantScope = resolveTenantScope(context.actor);
-  const withholdingRate = toRateNumber(input.withholdingRate, "withholdingRate");
-  const socialInsuranceRate = toRateNumber(input.socialInsuranceRate, "socialInsuranceRate");
-  const fixedOtherDeductionKrw = toKrwInteger(
-    input.fixedOtherDeductionKrw,
-    "fixedOtherDeductionKrw"
-  );
-
-  const profile = await context.dataAccess.deductionProfiles.upsert({
-    id: input.profileId,
-    organizationId: tenantScope ?? null,
-    name: input.name,
-    mode: input.mode,
-    withholdingRate,
-    socialInsuranceRate,
-    fixedOtherDeductionKrw,
-    active: input.active
-  });
-
-  await context.dataAccess.audit.append({
-    action: "payroll.deduction_profile.updated",
-    entityType: "DeductionProfile",
-    entityId: profile.id,
-    organizationId: profile.organizationId,
-    actorRole: context.actor!.role,
-    actorId: context.actor!.id,
-    payload: {
-      version: profile.version,
-      mode: profile.mode,
-      withholdingRate: profile.withholdingRate,
-      socialInsuranceRate: profile.socialInsuranceRate,
-      fixedOtherDeductionKrw: profile.fixedOtherDeductionKrw,
-      active: profile.active
-    }
-  });
-
-  await getEventPublisher(context).publish({
-    name: "payroll.deduction_profile.updated.v1",
-    occurredAt: new Date().toISOString(),
-    entityType: "DeductionProfile",
-    entityId: profile.id,
-    actorRole: context.actor!.role,
-    actorId: context.actor!.id,
-    payload: {
-      version: profile.version,
-      organizationId: profile.organizationId,
-      mode: profile.mode,
-      withholdingRate: profile.withholdingRate,
-      socialInsuranceRate: profile.socialInsuranceRate,
-      fixedOtherDeductionKrw: profile.fixedOtherDeductionKrw,
-      active: profile.active
-    }
-  });
-
-  return { profile };
+  return await upsertDeductionProfileFromHelper(context, input);
 }
 
 export async function listDeductionProfiles(
   context: ServiceContext,
   input: ListDeductionProfilesInput
 ): Promise<DeductionProfileEntity[]> {
-  await requireDeductionProfilePermission(context, Permissions.payrollDeductionProfileRead, "read");
-  const tenantScope = resolveTenantScope(context.actor);
-  return await context.dataAccess.deductionProfiles.list({
-    organizationId: tenantScope ?? undefined,
-    active: input.active,
-    mode: input.mode
-  });
+  return await listDeductionProfilesFromHelper(context, input);
 }
