@@ -96,13 +96,13 @@ const queuePanelCopyByLocale = {
     mobileQuickActions: "모바일 빠른 처리",
     pendingFirst: "대기 우선",
     summaryConnector: " / ",
-    selectedFilterOn: "선택 필터 ON",
+    selectedFilterOn: "선택 필터 적용",
     selectedFilterUnavailable: "전체/급여 큐에서는 선택 필터가 적용되지 않습니다.",
     recentHistory: "최근 처리 이력",
     clearHistory: "이력 초기화",
     noHistory: "아직 처리 이력이 없습니다.",
-    ok: "OK",
-    fail: "FAIL"
+    ok: "성공",
+    fail: "실패"
   },
   en: {
     title: "Approval Queue",

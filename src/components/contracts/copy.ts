@@ -130,7 +130,6 @@ export type AdminContractsCopy = typeof adminContractsCopyEn;
 
 export const adminContractsCopyByLocale: Record<FlowLocale, AdminContractsCopy> = {
   ko: {
-    ...adminContractsCopyEn,
     heroEyebrow: "FlowHR 관리자",
     title: "전자계약 워크스페이스",
     description: "템플릿 생성, 승인 연동 발송, 직원 서명, 갱신 라이프사이클을 한 화면에서 처리합니다.",
@@ -143,11 +142,14 @@ export const adminContractsCopyByLocale: Record<FlowLocale, AdminContractsCopy> 
     categoryLabel: "카테고리",
     bodyLabel: "본문",
     createTemplateAction: "템플릿 생성",
+    templateListAria: "계약 템플릿 목록",
     updatedPrefix: "업데이트",
     documentLifecycleTitle: "문서 라이프사이클",
     employeeIdLabel: "직원 ID",
+    employeeIdPlaceholder: "EMP-0001",
     selectedTemplateLabel: "선택된 템플릿",
     createDraftAction: "초안 생성",
+    documentListAria: "계약 문서 목록",
     employeePrefix: "직원",
     approvalPrefix: "승인",
     expiresPrefix: "만료",
@@ -221,7 +223,6 @@ export type ContractTemplateBuilderCopy = typeof contractTemplateBuilderCopyEn;
 
 export const contractTemplateBuilderCopyByLocale: Record<FlowLocale, ContractTemplateBuilderCopy> = {
   ko: {
-    ...contractTemplateBuilderCopyEn,
     heroEyebrow: "FlowHR 관리자",
     title: "계약 템플릿 빌더",
     description: "조항 블록을 구성하고 예측 가능한 본문을 생성해 계약 템플릿 초안을 만듭니다.",
@@ -230,6 +231,7 @@ export const contractTemplateBuilderCopyByLocale: Record<FlowLocale, ContractTem
     categoryLabel: "카테고리",
     addClauseAction: "조항 추가",
     createTemplateAction: "템플릿 생성",
+    clauseBuilderAria: "계약 템플릿 조항 빌더",
     clausePrefix: "조항",
     requiredLabel: "필수",
     requiredChip: "필수",
@@ -248,6 +250,7 @@ export const contractTemplateBuilderCopyByLocale: Record<FlowLocale, ContractTem
     templateCreatedPrefix: "템플릿 생성 완료",
     templateCreateError: "템플릿 생성에 실패했습니다",
     untitledClause: "제목 없는 조항",
+    emptyClauseBody: "-",
     defaultTemplateName: "근로계약서 v1",
     defaultClauses: [
       {
@@ -307,7 +310,6 @@ export type EmployeeContractsCopy = typeof employeeContractsCopyEn;
 
 export const employeeContractsCopyByLocale: Record<FlowLocale, EmployeeContractsCopy> = {
   ko: {
-    ...employeeContractsCopyEn,
     title: "내 계약함",
     description: "대기 중인 계약을 검토하고 서명 해시 검증 기반으로 응답하세요.",
     inboxTitle: "받은함",

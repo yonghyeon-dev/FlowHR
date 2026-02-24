@@ -267,9 +267,9 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     validationStatusFilterLabel: "검증 상태 필터",
     transportFilterLabel: "전송 방식 필터",
     submissionSearchLabel: "제출 검색",
-    submissionSearchPlaceholder: "submissionId, ackCode, note",
+    submissionSearchPlaceholder: "제출 ID, ACK 코드, 메모",
     settlementHashFilterLabel: "정산 해시 필터",
-    settlementHashFilterPlaceholder: "hash prefix (8-64 hex)",
+    settlementHashFilterPlaceholder: "해시 접두어 (8-64자리 16진수)",
     submissionSortByLabel: "제출 정렬 기준",
     submissionSortDirectionLabel: "정렬 방향",
     clearHashFilterAction: "해시 필터 초기화",
@@ -277,7 +277,7 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     finalizationNoteLabel: "확정 메모",
     expectedSettlementHashExportLabel: "예상 정산 해시 (내보내기/제출 가드)",
     expectedSettlementHashAckLabel: "예상 정산 해시 (ACK 가드)",
-    expectedSettlementHashPlaceholder: "64-char sha256 hash (optional)",
+    expectedSettlementHashPlaceholder: "64자리 sha256 해시 (선택)",
     submissionNoteLabel: "제출 메모",
     ackSubmissionIdLabel: "ACK 제출 ID",
     ackStatusLabel: "ACK 상태",
@@ -291,10 +291,10 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     reopenSubmissionIdLabel: "재오픈 제출 ID",
     timelineSubmissionIdLabel: "타임라인 제출 ID",
     evidenceNoteLabel: "증빙 메모",
-    accessTokenLabel: "Access Token (선택)",
-    bearerTokenPlaceholder: "Bearer 토큰",
-    actorIdFallbackLabel: "Actor ID (개발 fallback)",
-    organizationIdFallbackLabel: "조직 ID (개발 fallback)",
+    accessTokenLabel: "액세스 토큰 (선택)",
+    bearerTokenPlaceholder: "베어러 토큰",
+    actorIdFallbackLabel: "액터 ID (개발용 대체값)",
+    organizationIdFallbackLabel: "조직 ID (개발용 대체값)",
     previewFinalizationAction: "확정 프리뷰",
     finalizeSettlementAction: "정산 확정",
     exportFilingDataAction: "신고 데이터 내보내기",
@@ -410,8 +410,18 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     submissionTransportOptionLabels: {
       manual_portal: "수동 포털",
       hometax_upload: "홈택스 업로드",
-      nts_api_mock: "NTS API 모의",
+      nts_api_mock: "국세청 API 모의",
       all: "전체"
+    },
+    exportFormatOptionLabels: {
+      json: "JSON",
+      csv: "CSV",
+      jsonl: "JSONL",
+      hometax_csv: "홈택스 CSV"
+    },
+    validationModeOptionLabels: {
+      basic: "기본",
+      strict: "엄격"
     },
     submissionStatusOptionLabels: {
       all: "전체",
@@ -448,12 +458,12 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
       canceled: "취소됨"
     },
     timelineActionBadgeLabels: {
-      submitted: "submitted",
-      resubmitted: "resubmitted",
-      acknowledged: "acknowledged",
-      canceled: "canceled",
-      reopened: "reopened",
-      evidence_note_added: "evidence_note_added"
+      submitted: "제출됨",
+      resubmitted: "재제출됨",
+      acknowledged: "승인 확인됨",
+      canceled: "취소됨",
+      reopened: "재오픈됨",
+      evidence_note_added: "증빙 메모 추가"
     },
     timelineAttemptLabel: "시도",
     timelineFromLabel: "원본",

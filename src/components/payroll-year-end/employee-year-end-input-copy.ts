@@ -92,7 +92,7 @@ export const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEn
     annualIncomeTaxRateLabel: "연간 소득세율",
     localIncomeTaxRateLabel: "지방소득세율",
     accessTokenLabel: "액세스 토큰(선택)",
-    organizationIdFallbackLabel: "조직 ID(dev fallback)",
+    organizationIdFallbackLabel: "조직 ID(개발용 대체값)",
     loadFinalizedSettlementAction: "확정 정산 불러오기",
     pendingFinalizedSettlement: "확정 정산 조회",
     loadFinalizedSettlementLogLabel: "확정 정산 조회",

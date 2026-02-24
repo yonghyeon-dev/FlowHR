@@ -148,7 +148,7 @@ const EMPLOYEE_SURFACE_COPY_BY_LOCALE = {
       clickToPrefill: "날짜를 클릭하면 휴가 신청 폼이 자동 입력됩니다."
     },
     schedule: {
-      devSchedulingCockpit: "(dev) 스케줄링 Cockpit",
+      devSchedulingCockpit: "(개발) 스케줄링 대시보드",
       noSchedules: "근무 일정이 없습니다.",
       breakMinutesFormat: (minutes: number) => `휴게 ${minutes}분`
     },

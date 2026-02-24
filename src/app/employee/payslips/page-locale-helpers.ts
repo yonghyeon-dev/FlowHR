@@ -409,7 +409,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         summary: "개발/검증 설정",
         hiddenByDefault: "기본은 숨김",
         bearerTokenOptional: "접근 토큰 (선택)",
-        bearerPlaceholder: "비어 있으면 x-actor-* 헤더 모드가 사용됩니다.",
+        bearerPlaceholder: "비어 있으면 액터 헤더 모드(x-actor-*)가 사용됩니다.",
         bearerStatusLabel: "토큰 모드",
         callCount: "호출",
         current: "현재",

@@ -104,11 +104,11 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
     ...defaultCopy,
     title: "관리자 KPI 대시보드",
     description: "결재, 근태, 휴가, 급여 핵심 지표를 현재 기간과 이전 동일 기간으로 비교합니다.",
-    productionWarning: "프로덕션 환경에서는 API 호출을 위해 Bearer 토큰 세션이 필요합니다.",
-    loginCta: "/login 열기",
+    productionWarning: "프로덕션 환경에서는 API 호출을 위해 베어러 토큰 세션이 필요합니다.",
+    loginCta: "로그인 열기",
     contextTitle: "컨텍스트 및 기간",
     organizationIdLabel: "조직 ID",
-    adminActorIdLabel: "관리자 액터 ID (개발 fallback)",
+    adminActorIdLabel: "관리자 액터 ID (개발용 대체값)",
     accessTokenLabel: "액세스 토큰 (선택)",
     periodStartLabel: "기간 시작",
     periodEndLabel: "기간 종료",
@@ -128,7 +128,7 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
     details: {
       attendanceTotal: "총 근태 건",
       leaveApprovedRequests: "승인된 휴가 요청",
-      payrollConfirmedRuns: "확정된 급여 run",
+      payrollConfirmedRuns: "확정된 급여 실행 건",
       stalledThreshold: "24시간 이상 정체"
     },
     trendTitle: "기간 비교",
