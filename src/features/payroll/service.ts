@@ -66,6 +66,11 @@ import {
   buildYearEndFilingSubmissionTimeline as buildYearEndFilingSubmissionTimelineCore
 } from "@/features/payroll/year-end-filing-lifecycle-helpers";
 import {
+  buildYearEndFilingSubmissionId as buildYearEndFilingSubmissionIdCore,
+  ensureNoPendingFilingSubmission as ensureNoPendingFilingSubmissionCore,
+  listYearEndFilingLifecycleLogs as listYearEndFilingLifecycleLogsCore
+} from "@/features/payroll/year-end-filing-submission-lifecycle-helpers";
+import {
   buildPayrollYearEndFilingAckCatalog as buildPayrollYearEndFilingAckCatalogCore,
   resolvePayrollYearEndFilingAckPayload as resolvePayrollYearEndFilingAckPayloadCore
 } from "@/features/payroll/year-end-filing-ack-catalog-helpers";
@@ -3612,37 +3617,6 @@ export async function exportPayrollYearEndFilingData(
   };
 }
 
-async function listYearEndFilingSubmissionSummaries(
-  context: ServiceContext,
-  input: ListPayrollYearEndFilingSubmissionsInput
-) {
-  const logs = await listYearEndFilingLifecycleLogs(context, input);
-  return buildYearEndFilingSubmissionSummariesCore(logs) as PayrollYearEndFilingSubmissionSummary[];
-}
-
-async function listYearEndFilingLifecycleLogs(
-  context: ServiceContext,
-  input: {
-    year: number;
-    employeeId: string;
-  }
-) {
-  const entityId = `${input.year}_${input.employeeId}`;
-  return context.dataAccess.audit.list({
-    actions: [
-      "payroll.year_end.filing_package_submitted",
-      "payroll.year_end.filing_package_resubmitted",
-      "payroll.year_end.filing_package_canceled",
-      "payroll.year_end.filing_package_reopened",
-      "payroll.year_end.filing_package_acknowledged",
-      "payroll.year_end.filing_evidence_note_added"
-    ],
-    entityType: "PayrollYearEnd",
-    entityId,
-    limit: 1000
-  });
-}
-
 function matchesYearEndFilingSubmissionFilters(
   submission: PayrollYearEndFilingSubmissionSummary,
   filters: ListPayrollYearEndFilingSubmissionsInput
@@ -3667,13 +3641,26 @@ function buildYearEndFilingSubmissionListSummary(input: {
   return buildYearEndFilingSubmissionListSummaryCore(input);
 }
 
-function ensureNoPendingFilingSubmission(submissions: PayrollYearEndFilingSubmissionSummary[]) {
-  if (submissions.some((submission) => submission.status === "submitted")) {
-    throw new ServiceError(
-      409,
-      "existing filing submission must be acknowledged before submit/resubmit"
-    );
+async function listYearEndFilingSubmissionSummaries(
+  context: ServiceContext,
+  input: ListPayrollYearEndFilingSubmissionsInput
+) {
+  const logs = await listYearEndFilingLifecycleLogs(context, input);
+  return buildYearEndFilingSubmissionSummariesCore(logs) as PayrollYearEndFilingSubmissionSummary[];
+}
+
+async function listYearEndFilingLifecycleLogs(
+  context: ServiceContext,
+  input: {
+    year: number;
+    employeeId: string;
   }
+) {
+  return listYearEndFilingLifecycleLogsCore(context.dataAccess.audit, input);
+}
+
+function ensureNoPendingFilingSubmission(submissions: PayrollYearEndFilingSubmissionSummary[]) {
+  ensureNoPendingFilingSubmissionCore(submissions);
 }
 
 function buildYearEndFilingSubmissionId(input: {
@@ -3682,7 +3669,7 @@ function buildYearEndFilingSubmissionId(input: {
   checksumSha256: string;
   attempt: number;
 }) {
-  return `YFS-${input.year}-${input.employeeId}-${input.checksumSha256.slice(0, 10)}-A${input.attempt}-${Date.now()}`;
+  return buildYearEndFilingSubmissionIdCore(input);
 }
 
 async function createYearEndFilingSubmission(
