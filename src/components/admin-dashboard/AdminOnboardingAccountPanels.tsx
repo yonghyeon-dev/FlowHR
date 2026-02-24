@@ -77,7 +77,7 @@ export function AdminOnboardingAccountPanels({
         {organizations.length === 0 ? (
           <p className="small muted">{isKoLocale ? "조직 목록을 아직 불러오지 않았습니다." : "Organization list has not been loaded yet."}</p>
         ) : (
-          <ul className="simple-list" aria-label="조직 목록">
+          <ul className="simple-list" aria-label={isKoLocale ? "조직 목록" : "Organization list"}>
             {organizations.map((org) => (
               <li key={org.id}>
                 <span>
@@ -118,7 +118,7 @@ export function AdminOnboardingAccountPanels({
         )}
         {supabaseSessionError ? (
           <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
-            세션 오류: {supabaseSessionError}
+            {isKoLocale ? "세션 오류" : "Session error"}: {supabaseSessionError}
           </p>
         ) : null}
 
@@ -133,7 +133,7 @@ export function AdminOnboardingAccountPanels({
                 {isKoLocale ? "조직 ID" : "Organization ID"}
                 <input
                   value={organizationId}
-                  placeholder="예: ORG-00001"
+                  placeholder={isKoLocale ? "예: ORG-00001" : "e.g. ORG-00001"}
                   onChange={(event) => onOrganizationIdChange(event.target.value)}
                 />
               </label>

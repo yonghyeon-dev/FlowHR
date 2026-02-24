@@ -75,7 +75,7 @@ export function EmployeeAccountOverviewPanels({
         )}
         {supabaseSessionError ? (
           <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
-            세션 오류: {supabaseSessionError}
+            {isKoLocale ? "세션 오류" : "Session error"}: {supabaseSessionError}
           </p>
         ) : null}
 
@@ -90,7 +90,7 @@ export function EmployeeAccountOverviewPanels({
                 {isKoLocale ? "조직 ID (선택)" : "Organization ID (optional)"}
                 <input
                   value={organizationId}
-                  placeholder="예: ORG-00001"
+                  placeholder={isKoLocale ? "예: ORG-00001" : "e.g. ORG-00001"}
                   onChange={(event) => onOrganizationIdChange(event.target.value)}
                 />
               </label>
