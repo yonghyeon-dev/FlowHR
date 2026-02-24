@@ -31,7 +31,7 @@ function run() {
   assert.equal(
     parsed.github?.enabled,
     false,
-    "vercel github integration should be disabled to prevent noisy preview status checks under rate limits"
+    "vercel github integration should stay disabled to prevent preview status noise from PR branches"
   );
 }
 

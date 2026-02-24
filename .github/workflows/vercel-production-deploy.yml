@@ -1,0 +1,66 @@
+name: vercel-production-deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-vercel-production:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production Vercel config
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE || 'yh-devs-projects' }}
+          VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME || 'flowhr' }}
+        run: |
+          missing=()
+          if [ -z "$VERCEL_TOKEN" ]; then
+            missing+=("VERCEL_TOKEN")
+          fi
+          if [ -z "$VERCEL_SCOPE" ]; then
+            missing+=("VERCEL_SCOPE")
+          fi
+          if [ -z "$VERCEL_PROJECT_NAME" ]; then
+            missing+=("VERCEL_PROJECT_NAME")
+          fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required Vercel secret/vars: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Link Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE || 'yh-devs-projects' }}
+          VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME || 'flowhr' }}
+        run: |
+          npx vercel@latest link --yes --project "$VERCEL_PROJECT_NAME" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+
+      - name: Pull production environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE || 'yh-devs-projects' }}
+        run: |
+          npx vercel@latest pull --yes --environment=production --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+
+      - name: Deploy production on Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE || 'yh-devs-projects' }}
+        run: |
+          npx vercel@latest deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
