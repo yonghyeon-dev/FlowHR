@@ -9,6 +9,14 @@ import {
 } from "@/app/employee/page-derived-helpers";
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
 import {
+  cancelLeaveFromHelper,
+  checkOutNowFromHelper,
+  createAttendanceFromHelper,
+  createLeaveFromHelper,
+  refreshEmployeeSnapshotFromHelper,
+  requestAttendanceCorrectionFromHelper
+} from "@/app/employee/page-action-helpers";
+import {
   buildMobileRequestTimeline,
   buildRequestFailureCauses,
   buildRequestFeedbackRows,
@@ -241,146 +249,124 @@ export default function EmployeeSelfServicePage() {
   }
 
   async function refreshEmployeeSnapshot(range?: { fromIso: string; toIso: string }) {
-    const from = range?.fromIso ?? toIso(periodStart);
-    const to = range?.toIso ?? toIso(periodEnd);
+    const fromIso = range?.fromIso ?? toIso(periodStart);
+    const toIsoValue = range?.toIso ?? toIso(periodEnd);
+    const snapshot = await refreshEmployeeSnapshotFromHelper({
+      callApi,
+      callApiLabels,
+      fromIso,
+      toIso: toIsoValue,
+      employeeId,
+      selectedCorrectionRecordId,
+      lastAttendanceId,
+      buildQuery
+    });
 
-    const [attendanceRes, leaveRes, scheduleRes, balanceRes] = await Promise.all([
-      callApi(callApiLabels.attendanceList, "GET", `/api/attendance/records${buildQuery({ from, to })}`),
-      callApi(callApiLabels.leaveList, "GET", `/api/leave/requests${buildQuery({ from, to })}`),
-      callApi(callApiLabels.scheduleList, "GET", `/api/scheduling/schedules${buildQuery({ from, to })}`),
-      callApi(callApiLabels.leaveBalance, "GET", `/api/leave/balances/${employeeId.trim() || "EMP-1001"}`)
-    ]);
-
-    if (attendanceRes.response.ok) {
-      const parsed = attendanceRes.body as { records?: AttendanceRecordDto[] };
-      const records = parsed.records ?? [];
-      const recentRecords = records.slice().reverse().slice(-10).reverse();
-      setAttendance(recentRecords);
-      const pending = records.find((record) => record.state === "PENDING");
-      if (pending) {
-        setLastAttendanceId(pending.id);
-        setSelectedCorrectionRecordId(pending.id);
-      } else if (recentRecords.length > 0 && !selectedCorrectionRecordId.trim() && !lastAttendanceId.trim()) {
-        const latestId = recentRecords[recentRecords.length - 1].id;
-        setSelectedCorrectionRecordId(latestId);
-        setLastAttendanceId(latestId);
-      }
+    if (snapshot.attendance) {
+      setAttendance(snapshot.attendance);
     }
-
-    if (leaveRes.response.ok) {
-      const parsed = leaveRes.body as { requests?: LeaveRequestDto[] };
-      const requests = parsed.requests ?? [];
-      setLeaveRequests(requests.slice().reverse().slice(-10).reverse());
-      const pending = requests.find((req) => req.state === "PENDING");
-      if (pending) {
-        setLastLeaveRequestId(pending.id);
-      }
+    if (snapshot.nextLastAttendanceId) {
+      setLastAttendanceId(snapshot.nextLastAttendanceId);
     }
-
-    if (scheduleRes.response.ok) {
-      const parsed = scheduleRes.body as { schedules?: WorkScheduleDto[] };
-      const items = parsed.schedules ?? [];
-      setSchedules(items.slice().reverse().slice(-10).reverse());
+    if (snapshot.nextSelectedCorrectionRecordId) {
+      setSelectedCorrectionRecordId(snapshot.nextSelectedCorrectionRecordId);
     }
-
-    if (balanceRes.response.ok) {
-      const parsed = balanceRes.body as { balance?: LeaveBalanceDto };
-      setLeaveBalance(parsed.balance ?? null);
+    if (snapshot.leaveRequests) {
+      setLeaveRequests(snapshot.leaveRequests);
+    }
+    if (snapshot.nextLastLeaveRequestId) {
+      setLastLeaveRequestId(snapshot.nextLastLeaveRequestId);
+    }
+    if (snapshot.schedules) {
+      setSchedules(snapshot.schedules);
+    }
+    if (snapshot.leaveBalance !== undefined) {
+      setLeaveBalance(snapshot.leaveBalance);
     }
   }
 
   async function createAttendance() {
-    const { response, body } = await callApi(callApiLabels.createAttendance, "POST", "/api/attendance/records", {
-      employeeId: employeeId.trim() || "EMP-1001",
-      checkInAt: toIso(checkInAt),
-      checkOutAt: checkOutAt ? toIso(checkOutAt) : undefined,
-      breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes))),
+    const result = await createAttendanceFromHelper({
+      callApi,
+      callApiLabels,
+      employeeId,
+      checkInAt,
+      checkOutAt,
+      breakMinutes,
       isHoliday,
-      notes: attendanceNotes.trim().length > 0 ? attendanceNotes.trim() : undefined
+      attendanceNotes,
+      toIso,
+      coerceNumber
     });
-
-    if (response.ok) {
-      const parsed = body as { record?: { id?: string } };
-      if (parsed.record?.id) {
-        setLastAttendanceId(parsed.record.id);
-        setSelectedCorrectionRecordId(parsed.record.id);
+    if (result.ok) {
+      if (result.createdRecordId) {
+        setLastAttendanceId(result.createdRecordId);
+        setSelectedCorrectionRecordId(result.createdRecordId);
       }
       await refreshEmployeeSnapshot();
     }
   }
 
   async function checkOutNow() {
-    if (!lastAttendanceId.trim()) {
-      return;
-    }
-    const nowIso = new Date().toISOString();
-    const { response } = await callApi(
-      callApiLabels.checkOutNow,
-      "PATCH",
-      `/api/attendance/records/${lastAttendanceId.trim()}`,
-      {
-        checkOutAt: nowIso
-      }
-    );
-    if (response.ok) {
+    const checkedOut = await checkOutNowFromHelper({
+      callApi,
+      callApiLabels,
+      lastAttendanceId
+    });
+    if (checkedOut) {
       await refreshEmployeeSnapshot();
     }
   }
 
   async function requestAttendanceCorrection() {
-    if (!lastAttendanceId.trim()) {
-      return;
-    }
-    const { response } = await callApi(
-      callApiLabels.requestAttendanceCorrection,
-      "PATCH",
-      `/api/attendance/records/${lastAttendanceId.trim()}`,
-      {
-        checkInAt: toIso(checkInAt),
-        checkOutAt: checkOutAt ? toIso(checkOutAt) : undefined,
-        breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes))),
-        isHoliday,
-        notes: attendanceNotes.trim().length > 0 ? attendanceNotes.trim() : correctionRequestNote
-      }
-    );
-    if (response.ok) {
+    const corrected = await requestAttendanceCorrectionFromHelper({
+      callApi,
+      callApiLabels,
+      lastAttendanceId,
+      checkInAt,
+      checkOutAt,
+      breakMinutes,
+      isHoliday,
+      attendanceNotes,
+      correctionRequestNote,
+      toIso,
+      coerceNumber
+    });
+    if (corrected) {
       await refreshEmployeeSnapshot();
     }
   }
 
   async function createLeave() {
-    const { response, body } = await callApi(callApiLabels.createLeave, "POST", "/api/leave/requests", {
-      employeeId: employeeId.trim() || "EMP-1001",
+    const result = await createLeaveFromHelper({
+      callApi,
+      callApiLabels,
+      employeeId,
       leaveType,
-      startDate: toIso(leaveStartDate),
-      endDate: toIso(leaveEndDate),
-      unit: leaveUnit,
-      hours: leaveUnit === "HOUR" ? Math.max(0, coerceNumber(leaveHours)) : undefined,
-      reason: leaveReason.trim().length > 0 ? leaveReason.trim() : undefined
+      leaveUnit,
+      leaveStartDate,
+      leaveEndDate,
+      leaveHours,
+      leaveReason,
+      toIso,
+      coerceNumber
     });
-
-    if (response.ok) {
-      const parsed = body as { request?: { id?: string } };
-      if (parsed.request?.id) {
-        setLastLeaveRequestId(parsed.request.id);
+    if (result.ok) {
+      if (result.requestId) {
+        setLastLeaveRequestId(result.requestId);
       }
       await refreshEmployeeSnapshot();
     }
   }
 
   async function cancelLeave() {
-    if (!lastLeaveRequestId.trim()) {
-      return;
-    }
-    const { response } = await callApi(
-      callApiLabels.cancelLeave,
-      "POST",
-      `/api/leave/requests/${lastLeaveRequestId.trim()}/cancel`,
-      {
-        reason: cancelReason.trim().length > 0 ? cancelReason.trim() : undefined
-      }
-    );
-    if (response.ok) {
+    const canceled = await cancelLeaveFromHelper({
+      callApi,
+      callApiLabels,
+      lastLeaveRequestId,
+      cancelReason
+    });
+    if (canceled) {
       await refreshEmployeeSnapshot();
     }
   }
