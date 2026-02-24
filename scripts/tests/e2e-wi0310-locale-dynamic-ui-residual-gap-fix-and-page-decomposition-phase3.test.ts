@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminLocaleHelpers = readUtf8("src", "app", "admin", "page-locale-helpers.ts");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const adminChrome = readUtf8("src", "components", "admin-dashboard", "AdminDashboardChrome.tsx");
   const adminDebugLogsPanel = readUtf8(
@@ -59,45 +60,47 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.doesNotMatch(adminPage, /직원\(employee\)|매니저\(manager\)|링크\(link\)|이메일\(email\)/);
+  assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
   assert.match(
     adminPage,
-    /employee: isKoLocale \? "직원" : "Employee"/
-  );
-  assert.match(adminPage, /const updatedAtLabel = isKoLocale \? "업데이트" : "Updated";/);
-
-  assert.match(
-    adminPayrollPanel,
-    /\{isKoLocale \? "법정공제\(한국 기준\)" : "Statutory deductions \(KR baseline\)"\}/
-  );
-
-  assert.match(adminChrome, /<h1 className="page-title">\{isKoLocale \? "관리자 대시보드" : "Admin Dashboard"\}<\/h1>/);
-  assert.match(adminChrome, /\{isKoLocale \? "대시보드 새로고침" : "Refresh Dashboard"\}/);
-  assert.doesNotMatch(adminChrome, /운영\(production\)/);
-
-  assert.match(adminDebugLogsPanel, /<h2>\{isKoLocale \? "디버그 로그" : "Debug Logs"\}<\/h2>/);
-  assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "개발\/검증 설정" : "Dev\/Verification Settings"\}/);
-  assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "직원 관리" : "Employee Management"\}/);
-  assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "초대 링크 생성" : "Create Invite Link"\}/);
-
-  assert.match(employeeChrome, /<h1 className="page-title">\{isKoLocale \? "직원 포털" : "Employee Portal"\}<\/h1>/);
-  assert.match(employeeChrome, /\{isKoLocale \? "휴가 대기" : "Pending Leave"\}/);
-  assert.doesNotMatch(employeeChrome, /운영\(production\)/);
-
-  assert.match(
-    employeeAccountOverviewPanels,
-    /\{isKoLocale \? "내 데이터 새로고침" : "Refresh My Data"\}/
+    /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
   );
   assert.match(
-    employeeRequestFeedbackPanels,
-    /aria-label=\{isKoLocale \? "요청 검색\/정렬 목록" : "Request search and sort list"\}/
+    adminPage,
+    /const \{\s*queueLabels,\s*workTypeLabels,\s*logStatusLabels,\s*inviteRoleLabels,\s*inviteDeliveryModeLabels,\s*updatedAtLabel\s*\} = localeLabelBundle;/
   );
-  assert.match(
-    employeeResubmitPanel,
-    /aria-label=\{isKoLocale \? "재제출 흐름 검증" : "Resubmit flow checks"\}/
-  );
+  assert.match(adminPage, /isDefaultDemoOrganizationName\(previous\)/);
+  assert.doesNotMatch(adminPage, /const updatedAtLabel = isKoLocale \?/);
 
-  assert.match(employeePage, /success: isKoLocale \? "성공" : "Success"/);
+  assert.match(adminLocaleHelpers, /export function isDefaultDemoOrganizationName\(/);
+  assert.match(adminLocaleHelpers, /export function resolveAdminLocaleLabelBundle\(isKoLocale: boolean\)/);
+  assert.match(adminLocaleHelpers, /employee:\s*"Employee"/);
+  assert.match(adminLocaleHelpers, /manager:\s*"Manager"/);
+  assert.match(adminLocaleHelpers, /link:\s*"Link"/);
+  assert.match(adminLocaleHelpers, /email:\s*"Email"/);
+  assert.match(adminLocaleHelpers, /notConfiguredLabel:\s*isKoLocale \?\s*"[^"]+"\s*:\s*"not configured"/);
+  assert.match(adminLocaleHelpers, /updatedAtLabel:\s*isKoLocale \?\s*"[^"]+"\s*:\s*"Updated"/);
+
+  assert.match(adminPayrollPanel, /Statutory deductions \(KR baseline\)/);
+
+  assert.match(adminChrome, /Admin Dashboard/);
+  assert.match(adminChrome, /Refresh Dashboard/);
+  assert.doesNotMatch(adminChrome, /\(production\)/);
+
+  assert.match(adminDebugLogsPanel, /Debug Logs/);
+  assert.match(adminOnboardingAccountPanels, /Dev\/Verification Settings/);
+  assert.match(adminPeopleInvitePanels, /Employee Management/);
+  assert.match(adminPeopleInvitePanels, /Create Invite Link/);
+
+  assert.match(employeeChrome, /Employee Portal/);
+  assert.match(employeeChrome, /Pending Leave/);
+  assert.doesNotMatch(employeeChrome, /\(production\)/);
+
+  assert.match(employeeAccountOverviewPanels, /Refresh My Data/);
+  assert.match(employeeRequestFeedbackPanels, /Request search and sort list/);
+  assert.match(employeeResubmitPanel, /Resubmit flow checks/);
+  assert.match(employeePage, /success:\s*isKoLocale \?\s*"[^"]+"\s*:\s*"Success"/);
+
   assert.match(workItem, /WI-0310/i);
   assert.match(workItem, /locale/i);
   assert.match(roadmap, /WI-0310/i);
