@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 
 type PayrollRunDto = {
   id: string;
@@ -128,6 +129,26 @@ function toIso(value: string) {
   return new Date(value).toISOString();
 }
 
+function resolveRuntimeLocale() {
+  if (typeof document !== "undefined") {
+    const htmlLang = document.documentElement.lang?.trim().toLowerCase();
+    if (htmlLang.startsWith("ko")) {
+      return "ko-KR";
+    }
+    if (htmlLang.startsWith("en")) {
+      return "en-US";
+    }
+  }
+  if (typeof navigator !== "undefined" && navigator.language.trim().length > 0) {
+    return navigator.language;
+  }
+  return "ko-KR";
+}
+
+function isRuntimeKoLocale() {
+  return resolveRuntimeLocale().toLowerCase().startsWith("ko");
+}
+
 function formatDateTime(value: string | null) {
   if (!value) {
     return "-";
@@ -136,14 +157,16 @@ function formatDateTime(value: string | null) {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleString("ko-KR");
+  return parsed.toLocaleString(resolveRuntimeLocale());
 }
 
 function formatKrw(value: number | null) {
   if (value === null) {
     return "-";
   }
-  return `${value.toLocaleString("ko-KR")}원`;
+  const runtimeLocale = resolveRuntimeLocale();
+  const unitLabel = runtimeLocale.toLowerCase().startsWith("ko") ? "원" : " KRW";
+  return `${value.toLocaleString(runtimeLocale)}${unitLabel}`;
 }
 
 function minutesToHours(minutes: number) {
@@ -242,8 +265,9 @@ function sortPayslipSearchRows(rows: PayslipSearchRow[], option: PayslipSortOpti
 }
 
 function extractErrorMessage(body: unknown) {
+  const koLocale = isRuntimeKoLocale();
   if (!body) {
-    return "원인을 확인할 수 없습니다.";
+    return koLocale ? "원인을 확인할 수 없습니다." : "Unable to identify the cause.";
   }
   if (typeof body === "string") {
     return body;
@@ -280,14 +304,16 @@ function formatDiffKrw(value: number | null) {
   if (value === null) {
     return "-";
   }
-  const abs = Math.abs(value).toLocaleString("ko-KR");
+  const runtimeLocale = resolveRuntimeLocale();
+  const unitLabel = runtimeLocale.toLowerCase().startsWith("ko") ? "원" : " KRW";
+  const abs = Math.abs(value).toLocaleString(runtimeLocale);
   if (value > 0) {
-    return `+${abs}원`;
+    return `+${abs}${unitLabel}`;
   }
   if (value < 0) {
-    return `-${abs}원`;
+    return `-${abs}${unitLabel}`;
   }
-  return "0원";
+  return `0${unitLabel}`;
 }
 
 function formatPercent(value: number | null) {
@@ -305,7 +331,7 @@ function formatDateOnly(value: string | null) {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleDateString("ko-KR");
+  return parsed.toLocaleDateString(resolveRuntimeLocale());
 }
 
 function formatMonthLabel(value: string | null) {
@@ -316,7 +342,11 @@ function formatMonthLabel(value: string | null) {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return `${parsed.getFullYear()}년 ${String(parsed.getMonth() + 1).padStart(2, "0")}월`;
+  const runtimeLocale = resolveRuntimeLocale();
+  if (runtimeLocale.toLowerCase().startsWith("ko")) {
+    return `${parsed.getFullYear()}년 ${String(parsed.getMonth() + 1).padStart(2, "0")}월`;
+  }
+  return new Intl.DateTimeFormat(runtimeLocale, { year: "numeric", month: "long" }).format(parsed);
 }
 
 const DEDUCTION_DESCRIPTION_MAP: Record<string, { label: string; description: string }> = {
@@ -395,6 +425,80 @@ export default function EmployeePayslipsPage() {
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+
+  const searchSortCopy = useMemo(
+    () =>
+      isKoLocale
+        ? {
+            title: "명세서 검색/정렬",
+            description: "run id/기간/상태 조건으로 확정 명세서를 빠르게 찾고 정렬합니다.",
+            scopeLabel: "검색 범위",
+            queryLabel: "검색어",
+            queryPlaceholder: "예: RUN-2026-01, confirmed, 2026.01",
+            sortLabel: "정렬",
+            scope: {
+              all: "전체",
+              runId: "run id",
+              period: "기간",
+              state: "상태"
+            },
+            sort: {
+              latest: "최신순",
+              oldest: "오래된순",
+              netDesc: "실지급 높은순",
+              grossDesc: "총지급 높은순"
+            },
+            actions: {
+              reset: "초기화",
+              focusSelected: "선택 명세서로 포커스",
+              netPayHigh: "실지급 높은순"
+            },
+            empty: "현재 검색 조건과 일치하는 확정 명세서가 없습니다.",
+            listAriaLabel: "명세서 검색 정렬 목록",
+            gross: "총지급",
+            deduction: "공제",
+            net: "실지급",
+            confirmed: "확정",
+            select: "선택"
+          }
+        : {
+            title: "Payslip Search/Sort",
+            description:
+              "Search confirmed payslips by run id/period/state and reorder quickly for follow-up actions.",
+            scopeLabel: "Search scope",
+            queryLabel: "Query",
+            queryPlaceholder: "e.g. RUN-2026-01, confirmed, 2026.01",
+            sortLabel: "Sort",
+            scope: {
+              all: "all",
+              runId: "run id",
+              period: "period",
+              state: "state"
+            },
+            sort: {
+              latest: "latest first",
+              oldest: "oldest first",
+              netDesc: "net pay high",
+              grossDesc: "gross pay high"
+            },
+            actions: {
+              reset: "reset",
+              focusSelected: "focus selected",
+              netPayHigh: "net pay high"
+            },
+            empty: "No confirmed payslip matches current search options.",
+            listAriaLabel: "payslip search and sort list",
+            gross: "gross",
+            deduction: "deduction",
+            net: "net",
+            confirmed: "confirmed",
+            select: "select"
+          },
+    [isKoLocale]
+  );
 
   const bearerToken =
     accessToken.trim().length > 0
@@ -749,7 +853,7 @@ export default function EmployeePayslipsPage() {
           label,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body
         },
         ...prev
@@ -825,7 +929,7 @@ export default function EmployeePayslipsPage() {
           label: "명세서 ID 복사",
           status: 200,
           ok: true,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: { runId: selectedRun.id }
         },
         ...prev
@@ -837,7 +941,7 @@ export default function EmployeePayslipsPage() {
           label: "명세서 ID 복사",
           status: 500,
           ok: false,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: { error: error instanceof Error ? error.message : String(error) }
         },
         ...prev
@@ -857,7 +961,7 @@ export default function EmployeePayslipsPage() {
           label: "PDF 파일명 복사",
           status: 200,
           ok: true,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: { fileName: payslipFileName }
         },
         ...prev
@@ -869,7 +973,7 @@ export default function EmployeePayslipsPage() {
           label: "PDF 파일명 복사",
           status: 500,
           ok: false,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: { error: error instanceof Error ? error.message : String(error) }
         },
         ...prev
@@ -884,7 +988,7 @@ export default function EmployeePayslipsPage() {
         label,
         status,
         ok,
-        at: new Date().toLocaleString("ko-KR"),
+        at: new Date().toLocaleString(runtimeLocale),
         body
       },
       ...prev
@@ -1194,46 +1298,44 @@ export default function EmployeePayslipsPage() {
         </article>
 
         <article id="payslip-search-sort" className="panel panel-payslip-search-sort">
-          <h2>Payslip Search/Sort</h2>
-          <p className="small">
-            Search confirmed payslips by run id/period/state and reorder quickly for follow-up actions.
-          </p>
+          <h2>{searchSortCopy.title}</h2>
+          <p className="small">{searchSortCopy.description}</p>
           <div className="payslip-search-toolbar">
             <label>
-              Search Scope
+              {searchSortCopy.scopeLabel}
               <select
                 value={payslipSearchScope}
                 onChange={(event) => setPayslipSearchScope(event.target.value as PayslipSearchScope)}
               >
-                <option value="all">all</option>
-                <option value="run_id">run id</option>
-                <option value="period">period</option>
-                <option value="state">state</option>
+                <option value="all">{searchSortCopy.scope.all}</option>
+                <option value="run_id">{searchSortCopy.scope.runId}</option>
+                <option value="period">{searchSortCopy.scope.period}</option>
+                <option value="state">{searchSortCopy.scope.state}</option>
               </select>
             </label>
             <label className="full">
-              Query
+              {searchSortCopy.queryLabel}
               <input
                 value={payslipSearchQuery}
                 onChange={(event) => setPayslipSearchQuery(event.target.value)}
-                placeholder="e.g. RUN-2026-01, confirmed, 2026.01"
+                placeholder={searchSortCopy.queryPlaceholder}
               />
             </label>
             <label>
-              Sort
+              {searchSortCopy.sortLabel}
               <select
                 value={payslipSortOption}
                 onChange={(event) => setPayslipSortOption(event.target.value as PayslipSortOption)}
               >
-                <option value="latest_desc">latest first</option>
-                <option value="oldest_asc">oldest first</option>
-                <option value="net_desc">net pay high</option>
-                <option value="gross_desc">gross pay high</option>
+                <option value="latest_desc">{searchSortCopy.sort.latest}</option>
+                <option value="oldest_asc">{searchSortCopy.sort.oldest}</option>
+                <option value="net_desc">{searchSortCopy.sort.netDesc}</option>
+                <option value="gross_desc">{searchSortCopy.sort.grossDesc}</option>
               </select>
             </label>
             <div className="payslip-search-actions">
               <button type="button" className="btn btn-secondary btn-small" onClick={resetPayslipSearchControls}>
-                reset
+                {searchSortCopy.actions.reset}
               </button>
               <button
                 type="button"
@@ -1241,17 +1343,17 @@ export default function EmployeePayslipsPage() {
                 onClick={focusSelectedPayslipInSearch}
                 disabled={!selectedRun}
               >
-                focus selected
+                {searchSortCopy.actions.focusSelected}
               </button>
               <button type="button" className="btn btn-secondary btn-small" onClick={prioritizeNetPaySearchSort}>
-                net pay high
+                {searchSortCopy.actions.netPayHigh}
               </button>
             </div>
           </div>
           {filteredPayslipSearchRows.length === 0 ? (
-            <p className="small muted">No confirmed payslip matches current search options.</p>
+            <p className="small muted">{searchSortCopy.empty}</p>
           ) : (
-            <ul className="payslip-search-list" aria-label="payslip search and sort list">
+            <ul className="payslip-search-list" aria-label={searchSortCopy.listAriaLabel}>
               {filteredPayslipSearchRows.slice(0, 24).map((row) => (
                 <li key={row.key}>
                   <div className="payslip-search-head">
@@ -1260,18 +1362,21 @@ export default function EmployeePayslipsPage() {
                   </div>
                   <p>{row.periodLabel}</p>
                   <p className="small muted">
-                    gross {formatKrw(row.grossPayKrw)} / deduction {formatKrw(row.totalDeductionsKrw)} / net{" "}
+                    {searchSortCopy.gross} {formatKrw(row.grossPayKrw)} / {searchSortCopy.deduction}{" "}
+                    {formatKrw(row.totalDeductionsKrw)} / {searchSortCopy.net}{" "}
                     {formatKrw(row.netPayKrw)}
                   </p>
                   <div className="payslip-search-meta">
-                    <span className="queue-history-chip">confirmed {formatDateTime(row.confirmedAt)}</span>
+                    <span className="queue-history-chip">
+                      {searchSortCopy.confirmed} {formatDateTime(row.confirmedAt)}
+                    </span>
                   </div>
                   <button
                     type="button"
                     className="btn btn-secondary btn-small"
                     onClick={() => setSelectedRunId(row.runId)}
                   >
-                    select
+                    {searchSortCopy.select}
                   </button>
                 </li>
               ))}
