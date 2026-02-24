@@ -30,8 +30,8 @@ function run() {
   );
   assert.equal(
     parsed.github?.enabled,
-    true,
-    "vercel github integration should stay enabled so main-branch commits auto-deploy"
+    false,
+    "vercel github integration should stay disabled to prevent preview status noise from PR branches"
   );
 }
 
