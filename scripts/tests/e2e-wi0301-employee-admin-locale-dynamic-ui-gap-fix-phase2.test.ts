@@ -42,8 +42,11 @@ async function run() {
     /status: "PENDING" \| "APPROVED" \| "REJECTED" \| "CANCELED";/
   );
 
-  assert.match(adminPage, /const inviteRoleLabels = useMemo\(/);
-  assert.match(adminPage, /const inviteDeliveryModeLabels = useMemo\(/);
+  assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.match(
+    adminPage,
+    /const \{\s*queueLabels,\s*workTypeLabels,\s*logStatusLabels,\s*inviteRoleLabels,\s*inviteDeliveryModeLabels,\s*updatedAtLabel\s*\} = localeLabelBundle;/
+  );
   assert.match(adminPage, /const toInviteRoleLabel = \(role: string\) =>/);
   assert.match(adminPage, /const toInviteDeliveryModeLabel = \(mode: string\) =>/);
 
