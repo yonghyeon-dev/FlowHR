@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  formatApprovalHistoryDateTime,
+  resolveAdminApprovalHistoryLocaleCopy
+} from "@/app/admin/approval-history/page-locale-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 
 type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 type ApprovalStageResolution =
@@ -55,14 +60,6 @@ function isTruthyFlag(value: string | undefined) {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
-function formatDateTime(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString("ko-KR");
-}
-
 export default function AdminApprovalHistoryPage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -82,6 +79,10 @@ export default function AdminApprovalHistoryPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const copy = useMemo(() => resolveAdminApprovalHistoryLocaleCopy(isKoLocale), [isKoLocale]);
 
   const bearerToken =
     accessToken.trim().length > 0
@@ -128,7 +129,7 @@ export default function AdminApprovalHistoryPage() {
           label,
           ok: response.ok,
           status: response.status,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
@@ -174,7 +175,7 @@ export default function AdminApprovalHistoryPage() {
       query.set("limit", limit.trim());
     }
 
-    const { response, body } = await callApi("결재 단계 이력 조회", `/api/approval/stage-history?${query.toString()}`);
+    const { response, body } = await callApi(copy.logs.fetchHistory, `/api/approval/stage-history?${query.toString()}`);
     if (!response.ok || !body || typeof body !== "object") {
       return;
     }
@@ -185,92 +186,98 @@ export default function AdminApprovalHistoryPage() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>결재 단계 이력</h1>
+        <p className="eyebrow">{copy.hero.eyebrow}</p>
+        <h1>{copy.hero.title}</h1>
         <p>
-          승인 게이트 평가 결과(허용/차단, 템플릿 매칭, 위임 적용)를 조회합니다.
-          {showDevTools ? " 개발 모드에서는 헤더 기반 Actor 컨텍스트를 사용합니다." : ""}
+          {copy.hero.description}
+          {showDevTools ? ` ${copy.hero.devActorNotice}` : ""}
         </p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>컨텍스트/필터</h2>
+          <h2>{copy.filters.title}</h2>
           <label>
-            Organization ID
+            {copy.filters.organizationId}
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
           </label>
           <label>
-            Admin Actor ID (Dev fallback)
+            {copy.filters.adminActorId}
             <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
           </label>
           <label>
-            Access Token (optional)
+            {copy.filters.accessTokenOptional}
             <input
-              placeholder="Bearer token"
+              placeholder={copy.filters.bearerPlaceholder}
               value={accessToken}
               onChange={(event) => setAccessToken(event.target.value)}
             />
           </label>
           <label>
-            Domain
+            {copy.filters.domain}
             <select value={domain} onChange={(event) => setDomain(event.target.value as ApprovalDomain | "")}>
               {domainOptions.map((option) => (
                 <option key={option || "all"} value={option}>
-                  {option || "ALL"}
+                  {option || copy.filters.all}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Target Entity Type
+            {copy.filters.targetEntityType}
             <input
               value={targetEntityType}
               onChange={(event) => setTargetEntityType(event.target.value)}
-              placeholder="AttendanceRecord / LeaveRequest / PayrollRun"
+              placeholder={copy.filters.targetEntityTypePlaceholder}
             />
           </label>
           <label>
-            Target Entity ID
+            {copy.filters.targetEntityId}
             <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
           </label>
           <label>
-            Allowed
+            {copy.filters.allowed}
             <select value={allowed} onChange={(event) => setAllowed(event.target.value as "" | "true" | "false")}>
-              <option value="">ALL</option>
+              <option value="">{copy.filters.all}</option>
               <option value="true">true</option>
               <option value="false">false</option>
             </select>
           </label>
           <label>
-            Resolution
+            {copy.filters.resolution}
             <select
               value={resolution}
               onChange={(event) => setResolution(event.target.value as ApprovalStageResolution | "")}
             >
               {resolutionOptions.map((option) => (
                 <option key={option || "all"} value={option}>
-                  {option || "ALL"}
+                  {option || copy.filters.all}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Limit
+            {copy.filters.limit}
             <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(event.target.value)} />
           </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadHistory()} disabled={!organizationId.trim()}>
-              이력 조회
+              {copy.filters.loadHistory}
             </button>
           </div>
-          {supabaseSessionError ? <p className="small fail">Session 오류: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? (
+            <p className="small fail">
+              {copy.filters.sessionError}: {supabaseSessionError}
+            </p>
+          ) : null}
         </article>
 
         <article className="panel">
-          <h2>조회 결과 ({history.length})</h2>
+          <h2>
+            {copy.results.title} ({history.length})
+          </h2>
           {history.length === 0 ? (
-            <p className="small">조회된 이력이 없습니다.</p>
+            <p className="small">{copy.results.empty}</p>
           ) : (
             <ul className="simple-list">
               {history.map((entry) => (
@@ -278,25 +285,28 @@ export default function AdminApprovalHistoryPage() {
                   <strong>{entry.domain}</strong> / {entry.targetEntityType}:{entry.targetEntityId}
                   <br />
                   <span className={entry.allowed ? "ok" : "fail"}>
-                    {entry.allowed ? "허용" : "차단"} ({entry.resolution})
+                    {entry.allowed ? copy.results.allowed : copy.results.blocked} ({entry.resolution})
                   </span>
-                  {" / "}required [{entry.requiredRoles.join(", ")}] / fallback {entry.fallbackRole}
+                  {" / "}
+                  {copy.results.required} [{entry.requiredRoles.join(", ")}] / {copy.results.fallback} {entry.fallbackRole}
                   <br />
-                  actor {entry.actorRole}
-                  {entry.actorId ? ` (${entry.actorId})` : ""} / stage {entry.stageIndex}({entry.stageLabel})
+                  {copy.results.actor} {entry.actorRole}
+                  {entry.actorId ? ` (${entry.actorId})` : ""} / {copy.results.stage} {entry.stageIndex}({entry.stageLabel})
                   {entry.payrollGrossPayKrw !== null
-                    ? ` / gross ${entry.payrollGrossPayKrw.toLocaleString("ko-KR")} KRW`
+                    ? ` / ${copy.results.gross} ${entry.payrollGrossPayKrw.toLocaleString(runtimeLocale)} KRW`
                     : ""}
                   <br />
                   {entry.matchedTemplateIds.length > 0
-                    ? `matched templates: ${entry.matchedTemplateIds.join(", ")}`
-                    : "matched templates: -"}
+                    ? `${copy.results.matchedTemplates}: ${entry.matchedTemplateIds.join(", ")}`
+                    : `${copy.results.matchedTemplates}: -`}
                   {" / "}
                   {entry.activeDelegationIds.length > 0
-                    ? `delegations: ${entry.activeDelegationIds.join(", ")}`
-                    : "delegations: -"}
+                    ? `${copy.results.delegations}: ${entry.activeDelegationIds.join(", ")}`
+                    : `${copy.results.delegations}: -`}
                   <br />
-                  <span className="small">evaluated {formatDateTime(entry.evaluatedAt)}</span>
+                  <span className="small">
+                    {copy.results.evaluated} {formatApprovalHistoryDateTime(entry.evaluatedAt, runtimeLocale)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -304,32 +314,32 @@ export default function AdminApprovalHistoryPage() {
         </article>
 
         <article className="panel">
-          <h2>요청 로그</h2>
+          <h2>{copy.logs.title}</h2>
           <p className="small">
-            총 {stats.total}건 / 성공 {stats.success}건 / 실패 {stats.fail}건
-            {pendingLabel ? ` / 진행중 ${pendingLabel}` : ""}
+            {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
+            {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">아직 API 호출 이력이 없습니다.</p>
+            <p className="small">{copy.logs.empty}</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status} /{" "}
-                  {log.at}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span>{" "}
+                  {log.label} / {log.status} / {log.at}
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
             <Link href="/admin/approval-executions" className="btn btn-secondary">
-              결재 실행 현황
+              {copy.logs.goToExecutions}
             </Link>
             <Link href="/admin/approval-templates" className="btn btn-secondary">
-              결재 템플릿으로
+              {copy.logs.goToTemplates}
             </Link>
             <Link href="/admin" className="btn btn-secondary">
-              관리자 홈으로
+              {copy.logs.goToAdminHome}
             </Link>
           </div>
         </article>
