@@ -8,6 +8,8 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const previewHelpers = readUtf8("src", "features", "payroll", "service-preview-helpers.ts");
+  const payrollComputationSources = `${payrollService}\n${previewHelpers}`;
   const computationHelpers = readUtf8(
     "src",
     "features",
@@ -20,8 +22,8 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payrollService, /from "@\/features\/payroll\/service-computation-helpers"/);
-  assert.match(payrollService, /\bcalculatePayrollComputation\b/);
+  assert.match(payrollComputationSources, /from "@\/features\/payroll\/service-computation-helpers"/);
+  assert.match(payrollComputationSources, /\bcalculatePayrollComputation\b/);
 
   assert.doesNotMatch(payrollService, /const emptyTotals: PayableMinutes = \{/);
   assert.doesNotMatch(
