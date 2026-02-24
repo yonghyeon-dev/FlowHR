@@ -7,12 +7,14 @@ import type {
 } from "@/app/admin/page-types";
 import {
   queueAlertLevelRank,
+  toQueueAlertLevelByRule,
   matchesQueueSearch,
   summarizeQueueAlertByRule,
   matchesQueueSearchSort,
   sortQueueSearchSortRows
 } from "@/components/admin-approval/approval-queue-helpers";
 import type {
+  QueueFocus,
   AttendanceQueueSort,
   LeaveQueueSort,
   PayrollQueueSort,
@@ -415,4 +417,181 @@ export function filterQueueSearchSortRows({
   );
 
   return sortQueueSearchSortRows(filteredRows, queueSearchSortOption).slice(0, 18);
+}
+
+type BuildAdminQueueDerivedStateArgs = {
+  pendingAttendance: AttendanceRecordDto[];
+  pendingLeave: LeaveRequestDto[];
+  previewedPayroll: PayrollRunDto[];
+  approvalQueueFocus: QueueFocus;
+  approvalQueueOnlyUrgent: boolean;
+  approvalQueueSelectedOnly: boolean;
+  selectedAttendanceIds: string[];
+  selectedLeaveIds: string[];
+  approvalQueueSearch: string;
+  approvalQueueSearchScope: QueueSearchScope;
+  attendanceQueueSort: AttendanceQueueSort;
+  leaveQueueSort: LeaveQueueSort;
+  payrollQueueSort: PayrollQueueSort;
+  queueSearchSortScope: QueueSearchSortScope;
+  queueSearchSortQuery: string;
+  queueSearchSortOption: QueueSearchSortOption;
+  queueSlaWatchHoursInput: string;
+  queueSlaCriticalHoursInput: string;
+  queueLabels: {
+    all: string;
+    attendance: string;
+    leave: string;
+    payroll: string;
+  };
+  queueNowMs: number;
+};
+
+export type AdminQueueDerivedState = {
+  queueSlaWatchHours: number;
+  queueSlaCriticalHours: number;
+  filteredPendingAttendance: AttendanceRecordDto[];
+  filteredPendingLeave: LeaveRequestDto[];
+  filteredPreviewedPayroll: PayrollRunDto[];
+  queueBadgeSummaries: QueueBadgeSummary[];
+  activeQueueBadgeSummary: QueueBadgeSummary;
+  queueAlertOverview: {
+    totalCritical: number;
+    totalWatch: number;
+    hottestQueue: QueueBadgeSummary | null;
+  };
+  filteredQueueSearchSortRows: QueueSearchSortRow[];
+};
+
+export function buildAdminQueueDerivedState({
+  pendingAttendance,
+  pendingLeave,
+  previewedPayroll,
+  approvalQueueFocus,
+  approvalQueueOnlyUrgent,
+  approvalQueueSelectedOnly,
+  selectedAttendanceIds,
+  selectedLeaveIds,
+  approvalQueueSearch,
+  approvalQueueSearchScope,
+  attendanceQueueSort,
+  leaveQueueSort,
+  payrollQueueSort,
+  queueSearchSortScope,
+  queueSearchSortQuery,
+  queueSearchSortOption,
+  queueSlaWatchHoursInput,
+  queueSlaCriticalHoursInput,
+  queueLabels,
+  queueNowMs
+}: BuildAdminQueueDerivedStateArgs): AdminQueueDerivedState {
+  const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
+  const attendanceWaitHoursById = toWaitHoursById(
+    pendingAttendance,
+    (record) => record.id,
+    (record) => record.checkInAt,
+    queueNowMs
+  );
+  const leaveWaitHoursById = toWaitHoursById(
+    pendingLeave,
+    (request) => request.id,
+    (request) => request.startDate,
+    queueNowMs
+  );
+  const payrollWaitHoursById = toWaitHoursById(
+    previewedPayroll,
+    (run) => run.id,
+    (run) => run.periodStart,
+    queueNowMs
+  );
+  const attendanceWaitHoursValues = [...attendanceWaitHoursById.values()];
+  const leaveWaitHoursValues = [...leaveWaitHoursById.values()];
+  const payrollWaitHoursValues = [...payrollWaitHoursById.values()];
+  const queueSlaWatchHours = resolveQueueSlaWatchHours(queueSlaWatchHoursInput);
+  const queueSlaCriticalHours = resolveQueueSlaCriticalHours(
+    queueSlaCriticalHoursInput,
+    queueSlaWatchHours
+  );
+  const resolveQueueAlertLevel = (waitHours: number) =>
+    toQueueAlertLevelByRule(waitHours, queueSlaWatchHours, queueSlaCriticalHours);
+
+  const filteredPendingAttendance = filterPendingAttendanceQueue({
+    pendingAttendance,
+    attendanceWaitHoursById,
+    approvalQueueOnlyUrgent,
+    approvalQueueSelectedOnly,
+    selectedAttendanceIds,
+    approvalQueueSearchScope,
+    normalizedQueueSearch,
+    attendanceQueueSort,
+    resolveQueueAlertLevel
+  });
+  const filteredPendingLeave = filterPendingLeaveQueue({
+    pendingLeave,
+    leaveWaitHoursById,
+    approvalQueueOnlyUrgent,
+    approvalQueueSelectedOnly,
+    selectedLeaveIds,
+    approvalQueueSearchScope,
+    normalizedQueueSearch,
+    leaveQueueSort,
+    resolveQueueAlertLevel
+  });
+  const filteredPreviewedPayroll = filterPreviewedPayrollQueue({
+    previewedPayroll,
+    payrollWaitHoursById,
+    approvalQueueOnlyUrgent,
+    approvalQueueSelectedOnly,
+    approvalQueueSearchScope,
+    normalizedQueueSearch,
+    payrollQueueSort,
+    resolveQueueAlertLevel
+  });
+
+  const queueBadgeSummaries = buildQueueBadgeSummaries({
+    queueLabels,
+    queueSlaWatchHours,
+    queueSlaCriticalHours,
+    pendingAttendanceCount: pendingAttendance.length,
+    pendingLeaveCount: pendingLeave.length,
+    previewedPayrollCount: previewedPayroll.length,
+    filteredPendingAttendanceCount: filteredPendingAttendance.length,
+    filteredPendingLeaveCount: filteredPendingLeave.length,
+    filteredPreviewedPayrollCount: filteredPreviewedPayroll.length,
+    attendanceWaitHoursValues,
+    leaveWaitHoursValues,
+    payrollWaitHoursValues
+  });
+  const activeQueueBadgeSummary =
+    queueBadgeSummaries.find((badge) => badge.focus === approvalQueueFocus) ?? queueBadgeSummaries[0]!;
+  const queueAlertOverview = summarizeQueueAlertOverview(queueBadgeSummaries);
+
+  const queueSearchSortRows = buildQueueSearchSortRows({
+    filteredPendingAttendance,
+    filteredPendingLeave,
+    filteredPreviewedPayroll,
+    attendanceWaitHoursById,
+    leaveWaitHoursById,
+    payrollWaitHoursById,
+    resolveQueueAlertLevel,
+    queueLabels
+  });
+  const filteredQueueSearchSortRows = filterQueueSearchSortRows({
+    queueSearchSortRows,
+    queueSearchSortScope,
+    queueSearchSortQuery,
+    queueSearchSortOption
+  });
+
+  return {
+    queueSlaWatchHours,
+    queueSlaCriticalHours,
+    filteredPendingAttendance,
+    filteredPendingLeave,
+    filteredPreviewedPayroll,
+    queueBadgeSummaries,
+    activeQueueBadgeSummary,
+    queueAlertOverview,
+    filteredQueueSearchSortRows
+  };
 }
