@@ -7,6 +7,7 @@ import {
   buildLeaveUsageProjectionLabel,
   summarizeEmployeeApiLogs
 } from "@/app/employee/page-derived-helpers";
+import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
 import {
   buildQuery,
   calculateNetMinutes,
@@ -207,52 +208,19 @@ export default function EmployeeSelfServicePage() {
     payload?: Record<string, unknown>
   ) {
     setPendingLabel(label);
-    const startedAt = Date.now();
     try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
-
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken.trim()}`;
-      } else {
-        headers["x-actor-role"] = "employee";
-        headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
-        if (organizationId.trim().length > 0) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      }
-
-      const response = await fetch(path, {
+      const { response, body, log } = await performEmployeeApiCall({
+        label,
         method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
+        path,
+        payload,
+        usesBearerToken,
+        bearerToken,
+        employeeId,
+        organizationId,
+        runtimeLocale
       });
-
-      const raw = await response.text();
-      let body: unknown = null;
-      if (raw.trim().length > 0) {
-        try {
-          body = JSON.parse(raw);
-        } catch {
-          body = raw;
-        }
-      }
-
-      const durationMs = Date.now() - startedAt;
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label,
-          status: response.status,
-          ok: response.ok,
-          durationMs,
-          at: new Date().toLocaleString(runtimeLocale),
-          body
-        },
-        ...prev
-      ]);
+      setLogs((prev) => [log, ...prev]);
 
       return { response, body };
     } finally {
