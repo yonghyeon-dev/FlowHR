@@ -80,7 +80,8 @@ async function run() {
   assert.match(employeeLayoutSource, /\/employee\/payslip-receipts/, "employee nav should include payslip receipt route");
   assert.match(adminPageSource, /PayrollPayslipDeliveryConsole/, "admin page should render payslip delivery console");
   assert.match(employeePageSource, /PayslipReceiptConsole/, "employee page should render payslip receipt console");
-  assert.match(adminConsoleSource, /Payroll Payslip Delivery/, "admin console should include heading text");
+  assert.match(adminConsoleSource, /payrollPayslipDeliveryCopyByLocale/, "admin console should wire locale copy map");
+  assert.match(adminConsoleSource, /const copy = payrollPayslipDeliveryCopyByLocale\[locale\];/, "admin console should resolve runtime copy bundle");
   assert.match(employeeConsoleSource, /payslipReceiptCopyByLocale/, "employee console should wire locale copy map");
   assert.match(employeeConsoleSource, /copy\.title/, "employee console should render title from locale copy");
   assert.match(employeeCopySource, /title:\s*"Payslip Receipt Confirmation"/, "employee copy should include english heading text");

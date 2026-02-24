@@ -58,7 +58,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
-  assert.match(yearEndConsoleSource, /Eligible/);
+  assert.match(yearEndConsoleSource, /copy\.deductionEligibilityLabel/);
   assert.match(payrollApiSpec, /deduction eligibility/i);
   assert.match(payrollContract, /deduction eligibility validation guard/i);
   assert.match(payrollTestCases, /Year-End Deduction Eligibility Gate/);

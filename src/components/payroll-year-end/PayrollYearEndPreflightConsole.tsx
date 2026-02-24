@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { payrollYearEndPreflightCopyByLocale } from "@/components/payroll-year-end/copy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 import type {
   ApiLog,
   PayrollYearEndPreflightChecklistResponse
 } from "@/components/payroll-year-end/types";
 import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 
-function parseRequiredInt(value: string, fieldName: string) {
+function parseRequiredInt(value: string, fieldName: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${fieldName} must be a non-negative integer`);
+    throw new Error(`${fieldName} ${nonNegativeIntegerLabel}`);
   }
   return parsed;
 }
@@ -33,6 +35,9 @@ export default function PayrollYearEndPreflightConsole() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const copy = payrollYearEndPreflightCopyByLocale[locale];
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -65,12 +70,13 @@ export default function PayrollYearEndPreflightConsole() {
 
   async function runLoadChecklist() {
     try {
-      setPendingLabel("year-end preflight checklist");
-      const requestYear = parseRequiredInt(year, "year");
+      setPendingLabel(copy.pendingPreflightChecklist);
+      const requestYear = parseRequiredInt(year, copy.yearLabel, copy.statusNonNegativeInteger);
       const requestEmployeeId = employeeId.trim();
       const requestNonTaxableAnnualIncomeKrw = parseRequiredInt(
         nonTaxableAnnualIncomeKrw,
-        "nonTaxableAnnualIncomeKrw"
+        copy.nonTaxableAnnualIncomeLabel,
+        copy.statusNonNegativeInteger
       );
       const query = new URLSearchParams({
         year: String(requestYear),
@@ -86,20 +92,28 @@ export default function PayrollYearEndPreflightConsole() {
       );
       const body = (await response.json()) as PayrollYearEndPreflightChecklistResponse | { error: string };
       setLogs((prev) => [
-        { id: Date.now(), label: "year-end preflight checklist", status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        {
+          id: Date.now(),
+          label: copy.logPreflightChecklist,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setChecklist(body);
       setStatusMessage(
-        `loaded checklist (${body.checklist.summary.readyToFinalize ? "ready" : "not ready"})`
+        body.checklist.summary.readyToFinalize
+          ? copy.statusLoadedChecklistReady
+          : copy.statusLoadedChecklistNotReady
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -108,47 +122,47 @@ export default function PayrollYearEndPreflightConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Preflight Checklist</h1>
-        <p>Validate finalize prerequisites and filing readiness before year-end settlement apply.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
       <section className="panel-grid">
         <article className="panel">
-          <h2>Input</h2>
+          <h2>{copy.inputTitle}</h2>
           <div className="input-grid">
-            <label>Year<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>Employee ID<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
-            <label>Non-taxable Annual Income<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
+            <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
+            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
+            <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
           </div>
-          <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
-          <label>Actor ID (dev fallback)<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
-          <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
+          <label>{copy.actorIdFallbackLabel}<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
+          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void runLoadChecklist()} disabled={pendingLabel !== null}>Load Preflight Checklist</button>
+            <button className="btn btn-primary" onClick={() => void runLoadChecklist()} disabled={pendingLabel !== null}>{copy.loadPreflightChecklistAction}</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
 
         <article className="panel">
-          <h2>Checklist Summary</h2>
-          {!checklist ? <p className="small">No checklist loaded yet.</p> : (
+          <h2>{copy.checklistSummaryTitle}</h2>
+          {!checklist ? <p className="small">{copy.noChecklistLoadedYet}</p> : (
             <ul className="simple-list">
-              <li><span>Ready To Finalize</span><strong>{checklist.checklist.summary.readyToFinalize ? "YES" : "NO"}</strong></li>
-              <li><span>Pass / Fail / Warn</span><strong>{checklist.checklist.summary.passCount} / {checklist.checklist.summary.failCount} / {checklist.checklist.summary.warnCount}</strong></li>
-              <li><span>Annual Gross Pay</span><strong>{formatKrw(checklist.checklist.metrics.annualGrossPayKrw)}</strong></li>
-              <li><span>Non-taxable Annual Income</span><strong>{formatKrw(checklist.checklist.metrics.nonTaxableAnnualIncomeKrw)}</strong></li>
-              <li><span>Run States</span><strong>total {checklist.checklist.metrics.totalRuns} / confirmed {checklist.checklist.metrics.confirmedRuns} / previewed {checklist.checklist.metrics.previewedRuns}</strong></li>
-              <li><span>Distribution States</span><strong>undistributed {checklist.checklist.metrics.undistributedRuns} / pending receipt {checklist.checklist.metrics.pendingReceiptRuns}</strong></li>
-              <li><span>Submission States</span><strong>pending {checklist.checklist.metrics.pendingSubmissionCount} / rejected {checklist.checklist.metrics.rejectedSubmissionCount}</strong></li>
-              <li><span>Settlement Hash</span><strong>{checklist.checklist.metrics.settlementHash ?? "-"}</strong></li>
+              <li><span>{copy.readyToFinalizeLabel}</span><strong>{checklist.checklist.summary.readyToFinalize ? copy.yesLabel : copy.noLabel}</strong></li>
+              <li><span>{copy.passFailWarnLabel}</span><strong>{checklist.checklist.summary.passCount} / {checklist.checklist.summary.failCount} / {checklist.checklist.summary.warnCount}</strong></li>
+              <li><span>{copy.annualGrossPayLabel}</span><strong>{formatKrw(checklist.checklist.metrics.annualGrossPayKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.nonTaxableAnnualIncomeLabel}</span><strong>{formatKrw(checklist.checklist.metrics.nonTaxableAnnualIncomeKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.runStatesLabel}</span><strong>{copy.totalLabel} {checklist.checklist.metrics.totalRuns} / {copy.confirmedLabel} {checklist.checklist.metrics.confirmedRuns} / {copy.previewedLabel} {checklist.checklist.metrics.previewedRuns}</strong></li>
+              <li><span>{copy.distributionStatesLabel}</span><strong>{copy.undistributedLabel} {checklist.checklist.metrics.undistributedRuns} / {copy.pendingReceiptLabel} {checklist.checklist.metrics.pendingReceiptRuns}</strong></li>
+              <li><span>{copy.submissionStatesLabel}</span><strong>{copy.pendingLabel} {checklist.checklist.metrics.pendingSubmissionCount} / {copy.rejectedLabel} {checklist.checklist.metrics.rejectedSubmissionCount}</strong></li>
+              <li><span>{copy.settlementHashLabel}</span><strong>{checklist.checklist.metrics.settlementHash ?? "-"}</strong></li>
             </ul>
           )}
         </article>
 
         <article className="panel">
-          <h2>Checks</h2>
-          {!checklist ? <p className="small">No check entries yet.</p> : (
+          <h2>{copy.checksTitle}</h2>
+          {!checklist ? <p className="small">{copy.noCheckEntriesYet}</p> : (
             <ul className="log-list">
               {checklist.checklist.checks.map((check) => (
                 <li key={check.key}>
@@ -161,7 +175,11 @@ export default function PayrollYearEndPreflightConsole() {
                           : "small"
                     }
                   >
-                    {check.status.toUpperCase()}
+                    {check.status === "pass"
+                      ? copy.passLabel
+                      : check.status === "fail"
+                        ? copy.failLabel
+                        : copy.warnLabel}
                   </span>{" "}
                   {check.label} / {check.detail}
                 </li>
@@ -171,21 +189,21 @@ export default function PayrollYearEndPreflightConsole() {
         </article>
 
         <article className="panel">
-          <h2>API Logs</h2>
-          <p className="small">total {stats.total} / success {stats.success} / fail {stats.fail}{pendingLabel ? ` / running ${pendingLabel}` : ""}</p>
-          {logs.length === 0 ? <p className="small">No API call yet.</p> : (
+          <h2>{copy.apiLogsTitle}</h2>
+          <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
+          {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/admin/payroll-year-end" className="btn btn-secondary">Back to Year-End</Link>
-            <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
+            <Link href="/admin/payroll-year-end" className="btn btn-secondary">{copy.backToYearEndAction}</Link>
+            <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
           </div>
         </article>
       </section>

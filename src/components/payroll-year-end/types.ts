@@ -291,6 +291,6 @@ export function currentYear() {
   return new Date().getFullYear();
 }
 
-export function formatKrw(value: number) {
-  return `${value.toLocaleString("ko-KR")} KRW`;
+export function formatKrw(value: number, runtimeLocale = "ko-KR") {
+  return `${value.toLocaleString(runtimeLocale)} KRW`;
 }

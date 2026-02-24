@@ -70,8 +70,8 @@ async function run() {
   assert.match(adminLayoutSource, /\/admin\/payroll-year-end/, "admin nav should include payroll year-end route");
   assert.match(
     adminConsoleSource,
-    /Recalculate Settlement/,
-    "payroll year-end console should expose recalculation action"
+    /copy\.recalculateSettlementAction/,
+    "payroll year-end console should expose recalculation action via locale copy"
   );
   assert.match(
     recalculationRouteSource,
