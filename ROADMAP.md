@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-24
-> **Current version**: 0.1.124 (Employee Payslips Locale Dynamic Residual Gap Fix Phase 7)
+> **Current version**: 0.1.125 (Employee Payslips UTF-8 Encoding Guard)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -657,3 +657,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0390 vercel main auto-deploy restore (vercel.json github integration re-enabled + main-only deployment policy retained + e2e-wi0284 policy guard updated + regression test)
 - WI-0391 vercel scope fallback for main deploy workflow (make VERCEL_SCOPE optional + scoped vercel CLI fallback without --scope + e2e-wi0390 workflow contract hardening)
 - WI-0392 vercel scope-candidate fallback (try VERCEL_SCOPE then GITHUB_REPOSITORY_OWNER for scoped Vercel CLI commands + explicit attempted-scope diagnostics + e2e-wi0390 guard update)
+- WI-0393 employee payslips UTF-8 encoding guard (`/employee/payslips` compare insight Korean strings UTF-8 recovery + mojibake regression guard test + `.vercel` git ignore hardening)
