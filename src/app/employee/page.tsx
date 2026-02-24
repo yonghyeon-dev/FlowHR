@@ -14,14 +14,7 @@ import {
   summarizeEmployeeApiLogs
 } from "@/app/employee/page-derived-helpers";
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
-import {
-  cancelLeaveFromHelper,
-  checkOutNowFromHelper,
-  createAttendanceFromHelper,
-  createLeaveFromHelper,
-  refreshEmployeeSnapshotFromHelper,
-  requestAttendanceCorrectionFromHelper
-} from "@/app/employee/page-action-helpers";
+import { buildEmployeeMutationActions } from "@/app/employee/page-mutation-actions";
 import {
   buildMobileRequestTimeline,
   buildRequestFailureCauses,
@@ -257,128 +250,39 @@ export default function EmployeeSelfServicePage() {
     }
   }
 
-  async function refreshEmployeeSnapshot(range?: { fromIso: string; toIso: string }) {
-    const fromIso = range?.fromIso ?? toIso(periodStart);
-    const toIsoValue = range?.toIso ?? toIso(periodEnd);
-    const snapshot = await refreshEmployeeSnapshotFromHelper({
-      callApi,
-      callApiLabels,
-      fromIso,
-      toIso: toIsoValue,
-      employeeId,
-      selectedCorrectionRecordId,
-      lastAttendanceId,
-      buildQuery
-    });
-
-    if (snapshot.attendance) {
-      setAttendance(snapshot.attendance);
-    }
-    if (snapshot.nextLastAttendanceId) {
-      setLastAttendanceId(snapshot.nextLastAttendanceId);
-    }
-    if (snapshot.nextSelectedCorrectionRecordId) {
-      setSelectedCorrectionRecordId(snapshot.nextSelectedCorrectionRecordId);
-    }
-    if (snapshot.leaveRequests) {
-      setLeaveRequests(snapshot.leaveRequests);
-    }
-    if (snapshot.nextLastLeaveRequestId) {
-      setLastLeaveRequestId(snapshot.nextLastLeaveRequestId);
-    }
-    if (snapshot.schedules) {
-      setSchedules(snapshot.schedules);
-    }
-    if (snapshot.leaveBalance !== undefined) {
-      setLeaveBalance(snapshot.leaveBalance);
-    }
-  }
-
-  async function createAttendance() {
-    const result = await createAttendanceFromHelper({
-      callApi,
-      callApiLabels,
-      employeeId,
-      checkInAt,
-      checkOutAt,
-      breakMinutes,
-      isHoliday,
-      attendanceNotes,
-      toIso,
-      coerceNumber
-    });
-    if (result.ok) {
-      if (result.createdRecordId) {
-        setLastAttendanceId(result.createdRecordId);
-        setSelectedCorrectionRecordId(result.createdRecordId);
-      }
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function checkOutNow() {
-    const checkedOut = await checkOutNowFromHelper({
-      callApi,
-      callApiLabels,
-      lastAttendanceId
-    });
-    if (checkedOut) {
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function requestAttendanceCorrection() {
-    const corrected = await requestAttendanceCorrectionFromHelper({
-      callApi,
-      callApiLabels,
-      lastAttendanceId,
-      checkInAt,
-      checkOutAt,
-      breakMinutes,
-      isHoliday,
-      attendanceNotes,
-      correctionRequestNote,
-      toIso,
-      coerceNumber
-    });
-    if (corrected) {
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function createLeave() {
-    const result = await createLeaveFromHelper({
-      callApi,
-      callApiLabels,
-      employeeId,
-      leaveType,
-      leaveUnit,
-      leaveStartDate,
-      leaveEndDate,
-      leaveHours,
-      leaveReason,
-      toIso,
-      coerceNumber
-    });
-    if (result.ok) {
-      if (result.requestId) {
-        setLastLeaveRequestId(result.requestId);
-      }
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function cancelLeave() {
-    const canceled = await cancelLeaveFromHelper({
-      callApi,
-      callApiLabels,
-      lastLeaveRequestId,
-      cancelReason
-    });
-    if (canceled) {
-      await refreshEmployeeSnapshot();
-    }
-  }
+  const mutationActions = buildEmployeeMutationActions({
+    callApi,
+    callApiLabels,
+    buildQuery,
+    toIso,
+    coerceNumber,
+    periodStart,
+    periodEnd,
+    employeeId,
+    selectedCorrectionRecordId,
+    lastAttendanceId,
+    setAttendance,
+    setLastAttendanceId,
+    setSelectedCorrectionRecordId,
+    setLeaveRequests,
+    setLastLeaveRequestId,
+    setSchedules,
+    setLeaveBalance,
+    checkInAt,
+    checkOutAt,
+    breakMinutes,
+    isHoliday,
+    attendanceNotes,
+    correctionRequestNote,
+    leaveType,
+    leaveUnit,
+    leaveStartDate,
+    leaveEndDate,
+    leaveHours,
+    leaveReason,
+    cancelReason,
+    lastLeaveRequestId
+  });
 
   function applyLeaveQuickPreset(preset: "today-half" | "tomorrow-full" | "next-week-full") {
     const now = new Date();
@@ -463,7 +367,10 @@ export default function EmployeeSelfServicePage() {
     const nextPeriodEnd = toLocalInputValue(monthEnd);
     setPeriodStart(nextPeriodStart);
     setPeriodEnd(nextPeriodEnd);
-    await refreshEmployeeSnapshot({ fromIso: toIso(nextPeriodStart), toIso: toIso(nextPeriodEnd) });
+    await mutationActions.refreshEmployeeSnapshot({
+      fromIso: toIso(nextPeriodStart),
+      toIso: toIso(nextPeriodEnd)
+    });
   }
 
   async function moveCalendarMonth(monthOffset: number) {
@@ -1108,7 +1015,7 @@ export default function EmployeeSelfServicePage() {
           onAccessTokenChange={setAccessToken}
           onPeriodStartChange={setPeriodStart}
           onPeriodEndChange={setPeriodEnd}
-          onRefreshEmployeeSnapshot={() => void refreshEmployeeSnapshot()}
+          onRefreshEmployeeSnapshot={() => void mutationActions.refreshEmployeeSnapshot()}
           onJumpToSection={jumpToSection}
         />
 
@@ -1224,9 +1131,9 @@ export default function EmployeeSelfServicePage() {
           onAttendanceNotesChange={setAttendanceNotes}
           onLastAttendanceIdChange={setLastAttendanceId}
           onSelectCorrectionTarget={selectCorrectionTarget}
-          onCreateAttendance={() => void createAttendance()}
-          onCheckOutNow={() => void checkOutNow()}
-          onRequestAttendanceCorrection={() => void requestAttendanceCorrection()}
+          onCreateAttendance={() => void mutationActions.createAttendance()}
+          onCheckOutNow={() => void mutationActions.checkOutNow()}
+          onRequestAttendanceCorrection={() => void mutationActions.requestAttendanceCorrection()}
           onApplySelectedCorrectionRecord={applySelectedCorrectionRecord}
           onApplyLatestAttendanceToCorrectionForm={applyLatestAttendanceToCorrectionForm}
           onApplyAttendanceRecordToCorrectionForm={applyAttendanceRecordToCorrectionForm}
@@ -1239,8 +1146,8 @@ export default function EmployeeSelfServicePage() {
           onLeaveReasonChange={setLeaveReason}
           onLastLeaveRequestIdChange={setLastLeaveRequestId}
           onApplyLeaveQuickPreset={applyLeaveQuickPreset}
-          onCreateLeave={() => void createLeave()}
-          onCancelLeave={() => void cancelLeave()}
+          onCreateLeave={() => void mutationActions.createLeave()}
+          onCancelLeave={() => void mutationActions.cancelLeave()}
           onPrefillLeaveFromCalendarDate={prefillLeaveFormFromCalendarDate}
           onMoveCalendarMonth={(delta) => void moveCalendarMonth(delta)}
           onResetCalendarToCurrentMonth={() => void resetCalendarToCurrentMonth()}
