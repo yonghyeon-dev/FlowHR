@@ -84,8 +84,16 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(filingConsoleSource, /Cancel Submission/, "filing console should expose cancel action");
-  assert.match(filingConsoleSource, /Reopen Submission/, "filing console should expose reopen action");
+  assert.match(
+    filingConsoleSource,
+    /copy\.cancelSubmissionAction/,
+    "filing console should expose cancel action with locale copy"
+  );
+  assert.match(
+    filingConsoleSource,
+    /copy\.reopenSubmissionAction/,
+    "filing console should expose reopen action with locale copy"
+  );
   assert.match(
     payrollApiSpec,
     /\/payroll\/year-end\/filing-submissions\/\{submissionId\}\/cancel:/,

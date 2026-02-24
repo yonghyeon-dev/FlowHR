@@ -78,7 +78,11 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(filingConsoleSource, /Load ACK Catalog/, "filing console should expose ack catalog action");
+  assert.match(
+    filingConsoleSource,
+    /copy\.loadAckCatalogAction/,
+    "filing console should expose ack catalog action with locale copy"
+  );
   assert.match(payrollApiSpec, /\/payroll\/year-end\/filing-ack-catalog:/, "api spec should include ack catalog endpoint");
   assert.match(
     payrollContract,

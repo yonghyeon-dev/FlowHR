@@ -80,23 +80,23 @@ async function run() {
 
   assert.match(
     filingConsoleSource,
-    /Submission Search/,
-    "filing console should expose submission search input"
+    /copy\.submissionSearchLabel/,
+    "filing console should expose submission search input with locale copy"
   );
   assert.match(
     filingConsoleSource,
-    /Submission Sort By/,
-    "filing console should expose submission sort selector"
+    /copy\.submissionSortByLabel/,
+    "filing console should expose submission sort selector with locale copy"
   );
   assert.match(
     filingConsoleSource,
-    /Quick ACK Accepted/,
-    "filing console should expose quick acknowledge action"
+    /copy\.quickAckAcceptedAction/,
+    "filing console should expose quick acknowledge action with locale copy"
   );
   assert.match(
     filingConsoleSource,
-    /Quick Resubmit/,
-    "filing console should expose quick resubmit action"
+    /copy\.quickResubmitAction/,
+    "filing console should expose quick resubmit action with locale copy"
   );
   assert.match(payrollApiSpec, /name:\s*search/, "api spec should include search query");
   assert.match(payrollApiSpec, /name:\s*sortBy/, "api spec should include sortBy query");

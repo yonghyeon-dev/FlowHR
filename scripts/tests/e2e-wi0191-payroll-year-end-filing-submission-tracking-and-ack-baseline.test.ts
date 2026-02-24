@@ -72,9 +72,26 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(filingConsoleSource, /Submit Filing Package/, "filing console should support submission action");
-  assert.match(filingConsoleSource, /Acknowledge Submission/, "filing console should support ack action");
-  assert.match(filingConsoleSource, /Filing Submissions/, "filing console should render submission list panel");
+  assert.match(
+    filingConsoleSource,
+    /copy\.submitFilingPackageAction/,
+    "filing console should support submission action with locale copy"
+  );
+  assert.match(
+    filingConsoleSource,
+    /copy\.submitFilingPackageAction/,
+    "filing console should support submission action with locale copy"
+  );
+  assert.match(
+    filingConsoleSource,
+    /copy\.acknowledgeSubmissionAction/,
+    "filing console should support ack action with locale copy"
+  );
+  assert.match(
+    filingConsoleSource,
+    /copy\.filingSubmissionsPanelTitle/,
+    "filing console should render submission list panel with locale copy"
+  );
   assert.match(payrollApiSpec, /\/payroll\/year-end\/filing-submissions:/, "api spec should include filing submission endpoint");
   assert.match(payrollApiSpec, /\/payroll\/year-end\/filing-submissions\/\{submissionId\}\/ack:/, "api spec should include filing ack endpoint");
   assert.match(payrollContract, /payroll_year_end_filing_submission_v1/, "contract should include submission feature flag");

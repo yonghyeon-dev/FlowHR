@@ -60,6 +60,7 @@ async function run() {
     "payroll-year-end-filing",
     "PayrollYearEndFilingConsole.tsx"
   );
+  const filingCopySource = readUtf8("src", "components", "payroll-year-end-filing", "copy.ts");
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
@@ -75,8 +76,33 @@ async function run() {
   );
   assert.match(
     filingConsoleSource,
-    /Payroll Year-End Finalization/,
-    "filing console should include heading text"
+    /from "@\/components\/payroll-year-end-filing\/copy"/,
+    "filing console should read locale copy from dedicated copy module"
+  );
+  assert.match(
+    filingConsoleSource,
+    /const \{ locale \} = useI18n\(\);/,
+    "filing console should read locale from i18n provider"
+  );
+  assert.match(
+    filingConsoleSource,
+    /const copy = payrollYearEndFilingCopyByLocale\[locale\];/,
+    "filing console should resolve per-locale copy bundle"
+  );
+  assert.match(
+    filingConsoleSource,
+    /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US";/,
+    "filing console should derive runtime locale for date/number formatting"
+  );
+  assert.match(
+    filingCopySource,
+    /export const payrollYearEndFilingCopyByLocale/,
+    "filing copy module should export locale copy bundle"
+  );
+  assert.doesNotMatch(
+    filingConsoleSource,
+    /<h1>Payroll Year-End Finalization, Filing Search\/Sort, ACK Catalog, and Lifecycle Console<\/h1>/,
+    "filing console should no longer hardcode English heading"
   );
   assert.match(
     payrollApiSpec,

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { payrollYearEndFilingCopyByLocale } from "@/components/payroll-year-end-filing/copy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 import type {
   ApiLog,
@@ -26,46 +28,50 @@ import type {
   PayrollYearEndFinalizationResponse
 } from "@/components/payroll-year-end-filing/types";
 
-function parseRequiredInt(value: string, fieldName: string) {
+function parseRequiredInt(value: string, fieldName: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${fieldName} must be a non-negative integer`);
+    throw new Error(`${fieldName} ${nonNegativeIntegerLabel}`);
   }
   return parsed;
 }
 
-function parseRate(value: string, fieldName: string) {
+function parseRate(value: string, fieldName: string, rateBetweenZeroAndOneLabel: string) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
-    throw new Error(`${fieldName} must be between 0 and 1`);
+    throw new Error(`${fieldName} ${rateBetweenZeroAndOneLabel}`);
   }
   return parsed;
 }
 
-function formatTimelineEntry(entry: PayrollYearEndFilingTimelineEntry) {
+function formatTimelineEntry(
+  entry: PayrollYearEndFilingTimelineEntry,
+  copy: (typeof payrollYearEndFilingCopyByLocale)["en"]
+) {
   if (entry.action === "submitted" || entry.action === "resubmitted") {
     const parts = [
-      `${entry.action.toUpperCase()} attempt ${entry.attempt ?? "-"}`,
-      entry.resubmissionOfSubmissionId ? `from ${entry.resubmissionOfSubmissionId}` : null,
-      entry.resubmissionReason ? `reason: ${entry.resubmissionReason}` : null,
-      entry.submissionNote ? `note: ${entry.submissionNote}` : null
+      `${copy.timelineActionBadgeLabels[entry.action]} ${copy.timelineAttemptLabel} ${entry.attempt ?? copy.dashLabel}`,
+      entry.resubmissionOfSubmissionId ? `${copy.timelineFromLabel} ${entry.resubmissionOfSubmissionId}` : null,
+      entry.resubmissionReason ? `${copy.timelineReasonLabel}: ${entry.resubmissionReason}` : null,
+      entry.submissionNote ? `${copy.timelineNoteLabel}: ${entry.submissionNote}` : null
     ].filter(Boolean);
     return parts.join(" / ");
   }
   if (entry.action === "acknowledged") {
-    return `ACK ${entry.ackStatus ?? "-"}${entry.ackCode ? ` (${entry.ackCode})` : ""}${
-      entry.rejectionReasonCode ? ` / reason ${entry.rejectionReasonCode}` : ""
-    }${entry.rejectionReasonDetail ? ` / detail ${entry.rejectionReasonDetail}` : ""}${
-      entry.ackNote ? ` / ${entry.ackNote}` : ""
+    return `${copy.timelineAckPrefix} ${entry.ackStatus ?? copy.dashLabel}${
+      entry.ackCode ? ` (${entry.ackCode})` : ""
+    }${entry.rejectionReasonCode ? ` / ${copy.timelineReasonCodeLabel} ${entry.rejectionReasonCode}` : ""}${
+      entry.rejectionReasonDetail ? ` / ${copy.timelineDetailLabel} ${entry.rejectionReasonDetail}` : ""
+    }${entry.ackNote ? ` / ${entry.ackNote}` : ""
     }`;
   }
   if (entry.action === "canceled") {
-    return "SUBMISSION CANCELED";
+    return copy.timelineCanceledLabel;
   }
   if (entry.action === "reopened") {
-    return "SUBMISSION REOPENED";
+    return copy.timelineReopenedLabel;
   }
-  return `EVIDENCE NOTE: ${entry.evidenceNote ?? "-"}`;
+  return `${copy.timelineEvidencePrefix}: ${entry.evidenceNote ?? copy.dashLabel}`;
 }
 
 export default function PayrollYearEndFilingConsole() {
@@ -132,6 +138,9 @@ export default function PayrollYearEndFilingConsole() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const copy = payrollYearEndFilingCopyByLocale[locale];
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -220,22 +229,59 @@ export default function PayrollYearEndFilingConsole() {
 
   function buildFinalizePayload(apply: boolean) {
     return {
-      year: parseRequiredInt(year, "year"),
+      year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
       employeeId: employeeId.trim(),
       nonTaxableAnnualIncomeKrw: parseRequiredInt(
         nonTaxableAnnualIncomeKrw,
-        "nonTaxableAnnualIncomeKrw"
+        copy.nonTaxableAnnualIncomeLabel,
+        copy.statusFieldMustBeNonNegativeInteger
       ),
-      additionalTaxCreditKrw: parseRequiredInt(additionalTaxCreditKrw, "additionalTaxCreditKrw"),
-      annualIncomeTaxRate: parseRate(annualIncomeTaxRate, "annualIncomeTaxRate"),
-      localIncomeTaxRate: parseRate(localIncomeTaxRate, "localIncomeTaxRate"),
+      additionalTaxCreditKrw: parseRequiredInt(
+        additionalTaxCreditKrw,
+        copy.additionalTaxCreditLabel,
+        copy.statusFieldMustBeNonNegativeInteger
+      ),
+      annualIncomeTaxRate: parseRate(
+        annualIncomeTaxRate,
+        copy.annualIncomeTaxRateLabel,
+        copy.statusFieldRateBetweenZeroAndOne
+      ),
+      localIncomeTaxRate: parseRate(
+        localIncomeTaxRate,
+        copy.localIncomeTaxRateLabel,
+        copy.statusFieldRateBetweenZeroAndOne
+      ),
       deductionItems: {
-        personalPensionKrw: parseRequiredInt(personalPensionKrw, "personalPensionKrw"),
-        insurancePremiumKrw: parseRequiredInt(insurancePremiumKrw, "insurancePremiumKrw"),
-        medicalExpenseKrw: parseRequiredInt(medicalExpenseKrw, "medicalExpenseKrw"),
-        educationExpenseKrw: parseRequiredInt(educationExpenseKrw, "educationExpenseKrw"),
-        donationKrw: parseRequiredInt(donationKrw, "donationKrw"),
-        housingSavingsKrw: parseRequiredInt(housingSavingsKrw, "housingSavingsKrw")
+        personalPensionKrw: parseRequiredInt(
+          personalPensionKrw,
+          copy.personalPensionLabel,
+          copy.statusFieldMustBeNonNegativeInteger
+        ),
+        insurancePremiumKrw: parseRequiredInt(
+          insurancePremiumKrw,
+          copy.insurancePremiumLabel,
+          copy.statusFieldMustBeNonNegativeInteger
+        ),
+        medicalExpenseKrw: parseRequiredInt(
+          medicalExpenseKrw,
+          copy.medicalExpenseLabel,
+          copy.statusFieldMustBeNonNegativeInteger
+        ),
+        educationExpenseKrw: parseRequiredInt(
+          educationExpenseKrw,
+          copy.educationExpenseLabel,
+          copy.statusFieldMustBeNonNegativeInteger
+        ),
+        donationKrw: parseRequiredInt(
+          donationKrw,
+          copy.donationLabel,
+          copy.statusFieldMustBeNonNegativeInteger
+        ),
+        housingSavingsKrw: parseRequiredInt(
+          housingSavingsKrw,
+          copy.housingSavingsLabel,
+          copy.statusFieldMustBeNonNegativeInteger
+        )
       },
       apply,
       finalizedByNote: finalizedByNote.trim() || undefined
@@ -244,7 +290,7 @@ export default function PayrollYearEndFilingConsole() {
 
   async function runFinalization(apply: boolean) {
     try {
-      setPendingLabel(apply ? "year-end finalization apply" : "year-end finalization preview");
+      setPendingLabel(apply ? copy.pendingFinalizationApply : copy.pendingFinalizationPreview);
       const response = await fetch("/api/payroll/year-end/finalize-settlement", {
         method: "POST",
         headers: buildHeaders(),
@@ -254,24 +300,28 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: apply ? "finalize settlement" : "preview finalization",
+          label: apply ? copy.logFinalizeSettlement : copy.logPreviewFinalization,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setFinalization(body);
       setExpectedExportSettlementHash(body.settlement.settlementHash);
       setExpectedAckSettlementHash(body.settlement.settlementHash);
-      setStatusMessage(body.settlement.finalized ? `finalized ${body.settlement.finalizationId}` : "preview loaded");
+      setStatusMessage(
+        body.settlement.finalized
+          ? `${copy.statusFinalizedPrefix} ${body.settlement.finalizationId}`
+          : copy.statusPreviewLoaded
+      );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -279,9 +329,9 @@ export default function PayrollYearEndFilingConsole() {
 
   async function runFilingExport() {
     try {
-      setPendingLabel("year-end filing export");
+      setPendingLabel(copy.pendingFilingExport);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
         employeeId: employeeId.trim(),
         format: exportFormat,
         validationMode,
@@ -296,24 +346,24 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "export filing data",
+          label: copy.logExportFilingData,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setFilingExport(body);
       setStatusMessage(
-        `exported ${body.filingData.records.length} records (${body.filingData.validation.status})`
+        `${copy.statusExportedPrefix} ${body.filingData.records.length} (${body.filingData.validation.status})`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -321,9 +371,9 @@ export default function PayrollYearEndFilingConsole() {
 
   async function runSubmitFilingPackage() {
     try {
-      setPendingLabel("year-end filing package submit");
+      setPendingLabel(copy.pendingSubmitPackage);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
         employeeId: employeeId.trim(),
         format: exportFormat,
         validationMode,
@@ -340,24 +390,24 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "submit filing package",
+          label: copy.logSubmitFilingPackage,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
-      setStatusMessage(`submitted ${body.submission.submissionId}`);
+      setStatusMessage(`${copy.statusSubmittedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -365,8 +415,8 @@ export default function PayrollYearEndFilingConsole() {
 
   async function runRefreshSubmissions(settlementHashFilterOverride?: string) {
     try {
-      setPendingLabel("year-end filing submissions list");
-      const requestYear = parseRequiredInt(year, "year");
+      setPendingLabel(copy.pendingListSubmissions);
+      const requestYear = parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger);
       const requestEmployeeId = employeeId.trim();
       const query = new URLSearchParams({
         year: String(requestYear),
@@ -406,25 +456,25 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "list filing submissions",
+          label: copy.logListFilingSubmissions,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setSubmissionListSummary(body.summary);
       setSubmissions(body.submissions);
       setStatusMessage(
-        `loaded ${body.submissions.length}/${body.summary.totalCount} submissions (filters/search/sort applied)`
+        `${copy.statusLoadedSubmissionsPrefix} ${body.submissions.length}/${body.summary.totalCount}`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -443,7 +493,7 @@ export default function PayrollYearEndFilingConsole() {
 
   async function runLoadAckCatalog() {
     try {
-      setPendingLabel("year-end filing ack catalog");
+      setPendingLabel(copy.pendingAckCatalog);
       const response = await fetch("/api/payroll/year-end/filing-ack-catalog", {
         method: "GET",
         headers: buildHeaders()
@@ -452,24 +502,24 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "list filing ack catalog",
+          label: copy.logListAckCatalog,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setAckCatalog(body);
       setStatusMessage(
-        `loaded ack catalog (${body.acceptedCodes.length}/${body.rejectedCodes.length}/${body.rejectionReasons.length})`
+        `${copy.statusLoadedAckCatalogPrefix} (${body.acceptedCodes.length}/${body.rejectedCodes.length}/${body.rejectionReasons.length})`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -481,19 +531,19 @@ export default function PayrollYearEndFilingConsole() {
   ) {
     const submissionId = (submissionIdOverride ?? ackSubmissionId).trim();
     if (!submissionId) {
-      setStatusMessage("ack submission ID is required");
+      setStatusMessage(copy.statusAckSubmissionIdRequired);
       return;
     }
 
     try {
-      setPendingLabel("year-end filing package ack");
+      setPendingLabel(copy.pendingAckSubmission);
       const requestAckStatus = ackStatusOverride ?? ackStatus;
       const requestAckCode =
         requestAckStatus === "accepted" && ackStatusOverride === "accepted"
           ? ackCatalog?.acceptedCodes[0]?.code ?? "ACK-OK"
           : ackCode.trim() || undefined;
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
         employeeId: employeeId.trim(),
         expectedSettlementHash: expectedAckSettlementHash.trim() || undefined,
         ackStatus: requestAckStatus,
@@ -516,15 +566,15 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "ack filing package",
+          label: copy.logAcknowledgeSubmission,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setSubmissions((prev) =>
@@ -535,10 +585,10 @@ export default function PayrollYearEndFilingConsole() {
       if (body.submission.ack?.ackStatus === "rejected") {
         setResubmitSubmissionId(body.submission.submissionId);
       }
-      setStatusMessage(`acknowledged ${body.submission.submissionId}`);
+      setStatusMessage(`${copy.statusAcknowledgedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -547,14 +597,14 @@ export default function PayrollYearEndFilingConsole() {
   async function runResubmitSubmission(submissionIdOverride?: string) {
     const submissionId = (submissionIdOverride ?? resubmitSubmissionId).trim();
     if (!submissionId) {
-      setStatusMessage("resubmit submission ID is required");
+      setStatusMessage(copy.statusResubmitSubmissionIdRequired);
       return;
     }
 
     try {
-      setPendingLabel("year-end filing package resubmit");
+      setPendingLabel(copy.pendingResubmitSubmission);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
         employeeId: employeeId.trim(),
         format: exportFormat,
         validationMode,
@@ -575,25 +625,25 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "resubmit filing package",
+          label: copy.logResubmitSubmission,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
       setResubmitSubmissionId(body.submission.submissionId);
-      setStatusMessage(`resubmitted ${body.submission.submissionId}`);
+      setStatusMessage(`${copy.statusResubmittedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -602,14 +652,14 @@ export default function PayrollYearEndFilingConsole() {
   async function runCancelSubmission(submissionIdOverride?: string) {
     const submissionId = (submissionIdOverride ?? cancelSubmissionId).trim();
     if (!submissionId) {
-      setStatusMessage("cancel submission ID is required");
+      setStatusMessage(copy.statusCancelSubmissionIdRequired);
       return;
     }
 
     try {
-      setPendingLabel("year-end filing package cancel");
+      setPendingLabel(copy.pendingCancelSubmission);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
         employeeId: employeeId.trim()
       };
       const response = await fetch(
@@ -624,25 +674,25 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "cancel filing package",
+          label: copy.logCancelSubmission,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setSubmissions((prev) =>
         prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
       );
       setReopenSubmissionId(body.submission.submissionId);
-      setStatusMessage(`canceled ${body.submission.submissionId}`);
+      setStatusMessage(`${copy.statusCanceledPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -651,14 +701,14 @@ export default function PayrollYearEndFilingConsole() {
   async function runReopenSubmission(submissionIdOverride?: string) {
     const submissionId = (submissionIdOverride ?? reopenSubmissionId).trim();
     if (!submissionId) {
-      setStatusMessage("reopen submission ID is required");
+      setStatusMessage(copy.statusReopenSubmissionIdRequired);
       return;
     }
 
     try {
-      setPendingLabel("year-end filing package reopen");
+      setPendingLabel(copy.pendingReopenSubmission);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
         employeeId: employeeId.trim()
       };
       const response = await fetch(
@@ -673,15 +723,15 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "reopen filing package",
+          label: copy.logReopenSubmission,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setSubmissions((prev) =>
@@ -689,10 +739,10 @@ export default function PayrollYearEndFilingConsole() {
       );
       setCancelSubmissionId(body.submission.submissionId);
       setAckSubmissionId(body.submission.submissionId);
-      setStatusMessage(`reopened ${body.submission.submissionId}`);
+      setStatusMessage(`${copy.statusReopenedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -701,13 +751,13 @@ export default function PayrollYearEndFilingConsole() {
   async function runLoadSubmissionTimeline(submissionIdOverride?: string) {
     const submissionId = (submissionIdOverride ?? timelineSubmissionId).trim();
     if (!submissionId) {
-      setStatusMessage("timeline submission ID is required");
+      setStatusMessage(copy.statusTimelineSubmissionIdRequired);
       return;
     }
 
     try {
-      setPendingLabel("year-end filing submission timeline");
-      const requestYear = parseRequiredInt(year, "year");
+      setPendingLabel(copy.pendingLoadTimeline);
+      const requestYear = parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger);
       const requestEmployeeId = employeeId.trim();
       const response = await fetch(
         `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/timeline?year=${requestYear}&employeeId=${encodeURIComponent(requestEmployeeId)}`,
@@ -720,15 +770,15 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "list filing submission timeline",
+          label: copy.logListSubmissionTimeline,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setTimelineSubmissionId(submissionId);
@@ -736,10 +786,10 @@ export default function PayrollYearEndFilingConsole() {
       setSubmissions((prev) =>
         prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
       );
-      setStatusMessage(`loaded timeline ${body.timeline.length} events`);
+      setStatusMessage(`${copy.statusLoadedTimelinePrefix} ${body.timeline.length}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -748,14 +798,14 @@ export default function PayrollYearEndFilingConsole() {
   async function runAddEvidenceNote() {
     const submissionId = timelineSubmissionId.trim();
     if (!submissionId) {
-      setStatusMessage("timeline submission ID is required for evidence note");
+      setStatusMessage(copy.statusTimelineSubmissionIdRequiredForEvidence);
       return;
     }
 
     try {
-      setPendingLabel("year-end filing evidence note");
+      setPendingLabel(copy.pendingAddEvidence);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
         employeeId: employeeId.trim(),
         note: evidenceNote.trim()
       };
@@ -771,21 +821,21 @@ export default function PayrollYearEndFilingConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "add filing evidence note",
+          label: copy.logAddEvidenceNote,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
-      setStatusMessage(`added evidence note for ${body.evidenceNote.submissionId}`);
+      setStatusMessage(`${copy.statusAddedEvidencePrefix} ${body.evidenceNote.submissionId}`);
       await runLoadSubmissionTimeline(submissionId);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -794,47 +844,47 @@ export default function PayrollYearEndFilingConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End Finalization, Filing Search/Sort, ACK Catalog, and Lifecycle Console</h1>
-        <p>Finalize year-end settlement, manage filing submissions with status/search/sort filters plus quick actions, and trace timeline/evidence notes and cancel/reopen transitions per submission.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>Input</h2>
+          <h2>{copy.inputTitle}</h2>
           <div className="input-grid">
-            <label>Year<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>Employee ID<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
-            <label>Non-taxable Annual Income<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
-            <label>Additional Tax Credit<input value={additionalTaxCreditKrw} onChange={(event) => setAdditionalTaxCreditKrw(event.target.value)} /></label>
-            <label>Annual Income Tax Rate<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
-            <label>Local Income Tax Rate<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
-            <label>Personal Pension<input value={personalPensionKrw} onChange={(event) => setPersonalPensionKrw(event.target.value)} /></label>
-            <label>Insurance Premium<input value={insurancePremiumKrw} onChange={(event) => setInsurancePremiumKrw(event.target.value)} /></label>
-            <label>Medical Expense<input value={medicalExpenseKrw} onChange={(event) => setMedicalExpenseKrw(event.target.value)} /></label>
-            <label>Education Expense<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
-            <label>Donation<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
-            <label>Housing Savings<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
-            <label>Export Format
+            <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
+            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
+            <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
+            <label>{copy.additionalTaxCreditLabel}<input value={additionalTaxCreditKrw} onChange={(event) => setAdditionalTaxCreditKrw(event.target.value)} /></label>
+            <label>{copy.annualIncomeTaxRateLabel}<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
+            <label>{copy.localIncomeTaxRateLabel}<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
+            <label>{copy.personalPensionLabel}<input value={personalPensionKrw} onChange={(event) => setPersonalPensionKrw(event.target.value)} /></label>
+            <label>{copy.insurancePremiumLabel}<input value={insurancePremiumKrw} onChange={(event) => setInsurancePremiumKrw(event.target.value)} /></label>
+            <label>{copy.medicalExpenseLabel}<input value={medicalExpenseKrw} onChange={(event) => setMedicalExpenseKrw(event.target.value)} /></label>
+            <label>{copy.educationExpenseLabel}<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
+            <label>{copy.donationLabel}<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
+            <label>{copy.housingSavingsLabel}<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
+            <label>{copy.exportFormatLabel}
               <select
                 value={exportFormat}
                 onChange={(event) =>
                   setExportFormat(event.target.value as "json" | "csv" | "jsonl" | "hometax_csv")
                 }
               >
-                <option value="json">json</option>
-                <option value="csv">csv</option>
-                <option value="jsonl">jsonl</option>
-                <option value="hometax_csv">hometax_csv</option>
+                <option value="json">{copy.exportFormatOptionLabels.json}</option>
+                <option value="csv">{copy.exportFormatOptionLabels.csv}</option>
+                <option value="jsonl">{copy.exportFormatOptionLabels.jsonl}</option>
+                <option value="hometax_csv">{copy.exportFormatOptionLabels.hometax_csv}</option>
               </select>
             </label>
-            <label>Validation Mode
+            <label>{copy.validationModeLabel}
               <select value={validationMode} onChange={(event) => setValidationMode(event.target.value as "basic" | "strict")}>
-                <option value="basic">basic</option>
-                <option value="strict">strict</option>
+                <option value="basic">{copy.validationModeOptionLabels.basic}</option>
+                <option value="strict">{copy.validationModeOptionLabels.strict}</option>
               </select>
             </label>
-            <label>Submission Transport
+            <label>{copy.submissionTransportLabel}
               <select
                 value={submissionTransport}
                 onChange={(event) =>
@@ -843,12 +893,12 @@ export default function PayrollYearEndFilingConsole() {
                   )
                 }
               >
-                <option value="manual_portal">manual_portal</option>
-                <option value="hometax_upload">hometax_upload</option>
-                <option value="nts_api_mock">nts_api_mock</option>
+                <option value="manual_portal">{copy.submissionTransportOptionLabels.manual_portal}</option>
+                <option value="hometax_upload">{copy.submissionTransportOptionLabels.hometax_upload}</option>
+                <option value="nts_api_mock">{copy.submissionTransportOptionLabels.nts_api_mock}</option>
               </select>
             </label>
-            <label>Submission Status Filter
+            <label>{copy.submissionStatusFilterLabel}
               <select
                 value={submissionStatusFilter}
                 onChange={(event) =>
@@ -857,13 +907,13 @@ export default function PayrollYearEndFilingConsole() {
                   )
                 }
               >
-                <option value="all">all</option>
-                <option value="submitted">submitted</option>
-                <option value="acknowledged">acknowledged</option>
-                <option value="canceled">canceled</option>
+                <option value="all">{copy.submissionStatusOptionLabels.all}</option>
+                <option value="submitted">{copy.submissionStatusOptionLabels.submitted}</option>
+                <option value="acknowledged">{copy.submissionStatusOptionLabels.acknowledged}</option>
+                <option value="canceled">{copy.submissionStatusOptionLabels.canceled}</option>
               </select>
             </label>
-            <label>ACK Status Filter
+            <label>{copy.ackStatusFilterLabel}
               <select
                 value={submissionAckStatusFilter}
                 onChange={(event) =>
@@ -872,13 +922,13 @@ export default function PayrollYearEndFilingConsole() {
                   )
                 }
               >
-                <option value="all">all</option>
-                <option value="accepted">accepted</option>
-                <option value="rejected">rejected</option>
-                <option value="none">none</option>
+                <option value="all">{copy.ackStatusOptionLabels.all}</option>
+                <option value="accepted">{copy.ackStatusOptionLabels.accepted}</option>
+                <option value="rejected">{copy.ackStatusOptionLabels.rejected}</option>
+                <option value="none">{copy.ackStatusOptionLabels.none}</option>
               </select>
             </label>
-            <label>Validation Status Filter
+            <label>{copy.validationStatusFilterLabel}
               <select
                 value={submissionValidationStatusFilter}
                 onChange={(event) =>
@@ -887,12 +937,12 @@ export default function PayrollYearEndFilingConsole() {
                   )
                 }
               >
-                <option value="all">all</option>
-                <option value="pass">pass</option>
-                <option value="fail">fail</option>
+                <option value="all">{copy.validationStatusOptionLabels.all}</option>
+                <option value="pass">{copy.validationStatusOptionLabels.pass}</option>
+                <option value="fail">{copy.validationStatusOptionLabels.fail}</option>
               </select>
             </label>
-            <label>Transport Filter
+            <label>{copy.transportFilterLabel}
               <select
                 value={submissionTransportFilter}
                 onChange={(event) =>
@@ -901,42 +951,42 @@ export default function PayrollYearEndFilingConsole() {
                   )
                 }
               >
-                <option value="all">all</option>
-                <option value="manual_portal">manual_portal</option>
-                <option value="hometax_upload">hometax_upload</option>
-                <option value="nts_api_mock">nts_api_mock</option>
+                <option value="all">{copy.submissionTransportOptionLabels.all}</option>
+                <option value="manual_portal">{copy.submissionTransportOptionLabels.manual_portal}</option>
+                <option value="hometax_upload">{copy.submissionTransportOptionLabels.hometax_upload}</option>
+                <option value="nts_api_mock">{copy.submissionTransportOptionLabels.nts_api_mock}</option>
               </select>
             </label>
-            <label>Submission Search
+            <label>{copy.submissionSearchLabel}
               <input
                 value={submissionSearch}
                 onChange={(event) => setSubmissionSearch(event.target.value)}
-                placeholder="submissionId, ackCode, note"
+                placeholder={copy.submissionSearchPlaceholder}
               />
             </label>
-            <label>Settlement Hash Filter
+            <label>{copy.settlementHashFilterLabel}
               <input
                 value={submissionSettlementHashFilter}
                 onChange={(event) => setSubmissionSettlementHashFilter(event.target.value)}
-                placeholder="hash prefix (8-64 hex)"
+                placeholder={copy.settlementHashFilterPlaceholder}
               />
             </label>
-            <label>Submission Sort By
+            <label>{copy.submissionSortByLabel}
               <select
                 value={submissionSortBy}
                 onChange={(event) =>
                   setSubmissionSortBy(event.target.value as PayrollYearEndFilingSubmissionSortBy)
                 }
               >
-                <option value="submittedAt">submittedAt</option>
-                <option value="attempt">attempt</option>
-                <option value="status">status</option>
-                <option value="ackStatus">ackStatus</option>
-                <option value="validationStatus">validationStatus</option>
-                <option value="transport">transport</option>
+                <option value="submittedAt">{copy.submissionSortByOptionLabels.submittedAt}</option>
+                <option value="attempt">{copy.submissionSortByOptionLabels.attempt}</option>
+                <option value="status">{copy.submissionSortByOptionLabels.status}</option>
+                <option value="ackStatus">{copy.submissionSortByOptionLabels.ackStatus}</option>
+                <option value="validationStatus">{copy.submissionSortByOptionLabels.validationStatus}</option>
+                <option value="transport">{copy.submissionSortByOptionLabels.transport}</option>
               </select>
             </label>
-            <label>Submission Sort Direction
+            <label>{copy.submissionSortDirectionLabel}
               <select
                 value={submissionSortDirection}
                 onChange={(event) =>
@@ -945,8 +995,8 @@ export default function PayrollYearEndFilingConsole() {
                   )
                 }
               >
-                <option value="desc">desc</option>
-                <option value="asc">asc</option>
+                <option value="desc">{copy.submissionSortDirectionOptionLabels.desc}</option>
+                <option value="asc">{copy.submissionSortDirectionOptionLabels.asc}</option>
               </select>
             </label>
           </div>
@@ -960,7 +1010,7 @@ export default function PayrollYearEndFilingConsole() {
                 }}
                 disabled={pendingLabel !== null}
               >
-                Clear Hash Filter
+                {copy.clearHashFilterAction}
               </button>
               {settlementHashFilterChips.map((chip) => (
                 <button
@@ -972,35 +1022,35 @@ export default function PayrollYearEndFilingConsole() {
                   }}
                   disabled={pendingLabel !== null}
                 >
-                  hash:{chip}
+                  {copy.hashPrefixLabel}:{chip}
                 </button>
               ))}
             </div>
           ) : null}
-          <label>Finalization Note<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
-          <label>Expected Settlement Hash (Export/Submit Guard)
+          <label>{copy.finalizationNoteLabel}<input value={finalizedByNote} onChange={(event) => setFinalizedByNote(event.target.value)} /></label>
+          <label>{copy.expectedSettlementHashExportLabel}
             <input
               value={expectedExportSettlementHash}
               onChange={(event) => setExpectedExportSettlementHash(event.target.value)}
-              placeholder="64-char sha256 hash (optional)"
+              placeholder={copy.expectedSettlementHashPlaceholder}
             />
           </label>
-          <label>Expected Settlement Hash (ACK Guard)
+          <label>{copy.expectedSettlementHashAckLabel}
             <input
               value={expectedAckSettlementHash}
               onChange={(event) => setExpectedAckSettlementHash(event.target.value)}
-              placeholder="64-char sha256 hash (optional)"
+              placeholder={copy.expectedSettlementHashPlaceholder}
             />
           </label>
-          <label>Submission Note<input value={submissionNote} onChange={(event) => setSubmissionNote(event.target.value)} /></label>
-          <label>Ack Submission ID<input value={ackSubmissionId} onChange={(event) => setAckSubmissionId(event.target.value)} /></label>
-          <label>Ack Status
+          <label>{copy.submissionNoteLabel}<input value={submissionNote} onChange={(event) => setSubmissionNote(event.target.value)} /></label>
+          <label>{copy.ackSubmissionIdLabel}<input value={ackSubmissionId} onChange={(event) => setAckSubmissionId(event.target.value)} /></label>
+          <label>{copy.ackStatusLabel}
             <select value={ackStatus} onChange={(event) => setAckStatus(event.target.value as "accepted" | "rejected")}>
-              <option value="accepted">accepted</option>
-              <option value="rejected">rejected</option>
+              <option value="accepted">{copy.ackStatusOptionLabels.accepted}</option>
+              <option value="rejected">{copy.ackStatusOptionLabels.rejected}</option>
             </select>
           </label>
-          <label>Ack Code
+          <label>{copy.ackCodeLabel}
             <select value={ackCode} onChange={(event) => setAckCode(event.target.value)}>
               {ackCodeOptions.length === 0 ? (
                 <option value={ackCode}>{ackCode || "ACK-OK"}</option>
@@ -1015,7 +1065,7 @@ export default function PayrollYearEndFilingConsole() {
           </label>
           {ackStatus === "rejected" ? (
             <>
-              <label>Rejection Reason Code
+              <label>{copy.rejectionReasonCodeLabel}
                 <select
                   value={rejectionReasonCode}
                   onChange={(event) => setRejectionReasonCode(event.target.value)}
@@ -1033,108 +1083,108 @@ export default function PayrollYearEndFilingConsole() {
                   )}
                 </select>
               </label>
-              <label>Rejection Detail<input value={rejectionReasonDetail} onChange={(event) => setRejectionReasonDetail(event.target.value)} /></label>
+              <label>{copy.rejectionDetailLabel}<input value={rejectionReasonDetail} onChange={(event) => setRejectionReasonDetail(event.target.value)} /></label>
             </>
           ) : null}
-          <label>Ack Note<input value={ackNote} onChange={(event) => setAckNote(event.target.value)} /></label>
-          <label>Resubmit Submission ID<input value={resubmitSubmissionId} onChange={(event) => setResubmitSubmissionId(event.target.value)} /></label>
-          <label>Resubmission Reason<input value={resubmissionReason} onChange={(event) => setResubmissionReason(event.target.value)} /></label>
-          <label>Cancel Submission ID<input value={cancelSubmissionId} onChange={(event) => setCancelSubmissionId(event.target.value)} /></label>
-          <label>Reopen Submission ID<input value={reopenSubmissionId} onChange={(event) => setReopenSubmissionId(event.target.value)} /></label>
-          <label>Timeline Submission ID<input value={timelineSubmissionId} onChange={(event) => setTimelineSubmissionId(event.target.value)} /></label>
-          <label>Evidence Note<input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></label>
-          <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
-          <label>Actor ID (dev fallback)<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
-          <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
+          <label>{copy.ackNoteLabel}<input value={ackNote} onChange={(event) => setAckNote(event.target.value)} /></label>
+          <label>{copy.resubmitSubmissionIdLabel}<input value={resubmitSubmissionId} onChange={(event) => setResubmitSubmissionId(event.target.value)} /></label>
+          <label>{copy.resubmissionReasonLabel}<input value={resubmissionReason} onChange={(event) => setResubmissionReason(event.target.value)} /></label>
+          <label>{copy.cancelSubmissionIdLabel}<input value={cancelSubmissionId} onChange={(event) => setCancelSubmissionId(event.target.value)} /></label>
+          <label>{copy.reopenSubmissionIdLabel}<input value={reopenSubmissionId} onChange={(event) => setReopenSubmissionId(event.target.value)} /></label>
+          <label>{copy.timelineSubmissionIdLabel}<input value={timelineSubmissionId} onChange={(event) => setTimelineSubmissionId(event.target.value)} /></label>
+          <label>{copy.evidenceNoteLabel}<input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
+          <label>{copy.actorIdFallbackLabel}<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
+          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void runFinalization(false)} disabled={pendingLabel !== null}>Preview Finalization</button>
-            <button className="btn btn-primary" onClick={() => void runFinalization(true)} disabled={pendingLabel !== null}>Finalize Settlement</button>
-            <button className="btn btn-secondary" onClick={() => void runFilingExport()} disabled={pendingLabel !== null}>Export Filing Data</button>
-            <button className="btn btn-primary" onClick={() => void runSubmitFilingPackage()} disabled={pendingLabel !== null}>Submit Filing Package</button>
-            <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>Acknowledge Submission</button>
-            <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>Resubmit Submission</button>
-            <button className="btn btn-secondary" onClick={() => void runCancelSubmission()} disabled={pendingLabel !== null}>Cancel Submission</button>
-            <button className="btn btn-secondary" onClick={() => void runReopenSubmission()} disabled={pendingLabel !== null}>Reopen Submission</button>
-            <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>Refresh Submissions</button>
-            <button className="btn btn-secondary" onClick={resetSubmissionFilters} disabled={pendingLabel !== null}>Reset Filters</button>
-            <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>Load ACK Catalog</button>
-            <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>Load Submission Timeline</button>
-            <button className="btn btn-secondary" onClick={() => void runAddEvidenceNote()} disabled={pendingLabel !== null}>Add Evidence Note</button>
+            <button className="btn btn-secondary" onClick={() => void runFinalization(false)} disabled={pendingLabel !== null}>{copy.previewFinalizationAction}</button>
+            <button className="btn btn-primary" onClick={() => void runFinalization(true)} disabled={pendingLabel !== null}>{copy.finalizeSettlementAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runFilingExport()} disabled={pendingLabel !== null}>{copy.exportFilingDataAction}</button>
+            <button className="btn btn-primary" onClick={() => void runSubmitFilingPackage()} disabled={pendingLabel !== null}>{copy.submitFilingPackageAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runAcknowledgeSubmission()} disabled={pendingLabel !== null}>{copy.acknowledgeSubmissionAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runResubmitSubmission()} disabled={pendingLabel !== null}>{copy.resubmitSubmissionAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runCancelSubmission()} disabled={pendingLabel !== null}>{copy.cancelSubmissionAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runReopenSubmission()} disabled={pendingLabel !== null}>{copy.reopenSubmissionAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>{copy.refreshSubmissionsAction}</button>
+            <button className="btn btn-secondary" onClick={resetSubmissionFilters} disabled={pendingLabel !== null}>{copy.resetFiltersAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>{copy.loadAckCatalogAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runLoadSubmissionTimeline()} disabled={pendingLabel !== null}>{copy.loadSubmissionTimelineAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runAddEvidenceNote()} disabled={pendingLabel !== null}>{copy.addEvidenceNoteAction}</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
 
         <article className="panel">
-          <h2>Finalization</h2>
-          {!finalization ? <p className="small">No finalization summary yet.</p> : (
+          <h2>{copy.finalizationPanelTitle}</h2>
+          {!finalization ? <p className="small">{copy.noFinalizationSummaryYet}</p> : (
             <ul className="simple-list">
-              <li><span>Can Finalize / Finalized</span><strong>{finalization.settlement.canFinalize ? "YES" : "NO"} / {finalization.settlement.finalized ? "YES" : "NO"}</strong></li>
-              <li><span>Finalization ID</span><strong>{finalization.settlement.finalizationId}</strong></li>
-              <li><span>Settlement Hash</span><strong>{finalization.settlement.settlementHash}</strong></li>
-              <li><span>Tax Liability</span><strong>{formatKrw(finalization.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>Withholding Delta</span><strong>{formatKrw(finalization.settlement.settlementKrw.withholdingDeltaKrw)}</strong></li>
-              <li><span>Applied Deduction</span><strong>{formatKrw(finalization.settlement.deductionItemsKrw.appliedIncomeDeductionKrw)}</strong></li>
-              <li><span>Blocking Reasons</span><strong>{finalization.settlement.blockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.canFinalizeFinalizedLabel}</span><strong>{finalization.settlement.canFinalize ? copy.yesLabel : copy.noLabel} / {finalization.settlement.finalized ? copy.yesLabel : copy.noLabel}</strong></li>
+              <li><span>{copy.finalizationIdLabel}</span><strong>{finalization.settlement.finalizationId}</strong></li>
+              <li><span>{copy.settlementHashLabel}</span><strong>{finalization.settlement.settlementHash}</strong></li>
+              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(finalization.settlement.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(finalization.settlement.settlementKrw.withholdingDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.appliedDeductionLabel}</span><strong>{formatKrw(finalization.settlement.deductionItemsKrw.appliedIncomeDeductionKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.blockingReasonsLabel}</span><strong>{finalization.settlement.blockingReasons.join(" | ") || copy.dashLabel}</strong></li>
             </ul>
           )}
         </article>
 
         <article className="panel">
-          <h2>Filing Export</h2>
-          {!filingExport ? <p className="small">No export yet.</p> : (
+          <h2>{copy.filingExportPanelTitle}</h2>
+          {!filingExport ? <p className="small">{copy.noExportYet}</p> : (
             <ul className="simple-list">
-              <li><span>Finalization ID</span><strong>{filingExport.filingData.finalizationId}</strong></li>
-              <li><span>Settlement Hash</span><strong>{filingExport.filingData.settlementHash}</strong></li>
-              <li><span>Format</span><strong>{filingExport.filingData.format}</strong></li>
-              <li><span>Validation Mode</span><strong>{filingExport.filingData.validationMode}</strong></li>
-              <li><span>Validation Status</span><strong>{filingExport.filingData.validation.status}</strong></li>
-              <li><span>Exported Records</span><strong>{filingExport.filingData.records.length}</strong></li>
-              <li><span>Tax Liability</span><strong>{formatKrw(filingExport.filingData.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>Withholding Delta</span><strong>{formatKrw(filingExport.filingData.settlementKrw.withholdingDeltaKrw)}</strong></li>
-              <li><span>CSV</span><strong>{filingExport.filingData.csv ? "ready" : "-"}</strong></li>
-              <li><span>Artifact</span><strong>{filingExport.filingData.artifact.fileName}</strong></li>
-              <li><span>Checksum</span><strong>{filingExport.filingData.artifact.checksumSha256.slice(0, 16)}...</strong></li>
-              <li><span>Validation Issues</span><strong>{filingExport.filingData.validation.issues.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.finalizationIdLabel}</span><strong>{filingExport.filingData.finalizationId}</strong></li>
+              <li><span>{copy.settlementHashLabel}</span><strong>{filingExport.filingData.settlementHash}</strong></li>
+              <li><span>{copy.formatLabel}</span><strong>{copy.exportFormatOptionLabels[filingExport.filingData.format] ?? filingExport.filingData.format}</strong></li>
+              <li><span>{copy.validationModeDisplayLabel}</span><strong>{copy.validationModeOptionLabels[filingExport.filingData.validationMode] ?? filingExport.filingData.validationMode}</strong></li>
+              <li><span>{copy.validationStatusLabel}</span><strong>{copy.validationStatusOptionLabels[filingExport.filingData.validation.status] ?? filingExport.filingData.validation.status}</strong></li>
+              <li><span>{copy.exportedRecordsLabel}</span><strong>{filingExport.filingData.records.length}</strong></li>
+              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(filingExport.filingData.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(filingExport.filingData.settlementKrw.withholdingDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.csvLabel}</span><strong>{filingExport.filingData.csv ? copy.readyLabel : copy.dashLabel}</strong></li>
+              <li><span>{copy.artifactLabel}</span><strong>{filingExport.filingData.artifact.fileName}</strong></li>
+              <li><span>{copy.checksumLabel}</span><strong>{filingExport.filingData.artifact.checksumSha256.slice(0, 16)}...</strong></li>
+              <li><span>{copy.validationIssuesLabel}</span><strong>{filingExport.filingData.validation.issues.join(" | ") || copy.dashLabel}</strong></li>
             </ul>
           )}
         </article>
 
         <article className="panel">
-          <h2>API Logs</h2>
-          <p className="small">total {stats.total} / success {stats.success} / fail {stats.fail}{pendingLabel ? ` / running ${pendingLabel}` : ""}</p>
-          {logs.length === 0 ? <p className="small">No API call yet.</p> : (
+          <h2>{copy.apiLogsPanelTitle}</h2>
+          <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
+          {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/admin/payroll-year-end-filing/ops" className="btn btn-secondary">Open Filing Ops Dashboard</Link>
-            <Link href="/admin/payroll-year-end" className="btn btn-secondary">Back to Year-End</Link>
-            <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
+            <Link href="/admin/payroll-year-end-filing/ops" className="btn btn-secondary">{copy.openFilingOpsDashboardAction}</Link>
+            <Link href="/admin/payroll-year-end" className="btn btn-secondary">{copy.backToYearEndAction}</Link>
+            <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
           </div>
         </article>
 
         <article className="panel">
-          <h2>Filing Submissions</h2>
+          <h2>{copy.filingSubmissionsPanelTitle}</h2>
           {!submissionListSummary ? (
-            <p className="small">No submission summary yet. Run Refresh Submissions.</p>
+            <p className="small">{copy.noSubmissionSummaryYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>Total / Filtered</span><strong>{submissionListSummary.totalCount} / {submissionListSummary.filteredCount}</strong></li>
-              <li><span>Status</span><strong>submitted {submissionListSummary.statusCounts.submitted} / acknowledged {submissionListSummary.statusCounts.acknowledged} / canceled {submissionListSummary.statusCounts.canceled}</strong></li>
-              <li><span>ACK Status</span><strong>accepted {submissionListSummary.ackStatusCounts.accepted} / rejected {submissionListSummary.ackStatusCounts.rejected} / none {submissionListSummary.ackStatusCounts.none}</strong></li>
-              <li><span>Validation</span><strong>pass {submissionListSummary.validationStatusCounts.pass} / fail {submissionListSummary.validationStatusCounts.fail}</strong></li>
-              <li><span>Transport</span><strong>manual {submissionListSummary.transportCounts.manual_portal} / hometax {submissionListSummary.transportCounts.hometax_upload} / nts_api_mock {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
-              <li><span>Active Filters</span><strong>status={submissionStatusFilter}, ackStatus={submissionAckStatusFilter}, validation={submissionValidationStatusFilter}, transport={submissionTransportFilter}, settlementHash={submissionSettlementHashFilter.trim() || "-"}, search={submissionSearch.trim() || "-"}, sort={submissionSortBy}:{submissionSortDirection}</strong></li>
+              <li><span>{copy.totalFilteredLabel}</span><strong>{submissionListSummary.totalCount} / {submissionListSummary.filteredCount}</strong></li>
+              <li><span>{copy.statusSummaryLabel}</span><strong>{copy.submissionStatusOptionLabels.submitted} {submissionListSummary.statusCounts.submitted} / {copy.submissionStatusOptionLabels.acknowledged} {submissionListSummary.statusCounts.acknowledged} / {copy.submissionStatusOptionLabels.canceled} {submissionListSummary.statusCounts.canceled}</strong></li>
+              <li><span>{copy.ackStatusSummaryLabel}</span><strong>{copy.ackStatusOptionLabels.accepted} {submissionListSummary.ackStatusCounts.accepted} / {copy.ackStatusOptionLabels.rejected} {submissionListSummary.ackStatusCounts.rejected} / {copy.ackStatusOptionLabels.none} {submissionListSummary.ackStatusCounts.none}</strong></li>
+              <li><span>{copy.validationSummaryLabel}</span><strong>{copy.validationStatusOptionLabels.pass} {submissionListSummary.validationStatusCounts.pass} / {copy.validationStatusOptionLabels.fail} {submissionListSummary.validationStatusCounts.fail}</strong></li>
+              <li><span>{copy.transportSummaryLabel}</span><strong>{copy.transportShortManualLabel} {submissionListSummary.transportCounts.manual_portal} / {copy.transportShortHometaxLabel} {submissionListSummary.transportCounts.hometax_upload} / nts_api_mock {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
+              <li><span>{copy.activeFiltersLabel}</span><strong>status={copy.submissionStatusOptionLabels[submissionStatusFilter] ?? submissionStatusFilter}, ackStatus={copy.ackStatusOptionLabels[submissionAckStatusFilter] ?? submissionAckStatusFilter}, validation={copy.validationStatusOptionLabels[submissionValidationStatusFilter] ?? submissionValidationStatusFilter}, transport={copy.submissionTransportOptionLabels[submissionTransportFilter] ?? submissionTransportFilter}, settlementHash={submissionSettlementHashFilter.trim() || copy.dashLabel}, search={submissionSearch.trim() || copy.dashLabel}, sort={copy.submissionSortByOptionLabels[submissionSortBy] ?? submissionSortBy}:{copy.submissionSortDirectionOptionLabels[submissionSortDirection] ?? submissionSortDirection}</strong></li>
             </ul>
           )}
-          {submissions.length === 0 ? <p className="small">No filing submission yet.</p> : (
+          {submissions.length === 0 ? <p className="small">{copy.noFilingSubmissionYet}</p> : (
             <ul className="log-list">
               {submissions.map((submission) => (
                 <li key={submission.submissionId}>
@@ -1147,13 +1197,13 @@ export default function PayrollYearEndFilingConsole() {
                           : "small"
                     }
                   >
-                    {submission.status.toUpperCase()}
+                    {copy.submissionStatusBadgeLabels[submission.status] ?? submission.status}
                   </span>{" "}
-                  {submission.submissionId} / attempt {submission.attempt} / {submission.transport} / {submission.format} / {submission.validationMode}
-                  {submission.settlementHash ? ` / hash ${submission.settlementHash.slice(0, 12)}...` : ""}
-                  {submission.resubmissionOfSubmissionId ? ` / resubmissionOf ${submission.resubmissionOfSubmissionId}` : ""}
+                  {submission.submissionId} / {copy.timelineAttemptLabel} {submission.attempt} / {copy.submissionTransportOptionLabels[submission.transport] ?? submission.transport} / {copy.exportFormatOptionLabels[submission.format] ?? submission.format} / {copy.validationModeOptionLabels[submission.validationMode] ?? submission.validationMode}
+                  {submission.settlementHash ? ` / ${copy.hashPrefixLabel} ${submission.settlementHash.slice(0, 12)}...` : ""}
+                  {submission.resubmissionOfSubmissionId ? ` / ${copy.resubmissionOfLabel} ${submission.resubmissionOfSubmissionId}` : ""}
                   {submission.ack
-                    ? ` / ACK ${submission.ack.ackStatus}${submission.ack.ackCode ? `:${submission.ack.ackCode}` : ""}${
+                    ? ` / ${copy.timelineAckPrefix} ${copy.ackStatusOptionLabels[submission.ack.ackStatus] ?? submission.ack.ackStatus}${submission.ack.ackCode ? `:${submission.ack.ackCode}` : ""}${
                         submission.ack.rejectionReasonCode ? `(${submission.ack.rejectionReasonCode})` : ""
                       }`
                     : ""}
@@ -1167,7 +1217,7 @@ export default function PayrollYearEndFilingConsole() {
                           }}
                           disabled={pendingLabel !== null}
                         >
-                          Quick ACK Accepted
+                          {copy.quickAckAcceptedAction}
                         </button>
                         <button
                           className="btn btn-secondary"
@@ -1176,7 +1226,7 @@ export default function PayrollYearEndFilingConsole() {
                           }}
                           disabled={pendingLabel !== null}
                         >
-                          Quick Cancel
+                          {copy.quickCancelAction}
                         </button>
                       </>
                     ) : null}
@@ -1188,7 +1238,7 @@ export default function PayrollYearEndFilingConsole() {
                         }}
                         disabled={pendingLabel !== null}
                       >
-                        Quick Resubmit
+                        {copy.quickResubmitAction}
                       </button>
                     ) : null}
                     {submission.status === "canceled" ? (
@@ -1199,7 +1249,7 @@ export default function PayrollYearEndFilingConsole() {
                         }}
                         disabled={pendingLabel !== null}
                       >
-                        Quick Reopen
+                        {copy.quickReopenAction}
                       </button>
                     ) : null}
                     <button
@@ -1210,10 +1260,10 @@ export default function PayrollYearEndFilingConsole() {
                       }}
                       disabled={pendingLabel !== null}
                     >
-                      Timeline
+                      {copy.timelineAction}
                     </button>
                   </div>
-                  <time>{new Date(submission.submittedAt).toLocaleString("ko-KR")}</time>
+                  <time>{new Date(submission.submittedAt).toLocaleString(runtimeLocale)}</time>
                 </li>
               ))}
             </ul>
@@ -1221,8 +1271,8 @@ export default function PayrollYearEndFilingConsole() {
         </article>
 
         <article className="panel">
-          <h2>Submission Timeline</h2>
-          {timelineEntries.length === 0 ? <p className="small">No timeline loaded.</p> : (
+          <h2>{copy.submissionTimelinePanelTitle}</h2>
+          {timelineEntries.length === 0 ? <p className="small">{copy.noTimelineLoaded}</p> : (
             <ul className="log-list">
               {timelineEntries.map((entry, index) => (
                 <li key={`${entry.action}-${entry.occurredAt}-${index}`}>
@@ -1235,10 +1285,10 @@ export default function PayrollYearEndFilingConsole() {
                           : "small"
                     }
                   >
-                    {entry.action}
+                    {copy.timelineActionBadgeLabels[entry.action] ?? entry.action}
                   </span>{" "}
-                  {entry.submissionId} / {formatTimelineEntry(entry)}
-                  <time>{new Date(entry.occurredAt).toLocaleString("ko-KR")}</time>
+                  {entry.submissionId} / {formatTimelineEntry(entry, copy)}
+                  <time>{new Date(entry.occurredAt).toLocaleString(runtimeLocale)}</time>
                 </li>
               ))}
             </ul>
