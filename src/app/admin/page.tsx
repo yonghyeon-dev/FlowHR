@@ -13,6 +13,7 @@ import {
   toIso,
   toLocalInputValue
 } from "@/app/admin/page-helpers";
+import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { buildAdminPayrollPreviewRequest } from "@/app/admin/page-payroll-helpers";
 import {
   isDefaultDemoOrganizationName,
@@ -85,6 +86,7 @@ export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const localeLabelBundle = useMemo(() => resolveAdminLocaleLabelBundle(isKoLocale), [isKoLocale]);
 
   const [accessToken, setAccessToken] = useState("");
@@ -299,6 +301,10 @@ export default function AdminDashboardPage() {
     inviteRoleLabels[role as keyof typeof inviteRoleLabels] ?? role;
   const toInviteDeliveryModeLabel = (mode: string) =>
     inviteDeliveryModeLabels[mode as keyof typeof inviteDeliveryModeLabels] ?? mode;
+  const formatDateTimeByLocale = useCallback(
+    (value: string | null) => formatDateTime(value, runtimeLocale),
+    [runtimeLocale]
+  );
 
   const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
   const queueNowMs = Date.now();
@@ -489,52 +495,20 @@ export default function AdminDashboardPage() {
     options?: { omitOrganizationHeader?: boolean }
   ) {
     setPendingLabel(label);
-    const startedAt = Date.now();
     try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
-
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken.trim()}`;
-      } else {
-        headers["x-actor-role"] = "admin";
-        headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-        if (!options?.omitOrganizationHeader && organizationId.trim().length > 0) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      }
-
-      const response = await fetch(path, {
+      const { response, body, log } = await performAdminApiCall({
+        label,
         method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
+        path,
+        payload,
+        usesBearerToken,
+        bearerToken,
+        adminActorId,
+        organizationId,
+        runtimeLocale,
+        omitOrganizationHeader: options?.omitOrganizationHeader
       });
-
-      const raw = await response.text();
-      let body: unknown = null;
-      if (raw.trim().length > 0) {
-        try {
-          body = JSON.parse(raw);
-        } catch {
-          body = raw;
-        }
-      }
-
-      const durationMs = Date.now() - startedAt;
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label,
-          status: response.status,
-          ok: response.ok,
-          durationMs,
-          at: new Date().toLocaleString("ko-KR"),
-          body
-        },
-        ...prev
-      ]);
+      setLogs((prev) => [log, ...prev]);
 
       return { response, body };
     } finally {
@@ -561,7 +535,7 @@ export default function AdminDashboardPage() {
         ok: input.ok,
         status: input.status,
         createdAtMs,
-        at: new Date().toLocaleString("ko-KR")
+        at: new Date().toLocaleString(runtimeLocale)
       },
       ...prev
     ].slice(0, 30));
@@ -579,7 +553,7 @@ export default function AdminDashboardPage() {
       okCount: input.okCount,
       failCount: input.failCount,
       total: input.okCount + input.failCount,
-      at: new Date().toLocaleString("ko-KR")
+      at: new Date().toLocaleString(runtimeLocale)
     });
   }
 
@@ -723,7 +697,7 @@ export default function AdminDashboardPage() {
           status: 400,
           ok: false,
           durationMs: 0,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: { error: "조직 이름이 필요합니다." }
         },
         ...prev
@@ -849,7 +823,7 @@ export default function AdminDashboardPage() {
           status: 400,
           ok: false,
           durationMs: 0,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: {
             error: "Fix split-item rows before submit.",
             details: previewRequest.consistencySummary
@@ -901,7 +875,7 @@ export default function AdminDashboardPage() {
           status: 400,
           ok: false,
           durationMs: 0,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: { error: "조직 ID가 필요합니다." }
         },
         ...prev
@@ -967,7 +941,7 @@ export default function AdminDashboardPage() {
           status: 400,
           ok: false,
           durationMs: 0,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body: { error: "조직 ID가 필요합니다." }
         },
         ...prev
@@ -1121,7 +1095,7 @@ export default function AdminDashboardPage() {
           periodEnd={periodEnd}
           schedules={schedules}
           workTypeLabels={workTypeLabels}
-          formatDateTime={formatDateTime}
+          formatDateTime={formatDateTimeByLocale}
           onScheduleEmployeeIdChange={setScheduleEmployeeId}
           onScheduleIsHolidayChange={setScheduleIsHoliday}
           onScheduleStartAtChange={setScheduleStartAt}
@@ -1208,7 +1182,7 @@ export default function AdminDashboardPage() {
           accrualResult={accrualResult}
           organizationId={organizationId}
           updatedAtLabel={updatedAtLabel}
-          formatDateTime={formatDateTime}
+          formatDateTime={formatDateTimeByLocale}
           minutesToHours={minutesToHours}
           formatDays={formatDays}
           onAggregateEmployeeIdChange={setAggregateEmployeeId}
