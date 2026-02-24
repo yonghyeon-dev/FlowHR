@@ -73,6 +73,13 @@ const DEFAULT_CANCEL_REASON_BY_LOCALE = {
 
 const EMPLOYEE_SURFACE_COPY_BY_LOCALE = {
   ko: {
+    sectionTitles: {
+      attendance: "출퇴근",
+      leave: "휴가",
+      leaveCalendar: "휴가 캘린더",
+      schedule: "근무 일정",
+      apiLogs: "API 실행 로그"
+    },
     attendance: {
       checkInTime: "출근 시각",
       checkOutTime: "퇴근 시각",
@@ -155,6 +162,13 @@ const EMPLOYEE_SURFACE_COPY_BY_LOCALE = {
     }
   },
   en: {
+    sectionTitles: {
+      attendance: "Attendance",
+      leave: "Leave",
+      leaveCalendar: "Leave calendar",
+      schedule: "Work schedule",
+      apiLogs: "API execution logs"
+    },
     attendance: {
       checkInTime: "Check-in time",
       checkOutTime: "Check-out time",

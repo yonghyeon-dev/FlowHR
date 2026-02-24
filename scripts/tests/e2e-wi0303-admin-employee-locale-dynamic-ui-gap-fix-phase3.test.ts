@@ -63,7 +63,10 @@ async function run() {
     /\{isKoLocale\s*\?\s*"조직 ID \(선택\)"\s*:\s*"Organization ID \(optional\)"\}/
   );
   assert.match(employeePage, /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/);
-  assert.match(employeePage, /<h2>\{isKoLocale \? "API 실행 로그" : "API execution logs"\}<\/h2>/);
+  assert.ok(
+    /<h2>\{sectionTitles\.apiLogs\}<\/h2>/.test(employeePage) ||
+      /<h2>\{isKoLocale \? "API 실행 로그" : "API execution logs"\}<\/h2>/.test(employeePage)
+  );
   assert.doesNotMatch(employeePage, /\?\?\? \?\? \?\?/);
 
   assert.match(workItem, /WI-0303/i);

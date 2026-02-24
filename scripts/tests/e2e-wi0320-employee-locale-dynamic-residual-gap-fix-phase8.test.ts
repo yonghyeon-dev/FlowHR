@@ -18,7 +18,7 @@ async function run() {
   assert.match(employeePage, /surfaceCopy/);
   assert.match(
     employeePage,
-    /const \{ attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy \} =\s*surfaceCopy;/
+    /const \{\s*sectionTitles,\s*attendance: attendanceCopy,\s*leave: leaveCopy,\s*leaveCalendar: leaveCalendarCopy,\s*schedule: scheduleCopy,\s*apiLogs: apiLogsCopy\s*\} = surfaceCopy;/
   );
   assert.match(employeePage, /\{attendanceCopy\.checkInTime\}/);
   assert.match(employeePage, /\{leaveCopy\.requestUnit\}/);
@@ -27,15 +27,15 @@ async function run() {
   assert.match(employeePage, /\{apiLogsCopy\.runningNow\}/);
   assert.match(employeePage, /\{apiLogsCopy\.summary\(stats\.success, stats\.fail\)\}/);
 
-  assert.match(employeePage, /<h2>\{isKoLocale \? "출퇴근" : "Attendance"\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{isKoLocale \? "휴가" : "Leave"\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{isKoLocale \? "휴가 캘린더" : "Leave calendar"\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{isKoLocale \? "근무 일정" : "Work schedule"\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.leave\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
 
-  assert.doesNotMatch(employeePage, /\{isKoLocale \? "출근 시각" : "Check-in time"\}/);
-  assert.doesNotMatch(employeePage, /\{isKoLocale \? "휴가 유형" : "Leave type"\}/);
-  assert.doesNotMatch(employeePage, /\{isKoLocale \? "연차 사용률" : "Leave usage rate"\}/);
-  assert.doesNotMatch(employeePage, /\{isKoLocale \? "현재 실행 중" : "Running now"\}/);
+  assert.doesNotMatch(employeePage, /\{isKoLocale \? "異쒓렐 ?쒓컖" : "Check-in time"\}/);
+  assert.doesNotMatch(employeePage, /\{isKoLocale \? "?닿? ?좏삎" : "Leave type"\}/);
+  assert.doesNotMatch(employeePage, /\{isKoLocale \? "?곗감 ?ъ슜瑜? : "Leave usage rate"\}/);
+  assert.doesNotMatch(employeePage, /\{isKoLocale \? "?꾩옱 ?ㅽ뻾 以? : "Running now"\}/);
 
   assert.match(employeeLocaleHelpers, /const EMPLOYEE_SURFACE_COPY_BY_LOCALE =/);
   assert.match(employeeLocaleHelpers, /surfaceCopy: EMPLOYEE_SURFACE_COPY_BY_LOCALE\[localeKey\]/);

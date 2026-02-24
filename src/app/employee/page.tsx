@@ -148,8 +148,14 @@ export default function EmployeeSelfServicePage() {
   const newestLog = logs[0];
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
-  const { attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } =
-    surfaceCopy;
+  const {
+    sectionTitles,
+    attendance: attendanceCopy,
+    leave: leaveCopy,
+    leaveCalendar: leaveCalendarCopy,
+    schedule: scheduleCopy,
+    apiLogs: apiLogsCopy
+  } = surfaceCopy;
   const { leaveBalance: leaveBalanceCopy, leaveUnits: leaveUnitCopy } = summaryCopy;
   const {
     feedback: feedbackCopy,
@@ -1605,7 +1611,7 @@ export default function EmployeeSelfServicePage() {
         />
 
         <article className="panel" id="attendance">
-          <h2>{isKoLocale ? "출퇴근" : "Attendance"}</h2>
+          <h2>{sectionTitles.attendance}</h2>
           <div className="input-grid">
             <label>
               {attendanceCopy.checkInTime}
@@ -1733,7 +1739,7 @@ export default function EmployeeSelfServicePage() {
         </article>
 
         <article className="panel" id="leave">
-          <h2>{isKoLocale ? "휴가" : "Leave"}</h2>
+          <h2>{sectionTitles.leave}</h2>
           <p className="small">{leaveBalanceSummary}</p>
           <div className="input-grid">
             <label>
@@ -1851,7 +1857,7 @@ export default function EmployeeSelfServicePage() {
         </article>
 
         <article className="panel" id="leave-calendar">
-          <h2>{isKoLocale ? "휴가 캘린더" : "Leave calendar"}</h2>
+          <h2>{sectionTitles.leaveCalendar}</h2>
           <p className="small">
             {leaveCalendarCopy.usageRateLabel} {leaveUsageRatePercent}% ({leaveCalendarCopy.usedLabel}{" "}
             {formatDays(leaveBalance?.usedDays ?? 0)} / {leaveCalendarCopy.grantedLabel}{" "}
@@ -1955,7 +1961,7 @@ export default function EmployeeSelfServicePage() {
         </article>
 
         <article className="panel" id="schedule">
-          <h2>{isKoLocale ? "근무 일정" : "Work schedule"}</h2>
+          <h2>{sectionTitles.schedule}</h2>
           {showDevTools ? (
             <div className="actions">
               <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
@@ -1987,7 +1993,7 @@ export default function EmployeeSelfServicePage() {
 
         {showDevTools ? (
           <article className="panel panel-log">
-            <h2>{isKoLocale ? "API 실행 로그" : "API execution logs"}</h2>
+            <h2>{sectionTitles.apiLogs}</h2>
             <p className="small">
               {apiLogsCopy.runningNow}: <strong>{pendingLabel ?? apiLogsCopy.none}</strong> / {apiLogsCopy.totalCalls} {stats.total}
               {apiLogsCopy.summary(stats.success, stats.fail)}

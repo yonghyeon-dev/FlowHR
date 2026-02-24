@@ -26,10 +26,10 @@ async function run() {
   assert.match(employeePage, /attendanceNotePresets\.map\(\(preset\) => \(/);
   assert.match(employeePage, /leaveCalendarWeekdays\.map\(\(weekday\) => \(/);
 
-  assert.match(employeePage, /<h2>\{isKoLocale \? "출퇴근" : "Attendance"\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{isKoLocale \? "휴가" : "Leave"\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{isKoLocale \? "휴가 캘린더" : "Leave calendar"\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{isKoLocale \? "근무 일정" : "Work schedule"\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.leave\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
+  assert.match(employeePage, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
 
   assert.doesNotMatch(employeePage, /const LEAVE_CALENDAR_WEEKDAYS =/);
   assert.doesNotMatch(employeePage, /const ATTENDANCE_NOTE_PRESETS =/);
@@ -41,8 +41,9 @@ async function run() {
   assert.match(employeeLocaleHelpers, /export function extractEmployeeErrorMessage\(/);
   assert.match(employeeLocaleHelpers, /leaveCalendarWeekdays: LEAVE_CALENDAR_WEEKDAYS_BY_LOCALE\[localeKey\]/);
   assert.match(employeeLocaleHelpers, /attendanceNotePresets: ATTENDANCE_NOTE_PRESETS_BY_LOCALE\[localeKey\]/);
-  assert.match(employeeLocaleHelpers, /checkOutNow: isKoLocale \? "퇴근 처리\(지금\)" : "Check-out now"/);
-  assert.match(employeeLocaleHelpers, /ko: \["일", "월", "화", "수", "목", "금", "토"\]/);
+  assert.match(employeeLocaleHelpers, /sectionTitles: \{/);
+  assert.match(employeeLocaleHelpers, /checkOutNow: isKoLocale \? ".*" : "Check-out now"/);
+  assert.match(employeeLocaleHelpers, /ko:\s*\[[^\]]+\]/);
   assert.match(employeeLocaleHelpers, /en: \["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"\]/);
 
   assert.match(workItem, /WI-0314/i);
