@@ -79,6 +79,10 @@ import {
   buildYearEndInsuranceReconciliationMonthlyBreakdown as buildYearEndInsuranceReconciliationMonthlyBreakdownCore
 } from "@/features/payroll/year-end-finalization-run-helpers";
 import {
+  buildYearEndWithholdingReceiptGuard as buildYearEndWithholdingReceiptGuardCore,
+  buildYearEndWithholdingReceiptSummary as buildYearEndWithholdingReceiptSummaryCore
+} from "@/features/payroll/year-end-withholding-receipt-helpers";
+import {
   ensureMonthlyBoundaryInSeoul,
   ensureValidPeriod,
   formatSeoulDateTime,
@@ -952,16 +956,7 @@ type PayrollYearEndWithholdingReceiptSummary = {
   receiptNumber: string;
   issuerName: string;
   issuedAt: string | null;
-  runStates: {
-    totalRuns: number;
-    confirmedRuns: number;
-    previewedRuns: number;
-    undistributedRuns: number;
-    pendingReceiptRuns: number;
-    previewedRunIds: string[];
-    undistributedRunIds: string[];
-    pendingReceiptRunIds: string[];
-  };
+  runStates: YearEndFilingGuardRunStates;
   annualTotalsKrw: {
     grossPayKrw: number;
     withholdingTaxKrw: number;
@@ -4458,69 +4453,40 @@ export async function issuePayrollYearEndWithholdingReceipt(
 
   const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
   const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
-  const undistributedRuns = confirmedRuns.filter((run) => run.payslipDistributedAt === null);
-  const pendingReceiptRuns = confirmedRuns.filter(
-    (run) => run.payslipDistributedAt !== null && run.payslipReceiptConfirmedAt === null
-  );
   const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
+  const withholdingReceiptGuard = buildYearEndWithholdingReceiptGuardCore({
+    runs,
+    confirmedRuns,
+    previewedRuns
+  }) as {
+    runStates: YearEndFilingGuardRunStates;
+    blockingReasons: string[];
+    canIssue: boolean;
+  };
 
-  const blockingReasons: string[] = [];
-  if (confirmedRuns.length === 0) {
-    blockingReasons.push("no confirmed payroll runs found for selected year");
-  }
-  if (previewedRuns.length > 0) {
-    blockingReasons.push("all payroll runs must be confirmed before withholding receipt issue");
-  }
-  if (undistributedRuns.length > 0) {
-    blockingReasons.push("all confirmed runs must be distributed before withholding receipt issue");
-  }
-  if (pendingReceiptRuns.length > 0) {
-    blockingReasons.push(
-      "all distributed runs must have payslip receipt confirmation before withholding receipt issue"
-    );
-  }
-
-  const canIssue = blockingReasons.length === 0;
-  if (input.issue && !canIssue) {
+  if (input.issue && !withholdingReceiptGuard.canIssue) {
     throw new ServiceError(409, "withholding receipt cannot be issued", {
-      blockingReasons,
-      runStates: {
-        totalRuns: runs.length,
-        confirmedRuns: confirmedRuns.length,
-        previewedRuns: previewedRuns.length,
-        undistributedRuns: undistributedRuns.length,
-        pendingReceiptRuns: pendingReceiptRuns.length
-      }
+      blockingReasons: withholdingReceiptGuard.blockingReasons,
+      runStates: withholdingReceiptGuard.runStates
     });
   }
 
   const receiptNumber = `WR-${input.year}-${input.employeeId}`;
   const issuerName = input.issuerName?.trim() ? input.issuerName.trim() : actor.role;
   const issuedAt = input.issue ? new Date().toISOString() : null;
-  const payload = {
+  const payload = buildYearEndWithholdingReceiptSummaryCore({
     year: input.year,
     employeeId: input.employeeId,
     periodStart: periodStart.toISOString(),
     periodEnd: periodEnd.toISOString(),
     issue: input.issue,
-    canIssue,
-    issued: input.issue,
     receiptNumber,
     issuerName,
     issuedAt,
-    runStates: {
-      totalRuns: runs.length,
-      confirmedRuns: confirmedRuns.length,
-      previewedRuns: previewedRuns.length,
-      undistributedRuns: undistributedRuns.length,
-      pendingReceiptRuns: pendingReceiptRuns.length,
-      previewedRunIds: previewedRuns.map((run) => run.id),
-      undistributedRunIds: undistributedRuns.map((run) => run.id),
-      pendingReceiptRunIds: pendingReceiptRuns.map((run) => run.id)
-    },
+    runStates: withholdingReceiptGuard.runStates,
     annualTotalsKrw: totalsKrw,
-    blockingReasons
-  };
+    blockingReasons: withholdingReceiptGuard.blockingReasons
+  }) as PayrollYearEndWithholdingReceiptSummary;
 
   const entityId = `${input.year}_${input.employeeId}`;
   if (input.issue) {
