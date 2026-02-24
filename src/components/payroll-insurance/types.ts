@@ -73,8 +73,8 @@ export type ApiLog = {
   at: string;
 };
 
-export function formatKrw(value: number) {
-  return `${value.toLocaleString("ko-KR")} KRW`;
+export function formatKrw(value: number, runtimeLocale: string) {
+  return `${value.toLocaleString(runtimeLocale)} KRW`;
 }
 
 export function defaultMonthRange() {

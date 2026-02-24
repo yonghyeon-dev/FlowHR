@@ -67,6 +67,7 @@ async function run() {
     "payroll-insurance",
     "PayrollInsuranceSettlementConsole.tsx"
   );
+  const payrollInsuranceCopySource = readUtf8("src", "components", "payroll-insurance", "copy.ts");
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
@@ -82,8 +83,13 @@ async function run() {
   );
   assert.match(
     payrollInsuranceConsoleSource,
-    /Payroll Insurance Settlement/,
-    "payroll insurance console should include heading text"
+    /copy\.title/,
+    "payroll insurance console should render locale heading text via copy bundle"
+  );
+  assert.match(
+    payrollInsuranceCopySource,
+    /title: "Payroll Insurance Settlement"/,
+    "payroll insurance copy should preserve default English heading"
   );
   assert.match(
     payrollApiSpec,
