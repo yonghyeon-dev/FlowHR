@@ -28,7 +28,6 @@ import {
   normalizeYearEndDeductionItems,
   normalizeYearEndSettlementHash,
   normalizeYearEndTaxCreditItems,
-  resolvePayrollYearEndFilingAckPayload,
   resolveYearEndSettlementHashFromFinalizationPayload,
   sortYearEndFilingSubmissions,
   validateYearEndFilingRecords,
@@ -64,7 +63,6 @@ import type {
   IssuePayrollYearEndWithholdingReceiptInput,
   ListPayrollYearEndFilingSubmissionTimelineInput,
   ListPayrollYearEndFilingSubmissionsInput,
-  PayrollYearEndFilingAckStatus,
   PayrollYearEndFilingSubmissionSortBy,
   PayrollYearEndFilingSubmissionSortDirection,
   PayrollYearEndWithholdingReceiptDocumentFormat,
@@ -132,6 +130,11 @@ import {
   createYearEndFilingSubmissionFromHelper
 } from "@/features/payroll/service-year-end-filing-submission-helpers";
 import {
+  acknowledgePayrollYearEndFilingPackageFromHelper,
+  cancelPayrollYearEndFilingPackageFromHelper,
+  reopenPayrollYearEndFilingPackageFromHelper
+} from "@/features/payroll/service-year-end-filing-package-mutation-helpers";
+import {
   listDeductionProfilesFromHelper,
   readDeductionProfileFromHelper,
   upsertDeductionProfileFromHelper
@@ -149,6 +152,11 @@ import {
   closePayrollPeriodFromHelper,
   distributePayrollPayslipsFromHelper
 } from "@/features/payroll/service-payslip-period-helpers";
+import {
+  finalizePayrollYearEndSettlementFromHelper,
+  previewPayrollYearEndSettlementFromHelper,
+  recalculatePayrollYearEndSettlementFromHelper
+} from "@/features/payroll/service-year-end-settlement-flow-helpers";
 
 export async function previewPayroll(
   context: ServiceContext,
@@ -556,356 +564,21 @@ export async function previewPayrollYearEndSettlement(
   context: ServiceContext,
   input: PreviewPayrollYearEndSettlementInput
 ): Promise<PreviewPayrollYearEndSettlementResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-
-  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const settled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
-  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
-  const inputVectorHash = buildYearEndInputVectorHash({
-    year: input.year,
-    employeeId: input.employeeId,
-    nonTaxableAnnualIncomeKrw: settled.settlementKrw.nonTaxableAnnualIncomeKrw,
-    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
-    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
-    taxCredits: normalizedTaxCredits,
-    deductionItems: null,
-    deductionEligibility: null
-  });
-
-  const payload: YearEndSettlementSummary = {
-    year: input.year,
-    employeeId: input.employeeId,
-    periodStart: snapshot.periodStart.toISOString(),
-    periodEnd: snapshot.periodEnd.toISOString(),
-    inputVectorHash,
-    runStates: {
-      totalRuns: snapshot.runs.length,
-      confirmedRuns: snapshot.confirmedRuns.length,
-      previewedRuns: snapshot.previewedRuns.length,
-      previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
-    },
-    annualTotalsKrw: snapshot.totalsKrw,
-    settlementKrw: settled.settlementKrw
-  };
-
-  const entityId = `${input.year}_${input.employeeId}`;
-  await context.dataAccess.audit.append({
-    action: "payroll.year_end.settlement_previewed",
-    entityType: "PayrollYearEnd",
-    entityId,
-    organizationId: snapshot.organizationId,
-    actorRole: context.actor!.role,
-    actorId: context.actor!.id,
-    payload
-  });
-  await getEventPublisher(context).publish({
-    name: "payroll.year_end.settlement.previewed.v1",
-    occurredAt: new Date().toISOString(),
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole: context.actor!.role,
-    actorId: context.actor!.id,
-    payload
-  });
-
-  return {
-    summary: payload
-  };
+  return previewPayrollYearEndSettlementFromHelper(context, input);
 }
 
 export async function recalculatePayrollYearEndSettlement(
   context: ServiceContext,
   input: RecalculatePayrollYearEndSettlementInput
 ): Promise<RecalculatePayrollYearEndSettlementResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndDeductionInputEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_deduction_input_v1 feature flag is disabled");
-  }
-
-  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
-  const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
-  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
-  const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
-    normalizedDeductionItems,
-    normalizedDeductionEligibility
-  );
-  if (deductionEligibilityBlockingReasons.length > 0) {
-    throw new ServiceError(409, "year-end deduction eligibility validation failed", {
-      deductionEligibility: normalizedDeductionEligibility,
-      blockingReasons: deductionEligibilityBlockingReasons
-    });
-  }
-  const deductionCapApplied = applyYearEndDeductionCaps(normalizedDeductionItems);
-  const baselineSettled = calculateYearEndSettlementKrw(snapshot.totalsKrw, input, 0);
-  const recalculatedSettled = calculateYearEndSettlementKrw(
-    snapshot.totalsKrw,
-    input,
-    deductionCapApplied.cappedIncomeDeductionKrw
-  );
-  const inputVectorHash = buildYearEndInputVectorHash({
-    year: input.year,
-    employeeId: input.employeeId,
-    nonTaxableAnnualIncomeKrw: recalculatedSettled.settlementKrw.nonTaxableAnnualIncomeKrw,
-    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
-    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
-    taxCredits: normalizedTaxCredits,
-    deductionItems: normalizedDeductionItems,
-    deductionEligibility: normalizedDeductionEligibility
-  });
-
-  const payload = {
-    year: input.year,
-    employeeId: input.employeeId,
-    periodStart: snapshot.periodStart.toISOString(),
-    periodEnd: snapshot.periodEnd.toISOString(),
-    inputVectorHash,
-    runStates: {
-      totalRuns: snapshot.runs.length,
-      confirmedRuns: snapshot.confirmedRuns.length,
-      previewedRuns: snapshot.previewedRuns.length,
-      previewedRunIds: snapshot.previewedRuns.map((run) => run.id)
-    },
-    annualTotalsKrw: snapshot.totalsKrw,
-    deductionEligibility: normalizedDeductionEligibility,
-    deductionEligibilityBlockingReasons,
-    deductionItemsKrw: {
-      ...normalizedDeductionItems,
-      totalIncomeDeductionKrw: deductionCapApplied.totalIncomeDeductionKrw,
-      cappedIncomeDeductionKrw: deductionCapApplied.cappedIncomeDeductionKrw,
-      appliedIncomeDeductionKrw: recalculatedSettled.appliedIncomeDeductionKrw,
-      taxableAnnualIncomeBeforeDeductionKrw: recalculatedSettled.taxableAnnualIncomeBeforeDeductionKrw,
-      taxableAnnualIncomeAfterDeductionKrw: recalculatedSettled.settlementKrw.taxableAnnualIncomeKrw,
-      capRulesKrw: deductionCapApplied.capRulesKrw,
-      capAppliedByItemKrw: deductionCapApplied.capAppliedByItemKrw
-    },
-    baselineSettlementKrw: baselineSettled.settlementKrw,
-    recalculatedSettlementKrw: recalculatedSettled.settlementKrw,
-    deltaKrw: {
-      annualTaxLiabilityDeltaKrw:
-        recalculatedSettled.settlementKrw.annualTaxLiabilityKrw -
-        baselineSettled.settlementKrw.annualTaxLiabilityKrw,
-      withholdingDeltaChangeKrw:
-        recalculatedSettled.settlementKrw.withholdingDeltaKrw -
-        baselineSettled.settlementKrw.withholdingDeltaKrw,
-      taxableIncomeReductionKrw:
-        baselineSettled.settlementKrw.taxableAnnualIncomeKrw -
-        recalculatedSettled.settlementKrw.taxableAnnualIncomeKrw
-    }
-  };
-
-  const entityId = `${input.year}_${input.employeeId}`;
-  await context.dataAccess.audit.append({
-    action: "payroll.year_end.settlement_recalculated",
-    entityType: "PayrollYearEnd",
-    entityId,
-    organizationId: snapshot.organizationId,
-    actorRole: context.actor!.role,
-    actorId: context.actor!.id,
-    payload
-  });
-  await getEventPublisher(context).publish({
-    name: "payroll.year_end.settlement.recalculated.v1",
-    occurredAt: new Date().toISOString(),
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole: context.actor!.role,
-    actorId: context.actor!.id,
-    payload
-  });
-
-  return {
-    recalculation: payload
-  };
+  return recalculatePayrollYearEndSettlementFromHelper(context, input);
 }
 
 export async function finalizePayrollYearEndSettlement(
   context: ServiceContext,
   input: FinalizePayrollYearEndSettlementInput
 ): Promise<FinalizePayrollYearEndSettlementResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndDeductionInputEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_deduction_input_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndFilingExportEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
-  }
-
-  const snapshot = await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const filingGuard = buildYearEndFilingGuard(snapshot);
-  if (input.apply && !filingGuard.canFinalize) {
-    throw new ServiceError(409, "year-end settlement cannot be finalized", {
-      blockingReasons: filingGuard.blockingReasons,
-      runStates: {
-        totalRuns: filingGuard.runStates.totalRuns,
-        confirmedRuns: filingGuard.runStates.confirmedRuns,
-        previewedRuns: filingGuard.runStates.previewedRuns,
-        undistributedRuns: filingGuard.runStates.undistributedRuns,
-        pendingReceiptRuns: filingGuard.runStates.pendingReceiptRuns
-      }
-    });
-  }
-
-  const normalizedDeductionItems = normalizeYearEndDeductionItems(input.deductionItems);
-  const normalizedDeductionEligibility = normalizeYearEndDeductionEligibility(input.deductionEligibility);
-  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
-  const deductionEligibilityBlockingReasons = collectYearEndDeductionEligibilityBlockingReasons(
-    normalizedDeductionItems,
-    normalizedDeductionEligibility
-  );
-  if (deductionEligibilityBlockingReasons.length > 0) {
-    throw new ServiceError(409, "year-end deduction eligibility validation failed", {
-      deductionEligibility: normalizedDeductionEligibility,
-      blockingReasons: deductionEligibilityBlockingReasons
-    });
-  }
-  const deductionCapApplied = applyYearEndDeductionCaps(normalizedDeductionItems);
-  const settled = calculateYearEndSettlementKrw(
-    snapshot.totalsKrw,
-    input,
-    deductionCapApplied.cappedIncomeDeductionKrw
-  );
-  const deductionItemsKrw: YearEndDeductionSummaryKrw = {
-    ...normalizedDeductionItems,
-    totalIncomeDeductionKrw: deductionCapApplied.totalIncomeDeductionKrw,
-    cappedIncomeDeductionKrw: deductionCapApplied.cappedIncomeDeductionKrw,
-    appliedIncomeDeductionKrw: settled.appliedIncomeDeductionKrw,
-    taxableAnnualIncomeBeforeDeductionKrw: settled.taxableAnnualIncomeBeforeDeductionKrw,
-    taxableAnnualIncomeAfterDeductionKrw: settled.settlementKrw.taxableAnnualIncomeKrw,
-    capRulesKrw: deductionCapApplied.capRulesKrw,
-    capAppliedByItemKrw: deductionCapApplied.capAppliedByItemKrw
-  };
-  const inputVectorHash = buildYearEndInputVectorHash({
-    year: input.year,
-    employeeId: input.employeeId,
-    nonTaxableAnnualIncomeKrw: settled.settlementKrw.nonTaxableAnnualIncomeKrw,
-    annualIncomeTaxRate: toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0,
-    localIncomeTaxRate: toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0,
-    taxCredits: normalizedTaxCredits,
-    deductionItems: normalizedDeductionItems,
-    deductionEligibility: normalizedDeductionEligibility
-  });
-  const settlementHash = buildYearEndSettlementHash({
-    year: input.year,
-    employeeId: input.employeeId,
-    runStates: filingGuard.runStates,
-    annualTotalsKrw: snapshot.totalsKrw,
-    deductionEligibility: normalizedDeductionEligibility,
-    deductionItemsKrw,
-    settlementKrw: settled.settlementKrw
-  });
-  const expectedSettlementHash = input.expectedSettlementHash?.trim().toLowerCase();
-  if (
-    input.apply &&
-    typeof expectedSettlementHash === "string" &&
-    expectedSettlementHash.length > 0 &&
-    expectedSettlementHash !== settlementHash
-  ) {
-    throw new ServiceError(409, "year-end settlement hash mismatch", {
-      expectedSettlementHash,
-      computedSettlementHash: settlementHash
-    });
-  }
-  const entityId = `${input.year}_${input.employeeId}`;
-  if (input.apply) {
-    const finalizationLogs = await context.dataAccess.audit.list({
-      actions: ["payroll.year_end.settlement_finalized"],
-      entityType: "PayrollYearEnd",
-      entityId,
-      limit: 200
-    });
-    const latestFinalizationLog = finalizationLogs[finalizationLogs.length - 1] ?? null;
-    const latestFinalizationPayload = asYearEndFinalizationAuditPayload(latestFinalizationLog?.payload ?? null);
-    if (latestFinalizationPayload?.finalized && latestFinalizationPayload.finalizedAt) {
-      const latestSettlementHash = resolveYearEndSettlementHashFromFinalizationPayload(
-        latestFinalizationPayload
-      );
-      if (latestSettlementHash === settlementHash) {
-        throw new ServiceError(409, "year-end settlement already finalized for same hash", {
-          settlementHash,
-          latestFinalizationId: latestFinalizationPayload.finalizationId,
-          latestFinalizedAt: latestFinalizationPayload.finalizedAt
-        });
-      }
-    }
-  }
-  const finalizationId = `YEF-${input.year}-${input.employeeId}`;
-  const finalizedAt = input.apply ? new Date().toISOString() : null;
-  const finalizedByNote = input.finalizedByNote?.trim() ? input.finalizedByNote.trim() : null;
-  const payload: FinalizePayrollYearEndSettlementResult["settlement"] = {
-    year: input.year,
-    employeeId: input.employeeId,
-    periodStart: snapshot.periodStart.toISOString(),
-    periodEnd: snapshot.periodEnd.toISOString(),
-    apply: input.apply,
-    canFinalize: filingGuard.canFinalize,
-    finalized: input.apply,
-    finalizationId,
-    finalizedAt,
-    finalizedByNote,
-    inputVectorHash,
-    runStates: filingGuard.runStates,
-    annualTotalsKrw: snapshot.totalsKrw,
-    deductionEligibility: normalizedDeductionEligibility,
-    deductionEligibilityBlockingReasons,
-    deductionItemsKrw,
-    settlementKrw: settled.settlementKrw,
-    settlementHash,
-    blockingReasons: filingGuard.blockingReasons
-  };
-
-  if (input.apply) {
-    await context.dataAccess.audit.append({
-      action: "payroll.year_end.settlement_finalized",
-      entityType: "PayrollYearEnd",
-      entityId,
-      organizationId: snapshot.organizationId,
-      actorRole: context.actor!.role,
-      actorId: context.actor!.id,
-      payload
-    });
-    await getEventPublisher(context).publish({
-      name: "payroll.year_end.settlement.finalized.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "PayrollYearEnd",
-      entityId,
-      actorRole: context.actor!.role,
-      actorId: context.actor!.id,
-      payload
-    });
-  } else {
-    await context.dataAccess.audit.append({
-      action: "payroll.year_end.settlement_finalize_previewed",
-      entityType: "PayrollYearEnd",
-      entityId,
-      organizationId: snapshot.organizationId,
-      actorRole: context.actor!.role,
-      actorId: context.actor!.id,
-      payload
-    });
-    await getEventPublisher(context).publish({
-      name: "payroll.year_end.settlement.finalize_previewed.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "PayrollYearEnd",
-      entityId,
-      actorRole: context.actor!.role,
-      actorId: context.actor!.id,
-      payload
-    });
-  }
-
-  return {
-    settlement: payload
-  };
+  return finalizePayrollYearEndSettlementFromHelper(context, input);
 }
 
 export async function exportPayrollYearEndFilingData(
@@ -1121,260 +794,21 @@ export async function acknowledgePayrollYearEndFilingPackage(
   context: ServiceContext,
   input: AcknowledgePayrollYearEndFilingPackageInput
 ): Promise<AcknowledgePayrollYearEndFilingPackageResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
-  }
-
-  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-
-  const submissions = await listYearEndFilingSubmissionSummaries(context, {
-    year: input.year,
-    employeeId: input.employeeId
-  });
-  const target = submissions.find((submission) => submission.submissionId === input.submissionId);
-  if (!target) {
-    throw new ServiceError(404, "filing submission not found");
-  }
-  if (target.status === "canceled") {
-    throw new ServiceError(409, "canceled filing submission cannot be acknowledged");
-  }
-  if (target.status === "acknowledged") {
-    throw new ServiceError(409, "filing submission is already acknowledged");
-  }
-  const expectedSettlementHash = normalizeYearEndSettlementHash(input.expectedSettlementHash);
-  const submissionSettlementHash = normalizeYearEndSettlementHash(target.settlementHash);
-  if (expectedSettlementHash && expectedSettlementHash !== submissionSettlementHash) {
-    throw new ServiceError(409, "filing submission settlement hash mismatch", {
-      expectedSettlementHash,
-      submissionSettlementHash
-    });
-  }
-
-  const resolvedAck = resolvePayrollYearEndFilingAckPayload({
-    ackStatus: input.ackStatus,
-    ackCode: input.ackCode,
-    ackNote: input.ackNote,
-    rejectionReasonCode: input.rejectionReasonCode,
-    rejectionReasonDetail: input.rejectionReasonDetail
-  });
-  const actorRole = context.actor?.role ?? "system";
-  const actorId = context.actor?.id ?? null;
-  const acknowledgedAt = new Date().toISOString();
-  const entityId = `${input.year}_${input.employeeId}`;
-  const ackPayload: {
-    submissionId: string;
-    settlementHash: string | null;
-    expectedSettlementHash: string | null;
-    ackStatus: PayrollYearEndFilingAckStatus;
-    ackCode: string | null;
-    ackNote: string | null;
-    rejectionReasonCode: string | null;
-    rejectionReasonDetail: string | null;
-    acknowledgedAt: string;
-    acknowledgedByRole: string;
-    acknowledgedById: string | null;
-  } = {
-    submissionId: input.submissionId,
-    settlementHash: submissionSettlementHash,
-    expectedSettlementHash: expectedSettlementHash,
-    ackStatus: input.ackStatus,
-    ackCode: resolvedAck.ackCode,
-    ackNote: resolvedAck.ackNote,
-    rejectionReasonCode: resolvedAck.rejectionReasonCode,
-    rejectionReasonDetail: resolvedAck.rejectionReasonDetail,
-    acknowledgedAt,
-    acknowledgedByRole: actorRole,
-    acknowledgedById: actorId
-  };
-
-  await context.dataAccess.audit.append({
-    action: "payroll.year_end.filing_package_acknowledged",
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload: ackPayload
-  });
-  await getEventPublisher(context).publish({
-    name: "payroll.year_end.filing_package.acknowledged.v1",
-    occurredAt: acknowledgedAt,
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload: ackPayload as unknown as Record<string, unknown>
-  });
-
-  return {
-    submission: {
-      ...target,
-      status: "acknowledged",
-      ack: {
-        ackStatus: input.ackStatus,
-        ackCode: resolvedAck.ackCode,
-        ackNote: resolvedAck.ackNote,
-        rejectionReasonCode: resolvedAck.rejectionReasonCode,
-        rejectionReasonDetail: resolvedAck.rejectionReasonDetail,
-        acknowledgedAt,
-        acknowledgedByRole: actorRole,
-        acknowledgedById: actorId
-      }
-    }
-  };
+  return acknowledgePayrollYearEndFilingPackageFromHelper(context, input);
 }
 
 export async function cancelPayrollYearEndFilingPackage(
   context: ServiceContext,
   input: CancelPayrollYearEndFilingPackageInput
 ): Promise<CancelPayrollYearEndFilingPackageResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
-  }
-
-  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const submissions = await listYearEndFilingSubmissionSummaries(context, {
-    year: input.year,
-    employeeId: input.employeeId
-  });
-  const target = submissions.find((submission) => submission.submissionId === input.submissionId);
-  if (!target) {
-    throw new ServiceError(404, "filing submission not found");
-  }
-  if (target.status === "canceled") {
-    throw new ServiceError(409, "filing submission is already canceled");
-  }
-  if (target.status === "acknowledged") {
-    throw new ServiceError(409, "acknowledged filing submission cannot be canceled");
-  }
-
-  const actorRole = context.actor?.role ?? "system";
-  const actorId = context.actor?.id ?? null;
-  const canceledAt = new Date().toISOString();
-  const entityId = `${input.year}_${input.employeeId}`;
-  const payload: {
-    submissionId: string;
-    canceledAt: string;
-    canceledByRole: string;
-    canceledById: string | null;
-  } = {
-    submissionId: input.submissionId,
-    canceledAt,
-    canceledByRole: actorRole,
-    canceledById: actorId
-  };
-
-  await context.dataAccess.audit.append({
-    action: "payroll.year_end.filing_package_canceled",
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload
-  });
-  await getEventPublisher(context).publish({
-    name: "payroll.year_end.filing_package.canceled.v1",
-    occurredAt: canceledAt,
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload: payload as unknown as Record<string, unknown>
-  });
-
-  return {
-    submission: {
-      ...target,
-      status: "canceled",
-      ack: null
-    }
-  };
+  return cancelPayrollYearEndFilingPackageFromHelper(context, input);
 }
 
 export async function reopenPayrollYearEndFilingPackage(
   context: ServiceContext,
   input: ReopenPayrollYearEndFilingPackageInput
 ): Promise<ReopenPayrollYearEndFilingPackageResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
-  }
-
-  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const submissions = await listYearEndFilingSubmissionSummaries(context, {
-    year: input.year,
-    employeeId: input.employeeId
-  });
-  const target = submissions.find((submission) => submission.submissionId === input.submissionId);
-  if (!target) {
-    throw new ServiceError(404, "filing submission not found");
-  }
-  if (target.status !== "canceled") {
-    throw new ServiceError(409, "only canceled filing submission can be reopened");
-  }
-  if (
-    submissions.some(
-      (submission) =>
-        submission.status === "submitted" && submission.submissionId !== target.submissionId
-    )
-  ) {
-    throw new ServiceError(
-      409,
-      "another pending filing submission exists; acknowledge or cancel it before reopening"
-    );
-  }
-
-  const actorRole = context.actor?.role ?? "system";
-  const actorId = context.actor?.id ?? null;
-  const reopenedAt = new Date().toISOString();
-  const entityId = `${input.year}_${input.employeeId}`;
-  const payload: {
-    submissionId: string;
-    reopenedAt: string;
-    reopenedByRole: string;
-    reopenedById: string | null;
-  } = {
-    submissionId: input.submissionId,
-    reopenedAt,
-    reopenedByRole: actorRole,
-    reopenedById: actorId
-  };
-
-  await context.dataAccess.audit.append({
-    action: "payroll.year_end.filing_package_reopened",
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload
-  });
-  await getEventPublisher(context).publish({
-    name: "payroll.year_end.filing_package.reopened.v1",
-    occurredAt: reopenedAt,
-    entityType: "PayrollYearEnd",
-    entityId,
-    actorRole,
-    actorId: actorId ?? undefined,
-    payload: payload as unknown as Record<string, unknown>
-  });
-
-  return {
-    submission: {
-      ...target,
-      status: "submitted",
-      ack: null
-    }
-  };
+  return reopenPayrollYearEndFilingPackageFromHelper(context, input);
 }
 
 export async function listPayrollYearEndFilingSubmissions(
