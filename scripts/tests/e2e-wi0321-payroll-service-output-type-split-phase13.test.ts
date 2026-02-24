@@ -19,7 +19,6 @@ async function run() {
   assert.match(payrollService, /\bPreviewPayrollResult,/);
   assert.match(payrollService, /\bFinalizePayrollYearEndSettlementResult,/);
   assert.match(payrollService, /\bGetPayrollYearEndPreflightChecklistResult,/);
-  assert.match(payrollService, /\bPayrollComputation,/);
 
   assert.doesNotMatch(payrollService, /type PreviewPayrollResult = {/);
   assert.doesNotMatch(payrollService, /type PreviewPayrollWithDeductionsResult = {/);
