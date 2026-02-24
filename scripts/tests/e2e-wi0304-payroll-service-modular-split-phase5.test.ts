@@ -8,16 +8,23 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const payrollAdapterHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-year-end-adapter-helpers.ts"
+  );
   const ackHelpers = readUtf8("src", "features", "payroll", "year-end-filing-ack-catalog-helpers.ts");
   const workItem = readUtf8("work-items", "WI-0304-payroll-service-modular-split-phase5.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payrollService, /from "@\/features\/payroll\/year-end-filing-ack-catalog-helpers"/);
+  assert.match(payrollService, /from "@\/features\/payroll\/service-year-end-adapter-helpers"/);
+  assert.match(payrollAdapterHelpers, /from "@\/features\/payroll\/year-end-filing-ack-catalog-helpers"/);
   assert.match(
-    payrollService,
+    payrollAdapterHelpers,
     /return buildPayrollYearEndFilingAckCatalogCore\(\) as ListPayrollYearEndFilingAckCatalogResult;/
   );
-  assert.match(payrollService, /return resolvePayrollYearEndFilingAckPayloadCore\(input\);/);
+  assert.match(payrollAdapterHelpers, /return resolvePayrollYearEndFilingAckPayloadCore\(input\);/);
 
   assert.doesNotMatch(payrollService, /const payrollYearEndAcceptedAckCodeCatalog/);
   assert.doesNotMatch(payrollService, /const payrollYearEndRejectedAckCodeCatalog/);

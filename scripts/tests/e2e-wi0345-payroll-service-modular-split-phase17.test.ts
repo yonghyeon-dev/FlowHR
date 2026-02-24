@@ -18,9 +18,6 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(payrollService, /from "@\/features\/payroll\/service-year-end-adapter-helpers"/);
-  assert.match(payrollService, /buildYearEndFilingSubmissionTimeline\(/);
-  assert.match(payrollService, /buildYearEndWithholdingReceiptGuard\(/);
-  assert.match(payrollService, /buildYearEndWithholdingReceiptSummary\(/);
   assert.doesNotMatch(payrollService, /buildYearEndFilingSubmissionTimelineCore\(/);
   assert.doesNotMatch(payrollService, /buildYearEndWithholdingReceiptGuardCore\(/);
   assert.doesNotMatch(payrollService, /buildYearEndWithholdingReceiptSummaryCore\(/);

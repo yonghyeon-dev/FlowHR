@@ -24,7 +24,6 @@ async function run() {
     payrollService,
     /from "@\/features\/payroll\/service-year-end-run-snapshot-helpers"/
   );
-  assert.match(payrollService, /\baggregatePayrollTotalsKrw,/);
   assert.match(payrollService, /\bloadYearEndRunSnapshot,/);
   assert.match(payrollService, /type YearEndRunSnapshot/);
 

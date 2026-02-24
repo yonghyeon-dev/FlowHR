@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const payrollAdapterHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-year-end-adapter-helpers.ts"
+  );
   const finalizationRunHelpers = readUtf8(
     "src",
     "features",
@@ -17,13 +23,14 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-0306-payroll-service-modular-split-phase6.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payrollService, /from "@\/features\/payroll\/year-end-finalization-run-helpers"/);
+  assert.match(payrollService, /from "@\/features\/payroll\/service-year-end-adapter-helpers"/);
+  assert.match(payrollAdapterHelpers, /from "@\/features\/payroll\/year-end-finalization-run-helpers"/);
   assert.match(
-    payrollService,
+    payrollAdapterHelpers,
     /return buildYearEndFilingGuardCore\(snapshot\) as YearEndFilingGuard;/
   );
   assert.match(
-    payrollService,
+    payrollAdapterHelpers,
     /return buildYearEndInsuranceReconciliationMonthlyBreakdownCore\(runs, \(periodStart\) => \{/
   );
 

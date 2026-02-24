@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const payrollAdapterHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-year-end-adapter-helpers.ts"
+  );
   const withholdingHelpers = readUtf8(
     "src",
     "features",
@@ -22,10 +28,11 @@ async function run() {
 
   assert.match(
     payrollService,
-    /from "@\/features\/payroll\/year-end-withholding-receipt-helpers"/
+    /from "@\/features\/payroll\/service-year-end-adapter-helpers"/
   );
-  assert.match(payrollService, /const withholdingReceiptGuard = buildYearEndWithholdingReceiptGuardCore\(/);
-  assert.match(payrollService, /const payload = buildYearEndWithholdingReceiptSummaryCore\(/);
+  assert.match(payrollAdapterHelpers, /from "@\/features\/payroll\/year-end-withholding-receipt-helpers"/);
+  assert.match(payrollAdapterHelpers, /return buildYearEndWithholdingReceiptGuardCore\(input\);/);
+  assert.match(payrollAdapterHelpers, /return buildYearEndWithholdingReceiptSummaryCore\(input\)/);
 
   assert.doesNotMatch(
     payrollService,
