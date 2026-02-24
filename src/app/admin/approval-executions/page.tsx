@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 
 type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 type ApprovalExecutionState = "PENDING" | "APPROVED" | "REJECTED";
@@ -110,7 +111,7 @@ function toIso(value: string) {
   return new Date(value).toISOString();
 }
 
-function formatDateTime(value: string | null) {
+function formatDateTime(value: string | null, runtimeLocale: string) {
   if (!value) {
     return "-";
   }
@@ -118,7 +119,7 @@ function formatDateTime(value: string | null) {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleString("ko-KR");
+  return parsed.toLocaleString(runtimeLocale);
 }
 
 function getCompletedStages(execution: ApprovalExecutionDto) {
@@ -155,14 +156,14 @@ function resolveQuickJumpPath(execution: ApprovalExecutionDto) {
   return "/admin#approvals";
 }
 
-function resolveQuickJumpLabel(execution: ApprovalExecutionDto) {
+function resolveQuickJumpLabel(execution: ApprovalExecutionDto, isKoLocale: boolean) {
   if (execution.domain === "PAYROLL") {
-    return "급여 섹션";
+    return isKoLocale ? "급여 섹션" : "Payroll section";
   }
   if (execution.domain === "LEAVE") {
-    return "휴가 승인 큐";
+    return isKoLocale ? "휴가 승인 큐" : "Leave approval queue";
   }
-  return "근태 승인 큐";
+  return isKoLocale ? "근태 승인 큐" : "Attendance approval queue";
 }
 
 function toTargetKey(input: { domain: ApprovalDomain; targetEntityType: string; targetEntityId: string }) {
@@ -196,6 +197,9 @@ export default function AdminApprovalExecutionsPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
 
   const bearerToken =
     accessToken.trim().length > 0
@@ -233,6 +237,30 @@ export default function AdminApprovalExecutionsPage() {
       attendancePendingCount: pending.filter((item) => item.domain === "ATTENDANCE").length
     };
   }, [asOfDate, executions, stalledHoursMin]);
+
+  const domainLabel = useMemo(() => {
+    return {
+      ATTENDANCE: isKoLocale ? "근태" : "Attendance",
+      LEAVE: isKoLocale ? "휴가" : "Leave",
+      PAYROLL: isKoLocale ? "급여" : "Payroll"
+    } as const;
+  }, [isKoLocale]);
+
+  const stateLabel = useMemo(() => {
+    return {
+      PENDING: isKoLocale ? "대기" : "Pending",
+      APPROVED: isKoLocale ? "승인" : "Approved",
+      REJECTED: isKoLocale ? "반려" : "Rejected"
+    } as const;
+  }, [isKoLocale]);
+
+  function toDomainLabel(value: ApprovalDomain) {
+    return domainLabel[value];
+  }
+
+  function toStateLabel(value: ApprovalExecutionState) {
+    return stateLabel[value];
+  }
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -278,7 +306,7 @@ export default function AdminApprovalExecutionsPage() {
           label,
           ok: response.ok,
           status: response.status,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
@@ -327,7 +355,7 @@ export default function AdminApprovalExecutionsPage() {
     }
 
     const { response, body } = await callApi(
-      "결재 실행 현황 조회",
+      isKoLocale ? "결재 실행 현황 조회" : "Load approval execution queue",
       "GET",
       `/api/approval/executions?${query.toString()}`
     );
@@ -371,7 +399,7 @@ export default function AdminApprovalExecutionsPage() {
     });
 
     const { response, body } = await callApi(
-      "결재 단계 로그 조회",
+      isKoLocale ? "결재 단계 로그 조회" : "Load approval stage history",
       "GET",
       `/api/approval/stage-history?${query.toString()}`
     );
@@ -400,7 +428,13 @@ export default function AdminApprovalExecutionsPage() {
     };
 
     const { response, body } = await callApi(
-      dryRun ? "정체 에스컬레이션 드라이런" : "정체 에스컬레이션 실행",
+      dryRun
+        ? isKoLocale
+          ? "정체 에스컬레이션 드라이런"
+          : "Escalation dry run"
+        : isKoLocale
+          ? "정체 에스컬레이션 실행"
+          : "Escalation dispatch",
       "POST",
       "/api/approval/executions/escalate",
       payload
@@ -413,11 +447,23 @@ export default function AdminApprovalExecutionsPage() {
     const parsed = body as EscalationResultDto;
     setEscalationResult(parsed);
     if (parsed.dryRun) {
-      setStatusMessage(`드라이런 완료: 후보 ${parsed.counts.candidates}건`);
+      setStatusMessage(
+        isKoLocale
+          ? `드라이런 완료: 후보 ${parsed.counts.candidates}건`
+          : `Dry run complete: ${parsed.counts.candidates} candidate(s)`
+      );
     } else if (parsed.counts.requested > 0) {
-      setStatusMessage(`에스컬레이션 전송 완료: ${parsed.counts.requested}건`);
+      setStatusMessage(
+        isKoLocale
+          ? `에스컬레이션 전송 완료: ${parsed.counts.requested}건`
+          : `Escalation sent: ${parsed.counts.requested} item(s)`
+      );
     } else {
-      setStatusMessage("에스컬레이션 후보가 없어 전송을 건너뛰었습니다.");
+      setStatusMessage(
+        isKoLocale
+          ? "에스컬레이션 후보가 없어 전송을 건너뛰었습니다."
+          : "No escalation candidate found, dispatch skipped."
+      );
     }
     setTimeout(() => setStatusMessage(""), 3000);
   }
@@ -425,29 +471,35 @@ export default function AdminApprovalExecutionsPage() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>결재 실행 현황</h1>
+        <p className="eyebrow">{isKoLocale ? "FlowHR 관리자" : "FlowHR Admin"}</p>
+        <h1>{isKoLocale ? "결재 실행 현황" : "Approval execution queue"}</h1>
         <p>
-          정체된 결재 실행 항목을 우선순위로 확인하고, 임계값을 넘는 항목을 드라이런/실전 에스컬레이션으로 전송합니다.
-          {showDevTools ? " 개발 모드에서는 헤더 기반 Actor 컨텍스트를 사용할 수 있습니다." : ""}
+          {isKoLocale
+            ? "정체된 결재 실행 항목을 우선순위로 확인하고, 임계값을 넘는 항목을 드라이런/실전 에스컬레이션으로 전송합니다."
+            : "Review stalled approval executions by priority and send over-threshold items through dry-run/live escalation."}
+          {showDevTools
+            ? isKoLocale
+              ? " 개발 모드에서는 헤더 기반 Actor 컨텍스트를 사용할 수 있습니다."
+              : " Dev mode can use header-based actor context."
+            : ""}
         </p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>컨텍스트/필터</h2>
+          <h2>{isKoLocale ? "컨텍스트/필터" : "Context and filters"}</h2>
           <label>
-            Organization ID
+            {isKoLocale ? "조직 ID" : "Organization ID"}
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
           </label>
           <label>
-            Admin Actor ID (Dev fallback)
+            {isKoLocale ? "관리자 액터 ID (개발 대체값)" : "Admin actor ID (dev fallback)"}
             <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
           </label>
           <label>
-            Access Token (optional)
+            {isKoLocale ? "액세스 토큰 (선택)" : "Access token (optional)"}
             <input
-              placeholder="Bearer token"
+              placeholder={isKoLocale ? "Bearer 토큰" : "Bearer token"}
               value={accessToken}
               onChange={(event) => setAccessToken(event.target.value)}
             />
@@ -479,27 +531,27 @@ export default function AdminApprovalExecutionsPage() {
               />
             </label>
             <label>
-              Domain
+              {isKoLocale ? "도메인" : "Domain"}
               <select value={domain} onChange={(event) => setDomain(event.target.value as ApprovalDomain | "")}> 
                 {domainOptions.map((option) => (
                   <option key={option || "all"} value={option}>
-                    {option || "ALL"}
+                    {option ? toDomainLabel(option) : isKoLocale ? "전체" : "All"}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              State
+              {isKoLocale ? "상태" : "State"}
               <select value={state} onChange={(event) => setState(event.target.value as ApprovalExecutionState | "")}> 
                 {stateOptions.map((option) => (
                   <option key={option || "all"} value={option}>
-                    {option || "ALL"}
+                    {option ? toStateLabel(option) : isKoLocale ? "전체" : "All"}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Target Entity Type
+              {isKoLocale ? "대상 엔티티 타입" : "Target entity type"}
               <input
                 value={targetEntityType}
                 onChange={(event) => setTargetEntityType(event.target.value)}
@@ -507,15 +559,15 @@ export default function AdminApprovalExecutionsPage() {
               />
             </label>
             <label>
-              Target Entity ID
+              {isKoLocale ? "대상 엔티티 ID" : "Target entity ID"}
               <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
             </label>
             <label>
-              Execution Limit
+              {isKoLocale ? "실행 조회 개수" : "Execution limit"}
               <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(event.target.value)} />
             </label>
             <label>
-              History Limit
+              {isKoLocale ? "이력 조회 개수" : "History limit"}
               <input
                 type="number"
                 min={1}
@@ -525,7 +577,7 @@ export default function AdminApprovalExecutionsPage() {
               />
             </label>
             <label>
-              Escalation Channel
+              {isKoLocale ? "에스컬레이션 채널" : "Escalation channel"}
               <input
                 value={notificationChannel}
                 onChange={(event) => setNotificationChannel(event.target.value)}
@@ -535,96 +587,104 @@ export default function AdminApprovalExecutionsPage() {
           </div>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadExecutions()} disabled={!organizationId.trim()}>
-              실행 현황 조회
+              {isKoLocale ? "실행 현황 조회" : "Load executions"}
             </button>
             <button
               className="btn btn-secondary"
               onClick={() => void triggerEscalation(true)}
               disabled={!organizationId.trim() || pendingLabel !== null}
             >
-              에스컬레이션 드라이런
+              {isKoLocale ? "에스컬레이션 드라이런" : "Run dry escalation"}
             </button>
             <button
               className="btn btn-primary"
               onClick={() => void triggerEscalation(false)}
               disabled={!organizationId.trim() || pendingLabel !== null}
             >
-              에스컬레이션 실행
+              {isKoLocale ? "에스컬레이션 실행" : "Dispatch escalation"}
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session 오류: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? (
+            <p className="small fail">
+              {isKoLocale ? "세션 오류" : "Session error"}: {supabaseSessionError}
+            </p>
+          ) : null}
         </article>
 
         <article className="panel">
-          <h2>실행 요약</h2>
+          <h2>{isKoLocale ? "실행 요약" : "Execution summary"}</h2>
           <div className="summary-grid">
             <div className="summary-card">
-              <p>전체</p>
+              <p>{isKoLocale ? "전체" : "Total"}</p>
               <strong>{summary.total}</strong>
             </div>
             <div className="summary-card">
-              <p>진행중</p>
+              <p>{isKoLocale ? "진행중" : "In progress"}</p>
               <strong>{summary.pendingCount}</strong>
             </div>
             <div className="summary-card">
-              <p>정체 항목</p>
+              <p>{isKoLocale ? "정체 항목" : "Stalled items"}</p>
               <strong>{summary.stalledCount}</strong>
             </div>
             <div className="summary-card">
-              <p>급여 진행중</p>
+              <p>{isKoLocale ? "급여 진행중" : "Payroll pending"}</p>
               <strong>{summary.payrollPendingCount}</strong>
             </div>
             <div className="summary-card">
-              <p>휴가 진행중</p>
+              <p>{isKoLocale ? "휴가 진행중" : "Leave pending"}</p>
               <strong>{summary.leavePendingCount}</strong>
             </div>
             <div className="summary-card">
-              <p>근태 진행중</p>
+              <p>{isKoLocale ? "근태 진행중" : "Attendance pending"}</p>
               <strong>{summary.attendancePendingCount}</strong>
             </div>
           </div>
           <p className="small">
-            기준 시각 {formatDateTime(asOfDate.toISOString())} / 정체 기준 {stalledHoursMin || "0"}시간
+            {isKoLocale ? "기준 시각" : "As of"} {formatDateTime(asOfDate.toISOString(), runtimeLocale)} /{" "}
+            {isKoLocale ? "정체 기준" : "Stall threshold"} {stalledHoursMin || "0"}
+            {isKoLocale ? "시간" : "h"}
           </p>
         </article>
 
         <article className="panel">
-          <h2>에스컬레이션 결과</h2>
+          <h2>{isKoLocale ? "에스컬레이션 결과" : "Escalation result"}</h2>
           {!escalationResult ? (
-            <p className="small">아직 에스컬레이션 실행 이력이 없습니다.</p>
+            <p className="small">{isKoLocale ? "아직 에스컬레이션 실행 이력이 없습니다." : "No escalation run yet."}</p>
           ) : (
             <>
               <ul className="simple-list">
                 <li>
-                  <span>requestedAt</span>
-                  <strong>{formatDateTime(escalationResult.requestedAt)}</strong>
+                  <span>{isKoLocale ? "요청 시각" : "requestedAt"}</span>
+                  <strong>{formatDateTime(escalationResult.requestedAt, runtimeLocale)}</strong>
                 </li>
                 <li>
-                  <span>dryRun</span>
-                  <strong>{escalationResult.dryRun ? "yes" : "no"}</strong>
+                  <span>{isKoLocale ? "드라이런" : "dryRun"}</span>
+                  <strong>{escalationResult.dryRun ? (isKoLocale ? "예" : "yes") : isKoLocale ? "아니오" : "no"}</strong>
                 </li>
                 <li>
-                  <span>candidates / requested</span>
+                  <span>{isKoLocale ? "후보 / 요청됨" : "candidates / requested"}</span>
                   <strong>
                     {escalationResult.counts.candidates} / {escalationResult.counts.requested}
                   </strong>
                 </li>
                 <li>
-                  <span>webhook configured</span>
-                  <strong>{escalationResult.policy.webhookConfigured ? "yes" : "no"}</strong>
+                  <span>{isKoLocale ? "웹훅 설정" : "webhook configured"}</span>
+                  <strong>{escalationResult.policy.webhookConfigured ? (isKoLocale ? "예" : "yes") : isKoLocale ? "아니오" : "no"}</strong>
                 </li>
                 <li>
-                  <span>provider</span>
+                  <span>{isKoLocale ? "제공자" : "provider"}</span>
                   <strong>{escalationResult.policy.provider ?? "-"}</strong>
                 </li>
                 <li>
-                  <span>webhook source</span>
+                  <span>{isKoLocale ? "웹훅 소스" : "webhook source"}</span>
                   <strong>{escalationResult.policy.webhookSource ?? "-"}</strong>
                 </li>
               </ul>
               <p className="small">
-                channel {escalationResult.policy.notificationChannel} / threshold {escalationResult.policy.stalledHoursMin}h / limit {escalationResult.policy.limit}
+                {isKoLocale ? "채널" : "channel"} {escalationResult.policy.notificationChannel} /{" "}
+                {isKoLocale ? "임계값" : "threshold"} {escalationResult.policy.stalledHoursMin}h /{" "}
+                {isKoLocale ? "제한" : "limit"} {escalationResult.policy.limit}
               </p>
               {escalationResult.items.length > 0 ? (
                 <ul className="simple-list">
@@ -634,10 +694,19 @@ export default function AdminApprovalExecutionsPage() {
                         <strong>{item.domain}</strong> / {item.targetEntityType}:{item.targetEntityId}
                         <br />
                         <span className="small">
-                          stalled {item.stalledHours.toFixed(1)}h / stage {item.currentStageIndex}/{item.totalStages}
+                          {isKoLocale ? "정체" : "stalled"} {item.stalledHours.toFixed(1)}h /{" "}
+                          {isKoLocale ? "단계" : "stage"} {item.currentStageIndex}/{item.totalStages}
                         </span>
                       </span>
-                      <span className={item.decision === "REQUESTED" ? "ok" : "muted"}>{item.decision}</span>
+                      <span className={item.decision === "REQUESTED" ? "ok" : "muted"}>
+                        {item.decision === "REQUESTED"
+                          ? isKoLocale
+                            ? "요청됨"
+                            : "REQUESTED"
+                          : isKoLocale
+                            ? "드라이런"
+                            : "DRY_RUN"}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -647,9 +716,11 @@ export default function AdminApprovalExecutionsPage() {
         </article>
 
         <article className="panel">
-          <h2>실행 상태 ({executions.length})</h2>
+          <h2>
+            {isKoLocale ? "실행 상태" : "Execution status"} ({executions.length})
+          </h2>
           {executions.length === 0 ? (
-            <p className="small">조회된 결재 실행 데이터가 없습니다.</p>
+            <p className="small">{isKoLocale ? "조회된 결재 실행 데이터가 없습니다." : "No execution data found."}</p>
           ) : (
             <ul className="simple-list">
               {executions.map((execution) => {
@@ -662,28 +733,32 @@ export default function AdminApprovalExecutionsPage() {
                   <li key={execution.id} className={selected ? "selected-row" : undefined}>
                     <button type="button" className="execution-row-btn" onClick={() => void loadStageHistory(execution)}>
                       <span className="execution-head">
-                        <strong>{execution.domain}</strong>
-                        <span className={`state-chip state-${execution.state.toLowerCase()}`}>{execution.state}</span>
+                        <strong>{toDomainLabel(execution.domain)}</strong>
+                        <span className={`state-chip state-${execution.state.toLowerCase()}`}>{toStateLabel(execution.state)}</span>
                       </span>
                       <span className="muted">
                         {execution.targetEntityType}:{execution.targetEntityId}
                       </span>
                       <span className="muted">
-                        stage {getCompletedStages(execution)}/{execution.totalStages} ({progressPercent}%)
-                        {execution.state === "PENDING" ? ` / 정체 ${stalledHours.toFixed(1)}h` : ""}
+                        {isKoLocale ? "단계" : "stage"} {getCompletedStages(execution)}/{execution.totalStages} ({progressPercent}%)
+                        {execution.state === "PENDING"
+                          ? ` / ${isKoLocale ? "정체" : "stalled"} ${stalledHours.toFixed(1)}h`
+                          : ""}
                       </span>
                       <span className="progress-track" aria-hidden>
                         <span className="progress-fill" style={{ width: `${progressPercent}%` }} />
                       </span>
                       <span className="small">
-                        updated {formatDateTime(execution.updatedAt)}
-                        {execution.completedAt ? ` / completed ${formatDateTime(execution.completedAt)}` : ""}
+                        {isKoLocale ? "업데이트" : "updated"} {formatDateTime(execution.updatedAt, runtimeLocale)}
+                        {execution.completedAt
+                          ? ` / ${isKoLocale ? "완료" : "completed"} ${formatDateTime(execution.completedAt, runtimeLocale)}`
+                          : ""}
                       </span>
                       {isStalled ? <span className="stale-chip">정체</span> : null}
                     </button>
                     <div className="row-actions">
                       <Link className="btn btn-secondary btn-small" href={resolveQuickJumpPath(execution)}>
-                        {resolveQuickJumpLabel(execution)}
+                        {resolveQuickJumpLabel(execution, isKoLocale)}
                       </Link>
                     </div>
                   </li>
@@ -694,26 +769,36 @@ export default function AdminApprovalExecutionsPage() {
         </article>
 
         <article className="panel">
-          <h2>단계 로그 {selectedExecution ? `(${selectedExecution.targetEntityId})` : ""}</h2>
+          <h2>
+            {isKoLocale ? "단계 로그" : "Stage history"} {selectedExecution ? `(${selectedExecution.targetEntityId})` : ""}
+          </h2>
           {selectedExecution === null ? (
-            <p className="small">실행 항목을 선택하면 단계별 처리 로그를 표시합니다.</p>
+            <p className="small">
+              {isKoLocale
+                ? "실행 항목을 선택하면 단계별 처리 로그를 표시합니다."
+                : "Select an execution to view stage history."}
+            </p>
           ) : stageHistory.length === 0 ? (
-            <p className="small">해당 실행의 단계 로그가 없습니다.</p>
+            <p className="small">{isKoLocale ? "해당 실행의 단계 로그가 없습니다." : "No stage history for this execution."}</p>
           ) : (
             <ul className="simple-list">
               {stageHistory.map((entry) => (
                 <li key={entry.id}>
                   <span>
                     <span className={entry.allowed ? "ok" : "fail"}>
-                      {entry.allowed ? "ALLOW" : "DENY"} ({entry.resolution})
+                      {entry.allowed ? (isKoLocale ? "허용" : "ALLOW") : isKoLocale ? "거부" : "DENY"} ({entry.resolution})
                     </span>
-                    {" / "}stage {entry.stageIndex} ({entry.stageLabel})
+                    {" / "}
+                    {isKoLocale ? "단계" : "stage"} {entry.stageIndex} ({entry.stageLabel})
                     <br />
-                    actor {entry.actorRole}
+                    {isKoLocale ? "액터" : "actor"} {entry.actorRole}
                     {entry.actorId ? ` (${entry.actorId})` : ""}
-                    {" / "}required [{entry.requiredRoles.join(", ")}]
+                    {" / "}
+                    {isKoLocale ? "필요 역할" : "required"} [{entry.requiredRoles.join(", ")}]
                     <br />
-                    <span className="small">evaluated {formatDateTime(entry.evaluatedAt)}</span>
+                    <span className="small">
+                      {isKoLocale ? "평가 시각" : "evaluated"} {formatDateTime(entry.evaluatedAt, runtimeLocale)}
+                    </span>
                   </span>
                 </li>
               ))}
@@ -722,18 +807,22 @@ export default function AdminApprovalExecutionsPage() {
         </article>
 
         <article className="panel">
-          <h2>요청 로그</h2>
+          <h2>{isKoLocale ? "요청 로그" : "Request logs"}</h2>
           <p className="small">
-            총 {stats.total}건 / 성공 {stats.success}건 / 실패 {stats.fail}건
-            {pendingLabel ? ` / 진행중: ${pendingLabel}` : ""}
+            {isKoLocale ? "총" : "Total"} {stats.total}
+            {isKoLocale ? "건 / 성공" : " / success"} {stats.success}
+            {isKoLocale ? "건 / 실패" : " / fail"} {stats.fail}
+            {isKoLocale ? "건" : ""}
+            {pendingLabel ? ` / ${isKoLocale ? "진행중" : "running"}: ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">아직 API 호출 이력이 없습니다.</p>
+            <p className="small">{isKoLocale ? "아직 API 호출 이력이 없습니다." : "No API call history yet."}</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? (isKoLocale ? "성공" : "OK") : isKoLocale ? "실패" : "FAIL"}</span>{" "}
+                  {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
@@ -741,10 +830,10 @@ export default function AdminApprovalExecutionsPage() {
           )}
           <div className="panel-actions">
             <Link href="/admin/approval-history" className="btn btn-secondary">
-              결재 단계 이력
+              {isKoLocale ? "결재 단계 이력" : "Approval stage history"}
             </Link>
             <Link href="/admin" className="btn btn-secondary">
-              관리자 홈
+              {isKoLocale ? "관리자 홈" : "Admin home"}
             </Link>
           </div>
         </article>

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 
 type Organization = { id: string; name: string };
 type Department = { id: string; organizationId: string; code: string; name: string; active: boolean };
@@ -31,26 +32,18 @@ type ApiLog = { id: number; label: string; status: number; ok: boolean; at: stri
 type ActiveFilter = "all" | "active" | "inactive";
 type UpdatedWindow = "all" | "7" | "30" | "90";
 type ProfileField = "organizationId" | "departmentId" | "positionId" | "name" | "email" | "active";
-const profileFieldLabel: Record<ProfileField, string> = {
-  organizationId: "조직",
-  departmentId: "부서",
-  positionId: "직급",
-  name: "이름",
-  email: "이메일",
-  active: "활성"
-};
 
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string, runtimeLocale: string) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleString("ko-KR");
+  return parsed.toLocaleString(runtimeLocale);
 }
 
 function toTimestamp(value: string) {
@@ -84,12 +77,12 @@ function buildQuery(input: Record<string, string | undefined>) {
   return query ? `?${query}` : "";
 }
 
-function actionLabel(action: string) {
+function actionLabel(action: string, isKoLocale: boolean) {
   if (action === "employee.created") {
-    return "직원 생성";
+    return isKoLocale ? "직원 생성" : "Employee created";
   }
   if (action === "employee.profile.updated") {
-    return "직원 프로필 변경";
+    return isKoLocale ? "직원 프로필 변경" : "Employee profile updated";
   }
   return action;
 }
@@ -123,6 +116,20 @@ export default function AdminPeoplePage() {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+
+  const profileFieldLabel = useMemo<Record<ProfileField, string>>(() => {
+    return {
+      organizationId: isKoLocale ? "조직" : "Organization",
+      departmentId: isKoLocale ? "부서" : "Department",
+      positionId: isKoLocale ? "직급" : "Position",
+      name: isKoLocale ? "이름" : "Name",
+      email: isKoLocale ? "이메일" : "Email",
+      active: isKoLocale ? "활성" : "Active"
+    };
+  }, [isKoLocale]);
 
   const bearerToken =
     accessToken.trim().length > 0
@@ -219,9 +226,9 @@ export default function AdminPeoplePage() {
       .sort((left, right) => {
         const leftKey = normalize(left.name) || left.id.toLowerCase();
         const rightKey = normalize(right.name) || right.id.toLowerCase();
-        return leftKey.localeCompare(rightKey, "ko");
+        return leftKey.localeCompare(rightKey, runtimeLocale);
       });
-  }, [activeFilter, departmentFilter, employees, organizationId, positionFilter, recentlyUpdatedDays, search]);
+  }, [activeFilter, departmentFilter, employees, organizationId, positionFilter, recentlyUpdatedDays, runtimeLocale, search]);
 
   const tree = useMemo(() => {
     const result = new Map<string, { orgName: string; departments: Map<string, Employee[]> }>();
@@ -229,7 +236,9 @@ export default function AdminPeoplePage() {
       const orgKey = employee.organizationId ?? "__none__";
       const orgName = employee.organizationId
         ? (organizationById.get(employee.organizationId)?.name ?? employee.organizationId)
-        : "미지정 조직";
+        : isKoLocale
+          ? "미지정 조직"
+          : "Unassigned organization";
       const deptKey = employee.departmentId ?? "__none__";
       const orgBucket = result.get(orgKey) ?? { orgName, departments: new Map<string, Employee[]>() };
       if (!result.has(orgKey)) {
@@ -246,24 +255,26 @@ export default function AdminPeoplePage() {
         deptKey,
         deptName:
           deptKey === "__none__"
-            ? "미지정 부서"
+            ? isKoLocale
+              ? "미지정 부서"
+              : "Unassigned department"
             : (departmentById.get(deptKey)?.name ?? deptKey),
         employees: deptEmployees.sort((a, b) =>
-          (normalize(a.name) || a.id).localeCompare(normalize(b.name) || b.id, "ko")
+          (normalize(a.name) || a.id).localeCompare(normalize(b.name) || b.id, runtimeLocale)
         )
       }))
     }));
-  }, [departmentById, filteredEmployees, organizationById]);
+  }, [departmentById, filteredEmployees, isKoLocale, organizationById, runtimeLocale]);
 
   const compareRows = useMemo(() => {
     if (!compareEmployeeA || !compareEmployeeB) {
       return [] as Array<{ label: string; a: string; b: string; diff: boolean }>;
     }
     const rows = [
-      { label: "이름", a: compareEmployeeA.name ?? "-", b: compareEmployeeB.name ?? "-" },
-      { label: "이메일", a: compareEmployeeA.email ?? "-", b: compareEmployeeB.email ?? "-" },
+      { label: isKoLocale ? "이름" : "Name", a: compareEmployeeA.name ?? "-", b: compareEmployeeB.name ?? "-" },
+      { label: isKoLocale ? "이메일" : "Email", a: compareEmployeeA.email ?? "-", b: compareEmployeeB.email ?? "-" },
       {
-        label: "조직",
+        label: isKoLocale ? "조직" : "Organization",
         a: compareEmployeeA.organizationId
           ? (organizationById.get(compareEmployeeA.organizationId)?.name ?? compareEmployeeA.organizationId)
           : "-",
@@ -272,7 +283,7 @@ export default function AdminPeoplePage() {
           : "-"
       },
       {
-        label: "부서",
+        label: isKoLocale ? "부서" : "Department",
         a: compareEmployeeA.departmentId
           ? (departmentById.get(compareEmployeeA.departmentId)?.name ?? compareEmployeeA.departmentId)
           : "-",
@@ -281,7 +292,7 @@ export default function AdminPeoplePage() {
           : "-"
       },
       {
-        label: "직급",
+        label: isKoLocale ? "직급" : "Position",
         a: compareEmployeeA.positionId
           ? (positionById.get(compareEmployeeA.positionId)?.name ?? compareEmployeeA.positionId)
           : "-",
@@ -289,11 +300,19 @@ export default function AdminPeoplePage() {
           ? (positionById.get(compareEmployeeB.positionId)?.name ?? compareEmployeeB.positionId)
           : "-"
       },
-      { label: "활성", a: compareEmployeeA.active ? "활성" : "비활성", b: compareEmployeeB.active ? "활성" : "비활성" },
-      { label: "최근 업데이트", a: formatDateTime(compareEmployeeA.updatedAt), b: formatDateTime(compareEmployeeB.updatedAt) }
+      {
+        label: isKoLocale ? "활성" : "Active",
+        a: compareEmployeeA.active ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive",
+        b: compareEmployeeB.active ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive"
+      },
+      {
+        label: isKoLocale ? "최근 업데이트" : "Last updated",
+        a: formatDateTime(compareEmployeeA.updatedAt, runtimeLocale),
+        b: formatDateTime(compareEmployeeB.updatedAt, runtimeLocale)
+      }
     ];
     return rows.map((row) => ({ ...row, diff: row.a !== row.b }));
-  }, [compareEmployeeA, compareEmployeeB, departmentById, organizationById, positionById]);
+  }, [compareEmployeeA, compareEmployeeB, departmentById, isKoLocale, organizationById, positionById, runtimeLocale]);
 
   const formatProfileValue = useCallback(
     (field: ProfileField, value: unknown) => {
@@ -302,7 +321,7 @@ export default function AdminPeoplePage() {
       }
       if (field === "active") {
         if (typeof value === "boolean") {
-          return value ? "활성" : "비활성";
+          return value ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive";
         }
         return String(value);
       }
@@ -320,7 +339,7 @@ export default function AdminPeoplePage() {
       }
       return String(value);
     },
-    [departmentById, organizationById, positionById]
+    [departmentById, isKoLocale, organizationById, positionById]
   );
 
   const historyChanges = useCallback(
@@ -397,7 +416,13 @@ export default function AdminPeoplePage() {
         }
       }
       setLogs((prev) => [
-        { id: Date.now(), label, status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        {
+          id: Date.now(),
+          label,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
         ...prev
       ]);
       return { response, body };
@@ -407,7 +432,11 @@ export default function AdminPeoplePage() {
   }
 
   async function loadOrganizations() {
-    const { response, body } = await callApi("조직 목록 조회", "GET", "/api/people/organizations");
+    const { response, body } = await callApi(
+      isKoLocale ? "조직 목록 조회" : "Load organizations",
+      "GET",
+      "/api/people/organizations"
+    );
     if (!response.ok || !body || typeof body !== "object") {
       return;
     }
@@ -417,7 +446,7 @@ export default function AdminPeoplePage() {
 
   async function loadDepartments() {
     const { response, body } = await callApi(
-      "부서 목록 조회",
+      isKoLocale ? "부서 목록 조회" : "Load departments",
       "GET",
       `/api/people/departments${buildQuery({ organizationId: organizationId.trim() || undefined })}`
     );
@@ -430,7 +459,7 @@ export default function AdminPeoplePage() {
 
   async function loadPositions() {
     const { response, body } = await callApi(
-      "직급 목록 조회",
+      isKoLocale ? "직급 목록 조회" : "Load positions",
       "GET",
       `/api/people/positions${buildQuery({ organizationId: organizationId.trim() || undefined })}`
     );
@@ -443,7 +472,7 @@ export default function AdminPeoplePage() {
 
   async function loadEmployees() {
     const { response, body } = await callApi(
-      "직원 목록 조회",
+      isKoLocale ? "직원 목록 조회" : "Load employees",
       "GET",
       `/api/people/employees${buildQuery({ organizationId: organizationId.trim() || undefined })}`
     );
@@ -468,7 +497,7 @@ export default function AdminPeoplePage() {
       return;
     }
     const { response, body } = await callApi(
-      "직원 인사 이력 조회",
+      isKoLocale ? "직원 인사 이력 조회" : "Load employee history",
       "GET",
       `/api/people/employees/${encodeURIComponent(employeeId)}/history${buildQuery({
         limit: historyLimit.trim() || undefined
@@ -491,7 +520,7 @@ export default function AdminPeoplePage() {
       active: editActive === "true"
     };
     const { response } = await callApi(
-      "직원 프로필 업데이트",
+      isKoLocale ? "직원 프로필 업데이트" : "Update employee profile",
       "PATCH",
       `/api/people/employees/${encodeURIComponent(selectedEmployeeId)}`,
       payload
@@ -555,7 +584,7 @@ export default function AdminPeoplePage() {
         count: counters[field]
       }))
       .sort((left, right) => right.count - left.count);
-  }, [history]);
+  }, [history, profileFieldLabel]);
 
   const selectedDepartments = selectedEmployee?.organizationId
     ? departments.filter((department) => department.organizationId === selectedEmployee.organizationId)
@@ -576,56 +605,60 @@ export default function AdminPeoplePage() {
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">조직도/인사 이력</h1>
-          <p className="page-subtitle">조직도 트리, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다.</p>
+          <h1 className="page-title">{isKoLocale ? "조직도/인사 이력" : "Organization chart and HR history"}</h1>
+          <p className="page-subtitle">
+            {isKoLocale
+              ? "조직도 트리, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다."
+              : "Manage org tree, employee comparison, and HR history cards in one screen."}
+          </p>
         </div>
         <div className="page-actions">
           <button className="btn btn-primary" onClick={() => void refreshDirectory()}>
-            디렉터리 조회
+            {isKoLocale ? "디렉터리 조회" : "Refresh directory"}
           </button>
           <Link className="btn btn-secondary" href="/admin">
-            관리자 대시보드
+            {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
           </Link>
         </div>
       </header>
 
       <section className="kpi-strip">
         <article className="kpi-card">
-          <p>조직</p>
+          <p>{isKoLocale ? "조직" : "Organizations"}</p>
           <strong>{organizations.length}</strong>
         </article>
         <article className="kpi-card">
-          <p>부서</p>
+          <p>{isKoLocale ? "부서" : "Departments"}</p>
           <strong>{departments.length}</strong>
         </article>
         <article className="kpi-card">
-          <p>직급</p>
+          <p>{isKoLocale ? "직급" : "Positions"}</p>
           <strong>{positions.length}</strong>
         </article>
         <article className="kpi-card">
-          <p>직원</p>
+          <p>{isKoLocale ? "직원" : "Employees"}</p>
           <strong>
             {filteredEmployees.length} / {employees.length}
           </strong>
         </article>
         <article className="kpi-card">
-          <p>API 호출</p>
+          <p>{isKoLocale ? "API 호출" : "API calls"}</p>
           <strong>
-            {stats.total} (OK {stats.success} / FAIL {stats.fail})
+            {stats.total} ({isKoLocale ? "성공" : "OK"} {stats.success} / {isKoLocale ? "실패" : "FAIL"} {stats.fail})
           </strong>
         </article>
       </section>
 
       <section className="panel-grid">
         <article id="directory-filters" className="panel panel-directory-filters">
-          <h2>필터</h2>
+          <h2>{isKoLocale ? "필터" : "Filters"}</h2>
           <div className="input-grid">
             <label>
-              Organization ID
+              {isKoLocale ? "조직 ID" : "Organization ID"}
               <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
             </label>
             <label>
-              Admin Actor ID
+              {isKoLocale ? "관리자 액터 ID" : "Admin actor ID"}
               <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
             </label>
             <label>
@@ -641,9 +674,9 @@ export default function AdminPeoplePage() {
               </select>
             </label>
             <label>
-              Department Filter
+              {isKoLocale ? "부서 필터" : "Department filter"}
               <select value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)}>
-                <option value="">All</option>
+                <option value="">{isKoLocale ? "전체" : "All"}</option>
                 {departments.map((department) => (
                   <option key={department.id} value={department.id}>
                     {department.name} ({department.code})
@@ -652,9 +685,9 @@ export default function AdminPeoplePage() {
               </select>
             </label>
             <label>
-              Position Filter
+              {isKoLocale ? "직급 필터" : "Position filter"}
               <select value={positionFilter} onChange={(event) => setPositionFilter(event.target.value)}>
-                <option value="">All</option>
+                <option value="">{isKoLocale ? "전체" : "All"}</option>
                 {positions.map((position) => (
                   <option key={position.id} value={position.id}>
                     {position.name} ({position.code})
@@ -663,58 +696,64 @@ export default function AdminPeoplePage() {
               </select>
             </label>
             <label>
-              Updated Window
+              {isKoLocale ? "최근 업데이트 범위" : "Updated window"}
               <select
                 value={recentlyUpdatedDays}
                 onChange={(event) => setRecentlyUpdatedDays(event.target.value as UpdatedWindow)}
               >
-                <option value="all">All</option>
-                <option value="7">7 days</option>
-                <option value="30">30 days</option>
-                <option value="90">90 days</option>
+                <option value="all">{isKoLocale ? "전체" : "All"}</option>
+                <option value="7">{isKoLocale ? "7일" : "7 days"}</option>
+                <option value="30">{isKoLocale ? "30일" : "30 days"}</option>
+                <option value="90">{isKoLocale ? "90일" : "90 days"}</option>
               </select>
             </label>
             <label>
-              History Limit
+              {isKoLocale ? "이력 조회 개수" : "History limit"}
               <input type="number" min={1} max={200} value={historyLimit} onChange={(event) => setHistoryLimit(event.target.value)} />
             </label>
             {showDevTools ? (
               <label className="full">
-                Bearer Access Token (override)
+                {isKoLocale ? "Bearer 액세스 토큰 (override)" : "Bearer access token (override)"}
                 <textarea rows={3} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
               </label>
             ) : null}
           </div>
           <div className="actions">
             <button className="btn btn-secondary" onClick={() => void loadOrganizations()}>
-              조직 조회
+              {isKoLocale ? "조직 조회" : "Load organizations"}
             </button>
             <button className="btn btn-secondary" onClick={() => void loadDepartments()}>
-              부서 조회
+              {isKoLocale ? "부서 조회" : "Load departments"}
             </button>
             <button className="btn btn-secondary" onClick={() => void loadPositions()}>
-              직급 조회
+              {isKoLocale ? "직급 조회" : "Load positions"}
             </button>
             <button className="btn btn-secondary" onClick={() => void loadEmployees()}>
-              직원 조회
+              {isKoLocale ? "직원 조회" : "Load employees"}
             </button>
             <button className="btn btn-secondary" onClick={resetDirectoryFilters}>
-              Filter Reset
+              {isKoLocale ? "필터 초기화" : "Reset filters"}
             </button>
           </div>
           <p className="small muted">
-            filter summary: dept={departmentFilter || "all"} / position={positionFilter || "all"} / updated=
-            {recentlyUpdatedDays}
+            {isKoLocale ? "필터 요약" : "Filter summary"}:{" "}
+            {isKoLocale ? "부서" : "dept"}={departmentFilter || (isKoLocale ? "전체" : "all")} /{" "}
+            {isKoLocale ? "직급" : "position"}={positionFilter || (isKoLocale ? "전체" : "all")} /{" "}
+            {isKoLocale ? "최근 업데이트" : "updated"}={recentlyUpdatedDays}
           </p>
-          {supabaseSessionError ? <p className="small fail">세션 오류: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? (
+            <p className="small fail">
+              {isKoLocale ? "세션 오류" : "Session error"}: {supabaseSessionError}
+            </p>
+          ) : null}
         </article>
 
         <article id="org-chart" className="panel panel-org-chart">
-          <h2>조직도 트리</h2>
+          <h2>{isKoLocale ? "조직도 트리" : "Organization chart"}</h2>
           {tree.length === 0 ? (
-            <p className="small muted">표시할 직원이 없습니다.</p>
+            <p className="small muted">{isKoLocale ? "표시할 직원이 없습니다." : "No employee to display."}</p>
           ) : (
-            <ul className="org-chart-list" aria-label="조직도 트리">
+            <ul className="org-chart-list" aria-label={isKoLocale ? "조직도 트리" : "Organization chart"}>
               {tree.map((org) => (
                 <li key={org.orgKey} className="org-chart-organization">
                   <div className="org-chart-org-head">
@@ -740,7 +779,7 @@ export default function AdminPeoplePage() {
                               >
                                 <strong>{employee.name ?? employee.id}</strong>
                                 <span className="muted">
-                                  {employee.id} / {employee.active ? "활성" : "비활성"}
+                                  {employee.id} / {employee.active ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive"}
                                 </span>
                               </button>
                             </li>
@@ -756,12 +795,12 @@ export default function AdminPeoplePage() {
         </article>
 
         <article id="employee-compare" className="panel panel-employee-compare">
-          <h2>직원 비교</h2>
+          <h2>{isKoLocale ? "직원 비교" : "Employee comparison"}</h2>
           <div className="input-grid">
             <label>
-              비교 A
+              {isKoLocale ? "비교 A" : "Compare A"}
               <select value={compareA} onChange={(event) => setCompareA(event.target.value)}>
-                <option value="">선택</option>
+                <option value="">{isKoLocale ? "선택" : "Select"}</option>
                 {filteredEmployees.map((employee) => (
                   <option key={employee.id} value={employee.id}>
                     {employee.id}
@@ -771,9 +810,9 @@ export default function AdminPeoplePage() {
               </select>
             </label>
             <label>
-              비교 B
+              {isKoLocale ? "비교 B" : "Compare B"}
               <select value={compareB} onChange={(event) => setCompareB(event.target.value)}>
-                <option value="">선택</option>
+                <option value="">{isKoLocale ? "선택" : "Select"}</option>
                 {filteredEmployees.map((employee) => (
                   <option key={employee.id} value={employee.id}>
                     {employee.id}
@@ -784,13 +823,13 @@ export default function AdminPeoplePage() {
             </label>
           </div>
           {compareRows.length === 0 ? (
-            <p className="small muted">비교할 두 직원을 선택하세요.</p>
+            <p className="small muted">{isKoLocale ? "비교할 두 직원을 선택하세요." : "Select two employees to compare."}</p>
           ) : (
             <div className="compare-table-wrap">
               <table className="compare-table">
                 <thead>
                   <tr>
-                    <th>항목</th>
+                    <th>{isKoLocale ? "항목" : "Field"}</th>
                     <th>{compareEmployeeA?.id}</th>
                     <th>{compareEmployeeB?.id}</th>
                   </tr>
@@ -800,7 +839,7 @@ export default function AdminPeoplePage() {
                     <tr key={row.label} className={row.diff ? "compare-diff-row" : ""}>
                       <th>
                         {row.label}
-                        {row.diff ? <span className="compare-change-chip">CHANGED</span> : null}
+                        {row.diff ? <span className="compare-change-chip">{isKoLocale ? "변경됨" : "CHANGED"}</span> : null}
                       </th>
                       <td>{row.a}</td>
                       <td>{row.b}</td>
@@ -813,18 +852,18 @@ export default function AdminPeoplePage() {
         </article>
 
         <article id="employee-history" className="panel panel-employee-history">
-          <h2>인사 이력</h2>
+          <h2>{isKoLocale ? "인사 이력" : "HR history"}</h2>
           {selectedEmployee ? (
             <>
               <p className="small">
-                선택 직원: <strong>{selectedEmployee.id}</strong> · 최근 업데이트{" "}
-                {formatDateTime(selectedEmployee.updatedAt)}
+                {isKoLocale ? "선택 직원" : "Selected employee"}: <strong>{selectedEmployee.id}</strong> ·{" "}
+                {isKoLocale ? "최근 업데이트" : "Last updated"} {formatDateTime(selectedEmployee.updatedAt, runtimeLocale)}
               </p>
               <div className="input-grid">
                 <label>
-                  부서 재배정
+                  {isKoLocale ? "부서 재배정" : "Reassign department"}
                   <select value={editDepartmentId} onChange={(event) => setEditDepartmentId(event.target.value)}>
-                    <option value="">미지정</option>
+                    <option value="">{isKoLocale ? "미지정" : "Unassigned"}</option>
                     {selectedDepartments.map((department) => (
                       <option key={department.id} value={department.id}>
                         {department.name} ({department.code})
@@ -833,9 +872,9 @@ export default function AdminPeoplePage() {
                   </select>
                 </label>
                 <label>
-                  직급 재배정
+                  {isKoLocale ? "직급 재배정" : "Reassign position"}
                   <select value={editPositionId} onChange={(event) => setEditPositionId(event.target.value)}>
-                    <option value="">미지정</option>
+                    <option value="">{isKoLocale ? "미지정" : "Unassigned"}</option>
                     {selectedPositions.map((position) => (
                       <option key={position.id} value={position.id}>
                         {position.name} ({position.code})
@@ -844,24 +883,24 @@ export default function AdminPeoplePage() {
                   </select>
                 </label>
                 <label>
-                  활성 상태
+                  {isKoLocale ? "활성 상태" : "Active status"}
                   <select value={editActive} onChange={(event) => setEditActive(event.target.value)}>
-                    <option value="true">활성</option>
-                    <option value="false">비활성</option>
+                    <option value="true">{isKoLocale ? "활성" : "Active"}</option>
+                    <option value="false">{isKoLocale ? "비활성" : "Inactive"}</option>
                   </select>
                 </label>
               </div>
               <div className="actions">
                 <button className="btn btn-primary" onClick={() => void applySelectedProfileUpdate()}>
-                  프로필 업데이트
+                  {isKoLocale ? "프로필 업데이트" : "Update profile"}
                 </button>
                 <button className="btn btn-secondary" onClick={() => void loadSelectedEmployeeHistory(selectedEmployee.id)}>
-                  이력 조회
+                  {isKoLocale ? "이력 조회" : "Load history"}
                 </button>
               </div>
             </>
           ) : (
-            <p className="small muted">조직도 트리에서 직원을 선택하세요.</p>
+            <p className="small muted">{isKoLocale ? "조직도 트리에서 직원을 선택하세요." : "Select an employee from the org chart."}</p>
           )}
 
           {history.length === 0 ? (
@@ -869,26 +908,29 @@ export default function AdminPeoplePage() {
           ) : (
             <>
               {historyChangeSummary.length > 0 ? (
-                <ul className="history-change-summary-list" aria-label="History Change Summary">
+                <ul className="history-change-summary-list" aria-label={isKoLocale ? "이력 변경 요약" : "History change summary"}>
                   {historyChangeSummary.map((item) => (
                     <li key={item.field} className={`history-change-summary-chip ${changeHighlightClass(item.field)}`}>
                       <strong>{item.label}</strong>
-                      <span>{item.count} changes</span>
+                      <span>
+                        {item.count}
+                        {isKoLocale ? "건 변경" : " changes"}
+                      </span>
                     </li>
                   ))}
                 </ul>
               ) : null}
-              <ul className="history-card-list" aria-label="직원 인사 이력">
+              <ul className="history-card-list" aria-label={isKoLocale ? "직원 인사 이력" : "Employee HR history"}>
                 {history.map((entry, index) => {
                   const changes = historyChanges(entry);
                   return (
                     <li key={`${entry.action}-${entry.createdAt}-${index}`} className="history-card">
                       <div className="history-card-head">
-                        <strong>{actionLabel(entry.action)}</strong>
-                        <span className="muted">{formatDateTime(entry.createdAt)}</span>
+                        <strong>{actionLabel(entry.action, isKoLocale)}</strong>
+                        <span className="muted">{formatDateTime(entry.createdAt, runtimeLocale)}</span>
                       </div>
                       <p className="small">
-                        actor {entry.actorRole}
+                        {isKoLocale ? "액터" : "actor"} {entry.actorRole}
                         {entry.actorId ? ` (${entry.actorId})` : ""}
                       </p>
                       {changes.length === 0 ? (
@@ -917,18 +959,21 @@ export default function AdminPeoplePage() {
         </article>
 
         <article className="panel">
-          <h2>요청 로그</h2>
+          <h2>{isKoLocale ? "요청 로그" : "Request logs"}</h2>
           <p className="small">
-            총 {stats.total}건 · 성공 {stats.success}건 · 실패 {stats.fail}건
-            {pendingLabel ? ` · 진행 중 ${pendingLabel}` : ""}
+            {isKoLocale ? "총" : "Total"} {stats.total}
+            {isKoLocale ? "건 · 성공" : " · success"} {stats.success}
+            {isKoLocale ? "건 · 실패" : " · fail"} {stats.fail}
+            {isKoLocale ? "건" : ""}
+            {pendingLabel ? ` · ${isKoLocale ? "진행 중" : "running"} ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small muted">아직 API 호출 이력이 없습니다.</p>
+            <p className="small muted">{isKoLocale ? "아직 API 호출 이력이 없습니다." : "No API call history yet."}</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span>
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? (isKoLocale ? "성공" : "OK") : isKoLocale ? "실패" : "FAIL"}</span>
                   <span>{log.label}</span>
                   <span className="muted">
                     {log.status} · {log.at}
