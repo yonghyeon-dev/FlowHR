@@ -42,27 +42,29 @@ export function AdminDashboardChrome({
     <>
       <header className="page-header">
         <div>
-          <h1 className="page-title">관리자 대시보드</h1>
+          <h1 className="page-title">{isKoLocale ? "관리자 대시보드" : "Admin Dashboard"}</h1>
           <p className="page-subtitle">
-            직원/조직 온보딩부터 승인 대기함 처리, 근태 집계 확인, 급여 프리뷰/확정까지 한 화면에서 처리합니다.
+            {isKoLocale
+              ? "직원/조직 온보딩부터 승인 대기함 처리, 근태 집계 확인, 급여 프리뷰/확정까지 한 화면에서 처리합니다."
+              : "Handle onboarding, approval queues, attendance aggregates, and payroll preview/confirm in one screen."}
           </p>
         </div>
         <div className="page-actions">
           <button className="btn btn-primary" onClick={onRefreshDashboard}>
-            대시보드 새로고침
+            {isKoLocale ? "대시보드 새로고침" : "Refresh Dashboard"}
           </button>
           <Link className="btn btn-secondary" href="/employee">
-            직원 포털
+            {isKoLocale ? "직원 포털" : "Employee Portal"}
           </Link>
           <Link className="btn btn-secondary" href="/login">
-            로그인
+            {isKoLocale ? "로그인" : "Login"}
           </Link>
           <Link className="btn btn-secondary" href="/">
-            홈
+            {isKoLocale ? "홈" : "Home"}
           </Link>
           {showDevTools ? (
             <Link className="btn btn-secondary" href="/ops/mvp-console">
-              (dev) ops 콘솔
+              {isKoLocale ? "(개발) ops 콘솔" : "(dev) Ops Console"}
             </Link>
           ) : null}
         </div>
@@ -71,7 +73,7 @@ export function AdminDashboardChrome({
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
           {isKoLocale ? "현재 환경은 " : "Current environment is "}
-          <strong>{isKoLocale ? "운영(production)" : "production"}</strong>
+          <strong>{isKoLocale ? "운영" : "production"}</strong>
           {isKoLocale
             ? ". API 호출을 위해 로그인 세션(Bearer 토큰)이 필요합니다: "
             : ". Login session (Bearer token) is required for API calls: "}
@@ -81,15 +83,15 @@ export function AdminDashboardChrome({
 
       <section className="kpi-strip">
         <article className="kpi-card">
-          <p>출퇴근 승인 대기</p>
+          <p>{isKoLocale ? "출퇴근 승인 대기" : "Pending Attendance Approvals"}</p>
           <strong>{pendingAttendanceCount}</strong>
         </article>
         <article className="kpi-card">
-          <p>휴가 승인 대기</p>
+          <p>{isKoLocale ? "휴가 승인 대기" : "Pending Leave Approvals"}</p>
           <strong>{pendingLeaveCount}</strong>
         </article>
         <article className="kpi-card">
-          <p>급여 프리뷰</p>
+          <p>{isKoLocale ? "급여 프리뷰" : "Payroll Previews"}</p>
           <strong>{previewedPayrollCount}</strong>
         </article>
         <article className="kpi-card">
@@ -99,7 +101,7 @@ export function AdminDashboardChrome({
           </strong>
         </article>
         <article className="kpi-card">
-          <p>최근 실행</p>
+          <p>{isKoLocale ? "최근 실행" : "Latest Call"}</p>
           <strong>{pendingLabel ?? "-"}</strong>
         </article>
       </section>

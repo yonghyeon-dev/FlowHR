@@ -185,20 +185,20 @@ export default function EmployeeSelfServicePage() {
   const preSubmitStatusLabels = useMemo(
     () =>
       ({
-        pass: isKoLocale ? "통과" : "PASS",
-        fail: isKoLocale ? "실패" : "FAIL"
+        pass: isKoLocale ? "통과" : "Pass",
+        fail: isKoLocale ? "실패" : "Fail"
       }) as const,
     [isKoLocale]
   );
   const listBadgeLabels = useMemo(
     () =>
       ({
-        empty: isKoLocale ? "없음" : "EMPTY",
-        applied: isKoLocale ? "적용됨" : "APPLIED",
-        holiday: isKoLocale ? "휴일" : "HOLIDAY",
-        work: isKoLocale ? "근무" : "WORK",
-        success: isKoLocale ? "성공" : "OK",
-        fail: isKoLocale ? "실패" : "FAIL"
+        empty: isKoLocale ? "없음" : "None",
+        applied: isKoLocale ? "적용됨" : "Applied",
+        holiday: isKoLocale ? "휴일" : "Holiday",
+        work: isKoLocale ? "근무" : "Work",
+        success: isKoLocale ? "성공" : "Success",
+        fail: isKoLocale ? "실패" : "Fail"
       }) as const,
     [isKoLocale]
   );
@@ -1994,11 +1994,9 @@ export default function EmployeeSelfServicePage() {
             <p className="small">
               {isKoLocale ? "현재 실행 중" : "Running now"}: <strong>{pendingLabel ?? (isKoLocale ? "없음" : "none")}</strong>{" "}
               / {isKoLocale ? "총 호출" : "Total calls"} {stats.total}
-              {isKoLocale ? "건 (성공 " : " ("}
-              {stats.success}
-              {isKoLocale ? "건, 실패 " : " success, "}
-              {stats.fail}
-              {isKoLocale ? "건)" : " fail)"}
+              {isKoLocale
+                ? `건 (성공 ${stats.success}건, 실패 ${stats.fail}건)`
+                : ` (success ${stats.success}, fail ${stats.fail})`}
             </p>
             <div className="actions">
               <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>

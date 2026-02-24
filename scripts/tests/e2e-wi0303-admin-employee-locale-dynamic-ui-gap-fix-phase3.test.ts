@@ -50,7 +50,7 @@ async function run() {
   assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "액터 ID \(선택\)" : "Actor ID \(optional\)"\}/);
   assert.match(
     adminPayrollPanel,
-    /\{isKoLocale \? "법정공제\(한국 baseline\)" : "Statutory deductions \(KR baseline\)"\}/
+    /\{isKoLocale \? "법정공제\(한국 기준\)" : "Statutory deductions \(KR baseline\)"\}/
   );
   assert.doesNotMatch(adminPage, /Organization ID가 필요합니다\./);
 

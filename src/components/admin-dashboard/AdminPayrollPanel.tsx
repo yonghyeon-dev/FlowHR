@@ -123,7 +123,7 @@ export function AdminPayrollPanel({
           <select value={payrollPreviewMode} onChange={(event) => onPayrollPreviewModeChange(event.target.value as PayrollPreviewMode)}>
             <option value="gross">총지급만</option>
             <option value="statutory_kr_baseline">
-              {isKoLocale ? "법정공제(한국 baseline)" : "Statutory deductions (KR baseline)"}
+              {isKoLocale ? "법정공제(한국 기준)" : "Statutory deductions (KR baseline)"}
             </option>
           </select>
         </label>

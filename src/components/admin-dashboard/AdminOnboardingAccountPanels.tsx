@@ -47,11 +47,11 @@ export function AdminOnboardingAccountPanels({
   return (
     <>
       <article className="panel" id="onboarding">
-        <h2>조직 온보딩</h2>
+        <h2>{isKoLocale ? "조직 온보딩" : "Organization Onboarding"}</h2>
         <p className="small">
           {isKoLocale
-            ? "조직(테넌트)을 먼저 만들고 선택해야 직원/근태/휴가/급여 흐름을 정상 검증할 수 있습니다. 이 패널의 조직 생성/목록 조회 호출은 tenantScope 제한을 피하기 위해 Dev Header 모드에서 "
-            : "You need to create and select an organization (tenant) first to validate employee/attendance/leave/payroll flows. Organization create/list requests in this panel omit "}
+            ? "조직(테넌트)을 먼저 만들고 선택해야 직원/근태/휴가/급여 흐름을 정상 검증할 수 있습니다. 이 패널의 조직 생성/목록 조회 호출은 tenantScope 제한을 피하기 위해 개발 헤더 모드에서 "
+            : "Create and select an organization (tenant) first to validate employee/attendance/leave/payroll flows. In this panel, organization create/list calls omit "}
           <code>x-actor-organization-id</code>
           {isKoLocale ? " 헤더를 생략합니다." : " header in Dev Header mode to bypass tenantScope restriction."}
         </p>
@@ -61,21 +61,21 @@ export function AdminOnboardingAccountPanels({
 
         <div className="input-grid">
           <label className="full">
-            새 조직 이름
+            {isKoLocale ? "새 조직 이름" : "New Organization Name"}
             <input value={organizationName} onChange={(event) => onOrganizationNameChange(event.target.value)} />
           </label>
         </div>
         <div className="actions">
           <button className="btn btn-primary" onClick={onCreateOrganization} disabled={!organizationName.trim()}>
-            조직 생성
+            {isKoLocale ? "조직 생성" : "Create Organization"}
           </button>
           <button className="btn btn-secondary" onClick={onListOrganizations}>
-            조직 목록 조회
+            {isKoLocale ? "조직 목록 조회" : "List Organizations"}
           </button>
         </div>
 
         {organizations.length === 0 ? (
-          <p className="small muted">조직 목록을 아직 불러오지 않았습니다.</p>
+          <p className="small muted">{isKoLocale ? "조직 목록을 아직 불러오지 않았습니다." : "Organization list has not been loaded yet."}</p>
         ) : (
           <ul className="simple-list" aria-label="조직 목록">
             {organizations.map((org) => (
@@ -84,11 +84,11 @@ export function AdminOnboardingAccountPanels({
                   <strong>{org.id}</strong>{" "}
                   <span className="muted">
                     {org.name}
-                    {organizationId.trim() === org.id ? " (선택됨)" : ""}
+                    {organizationId.trim() === org.id ? (isKoLocale ? " (선택됨)" : " (selected)") : ""}
                   </span>
                 </span>
                 <button type="button" className="btn btn-secondary btn-small" onClick={() => onSelectOrganization(org.id)}>
-                  이 조직 사용
+                  {isKoLocale ? "이 조직 사용" : "Use This Org"}
                 </button>
               </li>
             ))}
@@ -97,14 +97,16 @@ export function AdminOnboardingAccountPanels({
       </article>
 
       <article className="panel" id="account">
-        <h2>내 계정</h2>
+        <h2>{isKoLocale ? "내 계정" : "My Account"}</h2>
         {isProductionRuntime ? (
           <p className="small">
             {supabaseSession
               ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"}`
-              : "현재 로그인되어 있지 않습니다."}{" "}
+              : isKoLocale
+                ? "현재 로그인되어 있지 않습니다."
+                : "You are not logged in."}{" "}
             <span className="muted">
-              (Bearer {isKoLocale ? (usesBearerToken ? "사용" : "미사용") : usesBearerToken ? "ON" : "OFF"})
+              (Bearer {isKoLocale ? (usesBearerToken ? "사용" : "미사용") : usesBearerToken ? "enabled" : "disabled"})
             </span>
           </p>
         ) : (
@@ -123,7 +125,8 @@ export function AdminOnboardingAccountPanels({
         {showDevTools || !isProductionRuntime ? (
           <details className="details" style={{ marginTop: 12 }}>
             <summary>
-              개발/검증 설정 <small>(필요할 때만)</small>
+              {isKoLocale ? "개발/검증 설정" : "Dev/Verification Settings"}{" "}
+              <small>{isKoLocale ? "(필요할 때만)" : "(only when needed)"}</small>
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <label>
@@ -156,7 +159,7 @@ export function AdminOnboardingAccountPanels({
             </div>
             {showDevTools ? (
               <p className="small muted" style={{ marginTop: 10 }}>
-                {isKoLocale ? "(dev) 런타임 Supabase URL" : "(dev) runtime Supabase URL"}: <code>{supabaseUrl}</code>
+                {isKoLocale ? "(개발) 런타임 Supabase URL" : "(dev) Runtime Supabase URL"}: <code>{supabaseUrl}</code>
               </p>
             ) : null}
           </details>
