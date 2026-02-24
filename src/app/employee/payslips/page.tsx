@@ -845,7 +845,7 @@ export default function EmployeePayslipsPage() {
                   {supabaseSession
                     ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"} · actor=${supabaseSession.actorId ?? "-"}`
                     : pageCopy.devTools.none}{" "}
-                  (Bearer {usesBearerToken ? pageCopy.devTools.bearerOn : pageCopy.devTools.bearerOff})
+                  ({pageCopy.devTools.bearerStatusLabel} {usesBearerToken ? pageCopy.devTools.bearerOn : pageCopy.devTools.bearerOff})
                 </p>
               ) : null}
               {supabaseSessionError ? (

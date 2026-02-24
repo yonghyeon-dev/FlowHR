@@ -73,6 +73,7 @@ export type PayslipPageCopy = {
     hiddenByDefault: string;
     bearerTokenOptional: string;
     bearerPlaceholder: string;
+    bearerStatusLabel: string;
     callCount: string;
     current: string;
     session: string;
@@ -299,14 +300,14 @@ export function resolvePayslipSearchSortCopy(isKoLocale: boolean): PayslipSearch
   if (isKoLocale) {
     return {
       title: "명세서 검색/정렬",
-      description: "run id/기간/상태 조건으로 확정 명세서를 빠르게 찾고 정렬합니다.",
+      description: "실행 번호/기간/상태 조건으로 확정 명세서를 빠르게 찾고 정렬합니다.",
       scopeLabel: "검색 범위",
       queryLabel: "검색어",
-      queryPlaceholder: "예: RUN-2026-01, confirmed, 2026.01",
+      queryPlaceholder: "예: RUN-2026-01, 확정, 2026.01",
       sortLabel: "정렬",
       scope: {
         all: "전체",
-        runId: "run id",
+        runId: "실행 번호",
         period: "기간",
         state: "상태"
       },
@@ -378,7 +379,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       },
       productionNotice: {
         prefix: "현재 환경은",
-        suffix: "입니다. 명세서 조회를 위해 로그인 세션(Bearer)이 필요합니다:"
+        suffix: "입니다. 명세서 조회를 위해 로그인 세션(인증 토큰)이 필요합니다:"
       },
       kpi: {
         count: "명세서 건수",
@@ -386,14 +387,14 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         totalDeductions: "총공제 합계",
         totalNet: "실지급 합계",
         apiCalls: "API 호출",
-        ok: "OK",
-        fail: "FAIL"
+        ok: "성공",
+        fail: "실패"
       },
       filters: {
         title: "조회 조건",
-        organizationIdOptional: "조직 ID (선택)",
+        organizationIdOptional: "조직 식별자 (선택)",
         organizationIdPlaceholder: "예: ORG-00001",
-        employeeId: "내 직원 ID",
+        employeeId: "내 직원 번호",
         periodStart: "기간 시작",
         periodEnd: "기간 종료",
         actions: {
@@ -407,14 +408,15 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       devTools: {
         summary: "개발/검증 설정",
         hiddenByDefault: "기본은 숨김",
-        bearerTokenOptional: "Bearer 액세스 토큰 (선택)",
+        bearerTokenOptional: "접근 토큰 (선택)",
         bearerPlaceholder: "비어 있으면 x-actor-* 헤더 모드가 사용됩니다.",
+        bearerStatusLabel: "토큰 모드",
         callCount: "호출",
         current: "현재",
         session: "세션",
         none: "없음",
-        bearerOn: "ON",
-        bearerOff: "OFF",
+        bearerOn: "사용",
+        bearerOff: "미사용",
         sessionError: "세션 오류",
         clearLogs: "로그 초기화"
       },
@@ -450,7 +452,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         noFailureHistory: "실패 이력 없음",
         copyFailureCause: "실패 원인 복사",
         latestConfirmed: "최근 확정 명세",
-        payslipId: "명세서 ID",
+        payslipId: "명세서 번호",
         recoveryGuide: "복구 가이드",
         lastErrorAt: "마지막 오류 시각",
         lastCheckedAt: "마지막 조회",
@@ -458,7 +460,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         successSuffix: "요청이 정상 처리되었습니다.",
         failureSuffix: "요청이 실패했습니다.",
         guideIfNoFailure: "실패 이력이 없으면 최신 명세서를 선택한 뒤 전달 준비를 진행하세요.",
-        guideIfFailure: "실패 원인을 확인한 뒤 조회 기간/사번/조직 ID를 점검하고 다시 조회하세요."
+        guideIfFailure: "실패 원인을 확인한 뒤 조회 기간/사번/조직 식별자를 점검하고 다시 조회하세요."
       },
       compare: {
         title: "명세서 비교 조회",
@@ -486,15 +488,15 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         actions: {
           printSavePdf: "인쇄/PDF 저장",
           copyPdfFileName: "PDF 파일명 복사",
-          copyPayslipId: "명세서 ID 복사"
+          copyPayslipId: "명세서 번호 복사"
         },
         recommendedFileName: "권장 파일명",
         sheetAriaLabel: "급여 명세서 문서 서식",
         sheetEyebrow: "FlowHR 급여 명세서",
         sheetTitleSuffix: "급여 명세서",
         payPeriod: "지급 기간",
-        employeeId: "직원 ID",
-        payslipId: "명세서 ID",
+        employeeId: "직원 번호",
+        payslipId: "명세서 번호",
         confirmedDate: "확정일",
         settlementState: "정산 상태",
         summaryTitle: "요약",
@@ -512,7 +514,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       logs: {
         fetchPayslips: "급여 명세서 조회",
         fetchAttendance: "근태 집계 조회",
-        copyPayslipId: "명세서 ID 복사",
+        copyPayslipId: "명세서 번호 복사",
         copyPdfFileName: "PDF 파일명 복사",
         copyFailureCause: "실패 원인 복사",
         copyCompareSnapshot: "비교 스냅샷 복사"
@@ -566,6 +568,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       hiddenByDefault: "hidden by default",
       bearerTokenOptional: "Bearer Access Token (optional)",
       bearerPlaceholder: "When empty, x-actor-* header mode is used.",
+      bearerStatusLabel: "Bearer mode",
       callCount: "Calls",
       current: "Current",
       session: "Session",

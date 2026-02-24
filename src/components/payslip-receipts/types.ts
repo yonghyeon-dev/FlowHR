@@ -60,7 +60,7 @@ export function formatKrw(value: number | null) {
   if (value === null) {
     return "-";
   }
-  return `${value.toLocaleString("ko-KR")} KRW`;
+  return `${value.toLocaleString("ko-KR")}원`;
 }
 
 export function formatDateTime(value: string | null) {
