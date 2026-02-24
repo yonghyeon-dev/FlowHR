@@ -355,6 +355,11 @@ async function run() {
     path.resolve(process.cwd(), "src", "app", "employee", "page.tsx"),
     "utf8"
   );
+  const employeeDashboardChromeSource = fs.readFileSync(
+    path.resolve(process.cwd(), "src", "components", "employee-dashboard", "EmployeeDashboardChrome.tsx"),
+    "utf8"
+  );
+  const employeeUiSource = `${employeeSource}\n${employeeDashboardChromeSource}`;
   assert.match(
     homeSource,
     /(HR SaaS MVP|t\("home\.title"\))/,
@@ -363,7 +368,7 @@ async function run() {
   assert.match(homeSource, /href="\/admin"/, "home page should link to admin dashboard");
   assert.match(homeSource, /href="\/employee"/, "home page should link to employee portal");
   assert.match(
-    employeeSource,
+    employeeUiSource,
     /(className="page-title"|employee\.nav\.overview)/,
     "employee page should keep the employee portal heading"
   );

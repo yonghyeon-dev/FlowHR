@@ -8,8 +8,11 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeRequestFeedbackPanels = readUtf8("src", "components", "employee-dashboard", "EmployeeRequestFeedbackPanels.tsx");
+  const employeeResubmitPanel = readUtf8("src", "components", "employee-dashboard", "EmployeeResubmitPanel.tsx");
   const employeeTypes = readUtf8("src", "app", "employee", "page-types.ts");
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPeopleInvitePanels = readUtf8("src", "components", "admin-dashboard", "AdminPeopleInvitePanels.tsx");
   const workItem = readUtf8("work-items", "WI-0301-employee-admin-locale-dynamic-ui-gap-fix-phase2.md");
   const roadmap = readUtf8("ROADMAP.md");
 
@@ -20,11 +23,11 @@ async function run() {
   assert.match(employeePage, /const toLeaveTypeLabel = useCallback\(/);
 
   assert.match(employeePage, /\{toRequestStatusLabel\(row\.status\)\}/);
-  assert.match(employeePage, /\{toRequestStatusLabel\(item\.status\)\}/);
+  assert.match(employeeRequestFeedbackPanels, /\{toRequestStatusLabel\(item\.status\)\}/);
   assert.match(employeePage, /\{toRequestStatusLabel\(record\.state\)\}/);
   assert.match(employeePage, /\{toRequestStatusLabel\(request\.state\)\}/);
   assert.match(employeePage, /\{listBadgeLabels\.empty\}/);
-  assert.match(employeePage, /\{listBadgeLabels\.applied\}/);
+  assert.match(employeeResubmitPanel, /\{listBadgeLabels\.applied\}/);
   assert.match(employeePage, /\{schedule\.isHoliday \? listBadgeLabels\.holiday : listBadgeLabels\.work\}/);
   assert.match(employeePage, /\{log\.ok \? listBadgeLabels\.success : listBadgeLabels\.fail\}/);
 
@@ -44,20 +47,20 @@ async function run() {
   assert.match(adminPage, /const toInviteRoleLabel = \(role: string\) =>/);
   assert.match(adminPage, /const toInviteDeliveryModeLabel = \(mode: string\) =>/);
 
-  assert.match(adminPage, /<option value="employee">\{inviteRoleLabels\.employee\}<\/option>/);
-  assert.match(adminPage, /<option value="manager">\{inviteRoleLabels\.manager\}<\/option>/);
-  assert.match(adminPage, /<option value="admin">\{inviteRoleLabels\.admin\}<\/option>/);
-  assert.match(adminPage, /<option value="link">\{inviteDeliveryModeLabels\.link\}<\/option>/);
-  assert.match(adminPage, /<option value="email">\{inviteDeliveryModeLabels\.email\}<\/option>/);
+  assert.match(adminPeopleInvitePanels, /<option value="employee">\{inviteRoleLabels\.employee\}<\/option>/);
+  assert.match(adminPeopleInvitePanels, /<option value="manager">\{inviteRoleLabels\.manager\}<\/option>/);
+  assert.match(adminPeopleInvitePanels, /<option value="admin">\{inviteRoleLabels\.admin\}<\/option>/);
+  assert.match(adminPeopleInvitePanels, /<option value="link">\{inviteDeliveryModeLabels\.link\}<\/option>/);
+  assert.match(adminPeopleInvitePanels, /<option value="email">\{inviteDeliveryModeLabels\.email\}<\/option>/);
 
-  assert.doesNotMatch(adminPage, /<option value="employee">employee<\/option>/);
-  assert.doesNotMatch(adminPage, /<option value="manager">manager<\/option>/);
-  assert.doesNotMatch(adminPage, /<option value="admin">admin<\/option>/);
-  assert.doesNotMatch(adminPage, /<option value="link">link<\/option>/);
-  assert.doesNotMatch(adminPage, /<option value="email">email<\/option>/);
+  assert.doesNotMatch(adminPeopleInvitePanels, /<option value="employee">employee<\/option>/);
+  assert.doesNotMatch(adminPeopleInvitePanels, /<option value="manager">manager<\/option>/);
+  assert.doesNotMatch(adminPeopleInvitePanels, /<option value="admin">admin<\/option>/);
+  assert.doesNotMatch(adminPeopleInvitePanels, /<option value="link">link<\/option>/);
+  assert.doesNotMatch(adminPeopleInvitePanels, /<option value="email">email<\/option>/);
 
-  assert.match(adminPage, /role=\s*\{toInviteRoleLabel\(inviteResult\.role\)\}/);
-  assert.match(adminPage, /delivery=\s*\{toInviteDeliveryModeLabel\(inviteResult\.deliveryMode\)\}/);
+  assert.match(adminPeopleInvitePanels, /role=\s*\{toInviteRoleLabel\(inviteResult\.role\)\}/);
+  assert.match(adminPeopleInvitePanels, /delivery=\s*\{toInviteDeliveryModeLabel\(inviteResult\.deliveryMode\)\}/);
 
   assert.match(workItem, /WI-0301/i);
   assert.match(workItem, /locale/i);
