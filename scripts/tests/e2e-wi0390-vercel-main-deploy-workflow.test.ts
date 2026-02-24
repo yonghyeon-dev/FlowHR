@@ -62,8 +62,18 @@ function run() {
   );
   assert.match(
     workflowSource,
-    /npx vercel@latest deploy --prod --yes/,
-    "workflow should execute a production Vercel deploy command"
+    /VERCEL_SCOPE:\s*\$\{\{\s*vars\.VERCEL_SCOPE\s*\|\|\s*''\s*\}\}/,
+    "workflow should allow empty scope and fallback when team scope is inaccessible"
+  );
+  assert.match(
+    workflowSource,
+    /Scoped vercel .* retrying without --scope\./,
+    "workflow should retry vercel commands without --scope when scoped access fails"
+  );
+  assert.match(
+    workflowSource,
+    /run_vercel\s+deploy\s+--prod\s+--yes/,
+    "workflow should execute a production Vercel deploy flow"
   );
 }
 
