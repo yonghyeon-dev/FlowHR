@@ -74,51 +74,55 @@ export function AdminPeopleInvitePanels({
   return (
     <>
       <article className="panel" id="people">
-        <h2>직원 관리</h2>
-        <p className="small">출퇴근/휴가/급여는 Employee 마스터가 있어야 동작합니다. 먼저 직원부터 생성하세요.</p>
+        <h2>{isKoLocale ? "직원 관리" : "Employee Management"}</h2>
+        <p className="small">
+          {isKoLocale
+            ? "출퇴근/휴가/급여는 Employee 마스터가 있어야 동작합니다. 먼저 직원을 생성하세요."
+            : "Attendance/leave/payroll flows require employee master data. Create employees first."}
+        </p>
         <div className="input-grid">
           <label>
-            직원 ID
+            {isKoLocale ? "직원 ID" : "Employee ID"}
             <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
           </label>
           <label>
-            이름 (선택)
+            {isKoLocale ? "이름 (선택)" : "Name (optional)"}
             <input value={employeeName} onChange={(event) => onEmployeeNameChange(event.target.value)} />
           </label>
           <label>
-            이메일 (선택)
+            {isKoLocale ? "이메일 (선택)" : "Email (optional)"}
             <input value={employeeEmail} onChange={(event) => onEmployeeEmailChange(event.target.value)} />
           </label>
           <label>
-            활성
+            {isKoLocale ? "활성" : "Active"}
             <select value={employeeActive ? "yes" : "no"} onChange={(event) => onEmployeeActiveChange(event.target.value === "yes")}>
-              <option value="yes">예</option>
-              <option value="no">아니오</option>
+              <option value="yes">{isKoLocale ? "예" : "Yes"}</option>
+              <option value="no">{isKoLocale ? "아니오" : "No"}</option>
             </select>
           </label>
         </div>
         <div className="actions">
           <button className="btn btn-primary" onClick={onCreateEmployee} disabled={!employeeId.trim() || !organizationId.trim()}>
-            직원 생성
+            {isKoLocale ? "직원 생성" : "Create Employee"}
           </button>
           <button className="btn btn-secondary" onClick={onListEmployees}>
-            직원 목록 조회
+            {isKoLocale ? "직원 목록 조회" : "List Employees"}
           </button>
         </div>
         {employees.length > 0 ? (
-          <ul className="simple-list" aria-label="직원 목록">
+          <ul className="simple-list" aria-label={isKoLocale ? "직원 목록" : "Employee list"}>
             {employees.map((employee) => (
               <li key={employee.id}>
                 <span>
                   <strong>{employee.id}</strong>{" "}
                   <span className="muted">
-                    {employee.active ? "활성" : "비활성"} / {employee.organizationId ?? "-"}
+                    {employee.active ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive"} / {employee.organizationId ?? "-"}
                     {employee.name ? ` / ${employee.name}` : ""}
                     {employee.email ? ` / ${employee.email}` : ""}
                   </span>
                 </span>
                 <button type="button" className="btn btn-secondary btn-small" onClick={() => onApplyEmployee(employee.id)}>
-                  이 직원으로 적용
+                  {isKoLocale ? "이 직원으로 적용" : "Apply This Employee"}
                 </button>
               </li>
             ))}
@@ -127,15 +131,15 @@ export function AdminPeopleInvitePanels({
       </article>
 
       <article className="panel" id="invites">
-        <h2>초대/가입</h2>
+        <h2>{isKoLocale ? "초대/가입" : "Invite/Sign-up"}</h2>
         <p className="small">
           {isKoLocale
-            ? "직원에게 전달할 초대 링크를 생성합니다. 액터 ID에 직원 ID(Employee.id)를 넣으면 직원 포털이 해당 직원으로 매핑됩니다."
-            : "Generate invite links for employees. If actor ID contains Employee.id, employee portal maps to that employee."}
+            ? "직원에게 전달할 초대 링크를 생성합니다. 액터 ID에 직원 ID를 넣으면 직원 포털이 해당 직원으로 매핑됩니다."
+            : "Generate invite links for employees. If actor ID contains the employee ID, the employee portal maps to that employee."}
         </p>
         <div className="input-grid">
           <label className="full">
-            초대 이메일
+            {isKoLocale ? "초대 이메일" : "Invite Email"}
             <input
               value={inviteEmail}
               onChange={(event) => onInviteEmailChange(event.target.value)}
@@ -143,7 +147,7 @@ export function AdminPeopleInvitePanels({
             />
           </label>
           <label>
-            역할
+            {isKoLocale ? "역할" : "Role"}
             <select value={inviteRole} onChange={(event) => onInviteRoleChange(event.target.value as InviteRole)}>
               <option value="employee">{inviteRoleLabels.employee}</option>
               <option value="manager">{inviteRoleLabels.manager}</option>
@@ -152,7 +156,7 @@ export function AdminPeopleInvitePanels({
             </select>
           </label>
           <label>
-            전달 방식
+            {isKoLocale ? "전달 방식" : "Delivery Mode"}
             <select value={inviteDeliveryMode} onChange={(event) => onInviteDeliveryModeChange(event.target.value as InviteDeliveryMode)}>
               <option value="link">{inviteDeliveryModeLabels.link}</option>
               <option value="email">{inviteDeliveryModeLabels.email}</option>
@@ -163,7 +167,7 @@ export function AdminPeopleInvitePanels({
             <input
               value={inviteActorId}
               onChange={(event) => onInviteActorIdChange(event.target.value)}
-              placeholder="예: EMP-1001"
+              placeholder={isKoLocale ? "예: EMP-1001" : "e.g. EMP-1001"}
             />
           </label>
           <label className="full">
@@ -173,32 +177,36 @@ export function AdminPeopleInvitePanels({
         </div>
         <div className="actions">
           <button className="btn btn-primary" onClick={onCreateInvite} disabled={!inviteEmail.trim() || !organizationId.trim()}>
-            초대 링크 생성
+            {isKoLocale ? "초대 링크 생성" : "Create Invite Link"}
           </button>
         </div>
         {inviteResult ? (
           <>
             <p className="small">
-              생성됨: <strong>{inviteResult.email}</strong> · role={toInviteRoleLabel(inviteResult.role)} · delivery=
+              {isKoLocale ? "생성됨" : "Created"}: <strong>{inviteResult.email}</strong> · role={toInviteRoleLabel(inviteResult.role)} · delivery=
               {toInviteDeliveryModeLabel(inviteResult.deliveryMode)} · org={inviteResult.organizationId}
               {inviteResult.actorId ? ` · actor=${inviteResult.actorId}` : ""}
             </p>
             {inviteResult.actionLink ? (
               <label className="full" style={{ display: "block", marginTop: 8 }}>
-                초대 링크 (action_link)
+                {isKoLocale ? "초대 링크 (action_link)" : "Invite Link (action_link)"}
                 <textarea readOnly rows={3} value={inviteResult.actionLink} />
               </label>
             ) : (
               <p className="small muted" style={{ marginTop: 8 }}>
-                이메일 발송 모드로 생성되어 action_link를 저장하지 않았습니다.
+                {isKoLocale
+                  ? "이메일 발송 모드로 생성되어 action_link를 저장하지 않았습니다."
+                  : "Created in email delivery mode; action_link is not stored."}
               </p>
             )}
             <p className="small muted" style={{ marginTop: 8 }}>
-              링크가 `/login`으로 리다이렉트되려면 Supabase Auth의 Redirect URL에 현재 도메인이 허용되어 있어야 합니다.
+              {isKoLocale
+                ? "링크가 `/login`으로 리다이렉트되려면 Supabase Auth의 Redirect URL에 현재 도메인이 허용되어야 합니다."
+                : "To redirect to `/login`, the current domain must be allowed in Supabase Auth Redirect URLs."}
             </p>
           </>
         ) : (
-          <p className="small muted">아직 초대 링크를 생성하지 않았습니다.</p>
+          <p className="small muted">{isKoLocale ? "아직 초대 링크를 생성하지 않았습니다." : "No invite link has been created yet."}</p>
         )}
       </article>
     </>

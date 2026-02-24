@@ -31,25 +31,29 @@ export function EmployeeDashboardChrome({
     <>
       <header className="page-header">
         <div>
-          <h1 className="page-title">직원 포털</h1>
-          <p className="page-subtitle">출퇴근 기록, 휴가 신청/취소, 내 스케줄 확인을 직원이 직접 처리합니다.</p>
+          <h1 className="page-title">{isKoLocale ? "직원 포털" : "Employee Portal"}</h1>
+          <p className="page-subtitle">
+            {isKoLocale
+              ? "출퇴근 기록, 휴가 신청/취소, 내 스케줄 확인을 직원이 직접 처리합니다."
+              : "Employees can handle attendance logs, leave requests/cancellations, and schedule checks."}
+          </p>
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee/payslips">
-            급여 명세서
+            {isKoLocale ? "급여 명세서" : "Payslips"}
           </Link>
           <Link className="btn btn-secondary" href="/login">
-            로그인
+            {isKoLocale ? "로그인" : "Login"}
           </Link>
           <Link className="btn btn-secondary" href="/admin">
-            관리자
+            {isKoLocale ? "관리자" : "Admin"}
           </Link>
           <Link className="btn btn-secondary" href="/">
-            홈
+            {isKoLocale ? "홈" : "Home"}
           </Link>
           {showDevTools ? (
             <Link className="btn btn-secondary" href="/ops/mvp-console">
-              (dev) ops 콘솔
+              {isKoLocale ? "(개발) ops 콘솔" : "(dev) Ops Console"}
             </Link>
           ) : null}
         </div>
@@ -58,7 +62,7 @@ export function EmployeeDashboardChrome({
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
           {isKoLocale ? "현재 환경은 " : "Current environment is "}
-          <strong>{isKoLocale ? "운영(production)" : "production"}</strong>
+          <strong>{isKoLocale ? "운영" : "production"}</strong>
           {isKoLocale
             ? "입니다. 출퇴근/휴가 API 호출을 위해 로그인 세션(Bearer 토큰)이 필요합니다: "
             : ". Login session (Bearer token) is required for attendance/leave API calls: "}
@@ -68,15 +72,15 @@ export function EmployeeDashboardChrome({
 
       <section className="kpi-strip">
         <article className="kpi-card">
-          <p>오늘 출퇴근</p>
+          <p>{isKoLocale ? "오늘 출퇴근" : "Today Attendance"}</p>
           <strong>{attendanceSummary}</strong>
         </article>
         <article className="kpi-card">
-          <p>잔여 휴가</p>
+          <p>{isKoLocale ? "잔여 휴가" : "Leave Balance"}</p>
           <strong>{leaveBalanceLabel}</strong>
         </article>
         <article className="kpi-card">
-          <p>휴가 대기</p>
+          <p>{isKoLocale ? "휴가 대기" : "Pending Leave"}</p>
           <strong>{pendingLeaveCount}</strong>
         </article>
         <article className="kpi-card">
@@ -84,7 +88,7 @@ export function EmployeeDashboardChrome({
           <strong>{stats.successRate}%</strong>
         </article>
         <article className="kpi-card">
-          <p>최근 실행</p>
+          <p>{isKoLocale ? "최근 실행" : "Latest Call"}</p>
           <strong>{pendingLabel ?? "-"}</strong>
         </article>
       </section>

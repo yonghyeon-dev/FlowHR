@@ -312,18 +312,18 @@ export default function AdminDashboardPage() {
   const inviteRoleLabels = useMemo(
     () =>
       ({
-        employee: isKoLocale ? "직원(employee)" : "Employee",
-        manager: isKoLocale ? "매니저(manager)" : "Manager",
-        payroll_operator: isKoLocale ? "급여 담당(payroll_operator)" : "Payroll Operator",
-        admin: isKoLocale ? "관리자(admin)" : "Admin"
+        employee: isKoLocale ? "직원" : "Employee",
+        manager: isKoLocale ? "매니저" : "Manager",
+        payroll_operator: isKoLocale ? "급여 담당" : "Payroll Operator",
+        admin: isKoLocale ? "관리자" : "Admin"
       }) as const,
     [isKoLocale]
   );
   const inviteDeliveryModeLabels = useMemo(
     () =>
       ({
-        link: isKoLocale ? "링크(link)" : "Link",
-        email: isKoLocale ? "이메일(email)" : "Email"
+        link: isKoLocale ? "링크" : "Link",
+        email: isKoLocale ? "이메일" : "Email"
       }) as const,
     [isKoLocale]
   );
@@ -331,7 +331,7 @@ export default function AdminDashboardPage() {
     inviteRoleLabels[role as keyof typeof inviteRoleLabels] ?? role;
   const toInviteDeliveryModeLabel = (mode: string) =>
     inviteDeliveryModeLabels[mode as keyof typeof inviteDeliveryModeLabels] ?? mode;
-  const updatedAtLabel = isKoLocale ? "업데이트" : "updated";
+  const updatedAtLabel = isKoLocale ? "업데이트" : "Updated";
 
   const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
   const queueNowMs = Date.now();

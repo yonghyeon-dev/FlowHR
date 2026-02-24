@@ -26,15 +26,19 @@ export function AdminDebugLogsPanel({
 
   return (
     <article className="panel">
-      <h2>디버그 로그</h2>
-      <p className="small">개발 모드에서만 노출됩니다. PR/배포 환경에서는 사용자 경험 화면을 우선합니다.</p>
+      <h2>{isKoLocale ? "디버그 로그" : "Debug Logs"}</h2>
+      <p className="small">
+        {isKoLocale
+          ? "개발 모드에서만 노출됩니다. PR/배포 환경에서는 사용자 경험 화면을 우선합니다."
+          : "Visible only in development mode. Production and PR environments prioritize user-facing surfaces."}
+      </p>
       <div className="actions">
         <button className="btn btn-secondary" onClick={onClearLogs}>
-          로그 초기화
+          {isKoLocale ? "로그 초기화" : "Clear Logs"}
         </button>
       </div>
       {logs.length === 0 ? (
-        <p className="small muted">아직 호출 이력이 없습니다.</p>
+        <p className="small muted">{isKoLocale ? "아직 호출 이력이 없습니다." : "No API call history yet."}</p>
       ) : (
         <ul className="simple-list" aria-label={isKoLocale ? "API 호출 로그" : "API call logs"}>
           {logs.slice(0, 12).map((log) => (
