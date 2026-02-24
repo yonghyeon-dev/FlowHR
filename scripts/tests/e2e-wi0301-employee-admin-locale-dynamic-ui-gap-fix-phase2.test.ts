@@ -17,8 +17,12 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeePage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(employeePage, /const requestStatusLabels = useMemo\(/);
-  assert.match(employeePage, /const listBadgeLabels = useMemo\(/);
+  assert.match(employeePage, /from "@\/app\/employee\/page-locale-helpers"/);
+  assert.match(
+    employeePage,
+    /const localeLabelBundle = useMemo\(\(\) => resolveEmployeeLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
+  );
+  assert.match(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
   assert.match(employeePage, /const toRequestStatusLabel = useCallback\(/);
   assert.match(employeePage, /const toLeaveTypeLabel = useCallback\(/);
 
@@ -30,7 +34,10 @@ async function run() {
   assert.match(employeeResubmitPanel, /\{listBadgeLabels\.applied\}/);
   assert.match(employeePage, /\{schedule\.isHoliday \? listBadgeLabels\.holiday : listBadgeLabels\.work\}/);
   assert.match(employeePage, /\{log\.ok \? listBadgeLabels\.success : listBadgeLabels\.fail\}/);
+  assert.match(employeePage, /attendanceNotePresets\.map\(\(preset\) => \(/);
 
+  assert.doesNotMatch(employeePage, /const requestStatusLabels = useMemo\(/);
+  assert.doesNotMatch(employeePage, /const listBadgeLabels = useMemo\(/);
   assert.doesNotMatch(employeePage, />EMPTY</);
   assert.doesNotMatch(employeePage, />APPLIED</);
   assert.doesNotMatch(employeePage, /schedule\.isHoliday \? "HOLIDAY" : "WORK"/);

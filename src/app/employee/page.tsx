@@ -25,6 +25,12 @@ import {
   toLocalInputValue,
   toTimestamp
 } from "@/app/employee/page-helpers";
+import {
+  extractEmployeeErrorMessage,
+  formatEmployeeDeltaMinutes,
+  isDefaultEmployeeCancelReason,
+  resolveEmployeeLocaleLabelBundle
+} from "@/app/employee/page-locale-helpers";
 import type {
   ApiLog,
   AttendanceRecordDto,
@@ -55,72 +61,23 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
-const LEAVE_CALENDAR_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
-
-const ATTENDANCE_NOTE_PRESETS = ["퇴근 누락 정정", "출근 시각 정정", "휴게시간 정정"] as const;
-
-function formatDeltaMinutes(deltaMinutes: number) {
-  if (deltaMinutes === 0) {
-    return "변화 없음";
-  }
-  const absMinutes = Math.abs(deltaMinutes);
-  const hours = Math.floor(absMinutes / 60);
-  const minutes = absMinutes % 60;
-  const parts: string[] = [];
-  if (hours > 0) {
-    parts.push(`${hours}시간`);
-  }
-  if (minutes > 0 || parts.length === 0) {
-    parts.push(`${minutes}분`);
-  }
-  const sign = deltaMinutes > 0 ? "+" : "-";
-  return `${sign}${parts.join(" ")}`;
-}
-
-function extractErrorMessage(body: unknown) {
-  if (body === null || body === undefined) {
-    return "서버 응답이 비어 있습니다.";
-  }
-  if (typeof body === "string") {
-    return body.trim().length > 0 ? body : "알 수 없는 오류";
-  }
-  if (typeof body !== "object") {
-    return String(body);
-  }
-
-  const record = body as Record<string, unknown>;
-  const candidates = [record.error, record.message, record.reason, record.detail];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim().length > 0) {
-      return candidate;
-    }
-  }
-
-  const errors = record.errors;
-  if (Array.isArray(errors) && errors.length > 0) {
-    const first = errors[0];
-    if (typeof first === "string") {
-      return first;
-    }
-    if (first && typeof first === "object") {
-      const firstRecord = first as Record<string, unknown>;
-      if (typeof firstRecord.message === "string" && firstRecord.message.trim().length > 0) {
-        return firstRecord.message;
-      }
-    }
-  }
-
-  try {
-    const compact = JSON.stringify(body);
-    return compact.length > 140 ? `${compact.slice(0, 140)}...` : compact;
-  } catch {
-    return "응답을 해석할 수 없습니다.";
-  }
-}
-
 export default function EmployeeSelfServicePage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
+  const localeLabelBundle = useMemo(() => resolveEmployeeLocaleLabelBundle(isKoLocale), [isKoLocale]);
+  const {
+    attendanceNotePresets,
+    callApiLabels,
+    correctionRequestNote,
+    defaultCancelReason,
+    leaveCalendarWeekdays,
+    leaveTypeLabels,
+    listBadgeLabels,
+    notConfiguredLabel,
+    preSubmitStatusLabels,
+    requestStatusLabels,
+    runtimeLocale
+  } = localeLabelBundle;
 
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -144,7 +101,7 @@ export default function EmployeeSelfServicePage() {
   const [leaveEndDate, setLeaveEndDate] = useState(todayEndLocal());
   const [leaveReason, setLeaveReason] = useState("");
   const [lastLeaveRequestId, setLastLeaveRequestId] = useState("");
-  const [cancelReason, setCancelReason] = useState("개인 사정으로 취소");
+  const [cancelReason, setCancelReason] = useState<string>(defaultCancelReason);
 
   const [attendance, setAttendance] = useState<AttendanceRecordDto[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequestDto[]>([]);
@@ -163,46 +120,6 @@ export default function EmployeeSelfServicePage() {
   const [selectedResubmitCandidateKey, setSelectedResubmitCandidateKey] = useState("");
   const [lastAppliedResubmitCandidateKey, setLastAppliedResubmitCandidateKey] = useState("");
 
-  const requestStatusLabels = useMemo(
-    () =>
-      ({
-        PENDING: isKoLocale ? "대기" : "Pending",
-        APPROVED: isKoLocale ? "승인" : "Approved",
-        REJECTED: isKoLocale ? "반려" : "Rejected",
-        CANCELED: isKoLocale ? "취소" : "Canceled"
-      }) as const,
-    [isKoLocale]
-  );
-  const leaveTypeLabels = useMemo(
-    () =>
-      ({
-        ANNUAL: isKoLocale ? "연차" : "Annual",
-        SICK: isKoLocale ? "병가" : "Sick",
-        UNPAID: isKoLocale ? "무급" : "Unpaid"
-      }) as const,
-    [isKoLocale]
-  );
-  const preSubmitStatusLabels = useMemo(
-    () =>
-      ({
-        pass: isKoLocale ? "통과" : "Pass",
-        fail: isKoLocale ? "실패" : "Fail"
-      }) as const,
-    [isKoLocale]
-  );
-  const listBadgeLabels = useMemo(
-    () =>
-      ({
-        empty: isKoLocale ? "없음" : "None",
-        applied: isKoLocale ? "적용됨" : "Applied",
-        holiday: isKoLocale ? "휴일" : "Holiday",
-        work: isKoLocale ? "근무" : "Work",
-        success: isKoLocale ? "성공" : "Success",
-        fail: isKoLocale ? "실패" : "Fail"
-      }) as const,
-    [isKoLocale]
-  );
-
   const toRequestStatusLabel = useCallback(
     (status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status],
     [requestStatusLabels]
@@ -212,7 +129,7 @@ export default function EmployeeSelfServicePage() {
     [leaveTypeLabels]
   );
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? (isKoLocale ? "미설정" : "not configured");
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
@@ -248,6 +165,12 @@ export default function EmployeeSelfServicePage() {
       setEmployeeId(actorId);
     }
   }, [employeeId, isProductionRuntime, setEmployeeId, supabaseSession?.actorId, supabaseSession?.userId]);
+
+  useEffect(() => {
+    setCancelReason((previous) =>
+      isDefaultEmployeeCancelReason(previous) ? defaultCancelReason : previous
+    );
+  }, [defaultCancelReason]);
 
   async function callApi(
     label: string,
@@ -297,7 +220,7 @@ export default function EmployeeSelfServicePage() {
           status: response.status,
           ok: response.ok,
           durationMs,
-          at: new Date().toLocaleString("ko-KR"),
+          at: new Date().toLocaleString(runtimeLocale),
           body
         },
         ...prev
@@ -314,10 +237,10 @@ export default function EmployeeSelfServicePage() {
     const to = range?.toIso ?? toIso(periodEnd);
 
     const [attendanceRes, leaveRes, scheduleRes, balanceRes] = await Promise.all([
-      callApi("내 출퇴근 조회", "GET", `/api/attendance/records${buildQuery({ from, to })}`),
-      callApi("내 휴가 요청 조회", "GET", `/api/leave/requests${buildQuery({ from, to })}`),
-      callApi("내 근무 일정 조회", "GET", `/api/scheduling/schedules${buildQuery({ from, to })}`),
-      callApi("내 휴가 잔여 조회", "GET", `/api/leave/balances/${employeeId.trim() || "EMP-1001"}`)
+      callApi(callApiLabels.attendanceList, "GET", `/api/attendance/records${buildQuery({ from, to })}`),
+      callApi(callApiLabels.leaveList, "GET", `/api/leave/requests${buildQuery({ from, to })}`),
+      callApi(callApiLabels.scheduleList, "GET", `/api/scheduling/schedules${buildQuery({ from, to })}`),
+      callApi(callApiLabels.leaveBalance, "GET", `/api/leave/balances/${employeeId.trim() || "EMP-1001"}`)
     ]);
 
     if (attendanceRes.response.ok) {
@@ -359,7 +282,7 @@ export default function EmployeeSelfServicePage() {
   }
 
   async function createAttendance() {
-    const { response, body } = await callApi("출퇴근 기록 생성", "POST", "/api/attendance/records", {
+    const { response, body } = await callApi(callApiLabels.createAttendance, "POST", "/api/attendance/records", {
       employeeId: employeeId.trim() || "EMP-1001",
       checkInAt: toIso(checkInAt),
       checkOutAt: checkOutAt ? toIso(checkOutAt) : undefined,
@@ -384,7 +307,7 @@ export default function EmployeeSelfServicePage() {
     }
     const nowIso = new Date().toISOString();
     const { response } = await callApi(
-      "퇴근 처리(지금)",
+      callApiLabels.checkOutNow,
       "PATCH",
       `/api/attendance/records/${lastAttendanceId.trim()}`,
       {
@@ -401,7 +324,7 @@ export default function EmployeeSelfServicePage() {
       return;
     }
     const { response } = await callApi(
-      "출퇴근 정정(요청)",
+      callApiLabels.requestAttendanceCorrection,
       "PATCH",
       `/api/attendance/records/${lastAttendanceId.trim()}`,
       {
@@ -409,7 +332,7 @@ export default function EmployeeSelfServicePage() {
         checkOutAt: checkOutAt ? toIso(checkOutAt) : undefined,
         breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes))),
         isHoliday,
-        notes: attendanceNotes.trim().length > 0 ? attendanceNotes.trim() : "정정 요청"
+        notes: attendanceNotes.trim().length > 0 ? attendanceNotes.trim() : correctionRequestNote
       }
     );
     if (response.ok) {
@@ -418,7 +341,7 @@ export default function EmployeeSelfServicePage() {
   }
 
   async function createLeave() {
-    const { response, body } = await callApi("휴가 신청", "POST", "/api/leave/requests", {
+    const { response, body } = await callApi(callApiLabels.createLeave, "POST", "/api/leave/requests", {
       employeeId: employeeId.trim() || "EMP-1001",
       leaveType,
       startDate: toIso(leaveStartDate),
@@ -442,7 +365,7 @@ export default function EmployeeSelfServicePage() {
       return;
     }
     const { response } = await callApi(
-      "휴가 취소",
+      callApiLabels.cancelLeave,
       "POST",
       `/api/leave/requests/${lastLeaveRequestId.trim()}/cancel`,
       {
@@ -568,31 +491,49 @@ export default function EmployeeSelfServicePage() {
     if (candidate.channel === "attendance") {
       const targetAttendance = attendance.find((record) => record.id === candidate.recordId);
       if (!targetAttendance) {
-        pushMobileFlowFeedback("선택한 출퇴근 재제출 대상이 최신 목록에 없습니다.");
+        pushMobileFlowFeedback(
+          isKoLocale
+            ? "선택한 출퇴근 재제출 대상이 최신 목록에 없습니다."
+            : "Selected attendance resubmit candidate is not in the latest list."
+        );
         return;
       }
       applyAttendanceRecordToCorrectionForm(targetAttendance);
-      setAttendanceNotes(targetAttendance.notes?.trim() || "재제출 정정");
+      setAttendanceNotes(targetAttendance.notes?.trim() || (isKoLocale ? "재제출 정정" : "Resubmit correction"));
       setLastAppliedResubmitCandidateKey(candidate.key);
       jumpToSection("attendance");
-      pushMobileFlowFeedback("출퇴근 재제출 초안을 정정 폼에 반영했습니다.");
+      pushMobileFlowFeedback(
+        isKoLocale
+          ? "출퇴근 재제출 초안을 정정 폼에 반영했습니다."
+          : "Applied attendance resubmit draft to correction form."
+      );
       return;
     }
 
     const targetLeave = leaveRequests.find((request) => request.id === candidate.recordId);
     if (!targetLeave) {
-      pushMobileFlowFeedback("선택한 휴가 재제출 대상이 최신 목록에 없습니다.");
+      pushMobileFlowFeedback(
+        isKoLocale
+          ? "선택한 휴가 재제출 대상이 최신 목록에 없습니다."
+          : "Selected leave resubmit candidate is not in the latest list."
+      );
       return;
     }
     applyLeaveRequestToResubmitDraft(targetLeave);
     setLastAppliedResubmitCandidateKey(candidate.key);
     jumpToSection("leave");
-    pushMobileFlowFeedback("휴가 재제출 초안을 신청 폼에 반영했습니다.");
+    pushMobileFlowFeedback(
+      isKoLocale
+        ? "휴가 재제출 초안을 신청 폼에 반영했습니다."
+        : "Applied leave resubmit draft to request form."
+    );
   }
 
   function applySelectedResubmitCandidate() {
     if (!selectedResubmitCandidate) {
-      pushMobileFlowFeedback("재제출 후보를 먼저 선택해 주세요.");
+      pushMobileFlowFeedback(
+        isKoLocale ? "재제출 후보를 먼저 선택해 주세요." : "Select a resubmit candidate first."
+      );
       return;
     }
     applyResubmitCandidateToDraft(selectedResubmitCandidate);
@@ -600,7 +541,9 @@ export default function EmployeeSelfServicePage() {
 
   function applyLatestResubmitCandidate() {
     if (resubmitCandidates.length === 0) {
-      pushMobileFlowFeedback("재제출할 반려/취소 건이 없습니다.");
+      pushMobileFlowFeedback(
+        isKoLocale ? "재제출할 반려/취소 건이 없습니다." : "No rejected/canceled request to resubmit."
+      );
       return;
     }
     const latest = resubmitCandidates[0];
@@ -611,23 +554,37 @@ export default function EmployeeSelfServicePage() {
   function clearResubmitSelection() {
     setSelectedResubmitCandidateKey("");
     setLastAppliedResubmitCandidateKey("");
-    pushMobileFlowFeedback("재제출 후보 선택을 초기화했습니다.");
+    pushMobileFlowFeedback(
+      isKoLocale ? "재제출 후보 선택을 초기화했습니다." : "Reset resubmit candidate selection."
+    );
   }
 
   async function copyFailureCause(message: string | null) {
     if (!message) {
-      pushMobileFlowFeedback("복사할 실패 원인이 없습니다.");
+      pushMobileFlowFeedback(
+        isKoLocale ? "복사할 실패 원인이 없습니다." : "No failure cause available to copy."
+      );
       return;
     }
     if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-      pushMobileFlowFeedback("클립보드 복사를 지원하지 않는 환경입니다.");
+      pushMobileFlowFeedback(
+        isKoLocale
+          ? "클립보드 복사를 지원하지 않는 환경입니다."
+          : "Clipboard copy is not available in this environment."
+      );
       return;
     }
     try {
       await navigator.clipboard.writeText(message);
-      pushMobileFlowFeedback("최근 실패 원인을 클립보드에 복사했습니다.");
+      pushMobileFlowFeedback(
+        isKoLocale
+          ? "최근 실패 원인을 클립보드에 복사했습니다."
+          : "Copied the latest failure cause to clipboard."
+      );
     } catch {
-      pushMobileFlowFeedback("실패 원인 복사에 실패했습니다.");
+      pushMobileFlowFeedback(
+        isKoLocale ? "실패 원인 복사에 실패했습니다." : "Failed to copy failure cause."
+      );
     }
   }
 
@@ -637,14 +594,14 @@ export default function EmployeeSelfServicePage() {
 
   const latestPayload = useMemo(() => {
     if (!newestLog) {
-      return "아직 호출 이력이 없습니다.";
+      return isKoLocale ? "아직 호출 이력이 없습니다." : "No API call history yet.";
     }
     try {
       return JSON.stringify(newestLog.body, null, 2);
     } catch {
       return String(newestLog.body);
     }
-  }, [newestLog]);
+  }, [isKoLocale, newestLog]);
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -656,10 +613,14 @@ export default function EmployeeSelfServicePage() {
 
   const leaveBalanceSummary = useMemo(() => {
     if (!leaveBalance) {
-      return "잔여 휴가 정보를 아직 불러오지 못했습니다.";
+      return isKoLocale
+        ? "잔여 휴가 정보를 아직 불러오지 못했습니다."
+        : "Leave balance is not loaded yet.";
     }
-    return `잔여 ${formatDays(leaveBalance.remainingDays)}일 (부여 ${formatDays(leaveBalance.grantedDays)}일, 사용 ${formatDays(leaveBalance.usedDays)}일)`;
-  }, [leaveBalance]);
+    return isKoLocale
+      ? `잔여 ${formatDays(leaveBalance.remainingDays)}일 (부여 ${formatDays(leaveBalance.grantedDays)}일, 사용 ${formatDays(leaveBalance.usedDays)}일)`
+      : `Remaining ${formatDays(leaveBalance.remainingDays)}d (granted ${formatDays(leaveBalance.grantedDays)}d, used ${formatDays(leaveBalance.usedDays)}d)`;
+  }, [isKoLocale, leaveBalance]);
 
   const pendingLeaveCount = useMemo(
     () => leaveRequests.filter((request) => request.state === "PENDING").length,
@@ -683,13 +644,13 @@ export default function EmployeeSelfServicePage() {
 
   const attendanceSummary = useMemo(() => {
     if (!latestAttendance) {
-      return "기록 없음";
+      return isKoLocale ? "기록 없음" : "No record";
     }
     if (!latestAttendance.checkOutAt) {
-      return "근무 중";
+      return isKoLocale ? "근무 중" : "Working";
     }
-    return "퇴근 완료";
-  }, [latestAttendance]);
+    return isKoLocale ? "퇴근 완료" : "Checked out";
+  }, [isKoLocale, latestAttendance]);
 
   const leaveUsageRatePercent = useMemo(() => {
     if (!leaveBalance || leaveBalance.grantedDays <= 0) {
@@ -711,16 +672,44 @@ export default function EmployeeSelfServicePage() {
       return [];
     }
     return [
-      { key: "remaining", label: "잔여", value: `${formatDays(leaveBalance.remainingDays)}일`, tone: "remaining" },
-      { key: "granted", label: "부여", value: `${formatDays(leaveBalance.grantedDays)}일`, tone: "granted" },
-      { key: "used", label: "사용", value: `${formatDays(leaveBalance.usedDays)}일`, tone: "used" },
-      { key: "carry-over", label: "이월", value: `${formatDays(leaveBalance.carryOverDays)}일`, tone: "carry-over" }
+      {
+        key: "remaining",
+        label: isKoLocale ? "잔여" : "Remaining",
+        value: isKoLocale
+          ? `${formatDays(leaveBalance.remainingDays)}일`
+          : `${formatDays(leaveBalance.remainingDays)}d`,
+        tone: "remaining"
+      },
+      {
+        key: "granted",
+        label: isKoLocale ? "부여" : "Granted",
+        value: isKoLocale
+          ? `${formatDays(leaveBalance.grantedDays)}일`
+          : `${formatDays(leaveBalance.grantedDays)}d`,
+        tone: "granted"
+      },
+      {
+        key: "used",
+        label: isKoLocale ? "사용" : "Used",
+        value: isKoLocale ? `${formatDays(leaveBalance.usedDays)}일` : `${formatDays(leaveBalance.usedDays)}d`,
+        tone: "used"
+      },
+      {
+        key: "carry-over",
+        label: isKoLocale ? "이월" : "Carry-over",
+        value: isKoLocale
+          ? `${formatDays(leaveBalance.carryOverDays)}일`
+          : `${formatDays(leaveBalance.carryOverDays)}d`,
+        tone: "carry-over"
+      }
     ];
-  }, [leaveBalance]);
+  }, [isKoLocale, leaveBalance]);
 
   const leaveUsageProjectionLabel = useMemo(() => {
     if (!leaveBalance || leaveBalance.grantedDays <= 0) {
-      return "연차 사용 속도 예측은 잔여 정보를 불러오면 표시됩니다.";
+      return isKoLocale
+        ? "연차 사용 속도 예측은 잔여 정보를 불러오면 표시됩니다."
+        : "Projection is shown after leave balance is loaded.";
     }
 
     const elapsedMonths = Math.max(1, new Date().getMonth() + 1);
@@ -728,16 +717,20 @@ export default function EmployeeSelfServicePage() {
     const projectedYearEndUsed = averageUsedPerMonth * 12;
     const projectedRemaining = leaveBalance.grantedDays - projectedYearEndUsed;
     if (projectedRemaining >= 0) {
-      return `현재 사용 속도 기준 연말 예상 잔여 ${formatDays(projectedRemaining)}일`;
+      return isKoLocale
+        ? `현재 사용 속도 기준 연말 예상 잔여 ${formatDays(projectedRemaining)}일`
+        : `Projected year-end remaining ${formatDays(projectedRemaining)}d at current usage rate`;
     }
-    return `현재 사용 속도 기준 연말 예상 부족 ${formatDays(Math.abs(projectedRemaining))}일`;
-  }, [leaveBalance]);
+    return isKoLocale
+      ? `현재 사용 속도 기준 연말 예상 부족 ${formatDays(Math.abs(projectedRemaining))}일`
+      : `Projected year-end shortage ${formatDays(Math.abs(projectedRemaining))}d at current usage rate`;
+  }, [isKoLocale, leaveBalance]);
 
   const leaveCalendarMonthLabel = useMemo(() => {
     const parsedPeriodStart = new Date(periodStart);
     const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
-    return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월`;
-  }, [periodStart]);
+    return new Intl.DateTimeFormat(runtimeLocale, { year: "numeric", month: "long" }).format(anchor);
+  }, [periodStart, runtimeLocale]);
 
   const leaveCalendarCells = useMemo<LeaveCalendarDayCell[]>(() => {
     const parsedPeriodStart = new Date(periodStart);
@@ -1118,7 +1111,7 @@ export default function EmployeeSelfServicePage() {
       channel: "attendance" as const,
       status: record.state,
       at: record.checkOutAt ?? record.checkInAt,
-      title: "출퇴근 요청",
+      title: isKoLocale ? "출퇴근 요청" : "Attendance request",
       detail: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
     }));
 
@@ -1127,14 +1120,14 @@ export default function EmployeeSelfServicePage() {
       channel: "leave" as const,
       status: request.state,
       at: request.endDate,
-      title: "휴가 요청",
+      title: isKoLocale ? "휴가 요청" : "Leave request",
       detail: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
     }));
 
     return [...attendanceItems, ...leaveItems]
       .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
       .slice(0, 12);
-  }, [attendance, leaveRequests, toLeaveTypeLabel]);
+  }, [attendance, isKoLocale, leaveRequests, toLeaveTypeLabel]);
 
   const filteredMobileRequestTimeline = useMemo(() => {
     return mobileRequestTimeline.filter((item) => {
@@ -1155,7 +1148,7 @@ export default function EmployeeSelfServicePage() {
       .filter((log) => !log.ok)
       .slice(0, 4)
       .forEach((log) => {
-        const message = extractErrorMessage(log.body);
+        const message = extractEmployeeErrorMessage(log.body, isKoLocale);
         byId.set(`log-${log.id}`, {
           id: `log-${log.id}`,
           source: `${log.label} (${log.status})`,
@@ -1170,8 +1163,10 @@ export default function EmployeeSelfServicePage() {
     if (latestRejectedAttendance) {
       byId.set(`attendance-${latestRejectedAttendance.id}`, {
         id: `attendance-${latestRejectedAttendance.id}`,
-        source: "출퇴근 반려",
-        message: latestRejectedAttendance.notes?.trim() || "반려 사유가 기록되지 않았습니다.",
+        source: isKoLocale ? "출퇴근 반려" : "Attendance rejected",
+        message:
+          latestRejectedAttendance.notes?.trim() ||
+          (isKoLocale ? "반려 사유가 기록되지 않았습니다." : "Rejection reason was not recorded."),
         at: formatDateTime(latestRejectedAttendance.checkOutAt ?? latestRejectedAttendance.checkInAt)
       });
     }
@@ -1182,17 +1177,24 @@ export default function EmployeeSelfServicePage() {
     if (latestRejectedLeave) {
       byId.set(`leave-${latestRejectedLeave.id}`, {
         id: `leave-${latestRejectedLeave.id}`,
-        source: latestRejectedLeave.state === "REJECTED" ? "휴가 반려" : "휴가 취소",
+        source:
+          latestRejectedLeave.state === "REJECTED"
+            ? isKoLocale
+              ? "휴가 반려"
+              : "Leave rejected"
+            : isKoLocale
+              ? "휴가 취소"
+              : "Leave canceled",
         message:
           latestRejectedLeave.decisionReason?.trim() ||
           latestRejectedLeave.reason?.trim() ||
-          "사유가 기록되지 않았습니다.",
+          (isKoLocale ? "사유가 기록되지 않았습니다." : "Reason was not recorded."),
         at: formatDateTime(latestRejectedLeave.endDate)
       });
     }
 
     return [...byId.values()].slice(0, 6);
-  }, [attendance, leaveRequests, logs]);
+  }, [attendance, isKoLocale, leaveRequests, logs]);
 
   const latestFailureCauseMessage = requestFailureCauses[0]?.message ?? null;
 
@@ -1505,10 +1507,10 @@ export default function EmployeeSelfServicePage() {
     });
 
     if (originalNetMinutes === null || draftNetMinutes === null) {
-      return "비교 불가";
+      return isKoLocale ? "비교 불가" : "Not comparable";
     }
-    return formatDeltaMinutes(draftNetMinutes - originalNetMinutes);
-  }, [breakMinutes, checkInAt, checkOutAt, selectedCorrectionRecord]);
+    return formatEmployeeDeltaMinutes(draftNetMinutes - originalNetMinutes, isKoLocale);
+  }, [breakMinutes, checkInAt, checkOutAt, isKoLocale, selectedCorrectionRecord]);
 
   function applyAttendanceRecordToCorrectionForm(record: AttendanceRecordDto) {
     setSelectedCorrectionRecordId(record.id);
@@ -1517,7 +1519,7 @@ export default function EmployeeSelfServicePage() {
     setCheckOutAt(record.checkOutAt ? toLocalInputValue(new Date(record.checkOutAt)) : "");
     setBreakMinutes(String(record.breakMinutes));
     setIsHoliday(record.isHoliday);
-    setAttendanceNotes(record.notes ?? "정정 요청");
+    setAttendanceNotes(record.notes ?? correctionRequestNote);
   }
 
   function applySelectedCorrectionRecord() {
@@ -1627,42 +1629,42 @@ export default function EmployeeSelfServicePage() {
         />
 
         <article className="panel" id="attendance">
-          <h2>출퇴근</h2>
+          <h2>{isKoLocale ? "출퇴근" : "Attendance"}</h2>
           <div className="input-grid">
             <label>
-              출근 시각
+              {isKoLocale ? "출근 시각" : "Check-in time"}
               <input type="datetime-local" value={checkInAt} onChange={(event) => setCheckInAt(event.target.value)} />
             </label>
             <label>
-              퇴근 시각
+              {isKoLocale ? "퇴근 시각" : "Check-out time"}
               <input type="datetime-local" value={checkOutAt} onChange={(event) => setCheckOutAt(event.target.value)} />
             </label>
             <label>
-              휴게 분
+              {isKoLocale ? "휴게 분" : "Break minutes"}
               <input type="number" min={0} value={breakMinutes} onChange={(event) => setBreakMinutes(event.target.value)} />
             </label>
             <label>
-              휴일 근무
+              {isKoLocale ? "휴일 근무" : "Holiday work"}
               <select value={isHoliday ? "yes" : "no"} onChange={(event) => setIsHoliday(event.target.value === "yes")}>
-                <option value="no">아니오</option>
-                <option value="yes">예</option>
+                <option value="no">{isKoLocale ? "아니오" : "No"}</option>
+                <option value="yes">{isKoLocale ? "예" : "Yes"}</option>
               </select>
             </label>
             <label className="full">
-              정정/메모
+              {isKoLocale ? "정정/메모" : "Correction note"}
               <input value={attendanceNotes} onChange={(event) => setAttendanceNotes(event.target.value)} />
             </label>
             <label className="full">
-              최근/대상 기록 ID
+              {isKoLocale ? "최근/대상 기록 ID" : "Recent/target record ID"}
               <input value={lastAttendanceId} onChange={(event) => setLastAttendanceId(event.target.value)} />
             </label>
             <label className="full">
-              정정 대상 기록 선택
+              {isKoLocale ? "정정 대상 기록 선택" : "Select correction target record"}
               <select
                 value={selectedCorrectionRecordId}
                 onChange={(event) => selectCorrectionTarget(event.target.value)}
               >
-                <option value="">최근 기록에서 선택</option>
+                <option value="">{isKoLocale ? "최근 기록에서 선택" : "Select from recent records"}</option>
                 {attendance.map((record) => (
                   <option key={record.id} value={record.id}>
                     {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} ({toRequestStatusLabel(record.state)})
@@ -1672,14 +1674,18 @@ export default function EmployeeSelfServicePage() {
             </label>
           </div>
           <p className="small muted" style={{ margin: "4px 0 0" }}>
-            근무시간 변화: <strong>{correctionDeltaLabel}</strong>
+            {isKoLocale ? "근무시간 변화" : "Work-time delta"}: <strong>{correctionDeltaLabel}</strong>
           </p>
           <div className="pre-submit-check-wrap">
             <p className="small" style={{ margin: "8px 0 0" }}>
-              제출 직전 검증 ({attendancePreSubmitChecks.filter((check) => check.pass).length}/
-              {attendancePreSubmitChecks.length} 통과)
+              {isKoLocale ? "제출 직전 검증" : "Pre-submit checks"} (
+              {attendancePreSubmitChecks.filter((check) => check.pass).length}/{attendancePreSubmitChecks.length}{" "}
+              {isKoLocale ? "통과" : "passed"})
             </p>
-            <ul className="pre-submit-check-list" aria-label="출퇴근 제출 직전 검증">
+            <ul
+              className="pre-submit-check-list"
+              aria-label={isKoLocale ? "출퇴근 제출 직전 검증" : "Attendance pre-submit checks"}
+            >
               {attendancePreSubmitChecks.map((check) => (
                 <li key={check.id} className={check.pass ? "pass" : "fail"}>
                   <strong>{check.pass ? preSubmitStatusLabels.pass : preSubmitStatusLabels.fail}</strong>
@@ -1696,29 +1702,29 @@ export default function EmployeeSelfServicePage() {
           ) : null}
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void createAttendance()}>
-              출퇴근 기록 생성
+              {isKoLocale ? "출퇴근 기록 생성" : "Create attendance record"}
             </button>
             <button className="btn btn-secondary" onClick={() => void checkOutNow()} disabled={!lastAttendanceId}>
-              퇴근 처리(지금)
+              {isKoLocale ? "퇴근 처리(지금)" : "Check-out now"}
             </button>
             <button
               className="btn btn-secondary"
               onClick={() => void requestAttendanceCorrection()}
               disabled={!correctionValidation.isValid || !attendancePreSubmitValid}
             >
-              출퇴근 정정(요청)
+              {isKoLocale ? "출퇴근 정정(요청)" : "Request attendance correction"}
             </button>
             <button
               className="btn btn-secondary"
               onClick={applySelectedCorrectionRecord}
               disabled={!selectedCorrectionRecord}
             >
-              선택 기록 불러오기
+              {isKoLocale ? "선택 기록 불러오기" : "Load selected record"}
             </button>
             <button className="btn btn-secondary" onClick={applyLatestAttendanceToCorrectionForm} disabled={!latestAttendance}>
-              최근 기록 불러오기
+              {isKoLocale ? "최근 기록 불러오기" : "Load latest record"}
             </button>
-            {ATTENDANCE_NOTE_PRESETS.map((preset) => (
+            {attendanceNotePresets.map((preset) => (
               <button key={preset} className="btn btn-secondary" onClick={() => setAttendanceNotes(preset)}>
                 {preset}
               </button>
@@ -1728,7 +1734,7 @@ export default function EmployeeSelfServicePage() {
             {attendance.length === 0 ? (
               <li>
                 <span className="fail">{listBadgeLabels.empty}</span>
-                <span>출퇴근 기록이 없습니다.</span>
+                <span>{isKoLocale ? "출퇴근 기록이 없습니다." : "No attendance records."}</span>
                 <time>-</time>
               </li>
             ) : (
@@ -1741,7 +1747,7 @@ export default function EmployeeSelfServicePage() {
                     {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)}
                   </span>
                   <button className="btn btn-secondary" onClick={() => applyAttendanceRecordToCorrectionForm(record)}>
-                    선택
+                    {isKoLocale ? "선택" : "Select"}
                   </button>
                   <time>{record.id}</time>
                 </li>
@@ -1751,11 +1757,11 @@ export default function EmployeeSelfServicePage() {
         </article>
 
         <article className="panel" id="leave">
-          <h2>휴가</h2>
+          <h2>{isKoLocale ? "휴가" : "Leave"}</h2>
           <p className="small">{leaveBalanceSummary}</p>
           <div className="input-grid">
             <label>
-              휴가 유형
+              {isKoLocale ? "휴가 유형" : "Leave type"}
               <select value={leaveType} onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}>
                 <option value="ANNUAL">{toLeaveTypeLabel("ANNUAL")}</option>
                 <option value="SICK">{toLeaveTypeLabel("SICK")}</option>
@@ -1763,49 +1769,53 @@ export default function EmployeeSelfServicePage() {
               </select>
             </label>
             <label>
-              신청 단위
+              {isKoLocale ? "신청 단위" : "Request unit"}
               <select
                 value={leaveUnit}
                 onChange={(event) => setLeaveUnit(event.target.value as "FULL_DAY" | "HALF_DAY" | "HOUR")}
               >
-                <option value="FULL_DAY">일 단위</option>
-                <option value="HALF_DAY">반차</option>
-                <option value="HOUR">시간 단위</option>
+                <option value="FULL_DAY">{isKoLocale ? "일 단위" : "Full day"}</option>
+                <option value="HALF_DAY">{isKoLocale ? "반차" : "Half day"}</option>
+                <option value="HOUR">{isKoLocale ? "시간 단위" : "Hourly"}</option>
               </select>
             </label>
             <label>
-              시작일
+              {isKoLocale ? "시작일" : "Start date"}
               <input type="datetime-local" value={leaveStartDate} onChange={(event) => setLeaveStartDate(event.target.value)} />
             </label>
             <label>
-              종료일
+              {isKoLocale ? "종료일" : "End date"}
               <input type="datetime-local" value={leaveEndDate} onChange={(event) => setLeaveEndDate(event.target.value)} />
             </label>
             {leaveUnit === "HOUR" ? (
               <label>
-                시간(시)
+                {isKoLocale ? "시간(시)" : "Hours"}
                 <input value={leaveHours} onChange={(event) => setLeaveHours(event.target.value)} />
               </label>
             ) : null}
             <label>
-              취소 사유
+              {isKoLocale ? "취소 사유" : "Cancel reason"}
               <input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
             </label>
             <label className="full">
-              신청 사유(선택)
+              {isKoLocale ? "신청 사유(선택)" : "Request reason (optional)"}
               <input value={leaveReason} onChange={(event) => setLeaveReason(event.target.value)} />
             </label>
             <label className="full">
-              최근/대상 요청 ID
+              {isKoLocale ? "최근/대상 요청 ID" : "Recent/target request ID"}
               <input value={lastLeaveRequestId} onChange={(event) => setLastLeaveRequestId(event.target.value)} />
             </label>
           </div>
           <div className="pre-submit-check-wrap">
             <p className="small" style={{ margin: "8px 0 0" }}>
-              제출 직전 검증 ({leavePreSubmitChecks.filter((check) => check.pass).length}/{leavePreSubmitChecks.length}
-              통과)
+              {isKoLocale ? "제출 직전 검증" : "Pre-submit checks"} (
+              {leavePreSubmitChecks.filter((check) => check.pass).length}/{leavePreSubmitChecks.length}{" "}
+              {isKoLocale ? "통과" : "passed"})
             </p>
-            <ul className="pre-submit-check-list" aria-label="휴가 제출 직전 검증">
+            <ul
+              className="pre-submit-check-list"
+              aria-label={isKoLocale ? "휴가 제출 직전 검증" : "Leave pre-submit checks"}
+            >
               {leavePreSubmitChecks.map((check) => (
                 <li key={check.id} className={check.pass ? "pass" : "fail"}>
                   <strong>{check.pass ? preSubmitStatusLabels.pass : preSubmitStatusLabels.fail}</strong>
@@ -1815,30 +1825,30 @@ export default function EmployeeSelfServicePage() {
               ))}
             </ul>
           </div>
-          <div className="leave-quick-actions" role="group" aria-label="휴가 빠른 입력">
+          <div className="leave-quick-actions" role="group" aria-label={isKoLocale ? "휴가 빠른 입력" : "Leave quick presets"}>
             <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("today-half")}>
-              오늘 반차
+              {isKoLocale ? "오늘 반차" : "Today half-day"}
             </button>
             <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("tomorrow-full")}>
-              내일 하루
+              {isKoLocale ? "내일 하루" : "Tomorrow full-day"}
             </button>
             <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("next-week-full")}>
-              다음주 월요일
+              {isKoLocale ? "다음주 월요일" : "Next Monday"}
             </button>
           </div>
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void createLeave()} disabled={!leavePreSubmitValid}>
-              휴가 신청
+              {isKoLocale ? "휴가 신청" : "Create leave request"}
             </button>
             <button className="btn btn-secondary" onClick={() => void cancelLeave()} disabled={!lastLeaveRequestId}>
-              휴가 취소
+              {isKoLocale ? "휴가 취소" : "Cancel leave request"}
             </button>
           </div>
           <ul className="log-list">
             {leaveRequests.length === 0 ? (
               <li>
                 <span className="fail">{listBadgeLabels.empty}</span>
-                <span>휴가 요청이 없습니다.</span>
+                <span>{isKoLocale ? "휴가 요청이 없습니다." : "No leave requests."}</span>
                 <time>-</time>
               </li>
             ) : (
@@ -1848,8 +1858,17 @@ export default function EmployeeSelfServicePage() {
                     {toRequestStatusLabel(request.state)}
                   </span>
                   <span>
-                    {toLeaveTypeLabel(request.leaveType)} / {formatDateTime(request.startDate)} ~ {formatDateTime(request.endDate)} ({formatDays(request.days)}일
-                    {request.unit === "HOUR" && request.hours !== null ? ` / ${request.hours.toFixed(2)}시간` : request.unit === "HALF_DAY" ? " / 반차" : ""}
+                    {toLeaveTypeLabel(request.leaveType)} / {formatDateTime(request.startDate)} ~ {formatDateTime(request.endDate)} (
+                    {isKoLocale ? `${formatDays(request.days)}일` : `${formatDays(request.days)}d`}
+                    {request.unit === "HOUR" && request.hours !== null
+                      ? isKoLocale
+                        ? ` / ${request.hours.toFixed(2)}시간`
+                        : ` / ${request.hours.toFixed(2)}h`
+                      : request.unit === "HALF_DAY"
+                        ? isKoLocale
+                          ? " / 반차"
+                          : " / Half day"
+                        : ""}
                     )
                   </span>
                   <time>{request.id}</time>
@@ -1860,21 +1879,26 @@ export default function EmployeeSelfServicePage() {
         </article>
 
         <article className="panel" id="leave-calendar">
-          <h2>휴가 캘린더</h2>
+          <h2>{isKoLocale ? "휴가 캘린더" : "Leave calendar"}</h2>
           <p className="small">
-            연차 사용률 {leaveUsageRatePercent}% (사용 {formatDays(leaveBalance?.usedDays ?? 0)} / 부여{" "}
-            {formatDays(leaveBalance?.grantedDays ?? 0)})
+            {isKoLocale ? "연차 사용률" : "Leave usage rate"} {leaveUsageRatePercent}% (
+            {isKoLocale ? "사용" : "used"} {formatDays(leaveBalance?.usedDays ?? 0)} /{" "}
+            {isKoLocale ? "부여" : "granted"} {formatDays(leaveBalance?.grantedDays ?? 0)})
           </p>
-          <div className="leave-balance-visual" aria-label="연차 잔여 시각화">
+          <div className="leave-balance-visual" aria-label={isKoLocale ? "연차 잔여 시각화" : "Leave balance visualization"}>
             <div className="leave-usage-ring" style={leaveUsageRingStyle}>
               <div>
                 <strong>{leaveUsageRatePercent}%</strong>
-                <span>사용률</span>
+                <span>{isKoLocale ? "사용률" : "Usage rate"}</span>
               </div>
             </div>
             <div className="leave-balance-cards">
               {leaveBalanceCards.length === 0 ? (
-                <p className="small">잔여 연차 데이터를 불러오면 시각화가 활성화됩니다.</p>
+                <p className="small">
+                  {isKoLocale
+                    ? "잔여 연차 데이터를 불러오면 시각화가 활성화됩니다."
+                    : "Visualization is enabled after leave balance is loaded."}
+                </p>
               ) : (
                 leaveBalanceCards.map((card) => (
                   <article key={card.key} className={`leave-balance-card tone-${card.tone}`}>
@@ -1887,21 +1911,23 @@ export default function EmployeeSelfServicePage() {
           </div>
           <p className="small leave-projection">{leaveUsageProjectionLabel}</p>
           <div className="leave-calendar-toolbar">
-            <strong>{leaveCalendarMonthLabel} 밀도 보기</strong>
-            <div className="leave-calendar-shortcuts" aria-label="캘린더 빠른 이동">
+            <strong>
+              {leaveCalendarMonthLabel} {isKoLocale ? "밀도 보기" : "density view"}
+            </strong>
+            <div className="leave-calendar-shortcuts" aria-label={isKoLocale ? "캘린더 빠른 이동" : "Calendar quick navigation"}>
               <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(-1)}>
-                이전 달
+                {isKoLocale ? "이전 달" : "Previous month"}
               </button>
               <button className="btn btn-secondary btn-small" onClick={() => void resetCalendarToCurrentMonth()}>
-                이번 달
+                {isKoLocale ? "이번 달" : "Current month"}
               </button>
               <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(1)}>
-                다음 달
+                {isKoLocale ? "다음 달" : "Next month"}
               </button>
             </div>
           </div>
           <div className="leave-calendar-weekdays" aria-hidden="true">
-            {LEAVE_CALENDAR_WEEKDAYS.map((weekday) => (
+            {leaveCalendarWeekdays.map((weekday) => (
               <span key={weekday}>{weekday}</span>
             ))}
           </div>
@@ -1920,25 +1946,33 @@ export default function EmployeeSelfServicePage() {
                   .trim()}
                 title={
                   cell.requestCount === 0
-                    ? `${cell.dateKey}: 휴가 일정 없음`
-                    : `${cell.dateKey}: ${cell.requestCount}건 (승인 ${cell.approvedCount}, 대기 ${cell.pendingCount}, 반려/취소 ${cell.rejectedCount})`
+                    ? isKoLocale
+                      ? `${cell.dateKey}: 휴가 일정 없음`
+                      : `${cell.dateKey}: no leave schedule`
+                    : isKoLocale
+                      ? `${cell.dateKey}: ${cell.requestCount}건 (승인 ${cell.approvedCount}, 대기 ${cell.pendingCount}, 반려/취소 ${cell.rejectedCount})`
+                      : `${cell.dateKey}: ${cell.requestCount} items (approved ${cell.approvedCount}, pending ${cell.pendingCount}, rejected/canceled ${cell.rejectedCount})`
                 }
               >
                 <div className="leave-day-head">
                   <span>{cell.dayOfMonth}</span>
-                  {cell.requestCount > 0 ? <strong>{cell.requestCount}건</strong> : null}
+                  {cell.requestCount > 0 ? <strong>{isKoLocale ? `${cell.requestCount}건` : `${cell.requestCount} items`}</strong> : null}
                 </div>
                 <p>
                   {cell.requestCount === 0
-                    ? "일정 없음"
-                    : `승인 ${cell.approvedCount} / 대기 ${cell.pendingCount} / 반려 ${cell.rejectedCount}`}
+                    ? isKoLocale
+                      ? "일정 없음"
+                      : "No schedule"
+                    : isKoLocale
+                      ? `승인 ${cell.approvedCount} / 대기 ${cell.pendingCount} / 반려 ${cell.rejectedCount}`
+                      : `Approved ${cell.approvedCount} / Pending ${cell.pendingCount} / Rejected ${cell.rejectedCount}`}
                 </p>
               </article>
             ))}
           </div>
           {leaveCalendarRows.length === 0 ? (
             <p className="small" style={{ marginTop: 12 }}>
-              이번 조회 구간에 휴가 일정이 없습니다.
+              {isKoLocale ? "이번 조회 구간에 휴가 일정이 없습니다." : "No leave schedule in the current range."}
             </p>
           ) : (
             <ul className="simple-list leave-calendar-list" style={{ marginTop: 12 }}>
@@ -1959,11 +1993,11 @@ export default function EmployeeSelfServicePage() {
         </article>
 
         <article className="panel" id="schedule">
-          <h2>근무 일정</h2>
+          <h2>{isKoLocale ? "근무 일정" : "Work schedule"}</h2>
           {showDevTools ? (
             <div className="actions">
               <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-                (dev) 스케줄링 Cockpit
+                {isKoLocale ? "(dev) 스케줄링 Cockpit" : "(dev) Scheduling Cockpit"}
               </Link>
             </div>
           ) : null}
@@ -1971,7 +2005,7 @@ export default function EmployeeSelfServicePage() {
             {schedules.length === 0 ? (
               <li>
                 <span className="fail">{listBadgeLabels.empty}</span>
-                <span>근무 일정이 없습니다.</span>
+                <span>{isKoLocale ? "근무 일정이 없습니다." : "No schedules."}</span>
                 <time>-</time>
               </li>
             ) : (
@@ -1979,7 +2013,8 @@ export default function EmployeeSelfServicePage() {
                 <li key={schedule.id}>
                   <span className="ok">{schedule.isHoliday ? listBadgeLabels.holiday : listBadgeLabels.work}</span>
                   <span>
-                    {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (휴게 {schedule.breakMinutes}분)
+                    {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (
+                    {isKoLocale ? `휴게 ${schedule.breakMinutes}분` : `Break ${schedule.breakMinutes}m`})
                   </span>
                   <time>{schedule.id}</time>
                 </li>
@@ -2000,7 +2035,7 @@ export default function EmployeeSelfServicePage() {
             </p>
             <div className="actions">
               <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
-                로그 초기화
+                {isKoLocale ? "로그 초기화" : "Clear logs"}
               </button>
             </div>
             <pre>{latestPayload}</pre>
