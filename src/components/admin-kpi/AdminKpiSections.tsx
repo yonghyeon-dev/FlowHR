@@ -171,7 +171,7 @@ export function AdminKpiTrendPanel({ copy, rows }: TrendPanelProps) {
           <table>
             <thead>
               <tr>
-                <th>Metric</th>
+                <th>{copy.metricLabel}</th>
                 <th>{copy.trendCurrent}</th>
                 <th>{copy.trendPrevious}</th>
                 <th>{copy.trendDelta}</th>
@@ -211,7 +211,7 @@ export function AdminKpiLogsPanel({ copy, logs }: LogsPanelProps) {
         <ul className="log-list">
           {logs.map((log) => (
             <li key={log.id}>
-              <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status} / {log.durationMs}ms / {log.at}
+              <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logSuccessLabel : copy.logFailLabel}</span> {log.label} / {log.status} / {log.durationMs}ms / {log.at}
             </li>
           ))}
         </ul>

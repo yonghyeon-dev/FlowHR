@@ -179,7 +179,10 @@ export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
           <ul className="log-list">
             {logs.map((log) => (
               <li key={log.id}>
-                <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} /{" "}
+                <span className={log.ok ? "ok" : "fail"}>
+                  {log.ok ? copy.okLabel : copy.failLabel}
+                </span>{" "}
+                {log.label} /{" "}
                 {log.status} / {log.durationMs}ms / {log.at}
               </li>
             ))}

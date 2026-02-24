@@ -15,12 +15,16 @@ export function AdminOnboardingDashboard() {
   const { locale } = useI18n();
   const copy = adminOnboardingCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const data = useAdminOnboardingData({ loadingLabel: copy.loadingLabel, runtimeLocale });
+  const data = useAdminOnboardingData({
+    loadingLabel: copy.loadingLabel,
+    runtimeLocale,
+    requestLabels: copy.requestLabels
+  });
 
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
       </header>

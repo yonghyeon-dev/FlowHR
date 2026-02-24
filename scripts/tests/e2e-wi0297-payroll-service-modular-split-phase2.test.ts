@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const payrollAdapterHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-year-end-adapter-helpers.ts"
+  );
   const auditHelpers = readUtf8(
     "src",
     "features",
@@ -26,11 +32,12 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payrollService, /from \"@\/features\/payroll\/year-end-audit-payload-helpers\"/);
-  assert.match(payrollService, /return buildYearEndSettlementHashCore\(payload\);/);
-  assert.match(payrollService, /return normalizeYearEndSettlementHashCore\(value\);/);
+  assert.match(payrollService, /from \"@\/features\/payroll\/service-year-end-adapter-helpers\"/);
+  assert.match(payrollAdapterHelpers, /from \"@\/features\/payroll\/year-end-audit-payload-helpers\"/);
+  assert.match(payrollAdapterHelpers, /return buildYearEndSettlementHashCore\(payload\);/);
+  assert.match(payrollAdapterHelpers, /return normalizeYearEndSettlementHashCore\(value\);/);
   assert.match(
-    payrollService,
+    payrollAdapterHelpers,
     /return resolveYearEndSettlementHashFromFinalizationPayloadCore\(payload\);/
   );
 

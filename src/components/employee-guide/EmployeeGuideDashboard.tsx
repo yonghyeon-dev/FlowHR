@@ -15,12 +15,16 @@ export function EmployeeGuideDashboard() {
   const { locale } = useI18n();
   const copy = employeeGuideCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const data = useEmployeeGuideData({ loadingLabel: copy.loadingLabel, runtimeLocale });
+  const data = useEmployeeGuideData({
+    loadingLabel: copy.loadingLabel,
+    runtimeLocale,
+    requestLabels: copy.requestLabels
+  });
 
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Employee</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
       </header>

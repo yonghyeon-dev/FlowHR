@@ -22,8 +22,8 @@ async function run() {
 
   assert.match(payrollService, /from "@\/features\/payroll\/service-runtime-helpers"/);
   assert.match(payrollService, /ensureValidPeriod\(input\.periodStart, input\.periodEnd\);/);
-  assert.match(payrollService, /const periodStartSeoul = toSeoulDateTimeParts\(input\.periodStart\);/);
-  assert.match(payrollService, /const periodEndSeoul = toSeoulDateTimeParts\(input\.periodEnd\);/);
+  assert.match(runtimeHelpers, /const start = toSeoulDateTimeParts\(periodStart\);/);
+  assert.match(runtimeHelpers, /const end = toSeoulDateTimeParts\(periodEnd\);/);
 
   assert.doesNotMatch(payrollService, /function isPayrollDeductionsEnabled\(/);
   assert.doesNotMatch(payrollService, /function isPayrollYearEndEnabled\(/);

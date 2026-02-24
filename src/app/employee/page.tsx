@@ -1,8 +1,35 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  buildAttendanceStatusSummary,
+  buildIntegratedSummaryCards,
+  buildLeaveCalendarCells,
+  buildLeaveCalendarRows,
+  buildLeaveBalanceCards,
+  buildLeaveStatusSummary,
+  buildLeaveUsageProjectionLabel,
+  buildResubmitCandidates,
+  summarizeEmployeeApiLogs
+} from "@/app/employee/page-derived-helpers";
+import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
+import { buildEmployeeMutationActions } from "@/app/employee/page-mutation-actions";
+import {
+  buildMobileRequestTimeline,
+  buildRequestFailureCauses,
+  buildRequestFeedbackRows,
+  buildRequestSearchRows,
+  filterMobileRequestTimeline,
+  filterRequestFeedbackRows
+} from "@/app/employee/page-request-helpers";
+import {
+  buildAttendancePreSubmitChecks,
+  buildCorrectionValidation,
+  buildIntegratedSubmitChecklistCards,
+  buildLeavePreSubmitChecks,
+  buildResubmitFlowChecks
+} from "@/app/employee/page-validation-helpers";
 import {
   buildQuery,
   calculateNetMinutes,
@@ -21,9 +48,7 @@ import {
   todayEndLocal,
   todayStartLocal,
   toIso,
-  toLocalDateKey,
-  toLocalInputValue,
-  toTimestamp
+  toLocalInputValue
 } from "@/app/employee/page-helpers";
 import {
   extractEmployeeErrorMessage,
@@ -37,9 +62,7 @@ import type {
   IntegratedSubmitChecklistCard,
   IntegratedSummaryCard,
   LeaveBalanceDto,
-  LeaveCalendarDensity,
   LeaveCalendarDayCell,
-  LeaveCalendarStatusTone,
   LeaveRequestDto,
   MobileRequestTimelineItem,
   PreSubmitCheckItem,
@@ -54,6 +77,7 @@ import type {
   WorkScheduleDto
 } from "@/app/employee/page-types";
 import { EmployeeAccountOverviewPanels } from "@/components/employee-dashboard/EmployeeAccountOverviewPanels";
+import { EmployeeAttendanceLeavePanels } from "@/components/employee-dashboard/EmployeeAttendanceLeavePanels";
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
 import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/EmployeeRequestFeedbackPanels";
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
@@ -131,6 +155,10 @@ export default function EmployeeSelfServicePage() {
     (leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType,
     [leaveTypeLabels]
   );
+  const formatDateTimeByLocale = useCallback(
+    (value: string | null) => formatDateTime(value, runtimeLocale),
+    [runtimeLocale]
+  );
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const showDevTools = isDevToolsEnabled();
@@ -202,52 +230,19 @@ export default function EmployeeSelfServicePage() {
     payload?: Record<string, unknown>
   ) {
     setPendingLabel(label);
-    const startedAt = Date.now();
     try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
-
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken.trim()}`;
-      } else {
-        headers["x-actor-role"] = "employee";
-        headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
-        if (organizationId.trim().length > 0) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      }
-
-      const response = await fetch(path, {
+      const { response, body, log } = await performEmployeeApiCall({
+        label,
         method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
+        path,
+        payload,
+        usesBearerToken,
+        bearerToken,
+        employeeId,
+        organizationId,
+        runtimeLocale
       });
-
-      const raw = await response.text();
-      let body: unknown = null;
-      if (raw.trim().length > 0) {
-        try {
-          body = JSON.parse(raw);
-        } catch {
-          body = raw;
-        }
-      }
-
-      const durationMs = Date.now() - startedAt;
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label,
-          status: response.status,
-          ok: response.ok,
-          durationMs,
-          at: new Date().toLocaleString(runtimeLocale),
-          body
-        },
-        ...prev
-      ]);
+      setLogs((prev) => [log, ...prev]);
 
       return { response, body };
     } finally {
@@ -255,150 +250,39 @@ export default function EmployeeSelfServicePage() {
     }
   }
 
-  async function refreshEmployeeSnapshot(range?: { fromIso: string; toIso: string }) {
-    const from = range?.fromIso ?? toIso(periodStart);
-    const to = range?.toIso ?? toIso(periodEnd);
-
-    const [attendanceRes, leaveRes, scheduleRes, balanceRes] = await Promise.all([
-      callApi(callApiLabels.attendanceList, "GET", `/api/attendance/records${buildQuery({ from, to })}`),
-      callApi(callApiLabels.leaveList, "GET", `/api/leave/requests${buildQuery({ from, to })}`),
-      callApi(callApiLabels.scheduleList, "GET", `/api/scheduling/schedules${buildQuery({ from, to })}`),
-      callApi(callApiLabels.leaveBalance, "GET", `/api/leave/balances/${employeeId.trim() || "EMP-1001"}`)
-    ]);
-
-    if (attendanceRes.response.ok) {
-      const parsed = attendanceRes.body as { records?: AttendanceRecordDto[] };
-      const records = parsed.records ?? [];
-      const recentRecords = records.slice().reverse().slice(-10).reverse();
-      setAttendance(recentRecords);
-      const pending = records.find((record) => record.state === "PENDING");
-      if (pending) {
-        setLastAttendanceId(pending.id);
-        setSelectedCorrectionRecordId(pending.id);
-      } else if (recentRecords.length > 0 && !selectedCorrectionRecordId.trim() && !lastAttendanceId.trim()) {
-        const latestId = recentRecords[recentRecords.length - 1].id;
-        setSelectedCorrectionRecordId(latestId);
-        setLastAttendanceId(latestId);
-      }
-    }
-
-    if (leaveRes.response.ok) {
-      const parsed = leaveRes.body as { requests?: LeaveRequestDto[] };
-      const requests = parsed.requests ?? [];
-      setLeaveRequests(requests.slice().reverse().slice(-10).reverse());
-      const pending = requests.find((req) => req.state === "PENDING");
-      if (pending) {
-        setLastLeaveRequestId(pending.id);
-      }
-    }
-
-    if (scheduleRes.response.ok) {
-      const parsed = scheduleRes.body as { schedules?: WorkScheduleDto[] };
-      const items = parsed.schedules ?? [];
-      setSchedules(items.slice().reverse().slice(-10).reverse());
-    }
-
-    if (balanceRes.response.ok) {
-      const parsed = balanceRes.body as { balance?: LeaveBalanceDto };
-      setLeaveBalance(parsed.balance ?? null);
-    }
-  }
-
-  async function createAttendance() {
-    const { response, body } = await callApi(callApiLabels.createAttendance, "POST", "/api/attendance/records", {
-      employeeId: employeeId.trim() || "EMP-1001",
-      checkInAt: toIso(checkInAt),
-      checkOutAt: checkOutAt ? toIso(checkOutAt) : undefined,
-      breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes))),
-      isHoliday,
-      notes: attendanceNotes.trim().length > 0 ? attendanceNotes.trim() : undefined
-    });
-
-    if (response.ok) {
-      const parsed = body as { record?: { id?: string } };
-      if (parsed.record?.id) {
-        setLastAttendanceId(parsed.record.id);
-        setSelectedCorrectionRecordId(parsed.record.id);
-      }
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function checkOutNow() {
-    if (!lastAttendanceId.trim()) {
-      return;
-    }
-    const nowIso = new Date().toISOString();
-    const { response } = await callApi(
-      callApiLabels.checkOutNow,
-      "PATCH",
-      `/api/attendance/records/${lastAttendanceId.trim()}`,
-      {
-        checkOutAt: nowIso
-      }
-    );
-    if (response.ok) {
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function requestAttendanceCorrection() {
-    if (!lastAttendanceId.trim()) {
-      return;
-    }
-    const { response } = await callApi(
-      callApiLabels.requestAttendanceCorrection,
-      "PATCH",
-      `/api/attendance/records/${lastAttendanceId.trim()}`,
-      {
-        checkInAt: toIso(checkInAt),
-        checkOutAt: checkOutAt ? toIso(checkOutAt) : undefined,
-        breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes))),
-        isHoliday,
-        notes: attendanceNotes.trim().length > 0 ? attendanceNotes.trim() : correctionRequestNote
-      }
-    );
-    if (response.ok) {
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function createLeave() {
-    const { response, body } = await callApi(callApiLabels.createLeave, "POST", "/api/leave/requests", {
-      employeeId: employeeId.trim() || "EMP-1001",
-      leaveType,
-      startDate: toIso(leaveStartDate),
-      endDate: toIso(leaveEndDate),
-      unit: leaveUnit,
-      hours: leaveUnit === "HOUR" ? Math.max(0, coerceNumber(leaveHours)) : undefined,
-      reason: leaveReason.trim().length > 0 ? leaveReason.trim() : undefined
-    });
-
-    if (response.ok) {
-      const parsed = body as { request?: { id?: string } };
-      if (parsed.request?.id) {
-        setLastLeaveRequestId(parsed.request.id);
-      }
-      await refreshEmployeeSnapshot();
-    }
-  }
-
-  async function cancelLeave() {
-    if (!lastLeaveRequestId.trim()) {
-      return;
-    }
-    const { response } = await callApi(
-      callApiLabels.cancelLeave,
-      "POST",
-      `/api/leave/requests/${lastLeaveRequestId.trim()}/cancel`,
-      {
-        reason: cancelReason.trim().length > 0 ? cancelReason.trim() : undefined
-      }
-    );
-    if (response.ok) {
-      await refreshEmployeeSnapshot();
-    }
-  }
+  const mutationActions = buildEmployeeMutationActions({
+    callApi,
+    callApiLabels,
+    buildQuery,
+    toIso,
+    coerceNumber,
+    periodStart,
+    periodEnd,
+    employeeId,
+    selectedCorrectionRecordId,
+    lastAttendanceId,
+    setAttendance,
+    setLastAttendanceId,
+    setSelectedCorrectionRecordId,
+    setLeaveRequests,
+    setLastLeaveRequestId,
+    setSchedules,
+    setLeaveBalance,
+    checkInAt,
+    checkOutAt,
+    breakMinutes,
+    isHoliday,
+    attendanceNotes,
+    correctionRequestNote,
+    leaveType,
+    leaveUnit,
+    leaveStartDate,
+    leaveEndDate,
+    leaveHours,
+    leaveReason,
+    cancelReason,
+    lastLeaveRequestId
+  });
 
   function applyLeaveQuickPreset(preset: "today-half" | "tomorrow-full" | "next-week-full") {
     const now = new Date();
@@ -430,6 +314,52 @@ export default function EmployeeSelfServicePage() {
     setLeaveEndDate(toLocalInputValue(end));
   }
 
+  function prefillLeaveFormFromCalendarDate(dateKey: string) {
+    const [yearText, monthText, dayText] = dateKey.split("-");
+    const yearNumber = Number(yearText);
+    const monthNumber = Number(monthText);
+    const dayNumber = Number(dayText);
+    if (
+      !Number.isInteger(yearNumber) ||
+      !Number.isInteger(monthNumber) ||
+      !Number.isInteger(dayNumber) ||
+      monthNumber < 1 ||
+      monthNumber > 12 ||
+      dayNumber < 1 ||
+      dayNumber > 31
+    ) {
+      pushMobileFlowFeedback(
+        isKoLocale ? "선택한 날짜를 해석할 수 없습니다." : "Unable to parse selected calendar date."
+      );
+      return;
+    }
+
+    const start = new Date(yearNumber, monthNumber - 1, dayNumber, 9, 0, 0);
+    const end = new Date(yearNumber, monthNumber - 1, dayNumber, 18, 0, 0);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      pushMobileFlowFeedback(
+        isKoLocale ? "선택한 날짜를 해석할 수 없습니다." : "Unable to parse selected calendar date."
+      );
+      return;
+    }
+
+    setLeaveType("ANNUAL");
+    setLeaveUnit("FULL_DAY");
+    setLeaveStartDate(toLocalInputValue(start));
+    setLeaveEndDate(toLocalInputValue(end));
+    setLeaveReason(
+      isKoLocale
+        ? `${dateKey} 캘린더 선택으로 자동 입력`
+        : `Auto-prefilled from calendar selection (${dateKey})`
+    );
+    jumpToSection("leave");
+    pushMobileFlowFeedback(
+      isKoLocale
+        ? `${dateKey} 휴가 신청 초안이 자동 입력되었습니다.`
+        : `Leave request draft for ${dateKey} was auto-prefilled.`
+    );
+  }
+
   async function setCalendarMonthFromAnchor(anchor: Date, monthOffset: number) {
     const monthStart = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset, 1, 0, 0, 0);
     const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset + 1, 0, 23, 59, 0);
@@ -437,7 +367,10 @@ export default function EmployeeSelfServicePage() {
     const nextPeriodEnd = toLocalInputValue(monthEnd);
     setPeriodStart(nextPeriodStart);
     setPeriodEnd(nextPeriodEnd);
-    await refreshEmployeeSnapshot({ fromIso: toIso(nextPeriodStart), toIso: toIso(nextPeriodEnd) });
+    await mutationActions.refreshEmployeeSnapshot({
+      fromIso: toIso(nextPeriodStart),
+      toIso: toIso(nextPeriodEnd)
+    });
   }
 
   async function moveCalendarMonth(monthOffset: number) {
@@ -593,11 +526,7 @@ export default function EmployeeSelfServicePage() {
   }, [defaultsCopy.noApiCallHistory, newestLog]);
 
   const stats = useMemo(() => {
-    const total = logs.length;
-    const success = logs.filter((log) => log.ok).length;
-    const fail = total - success;
-    const successRate = total === 0 ? 0 : Math.round((success / total) * 100);
-    return { total, success, fail, successRate };
+    return summarizeEmployeeApiLogs(logs);
   }, [logs]);
 
   const leaveBalanceSummary = useMemo(() => {
@@ -657,50 +586,11 @@ export default function EmployeeSelfServicePage() {
   );
 
   const leaveBalanceCards = useMemo(() => {
-    if (!leaveBalance) {
-      return [];
-    }
-    return [
-      {
-        key: "remaining",
-        label: leaveBalanceCopy.cardLabels.remaining,
-        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.remainingDays)),
-        tone: "remaining"
-      },
-      {
-        key: "granted",
-        label: leaveBalanceCopy.cardLabels.granted,
-        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.grantedDays)),
-        tone: "granted"
-      },
-      {
-        key: "used",
-        label: leaveBalanceCopy.cardLabels.used,
-        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.usedDays)),
-        tone: "used"
-      },
-      {
-        key: "carry-over",
-        label: leaveBalanceCopy.cardLabels.carryOver,
-        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.carryOverDays)),
-        tone: "carry-over"
-      }
-    ];
+    return buildLeaveBalanceCards(leaveBalance, leaveBalanceCopy, formatDays);
   }, [leaveBalance, leaveBalanceCopy]);
 
   const leaveUsageProjectionLabel = useMemo(() => {
-    if (!leaveBalance || leaveBalance.grantedDays <= 0) {
-      return leaveBalanceCopy.projectionPending;
-    }
-
-    const elapsedMonths = Math.max(1, new Date().getMonth() + 1);
-    const averageUsedPerMonth = leaveBalance.usedDays / elapsedMonths;
-    const projectedYearEndUsed = averageUsedPerMonth * 12;
-    const projectedRemaining = leaveBalance.grantedDays - projectedYearEndUsed;
-    if (projectedRemaining >= 0) {
-      return leaveBalanceCopy.projectedRemaining(formatDays(projectedRemaining));
-    }
-    return leaveBalanceCopy.projectedShortage(formatDays(Math.abs(projectedRemaining)));
+    return buildLeaveUsageProjectionLabel(leaveBalance, leaveBalanceCopy, formatDays);
   }, [leaveBalance, leaveBalanceCopy]);
 
   const leaveCalendarMonthLabel = useMemo(() => {
@@ -709,125 +599,37 @@ export default function EmployeeSelfServicePage() {
     return new Intl.DateTimeFormat(runtimeLocale, { year: "numeric", month: "long" }).format(anchor);
   }, [periodStart, runtimeLocale]);
 
-  const leaveCalendarCells = useMemo<LeaveCalendarDayCell[]>(() => {
-    const parsedPeriodStart = new Date(periodStart);
-    const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
-    const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 0, 0, 0);
-    const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 0, 0, 0);
-    const gridStart = shiftDays(startOfLocalDay(monthStart), -monthStart.getDay());
-    const gridEnd = shiftDays(startOfLocalDay(monthEnd), 6 - monthEnd.getDay());
+  const leaveCalendarCells = useMemo<LeaveCalendarDayCell[]>(
+    () => buildLeaveCalendarCells(leaveRequests, periodStart),
+    [leaveRequests, periodStart]
+  );
 
-    const requestByDate = new Map<string, LeaveRequestDto[]>();
-    for (const request of leaveRequests) {
-      const parsedStartDate = new Date(request.startDate);
-      const parsedEndDate = new Date(request.endDate);
-      if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
-        continue;
-      }
+  const leaveCalendarRows = useMemo(
+    () =>
+      buildLeaveCalendarRows({
+        leaveRequests,
+        toLeaveTypeLabel,
+        leaveUnitCopy,
+        formatDays,
+        formatDateTime: formatDateTimeByLocale
+      }),
+    [formatDateTimeByLocale, leaveRequests, leaveUnitCopy, toLeaveTypeLabel]
+  );
 
-      let cursor = startOfLocalDay(parsedStartDate);
-      const requestEnd = startOfLocalDay(parsedEndDate);
-      while (cursor.getTime() <= requestEnd.getTime()) {
-        const dateKey = toLocalDateKey(cursor);
-        const bucket = requestByDate.get(dateKey);
-        if (bucket) {
-          bucket.push(request);
-        } else {
-          requestByDate.set(dateKey, [request]);
-        }
-        cursor = shiftDays(cursor, 1);
-      }
-    }
+  const attendanceStatusSummary = useMemo(
+    () => buildAttendanceStatusSummary(attendance),
+    [attendance]
+  );
 
-    const todayKey = toLocalDateKey(new Date());
-    const cells: LeaveCalendarDayCell[] = [];
-    for (let cursor = new Date(gridStart); cursor.getTime() <= gridEnd.getTime(); cursor = shiftDays(cursor, 1)) {
-      const dateKey = toLocalDateKey(cursor);
-      const requestBucket = requestByDate.get(dateKey) ?? [];
-      const requestCount = requestBucket.length;
-      let approvedCount = 0;
-      let pendingCount = 0;
-      let rejectedCount = 0;
-      for (const request of requestBucket) {
-        if (request.state === "APPROVED") {
-          approvedCount += 1;
-        } else if (request.state === "PENDING") {
-          pendingCount += 1;
-        } else {
-          rejectedCount += 1;
-        }
-      }
-
-      let tone: LeaveCalendarStatusTone = "none";
-      if (requestCount > 0) {
-        if (approvedCount === requestCount) {
-          tone = "approved";
-        } else if (pendingCount === requestCount) {
-          tone = "pending";
-        } else if (rejectedCount === requestCount) {
-          tone = "rejected";
-        } else {
-          tone = "mixed";
-        }
-      }
-
-      const density: LeaveCalendarDensity =
-        requestCount >= 3 ? "high" : requestCount === 2 ? "mid" : requestCount === 1 ? "low" : "none";
-
-      cells.push({
-        dateKey,
-        dayOfMonth: cursor.getDate(),
-        inCurrentMonth: cursor.getMonth() === monthStart.getMonth(),
-        isToday: dateKey === todayKey,
-        requestCount,
-        approvedCount,
-        pendingCount,
-        rejectedCount,
-        density,
-        tone
-      });
-    }
-
-    return cells;
-  }, [leaveRequests, periodStart]);
-
-  const leaveCalendarRows = useMemo(() => {
-    return [...leaveRequests]
-      .sort((lhs, rhs) => new Date(lhs.startDate).getTime() - new Date(rhs.startDate).getTime())
-      .map((request) => ({
-        id: request.id,
-        dateRange: `${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`,
-        status: request.state,
-        label:
-          request.unit === "HOUR" && request.hours !== null
-            ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.hourUnit(request.hours.toFixed(2))}`
-            : request.unit === "HALF_DAY"
-              ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.halfDay}`
-              : `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.dayUnit(formatDays(request.days))}`
-      }));
-  }, [leaveRequests, leaveUnitCopy, toLeaveTypeLabel]);
-
-  const attendanceStatusSummary = useMemo(() => {
-    return {
-      pending: attendance.filter((record) => record.state === "PENDING").length,
-      approved: attendance.filter((record) => record.state === "APPROVED").length,
-      rejected: attendance.filter((record) => record.state === "REJECTED").length
-    };
-  }, [attendance]);
-
-  const leaveStatusSummary = useMemo(() => {
-    return {
-      pending: leaveRequests.filter((request) => request.state === "PENDING").length,
-      approved: leaveRequests.filter((request) => request.state === "APPROVED").length,
-      rejected: leaveRequests.filter((request) => request.state === "REJECTED").length,
-      canceled: leaveRequests.filter((request) => request.state === "CANCELED").length
-    };
-  }, [leaveRequests]);
+  const leaveStatusSummary = useMemo(
+    () => buildLeaveStatusSummary(leaveRequests),
+    [leaveRequests]
+  );
 
   const totalPendingRequestCount = attendanceStatusSummary.pending + leaveStatusSummary.pending;
   const totalApprovedRequestCount = attendanceStatusSummary.approved + leaveStatusSummary.approved;
   const totalRejectedOrCanceledRequestCount =
-    attendanceStatusSummary.rejected + leaveStatusSummary.rejected + leaveStatusSummary.canceled;
+    attendanceStatusSummary.rejected + leaveStatusSummary.rejected + (leaveStatusSummary.canceled ?? 0);
 
   const requestCompletionRatePercent = useMemo(() => {
     const totalHandled = totalApprovedRequestCount + totalRejectedOrCanceledRequestCount;
@@ -838,38 +640,17 @@ export default function EmployeeSelfServicePage() {
     return Math.max(0, Math.min(100, Math.round((totalHandled / total) * 100)));
   }, [totalApprovedRequestCount, totalPendingRequestCount, totalRejectedOrCanceledRequestCount]);
 
-  const resubmitCandidates = useMemo<ResubmitCandidate[]>(() => {
-    const attendanceCandidates = attendance
-      .filter((record) => record.state === "REJECTED")
-      .map((record) => ({
-        key: `attendance:${record.id}`,
-        channel: "attendance" as const,
-        recordId: record.id,
-        status: "REJECTED" as const,
-        at: record.checkOutAt ?? record.checkInAt,
-        reason: record.notes?.trim() || defaultsCopy.noReasonProvided,
-        summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
-      }));
-
-    const leaveCandidates = leaveRequests
-      .filter((request) => request.state === "REJECTED" || request.state === "CANCELED")
-      .map((request) => ({
-        key: `leave:${request.id}`,
-        channel: "leave" as const,
-        recordId: request.id,
-        status: request.state as "REJECTED" | "CANCELED",
-        at: request.endDate,
-        reason:
-          request.decisionReason?.trim() ||
-          request.reason?.trim() ||
-          defaultsCopy.noReasonProvided,
-        summary: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
-      }));
-
-    return [...attendanceCandidates, ...leaveCandidates]
-      .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
-      .slice(0, 12);
-  }, [attendance, defaultsCopy.noReasonProvided, leaveRequests, toLeaveTypeLabel]);
+  const resubmitCandidates = useMemo<ResubmitCandidate[]>(
+    () =>
+      buildResubmitCandidates({
+        attendance,
+        leaveRequests,
+        noReasonProvidedLabel: defaultsCopy.noReasonProvided,
+        formatDateTime: formatDateTimeByLocale,
+        toLeaveTypeLabel
+      }),
+    [attendance, defaultsCopy.noReasonProvided, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]
+  );
 
   const selectedResubmitCandidate = useMemo(() => {
     if (resubmitCandidates.length === 0) {
@@ -898,54 +679,27 @@ export default function EmployeeSelfServicePage() {
     }
   }, [resubmitCandidates, selectedResubmitCandidateKey]);
 
-  const integratedSummaryCards = useMemo<IntegratedSummaryCard[]>(() => {
-    const resubmitNeededCount = resubmitCandidates.length;
-    const apiFailureCount = stats.fail;
-    return [
-      {
-        key: "pending",
-        label: summaryCardCopy.pendingRequestsLabel,
-        value: `${totalPendingRequestCount}`,
-        detail: summaryCardCopy.pendingRequestsDetail(attendanceStatusSummary.pending, leaveStatusSummary.pending),
-        tone: totalPendingRequestCount > 0 ? "pending" : "ok"
-      },
-      {
-        key: "completion",
-        label: summaryCardCopy.completionRateLabel,
-        value: `${requestCompletionRatePercent}%`,
-        detail: summaryCardCopy.completionRateDetail(totalApprovedRequestCount, totalRejectedOrCanceledRequestCount),
-        tone: requestCompletionRatePercent >= 70 ? "ok" : requestCompletionRatePercent >= 40 ? "pending" : "fail"
-      },
-      {
-        key: "resubmit",
-        label: summaryCardCopy.resubmitNeededLabel,
-        value: `${resubmitNeededCount}`,
-        detail:
-          resubmitNeededCount > 0
-            ? summaryCardCopy.resubmitNeededDetail(resubmitNeededCount)
-            : summaryCardCopy.noResubmitNeededDetail,
-        tone: resubmitNeededCount > 0 ? "fail" : "ok"
-      },
-      {
-        key: "api-failures",
-        label: summaryCardCopy.apiFailuresLabel,
-        value: `${apiFailureCount}`,
-        detail: summaryCardCopy.apiFailuresDetail(stats.success, stats.fail),
-        tone: apiFailureCount > 0 ? "fail" : "info"
-      }
-    ];
-  }, [
-    attendanceStatusSummary.pending,
-    leaveStatusSummary.pending,
-    requestCompletionRatePercent,
-    resubmitCandidates.length,
-    stats.fail,
-    stats.success,
-    summaryCardCopy,
-    totalApprovedRequestCount,
-    totalPendingRequestCount,
-    totalRejectedOrCanceledRequestCount
-  ]);
+  const integratedSummaryCards = useMemo<IntegratedSummaryCard[]>(
+    () =>
+      buildIntegratedSummaryCards({
+        attendanceStatusSummary,
+        leaveStatusSummary,
+        requestCompletionRatePercent,
+        resubmitNeededCount: resubmitCandidates.length,
+        successCount: stats.success,
+        failCount: stats.fail,
+        summaryCardCopy
+      }),
+    [
+      attendanceStatusSummary,
+      leaveStatusSummary,
+      requestCompletionRatePercent,
+      resubmitCandidates.length,
+      stats.fail,
+      stats.success,
+      summaryCardCopy
+    ]
+  );
 
   const latestLeaveRequest = useMemo(() => {
     if (leaveRequests.length === 0) {
@@ -955,101 +709,31 @@ export default function EmployeeSelfServicePage() {
   }, [leaveRequests]);
 
   const requestFeedbackRows = useMemo<RequestFeedbackRow[]>(() => {
-    const rows: RequestFeedbackRow[] = [];
-    if (latestAttendance) {
-      rows.push({
-        id: `attendance-${latestAttendance.id}`,
-        channel: "attendance",
-        status: latestAttendance.state,
-        at: latestAttendance.checkOutAt ?? latestAttendance.checkInAt,
-        message:
-          latestAttendance.state === "REJECTED"
-            ? `${requestFeedbackCopy.rejectionReasonPrefix}: ${latestAttendance.notes?.trim() || defaultsCopy.noReasonProvided}`
-            : latestAttendance.state === "PENDING"
-              ? requestFeedbackCopy.pendingMessage
-              : requestFeedbackCopy.successMessage,
-        tone:
-          latestAttendance.state === "APPROVED"
-            ? "ok"
-            : latestAttendance.state === "PENDING"
-              ? "pending"
-              : "fail"
-      });
-    }
-    if (latestLeaveRequest) {
-      const rejectReason =
-        latestLeaveRequest.decisionReason?.trim() ||
-        latestLeaveRequest.reason?.trim() ||
-        defaultsCopy.noReasonProvided;
-      rows.push({
-        id: `leave-${latestLeaveRequest.id}`,
-        channel: "leave",
-        status: latestLeaveRequest.state,
-        at: latestLeaveRequest.endDate,
-        message:
-          latestLeaveRequest.state === "REJECTED"
-            ? `${requestFeedbackCopy.rejectionReasonPrefix}: ${rejectReason}`
-            : latestLeaveRequest.state === "CANCELED"
-              ? `${requestFeedbackCopy.cancelReasonPrefix}: ${rejectReason}`
-              : latestLeaveRequest.state === "PENDING"
-                ? requestFeedbackCopy.pendingMessage
-                : requestFeedbackCopy.successMessage,
-        tone:
-          latestLeaveRequest.state === "APPROVED"
-            ? "ok"
-            : latestLeaveRequest.state === "PENDING"
-              ? "pending"
-              : "fail"
-      });
-    }
-
-    return rows.sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
-  }, [defaultsCopy.noReasonProvided, latestAttendance, latestLeaveRequest, requestFeedbackCopy.cancelReasonPrefix, requestFeedbackCopy.pendingMessage, requestFeedbackCopy.rejectionReasonPrefix, requestFeedbackCopy.successMessage]);
+    return buildRequestFeedbackRows({
+      latestAttendance,
+      latestLeaveRequest,
+      defaultsCopy: {
+        noReasonProvided: defaultsCopy.noReasonProvided
+      },
+      requestFeedbackCopy
+    });
+  }, [defaultsCopy.noReasonProvided, latestAttendance, latestLeaveRequest, requestFeedbackCopy]);
 
   const requestSearchRows = useMemo<RequestSearchRow[]>(() => {
-    const attendanceRows = attendance.map((record) => {
-      const at = record.checkOutAt ?? record.checkInAt;
-      const pendingHours =
-        record.state === "PENDING" ? Math.max(0, (requestNowMs - toTimestamp(at)) / 3_600_000) : 0;
-      return {
-        key: `attendance:${record.id}`,
-        channel: "attendance" as const,
-        requestId: record.id,
-        status: record.state,
-        at,
-        summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`,
-        detail: record.notes?.trim() || defaultsCopy.noNote,
-        pendingHours
-      };
+    return buildRequestSearchRows({
+      attendance,
+      leaveRequests,
+      requestNowMs,
+      defaultsCopy: {
+        noNote: defaultsCopy.noNote,
+        noReason: defaultsCopy.noReason
+      },
+      leaveUnitCopy,
+      formatDays,
+      toLeaveTypeLabel,
+      formatDateTime: formatDateTimeByLocale
     });
-
-    const leaveRows = leaveRequests.map((request) => {
-      const at = request.startDate;
-      const pendingHours =
-        request.state === "PENDING" ? Math.max(0, (requestNowMs - toTimestamp(at)) / 3_600_000) : 0;
-      const leaveUnitLabel =
-        request.unit === "HOUR" && request.hours !== null
-          ? leaveUnitCopy.hourUnit(request.hours.toFixed(2))
-          : request.unit === "HALF_DAY"
-            ? leaveUnitCopy.halfDay
-            : leaveUnitCopy.dayUnit(formatDays(request.days));
-      return {
-        key: `leave:${request.id}`,
-        channel: "leave" as const,
-        requestId: request.id,
-        status: request.state,
-        at,
-        summary: `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitLabel} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`,
-        detail:
-          request.reason?.trim() ||
-          request.decisionReason?.trim() ||
-          defaultsCopy.noReason,
-        pendingHours
-      };
-    });
-
-    return [...attendanceRows, ...leaveRows].sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
-  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, leaveRequests, leaveUnitCopy, requestNowMs, toLeaveTypeLabel]);
+  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, formatDateTimeByLocale, leaveRequests, leaveUnitCopy, requestNowMs, toLeaveTypeLabel]);
 
   const filteredRequestSearchRows = useMemo(() => {
     const filtered = requestSearchRows.filter((row) =>
@@ -1060,190 +744,73 @@ export default function EmployeeSelfServicePage() {
   }, [normalizedRequestSearchQuery, requestSearchRows, requestSearchScope, requestSortOption]);
 
   const filteredRequestFeedbackRows = useMemo(() => {
-    if (requestFeedbackStatusFilter === "all") {
-      return requestFeedbackRows;
-    }
-    return requestFeedbackRows.filter((row) => row.status === requestFeedbackStatusFilter);
+    return filterRequestFeedbackRows(requestFeedbackRows, requestFeedbackStatusFilter);
   }, [requestFeedbackStatusFilter, requestFeedbackRows]);
 
   const mobileRequestTimeline = useMemo<MobileRequestTimelineItem[]>(() => {
-    const attendanceItems = attendance.map((record) => ({
-      id: `attendance-${record.id}`,
-      channel: "attendance" as const,
-      status: record.state,
-      at: record.checkOutAt ?? record.checkInAt,
-      title: defaultsCopy.attendanceRequestTitle,
-      detail: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
-    }));
-
-    const leaveItems = leaveRequests.map((request) => ({
-      id: `leave-${request.id}`,
-      channel: "leave" as const,
-      status: request.state,
-      at: request.endDate,
-      title: defaultsCopy.leaveRequestTitle,
-      detail: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
-    }));
-
-    return [...attendanceItems, ...leaveItems]
-      .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
-      .slice(0, 12);
-  }, [attendance, defaultsCopy.attendanceRequestTitle, defaultsCopy.leaveRequestTitle, leaveRequests, toLeaveTypeLabel]);
+    return buildMobileRequestTimeline({
+      attendance,
+      leaveRequests,
+      defaultsCopy: {
+        attendanceRequestTitle: defaultsCopy.attendanceRequestTitle,
+        leaveRequestTitle: defaultsCopy.leaveRequestTitle
+      },
+      toLeaveTypeLabel,
+      formatDateTime: formatDateTimeByLocale
+    });
+  }, [attendance, defaultsCopy.attendanceRequestTitle, defaultsCopy.leaveRequestTitle, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]);
 
   const filteredMobileRequestTimeline = useMemo(() => {
-    return mobileRequestTimeline.filter((item) => {
-      if (timelineChannelFilter !== "all" && item.channel !== timelineChannelFilter) {
-        return false;
-      }
-      if (timelineStatusFilter !== "all" && item.status !== timelineStatusFilter) {
-        return false;
-      }
-      return true;
-    });
+    return filterMobileRequestTimeline(
+      mobileRequestTimeline,
+      timelineChannelFilter,
+      timelineStatusFilter
+    );
   }, [mobileRequestTimeline, timelineChannelFilter, timelineStatusFilter]);
 
   const requestFailureCauses = useMemo<RequestFailureCause[]>(() => {
-    const byId = new Map<string, RequestFailureCause>();
-
-    logs
-      .filter((log) => !log.ok)
-      .slice(0, 4)
-      .forEach((log) => {
-        const message = extractEmployeeErrorMessage(log.body, isKoLocale);
-        byId.set(`log-${log.id}`, {
-          id: `log-${log.id}`,
-          source: `${log.label} (${log.status})`,
-          message,
-          at: log.at
-        });
-      });
-
-    const latestRejectedAttendance = [...attendance]
-      .reverse()
-      .find((record) => record.state === "REJECTED");
-    if (latestRejectedAttendance) {
-      byId.set(`attendance-${latestRejectedAttendance.id}`, {
-        id: `attendance-${latestRejectedAttendance.id}`,
-        source: defaultsCopy.attendanceRejectedSource,
-        message:
-          latestRejectedAttendance.notes?.trim() ||
-          defaultsCopy.rejectionReasonMissing,
-        at: formatDateTime(latestRejectedAttendance.checkOutAt ?? latestRejectedAttendance.checkInAt)
-      });
-    }
-
-    const latestRejectedLeave = [...leaveRequests]
-      .reverse()
-      .find((request) => request.state === "REJECTED" || request.state === "CANCELED");
-    if (latestRejectedLeave) {
-      byId.set(`leave-${latestRejectedLeave.id}`, {
-        id: `leave-${latestRejectedLeave.id}`,
-        source:
-          latestRejectedLeave.state === "REJECTED"
-            ? defaultsCopy.leaveRejectedSource
-            : defaultsCopy.leaveCanceledSource,
-        message:
-          latestRejectedLeave.decisionReason?.trim() ||
-          latestRejectedLeave.reason?.trim() ||
-          defaultsCopy.reasonMissing,
-        at: formatDateTime(latestRejectedLeave.endDate)
-      });
-    }
-
-    return [...byId.values()].slice(0, 6);
-  }, [attendance, defaultsCopy.attendanceRejectedSource, defaultsCopy.leaveCanceledSource, defaultsCopy.leaveRejectedSource, defaultsCopy.reasonMissing, defaultsCopy.rejectionReasonMissing, isKoLocale, leaveRequests, logs]);
+    return buildRequestFailureCauses({
+      logs,
+      attendance,
+      leaveRequests,
+      defaultsCopy: {
+        attendanceRejectedSource: defaultsCopy.attendanceRejectedSource,
+        leaveRejectedSource: defaultsCopy.leaveRejectedSource,
+        leaveCanceledSource: defaultsCopy.leaveCanceledSource,
+        rejectionReasonMissing: defaultsCopy.rejectionReasonMissing,
+        reasonMissing: defaultsCopy.reasonMissing
+      },
+      isKoLocale,
+      formatDateTime: formatDateTimeByLocale,
+      extractEmployeeErrorMessage
+    });
+  }, [attendance, defaultsCopy.attendanceRejectedSource, defaultsCopy.leaveCanceledSource, defaultsCopy.leaveRejectedSource, defaultsCopy.reasonMissing, defaultsCopy.rejectionReasonMissing, formatDateTimeByLocale, isKoLocale, leaveRequests, logs]);
 
   const latestFailureCauseMessage = requestFailureCauses[0]?.message ?? null;
 
-  const correctionValidation = useMemo(() => {
-    if (!lastAttendanceId.trim()) {
-      return { isValid: false, message: correctionValidationCopy.missingTargetRecordId };
-    }
+  const correctionValidation = useMemo(
+    () =>
+      buildCorrectionValidation({
+        lastAttendanceId,
+        checkInAt,
+        checkOutAt,
+        breakMinutes,
+        correctionValidationCopy
+      }),
+    [breakMinutes, checkInAt, checkOutAt, correctionValidationCopy, lastAttendanceId]
+  );
 
-    const checkInMs = new Date(checkInAt).getTime();
-    if (Number.isNaN(checkInMs)) {
-      return { isValid: false, message: correctionValidationCopy.invalidCheckInFormat };
-    }
-
-    const normalizedBreakMinutes = Math.max(0, Math.trunc(coerceNumber(breakMinutes)));
-    if (normalizedBreakMinutes > 12 * 60) {
-      return { isValid: false, message: correctionValidationCopy.excessiveBreakMinutes };
-    }
-
-    if (checkOutAt.trim().length === 0) {
-      return { isValid: true, message: null };
-    }
-
-    const checkOutMs = new Date(checkOutAt).getTime();
-    if (Number.isNaN(checkOutMs)) {
-      return { isValid: false, message: correctionValidationCopy.invalidCheckOutFormat };
-    }
-    if (checkOutMs <= checkInMs) {
-      return { isValid: false, message: correctionValidationCopy.invalidTimeOrder };
-    }
-
-    const totalMinutes = Math.round((checkOutMs - checkInMs) / 60_000);
-    if (normalizedBreakMinutes >= totalMinutes) {
-      return { isValid: false, message: correctionValidationCopy.breakExceedsWorkMinutes };
-    }
-
-    return { isValid: true, message: null };
-  }, [breakMinutes, checkInAt, checkOutAt, correctionValidationCopy.breakExceedsWorkMinutes, correctionValidationCopy.excessiveBreakMinutes, correctionValidationCopy.invalidCheckInFormat, correctionValidationCopy.invalidCheckOutFormat, correctionValidationCopy.invalidTimeOrder, correctionValidationCopy.missingTargetRecordId, lastAttendanceId]);
-
-  const attendancePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(() => {
-    const checks: PreSubmitCheckItem[] = [];
-    checks.push({
-      id: "attendance-target",
-      pass: lastAttendanceId.trim().length > 0,
-      label: attendanceCheckCopy.targetLabel,
-      detail:
-        lastAttendanceId.trim().length > 0
-          ? attendanceCheckCopy.targetSelectedDetail
-          : attendanceCheckCopy.targetMissingDetail
-    });
-
-    const checkInMs = new Date(checkInAt).getTime();
-    checks.push({
-      id: "attendance-checkin",
-      pass: !Number.isNaN(checkInMs),
-      label: attendanceCheckCopy.checkInFormatLabel,
-      detail: !Number.isNaN(checkInMs) ? attendanceCheckCopy.checkInFormatValidDetail : attendanceCheckCopy.checkInFormatInvalidDetail
-    });
-
-    const normalizedBreakMinutes = Math.max(0, Math.trunc(coerceNumber(breakMinutes)));
-    checks.push({
-      id: "attendance-break",
-      pass: normalizedBreakMinutes <= 12 * 60,
-      label: attendanceCheckCopy.breakRangeLabel,
-      detail:
-        normalizedBreakMinutes <= 12 * 60
-          ? attendanceCheckCopy.breakRangeValidDetail(normalizedBreakMinutes)
-          : attendanceCheckCopy.breakRangeInvalidDetail
-    });
-
-    if (checkOutAt.trim().length > 0) {
-      const checkOutMs = new Date(checkOutAt).getTime();
-      checks.push({
-        id: "attendance-checkout-format",
-        pass: !Number.isNaN(checkOutMs),
-        label: attendanceCheckCopy.checkOutFormatLabel,
-        detail:
-          !Number.isNaN(checkOutMs)
-            ? attendanceCheckCopy.checkOutFormatValidDetail
-            : attendanceCheckCopy.checkOutFormatInvalidDetail
-      });
-      checks.push({
-        id: "attendance-time-order",
-        pass: !Number.isNaN(checkOutMs) && !Number.isNaN(checkInMs) && checkOutMs > checkInMs,
-        label: attendanceCheckCopy.timeOrderLabel,
-        detail: !Number.isNaN(checkOutMs) && !Number.isNaN(checkInMs) && checkOutMs > checkInMs
-          ? attendanceCheckCopy.timeOrderValidDetail
-          : attendanceCheckCopy.timeOrderInvalidDetail
-      });
-    }
-
-    return checks;
-  }, [attendanceCheckCopy, breakMinutes, checkInAt, checkOutAt, lastAttendanceId]);
+  const attendancePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(
+    () =>
+      buildAttendancePreSubmitChecks({
+        lastAttendanceId,
+        checkInAt,
+        checkOutAt,
+        breakMinutes,
+        attendanceCheckCopy
+      }),
+    [attendanceCheckCopy, breakMinutes, checkInAt, checkOutAt, lastAttendanceId]
+  );
 
   const attendancePreSubmitValid = useMemo(
     () => attendancePreSubmitChecks.every((check) => check.pass),
@@ -1266,83 +833,30 @@ export default function EmployeeSelfServicePage() {
     [leaveEndDate, leaveHours, leaveStartDate, leaveUnit]
   );
 
-  const leavePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(() => {
-    const checks: PreSubmitCheckItem[] = [];
-    const startMs = new Date(leaveStartDate).getTime();
-    const endMs = new Date(leaveEndDate).getTime();
-    const validStart = !Number.isNaN(startMs);
-    const validEnd = !Number.isNaN(endMs);
-
-    checks.push({
-      id: "leave-start-format",
-      pass: validStart,
-      label: leaveCheckCopy.startDateFormatLabel,
-      detail: validStart ? leaveCheckCopy.startDateFormatValidDetail : leaveCheckCopy.startDateFormatInvalidDetail
-    });
-    checks.push({
-      id: "leave-end-format",
-      pass: validEnd,
-      label: leaveCheckCopy.endDateFormatLabel,
-      detail: validEnd ? leaveCheckCopy.endDateFormatValidDetail : leaveCheckCopy.endDateFormatInvalidDetail
-    });
-    checks.push({
-      id: "leave-range",
-      pass: validStart && validEnd && endMs >= startMs,
-      label: leaveCheckCopy.requestRangeLabel,
-      detail: validStart && validEnd && endMs >= startMs
-        ? leaveCheckCopy.requestRangeValidDetail
-        : leaveCheckCopy.requestRangeInvalidDetail
-    });
-
-    if (leaveUnit === "HOUR") {
-      const hours = Math.max(0, coerceNumber(leaveHours));
-      checks.push({
-        id: "leave-hours",
-        pass: hours > 0 && hours <= 12,
-        label: leaveCheckCopy.hourlyInputLabel,
-        detail:
-          hours > 0 && hours <= 12
-            ? leaveCheckCopy.hourlyInputValidDetail(hours)
-            : leaveCheckCopy.hourlyInputInvalidDetail
-      });
-    }
-
-    checks.push({
-      id: "leave-estimated-days",
-      pass: estimatedLeaveRequestedDays > 0,
-      label: leaveCheckCopy.estimatedDaysLabel,
-      detail:
-        estimatedLeaveRequestedDays > 0
-          ? leaveCheckCopy.estimatedDaysValidDetail(formatDays(estimatedLeaveRequestedDays))
-          : leaveCheckCopy.estimatedDaysInvalidDetail
-    });
-
-    if (leaveType === "ANNUAL" && leaveBalance) {
-      checks.push({
-        id: "leave-balance",
-        pass: leaveBalance.remainingDays >= estimatedLeaveRequestedDays,
-        label: leaveCheckCopy.annualBalanceLabel,
-        detail:
-          leaveBalance.remainingDays >= estimatedLeaveRequestedDays
-            ? leaveCheckCopy.annualBalanceSufficientDetail(formatDays(leaveBalance.remainingDays))
-            : leaveCheckCopy.annualBalanceInsufficientDetail(
-                formatDays(leaveBalance.remainingDays),
-                formatDays(estimatedLeaveRequestedDays)
-              )
-      });
-    }
-
-    return checks;
-  }, [
-    estimatedLeaveRequestedDays,
-    leaveBalance,
-    leaveCheckCopy,
-    leaveEndDate,
-    leaveHours,
-    leaveStartDate,
-    leaveType,
-    leaveUnit
-  ]);
+  const leavePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(
+    () =>
+      buildLeavePreSubmitChecks({
+        leaveStartDate,
+        leaveEndDate,
+        leaveUnit,
+        leaveHours,
+        leaveType,
+        leaveBalance,
+        estimatedLeaveRequestedDays,
+        leaveCheckCopy,
+        formatDays
+      }),
+    [
+      estimatedLeaveRequestedDays,
+      leaveBalance,
+      leaveCheckCopy,
+      leaveEndDate,
+      leaveHours,
+      leaveStartDate,
+      leaveType,
+      leaveUnit
+    ]
+  );
 
   const leavePreSubmitValid = useMemo(() => leavePreSubmitChecks.every((check) => check.pass), [leavePreSubmitChecks]);
 
@@ -1351,58 +865,25 @@ export default function EmployeeSelfServicePage() {
     [leavePreSubmitChecks]
   );
 
-  const resubmitFlowChecks = useMemo<PreSubmitCheckItem[]>(() => {
-    const hasCandidate = Boolean(selectedResubmitCandidate);
-    const isDraftApplied =
-      hasCandidate && selectedResubmitCandidate
-        ? lastAppliedResubmitCandidateKey === selectedResubmitCandidate.key
-        : false;
-    const isSubmissionReady = !hasCandidate
-      ? false
-      : selectedResubmitCandidate?.channel === "attendance"
-        ? correctionValidation.isValid && attendancePreSubmitValid
-        : leavePreSubmitValid;
-
-    return [
-      {
-        id: "resubmit-candidate",
-        pass: hasCandidate,
-        label: resubmitFlowCheckCopy.candidateLabel,
-        detail:
-          hasCandidate ? resubmitFlowCheckCopy.candidateSelectedDetail : resubmitFlowCheckCopy.candidateMissingDetail
-      },
-      {
-        id: "resubmit-draft",
-        pass: isDraftApplied,
-        label: resubmitFlowCheckCopy.draftAppliedLabel,
-        detail:
-          isDraftApplied ? resubmitFlowCheckCopy.draftAppliedDetail : resubmitFlowCheckCopy.draftMissingDetail
-      },
-      {
-        id: "resubmit-submit-ready",
-        pass: isSubmissionReady,
-        label: resubmitFlowCheckCopy.submitReadyLabel,
-        detail: isSubmissionReady
-          ? resubmitFlowCheckCopy.submitReadyDetail
-          : resubmitFlowCheckCopy.submitNotReadyDetail
-      }
-    ];
-  }, [
-    attendancePreSubmitValid,
-    correctionValidation.isValid,
-    lastAppliedResubmitCandidateKey,
-    leavePreSubmitValid,
-    resubmitFlowCheckCopy.candidateLabel,
-    resubmitFlowCheckCopy.candidateMissingDetail,
-    resubmitFlowCheckCopy.candidateSelectedDetail,
-    resubmitFlowCheckCopy.draftAppliedDetail,
-    resubmitFlowCheckCopy.draftAppliedLabel,
-    resubmitFlowCheckCopy.draftMissingDetail,
-    resubmitFlowCheckCopy.submitNotReadyDetail,
-    resubmitFlowCheckCopy.submitReadyDetail,
-    resubmitFlowCheckCopy.submitReadyLabel,
-    selectedResubmitCandidate
-  ]);
+  const resubmitFlowChecks = useMemo<PreSubmitCheckItem[]>(
+    () =>
+      buildResubmitFlowChecks({
+        selectedResubmitCandidate,
+        lastAppliedResubmitCandidateKey,
+        correctionValidationIsValid: correctionValidation.isValid,
+        attendancePreSubmitValid,
+        leavePreSubmitValid,
+        resubmitFlowCheckCopy
+      }),
+    [
+      attendancePreSubmitValid,
+      correctionValidation.isValid,
+      lastAppliedResubmitCandidateKey,
+      leavePreSubmitValid,
+      resubmitFlowCheckCopy,
+      selectedResubmitCandidate
+    ]
+  );
 
   const resubmitFlowReady = useMemo(
     () => resubmitFlowChecks.every((check) => check.pass),
@@ -1414,64 +895,40 @@ export default function EmployeeSelfServicePage() {
     [resubmitFlowChecks]
   );
 
-  const integratedSubmitChecklistCards = useMemo<IntegratedSubmitChecklistCard[]>(() => {
-    const attendancePassCount = attendancePreSubmitChecks.filter((check) => check.pass).length;
-    const leavePassCount = leavePreSubmitChecks.filter((check) => check.pass).length;
-    const resubmitPassCount = resubmitFlowChecks.filter((check) => check.pass).length;
-    const attendanceReady =
-      attendancePreSubmitValid && correctionValidation.isValid && lastAttendanceId.trim().length > 0;
-
-    return [
-      {
-        key: "attendance",
-        label: submitChecklistCardCopy.attendanceCorrectionLabel,
-        passCount: attendancePassCount,
-        totalCount: attendancePreSubmitChecks.length,
-        ready: attendanceReady,
-        detail: attendanceReady
-          ? submitChecklistCardCopy.attendanceReadyDetail
-          : correctionValidation.message || attendanceFirstFailCheck?.detail || submitChecklistCardCopy.attendanceFallbackDetail,
-        targetSectionId: "attendance"
-      },
-      {
-        key: "leave",
-        label: submitChecklistCardCopy.leaveSubmissionLabel,
-        passCount: leavePassCount,
-        totalCount: leavePreSubmitChecks.length,
-        ready: leavePreSubmitValid,
-        detail: leavePreSubmitValid
-          ? submitChecklistCardCopy.leaveReadyDetail(formatDays(estimatedLeaveRequestedDays))
-          : leaveFirstFailCheck?.detail || submitChecklistCardCopy.leaveFallbackDetail,
-        targetSectionId: "leave"
-      },
-      {
-        key: "resubmit",
-        label: submitChecklistCardCopy.requestResubmitLabel,
-        passCount: resubmitPassCount,
-        totalCount: resubmitFlowChecks.length,
-        ready: resubmitFlowReady,
-        detail: resubmitFlowReady
-          ? submitChecklistCardCopy.requestResubmitReadyDetail
-          : resubmitFirstFailCheck?.detail || submitChecklistCardCopy.requestResubmitFallbackDetail,
-        targetSectionId: "request-resubmit"
-      }
-    ];
-  }, [
-    attendanceFirstFailCheck,
-    attendancePreSubmitChecks,
-    attendancePreSubmitValid,
-    correctionValidation.isValid,
-    correctionValidation.message,
-    estimatedLeaveRequestedDays,
-    lastAttendanceId,
-    leaveFirstFailCheck,
-    leavePreSubmitChecks,
-    leavePreSubmitValid,
-    resubmitFirstFailCheck,
-    resubmitFlowChecks,
-    resubmitFlowReady,
-    submitChecklistCardCopy
-  ]);
+  const integratedSubmitChecklistCards = useMemo<IntegratedSubmitChecklistCard[]>(
+    () =>
+      buildIntegratedSubmitChecklistCards({
+        attendancePreSubmitChecks,
+        leavePreSubmitChecks,
+        resubmitFlowChecks,
+        attendancePreSubmitValid,
+        correctionValidation,
+        lastAttendanceId,
+        attendanceFirstFailCheck,
+        leavePreSubmitValid,
+        estimatedLeaveRequestedDays,
+        leaveFirstFailCheck,
+        resubmitFlowReady,
+        resubmitFirstFailCheck,
+        submitChecklistCardCopy,
+        formatDays
+      }),
+    [
+      attendanceFirstFailCheck,
+      attendancePreSubmitChecks,
+      attendancePreSubmitValid,
+      correctionValidation,
+      estimatedLeaveRequestedDays,
+      lastAttendanceId,
+      leaveFirstFailCheck,
+      leavePreSubmitChecks,
+      leavePreSubmitValid,
+      resubmitFirstFailCheck,
+      resubmitFlowChecks,
+      resubmitFlowReady,
+      submitChecklistCardCopy
+    ]
+  );
 
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
@@ -1558,7 +1015,7 @@ export default function EmployeeSelfServicePage() {
           onAccessTokenChange={setAccessToken}
           onPeriodStartChange={setPeriodStart}
           onPeriodEndChange={setPeriodEnd}
-          onRefreshEmployeeSnapshot={() => void refreshEmployeeSnapshot()}
+          onRefreshEmployeeSnapshot={() => void mutationActions.refreshEmployeeSnapshot()}
           onJumpToSection={jumpToSection}
         />
 
@@ -1576,7 +1033,7 @@ export default function EmployeeSelfServicePage() {
           timelineStatusFilter={timelineStatusFilter}
           filteredMobileRequestTimeline={filteredMobileRequestTimeline}
           toRequestStatusLabel={toRequestStatusLabel}
-          formatDateTime={formatDateTime}
+          formatDateTime={formatDateTimeByLocale}
           statusToTone={statusToTone}
           onRequestFeedbackStatusFilterChange={setRequestFeedbackStatusFilter}
           onCopyFailureCause={(message) => void copyFailureCause(message)}
@@ -1610,415 +1067,92 @@ export default function EmployeeSelfServicePage() {
           onApplyResubmitCandidateToDraft={applyResubmitCandidateToDraft}
         />
 
-        <article className="panel" id="attendance">
-          <h2>{sectionTitles.attendance}</h2>
-          <div className="input-grid">
-            <label>
-              {attendanceCopy.checkInTime}
-              <input type="datetime-local" value={checkInAt} onChange={(event) => setCheckInAt(event.target.value)} />
-            </label>
-            <label>
-              {attendanceCopy.checkOutTime}
-              <input type="datetime-local" value={checkOutAt} onChange={(event) => setCheckOutAt(event.target.value)} />
-            </label>
-            <label>
-              {attendanceCopy.breakMinutes}
-              <input type="number" min={0} value={breakMinutes} onChange={(event) => setBreakMinutes(event.target.value)} />
-            </label>
-            <label>
-              {attendanceCopy.holidayWork}
-              <select value={isHoliday ? "yes" : "no"} onChange={(event) => setIsHoliday(event.target.value === "yes")}>
-                <option value="no">{attendanceCopy.noOption}</option>
-                <option value="yes">{attendanceCopy.yesOption}</option>
-              </select>
-            </label>
-            <label className="full">
-              {attendanceCopy.correctionNote}
-              <input value={attendanceNotes} onChange={(event) => setAttendanceNotes(event.target.value)} />
-            </label>
-            <label className="full">
-              {attendanceCopy.recentTargetRecordId}
-              <input value={lastAttendanceId} onChange={(event) => setLastAttendanceId(event.target.value)} />
-            </label>
-            <label className="full">
-              {attendanceCopy.selectCorrectionTargetRecord}
-              <select
-                value={selectedCorrectionRecordId}
-                onChange={(event) => selectCorrectionTarget(event.target.value)}
-              >
-                <option value="">{attendanceCopy.selectFromRecentRecords}</option>
-                {attendance.map((record) => (
-                  <option key={record.id} value={record.id}>
-                    {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} ({toRequestStatusLabel(record.state)})
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <p className="small muted" style={{ margin: "4px 0 0" }}>
-            {attendanceCopy.workTimeDelta}: <strong>{correctionDeltaLabel}</strong>
-          </p>
-          <div className="pre-submit-check-wrap">
-            <p className="small" style={{ margin: "8px 0 0" }}>
-              {attendanceCopy.preSubmitChecks} (
-              {attendancePreSubmitChecks.filter((check) => check.pass).length}/{attendancePreSubmitChecks.length}{" "}
-              {attendanceCopy.passed})
-            </p>
-            <ul
-              className="pre-submit-check-list"
-              aria-label={attendanceCopy.preSubmitChecksAriaLabel}
-            >
-              {attendancePreSubmitChecks.map((check) => (
-                <li key={check.id} className={check.pass ? "pass" : "fail"}>
-                  <strong>{check.pass ? preSubmitStatusLabels.pass : preSubmitStatusLabels.fail}</strong>
-                  <span>{check.label}</span>
-                  <p>{check.detail}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {correctionValidation.message ? (
-            <p className="small" style={{ margin: "8px 0 0", color: "var(--danger)" }}>
-              {correctionValidation.message}
-            </p>
-          ) : null}
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void createAttendance()}>
-              {callApiLabels.createAttendance}
-            </button>
-            <button className="btn btn-secondary" onClick={() => void checkOutNow()} disabled={!lastAttendanceId}>
-              {callApiLabels.checkOutNow}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => void requestAttendanceCorrection()}
-              disabled={!correctionValidation.isValid || !attendancePreSubmitValid}
-            >
-              {callApiLabels.requestAttendanceCorrection}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={applySelectedCorrectionRecord}
-              disabled={!selectedCorrectionRecord}
-            >
-              {attendanceCopy.loadSelectedRecord}
-            </button>
-            <button className="btn btn-secondary" onClick={applyLatestAttendanceToCorrectionForm} disabled={!latestAttendance}>
-              {attendanceCopy.loadLatestRecord}
-            </button>
-            {attendanceNotePresets.map((preset) => (
-              <button key={preset} className="btn btn-secondary" onClick={() => setAttendanceNotes(preset)}>
-                {preset}
-              </button>
-            ))}
-          </div>
-          <ul className="log-list">
-            {attendance.length === 0 ? (
-              <li>
-                <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{attendanceCopy.noRecords}</span>
-                <time>-</time>
-              </li>
-            ) : (
-              attendance.map((record) => (
-                <li key={record.id}>
-                  <span className={record.state === "APPROVED" ? "ok" : record.state === "PENDING" ? "fail" : "fail"}>
-                    {toRequestStatusLabel(record.state)}
-                  </span>
-                  <span>
-                    {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)}
-                  </span>
-                  <button className="btn btn-secondary" onClick={() => applyAttendanceRecordToCorrectionForm(record)}>
-                    {attendanceCopy.selectAction}
-                  </button>
-                  <time>{record.id}</time>
-                </li>
-              ))
-            )}
-          </ul>
-        </article>
-
-        <article className="panel" id="leave">
-          <h2>{sectionTitles.leave}</h2>
-          <p className="small">{leaveBalanceSummary}</p>
-          <div className="input-grid">
-            <label>
-              {leaveCopy.leaveType}
-              <select value={leaveType} onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}>
-                <option value="ANNUAL">{toLeaveTypeLabel("ANNUAL")}</option>
-                <option value="SICK">{toLeaveTypeLabel("SICK")}</option>
-                <option value="UNPAID">{toLeaveTypeLabel("UNPAID")}</option>
-              </select>
-            </label>
-            <label>
-              {leaveCopy.requestUnit}
-              <select
-                value={leaveUnit}
-                onChange={(event) => setLeaveUnit(event.target.value as "FULL_DAY" | "HALF_DAY" | "HOUR")}
-              >
-                <option value="FULL_DAY">{leaveCopy.fullDay}</option>
-                <option value="HALF_DAY">{leaveCopy.halfDay}</option>
-                <option value="HOUR">{leaveCopy.hourly}</option>
-              </select>
-            </label>
-            <label>
-              {leaveCopy.startDate}
-              <input type="datetime-local" value={leaveStartDate} onChange={(event) => setLeaveStartDate(event.target.value)} />
-            </label>
-            <label>
-              {leaveCopy.endDate}
-              <input type="datetime-local" value={leaveEndDate} onChange={(event) => setLeaveEndDate(event.target.value)} />
-            </label>
-            {leaveUnit === "HOUR" ? (
-              <label>
-                {leaveCopy.hours}
-                <input value={leaveHours} onChange={(event) => setLeaveHours(event.target.value)} />
-              </label>
-            ) : null}
-            <label>
-              {leaveCopy.cancelReason}
-              <input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
-            </label>
-            <label className="full">
-              {leaveCopy.requestReasonOptional}
-              <input value={leaveReason} onChange={(event) => setLeaveReason(event.target.value)} />
-            </label>
-            <label className="full">
-              {leaveCopy.recentTargetRequestId}
-              <input value={lastLeaveRequestId} onChange={(event) => setLastLeaveRequestId(event.target.value)} />
-            </label>
-          </div>
-          <div className="pre-submit-check-wrap">
-            <p className="small" style={{ margin: "8px 0 0" }}>
-              {leaveCopy.preSubmitChecks} (
-              {leavePreSubmitChecks.filter((check) => check.pass).length}/{leavePreSubmitChecks.length}{" "}
-              {leaveCopy.passed})
-            </p>
-            <ul
-              className="pre-submit-check-list"
-              aria-label={leaveCopy.preSubmitChecksAriaLabel}
-            >
-              {leavePreSubmitChecks.map((check) => (
-                <li key={check.id} className={check.pass ? "pass" : "fail"}>
-                  <strong>{check.pass ? preSubmitStatusLabels.pass : preSubmitStatusLabels.fail}</strong>
-                  <span>{check.label}</span>
-                  <p>{check.detail}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="leave-quick-actions" role="group" aria-label={leaveCopy.quickPresetsAriaLabel}>
-            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("today-half")}>
-              {leaveCopy.todayHalfDay}
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("tomorrow-full")}>
-              {leaveCopy.tomorrowFullDay}
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("next-week-full")}>
-              {leaveCopy.nextMonday}
-            </button>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void createLeave()} disabled={!leavePreSubmitValid}>
-              {callApiLabels.createLeave}
-            </button>
-            <button className="btn btn-secondary" onClick={() => void cancelLeave()} disabled={!lastLeaveRequestId}>
-              {callApiLabels.cancelLeave}
-            </button>
-          </div>
-          <ul className="log-list">
-            {leaveRequests.length === 0 ? (
-              <li>
-                <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{leaveCopy.noRequests}</span>
-                <time>-</time>
-              </li>
-            ) : (
-              leaveRequests.map((request) => (
-                <li key={request.id}>
-                  <span className={request.state === "APPROVED" ? "ok" : request.state === "PENDING" ? "fail" : "fail"}>
-                    {toRequestStatusLabel(request.state)}
-                  </span>
-                  <span>
-                    {toLeaveTypeLabel(request.leaveType)} / {formatDateTime(request.startDate)} ~ {formatDateTime(request.endDate)} (
-                    {`${formatDays(request.days)}${leaveCopy.dayUnitSuffix}`}
-                    {request.unit === "HOUR" && request.hours !== null
-                      ? ` / ${request.hours.toFixed(2)}${leaveCopy.hourUnitSuffix}`
-                      : request.unit === "HALF_DAY"
-                        ? ` / ${leaveCopy.halfDaySuffix}`
-                        : ""}
-                    )
-                  </span>
-                  <time>{request.id}</time>
-                </li>
-              ))
-            )}
-          </ul>
-        </article>
-
-        <article className="panel" id="leave-calendar">
-          <h2>{sectionTitles.leaveCalendar}</h2>
-          <p className="small">
-            {leaveCalendarCopy.usageRateLabel} {leaveUsageRatePercent}% ({leaveCalendarCopy.usedLabel}{" "}
-            {formatDays(leaveBalance?.usedDays ?? 0)} / {leaveCalendarCopy.grantedLabel}{" "}
-            {formatDays(leaveBalance?.grantedDays ?? 0)})
-          </p>
-          <div className="leave-balance-visual" aria-label={leaveCalendarCopy.visualizationAriaLabel}>
-            <div className="leave-usage-ring" style={leaveUsageRingStyle}>
-              <div>
-                <strong>{leaveUsageRatePercent}%</strong>
-                <span>{leaveCalendarCopy.usageRateShort}</span>
-              </div>
-            </div>
-            <div className="leave-balance-cards">
-              {leaveBalanceCards.length === 0 ? (
-                <p className="small">
-                  {leaveCalendarCopy.visualizationHint}
-                </p>
-              ) : (
-                leaveBalanceCards.map((card) => (
-                  <article key={card.key} className={`leave-balance-card tone-${card.tone}`}>
-                    <p>{card.label}</p>
-                    <strong>{card.value}</strong>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-          <p className="small leave-projection">{leaveUsageProjectionLabel}</p>
-          <div className="leave-calendar-toolbar">
-            <strong>
-              {leaveCalendarMonthLabel} {leaveCalendarCopy.densityViewLabel}
-            </strong>
-            <div className="leave-calendar-shortcuts" aria-label={leaveCalendarCopy.quickNavigationAriaLabel}>
-              <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(-1)}>
-                {leaveCalendarCopy.previousMonth}
-              </button>
-              <button className="btn btn-secondary btn-small" onClick={() => void resetCalendarToCurrentMonth()}>
-                {leaveCalendarCopy.currentMonth}
-              </button>
-              <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(1)}>
-                {leaveCalendarCopy.nextMonth}
-              </button>
-            </div>
-          </div>
-          <div className="leave-calendar-weekdays" aria-hidden="true">
-            {leaveCalendarWeekdays.map((weekday) => (
-              <span key={weekday}>{weekday}</span>
-            ))}
-          </div>
-          <div className="leave-calendar-grid">
-            {leaveCalendarCells.map((cell) => (
-              <article
-                key={cell.dateKey}
-                className={[
-                  "leave-calendar-day",
-                  `density-${cell.density}`,
-                  `tone-${cell.tone}`,
-                  cell.inCurrentMonth ? "in-month" : "out-month",
-                  cell.isToday ? "today" : ""
-                ]
-                  .join(" ")
-                  .trim()}
-                title={
-                  cell.requestCount === 0
-                    ? `${cell.dateKey}: ${leaveCalendarCopy.noScheduleInDateLabel}`
-                    : `${cell.dateKey}: ${cell.requestCount}${leaveCalendarCopy.itemSuffix} (${leaveCalendarCopy.approvedLabel} ${cell.approvedCount}, ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount}, ${leaveCalendarCopy.rejectedOrCanceledLabel} ${cell.rejectedCount})`
-                }
-              >
-                <div className="leave-day-head">
-                  <span>{cell.dayOfMonth}</span>
-                  {cell.requestCount > 0 ? <strong>{`${cell.requestCount}${leaveCalendarCopy.itemSuffix}`}</strong> : null}
-                </div>
-                <p>
-                  {cell.requestCount === 0
-                    ? leaveCalendarCopy.noScheduleLabel
-                    : `${leaveCalendarCopy.approvedLabel} ${cell.approvedCount} / ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount} / ${leaveCalendarCopy.rejectedLabel} ${cell.rejectedCount}`}
-                </p>
-              </article>
-            ))}
-          </div>
-          {leaveCalendarRows.length === 0 ? (
-            <p className="small" style={{ marginTop: 12 }}>
-              {leaveCalendarCopy.noScheduleInRange}
-            </p>
-          ) : (
-            <ul className="simple-list leave-calendar-list" style={{ marginTop: 12 }}>
-              {leaveCalendarRows.map((row) => (
-                <li key={row.id}>
-                  <span>
-                    <strong>{row.label}</strong>
-                    <br />
-                    <span className="small">{row.dateRange}</span>
-                  </span>
-                  <span className={row.status === "APPROVED" ? "ok" : row.status === "PENDING" ? "muted" : "fail"}>
-                    {toRequestStatusLabel(row.status)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-
-        <article className="panel" id="schedule">
-          <h2>{sectionTitles.schedule}</h2>
-          {showDevTools ? (
-            <div className="actions">
-              <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-                {scheduleCopy.devSchedulingCockpit}
-              </Link>
-            </div>
-          ) : null}
-          <ul className="log-list">
-            {schedules.length === 0 ? (
-              <li>
-                <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{scheduleCopy.noSchedules}</span>
-                <time>-</time>
-              </li>
-            ) : (
-              schedules.map((schedule) => (
-                <li key={schedule.id}>
-                  <span className="ok">{schedule.isHoliday ? listBadgeLabels.holiday : listBadgeLabels.work}</span>
-                  <span>
-                    {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (
-                    {scheduleCopy.breakMinutesFormat(schedule.breakMinutes)})
-                  </span>
-                  <time>{schedule.id}</time>
-                </li>
-              ))
-            )}
-          </ul>
-        </article>
-
-        {showDevTools ? (
-          <article className="panel panel-log">
-            <h2>{sectionTitles.apiLogs}</h2>
-            <p className="small">
-              {apiLogsCopy.runningNow}: <strong>{pendingLabel ?? apiLogsCopy.none}</strong> / {apiLogsCopy.totalCalls} {stats.total}
-              {apiLogsCopy.summary(stats.success, stats.fail)}
-            </p>
-            <div className="actions">
-              <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
-                {apiLogsCopy.clearLogs}
-              </button>
-            </div>
-            <pre>{latestPayload}</pre>
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>
-                    {log.ok ? listBadgeLabels.success : listBadgeLabels.fail} {log.status}
-                  </span>
-                  <span>
-                    {log.label} ({Math.max(0, Math.round(log.durationMs))}ms)
-                  </span>
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          </article>
-        ) : null}
+        <EmployeeAttendanceLeavePanels
+          sectionTitles={sectionTitles}
+          attendanceCopy={attendanceCopy}
+          leaveCopy={leaveCopy}
+          leaveCalendarCopy={leaveCalendarCopy}
+          scheduleCopy={scheduleCopy}
+          apiLogsCopy={apiLogsCopy}
+          callApiLabels={callApiLabels}
+          listBadgeLabels={listBadgeLabels}
+          preSubmitStatusLabels={preSubmitStatusLabels}
+          showDevTools={showDevTools}
+          attendance={attendance}
+          leaveRequests={leaveRequests}
+          schedules={schedules}
+          leaveBalance={leaveBalance}
+          checkInAt={checkInAt}
+          checkOutAt={checkOutAt}
+          breakMinutes={breakMinutes}
+          isHoliday={isHoliday}
+          attendanceNotes={attendanceNotes}
+          lastAttendanceId={lastAttendanceId}
+          selectedCorrectionRecordId={selectedCorrectionRecordId}
+          hasSelectedCorrectionRecord={selectedCorrectionRecord !== null}
+          correctionDeltaLabel={correctionDeltaLabel}
+          attendancePreSubmitChecks={attendancePreSubmitChecks}
+          attendancePreSubmitValid={attendancePreSubmitValid}
+          correctionValidationMessage={correctionValidation.message}
+          correctionValidationIsValid={correctionValidation.isValid}
+          latestAttendance={latestAttendance}
+          attendanceNotePresets={attendanceNotePresets}
+          leaveType={leaveType}
+          leaveUnit={leaveUnit}
+          leaveHours={leaveHours}
+          leaveStartDate={leaveStartDate}
+          leaveEndDate={leaveEndDate}
+          leaveReason={leaveReason}
+          cancelReason={cancelReason}
+          lastLeaveRequestId={lastLeaveRequestId}
+          leaveBalanceSummary={leaveBalanceSummary}
+          leavePreSubmitChecks={leavePreSubmitChecks}
+          leavePreSubmitValid={leavePreSubmitValid}
+          leaveUsageRatePercent={leaveUsageRatePercent}
+          leaveUsageRingStyle={leaveUsageRingStyle}
+          leaveBalanceCards={leaveBalanceCards}
+          leaveUsageProjectionLabel={leaveUsageProjectionLabel}
+          leaveCalendarMonthLabel={leaveCalendarMonthLabel}
+          leaveCalendarWeekdays={leaveCalendarWeekdays}
+          leaveCalendarCells={leaveCalendarCells}
+          leaveCalendarRows={leaveCalendarRows}
+          pendingLabel={pendingLabel}
+          logs={logs}
+          stats={stats}
+          latestPayload={latestPayload}
+          formatDateTime={formatDateTimeByLocale}
+          formatDays={formatDays}
+          toLeaveTypeLabel={toLeaveTypeLabel}
+          toRequestStatusLabel={toRequestStatusLabel}
+          onCheckInAtChange={setCheckInAt}
+          onCheckOutAtChange={setCheckOutAt}
+          onBreakMinutesChange={setBreakMinutes}
+          onIsHolidayChange={setIsHoliday}
+          onAttendanceNotesChange={setAttendanceNotes}
+          onLastAttendanceIdChange={setLastAttendanceId}
+          onSelectCorrectionTarget={selectCorrectionTarget}
+          onCreateAttendance={() => void mutationActions.createAttendance()}
+          onCheckOutNow={() => void mutationActions.checkOutNow()}
+          onRequestAttendanceCorrection={() => void mutationActions.requestAttendanceCorrection()}
+          onApplySelectedCorrectionRecord={applySelectedCorrectionRecord}
+          onApplyLatestAttendanceToCorrectionForm={applyLatestAttendanceToCorrectionForm}
+          onApplyAttendanceRecordToCorrectionForm={applyAttendanceRecordToCorrectionForm}
+          onLeaveTypeChange={setLeaveType}
+          onLeaveUnitChange={setLeaveUnit}
+          onLeaveHoursChange={setLeaveHours}
+          onLeaveStartDateChange={setLeaveStartDate}
+          onLeaveEndDateChange={setLeaveEndDate}
+          onCancelReasonChange={setCancelReason}
+          onLeaveReasonChange={setLeaveReason}
+          onLastLeaveRequestIdChange={setLastLeaveRequestId}
+          onApplyLeaveQuickPreset={applyLeaveQuickPreset}
+          onCreateLeave={() => void mutationActions.createLeave()}
+          onCancelLeave={() => void mutationActions.cancelLeave()}
+          onPrefillLeaveFromCalendarDate={prefillLeaveFormFromCalendarDate}
+          onMoveCalendarMonth={(delta) => void moveCalendarMonth(delta)}
+          onResetCalendarToCurrentMonth={() => void resetCalendarToCurrentMonth()}
+          onClearLogs={clearLogs}
+        />
       </section>
     </main>
   );

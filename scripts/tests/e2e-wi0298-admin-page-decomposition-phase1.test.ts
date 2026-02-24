@@ -9,15 +9,17 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const queueHelpers = readUtf8("src", "app", "admin", "page-queue-helpers.ts");
+  const adminQueueSources = `${adminPage}\n${queueHelpers}`;
   const workItem = readUtf8("work-items", "WI-0298-admin-page-decomposition-phase1.md");
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminPage, /from "@\/app\/admin\/page-queue-helpers"/);
-  assert.match(adminPage, /filterPendingAttendanceQueue\(\{/);
-  assert.match(adminPage, /filterPendingLeaveQueue\(\{/);
-  assert.match(adminPage, /filterPreviewedPayrollQueue\(\{/);
-  assert.match(adminPage, /buildQueueSearchSortRows\(\{/);
-  assert.match(adminPage, /filterQueueSearchSortRows\(\{/);
+  assert.match(adminPage, /buildAdminQueueDerivedState\(\{/);
+  assert.match(adminQueueSources, /filterPendingAttendanceQueue\(\{/);
+  assert.match(adminQueueSources, /filterPendingLeaveQueue\(\{/);
+  assert.match(adminQueueSources, /filterPreviewedPayrollQueue\(\{/);
+  assert.match(adminQueueSources, /buildQueueSearchSortRows\(\{/);
+  assert.match(adminQueueSources, /filterQueueSearchSortRows\(\{/);
 
   assert.match(queueHelpers, /export function toWaitHoursById/);
   assert.match(queueHelpers, /export function filterPendingAttendanceQueue/);

@@ -50,10 +50,10 @@ export default async function HomePage() {
           <p className="small">{t("home.employee.copy")}</p>
           <div className="actions">
             <Link className="btn btn-secondary" href="/employee">
-              /employee
+              {t("home.employee.openOverview")}
             </Link>
             <Link className="btn btn-secondary" href="/employee/payslips">
-              /employee/payslips
+              {t("home.employee.openPayslips")}
             </Link>
           </div>
         </article>
@@ -64,13 +64,13 @@ export default async function HomePage() {
             <p className="small">{t("home.devtools.copy")}</p>
             <div className="actions">
               <Link className="btn btn-secondary" href="/ops/admin-console">
-                Admin Console (legacy)
+                {t("home.devtools.adminConsoleLegacy")}
               </Link>
               <Link className="btn btn-secondary" href="/ops/mvp-console">
-                MVP Console
+                {t("home.devtools.mvpConsole")}
               </Link>
               <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-                Scheduling Cockpit
+                {t("home.devtools.schedulingCockpit")}
               </Link>
             </div>
           </article>

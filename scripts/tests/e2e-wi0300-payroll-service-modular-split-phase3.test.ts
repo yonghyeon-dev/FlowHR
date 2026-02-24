@@ -8,6 +8,18 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const deductionPreviewHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-deduction-statutory-preview-helpers.ts"
+  );
+  const insurancePreviewHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-insurance-settlement-preview-helpers.ts"
+  );
   const statutoryHelpers = readUtf8("src", "features", "payroll", "kr-statutory-helpers.ts");
   const statutoryAdapterHelpers = readUtf8(
     "src",
@@ -18,39 +30,32 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-0300-payroll-service-modular-split-phase3.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  const serviceUsesAdapterHelpers = /from "@\/features\/payroll\/service-statutory-adapter-helpers"/.test(
-    payrollService
-  );
-  const statutoryWrapperLayer = serviceUsesAdapterHelpers ? statutoryAdapterHelpers : payrollService;
-
-  if (serviceUsesAdapterHelpers) {
-    assert.doesNotMatch(payrollService, /from "@\/features\/payroll\/kr-statutory-helpers"/);
-  } else {
-    assert.match(payrollService, /from "@\/features\/payroll\/kr-statutory-helpers"/);
-  }
+  const statutoryCallChainSource = `${payrollService}\n${deductionPreviewHelpers}\n${insurancePreviewHelpers}`;
+  assert.match(statutoryCallChainSource, /from "@\/features\/payroll\/service-statutory-adapter-helpers"/);
+  assert.match(statutoryAdapterHelpers, /from "@\/features\/payroll\/kr-statutory-helpers"/);
 
   assert.match(
-    statutoryWrapperLayer,
+    statutoryAdapterHelpers,
     /return normalizeIncomeTaxBracketsCore\(brackets, toRateNumber, toKrwInteger\)/
   );
-  assert.match(statutoryWrapperLayer, /return normalizeIncomeTaxLookupTableCore\(lookupTable, toKrwInteger\)/);
+  assert.match(statutoryAdapterHelpers, /return normalizeIncomeTaxLookupTableCore\(lookupTable, toKrwInteger\)/);
   assert.match(
-    statutoryWrapperLayer,
+    statutoryAdapterHelpers,
     /return normalizeStatutoryIncomeSplitItemsCore\(items, fieldName, toKrwInteger\)/
   );
   assert.match(
-    statutoryWrapperLayer,
+    statutoryAdapterHelpers,
     /return calculateProgressiveIncomeTaxKrwCore\(taxableBaseKrw, brackets, toKrwInteger\)/
   );
-  assert.match(statutoryWrapperLayer, /return calculateLookupIncomeTaxKrwCore\(/);
+  assert.match(statutoryAdapterHelpers, /return calculateLookupIncomeTaxKrwCore\(/);
   assert.match(
-    statutoryWrapperLayer,
+    statutoryAdapterHelpers,
     /return applyContributionCapCore\(baseKrw, capKrw, fieldName, toKrwInteger\)/
   );
-  assert.match(statutoryWrapperLayer, /return normalizeInsuranceRoundingRulesCore\(rules, fieldPrefix\)/);
-  assert.match(statutoryWrapperLayer, /return normalizeSettlementInsuranceRoundingRulesCore\(rules\)/);
+  assert.match(statutoryAdapterHelpers, /return normalizeInsuranceRoundingRulesCore\(rules, fieldPrefix\)/);
+  assert.match(statutoryAdapterHelpers, /return normalizeSettlementInsuranceRoundingRulesCore\(rules\)/);
   assert.match(
-    statutoryWrapperLayer,
+    statutoryAdapterHelpers,
     /return roundKrwByRuleCore\(rawValueKrw, fieldName, mode, unitKrw, toKrwInteger\)/
   );
 

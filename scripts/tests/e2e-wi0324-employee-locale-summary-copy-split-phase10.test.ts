@@ -8,6 +8,8 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeDerivedHelpers = readUtf8("src", "app", "employee", "page-derived-helpers.ts");
+  const employeeSummarySources = `${employeePage}\n${employeeDerivedHelpers}`;
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -19,9 +21,9 @@ async function run() {
   assert.match(employeePage, /const \{ leaveBalance: leaveBalanceCopy, leaveUnits: leaveUnitCopy \} = summaryCopy;/);
   assert.match(employeePage, /return leaveBalanceCopy\.notLoaded;/);
   assert.match(employeePage, /return leaveBalanceCopy\.summary\(/);
-  assert.match(employeePage, /label: leaveBalanceCopy\.cardLabels\.remaining/);
-  assert.match(employeePage, /leaveBalanceCopy\.projectedRemaining/);
-  assert.match(employeePage, /leaveUnitCopy\.hourUnit\(request\.hours\.toFixed\(2\)\)/);
+  assert.match(employeeSummarySources, /label: leaveBalanceCopy\.cardLabels\.remaining/);
+  assert.match(employeeSummarySources, /leaveBalanceCopy\.projectedRemaining/);
+  assert.match(employeeSummarySources, /leaveUnitCopy\.hourUnit\(request\.hours\.toFixed\(2\)\)/);
   assert.match(employeePage, /leaveBalanceLabel=\{leaveBalance \? leaveBalanceCopy\.dayUnit\(/);
 
   assert.doesNotMatch(employeePage, /잔여 휴가 정보를 아직 불러오지 못했습니다\./);

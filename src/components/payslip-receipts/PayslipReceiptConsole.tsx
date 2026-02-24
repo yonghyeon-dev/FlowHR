@@ -36,7 +36,7 @@ export default function PayslipReceiptConsole() {
   const copy = payslipReceiptCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const formatKrwByLocale = (value: number | null) =>
-    value === null ? "-" : `${value.toLocaleString(runtimeLocale)} KRW`;
+    value === null ? "-" : `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "원" : " KRW"}`;
   const formatDateTimeByLocale = (value: string | null) =>
     value ? new Date(value).toLocaleString(runtimeLocale) : "-";
 

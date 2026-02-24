@@ -7,65 +7,18 @@ import {
   contractDocumentStatusLabelByLocale,
   employeeContractsCopyByLocale,
   toDateText,
-  type ContractApprovalStatus,
-  type ContractDocumentStatus
 } from "@/components/contracts/copy";
+import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
+import { readJson } from "@/components/contracts/http";
+import {
+  type ContractSignatureEvidenceResponse,
+  type EmployeeContractDocument as ContractDocument
+} from "@/components/contracts/types";
 import { useI18n } from "@/lib/i18n/provider";
-
-type ContractDocument = {
-  id: string;
-  title: string;
-  employeeId: string;
-  status: ContractDocumentStatus;
-  approvalStatus: ContractApprovalStatus;
-  documentHash: string;
-  respondedAt: string | null;
-  signatureHash: string | null;
-  signatureEvidenceHash: string | null;
-  expiresAt: string | null;
-  updatedAt: string;
-  responseComment: string | null;
-};
-
-type ContractSignatureEvidenceResponse = {
-  evidence: {
-    documentId: string;
-    employeeId: string;
-    status: "SIGNED";
-    respondedAt: string;
-    signatureHash: string;
-    signatureEvidenceHash: string;
-    documentHash: string;
-    format: "json" | "text";
-    fileName: string;
-    contentType: string;
-    contentSha256: string;
-    generatedAt: string;
-    content: string;
-  };
-};
-
-async function readJson(response: Response) {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
-  }
-
-  if (!response.ok) {
-    const message =
-      typeof body === "object" && body !== null && "error" in body
-        ? String((body as { error: unknown }).error)
-        : `request failed (${response.status})`;
-    throw new Error(message);
-  }
-
-  return body;
-}
 
 export default function EmployeeContractsInbox() {
   const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = employeeContractsCopyByLocale[locale];
   const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
@@ -83,6 +36,7 @@ export default function EmployeeContractsInbox() {
     () => documents.find((document) => document.id === selectedDocumentId) ?? documents[0] ?? null,
     [documents, selectedDocumentId]
   );
+
 
   const reload = useCallback(async () => {
     setError(null);
@@ -238,6 +192,8 @@ export default function EmployeeContractsInbox() {
                   <strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong>
                 </li>
               </ul>
+
+              <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
 
               <label>
                 {copy.signatureInputLabel}

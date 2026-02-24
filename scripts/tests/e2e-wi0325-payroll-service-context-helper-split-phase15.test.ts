@@ -8,6 +8,13 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const deductionProfileHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-deduction-profile-helpers.ts"
+  );
+  const deductionPermissionSources = `${payrollService}\n${deductionProfileHelpers}`;
   const contextHelpers = readUtf8(
     "src",
     "features",
@@ -24,7 +31,7 @@ async function run() {
   assert.match(payrollService, /\btype ServiceContext,/);
   assert.match(payrollService, /\bgetEventPublisher,/);
   assert.match(payrollService, /\brequirePayrollPermission\b/);
-  assert.match(payrollService, /\brequireDeductionProfilePermission\b/);
+  assert.match(deductionPermissionSources, /\brequireDeductionProfilePermission\b/);
 
   assert.doesNotMatch(payrollService, /type ServiceContext = \{/);
   assert.doesNotMatch(payrollService, /function getEventPublisher\(/);

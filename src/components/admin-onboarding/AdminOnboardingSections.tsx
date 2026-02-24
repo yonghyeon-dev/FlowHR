@@ -164,12 +164,24 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
       <article className="panel">
         <h2>{copy.leavePolicyTitle}</h2>
         <div className="input-grid">
-          <label>Annual grant days<input type="number" min={1} value={annualGrantDays} onChange={(event) => onSetAnnualGrantDays(event.target.value)} /></label>
-          <label>Carry-over cap days<input type="number" min={0} value={carryOverCapDays} onChange={(event) => onSetCarryOverCapDays(event.target.value)} /></label>
-          <label>Allow half-day<select value={allowHalfDay ? "true" : "false"} onChange={(event) => onSetAllowHalfDay(event.target.value === "true")}><option value="true">true</option><option value="false">false</option></select></label>
-          <label>Allow hourly<select value={allowHourly ? "true" : "false"} onChange={(event) => onSetAllowHourly(event.target.value === "true")}><option value="true">true</option><option value="false">false</option></select></label>
-          <label>Hourly increment minutes<input type="number" min={15} step={15} value={hourlyIncrementMinutes} onChange={(event) => onSetHourlyIncrementMinutes(event.target.value)} /></label>
-          <label>Max hours per request<input type="number" min={1} max={24} value={maxHoursPerRequest} onChange={(event) => onSetMaxHoursPerRequest(event.target.value)} /></label>
+          <label>{copy.leavePolicyFields.annualGrantDays}<input type="number" min={1} value={annualGrantDays} onChange={(event) => onSetAnnualGrantDays(event.target.value)} /></label>
+          <label>{copy.leavePolicyFields.carryOverCapDays}<input type="number" min={0} value={carryOverCapDays} onChange={(event) => onSetCarryOverCapDays(event.target.value)} /></label>
+          <label>
+            {copy.leavePolicyFields.allowHalfDay}
+            <select value={allowHalfDay ? "true" : "false"} onChange={(event) => onSetAllowHalfDay(event.target.value === "true")}>
+              <option value="true">{copy.leavePolicyFields.enabled}</option>
+              <option value="false">{copy.leavePolicyFields.disabled}</option>
+            </select>
+          </label>
+          <label>
+            {copy.leavePolicyFields.allowHourly}
+            <select value={allowHourly ? "true" : "false"} onChange={(event) => onSetAllowHourly(event.target.value === "true")}>
+              <option value="true">{copy.leavePolicyFields.enabled}</option>
+              <option value="false">{copy.leavePolicyFields.disabled}</option>
+            </select>
+          </label>
+          <label>{copy.leavePolicyFields.hourlyIncrementMinutes}<input type="number" min={15} step={15} value={hourlyIncrementMinutes} onChange={(event) => onSetHourlyIncrementMinutes(event.target.value)} /></label>
+          <label>{copy.leavePolicyFields.maxHoursPerRequest}<input type="number" min={1} max={24} value={maxHoursPerRequest} onChange={(event) => onSetMaxHoursPerRequest(event.target.value)} /></label>
         </div>
         <div className="actions"><button className="btn btn-primary" onClick={onApplyLeavePolicy}>{copy.applyLeavePolicyButton}</button></div>
       </article>
@@ -191,12 +203,14 @@ export function AdminOnboardingChecklistPanel(props: ChecklistPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.checklistTitle}</h2>
-        <p className="small">Progress: <strong>{progressPercent}%</strong></p>
+        <p className="small">{copy.progressLabel}: <strong>{progressPercent}%</strong></p>
         <ul className="simple-list">
           {checklistItems.map((item) => (
             <li key={item.key}>
               <span>
-                <span className={item.done ? "ok" : "fail"}>{item.done ? "DONE" : "TODO"}</span>{" "}
+                <span className={item.done ? "ok" : "fail"}>
+                  {item.done ? copy.doneLabel : copy.todoLabel}
+                </span>{" "}
                 {item.key === "organization"
                   ? copy.checklist.organization
                   : item.key === "departments"
@@ -214,7 +228,14 @@ export function AdminOnboardingChecklistPanel(props: ChecklistPanelProps) {
         <h2>{copy.logsTitle}</h2>
         {logs.length === 0 ? <p className="small muted">{copy.logsEmpty}</p> : (
           <ul className="log-list">
-            {logs.map((log) => <li key={log.id}><span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status} / {log.durationMs}ms / {log.at}</li>)}
+            {logs.map((log) => (
+              <li key={log.id}>
+                <span className={log.ok ? "ok" : "fail"}>
+                  {log.ok ? copy.okLabel : copy.failLabel}
+                </span>{" "}
+                {log.label} / {log.status} / {log.durationMs}ms / {log.at}
+              </li>
+            ))}
           </ul>
         )}
       </article>

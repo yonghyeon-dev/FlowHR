@@ -10,60 +10,16 @@ import {
   contractDocumentStatusLabelByLocale,
   contractTemplateStatusLabelByLocale,
   toDateText,
-  type ContractApprovalStatus,
-  type ContractCategory,
-  type ContractDocumentStatus
+  type ContractCategory
 } from "@/components/contracts/copy";
+import { resolveContractDocumentActionRequest } from "@/components/contracts/action-payloads";
+import { readJson } from "@/components/contracts/http";
+import {
+  type AdminContractDocument as ContractDocument,
+  type ContractDocumentAction,
+  type ContractTemplate
+} from "@/components/contracts/types";
 import { useI18n } from "@/lib/i18n/provider";
-
-type ContractTemplate = {
-  id: string;
-  organizationId: string;
-  name: string;
-  category: ContractCategory;
-  body: string;
-  status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type ContractDocument = {
-  id: string;
-  organizationId: string;
-  templateId: string;
-  templateVersion: number;
-  title: string;
-  employeeId: string;
-  status: ContractDocumentStatus;
-  approvalStatus: ContractApprovalStatus;
-  approvalExecutionId: string | null;
-  requiresApproval: boolean;
-  documentHash: string;
-  expiresAt: string | null;
-  updatedAt: string;
-};
-
-type ContractDocumentAction = "request" | "approve" | "reject" | "send" | "expire" | "renew";
-
-async function readJson(response: Response) {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
-  }
-
-  if (!response.ok) {
-    const message =
-      typeof body === "object" && body !== null && "error" in body
-        ? String((body as { error: unknown }).error)
-        : `request failed (${response.status})`;
-    throw new Error(message);
-  }
-
-  return body;
-}
 
 export default function AdminContractsWorkspace() {
   const { locale } = useI18n();
@@ -169,30 +125,13 @@ export default function AdminContractsWorkspace() {
   async function runDocumentAction(documentId: string, action: ContractDocumentAction) {
     setError(null);
     setMessage(null);
-
-    const endpointMap: Record<typeof action, string> = {
-      request: `/api/contracts/documents/${documentId}/request-approval`,
-      approve: `/api/contracts/documents/${documentId}/approval`,
-      reject: `/api/contracts/documents/${documentId}/approval`,
-      send: `/api/contracts/documents/${documentId}/send`,
-      expire: `/api/contracts/documents/${documentId}/expire`,
-      renew: `/api/contracts/documents/${documentId}/renew`
-    };
-
-    const payloadMap: Record<typeof action, Record<string, unknown>> = {
-      request: {},
-      approve: { action: "APPROVE" },
-      reject: { action: "REJECT" },
-      send: {},
-      expire: { reason: copy.manualExpireReason },
-      renew: {}
-    };
+    const request = resolveContractDocumentActionRequest(documentId, action, copy.manualExpireReason);
 
     try {
-      await fetch(endpointMap[action], {
+      await fetch(request.endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payloadMap[action])
+        body: JSON.stringify(request.payload)
       }).then(readJson);
       setMessage(`${copy.actionCompletedPrefix}: ${actionLabelByAction[action]}`);
       await reload();

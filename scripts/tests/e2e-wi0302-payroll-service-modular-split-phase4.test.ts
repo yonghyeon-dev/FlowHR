@@ -8,18 +8,25 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const payrollAdapterHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-year-end-adapter-helpers.ts"
+  );
   const lifecycleHelpers = readUtf8("src", "features", "payroll", "year-end-filing-lifecycle-helpers.ts");
   const workItem = readUtf8("work-items", "WI-0302-payroll-service-modular-split-phase4.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payrollService, /from "@\/features\/payroll\/year-end-filing-lifecycle-helpers"/);
+  assert.match(payrollService, /from "@\/features\/payroll\/service-year-end-adapter-helpers"/);
+  assert.match(payrollAdapterHelpers, /from "@\/features\/payroll\/year-end-filing-lifecycle-helpers"/);
   assert.match(
-    payrollService,
+    payrollAdapterHelpers,
     /return buildYearEndFilingSubmissionSummariesCore\(logs\) as PayrollYearEndFilingSubmissionSummary\[\];/
   );
   assert.match(
-    payrollService,
-    /const timeline = buildYearEndFilingSubmissionTimelineCore\(logs, input\.submissionId\) as PayrollYearEndFilingTimelineEntry\[\];/
+    payrollAdapterHelpers,
+    /return buildYearEndFilingSubmissionTimelineCore\([\s\S]*submissionId[\s\S]*\) as PayrollYearEndFilingTimelineEntry\[\];/
   );
 
   assert.doesNotMatch(payrollService, /function buildYearEndFilingSubmissionSummaries\(/);

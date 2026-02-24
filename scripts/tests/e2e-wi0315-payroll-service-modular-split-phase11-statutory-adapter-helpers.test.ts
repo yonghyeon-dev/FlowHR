@@ -8,6 +8,18 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payrollService = readUtf8("src", "features", "payroll", "service.ts");
+  const deductionPreviewHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-deduction-statutory-preview-helpers.ts"
+  );
+  const insurancePreviewHelpers = readUtf8(
+    "src",
+    "features",
+    "payroll",
+    "service-insurance-settlement-preview-helpers.ts"
+  );
   const adapterHelpers = readUtf8(
     "src",
     "features",
@@ -20,7 +32,8 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payrollService, /from "@\/features\/payroll\/service-statutory-adapter-helpers"/);
+  const statutoryCallChainSource = `${payrollService}\n${deductionPreviewHelpers}\n${insurancePreviewHelpers}`;
+  assert.match(statutoryCallChainSource, /from "@\/features\/payroll\/service-statutory-adapter-helpers"/);
   assert.doesNotMatch(payrollService, /from "@\/features\/payroll\/kr-statutory-helpers"/);
   assert.doesNotMatch(payrollService, /function normalizeIncomeTaxBrackets\(/);
   assert.doesNotMatch(payrollService, /function normalizeIncomeTaxLookupTable\(/);

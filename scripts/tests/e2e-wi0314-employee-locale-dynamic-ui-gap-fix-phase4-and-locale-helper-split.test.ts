@@ -8,7 +8,16 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeHelpers = readUtf8("src", "app", "employee", "page-helpers.ts");
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
+  const employeeAttendanceLeavePanels = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeavePanels.tsx"
+  );
+  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}`;
+  const employeeLocaleSources = `${employeePage}\n${employeeHelpers}`;
   const workItem = readUtf8(
     "work-items",
     "WI-0314-employee-locale-dynamic-ui-gap-fix-phase4-and-locale-helper-split.md"
@@ -18,18 +27,22 @@ async function run() {
   assert.match(employeePage, /from "@\/app\/employee\/page-locale-helpers"/);
   assert.match(
     employeePage,
+    /from "@\/components\/employee-dashboard\/EmployeeAttendanceLeavePanels"/
+  );
+  assert.match(
+    employeePage,
     /const localeLabelBundle = useMemo\(\(\) => resolveEmployeeLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
   );
   assert.match(employeePage, /isDefaultEmployeeCancelReason\(previous\)/);
   assert.match(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
-  assert.match(employeePage, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
-  assert.match(employeePage, /attendanceNotePresets\.map\(\(preset\) => \(/);
-  assert.match(employeePage, /leaveCalendarWeekdays\.map\(\(weekday\) => \(/);
+  assert.match(employeeLocaleSources, /toLocaleString\(runtimeLocale\)/);
+  assert.match(employeeSurfaceSources, /attendanceNotePresets\.map\(\(preset\) => \(/);
+  assert.match(employeeSurfaceSources, /leaveCalendarWeekdays\.map\(\(weekday\) => \(/);
 
-  assert.match(employeePage, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.leave\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.leave\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
 
   assert.doesNotMatch(employeePage, /const LEAVE_CALENDAR_WEEKDAYS =/);
   assert.doesNotMatch(employeePage, /const ATTENDANCE_NOTE_PRESETS =/);

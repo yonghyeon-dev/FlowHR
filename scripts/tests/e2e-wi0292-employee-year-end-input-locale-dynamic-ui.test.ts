@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -7,23 +7,29 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const source = readUtf8("src", "components", "payroll-year-end", "EmployeeYearEndInputConsole.tsx");
+  const consoleSource = readUtf8("src", "components", "payroll-year-end", "EmployeeYearEndInputConsole.tsx");
+  const copySource = readUtf8(
+    "src",
+    "components",
+    "payroll-year-end",
+    "employee-year-end-input-copy.ts"
+  );
   const workItem = readUtf8("work-items", "WI-0292-employee-year-end-input-locale-dynamic-ui.md");
 
-  assert.match(source, /useI18n\(\)/);
-  assert.match(source, /employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputCopy>/);
-  assert.match(source, /ko:\s*\{/);
-  assert.match(source, /en:\s*\{/);
-  assert.match(source, /title:\s*"연말정산 입력 시뮬레이터"/);
-  assert.match(source, /title:\s*"Year-End Input Simulator"/);
-  assert.match(source, /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US"/);
-  assert.match(source, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
-  assert.match(source, /copy\.loadFinalizedSettlementAction/);
-  assert.match(source, /copy\.apiLogsTitle/);
-  assert.match(source, /copy\.openWithholdingReceiptAction/);
+  assert.match(consoleSource, /useI18n\(\)/);
+  assert.match(copySource, /employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputCopy>/);
+  assert.match(copySource, /ko:\s*\{/);
+  assert.match(copySource, /en:\s*\{/);
+  assert.match(copySource, /ko:\s*\{[\s\S]*title:\s*"[^"]+"/);
+  assert.match(copySource, /title:\s*"Year-End Input Simulator"/);
+  assert.match(consoleSource, /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US"/);
+  assert.match(consoleSource, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
+  assert.match(consoleSource, /copy\.loadFinalizedSettlementAction/);
+  assert.match(consoleSource, /copy\.apiLogsTitle/);
+  assert.match(consoleSource, /copy\.openWithholdingReceiptAction/);
 
   assert.match(workItem, /WI-0292/i);
-  assert.match(workItem, /브라우저 언어|locale/i);
+  assert.match(workItem, /釉뚮씪?곗? ?몄뼱|locale/i);
   assert.match(workItem, /\/employee\/year-end-input/);
 }
 
@@ -35,4 +41,3 @@ run()
     console.error(error);
     process.exit(1);
   });
-

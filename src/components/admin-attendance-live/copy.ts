@@ -31,8 +31,20 @@ export type AttendanceLiveCopy = {
     criticalAlerts: string;
   };
   tableTitle: string;
+  tableHeaders: {
+    employee: string;
+    department: string;
+    schedule: string;
+    checkIn: string;
+    checkOut: string;
+    late: string;
+    status: string;
+    alert: string;
+  };
   tableNoRows: string;
   logsTitle: string;
+  logSuccessLabel: string;
+  logFailLabel: string;
   logsEmpty: string;
   statuses: Record<AttendanceLiveStatus, string>;
   statusAll: string;
@@ -72,8 +84,20 @@ const defaultCopy: AttendanceLiveCopy = {
     criticalAlerts: "Critical alerts"
   },
   tableTitle: "Realtime attendance rows",
+  tableHeaders: {
+    employee: "Employee",
+    department: "Department",
+    schedule: "Schedule",
+    checkIn: "Check-in",
+    checkOut: "Check-out",
+    late: "Late",
+    status: "Status",
+    alert: "Alert"
+  },
   tableNoRows: "No rows for current filter.",
   logsTitle: "API call logs",
+  logSuccessLabel: "OK",
+  logFailLabel: "FAIL",
   logsEmpty: "No API logs yet.",
   statuses: {
     scheduled: "Scheduled",
@@ -94,9 +118,12 @@ export const attendanceLiveCopyByLocale: Record<FlowLocale, AttendanceLiveCopy> 
     ...defaultCopy,
     title: "실시간 근태 현황",
     description: "스케줄 기준으로 출근/지각/미출근 상태를 실시간으로 확인하고 경고 배지를 추적합니다.",
-    productionWarning: "프로덕션 환경에서는 API 호출을 위해 Bearer 토큰 세션이 필요합니다.",
-    loginCta: "/login 열기",
+    productionWarning: "프로덕션 환경에서는 API 호출을 위해 베어러 토큰 세션이 필요합니다.",
+    loginCta: "로그인 열기",
     contextTitle: "컨텍스트 및 필터",
+    organizationIdLabel: "조직 ID",
+    adminActorIdLabel: "관리자 액터 ID (개발용 대체값)",
+    accessTokenLabel: "액세스 토큰 (선택)",
     periodStartLabel: "조회 시작",
     periodEndLabel: "조회 종료",
     departmentLabel: "부서",
@@ -117,8 +144,20 @@ export const attendanceLiveCopyByLocale: Record<FlowLocale, AttendanceLiveCopy> 
       criticalAlerts: "치명 알림"
     },
     tableTitle: "실시간 근태 목록",
+    tableHeaders: {
+      employee: "직원",
+      department: "부서",
+      schedule: "근무 시간",
+      checkIn: "출근",
+      checkOut: "퇴근",
+      late: "지각",
+      status: "상태",
+      alert: "알림"
+    },
     tableNoRows: "현재 필터에 해당하는 항목이 없습니다.",
     logsTitle: "API 호출 로그",
+    logSuccessLabel: "정상",
+    logFailLabel: "실패",
     logsEmpty: "아직 API 호출 로그가 없습니다.",
     statuses: {
       scheduled: "예정",

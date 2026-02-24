@@ -19,9 +19,14 @@ const messages = {
     "home.employee.title": "직원 포털",
     "home.employee.copy":
       "출퇴근 기록, 휴가 신청/취소, 내 스케줄과 잔여 휴가, 급여 명세서까지 직원이 직접 처리합니다.",
+    "home.employee.openOverview": "/employee 열기",
+    "home.employee.openPayslips": "/employee/payslips 열기",
     "home.devtools.title": "개발 도구",
     "home.devtools.copy":
       "운영/검증용 콘솔입니다. SaaS 사용자 UI와 분리되어야 하므로 기본 화면에서는 숨깁니다.",
+    "home.devtools.adminConsoleLegacy": "관리자 콘솔(레거시)",
+    "home.devtools.mvpConsole": "MVP 콘솔",
+    "home.devtools.schedulingCockpit": "스케줄링 콕핏",
 
     "admin.badge": "Admin",
     "admin.nav.aria": "관리자 네비게이션",
@@ -127,9 +132,14 @@ const messages = {
     "home.employee.title": "Employee Portal",
     "home.employee.copy":
       "Employees can manage attendance records, leave requests/cancel, schedules, leave balance, and payslips directly.",
+    "home.employee.openOverview": "Open /employee",
+    "home.employee.openPayslips": "Open /employee/payslips",
     "home.devtools.title": "Developer Tools",
     "home.devtools.copy":
       "These are operational and validation consoles. They are hidden from the default SaaS UI.",
+    "home.devtools.adminConsoleLegacy": "Admin Console (legacy)",
+    "home.devtools.mvpConsole": "MVP Console",
+    "home.devtools.schedulingCockpit": "Scheduling Cockpit",
 
     "admin.badge": "Admin",
     "admin.nav.aria": "Administrator navigation",

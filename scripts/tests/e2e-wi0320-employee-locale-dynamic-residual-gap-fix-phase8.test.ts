@@ -8,6 +8,13 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeAttendanceLeavePanels = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeavePanels.tsx"
+  );
+  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}`;
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -20,17 +27,17 @@ async function run() {
     employeePage,
     /const \{\s*sectionTitles,\s*attendance: attendanceCopy,\s*leave: leaveCopy,\s*leaveCalendar: leaveCalendarCopy,\s*schedule: scheduleCopy,\s*apiLogs: apiLogsCopy\s*\} = surfaceCopy;/
   );
-  assert.match(employeePage, /\{attendanceCopy\.checkInTime\}/);
-  assert.match(employeePage, /\{leaveCopy\.requestUnit\}/);
-  assert.match(employeePage, /\{leaveCalendarCopy\.usageRateLabel\}/);
-  assert.match(employeePage, /\{scheduleCopy\.devSchedulingCockpit\}/);
-  assert.match(employeePage, /\{apiLogsCopy\.runningNow\}/);
-  assert.match(employeePage, /\{apiLogsCopy\.summary\(stats\.success, stats\.fail\)\}/);
+  assert.match(employeeSurfaceSources, /\{attendanceCopy\.checkInTime\}/);
+  assert.match(employeeSurfaceSources, /\{leaveCopy\.requestUnit\}/);
+  assert.match(employeeSurfaceSources, /\{leaveCalendarCopy\.usageRateLabel\}/);
+  assert.match(employeeSurfaceSources, /\{scheduleCopy\.devSchedulingCockpit\}/);
+  assert.match(employeeSurfaceSources, /\{apiLogsCopy\.runningNow\}/);
+  assert.match(employeeSurfaceSources, /\{apiLogsCopy\.summary\(stats\.success, stats\.fail\)\}/);
 
-  assert.match(employeePage, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.leave\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.leave\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
+  assert.match(employeeSurfaceSources, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
 
   assert.doesNotMatch(employeePage, /\{isKoLocale \? "異쒓렐 ?쒓컖" : "Check-in time"\}/);
   assert.doesNotMatch(employeePage, /\{isKoLocale \? "?닿? ?좏삎" : "Leave type"\}/);

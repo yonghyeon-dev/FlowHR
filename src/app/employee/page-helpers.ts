@@ -75,7 +75,7 @@ export function buildQuery(params: Record<string, string | undefined>) {
   return query.length > 0 ? `?${query}` : "";
 }
 
-export function formatDateTime(value: string | null) {
+export function formatDateTime(value: string | null, runtimeLocale: string) {
   if (!value) {
     return "-";
   }
@@ -83,7 +83,7 @@ export function formatDateTime(value: string | null) {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleString("ko-KR");
+  return parsed.toLocaleString(runtimeLocale);
 }
 
 export function formatDays(value: number) {

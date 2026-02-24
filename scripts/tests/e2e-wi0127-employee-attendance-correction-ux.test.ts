@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const employeePageSource = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeAttendancePanelSource = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeavePanels.tsx"
+  );
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
 
   assert.ok(
@@ -26,7 +32,7 @@ function run() {
     "employee attendance panel should show correction delta preview"
   );
   assert.match(
-    employeePageSource,
+    `${employeePageSource}\n${employeeAttendancePanelSource}`,
     /attendanceNotePresets\.map\(\(preset\) => \(/,
     "employee attendance panel should render locale-aware note preset shortcuts"
   );

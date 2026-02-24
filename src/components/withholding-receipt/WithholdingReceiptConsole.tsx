@@ -32,7 +32,10 @@ type WithholdingReceiptCopy = {
   employeeIdLabel: string;
   documentFormatLabel: string;
   accessTokenLabel: string;
+  bearerTokenPlaceholder: string;
   organizationIdFallbackLabel: string;
+  formatJsonLabel: string;
+  formatTextLabel: string;
   actionPreviewReceipt: string;
   actionLoadFinalizedSettlement: string;
   actionLoadIssuedDocument: string;
@@ -97,10 +100,13 @@ const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>
     description: "연간 원천징수영수증 발급 가능 상태와 정산 요약을 확인합니다.",
     inputTitle: "입력",
     yearLabel: "연도",
-    employeeIdLabel: "직원 ID",
+    employeeIdLabel: "직원 번호",
     documentFormatLabel: "문서 포맷",
     accessTokenLabel: "액세스 토큰(선택)",
-    organizationIdFallbackLabel: "조직 ID(dev fallback)",
+    bearerTokenPlaceholder: "인증 토큰",
+    organizationIdFallbackLabel: "조직 식별자(개발 대체값)",
+    formatJsonLabel: "구조 데이터",
+    formatTextLabel: "텍스트",
     actionPreviewReceipt: "영수증 프리뷰",
     actionLoadFinalizedSettlement: "확정 정산 불러오기",
     actionLoadIssuedDocument: "발급 문서 불러오기",
@@ -125,16 +131,16 @@ const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>
     canIssueIssuedLabel: "발급 가능 / 발급 완료",
     grossNetLabel: "총급여 / 실수령",
     withholdingSocialLabel: "원천징수 / 사회보험",
-    pendingReceiptRunsLabel: "수신확인 대기 Run",
+    pendingReceiptRunsLabel: "수신확인 대기 실행",
     blockingReasonsLabel: "차단 사유",
-    finalizationIdLabel: "확정 ID",
+    finalizationIdLabel: "확정 번호",
     finalizedAtLabel: "확정 시각",
     settlementHashLabel: "정산 해시",
     taxLiabilityLabel: "세부담",
     priorWithheldLabel: "기납부 원천징수",
     withholdingDeltaLabel: "원천징수 차액",
     additionalDueRefundLabel: "추가 납부 / 환급",
-    runGuardSnapshotLabel: "Run 가드 스냅샷",
+    runGuardSnapshotLabel: "실행 가드 스냅샷",
     runGuardConfirmedLabel: "확정",
     runGuardPreviewedLabel: "프리뷰",
     runGuardUndistributedLabel: "미배포",
@@ -143,7 +149,7 @@ const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>
     formatTypeLabel: "포맷 / 타입",
     issuedAtLabel: "발급 시각",
     generatedAtLabel: "생성 시각",
-    contentSha256Label: "콘텐츠 SHA256",
+    contentSha256Label: "콘텐츠 해시값",
     actionDownloadLoadedDocument: "불러온 문서 다운로드",
     apiLogsTitle: "API 로그",
     apiLogsTotalLabel: "총",
@@ -166,7 +172,10 @@ const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>
     employeeIdLabel: "Employee ID",
     documentFormatLabel: "Document Format",
     accessTokenLabel: "Access Token (optional)",
+    bearerTokenPlaceholder: "Bearer token",
     organizationIdFallbackLabel: "Organization ID (dev fallback)",
+    formatJsonLabel: "JSON",
+    formatTextLabel: "Text",
     actionPreviewReceipt: "Preview Receipt",
     actionLoadFinalizedSettlement: "Load Finalized Settlement",
     actionLoadIssuedDocument: "Load Issued Document",
@@ -229,7 +238,8 @@ export default function WithholdingReceiptConsole() {
   const { locale } = useI18n();
   const copy = withholdingReceiptCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const formatKrwByLocale = (value: number) => `${value.toLocaleString(runtimeLocale)} KRW`;
+  const formatKrwByLocale = (value: number) =>
+    `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "원" : " KRW"}`;
 
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
@@ -426,12 +436,12 @@ export default function WithholdingReceiptConsole() {
                 value={documentFormat}
                 onChange={(event) => setDocumentFormat(event.target.value === "text" ? "text" : "json")}
               >
-                <option value="json">json</option>
-                <option value="text">text</option>
+                <option value="json">{copy.formatJsonLabel}</option>
+                <option value="text">{copy.formatTextLabel}</option>
               </select>
             </label>
           </div>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
           <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void previewReceipt()} disabled={pendingLabel !== null}>{copy.actionPreviewReceipt}</button>

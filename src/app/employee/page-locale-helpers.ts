@@ -1,4 +1,4 @@
-const REQUEST_STATUS_LABELS_BY_LOCALE = {
+﻿const REQUEST_STATUS_LABELS_BY_LOCALE = {
   ko: {
     PENDING: "대기",
     APPROVED: "승인",
@@ -144,10 +144,11 @@ const EMPLOYEE_SURFACE_COPY_BY_LOCALE = {
       pendingLabel: "대기",
       rejectedLabel: "반려",
       rejectedOrCanceledLabel: "반려/취소",
-      noScheduleInRange: "이번 조회 구간에 휴가 일정이 없습니다."
+      noScheduleInRange: "현재 조회 구간에 휴가 일정이 없습니다.",
+      clickToPrefill: "날짜를 클릭하면 휴가 신청 폼이 자동 입력됩니다."
     },
     schedule: {
-      devSchedulingCockpit: "(dev) 스케줄링 Cockpit",
+      devSchedulingCockpit: "(개발) 스케줄링 대시보드",
       noSchedules: "근무 일정이 없습니다.",
       breakMinutesFormat: (minutes: number) => `휴게 ${minutes}분`
     },
@@ -233,7 +234,8 @@ const EMPLOYEE_SURFACE_COPY_BY_LOCALE = {
       pendingLabel: "pending",
       rejectedLabel: "rejected",
       rejectedOrCanceledLabel: "rejected/canceled",
-      noScheduleInRange: "No leave schedule in the current range."
+      noScheduleInRange: "No leave schedule in the current range.",
+      clickToPrefill: "Click a date to prefill the leave request form."
     },
     schedule: {
       devSchedulingCockpit: "(dev) Scheduling Cockpit",

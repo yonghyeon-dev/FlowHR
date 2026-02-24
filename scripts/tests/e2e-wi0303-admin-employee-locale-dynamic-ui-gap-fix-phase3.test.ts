@@ -35,6 +35,12 @@ async function run() {
     "employee-dashboard",
     "EmployeeResubmitPanel.tsx"
   );
+  const employeeAttendanceLeavePanels = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeavePanels.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0303-admin-employee-locale-dynamic-ui-gap-fix-phase3.md"
@@ -62,10 +68,15 @@ async function run() {
     employeeAccountOverviewPanels,
     /\{isKoLocale\s*\?\s*"조직 ID \(선택\)"\s*:\s*"Organization ID \(optional\)"\}/
   );
-  assert.match(employeePage, /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/);
+  assert.match(
+    employeeAttendanceLeavePanels,
+    /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/
+  );
   assert.ok(
-    /<h2>\{sectionTitles\.apiLogs\}<\/h2>/.test(employeePage) ||
-      /<h2>\{isKoLocale \? "API 실행 로그" : "API execution logs"\}<\/h2>/.test(employeePage)
+    /<h2>\{sectionTitles\.apiLogs\}<\/h2>/.test(employeeAttendanceLeavePanels) ||
+      /<h2>\{isKoLocale \? "API 실행 로그" : "API execution logs"\}<\/h2>/.test(
+        employeeAttendanceLeavePanels
+      )
   );
   assert.doesNotMatch(employeePage, /\?\?\? \?\? \?\?/);
 
