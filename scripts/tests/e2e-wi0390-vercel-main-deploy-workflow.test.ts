@@ -63,12 +63,17 @@ function run() {
   assert.match(
     workflowSource,
     /VERCEL_SCOPE:\s*\$\{\{\s*vars\.VERCEL_SCOPE\s*\|\|\s*''\s*\}\}/,
-    "workflow should allow empty scope and fallback when team scope is inaccessible"
+    "workflow should allow empty VERCEL_SCOPE and use scope candidates"
   );
   assert.match(
     workflowSource,
-    /Scoped vercel .* retrying without --scope\./,
-    "workflow should retry vercel commands without --scope when scoped access fails"
+    /scope_candidates\+=\("\$GITHUB_REPOSITORY_OWNER"\)/,
+    "workflow should include repository-owner scope as fallback candidate"
+  );
+  assert.match(
+    workflowSource,
+    /All scoped vercel .* attempts failed\. Tried scopes:/,
+    "workflow should fail with explicit scope-candidate diagnostics when all scoped attempts fail"
   );
   assert.match(
     workflowSource,
