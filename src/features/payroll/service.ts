@@ -1,7 +1,6 @@
-import type { Actor } from "@/lib/actor";
 import { createHash } from "node:crypto";
-import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
-import { Permissions, type Permission } from "@/lib/rbac";
+import { resolveActorPermissions } from "@/lib/permissions";
+import { Permissions } from "@/lib/rbac";
 import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
 import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import {
@@ -14,8 +13,6 @@ import type {
   DeductionProfileEntity,
   PayrollRunEntity
 } from "@/features/shared/data-access";
-import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
-import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
 import {
   getPayrollKrIncomeTaxLookupPreset,
@@ -182,16 +179,12 @@ import {
   loadYearEndRunSnapshot,
   type YearEndRunSnapshot
 } from "@/features/payroll/service-year-end-run-snapshot-helpers";
-
-type ServiceContext = {
-  actor: Actor | null;
-  dataAccess: DataAccess;
-  eventPublisher?: DomainEventPublisher;
-};
-
-function getEventPublisher(context: ServiceContext): DomainEventPublisher {
-  return context.eventPublisher ?? getRuntimeDomainEventPublisher();
-}
+import {
+  type ServiceContext,
+  getEventPublisher,
+  requireDeductionProfilePermission,
+  requirePayrollPermission
+} from "@/features/payroll/service-context-helpers";
 
 const emptyTotals: PayableMinutes = {
   regular: 0,
@@ -199,22 +192,6 @@ const emptyTotals: PayableMinutes = {
   night: 0,
   holiday: 0
 };
-
-async function requirePayrollPermission(
-  context: ServiceContext,
-  permission: Permission,
-  action: "preview" | "confirm" | "list"
-) {
-  await requirePermission(context, permission, `payroll ${action} requires ${permission}`);
-}
-
-async function requireDeductionProfilePermission(
-  context: ServiceContext,
-  permission: Permission,
-  action: "read" | "write"
-) {
-  await requirePermission(context, permission, `deduction profile ${action} requires ${permission}`);
-}
 
 function buildPayrollYearEndFilingAckCatalog(): ListPayrollYearEndFilingAckCatalogResult {
   return buildPayrollYearEndFilingAckCatalogCore() as ListPayrollYearEndFilingAckCatalogResult;
