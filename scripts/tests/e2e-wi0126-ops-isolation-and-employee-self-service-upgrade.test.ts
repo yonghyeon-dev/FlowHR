@@ -34,8 +34,12 @@ function run() {
   );
 
   const employeePageSource = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeLocaleHelperSource = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   assert.match(employeePageSource, /휴가 캘린더/, "employee portal should include leave calendar panel");
-  assert.match(employeePageSource, /연차 사용률/, "employee portal should include leave balance visualization");
+  assert.ok(
+    /연차 사용률/.test(employeePageSource) || /usageRateLabel:\s*"연차 사용률"/.test(employeeLocaleHelperSource),
+    "employee portal should include leave balance visualization"
+  );
 
   const employeeLayoutSource = readUtf8("src", "app", "employee", "layout.tsx");
   assert.match(
