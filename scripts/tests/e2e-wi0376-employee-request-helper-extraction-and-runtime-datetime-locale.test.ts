@@ -31,7 +31,7 @@ async function run() {
   assert.match(employeePage, /return buildRequestFailureCauses\(\{/);
   assert.doesNotMatch(employeePage, /const rows: RequestFeedbackRow\[] = \[];/);
 
-  assert.match(employeePageHelpers, /export function formatDateTime\(value: string \| null, runtimeLocale = "ko-KR"\)/);
+  assert.match(employeePageHelpers, /export function formatDateTime\(value: string \| null, runtimeLocale: string\)/);
   assert.match(employeePageHelpers, /return parsed\.toLocaleString\(runtimeLocale\);/);
 
   assert.match(requestHelpers, /export function buildRequestFeedbackRows/);

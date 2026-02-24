@@ -22,7 +22,7 @@ export function toIso(value: string) {
   return new Date(value).toISOString();
 }
 
-export function formatDateTime(value: string | null, runtimeLocale = "ko-KR") {
+export function formatDateTime(value: string | null, runtimeLocale: string) {
   if (!value) {
     return "-";
   }

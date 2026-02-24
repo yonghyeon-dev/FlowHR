@@ -23,7 +23,7 @@ async function run() {
   assert.match(adminPage, /formatDateTime=\{formatDateTimeByLocale\}/);
   assert.doesNotMatch(adminPage, /toLocaleString\("ko-KR"\)/);
 
-  assert.match(adminPageHelpers, /export function formatDateTime\(value: string \| null, runtimeLocale = "ko-KR"\)/);
+  assert.match(adminPageHelpers, /export function formatDateTime\(value: string \| null, runtimeLocale: string\)/);
   assert.match(adminPageHelpers, /return parsed\.toLocaleString\(runtimeLocale\);/);
 
   assert.match(adminApiHelpers, /export async function performAdminApiCall/);

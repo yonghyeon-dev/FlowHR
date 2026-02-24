@@ -75,7 +75,7 @@ export function buildQuery(params: Record<string, string | undefined>) {
   return query.length > 0 ? `?${query}` : "";
 }
 
-export function formatDateTime(value: string | null, runtimeLocale = "ko-KR") {
+export function formatDateTime(value: string | null, runtimeLocale: string) {
   if (!value) {
     return "-";
   }
