@@ -14,6 +14,10 @@ import {
   toLocalInputValue
 } from "@/app/admin/page-helpers";
 import {
+  isDefaultDemoOrganizationName,
+  resolveAdminLocaleLabelBundle
+} from "@/app/admin/page-locale-helpers";
+import {
   buildQueueSearchSortRows,
   filterPendingAttendanceQueue,
   filterPendingLeaveQueue,
@@ -82,23 +86,24 @@ export default function AdminDashboardPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
+  const localeLabelBundle = useMemo(() => resolveAdminLocaleLabelBundle(isKoLocale), [isKoLocale]);
 
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [organizationName, setOrganizationName] = useState(
-    isKoLocale ? "FlowHR 데모 조직" : "FlowHR Demo Org"
+  const [organizationName, setOrganizationName] = useState<string>(
+    localeLabelBundle.demoOrganizationName
   );
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
 
   useEffect(() => {
     setOrganizationName((previous) => {
-      if (previous !== "FlowHR Demo Org" && previous !== "FlowHR 데모 조직") {
+      if (!isDefaultDemoOrganizationName(previous)) {
         return previous;
       }
-      return isKoLocale ? "FlowHR 데모 조직" : "FlowHR Demo Org";
+      return localeLabelBundle.demoOrganizationName;
     });
-  }, [isKoLocale]);
+  }, [localeLabelBundle.demoOrganizationName]);
 
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
@@ -211,7 +216,7 @@ export default function AdminDashboardPage() {
         : "";
 
   const usesBearerToken = bearerToken.trim().length > 0;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? (isKoLocale ? "미설정" : "not configured");
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? localeLabelBundle.notConfiguredLabel;
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -286,52 +291,18 @@ export default function AdminDashboardPage() {
     return { total, success, fail };
   }, [logs]);
 
-  const queueLabels = useMemo(
-    () => ({
-      all: isKoLocale ? "전체" : "All",
-      attendance: isKoLocale ? "출퇴근" : "Attendance",
-      leave: isKoLocale ? "휴가" : "Leave",
-      payroll: isKoLocale ? "급여" : "Payroll"
-    }),
-    [isKoLocale]
-  );
-  const workTypeLabels = useMemo(
-    () => ({
-      holiday: isKoLocale ? "휴일" : "Holiday",
-      work: isKoLocale ? "근무" : "Work"
-    }),
-    [isKoLocale]
-  );
-  const logStatusLabels = useMemo(
-    () => ({
-      success: isKoLocale ? "성공" : "OK",
-      fail: isKoLocale ? "실패" : "FAIL"
-    }),
-    [isKoLocale]
-  );
-  const inviteRoleLabels = useMemo(
-    () =>
-      ({
-        employee: isKoLocale ? "직원" : "Employee",
-        manager: isKoLocale ? "매니저" : "Manager",
-        payroll_operator: isKoLocale ? "급여 담당" : "Payroll Operator",
-        admin: isKoLocale ? "관리자" : "Admin"
-      }) as const,
-    [isKoLocale]
-  );
-  const inviteDeliveryModeLabels = useMemo(
-    () =>
-      ({
-        link: isKoLocale ? "링크" : "Link",
-        email: isKoLocale ? "이메일" : "Email"
-      }) as const,
-    [isKoLocale]
-  );
+  const {
+    queueLabels,
+    workTypeLabels,
+    logStatusLabels,
+    inviteRoleLabels,
+    inviteDeliveryModeLabels,
+    updatedAtLabel
+  } = localeLabelBundle;
   const toInviteRoleLabel = (role: string) =>
     inviteRoleLabels[role as keyof typeof inviteRoleLabels] ?? role;
   const toInviteDeliveryModeLabel = (mode: string) =>
     inviteDeliveryModeLabels[mode as keyof typeof inviteDeliveryModeLabels] ?? mode;
-  const updatedAtLabel = isKoLocale ? "업데이트" : "Updated";
 
   const normalizedQueueSearch = approvalQueueSearch.trim().toLowerCase();
   const queueNowMs = Date.now();
