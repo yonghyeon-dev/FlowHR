@@ -7,12 +7,16 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import {
+  type DeductionDescriptionMap,
   extractErrorMessage,
   formatDateOnly,
   formatDateTime,
   formatDiffKrw,
   formatKrw,
   formatMonthLabel,
+  resolveDeductionDescriptionMap,
+  resolvePayslipPageCopy,
+  resolvePayslipRunStateLabel,
   resolvePayslipSearchSortCopy
 } from "@/app/employee/payslips/page-locale-helpers";
 
@@ -72,6 +76,8 @@ type PayslipSearchRow = {
   runId: string;
   periodLabel: string;
   state: PayrollRunDto["state"];
+  stateLabel: string;
+  stateSearchText: string;
   grossPayKrw: number;
   totalDeductionsKrw: number | null;
   netPayKrw: number | null;
@@ -192,7 +198,6 @@ function matchesPayslipSearch(scope: PayslipSearchScope, query: string, row: Pay
     return true;
   }
 
-  const normalizedState = row.state.toLowerCase();
   if (scope === "run_id") {
     return row.runId.toLowerCase().includes(query);
   }
@@ -200,13 +205,13 @@ function matchesPayslipSearch(scope: PayslipSearchScope, query: string, row: Pay
     return row.periodLabel.toLowerCase().includes(query);
   }
   if (scope === "state") {
-    return normalizedState.includes(query);
+    return row.stateSearchText.includes(query);
   }
 
   return (
     row.runId.toLowerCase().includes(query) ||
     row.periodLabel.toLowerCase().includes(query) ||
-    normalizedState.includes(query)
+    row.stateSearchText.includes(query)
   );
 }
 
@@ -254,61 +259,6 @@ function formatPercent(value: number | null) {
   return `${value.toFixed(1)}%`;
 }
 
-const DEDUCTION_DESCRIPTION_MAP: Record<string, { label: string; description: string }> = {
-  withholdingTaxKrw: {
-    label: "원천세",
-    description: "소득세와 지방소득세를 합산한 원천징수 금액입니다."
-  },
-  socialInsuranceKrw: {
-    label: "사회보험",
-    description: "국민연금, 건강보험, 장기요양, 고용보험 근로자 부담분입니다."
-  },
-  otherDeductionsKrw: {
-    label: "기타 공제",
-    description: "회사 정책에 따른 추가 공제(가불금/기타 정산) 금액입니다."
-  },
-  incomeTaxKrw: {
-    label: "소득세",
-    description: "과세표준 기준으로 계산된 월 소득세입니다."
-  },
-  localIncomeTaxKrw: {
-    label: "지방소득세",
-    description: "소득세 연동 지방세 항목입니다."
-  },
-  nationalPensionKrw: {
-    label: "국민연금",
-    description: "국민연금 근로자 부담분입니다."
-  },
-  healthInsuranceKrw: {
-    label: "건강보험",
-    description: "건강보험 근로자 부담분입니다."
-  },
-  longTermCareKrw: {
-    label: "장기요양",
-    description: "건강보험 연동 장기요양보험 부담분입니다."
-  },
-  employmentInsuranceKrw: {
-    label: "고용보험",
-    description: "고용보험 근로자 부담분입니다."
-  },
-  preCreditIncomeTaxKrw: {
-    label: "세액공제 전 소득세",
-    description: "추가 세액공제 적용 전 계산된 소득세입니다."
-  },
-  dependentTaxCreditKrw: {
-    label: "부양가족 공제",
-    description: "부양가족 기준에 따라 적용된 세액공제입니다."
-  },
-  additionalTaxCreditKrw: {
-    label: "추가 세액공제",
-    description: "정책/요건 기반으로 적용된 추가 세액공제입니다."
-  },
-  totalTaxCreditKrw: {
-    label: "총 세액공제",
-    description: "모든 세액공제를 합산한 금액입니다."
-  }
-};
-
 export default function EmployeePayslipsPage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -335,6 +285,11 @@ export default function EmployeePayslipsPage() {
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
 
   const searchSortCopy = useMemo(() => resolvePayslipSearchSortCopy(isKoLocale), [isKoLocale]);
+  const pageCopy = useMemo(() => resolvePayslipPageCopy(isKoLocale), [isKoLocale]);
+  const deductionDescriptionMap = useMemo<DeductionDescriptionMap>(
+    () => resolveDeductionDescriptionMap(isKoLocale),
+    [isKoLocale]
+  );
 
   const bearerToken =
     accessToken.trim().length > 0
@@ -369,11 +324,14 @@ export default function EmployeePayslipsPage() {
     return runs.map((run) => {
       const confirmedAtTs = toTimestamp(run.confirmedAt);
       const periodEndTs = toTimestamp(run.periodEnd);
+      const stateLabel = resolvePayslipRunStateLabel(run.state, isKoLocale);
       return {
         key: run.id,
         runId: run.id,
         periodLabel: `${formatDateOnly(run.periodStart)} ~ ${formatDateOnly(run.periodEnd)}`,
         state: run.state,
+        stateLabel,
+        stateSearchText: `${run.state.toLowerCase()} ${stateLabel.toLowerCase()}`,
         grossPayKrw: run.grossPayKrw,
         totalDeductionsKrw: run.totalDeductionsKrw,
         netPayKrw: run.netPayKrw,
@@ -381,7 +339,7 @@ export default function EmployeePayslipsPage() {
         sortTimestamp: confirmedAtTs > 0 ? confirmedAtTs : periodEndTs
       };
     });
-  }, [runs]);
+  }, [isKoLocale, runs]);
 
   const filteredPayslipSearchRows = useMemo(() => {
     const filtered = payslipSearchRows.filter((row) =>
@@ -413,13 +371,13 @@ export default function EmployeePayslipsPage() {
 
   const statusFeedbackMessage = useMemo(() => {
     if (!latestLog) {
-      return "최근 조회 결과가 없습니다.";
+      return pageCopy.status.noRecentResult;
     }
     if (latestLog.ok) {
-      return `${latestLog.label} 요청이 정상 처리되었습니다.`;
+      return `${latestLog.label} ${pageCopy.status.successSuffix}`;
     }
-    return `${latestLog.label} 요청이 실패했습니다.`;
-  }, [latestLog]);
+    return `${latestLog.label} ${pageCopy.status.failureSuffix}`;
+  }, [latestLog, pageCopy.status.failureSuffix, pageCopy.status.noRecentResult, pageCopy.status.successSuffix]);
 
   const latestFailureMessage = useMemo(() => {
     if (!latestFailedLog) {
@@ -430,10 +388,10 @@ export default function EmployeePayslipsPage() {
 
   const statusRecoveryGuide = useMemo(() => {
     if (!latestFailedLog) {
-      return "실패 이력이 없으면 최신 명세서를 선택한 뒤 전달 준비를 진행하세요.";
+      return pageCopy.status.guideIfNoFailure;
     }
-    return "실패 원인을 확인한 뒤 조회 기간/사번/조직 ID를 점검하고 다시 조회하세요.";
-  }, [latestFailedLog]);
+    return pageCopy.status.guideIfFailure;
+  }, [latestFailedLog, pageCopy.status.guideIfFailure, pageCopy.status.guideIfNoFailure]);
 
   const compareCandidates = useMemo(() => {
     if (!selectedRun) {
@@ -459,19 +417,19 @@ export default function EmployeePayslipsPage() {
     const rows: Array<{ id: string; label: string; selectedValue: number | null; compareValue: number | null }> = [
       {
         id: "gross",
-        label: "총지급",
+        label: pageCopy.compare.metrics.gross,
         selectedValue: selectedRun.grossPayKrw,
         compareValue: compareRun.grossPayKrw
       },
       {
         id: "deduction",
-        label: "총공제",
+        label: pageCopy.compare.metrics.deduction,
         selectedValue: selectedRun.totalDeductionsKrw,
         compareValue: compareRun.totalDeductionsKrw
       },
       {
         id: "net",
-        label: "실지급",
+        label: pageCopy.compare.metrics.net,
         selectedValue: selectedRun.netPayKrw,
         compareValue: compareRun.netPayKrw
       }
@@ -482,7 +440,7 @@ export default function EmployeePayslipsPage() {
       diffValue: safeDiff(row.selectedValue, row.compareValue),
       diffRate: safeDiffRate(row.selectedValue, row.compareValue)
     }));
-  }, [compareRun, selectedRun]);
+  }, [compareRun, pageCopy.compare.metrics.deduction, pageCopy.compare.metrics.gross, pageCopy.compare.metrics.net, selectedRun]);
 
   const compareWindowLabel = useMemo(() => {
     if (!selectedRun || !compareRun) {
@@ -490,8 +448,8 @@ export default function EmployeePayslipsPage() {
     }
     const selectedLabel = `${formatDateOnly(selectedRun.periodStart)} ~ ${formatDateOnly(selectedRun.periodEnd)}`;
     const compareLabel = `${formatDateOnly(compareRun.periodStart)} ~ ${formatDateOnly(compareRun.periodEnd)}`;
-    return `${selectedLabel} vs ${compareLabel}`;
-  }, [compareRun, selectedRun]);
+    return isKoLocale ? `${selectedLabel} 대비 ${compareLabel}` : `${selectedLabel} vs ${compareLabel}`;
+  }, [compareRun, isKoLocale, selectedRun]);
 
   const fixedDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
     if (!selectedRun) {
@@ -500,24 +458,24 @@ export default function EmployeePayslipsPage() {
     return [
       {
         key: "withholdingTaxKrw",
-        label: DEDUCTION_DESCRIPTION_MAP.withholdingTaxKrw.label,
+        label: deductionDescriptionMap.withholdingTaxKrw.label,
         amountKrw: selectedRun.withholdingTaxKrw,
-        description: DEDUCTION_DESCRIPTION_MAP.withholdingTaxKrw.description
+        description: deductionDescriptionMap.withholdingTaxKrw.description
       },
       {
         key: "socialInsuranceKrw",
-        label: DEDUCTION_DESCRIPTION_MAP.socialInsuranceKrw.label,
+        label: deductionDescriptionMap.socialInsuranceKrw.label,
         amountKrw: selectedRun.socialInsuranceKrw,
-        description: DEDUCTION_DESCRIPTION_MAP.socialInsuranceKrw.description
+        description: deductionDescriptionMap.socialInsuranceKrw.description
       },
       {
         key: "otherDeductionsKrw",
-        label: DEDUCTION_DESCRIPTION_MAP.otherDeductionsKrw.label,
+        label: deductionDescriptionMap.otherDeductionsKrw.label,
         amountKrw: selectedRun.otherDeductionsKrw,
-        description: DEDUCTION_DESCRIPTION_MAP.otherDeductionsKrw.description
+        description: deductionDescriptionMap.otherDeductionsKrw.description
       }
     ];
-  }, [selectedRun]);
+  }, [deductionDescriptionMap, selectedRun]);
 
   const componentDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
     const additional = toBreakdownRecord(selectedRunBreakdown?.additional ?? null);
@@ -531,17 +489,17 @@ export default function EmployeePayslipsPage() {
       if (amount === null || amount === 0) {
         return [];
       }
-      const mapped = DEDUCTION_DESCRIPTION_MAP[key];
+      const mapped = deductionDescriptionMap[key];
       return [
         {
           key,
           label: mapped?.label ?? key,
           amountKrw: amount,
-          description: mapped?.description ?? "법정공제 세부 항목입니다."
+          description: mapped?.description ?? pageCopy.deductionFallback.statutoryDetail
         }
       ];
     });
-  }, [selectedRunBreakdown]);
+  }, [pageCopy.deductionFallback.statutoryDetail, selectedRunBreakdown, deductionDescriptionMap]);
 
   const taxCreditExplainItems = useMemo<DeductionExplainItem[]>(() => {
     const additional = toBreakdownRecord(selectedRunBreakdown?.additional ?? null);
@@ -556,18 +514,18 @@ export default function EmployeePayslipsPage() {
         if (amount === null || amount === 0) {
           return [];
         }
-        const mapped = DEDUCTION_DESCRIPTION_MAP[key];
+        const mapped = deductionDescriptionMap[key];
         return [
           {
             key,
             label: mapped?.label ?? key,
             amountKrw: amount,
-            description: mapped?.description ?? "세액공제 계산에 사용된 항목입니다."
+            description: mapped?.description ?? pageCopy.deductionFallback.taxCreditDetail
           }
         ];
       }
     );
-  }, [selectedRunBreakdown]);
+  }, [pageCopy.deductionFallback.taxCreditDetail, selectedRunBreakdown, deductionDescriptionMap]);
 
   const deductionExplainSections = useMemo<DeductionExplainSection[]>(() => {
     if (!selectedRun) {
@@ -576,21 +534,29 @@ export default function EmployeePayslipsPage() {
     return [
       {
         id: "fixed",
-        title: "공제 항목 설명",
+        title: pageCopy.detail.deductionGuideTitle,
         items: fixedDeductionExplainItems
       },
       {
         id: "component",
-        title: "법정공제 세부 구성",
+        title: pageCopy.detail.deductionComponentTitle,
         items: componentDeductionExplainItems
       },
       {
         id: "tax-credit",
-        title: "세액공제 참고 항목",
+        title: pageCopy.detail.taxCreditReferenceTitle,
         items: taxCreditExplainItems
       }
     ];
-  }, [componentDeductionExplainItems, fixedDeductionExplainItems, selectedRun, taxCreditExplainItems]);
+  }, [
+    componentDeductionExplainItems,
+    fixedDeductionExplainItems,
+    pageCopy.detail.deductionComponentTitle,
+    pageCopy.detail.deductionGuideTitle,
+    pageCopy.detail.taxCreditReferenceTitle,
+    selectedRun,
+    taxCreditExplainItems
+  ]);
 
   const payslipFileName = useMemo(() => {
     if (!selectedRun) {
@@ -708,7 +674,7 @@ export default function EmployeePayslipsPage() {
 
     const [runsRes, aggregateRes] = await Promise.all([
       callApi(
-        "급여 명세서 조회",
+        pageCopy.logs.fetchPayslips,
         "GET",
         `/api/payroll/runs${buildQuery({
           from,
@@ -718,7 +684,7 @@ export default function EmployeePayslipsPage() {
         })}`
       ),
       callApi(
-        "근태 집계 조회",
+        pageCopy.logs.fetchAttendance,
         "GET",
         `/api/attendance/aggregates${buildQuery({ from, to, employeeId: targetEmployeeId })}`
       )
@@ -762,7 +728,7 @@ export default function EmployeePayslipsPage() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "명세서 ID 복사",
+          label: pageCopy.logs.copyPayslipId,
           status: 200,
           ok: true,
           at: new Date().toLocaleString(runtimeLocale),
@@ -774,7 +740,7 @@ export default function EmployeePayslipsPage() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "명세서 ID 복사",
+          label: pageCopy.logs.copyPayslipId,
           status: 500,
           ok: false,
           at: new Date().toLocaleString(runtimeLocale),
@@ -794,7 +760,7 @@ export default function EmployeePayslipsPage() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "PDF 파일명 복사",
+          label: pageCopy.logs.copyPdfFileName,
           status: 200,
           ok: true,
           at: new Date().toLocaleString(runtimeLocale),
@@ -806,7 +772,7 @@ export default function EmployeePayslipsPage() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "PDF 파일명 복사",
+          label: pageCopy.logs.copyPdfFileName,
           status: 500,
           ok: false,
           at: new Date().toLocaleString(runtimeLocale),
@@ -838,9 +804,9 @@ export default function EmployeePayslipsPage() {
     const message = extractErrorMessage(latestFailedLog.body);
     try {
       await navigator.clipboard.writeText(message);
-      appendClientLog("실패 원인 복사", true, 200, { message });
+      appendClientLog(pageCopy.logs.copyFailureCause, true, 200, { message });
     } catch (error) {
-      appendClientLog("실패 원인 복사", false, 500, {
+      appendClientLog(pageCopy.logs.copyFailureCause, false, 500, {
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -865,9 +831,9 @@ export default function EmployeePayslipsPage() {
 
     try {
       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-      appendClientLog("비교 스냅샷 복사", true, 200, payload);
+      appendClientLog(pageCopy.logs.copyCompareSnapshot, true, 200, payload);
     } catch (error) {
-      appendClientLog("비교 스냅샷 복사", false, 500, {
+      appendClientLog(pageCopy.logs.copyCompareSnapshot, false, 500, {
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -945,75 +911,76 @@ export default function EmployeePayslipsPage() {
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">급여 명세서</h1>
-          <p className="page-subtitle">직원은 본인의 확정된 급여 내역만 조회할 수 있습니다.</p>
+          <h1 className="page-title">{pageCopy.pageTitle}</h1>
+          <p className="page-subtitle">{pageCopy.pageSubtitle}</p>
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
-            직원 포털
+            {pageCopy.nav.employeePortal}
           </Link>
           <Link className="btn btn-secondary" href="/login">
-            로그인
+            {pageCopy.nav.login}
           </Link>
           <Link className="btn btn-secondary" href="/admin">
-            관리자
+            {pageCopy.nav.admin}
           </Link>
           <Link className="btn btn-secondary" href="/">
-            홈
+            {pageCopy.nav.home}
           </Link>
         </div>
       </header>
 
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          현재 환경은 <strong>production</strong>입니다. 명세서 조회를 위해 로그인 세션(Bearer)이 필요합니다:{" "}
+          {pageCopy.productionNotice.prefix} <strong>production</strong>
+          {pageCopy.productionNotice.suffix}{" "}
           <Link href="/login">/login</Link>
         </p>
       ) : null}
 
       <section className="kpi-strip">
         <article className="kpi-card">
-          <p>명세서 건수</p>
+          <p>{pageCopy.kpi.count}</p>
           <strong>{payslipStats.count}</strong>
         </article>
         <article className="kpi-card">
-          <p>총지급 합계</p>
+          <p>{pageCopy.kpi.totalGross}</p>
           <strong>{formatKrw(payslipStats.totalGross)}</strong>
         </article>
         <article className="kpi-card">
-          <p>총공제 합계</p>
+          <p>{pageCopy.kpi.totalDeductions}</p>
           <strong>{formatKrw(payslipStats.totalDeductions)}</strong>
         </article>
         <article className="kpi-card">
-          <p>실지급 합계</p>
+          <p>{pageCopy.kpi.totalNet}</p>
           <strong>{formatKrw(payslipStats.totalNet)}</strong>
         </article>
         <article className="kpi-card">
-          <p>API 호출</p>
+          <p>{pageCopy.kpi.apiCalls}</p>
           <strong>
-            {stats.total} (OK {stats.success} / FAIL {stats.fail})
+            {stats.total} ({pageCopy.kpi.ok} {stats.success} / {pageCopy.kpi.fail} {stats.fail})
           </strong>
         </article>
       </section>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>조회 조건</h2>
+          <h2>{pageCopy.filters.title}</h2>
           <div className="input-grid">
             <label>
-              Organization ID (선택)
+              {pageCopy.filters.organizationIdOptional}
               <input
                 value={organizationId}
-                placeholder="예: ORG-00001"
+                placeholder={pageCopy.filters.organizationIdPlaceholder}
                 onChange={(event) => setOrganizationId(event.target.value)}
               />
             </label>
             <label>
-              내 직원 ID
+              {pageCopy.filters.employeeId}
               <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
             </label>
             <label>
-              기간 시작
+              {pageCopy.filters.periodStart}
               <input
                 type="datetime-local"
                 value={periodStart}
@@ -1021,7 +988,7 @@ export default function EmployeePayslipsPage() {
               />
             </label>
             <label>
-              기간 종료
+              {pageCopy.filters.periodEnd}
               <input
                 type="datetime-local"
                 value={periodEnd}
@@ -1031,58 +998,59 @@ export default function EmployeePayslipsPage() {
           </div>
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void refreshPayslips()}>
-              조회
+              {pageCopy.filters.actions.refresh}
             </button>
             <button className="btn btn-secondary" onClick={applyCurrentMonthRange}>
-              이번 달
+              {pageCopy.filters.actions.currentMonth}
             </button>
             <button className="btn btn-secondary" onClick={applyPreviousMonthRange}>
-              지난 달
+              {pageCopy.filters.actions.previousMonth}
             </button>
             <button className="btn btn-secondary" onClick={applyLastThreeMonthsRange}>
-              최근 3개월
+              {pageCopy.filters.actions.lastThreeMonths}
             </button>
             <button className="btn btn-secondary" onClick={downloadRunsCsv} disabled={runs.length === 0}>
-              CSV 다운로드
+              {pageCopy.filters.actions.downloadCsv}
             </button>
           </div>
 
           {showDevTools ? (
             <details className="details" style={{ marginTop: 12 }}>
               <summary>
-                개발/검증 설정 <small>(기본은 숨김)</small>
+                {pageCopy.devTools.summary} <small>({pageCopy.devTools.hiddenByDefault})</small>
               </summary>
               <div className="input-grid" style={{ marginTop: 12 }}>
                 <label className="full">
-                  Bearer Access Token (선택)
+                  {pageCopy.devTools.bearerTokenOptional}
                   <textarea
                     rows={3}
-                    placeholder="비어 있으면 x-actor-* 헤더 모드가 사용됩니다."
+                    placeholder={pageCopy.devTools.bearerPlaceholder}
                     value={accessToken}
                     onChange={(event) => setAccessToken(event.target.value)}
                   />
                 </label>
               </div>
               <p className="small">
-                호출 {stats.total}건 (OK {stats.success} / FAIL {stats.fail}) · 현재 {pendingLabel ?? "-"}
+                {pageCopy.devTools.callCount} {stats.total} ({pageCopy.kpi.ok} {stats.success} / {pageCopy.kpi.fail}{" "}
+                {stats.fail}) · {pageCopy.devTools.current} {pendingLabel ?? "-"}
               </p>
               {isProductionRuntime ? (
                 <p className="small muted">
-                  세션:{" "}
+                  {pageCopy.devTools.session}:{" "}
                   {supabaseSession
                     ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"} · actor=${supabaseSession.actorId ?? "-"}`
-                    : "없음"}{" "}
-                  (Bearer {usesBearerToken ? "ON" : "OFF"})
+                    : pageCopy.devTools.none}{" "}
+                  (Bearer {usesBearerToken ? pageCopy.devTools.bearerOn : pageCopy.devTools.bearerOff})
                 </p>
               ) : null}
               {supabaseSessionError ? (
                 <p className="small" style={{ color: "var(--danger)" }}>
-                  세션 오류: {supabaseSessionError}
+                  {pageCopy.devTools.sessionError}: {supabaseSessionError}
                 </p>
               ) : null}
               <div className="actions">
                 <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
-                  로그 초기화
+                  {pageCopy.devTools.clearLogs}
                 </button>
               </div>
             </details>
@@ -1090,21 +1058,23 @@ export default function EmployeePayslipsPage() {
 
           {aggregate ? (
             <p className="small">
-              근태 요약: 정규 {minutesToHours(aggregate.totals.regular)} / 연장{" "}
-              {minutesToHours(aggregate.totals.overtime)} / 야간 {minutesToHours(aggregate.totals.night)} /
-              휴일 {minutesToHours(aggregate.totals.holiday)} (급여반영 {aggregate.counts.payable}건)
+              {pageCopy.attendance.summaryPrefix}: {pageCopy.attendance.regular} {minutesToHours(aggregate.totals.regular)} /{" "}
+              {pageCopy.attendance.overtime} {minutesToHours(aggregate.totals.overtime)} / {pageCopy.attendance.night}{" "}
+              {minutesToHours(aggregate.totals.night)} / {pageCopy.attendance.holiday}{" "}
+              {minutesToHours(aggregate.totals.holiday)} ({pageCopy.attendance.payable} {aggregate.counts.payable}
+              {pageCopy.attendance.payableUnit})
             </p>
           ) : (
-            <p className="small muted">근태 집계가 없습니다.</p>
+            <p className="small muted">{pageCopy.attendance.empty}</p>
           )}
         </article>
 
         <article className="panel">
-          <h2>명세서 목록</h2>
+          <h2>{pageCopy.payslipList.title}</h2>
           {runs.length === 0 ? (
-            <p className="small muted">확정된 급여가 없습니다.</p>
+            <p className="small muted">{pageCopy.payslipList.empty}</p>
           ) : (
-            <ul className="simple-list" aria-label="급여 명세서 목록">
+            <ul className="simple-list" aria-label={pageCopy.payslipList.ariaLabel}>
               {runs.map((run) => (
                 <li
                   key={run.id}
@@ -1116,8 +1086,9 @@ export default function EmployeePayslipsPage() {
                   <span>
                     <strong>{formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)}</strong>{" "}
                     <span className="muted">
-                      총지급 {formatKrw(run.grossPayKrw)} · 공제 {formatKrw(run.totalDeductionsKrw)} · 실지급{" "}
-                      {formatKrw(run.netPayKrw)} · 확정 {formatDateTime(run.confirmedAt)}
+                      {pageCopy.payslipList.gross} {formatKrw(run.grossPayKrw)} · {pageCopy.payslipList.deduction}{" "}
+                      {formatKrw(run.totalDeductionsKrw)} · {pageCopy.payslipList.net} {formatKrw(run.netPayKrw)} ·{" "}
+                      {pageCopy.payslipList.confirmed} {formatDateTime(run.confirmedAt)}
                     </span>
                   </span>
                   <button
@@ -1125,7 +1096,7 @@ export default function EmployeePayslipsPage() {
                     className="btn btn-secondary btn-small"
                     onClick={() => setSelectedRunId(run.id)}
                   >
-                    선택
+                    {pageCopy.payslipList.select}
                   </button>
                 </li>
               ))}
@@ -1194,7 +1165,9 @@ export default function EmployeePayslipsPage() {
                 <li key={row.key}>
                   <div className="payslip-search-head">
                     <strong>{row.runId}</strong>
-                    <span className={`status-pill tone-${row.state === "CONFIRMED" ? "ok" : "idle"}`}>{row.state}</span>
+                    <span className={`status-pill tone-${row.state === "CONFIRMED" ? "ok" : "idle"}`}>
+                      {row.stateLabel}
+                    </span>
                   </div>
                   <p>{row.periodLabel}</p>
                   <p className="small muted">
@@ -1222,18 +1195,22 @@ export default function EmployeePayslipsPage() {
 
 
         <article id="status-feedback" className="panel panel-payslip-status-feedback">
-          <h2>상태/오류 피드백</h2>
+          <h2>{pageCopy.status.title}</h2>
           <div className="payslip-status-grid">
             <article className="payslip-status-card">
-              <p>최근 API 상태</p>
+              <p>{pageCopy.status.latestApi}</p>
               <strong>{statusFeedbackMessage}</strong>
               <span className={`status-pill tone-${statusFeedbackTone}`}>
-                {statusFeedbackTone === "ok" ? "정상" : statusFeedbackTone === "fail" ? "실패" : "대기"}
+                {statusFeedbackTone === "ok"
+                  ? pageCopy.status.tone.ok
+                  : statusFeedbackTone === "fail"
+                    ? pageCopy.status.tone.fail
+                    : pageCopy.status.tone.idle}
               </span>
             </article>
             <article className="payslip-status-card">
-              <p>최근 실패 원인</p>
-              <strong>{latestFailureMessage || "실패 이력 없음"}</strong>
+              <p>{pageCopy.status.latestFailureCause}</p>
+              <strong>{latestFailureMessage || pageCopy.status.noFailureHistory}</strong>
               <div className="actions">
                 <button
                   type="button"
@@ -1241,21 +1218,23 @@ export default function EmployeePayslipsPage() {
                   onClick={() => void copyLatestFailureCause()}
                   disabled={!latestFailedLog}
                 >
-                  실패 원인 복사
+                  {pageCopy.status.copyFailureCause}
                 </button>
               </div>
             </article>
             <article className="payslip-status-card">
-              <p>최근 확정 명세</p>
+              <p>{pageCopy.status.latestConfirmed}</p>
               <strong>{selectedRun ? formatDateTime(selectedRun.confirmedAt) : "-"}</strong>
-              <span className="muted">명세서 ID {selectedRun?.id ?? "-"}</span>
+              <span className="muted">
+                {pageCopy.status.payslipId} {selectedRun?.id ?? "-"}
+              </span>
             </article>
             <article className="payslip-status-card">
-              <p>복구 가이드</p>
+              <p>{pageCopy.status.recoveryGuide}</p>
               <strong>{statusRecoveryGuide}</strong>
               <span className="muted">
-                마지막 오류 시각 {latestFailedLog ? latestFailedLog.at : "-"} / 마지막 조회{" "}
-                {latestLog ? latestLog.at : "-"}
+                {pageCopy.status.lastErrorAt} {latestFailedLog ? latestFailedLog.at : "-"} /{" "}
+                {pageCopy.status.lastCheckedAt} {latestLog ? latestLog.at : "-"}
               </span>
             </article>
           </div>
@@ -1263,7 +1242,7 @@ export default function EmployeePayslipsPage() {
 
         <article id="compare-view" className="panel panel-payslip-compare">
           <div className="payslip-compare-head">
-            <h2>명세서 비교 조회</h2>
+            <h2>{pageCopy.compare.title}</h2>
             <div className="actions">
               <button
                 type="button"
@@ -1271,17 +1250,17 @@ export default function EmployeePayslipsPage() {
                 onClick={() => void copyCompareSnapshot()}
                 disabled={!selectedRun || !compareRun}
               >
-                비교 스냅샷 복사
+                {pageCopy.compare.copySnapshot}
               </button>
             </div>
           </div>
           {!selectedRun || compareCandidates.length === 0 ? (
-            <p className="small muted">비교 가능한 명세서가 없습니다. 기간을 넓혀 조회하세요.</p>
+            <p className="small muted">{pageCopy.compare.empty}</p>
           ) : (
             <>
               <div className="payslip-compare-controls">
                 <label>
-                  비교 대상
+                  {pageCopy.compare.target}
                   <select value={compareRunId} onChange={(event) => setCompareRunId(event.target.value)}>
                     {compareCandidates.map((run) => (
                       <option key={run.id} value={run.id}>
@@ -1290,25 +1269,29 @@ export default function EmployeePayslipsPage() {
                     ))}
                   </select>
                 </label>
-                <p className="small muted">비교 기간: {compareWindowLabel}</p>
+                <p className="small muted">
+                  {pageCopy.compare.window}: {compareWindowLabel}
+                </p>
               </div>
               <div className="payslip-compare-delta-grid">
                 {compareMetrics.map((metric) => (
                   <article key={metric.id} className="payslip-compare-delta-card">
-                    <p>{metric.label} 차이</p>
+                    <p>
+                      {metric.label} {pageCopy.compare.diffSuffix}
+                    </p>
                     <strong>{formatDiffKrw(metric.diffValue)}</strong>
                     <span>{formatPercent(metric.diffRate)}</span>
                   </article>
                 ))}
               </div>
               <div className="compare-table-wrap">
-                <table className="compare-table" aria-label="명세서 비교 표">
+                <table className="compare-table" aria-label={pageCopy.compare.tableAriaLabel}>
                   <thead>
                     <tr>
-                      <th>항목</th>
-                      <th>현재 선택</th>
-                      <th>비교 대상</th>
-                      <th>증감</th>
+                      <th>{pageCopy.compare.headers.metric}</th>
+                      <th>{pageCopy.compare.headers.selected}</th>
+                      <th>{pageCopy.compare.headers.compare}</th>
+                      <th>{pageCopy.compare.headers.diff}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1329,89 +1312,91 @@ export default function EmployeePayslipsPage() {
 
 
         <article className="panel panel-payslip-print">
-          <h2>선택 명세서 상세</h2>
+          <h2>{pageCopy.detail.title}</h2>
           {!selectedRun ? (
-            <p className="small muted">선택된 명세서가 없습니다.</p>
+            <p className="small muted">{pageCopy.detail.empty}</p>
           ) : (
             <>
               <div className="payslip-print-actions actions no-print">
                 <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-                  인쇄/PDF 저장
+                  {pageCopy.detail.actions.printSavePdf}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => void copyPayslipFileName()}>
-                  PDF 파일명 복사
+                  {pageCopy.detail.actions.copyPdfFileName}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => void copySelectedRunId()}>
-                  명세서 ID 복사
+                  {pageCopy.detail.actions.copyPayslipId}
                 </button>
               </div>
               {payslipFileName ? (
                 <p className="small muted no-print" style={{ marginTop: 8 }}>
-                  권장 파일명: <code>{payslipFileName}</code>
+                  {pageCopy.detail.recommendedFileName}: <code>{payslipFileName}</code>
                 </p>
               ) : null}
 
-              <article className="payslip-sheet" aria-label="급여 명세서 문서 서식">
+              <article className="payslip-sheet" aria-label={pageCopy.detail.sheetAriaLabel}>
                 <header className="payslip-sheet-header">
                   <div>
-                    <p className="eyebrow">FlowHR Payslip</p>
-                    <h3>{formatMonthLabel(selectedRun.periodStart)} 급여 명세서</h3>
+                    <p className="eyebrow">{pageCopy.detail.sheetEyebrow}</p>
+                    <h3>
+                      {formatMonthLabel(selectedRun.periodStart)} {pageCopy.detail.sheetTitleSuffix}
+                    </h3>
                     <p className="small muted">
-                      지급 기간 {formatDateOnly(selectedRun.periodStart)} ~{" "}
+                      {pageCopy.detail.payPeriod} {formatDateOnly(selectedRun.periodStart)} ~{" "}
                       {formatDateOnly(selectedRun.periodEnd)}
                     </p>
                   </div>
                   <ul className="payslip-meta-list">
                     <li>
-                      <span>직원 ID</span>
+                      <span>{pageCopy.detail.employeeId}</span>
                       <strong>{selectedRun.employeeId ?? employeeId}</strong>
                     </li>
                     <li>
-                      <span>명세서 ID</span>
+                      <span>{pageCopy.detail.payslipId}</span>
                       <strong>{selectedRun.id}</strong>
                     </li>
                     <li>
-                      <span>확정일</span>
+                      <span>{pageCopy.detail.confirmedDate}</span>
                       <strong>{formatDateOnly(selectedRun.confirmedAt)}</strong>
                     </li>
                     <li>
-                      <span>정산 상태</span>
-                      <strong>{selectedRun.state}</strong>
+                      <span>{pageCopy.detail.settlementState}</span>
+                      <strong>{resolvePayslipRunStateLabel(selectedRun.state, isKoLocale)}</strong>
                     </li>
                   </ul>
                 </header>
 
                 <section>
-                  <h4>요약</h4>
+                  <h4>{pageCopy.detail.summaryTitle}</h4>
                   <div className="payslip-grid">
                     <article className="summary-card">
-                      <p>총지급</p>
+                      <p>{pageCopy.compare.metrics.gross}</p>
                       <strong>{formatKrw(selectedRun.grossPayKrw)}</strong>
                     </article>
                     <article className="summary-card">
-                      <p>총공제</p>
+                      <p>{pageCopy.compare.metrics.deduction}</p>
                       <strong>{formatKrw(selectedRun.totalDeductionsKrw)}</strong>
                     </article>
                     <article className="summary-card">
-                      <p>실지급</p>
+                      <p>{pageCopy.compare.metrics.net}</p>
                       <strong>{formatKrw(selectedRun.netPayKrw)}</strong>
                     </article>
                   </div>
                 </section>
 
                 <section>
-                  <h4>지급/공제 상세</h4>
+                  <h4>{pageCopy.detail.paymentDeductionTitle}</h4>
                   <ul className="simple-list">
                     <li>
-                      <span>원천세</span>
+                      <span>{pageCopy.detail.withholdingTax}</span>
                       <strong>{formatKrw(selectedRun.withholdingTaxKrw)}</strong>
                     </li>
                     <li>
-                      <span>사회보험</span>
+                      <span>{pageCopy.detail.socialInsurance}</span>
                       <strong>{formatKrw(selectedRun.socialInsuranceKrw)}</strong>
                     </li>
                     <li>
-                      <span>기타 공제</span>
+                      <span>{pageCopy.detail.otherDeductions}</span>
                       <strong>{formatKrw(selectedRun.otherDeductionsKrw)}</strong>
                     </li>
                   </ul>
@@ -1422,7 +1407,7 @@ export default function EmployeePayslipsPage() {
                     <div key={section.id} className="payslip-explain-section">
                       <h4>{section.title}</h4>
                       {section.items.length === 0 ? (
-                        <p className="small muted">표시할 항목이 없습니다.</p>
+                        <p className="small muted">{pageCopy.detail.noItems}</p>
                       ) : (
                         <ul className="payslip-explain-list">
                           {section.items.map((item) => (
@@ -1442,19 +1427,21 @@ export default function EmployeePayslipsPage() {
 
                 {aggregate ? (
                   <section>
-                    <h4>근태 기준(참고)</h4>
+                    <h4>{pageCopy.detail.attendanceReference}</h4>
                     <p className="small">
-                      정규 {minutesToHours(aggregate.totals.regular)} / 연장{" "}
-                      {minutesToHours(aggregate.totals.overtime)} / 야간{" "}
-                      {minutesToHours(aggregate.totals.night)} / 휴일{" "}
-                      {minutesToHours(aggregate.totals.holiday)} (급여반영 {aggregate.counts.payable}건)
+                      {pageCopy.attendance.regular} {minutesToHours(aggregate.totals.regular)} /{" "}
+                      {pageCopy.attendance.overtime} {minutesToHours(aggregate.totals.overtime)} /{" "}
+                      {pageCopy.attendance.night} {minutesToHours(aggregate.totals.night)} /{" "}
+                      {pageCopy.attendance.holiday} {minutesToHours(aggregate.totals.holiday)} ({pageCopy.attendance.payable}{" "}
+                      {aggregate.counts.payable}
+                      {pageCopy.attendance.payableUnit})
                     </p>
                   </section>
                 ) : null}
 
                 {selectedRun.deductionBreakdown ? (
                   <details className="details no-print" style={{ marginTop: 12 }}>
-                    <summary>공제 Breakdown 원본</summary>
+                    <summary>{pageCopy.detail.deductionBreakdownRaw}</summary>
                     <pre className="small" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
                       {JSON.stringify(selectedRun.deductionBreakdown, null, 2)}
                     </pre>
