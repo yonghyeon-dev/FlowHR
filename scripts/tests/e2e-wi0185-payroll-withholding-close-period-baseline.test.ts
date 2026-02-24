@@ -57,6 +57,7 @@ async function run() {
     "payroll-close",
     "PayrollClosePeriodConsole.tsx"
   );
+  const payrollCloseCopySource = readUtf8("src", "components", "payroll-close", "copy.ts");
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
@@ -68,8 +69,13 @@ async function run() {
   );
   assert.match(
     payrollCloseConsoleSource,
-    /Payroll Close Period/,
-    "payroll close console should include heading text"
+    /copy\.title/,
+    "payroll close console should render locale heading text via copy bundle"
+  );
+  assert.match(
+    payrollCloseCopySource,
+    /title: "Payroll Close Period"/,
+    "payroll close copy should preserve default English heading"
   );
   assert.match(payrollApiSpec, /\/payroll\/runs\/close-period:/, "payroll api spec should include close-period endpoint");
   assert.match(payrollContract, /path: \/payroll\/runs\/close-period/, "payroll contract should include close-period endpoint");
