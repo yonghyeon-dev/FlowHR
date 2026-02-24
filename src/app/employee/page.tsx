@@ -547,7 +547,7 @@ export default function EmployeeSelfServicePage() {
       query: "pending",
       sortOption: "pending_first",
       targetSectionId: "request-search-sort",
-      feedback: "Pending requests filter is now applied."
+      feedback: isKoLocale ? "대기 요청 필터가 적용되었습니다." : "Pending requests filter is now applied."
     });
   }
 
@@ -947,7 +947,7 @@ export default function EmployeeSelfServicePage() {
         value: `${requestCompletionRatePercent}%`,
         detail: isKoLocale
           ? `승인 ${totalApprovedRequestCount} / 조치 필요 ${totalRejectedOrCanceledRequestCount}`
-          : `Approved ${totalApprovedRequestCount} / Action needed ${totalRejectedOrCanceledRequestCount}`,
+          : `Approved ${totalApprovedRequestCount} / Needs action ${totalRejectedOrCanceledRequestCount}`,
         tone: requestCompletionRatePercent >= 70 ? "ok" : requestCompletionRatePercent >= 40 ? "pending" : "fail"
       },
       {
@@ -970,7 +970,7 @@ export default function EmployeeSelfServicePage() {
         value: `${apiFailureCount}`,
         detail: isKoLocale
           ? `성공 ${stats.success} / 실패 ${stats.fail}`
-          : `Success ${stats.success} / Fail ${stats.fail}`,
+          : `Success ${stats.success} / Failed ${stats.fail}`,
         tone: apiFailureCount > 0 ? "fail" : "info"
       }
     ];
