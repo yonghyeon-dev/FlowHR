@@ -8,6 +8,13 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeAttendanceLeavePanels = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeavePanels.tsx"
+  );
+  const employeeSectionSources = `${employeePage}\n${employeeAttendanceLeavePanels}`;
   const localeHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -23,12 +30,12 @@ async function run() {
   assert.match(localeHelpers, /apiLogs: "API execution logs"/);
 
   assert.match(employeePage, /\bsectionTitles,/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.leave\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
-  assert.match(employeePage, /<h2>\{sectionTitles\.apiLogs\}<\/h2>/);
-  assert.doesNotMatch(employeePage, /<h2>\{isKoLocale \?/);
+  assert.match(employeeSectionSources, /<h2>\{sectionTitles\.attendance\}<\/h2>/);
+  assert.match(employeeSectionSources, /<h2>\{sectionTitles\.leave\}<\/h2>/);
+  assert.match(employeeSectionSources, /<h2>\{sectionTitles\.leaveCalendar\}<\/h2>/);
+  assert.match(employeeSectionSources, /<h2>\{sectionTitles\.schedule\}<\/h2>/);
+  assert.match(employeeSectionSources, /<h2>\{sectionTitles\.apiLogs\}<\/h2>/);
+  assert.doesNotMatch(employeeSectionSources, /<h2>\{isKoLocale \?/);
 
   assert.match(workItem, /WI-0327/i);
   assert.match(workItem, /section title copy split|locale/i);

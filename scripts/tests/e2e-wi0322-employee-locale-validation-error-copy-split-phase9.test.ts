@@ -8,6 +8,11 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeValidationHelpers = readUtf8("src", "app", "employee", "page-validation-helpers.ts");
+  const employeeDerivedHelpers = readUtf8("src", "app", "employee", "page-derived-helpers.ts");
+  const employeeRequestHelpers = readUtf8("src", "app", "employee", "page-request-helpers.ts");
+  const employeeValidationSources = `${employeePage}\n${employeeValidationHelpers}`;
+  const employeeDerivedSources = `${employeePage}\n${employeeDerivedHelpers}\n${employeeRequestHelpers}`;
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -17,13 +22,13 @@ async function run() {
 
   assert.match(employeePage, /validationCopy/);
   assert.match(employeePage, /feedback: feedbackCopy\.pendingRequestFilterApplied/);
-  assert.match(employeePage, /correctionValidationCopy\.missingTargetRecordId/);
-  assert.match(employeePage, /attendanceCheckCopy\.targetLabel/);
-  assert.match(employeePage, /leaveCheckCopy\.startDateFormatLabel/);
-  assert.match(employeePage, /resubmitFlowCheckCopy\.candidateLabel/);
-  assert.match(employeePage, /submitChecklistCardCopy\.attendanceCorrectionLabel/);
-  assert.match(employeePage, /defaultsCopy\.noReasonProvided/);
-  assert.match(employeePage, /summaryCardCopy\.pendingRequestsLabel/);
+  assert.match(employeeValidationSources, /correctionValidationCopy\.missingTargetRecordId/);
+  assert.match(employeeValidationSources, /attendanceCheckCopy\.targetLabel/);
+  assert.match(employeeValidationSources, /leaveCheckCopy\.startDateFormatLabel/);
+  assert.match(employeeValidationSources, /resubmitFlowCheckCopy\.candidateLabel/);
+  assert.match(employeeValidationSources, /submitChecklistCardCopy\.attendanceCorrectionLabel/);
+  assert.match(employeeDerivedSources, /defaultsCopy\.noReasonProvided/);
+  assert.match(employeeDerivedSources, /summaryCardCopy\.pendingRequestsLabel/);
 
   assert.doesNotMatch(employeePage, /feedback: isKoLocale \? "대기 요청 필터가 적용되었습니다\."/);
   assert.doesNotMatch(employeePage, /return \{ isValid: false, message: "정정 대상 기록 ID를 선택해 주세요\." \};/);
