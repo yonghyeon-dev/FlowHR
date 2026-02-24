@@ -78,7 +78,8 @@ export default function EmployeeSelfServicePage() {
     requestStatusLabels,
     runtimeLocale,
     surfaceCopy,
-    validationCopy
+    validationCopy,
+    summaryCopy
   } = localeLabelBundle;
 
   const [accessToken, setAccessToken] = useState("");
@@ -149,6 +150,7 @@ export default function EmployeeSelfServicePage() {
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
   const { attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } =
     surfaceCopy;
+  const { leaveBalance: leaveBalanceCopy, leaveUnits: leaveUnitCopy } = summaryCopy;
   const {
     feedback: feedbackCopy,
     defaults: defaultsCopy,
@@ -594,14 +596,14 @@ export default function EmployeeSelfServicePage() {
 
   const leaveBalanceSummary = useMemo(() => {
     if (!leaveBalance) {
-      return isKoLocale
-        ? "잔여 휴가 정보를 아직 불러오지 못했습니다."
-        : "Leave balance is not loaded yet.";
+      return leaveBalanceCopy.notLoaded;
     }
-    return isKoLocale
-      ? `잔여 ${formatDays(leaveBalance.remainingDays)}일 (부여 ${formatDays(leaveBalance.grantedDays)}일, 사용 ${formatDays(leaveBalance.usedDays)}일)`
-      : `Remaining ${formatDays(leaveBalance.remainingDays)}d (granted ${formatDays(leaveBalance.grantedDays)}d, used ${formatDays(leaveBalance.usedDays)}d)`;
-  }, [isKoLocale, leaveBalance]);
+    return leaveBalanceCopy.summary(
+      formatDays(leaveBalance.remainingDays),
+      formatDays(leaveBalance.grantedDays),
+      formatDays(leaveBalance.usedDays)
+    );
+  }, [leaveBalance, leaveBalanceCopy]);
 
   const pendingLeaveCount = useMemo(
     () => leaveRequests.filter((request) => request.state === "PENDING").length,
@@ -655,42 +657,34 @@ export default function EmployeeSelfServicePage() {
     return [
       {
         key: "remaining",
-        label: isKoLocale ? "잔여" : "Remaining",
-        value: isKoLocale
-          ? `${formatDays(leaveBalance.remainingDays)}일`
-          : `${formatDays(leaveBalance.remainingDays)}d`,
+        label: leaveBalanceCopy.cardLabels.remaining,
+        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.remainingDays)),
         tone: "remaining"
       },
       {
         key: "granted",
-        label: isKoLocale ? "부여" : "Granted",
-        value: isKoLocale
-          ? `${formatDays(leaveBalance.grantedDays)}일`
-          : `${formatDays(leaveBalance.grantedDays)}d`,
+        label: leaveBalanceCopy.cardLabels.granted,
+        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.grantedDays)),
         tone: "granted"
       },
       {
         key: "used",
-        label: isKoLocale ? "사용" : "Used",
-        value: isKoLocale ? `${formatDays(leaveBalance.usedDays)}일` : `${formatDays(leaveBalance.usedDays)}d`,
+        label: leaveBalanceCopy.cardLabels.used,
+        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.usedDays)),
         tone: "used"
       },
       {
         key: "carry-over",
-        label: isKoLocale ? "이월" : "Carry-over",
-        value: isKoLocale
-          ? `${formatDays(leaveBalance.carryOverDays)}일`
-          : `${formatDays(leaveBalance.carryOverDays)}d`,
+        label: leaveBalanceCopy.cardLabels.carryOver,
+        value: leaveBalanceCopy.dayUnit(formatDays(leaveBalance.carryOverDays)),
         tone: "carry-over"
       }
     ];
-  }, [isKoLocale, leaveBalance]);
+  }, [leaveBalance, leaveBalanceCopy]);
 
   const leaveUsageProjectionLabel = useMemo(() => {
     if (!leaveBalance || leaveBalance.grantedDays <= 0) {
-      return isKoLocale
-        ? "연차 사용 속도 예측은 잔여 정보를 불러오면 표시됩니다."
-        : "Projection is shown after leave balance is loaded.";
+      return leaveBalanceCopy.projectionPending;
     }
 
     const elapsedMonths = Math.max(1, new Date().getMonth() + 1);
@@ -698,14 +692,10 @@ export default function EmployeeSelfServicePage() {
     const projectedYearEndUsed = averageUsedPerMonth * 12;
     const projectedRemaining = leaveBalance.grantedDays - projectedYearEndUsed;
     if (projectedRemaining >= 0) {
-      return isKoLocale
-        ? `현재 사용 속도 기준 연말 예상 잔여 ${formatDays(projectedRemaining)}일`
-        : `Projected year-end remaining ${formatDays(projectedRemaining)}d at current usage rate`;
+      return leaveBalanceCopy.projectedRemaining(formatDays(projectedRemaining));
     }
-    return isKoLocale
-      ? `현재 사용 속도 기준 연말 예상 부족 ${formatDays(Math.abs(projectedRemaining))}일`
-      : `Projected year-end shortage ${formatDays(Math.abs(projectedRemaining))}d at current usage rate`;
-  }, [isKoLocale, leaveBalance]);
+    return leaveBalanceCopy.projectedShortage(formatDays(Math.abs(projectedRemaining)));
+  }, [leaveBalance, leaveBalanceCopy]);
 
   const leaveCalendarMonthLabel = useMemo(() => {
     const parsedPeriodStart = new Date(periodStart);
@@ -804,12 +794,12 @@ export default function EmployeeSelfServicePage() {
         status: request.state,
         label:
           request.unit === "HOUR" && request.hours !== null
-            ? `${toLeaveTypeLabel(request.leaveType)} / ${request.hours.toFixed(2)}시간`
+            ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.hourUnit(request.hours.toFixed(2))}`
             : request.unit === "HALF_DAY"
-              ? `${toLeaveTypeLabel(request.leaveType)} / 반차`
-              : `${toLeaveTypeLabel(request.leaveType)} / ${formatDays(request.days)}일`
+              ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.halfDay}`
+              : `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.dayUnit(formatDays(request.days))}`
       }));
-  }, [leaveRequests, toLeaveTypeLabel]);
+  }, [leaveRequests, leaveUnitCopy, toLeaveTypeLabel]);
 
   const attendanceStatusSummary = useMemo(() => {
     return {
@@ -1033,16 +1023,10 @@ export default function EmployeeSelfServicePage() {
         request.state === "PENDING" ? Math.max(0, (requestNowMs - toTimestamp(at)) / 3_600_000) : 0;
       const leaveUnitLabel =
         request.unit === "HOUR" && request.hours !== null
-          ? isKoLocale
-            ? `${request.hours.toFixed(2)}시간`
-            : `${request.hours.toFixed(2)}h`
+          ? leaveUnitCopy.hourUnit(request.hours.toFixed(2))
           : request.unit === "HALF_DAY"
-            ? isKoLocale
-              ? "반차"
-              : "0.5d"
-            : isKoLocale
-              ? `${formatDays(request.days)}일`
-              : `${formatDays(request.days)}d`;
+            ? leaveUnitCopy.halfDay
+            : leaveUnitCopy.dayUnit(formatDays(request.days));
       return {
         key: `leave:${request.id}`,
         channel: "leave" as const,
@@ -1059,7 +1043,7 @@ export default function EmployeeSelfServicePage() {
     });
 
     return [...attendanceRows, ...leaveRows].sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
-  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, isKoLocale, leaveRequests, requestNowMs, toLeaveTypeLabel]);
+  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, leaveRequests, leaveUnitCopy, requestNowMs, toLeaveTypeLabel]);
 
   const filteredRequestSearchRows = useMemo(() => {
     const filtered = requestSearchRows.filter((row) =>
@@ -1541,7 +1525,7 @@ export default function EmployeeSelfServicePage() {
         isProductionRuntime={isProductionRuntime}
         usesBearerToken={usesBearerToken}
         attendanceSummary={attendanceSummary}
-        leaveBalanceLabel={leaveBalance ? `${formatDays(leaveBalance.remainingDays)}일` : "-"}
+        leaveBalanceLabel={leaveBalance ? leaveBalanceCopy.dayUnit(formatDays(leaveBalance.remainingDays)) : "-"}
         pendingLeaveCount={pendingLeaveCount}
         stats={stats}
         pendingLabel={pendingLabel}
