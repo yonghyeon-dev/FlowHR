@@ -9,6 +9,12 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const employeeRequestFeedbackPanels = readUtf8("src", "components", "employee-dashboard", "EmployeeRequestFeedbackPanels.tsx");
+  const employeeAttendanceLeavePanels = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeavePanels.tsx"
+  );
   const employeeResubmitPanel = readUtf8("src", "components", "employee-dashboard", "EmployeeResubmitPanel.tsx");
   const employeeTypes = readUtf8("src", "app", "employee", "page-types.ts");
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
@@ -25,16 +31,23 @@ async function run() {
   assert.match(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
   assert.match(employeePage, /const toRequestStatusLabel = useCallback\(/);
   assert.match(employeePage, /const toLeaveTypeLabel = useCallback\(/);
+  assert.match(employeePage, /<EmployeeAttendanceLeavePanels/);
 
-  assert.match(employeePage, /\{toRequestStatusLabel\(row\.status\)\}/);
+  assert.match(employeeAttendanceLeavePanels, /\{toRequestStatusLabel\(row\.status\)\}/);
   assert.match(employeeRequestFeedbackPanels, /\{toRequestStatusLabel\(item\.status\)\}/);
-  assert.match(employeePage, /\{toRequestStatusLabel\(record\.state\)\}/);
-  assert.match(employeePage, /\{toRequestStatusLabel\(request\.state\)\}/);
-  assert.match(employeePage, /\{listBadgeLabels\.empty\}/);
+  assert.match(employeeAttendanceLeavePanels, /\{toRequestStatusLabel\(record\.state\)\}/);
+  assert.match(employeeAttendanceLeavePanels, /\{toRequestStatusLabel\(request\.state\)\}/);
+  assert.match(employeeAttendanceLeavePanels, /\{listBadgeLabels\.empty\}/);
   assert.match(employeeResubmitPanel, /\{listBadgeLabels\.applied\}/);
-  assert.match(employeePage, /\{schedule\.isHoliday \? listBadgeLabels\.holiday : listBadgeLabels\.work\}/);
-  assert.match(employeePage, /\{log\.ok \? listBadgeLabels\.success : listBadgeLabels\.fail\}/);
-  assert.match(employeePage, /attendanceNotePresets\.map\(\(preset\) => \(/);
+  assert.match(
+    employeeAttendanceLeavePanels,
+    /\{schedule\.isHoliday \? listBadgeLabels\.holiday : listBadgeLabels\.work\}/
+  );
+  assert.match(
+    employeeAttendanceLeavePanels,
+    /\{log\.ok \? listBadgeLabels\.success : listBadgeLabels\.fail\}/
+  );
+  assert.match(employeeAttendanceLeavePanels, /attendanceNotePresets\.map\(\(preset\) => \(/);
 
   assert.doesNotMatch(employeePage, /const requestStatusLabels = useMemo\(/);
   assert.doesNotMatch(employeePage, /const listBadgeLabels = useMemo\(/);

@@ -14,16 +14,10 @@ import {
 } from "@/features/payroll/kr-income-tax-lookup-presets";
 import { getPayrollKrIncomeSplitItemPreset } from "@/features/payroll/kr-income-split-item-presets";
 import {
-  buildYearEndFilingSubmissionTimeline as buildYearEndFilingSubmissionTimelineCore
-} from "@/features/payroll/year-end-filing-lifecycle-helpers";
-import {
-  buildYearEndWithholdingReceiptGuard as buildYearEndWithholdingReceiptGuardCore,
-  buildYearEndWithholdingReceiptSummary as buildYearEndWithholdingReceiptSummaryCore
-} from "@/features/payroll/year-end-withholding-receipt-helpers";
-import {
   applyYearEndDeductionCaps,
   asYearEndFinalizationAuditPayload,
   asYearEndWithholdingReceiptSummaryPayload,
+  buildYearEndFilingSubmissionTimeline,
   buildPayrollYearEndFilingAckCatalog,
   buildYearEndFilingArtifact,
   buildYearEndFilingGuard,
@@ -33,6 +27,8 @@ import {
   buildYearEndInputVectorHash,
   buildYearEndInsuranceReconciliationMonthlyBreakdown,
   buildYearEndSettlementHash,
+  buildYearEndWithholdingReceiptGuard,
+  buildYearEndWithholdingReceiptSummary,
   buildYearEndWithholdingReceiptDocumentArtifact,
   calculateYearEndSettlementKrw,
   collectYearEndDeductionEligibilityBlockingReasons,
@@ -2560,7 +2556,7 @@ export async function listPayrollYearEndFilingSubmissionTimeline(
     year: input.year,
     employeeId: input.employeeId
   });
-  const timeline = buildYearEndFilingSubmissionTimelineCore(logs, input.submissionId) as PayrollYearEndFilingTimelineEntry[];
+  const timeline = buildYearEndFilingSubmissionTimeline(logs, input.submissionId);
 
   return {
     submission,
@@ -3006,7 +3002,7 @@ export async function issuePayrollYearEndWithholdingReceipt(
   const confirmedRuns = runs.filter((run) => run.state === "CONFIRMED");
   const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
   const totalsKrw = aggregatePayrollTotalsKrw(confirmedRuns);
-  const withholdingReceiptGuard = buildYearEndWithholdingReceiptGuardCore({
+  const withholdingReceiptGuard = buildYearEndWithholdingReceiptGuard({
     runs,
     confirmedRuns,
     previewedRuns
@@ -3026,7 +3022,7 @@ export async function issuePayrollYearEndWithholdingReceipt(
   const receiptNumber = `WR-${input.year}-${input.employeeId}`;
   const issuerName = input.issuerName?.trim() ? input.issuerName.trim() : actor.role;
   const issuedAt = input.issue ? new Date().toISOString() : null;
-  const payload = buildYearEndWithholdingReceiptSummaryCore({
+  const payload = buildYearEndWithholdingReceiptSummary({
     year: input.year,
     employeeId: input.employeeId,
     periodStart: periodStart.toISOString(),

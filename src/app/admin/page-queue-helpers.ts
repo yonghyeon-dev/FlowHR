@@ -1,11 +1,14 @@
 import { toTimestamp, toWaitHours } from "@/app/admin/page-helpers";
 import type {
+  ApiLog,
   AttendanceRecordDto,
   LeaveRequestDto,
   PayrollRunDto
 } from "@/app/admin/page-types";
 import {
+  queueAlertLevelRank,
   matchesQueueSearch,
+  summarizeQueueAlertByRule,
   matchesQueueSearchSort,
   sortQueueSearchSortRows
 } from "@/components/admin-approval/approval-queue-helpers";
@@ -14,6 +17,7 @@ import type {
   LeaveQueueSort,
   PayrollQueueSort,
   QueueAlertLevel,
+  QueueBadgeSummary,
   QueueSearchScope,
   QueueSearchSortOption,
   QueueSearchSortRow,
@@ -29,6 +33,13 @@ export function toWaitHoursById<T>(
   referenceMs: number
 ) {
   return new Map(items.map((item) => [getId(item), toWaitHours(getStartAt(item), referenceMs)] as const));
+}
+
+export function summarizeAdminApiLogs(logs: ApiLog[]) {
+  const total = logs.length;
+  const success = logs.filter((log) => log.ok).length;
+  const fail = total - success;
+  return { total, success, fail };
 }
 
 export function resolveQueueSlaWatchHours(value: string, fallback = 24) {
@@ -286,6 +297,103 @@ export function buildQueueSearchSortRows({
   }));
 
   return [...attendanceRows, ...leaveRows, ...payrollRows];
+}
+
+type BuildQueueBadgeSummariesArgs = {
+  queueLabels: {
+    all: string;
+    attendance: string;
+    leave: string;
+    payroll: string;
+  };
+  queueSlaWatchHours: number;
+  queueSlaCriticalHours: number;
+  pendingAttendanceCount: number;
+  pendingLeaveCount: number;
+  previewedPayrollCount: number;
+  filteredPendingAttendanceCount: number;
+  filteredPendingLeaveCount: number;
+  filteredPreviewedPayrollCount: number;
+  attendanceWaitHoursValues: number[];
+  leaveWaitHoursValues: number[];
+  payrollWaitHoursValues: number[];
+};
+
+export function buildQueueBadgeSummaries({
+  queueLabels,
+  queueSlaWatchHours,
+  queueSlaCriticalHours,
+  pendingAttendanceCount,
+  pendingLeaveCount,
+  previewedPayrollCount,
+  filteredPendingAttendanceCount,
+  filteredPendingLeaveCount,
+  filteredPreviewedPayrollCount,
+  attendanceWaitHoursValues,
+  leaveWaitHoursValues,
+  payrollWaitHoursValues
+}: BuildQueueBadgeSummariesArgs): QueueBadgeSummary[] {
+  return [
+    {
+      focus: "all",
+      label: queueLabels.all,
+      pending: pendingAttendanceCount + pendingLeaveCount + previewedPayrollCount,
+      visible: filteredPendingAttendanceCount + filteredPendingLeaveCount + filteredPreviewedPayrollCount,
+      selected: 0,
+      ...summarizeQueueAlertByRule(
+        [...attendanceWaitHoursValues, ...leaveWaitHoursValues, ...payrollWaitHoursValues],
+        queueSlaWatchHours,
+        queueSlaCriticalHours
+      )
+    },
+    {
+      focus: "attendance",
+      label: queueLabels.attendance,
+      pending: pendingAttendanceCount,
+      visible: filteredPendingAttendanceCount,
+      selected: 0,
+      ...summarizeQueueAlertByRule(attendanceWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
+    },
+    {
+      focus: "leave",
+      label: queueLabels.leave,
+      pending: pendingLeaveCount,
+      visible: filteredPendingLeaveCount,
+      selected: 0,
+      ...summarizeQueueAlertByRule(leaveWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
+    },
+    {
+      focus: "payroll",
+      label: queueLabels.payroll,
+      pending: previewedPayrollCount,
+      visible: filteredPreviewedPayrollCount,
+      selected: 0,
+      ...summarizeQueueAlertByRule(payrollWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
+    }
+  ];
+}
+
+export function summarizeQueueAlertOverview(
+  queueBadgeSummaries: QueueBadgeSummary[]
+): {
+  totalCritical: number;
+  totalWatch: number;
+  hottestQueue: QueueBadgeSummary | null;
+} {
+  const queueBadges = queueBadgeSummaries.filter((badge) => badge.focus !== "all");
+  const totalCritical = queueBadges.reduce((sum, badge) => sum + badge.critical, 0);
+  const totalWatch = queueBadges.reduce((sum, badge) => sum + badge.watch, 0);
+  const hottestQueue =
+    queueBadges.length === 0
+      ? null
+      : [...queueBadges].sort((left, right) => {
+          const levelDiff = queueAlertLevelRank(right.alertLevel) - queueAlertLevelRank(left.alertLevel);
+          if (levelDiff !== 0) {
+            return levelDiff;
+          }
+          return right.oldestHours - left.oldestHours;
+        })[0];
+  return { totalCritical, totalWatch, hottestQueue };
 }
 
 type FilterQueueSearchSortRowsArgs = {

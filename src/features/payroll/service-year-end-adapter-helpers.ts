@@ -1,5 +1,5 @@
 import { ServiceError } from "@/features/shared/service-error";
-import type { PayrollRunEntity } from "@/features/shared/data-access";
+import type { AuditLogEntity, PayrollRunEntity } from "@/features/shared/data-access";
 import {
   applyYearEndDeductionCaps as applyYearEndDeductionCapsCore,
   buildYearEndInputVectorHash as buildYearEndInputVectorHashCore,
@@ -28,6 +28,7 @@ import {
   resolveYearEndSettlementHashFromFinalizationPayload as resolveYearEndSettlementHashFromFinalizationPayloadCore
 } from "@/features/payroll/year-end-audit-payload-helpers";
 import { buildYearEndFilingSubmissionSummaries as buildYearEndFilingSubmissionSummariesCore } from "@/features/payroll/year-end-filing-lifecycle-helpers";
+import { buildYearEndFilingSubmissionTimeline as buildYearEndFilingSubmissionTimelineCore } from "@/features/payroll/year-end-filing-lifecycle-helpers";
 import {
   buildYearEndFilingSubmissionId as buildYearEndFilingSubmissionIdCore,
   ensureNoPendingFilingSubmission as ensureNoPendingFilingSubmissionCore,
@@ -41,6 +42,10 @@ import {
   buildYearEndFilingGuard as buildYearEndFilingGuardCore,
   buildYearEndInsuranceReconciliationMonthlyBreakdown as buildYearEndInsuranceReconciliationMonthlyBreakdownCore
 } from "@/features/payroll/year-end-finalization-run-helpers";
+import {
+  buildYearEndWithholdingReceiptGuard as buildYearEndWithholdingReceiptGuardCore,
+  buildYearEndWithholdingReceiptSummary as buildYearEndWithholdingReceiptSummaryCore
+} from "@/features/payroll/year-end-withholding-receipt-helpers";
 import {
   toKrwInteger,
   toRateNumber,
@@ -64,6 +69,7 @@ import type {
   PayrollTotalsKrw,
   PayrollYearEndFilingSubmissionListSummary,
   PayrollYearEndFilingSubmissionSummary,
+  PayrollYearEndFilingTimelineEntry,
   PayrollYearEndWithholdingReceiptSummary,
   YearEndDeductionSummaryKrw,
   YearEndFilingGuardRunStates,
@@ -183,6 +189,13 @@ export function buildYearEndSettlementHash(payload: {
   return buildYearEndSettlementHashCore(payload);
 }
 
+export function buildYearEndFilingSubmissionTimeline(logs: unknown[], submissionId: string) {
+  return buildYearEndFilingSubmissionTimelineCore(
+    logs as AuditLogEntity[],
+    submissionId
+  ) as PayrollYearEndFilingTimelineEntry[];
+}
+
 export function normalizeYearEndSettlementHash(value: unknown): string | null {
   return normalizeYearEndSettlementHashCore(value);
 }
@@ -229,6 +242,45 @@ export function validateYearEndFilingRecords(
   payload: YearEndFinalizationAuditPayload
 ) {
   return validateYearEndFilingRecordsCore(rows, payload);
+}
+
+type YearEndWithholdingReceiptRunStates = {
+  totalRuns: number;
+  confirmedRuns: number;
+  previewedRuns: number;
+  undistributedRuns: number;
+  pendingReceiptRuns: number;
+  previewedRunIds: string[];
+  undistributedRunIds: string[];
+  pendingReceiptRunIds: string[];
+};
+
+type BuildYearEndWithholdingReceiptGuardInput = {
+  runs: PayrollRunEntity[];
+  confirmedRuns: PayrollRunEntity[];
+  previewedRuns: PayrollRunEntity[];
+};
+
+type BuildYearEndWithholdingReceiptSummaryInput = {
+  year: number;
+  employeeId: string;
+  periodStart: string;
+  periodEnd: string;
+  issue: boolean;
+  receiptNumber: string;
+  issuerName: string;
+  issuedAt: string | null;
+  runStates: YearEndWithholdingReceiptRunStates;
+  annualTotalsKrw: PayrollTotalsKrw;
+  blockingReasons: string[];
+};
+
+export function buildYearEndWithholdingReceiptGuard(input: BuildYearEndWithholdingReceiptGuardInput) {
+  return buildYearEndWithholdingReceiptGuardCore(input);
+}
+
+export function buildYearEndWithholdingReceiptSummary(input: BuildYearEndWithholdingReceiptSummaryInput) {
+  return buildYearEndWithholdingReceiptSummaryCore(input) as PayrollYearEndWithholdingReceiptSummary;
 }
 
 export function matchesYearEndFilingSubmissionFilters(

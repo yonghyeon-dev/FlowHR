@@ -113,6 +113,50 @@ export function AdminPayrollPanel({
   onReapplyPayrollPresetShareContext,
   onClearManualIncomeSplitItems
 }: AdminPayrollPanelProps) {
+  const fieldCopy = isKoLocale
+    ? {
+        previewMode: "프리뷰 모드",
+        grossOnly: "총지급만",
+        employeeId: "대상 직원 ID",
+        hourlyRate: "시급 (KRW)",
+        nonTaxableIncome: "비과세 소득(KRW)",
+        otherDeductions: "기타 공제(KRW)",
+        additionalTaxCredit: "세액공제 추가(KRW)",
+        dependentCount: "부양가족 수",
+        dependentTaxCreditPerPerson: "1인당 부양가족 공제(KRW)",
+        requireMonthlyBoundary: "월경계 강제검증(서울)",
+        disabledOption: "비활성",
+        enabledOption: "활성",
+        nationalPensionCap: "국민연금 상한(KRW, 선택)",
+        healthInsuranceCap: "건강보험 상한(KRW, 선택)",
+        employmentInsuranceCap: "고용보험 상한(KRW, 선택)",
+        lastRunId: "최근 Run ID",
+        lastRunIdPlaceholder: "확정 버튼용",
+        createPreview: "프리뷰 생성",
+        confirmRun: "Run 확정"
+      }
+    : {
+        previewMode: "Preview mode",
+        grossOnly: "Gross only",
+        employeeId: "Target employee ID",
+        hourlyRate: "Hourly rate (KRW)",
+        nonTaxableIncome: "Non-taxable income (KRW)",
+        otherDeductions: "Other deductions (KRW)",
+        additionalTaxCredit: "Additional tax credit (KRW)",
+        dependentCount: "Dependent count",
+        dependentTaxCreditPerPerson: "Dependent tax credit per person (KRW)",
+        requireMonthlyBoundary: "Require monthly boundary (Seoul)",
+        disabledOption: "Disabled",
+        enabledOption: "Enabled",
+        nationalPensionCap: "National pension cap (KRW, optional)",
+        healthInsuranceCap: "Health insurance cap (KRW, optional)",
+        employmentInsuranceCap: "Employment insurance cap (KRW, optional)",
+        lastRunId: "Recent run ID",
+        lastRunIdPlaceholder: "for confirm button",
+        createPreview: "Create preview",
+        confirmRun: "Confirm run"
+      };
+
   const headingTitle = isKoLocale ? "급여 프리뷰/확정" : "Payroll Preview/Confirm";
   const headingDescription = isKoLocale
     ? "승인된 출퇴근 기반으로 총지급을 산정하거나, 법정공제 기준 프리뷰를 생성할 수 있습니다."
@@ -178,26 +222,26 @@ export function AdminPayrollPanel({
       <p className="small muted">{valueNarrative.summaryDescription}</p>
       <div className="input-grid">
         <label>
-          프리뷰 모드
+          {fieldCopy.previewMode}
           <select value={payrollPreviewMode} onChange={(event) => onPayrollPreviewModeChange(event.target.value as PayrollPreviewMode)}>
-            <option value="gross">총지급만</option>
+            <option value="gross">{fieldCopy.grossOnly}</option>
             <option value="statutory_kr_baseline">
               {isKoLocale ? "법정공제(한국 기준)" : "Statutory deductions (KR baseline)"}
             </option>
           </select>
         </label>
         <label>
-          대상 직원 ID
+          {fieldCopy.employeeId}
           <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
         </label>
         <label>
-          시급 (KRW)
+          {fieldCopy.hourlyRate}
           <input type="number" min={1} value={payrollHourlyRateKrw} onChange={(event) => onPayrollHourlyRateKrwChange(event.target.value)} />
         </label>
         {payrollPreviewMode === "statutory_kr_baseline" ? (
           <>
             <label>
-              비과세 소득(KRW)
+              {fieldCopy.nonTaxableIncome}
               <input
                 type="number"
                 min={0}
@@ -243,11 +287,11 @@ export function AdminPayrollPanel({
               />
             </div>
             <label>
-              기타 공제(KRW)
+              {fieldCopy.otherDeductions}
               <input type="number" min={0} value={payrollOtherDeductionsKrw} onChange={(event) => onPayrollOtherDeductionsKrwChange(event.target.value)} />
             </label>
             <label>
-              세액공제 추가(KRW)
+              {fieldCopy.additionalTaxCredit}
               <input
                 type="number"
                 min={0}
@@ -256,11 +300,11 @@ export function AdminPayrollPanel({
               />
             </label>
             <label>
-              부양가족 수
+              {fieldCopy.dependentCount}
               <input type="number" min={0} value={payrollDependentCount} onChange={(event) => onPayrollDependentCountChange(event.target.value)} />
             </label>
             <label>
-              1인당 부양가족 공제(KRW)
+              {fieldCopy.dependentTaxCreditPerPerson}
               <input
                 type="number"
                 min={0}
@@ -279,37 +323,41 @@ export function AdminPayrollPanel({
               />
             </div>
             <label>
-              월경계 강제검증(서울)
+              {fieldCopy.requireMonthlyBoundary}
               <select value={payrollRequireMonthlyBoundary ? "true" : "false"} onChange={(event) => onPayrollRequireMonthlyBoundaryChange(event.target.value === "true")}>
-                <option value="false">비활성</option>
-                <option value="true">활성</option>
+                <option value="false">{fieldCopy.disabledOption}</option>
+                <option value="true">{fieldCopy.enabledOption}</option>
               </select>
             </label>
             <label>
-              국민연금 상한(KRW, 선택)
+              {fieldCopy.nationalPensionCap}
               <input type="number" min={0} value={payrollNationalPensionCapKrw} onChange={(event) => onPayrollNationalPensionCapKrwChange(event.target.value)} />
             </label>
             <label>
-              건강보험 상한(KRW, 선택)
+              {fieldCopy.healthInsuranceCap}
               <input type="number" min={0} value={payrollHealthInsuranceCapKrw} onChange={(event) => onPayrollHealthInsuranceCapKrwChange(event.target.value)} />
             </label>
             <label>
-              고용보험 상한(KRW, 선택)
+              {fieldCopy.employmentInsuranceCap}
               <input type="number" min={0} value={payrollEmploymentInsuranceCapKrw} onChange={(event) => onPayrollEmploymentInsuranceCapKrwChange(event.target.value)} />
             </label>
           </>
         ) : null}
         <label className="full">
-          최근 Run ID
-          <input value={lastPayrollRunId} onChange={(event) => onLastPayrollRunIdChange(event.target.value)} placeholder="확정 버튼용" />
+          {fieldCopy.lastRunId}
+          <input
+            value={lastPayrollRunId}
+            onChange={(event) => onLastPayrollRunIdChange(event.target.value)}
+            placeholder={fieldCopy.lastRunIdPlaceholder}
+          />
         </label>
       </div>
       <div className="actions">
         <button className="btn btn-primary" onClick={onPreviewPayroll}>
-          프리뷰 생성
+          {fieldCopy.createPreview}
         </button>
         <button className="btn btn-danger" onClick={onConfirmPayroll} disabled={!lastPayrollRunId.trim()}>
-          Run 확정
+          {fieldCopy.confirmRun}
         </button>
       </div>
     </article>

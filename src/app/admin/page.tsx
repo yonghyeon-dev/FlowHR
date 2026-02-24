@@ -19,6 +19,7 @@ import {
   resolveAdminLocaleLabelBundle
 } from "@/app/admin/page-locale-helpers";
 import {
+  buildQueueBadgeSummaries,
   buildQueueSearchSortRows,
   filterPendingAttendanceQueue,
   filterPendingLeaveQueue,
@@ -26,6 +27,8 @@ import {
   filterQueueSearchSortRows,
   resolveQueueSlaCriticalHours,
   resolveQueueSlaWatchHours,
+  summarizeAdminApiLogs,
+  summarizeQueueAlertOverview,
   toWaitHoursById
 } from "@/app/admin/page-queue-helpers";
 import type {
@@ -43,11 +46,7 @@ import type {
   WorkScheduleDto
 } from "@/app/admin/page-types";
 import { ApprovalQueuePanel } from "@/components/admin-approval/ApprovalQueuePanel";
-import {
-  queueAlertLevelRank,
-  summarizeQueueAlertByRule,
-  toQueueAlertLevelByRule
-} from "@/components/admin-approval/approval-queue-helpers";
+import { toQueueAlertLevelByRule } from "@/components/admin-approval/approval-queue-helpers";
 import {
   type ApprovalActivity,
   type AttendanceQueueSort,
@@ -285,10 +284,7 @@ export default function AdminDashboardPage() {
   }, [applyPayrollPresetShareContext]);
 
   const stats = useMemo(() => {
-    const total = logs.length;
-    const success = logs.filter((log) => log.ok).length;
-    const fail = total - success;
-    return { total, success, fail };
+    return summarizeAdminApiLogs(logs);
   }, [logs]);
 
   const {
@@ -414,59 +410,21 @@ export default function AdminDashboardPage() {
   ]);
 
   const queueBadgeSummaries = useMemo<QueueBadgeSummary[]>(
-    () => [
-      {
-        focus: "all",
-        label: queueLabels.all,
-        pending: pendingAttendance.length + pendingLeave.length + previewedPayroll.length,
-        visible:
-          filteredPendingAttendance.length +
-          filteredPendingLeave.length +
-          filteredPreviewedPayroll.length,
-        selected: 0,
-        ...summarizeQueueAlertByRule(
-          [
-          ...attendanceWaitHoursValues,
-          ...leaveWaitHoursValues,
-          ...payrollWaitHoursValues
-          ],
-          queueSlaWatchHours,
-          queueSlaCriticalHours
-        )
-      },
-      {
-        focus: "attendance",
-        label: queueLabels.attendance,
-        pending: pendingAttendance.length,
-        visible: filteredPendingAttendance.length,
-        selected: 0,
-        ...summarizeQueueAlertByRule(
-          attendanceWaitHoursValues,
-          queueSlaWatchHours,
-          queueSlaCriticalHours
-        )
-      },
-      {
-        focus: "leave",
-        label: queueLabels.leave,
-        pending: pendingLeave.length,
-        visible: filteredPendingLeave.length,
-        selected: 0,
-        ...summarizeQueueAlertByRule(leaveWaitHoursValues, queueSlaWatchHours, queueSlaCriticalHours)
-      },
-      {
-        focus: "payroll",
-        label: queueLabels.payroll,
-        pending: previewedPayroll.length,
-        visible: filteredPreviewedPayroll.length,
-        selected: 0,
-        ...summarizeQueueAlertByRule(
-          payrollWaitHoursValues,
-          queueSlaWatchHours,
-          queueSlaCriticalHours
-        )
-      }
-    ],
+    () =>
+      buildQueueBadgeSummaries({
+        queueLabels,
+        queueSlaWatchHours,
+        queueSlaCriticalHours,
+        pendingAttendanceCount: pendingAttendance.length,
+        pendingLeaveCount: pendingLeave.length,
+        previewedPayrollCount: previewedPayroll.length,
+        filteredPendingAttendanceCount: filteredPendingAttendance.length,
+        filteredPendingLeaveCount: filteredPendingLeave.length,
+        filteredPreviewedPayrollCount: filteredPreviewedPayroll.length,
+        attendanceWaitHoursValues,
+        leaveWaitHoursValues,
+        payrollWaitHoursValues
+      }),
     [
       attendanceWaitHoursValues,
       filteredPendingAttendance.length,
@@ -477,10 +435,7 @@ export default function AdminDashboardPage() {
       pendingLeave.length,
       payrollWaitHoursValues,
       previewedPayroll.length,
-      queueLabels.all,
-      queueLabels.attendance,
-      queueLabels.leave,
-      queueLabels.payroll,
+      queueLabels,
       queueSlaCriticalHours,
       queueSlaWatchHours
     ]
@@ -489,22 +444,10 @@ export default function AdminDashboardPage() {
   const activeQueueBadgeSummary =
     queueBadgeSummaries.find((badge) => badge.focus === approvalQueueFocus) ?? queueBadgeSummaries[0];
 
-  const queueAlertOverview = useMemo(() => {
-    const queueBadges = queueBadgeSummaries.filter((badge) => badge.focus !== "all");
-    const totalCritical = queueBadges.reduce((sum, badge) => sum + badge.critical, 0);
-    const totalWatch = queueBadges.reduce((sum, badge) => sum + badge.watch, 0);
-    const hottestQueue =
-      queueBadges.length === 0
-        ? null
-        : [...queueBadges].sort((left, right) => {
-            const levelDiff = queueAlertLevelRank(right.alertLevel) - queueAlertLevelRank(left.alertLevel);
-            if (levelDiff !== 0) {
-              return levelDiff;
-            }
-            return right.oldestHours - left.oldestHours;
-          })[0];
-    return { totalCritical, totalWatch, hottestQueue };
-  }, [queueBadgeSummaries]);
+  const queueAlertOverview = useMemo(
+    () => summarizeQueueAlertOverview(queueBadgeSummaries),
+    [queueBadgeSummaries]
+  );
 
   const queueSearchSortRows = useMemo<QueueSearchSortRow[]>(() => {
     return buildQueueSearchSortRows({
