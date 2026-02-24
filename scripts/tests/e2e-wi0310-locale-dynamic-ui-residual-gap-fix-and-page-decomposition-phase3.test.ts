@@ -10,6 +10,7 @@ async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminLocaleHelpers = readUtf8("src", "app", "admin", "page-locale-helpers.ts");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const adminChrome = readUtf8("src", "components", "admin-dashboard", "AdminDashboardChrome.tsx");
   const adminDebugLogsPanel = readUtf8(
     "src",
@@ -99,7 +100,12 @@ async function run() {
   assert.match(employeeAccountOverviewPanels, /Refresh My Data/);
   assert.match(employeeRequestFeedbackPanels, /Request search and sort list/);
   assert.match(employeeResubmitPanel, /Resubmit flow checks/);
-  assert.match(employeePage, /success:\s*isKoLocale \?\s*"[^"]+"\s*:\s*"Success"/);
+  assert.match(employeePage, /from "@\/app\/employee\/page-locale-helpers"/);
+  assert.match(
+    employeePage,
+    /const localeLabelBundle = useMemo\(\(\) => resolveEmployeeLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
+  );
+  assert.match(employeeLocaleHelpers, /success:\s*"Success"/);
 
   assert.match(workItem, /WI-0310/i);
   assert.match(workItem, /locale/i);
