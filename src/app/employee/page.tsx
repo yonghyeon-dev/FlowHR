@@ -76,7 +76,8 @@ export default function EmployeeSelfServicePage() {
     notConfiguredLabel,
     preSubmitStatusLabels,
     requestStatusLabels,
-    runtimeLocale
+    runtimeLocale,
+    surfaceCopy
   } = localeLabelBundle;
 
   const [accessToken, setAccessToken] = useState("");
@@ -145,6 +146,8 @@ export default function EmployeeSelfServicePage() {
   const newestLog = logs[0];
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
+  const { attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } =
+    surfaceCopy;
 
   useEffect(() => {
     if (!isProductionRuntime) {
@@ -1493,7 +1496,7 @@ export default function EmployeeSelfServicePage() {
 
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
-      return "비교 대상 없음";
+      return attendanceCopy.noComparisonTarget;
     }
     const originalNetMinutes = calculateNetMinutes({
       checkInAt: selectedCorrectionRecord.checkInAt,
@@ -1510,7 +1513,7 @@ export default function EmployeeSelfServicePage() {
       return isKoLocale ? "비교 불가" : "Not comparable";
     }
     return formatEmployeeDeltaMinutes(draftNetMinutes - originalNetMinutes, isKoLocale);
-  }, [breakMinutes, checkInAt, checkOutAt, isKoLocale, selectedCorrectionRecord]);
+  }, [attendanceCopy.noComparisonTarget, breakMinutes, checkInAt, checkOutAt, isKoLocale, selectedCorrectionRecord]);
 
   function applyAttendanceRecordToCorrectionForm(record: AttendanceRecordDto) {
     setSelectedCorrectionRecordId(record.id);
@@ -1632,39 +1635,39 @@ export default function EmployeeSelfServicePage() {
           <h2>{isKoLocale ? "출퇴근" : "Attendance"}</h2>
           <div className="input-grid">
             <label>
-              {isKoLocale ? "출근 시각" : "Check-in time"}
+              {attendanceCopy.checkInTime}
               <input type="datetime-local" value={checkInAt} onChange={(event) => setCheckInAt(event.target.value)} />
             </label>
             <label>
-              {isKoLocale ? "퇴근 시각" : "Check-out time"}
+              {attendanceCopy.checkOutTime}
               <input type="datetime-local" value={checkOutAt} onChange={(event) => setCheckOutAt(event.target.value)} />
             </label>
             <label>
-              {isKoLocale ? "휴게 분" : "Break minutes"}
+              {attendanceCopy.breakMinutes}
               <input type="number" min={0} value={breakMinutes} onChange={(event) => setBreakMinutes(event.target.value)} />
             </label>
             <label>
-              {isKoLocale ? "휴일 근무" : "Holiday work"}
+              {attendanceCopy.holidayWork}
               <select value={isHoliday ? "yes" : "no"} onChange={(event) => setIsHoliday(event.target.value === "yes")}>
-                <option value="no">{isKoLocale ? "아니오" : "No"}</option>
-                <option value="yes">{isKoLocale ? "예" : "Yes"}</option>
+                <option value="no">{attendanceCopy.noOption}</option>
+                <option value="yes">{attendanceCopy.yesOption}</option>
               </select>
             </label>
             <label className="full">
-              {isKoLocale ? "정정/메모" : "Correction note"}
+              {attendanceCopy.correctionNote}
               <input value={attendanceNotes} onChange={(event) => setAttendanceNotes(event.target.value)} />
             </label>
             <label className="full">
-              {isKoLocale ? "최근/대상 기록 ID" : "Recent/target record ID"}
+              {attendanceCopy.recentTargetRecordId}
               <input value={lastAttendanceId} onChange={(event) => setLastAttendanceId(event.target.value)} />
             </label>
             <label className="full">
-              {isKoLocale ? "정정 대상 기록 선택" : "Select correction target record"}
+              {attendanceCopy.selectCorrectionTargetRecord}
               <select
                 value={selectedCorrectionRecordId}
                 onChange={(event) => selectCorrectionTarget(event.target.value)}
               >
-                <option value="">{isKoLocale ? "최근 기록에서 선택" : "Select from recent records"}</option>
+                <option value="">{attendanceCopy.selectFromRecentRecords}</option>
                 {attendance.map((record) => (
                   <option key={record.id} value={record.id}>
                     {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} ({toRequestStatusLabel(record.state)})
@@ -1674,17 +1677,17 @@ export default function EmployeeSelfServicePage() {
             </label>
           </div>
           <p className="small muted" style={{ margin: "4px 0 0" }}>
-            {isKoLocale ? "근무시간 변화" : "Work-time delta"}: <strong>{correctionDeltaLabel}</strong>
+            {attendanceCopy.workTimeDelta}: <strong>{correctionDeltaLabel}</strong>
           </p>
           <div className="pre-submit-check-wrap">
             <p className="small" style={{ margin: "8px 0 0" }}>
-              {isKoLocale ? "제출 직전 검증" : "Pre-submit checks"} (
+              {attendanceCopy.preSubmitChecks} (
               {attendancePreSubmitChecks.filter((check) => check.pass).length}/{attendancePreSubmitChecks.length}{" "}
-              {isKoLocale ? "통과" : "passed"})
+              {attendanceCopy.passed})
             </p>
             <ul
               className="pre-submit-check-list"
-              aria-label={isKoLocale ? "출퇴근 제출 직전 검증" : "Attendance pre-submit checks"}
+              aria-label={attendanceCopy.preSubmitChecksAriaLabel}
             >
               {attendancePreSubmitChecks.map((check) => (
                 <li key={check.id} className={check.pass ? "pass" : "fail"}>
@@ -1702,27 +1705,27 @@ export default function EmployeeSelfServicePage() {
           ) : null}
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void createAttendance()}>
-              {isKoLocale ? "출퇴근 기록 생성" : "Create attendance record"}
+              {callApiLabels.createAttendance}
             </button>
             <button className="btn btn-secondary" onClick={() => void checkOutNow()} disabled={!lastAttendanceId}>
-              {isKoLocale ? "퇴근 처리(지금)" : "Check-out now"}
+              {callApiLabels.checkOutNow}
             </button>
             <button
               className="btn btn-secondary"
               onClick={() => void requestAttendanceCorrection()}
               disabled={!correctionValidation.isValid || !attendancePreSubmitValid}
             >
-              {isKoLocale ? "출퇴근 정정(요청)" : "Request attendance correction"}
+              {callApiLabels.requestAttendanceCorrection}
             </button>
             <button
               className="btn btn-secondary"
               onClick={applySelectedCorrectionRecord}
               disabled={!selectedCorrectionRecord}
             >
-              {isKoLocale ? "선택 기록 불러오기" : "Load selected record"}
+              {attendanceCopy.loadSelectedRecord}
             </button>
             <button className="btn btn-secondary" onClick={applyLatestAttendanceToCorrectionForm} disabled={!latestAttendance}>
-              {isKoLocale ? "최근 기록 불러오기" : "Load latest record"}
+              {attendanceCopy.loadLatestRecord}
             </button>
             {attendanceNotePresets.map((preset) => (
               <button key={preset} className="btn btn-secondary" onClick={() => setAttendanceNotes(preset)}>
@@ -1734,7 +1737,7 @@ export default function EmployeeSelfServicePage() {
             {attendance.length === 0 ? (
               <li>
                 <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{isKoLocale ? "출퇴근 기록이 없습니다." : "No attendance records."}</span>
+                <span>{attendanceCopy.noRecords}</span>
                 <time>-</time>
               </li>
             ) : (
@@ -1747,7 +1750,7 @@ export default function EmployeeSelfServicePage() {
                     {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)}
                   </span>
                   <button className="btn btn-secondary" onClick={() => applyAttendanceRecordToCorrectionForm(record)}>
-                    {isKoLocale ? "선택" : "Select"}
+                    {attendanceCopy.selectAction}
                   </button>
                   <time>{record.id}</time>
                 </li>
@@ -1761,7 +1764,7 @@ export default function EmployeeSelfServicePage() {
           <p className="small">{leaveBalanceSummary}</p>
           <div className="input-grid">
             <label>
-              {isKoLocale ? "휴가 유형" : "Leave type"}
+              {leaveCopy.leaveType}
               <select value={leaveType} onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}>
                 <option value="ANNUAL">{toLeaveTypeLabel("ANNUAL")}</option>
                 <option value="SICK">{toLeaveTypeLabel("SICK")}</option>
@@ -1769,52 +1772,52 @@ export default function EmployeeSelfServicePage() {
               </select>
             </label>
             <label>
-              {isKoLocale ? "신청 단위" : "Request unit"}
+              {leaveCopy.requestUnit}
               <select
                 value={leaveUnit}
                 onChange={(event) => setLeaveUnit(event.target.value as "FULL_DAY" | "HALF_DAY" | "HOUR")}
               >
-                <option value="FULL_DAY">{isKoLocale ? "일 단위" : "Full day"}</option>
-                <option value="HALF_DAY">{isKoLocale ? "반차" : "Half day"}</option>
-                <option value="HOUR">{isKoLocale ? "시간 단위" : "Hourly"}</option>
+                <option value="FULL_DAY">{leaveCopy.fullDay}</option>
+                <option value="HALF_DAY">{leaveCopy.halfDay}</option>
+                <option value="HOUR">{leaveCopy.hourly}</option>
               </select>
             </label>
             <label>
-              {isKoLocale ? "시작일" : "Start date"}
+              {leaveCopy.startDate}
               <input type="datetime-local" value={leaveStartDate} onChange={(event) => setLeaveStartDate(event.target.value)} />
             </label>
             <label>
-              {isKoLocale ? "종료일" : "End date"}
+              {leaveCopy.endDate}
               <input type="datetime-local" value={leaveEndDate} onChange={(event) => setLeaveEndDate(event.target.value)} />
             </label>
             {leaveUnit === "HOUR" ? (
               <label>
-                {isKoLocale ? "시간(시)" : "Hours"}
+                {leaveCopy.hours}
                 <input value={leaveHours} onChange={(event) => setLeaveHours(event.target.value)} />
               </label>
             ) : null}
             <label>
-              {isKoLocale ? "취소 사유" : "Cancel reason"}
+              {leaveCopy.cancelReason}
               <input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
             </label>
             <label className="full">
-              {isKoLocale ? "신청 사유(선택)" : "Request reason (optional)"}
+              {leaveCopy.requestReasonOptional}
               <input value={leaveReason} onChange={(event) => setLeaveReason(event.target.value)} />
             </label>
             <label className="full">
-              {isKoLocale ? "최근/대상 요청 ID" : "Recent/target request ID"}
+              {leaveCopy.recentTargetRequestId}
               <input value={lastLeaveRequestId} onChange={(event) => setLastLeaveRequestId(event.target.value)} />
             </label>
           </div>
           <div className="pre-submit-check-wrap">
             <p className="small" style={{ margin: "8px 0 0" }}>
-              {isKoLocale ? "제출 직전 검증" : "Pre-submit checks"} (
+              {leaveCopy.preSubmitChecks} (
               {leavePreSubmitChecks.filter((check) => check.pass).length}/{leavePreSubmitChecks.length}{" "}
-              {isKoLocale ? "통과" : "passed"})
+              {leaveCopy.passed})
             </p>
             <ul
               className="pre-submit-check-list"
-              aria-label={isKoLocale ? "휴가 제출 직전 검증" : "Leave pre-submit checks"}
+              aria-label={leaveCopy.preSubmitChecksAriaLabel}
             >
               {leavePreSubmitChecks.map((check) => (
                 <li key={check.id} className={check.pass ? "pass" : "fail"}>
@@ -1825,30 +1828,30 @@ export default function EmployeeSelfServicePage() {
               ))}
             </ul>
           </div>
-          <div className="leave-quick-actions" role="group" aria-label={isKoLocale ? "휴가 빠른 입력" : "Leave quick presets"}>
+          <div className="leave-quick-actions" role="group" aria-label={leaveCopy.quickPresetsAriaLabel}>
             <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("today-half")}>
-              {isKoLocale ? "오늘 반차" : "Today half-day"}
+              {leaveCopy.todayHalfDay}
             </button>
             <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("tomorrow-full")}>
-              {isKoLocale ? "내일 하루" : "Tomorrow full-day"}
+              {leaveCopy.tomorrowFullDay}
             </button>
             <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("next-week-full")}>
-              {isKoLocale ? "다음주 월요일" : "Next Monday"}
+              {leaveCopy.nextMonday}
             </button>
           </div>
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void createLeave()} disabled={!leavePreSubmitValid}>
-              {isKoLocale ? "휴가 신청" : "Create leave request"}
+              {callApiLabels.createLeave}
             </button>
             <button className="btn btn-secondary" onClick={() => void cancelLeave()} disabled={!lastLeaveRequestId}>
-              {isKoLocale ? "휴가 취소" : "Cancel leave request"}
+              {callApiLabels.cancelLeave}
             </button>
           </div>
           <ul className="log-list">
             {leaveRequests.length === 0 ? (
               <li>
                 <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{isKoLocale ? "휴가 요청이 없습니다." : "No leave requests."}</span>
+                <span>{leaveCopy.noRequests}</span>
                 <time>-</time>
               </li>
             ) : (
@@ -1859,15 +1862,11 @@ export default function EmployeeSelfServicePage() {
                   </span>
                   <span>
                     {toLeaveTypeLabel(request.leaveType)} / {formatDateTime(request.startDate)} ~ {formatDateTime(request.endDate)} (
-                    {isKoLocale ? `${formatDays(request.days)}일` : `${formatDays(request.days)}d`}
+                    {`${formatDays(request.days)}${leaveCopy.dayUnitSuffix}`}
                     {request.unit === "HOUR" && request.hours !== null
-                      ? isKoLocale
-                        ? ` / ${request.hours.toFixed(2)}시간`
-                        : ` / ${request.hours.toFixed(2)}h`
+                      ? ` / ${request.hours.toFixed(2)}${leaveCopy.hourUnitSuffix}`
                       : request.unit === "HALF_DAY"
-                        ? isKoLocale
-                          ? " / 반차"
-                          : " / Half day"
+                        ? ` / ${leaveCopy.halfDaySuffix}`
                         : ""}
                     )
                   </span>
@@ -1881,23 +1880,21 @@ export default function EmployeeSelfServicePage() {
         <article className="panel" id="leave-calendar">
           <h2>{isKoLocale ? "휴가 캘린더" : "Leave calendar"}</h2>
           <p className="small">
-            {isKoLocale ? "연차 사용률" : "Leave usage rate"} {leaveUsageRatePercent}% (
-            {isKoLocale ? "사용" : "used"} {formatDays(leaveBalance?.usedDays ?? 0)} /{" "}
-            {isKoLocale ? "부여" : "granted"} {formatDays(leaveBalance?.grantedDays ?? 0)})
+            {leaveCalendarCopy.usageRateLabel} {leaveUsageRatePercent}% ({leaveCalendarCopy.usedLabel}{" "}
+            {formatDays(leaveBalance?.usedDays ?? 0)} / {leaveCalendarCopy.grantedLabel}{" "}
+            {formatDays(leaveBalance?.grantedDays ?? 0)})
           </p>
-          <div className="leave-balance-visual" aria-label={isKoLocale ? "연차 잔여 시각화" : "Leave balance visualization"}>
+          <div className="leave-balance-visual" aria-label={leaveCalendarCopy.visualizationAriaLabel}>
             <div className="leave-usage-ring" style={leaveUsageRingStyle}>
               <div>
                 <strong>{leaveUsageRatePercent}%</strong>
-                <span>{isKoLocale ? "사용률" : "Usage rate"}</span>
+                <span>{leaveCalendarCopy.usageRateShort}</span>
               </div>
             </div>
             <div className="leave-balance-cards">
               {leaveBalanceCards.length === 0 ? (
                 <p className="small">
-                  {isKoLocale
-                    ? "잔여 연차 데이터를 불러오면 시각화가 활성화됩니다."
-                    : "Visualization is enabled after leave balance is loaded."}
+                  {leaveCalendarCopy.visualizationHint}
                 </p>
               ) : (
                 leaveBalanceCards.map((card) => (
@@ -1912,17 +1909,17 @@ export default function EmployeeSelfServicePage() {
           <p className="small leave-projection">{leaveUsageProjectionLabel}</p>
           <div className="leave-calendar-toolbar">
             <strong>
-              {leaveCalendarMonthLabel} {isKoLocale ? "밀도 보기" : "density view"}
+              {leaveCalendarMonthLabel} {leaveCalendarCopy.densityViewLabel}
             </strong>
-            <div className="leave-calendar-shortcuts" aria-label={isKoLocale ? "캘린더 빠른 이동" : "Calendar quick navigation"}>
+            <div className="leave-calendar-shortcuts" aria-label={leaveCalendarCopy.quickNavigationAriaLabel}>
               <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(-1)}>
-                {isKoLocale ? "이전 달" : "Previous month"}
+                {leaveCalendarCopy.previousMonth}
               </button>
               <button className="btn btn-secondary btn-small" onClick={() => void resetCalendarToCurrentMonth()}>
-                {isKoLocale ? "이번 달" : "Current month"}
+                {leaveCalendarCopy.currentMonth}
               </button>
               <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(1)}>
-                {isKoLocale ? "다음 달" : "Next month"}
+                {leaveCalendarCopy.nextMonth}
               </button>
             </div>
           </div>
@@ -1946,33 +1943,25 @@ export default function EmployeeSelfServicePage() {
                   .trim()}
                 title={
                   cell.requestCount === 0
-                    ? isKoLocale
-                      ? `${cell.dateKey}: 휴가 일정 없음`
-                      : `${cell.dateKey}: no leave schedule`
-                    : isKoLocale
-                      ? `${cell.dateKey}: ${cell.requestCount}건 (승인 ${cell.approvedCount}, 대기 ${cell.pendingCount}, 반려/취소 ${cell.rejectedCount})`
-                      : `${cell.dateKey}: ${cell.requestCount} items (approved ${cell.approvedCount}, pending ${cell.pendingCount}, rejected/canceled ${cell.rejectedCount})`
+                    ? `${cell.dateKey}: ${leaveCalendarCopy.noScheduleInDateLabel}`
+                    : `${cell.dateKey}: ${cell.requestCount}${leaveCalendarCopy.itemSuffix} (${leaveCalendarCopy.approvedLabel} ${cell.approvedCount}, ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount}, ${leaveCalendarCopy.rejectedOrCanceledLabel} ${cell.rejectedCount})`
                 }
               >
                 <div className="leave-day-head">
                   <span>{cell.dayOfMonth}</span>
-                  {cell.requestCount > 0 ? <strong>{isKoLocale ? `${cell.requestCount}건` : `${cell.requestCount} items`}</strong> : null}
+                  {cell.requestCount > 0 ? <strong>{`${cell.requestCount}${leaveCalendarCopy.itemSuffix}`}</strong> : null}
                 </div>
                 <p>
                   {cell.requestCount === 0
-                    ? isKoLocale
-                      ? "일정 없음"
-                      : "No schedule"
-                    : isKoLocale
-                      ? `승인 ${cell.approvedCount} / 대기 ${cell.pendingCount} / 반려 ${cell.rejectedCount}`
-                      : `Approved ${cell.approvedCount} / Pending ${cell.pendingCount} / Rejected ${cell.rejectedCount}`}
+                    ? leaveCalendarCopy.noScheduleLabel
+                    : `${leaveCalendarCopy.approvedLabel} ${cell.approvedCount} / ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount} / ${leaveCalendarCopy.rejectedLabel} ${cell.rejectedCount}`}
                 </p>
               </article>
             ))}
           </div>
           {leaveCalendarRows.length === 0 ? (
             <p className="small" style={{ marginTop: 12 }}>
-              {isKoLocale ? "이번 조회 구간에 휴가 일정이 없습니다." : "No leave schedule in the current range."}
+              {leaveCalendarCopy.noScheduleInRange}
             </p>
           ) : (
             <ul className="simple-list leave-calendar-list" style={{ marginTop: 12 }}>
@@ -1997,7 +1986,7 @@ export default function EmployeeSelfServicePage() {
           {showDevTools ? (
             <div className="actions">
               <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-                {isKoLocale ? "(dev) 스케줄링 Cockpit" : "(dev) Scheduling Cockpit"}
+                {scheduleCopy.devSchedulingCockpit}
               </Link>
             </div>
           ) : null}
@@ -2005,7 +1994,7 @@ export default function EmployeeSelfServicePage() {
             {schedules.length === 0 ? (
               <li>
                 <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{isKoLocale ? "근무 일정이 없습니다." : "No schedules."}</span>
+                <span>{scheduleCopy.noSchedules}</span>
                 <time>-</time>
               </li>
             ) : (
@@ -2014,7 +2003,7 @@ export default function EmployeeSelfServicePage() {
                   <span className="ok">{schedule.isHoliday ? listBadgeLabels.holiday : listBadgeLabels.work}</span>
                   <span>
                     {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (
-                    {isKoLocale ? `휴게 ${schedule.breakMinutes}분` : `Break ${schedule.breakMinutes}m`})
+                    {scheduleCopy.breakMinutesFormat(schedule.breakMinutes)})
                   </span>
                   <time>{schedule.id}</time>
                 </li>
@@ -2027,15 +2016,12 @@ export default function EmployeeSelfServicePage() {
           <article className="panel panel-log">
             <h2>{isKoLocale ? "API 실행 로그" : "API execution logs"}</h2>
             <p className="small">
-              {isKoLocale ? "현재 실행 중" : "Running now"}: <strong>{pendingLabel ?? (isKoLocale ? "없음" : "none")}</strong>{" "}
-              / {isKoLocale ? "총 호출" : "Total calls"} {stats.total}
-              {isKoLocale
-                ? `건 (성공 ${stats.success}건, 실패 ${stats.fail}건)`
-                : ` (success ${stats.success}, fail ${stats.fail})`}
+              {apiLogsCopy.runningNow}: <strong>{pendingLabel ?? apiLogsCopy.none}</strong> / {apiLogsCopy.totalCalls} {stats.total}
+              {apiLogsCopy.summary(stats.success, stats.fail)}
             </p>
             <div className="actions">
               <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
-                {isKoLocale ? "로그 초기화" : "Clear logs"}
+                {apiLogsCopy.clearLogs}
               </button>
             </div>
             <pre>{latestPayload}</pre>
