@@ -4,6 +4,9 @@ import { useMemo } from "react";
 
 import { useI18n } from "@/lib/i18n/provider";
 
+import { ApprovalQueueActivitySection } from "./ApprovalQueueActivitySection";
+import { ApprovalQueueBadgeAndAlert } from "./ApprovalQueueBadgeAndAlert";
+import { ApprovalQueueFilterSection } from "./ApprovalQueueFilterSection";
 import { ApprovalQueueSearchSortPanel } from "./ApprovalQueueSearchSortPanel";
 import {
   type ApprovalActivity,
@@ -212,156 +215,37 @@ export function ApprovalQueuePanel({
         </button>
       </div>
 
-      <div className="queue-badge-strip" role="tablist" aria-label={copy.filterAriaLabel}>
-        {queueBadgeSummaries.map((badge) => (
-          <button
-            key={badge.focus}
-            type="button"
-            role="tab"
-            aria-selected={approvalQueueFocus === badge.focus}
-            className={`queue-badge${approvalQueueFocus === badge.focus ? " active" : ""}`}
-            onClick={() => onApprovalQueueFocusChange(badge.focus)}
-          >
-            <span className="queue-badge-title">{badge.label}</span>
-            <span className="queue-badge-count">
-              {copy.waiting} {badge.pending}
-            </span>
-            <span className={`queue-badge-alert alert-${badge.alertLevel}`}>
-              {badge.alertLevel === "critical"
-                ? `${copy.critical} ${badge.critical}`
-                : badge.alertLevel === "watch"
-                  ? `${copy.watch} ${badge.watch}`
-                  : copy.normal}
-            </span>
-            <span className="queue-badge-meta">
-              {copy.searchResult} {badge.visible}
-              {copy.summaryConnector}
-              {copy.oldest} {Math.round(badge.oldestHours)}h
-              {badge.selected > 0 ? `${copy.summaryConnector}${copy.selected} ${badge.selected}` : ""}
-            </span>
-          </button>
-        ))}
-      </div>
+      <ApprovalQueueBadgeAndAlert
+        copy={copy}
+        queueBadgeSummaries={queueBadgeSummaries}
+        approvalQueueFocus={approvalQueueFocus}
+        queueAlertOverview={queueAlertOverview}
+        onApprovalQueueFocusChange={onApprovalQueueFocusChange}
+      />
 
-      <div className="queue-alert-strip" aria-label={copy.alertSummaryAriaLabel}>
-        <article className="queue-alert-card tone-critical">
-          <p>{copy.criticalQueue}</p>
-          <strong>
-            {queueAlertOverview.totalCritical}
-            {copy.countUnit}
-          </strong>
-        </article>
-        <article className="queue-alert-card tone-watch">
-          <p>{copy.watchQueue}</p>
-          <strong>
-            {queueAlertOverview.totalWatch}
-            {copy.countUnit}
-          </strong>
-        </article>
-        <article className="queue-alert-card tone-hot">
-          <p>{copy.hottestQueue}</p>
-          <strong>{queueAlertOverview.hottestQueue?.label ?? "-"}</strong>
-        </article>
-      </div>
-
-      <div className="input-grid" style={{ marginTop: 12 }}>
-        <label>
-          {copy.periodStart}
-          <input type="datetime-local" value={periodStart} onChange={(event) => onPeriodStartChange(event.target.value)} />
-        </label>
-        <label>
-          {copy.periodEnd}
-          <input type="datetime-local" value={periodEnd} onChange={(event) => onPeriodEndChange(event.target.value)} />
-        </label>
-        <label>
-          {copy.searchScope}
-          <select
-            value={approvalQueueSearchScope}
-            onChange={(event) => onApprovalQueueSearchScopeChange(event.target.value as QueueSearchScope)}
-          >
-            <option value="all">{copy.searchScopeAll}</option>
-            <option value="employee">{copy.searchScopeEmployee}</option>
-            <option value="request_id">{copy.searchScopeRequestId}</option>
-            <option value="content">{copy.searchScopeContent}</option>
-          </select>
-        </label>
-        <label className="full">
-          {copy.query}
-          <input
-            value={approvalQueueSearch}
-            onChange={(event) => onApprovalQueueSearchChange(event.target.value)}
-            placeholder={copy.queryPlaceholder}
-          />
-        </label>
-        <div className="queue-toggle-row full" role="group" aria-label={copy.filterAriaLabel}>
-          <button type="button" className={`queue-toggle-chip${approvalQueueOnlyUrgent ? " active" : ""}`} onClick={onToggleUrgentOnly}>
-            {copy.urgentOnly}
-          </button>
-          <button type="button" className={`queue-toggle-chip${approvalQueueSelectedOnly ? " active" : ""}`} onClick={onToggleSelectedOnly}>
-            {copy.selectedOnly}
-          </button>
-          <button type="button" className="queue-toggle-chip" onClick={onResetQuickFilters}>
-            {copy.resetFilter}
-          </button>
-        </div>
-        <label className="full">
-          {copy.attendanceRejectReason}
-          <input
-            value={attendanceRejectReason}
-            onChange={(event) => onAttendanceRejectReasonChange(event.target.value)}
-            placeholder={copy.attendanceRejectReasonPlaceholder}
-          />
-        </label>
-        <label className="full">
-          {copy.leaveRejectReason}
-          <input
-            value={leaveRejectReason}
-            onChange={(event) => onLeaveRejectReasonChange(event.target.value)}
-            placeholder={copy.leaveRejectReasonPlaceholder}
-          />
-        </label>
-      </div>
-
-      <div className="queue-mobile-sticky" role="region" aria-label={copy.mobileQuickActions}>
-        <p>{copy.mobileQuickActions}</p>
-        <div className="queue-mobile-actions">
-          <button type="button" className="btn btn-secondary btn-small" onClick={onApplyUrgentPreset}>
-            {copy.urgentOnly}
-          </button>
-          <button type="button" className="btn btn-secondary btn-small" onClick={onApplyPendingPreset}>
-            {copy.pendingFirst}
-          </button>
-          <button type="button" className="btn btn-secondary btn-small" onClick={onRefreshInbox}>
-            {copy.refreshInbox}
-          </button>
-          <button type="button" className="btn btn-secondary btn-small" onClick={onResetQuickFilters}>
-            {copy.resetFilter}
-          </button>
-        </div>
-      </div>
-
-      <p className="small" style={{ marginTop: 10 }}>
-        {activeQueueBadgeSummary.label}
-        {copy.summaryConnector}
-        {copy.waiting} {activeQueueBadgeSummary.pending}
-        {copy.countUnit}
-        {copy.summaryConnector}
-        {copy.searchResult} {activeQueueBadgeSummary.visible}
-        {copy.countUnit}
-        {activeQueueBadgeSummary.selected > 0
-          ? `${copy.summaryConnector}${copy.selected} ${activeQueueBadgeSummary.selected}${copy.countUnit}`
-          : ""}
-        {copy.summaryConnector}
-        {activeAlertLabel}
-        {approvalQueueSelectedOnly && activeQueueBadgeSummary.focus !== "payroll"
-          ? `${copy.summaryConnector}${copy.selectedFilterOn}`
-          : ""}
-      </p>
-      {approvalQueueSelectedOnly && (approvalQueueFocus === "all" || approvalQueueFocus === "payroll") ? (
-        <p className="small muted" style={{ marginTop: 6 }}>
-          {copy.selectedFilterUnavailable}
-        </p>
-      ) : null}
+      <ApprovalQueueFilterSection
+        copy={copy}
+        periodStart={periodStart}
+        periodEnd={periodEnd}
+        approvalQueueSearchScope={approvalQueueSearchScope}
+        approvalQueueSearch={approvalQueueSearch}
+        approvalQueueOnlyUrgent={approvalQueueOnlyUrgent}
+        approvalQueueSelectedOnly={approvalQueueSelectedOnly}
+        attendanceRejectReason={attendanceRejectReason}
+        leaveRejectReason={leaveRejectReason}
+        onPeriodStartChange={onPeriodStartChange}
+        onPeriodEndChange={onPeriodEndChange}
+        onApprovalQueueSearchScopeChange={onApprovalQueueSearchScopeChange}
+        onApprovalQueueSearchChange={onApprovalQueueSearchChange}
+        onToggleUrgentOnly={onToggleUrgentOnly}
+        onToggleSelectedOnly={onToggleSelectedOnly}
+        onResetQuickFilters={onResetQuickFilters}
+        onAttendanceRejectReasonChange={onAttendanceRejectReasonChange}
+        onLeaveRejectReasonChange={onLeaveRejectReasonChange}
+        onApplyPendingPreset={onApplyPendingPreset}
+        onApplyUrgentPreset={onApplyUrgentPreset}
+        onRefreshInbox={onRefreshInbox}
+      />
 
       <ApprovalQueueSearchSortPanel
         queueSearchSortScope={queueSearchSortScope}
@@ -377,38 +261,15 @@ export function ApprovalQueuePanel({
         onFocusQueue={onApprovalQueueFocusChange}
       />
 
-      <hr className="divider" />
-      <div className="actions">
-        <p className="small" style={{ margin: 0 }}>
-          {copy.recentHistory} ({approvalActivities.length}
-          {copy.countUnit})
-        </p>
-        <button
-          type="button"
-          className="btn btn-secondary btn-small"
-          onClick={onClearApprovalActivities}
-          disabled={approvalActivities.length === 0}
-        >
-          {copy.clearHistory}
-        </button>
-      </div>
-      {approvalActivities.length === 0 ? (
-        <p className="small muted">{copy.noHistory}</p>
-      ) : (
-        <ul className="simple-list" aria-label={copy.recentHistory}>
-          {approvalActivities.map((activity) => (
-            <li key={activity.id}>
-              <span>
-                <span className={activity.ok ? "ok" : "fail"}>{activity.ok ? copy.ok : copy.fail}</span>{" "}
-                <strong>[{activity.queue}]</strong> {activity.action} · {activity.itemId}{" "}
-                <span className="muted">
-                  ({activity.status} · {activity.at})
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ApprovalQueueActivitySection
+        copy={copy}
+        activeQueueBadgeSummary={activeQueueBadgeSummary}
+        activeAlertLabel={activeAlertLabel}
+        approvalQueueSelectedOnly={approvalQueueSelectedOnly}
+        approvalQueueFocus={approvalQueueFocus}
+        approvalActivities={approvalActivities}
+        onClearApprovalActivities={onClearApprovalActivities}
+      />
     </article>
   );
 }
