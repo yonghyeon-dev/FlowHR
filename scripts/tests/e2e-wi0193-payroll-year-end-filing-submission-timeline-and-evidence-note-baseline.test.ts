@@ -81,8 +81,16 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
-  assert.match(filingConsoleSource, /Load Submission Timeline/, "filing console should expose timeline action");
-  assert.match(filingConsoleSource, /Add Evidence Note/, "filing console should expose evidence-note action");
+  assert.match(
+    filingConsoleSource,
+    /copy\.loadSubmissionTimelineAction/,
+    "filing console should expose timeline action with locale copy"
+  );
+  assert.match(
+    filingConsoleSource,
+    /copy\.addEvidenceNoteAction/,
+    "filing console should expose evidence-note action with locale copy"
+  );
   assert.match(payrollApiSpec, /\/payroll\/year-end\/filing-submissions\/\{submissionId\}\/timeline:/, "api spec should include timeline endpoint");
   assert.match(payrollApiSpec, /\/payroll\/year-end\/filing-submissions\/\{submissionId\}\/evidence-note:/, "api spec should include evidence-note endpoint");
   assert.match(payrollContract, /payroll\.year_end\.filing_evidence_note\.added\.v1/, "contract should include evidence-note event");

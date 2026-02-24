@@ -80,13 +80,13 @@ async function run() {
 
   assert.match(
     filingConsoleSource,
-    /Submission Status Filter/,
-    "filing console should expose submission status filter"
+    /copy\.submissionStatusFilterLabel/,
+    "filing console should expose submission status filter with locale copy"
   );
   assert.match(
     filingConsoleSource,
-    /ACK Status Filter/,
-    "filing console should expose ack status filter"
+    /copy\.ackStatusFilterLabel/,
+    "filing console should expose ack status filter with locale copy"
   );
   assert.match(payrollApiSpec, /name:\s*status/, "api spec should include status query filter");
   assert.match(payrollApiSpec, /name:\s*ackStatus/, "api spec should include ackStatus query filter");
