@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 type ToKrwInteger = (value: number, fieldName: string) => number;
+type ToRateNumber = (value: number, fieldName: string) => number | null;
 
 type YearEndTaxCreditItemsInput = {
   earnedIncomeTaxCreditKrw: number;
@@ -68,6 +69,35 @@ type YearEndDeductionCapAppliedBreakdownKrw = Record<
   YearEndDeductionItemKey,
   YearEndDeductionCapAppliedItemKrw
 >;
+
+type YearEndSettlementTotalsKrw = {
+  grossPayKrw: number;
+  withholdingTaxKrw: number;
+};
+
+type YearEndSettlementKrw = {
+  nonTaxableAnnualIncomeKrw: number;
+  taxableAnnualIncomeKrw: number;
+  annualIncomeTaxBeforeCreditKrw: number;
+  additionalTaxCreditKrw: number;
+  totalTaxCreditInputKrw: number;
+  totalTaxCreditAppliedKrw: number;
+  taxCreditRulesKrw: YearEndTaxCreditItemsInput;
+  taxCreditAppliedByItemKrw: YearEndTaxCreditCapAppliedBreakdownKrw;
+  annualIncomeTaxAfterCreditKrw: number;
+  annualLocalIncomeTaxKrw: number;
+  annualTaxLiabilityKrw: number;
+  priorWithheldTaxKrw: number;
+  withholdingDeltaKrw: number;
+  additionalWithholdingDueKrw: number;
+  withholdingRefundKrw: number;
+};
+
+type YearEndNonTaxableOverflowContext = {
+  nonTaxableAnnualIncomeKrw: number;
+  annualGrossPayKrw: number;
+  overflowKrw: number;
+};
 
 type PreviewPayrollYearEndSettlementInputShape = {
   year: number;
@@ -355,5 +385,83 @@ export function applyYearEndDeductionCaps(
     cappedIncomeDeductionKrw,
     capRulesKrw,
     capAppliedByItemKrw
+  };
+}
+
+export function calculateYearEndSettlementKrw(
+  totalsKrw: YearEndSettlementTotalsKrw,
+  input: PreviewPayrollYearEndSettlementInputShape,
+  incomeDeductionKrw: number,
+  toKrwInteger: ToKrwInteger,
+  toRateNumber: ToRateNumber,
+  throwNonTaxableAnnualIncomeOverflow: (context: YearEndNonTaxableOverflowContext) => never
+) {
+  const nonTaxableAnnualIncomeKrw = toKrwInteger(
+    input.nonTaxableAnnualIncomeKrw,
+    "nonTaxableAnnualIncomeKrw"
+  );
+  if (nonTaxableAnnualIncomeKrw > totalsKrw.grossPayKrw) {
+    return throwNonTaxableAnnualIncomeOverflow({
+      nonTaxableAnnualIncomeKrw,
+      annualGrossPayKrw: totalsKrw.grossPayKrw,
+      overflowKrw: nonTaxableAnnualIncomeKrw - totalsKrw.grossPayKrw
+    });
+  }
+
+  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input, toKrwInteger);
+  const taxCreditCapApplied = applyYearEndTaxCreditCaps(normalizedTaxCredits, toKrwInteger);
+  const annualIncomeTaxRate = toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0;
+  const localIncomeTaxRate = toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0;
+  const normalizedIncomeDeductionKrw = toKrwInteger(incomeDeductionKrw, "incomeDeductionKrw");
+
+  const taxableAnnualIncomeBeforeDeductionKrw = Math.max(
+    totalsKrw.grossPayKrw - nonTaxableAnnualIncomeKrw,
+    0
+  );
+  const appliedIncomeDeductionKrw = Math.min(
+    normalizedIncomeDeductionKrw,
+    taxableAnnualIncomeBeforeDeductionKrw
+  );
+  const taxableAnnualIncomeKrw = taxableAnnualIncomeBeforeDeductionKrw - appliedIncomeDeductionKrw;
+  const annualIncomeTaxBeforeCreditKrw = toKrwInteger(
+    Math.round(taxableAnnualIncomeKrw * annualIncomeTaxRate),
+    "annualIncomeTaxBeforeCreditKrw"
+  );
+  const annualIncomeTaxAfterCreditKrw = Math.max(
+    annualIncomeTaxBeforeCreditKrw - taxCreditCapApplied.totalAppliedTaxCreditKrw,
+    0
+  );
+  const annualLocalIncomeTaxKrw = toKrwInteger(
+    Math.round(annualIncomeTaxAfterCreditKrw * localIncomeTaxRate),
+    "annualLocalIncomeTaxKrw"
+  );
+  const annualTaxLiabilityKrw = annualIncomeTaxAfterCreditKrw + annualLocalIncomeTaxKrw;
+  const priorWithheldTaxKrw = totalsKrw.withholdingTaxKrw;
+  const withholdingDeltaKrw = annualTaxLiabilityKrw - priorWithheldTaxKrw;
+  const additionalWithholdingDueKrw = Math.max(withholdingDeltaKrw, 0);
+  const withholdingRefundKrw = Math.max(-withholdingDeltaKrw, 0);
+
+  const settlementKrw: YearEndSettlementKrw = {
+    nonTaxableAnnualIncomeKrw,
+    taxableAnnualIncomeKrw,
+    annualIncomeTaxBeforeCreditKrw,
+    additionalTaxCreditKrw: taxCreditCapApplied.capAppliedByItemKrw.additionalTaxCreditKrw.appliedKrw,
+    totalTaxCreditInputKrw: taxCreditCapApplied.totalInputTaxCreditKrw,
+    totalTaxCreditAppliedKrw: taxCreditCapApplied.totalAppliedTaxCreditKrw,
+    taxCreditRulesKrw: taxCreditCapApplied.capRulesKrw,
+    taxCreditAppliedByItemKrw: taxCreditCapApplied.capAppliedByItemKrw,
+    annualIncomeTaxAfterCreditKrw,
+    annualLocalIncomeTaxKrw,
+    annualTaxLiabilityKrw,
+    priorWithheldTaxKrw,
+    withholdingDeltaKrw,
+    additionalWithholdingDueKrw,
+    withholdingRefundKrw
+  };
+
+  return {
+    settlementKrw,
+    taxableAnnualIncomeBeforeDeductionKrw,
+    appliedIncomeDeductionKrw
   };
 }

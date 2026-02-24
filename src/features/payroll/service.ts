@@ -36,8 +36,8 @@ import {
 } from "@/features/payroll/kr-statutory-helpers";
 import {
   applyYearEndDeductionCaps as applyYearEndDeductionCapsCore,
-  applyYearEndTaxCreditCaps as applyYearEndTaxCreditCapsCore,
   buildYearEndInputVectorHash as buildYearEndInputVectorHashCore,
+  calculateYearEndSettlementKrw as calculateYearEndSettlementKrwCore,
   collectYearEndDeductionEligibilityBlockingReasons as collectYearEndDeductionEligibilityBlockingReasonsCore,
   normalizeYearEndDeductionEligibility as normalizeYearEndDeductionEligibilityCore,
   normalizeYearEndDeductionItems as normalizeYearEndDeductionItemsCore,
@@ -2475,10 +2475,6 @@ function buildYearEndInputVectorHash(input: {
   return buildYearEndInputVectorHashCore(input);
 }
 
-function applyYearEndTaxCreditCaps(taxCredits: YearEndTaxCreditItemsInput) {
-  return applyYearEndTaxCreditCapsCore(taxCredits, toKrwInteger);
-}
-
 function applyYearEndDeductionCaps(deductionItems: YearEndDeductionItemsInput) {
   return applyYearEndDeductionCapsCore(deductionItems, toKrwInteger);
 }
@@ -2488,71 +2484,20 @@ function calculateYearEndSettlementKrw(
   input: PreviewPayrollYearEndSettlementInput,
   incomeDeductionKrw: number
 ) {
-  const nonTaxableAnnualIncomeKrw = toKrwInteger(
-    input.nonTaxableAnnualIncomeKrw,
-    "nonTaxableAnnualIncomeKrw"
+  return calculateYearEndSettlementKrwCore(
+    totalsKrw,
+    input,
+    incomeDeductionKrw,
+    toKrwInteger,
+    toRateNumber,
+    ({ nonTaxableAnnualIncomeKrw, annualGrossPayKrw, overflowKrw }) => {
+      throw new ServiceError(409, "year-end non-taxable annual income exceeds annual gross pay", {
+        nonTaxableAnnualIncomeKrw,
+        annualGrossPayKrw,
+        overflowKrw
+      });
+    }
   );
-  if (nonTaxableAnnualIncomeKrw > totalsKrw.grossPayKrw) {
-    throw new ServiceError(409, "year-end non-taxable annual income exceeds annual gross pay", {
-      nonTaxableAnnualIncomeKrw,
-      annualGrossPayKrw: totalsKrw.grossPayKrw,
-      overflowKrw: nonTaxableAnnualIncomeKrw - totalsKrw.grossPayKrw
-    });
-  }
-  const normalizedTaxCredits = normalizeYearEndTaxCreditItems(input);
-  const taxCreditCapApplied = applyYearEndTaxCreditCaps(normalizedTaxCredits);
-  const annualIncomeTaxRate = toRateNumber(input.annualIncomeTaxRate, "annualIncomeTaxRate") ?? 0;
-  const localIncomeTaxRate = toRateNumber(input.localIncomeTaxRate, "localIncomeTaxRate") ?? 0;
-  const normalizedIncomeDeductionKrw = toKrwInteger(incomeDeductionKrw, "incomeDeductionKrw");
-
-  const taxableAnnualIncomeBeforeDeductionKrw = Math.max(
-    totalsKrw.grossPayKrw - nonTaxableAnnualIncomeKrw,
-    0
-  );
-  const appliedIncomeDeductionKrw = Math.min(
-    normalizedIncomeDeductionKrw,
-    taxableAnnualIncomeBeforeDeductionKrw
-  );
-  const taxableAnnualIncomeKrw = taxableAnnualIncomeBeforeDeductionKrw - appliedIncomeDeductionKrw;
-  const annualIncomeTaxBeforeCreditKrw = toKrwInteger(
-    Math.round(taxableAnnualIncomeKrw * annualIncomeTaxRate),
-    "annualIncomeTaxBeforeCreditKrw"
-  );
-  const annualIncomeTaxAfterCreditKrw = Math.max(
-    annualIncomeTaxBeforeCreditKrw - taxCreditCapApplied.totalAppliedTaxCreditKrw,
-    0
-  );
-  const annualLocalIncomeTaxKrw = toKrwInteger(
-    Math.round(annualIncomeTaxAfterCreditKrw * localIncomeTaxRate),
-    "annualLocalIncomeTaxKrw"
-  );
-  const annualTaxLiabilityKrw = annualIncomeTaxAfterCreditKrw + annualLocalIncomeTaxKrw;
-  const priorWithheldTaxKrw = totalsKrw.withholdingTaxKrw;
-  const withholdingDeltaKrw = annualTaxLiabilityKrw - priorWithheldTaxKrw;
-  const additionalWithholdingDueKrw = Math.max(withholdingDeltaKrw, 0);
-  const withholdingRefundKrw = Math.max(-withholdingDeltaKrw, 0);
-
-  return {
-    settlementKrw: {
-      nonTaxableAnnualIncomeKrw,
-      taxableAnnualIncomeKrw,
-      annualIncomeTaxBeforeCreditKrw,
-      additionalTaxCreditKrw: taxCreditCapApplied.capAppliedByItemKrw.additionalTaxCreditKrw.appliedKrw,
-      totalTaxCreditInputKrw: taxCreditCapApplied.totalInputTaxCreditKrw,
-      totalTaxCreditAppliedKrw: taxCreditCapApplied.totalAppliedTaxCreditKrw,
-      taxCreditRulesKrw: taxCreditCapApplied.capRulesKrw,
-      taxCreditAppliedByItemKrw: taxCreditCapApplied.capAppliedByItemKrw,
-      annualIncomeTaxAfterCreditKrw,
-      annualLocalIncomeTaxKrw,
-      annualTaxLiabilityKrw,
-      priorWithheldTaxKrw,
-      withholdingDeltaKrw,
-      additionalWithholdingDueKrw,
-      withholdingRefundKrw
-    },
-    taxableAnnualIncomeBeforeDeductionKrw,
-    appliedIncomeDeductionKrw
-  };
 }
 
 type YearEndFilingGuard = {
