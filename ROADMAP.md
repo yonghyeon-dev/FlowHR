@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-24
-> **Current version**: 0.1.123 (Employee Payslips Locale Helper Split Phase 6)
+> **Current version**: 0.1.124 (Employee Payslips Locale Dynamic Residual Gap Fix Phase 7)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -589,3 +589,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0316 employee payslips locale dynamic UI gap fix phase5 baseline(`src/app/employee/payslips/page.tsx` locale-aware runtime formatting + search/sort copy ko/en dynamic rewiring + WI-0316 regression test)
 - WI-0317 payroll decomposition phase12 baseline(`src/features/payroll/service-input-types.ts` extraction for payroll input/request type blocks + `src/features/payroll/service.ts` type import rewiring + WI-0317 regression test)
 - WI-0318 employee payslips locale helper split phase6 baseline(`src/app/employee/payslips/page-locale-helpers.ts` extraction for locale formatting/search copy helpers + `src/app/employee/payslips/page.tsx` helper import rewiring + WI-0318 regression test)
+- WI-0319 employee payslips locale dynamic residual gap fix phase7 baseline(`src/app/employee/payslips/page-locale-helpers.ts` page-level ko/en copy bundle + deduction/state label locale helpers + `src/app/employee/payslips/page.tsx` remaining hardcoded UI copy replacement + WI-0319 regression test)
