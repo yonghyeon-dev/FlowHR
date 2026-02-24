@@ -13,6 +13,12 @@ async function run() {
     "payroll-year-end",
     "EmployeeYearEndInputConsole.tsx"
   );
+  const yearEndInputCopy = readUtf8(
+    "src",
+    "components",
+    "payroll-year-end",
+    "employee-year-end-input-copy.ts"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0349-employee-year-end-input-real-time-validation-and-checklist-ux.md"
@@ -21,10 +27,10 @@ async function run() {
 
   assert.match(yearEndInputConsole, /isNonNegativeIntegerText/);
   assert.match(yearEndInputConsole, /const validationChecks = useMemo/);
-  assert.match(yearEndInputConsole, /Real-time input validation/);
+  assert.match(yearEndInputCopy, /Real-time Input Validation/);
   assert.match(yearEndInputConsole, /pre-submit-check-list/);
   assert.match(yearEndInputConsole, /disabled=\{pendingLabel !== null \|\| !coreLoadValid\}/);
-  assert.match(yearEndInputConsole, /Tax rates in 0~1 range/);
+  assert.match(yearEndInputCopy, /Tax rates in 0~1 range/);
 
   assert.match(workItem, /WI-0349/i);
   assert.match(workItem, /validation/i);
