@@ -36,10 +36,7 @@ async function run() {
   assert.doesNotMatch(adminPeoplePage, /Filter Reset/);
   assert.doesNotMatch(adminPeoplePage, /History Change Summary/);
 
-  assert.match(
-    employeePage,
-    /feedback: isKoLocale \? "대기 요청 필터가 적용되었습니다\." : "Pending requests filter is now applied\."/
-  );
+  assert.match(employeePage, /feedback: feedbackCopy\.pendingRequestFilterApplied/);
 
   assert.match(workItem, /WI-0307/i);
   assert.match(workItem, /locale/i);
