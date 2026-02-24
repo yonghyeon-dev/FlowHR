@@ -7,62 +7,13 @@ import {
   contractDocumentStatusLabelByLocale,
   employeeContractsCopyByLocale,
   toDateText,
-  type ContractApprovalStatus,
-  type ContractDocumentStatus
 } from "@/components/contracts/copy";
+import { readJson } from "@/components/contracts/http";
+import {
+  type ContractSignatureEvidenceResponse,
+  type EmployeeContractDocument as ContractDocument
+} from "@/components/contracts/types";
 import { useI18n } from "@/lib/i18n/provider";
-
-type ContractDocument = {
-  id: string;
-  title: string;
-  employeeId: string;
-  status: ContractDocumentStatus;
-  approvalStatus: ContractApprovalStatus;
-  documentHash: string;
-  respondedAt: string | null;
-  signatureHash: string | null;
-  signatureEvidenceHash: string | null;
-  expiresAt: string | null;
-  updatedAt: string;
-  responseComment: string | null;
-};
-
-type ContractSignatureEvidenceResponse = {
-  evidence: {
-    documentId: string;
-    employeeId: string;
-    status: "SIGNED";
-    respondedAt: string;
-    signatureHash: string;
-    signatureEvidenceHash: string;
-    documentHash: string;
-    format: "json" | "text";
-    fileName: string;
-    contentType: string;
-    contentSha256: string;
-    generatedAt: string;
-    content: string;
-  };
-};
-
-async function readJson(response: Response) {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
-  }
-
-  if (!response.ok) {
-    const message =
-      typeof body === "object" && body !== null && "error" in body
-        ? String((body as { error: unknown }).error)
-        : `request failed (${response.status})`;
-    throw new Error(message);
-  }
-
-  return body;
-}
 
 export default function EmployeeContractsInbox() {
   const { locale } = useI18n();

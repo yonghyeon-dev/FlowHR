@@ -113,10 +113,69 @@ export function AdminPayrollPanel({
   onReapplyPayrollPresetShareContext,
   onClearManualIncomeSplitItems
 }: AdminPayrollPanelProps) {
+  const headingTitle = isKoLocale ? "급여 프리뷰/확정" : "Payroll Preview/Confirm";
+  const headingDescription = isKoLocale
+    ? "승인된 출퇴근 기반으로 총지급을 산정하거나, 법정공제 기준 프리뷰를 생성할 수 있습니다."
+    : "Generate gross-pay previews from approved attendance, or run statutory deduction previews before confirmation.";
+
+  const valueNarrative = isKoLocale
+    ? {
+        summaryTitle: "급여 고객가치",
+        summaryDescription: "급여팀 운영이 아닌 직원 체감가치 중심으로 프리뷰 목적을 명확히 보여줍니다.",
+        cards: [
+          {
+            label: "정확성",
+            value: "근태 기반 산정",
+            detail: "승인된 근태 데이터를 기준으로 총지급/공제를 일관되게 계산합니다."
+          },
+          {
+            label: "투명성",
+            value: "공제 근거 공개",
+            detail: "법정공제 항목과 세액공제 계산값을 사전에 확인해 신뢰를 높입니다."
+          },
+          {
+            label: "자기확인",
+            value: "직원 설명 가능",
+            detail: "확정 전 프리뷰를 공유해 지급 결과를 직원에게 설명 가능한 상태로 만듭니다."
+          }
+        ]
+      }
+    : {
+        summaryTitle: "Payroll Customer Value",
+        summaryDescription: "Keep this payroll flow focused on employee-facing value instead of back-office operations.",
+        cards: [
+          {
+            label: "Accuracy",
+            value: "Attendance-based calculation",
+            detail: "Compute gross pay and deductions from approved attendance records with consistent rules."
+          },
+          {
+            label: "Transparency",
+            value: "Deduction traceability",
+            detail: "Review statutory deductions and tax credits before confirmation to increase trust."
+          },
+          {
+            label: "Self-service readiness",
+            value: "Explainable payout",
+            detail: "Use preview data to explain payroll outcomes clearly before final confirmation."
+          }
+        ]
+      };
+
   return (
     <article className="panel" id="payroll">
-      <h2>급여 프리뷰/확정</h2>
-      <p className="small">승인된 출퇴근 기반으로 총지급을 산정하거나, 법정공제 기준 프리뷰를 생성할 수 있습니다.</p>
+      <h2>{headingTitle}</h2>
+      <p className="small">{headingDescription}</p>
+      <section className="kpi-strip" aria-label={valueNarrative.summaryTitle}>
+        {valueNarrative.cards.map((card) => (
+          <article key={card.label} className="kpi-card">
+            <span>{card.label}</span>
+            <strong>{card.value}</strong>
+            <p className="small">{card.detail}</p>
+          </article>
+        ))}
+      </section>
+      <p className="small muted">{valueNarrative.summaryDescription}</p>
       <div className="input-grid">
         <label>
           프리뷰 모드

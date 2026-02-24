@@ -13,6 +13,7 @@ import {
   toIso,
   toLocalInputValue
 } from "@/app/admin/page-helpers";
+import { buildAdminPayrollPreviewRequest } from "@/app/admin/page-payroll-helpers";
 import {
   isDefaultDemoOrganizationName,
   resolveAdminLocaleLabelBundle
@@ -72,7 +73,6 @@ import {
   createEmptyPayrollKrIncomeSplitItemDraft,
   type PayrollKrIncomeSplitItemDraft
 } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
-import { analyzePayrollKrIncomeSplitDraftConsistency } from "@/features/payroll/kr-income-split-item-consistency";
 import {
   hasPayrollKrPresetShareContext,
   parsePayrollKrPresetShareContext,
@@ -873,39 +873,32 @@ export default function AdminDashboardPage() {
   }
 
   async function previewPayroll() {
-    function buildIncomeSplitItems(items: PayrollKrIncomeSplitItemDraft[]) {
-      return items.flatMap((item) => {
-        const codeValue = item.code.trim();
-        const categoryValue = item.category.trim();
-        const amountValue = item.amountKrw.trim();
-        if (!codeValue && !categoryValue && !amountValue) {
-          return [];
-        }
-        const parsedAmount =
-          amountValue.length > 0 ? Math.max(0, Math.trunc(Number(amountValue) || 0)) : -1;
-        return [
-          {
-            code: codeValue,
-            category: categoryValue,
-            amountKrw: parsedAmount
-          }
-        ];
-      });
-    }
-
-    const taxableIncomeItems = buildIncomeSplitItems(payrollTaxableItems);
-    const nonTaxableIncomeItems = buildIncomeSplitItems(payrollNonTaxableItems);
-    const incomeSplitItemPresetId = payrollIncomeSplitItemPresetId.trim();
-    const incomeSplitConsistencySummary = analyzePayrollKrIncomeSplitDraftConsistency({
-      taxableItems: payrollTaxableItems,
-      nonTaxableItems: payrollNonTaxableItems
+    const previewRequest = buildAdminPayrollPreviewRequest({
+      payrollPreviewMode,
+      periodStart,
+      periodEnd,
+      employeeId,
+      payrollHourlyRateKrw,
+      payrollNonTaxableIncomeKrw,
+      payrollTaxableIncomeKrw,
+      payrollTaxableItems,
+      payrollNonTaxableItems,
+      payrollIncomeSplitItemPresetId,
+      payrollOtherDeductionsKrw,
+      payrollAdditionalTaxCreditKrw,
+      payrollDependentCount,
+      payrollDependentTaxCreditPerPersonKrw,
+      payrollIncomeTaxLookupPresetId,
+      payrollIncomeTaxLookupPresetAuto,
+      payrollIncomeTaxLookupAsOf,
+      payrollRequireMonthlyBoundary,
+      payrollNationalPensionCapKrw,
+      payrollHealthInsuranceCapKrw,
+      payrollEmploymentInsuranceCapKrw,
+      toIso
     });
 
-    if (
-      payrollPreviewMode === "statutory_kr_baseline" &&
-      incomeSplitItemPresetId.length === 0 &&
-      incomeSplitConsistencySummary.hasBlockingIssues
-    ) {
+    if (previewRequest.hasBlockingConsistencyIssues) {
       setLogs((prev) => [
         {
           id: Date.now(),
@@ -916,7 +909,7 @@ export default function AdminDashboardPage() {
           at: new Date().toLocaleString("ko-KR"),
           body: {
             error: "Fix split-item rows before submit.",
-            details: incomeSplitConsistencySummary
+            details: previewRequest.consistencySummary
           }
         },
         ...prev
@@ -924,79 +917,7 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    const basePayload = {
-      periodStart: toIso(periodStart),
-      periodEnd: toIso(periodEnd),
-      employeeId: employeeId.trim() || undefined,
-      hourlyRateKrw: Number(payrollHourlyRateKrw),
-      multipliers: {
-        overtime: 1.5,
-        night: 1.5,
-        holiday: 1.5
-      }
-    };
-
-    const statutoryPayload = {
-      ...basePayload,
-      deductionMode: "statutory_kr_baseline" as const,
-      statutory: {
-        nonTaxableIncomeKrw: Math.max(0, Number(payrollNonTaxableIncomeKrw) || 0),
-        taxableIncomeKrw:
-          payrollTaxableIncomeKrw.trim().length > 0
-            ? Math.max(0, Math.trunc(Number(payrollTaxableIncomeKrw) || 0))
-            : undefined,
-        taxableIncomeItems:
-          incomeSplitItemPresetId.length > 0
-            ? undefined
-            : taxableIncomeItems.length > 0
-              ? taxableIncomeItems
-              : undefined,
-        nonTaxableIncomeItems:
-          incomeSplitItemPresetId.length > 0
-            ? undefined
-            : nonTaxableIncomeItems.length > 0
-              ? nonTaxableIncomeItems
-              : undefined,
-        incomeSplitItemPresetId: incomeSplitItemPresetId || undefined,
-        otherDeductionsKrw: Math.max(0, Number(payrollOtherDeductionsKrw) || 0),
-        additionalTaxCreditKrw: Math.max(0, Math.trunc(Number(payrollAdditionalTaxCreditKrw) || 0)),
-        dependentCount: Math.max(0, Math.trunc(Number(payrollDependentCount) || 0)),
-        dependentTaxCreditPerPersonKrw: Math.max(
-          0,
-          Math.trunc(Number(payrollDependentTaxCreditPerPersonKrw) || 0)
-        ),
-        incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetAuto
-          ? undefined
-          : payrollIncomeTaxLookupPresetId.trim() || undefined,
-        incomeTaxLookupPresetAuto: payrollIncomeTaxLookupPresetAuto,
-        incomeTaxLookupAsOf:
-          payrollIncomeTaxLookupPresetAuto && payrollIncomeTaxLookupAsOf.trim().length > 0
-            ? toIso(payrollIncomeTaxLookupAsOf)
-            : undefined,
-        requireMonthlyBoundary: payrollRequireMonthlyBoundary,
-        nationalPensionCapKrw:
-          payrollNationalPensionCapKrw.trim().length > 0
-            ? Math.max(0, Number(payrollNationalPensionCapKrw) || 0)
-            : undefined,
-        healthInsuranceCapKrw:
-          payrollHealthInsuranceCapKrw.trim().length > 0
-            ? Math.max(0, Number(payrollHealthInsuranceCapKrw) || 0)
-            : undefined,
-        employmentInsuranceCapKrw:
-          payrollEmploymentInsuranceCapKrw.trim().length > 0
-            ? Math.max(0, Number(payrollEmploymentInsuranceCapKrw) || 0)
-            : undefined
-      }
-    };
-
-    const { response, body } = await callApi(
-      payrollPreviewMode === "gross" ? "급여 프리뷰 생성(총지급)" : "급여 프리뷰 생성(법정공제)",
-      "POST",
-      payrollPreviewMode === "gross"
-        ? "/api/payroll/runs/preview"
-        : "/api/payroll/runs/preview-with-deductions",
-      payrollPreviewMode === "gross" ? basePayload : statutoryPayload
-    );
+    const { response, body } = await callApi(previewRequest.label, "POST", previewRequest.path, previewRequest.payload);
     if (!response.ok) {
       return;
     }

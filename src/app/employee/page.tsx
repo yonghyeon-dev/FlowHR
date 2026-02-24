@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -54,6 +53,7 @@ import type {
   WorkScheduleDto
 } from "@/app/employee/page-types";
 import { EmployeeAccountOverviewPanels } from "@/components/employee-dashboard/EmployeeAccountOverviewPanels";
+import { EmployeeAttendanceLeavePanels } from "@/components/employee-dashboard/EmployeeAttendanceLeavePanels";
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
 import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/EmployeeRequestFeedbackPanels";
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
@@ -1610,415 +1610,91 @@ export default function EmployeeSelfServicePage() {
           onApplyResubmitCandidateToDraft={applyResubmitCandidateToDraft}
         />
 
-        <article className="panel" id="attendance">
-          <h2>{sectionTitles.attendance}</h2>
-          <div className="input-grid">
-            <label>
-              {attendanceCopy.checkInTime}
-              <input type="datetime-local" value={checkInAt} onChange={(event) => setCheckInAt(event.target.value)} />
-            </label>
-            <label>
-              {attendanceCopy.checkOutTime}
-              <input type="datetime-local" value={checkOutAt} onChange={(event) => setCheckOutAt(event.target.value)} />
-            </label>
-            <label>
-              {attendanceCopy.breakMinutes}
-              <input type="number" min={0} value={breakMinutes} onChange={(event) => setBreakMinutes(event.target.value)} />
-            </label>
-            <label>
-              {attendanceCopy.holidayWork}
-              <select value={isHoliday ? "yes" : "no"} onChange={(event) => setIsHoliday(event.target.value === "yes")}>
-                <option value="no">{attendanceCopy.noOption}</option>
-                <option value="yes">{attendanceCopy.yesOption}</option>
-              </select>
-            </label>
-            <label className="full">
-              {attendanceCopy.correctionNote}
-              <input value={attendanceNotes} onChange={(event) => setAttendanceNotes(event.target.value)} />
-            </label>
-            <label className="full">
-              {attendanceCopy.recentTargetRecordId}
-              <input value={lastAttendanceId} onChange={(event) => setLastAttendanceId(event.target.value)} />
-            </label>
-            <label className="full">
-              {attendanceCopy.selectCorrectionTargetRecord}
-              <select
-                value={selectedCorrectionRecordId}
-                onChange={(event) => selectCorrectionTarget(event.target.value)}
-              >
-                <option value="">{attendanceCopy.selectFromRecentRecords}</option>
-                {attendance.map((record) => (
-                  <option key={record.id} value={record.id}>
-                    {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)} ({toRequestStatusLabel(record.state)})
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <p className="small muted" style={{ margin: "4px 0 0" }}>
-            {attendanceCopy.workTimeDelta}: <strong>{correctionDeltaLabel}</strong>
-          </p>
-          <div className="pre-submit-check-wrap">
-            <p className="small" style={{ margin: "8px 0 0" }}>
-              {attendanceCopy.preSubmitChecks} (
-              {attendancePreSubmitChecks.filter((check) => check.pass).length}/{attendancePreSubmitChecks.length}{" "}
-              {attendanceCopy.passed})
-            </p>
-            <ul
-              className="pre-submit-check-list"
-              aria-label={attendanceCopy.preSubmitChecksAriaLabel}
-            >
-              {attendancePreSubmitChecks.map((check) => (
-                <li key={check.id} className={check.pass ? "pass" : "fail"}>
-                  <strong>{check.pass ? preSubmitStatusLabels.pass : preSubmitStatusLabels.fail}</strong>
-                  <span>{check.label}</span>
-                  <p>{check.detail}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {correctionValidation.message ? (
-            <p className="small" style={{ margin: "8px 0 0", color: "var(--danger)" }}>
-              {correctionValidation.message}
-            </p>
-          ) : null}
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void createAttendance()}>
-              {callApiLabels.createAttendance}
-            </button>
-            <button className="btn btn-secondary" onClick={() => void checkOutNow()} disabled={!lastAttendanceId}>
-              {callApiLabels.checkOutNow}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => void requestAttendanceCorrection()}
-              disabled={!correctionValidation.isValid || !attendancePreSubmitValid}
-            >
-              {callApiLabels.requestAttendanceCorrection}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={applySelectedCorrectionRecord}
-              disabled={!selectedCorrectionRecord}
-            >
-              {attendanceCopy.loadSelectedRecord}
-            </button>
-            <button className="btn btn-secondary" onClick={applyLatestAttendanceToCorrectionForm} disabled={!latestAttendance}>
-              {attendanceCopy.loadLatestRecord}
-            </button>
-            {attendanceNotePresets.map((preset) => (
-              <button key={preset} className="btn btn-secondary" onClick={() => setAttendanceNotes(preset)}>
-                {preset}
-              </button>
-            ))}
-          </div>
-          <ul className="log-list">
-            {attendance.length === 0 ? (
-              <li>
-                <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{attendanceCopy.noRecords}</span>
-                <time>-</time>
-              </li>
-            ) : (
-              attendance.map((record) => (
-                <li key={record.id}>
-                  <span className={record.state === "APPROVED" ? "ok" : record.state === "PENDING" ? "fail" : "fail"}>
-                    {toRequestStatusLabel(record.state)}
-                  </span>
-                  <span>
-                    {formatDateTime(record.checkInAt)} ~ {formatDateTime(record.checkOutAt)}
-                  </span>
-                  <button className="btn btn-secondary" onClick={() => applyAttendanceRecordToCorrectionForm(record)}>
-                    {attendanceCopy.selectAction}
-                  </button>
-                  <time>{record.id}</time>
-                </li>
-              ))
-            )}
-          </ul>
-        </article>
-
-        <article className="panel" id="leave">
-          <h2>{sectionTitles.leave}</h2>
-          <p className="small">{leaveBalanceSummary}</p>
-          <div className="input-grid">
-            <label>
-              {leaveCopy.leaveType}
-              <select value={leaveType} onChange={(event) => setLeaveType(event.target.value as "ANNUAL" | "SICK" | "UNPAID")}>
-                <option value="ANNUAL">{toLeaveTypeLabel("ANNUAL")}</option>
-                <option value="SICK">{toLeaveTypeLabel("SICK")}</option>
-                <option value="UNPAID">{toLeaveTypeLabel("UNPAID")}</option>
-              </select>
-            </label>
-            <label>
-              {leaveCopy.requestUnit}
-              <select
-                value={leaveUnit}
-                onChange={(event) => setLeaveUnit(event.target.value as "FULL_DAY" | "HALF_DAY" | "HOUR")}
-              >
-                <option value="FULL_DAY">{leaveCopy.fullDay}</option>
-                <option value="HALF_DAY">{leaveCopy.halfDay}</option>
-                <option value="HOUR">{leaveCopy.hourly}</option>
-              </select>
-            </label>
-            <label>
-              {leaveCopy.startDate}
-              <input type="datetime-local" value={leaveStartDate} onChange={(event) => setLeaveStartDate(event.target.value)} />
-            </label>
-            <label>
-              {leaveCopy.endDate}
-              <input type="datetime-local" value={leaveEndDate} onChange={(event) => setLeaveEndDate(event.target.value)} />
-            </label>
-            {leaveUnit === "HOUR" ? (
-              <label>
-                {leaveCopy.hours}
-                <input value={leaveHours} onChange={(event) => setLeaveHours(event.target.value)} />
-              </label>
-            ) : null}
-            <label>
-              {leaveCopy.cancelReason}
-              <input value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} />
-            </label>
-            <label className="full">
-              {leaveCopy.requestReasonOptional}
-              <input value={leaveReason} onChange={(event) => setLeaveReason(event.target.value)} />
-            </label>
-            <label className="full">
-              {leaveCopy.recentTargetRequestId}
-              <input value={lastLeaveRequestId} onChange={(event) => setLastLeaveRequestId(event.target.value)} />
-            </label>
-          </div>
-          <div className="pre-submit-check-wrap">
-            <p className="small" style={{ margin: "8px 0 0" }}>
-              {leaveCopy.preSubmitChecks} (
-              {leavePreSubmitChecks.filter((check) => check.pass).length}/{leavePreSubmitChecks.length}{" "}
-              {leaveCopy.passed})
-            </p>
-            <ul
-              className="pre-submit-check-list"
-              aria-label={leaveCopy.preSubmitChecksAriaLabel}
-            >
-              {leavePreSubmitChecks.map((check) => (
-                <li key={check.id} className={check.pass ? "pass" : "fail"}>
-                  <strong>{check.pass ? preSubmitStatusLabels.pass : preSubmitStatusLabels.fail}</strong>
-                  <span>{check.label}</span>
-                  <p>{check.detail}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="leave-quick-actions" role="group" aria-label={leaveCopy.quickPresetsAriaLabel}>
-            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("today-half")}>
-              {leaveCopy.todayHalfDay}
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("tomorrow-full")}>
-              {leaveCopy.tomorrowFullDay}
-            </button>
-            <button className="btn btn-secondary btn-small" onClick={() => applyLeaveQuickPreset("next-week-full")}>
-              {leaveCopy.nextMonday}
-            </button>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void createLeave()} disabled={!leavePreSubmitValid}>
-              {callApiLabels.createLeave}
-            </button>
-            <button className="btn btn-secondary" onClick={() => void cancelLeave()} disabled={!lastLeaveRequestId}>
-              {callApiLabels.cancelLeave}
-            </button>
-          </div>
-          <ul className="log-list">
-            {leaveRequests.length === 0 ? (
-              <li>
-                <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{leaveCopy.noRequests}</span>
-                <time>-</time>
-              </li>
-            ) : (
-              leaveRequests.map((request) => (
-                <li key={request.id}>
-                  <span className={request.state === "APPROVED" ? "ok" : request.state === "PENDING" ? "fail" : "fail"}>
-                    {toRequestStatusLabel(request.state)}
-                  </span>
-                  <span>
-                    {toLeaveTypeLabel(request.leaveType)} / {formatDateTime(request.startDate)} ~ {formatDateTime(request.endDate)} (
-                    {`${formatDays(request.days)}${leaveCopy.dayUnitSuffix}`}
-                    {request.unit === "HOUR" && request.hours !== null
-                      ? ` / ${request.hours.toFixed(2)}${leaveCopy.hourUnitSuffix}`
-                      : request.unit === "HALF_DAY"
-                        ? ` / ${leaveCopy.halfDaySuffix}`
-                        : ""}
-                    )
-                  </span>
-                  <time>{request.id}</time>
-                </li>
-              ))
-            )}
-          </ul>
-        </article>
-
-        <article className="panel" id="leave-calendar">
-          <h2>{sectionTitles.leaveCalendar}</h2>
-          <p className="small">
-            {leaveCalendarCopy.usageRateLabel} {leaveUsageRatePercent}% ({leaveCalendarCopy.usedLabel}{" "}
-            {formatDays(leaveBalance?.usedDays ?? 0)} / {leaveCalendarCopy.grantedLabel}{" "}
-            {formatDays(leaveBalance?.grantedDays ?? 0)})
-          </p>
-          <div className="leave-balance-visual" aria-label={leaveCalendarCopy.visualizationAriaLabel}>
-            <div className="leave-usage-ring" style={leaveUsageRingStyle}>
-              <div>
-                <strong>{leaveUsageRatePercent}%</strong>
-                <span>{leaveCalendarCopy.usageRateShort}</span>
-              </div>
-            </div>
-            <div className="leave-balance-cards">
-              {leaveBalanceCards.length === 0 ? (
-                <p className="small">
-                  {leaveCalendarCopy.visualizationHint}
-                </p>
-              ) : (
-                leaveBalanceCards.map((card) => (
-                  <article key={card.key} className={`leave-balance-card tone-${card.tone}`}>
-                    <p>{card.label}</p>
-                    <strong>{card.value}</strong>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-          <p className="small leave-projection">{leaveUsageProjectionLabel}</p>
-          <div className="leave-calendar-toolbar">
-            <strong>
-              {leaveCalendarMonthLabel} {leaveCalendarCopy.densityViewLabel}
-            </strong>
-            <div className="leave-calendar-shortcuts" aria-label={leaveCalendarCopy.quickNavigationAriaLabel}>
-              <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(-1)}>
-                {leaveCalendarCopy.previousMonth}
-              </button>
-              <button className="btn btn-secondary btn-small" onClick={() => void resetCalendarToCurrentMonth()}>
-                {leaveCalendarCopy.currentMonth}
-              </button>
-              <button className="btn btn-secondary btn-small" onClick={() => void moveCalendarMonth(1)}>
-                {leaveCalendarCopy.nextMonth}
-              </button>
-            </div>
-          </div>
-          <div className="leave-calendar-weekdays" aria-hidden="true">
-            {leaveCalendarWeekdays.map((weekday) => (
-              <span key={weekday}>{weekday}</span>
-            ))}
-          </div>
-          <div className="leave-calendar-grid">
-            {leaveCalendarCells.map((cell) => (
-              <article
-                key={cell.dateKey}
-                className={[
-                  "leave-calendar-day",
-                  `density-${cell.density}`,
-                  `tone-${cell.tone}`,
-                  cell.inCurrentMonth ? "in-month" : "out-month",
-                  cell.isToday ? "today" : ""
-                ]
-                  .join(" ")
-                  .trim()}
-                title={
-                  cell.requestCount === 0
-                    ? `${cell.dateKey}: ${leaveCalendarCopy.noScheduleInDateLabel}`
-                    : `${cell.dateKey}: ${cell.requestCount}${leaveCalendarCopy.itemSuffix} (${leaveCalendarCopy.approvedLabel} ${cell.approvedCount}, ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount}, ${leaveCalendarCopy.rejectedOrCanceledLabel} ${cell.rejectedCount})`
-                }
-              >
-                <div className="leave-day-head">
-                  <span>{cell.dayOfMonth}</span>
-                  {cell.requestCount > 0 ? <strong>{`${cell.requestCount}${leaveCalendarCopy.itemSuffix}`}</strong> : null}
-                </div>
-                <p>
-                  {cell.requestCount === 0
-                    ? leaveCalendarCopy.noScheduleLabel
-                    : `${leaveCalendarCopy.approvedLabel} ${cell.approvedCount} / ${leaveCalendarCopy.pendingLabel} ${cell.pendingCount} / ${leaveCalendarCopy.rejectedLabel} ${cell.rejectedCount}`}
-                </p>
-              </article>
-            ))}
-          </div>
-          {leaveCalendarRows.length === 0 ? (
-            <p className="small" style={{ marginTop: 12 }}>
-              {leaveCalendarCopy.noScheduleInRange}
-            </p>
-          ) : (
-            <ul className="simple-list leave-calendar-list" style={{ marginTop: 12 }}>
-              {leaveCalendarRows.map((row) => (
-                <li key={row.id}>
-                  <span>
-                    <strong>{row.label}</strong>
-                    <br />
-                    <span className="small">{row.dateRange}</span>
-                  </span>
-                  <span className={row.status === "APPROVED" ? "ok" : row.status === "PENDING" ? "muted" : "fail"}>
-                    {toRequestStatusLabel(row.status)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-
-        <article className="panel" id="schedule">
-          <h2>{sectionTitles.schedule}</h2>
-          {showDevTools ? (
-            <div className="actions">
-              <Link className="btn btn-secondary" href="/ops/scheduling-cockpit">
-                {scheduleCopy.devSchedulingCockpit}
-              </Link>
-            </div>
-          ) : null}
-          <ul className="log-list">
-            {schedules.length === 0 ? (
-              <li>
-                <span className="fail">{listBadgeLabels.empty}</span>
-                <span>{scheduleCopy.noSchedules}</span>
-                <time>-</time>
-              </li>
-            ) : (
-              schedules.map((schedule) => (
-                <li key={schedule.id}>
-                  <span className="ok">{schedule.isHoliday ? listBadgeLabels.holiday : listBadgeLabels.work}</span>
-                  <span>
-                    {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (
-                    {scheduleCopy.breakMinutesFormat(schedule.breakMinutes)})
-                  </span>
-                  <time>{schedule.id}</time>
-                </li>
-              ))
-            )}
-          </ul>
-        </article>
-
-        {showDevTools ? (
-          <article className="panel panel-log">
-            <h2>{sectionTitles.apiLogs}</h2>
-            <p className="small">
-              {apiLogsCopy.runningNow}: <strong>{pendingLabel ?? apiLogsCopy.none}</strong> / {apiLogsCopy.totalCalls} {stats.total}
-              {apiLogsCopy.summary(stats.success, stats.fail)}
-            </p>
-            <div className="actions">
-              <button className="btn btn-secondary" onClick={clearLogs} disabled={logs.length === 0}>
-                {apiLogsCopy.clearLogs}
-              </button>
-            </div>
-            <pre>{latestPayload}</pre>
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>
-                    {log.ok ? listBadgeLabels.success : listBadgeLabels.fail} {log.status}
-                  </span>
-                  <span>
-                    {log.label} ({Math.max(0, Math.round(log.durationMs))}ms)
-                  </span>
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          </article>
-        ) : null}
+        <EmployeeAttendanceLeavePanels
+          sectionTitles={sectionTitles}
+          attendanceCopy={attendanceCopy}
+          leaveCopy={leaveCopy}
+          leaveCalendarCopy={leaveCalendarCopy}
+          scheduleCopy={scheduleCopy}
+          apiLogsCopy={apiLogsCopy}
+          callApiLabels={callApiLabels}
+          listBadgeLabels={listBadgeLabels}
+          preSubmitStatusLabels={preSubmitStatusLabels}
+          showDevTools={showDevTools}
+          attendance={attendance}
+          leaveRequests={leaveRequests}
+          schedules={schedules}
+          leaveBalance={leaveBalance}
+          checkInAt={checkInAt}
+          checkOutAt={checkOutAt}
+          breakMinutes={breakMinutes}
+          isHoliday={isHoliday}
+          attendanceNotes={attendanceNotes}
+          lastAttendanceId={lastAttendanceId}
+          selectedCorrectionRecordId={selectedCorrectionRecordId}
+          hasSelectedCorrectionRecord={selectedCorrectionRecord !== null}
+          correctionDeltaLabel={correctionDeltaLabel}
+          attendancePreSubmitChecks={attendancePreSubmitChecks}
+          attendancePreSubmitValid={attendancePreSubmitValid}
+          correctionValidationMessage={correctionValidation.message}
+          correctionValidationIsValid={correctionValidation.isValid}
+          latestAttendance={latestAttendance}
+          attendanceNotePresets={attendanceNotePresets}
+          leaveType={leaveType}
+          leaveUnit={leaveUnit}
+          leaveHours={leaveHours}
+          leaveStartDate={leaveStartDate}
+          leaveEndDate={leaveEndDate}
+          leaveReason={leaveReason}
+          cancelReason={cancelReason}
+          lastLeaveRequestId={lastLeaveRequestId}
+          leaveBalanceSummary={leaveBalanceSummary}
+          leavePreSubmitChecks={leavePreSubmitChecks}
+          leavePreSubmitValid={leavePreSubmitValid}
+          leaveUsageRatePercent={leaveUsageRatePercent}
+          leaveUsageRingStyle={leaveUsageRingStyle}
+          leaveBalanceCards={leaveBalanceCards}
+          leaveUsageProjectionLabel={leaveUsageProjectionLabel}
+          leaveCalendarMonthLabel={leaveCalendarMonthLabel}
+          leaveCalendarWeekdays={leaveCalendarWeekdays}
+          leaveCalendarCells={leaveCalendarCells}
+          leaveCalendarRows={leaveCalendarRows}
+          pendingLabel={pendingLabel}
+          logs={logs}
+          stats={stats}
+          latestPayload={latestPayload}
+          formatDateTime={formatDateTime}
+          formatDays={formatDays}
+          toLeaveTypeLabel={toLeaveTypeLabel}
+          toRequestStatusLabel={toRequestStatusLabel}
+          onCheckInAtChange={setCheckInAt}
+          onCheckOutAtChange={setCheckOutAt}
+          onBreakMinutesChange={setBreakMinutes}
+          onIsHolidayChange={setIsHoliday}
+          onAttendanceNotesChange={setAttendanceNotes}
+          onLastAttendanceIdChange={setLastAttendanceId}
+          onSelectCorrectionTarget={selectCorrectionTarget}
+          onCreateAttendance={() => void createAttendance()}
+          onCheckOutNow={() => void checkOutNow()}
+          onRequestAttendanceCorrection={() => void requestAttendanceCorrection()}
+          onApplySelectedCorrectionRecord={applySelectedCorrectionRecord}
+          onApplyLatestAttendanceToCorrectionForm={applyLatestAttendanceToCorrectionForm}
+          onApplyAttendanceRecordToCorrectionForm={applyAttendanceRecordToCorrectionForm}
+          onLeaveTypeChange={setLeaveType}
+          onLeaveUnitChange={setLeaveUnit}
+          onLeaveHoursChange={setLeaveHours}
+          onLeaveStartDateChange={setLeaveStartDate}
+          onLeaveEndDateChange={setLeaveEndDate}
+          onCancelReasonChange={setCancelReason}
+          onLeaveReasonChange={setLeaveReason}
+          onLastLeaveRequestIdChange={setLastLeaveRequestId}
+          onApplyLeaveQuickPreset={applyLeaveQuickPreset}
+          onCreateLeave={() => void createLeave()}
+          onCancelLeave={() => void cancelLeave()}
+          onMoveCalendarMonth={(delta) => void moveCalendarMonth(delta)}
+          onResetCalendarToCurrentMonth={() => void resetCalendarToCurrentMonth()}
+          onClearLogs={clearLogs}
+        />
       </section>
     </main>
   );
