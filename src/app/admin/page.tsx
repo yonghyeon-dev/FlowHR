@@ -14,6 +14,20 @@ import {
   toLocalInputValue
 } from "@/app/admin/page-helpers";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
+import {
+  buildAdminValidationFailureLog,
+  createEmployeeFromHelper,
+  createInviteFromHelper,
+  createOrganizationFromHelper,
+  createScheduleFromHelper,
+  deleteScheduleFromHelper,
+  listAttendanceAggregatesFromHelper,
+  listEmployeesFromHelper,
+  listOrganizationsFromHelper,
+  listSchedulesFromHelper,
+  loadLeavePolicyFromHelper,
+  saveLeavePolicyFromHelper
+} from "@/app/admin/page-action-helpers";
 import { buildAdminPayrollPreviewRequest } from "@/app/admin/page-payroll-helpers";
 import {
   isDefaultDemoOrganizationName,
@@ -558,99 +572,80 @@ export default function AdminDashboardPage() {
   }
 
   async function listEmployees() {
-    const { response, body } = await callApi(
-      "직원 목록 조회",
-      "GET",
-      `/api/people/employees${buildQuery({
-        organizationId: organizationId.trim() || undefined
-      })}`
-    );
-    if (!response.ok) {
+    const nextEmployees = await listEmployeesFromHelper({
+      callApi,
+      organizationId,
+      buildQuery
+    });
+    if (!nextEmployees) {
       return;
     }
-    const parsed = body as { employees?: EmployeeSummary[] };
-    setEmployees(Array.isArray(parsed.employees) ? parsed.employees : []);
+    setEmployees(nextEmployees);
   }
 
   async function createEmployee() {
-    const payload = {
-      id: employeeId.trim(),
-      organizationId: organizationId.trim() || null,
-      name: employeeName.trim() || undefined,
-      email: employeeEmail.trim() || undefined,
-      active: employeeActive
-    };
-    const { response, body } = await callApi("직원 생성", "POST", "/api/people/employees", payload);
-    if (!response.ok) {
+    const result = await createEmployeeFromHelper({
+      callApi,
+      employeeId,
+      organizationId,
+      employeeName,
+      employeeEmail,
+      employeeActive
+    });
+    if (!result.ok) {
       return;
     }
-    const parsed = body as { employee?: { id?: string } };
-    if (parsed.employee?.id) {
-      setEmployeeId(parsed.employee.id);
-      setAccrualEmployeeId(parsed.employee.id);
-      setScheduleEmployeeId(parsed.employee.id);
-      setInviteActorId(parsed.employee.id);
+    if (result.createdEmployeeId) {
+      setEmployeeId(result.createdEmployeeId);
+      setAccrualEmployeeId(result.createdEmployeeId);
+      setScheduleEmployeeId(result.createdEmployeeId);
+      setInviteActorId(result.createdEmployeeId);
     }
     await listEmployees();
   }
 
   async function createInvite() {
     setInviteResult(null);
-
-    const email = inviteEmail.trim();
-    if (!email) {
-      return;
-    }
-
-    const payload = {
-      email,
-      role: inviteRole,
-      deliveryMode: inviteDeliveryMode,
-      organizationId: organizationId.trim() || undefined,
-      actorId: inviteActorId.trim() || undefined
-    };
-
-    const { response, body } = await callApi("직원 초대 생성", "POST", "/api/auth/invites", payload);
-    if (!response.ok) {
-      return;
-    }
-
-    const parsed = body as { invite?: InviteResultDto };
-    if (parsed.invite) {
-      setInviteResult(parsed.invite);
+    const nextInviteResult = await createInviteFromHelper({
+      callApi,
+      inviteEmail,
+      inviteRole,
+      inviteDeliveryMode,
+      organizationId,
+      inviteActorId
+    });
+    if (nextInviteResult) {
+      setInviteResult(nextInviteResult);
     }
   }
 
   async function listSchedules() {
-    const { response, body } = await callApi(
-      "근무 일정 조회",
-      "GET",
-      `/api/scheduling/schedules${buildQuery({
-        from: toIso(periodStart),
-        to: toIso(periodEnd),
-        employeeId: scheduleEmployeeId.trim() || undefined
-      })}`
-    );
-    if (!response.ok) {
+    const nextSchedules = await listSchedulesFromHelper({
+      callApi,
+      periodStart,
+      periodEnd,
+      scheduleEmployeeId,
+      toIso,
+      buildQuery
+    });
+    if (!nextSchedules) {
       return;
     }
-    const parsed = body as { schedules?: WorkScheduleDto[] };
-    setSchedules(Array.isArray(parsed.schedules) ? parsed.schedules : []);
+    setSchedules(nextSchedules);
   }
 
   async function createSchedule() {
-    const breakMinutesRaw = Number(scheduleBreakMinutes);
-    const payload = {
-      employeeId: scheduleEmployeeId.trim(),
-      startAt: toIso(scheduleStartAt),
-      endAt: toIso(scheduleEndAt),
-      breakMinutes: Math.max(0, Math.trunc(Number.isFinite(breakMinutesRaw) ? breakMinutesRaw : 0)),
-      isHoliday: scheduleIsHoliday,
-      notes: scheduleNotes.trim() ? scheduleNotes.trim() : undefined
-    };
-
-    const { response } = await callApi("근무 일정 생성", "POST", "/api/scheduling/schedules", payload);
-    if (!response.ok) {
+    const created = await createScheduleFromHelper({
+      callApi,
+      scheduleEmployeeId,
+      scheduleStartAt,
+      scheduleEndAt,
+      scheduleBreakMinutes,
+      scheduleIsHoliday,
+      scheduleNotes,
+      toIso
+    });
+    if (!created) {
       return;
     }
     await listSchedules();
@@ -665,60 +660,45 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    const { response } = await callApi(
-      "근무 일정 삭제",
-      "DELETE",
-      `/api/scheduling/schedules/${encodeURIComponent(scheduleId)}`
-    );
-    if (!response.ok) {
+    const deleted = await deleteScheduleFromHelper({
+      callApi,
+      scheduleId
+    });
+    if (!deleted) {
       return;
     }
     setSchedules((prev) => prev.filter((item) => item.id !== scheduleId));
   }
 
   async function listOrganizations() {
-    const { response, body } = await callApi("조직 목록 조회", "GET", "/api/people/organizations", undefined, {
-      omitOrganizationHeader: true
+    const nextOrganizations = await listOrganizationsFromHelper({
+      callApi
     });
-    if (!response.ok) {
+    if (!nextOrganizations) {
       return;
     }
-    const parsed = body as { organizations?: OrganizationSummary[] };
-    setOrganizations(Array.isArray(parsed.organizations) ? parsed.organizations : []);
+    setOrganizations(nextOrganizations);
   }
 
   async function createOrganization() {
     const name = organizationName.trim();
     if (!name) {
       setLogs((prev) => [
-        {
-          id: Date.now(),
+        buildAdminValidationFailureLog({
           label: "조직 생성",
-          status: 400,
-          ok: false,
-          durationMs: 0,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: { error: "조직 이름이 필요합니다." }
-        },
+          error: "조직 이름이 필요합니다.",
+          runtimeLocale
+        }),
         ...prev
       ]);
       return;
     }
 
-    const { response, body } = await callApi(
-      "조직 생성",
-      "POST",
-      "/api/people/organizations",
-      { name },
-      { omitOrganizationHeader: true }
-    );
-    if (!response.ok) {
-      return;
-    }
-
-    const parsed = body as { organization?: { id?: string } };
-    const createdId = parsed.organization?.id;
-    if (typeof createdId === "string" && createdId.trim().length > 0) {
+    const createdId = await createOrganizationFromHelper({
+      callApi,
+      organizationName
+    });
+    if (createdId) {
       setOrganizationId(createdId);
     }
 
@@ -866,137 +846,96 @@ export default function AdminDashboardPage() {
   }
 
   async function loadLeavePolicy() {
-    const orgId = organizationId.trim();
-    if (!orgId) {
+    if (!organizationId.trim()) {
       setLogs((prev) => [
-        {
-          id: Date.now(),
+        buildAdminValidationFailureLog({
           label: "휴가 정책 조회",
-          status: 400,
-          ok: false,
-          durationMs: 0,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: { error: "조직 ID가 필요합니다." }
-        },
+          error: "조직 ID가 필요합니다.",
+          runtimeLocale
+        }),
         ...prev
       ]);
       return;
     }
 
-    const { response, body } = await callApi(
-      "휴가 정책 조회",
-      "GET",
-      `/api/leave/policy${buildQuery({ organizationId: orgId })}`
-    );
-    if (!response.ok) {
+    const policy = await loadLeavePolicyFromHelper({
+      callApi,
+      organizationId,
+      buildQuery
+    });
+    if (!policy) {
       return;
     }
-    const parsed = body as {
-      policy?: {
-        annualGrantDays?: number;
-        carryOverCapDays?: number;
-        allowHalfDay?: boolean;
-        allowHourly?: boolean;
-        hourlyIncrementMinutes?: number;
-        maxHoursPerRequest?: number;
-        minNoticeDays?: number;
-        maxConsecutiveDays?: number | null;
-      };
-    };
-    if (typeof parsed.policy?.annualGrantDays === "number") {
-      setAccrualGrantDays(String(parsed.policy.annualGrantDays));
+
+    if (typeof policy.annualGrantDays === "number") {
+      setAccrualGrantDays(String(policy.annualGrantDays));
     }
-    if (typeof parsed.policy?.carryOverCapDays === "number") {
-      setAccrualCarryCapDays(String(parsed.policy.carryOverCapDays));
+    if (typeof policy.carryOverCapDays === "number") {
+      setAccrualCarryCapDays(String(policy.carryOverCapDays));
     }
-    if (typeof parsed.policy?.allowHalfDay === "boolean") {
-      setLeaveAllowHalfDay(parsed.policy.allowHalfDay);
+    if (typeof policy.allowHalfDay === "boolean") {
+      setLeaveAllowHalfDay(policy.allowHalfDay);
     }
-    if (typeof parsed.policy?.allowHourly === "boolean") {
-      setLeaveAllowHourly(parsed.policy.allowHourly);
+    if (typeof policy.allowHourly === "boolean") {
+      setLeaveAllowHourly(policy.allowHourly);
     }
-    if (typeof parsed.policy?.hourlyIncrementMinutes === "number") {
-      setLeaveHourlyIncrementMinutes(String(parsed.policy.hourlyIncrementMinutes));
+    if (typeof policy.hourlyIncrementMinutes === "number") {
+      setLeaveHourlyIncrementMinutes(String(policy.hourlyIncrementMinutes));
     }
-    if (typeof parsed.policy?.maxHoursPerRequest === "number") {
-      setLeaveMaxHoursPerRequest(String(parsed.policy.maxHoursPerRequest));
+    if (typeof policy.maxHoursPerRequest === "number") {
+      setLeaveMaxHoursPerRequest(String(policy.maxHoursPerRequest));
     }
-    if (typeof parsed.policy?.minNoticeDays === "number") {
-      setLeaveMinNoticeDays(String(parsed.policy.minNoticeDays));
+    if (typeof policy.minNoticeDays === "number") {
+      setLeaveMinNoticeDays(String(policy.minNoticeDays));
     }
-    if (typeof parsed.policy?.maxConsecutiveDays === "number") {
-      setLeaveMaxConsecutiveDays(String(parsed.policy.maxConsecutiveDays));
-    } else if (parsed.policy?.maxConsecutiveDays === null) {
+    if (typeof policy.maxConsecutiveDays === "number") {
+      setLeaveMaxConsecutiveDays(String(policy.maxConsecutiveDays));
+    } else if (policy.maxConsecutiveDays === null) {
       setLeaveMaxConsecutiveDays("");
     }
   }
 
   async function saveLeavePolicy() {
-    const orgId = organizationId.trim();
-    if (!orgId) {
+    if (!organizationId.trim()) {
       setLogs((prev) => [
-        {
-          id: Date.now(),
+        buildAdminValidationFailureLog({
           label: "휴가 정책 저장",
-          status: 400,
-          ok: false,
-          durationMs: 0,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: { error: "조직 ID가 필요합니다." }
-        },
+          error: "조직 ID가 필요합니다.",
+          runtimeLocale
+        }),
         ...prev
       ]);
       return;
     }
 
-    const annualGrantDays = Number(accrualGrantDays.trim());
-    const carryOverCapDays = Number(accrualCarryCapDays.trim());
-    const hourlyIncrementMinutes = Number(leaveHourlyIncrementMinutes.trim());
-    const maxHoursPerRequest = Number(leaveMaxHoursPerRequest.trim());
-    const minNoticeDaysRaw = leaveMinNoticeDays.trim();
-    const minNoticeDays = minNoticeDaysRaw.length > 0 ? Number(minNoticeDaysRaw) : Number.NaN;
-    const maxConsecutiveDaysRaw = leaveMaxConsecutiveDays.trim();
-    const maxConsecutiveDays =
-      maxConsecutiveDaysRaw.length > 0 ? Number(maxConsecutiveDaysRaw) : null;
-    const payload = {
-      organizationId: orgId,
-      annualGrantDays,
-      carryOverCapDays,
-      allowHalfDay: leaveAllowHalfDay,
-      allowHourly: leaveAllowHourly,
-      hourlyIncrementMinutes,
-      maxHoursPerRequest,
-      minNoticeDays: Number.isFinite(minNoticeDays) ? minNoticeDays : undefined,
-      maxConsecutiveDays:
-        maxConsecutiveDays === null
-          ? null
-          : Number.isFinite(maxConsecutiveDays)
-            ? maxConsecutiveDays
-            : undefined
-    };
-    await callApi("휴가 정책 저장", "PUT", "/api/leave/policy", payload);
+    await saveLeavePolicyFromHelper({
+      callApi,
+      organizationId,
+      accrualGrantDays,
+      accrualCarryCapDays,
+      leaveAllowHalfDay,
+      leaveAllowHourly,
+      leaveHourlyIncrementMinutes,
+      leaveMaxHoursPerRequest,
+      leaveMinNoticeDays,
+      leaveMaxConsecutiveDays
+    });
   }
 
   async function listAttendanceAggregates(options?: { employeeId?: string }) {
-    const from = toIso(periodStart);
-    const to = toIso(periodEnd);
-    const employeeCandidate = options?.employeeId;
-    const employee =
-      typeof employeeCandidate === "string" ? employeeCandidate.trim() : aggregateEmployeeId.trim();
-    const { response, body } = await callApi(
-      employee ? "근태 집계 조회" : "근태 집계 조회(전체)",
-      "GET",
-      `/api/attendance/aggregates${buildQuery({
-        from,
-        to,
-        employeeId: employee.length > 0 ? employee : undefined
-      })}`
-    );
-    if (!response.ok) {
+    const nextAggregates = await listAttendanceAggregatesFromHelper({
+      callApi,
+      periodStart,
+      periodEnd,
+      aggregateEmployeeId,
+      employeeIdOverride: options?.employeeId,
+      toIso,
+      buildQuery
+    });
+    if (!nextAggregates) {
       return;
     }
-    const parsed = body as { aggregates?: AttendanceAggregateDto[] };
-    setAggregates(Array.isArray(parsed.aggregates) ? parsed.aggregates : []);
+    setAggregates(nextAggregates);
   }
 
   function clearLogs() {
