@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-24
-> **Current version**: 0.1.125 (Employee Payslips UTF-8 Encoding Guard)
+> **Current version**: 0.1.126 (Korean Copy Terminology Normalization: Withholding/Payslip/Contracts)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -658,3 +658,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0391 vercel scope fallback for main deploy workflow (make VERCEL_SCOPE optional + scoped vercel CLI fallback without --scope + e2e-wi0390 workflow contract hardening)
 - WI-0392 vercel scope-candidate fallback (try VERCEL_SCOPE then GITHUB_REPOSITORY_OWNER for scoped Vercel CLI commands + explicit attempted-scope diagnostics + e2e-wi0390 guard update)
 - WI-0393 employee payslips UTF-8 encoding guard (`/employee/payslips` compare insight Korean strings UTF-8 recovery + mojibake regression guard test + `.vercel` git ignore hardening)
+- WI-0394 Korean copy terminology normalization (`/employee/withholding-receipt`, `/employee/payslip-receipts`, `/employee/contracts` 용어 일관화: 직원 번호/실행/해시값 + contracts ko locale spread 제거 + regression guard test)

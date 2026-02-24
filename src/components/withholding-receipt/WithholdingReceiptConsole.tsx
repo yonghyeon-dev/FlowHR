@@ -15,10 +15,14 @@ import { currentYear } from "@/components/withholding-receipt/types";
 import { type FlowLocale } from "@/lib/i18n/locales";
 import { useI18n } from "@/lib/i18n/provider";
 
-function parseRequiredInt(value: string, fieldName: string) {
+function parseRequiredInt(value: string, fieldName: string, locale: FlowLocale) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${fieldName} must be a non-negative integer`);
+    throw new Error(
+      locale === "ko"
+        ? `${fieldName}은(는) 0 이상의 정수여야 합니다`
+        : `${fieldName} must be a non-negative integer`
+    );
   }
   return parsed;
 }
@@ -290,7 +294,7 @@ export default function WithholdingReceiptConsole() {
     try {
       setPendingLabel(copy.pendingReceiptPreview);
       const payload = {
-        year: parseRequiredInt(year, copy.yearLabel),
+        year: parseRequiredInt(year, copy.yearLabel, locale),
         employeeId: employeeId.trim(),
         issue: false
       };
@@ -340,7 +344,7 @@ export default function WithholdingReceiptConsole() {
     try {
       setPendingLabel(copy.pendingReceiptDocument);
       const query = new URLSearchParams({
-        year: String(parseRequiredInt(year, copy.yearLabel)),
+        year: String(parseRequiredInt(year, copy.yearLabel, locale)),
         employeeId: employeeId.trim(),
         format: documentFormat
       });
@@ -379,7 +383,7 @@ export default function WithholdingReceiptConsole() {
     try {
       setPendingLabel(copy.pendingFinalizedSettlement);
       const query = new URLSearchParams({
-        year: String(parseRequiredInt(year, copy.yearLabel)),
+        year: String(parseRequiredInt(year, copy.yearLabel, locale)),
         employeeId: employeeId.trim()
       });
       const response = await fetch(`/api/payroll/year-end/finalized-settlement?${query.toString()}`, {
