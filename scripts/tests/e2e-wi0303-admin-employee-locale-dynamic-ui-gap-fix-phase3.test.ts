@@ -9,6 +9,32 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const adminChrome = readUtf8("src", "components", "admin-dashboard", "AdminDashboardChrome.tsx");
+  const adminOnboardingAccountPanels = readUtf8(
+    "src",
+    "components",
+    "admin-dashboard",
+    "AdminOnboardingAccountPanels.tsx"
+  );
+  const adminPeopleInvitePanels = readUtf8(
+    "src",
+    "components",
+    "admin-dashboard",
+    "AdminPeopleInvitePanels.tsx"
+  );
+  const adminPayrollPanel = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
+  const employeeAccountOverviewPanels = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAccountOverviewPanels.tsx"
+  );
+  const employeeResubmitPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeResubmitPanel.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0303-admin-employee-locale-dynamic-ui-gap-fix-phase3.md"
@@ -16,24 +42,24 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(
-    adminPage,
+    adminChrome,
     /isKoLocale\s*\?\s*"현재 환경은 "\s*:\s*"Current environment is "/
   );
-  assert.match(adminPage, /<p>\{isKoLocale \? "API 호출" : "API calls"\}<\/p>/);
-  assert.match(adminPage, /\{isKoLocale \? "조직 ID" : "Organization ID"\}/);
-  assert.match(adminPage, /\{isKoLocale \? "액터 ID \(선택\)" : "Actor ID \(optional\)"\}/);
+  assert.match(adminChrome, /<p>\{isKoLocale \? "API 호출" : "API calls"\}<\/p>/);
+  assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "조직 ID" : "Organization ID"\}/);
+  assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "액터 ID \(선택\)" : "Actor ID \(optional\)"\}/);
   assert.match(
-    adminPage,
+    adminPayrollPanel,
     /\{isKoLocale \? "법정공제\(한국 baseline\)" : "Statutory deductions \(KR baseline\)"\}/
   );
   assert.doesNotMatch(adminPage, /Organization ID가 필요합니다\./);
 
   assert.match(
-    employeePage,
+    employeeResubmitPanel,
     /aria-label=\{isKoLocale \? "재제출 후보 목록" : "resubmit candidate list"\}/
   );
   assert.match(
-    employeePage,
+    employeeAccountOverviewPanels,
     /\{isKoLocale\s*\?\s*"조직 ID \(선택\)"\s*:\s*"Organization ID \(optional\)"\}/
   );
   assert.match(employeePage, /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/);

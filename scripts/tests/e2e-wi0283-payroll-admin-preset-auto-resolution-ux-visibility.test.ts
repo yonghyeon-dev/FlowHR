@@ -12,6 +12,7 @@ function countLines(source: string) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPayrollPanelSource = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const presetGuidePanelSource = readUtf8(
     "src",
     "components",
@@ -51,12 +52,12 @@ function run() {
     "admin payroll payload should forward optional asOf in auto mode"
   );
   assert.match(
-    adminPageSource,
+    adminPayrollPanelSource,
     /presetAutoEnabled=\{payrollIncomeTaxLookupPresetAuto\}/,
     "admin payroll preview should bind preset auto mode to guide panel"
   );
   assert.match(
-    adminPageSource,
+    adminPayrollPanelSource,
     /presetAsOfInput=\{payrollIncomeTaxLookupAsOf\}/,
     "admin payroll preview should bind preset asOf input to guide panel"
   );

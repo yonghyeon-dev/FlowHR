@@ -13,12 +13,13 @@ function countLines(source: string) {
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
   const employeePageSource = readUtf8("src", "app", "employee", "page.tsx");
-  const approvalQueuePanelSource = readUtf8(
+  const employeeAccountOverviewPanelsSource = readUtf8(
     "src",
     "components",
-    "admin-approval",
-    "ApprovalQueuePanel.tsx"
+    "employee-dashboard",
+    "EmployeeAccountOverviewPanels.tsx"
   );
+  const approvalQueuePanelSource = readUtf8("src", "components", "admin-approval", "ApprovalQueuePanel.tsx");
   const approvalQueueSearchSortSource = readUtf8(
     "src",
     "components",
@@ -52,14 +53,15 @@ function run() {
     `ApprovalQueueSearchSortPanel should stay under 300 lines (current: ${countLines(approvalQueueSearchSortSource)})`
   );
 
+  assert.match(employeePageSource, /EmployeeAccountOverviewPanels/, "employee page should mount account overview panels");
   assert.match(
-    employeePageSource,
+    employeeAccountOverviewPanelsSource,
     /EmployeeJourneyShortcutPanel/,
-    "employee page should include extracted IA shortcut panel"
+    "employee account overview panels should include extracted IA shortcut panel"
   );
   assert.match(
     employeeJourneyShortcutSource,
-    /핵심 여정 바로가기/,
+    /직원 여정 바로가기|Employee Journey Shortcuts/,
     "employee journey shortcut panel should expose a simplified IA entry"
   );
   assert.ok(
