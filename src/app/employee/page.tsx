@@ -9,6 +9,14 @@ import {
 } from "@/app/employee/page-derived-helpers";
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
 import {
+  buildMobileRequestTimeline,
+  buildRequestFailureCauses,
+  buildRequestFeedbackRows,
+  buildRequestSearchRows,
+  filterMobileRequestTimeline,
+  filterRequestFeedbackRows
+} from "@/app/employee/page-request-helpers";
+import {
   buildQuery,
   calculateNetMinutes,
   coerceNumber,
@@ -136,6 +144,10 @@ export default function EmployeeSelfServicePage() {
   const toLeaveTypeLabel = useCallback(
     (leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType,
     [leaveTypeLabels]
+  );
+  const formatDateTimeByLocale = useCallback(
+    (value: string | null) => formatDateTime(value, runtimeLocale),
+    [runtimeLocale]
   );
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
@@ -772,7 +784,7 @@ export default function EmployeeSelfServicePage() {
       .sort((lhs, rhs) => new Date(lhs.startDate).getTime() - new Date(rhs.startDate).getTime())
       .map((request) => ({
         id: request.id,
-        dateRange: `${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`,
+        dateRange: `${formatDateTimeByLocale(request.startDate)} ~ ${formatDateTimeByLocale(request.endDate)}`,
         status: request.state,
         label:
           request.unit === "HOUR" && request.hours !== null
@@ -824,7 +836,7 @@ export default function EmployeeSelfServicePage() {
         status: "REJECTED" as const,
         at: record.checkOutAt ?? record.checkInAt,
         reason: record.notes?.trim() || defaultsCopy.noReasonProvided,
-        summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
+        summary: `${formatDateTimeByLocale(record.checkInAt)} ~ ${formatDateTimeByLocale(record.checkOutAt)}`
       }));
 
     const leaveCandidates = leaveRequests
@@ -839,7 +851,7 @@ export default function EmployeeSelfServicePage() {
           request.decisionReason?.trim() ||
           request.reason?.trim() ||
           defaultsCopy.noReasonProvided,
-        summary: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
+        summary: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTimeByLocale(request.startDate)} ~ ${formatDateTimeByLocale(request.endDate)}`
       }));
 
     return [...attendanceCandidates, ...leaveCandidates]
@@ -931,101 +943,31 @@ export default function EmployeeSelfServicePage() {
   }, [leaveRequests]);
 
   const requestFeedbackRows = useMemo<RequestFeedbackRow[]>(() => {
-    const rows: RequestFeedbackRow[] = [];
-    if (latestAttendance) {
-      rows.push({
-        id: `attendance-${latestAttendance.id}`,
-        channel: "attendance",
-        status: latestAttendance.state,
-        at: latestAttendance.checkOutAt ?? latestAttendance.checkInAt,
-        message:
-          latestAttendance.state === "REJECTED"
-            ? `${requestFeedbackCopy.rejectionReasonPrefix}: ${latestAttendance.notes?.trim() || defaultsCopy.noReasonProvided}`
-            : latestAttendance.state === "PENDING"
-              ? requestFeedbackCopy.pendingMessage
-              : requestFeedbackCopy.successMessage,
-        tone:
-          latestAttendance.state === "APPROVED"
-            ? "ok"
-            : latestAttendance.state === "PENDING"
-              ? "pending"
-              : "fail"
-      });
-    }
-    if (latestLeaveRequest) {
-      const rejectReason =
-        latestLeaveRequest.decisionReason?.trim() ||
-        latestLeaveRequest.reason?.trim() ||
-        defaultsCopy.noReasonProvided;
-      rows.push({
-        id: `leave-${latestLeaveRequest.id}`,
-        channel: "leave",
-        status: latestLeaveRequest.state,
-        at: latestLeaveRequest.endDate,
-        message:
-          latestLeaveRequest.state === "REJECTED"
-            ? `${requestFeedbackCopy.rejectionReasonPrefix}: ${rejectReason}`
-            : latestLeaveRequest.state === "CANCELED"
-              ? `${requestFeedbackCopy.cancelReasonPrefix}: ${rejectReason}`
-              : latestLeaveRequest.state === "PENDING"
-                ? requestFeedbackCopy.pendingMessage
-                : requestFeedbackCopy.successMessage,
-        tone:
-          latestLeaveRequest.state === "APPROVED"
-            ? "ok"
-            : latestLeaveRequest.state === "PENDING"
-              ? "pending"
-              : "fail"
-      });
-    }
-
-    return rows.sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
-  }, [defaultsCopy.noReasonProvided, latestAttendance, latestLeaveRequest, requestFeedbackCopy.cancelReasonPrefix, requestFeedbackCopy.pendingMessage, requestFeedbackCopy.rejectionReasonPrefix, requestFeedbackCopy.successMessage]);
+    return buildRequestFeedbackRows({
+      latestAttendance,
+      latestLeaveRequest,
+      defaultsCopy: {
+        noReasonProvided: defaultsCopy.noReasonProvided
+      },
+      requestFeedbackCopy
+    });
+  }, [defaultsCopy.noReasonProvided, latestAttendance, latestLeaveRequest, requestFeedbackCopy]);
 
   const requestSearchRows = useMemo<RequestSearchRow[]>(() => {
-    const attendanceRows = attendance.map((record) => {
-      const at = record.checkOutAt ?? record.checkInAt;
-      const pendingHours =
-        record.state === "PENDING" ? Math.max(0, (requestNowMs - toTimestamp(at)) / 3_600_000) : 0;
-      return {
-        key: `attendance:${record.id}`,
-        channel: "attendance" as const,
-        requestId: record.id,
-        status: record.state,
-        at,
-        summary: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`,
-        detail: record.notes?.trim() || defaultsCopy.noNote,
-        pendingHours
-      };
+    return buildRequestSearchRows({
+      attendance,
+      leaveRequests,
+      requestNowMs,
+      defaultsCopy: {
+        noNote: defaultsCopy.noNote,
+        noReason: defaultsCopy.noReason
+      },
+      leaveUnitCopy,
+      formatDays,
+      toLeaveTypeLabel,
+      formatDateTime: formatDateTimeByLocale
     });
-
-    const leaveRows = leaveRequests.map((request) => {
-      const at = request.startDate;
-      const pendingHours =
-        request.state === "PENDING" ? Math.max(0, (requestNowMs - toTimestamp(at)) / 3_600_000) : 0;
-      const leaveUnitLabel =
-        request.unit === "HOUR" && request.hours !== null
-          ? leaveUnitCopy.hourUnit(request.hours.toFixed(2))
-          : request.unit === "HALF_DAY"
-            ? leaveUnitCopy.halfDay
-            : leaveUnitCopy.dayUnit(formatDays(request.days));
-      return {
-        key: `leave:${request.id}`,
-        channel: "leave" as const,
-        requestId: request.id,
-        status: request.state,
-        at,
-        summary: `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitLabel} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`,
-        detail:
-          request.reason?.trim() ||
-          request.decisionReason?.trim() ||
-          defaultsCopy.noReason,
-        pendingHours
-      };
-    });
-
-    return [...attendanceRows, ...leaveRows].sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at));
-  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, leaveRequests, leaveUnitCopy, requestNowMs, toLeaveTypeLabel]);
+  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, formatDateTimeByLocale, leaveRequests, leaveUnitCopy, requestNowMs, toLeaveTypeLabel]);
 
   const filteredRequestSearchRows = useMemo(() => {
     const filtered = requestSearchRows.filter((row) =>
@@ -1036,98 +978,47 @@ export default function EmployeeSelfServicePage() {
   }, [normalizedRequestSearchQuery, requestSearchRows, requestSearchScope, requestSortOption]);
 
   const filteredRequestFeedbackRows = useMemo(() => {
-    if (requestFeedbackStatusFilter === "all") {
-      return requestFeedbackRows;
-    }
-    return requestFeedbackRows.filter((row) => row.status === requestFeedbackStatusFilter);
+    return filterRequestFeedbackRows(requestFeedbackRows, requestFeedbackStatusFilter);
   }, [requestFeedbackStatusFilter, requestFeedbackRows]);
 
   const mobileRequestTimeline = useMemo<MobileRequestTimelineItem[]>(() => {
-    const attendanceItems = attendance.map((record) => ({
-      id: `attendance-${record.id}`,
-      channel: "attendance" as const,
-      status: record.state,
-      at: record.checkOutAt ?? record.checkInAt,
-      title: defaultsCopy.attendanceRequestTitle,
-      detail: `${formatDateTime(record.checkInAt)} ~ ${formatDateTime(record.checkOutAt)}`
-    }));
-
-    const leaveItems = leaveRequests.map((request) => ({
-      id: `leave-${request.id}`,
-      channel: "leave" as const,
-      status: request.state,
-      at: request.endDate,
-      title: defaultsCopy.leaveRequestTitle,
-      detail: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTime(request.startDate)} ~ ${formatDateTime(request.endDate)}`
-    }));
-
-    return [...attendanceItems, ...leaveItems]
-      .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
-      .slice(0, 12);
-  }, [attendance, defaultsCopy.attendanceRequestTitle, defaultsCopy.leaveRequestTitle, leaveRequests, toLeaveTypeLabel]);
+    return buildMobileRequestTimeline({
+      attendance,
+      leaveRequests,
+      defaultsCopy: {
+        attendanceRequestTitle: defaultsCopy.attendanceRequestTitle,
+        leaveRequestTitle: defaultsCopy.leaveRequestTitle
+      },
+      toLeaveTypeLabel,
+      formatDateTime: formatDateTimeByLocale
+    });
+  }, [attendance, defaultsCopy.attendanceRequestTitle, defaultsCopy.leaveRequestTitle, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]);
 
   const filteredMobileRequestTimeline = useMemo(() => {
-    return mobileRequestTimeline.filter((item) => {
-      if (timelineChannelFilter !== "all" && item.channel !== timelineChannelFilter) {
-        return false;
-      }
-      if (timelineStatusFilter !== "all" && item.status !== timelineStatusFilter) {
-        return false;
-      }
-      return true;
-    });
+    return filterMobileRequestTimeline(
+      mobileRequestTimeline,
+      timelineChannelFilter,
+      timelineStatusFilter
+    );
   }, [mobileRequestTimeline, timelineChannelFilter, timelineStatusFilter]);
 
   const requestFailureCauses = useMemo<RequestFailureCause[]>(() => {
-    const byId = new Map<string, RequestFailureCause>();
-
-    logs
-      .filter((log) => !log.ok)
-      .slice(0, 4)
-      .forEach((log) => {
-        const message = extractEmployeeErrorMessage(log.body, isKoLocale);
-        byId.set(`log-${log.id}`, {
-          id: `log-${log.id}`,
-          source: `${log.label} (${log.status})`,
-          message,
-          at: log.at
-        });
-      });
-
-    const latestRejectedAttendance = [...attendance]
-      .reverse()
-      .find((record) => record.state === "REJECTED");
-    if (latestRejectedAttendance) {
-      byId.set(`attendance-${latestRejectedAttendance.id}`, {
-        id: `attendance-${latestRejectedAttendance.id}`,
-        source: defaultsCopy.attendanceRejectedSource,
-        message:
-          latestRejectedAttendance.notes?.trim() ||
-          defaultsCopy.rejectionReasonMissing,
-        at: formatDateTime(latestRejectedAttendance.checkOutAt ?? latestRejectedAttendance.checkInAt)
-      });
-    }
-
-    const latestRejectedLeave = [...leaveRequests]
-      .reverse()
-      .find((request) => request.state === "REJECTED" || request.state === "CANCELED");
-    if (latestRejectedLeave) {
-      byId.set(`leave-${latestRejectedLeave.id}`, {
-        id: `leave-${latestRejectedLeave.id}`,
-        source:
-          latestRejectedLeave.state === "REJECTED"
-            ? defaultsCopy.leaveRejectedSource
-            : defaultsCopy.leaveCanceledSource,
-        message:
-          latestRejectedLeave.decisionReason?.trim() ||
-          latestRejectedLeave.reason?.trim() ||
-          defaultsCopy.reasonMissing,
-        at: formatDateTime(latestRejectedLeave.endDate)
-      });
-    }
-
-    return [...byId.values()].slice(0, 6);
-  }, [attendance, defaultsCopy.attendanceRejectedSource, defaultsCopy.leaveCanceledSource, defaultsCopy.leaveRejectedSource, defaultsCopy.reasonMissing, defaultsCopy.rejectionReasonMissing, isKoLocale, leaveRequests, logs]);
+    return buildRequestFailureCauses({
+      logs,
+      attendance,
+      leaveRequests,
+      defaultsCopy: {
+        attendanceRejectedSource: defaultsCopy.attendanceRejectedSource,
+        leaveRejectedSource: defaultsCopy.leaveRejectedSource,
+        leaveCanceledSource: defaultsCopy.leaveCanceledSource,
+        rejectionReasonMissing: defaultsCopy.rejectionReasonMissing,
+        reasonMissing: defaultsCopy.reasonMissing
+      },
+      isKoLocale,
+      formatDateTime: formatDateTimeByLocale,
+      extractEmployeeErrorMessage
+    });
+  }, [attendance, defaultsCopy.attendanceRejectedSource, defaultsCopy.leaveCanceledSource, defaultsCopy.leaveRejectedSource, defaultsCopy.reasonMissing, defaultsCopy.rejectionReasonMissing, formatDateTimeByLocale, isKoLocale, leaveRequests, logs]);
 
   const latestFailureCauseMessage = requestFailureCauses[0]?.message ?? null;
 
@@ -1552,7 +1443,7 @@ export default function EmployeeSelfServicePage() {
           timelineStatusFilter={timelineStatusFilter}
           filteredMobileRequestTimeline={filteredMobileRequestTimeline}
           toRequestStatusLabel={toRequestStatusLabel}
-          formatDateTime={formatDateTime}
+          formatDateTime={formatDateTimeByLocale}
           statusToTone={statusToTone}
           onRequestFeedbackStatusFilterChange={setRequestFeedbackStatusFilter}
           onCopyFailureCause={(message) => void copyFailureCause(message)}
@@ -1639,7 +1530,7 @@ export default function EmployeeSelfServicePage() {
           logs={logs}
           stats={stats}
           latestPayload={latestPayload}
-          formatDateTime={formatDateTime}
+          formatDateTime={formatDateTimeByLocale}
           formatDays={formatDays}
           toLeaveTypeLabel={toLeaveTypeLabel}
           toRequestStatusLabel={toRequestStatusLabel}
