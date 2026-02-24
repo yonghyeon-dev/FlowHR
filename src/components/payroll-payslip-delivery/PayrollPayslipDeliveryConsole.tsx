@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { payrollPayslipDeliveryCopyByLocale } from "@/components/payroll-payslip-delivery/copy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 import type { ApiLog, PayrollPayslipDistributionResponse } from "@/components/payroll-payslip-delivery/types";
 import {
   defaultMonthRange,
@@ -28,6 +30,9 @@ export default function PayrollPayslipDeliveryConsole() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const copy = payrollPayslipDeliveryCopyByLocale[locale];
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -52,7 +57,7 @@ export default function PayrollPayslipDeliveryConsole() {
         dryRun
       };
 
-      setPendingLabel(dryRun ? "payslip distribution dry-run" : "payslip distribution apply");
+      setPendingLabel(dryRun ? copy.pendingDryRun : copy.pendingApply);
       const headers: Record<string, string> = {
         "content-type": "application/json"
       };
@@ -85,16 +90,16 @@ export default function PayrollPayslipDeliveryConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: dryRun ? "dry-run distribute payslips" : "apply distribute payslips",
+          label: dryRun ? copy.logDryRun : copy.logApply,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
 
       if (!response.ok || !body || typeof body !== "object") {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
 
@@ -102,12 +107,12 @@ export default function PayrollPayslipDeliveryConsole() {
       setResult(parsed);
       setStatusMessage(
         dryRun
-          ? `dry-run target ${parsed.summary.distribution.targetCount} runs`
-          : `distributed ${parsed.summary.distribution.newlyDistributedCount} runs`
+          ? `${copy.statusDryRunTargetPrefix} ${parsed.summary.distribution.targetCount} ${copy.statusRunsSuffix}`
+          : `${copy.statusDistributedPrefix} ${parsed.summary.distribution.newlyDistributedCount} ${copy.statusRunsSuffix}`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -116,106 +121,106 @@ export default function PayrollPayslipDeliveryConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Payslip Delivery</h1>
-        <p>Distribute confirmed payroll payslips and track delivery baseline before employee receipt confirmation.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>Distribution Input</h2>
+          <h2>{copy.inputTitle}</h2>
           <div className="input-grid">
             <label>
-              Period Start
+              {copy.periodStartLabel}
               <input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} />
             </label>
             <label>
-              Period End
+              {copy.periodEndLabel}
               <input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} />
             </label>
             <label>
-              Employee ID (optional)
-              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} placeholder="EMP-1001" />
+              {copy.employeeIdOptionalLabel}
+              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} placeholder={copy.employeeIdPlaceholder} />
             </label>
             <label>
-              Delivery Channel
+              {copy.deliveryChannelLabel}
               <select value={deliveryChannel} onChange={(event) => setDeliveryChannel(event.target.value as "in_app" | "email")}>
-                <option value="in_app">in_app</option>
-                <option value="email">email</option>
+                <option value="in_app">{copy.deliveryChannelInAppLabel}</option>
+                <option value="email">{copy.deliveryChannelEmailLabel}</option>
               </select>
             </label>
           </div>
           <label>
-            Access Token (optional)
-            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" />
+            {copy.accessTokenLabel}
+            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} />
           </label>
           <label>
-            Actor ID (dev fallback)
+            {copy.actorIdFallbackLabel}
             <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
           </label>
           <label>
-            Organization ID (dev fallback)
+            {copy.organizationIdFallbackLabel}
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
           </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runDistribution(true)} disabled={pendingLabel !== null}>
-              Dry-run
+              {copy.dryRunAction}
             </button>
             <button className="btn btn-primary" onClick={() => void runDistribution(false)} disabled={pendingLabel !== null}>
-              Apply Delivery
+              {copy.applyDeliveryAction}
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
 
         <article className="panel">
-          <h2>Run States</h2>
+          <h2>{copy.runStatesTitle}</h2>
           {!result ? (
-            <p className="small">No distribution summary yet.</p>
+            <p className="small">{copy.noDistributionSummaryYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>Total / Confirmed / Previewed</span><strong>{result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} / {result.summary.runStates.previewedRuns}</strong></li>
-              <li><span>Target Count</span><strong>{result.summary.distribution.targetCount}</strong></li>
-              <li><span>Already Distributed</span><strong>{result.summary.distribution.alreadyDistributedCount}</strong></li>
-              <li><span>Newly Distributed</span><strong>{result.summary.distribution.newlyDistributedCount}</strong></li>
+              <li><span>{copy.totalConfirmedPreviewedLabel}</span><strong>{result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} / {result.summary.runStates.previewedRuns}</strong></li>
+              <li><span>{copy.targetCountLabel}</span><strong>{result.summary.distribution.targetCount}</strong></li>
+              <li><span>{copy.alreadyDistributedLabel}</span><strong>{result.summary.distribution.alreadyDistributedCount}</strong></li>
+              <li><span>{copy.newlyDistributedLabel}</span><strong>{result.summary.distribution.newlyDistributedCount}</strong></li>
             </ul>
           )}
         </article>
 
         <article className="panel">
-          <h2>Run IDs</h2>
+          <h2>{copy.runIdsTitle}</h2>
           {!result ? (
-            <p className="small">No run IDs yet.</p>
+            <p className="small">{copy.noRunIdsYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>Target Runs</span><strong>{result.summary.distribution.targetRunIds.join(", ") || "-"}</strong></li>
-              <li><span>Already Distributed Runs</span><strong>{result.summary.distribution.alreadyDistributedRunIds.join(", ") || "-"}</strong></li>
-              <li><span>Newly Distributed Runs</span><strong>{result.summary.distribution.newlyDistributedRunIds.join(", ") || "-"}</strong></li>
+              <li><span>{copy.targetRunsLabel}</span><strong>{result.summary.distribution.targetRunIds.join(", ") || "-"}</strong></li>
+              <li><span>{copy.alreadyDistributedRunsLabel}</span><strong>{result.summary.distribution.alreadyDistributedRunIds.join(", ") || "-"}</strong></li>
+              <li><span>{copy.newlyDistributedRunsLabel}</span><strong>{result.summary.distribution.newlyDistributedRunIds.join(", ") || "-"}</strong></li>
             </ul>
           )}
         </article>
 
         <article className="panel">
-          <h2>API Logs</h2>
+          <h2>{copy.apiLogsTitle}</h2>
           <p className="small">
-            total {stats.total} / success {stats.success} / fail {stats.fail}
-            {pendingLabel ? ` / running ${pendingLabel}` : ""}
+            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">No API call yet.</p>
+            <p className="small">{copy.noApiCallYet}</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
+            <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
           </div>
         </article>
       </section>

@@ -118,7 +118,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
-  assert.match(yearEndConsoleSource, /Additional Withholding Due/);
+  assert.match(yearEndConsoleSource, /copy\.additionalWithholdingDueLabel/);
   assert.match(payrollApiSpec, /refund\/additional-due/i);
   assert.match(payrollContract, /additionalWithholdingDueKrw/);
   assert.match(payrollTestCases, /Year-End Withholding Breakdown Gate/);

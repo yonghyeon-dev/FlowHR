@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { payrollYearEndCopyByLocale } from "@/components/payroll-year-end/copy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 import type {
   ApiLog,
   PayrollYearEndInsuranceReconciliationReportResponse,
@@ -14,45 +16,40 @@ import type {
 } from "@/components/payroll-year-end/types";
 import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 
-function parseRequiredInt(value: string, fieldName: string) {
+function parseRequiredInt(value: string, fieldName: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${fieldName} must be a non-negative integer`);
+    throw new Error(`${fieldName} ${nonNegativeIntegerLabel}`);
   }
   return parsed;
 }
 
-function parseRate(value: string, fieldName: string) {
+function parseRate(value: string, fieldName: string, rateBetweenZeroAndOneLabel: string) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
-    throw new Error(`${fieldName} must be between 0 and 1`);
+    throw new Error(`${fieldName} ${rateBetweenZeroAndOneLabel}`);
   }
   return parsed;
 }
 
-const deductionItemLabels: Record<string, string> = {
-  personalPensionKrw: "Personal Pension",
-  insurancePremiumKrw: "Insurance Premium",
-  medicalExpenseKrw: "Medical Expense",
-  educationExpenseKrw: "Education Expense",
-  donationKrw: "Donation",
-  housingSavingsKrw: "Housing Savings"
-};
-
 function summarizeCappedDeductionItems(
-  capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"]
+  capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"],
+  deductionItemLabels: Record<string, string>,
+  runtimeLocale: string,
+  capLabel: string
 ) {
   const cappedLines = Object.entries(capAppliedByItemKrw)
     .filter(([, value]) => value.capped)
     .map(([key, value]) => {
       const label = deductionItemLabels[key] ?? key;
-      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)}) [${value.applicationReasonCode}]`;
+      return `${label}: ${formatKrw(value.inputKrw, runtimeLocale)} -> ${formatKrw(value.appliedKrw, runtimeLocale)} (${capLabel} ${formatKrw(value.capKrw, runtimeLocale)}) [${value.applicationReasonCode}]`;
     });
   return cappedLines.length ? cappedLines.join(" | ") : "-";
 }
 
 function summarizeDeductionReasonCodes(
-  capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"]
+  capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"],
+  deductionItemLabels: Record<string, string>
 ) {
   return Object.entries(capAppliedByItemKrw)
     .map(([key, value]) => {
@@ -62,26 +59,24 @@ function summarizeDeductionReasonCodes(
     .join(" | ");
 }
 
-const taxCreditItemLabels: Record<string, string> = {
-  earnedIncomeTaxCreditKrw: "Earned Income Credit",
-  childTaxCreditKrw: "Child Credit",
-  additionalTaxCreditKrw: "Additional Credit"
-};
-
 function summarizeCappedTaxCreditItems(
-  capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"]
+  capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"],
+  taxCreditItemLabels: Record<string, string>,
+  runtimeLocale: string,
+  capLabel: string
 ) {
   const cappedLines = Object.entries(capAppliedByItemKrw)
     .filter(([, value]) => value.capped)
     .map(([key, value]) => {
       const label = taxCreditItemLabels[key] ?? key;
-      return `${label}: ${formatKrw(value.inputKrw)} -> ${formatKrw(value.appliedKrw)} (cap ${formatKrw(value.capKrw)}) [${value.applicationReasonCode}]`;
+      return `${label}: ${formatKrw(value.inputKrw, runtimeLocale)} -> ${formatKrw(value.appliedKrw, runtimeLocale)} (${capLabel} ${formatKrw(value.capKrw, runtimeLocale)}) [${value.applicationReasonCode}]`;
     });
   return cappedLines.length ? cappedLines.join(" | ") : "-";
 }
 
 function summarizeTaxCreditReasonCodes(
-  capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"]
+  capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"],
+  taxCreditItemLabels: Record<string, string>
 ) {
   return Object.entries(capAppliedByItemKrw)
     .map(([key, value]) => {
@@ -127,6 +122,9 @@ export default function PayrollYearEndConsole() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const copy = payrollYearEndCopyByLocale[locale];
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -159,28 +157,47 @@ export default function PayrollYearEndConsole() {
 
   async function runSettlementPreview() {
     try {
-      setPendingLabel("year-end settlement preview");
+      setPendingLabel(copy.pendingSettlementPreview);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusNonNegativeInteger),
         employeeId: employeeId.trim(),
         nonTaxableAnnualIncomeKrw: parseRequiredInt(
-        nonTaxableAnnualIncomeKrw,
-          "nonTaxableAnnualIncomeKrw"
+          nonTaxableAnnualIncomeKrw,
+          copy.nonTaxableAnnualIncomeLabel,
+          copy.statusNonNegativeInteger
         ),
-        additionalTaxCreditKrw: parseRequiredInt(additionalTaxCreditKrw, "additionalTaxCreditKrw"),
+        additionalTaxCreditKrw: parseRequiredInt(
+          additionalTaxCreditKrw,
+          copy.additionalTaxCreditLabel,
+          copy.statusNonNegativeInteger
+        ),
         taxCredits: {
           earnedIncomeTaxCreditKrw: parseRequiredInt(
             earnedIncomeTaxCreditKrw,
-            "taxCredits.earnedIncomeTaxCreditKrw"
+            copy.earnedIncomeTaxCreditLabel,
+            copy.statusNonNegativeInteger
           ),
-          childTaxCreditKrw: parseRequiredInt(childTaxCreditKrw, "taxCredits.childTaxCreditKrw"),
+          childTaxCreditKrw: parseRequiredInt(
+            childTaxCreditKrw,
+            copy.childTaxCreditLabel,
+            copy.statusNonNegativeInteger
+          ),
           additionalTaxCreditKrw: parseRequiredInt(
             additionalTaxCreditKrw,
-            "taxCredits.additionalTaxCreditKrw"
+            copy.additionalTaxCreditLabel,
+            copy.statusNonNegativeInteger
           )
         },
-        annualIncomeTaxRate: parseRate(annualIncomeTaxRate, "annualIncomeTaxRate"),
-        localIncomeTaxRate: parseRate(localIncomeTaxRate, "localIncomeTaxRate")
+        annualIncomeTaxRate: parseRate(
+          annualIncomeTaxRate,
+          copy.annualIncomeTaxRateLabel,
+          copy.statusRateBetweenZeroAndOne
+        ),
+        localIncomeTaxRate: parseRate(
+          localIncomeTaxRate,
+          copy.localIncomeTaxRateLabel,
+          copy.statusRateBetweenZeroAndOne
+        )
       };
       const response = await fetch("/api/payroll/year-end/preview-settlement", {
         method: "POST",
@@ -189,18 +206,26 @@ export default function PayrollYearEndConsole() {
       });
       const body = (await response.json()) as PayrollYearEndSettlementResponse | { error: string };
       setLogs((prev) => [
-        { id: Date.now(), label: "preview year-end settlement", status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        {
+          id: Date.now(),
+          label: copy.logPreviewSettlement,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setSettlement(body);
-      setStatusMessage(`loaded annual liability ${formatKrw(body.summary.settlementKrw.annualTaxLiabilityKrw)}`);
+      setStatusMessage(
+        `${copy.statusLoadedAnnualLiabilityPrefix} ${formatKrw(body.summary.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}`
+      );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -208,28 +233,47 @@ export default function PayrollYearEndConsole() {
 
   async function runSettlementRecalculation() {
     try {
-      setPendingLabel("year-end settlement recalculation");
+      setPendingLabel(copy.pendingSettlementRecalculation);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusNonNegativeInteger),
         employeeId: employeeId.trim(),
         nonTaxableAnnualIncomeKrw: parseRequiredInt(
-        nonTaxableAnnualIncomeKrw,
-          "nonTaxableAnnualIncomeKrw"
+          nonTaxableAnnualIncomeKrw,
+          copy.nonTaxableAnnualIncomeLabel,
+          copy.statusNonNegativeInteger
         ),
-        additionalTaxCreditKrw: parseRequiredInt(additionalTaxCreditKrw, "additionalTaxCreditKrw"),
+        additionalTaxCreditKrw: parseRequiredInt(
+          additionalTaxCreditKrw,
+          copy.additionalTaxCreditLabel,
+          copy.statusNonNegativeInteger
+        ),
         taxCredits: {
           earnedIncomeTaxCreditKrw: parseRequiredInt(
             earnedIncomeTaxCreditKrw,
-            "taxCredits.earnedIncomeTaxCreditKrw"
+            copy.earnedIncomeTaxCreditLabel,
+            copy.statusNonNegativeInteger
           ),
-          childTaxCreditKrw: parseRequiredInt(childTaxCreditKrw, "taxCredits.childTaxCreditKrw"),
+          childTaxCreditKrw: parseRequiredInt(
+            childTaxCreditKrw,
+            copy.childTaxCreditLabel,
+            copy.statusNonNegativeInteger
+          ),
           additionalTaxCreditKrw: parseRequiredInt(
             additionalTaxCreditKrw,
-            "taxCredits.additionalTaxCreditKrw"
+            copy.additionalTaxCreditLabel,
+            copy.statusNonNegativeInteger
           )
         },
-        annualIncomeTaxRate: parseRate(annualIncomeTaxRate, "annualIncomeTaxRate"),
-        localIncomeTaxRate: parseRate(localIncomeTaxRate, "localIncomeTaxRate"),
+        annualIncomeTaxRate: parseRate(
+          annualIncomeTaxRate,
+          copy.annualIncomeTaxRateLabel,
+          copy.statusRateBetweenZeroAndOne
+        ),
+        localIncomeTaxRate: parseRate(
+          localIncomeTaxRate,
+          copy.localIncomeTaxRateLabel,
+          copy.statusRateBetweenZeroAndOne
+        ),
         deductionEligibility: {
           personalPensionEligible,
           insurancePremiumEligible,
@@ -239,12 +283,32 @@ export default function PayrollYearEndConsole() {
           housingSavingsEligible
         },
         deductionItems: {
-          personalPensionKrw: parseRequiredInt(personalPensionKrw, "personalPensionKrw"),
-          insurancePremiumKrw: parseRequiredInt(insurancePremiumKrw, "insurancePremiumKrw"),
-          medicalExpenseKrw: parseRequiredInt(medicalExpenseKrw, "medicalExpenseKrw"),
-          educationExpenseKrw: parseRequiredInt(educationExpenseKrw, "educationExpenseKrw"),
-          donationKrw: parseRequiredInt(donationKrw, "donationKrw"),
-          housingSavingsKrw: parseRequiredInt(housingSavingsKrw, "housingSavingsKrw")
+          personalPensionKrw: parseRequiredInt(
+            personalPensionKrw,
+            copy.personalPensionLabel,
+            copy.statusNonNegativeInteger
+          ),
+          insurancePremiumKrw: parseRequiredInt(
+            insurancePremiumKrw,
+            copy.insurancePremiumLabel,
+            copy.statusNonNegativeInteger
+          ),
+          medicalExpenseKrw: parseRequiredInt(
+            medicalExpenseKrw,
+            copy.medicalExpenseLabel,
+            copy.statusNonNegativeInteger
+          ),
+          educationExpenseKrw: parseRequiredInt(
+            educationExpenseKrw,
+            copy.educationExpenseLabel,
+            copy.statusNonNegativeInteger
+          ),
+          donationKrw: parseRequiredInt(donationKrw, copy.donationLabel, copy.statusNonNegativeInteger),
+          housingSavingsKrw: parseRequiredInt(
+            housingSavingsKrw,
+            copy.housingSavingsLabel,
+            copy.statusNonNegativeInteger
+          )
         }
       };
       const response = await fetch("/api/payroll/year-end/recalculate-settlement", {
@@ -254,20 +318,26 @@ export default function PayrollYearEndConsole() {
       });
       const body = (await response.json()) as PayrollYearEndRecalculationResponse | { error: string };
       setLogs((prev) => [
-        { id: Date.now(), label: "recalculate year-end settlement", status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        {
+          id: Date.now(),
+          label: copy.logRecalculateSettlement,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setRecalculation(body);
       setStatusMessage(
-        `recalculated tax delta ${formatKrw(body.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw)}`
+        `${copy.statusRecalculatedTaxDeltaPrefix} ${formatKrw(body.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw, runtimeLocale)}`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -275,9 +345,9 @@ export default function PayrollYearEndConsole() {
 
   async function runReceipt(issue: boolean) {
     try {
-      setPendingLabel(issue ? "withholding receipt issue" : "withholding receipt preview");
+      setPendingLabel(issue ? copy.pendingReceiptIssue : copy.pendingReceiptPreview);
       const payload = {
-        year: parseRequiredInt(year, "year"),
+        year: parseRequiredInt(year, copy.yearLabel, copy.statusNonNegativeInteger),
         employeeId: employeeId.trim(),
         issue,
         issuerName: issuerName.trim() || undefined
@@ -289,18 +359,28 @@ export default function PayrollYearEndConsole() {
       });
       const body = (await response.json()) as PayrollWithholdingReceiptResponse | { error: string };
       setLogs((prev) => [
-        { id: Date.now(), label: issue ? "issue withholding receipt" : "preview withholding receipt", status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        {
+          id: Date.now(),
+          label: issue ? copy.logIssueReceipt : copy.logPreviewReceipt,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setReceipt(body);
-      setStatusMessage(body.receipt.issued ? `issued ${body.receipt.receiptNumber}` : `previewed ${body.receipt.receiptNumber}`);
+      setStatusMessage(
+        body.receipt.issued
+          ? `${copy.statusIssuedPrefix} ${body.receipt.receiptNumber}`
+          : `${copy.statusPreviewedPrefix} ${body.receipt.receiptNumber}`
+      );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -308,8 +388,8 @@ export default function PayrollYearEndConsole() {
 
   async function runLoadInsuranceReconciliationReport() {
     try {
-      setPendingLabel("year-end insurance reconciliation report");
-      const requestYear = parseRequiredInt(year, "year");
+      setPendingLabel(copy.pendingInsuranceReconciliation);
+      const requestYear = parseRequiredInt(year, copy.yearLabel, copy.statusNonNegativeInteger);
       const requestEmployeeId = employeeId.trim();
       const query = new URLSearchParams({
         year: String(requestYear),
@@ -326,20 +406,26 @@ export default function PayrollYearEndConsole() {
         | PayrollYearEndInsuranceReconciliationReportResponse
         | { error: string };
       setLogs((prev) => [
-        { id: Date.now(), label: "year-end insurance reconciliation report", status: response.status, ok: response.ok, at: new Date().toLocaleString("ko-KR") },
+        {
+          id: Date.now(),
+          label: copy.logInsuranceReconciliation,
+          status: response.status,
+          ok: response.ok,
+          at: new Date().toLocaleString(runtimeLocale)
+        },
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
       setInsuranceReconciliationReport(body);
       setStatusMessage(
-        `loaded insurance reconciliation (${body.report.reconciliation.status}, delta ${formatKrw(body.report.reconciliation.deltaKrw)})`
+        `${copy.statusLoadedInsuranceReconciliationPrefix} (${body.report.reconciliation.status}, ${copy.statusDeltaLabel} ${formatKrw(body.report.reconciliation.deltaKrw, runtimeLocale)})`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -348,133 +434,133 @@ export default function PayrollYearEndConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Year-End and Withholding Receipt</h1>
-        <p>Preview annual settlement and issue employee withholding receipts with payroll compliance guards.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
       <section className="panel-grid">
         <article className="panel">
-          <h2>Input</h2>
+          <h2>{copy.inputTitle}</h2>
           <div className="input-grid">
-            <label>Year<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>Employee ID<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
-            <label>Non-taxable Annual Income<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
-            <label>Earned Income Tax Credit<input value={earnedIncomeTaxCreditKrw} onChange={(event) => setEarnedIncomeTaxCreditKrw(event.target.value)} /></label>
-            <label>Child Tax Credit<input value={childTaxCreditKrw} onChange={(event) => setChildTaxCreditKrw(event.target.value)} /></label>
-            <label>Additional Tax Credit<input value={additionalTaxCreditKrw} onChange={(event) => setAdditionalTaxCreditKrw(event.target.value)} /></label>
-            <label>Annual Income Tax Rate<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
-            <label>Local Income Tax Rate<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
-            <label>Issuer Name<input value={issuerName} onChange={(event) => setIssuerName(event.target.value)} /></label>
-            <label>Personal Pension<input value={personalPensionKrw} onChange={(event) => setPersonalPensionKrw(event.target.value)} /></label>
-            <label>Insurance Premium<input value={insurancePremiumKrw} onChange={(event) => setInsurancePremiumKrw(event.target.value)} /></label>
-            <label>Medical Expense<input value={medicalExpenseKrw} onChange={(event) => setMedicalExpenseKrw(event.target.value)} /></label>
-            <label>Education Expense<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
-            <label>Donation<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
-            <label>Housing Savings<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
-            <label className="checkbox"><input type="checkbox" checked={personalPensionEligible} onChange={(event) => setPersonalPensionEligible(event.target.checked)} />Personal Pension Eligible</label>
-            <label className="checkbox"><input type="checkbox" checked={insurancePremiumEligible} onChange={(event) => setInsurancePremiumEligible(event.target.checked)} />Insurance Premium Eligible</label>
-            <label className="checkbox"><input type="checkbox" checked={medicalExpenseEligible} onChange={(event) => setMedicalExpenseEligible(event.target.checked)} />Medical Expense Eligible</label>
-            <label className="checkbox"><input type="checkbox" checked={educationExpenseEligible} onChange={(event) => setEducationExpenseEligible(event.target.checked)} />Education Expense Eligible</label>
-            <label className="checkbox"><input type="checkbox" checked={donationEligible} onChange={(event) => setDonationEligible(event.target.checked)} />Donation Eligible</label>
-            <label className="checkbox"><input type="checkbox" checked={housingSavingsEligible} onChange={(event) => setHousingSavingsEligible(event.target.checked)} />Housing Savings Eligible</label>
+            <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
+            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
+            <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
+            <label>{copy.earnedIncomeTaxCreditLabel}<input value={earnedIncomeTaxCreditKrw} onChange={(event) => setEarnedIncomeTaxCreditKrw(event.target.value)} /></label>
+            <label>{copy.childTaxCreditLabel}<input value={childTaxCreditKrw} onChange={(event) => setChildTaxCreditKrw(event.target.value)} /></label>
+            <label>{copy.additionalTaxCreditLabel}<input value={additionalTaxCreditKrw} onChange={(event) => setAdditionalTaxCreditKrw(event.target.value)} /></label>
+            <label>{copy.annualIncomeTaxRateLabel}<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
+            <label>{copy.localIncomeTaxRateLabel}<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
+            <label>{copy.issuerNameLabel}<input value={issuerName} onChange={(event) => setIssuerName(event.target.value)} /></label>
+            <label>{copy.personalPensionLabel}<input value={personalPensionKrw} onChange={(event) => setPersonalPensionKrw(event.target.value)} /></label>
+            <label>{copy.insurancePremiumLabel}<input value={insurancePremiumKrw} onChange={(event) => setInsurancePremiumKrw(event.target.value)} /></label>
+            <label>{copy.medicalExpenseLabel}<input value={medicalExpenseKrw} onChange={(event) => setMedicalExpenseKrw(event.target.value)} /></label>
+            <label>{copy.educationExpenseLabel}<input value={educationExpenseKrw} onChange={(event) => setEducationExpenseKrw(event.target.value)} /></label>
+            <label>{copy.donationLabel}<input value={donationKrw} onChange={(event) => setDonationKrw(event.target.value)} /></label>
+            <label>{copy.housingSavingsLabel}<input value={housingSavingsKrw} onChange={(event) => setHousingSavingsKrw(event.target.value)} /></label>
+            <label className="checkbox"><input type="checkbox" checked={personalPensionEligible} onChange={(event) => setPersonalPensionEligible(event.target.checked)} />{copy.personalPensionEligibleLabel}</label>
+            <label className="checkbox"><input type="checkbox" checked={insurancePremiumEligible} onChange={(event) => setInsurancePremiumEligible(event.target.checked)} />{copy.insurancePremiumEligibleLabel}</label>
+            <label className="checkbox"><input type="checkbox" checked={medicalExpenseEligible} onChange={(event) => setMedicalExpenseEligible(event.target.checked)} />{copy.medicalExpenseEligibleLabel}</label>
+            <label className="checkbox"><input type="checkbox" checked={educationExpenseEligible} onChange={(event) => setEducationExpenseEligible(event.target.checked)} />{copy.educationExpenseEligibleLabel}</label>
+            <label className="checkbox"><input type="checkbox" checked={donationEligible} onChange={(event) => setDonationEligible(event.target.checked)} />{copy.donationEligibleLabel}</label>
+            <label className="checkbox"><input type="checkbox" checked={housingSavingsEligible} onChange={(event) => setHousingSavingsEligible(event.target.checked)} />{copy.housingSavingsEligibleLabel}</label>
           </div>
-          <label>Access Token (optional)<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
-          <label>Actor ID (dev fallback)<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
-          <label>Organization ID (dev fallback)<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
+          <label>{copy.actorIdFallbackLabel}<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
+          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void runSettlementPreview()} disabled={pendingLabel !== null}>Preview Settlement</button>
-            <button className="btn btn-secondary" onClick={() => void runSettlementRecalculation()} disabled={pendingLabel !== null}>Recalculate Settlement</button>
-            <button className="btn btn-secondary" onClick={() => void runLoadInsuranceReconciliationReport()} disabled={pendingLabel !== null}>Load Insurance Reconciliation</button>
-            <button className="btn btn-secondary" onClick={() => void runReceipt(false)} disabled={pendingLabel !== null}>Preview Receipt</button>
-            <button className="btn btn-primary" onClick={() => void runReceipt(true)} disabled={pendingLabel !== null}>Issue Receipt</button>
+            <button className="btn btn-secondary" onClick={() => void runSettlementPreview()} disabled={pendingLabel !== null}>{copy.previewSettlementAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runSettlementRecalculation()} disabled={pendingLabel !== null}>{copy.recalculateSettlementAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runLoadInsuranceReconciliationReport()} disabled={pendingLabel !== null}>{copy.loadInsuranceReconciliationAction}</button>
+            <button className="btn btn-secondary" onClick={() => void runReceipt(false)} disabled={pendingLabel !== null}>{copy.previewReceiptAction}</button>
+            <button className="btn btn-primary" onClick={() => void runReceipt(true)} disabled={pendingLabel !== null}>{copy.issueReceiptAction}</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
         <article className="panel">
-          <h2>Settlement</h2>
-          {!settlement ? <p className="small">No settlement yet.</p> : (
+          <h2>{copy.settlementTitle}</h2>
+          {!settlement ? <p className="small">{copy.noSettlementYet}</p> : (
             <ul className="simple-list">
-              <li><span>Gross / Net</span><strong>{formatKrw(settlement.summary.annualTotalsKrw.grossPayKrw)} / {formatKrw(settlement.summary.annualTotalsKrw.netPayKrw)}</strong></li>
-              <li><span>Input Vector Hash</span><strong>{settlement.summary.inputVectorHash.slice(0, 16)}...</strong></li>
-              <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(settlement.summary.settlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(settlement.summary.settlementKrw.totalTaxCreditAppliedKrw)}</strong></li>
-              <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
-              <li><span>Tax Credit Reason Codes</span><strong>{summarizeTaxCreditReasonCodes(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
-              <li><span>Tax Liability</span><strong>{formatKrw(settlement.summary.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>Prior Withheld</span><strong>{formatKrw(settlement.summary.settlementKrw.priorWithheldTaxKrw)}</strong></li>
-              <li><span>Withholding Delta</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingDeltaKrw)}</strong></li>
-              <li><span>Additional Withholding Due</span><strong>{formatKrw(settlement.summary.settlementKrw.additionalWithholdingDueKrw)}</strong></li>
-              <li><span>Withholding Refund</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingRefundKrw)}</strong></li>
-              <li><span>Previewed Runs</span><strong>{settlement.summary.runStates.previewedRunIds.join(", ") || "-"}</strong></li>
+              <li><span>{copy.grossNetLabel}</span><strong>{formatKrw(settlement.summary.annualTotalsKrw.grossPayKrw, runtimeLocale)} / {formatKrw(settlement.summary.annualTotalsKrw.netPayKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.inputVectorHashLabel}</span><strong>{settlement.summary.inputVectorHash.slice(0, 16)}...</strong></li>
+              <li><span>{copy.taxCreditInputAppliedLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.totalTaxCreditInputKrw, runtimeLocale)}{" / "}{formatKrw(settlement.summary.settlementKrw.totalTaxCreditAppliedKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.cappedTaxCreditsLabel}</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, runtimeLocale, copy.capLabel)}</strong></li>
+              <li><span>{copy.taxCreditReasonCodesLabel}</span><strong>{summarizeTaxCreditReasonCodes(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels)}</strong></li>
+              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.priorWithheldLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.priorWithheldTaxKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.additionalWithholdingDueLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.additionalWithholdingDueKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.withholdingRefundLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingRefundKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.previewedRunsLabel}</span><strong>{settlement.summary.runStates.previewedRunIds.join(", ") || "-"}</strong></li>
             </ul>
           )}
         </article>
         <article className="panel">
-          <h2>Recalculation</h2>
-          {!recalculation ? <p className="small">No recalculation yet.</p> : (
+          <h2>{copy.recalculationTitle}</h2>
+          {!recalculation ? <p className="small">{copy.noRecalculationYet}</p> : (
             <ul className="simple-list">
-              <li><span>Income Deduction Input</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.totalIncomeDeductionKrw)}</strong></li>
-              <li><span>Input Vector Hash</span><strong>{recalculation.recalculation.inputVectorHash.slice(0, 16)}...</strong></li>
-              <li><span>Capped Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.cappedIncomeDeductionKrw)}</strong></li>
-              <li><span>Applied Deduction</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw)}</strong></li>
-              <li><span>Tax Credit Input / Applied</span><strong>{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditInputKrw)}{" / "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditAppliedKrw)}</strong></li>
-              <li><span>Capped Tax Credits</span><strong>{summarizeCappedTaxCreditItems(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
-              <li><span>Tax Credit Reason Codes</span><strong>{summarizeTaxCreditReasonCodes(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw)}</strong></li>
-              <li><span>Taxable Income</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeBeforeDeductionKrw)}{" -> "}{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeAfterDeductionKrw)}</strong></li>
-              <li><span>Capped Items</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw)}</strong></li>
-              <li><span>Deduction Reason Codes</span><strong>{summarizeDeductionReasonCodes(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw)}</strong></li>
-              <li><span>Deduction Eligibility</span><strong>{Object.entries(recalculation.recalculation.deductionEligibility).filter(([, value]) => value).map(([key]) => key).join(", ") || "-"}</strong></li>
-              <li><span>Eligibility Blocking Reasons</span><strong>{recalculation.recalculation.deductionEligibilityBlockingReasons.join(" | ") || "-"}</strong></li>
-              <li><span>Tax Liability</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>Tax Liability Delta</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw)}</strong></li>
-              <li><span>Withholding Delta Change</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.withholdingDeltaChangeKrw)}</strong></li>
-              <li><span>Additional Due</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.additionalWithholdingDueKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.additionalWithholdingDueKrw)}</strong></li>
-              <li><span>Refund</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.withholdingRefundKrw)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.withholdingRefundKrw)}</strong></li>
+              <li><span>{copy.incomeDeductionInputLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.totalIncomeDeductionKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.inputVectorHashLabel}</span><strong>{recalculation.recalculation.inputVectorHash.slice(0, 16)}...</strong></li>
+              <li><span>{copy.cappedDeductionLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.cappedIncomeDeductionKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.appliedDeductionLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.taxCreditInputAppliedLabel}</span><strong>{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditInputKrw, runtimeLocale)}{" / "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditAppliedKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.cappedTaxCreditsLabel}</span><strong>{summarizeCappedTaxCreditItems(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, runtimeLocale, copy.capLabel)}</strong></li>
+              <li><span>{copy.taxCreditReasonCodesLabel}</span><strong>{summarizeTaxCreditReasonCodes(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels)}</strong></li>
+              <li><span>{copy.taxableIncomeLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeBeforeDeductionKrw, runtimeLocale)}{" -> "}{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeAfterDeductionKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.cappedItemsLabel}</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw, copy.deductionItemLabels, runtimeLocale, copy.capLabel)}</strong></li>
+              <li><span>{copy.deductionReasonCodesLabel}</span><strong>{summarizeDeductionReasonCodes(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw, copy.deductionItemLabels)}</strong></li>
+              <li><span>{copy.deductionEligibilityLabel}</span><strong>{Object.entries(recalculation.recalculation.deductionEligibility).filter(([, value]) => value).map(([key]) => copy.deductionEligibilityLabels[key] ?? key).join(", ") || "-"}</strong></li>
+              <li><span>{copy.eligibilityBlockingReasonsLabel}</span><strong>{recalculation.recalculation.deductionEligibilityBlockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw, runtimeLocale)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.taxLiabilityDeltaLabel}</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.withholdingDeltaChangeLabel}</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.withholdingDeltaChangeKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.additionalDueLabel}</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.additionalWithholdingDueKrw, runtimeLocale)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.additionalWithholdingDueKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.refundLabel}</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.withholdingRefundKrw, runtimeLocale)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.withholdingRefundKrw, runtimeLocale)}</strong></li>
             </ul>
           )}
         </article>
         <article className="panel">
-          <h2>Insurance Reconciliation</h2>
-          {!insuranceReconciliationReport ? <p className="small">No reconciliation report yet.</p> : (
+          <h2>{copy.insuranceReconciliationTitle}</h2>
+          {!insuranceReconciliationReport ? <p className="small">{copy.noInsuranceReconciliationReportYet}</p> : (
             <ul className="simple-list">
-              <li><span>Status</span><strong>{insuranceReconciliationReport.report.reconciliation.status}</strong></li>
-              <li><span>Annual Social Insurance (Runs)</span><strong>{formatKrw(insuranceReconciliationReport.report.annualRunSocialInsuranceKrw)}</strong></li>
-              <li><span>Compared Insurance Premium (Finalization)</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.comparedKrw)}</strong></li>
-              <li><span>Delta</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.deltaKrw)}</strong></li>
-              <li><span>Finalization / Hash</span><strong>{insuranceReconciliationReport.report.finalization.finalizationId ?? "-"} / {insuranceReconciliationReport.report.finalization.settlementHash?.slice(0, 12) ?? "-"}</strong></li>
-              <li><span>Insurance Reason Code</span><strong>{insuranceReconciliationReport.report.finalization.applicationReasonCode ?? "-"}</strong></li>
-              <li><span>Monthly Breakdown</span><strong>{insuranceReconciliationReport.report.monthlyBreakdown.map((row) => `${row.month}:${formatKrw(row.socialInsuranceKrw)}`).join(" | ") || "-"}</strong></li>
+              <li><span>{copy.statusLabel}</span><strong>{insuranceReconciliationReport.report.reconciliation.status}</strong></li>
+              <li><span>{copy.annualSocialInsuranceRunsLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.annualRunSocialInsuranceKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.comparedInsurancePremiumFinalizationLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.comparedKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.deltaLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.deltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.finalizationHashLabel}</span><strong>{insuranceReconciliationReport.report.finalization.finalizationId ?? "-"} / {insuranceReconciliationReport.report.finalization.settlementHash?.slice(0, 12) ?? "-"}</strong></li>
+              <li><span>{copy.insuranceReasonCodeLabel}</span><strong>{insuranceReconciliationReport.report.finalization.applicationReasonCode ?? "-"}</strong></li>
+              <li><span>{copy.monthlyBreakdownLabel}</span><strong>{insuranceReconciliationReport.report.monthlyBreakdown.map((row) => `${row.month}:${formatKrw(row.socialInsuranceKrw, runtimeLocale)}`).join(" | ") || "-"}</strong></li>
             </ul>
           )}
         </article>
         <article className="panel">
-          <h2>Withholding Receipt</h2>
-          {!receipt ? <p className="small">No receipt summary yet.</p> : (
+          <h2>{copy.withholdingReceiptTitle}</h2>
+          {!receipt ? <p className="small">{copy.noReceiptSummaryYet}</p> : (
             <ul className="simple-list">
-              <li><span>Receipt Number</span><strong>{receipt.receipt.receiptNumber}</strong></li>
-              <li><span>Can Issue / Issued</span><strong>{receipt.receipt.canIssue ? "YES" : "NO"} / {receipt.receipt.issued ? "YES" : "NO"}</strong></li>
-              <li><span>Issued At</span><strong>{receipt.receipt.issuedAt ?? "-"}</strong></li>
-              <li><span>Pending Receipt Runs</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
-              <li><span>Blocking Reasons</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.receiptNumberLabel}</span><strong>{receipt.receipt.receiptNumber}</strong></li>
+              <li><span>{copy.canIssueIssuedLabel}</span><strong>{receipt.receipt.canIssue ? copy.yesLabel : copy.noLabel} / {receipt.receipt.issued ? copy.yesLabel : copy.noLabel}</strong></li>
+              <li><span>{copy.issuedAtLabel}</span><strong>{receipt.receipt.issuedAt ? new Date(receipt.receipt.issuedAt).toLocaleString(runtimeLocale) : "-"}</strong></li>
+              <li><span>{copy.pendingReceiptRunsLabel}</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
+              <li><span>{copy.blockingReasonsLabel}</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
             </ul>
           )}
         </article>
         <article className="panel">
-          <h2>API Logs</h2>
-          <p className="small">total {stats.total} / success {stats.success} / fail {stats.fail}{pendingLabel ? ` / running ${pendingLabel}` : ""}</p>
-          {logs.length === 0 ? <p className="small">No API call yet.</p> : (
+          <h2>{copy.apiLogsTitle}</h2>
+          <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
+          {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">Open Preflight Checklist</Link>
-            <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
+            <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">{copy.openPreflightChecklistAction}</Link>
+            <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
           </div>
         </article>
       </section>

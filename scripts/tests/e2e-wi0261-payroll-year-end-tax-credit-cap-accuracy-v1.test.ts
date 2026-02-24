@@ -60,7 +60,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
-  assert.match(yearEndConsoleSource, /Earned Income Tax Credit/);
+  assert.match(yearEndConsoleSource, /copy\.earnedIncomeTaxCreditLabel/);
   assert.match(payrollApiSpec, /tax credit cap/i);
   assert.match(payrollContract, /year-end tax credit caps/i);
   assert.match(payrollTestCases, /Year-end tax credit caps/i);

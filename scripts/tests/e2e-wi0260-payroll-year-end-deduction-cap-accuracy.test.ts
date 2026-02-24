@@ -59,7 +59,7 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
-  assert.match(yearEndConsoleSource, /Capped Deduction/);
+  assert.match(yearEndConsoleSource, /copy\.cappedDeductionLabel/);
   assert.match(payrollApiSpec, /deduction cap/i);
   assert.match(payrollContract, /year-end deduction item caps/i);
   assert.match(payrollTestCases, /Year-end deduction item caps/i);

@@ -55,6 +55,7 @@ async function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "payroll-year-end", "page.tsx");
   const employeePageSource = readUtf8("src", "app", "employee", "withholding-receipt", "page.tsx");
   const adminConsoleSource = readUtf8("src", "components", "payroll-year-end", "PayrollYearEndConsole.tsx");
+  const yearEndCopySource = readUtf8("src", "components", "payroll-year-end", "copy.ts");
   const employeeConsoleSource = readUtf8(
     "src",
     "components",
@@ -78,8 +79,18 @@ async function run() {
   );
   assert.match(
     adminConsoleSource,
-    /Payroll Year-End and Withholding Receipt/,
-    "year-end console should include heading text"
+    /payrollYearEndCopyByLocale/,
+    "year-end console should wire locale copy map"
+  );
+  assert.match(
+    adminConsoleSource,
+    /const copy = payrollYearEndCopyByLocale\[locale\];/,
+    "year-end console should resolve runtime copy bundle"
+  );
+  assert.match(
+    yearEndCopySource,
+    /title: "Payroll Year-End and Withholding Receipt"/,
+    "year-end copy should include english heading text"
   );
   assert.match(
     employeeConsoleSource,
