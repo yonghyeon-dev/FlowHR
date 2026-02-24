@@ -238,9 +238,9 @@ export default function EmployeePayslipsPage() {
     return buildCompareInsightCards(compareMetrics, isKoLocale);
   }, [compareMetrics, isKoLocale]);
 
-  const compareInsightTitle = isKoLocale ? "ΐόΏω ΄λΊρ Ό³Έν" : "Month-over-month explanation";
+  const compareInsightTitle = isKoLocale ? "μ „μ›” λ€λΉ„ μ„¤λª…" : "Month-over-month explanation";
   const compareInsightAriaLabel = isKoLocale
-    ? "ΐόΏω ΄λΊρ Ό³Έν Δ«µε"
+    ? "μ „μ›” λ€λΉ„ μ„¤λª… μΉ΄λ“"
     : "Month-over-month explanation cards";
 
   const compareWindowLabel = useMemo(() => {
@@ -249,7 +249,7 @@ export default function EmployeePayslipsPage() {
     }
     const selectedLabel = `${formatDateOnly(selectedRun.periodStart)} ~ ${formatDateOnly(selectedRun.periodEnd)}`;
     const compareLabel = `${formatDateOnly(compareRun.periodStart)} ~ ${formatDateOnly(compareRun.periodEnd)}`;
-    return isKoLocale ? `${selectedLabel} ?€λΉ?${compareLabel}` : `${selectedLabel} vs ${compareLabel}`;
+    return isKoLocale ? `${selectedLabel} λ€λΉ„ ${compareLabel}` : `${selectedLabel} vs ${compareLabel}`;
   }, [compareRun, isKoLocale, selectedRun]);
 
   const fixedDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
