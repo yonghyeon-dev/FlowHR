@@ -3,11 +3,24 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  adminContractsCopyByLocale,
+  contractApprovalStatusLabelByLocale,
+  contractCategoryLabelByLocale,
+  contractDocumentStatusLabelByLocale,
+  contractTemplateStatusLabelByLocale,
+  toDateText,
+  type ContractApprovalStatus,
+  type ContractCategory,
+  type ContractDocumentStatus
+} from "@/components/contracts/copy";
+import { useI18n } from "@/lib/i18n/provider";
+
 type ContractTemplate = {
   id: string;
   organizationId: string;
   name: string;
-  category: "employment" | "amendment" | "nda" | "policy";
+  category: ContractCategory;
   body: string;
   status: "DRAFT" | "ACTIVE" | "ARCHIVED";
   version: number;
@@ -22,8 +35,8 @@ type ContractDocument = {
   templateVersion: number;
   title: string;
   employeeId: string;
-  status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED";
-  approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+  status: ContractDocumentStatus;
+  approvalStatus: ContractApprovalStatus;
   approvalExecutionId: string | null;
   requiresApproval: boolean;
   documentHash: string;
@@ -31,16 +44,7 @@ type ContractDocument = {
   updatedAt: string;
 };
 
-function toDateText(value: string | null) {
-  if (!value) {
-    return "-";
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "-";
-  }
-  return parsed.toLocaleString();
-}
+type ContractDocumentAction = "request" | "approve" | "reject" | "send" | "expire" | "renew";
 
 async function readJson(response: Response) {
   let body: unknown;
@@ -62,16 +66,41 @@ async function readJson(response: Response) {
 }
 
 export default function AdminContractsWorkspace() {
+  const { locale } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const copy = adminContractsCopyByLocale[locale];
+  const categoryLabels = contractCategoryLabelByLocale[locale];
+  const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
+  const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
+  const approvalStatusLabels = contractApprovalStatusLabelByLocale[locale];
+
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [employeeId, setEmployeeId] = useState("");
-  const [templateName, setTemplateName] = useState("Employment Standard");
-  const [templateCategory, setTemplateCategory] = useState<ContractTemplate["category"]>("employment");
-  const [templateBody, setTemplateBody] = useState("Employee agrees to role, compensation, and confidentiality clauses.");
+  const [templateName, setTemplateName] = useState(
+    locale === "ko" ? "근로계약 기본" : "Employment Standard"
+  );
+  const [templateCategory, setTemplateCategory] = useState<ContractCategory>("employment");
+  const [templateBody, setTemplateBody] = useState(
+    locale === "ko"
+      ? "직원은 직무, 보상, 기밀유지 조항에 동의합니다."
+      : "Employee agrees to role, compensation, and confidentiality clauses."
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selectedTemplateId = useMemo(() => templates[0]?.id ?? "", [templates]);
+  const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
+    () => ({
+      request: copy.requestApprovalAction,
+      approve: copy.approveAction,
+      reject: copy.rejectAction,
+      send: copy.sendAction,
+      expire: copy.expireAction,
+      renew: copy.renewAction
+    }),
+    [copy]
+  );
 
   const reload = useCallback(async () => {
     setError(null);
@@ -86,9 +115,9 @@ export default function AdminContractsWorkspace() {
 
   useEffect(() => {
     reload().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : "failed to load contracts");
+      setError(loadError instanceof Error ? loadError.message : copy.loadError);
     });
-  }, [reload]);
+  }, [copy.loadError, reload]);
 
   async function submitTemplate() {
     setError(null);
@@ -104,16 +133,16 @@ export default function AdminContractsWorkspace() {
           status: "DRAFT"
         })
       }).then(readJson);
-      setMessage("Template created");
+      setMessage(copy.templateCreatedMessage);
       await reload();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "template create failed");
+      setError(submitError instanceof Error ? submitError.message : copy.templateCreateError);
     }
   }
 
   async function createDraftDocument() {
     if (!selectedTemplateId || employeeId.trim().length === 0) {
-      setError("template and employeeId are required");
+      setError(copy.requiredTemplateAndEmployeeError);
       return;
     }
 
@@ -126,18 +155,18 @@ export default function AdminContractsWorkspace() {
         body: JSON.stringify({
           templateId: selectedTemplateId,
           employeeId: employeeId.trim(),
-          title: `Contract ${employeeId.trim()}`,
+          title: `${copy.draftTitlePrefix} ${employeeId.trim()}`,
           requiresApproval: true
         })
       }).then(readJson);
-      setMessage("Draft document created");
+      setMessage(copy.draftCreatedMessage);
       await reload();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "document create failed");
+      setError(createError instanceof Error ? createError.message : copy.draftCreateError);
     }
   }
 
-  async function runDocumentAction(documentId: string, action: "request" | "approve" | "reject" | "send" | "expire" | "renew") {
+  async function runDocumentAction(documentId: string, action: ContractDocumentAction) {
     setError(null);
     setMessage(null);
 
@@ -155,7 +184,7 @@ export default function AdminContractsWorkspace() {
       approve: { action: "APPROVE" },
       reject: { action: "REJECT" },
       send: {},
-      expire: { reason: "manual admin expire" },
+      expire: { reason: copy.manualExpireReason },
       renew: {}
     };
 
@@ -165,10 +194,14 @@ export default function AdminContractsWorkspace() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payloadMap[action])
       }).then(readJson);
-      setMessage(`Action completed: ${action}`);
+      setMessage(`${copy.actionCompletedPrefix}: ${actionLabelByAction[action]}`);
       await reload();
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : `action failed: ${action}`);
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`
+      );
     }
   }
 
@@ -176,10 +209,13 @@ export default function AdminContractsWorkspace() {
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">E-Contract Workspace</h1>
-          <p className="page-subtitle">Template CRUD, approval-gated send, employee signature, and renewal lifecycle.</p>
+          <p className="page-eyebrow">{copy.heroEyebrow}</p>
+          <h1 className="page-title">{copy.title}</h1>
+          <p className="page-subtitle">{copy.description}</p>
           <div className="contract-action-row">
-            <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">Open Template Builder</Link>
+            <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">
+              {copy.openTemplateBuilderAction}
+            </Link>
           </div>
         </div>
       </header>
@@ -189,45 +225,50 @@ export default function AdminContractsWorkspace() {
 
       <section className="kpi-strip" aria-label="contract summary kpi">
         <article className="kpi-card">
-          <span>Templates</span>
+          <span>{copy.templatesKpiLabel}</span>
           <strong>{templates.length}</strong>
         </article>
         <article className="kpi-card">
-          <span>Documents</span>
+          <span>{copy.documentsKpiLabel}</span>
           <strong>{documents.length}</strong>
         </article>
         <article className="kpi-card">
-          <span>Pending Approval</span>
+          <span>{copy.pendingApprovalKpiLabel}</span>
           <strong>{documents.filter((item) => item.approvalStatus === "PENDING").length}</strong>
         </article>
       </section>
 
       <section className="panel-grid">
         <article id="contract-template-library" className="panel panel-contract-template-library">
-          <h2>Contract Template Library</h2>
+          <h2>{copy.templateLibraryTitle}</h2>
           <div className="contract-form-grid">
             <label>
-              Name
+              {copy.nameLabel}
               <input value={templateName} onChange={(event) => setTemplateName(event.target.value)} />
             </label>
             <label>
-              Category
-              <select value={templateCategory} onChange={(event) => setTemplateCategory(event.target.value as ContractTemplate["category"])}>
-                <option value="employment">employment</option>
-                <option value="amendment">amendment</option>
-                <option value="nda">nda</option>
-                <option value="policy">policy</option>
+              {copy.categoryLabel}
+              <select
+                value={templateCategory}
+                onChange={(event) => setTemplateCategory(event.target.value as ContractCategory)}
+              >
+                <option value="employment">{categoryLabels.employment}</option>
+                <option value="amendment">{categoryLabels.amendment}</option>
+                <option value="nda">{categoryLabels.nda}</option>
+                <option value="policy">{categoryLabels.policy}</option>
               </select>
             </label>
             <label className="contract-form-wide">
-              Body
+              {copy.bodyLabel}
               <textarea rows={4} value={templateBody} onChange={(event) => setTemplateBody(event.target.value)} />
             </label>
           </div>
           <div className="contract-action-row">
-            <button type="button" className="btn" onClick={submitTemplate}>Create Template</button>
+            <button type="button" className="btn" onClick={submitTemplate}>
+              {copy.createTemplateAction}
+            </button>
           </div>
-          <ul className="contract-template-list" aria-label="contract template list">
+          <ul className="contract-template-list" aria-label={copy.templateListAria}>
             {templates.map((template) => (
               <li key={template.id} className={`tone-${template.status === "ACTIVE" ? "ready" : template.status === "DRAFT" ? "watch" : "risk"}`}>
                 <div className="contract-template-head">
@@ -236,9 +277,11 @@ export default function AdminContractsWorkspace() {
                 </div>
                 <div className="contract-template-meta">
                   <span className="queue-history-chip">{template.id}</span>
-                  <span className="queue-history-chip">{template.category}</span>
-                  <span className="queue-history-chip">{template.status}</span>
-                  <span className="queue-history-chip">updated {toDateText(template.updatedAt)}</span>
+                  <span className="queue-history-chip">{categoryLabels[template.category]}</span>
+                  <span className="queue-history-chip">{templateStatusLabels[template.status]}</span>
+                  <span className="queue-history-chip">
+                    {copy.updatedPrefix} {toDateText(template.updatedAt, runtimeLocale)}
+                  </span>
                 </div>
               </li>
             ))}
@@ -246,37 +289,57 @@ export default function AdminContractsWorkspace() {
         </article>
 
         <article id="contract-signature-readiness" className="panel panel-contract-signature-readiness">
-          <h2>Document Lifecycle</h2>
+          <h2>{copy.documentLifecycleTitle}</h2>
           <div className="contract-form-grid">
             <label>
-              Employee ID
-              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} placeholder="EMP-0001" />
+              {copy.employeeIdLabel}
+              <input
+                value={employeeId}
+                onChange={(event) => setEmployeeId(event.target.value)}
+                placeholder={copy.employeeIdPlaceholder}
+              />
             </label>
             <label>
-              Selected Template
+              {copy.selectedTemplateLabel}
               <input value={selectedTemplateId} disabled />
             </label>
           </div>
           <div className="contract-action-row">
-            <button type="button" className="btn" onClick={createDraftDocument}>Create Draft</button>
+            <button type="button" className="btn" onClick={createDraftDocument}>
+              {copy.createDraftAction}
+            </button>
           </div>
-          <ul className="contract-signature-readiness-list" aria-label="contract document list">
+          <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>
             {documents.map((document) => (
               <li key={document.id} className={`tone-${document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"}`}>
                 <div className="contract-signature-readiness-head">
                   <strong>{document.title}</strong>
-                  <span className="queue-history-chip">{document.status}</span>
+                  <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
                 </div>
                 <p>
-                  {document.id} | employee {document.employeeId} | approval {document.approvalStatus} | expires {toDateText(document.expiresAt)}
+                  {document.id} | {copy.employeePrefix} {document.employeeId} | {copy.approvalPrefix}{" "}
+                  {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
+                  {toDateText(document.expiresAt, runtimeLocale)}
                 </p>
                 <div className="contract-action-row">
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "request")}>Request Approval</button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "approve")}>Approve</button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "reject")}>Reject</button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "send")}>Send</button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "expire")}>Expire</button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "renew")}>Renew</button>
+                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "request")}>
+                    {copy.requestApprovalAction}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "approve")}>
+                    {copy.approveAction}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "reject")}>
+                    {copy.rejectAction}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "send")}>
+                    {copy.sendAction}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "expire")}>
+                    {copy.expireAction}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "renew")}>
+                    {copy.renewAction}
+                  </button>
                 </div>
               </li>
             ))}
