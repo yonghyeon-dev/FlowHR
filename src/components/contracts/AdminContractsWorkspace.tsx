@@ -61,13 +61,17 @@ export default function AdminContractsWorkspace() {
   const reload = useCallback(async () => {
     setError(null);
     const [templateBodyRaw, documentBodyRaw] = await Promise.all([
-      fetch("/api/contracts/templates", { cache: "no-store" }).then(readJson),
-      fetch("/api/contracts/documents", { cache: "no-store" }).then(readJson)
+      fetch("/api/contracts/templates", { cache: "no-store" }).then((response) =>
+        readJson(response, copy.loadError)
+      ),
+      fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
+        readJson(response, copy.loadError)
+      )
     ]);
 
     setTemplates((templateBodyRaw as { templates?: ContractTemplate[] }).templates ?? []);
     setDocuments((documentBodyRaw as { documents?: ContractDocument[] }).documents ?? []);
-  }, []);
+  }, [copy.loadError]);
 
   useEffect(() => {
     reload().catch((loadError) => {
@@ -88,7 +92,7 @@ export default function AdminContractsWorkspace() {
           body: templateBody,
           status: "DRAFT"
         })
-      }).then(readJson);
+      }).then((response) => readJson(response, copy.templateCreateError));
       setMessage(copy.templateCreatedMessage);
       await reload();
     } catch (submitError) {
@@ -114,7 +118,7 @@ export default function AdminContractsWorkspace() {
           title: `${copy.draftTitlePrefix} ${employeeId.trim()}`,
           requiresApproval: true
         })
-      }).then(readJson);
+      }).then((response) => readJson(response, copy.draftCreateError));
       setMessage(copy.draftCreatedMessage);
       await reload();
     } catch (createError) {
@@ -132,7 +136,9 @@ export default function AdminContractsWorkspace() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(request.payload)
-      }).then(readJson);
+      }).then((response) =>
+        readJson(response, `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`)
+      );
       setMessage(`${copy.actionCompletedPrefix}: ${actionLabelByAction[action]}`);
       await reload();
     } catch (actionError) {

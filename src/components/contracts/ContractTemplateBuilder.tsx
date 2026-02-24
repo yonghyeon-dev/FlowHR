@@ -10,6 +10,7 @@ import {
   type ContractCategory,
   type ContractTemplateBuilderCopy
 } from "@/components/contracts/copy";
+import { readJson } from "@/components/contracts/http";
 import { useI18n } from "@/lib/i18n/provider";
 
 type ClauseDraft = {
@@ -60,14 +61,6 @@ function createInitialClauses(copy: ContractTemplateBuilderCopy): ClauseDraft[] 
     body: clause.body,
     required: true
   }));
-}
-
-async function readJson(response: Response) {
-  const body = (await response.json().catch(() => null)) as { error?: string } | null;
-  if (!response.ok) {
-    throw new Error(body?.error ?? `request failed (${response.status})`);
-  }
-  return body;
 }
 
 export default function ContractTemplateBuilder() {
@@ -132,7 +125,7 @@ export default function ContractTemplateBuilder() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const body = (await readJson(response)) as {
+      const body = (await readJson(response, copy.templateCreateError)) as {
         template: CreatedTemplate;
       };
       setCreatedTemplate(body.template);

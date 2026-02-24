@@ -40,11 +40,11 @@ export default function EmployeeContractsInbox() {
 
   const reload = useCallback(async () => {
     setError(null);
-    const data = (await fetch("/api/contracts/documents", { cache: "no-store" }).then(readJson)) as {
-      documents?: ContractDocument[];
-    };
+    const data = (await fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
+      readJson(response, copy.loadError)
+    )) as { documents?: ContractDocument[] };
     setDocuments(data.documents ?? []);
-  }, []);
+  }, [copy.loadError]);
 
   useEffect(() => {
     reload().catch((loadError) => {
@@ -74,7 +74,7 @@ export default function EmployeeContractsInbox() {
           signatureInput: action === "SIGN" ? signatureInput : undefined,
           expectedDocumentHash: selected.documentHash
         })
-      }).then(readJson);
+      }).then((response) => readJson(response, copy.respondError));
 
       setMessage(action === "SIGN" ? copy.signedMessage : copy.rejectedMessage);
       setSignatureInput("");
@@ -109,7 +109,7 @@ export default function EmployeeContractsInbox() {
         `/api/contracts/documents/${selected.id}/signature-evidence?format=${format}`,
         { method: "GET" }
       );
-      const body = (await readJson(response)) as ContractSignatureEvidenceResponse;
+      const body = (await readJson(response, copy.evidenceLoadError)) as ContractSignatureEvidenceResponse;
       setSignatureEvidence(body.evidence);
       setMessage(`${copy.evidenceLoadedPrefix}: ${body.evidence.fileName}`);
     } catch (loadError) {

@@ -1,4 +1,4 @@
-export async function readJson(response: Response) {
+export async function readJson(response: Response, fallbackMessage?: string) {
   let body: unknown;
   try {
     body = await response.json();
@@ -10,7 +10,7 @@ export async function readJson(response: Response) {
     const message =
       typeof body === "object" && body !== null && "error" in body
         ? String((body as { error: unknown }).error)
-        : `request failed (${response.status})`;
+        : fallbackMessage ?? `request failed (${response.status})`;
     throw new Error(message);
   }
 
