@@ -74,6 +74,16 @@ type EmployeeYearEndInputCopy = {
   loadFinalizedSettlementAction: string;
   pendingFinalizedSettlement: string;
   loadFinalizedSettlementLogLabel: string;
+  validationTitle: string;
+  validationChecklistAriaLabel: string;
+  validationYearLabel: string;
+  validationEmployeeIdLabel: string;
+  validationTaxRatesLabel: string;
+  validationAmountsLabel: string;
+  validationNonTaxableLabel: string;
+  validationPassLabel: string;
+  validationFailLabel: string;
+  coreLoadInvalidGuide: string;
   requestFailedStatus: string;
   requestFailedCheckLogsStatus: string;
   loadedStatusPrefix: string;
@@ -90,6 +100,16 @@ type EmployeeYearEndInputCopy = {
   summaryWithholdingDelta: string;
   summaryAdditionalDueRefund: string;
   capsGuide: string;
+  accuracyGuideTitle: string;
+  accuracyGuideNoSimulation: string;
+  accuracyGuideNoWarnings: string;
+  accuracyGuideCapAppliedPrefix: string;
+  accuracyGuideNonTaxableAdjusted: string;
+  accuracyGuideLiabilityIncreasePrefix: string;
+  accuracyGuideLiabilityDecreasePrefix: string;
+  accuracyGuideLiabilityNoChange: string;
+  accuracyGuideAdditionalDuePrefix: string;
+  accuracyGuideRefundPrefix: string;
   apiLogsTitle: string;
   apiLogsTotalPrefix: string;
   apiLogsRunningPrefix: string;
@@ -126,6 +146,16 @@ const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputC
     loadFinalizedSettlementAction: "확정 정산 불러오기",
     pendingFinalizedSettlement: "확정 정산 조회",
     loadFinalizedSettlementLogLabel: "확정 정산 조회",
+    validationTitle: "실시간 입력 검증",
+    validationChecklistAriaLabel: "연말정산 입력 검증 체크리스트",
+    validationYearLabel: "연도(2000~2100)",
+    validationEmployeeIdLabel: "직원 ID 입력",
+    validationTaxRatesLabel: "세율(0~1 범위)",
+    validationAmountsLabel: "금액 입력(0 이상 정수)",
+    validationNonTaxableLabel: "비과세 연소득 <= 연 총지급(정산 로드 후)",
+    validationPassLabel: "통과",
+    validationFailLabel: "실패",
+    coreLoadInvalidGuide: "연도와 직원 ID를 먼저 확인해 주세요.",
     requestFailedStatus: "요청이 실패했습니다",
     requestFailedCheckLogsStatus: "요청이 실패했습니다. 로그를 확인하세요.",
     loadedStatusPrefix: "조회 완료",
@@ -143,6 +173,16 @@ const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputC
     summaryAdditionalDueRefund: "추가 납부 / 환급",
     capsGuide:
       "한도: 소득공제(개인연금 7,000,000 / 보험료 1,000,000 / 의료비 15,000,000 / 교육비 9,000,000 / 기부금 10,000,000 / 주택저축 4,000,000), 세액공제(근로 740,000 / 자녀 900,000 / 추가 1,000,000).",
+    accuracyGuideTitle: "정확도 가이드",
+    accuracyGuideNoSimulation: "시뮬레이션 결과를 불러오면 자동 가이드가 표시됩니다.",
+    accuracyGuideNoWarnings: "현재 입력 기준으로 보정/주의 항목이 없습니다.",
+    accuracyGuideCapAppliedPrefix: "한도 적용",
+    accuracyGuideNonTaxableAdjusted: "비과세 연소득이 총급여를 초과해 총급여 기준으로 보정됩니다.",
+    accuracyGuideLiabilityIncreasePrefix: "예상 세부담 증가",
+    accuracyGuideLiabilityDecreasePrefix: "예상 세부담 감소",
+    accuracyGuideLiabilityNoChange: "예상 세부담 변동이 없습니다.",
+    accuracyGuideAdditionalDuePrefix: "추가 납부 예상",
+    accuracyGuideRefundPrefix: "환급 예상",
     apiLogsTitle: "API 로그",
     apiLogsTotalPrefix: "총",
     apiLogsRunningPrefix: "실행 중",
@@ -178,6 +218,16 @@ const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputC
     loadFinalizedSettlementAction: "Load Finalized Settlement",
     pendingFinalizedSettlement: "finalized settlement load",
     loadFinalizedSettlementLogLabel: "load finalized settlement",
+    validationTitle: "Real-time Input Validation",
+    validationChecklistAriaLabel: "Year-end input validation checklist",
+    validationYearLabel: "Year (2000~2100)",
+    validationEmployeeIdLabel: "Employee ID provided",
+    validationTaxRatesLabel: "Tax rates in 0~1 range",
+    validationAmountsLabel: "Amount fields are non-negative integers",
+    validationNonTaxableLabel: "Non-taxable annual income <= annual gross pay",
+    validationPassLabel: "PASS",
+    validationFailLabel: "FAIL",
+    coreLoadInvalidGuide: "Check year and employee ID before loading finalized settlement.",
     requestFailedStatus: "request failed",
     requestFailedCheckLogsStatus: "request failed; check logs",
     loadedStatusPrefix: "loaded",
@@ -195,6 +245,16 @@ const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputC
     summaryAdditionalDueRefund: "Additional Due / Refund",
     capsGuide:
       "Caps: deduction(personal pension 7,000,000 / insurance 1,000,000 / medical 15,000,000 / education 9,000,000 / donation 10,000,000 / housing 4,000,000), tax credit(earned 740,000 / child 900,000 / additional 1,000,000).",
+    accuracyGuideTitle: "Accuracy Guide",
+    accuracyGuideNoSimulation: "Load simulation result to see auto guidance.",
+    accuracyGuideNoWarnings: "No correction/warning items for current input.",
+    accuracyGuideCapAppliedPrefix: "Cap applied",
+    accuracyGuideNonTaxableAdjusted: "Non-taxable annual income exceeded annual gross pay and was adjusted.",
+    accuracyGuideLiabilityIncreasePrefix: "Estimated liability increases",
+    accuracyGuideLiabilityDecreasePrefix: "Estimated liability decreases",
+    accuracyGuideLiabilityNoChange: "Estimated liability unchanged.",
+    accuracyGuideAdditionalDuePrefix: "Additional withholding due",
+    accuracyGuideRefundPrefix: "Expected refund",
     apiLogsTitle: "API Logs",
     apiLogsTotalPrefix: "total",
     apiLogsRunningPrefix: "running",
@@ -210,7 +270,6 @@ const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEndInputC
 export default function EmployeeYearEndInputConsole() {
   const { locale } = useI18n();
   const copy = employeeYearEndInputCopyByLocale[locale];
-  const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
 
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -296,37 +355,39 @@ export default function EmployeeYearEndInputConsole() {
     return [
       {
         id: "year",
-        label: isKoLocale ? "연도(2000~2100)" : "Year (2000~2100)",
+        label: copy.validationYearLabel,
         pass: yearValid
       },
       {
         id: "employee",
-        label: isKoLocale ? "직원 ID 입력" : "Employee ID provided",
+        label: copy.validationEmployeeIdLabel,
         pass: employeeIdValid
       },
       {
         id: "rates",
-        label: isKoLocale ? "세율(0~1 범위)" : "Tax rates in 0~1 range",
+        label: copy.validationTaxRatesLabel,
         pass: annualIncomeTaxRateValid && localIncomeTaxRateValid
       },
       {
         id: "integers",
-        label: isKoLocale ? "금액 입력(0 이상 정수)" : "Amount fields are non-negative integers",
+        label: copy.validationAmountsLabel,
         pass: integerInputsValid
       },
       {
         id: "non-taxable",
-        label: isKoLocale
-          ? "비과세 연소득 <= 연 총지급(정산 로드 후)"
-          : "Non-taxable annual income <= annual gross pay",
+        label: copy.validationNonTaxableLabel,
         pass: nonTaxableWithinGrossValid
       }
     ];
   }, [
     annualIncomeTaxRateValid,
+    copy.validationAmountsLabel,
+    copy.validationEmployeeIdLabel,
+    copy.validationNonTaxableLabel,
+    copy.validationTaxRatesLabel,
+    copy.validationYearLabel,
     employeeIdValid,
     integerInputsValid,
-    isKoLocale,
     localIncomeTaxRateValid,
     nonTaxableWithinGrossValid,
     yearValid
@@ -497,6 +558,103 @@ export default function EmployeeYearEndInputConsole() {
     personalPensionKrw
   ]);
 
+  const accuracyGuidanceItems = useMemo(() => {
+    const items: string[] = [];
+    const deductionInputs = [
+      { label: copy.personalPensionLabel, input: parseNonNegativeInt(personalPensionKrw), cap: deductionCaps.personalPensionKrw },
+      { label: copy.insurancePremiumLabel, input: parseNonNegativeInt(insurancePremiumKrw), cap: deductionCaps.insurancePremiumKrw },
+      { label: copy.medicalExpenseLabel, input: parseNonNegativeInt(medicalExpenseKrw), cap: deductionCaps.medicalExpenseKrw },
+      { label: copy.educationExpenseLabel, input: parseNonNegativeInt(educationExpenseKrw), cap: deductionCaps.educationExpenseKrw },
+      { label: copy.donationLabel, input: parseNonNegativeInt(donationKrw), cap: deductionCaps.donationKrw },
+      { label: copy.housingSavingsLabel, input: parseNonNegativeInt(housingSavingsKrw), cap: deductionCaps.housingSavingsKrw }
+    ];
+    for (const entry of deductionInputs) {
+      if (entry.input > entry.cap) {
+        items.push(
+          `${copy.accuracyGuideCapAppliedPrefix}: ${entry.label} ${formatKrw(entry.input, runtimeLocale)} -> ${formatKrw(entry.cap, runtimeLocale)}`
+        );
+      }
+    }
+
+    const taxCreditInputs = [
+      { label: copy.earnedIncomeTaxCreditLabel, input: parseNonNegativeInt(earnedIncomeTaxCreditKrw), cap: taxCreditCaps.earnedIncomeTaxCreditKrw },
+      { label: copy.childTaxCreditLabel, input: parseNonNegativeInt(childTaxCreditKrw), cap: taxCreditCaps.childTaxCreditKrw },
+      { label: copy.additionalTaxCreditLabel, input: parseNonNegativeInt(additionalTaxCreditKrw), cap: taxCreditCaps.additionalTaxCreditKrw }
+    ];
+    for (const entry of taxCreditInputs) {
+      if (entry.input > entry.cap) {
+        items.push(
+          `${copy.accuracyGuideCapAppliedPrefix}: ${entry.label} ${formatKrw(entry.input, runtimeLocale)} -> ${formatKrw(entry.cap, runtimeLocale)}`
+        );
+      }
+    }
+
+    if (!nonTaxableWithinGrossValid && finalizedSettlement) {
+      items.push(
+        `${copy.accuracyGuideNonTaxableAdjusted} (${formatKrw(finalizedSettlement.settlement.annualTotalsKrw.grossPayKrw, runtimeLocale)})`
+      );
+    }
+
+    if (!simulation) {
+      return items;
+    }
+
+    if (simulation.liabilityChangeKrw > 0) {
+      items.push(
+        `${copy.accuracyGuideLiabilityIncreasePrefix}: ${formatKrw(simulation.liabilityChangeKrw, runtimeLocale)}`
+      );
+    } else if (simulation.liabilityChangeKrw < 0) {
+      items.push(
+        `${copy.accuracyGuideLiabilityDecreasePrefix}: ${formatKrw(Math.abs(simulation.liabilityChangeKrw), runtimeLocale)}`
+      );
+    } else {
+      items.push(copy.accuracyGuideLiabilityNoChange);
+    }
+
+    if (simulation.additionalWithholdingDueKrw > 0) {
+      items.push(
+        `${copy.accuracyGuideAdditionalDuePrefix}: ${formatKrw(simulation.additionalWithholdingDueKrw, runtimeLocale)}`
+      );
+    }
+    if (simulation.withholdingRefundKrw > 0) {
+      items.push(
+        `${copy.accuracyGuideRefundPrefix}: ${formatKrw(simulation.withholdingRefundKrw, runtimeLocale)}`
+      );
+    }
+
+    return items;
+  }, [
+    additionalTaxCreditKrw,
+    childTaxCreditKrw,
+    copy.accuracyGuideAdditionalDuePrefix,
+    copy.accuracyGuideCapAppliedPrefix,
+    copy.accuracyGuideLiabilityDecreasePrefix,
+    copy.accuracyGuideLiabilityIncreasePrefix,
+    copy.accuracyGuideLiabilityNoChange,
+    copy.accuracyGuideNonTaxableAdjusted,
+    copy.accuracyGuideRefundPrefix,
+    copy.additionalTaxCreditLabel,
+    copy.childTaxCreditLabel,
+    copy.donationLabel,
+    copy.earnedIncomeTaxCreditLabel,
+    copy.educationExpenseLabel,
+    copy.housingSavingsLabel,
+    copy.insurancePremiumLabel,
+    copy.medicalExpenseLabel,
+    copy.personalPensionLabel,
+    donationKrw,
+    earnedIncomeTaxCreditKrw,
+    educationExpenseKrw,
+    finalizedSettlement,
+    housingSavingsKrw,
+    insurancePremiumKrw,
+    medicalExpenseKrw,
+    nonTaxableWithinGrossValid,
+    personalPensionKrw,
+    runtimeLocale,
+    simulation
+  ]);
+
   return (
     <main className="saas-content">
       <header className="hero">
@@ -536,16 +694,16 @@ export default function EmployeeYearEndInputConsole() {
           </div>
           <div className="pre-submit-check-wrap" style={{ marginTop: 10 }}>
             <p className="small" style={{ margin: 0 }}>
-              {isKoLocale ? "실시간 입력 검증" : "Real-time input validation"} ({validationPassCount}/
+              {copy.validationTitle} ({validationPassCount}/
               {validationChecks.length})
             </p>
             <ul
               className="pre-submit-check-list"
-              aria-label={isKoLocale ? "연말정산 입력 검증 체크리스트" : "Year-end input validation checklist"}
+              aria-label={copy.validationChecklistAriaLabel}
             >
               {validationChecks.map((check) => (
                 <li key={check.id} className={check.pass ? "pass" : "fail"}>
-                  <strong>{check.pass ? (isKoLocale ? "통과" : "PASS") : isKoLocale ? "실패" : "FAIL"}</strong>
+                  <strong>{check.pass ? copy.validationPassLabel : copy.validationFailLabel}</strong>
                   <span>{check.label}</span>
                 </li>
               ))}
@@ -553,9 +711,7 @@ export default function EmployeeYearEndInputConsole() {
           </div>
           {!coreLoadValid ? (
             <p className="small fail">
-              {isKoLocale
-                ? "연도와 직원 ID를 먼저 확인해 주세요."
-                : "Check year and employee ID before loading finalized settlement."}
+              {copy.coreLoadInvalidGuide}
             </p>
           ) : null}
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -566,18 +722,34 @@ export default function EmployeeYearEndInputConsole() {
           {!simulation ? <p className="small">{copy.loadFirstGuide}</p> : (
             <ul className="simple-list">
               <li><span>{copy.summaryFinalization}</span><strong>{finalizedSettlement?.settlement.finalizationId}</strong></li>
-              <li><span>{copy.summaryGrossPay}</span><strong>{formatKrw(simulation.annualGrossPayKrw)}</strong></li>
-              <li><span>{copy.summaryAppliedDeduction}</span><strong>{formatKrw(simulation.totalAppliedDeductionKrw)}</strong></li>
-              <li><span>{copy.summaryTaxableAnnualIncome}</span><strong>{formatKrw(simulation.taxableAnnualIncomeKrw)}</strong></li>
-              <li><span>{copy.summaryAppliedTaxCredit}</span><strong>{formatKrw(simulation.totalAppliedTaxCreditKrw)}</strong></li>
-              <li><span>{copy.summaryEstimatedLiability}</span><strong>{formatKrw(simulation.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>{copy.summaryBaselineLiability}</span><strong>{formatKrw(simulation.baselineTaxLiabilityKrw)}</strong></li>
-              <li><span>{copy.summaryLiabilityChange}</span><strong>{formatKrw(simulation.liabilityChangeKrw)}</strong></li>
-              <li><span>{copy.summaryWithholdingDelta}</span><strong>{formatKrw(simulation.withholdingDeltaKrw)}</strong></li>
-              <li><span>{copy.summaryAdditionalDueRefund}</span><strong>{formatKrw(simulation.additionalWithholdingDueKrw)} / {formatKrw(simulation.withholdingRefundKrw)}</strong></li>
+              <li><span>{copy.summaryGrossPay}</span><strong>{formatKrw(simulation.annualGrossPayKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryAppliedDeduction}</span><strong>{formatKrw(simulation.totalAppliedDeductionKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryTaxableAnnualIncome}</span><strong>{formatKrw(simulation.taxableAnnualIncomeKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryAppliedTaxCredit}</span><strong>{formatKrw(simulation.totalAppliedTaxCreditKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryEstimatedLiability}</span><strong>{formatKrw(simulation.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryBaselineLiability}</span><strong>{formatKrw(simulation.baselineTaxLiabilityKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryLiabilityChange}</span><strong>{formatKrw(simulation.liabilityChangeKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryWithholdingDelta}</span><strong>{formatKrw(simulation.withholdingDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.summaryAdditionalDueRefund}</span><strong>{formatKrw(simulation.additionalWithholdingDueKrw, runtimeLocale)} / {formatKrw(simulation.withholdingRefundKrw, runtimeLocale)}</strong></li>
             </ul>
           )}
           <p className="small">{copy.capsGuide}</p>
+          <div className="pre-submit-check-wrap" style={{ marginTop: 10 }}>
+            <p className="small" style={{ margin: 0 }}>{copy.accuracyGuideTitle}</p>
+            {!simulation ? (
+              <p className="small muted">{copy.accuracyGuideNoSimulation}</p>
+            ) : accuracyGuidanceItems.length === 0 ? (
+              <p className="small ok">{copy.accuracyGuideNoWarnings}</p>
+            ) : (
+              <ul className="pre-submit-check-list">
+                {accuracyGuidanceItems.map((item, index) => (
+                  <li key={`${index}-${item}`} className="pass">
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </article>
         <article className="panel">
           <h2>{copy.apiLogsTitle}</h2>

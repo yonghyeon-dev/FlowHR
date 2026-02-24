@@ -160,7 +160,18 @@ export function AdminAttendanceLiveTablePanel({ copy, rows, locale }: TablePanel
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={TABLE_STYLE}>
-            <thead><tr><th style={CELL_STYLE}>Employee</th><th style={CELL_STYLE}>Department</th><th style={CELL_STYLE}>Schedule</th><th style={CELL_STYLE}>Check-in</th><th style={CELL_STYLE}>Check-out</th><th style={CELL_STYLE}>Late</th><th style={CELL_STYLE}>Status</th><th style={CELL_STYLE}>Alert</th></tr></thead>
+            <thead>
+              <tr>
+                <th style={CELL_STYLE}>{copy.tableHeaders.employee}</th>
+                <th style={CELL_STYLE}>{copy.tableHeaders.department}</th>
+                <th style={CELL_STYLE}>{copy.tableHeaders.schedule}</th>
+                <th style={CELL_STYLE}>{copy.tableHeaders.checkIn}</th>
+                <th style={CELL_STYLE}>{copy.tableHeaders.checkOut}</th>
+                <th style={CELL_STYLE}>{copy.tableHeaders.late}</th>
+                <th style={CELL_STYLE}>{copy.tableHeaders.status}</th>
+                <th style={CELL_STYLE}>{copy.tableHeaders.alert}</th>
+              </tr>
+            </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.scheduleId}>
@@ -193,7 +204,7 @@ export function AdminAttendanceLiveLogsPanel({ copy, logs }: LogsPanelProps) {
       <h2>{copy.logsTitle}</h2>
       {logs.length === 0 ? <p className="small muted">{copy.logsEmpty}</p> : (
         <ul className="log-list">
-          {logs.map((log) => <li key={log.id}><span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status} / {log.durationMs}ms / {log.at}</li>)}
+          {logs.map((log) => <li key={log.id}><span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logSuccessLabel : copy.logFailLabel}</span> {log.label} / {log.status} / {log.durationMs}ms / {log.at}</li>)}
         </ul>
       )}
     </article>
