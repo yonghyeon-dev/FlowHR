@@ -63,7 +63,11 @@ async function run() {
 
   assert.match(filingConsoleSource, /hometax_csv/, "filing console should expose hometax_csv option");
   assert.match(filingConsoleSource, /jsonl/, "filing console should expose jsonl option");
-  assert.match(filingConsoleSource, /Validation Mode/, "filing console should expose validation mode selector");
+  assert.match(
+    filingConsoleSource,
+    /copy\.validationModeLabel/,
+    "filing console should expose validation mode selector with locale copy"
+  );
   assert.match(payrollApiSpec, /jsonl/, "api spec should mention jsonl format");
   assert.match(payrollContract, /hometax_csv/, "contract should mention hometax_csv format");
   assert.match(payrollContract, /validation mode/i, "contract should mention validation mode");
