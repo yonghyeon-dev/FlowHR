@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  formatApprovalPolicyDateTime,
+  resolveAdminApprovalPolicyLocaleCopy
+} from "@/app/admin/approval-policy/page-locale-helpers";
 import { actorRoles } from "@/lib/actor";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 
 type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 
@@ -66,14 +71,6 @@ function toIso(value: string) {
   return new Date(value).toISOString();
 }
 
-function formatDateTime(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString("ko-KR");
-}
-
 export default function AdminApprovalPolicyPage() {
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -98,9 +95,7 @@ export default function AdminApprovalPolicyPage() {
   const [delegationReason, setDelegationReason] = useState("");
   const [delegations, setDelegations] = useState<ApprovalDelegationDto[]>([]);
   const [delegationExpireDryRun, setDelegationExpireDryRun] = useState(false);
-  const [lastExpireResult, setLastExpireResult] = useState<ApprovalDelegationExpireResultDto | null>(
-    null
-  );
+  const [lastExpireResult, setLastExpireResult] = useState<ApprovalDelegationExpireResultDto | null>(null);
 
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -108,6 +103,10 @@ export default function AdminApprovalPolicyPage() {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
+  const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const copy = useMemo(() => resolveAdminApprovalPolicyLocaleCopy(isKoLocale), [isKoLocale]);
 
   const bearerToken =
     accessToken.trim().length > 0
@@ -172,7 +171,7 @@ export default function AdminApprovalPolicyPage() {
           label,
           ok: response.ok,
           status: response.status,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
@@ -197,7 +196,7 @@ export default function AdminApprovalPolicyPage() {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
-    const { response, body } = await callApi("결재선 정책 조회", "GET", `/api/approval/policy?${query}`);
+    const { response, body } = await callApi(copy.apiLabels.loadPolicy, "GET", `/api/approval/policy?${query}`);
     if (!response.ok || !body || typeof body !== "object") {
       return;
     }
@@ -216,7 +215,7 @@ export default function AdminApprovalPolicyPage() {
     if (!organizationId.trim()) {
       return;
     }
-    await callApi("결재선 정책 저장", "PUT", "/api/approval/policy", {
+    await callApi(copy.apiLabels.savePolicy, "PUT", "/api/approval/policy", {
       organizationId: organizationId.trim(),
       attendanceApproverRole: attendanceRole,
       leaveApproverRole: leaveRole,
@@ -230,7 +229,7 @@ export default function AdminApprovalPolicyPage() {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
-    const { response, body } = await callApi("위임 정책 조회", "GET", `/api/approval/delegations?${query}`);
+    const { response, body } = await callApi(copy.apiLabels.loadDelegations, "GET", `/api/approval/delegations?${query}`);
     if (!response.ok || !body || typeof body !== "object") {
       return;
     }
@@ -242,7 +241,7 @@ export default function AdminApprovalPolicyPage() {
     if (!organizationId.trim()) {
       return;
     }
-    await callApi("위임 정책 생성", "POST", "/api/approval/delegations", {
+    await callApi(copy.apiLabels.createDelegation, "POST", "/api/approval/delegations", {
       organizationId: organizationId.trim(),
       domain: delegationDomain,
       delegatorRole,
@@ -256,7 +255,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function deactivateDelegation(id: string) {
-    await callApi("위임 정책 비활성화", "PATCH", `/api/approval/delegations/${id}`, {
+    await callApi(copy.apiLabels.deactivateDelegation, "PATCH", `/api/approval/delegations/${id}`, {
       active: false
     });
     await loadDelegations();
@@ -267,7 +266,7 @@ export default function AdminApprovalPolicyPage() {
       return;
     }
 
-    const { response, body } = await callApi("만료 위임 정리", "POST", "/api/approval/delegations/expire", {
+    const { response, body } = await callApi(copy.apiLabels.expireDelegations, "POST", "/api/approval/delegations/expire", {
       organizationId: organizationId.trim(),
       dryRun: delegationExpireDryRun
     });
@@ -285,53 +284,55 @@ export default function AdminApprovalPolicyPage() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>결재선/위임 정책</h1>
+        <p className="eyebrow">{copy.hero.eyebrow}</p>
+        <h1>{copy.hero.title}</h1>
         <p>
-          도메인별 기본 결재 권한(근태/휴가/급여)과 임시 위임을 설정합니다.
-          {showDevTools ? " dev tools 모드에서는 헤더 기반 Actor 컨텍스트를 사용합니다." : ""}
+          {copy.hero.description}
+          {showDevTools ? ` ${copy.hero.devNotice}` : ""}
         </p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>컨텍스트</h2>
+          <h2>{copy.context.title}</h2>
           <label>
-            Organization ID
+            {copy.context.organizationId}
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
           </label>
           <label>
-            Admin Actor ID (Dev fallback)
+            {copy.context.adminActorId}
             <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
           </label>
           <label>
-            Access Token (optional)
+            {copy.context.accessTokenOptional}
             <input
-              placeholder="Bearer token"
+              placeholder={copy.context.bearerPlaceholder}
               value={accessToken}
               onChange={(event) => setAccessToken(event.target.value)}
             />
           </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadPolicy()} disabled={!organizationId.trim()}>
-              정책 조회
+              {copy.context.loadPolicy}
             </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => void loadDelegations()}
-              disabled={!organizationId.trim()}
-            >
-              위임 조회
+            <button className="btn btn-secondary" onClick={() => void loadDelegations()} disabled={!organizationId.trim()}>
+              {copy.context.loadDelegations}
             </button>
           </div>
-          {supabaseSessionError ? <p className="small fail">Session 오류: {supabaseSessionError}</p> : null}
-          <p className="small">현재 정책 상태: {policyConfigured ? "Configured" : "Default fallback"}</p>
+          {supabaseSessionError ? (
+            <p className="small fail">
+              {copy.context.sessionError}: {supabaseSessionError}
+            </p>
+          ) : null}
+          <p className="small">
+            {copy.context.policyState}: {policyConfigured ? copy.context.configured : copy.context.defaultFallback}
+          </p>
         </article>
 
         <article className="panel">
-          <h2>도메인별 결재선</h2>
+          <h2>{copy.policy.title}</h2>
           <label>
-            근태 승인 역할
+            {copy.policy.attendanceApproverRole}
             <select value={attendanceRole} onChange={(event) => setAttendanceRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
@@ -341,7 +342,7 @@ export default function AdminApprovalPolicyPage() {
             </select>
           </label>
           <label>
-            휴가 승인 역할
+            {copy.policy.leaveApproverRole}
             <select value={leaveRole} onChange={(event) => setLeaveRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
@@ -351,7 +352,7 @@ export default function AdminApprovalPolicyPage() {
             </select>
           </label>
           <label>
-            급여 확정 역할
+            {copy.policy.payrollApproverRole}
             <select value={payrollRole} onChange={(event) => setPayrollRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
@@ -362,25 +363,25 @@ export default function AdminApprovalPolicyPage() {
           </label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void savePolicy()} disabled={!organizationId.trim()}>
-              정책 저장
+              {copy.policy.savePolicy}
             </button>
           </div>
         </article>
 
         <article className="panel">
-          <h2>위임 생성</h2>
+          <h2>{copy.delegationCreate.title}</h2>
           <label>
-            도메인
+            {copy.delegationCreate.domain}
             <select value={delegationDomain} onChange={(event) => setDelegationDomain(event.target.value as ApprovalDomain)}>
               {domainOptions.map((domain) => (
                 <option key={domain} value={domain}>
-                  {domain}
+                  {copy.domainLabels[domain]}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            위임자 역할
+            {copy.delegationCreate.delegatorRole}
             <select value={delegatorRole} onChange={(event) => setDelegatorRole(event.target.value)}>
               {actorRoles.map((role) => (
                 <option key={role} value={role}>
@@ -390,11 +391,11 @@ export default function AdminApprovalPolicyPage() {
             </select>
           </label>
           <label>
-            수임 Actor ID
+            {copy.delegationCreate.delegateActorId}
             <input value={delegateActorId} onChange={(event) => setDelegateActorId(event.target.value)} />
           </label>
           <label>
-            시작 시각
+            {copy.delegationCreate.startsAt}
             <input
               type="datetime-local"
               value={delegationStartsAt}
@@ -402,7 +403,7 @@ export default function AdminApprovalPolicyPage() {
             />
           </label>
           <label>
-            종료 시각
+            {copy.delegationCreate.endsAt}
             <input
               type="datetime-local"
               value={delegationEndsAt}
@@ -410,62 +411,60 @@ export default function AdminApprovalPolicyPage() {
             />
           </label>
           <label>
-            사유 (optional)
+            {copy.delegationCreate.reasonOptional}
             <textarea value={delegationReason} onChange={(event) => setDelegationReason(event.target.value)} />
           </label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void createDelegation()} disabled={!organizationId.trim()}>
-              위임 생성
+              {copy.delegationCreate.createDelegation}
             </button>
           </div>
         </article>
 
         <article className="panel">
-          <h2>위임 목록 ({delegations.length})</h2>
+          <h2>
+            {copy.delegationList.title} ({delegations.length})
+          </h2>
           <div className="panel-actions">
-            <button
-              className="btn btn-secondary btn-small"
-              onClick={() => void expireDelegations()}
-              disabled={!organizationId.trim()}
-            >
-              만료 위임 정리
+            <button className="btn btn-secondary btn-small" onClick={() => void expireDelegations()} disabled={!organizationId.trim()}>
+              {copy.delegationList.expireDelegations}
             </button>
             <label className="small" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-              Dry-run
+              {copy.delegationList.dryRun}
               <select
                 value={delegationExpireDryRun ? "true" : "false"}
                 onChange={(event) => setDelegationExpireDryRun(event.target.value === "true")}
               >
-                <option value="false">실행</option>
-                <option value="true">미리보기</option>
+                <option value="false">{copy.delegationList.execute}</option>
+                <option value="true">{copy.delegationList.preview}</option>
               </select>
             </label>
           </div>
           {lastExpireResult ? (
             <p className="small">
-              최근 정리 결과: checked {lastExpireResult.checkedCount}, expired{" "}
-              {lastExpireResult.expiredCount}, dryRun {lastExpireResult.dryRun ? "true" : "false"} (
-              {formatDateTime(lastExpireResult.effectiveAt)})
+              {copy.delegationList.lastResult}: {copy.delegationList.checked} {lastExpireResult.checkedCount},{" "}
+              {copy.delegationList.expired} {lastExpireResult.expiredCount}, {copy.delegationList.dryRunValue}{" "}
+              {lastExpireResult.dryRun ? "true" : "false"} (
+              {formatApprovalPolicyDateTime(lastExpireResult.effectiveAt, runtimeLocale)})
             </p>
           ) : null}
           {delegations.length === 0 ? (
-            <p className="small">등록된 위임이 없습니다.</p>
+            <p className="small">{copy.delegationList.noDelegations}</p>
           ) : (
             <ul className="simple-list">
               {delegations.map((delegation) => (
                 <li key={delegation.id}>
-                  <strong>{delegation.domain}</strong> · {delegation.delegatorRole} =&gt;{" "}
-                  {delegation.delegateActorId} · {delegation.active ? "ACTIVE" : "INACTIVE"}<br />
+                  <strong>{copy.domainLabels[delegation.domain]}</strong> 쨌 {delegation.delegatorRole} =&gt;{" "}
+                  {delegation.delegateActorId} 쨌 {delegation.active ? copy.delegationList.active : copy.delegationList.inactive}
+                  <br />
                   <span className="small">
-                    {formatDateTime(delegation.startsAt)} ~ {formatDateTime(delegation.endsAt)}
+                    {formatApprovalPolicyDateTime(delegation.startsAt, runtimeLocale)} ~{" "}
+                    {formatApprovalPolicyDateTime(delegation.endsAt, runtimeLocale)}
                   </span>
                   {delegation.active ? (
                     <div className="panel-actions">
-                      <button
-                        className="btn btn-danger btn-small"
-                        onClick={() => void deactivateDelegation(delegation.id)}
-                      >
-                        비활성화
+                      <button className="btn btn-danger btn-small" onClick={() => void deactivateDelegation(delegation.id)}>
+                        {copy.delegationList.deactivate}
                       </button>
                     </div>
                   ) : null}
@@ -476,26 +475,26 @@ export default function AdminApprovalPolicyPage() {
         </article>
 
         <article className="panel">
-          <h2>요청 로그</h2>
+          <h2>{copy.logs.title}</h2>
           <p className="small">
-            총 {stats.total}건 · 성공 {stats.success}건 · 실패 {stats.fail}건
-            {pendingLabel ? ` · 진행중: ${pendingLabel}` : ""}
+            {copy.logs.total} {stats.total} 쨌 {copy.logs.success} {stats.success} 쨌 {copy.logs.fail} {stats.fail}
+            {pendingLabel ? ` 쨌 ${copy.logs.inProgress} ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">아직 API 호출 이력이 없습니다.</p>
+            <p className="small">{copy.logs.empty}</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} ·{" "}
-                  {log.status} · {log.at}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span>{" "}
+                  {log.label} 쨌 {log.status} 쨌 {log.at}
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
             <Link href="/admin" className="btn btn-secondary">
-              관리자 홈으로
+              {copy.logs.toAdmin}
             </Link>
           </div>
         </article>
