@@ -40,24 +40,53 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Deploy production on Vercel (scope fallback)
+      - name: Deploy production on Vercel (scope-candidate fallback)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE || '' }}
           VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME || 'flowhr' }}
         run: |
+          scope_candidates=()
+          if [ -n "$VERCEL_SCOPE" ]; then
+            scope_candidates+=("$VERCEL_SCOPE")
+          fi
+          if [ -n "$GITHUB_REPOSITORY_OWNER" ]; then
+            scope_candidates+=("$GITHUB_REPOSITORY_OWNER")
+          fi
+
+          unique_scopes=()
+          for scope in "${scope_candidates[@]}"; do
+            duplicate=false
+            for seen_scope in "${unique_scopes[@]}"; do
+              if [ "$seen_scope" = "$scope" ]; then
+                duplicate=true
+                break
+              fi
+            done
+            if [ "$duplicate" = false ]; then
+              unique_scopes+=("$scope")
+            fi
+          done
+
+          if [ ${#unique_scopes[@]} -eq 0 ]; then
+            echo "::error::No Vercel scope candidate is available. Configure VERCEL_SCOPE."
+            exit 1
+          fi
+
           run_vercel() {
             local command="$1"
             shift
 
-            if [ -n "$VERCEL_SCOPE" ]; then
-              if npx vercel@latest "$command" "$@" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"; then
+            for scope in "${unique_scopes[@]}"; do
+              if npx vercel@latest "$command" "$@" --scope "$scope" --token "$VERCEL_TOKEN"; then
+                echo "vercel $command succeeded with scope '$scope'"
                 return 0
               fi
-              echo "::warning::Scoped vercel $command failed for '$VERCEL_SCOPE'; retrying without --scope."
-            fi
+              echo "::warning::Scoped vercel $command failed for '$scope'."
+            done
 
-            npx vercel@latest "$command" "$@" --token "$VERCEL_TOKEN"
+            echo "::error::All scoped vercel $command attempts failed. Tried scopes: ${unique_scopes[*]}"
+            return 1
           }
 
           run_vercel link --yes --project "$VERCEL_PROJECT_NAME"
