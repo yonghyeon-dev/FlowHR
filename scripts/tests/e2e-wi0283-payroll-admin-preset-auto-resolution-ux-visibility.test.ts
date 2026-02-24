@@ -12,6 +12,7 @@ function countLines(source: string) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPayrollHelperSource = readUtf8("src", "app", "admin", "page-payroll-helpers.ts");
   const adminPayrollPanelSource = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const presetGuidePanelSource = readUtf8(
     "src",
@@ -37,19 +38,19 @@ function run() {
     "admin payroll preview should keep preset asOf state"
   );
   assert.match(
-    adminPageSource,
-    /incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetAuto\s*\?\s*undefined\s*:\s*payrollIncomeTaxLookupPresetId\.trim\(\) \|\| undefined,/,
-    "admin payroll payload should skip manual preset id when auto mode is enabled"
+    `${adminPageSource}\n${adminPayrollHelperSource}`,
+    /incomeTaxLookupPresetId:\s*(?:input\.)?payrollIncomeTaxLookupPresetAuto\s*\?\s*undefined\s*:\s*(?:input\.)?payrollIncomeTaxLookupPresetId\.trim\(\)\s*\|\|\s*undefined,/,
+    "admin payroll payload should skip manual preset id when auto mode is enabled (inline page or extracted helper)"
   );
   assert.match(
-    adminPageSource,
-    /incomeTaxLookupPresetAuto: payrollIncomeTaxLookupPresetAuto,/,
-    "admin payroll payload should forward preset auto flag"
+    `${adminPageSource}\n${adminPayrollHelperSource}`,
+    /incomeTaxLookupPresetAuto:\s*(?:input\.)?payrollIncomeTaxLookupPresetAuto,/,
+    "admin payroll payload should forward preset auto flag (inline page or extracted helper)"
   );
   assert.match(
-    adminPageSource,
-    /incomeTaxLookupAsOf:\s*payrollIncomeTaxLookupPresetAuto && payrollIncomeTaxLookupAsOf\.trim\(\)\.length > 0/,
-    "admin payroll payload should forward optional asOf in auto mode"
+    `${adminPageSource}\n${adminPayrollHelperSource}`,
+    /incomeTaxLookupAsOf:\s*(?:input\.)?payrollIncomeTaxLookupPresetAuto\s*&&\s*(?:input\.)?payrollIncomeTaxLookupAsOf\.trim\(\)\.length > 0/,
+    "admin payroll payload should forward optional asOf in auto mode (inline page or extracted helper)"
   );
   assert.match(
     adminPayrollPanelSource,

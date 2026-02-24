@@ -12,6 +12,8 @@ function countLines(source: string) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPayrollHelperSource = readUtf8("src", "app", "admin", "page-payroll-helpers.ts");
+  const adminPayrollPanelSource = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const presetGuidePanelSource = readUtf8(
     "src",
     "components",
@@ -26,9 +28,9 @@ function run() {
   );
 
   assert.match(
-    adminPageSource,
+    `${adminPageSource}\n${adminPayrollPanelSource}`,
     /PayrollKrPresetGuidePanel/,
-    "admin payroll preview should render the preset guide panel"
+    "admin payroll preview should render the preset guide panel (directly or via extracted panel)"
   );
   assert.match(
     adminPageSource,
@@ -36,19 +38,19 @@ function run() {
     "admin payroll preview should keep preset state"
   );
   assert.match(
-    adminPageSource,
-    /incomeTaxLookupPresetId: payrollIncomeTaxLookupPresetAuto\s*\?\s*undefined\s*:\s*payrollIncomeTaxLookupPresetId\.trim\(\) \|\| undefined,/,
-    "admin payroll preview should send selected preset ID in payload"
+    `${adminPageSource}\n${adminPayrollHelperSource}`,
+    /incomeTaxLookupPresetId:\s*(?:input\.)?payrollIncomeTaxLookupPresetAuto\s*\?\s*undefined\s*:\s*(?:input\.)?payrollIncomeTaxLookupPresetId\.trim\(\)\s*\|\|\s*undefined,/,
+    "admin payroll preview should send selected preset ID in payload (inline page or extracted helper)"
   );
   assert.match(
-    adminPageSource,
+    `${adminPageSource}\n${adminPayrollPanelSource}`,
     /selectedPresetId=\{payrollIncomeTaxLookupPresetId\}/,
-    "admin payroll preview should bind selected preset state"
+    "admin payroll preview should bind selected preset state (directly or via extracted panel)"
   );
   assert.match(
-    adminPageSource,
-    /onPresetChange=\{setPayrollIncomeTaxLookupPresetId\}/,
-    "admin payroll preview should wire preset change handler"
+    `${adminPageSource}\n${adminPayrollPanelSource}`,
+    /onPresetChange=\{(?:setPayrollIncomeTaxLookupPresetId|onPayrollIncomeTaxLookupPresetIdChange)\}/,
+    "admin payroll preview should wire preset change handler (directly or via extracted panel)"
   );
 
   assert.match(
