@@ -5,13 +5,16 @@
 Recent PR checks reported repeated Vercel deployment failures caused by account build-rate limits.
 Core CI checks passed, but preview deployment failures created noisy status and delayed delivery flow.
 
+> Note: Deployment integration behavior was adjusted in WI-0390 to restore `main` auto-deploy
+> while keeping preview suppression (`deploymentEnabled["*"] = false`).
+
 ## Scope
 
 ### In Scope
 
 - update `vercel.json` to keep automatic deployment enabled on `main` only
 - disable automatic Vercel deployments for non-main branches to reduce preview deployment volume
-- disable Vercel GitHub integration status publishing to prevent PR status noise from account rate limits
+- minimize preview status noise by suppressing non-main deployments
 - add regression test to lock deployment policy contract in repo
 - update roadmap tracking for WI-0284
 
