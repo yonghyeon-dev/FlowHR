@@ -3,8 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  buildAttendanceStatusSummary,
+  buildIntegratedSummaryCards,
+  buildLeaveCalendarCells,
+  buildLeaveCalendarRows,
   buildLeaveBalanceCards,
+  buildLeaveStatusSummary,
   buildLeaveUsageProjectionLabel,
+  buildResubmitCandidates,
   summarizeEmployeeApiLogs
 } from "@/app/employee/page-derived-helpers";
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
@@ -49,9 +55,7 @@ import {
   todayEndLocal,
   todayStartLocal,
   toIso,
-  toLocalDateKey,
-  toLocalInputValue,
-  toTimestamp
+  toLocalInputValue
 } from "@/app/employee/page-helpers";
 import {
   extractEmployeeErrorMessage,
@@ -65,9 +69,7 @@ import type {
   IntegratedSubmitChecklistCard,
   IntegratedSummaryCard,
   LeaveBalanceDto,
-  LeaveCalendarDensity,
   LeaveCalendarDayCell,
-  LeaveCalendarStatusTone,
   LeaveRequestDto,
   MobileRequestTimelineItem,
   PreSubmitCheckItem,
@@ -690,125 +692,37 @@ export default function EmployeeSelfServicePage() {
     return new Intl.DateTimeFormat(runtimeLocale, { year: "numeric", month: "long" }).format(anchor);
   }, [periodStart, runtimeLocale]);
 
-  const leaveCalendarCells = useMemo<LeaveCalendarDayCell[]>(() => {
-    const parsedPeriodStart = new Date(periodStart);
-    const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
-    const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1, 0, 0, 0);
-    const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 0, 0, 0);
-    const gridStart = shiftDays(startOfLocalDay(monthStart), -monthStart.getDay());
-    const gridEnd = shiftDays(startOfLocalDay(monthEnd), 6 - monthEnd.getDay());
+  const leaveCalendarCells = useMemo<LeaveCalendarDayCell[]>(
+    () => buildLeaveCalendarCells(leaveRequests, periodStart),
+    [leaveRequests, periodStart]
+  );
 
-    const requestByDate = new Map<string, LeaveRequestDto[]>();
-    for (const request of leaveRequests) {
-      const parsedStartDate = new Date(request.startDate);
-      const parsedEndDate = new Date(request.endDate);
-      if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
-        continue;
-      }
+  const leaveCalendarRows = useMemo(
+    () =>
+      buildLeaveCalendarRows({
+        leaveRequests,
+        toLeaveTypeLabel,
+        leaveUnitCopy,
+        formatDays,
+        formatDateTime: formatDateTimeByLocale
+      }),
+    [formatDateTimeByLocale, leaveRequests, leaveUnitCopy, toLeaveTypeLabel]
+  );
 
-      let cursor = startOfLocalDay(parsedStartDate);
-      const requestEnd = startOfLocalDay(parsedEndDate);
-      while (cursor.getTime() <= requestEnd.getTime()) {
-        const dateKey = toLocalDateKey(cursor);
-        const bucket = requestByDate.get(dateKey);
-        if (bucket) {
-          bucket.push(request);
-        } else {
-          requestByDate.set(dateKey, [request]);
-        }
-        cursor = shiftDays(cursor, 1);
-      }
-    }
+  const attendanceStatusSummary = useMemo(
+    () => buildAttendanceStatusSummary(attendance),
+    [attendance]
+  );
 
-    const todayKey = toLocalDateKey(new Date());
-    const cells: LeaveCalendarDayCell[] = [];
-    for (let cursor = new Date(gridStart); cursor.getTime() <= gridEnd.getTime(); cursor = shiftDays(cursor, 1)) {
-      const dateKey = toLocalDateKey(cursor);
-      const requestBucket = requestByDate.get(dateKey) ?? [];
-      const requestCount = requestBucket.length;
-      let approvedCount = 0;
-      let pendingCount = 0;
-      let rejectedCount = 0;
-      for (const request of requestBucket) {
-        if (request.state === "APPROVED") {
-          approvedCount += 1;
-        } else if (request.state === "PENDING") {
-          pendingCount += 1;
-        } else {
-          rejectedCount += 1;
-        }
-      }
-
-      let tone: LeaveCalendarStatusTone = "none";
-      if (requestCount > 0) {
-        if (approvedCount === requestCount) {
-          tone = "approved";
-        } else if (pendingCount === requestCount) {
-          tone = "pending";
-        } else if (rejectedCount === requestCount) {
-          tone = "rejected";
-        } else {
-          tone = "mixed";
-        }
-      }
-
-      const density: LeaveCalendarDensity =
-        requestCount >= 3 ? "high" : requestCount === 2 ? "mid" : requestCount === 1 ? "low" : "none";
-
-      cells.push({
-        dateKey,
-        dayOfMonth: cursor.getDate(),
-        inCurrentMonth: cursor.getMonth() === monthStart.getMonth(),
-        isToday: dateKey === todayKey,
-        requestCount,
-        approvedCount,
-        pendingCount,
-        rejectedCount,
-        density,
-        tone
-      });
-    }
-
-    return cells;
-  }, [leaveRequests, periodStart]);
-
-  const leaveCalendarRows = useMemo(() => {
-    return [...leaveRequests]
-      .sort((lhs, rhs) => new Date(lhs.startDate).getTime() - new Date(rhs.startDate).getTime())
-      .map((request) => ({
-        id: request.id,
-        dateRange: `${formatDateTimeByLocale(request.startDate)} ~ ${formatDateTimeByLocale(request.endDate)}`,
-        status: request.state,
-        label:
-          request.unit === "HOUR" && request.hours !== null
-            ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.hourUnit(request.hours.toFixed(2))}`
-            : request.unit === "HALF_DAY"
-              ? `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.halfDay}`
-              : `${toLeaveTypeLabel(request.leaveType)} / ${leaveUnitCopy.dayUnit(formatDays(request.days))}`
-      }));
-  }, [leaveRequests, leaveUnitCopy, toLeaveTypeLabel]);
-
-  const attendanceStatusSummary = useMemo(() => {
-    return {
-      pending: attendance.filter((record) => record.state === "PENDING").length,
-      approved: attendance.filter((record) => record.state === "APPROVED").length,
-      rejected: attendance.filter((record) => record.state === "REJECTED").length
-    };
-  }, [attendance]);
-
-  const leaveStatusSummary = useMemo(() => {
-    return {
-      pending: leaveRequests.filter((request) => request.state === "PENDING").length,
-      approved: leaveRequests.filter((request) => request.state === "APPROVED").length,
-      rejected: leaveRequests.filter((request) => request.state === "REJECTED").length,
-      canceled: leaveRequests.filter((request) => request.state === "CANCELED").length
-    };
-  }, [leaveRequests]);
+  const leaveStatusSummary = useMemo(
+    () => buildLeaveStatusSummary(leaveRequests),
+    [leaveRequests]
+  );
 
   const totalPendingRequestCount = attendanceStatusSummary.pending + leaveStatusSummary.pending;
   const totalApprovedRequestCount = attendanceStatusSummary.approved + leaveStatusSummary.approved;
   const totalRejectedOrCanceledRequestCount =
-    attendanceStatusSummary.rejected + leaveStatusSummary.rejected + leaveStatusSummary.canceled;
+    attendanceStatusSummary.rejected + leaveStatusSummary.rejected + (leaveStatusSummary.canceled ?? 0);
 
   const requestCompletionRatePercent = useMemo(() => {
     const totalHandled = totalApprovedRequestCount + totalRejectedOrCanceledRequestCount;
@@ -819,38 +733,17 @@ export default function EmployeeSelfServicePage() {
     return Math.max(0, Math.min(100, Math.round((totalHandled / total) * 100)));
   }, [totalApprovedRequestCount, totalPendingRequestCount, totalRejectedOrCanceledRequestCount]);
 
-  const resubmitCandidates = useMemo<ResubmitCandidate[]>(() => {
-    const attendanceCandidates = attendance
-      .filter((record) => record.state === "REJECTED")
-      .map((record) => ({
-        key: `attendance:${record.id}`,
-        channel: "attendance" as const,
-        recordId: record.id,
-        status: "REJECTED" as const,
-        at: record.checkOutAt ?? record.checkInAt,
-        reason: record.notes?.trim() || defaultsCopy.noReasonProvided,
-        summary: `${formatDateTimeByLocale(record.checkInAt)} ~ ${formatDateTimeByLocale(record.checkOutAt)}`
-      }));
-
-    const leaveCandidates = leaveRequests
-      .filter((request) => request.state === "REJECTED" || request.state === "CANCELED")
-      .map((request) => ({
-        key: `leave:${request.id}`,
-        channel: "leave" as const,
-        recordId: request.id,
-        status: request.state as "REJECTED" | "CANCELED",
-        at: request.endDate,
-        reason:
-          request.decisionReason?.trim() ||
-          request.reason?.trim() ||
-          defaultsCopy.noReasonProvided,
-        summary: `${toLeaveTypeLabel(request.leaveType)} / ${formatDateTimeByLocale(request.startDate)} ~ ${formatDateTimeByLocale(request.endDate)}`
-      }));
-
-    return [...attendanceCandidates, ...leaveCandidates]
-      .sort((left, right) => toTimestamp(right.at) - toTimestamp(left.at))
-      .slice(0, 12);
-  }, [attendance, defaultsCopy.noReasonProvided, leaveRequests, toLeaveTypeLabel]);
+  const resubmitCandidates = useMemo<ResubmitCandidate[]>(
+    () =>
+      buildResubmitCandidates({
+        attendance,
+        leaveRequests,
+        noReasonProvidedLabel: defaultsCopy.noReasonProvided,
+        formatDateTime: formatDateTimeByLocale,
+        toLeaveTypeLabel
+      }),
+    [attendance, defaultsCopy.noReasonProvided, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]
+  );
 
   const selectedResubmitCandidate = useMemo(() => {
     if (resubmitCandidates.length === 0) {
@@ -879,54 +772,27 @@ export default function EmployeeSelfServicePage() {
     }
   }, [resubmitCandidates, selectedResubmitCandidateKey]);
 
-  const integratedSummaryCards = useMemo<IntegratedSummaryCard[]>(() => {
-    const resubmitNeededCount = resubmitCandidates.length;
-    const apiFailureCount = stats.fail;
-    return [
-      {
-        key: "pending",
-        label: summaryCardCopy.pendingRequestsLabel,
-        value: `${totalPendingRequestCount}`,
-        detail: summaryCardCopy.pendingRequestsDetail(attendanceStatusSummary.pending, leaveStatusSummary.pending),
-        tone: totalPendingRequestCount > 0 ? "pending" : "ok"
-      },
-      {
-        key: "completion",
-        label: summaryCardCopy.completionRateLabel,
-        value: `${requestCompletionRatePercent}%`,
-        detail: summaryCardCopy.completionRateDetail(totalApprovedRequestCount, totalRejectedOrCanceledRequestCount),
-        tone: requestCompletionRatePercent >= 70 ? "ok" : requestCompletionRatePercent >= 40 ? "pending" : "fail"
-      },
-      {
-        key: "resubmit",
-        label: summaryCardCopy.resubmitNeededLabel,
-        value: `${resubmitNeededCount}`,
-        detail:
-          resubmitNeededCount > 0
-            ? summaryCardCopy.resubmitNeededDetail(resubmitNeededCount)
-            : summaryCardCopy.noResubmitNeededDetail,
-        tone: resubmitNeededCount > 0 ? "fail" : "ok"
-      },
-      {
-        key: "api-failures",
-        label: summaryCardCopy.apiFailuresLabel,
-        value: `${apiFailureCount}`,
-        detail: summaryCardCopy.apiFailuresDetail(stats.success, stats.fail),
-        tone: apiFailureCount > 0 ? "fail" : "info"
-      }
-    ];
-  }, [
-    attendanceStatusSummary.pending,
-    leaveStatusSummary.pending,
-    requestCompletionRatePercent,
-    resubmitCandidates.length,
-    stats.fail,
-    stats.success,
-    summaryCardCopy,
-    totalApprovedRequestCount,
-    totalPendingRequestCount,
-    totalRejectedOrCanceledRequestCount
-  ]);
+  const integratedSummaryCards = useMemo<IntegratedSummaryCard[]>(
+    () =>
+      buildIntegratedSummaryCards({
+        attendanceStatusSummary,
+        leaveStatusSummary,
+        requestCompletionRatePercent,
+        resubmitNeededCount: resubmitCandidates.length,
+        successCount: stats.success,
+        failCount: stats.fail,
+        summaryCardCopy
+      }),
+    [
+      attendanceStatusSummary,
+      leaveStatusSummary,
+      requestCompletionRatePercent,
+      resubmitCandidates.length,
+      stats.fail,
+      stats.success,
+      summaryCardCopy
+    ]
+  );
 
   const latestLeaveRequest = useMemo(() => {
     if (leaveRequests.length === 0) {
