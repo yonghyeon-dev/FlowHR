@@ -483,6 +483,53 @@ const EMPLOYEE_VALIDATION_COPY_BY_LOCALE = {
   }
 } as const;
 
+const EMPLOYEE_SUMMARY_COPY_BY_LOCALE = {
+  ko: {
+    leaveBalance: {
+      notLoaded: "잔여 휴가 정보를 아직 불러오지 못했습니다.",
+      summary: (remainingDaysLabel: string, grantedDaysLabel: string, usedDaysLabel: string) =>
+        `잔여 ${remainingDaysLabel}일 (부여 ${grantedDaysLabel}일, 사용 ${usedDaysLabel}일)`,
+      cardLabels: {
+        remaining: "잔여",
+        granted: "부여",
+        used: "사용",
+        carryOver: "이월"
+      },
+      dayUnit: (daysLabel: string) => `${daysLabel}일`,
+      projectionPending: "연차 사용 속도 예측은 잔여 정보를 불러오면 표시됩니다.",
+      projectedRemaining: (daysLabel: string) => `현재 사용 속도 기준 연말 예상 잔여 ${daysLabel}일`,
+      projectedShortage: (daysLabel: string) => `현재 사용 속도 기준 연말 예상 부족 ${daysLabel}일`
+    },
+    leaveUnits: {
+      hourUnit: (hoursLabel: string) => `${hoursLabel}시간`,
+      halfDay: "반차",
+      dayUnit: (daysLabel: string) => `${daysLabel}일`
+    }
+  },
+  en: {
+    leaveBalance: {
+      notLoaded: "Leave balance is not loaded yet.",
+      summary: (remainingDaysLabel: string, grantedDaysLabel: string, usedDaysLabel: string) =>
+        `Remaining ${remainingDaysLabel}d (granted ${grantedDaysLabel}d, used ${usedDaysLabel}d)`,
+      cardLabels: {
+        remaining: "Remaining",
+        granted: "Granted",
+        used: "Used",
+        carryOver: "Carry-over"
+      },
+      dayUnit: (daysLabel: string) => `${daysLabel}d`,
+      projectionPending: "Projection is shown after leave balance is loaded.",
+      projectedRemaining: (daysLabel: string) => `Projected year-end remaining ${daysLabel}d at current usage rate`,
+      projectedShortage: (daysLabel: string) => `Projected year-end shortage ${daysLabel}d at current usage rate`
+    },
+    leaveUnits: {
+      hourUnit: (hoursLabel: string) => `${hoursLabel}h`,
+      halfDay: "0.5d",
+      dayUnit: (daysLabel: string) => `${daysLabel}d`
+    }
+  }
+} as const;
+
 export function isDefaultEmployeeCancelReason(reason: string) {
   return reason === DEFAULT_CANCEL_REASON_BY_LOCALE.ko || reason === DEFAULT_CANCEL_REASON_BY_LOCALE.en;
 }
@@ -500,6 +547,7 @@ export function resolveEmployeeLocaleLabelBundle(isKoLocale: boolean) {
     defaultCancelReason: DEFAULT_CANCEL_REASON_BY_LOCALE[localeKey],
     surfaceCopy: EMPLOYEE_SURFACE_COPY_BY_LOCALE[localeKey],
     validationCopy: EMPLOYEE_VALIDATION_COPY_BY_LOCALE[localeKey],
+    summaryCopy: EMPLOYEE_SUMMARY_COPY_BY_LOCALE[localeKey],
     notConfiguredLabel: isKoLocale ? "미설정" : "not configured",
     runtimeLocale: isKoLocale ? "ko-KR" : "en-US",
     correctionRequestNote: isKoLocale ? "정정 요청" : "Correction request",
