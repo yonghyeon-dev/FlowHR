@@ -26,7 +26,10 @@ import {
   listOrganizationsFromHelper,
   listSchedulesFromHelper,
   loadLeavePolicyFromHelper,
-  saveLeavePolicyFromHelper
+  refreshAdminInboxFromHelper,
+  confirmPayrollFromHelper,
+  saveLeavePolicyFromHelper,
+  settleLeaveAccrualFromHelper
 } from "@/app/admin/page-action-helpers";
 import { buildAdminPayrollPreviewRequest } from "@/app/admin/page-payroll-helpers";
 import {
@@ -573,65 +576,39 @@ export default function AdminDashboardPage() {
   }
 
   async function refreshInbox() {
-    const from = toIso(periodStart);
-    const to = toIso(periodEnd);
-
-    const [attendanceRes, leaveRes, payrollRes] = await Promise.all([
-      callApi(
-        "승인 대기 출퇴근 조회",
-        "GET",
-        `/api/attendance/records${buildQuery({ from, to, state: "PENDING" })}`
-      ),
-      callApi(
-        "승인 대기 휴가 조회",
-        "GET",
-        `/api/leave/requests${buildQuery({ from, to, state: "PENDING" })}`
-      ),
-      callApi(
-        "프리뷰 급여 조회",
-        "GET",
-        `/api/payroll/runs${buildQuery({ from, to, state: "PREVIEWED" })}`
-      )
-    ]);
-
-    if (attendanceRes.response.ok) {
-      const parsed = attendanceRes.body as { records?: AttendanceRecordDto[] };
-      const records = Array.isArray(parsed.records) ? parsed.records : [];
-      setPendingAttendance(records);
-    }
-    if (leaveRes.response.ok) {
-      const parsed = leaveRes.body as { requests?: LeaveRequestDto[] };
-      const requests = Array.isArray(parsed.requests) ? parsed.requests : [];
-      setPendingLeave(requests);
-    }
-    if (payrollRes.response.ok) {
-      const parsed = payrollRes.body as { runs?: PayrollRunDto[] };
-      const runs = Array.isArray(parsed.runs) ? parsed.runs : [];
-      setPreviewedPayroll(runs);
-    }
+    const inbox = await refreshAdminInboxFromHelper({
+      callApi,
+      periodStart,
+      periodEnd,
+      toIso,
+      buildQuery
+    });
+    setPendingAttendance(inbox.pendingAttendance);
+    setPendingLeave(inbox.pendingLeave);
+    setPreviewedPayroll(inbox.previewedPayroll);
   }
 
   async function confirmPayroll(runId: string) {
-    const { response, body } = await callApi("급여 확정", "POST", `/api/payroll/runs/${runId}/confirm`);
+    const confirmed = await confirmPayrollFromHelper({
+      callApi,
+      runId
+    });
     appendApprovalActivity({
       queue: "payroll",
       actionKind: "confirm",
       action: "확정",
       itemId: runId,
-      ok: response.ok,
-      status: response.status
+      ok: confirmed.ok,
+      status: confirmed.status
     });
     publishMobileApprovalFeedback({
       queue: "payroll",
       action: "payroll-single-confirm",
-      okCount: response.ok ? 1 : 0,
-      failCount: response.ok ? 0 : 1
+      okCount: confirmed.ok ? 1 : 0,
+      failCount: confirmed.ok ? 0 : 1
     });
-    if (response.ok) {
-      const parsed = body as { run?: { id?: string } };
-      if (parsed.run?.id) {
-        setLastPayrollRunId(parsed.run.id);
-      }
+    if (confirmed.ok && confirmed.confirmedRunId) {
+      setLastPayrollRunId(confirmed.confirmedRunId);
     }
     await refreshInbox();
   }
@@ -693,23 +670,17 @@ export default function AdminDashboardPage() {
   }
 
   async function settleLeaveAccrual() {
-    const year = Number(accrualYear);
-    const annualGrantDaysRaw = accrualGrantDays.trim();
-    const carryOverCapDaysRaw = accrualCarryCapDays.trim();
-    const annualGrantDays = annualGrantDaysRaw.length > 0 ? Number(annualGrantDaysRaw) : Number.NaN;
-    const carryOverCapDays = carryOverCapDaysRaw.length > 0 ? Number(carryOverCapDaysRaw) : Number.NaN;
-    const payload = {
-      employeeId: accrualEmployeeId.trim(),
-      year,
-      annualGrantDays: Number.isFinite(annualGrantDays) ? annualGrantDays : undefined,
-      carryOverCapDays: Number.isFinite(carryOverCapDays) ? carryOverCapDays : undefined
-    };
-    const { response, body } = await callApi("휴가 정산(부여/이월)", "POST", "/api/leave/accrual/settle", payload);
-    if (!response.ok) {
+    const balance = await settleLeaveAccrualFromHelper({
+      callApi,
+      accrualYear,
+      accrualGrantDays,
+      accrualCarryCapDays,
+      accrualEmployeeId
+    });
+    if (!balance) {
       return;
     }
-    const parsed = body as { balance?: LeaveBalanceDto };
-    setAccrualResult(parsed.balance ?? null);
+    setAccrualResult(balance);
   }
 
   async function loadLeavePolicy() {

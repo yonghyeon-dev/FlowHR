@@ -1,11 +1,15 @@
 import type {
   ApiLog,
   AttendanceAggregateDto,
+  AttendanceRecordDto,
   EmployeeSummary,
   InviteDeliveryMode,
   InviteResultDto,
   InviteRole,
+  LeaveBalanceDto,
+  LeaveRequestDto,
   OrganizationSummary,
+  PayrollRunDto,
   WorkScheduleDto
 } from "@/app/admin/page-types";
 
@@ -316,4 +320,103 @@ export async function listAttendanceAggregatesFromHelper(input: {
   }
   const parsed = body as { aggregates?: AttendanceAggregateDto[] };
   return Array.isArray(parsed.aggregates) ? parsed.aggregates : [];
+}
+
+export async function refreshAdminInboxFromHelper(input: {
+  callApi: AdminCallApi;
+  periodStart: string;
+  periodEnd: string;
+  toIso: (value: string) => string;
+  buildQuery: (params: Record<string, string | undefined>) => string;
+}): Promise<{
+  pendingAttendance: AttendanceRecordDto[];
+  pendingLeave: LeaveRequestDto[];
+  previewedPayroll: PayrollRunDto[];
+}> {
+  const from = input.toIso(input.periodStart);
+  const to = input.toIso(input.periodEnd);
+
+  const [attendanceRes, leaveRes, payrollRes] = await Promise.all([
+    input.callApi(
+      "승인 대기 출퇴근 조회",
+      "GET",
+      `/api/attendance/records${input.buildQuery({ from, to, state: "PENDING" })}`
+    ),
+    input.callApi(
+      "승인 대기 휴가 조회",
+      "GET",
+      `/api/leave/requests${input.buildQuery({ from, to, state: "PENDING" })}`
+    ),
+    input.callApi(
+      "프리뷰 급여 조회",
+      "GET",
+      `/api/payroll/runs${input.buildQuery({ from, to, state: "PREVIEWED" })}`
+    )
+  ]);
+
+  const pendingAttendance = attendanceRes.response.ok
+    ? Array.isArray((attendanceRes.body as { records?: AttendanceRecordDto[] }).records)
+      ? ((attendanceRes.body as { records?: AttendanceRecordDto[] }).records ?? [])
+      : []
+    : [];
+  const pendingLeave = leaveRes.response.ok
+    ? Array.isArray((leaveRes.body as { requests?: LeaveRequestDto[] }).requests)
+      ? ((leaveRes.body as { requests?: LeaveRequestDto[] }).requests ?? [])
+      : []
+    : [];
+  const previewedPayroll = payrollRes.response.ok
+    ? Array.isArray((payrollRes.body as { runs?: PayrollRunDto[] }).runs)
+      ? ((payrollRes.body as { runs?: PayrollRunDto[] }).runs ?? [])
+      : []
+    : [];
+
+  return { pendingAttendance, pendingLeave, previewedPayroll };
+}
+
+export async function confirmPayrollFromHelper(input: {
+  callApi: AdminCallApi;
+  runId: string;
+}): Promise<{ ok: boolean; status: number; confirmedRunId: string | null }> {
+  const { response, body } = await input.callApi(
+    "급여 확정",
+    "POST",
+    `/api/payroll/runs/${input.runId}/confirm`
+  );
+  const parsed = body as { run?: { id?: string } };
+  return {
+    ok: response.ok,
+    status: response.status,
+    confirmedRunId: parsed.run?.id ?? null
+  };
+}
+
+export async function settleLeaveAccrualFromHelper(input: {
+  callApi: AdminCallApi;
+  accrualYear: string;
+  accrualGrantDays: string;
+  accrualCarryCapDays: string;
+  accrualEmployeeId: string;
+}): Promise<LeaveBalanceDto | null> {
+  const year = Number(input.accrualYear);
+  const annualGrantDaysRaw = input.accrualGrantDays.trim();
+  const carryOverCapDaysRaw = input.accrualCarryCapDays.trim();
+  const annualGrantDays = annualGrantDaysRaw.length > 0 ? Number(annualGrantDaysRaw) : Number.NaN;
+  const carryOverCapDays = carryOverCapDaysRaw.length > 0 ? Number(carryOverCapDaysRaw) : Number.NaN;
+  const payload = {
+    employeeId: input.accrualEmployeeId.trim(),
+    year,
+    annualGrantDays: Number.isFinite(annualGrantDays) ? annualGrantDays : undefined,
+    carryOverCapDays: Number.isFinite(carryOverCapDays) ? carryOverCapDays : undefined
+  };
+  const { response, body } = await input.callApi(
+    "휴가 정산(부여/이월)",
+    "POST",
+    "/api/leave/accrual/settle",
+    payload
+  );
+  if (!response.ok) {
+    return null;
+  }
+  const parsed = body as { balance?: LeaveBalanceDto };
+  return parsed.balance ?? null;
 }
