@@ -16,21 +16,14 @@ import {
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import {
   buildAdminValidationFailureLog,
-  createEmployeeFromHelper,
-  createInviteFromHelper,
-  createOrganizationFromHelper,
-  createScheduleFromHelper,
-  deleteScheduleFromHelper,
   listAttendanceAggregatesFromHelper,
-  listEmployeesFromHelper,
-  listOrganizationsFromHelper,
-  listSchedulesFromHelper,
   loadLeavePolicyFromHelper,
   refreshAdminInboxFromHelper,
   confirmPayrollFromHelper,
   saveLeavePolicyFromHelper,
   settleLeaveAccrualFromHelper
 } from "@/app/admin/page-action-helpers";
+import { buildAdminDirectoryActions } from "@/app/admin/page-directory-actions";
 import { buildAdminPayrollPreviewRequest } from "@/app/admin/page-payroll-helpers";
 import {
   isDefaultDemoOrganizationName,
@@ -441,139 +434,41 @@ export default function AdminDashboardPage() {
     });
   }
 
-  async function listEmployees() {
-    const nextEmployees = await listEmployeesFromHelper({
-      callApi,
-      organizationId,
-      buildQuery
-    });
-    if (!nextEmployees) {
-      return;
-    }
-    setEmployees(nextEmployees);
-  }
-
-  async function createEmployee() {
-    const result = await createEmployeeFromHelper({
-      callApi,
-      employeeId,
-      organizationId,
-      employeeName,
-      employeeEmail,
-      employeeActive
-    });
-    if (!result.ok) {
-      return;
-    }
-    if (result.createdEmployeeId) {
-      setEmployeeId(result.createdEmployeeId);
-      setAccrualEmployeeId(result.createdEmployeeId);
-      setScheduleEmployeeId(result.createdEmployeeId);
-      setInviteActorId(result.createdEmployeeId);
-    }
-    await listEmployees();
-  }
-
-  async function createInvite() {
-    setInviteResult(null);
-    const nextInviteResult = await createInviteFromHelper({
-      callApi,
-      inviteEmail,
-      inviteRole,
-      inviteDeliveryMode,
-      organizationId,
-      inviteActorId
-    });
-    if (nextInviteResult) {
-      setInviteResult(nextInviteResult);
-    }
-  }
-
-  async function listSchedules() {
-    const nextSchedules = await listSchedulesFromHelper({
-      callApi,
-      periodStart,
-      periodEnd,
-      scheduleEmployeeId,
-      toIso,
-      buildQuery
-    });
-    if (!nextSchedules) {
-      return;
-    }
-    setSchedules(nextSchedules);
-  }
-
-  async function createSchedule() {
-    const created = await createScheduleFromHelper({
-      callApi,
-      scheduleEmployeeId,
-      scheduleStartAt,
-      scheduleEndAt,
-      scheduleBreakMinutes,
-      scheduleIsHoliday,
-      scheduleNotes,
-      toIso
-    });
-    if (!created) {
-      return;
-    }
-    await listSchedules();
-  }
-
-  async function deleteSchedule(scheduleId: string) {
-    if (!scheduleId.trim()) {
-      return;
-    }
-    const okToDelete = window.confirm(`근무 일정을 삭제할까요?\n\nID: ${scheduleId}`);
-    if (!okToDelete) {
-      return;
-    }
-
-    const deleted = await deleteScheduleFromHelper({
-      callApi,
-      scheduleId
-    });
-    if (!deleted) {
-      return;
-    }
-    setSchedules((prev) => prev.filter((item) => item.id !== scheduleId));
-  }
-
-  async function listOrganizations() {
-    const nextOrganizations = await listOrganizationsFromHelper({
-      callApi
-    });
-    if (!nextOrganizations) {
-      return;
-    }
-    setOrganizations(nextOrganizations);
-  }
-
-  async function createOrganization() {
-    const name = organizationName.trim();
-    if (!name) {
-      setLogs((prev) => [
-        buildAdminValidationFailureLog({
-          label: "조직 생성",
-          error: "조직 이름이 필요합니다.",
-          runtimeLocale
-        }),
-        ...prev
-      ]);
-      return;
-    }
-
-    const createdId = await createOrganizationFromHelper({
-      callApi,
-      organizationName
-    });
-    if (createdId) {
-      setOrganizationId(createdId);
-    }
-
-    await listOrganizations();
-  }
+  const directoryActions = buildAdminDirectoryActions({
+    callApi,
+    buildQuery,
+    toIso,
+    runtimeLocale,
+    organizationId,
+    organizationName,
+    setOrganizationId,
+    employeeId,
+    employeeName,
+    employeeEmail,
+    employeeActive,
+    setEmployeeId,
+    setEmployees,
+    setAccrualEmployeeId,
+    setScheduleEmployeeId,
+    setInviteActorId,
+    inviteEmail,
+    inviteRole,
+    inviteDeliveryMode,
+    inviteActorId,
+    setInviteResult,
+    periodStart,
+    periodEnd,
+    scheduleEmployeeId,
+    scheduleStartAt,
+    scheduleEndAt,
+    scheduleBreakMinutes,
+    scheduleIsHoliday,
+    scheduleNotes,
+    setSchedules,
+    setOrganizations,
+    setLogs,
+    confirmScheduleDelete: (scheduleId) => window.confirm(`근무 일정을 삭제할까요?\n\nID: ${scheduleId}`)
+  });
 
   async function refreshInbox() {
     const inbox = await refreshAdminInboxFromHelper({
@@ -815,8 +710,8 @@ export default function AdminDashboardPage() {
           supabaseSession={supabaseSession}
           supabaseSessionError={supabaseSessionError}
           onOrganizationNameChange={setOrganizationName}
-          onCreateOrganization={() => void createOrganization()}
-          onListOrganizations={() => void listOrganizations()}
+          onCreateOrganization={() => void directoryActions.createOrganization()}
+          onListOrganizations={() => void directoryActions.listOrganizations()}
           onSelectOrganization={setOrganizationId}
           onOrganizationIdChange={setOrganizationId}
           onAdminActorIdChange={setAdminActorId}
@@ -844,8 +739,8 @@ export default function AdminDashboardPage() {
           onEmployeeNameChange={setEmployeeName}
           onEmployeeEmailChange={setEmployeeEmail}
           onEmployeeActiveChange={setEmployeeActive}
-          onCreateEmployee={() => void createEmployee()}
-          onListEmployees={() => void listEmployees()}
+          onCreateEmployee={() => void directoryActions.createEmployee()}
+          onListEmployees={() => void directoryActions.listEmployees()}
           onApplyEmployee={(id) => {
             setEmployeeId(id);
             setAccrualEmployeeId(id);
@@ -858,7 +753,7 @@ export default function AdminDashboardPage() {
           onInviteDeliveryModeChange={setInviteDeliveryMode}
           onInviteActorIdChange={setInviteActorId}
           onOrganizationIdChange={setOrganizationId}
-          onCreateInvite={() => void createInvite()}
+          onCreateInvite={() => void directoryActions.createInvite()}
         />
 
         <AdminSchedulingPanel
@@ -881,9 +776,9 @@ export default function AdminDashboardPage() {
           onScheduleNotesChange={setScheduleNotes}
           onPeriodStartChange={setPeriodStart}
           onPeriodEndChange={setPeriodEnd}
-          onCreateSchedule={() => void createSchedule()}
-          onListSchedules={() => void listSchedules()}
-          onDeleteSchedule={(scheduleId) => void deleteSchedule(scheduleId)}
+          onCreateSchedule={() => void directoryActions.createSchedule()}
+          onListSchedules={() => void directoryActions.listSchedules()}
+          onDeleteSchedule={(scheduleId) => void directoryActions.deleteSchedule(scheduleId)}
         />
 
         <ApprovalQueuePanel

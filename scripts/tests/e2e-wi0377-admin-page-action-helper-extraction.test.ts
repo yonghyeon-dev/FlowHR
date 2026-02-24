@@ -9,18 +9,13 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const adminActionHelpers = readUtf8("src", "app", "admin", "page-action-helpers.ts");
+  const adminDirectoryActions = readUtf8("src", "app", "admin", "page-directory-actions.ts");
   const workItem = readUtf8("work-items", "WI-0377-admin-page-action-helper-extraction.md");
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminPage, /from "@\/app\/admin\/page-action-helpers";/);
-  assert.match(adminPage, /await listEmployeesFromHelper\(\{/);
-  assert.match(adminPage, /await createEmployeeFromHelper\(\{/);
-  assert.match(adminPage, /await createInviteFromHelper\(\{/);
-  assert.match(adminPage, /await listSchedulesFromHelper\(\{/);
-  assert.match(adminPage, /await createScheduleFromHelper\(\{/);
-  assert.match(adminPage, /await deleteScheduleFromHelper\(\{/);
-  assert.match(adminPage, /await listOrganizationsFromHelper\(\{/);
-  assert.match(adminPage, /await createOrganizationFromHelper\(\{/);
+  assert.match(adminPage, /from "@\/app\/admin\/page-directory-actions";/);
+  assert.match(adminPage, /const directoryActions = buildAdminDirectoryActions\(\{/);
   assert.match(adminPage, /await loadLeavePolicyFromHelper\(\{/);
   assert.match(adminPage, /await saveLeavePolicyFromHelper\(\{/);
   assert.match(adminPage, /await listAttendanceAggregatesFromHelper\(\{/);
@@ -40,6 +35,15 @@ async function run() {
   assert.match(adminActionHelpers, /export async function saveLeavePolicyFromHelper/);
   assert.match(adminActionHelpers, /export async function listAttendanceAggregatesFromHelper/);
   assert.match(adminActionHelpers, /export function buildAdminValidationFailureLog/);
+  assert.match(adminDirectoryActions, /await listEmployeesFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /await createEmployeeFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /await createInviteFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /await listSchedulesFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /await createScheduleFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /await deleteScheduleFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /await listOrganizationsFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /await createOrganizationFromHelper\(\{/);
+  assert.match(adminDirectoryActions, /buildAdminValidationFailureLog\(\{/);
 
   assert.match(workItem, /WI-0377/i);
   assert.match(workItem, /action helper extraction/i);
