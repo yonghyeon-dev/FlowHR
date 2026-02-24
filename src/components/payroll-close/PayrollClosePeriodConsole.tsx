@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { payrollCloseCopyByLocale } from "@/components/payroll-close/copy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 import type { ApiLog, PayrollClosePeriodResponse } from "@/components/payroll-close/types";
 import {
   defaultMonthRange,
@@ -13,10 +15,10 @@ import {
   toSeoulStartIso
 } from "@/components/payroll-close/types";
 
-function parseRequiredInt(value: string, fieldName: string) {
+function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${fieldName} must be a non-negative integer`);
+    throw new Error(`${fieldLabel} ${nonNegativeIntegerLabel}`);
   }
   return parsed;
 }
@@ -38,6 +40,9 @@ export default function PayrollClosePeriodConsole() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const copy = payrollCloseCopyByLocale[locale];
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -61,17 +66,23 @@ export default function PayrollClosePeriodConsole() {
         settlement: {
           priorPaidWithholdingTaxKrw: parseRequiredInt(
             priorPaidWithholdingTaxKrw,
-            "priorPaidWithholdingTaxKrw"
+            copy.priorPaidWithholdingLabel,
+            copy.statusNonNegativeInteger
           ),
           priorPaidSocialInsuranceKrw: parseRequiredInt(
             priorPaidSocialInsuranceKrw,
-            "priorPaidSocialInsuranceKrw"
+            copy.priorPaidSocialInsuranceLabel,
+            copy.statusNonNegativeInteger
           ),
-          priorPaidNetPayKrw: parseRequiredInt(priorPaidNetPayKrw, "priorPaidNetPayKrw")
+          priorPaidNetPayKrw: parseRequiredInt(
+            priorPaidNetPayKrw,
+            copy.priorPaidNetPayoutLabel,
+            copy.statusNonNegativeInteger
+          )
         }
       };
 
-      setPendingLabel(apply ? "payroll period close apply" : "payroll period close preview");
+      setPendingLabel(apply ? copy.pendingApply : copy.pendingPreview);
       const headers: Record<string, string> = {
         "content-type": "application/json"
       };
@@ -104,16 +115,16 @@ export default function PayrollClosePeriodConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: apply ? "apply close period" : "preview close period",
+          label: apply ? copy.logApply : copy.logPreview,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
 
       if (!response.ok || !body || typeof body !== "object") {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
 
@@ -121,12 +132,12 @@ export default function PayrollClosePeriodConsole() {
       setResult(parsed);
       setStatusMessage(
         parsed.summary.canClose
-          ? `loaded close summary; remittance delta ${formatKrw(parsed.summary.settlementKrw.remittanceDeltaKrw)}`
-          : "loaded close summary with blocking reasons"
+          ? `${copy.statusLoadedCloseSummaryPrefix} ${formatKrw(parsed.summary.settlementKrw.remittanceDeltaKrw, runtimeLocale)}`
+          : copy.statusLoadedCloseSummaryBlocked
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -135,111 +146,119 @@ export default function PayrollClosePeriodConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Close Period</h1>
-        <p>Preview/apply period close workflow with withholding settlement deltas from confirmed payroll runs.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>Input</h2>
+          <h2>{copy.inputTitle}</h2>
           <div className="input-grid">
             <label>
-              Period Start
+              {copy.periodStartLabel}
               <input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} />
             </label>
             <label>
-              Period End
+              {copy.periodEndLabel}
               <input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} />
             </label>
             <label>
-              Prior Paid Withholding (KRW)
+              {copy.priorPaidWithholdingLabel}
               <input value={priorPaidWithholdingTaxKrw} onChange={(event) => setPriorPaidWithholdingTaxKrw(event.target.value)} />
             </label>
             <label>
-              Prior Paid Social Insurance (KRW)
+              {copy.priorPaidSocialInsuranceLabel}
               <input value={priorPaidSocialInsuranceKrw} onChange={(event) => setPriorPaidSocialInsuranceKrw(event.target.value)} />
             </label>
             <label>
-              Prior Paid Net Payout (KRW)
+              {copy.priorPaidNetPayoutLabel}
               <input value={priorPaidNetPayKrw} onChange={(event) => setPriorPaidNetPayKrw(event.target.value)} />
             </label>
           </div>
           <label>
-            Access Token (optional)
-            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" />
+            {copy.accessTokenLabel}
+            <input
+              value={accessToken}
+              onChange={(event) => setAccessToken(event.target.value)}
+              placeholder={copy.bearerTokenPlaceholder}
+            />
           </label>
           <label>
-            Actor ID (dev fallback)
+            {copy.actorIdFallbackLabel}
             <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
           </label>
           <label>
-            Organization ID (dev fallback)
+            {copy.organizationIdFallbackLabel}
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
           </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runClosePeriod(false)} disabled={pendingLabel !== null}>
-              Preview Close
+              {copy.previewAction}
             </button>
             <button className="btn btn-primary" onClick={() => void runClosePeriod(true)} disabled={pendingLabel !== null}>
-              Apply Close
+              {copy.applyAction}
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
+          {supabaseSessionError ? (
+            <p className="small fail">
+              {copy.sessionErrorPrefix}: {supabaseSessionError}
+            </p>
+          ) : null}
         </article>
 
         <article className="panel">
-          <h2>Run States</h2>
+          <h2>{copy.runStatesTitle}</h2>
           {!result ? (
-            <p className="small">No close summary yet.</p>
+            <p className="small">{copy.noCloseSummaryYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>Can Close</span><strong>{result.summary.canClose ? "YES" : "NO"}</strong></li>
-              <li><span>Total / Confirmed / Previewed</span><strong>{result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} / {result.summary.runStates.previewedRuns}</strong></li>
-              <li><span>Blocking Run IDs</span><strong>{result.summary.runStates.blockingRunIds.join(", ") || "-"}</strong></li>
-              <li><span>Blocking Reasons</span><strong>{result.summary.runStates.blockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.canCloseLabel}</span><strong>{result.summary.canClose ? copy.yes : copy.no}</strong></li>
+              <li><span>{copy.totalConfirmedPreviewedLabel}</span><strong>{result.summary.runStates.totalRuns} / {result.summary.runStates.confirmedRuns} / {result.summary.runStates.previewedRuns}</strong></li>
+              <li><span>{copy.blockingRunIdsLabel}</span><strong>{result.summary.runStates.blockingRunIds.join(", ") || "-"}</strong></li>
+              <li><span>{copy.blockingReasonsLabel}</span><strong>{result.summary.runStates.blockingReasons.join(" | ") || "-"}</strong></li>
             </ul>
           )}
         </article>
 
         <article className="panel">
-          <h2>Totals / Delta</h2>
+          <h2>{copy.totalsDeltaTitle}</h2>
           {!result ? (
-            <p className="small">No totals yet.</p>
+            <p className="small">{copy.noTotalsYet}</p>
           ) : (
             <ul className="simple-list">
-              <li><span>Gross / Net</span><strong>{formatKrw(result.summary.totalsKrw.grossPayKrw)} / {formatKrw(result.summary.totalsKrw.netPayKrw)}</strong></li>
-              <li><span>Withholding / Social Insurance</span><strong>{formatKrw(result.summary.totalsKrw.withholdingTaxKrw)} / {formatKrw(result.summary.totalsKrw.socialInsuranceKrw)}</strong></li>
-              <li><span>Deductions / Other</span><strong>{formatKrw(result.summary.totalsKrw.totalDeductionsKrw)} / {formatKrw(result.summary.totalsKrw.otherDeductionsKrw)}</strong></li>
-              <li><span>Withholding Delta</span><strong>{formatKrw(result.summary.settlementKrw.withholdingTaxDeltaKrw)}</strong></li>
-              <li><span>Social Insurance Delta</span><strong>{formatKrw(result.summary.settlementKrw.socialInsuranceDeltaKrw)}</strong></li>
-              <li><span>Net Pay Delta</span><strong>{formatKrw(result.summary.settlementKrw.netPayDeltaKrw)}</strong></li>
-              <li><span>Remittance Delta</span><strong>{formatKrw(result.summary.settlementKrw.remittanceDeltaKrw)}</strong></li>
+              <li><span>{copy.grossNetLabel}</span><strong>{formatKrw(result.summary.totalsKrw.grossPayKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.netPayKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.withholdingSocialInsuranceLabel}</span><strong>{formatKrw(result.summary.totalsKrw.withholdingTaxKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.socialInsuranceKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.deductionsOtherLabel}</span><strong>{formatKrw(result.summary.totalsKrw.totalDeductionsKrw, runtimeLocale)} / {formatKrw(result.summary.totalsKrw.otherDeductionsKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.withholdingTaxDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.socialInsuranceDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.socialInsuranceDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.netPayDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.netPayDeltaKrw, runtimeLocale)}</strong></li>
+              <li><span>{copy.remittanceDeltaLabel}</span><strong>{formatKrw(result.summary.settlementKrw.remittanceDeltaKrw, runtimeLocale)}</strong></li>
             </ul>
           )}
         </article>
 
         <article className="panel">
-          <h2>API Logs</h2>
+          <h2>{copy.apiLogsTitle}</h2>
           <p className="small">
-            total {stats.total} / success {stats.success} / fail {stats.fail}
-            {pendingLabel ? ` / running ${pendingLabel}` : ""}
+            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
           </p>
           {logs.length === 0 ? (
-            <p className="small">No API call yet.</p>
+            <p className="small">{copy.noApiCallYet}</p>
           ) : (
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}
             </ul>
           )}
           <div className="panel-actions">
-            <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
+            <Link href="/admin" className="btn btn-secondary">{copy.backToAdmin}</Link>
           </div>
         </article>
       </section>
