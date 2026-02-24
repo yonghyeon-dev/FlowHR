@@ -1,6 +1,5 @@
-"use client";
+﻿"use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -57,20 +56,18 @@ import {
   type QueueSearchSortRow,
   type QueueSearchSortScope
 } from "@/components/admin-approval/approval-queue-types";
-import { PayrollKrIncomeSplitGuideField } from "@/components/payroll/PayrollKrIncomeSplitGuideField";
-import { PayrollKrIncomeSplitConsistencyGuidePanel } from "@/components/payroll/PayrollKrIncomeSplitConsistencyGuidePanel";
-import { PayrollKrIncomeSplitPresetPayloadPreviewPanel } from "@/components/payroll/PayrollKrIncomeSplitPresetPayloadPreviewPanel";
-import {
-  PayrollKrPresetShareLinkFeedbackPanel,
-  type PayrollKrPresetShareLinkFeedback
-} from "@/components/payroll/PayrollKrPresetShareLinkFeedbackPanel";
+import { AdminAggregateLeavePanels } from "@/components/admin-dashboard/AdminAggregateLeavePanels";
+import { AdminDashboardChrome } from "@/components/admin-dashboard/AdminDashboardChrome";
+import { AdminDebugLogsPanel } from "@/components/admin-dashboard/AdminDebugLogsPanel";
+import { AdminOnboardingAccountPanels } from "@/components/admin-dashboard/AdminOnboardingAccountPanels";
+import { AdminPayrollPanel } from "@/components/admin-dashboard/AdminPayrollPanel";
+import { AdminPeopleInvitePanels } from "@/components/admin-dashboard/AdminPeopleInvitePanels";
+import { AdminSchedulingPanel } from "@/components/admin-dashboard/AdminSchedulingPanel";
+import { type PayrollKrPresetShareLinkFeedback } from "@/components/payroll/PayrollKrPresetShareLinkFeedbackPanel";
 import {
   createEmptyPayrollKrIncomeSplitItemDraft,
-  PayrollKrIncomeSplitItemsTable,
   type PayrollKrIncomeSplitItemDraft
 } from "@/components/payroll/PayrollKrIncomeSplitItemsTable";
-import { PayrollKrIncomeSplitItemPresetField } from "@/components/payroll/PayrollKrIncomeSplitItemPresetField";
-import { PayrollKrPresetGuidePanel } from "@/components/payroll/PayrollKrPresetGuidePanel";
 import { analyzePayrollKrIncomeSplitDraftConsistency } from "@/features/payroll/kr-income-split-item-consistency";
 import {
   hasPayrollKrPresetShareContext,
@@ -1203,465 +1200,105 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="saas-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">관리자 대시보드</h1>
-          <p className="page-subtitle">
-            직원/조직 온보딩부터 승인 대기함 처리, 근태 집계 확인, 급여 프리뷰/확정까지 한 화면에서 처리합니다.
-          </p>
-        </div>
-        <div className="page-actions">
-          <button className="btn btn-primary" onClick={() => void refreshDashboard()}>
-            대시보드 새로고침
-          </button>
-          <Link className="btn btn-secondary" href="/employee">
-            직원 포털
-          </Link>
-          <Link className="btn btn-secondary" href="/login">
-            로그인
-          </Link>
-          <Link className="btn btn-secondary" href="/">
-            홈
-          </Link>
-          {showDevTools ? (
-            <Link className="btn btn-secondary" href="/ops/mvp-console">
-              (dev) ops 콘솔
-            </Link>
-          ) : null}
-        </div>
-      </header>
-
-      {isProductionRuntime && !usesBearerToken ? (
-        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          {isKoLocale
-            ? "현재 환경은 "
-            : "Current environment is "}
-          <strong>{isKoLocale ? "운영(production)" : "production"}</strong>
-          {isKoLocale
-            ? ". API 호출을 위해 로그인 세션(Bearer 토큰)이 필요합니다: "
-            : ". Login session (Bearer token) is required for API calls: "}
-          <Link href="/login">/login</Link>
-        </p>
-      ) : null}
-
-      <section className="kpi-strip">
-        <article className="kpi-card">
-          <p>출퇴근 승인 대기</p>
-          <strong>{pendingAttendance.length}</strong>
-        </article>
-        <article className="kpi-card">
-          <p>휴가 승인 대기</p>
-          <strong>{pendingLeave.length}</strong>
-        </article>
-        <article className="kpi-card">
-          <p>급여 프리뷰</p>
-          <strong>{previewedPayroll.length}</strong>
-        </article>
-        <article className="kpi-card">
-          <p>{isKoLocale ? "API 호출" : "API calls"}</p>
-          <strong>
-            {stats.total} ({logStatusLabels.success} {stats.success} / {logStatusLabels.fail} {stats.fail})
-          </strong>
-        </article>
-        <article className="kpi-card">
-          <p>최근 실행</p>
-          <strong>{pendingLabel ?? "-"}</strong>
-        </article>
-      </section>
+      <AdminDashboardChrome
+        showDevTools={showDevTools}
+        isKoLocale={isKoLocale}
+        isProductionRuntime={isProductionRuntime}
+        usesBearerToken={usesBearerToken}
+        pendingAttendanceCount={pendingAttendance.length}
+        pendingLeaveCount={pendingLeave.length}
+        previewedPayrollCount={previewedPayroll.length}
+        stats={stats}
+        logStatusLabels={logStatusLabels}
+        pendingLabel={pendingLabel}
+        onRefreshDashboard={() => void refreshDashboard()}
+      />
 
       <section className="panel-grid">
-        <article className="panel" id="onboarding">
-          <h2>조직 온보딩</h2>
-          <p className="small">
-            {isKoLocale
-              ? "조직(테넌트)을 먼저 만들고 선택해야 직원/근태/휴가/급여 흐름을 정상 검증할 수 있습니다. 이 패널의 조직 생성/목록 조회 호출은 tenantScope 제한을 피하기 위해 Dev Header 모드에서 "
-              : "You need to create and select an organization (tenant) first to validate employee/attendance/leave/payroll flows. Organization create/list requests in this panel omit "}
-            <code>x-actor-organization-id</code>
-            {isKoLocale
-              ? " 헤더를 생략합니다."
-              : " header in Dev Header mode to bypass tenantScope restriction."}
-          </p>
-          <p className="small">
-            {isKoLocale ? "현재 선택된 조직 ID" : "Current organization ID"}: <code>{organizationId.trim() || "-"}</code>
-          </p>
+        <AdminOnboardingAccountPanels
+          isKoLocale={isKoLocale}
+          showDevTools={showDevTools}
+          isProductionRuntime={isProductionRuntime}
+          usesBearerToken={usesBearerToken}
+          organizationId={organizationId}
+          organizationName={organizationName}
+          organizations={organizations}
+          adminActorId={adminActorId}
+          accessToken={accessToken}
+          supabaseUrl={supabaseUrl}
+          supabaseSession={supabaseSession}
+          supabaseSessionError={supabaseSessionError}
+          onOrganizationNameChange={setOrganizationName}
+          onCreateOrganization={() => void createOrganization()}
+          onListOrganizations={() => void listOrganizations()}
+          onSelectOrganization={setOrganizationId}
+          onOrganizationIdChange={setOrganizationId}
+          onAdminActorIdChange={setAdminActorId}
+          onAccessTokenChange={setAccessToken}
+        />
 
-          <div className="input-grid">
-            <label className="full">
-              새 조직 이름
-              <input value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void createOrganization()} disabled={!organizationName.trim()}>
-              조직 생성
-            </button>
-            <button className="btn btn-secondary" onClick={() => void listOrganizations()}>
-              조직 목록 조회
-            </button>
-          </div>
+        <AdminPeopleInvitePanels
+          isKoLocale={isKoLocale}
+          organizationId={organizationId}
+          employeeId={employeeId}
+          employeeName={employeeName}
+          employeeEmail={employeeEmail}
+          employeeActive={employeeActive}
+          employees={employees}
+          inviteEmail={inviteEmail}
+          inviteRole={inviteRole}
+          inviteDeliveryMode={inviteDeliveryMode}
+          inviteActorId={inviteActorId}
+          inviteResult={inviteResult}
+          inviteRoleLabels={inviteRoleLabels}
+          inviteDeliveryModeLabels={inviteDeliveryModeLabels}
+          toInviteRoleLabel={toInviteRoleLabel}
+          toInviteDeliveryModeLabel={toInviteDeliveryModeLabel}
+          onEmployeeIdChange={setEmployeeId}
+          onEmployeeNameChange={setEmployeeName}
+          onEmployeeEmailChange={setEmployeeEmail}
+          onEmployeeActiveChange={setEmployeeActive}
+          onCreateEmployee={() => void createEmployee()}
+          onListEmployees={() => void listEmployees()}
+          onApplyEmployee={(id) => {
+            setEmployeeId(id);
+            setAccrualEmployeeId(id);
+            setAggregateEmployeeId(id);
+            setScheduleEmployeeId(id);
+            setInviteActorId(id);
+          }}
+          onInviteEmailChange={setInviteEmail}
+          onInviteRoleChange={setInviteRole}
+          onInviteDeliveryModeChange={setInviteDeliveryMode}
+          onInviteActorIdChange={setInviteActorId}
+          onOrganizationIdChange={setOrganizationId}
+          onCreateInvite={() => void createInvite()}
+        />
 
-          {organizations.length === 0 ? (
-            <p className="small muted">조직 목록을 아직 불러오지 않았습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="조직 목록">
-              {organizations.map((org) => (
-                <li key={org.id}>
-                  <span>
-                    <strong>{org.id}</strong>{" "}
-                    <span className="muted">
-                      {org.name}
-                      {organizationId.trim() === org.id ? " (선택됨)" : ""}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-small"
-                    onClick={() => setOrganizationId(org.id)}
-                  >
-                    이 조직 사용
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-
-        <article className="panel" id="account">
-          <h2>내 계정</h2>
-          {isProductionRuntime ? (
-            <p className="small">
-              {supabaseSession
-                ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"}`
-                : "현재 로그인되어 있지 않습니다."}{" "}
-              <span className="muted">
-                (Bearer {isKoLocale ? (usesBearerToken ? "사용" : "미사용") : usesBearerToken ? "ON" : "OFF"})
-              </span>
-            </p>
-          ) : (
-            <p className="small muted">
-              {isKoLocale
-                ? "로컬 개발: Dev Header(x-actor-*) 모드가 기본입니다."
-                : "Local dev: Dev Header (x-actor-*) mode is default."}
-            </p>
-          )}
-          {supabaseSessionError ? (
-            <p className="small" style={{ marginTop: 10, color: "var(--danger)" }}>
-              세션 오류: {supabaseSessionError}
-            </p>
-          ) : null}
-
-          {showDevTools || !isProductionRuntime ? (
-            <details className="details" style={{ marginTop: 12 }}>
-              <summary>
-                개발/검증 설정 <small>(필요할 때만)</small>
-              </summary>
-              <div className="input-grid" style={{ marginTop: 12 }}>
-                <label>
-                  {isKoLocale ? "조직 ID" : "Organization ID"}
-                  <input
-                    value={organizationId}
-                    placeholder="예: ORG-00001"
-                    onChange={(event) => setOrganizationId(event.target.value)}
-                  />
-                </label>
-                <label>
-                  {isKoLocale ? "관리자 액터 ID" : "Admin actor ID"}
-                  <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-                </label>
-                {showDevTools ? (
-                  <label className="full">
-                    {isKoLocale ? "Bearer 액세스 토큰 (재정의)" : "Bearer access token (override)"}
-                    <textarea
-                      rows={3}
-                      placeholder={
-                        isKoLocale
-                          ? "비어 있으면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
-                          : "If empty, Dev Header (local) or session (Bearer) will be used."
-                      }
-                      value={accessToken}
-                      onChange={(event) => setAccessToken(event.target.value)}
-                    />
-                  </label>
-                ) : null}
-              </div>
-              {showDevTools ? (
-                <p className="small muted" style={{ marginTop: 10 }}>
-                  {isKoLocale ? "(dev) 런타임 Supabase URL" : "(dev) runtime Supabase URL"}: <code>{supabaseUrl}</code>
-                </p>
-              ) : null}
-            </details>
-          ) : null}
-        </article>
-
-        <article className="panel" id="people">
-          <h2>직원 관리</h2>
-          <p className="small">
-            출퇴근/휴가/급여는 Employee 마스터가 있어야 동작합니다. 먼저 직원부터 생성하세요.
-          </p>
-          <div className="input-grid">
-            <label>
-              직원 ID
-              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-            </label>
-            <label>
-              이름 (선택)
-              <input value={employeeName} onChange={(event) => setEmployeeName(event.target.value)} />
-            </label>
-            <label>
-              이메일 (선택)
-              <input value={employeeEmail} onChange={(event) => setEmployeeEmail(event.target.value)} />
-            </label>
-            <label>
-              활성
-              <select
-                value={employeeActive ? "yes" : "no"}
-                onChange={(event) => setEmployeeActive(event.target.value === "yes")}
-              >
-                <option value="yes">예</option>
-                <option value="no">아니오</option>
-              </select>
-            </label>
-          </div>
-          <div className="actions">
-            <button
-              className="btn btn-primary"
-              onClick={() => void createEmployee()}
-              disabled={!employeeId.trim() || !organizationId.trim()}
-            >
-              직원 생성
-            </button>
-            <button className="btn btn-secondary" onClick={() => void listEmployees()}>
-              직원 목록 조회
-            </button>
-          </div>
-          {employees.length > 0 ? (
-            <ul className="simple-list" aria-label="직원 목록">
-              {employees.map((employee) => (
-                <li key={employee.id}>
-                  <span>
-                    <strong>{employee.id}</strong>{" "}
-                    <span className="muted">
-                      {employee.active ? "활성" : "비활성"} / {employee.organizationId ?? "-"}
-                      {employee.name ? ` / ${employee.name}` : ""}
-                      {employee.email ? ` / ${employee.email}` : ""}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-small"
-                    onClick={() => {
-                      setEmployeeId(employee.id);
-                      setAccrualEmployeeId(employee.id);
-                      setAggregateEmployeeId(employee.id);
-                      setScheduleEmployeeId(employee.id);
-                      setInviteActorId(employee.id);
-                    }}
-                  >
-                    이 직원으로 적용
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </article>
-
-        <article className="panel" id="invites">
-          <h2>초대/가입</h2>
-          <p className="small">
-            {isKoLocale
-              ? "직원에게 전달할 초대 링크를 생성합니다. 액터 ID에 직원 ID(Employee.id)를 넣으면 직원 포털이 해당 직원으로 매핑됩니다."
-              : "Generate invite links for employees. If actor ID contains Employee.id, employee portal maps to that employee."}
-          </p>
-          <div className="input-grid">
-            <label className="full">
-              초대 이메일
-              <input
-                value={inviteEmail}
-                onChange={(event) => setInviteEmail(event.target.value)}
-                placeholder="you@company.com"
-              />
-            </label>
-            <label>
-              역할
-              <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as InviteRole)}>
-                <option value="employee">{inviteRoleLabels.employee}</option>
-                <option value="manager">{inviteRoleLabels.manager}</option>
-                <option value="payroll_operator">{inviteRoleLabels.payroll_operator}</option>
-                <option value="admin">{inviteRoleLabels.admin}</option>
-              </select>
-            </label>
-            <label>
-              전달 방식
-              <select
-                value={inviteDeliveryMode}
-                onChange={(event) => setInviteDeliveryMode(event.target.value as InviteDeliveryMode)}
-              >
-                <option value="link">{inviteDeliveryModeLabels.link}</option>
-                <option value="email">{inviteDeliveryModeLabels.email}</option>
-              </select>
-            </label>
-            <label>
-              {isKoLocale ? "액터 ID (선택)" : "Actor ID (optional)"}
-              <input
-                value={inviteActorId}
-                onChange={(event) => setInviteActorId(event.target.value)}
-                placeholder="예: EMP-1001"
-              />
-            </label>
-            <label className="full">
-              {isKoLocale ? "조직 ID" : "Organization ID"}
-              <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-            </label>
-          </div>
-          <div className="actions">
-            <button
-              className="btn btn-primary"
-              onClick={() => void createInvite()}
-              disabled={!inviteEmail.trim() || !organizationId.trim()}
-            >
-              초대 링크 생성
-            </button>
-          </div>
-          {inviteResult ? (
-            <>
-              <p className="small">
-                생성됨: <strong>{inviteResult.email}</strong> · role={toInviteRoleLabel(inviteResult.role)} · delivery=
-                {toInviteDeliveryModeLabel(inviteResult.deliveryMode)} · org={inviteResult.organizationId}
-                {inviteResult.actorId ? ` · actor=${inviteResult.actorId}` : ""}
-              </p>
-              {inviteResult.actionLink ? (
-                <label className="full" style={{ display: "block", marginTop: 8 }}>
-                  초대 링크 (action_link)
-                  <textarea readOnly rows={3} value={inviteResult.actionLink} />
-                </label>
-              ) : (
-                <p className="small muted" style={{ marginTop: 8 }}>
-                  이메일 발송 모드로 생성되어 action_link를 저장하지 않았습니다.
-                </p>
-              )}
-              <p className="small muted" style={{ marginTop: 8 }}>
-                링크가 `/login`으로 리다이렉트되려면 Supabase Auth의 Redirect URL에 현재 도메인이 허용되어 있어야 합니다.
-              </p>
-            </>
-          ) : (
-            <p className="small muted">아직 초대 링크를 생성하지 않았습니다.</p>
-          )}
-        </article>
-
-        <article className="panel" id="scheduling">
-          <h2>근무 일정</h2>
-          <p className="small">
-            직원별 근무 일정을 생성/조회/삭제합니다. 기간 필터(시작/종료)는 아래 기능들과 동일하게 공유됩니다.
-          </p>
-          <div className="input-grid">
-            <label>
-              직원 ID
-              <input
-                value={scheduleEmployeeId}
-                onChange={(event) => setScheduleEmployeeId(event.target.value)}
-                placeholder="예: EMP-1001"
-              />
-            </label>
-            <label>
-              기간 시작 (조회)
-              <input
-                type="datetime-local"
-                value={periodStart}
-                onChange={(event) => setPeriodStart(event.target.value)}
-              />
-            </label>
-            <label>
-              기간 종료 (조회)
-              <input
-                type="datetime-local"
-                value={periodEnd}
-                onChange={(event) => setPeriodEnd(event.target.value)}
-              />
-            </label>
-            <label>
-              휴일 근무
-              <select
-                value={scheduleIsHoliday ? "yes" : "no"}
-                onChange={(event) => setScheduleIsHoliday(event.target.value === "yes")}
-              >
-                <option value="no">아니오</option>
-                <option value="yes">예</option>
-              </select>
-            </label>
-            <label>
-              시작 시각
-              <input
-                type="datetime-local"
-                value={scheduleStartAt}
-                onChange={(event) => setScheduleStartAt(event.target.value)}
-              />
-            </label>
-            <label>
-              종료 시각
-              <input
-                type="datetime-local"
-                value={scheduleEndAt}
-                onChange={(event) => setScheduleEndAt(event.target.value)}
-              />
-            </label>
-            <label>
-              휴게 분
-              <input
-                type="number"
-                min={0}
-                value={scheduleBreakMinutes}
-                onChange={(event) => setScheduleBreakMinutes(event.target.value)}
-              />
-            </label>
-            <label>
-              메모 (선택)
-              <input value={scheduleNotes} onChange={(event) => setScheduleNotes(event.target.value)} />
-            </label>
-          </div>
-          <div className="actions">
-            <button
-              className="btn btn-primary"
-              onClick={() => void createSchedule()}
-              disabled={!scheduleEmployeeId.trim()}
-            >
-              일정 생성
-            </button>
-            <button className="btn btn-secondary" onClick={() => void listSchedules()}>
-              일정 조회
-            </button>
-          </div>
-          {schedules.length === 0 ? (
-            <p className="small muted">근무 일정이 없습니다.</p>
-          ) : (
-            <ul className="simple-list" aria-label="근무 일정 목록">
-              {schedules.map((schedule) => (
-                <li key={schedule.id}>
-                  <span>
-                    <span className="ok">
-                      {schedule.isHoliday ? workTypeLabels.holiday : workTypeLabels.work}
-                    </span>{" "}
-                    <strong>{schedule.employeeId}</strong>{" "}
-                    <span className="muted">
-                      {formatDateTime(schedule.startAt)} ~ {formatDateTime(schedule.endAt)} (휴게{" "}
-                      {schedule.breakMinutes}분)
-                      {schedule.notes ? ` / ${schedule.notes}` : ""}
-                    </span>{" "}
-                    <time className="muted">{schedule.id}</time>
-                  </span>
-                  <div className="queue-actions">
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      onClick={() => void deleteSchedule(schedule.id)}
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
+        <AdminSchedulingPanel
+          scheduleEmployeeId={scheduleEmployeeId}
+          scheduleIsHoliday={scheduleIsHoliday}
+          scheduleStartAt={scheduleStartAt}
+          scheduleEndAt={scheduleEndAt}
+          scheduleBreakMinutes={scheduleBreakMinutes}
+          scheduleNotes={scheduleNotes}
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          schedules={schedules}
+          workTypeLabels={workTypeLabels}
+          formatDateTime={formatDateTime}
+          onScheduleEmployeeIdChange={setScheduleEmployeeId}
+          onScheduleIsHolidayChange={setScheduleIsHoliday}
+          onScheduleStartAtChange={setScheduleStartAt}
+          onScheduleEndAtChange={setScheduleEndAt}
+          onScheduleBreakMinutesChange={setScheduleBreakMinutes}
+          onScheduleNotesChange={setScheduleNotes}
+          onPeriodStartChange={setPeriodStart}
+          onPeriodEndChange={setPeriodEnd}
+          onCreateSchedule={() => void createSchedule()}
+          onListSchedules={() => void listSchedules()}
+          onDeleteSchedule={(scheduleId) => void deleteSchedule(scheduleId)}
+        />
 
         <ApprovalQueuePanel
           queueBadgeSummaries={queueBadgeSummaries}
@@ -1720,411 +1357,116 @@ export default function AdminDashboardPage() {
           }}
         />
 
-        <article className="panel" id="aggregates">
-          <h2>근태 집계</h2>
-          <div className="input-grid">
-            <label>
-              직원 ID (선택)
-              <input
-                value={aggregateEmployeeId}
-                onChange={(event) => setAggregateEmployeeId(event.target.value)}
-                placeholder="비우면 전체"
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-secondary" onClick={() => void listAttendanceAggregates()}>
-              집계 조회
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setAggregateEmployeeId("");
-                void listAttendanceAggregates({ employeeId: "" });
-              }}
-            >
-              전체 집계
-            </button>
-          </div>
-          {aggregates.length > 0 ? (
-            <ul className="simple-list" aria-label="근태 집계 결과">
-              {aggregates.map((aggregate) => (
-                <li key={aggregate.employeeId}>
-                  <span>
-                    <strong>{aggregate.employeeId}</strong>{" "}
-                    <span className="muted">
-                      승인 {aggregate.counts.approved} / 대기 {aggregate.counts.pending} / 반려{" "}
-                      {aggregate.counts.rejected} / 급여반영 {aggregate.counts.payable}
-                      {" · "}정규 {minutesToHours(aggregate.totals.regular)} / 연장{" "}
-                      {minutesToHours(aggregate.totals.overtime)} / 야간{" "}
-                      {minutesToHours(aggregate.totals.night)} / 휴일{" "}
-                      {minutesToHours(aggregate.totals.holiday)}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-small"
-                    onClick={() => {
-                      setAggregateEmployeeId(aggregate.employeeId);
-                      setEmployeeId(aggregate.employeeId);
-                      setAccrualEmployeeId(aggregate.employeeId);
-                    }}
-                  >
-                    이 직원으로 적용
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="small muted">집계 데이터가 없습니다.</p>
-          )}
-        </article>
+        <AdminAggregateLeavePanels
+          aggregateEmployeeId={aggregateEmployeeId}
+          aggregates={aggregates}
+          accrualEmployeeId={accrualEmployeeId}
+          accrualYear={accrualYear}
+          accrualGrantDays={accrualGrantDays}
+          accrualCarryCapDays={accrualCarryCapDays}
+          leaveAllowHalfDay={leaveAllowHalfDay}
+          leaveAllowHourly={leaveAllowHourly}
+          leaveHourlyIncrementMinutes={leaveHourlyIncrementMinutes}
+          leaveMaxHoursPerRequest={leaveMaxHoursPerRequest}
+          leaveMinNoticeDays={leaveMinNoticeDays}
+          leaveMaxConsecutiveDays={leaveMaxConsecutiveDays}
+          accrualResult={accrualResult}
+          organizationId={organizationId}
+          updatedAtLabel={updatedAtLabel}
+          formatDateTime={formatDateTime}
+          minutesToHours={minutesToHours}
+          formatDays={formatDays}
+          onAggregateEmployeeIdChange={setAggregateEmployeeId}
+          onListAttendanceAggregates={() => void listAttendanceAggregates()}
+          onListAttendanceAggregatesAll={() => {
+            setAggregateEmployeeId("");
+            void listAttendanceAggregates({ employeeId: "" });
+          }}
+          onApplyAggregateEmployee={(id) => {
+            setAggregateEmployeeId(id);
+            setEmployeeId(id);
+            setAccrualEmployeeId(id);
+          }}
+          onAccrualEmployeeIdChange={setAccrualEmployeeId}
+          onAccrualYearChange={setAccrualYear}
+          onAccrualGrantDaysChange={setAccrualGrantDays}
+          onAccrualCarryCapDaysChange={setAccrualCarryCapDays}
+          onLeaveAllowHalfDayChange={setLeaveAllowHalfDay}
+          onLeaveAllowHourlyChange={setLeaveAllowHourly}
+          onLeaveHourlyIncrementMinutesChange={setLeaveHourlyIncrementMinutes}
+          onLeaveMaxHoursPerRequestChange={setLeaveMaxHoursPerRequest}
+          onLeaveMinNoticeDaysChange={setLeaveMinNoticeDays}
+          onLeaveMaxConsecutiveDaysChange={setLeaveMaxConsecutiveDays}
+          onLoadLeavePolicy={() => void loadLeavePolicy()}
+          onSaveLeavePolicy={() => void saveLeavePolicy()}
+          onSettleLeaveAccrual={() => void settleLeaveAccrual()}
+        />
 
-        <article className="panel" id="leave-policy">
-          <h2>휴가 정책/정산 (연차 부여/이월)</h2>
-          <p className="small">
-            조직 단위 휴가 정책(연간 부여/이월 상한)을 저장하고, 정산 시 부여/이월 값을 비워두면 정책 기본값이 적용됩니다.
-          </p>
-          <div className="input-grid">
-            <label>
-              직원 ID
-              <input
-                value={accrualEmployeeId}
-                onChange={(event) => setAccrualEmployeeId(event.target.value)}
-              />
-            </label>
-            <label>
-              연도
-              <input value={accrualYear} onChange={(event) => setAccrualYear(event.target.value)} />
-            </label>
-            <label>
-              연차 부여일
-              <input
-                value={accrualGrantDays}
-                onChange={(event) => setAccrualGrantDays(event.target.value)}
-              />
-            </label>
-            <label>
-              이월 상한일
-              <input
-                value={accrualCarryCapDays}
-                onChange={(event) => setAccrualCarryCapDays(event.target.value)}
-              />
-            </label>
-            <label>
-              반차 허용
-              <select
-                value={leaveAllowHalfDay ? "true" : "false"}
-                onChange={(event) => setLeaveAllowHalfDay(event.target.value === "true")}
-              >
-                <option value="true">허용</option>
-                <option value="false">비허용</option>
-              </select>
-            </label>
-            <label>
-              시간단위 허용
-              <select
-                value={leaveAllowHourly ? "true" : "false"}
-                onChange={(event) => setLeaveAllowHourly(event.target.value === "true")}
-              >
-                <option value="true">허용</option>
-                <option value="false">비허용</option>
-              </select>
-            </label>
-            <label>
-              시간 단위(분)
-              <input
-                value={leaveHourlyIncrementMinutes}
-                onChange={(event) => setLeaveHourlyIncrementMinutes(event.target.value)}
-              />
-            </label>
-            <label>
-              1회 최대 시간
-              <input
-                value={leaveMaxHoursPerRequest}
-                onChange={(event) => setLeaveMaxHoursPerRequest(event.target.value)}
-              />
-            </label>
-            <label>
-              사전 신청 최소 일수
-              <input
-                type="number"
-                min={0}
-                value={leaveMinNoticeDays}
-                onChange={(event) => setLeaveMinNoticeDays(event.target.value)}
-              />
-            </label>
-            <label>
-              연속 사용 상한(일, 비우면 무제한)
-              <input
-                type="number"
-                min={0.5}
-                step="0.5"
-                value={leaveMaxConsecutiveDays}
-                onChange={(event) => setLeaveMaxConsecutiveDays(event.target.value)}
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-secondary" onClick={() => void loadLeavePolicy()} disabled={!organizationId.trim()}>
-              정책 불러오기
-            </button>
-            <button className="btn btn-secondary" onClick={() => void saveLeavePolicy()} disabled={!organizationId.trim()}>
-              정책 저장
-            </button>
-            <button className="btn btn-primary" onClick={() => void settleLeaveAccrual()}>
-              정산 실행
-            </button>
-          </div>
-          {accrualResult ? (
-            <p className="small">
-              결과: 잔여 {formatDays(accrualResult.remainingDays)}일 (부여{" "}
-              {formatDays(accrualResult.grantedDays)}일, 사용 {formatDays(accrualResult.usedDays)}일, 이월{" "}
-              {formatDays(accrualResult.carryOverDays)}일) / {updatedAtLabel}{" "}
-              {formatDateTime(accrualResult.updatedAt)}
-            </p>
-          ) : (
-            <p className="small muted">정산 결과가 아직 없습니다.</p>
-          )}
-        </article>
+        <AdminPayrollPanel
+          isKoLocale={isKoLocale}
+          payrollPreviewMode={payrollPreviewMode}
+          employeeId={employeeId}
+          payrollHourlyRateKrw={payrollHourlyRateKrw}
+          payrollNonTaxableIncomeKrw={payrollNonTaxableIncomeKrw}
+          payrollTaxableIncomeKrw={payrollTaxableIncomeKrw}
+          payrollTaxableItems={payrollTaxableItems}
+          payrollNonTaxableItems={payrollNonTaxableItems}
+          payrollIncomeSplitItemPresetId={payrollIncomeSplitItemPresetId}
+          payrollOtherDeductionsKrw={payrollOtherDeductionsKrw}
+          payrollAdditionalTaxCreditKrw={payrollAdditionalTaxCreditKrw}
+          payrollDependentCount={payrollDependentCount}
+          payrollDependentTaxCreditPerPersonKrw={payrollDependentTaxCreditPerPersonKrw}
+          payrollIncomeTaxLookupPresetId={payrollIncomeTaxLookupPresetId}
+          payrollIncomeTaxLookupPresetAuto={payrollIncomeTaxLookupPresetAuto}
+          payrollIncomeTaxLookupAsOf={payrollIncomeTaxLookupAsOf}
+          payrollRequireMonthlyBoundary={payrollRequireMonthlyBoundary}
+          payrollNationalPensionCapKrw={payrollNationalPensionCapKrw}
+          payrollHealthInsuranceCapKrw={payrollHealthInsuranceCapKrw}
+          payrollEmploymentInsuranceCapKrw={payrollEmploymentInsuranceCapKrw}
+          payrollPresetShareLinkFeedback={payrollPresetShareLinkFeedback}
+          lastPayrollRunId={lastPayrollRunId}
+          onPayrollPreviewModeChange={setPayrollPreviewMode}
+          onEmployeeIdChange={setEmployeeId}
+          onPayrollHourlyRateKrwChange={setPayrollHourlyRateKrw}
+          onPayrollNonTaxableIncomeKrwChange={setPayrollNonTaxableIncomeKrw}
+          onPayrollTaxableIncomeKrwChange={setPayrollTaxableIncomeKrw}
+          onPayrollTaxableItemsChange={setPayrollTaxableItems}
+          onPayrollNonTaxableItemsChange={setPayrollNonTaxableItems}
+          onPayrollIncomeSplitItemPresetIdChange={setPayrollIncomeSplitItemPresetId}
+          onPayrollOtherDeductionsKrwChange={setPayrollOtherDeductionsKrw}
+          onPayrollAdditionalTaxCreditKrwChange={setPayrollAdditionalTaxCreditKrw}
+          onPayrollDependentCountChange={setPayrollDependentCount}
+          onPayrollDependentTaxCreditPerPersonKrwChange={setPayrollDependentTaxCreditPerPersonKrw}
+          onPayrollIncomeTaxLookupPresetIdChange={setPayrollIncomeTaxLookupPresetId}
+          onPayrollIncomeTaxLookupPresetAutoChange={(enabled) => {
+            setPayrollIncomeTaxLookupPresetAuto(enabled);
+            if (enabled) {
+              setPayrollIncomeTaxLookupPresetId("");
+            }
+          }}
+          onPayrollIncomeTaxLookupAsOfChange={setPayrollIncomeTaxLookupAsOf}
+          onPayrollRequireMonthlyBoundaryChange={setPayrollRequireMonthlyBoundary}
+          onPayrollNationalPensionCapKrwChange={setPayrollNationalPensionCapKrw}
+          onPayrollHealthInsuranceCapKrwChange={setPayrollHealthInsuranceCapKrw}
+          onPayrollEmploymentInsuranceCapKrwChange={setPayrollEmploymentInsuranceCapKrw}
+          onLastPayrollRunIdChange={setLastPayrollRunId}
+          onPreviewPayroll={() => void previewPayroll()}
+          onConfirmPayroll={() => void confirmPayroll(lastPayrollRunId)}
+          onResetPayrollPresetShareContext={resetPayrollPresetShareContext}
+          onReapplyPayrollPresetShareContext={reapplyPayrollPresetShareContext}
+          onClearManualIncomeSplitItems={() => {
+            setPayrollTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
+            setPayrollNonTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
+          }}
+        />
 
-        <article className="panel" id="payroll">
-          <h2>급여 프리뷰/확정</h2>
-          <p className="small">
-            승인된 출퇴근 기반으로 총지급을 산정하거나, 법정공제 기준 프리뷰를 생성할 수 있습니다.
-          </p>
-          <div className="input-grid">
-            <label>
-              프리뷰 모드
-              <select
-                value={payrollPreviewMode}
-                onChange={(event) =>
-                  setPayrollPreviewMode(event.target.value as "gross" | "statutory_kr_baseline")
-                }
-              >
-                <option value="gross">총지급만</option>
-                <option value="statutory_kr_baseline">
-                  {isKoLocale ? "법정공제(한국 baseline)" : "Statutory deductions (KR baseline)"}
-                </option>
-              </select>
-            </label>
-            <label>
-              대상 직원 ID
-              <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-            </label>
-            <label>
-              시급 (KRW)
-              <input
-                type="number"
-                min={1}
-                value={payrollHourlyRateKrw}
-                onChange={(event) => setPayrollHourlyRateKrw(event.target.value)}
-              />
-            </label>
-            {payrollPreviewMode === "statutory_kr_baseline" ? (
-              <>
-                <label>
-                  비과세 소득(KRW)
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollNonTaxableIncomeKrw}
-                    onChange={(event) => setPayrollNonTaxableIncomeKrw(event.target.value)}
-                  />
-                </label>
-                <div className="full">
-                  <PayrollKrIncomeSplitGuideField
-                    taxableIncomeKrw={payrollTaxableIncomeKrw}
-                    onTaxableIncomeKrwChange={setPayrollTaxableIncomeKrw}
-                  />
-                </div>
-                <div className="full">
-                  <PayrollKrIncomeSplitItemPresetField
-                    selectedPresetId={payrollIncomeSplitItemPresetId}
-                    onPresetChange={setPayrollIncomeSplitItemPresetId}
-                  />
-                </div>
-                <div className="full">
-                  <PayrollKrIncomeSplitPresetPayloadPreviewPanel
-                    selectedPresetId={payrollIncomeSplitItemPresetId}
-                    taxableIncomeKrw={payrollTaxableIncomeKrw}
-                    nonTaxableIncomeKrw={payrollNonTaxableIncomeKrw}
-                  />
-                </div>
-                <div className="full">
-                  <PayrollKrPresetShareLinkFeedbackPanel
-                    feedback={payrollPresetShareLinkFeedback}
-                    onResetAppliedValues={resetPayrollPresetShareContext}
-                    onReapplyQueryValues={reapplyPayrollPresetShareContext}
-                  />
-                </div>
-                <div className="full">
-                  <PayrollKrIncomeSplitItemsTable
-                    taxableItems={payrollTaxableItems}
-                    onTaxableItemsChange={setPayrollTaxableItems}
-                    nonTaxableItems={payrollNonTaxableItems}
-                    onNonTaxableItemsChange={setPayrollNonTaxableItems}
-                    disabled={payrollIncomeSplitItemPresetId.trim().length > 0}
-                  />
-                </div>
-                <div className="full">
-                  <PayrollKrIncomeSplitConsistencyGuidePanel
-                    taxableItems={payrollTaxableItems}
-                    nonTaxableItems={payrollNonTaxableItems}
-                    selectedPresetId={payrollIncomeSplitItemPresetId}
-                    onClearManualItems={() => {
-                      setPayrollTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
-                      setPayrollNonTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
-                    }}
-                  />
-                </div>
-                <label>
-                  기타 공제(KRW)
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollOtherDeductionsKrw}
-                    onChange={(event) => setPayrollOtherDeductionsKrw(event.target.value)}
-                  />
-                </label>
-                <label>
-                  세액공제 추가(KRW)
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollAdditionalTaxCreditKrw}
-                    onChange={(event) => setPayrollAdditionalTaxCreditKrw(event.target.value)}
-                  />
-                </label>
-                <label>
-                  부양가족 수
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollDependentCount}
-                    onChange={(event) => setPayrollDependentCount(event.target.value)}
-                  />
-                </label>
-                <label>
-                  1인당 부양가족 공제(KRW)
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollDependentTaxCreditPerPersonKrw}
-                    onChange={(event) =>
-                      setPayrollDependentTaxCreditPerPersonKrw(event.target.value)
-                    }
-                  />
-                </label>
-                <div className="full">
-                  <PayrollKrPresetGuidePanel
-                    selectedPresetId={payrollIncomeTaxLookupPresetId}
-                    onPresetChange={setPayrollIncomeTaxLookupPresetId}
-                    presetAutoEnabled={payrollIncomeTaxLookupPresetAuto}
-                    onPresetAutoEnabledChange={(enabled) => {
-                      setPayrollIncomeTaxLookupPresetAuto(enabled);
-                      if (enabled) {
-                        setPayrollIncomeTaxLookupPresetId("");
-                      }
-                    }}
-                    presetAsOfInput={payrollIncomeTaxLookupAsOf}
-                    onPresetAsOfInputChange={setPayrollIncomeTaxLookupAsOf}
-                  />
-                </div>
-                <label>
-                  월경계 강제검증(서울)
-                  <select
-                    value={payrollRequireMonthlyBoundary ? "true" : "false"}
-                    onChange={(event) => setPayrollRequireMonthlyBoundary(event.target.value === "true")}
-                  >
-                    <option value="false">비활성</option>
-                    <option value="true">활성</option>
-                  </select>
-                </label>
-                <label>
-                  국민연금 상한(KRW, 선택)
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollNationalPensionCapKrw}
-                    onChange={(event) => setPayrollNationalPensionCapKrw(event.target.value)}
-                  />
-                </label>
-                <label>
-                  건강보험 상한(KRW, 선택)
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollHealthInsuranceCapKrw}
-                    onChange={(event) => setPayrollHealthInsuranceCapKrw(event.target.value)}
-                  />
-                </label>
-                <label>
-                  고용보험 상한(KRW, 선택)
-                  <input
-                    type="number"
-                    min={0}
-                    value={payrollEmploymentInsuranceCapKrw}
-                    onChange={(event) => setPayrollEmploymentInsuranceCapKrw(event.target.value)}
-                  />
-                </label>
-              </>
-            ) : null}
-            <label className="full">
-              최근 Run ID
-              <input
-                value={lastPayrollRunId}
-                onChange={(event) => setLastPayrollRunId(event.target.value)}
-                placeholder="확정 버튼용"
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" onClick={() => void previewPayroll()}>
-              프리뷰 생성
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={() => void confirmPayroll(lastPayrollRunId)}
-              disabled={!lastPayrollRunId.trim()}
-            >
-              Run 확정
-            </button>
-          </div>
-        </article>
-
-        {showDevTools ? (
-          <article className="panel">
-            <h2>디버그 로그</h2>
-            <p className="small">
-              개발 모드에서만 노출됩니다. PR/배포 환경에서는 사용자 경험 화면을 우선합니다.
-            </p>
-            <div className="actions">
-              <button className="btn btn-secondary" onClick={clearLogs}>
-                로그 초기화
-              </button>
-            </div>
-            {logs.length === 0 ? (
-              <p className="small muted">아직 호출 이력이 없습니다.</p>
-            ) : (
-              <ul className="simple-list" aria-label={isKoLocale ? "API 호출 로그" : "API call logs"}>
-                {logs.slice(0, 12).map((log) => (
-                  <li key={log.id}>
-                    <span>
-                      <span className={log.ok ? "ok" : "fail"}>
-                        {log.ok ? logStatusLabels.success : logStatusLabels.fail} {log.status}
-                      </span>{" "}
-                      <strong>{log.label}</strong>{" "}
-                      <span className="muted">
-                        {log.durationMs}ms · {log.at}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-        ) : null}
+        <AdminDebugLogsPanel
+          showDevTools={showDevTools}
+          isKoLocale={isKoLocale}
+          logs={logs}
+          logStatusLabels={logStatusLabels}
+          onClearLogs={clearLogs}
+        />
       </section>
     </main>
   );
