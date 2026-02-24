@@ -1,10 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { payrollInsuranceCopyByLocale } from "@/components/payroll-insurance/copy";
+import {
+  PayrollInsuranceComponentsPanel,
+  PayrollInsuranceLogsPanel,
+  PayrollInsuranceSummaryPanel
+} from "@/components/payroll-insurance/PayrollInsuranceSettlementSections";
+import { PayrollInsuranceInputPanel } from "@/components/payroll-insurance/PayrollInsuranceSettlementInputPanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { useI18n } from "@/lib/i18n/provider";
 import type { ApiLog, PayrollInsuranceSettlementResponse } from "@/components/payroll-insurance/types";
 import {
   defaultMonthRange,
@@ -13,36 +20,32 @@ import {
   toSeoulStartIso
 } from "@/components/payroll-insurance/types";
 
-function parseRequiredInt(value: string, fieldName: string) {
+function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${fieldName} must be a non-negative integer`);
+    throw new Error(`${fieldLabel} ${nonNegativeIntegerLabel}`);
   }
   return parsed;
 }
 
-function parseRequiredPositiveInt(value: string, fieldName: string) {
+function parseRequiredPositiveInt(value: string, fieldLabel: string, positiveIntegerLabel: string) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${fieldName} must be a positive integer`);
+    throw new Error(`${fieldLabel} ${positiveIntegerLabel}`);
   }
   return parsed;
 }
 
-function parseOptionalInt(value: string) {
+function parseOptionalInt(value: string, optionalCapIntegerLabel: string) {
   const normalized = value.trim();
   if (!normalized) {
     return undefined;
   }
   const parsed = Number(normalized);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error("optional cap values must be non-negative integers");
+    throw new Error(optionalCapIntegerLabel);
   }
   return parsed;
-}
-
-function formatKrwRaw(value: number) {
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} KRW`;
 }
 
 export default function PayrollInsuranceSettlementConsole() {
@@ -73,6 +76,9 @@ export default function PayrollInsuranceSettlementConsole() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { locale } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const copy = payrollInsuranceCopyByLocale[locale];
 
   const bearerToken =
     accessToken.trim().length > 0
@@ -90,7 +96,7 @@ export default function PayrollInsuranceSettlementConsole() {
 
   async function runPreview() {
     if (!employeeId.trim()) {
-      setStatusMessage("employeeId is required");
+      setStatusMessage(copy.statusEmployeeRequired);
       return;
     }
 
@@ -99,7 +105,7 @@ export default function PayrollInsuranceSettlementConsole() {
         employeeId: employeeId.trim(),
         periodStart: toSeoulStartIso(periodStartDate),
         periodEnd: toSeoulEndIso(periodEndDate),
-        hourlyRateKrw: parseRequiredInt(hourlyRateKrw, "hourlyRateKrw"),
+        hourlyRateKrw: parseRequiredInt(hourlyRateKrw, copy.hourlyRateLabel, copy.statusNonNegativeInteger),
         multipliers: {
           regular: 1,
           overtime: 1.5,
@@ -107,40 +113,57 @@ export default function PayrollInsuranceSettlementConsole() {
           holiday: 2
         },
         settlement: {
-          nonTaxableIncomeKrw: parseRequiredInt(nonTaxableIncomeKrw, "nonTaxableIncomeKrw"),
+          nonTaxableIncomeKrw: parseRequiredInt(
+            nonTaxableIncomeKrw,
+            copy.nonTaxableIncomeLabel,
+            copy.statusNonNegativeInteger
+          ),
           requireMonthlyBoundary: true,
           insuranceRounding: {
             mode: insuranceRoundingMode,
             nationalPensionUnitKrw: parseRequiredPositiveInt(
               nationalPensionUnitKrw,
-              "insuranceRounding.nationalPensionUnitKrw"
+              copy.nationalPensionUnitLabel,
+              copy.statusPositiveInteger
             ),
             healthInsuranceUnitKrw: parseRequiredPositiveInt(
               healthInsuranceUnitKrw,
-              "insuranceRounding.healthInsuranceUnitKrw"
+              copy.healthInsuranceUnitLabel,
+              copy.statusPositiveInteger
             ),
             longTermCareUnitKrw: parseRequiredPositiveInt(
               longTermCareUnitKrw,
-              "insuranceRounding.longTermCareUnitKrw"
+              copy.longTermCareUnitLabel,
+              copy.statusPositiveInteger
             ),
             employmentInsuranceUnitKrw: parseRequiredPositiveInt(
               employmentInsuranceUnitKrw,
-              "insuranceRounding.employmentInsuranceUnitKrw"
+              copy.employmentInsuranceUnitLabel,
+              copy.statusPositiveInteger
             ),
             industrialAccidentUnitKrw: parseRequiredPositiveInt(
               industrialAccidentUnitKrw,
-              "insuranceRounding.industrialAccidentUnitKrw"
+              copy.industrialAccidentUnitLabel,
+              copy.statusPositiveInteger
             )
           },
-          nationalPensionCapKrw: parseOptionalInt(nationalPensionCapKrw),
-          healthInsuranceCapKrw: parseOptionalInt(healthInsuranceCapKrw),
-          employmentInsuranceCapKrw: parseOptionalInt(employmentInsuranceCapKrw),
-          priorWithheldKrw: parseRequiredInt(priorWithheldKrw, "priorWithheldKrw"),
-          priorEmployerPaidKrw: parseRequiredInt(priorEmployerPaidKrw, "priorEmployerPaidKrw")
+          nationalPensionCapKrw: parseOptionalInt(nationalPensionCapKrw, copy.statusOptionalCapInteger),
+          healthInsuranceCapKrw: parseOptionalInt(healthInsuranceCapKrw, copy.statusOptionalCapInteger),
+          employmentInsuranceCapKrw: parseOptionalInt(employmentInsuranceCapKrw, copy.statusOptionalCapInteger),
+          priorWithheldKrw: parseRequiredInt(
+            priorWithheldKrw,
+            copy.priorWithheldLabel,
+            copy.statusNonNegativeInteger
+          ),
+          priorEmployerPaidKrw: parseRequiredInt(
+            priorEmployerPaidKrw,
+            copy.priorEmployerPaidLabel,
+            copy.statusNonNegativeInteger
+          )
         }
       };
 
-      setPendingLabel("payroll insurance settlement preview");
+      setPendingLabel(copy.pendingPreview);
       const headers: Record<string, string> = {
         "content-type": "application/json"
       };
@@ -173,27 +196,27 @@ export default function PayrollInsuranceSettlementConsole() {
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: "preview insurance settlement",
+          label: copy.logPreview,
           status: response.status,
           ok: response.ok,
-          at: new Date().toLocaleString("ko-KR")
+          at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
 
       if (!response.ok || !body || typeof body !== "object") {
-        setStatusMessage("request failed; check logs");
+        setStatusMessage(copy.statusRequestFailed);
         return;
       }
 
       const parsed = body as PayrollInsuranceSettlementResponse;
       setResult(parsed);
       setStatusMessage(
-        `loaded gross ${formatKrw(parsed.summary.grossPayKrw)}, total delta ${formatKrw(parsed.summary.settlementKrw.totalDeltaKrw)}`
+        `${copy.statusLoadedPrefix} ${formatKrw(parsed.summary.grossPayKrw, runtimeLocale)}, ${copy.statusTotalDeltaLabel} ${formatKrw(parsed.summary.settlementKrw.totalDeltaKrw, runtimeLocale)}`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "invalid input");
+      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -202,170 +225,61 @@ export default function PayrollInsuranceSettlementConsole() {
   return (
     <main className="saas-content">
       <header className="hero">
-        <p className="eyebrow">FlowHR Admin</p>
-        <h1>Payroll Insurance Settlement</h1>
-        <p>Preview employee/employer 4-insurance contributions and settlement deltas for a payroll period.</p>
+        <p className="eyebrow">{copy.heroEyebrow}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.description}</p>
       </header>
 
       <section className="panel-grid">
-        <article className="panel">
-          <h2>Input</h2>
-          <label>
-            Employee ID
-            <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-          </label>
-          <div className="input-grid">
-            <label>
-              Period Start
-              <input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} />
-            </label>
-            <label>
-              Period End
-              <input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} />
-            </label>
-            <label>
-              Hourly Rate (KRW)
-              <input value={hourlyRateKrw} onChange={(event) => setHourlyRateKrw(event.target.value)} />
-            </label>
-            <label>
-              Non-taxable Income (KRW)
-              <input value={nonTaxableIncomeKrw} onChange={(event) => setNonTaxableIncomeKrw(event.target.value)} />
-            </label>
-            <label>
-              Prior Withheld (KRW)
-              <input value={priorWithheldKrw} onChange={(event) => setPriorWithheldKrw(event.target.value)} />
-            </label>
-            <label>
-              Prior Employer Paid (KRW)
-              <input value={priorEmployerPaidKrw} onChange={(event) => setPriorEmployerPaidKrw(event.target.value)} />
-            </label>
-            <label>
-              National Pension Cap (optional)
-              <input value={nationalPensionCapKrw} onChange={(event) => setNationalPensionCapKrw(event.target.value)} />
-            </label>
-            <label>
-              Health Insurance Cap (optional)
-              <input value={healthInsuranceCapKrw} onChange={(event) => setHealthInsuranceCapKrw(event.target.value)} />
-            </label>
-            <label>
-              Employment Insurance Cap (optional)
-              <input value={employmentInsuranceCapKrw} onChange={(event) => setEmploymentInsuranceCapKrw(event.target.value)} />
-            </label>
-            <label>
-              Rounding Mode
-              <select
-                value={insuranceRoundingMode}
-                onChange={(event) => setInsuranceRoundingMode(event.target.value as "round" | "floor" | "ceil")}
-              >
-                <option value="round">round</option>
-                <option value="floor">floor</option>
-                <option value="ceil">ceil</option>
-              </select>
-            </label>
-            <label>
-              NP Unit (KRW)
-              <input value={nationalPensionUnitKrw} onChange={(event) => setNationalPensionUnitKrw(event.target.value)} />
-            </label>
-            <label>
-              HI Unit (KRW)
-              <input value={healthInsuranceUnitKrw} onChange={(event) => setHealthInsuranceUnitKrw(event.target.value)} />
-            </label>
-            <label>
-              LTC Unit (KRW)
-              <input value={longTermCareUnitKrw} onChange={(event) => setLongTermCareUnitKrw(event.target.value)} />
-            </label>
-            <label>
-              EI Unit (KRW)
-              <input value={employmentInsuranceUnitKrw} onChange={(event) => setEmploymentInsuranceUnitKrw(event.target.value)} />
-            </label>
-            <label>
-              IA Unit (KRW)
-              <input value={industrialAccidentUnitKrw} onChange={(event) => setIndustrialAccidentUnitKrw(event.target.value)} />
-            </label>
-          </div>
-          <label>
-            Access Token (optional)
-            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" />
-          </label>
-          <label>
-            Actor ID (dev fallback)
-            <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-          </label>
-          <label>
-            Organization ID (dev fallback)
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
-          <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void runPreview()} disabled={pendingLabel !== null}>
-              Preview Settlement
-            </button>
-          </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">Session error: {supabaseSessionError}</p> : null}
-        </article>
+        <PayrollInsuranceInputPanel
+          copy={copy}
+          employeeId={employeeId}
+          setEmployeeId={setEmployeeId}
+          periodStartDate={periodStartDate}
+          setPeriodStartDate={setPeriodStartDate}
+          periodEndDate={periodEndDate}
+          setPeriodEndDate={setPeriodEndDate}
+          hourlyRateKrw={hourlyRateKrw}
+          setHourlyRateKrw={setHourlyRateKrw}
+          nonTaxableIncomeKrw={nonTaxableIncomeKrw}
+          setNonTaxableIncomeKrw={setNonTaxableIncomeKrw}
+          priorWithheldKrw={priorWithheldKrw}
+          setPriorWithheldKrw={setPriorWithheldKrw}
+          priorEmployerPaidKrw={priorEmployerPaidKrw}
+          setPriorEmployerPaidKrw={setPriorEmployerPaidKrw}
+          nationalPensionCapKrw={nationalPensionCapKrw}
+          setNationalPensionCapKrw={setNationalPensionCapKrw}
+          healthInsuranceCapKrw={healthInsuranceCapKrw}
+          setHealthInsuranceCapKrw={setHealthInsuranceCapKrw}
+          employmentInsuranceCapKrw={employmentInsuranceCapKrw}
+          setEmploymentInsuranceCapKrw={setEmploymentInsuranceCapKrw}
+          insuranceRoundingMode={insuranceRoundingMode}
+          setInsuranceRoundingMode={setInsuranceRoundingMode}
+          nationalPensionUnitKrw={nationalPensionUnitKrw}
+          setNationalPensionUnitKrw={setNationalPensionUnitKrw}
+          healthInsuranceUnitKrw={healthInsuranceUnitKrw}
+          setHealthInsuranceUnitKrw={setHealthInsuranceUnitKrw}
+          longTermCareUnitKrw={longTermCareUnitKrw}
+          setLongTermCareUnitKrw={setLongTermCareUnitKrw}
+          employmentInsuranceUnitKrw={employmentInsuranceUnitKrw}
+          setEmploymentInsuranceUnitKrw={setEmploymentInsuranceUnitKrw}
+          industrialAccidentUnitKrw={industrialAccidentUnitKrw}
+          setIndustrialAccidentUnitKrw={setIndustrialAccidentUnitKrw}
+          accessToken={accessToken}
+          setAccessToken={setAccessToken}
+          adminActorId={adminActorId}
+          setAdminActorId={setAdminActorId}
+          organizationId={organizationId}
+          setOrganizationId={setOrganizationId}
+          pendingLabel={pendingLabel}
+          runPreview={() => void runPreview()}
+          statusMessage={statusMessage}
+          supabaseSessionError={supabaseSessionError}
+        />
 
-        <article className="panel">
-          <h2>Summary</h2>
-          {!result ? (
-            <p className="small">No result yet.</p>
-          ) : (
-            <ul className="simple-list">
-              <li><span>Gross / Taxable</span><strong>{formatKrw(result.summary.grossPayKrw)} / {formatKrw(result.summary.taxableBaseKrw)}</strong></li>
-              <li><span>Employee Total</span><strong>{formatKrw(result.summary.employeeContributionKrw.totalKrw)}</strong></li>
-              <li><span>Employer Total</span><strong>{formatKrw(result.summary.employerContributionKrw.totalKrw)}</strong></li>
-              <li><span>Total Delta</span><strong>{formatKrw(result.summary.settlementKrw.totalDeltaKrw)}</strong></li>
-              <li>
-                <span>Rounding</span>
-                <strong>
-                  {result.summary.rounding.mode} / NP {result.summary.rounding.unitsKrw.nationalPensionUnitKrw} / HI{" "}
-                  {result.summary.rounding.unitsKrw.healthInsuranceUnitKrw} / LTC{" "}
-                  {result.summary.rounding.unitsKrw.longTermCareUnitKrw} / EI{" "}
-                  {result.summary.rounding.unitsKrw.employmentInsuranceUnitKrw} / IA{" "}
-                  {result.summary.rounding.unitsKrw.industrialAccidentUnitKrw}
-                </strong>
-              </li>
-            </ul>
-          )}
-        </article>
-
-        <article className="panel">
-          <h2>Components</h2>
-          {!result ? (
-            <p className="small">No contribution breakdown yet.</p>
-          ) : (
-            <ul className="simple-list">
-              <li><span>Employee NP/HI/LTC/EI</span><strong>{formatKrw(result.summary.employeeContributionKrw.nationalPensionKrw)} / {formatKrw(result.summary.employeeContributionKrw.healthInsuranceKrw)} / {formatKrw(result.summary.employeeContributionKrw.longTermCareKrw)} / {formatKrw(result.summary.employeeContributionKrw.employmentInsuranceKrw)}</strong></li>
-              <li><span>Employer NP/HI/LTC/EI/IA</span><strong>{formatKrw(result.summary.employerContributionKrw.nationalPensionKrw)} / {formatKrw(result.summary.employerContributionKrw.healthInsuranceKrw)} / {formatKrw(result.summary.employerContributionKrw.longTermCareKrw)} / {formatKrw(result.summary.employerContributionKrw.employmentInsuranceKrw)} / {formatKrw(result.summary.employerContributionKrw.industrialAccidentKrw)}</strong></li>
-              <li><span>Employee Raw NP/HI/LTC/EI</span><strong>{formatKrwRaw(result.summary.rawContributionKrw.employee.nationalPensionKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employee.healthInsuranceKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employee.longTermCareKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employee.employmentInsuranceKrw)}</strong></li>
-              <li><span>Employer Raw NP/HI/LTC/EI/IA</span><strong>{formatKrwRaw(result.summary.rawContributionKrw.employer.nationalPensionKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.healthInsuranceKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.longTermCareKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.employmentInsuranceKrw)} / {formatKrwRaw(result.summary.rawContributionKrw.employer.industrialAccidentKrw)}</strong></li>
-              <li><span>Bases NP/HI/EI/IA</span><strong>{formatKrw(result.summary.contributionBasesKrw.nationalPensionBaseKrw)} / {formatKrw(result.summary.contributionBasesKrw.healthInsuranceBaseKrw)} / {formatKrw(result.summary.contributionBasesKrw.employmentInsuranceBaseKrw)} / {formatKrw(result.summary.contributionBasesKrw.industrialAccidentBaseKrw)}</strong></li>
-              <li><span>Prior Withheld / Paid</span><strong>{formatKrw(result.summary.settlementKrw.priorWithheldKrw)} / {formatKrw(result.summary.settlementKrw.priorEmployerPaidKrw)}</strong></li>
-            </ul>
-          )}
-        </article>
-
-        <article className="panel">
-          <h2>API Logs</h2>
-          <p className="small">
-            total {stats.total} / success {stats.success} / fail {stats.fail}
-            {pendingLabel ? ` / running ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small">No API call yet.</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/admin" className="btn btn-secondary">Back to Admin</Link>
-          </div>
-        </article>
+        <PayrollInsuranceSummaryPanel copy={copy} result={result} runtimeLocale={runtimeLocale} />
+        <PayrollInsuranceComponentsPanel copy={copy} result={result} runtimeLocale={runtimeLocale} />
+        <PayrollInsuranceLogsPanel copy={copy} stats={stats} pendingLabel={pendingLabel} logs={logs} />
       </section>
     </main>
   );
