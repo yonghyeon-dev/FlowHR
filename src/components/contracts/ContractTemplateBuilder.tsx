@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-type TemplateCategory = "employment" | "amendment" | "nda" | "policy";
+import {
+  contractCategoryLabelByLocale,
+  contractTemplateStatusLabelByLocale,
+  contractTemplateBuilderCopyByLocale,
+  type ContractCategory,
+  type ContractTemplateBuilderCopy
+} from "@/components/contracts/copy";
+import { useI18n } from "@/lib/i18n/provider";
 
 type ClauseDraft = {
   id: string;
@@ -15,7 +22,7 @@ type ClauseDraft = {
 type CreatedTemplate = {
   id: string;
   name: string;
-  category: TemplateCategory;
+  category: ContractCategory;
   status: "DRAFT" | "ACTIVE" | "ARCHIVED";
   version: number;
 };
@@ -32,15 +39,27 @@ function normalizeClause(value: ClauseDraft) {
   };
 }
 
-function buildTemplateBody(clauses: ClauseDraft[]) {
+function buildTemplateBody(
+  clauses: ClauseDraft[],
+  copy: Pick<ContractTemplateBuilderCopy, "requiredChip" | "optionalChip" | "untitledClause" | "emptyClauseBody">
+) {
   return clauses
     .map(normalizeClause)
     .filter((clause) => clause.title.length > 0 || clause.body.length > 0)
     .map((clause, index) => {
-      const badge = clause.required ? "[required]" : "[optional]";
-      return `## ${index + 1}. ${clause.title || "Untitled Clause"} ${badge}\n${clause.body || "-"}`;
+      const badge = clause.required ? `[${copy.requiredChip}]` : `[${copy.optionalChip}]`;
+      return `## ${index + 1}. ${clause.title || copy.untitledClause} ${badge}\n${clause.body || copy.emptyClauseBody}`;
     })
     .join("\n\n");
+}
+
+function createInitialClauses(copy: ContractTemplateBuilderCopy): ClauseDraft[] {
+  return copy.defaultClauses.map((clause, index) => ({
+    id: createClauseId(index + 1),
+    title: clause.title,
+    body: clause.body,
+    required: true
+  }));
 }
 
 async function readJson(response: Response) {
@@ -52,34 +71,29 @@ async function readJson(response: Response) {
 }
 
 export default function ContractTemplateBuilder() {
-  const [templateName, setTemplateName] = useState("Employment Contract v1");
-  const [category, setCategory] = useState<TemplateCategory>("employment");
-  const [clauses, setClauses] = useState<ClauseDraft[]>([
-    {
-      id: createClauseId(1),
-      title: "Role and Responsibilities",
-      body: "The employee agrees to perform assigned duties and follow internal policy.",
-      required: true
-    },
-    {
-      id: createClauseId(2),
-      title: "Compensation",
-      body: "Monthly compensation and payroll schedule follow company policy.",
-      required: true
-    },
-    {
-      id: createClauseId(3),
-      title: "Confidentiality",
-      body: "The employee must protect confidential company information.",
-      required: true
-    }
-  ]);
+  const { locale } = useI18n();
+  const copy = contractTemplateBuilderCopyByLocale[locale];
+  const categoryLabels = contractCategoryLabelByLocale[locale];
+  const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
+
+  const [templateName, setTemplateName] = useState(copy.defaultTemplateName);
+  const [category, setCategory] = useState<ContractCategory>("employment");
+  const [clauses, setClauses] = useState<ClauseDraft[]>(() => createInitialClauses(copy));
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [createdTemplate, setCreatedTemplate] = useState<CreatedTemplate | null>(null);
 
-  const templateBody = useMemo(() => buildTemplateBody(clauses), [clauses]);
+  const templateBody = useMemo(
+    () =>
+      buildTemplateBody(clauses, {
+        requiredChip: copy.requiredChip,
+        optionalChip: copy.optionalChip,
+        untitledClause: copy.untitledClause,
+        emptyClauseBody: copy.emptyClauseBody
+      }),
+    [clauses, copy.emptyClauseBody, copy.optionalChip, copy.requiredChip, copy.untitledClause]
+  );
 
   function updateClause(id: string, patch: Partial<ClauseDraft>) {
     setClauses((prev) => prev.map((clause) => (clause.id === id ? { ...clause, ...patch } : clause)));
@@ -122,9 +136,9 @@ export default function ContractTemplateBuilder() {
         template: CreatedTemplate;
       };
       setCreatedTemplate(body.template);
-      setStatusMessage(`Template created: ${body.template.id} (v${body.template.version})`);
+      setStatusMessage(`${copy.templateCreatedPrefix}: ${body.template.id} (v${body.template.version})`);
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "template create failed");
+      setError(createError instanceof Error ? createError.message : copy.templateCreateError);
     } finally {
       setPending(false);
     }
@@ -134,48 +148,51 @@ export default function ContractTemplateBuilder() {
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">Contract Template Builder</h1>
-          <p className="page-subtitle">Compose clause blocks, generate a deterministic template body, and create a draft template.</p>
+          <p className="page-eyebrow">{copy.heroEyebrow}</p>
+          <h1 className="page-title">{copy.title}</h1>
+          <p className="page-subtitle">{copy.description}</p>
         </div>
       </header>
       {error ? <p className="inline-error">{error}</p> : null}
       {statusMessage ? <p className="small">{statusMessage}</p> : null}
       <section className="panel-grid">
         <article className="panel">
-          <h2>Builder</h2>
+          <h2>{copy.builderTitle}</h2>
           <div className="contract-form-grid">
             <label>
-              Template Name
+              {copy.templateNameLabel}
               <input value={templateName} onChange={(event) => setTemplateName(event.target.value)} />
             </label>
             <label>
-              Category
-              <select value={category} onChange={(event) => setCategory(event.target.value as TemplateCategory)}>
-                <option value="employment">employment</option>
-                <option value="amendment">amendment</option>
-                <option value="nda">nda</option>
-                <option value="policy">policy</option>
+              {copy.categoryLabel}
+              <select value={category} onChange={(event) => setCategory(event.target.value as ContractCategory)}>
+                <option value="employment">{categoryLabels.employment}</option>
+                <option value="amendment">{categoryLabels.amendment}</option>
+                <option value="nda">{categoryLabels.nda}</option>
+                <option value="policy">{categoryLabels.policy}</option>
               </select>
             </label>
           </div>
           <div className="contract-action-row">
             <button type="button" className="btn btn-secondary" onClick={addClause} disabled={pending}>
-              Add Clause
+              {copy.addClauseAction}
             </button>
             <button type="button" className="btn" onClick={() => void createTemplate()} disabled={pending}>
-              Create Template
+              {copy.createTemplateAction}
             </button>
           </div>
-          <ul className="contract-template-list" aria-label="contract template clause builder">
+          <ul className="contract-template-list" aria-label={copy.clauseBuilderAria}>
             {clauses.map((clause, index) => (
               <li key={clause.id}>
                 <div className="contract-template-head">
-                  <strong>Clause {index + 1}</strong>
-                  <span className="queue-history-chip">{clause.required ? "required" : "optional"}</span>
+                  <strong>
+                    {copy.clausePrefix} {index + 1}
+                  </strong>
+                  <span className="queue-history-chip">{clause.required ? copy.requiredChip : copy.optionalChip}</span>
                 </div>
                 <div className="contract-form-grid">
                   <label>
-                    Title
+                    {copy.titleLabel}
                     <input
                       value={clause.title}
                       onChange={(event) => updateClause(clause.id, { title: event.target.value })}
@@ -187,10 +204,10 @@ export default function ContractTemplateBuilder() {
                       checked={clause.required}
                       onChange={(event) => updateClause(clause.id, { required: event.target.checked })}
                     />
-                    Required
+                    {copy.requiredLabel}
                   </label>
                   <label className="contract-form-wide">
-                    Body
+                    {copy.bodyLabel}
                     <textarea
                       rows={3}
                       value={clause.body}
@@ -205,7 +222,7 @@ export default function ContractTemplateBuilder() {
                     onClick={() => removeClause(clause.id)}
                     disabled={pending || clauses.length <= 1}
                   >
-                    Remove Clause
+                    {copy.removeClauseAction}
                   </button>
                 </div>
               </li>
@@ -213,20 +230,22 @@ export default function ContractTemplateBuilder() {
           </ul>
         </article>
         <article className="panel">
-          <h2>Generated Body Preview</h2>
-          <pre className="small">{templateBody || "No clause content."}</pre>
+          <h2>{copy.generatedBodyTitle}</h2>
+          <pre className="small">{templateBody || copy.noClauseContent}</pre>
           {createdTemplate ? (
             <ul className="simple-list">
-              <li><span>Template ID</span><strong>{createdTemplate.id}</strong></li>
-              <li><span>Version</span><strong>{createdTemplate.version}</strong></li>
-              <li><span>Status</span><strong>{createdTemplate.status}</strong></li>
-              <li><span>Category</span><strong>{createdTemplate.category}</strong></li>
+              <li><span>{copy.templateIdLabel}</span><strong>{createdTemplate.id}</strong></li>
+              <li><span>{copy.versionLabel}</span><strong>{createdTemplate.version}</strong></li>
+              <li><span>{copy.statusLabel}</span><strong>{templateStatusLabels[createdTemplate.status]}</strong></li>
+              <li><span>{copy.categoryValueLabel}</span><strong>{categoryLabels[createdTemplate.category]}</strong></li>
             </ul>
           ) : (
-            <p className="small">Create a template to confirm saved metadata.</p>
+            <p className="small">{copy.noTemplateMessage}</p>
           )}
           <div className="panel-actions">
-            <Link href="/admin/contracts" className="btn btn-secondary">Back to Contracts</Link>
+            <Link href="/admin/contracts" className="btn btn-secondary">
+              {copy.backToContractsAction}
+            </Link>
           </div>
         </article>
       </section>

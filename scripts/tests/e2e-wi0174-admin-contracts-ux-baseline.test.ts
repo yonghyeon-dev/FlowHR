@@ -9,6 +9,7 @@ function readUtf8(...parts: string[]) {
 function run() {
   const adminContractsPage = readUtf8("src", "app", "admin", "contracts", "page.tsx");
   const adminContractsWorkspace = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
+  const contractsCopy = readUtf8("src", "components", "contracts", "copy.ts");
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
   const globalCss = readUtf8("src", "app", "globals.css");
 
@@ -19,8 +20,28 @@ function run() {
   );
   assert.match(
     adminContractsWorkspace,
-    /E-Contract Workspace/,
-    "contracts workspace should render workspace title"
+    /from "@\/components\/contracts\/copy"/,
+    "contracts workspace should consume contracts locale copy"
+  );
+  assert.match(
+    adminContractsWorkspace,
+    /const \{ locale \} = useI18n\(\);/,
+    "contracts workspace should consume locale context"
+  );
+  assert.match(
+    adminContractsWorkspace,
+    /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US";/,
+    "contracts workspace should resolve runtime locale"
+  );
+  assert.match(
+    contractsCopy,
+    /title: "E-Contract Workspace"/,
+    "contracts copy should include english workspace title"
+  );
+  assert.match(
+    contractsCopy,
+    /title: "전자계약 워크스페이스"/,
+    "contracts copy should include korean workspace title"
   );
   assert.match(
     adminContractsWorkspace,
@@ -35,12 +56,12 @@ function run() {
 
   assert.match(
     adminContractsWorkspace,
-    /aria-label="contract template list"/,
+    /aria-label=\{copy\.templateListAria\}/,
     "contracts workspace should render contract template list"
   );
   assert.match(
     adminContractsWorkspace,
-    /aria-label="contract document list"/,
+    /aria-label=\{copy\.documentListAria\}/,
     "contracts workspace should render contract document list"
   );
 
