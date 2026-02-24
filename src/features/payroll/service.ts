@@ -7,7 +7,6 @@ import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } fr
 import {
   calculateGrossPay,
   derivePayableMinutes,
-  type Multipliers,
   type PayableMinutes
 } from "@/lib/payroll-rules";
 import type {
@@ -103,363 +102,48 @@ import {
   type InsuranceRoundingMode
 } from "@/features/payroll/service-statutory-adapter-helpers";
 
-type PreviewPayrollInput = {
-  periodStart: Date;
-  periodEnd: Date;
-  employeeId?: string;
-  hourlyRateKrw: number;
-  multipliers: Multipliers;
-};
 
-type ManualDeductions = {
-  deductionMode: "manual";
-  deductions: {
-    withholdingTaxKrw: number;
-    socialInsuranceKrw: number;
-    otherDeductionsKrw: number;
-    breakdown?: Record<string, number>;
-  };
-};
+import type {
+  AcknowledgePayrollPayslipReceiptInput,
+  AcknowledgePayrollYearEndFilingPackageInput,
+  AddPayrollYearEndFilingEvidenceNoteInput,
+  CancelPayrollYearEndFilingPackageInput,
+  ClosePayrollPeriodInput,
+  DistributePayrollPayslipsInput,
+  ExportPayrollYearEndFilingDataInput,
+  FinalizePayrollYearEndSettlementInput,
+  GetPayrollYearEndFinalizedSettlementInput,
+  GetPayrollYearEndInsuranceReconciliationReportInput,
+  GetPayrollYearEndPreflightChecklistInput,
+  GetPayrollYearEndWithholdingReceiptDocumentInput,
+  IssuePayrollYearEndWithholdingReceiptInput,
+  ListPayrollYearEndFilingSubmissionTimelineInput,
+  ListPayrollYearEndFilingSubmissionsInput,
+  PayslipDeliveryChannel,
+  PayrollYearEndFilingAckStatus,
+  PayrollYearEndFilingExportFormat,
+  PayrollYearEndFilingSubmissionSortBy,
+  PayrollYearEndFilingSubmissionSortDirection,
+  PayrollYearEndFilingTransport,
+  PayrollYearEndFilingValidationMode,
+  PayrollYearEndWithholdingReceiptDocumentFormat,
+  PreviewPayrollInput,
+  PreviewPayrollInsuranceSettlementInput,
+  PreviewPayrollWithDeductionsInput,
+  PreviewPayrollYearEndSettlementInput,
+  RecalculatePayrollYearEndSettlementInput,
+  ReopenPayrollYearEndFilingPackageInput,
+  ResubmitPayrollYearEndFilingPackageInput,
+  SubmitPayrollYearEndFilingPackageInput,
+  UpsertDeductionProfileInput,
+  YearEndAppliedReasonCode,
+  YearEndDeductionCapAppliedBreakdownKrw,
+  YearEndDeductionEligibilityInput,
+  YearEndDeductionItemsInput,
+  YearEndTaxCreditCapAppliedBreakdownKrw,
+  YearEndTaxCreditItemsInput
+} from "@/features/payroll/service-input-types";
 
-type ProfileDeductions = {
-  deductionMode: "profile";
-  profileId: string;
-  expectedProfileVersion?: number;
-};
-
-type StatutoryKrBaselineDeductions = {
-  deductionMode: "statutory_kr_baseline";
-  statutory?: {
-    nonTaxableIncomeKrw: number;
-    taxableIncomeKrw?: number;
-    taxableIncomeItems?: Array<{
-      code: string;
-      category: string;
-      amountKrw: number;
-    }>;
-    nonTaxableIncomeItems?: Array<{
-      code: string;
-      category: string;
-      amountKrw: number;
-    }>;
-    incomeSplitItemPresetId?: string;
-    incomeTaxBrackets?: Array<{
-      upToKrw: number | null;
-      rate: number;
-    }>;
-    incomeTaxLookupTable?: Array<{
-      upToKrw: number | null;
-      taxKrw: number;
-      dependentTaxKrw?: Array<{
-        dependentCount: number;
-        taxKrw: number;
-      }>;
-    }>;
-    incomeTaxLookupPresetId?: string;
-    incomeTaxLookupPresetAuto?: boolean;
-    incomeTaxLookupAsOf?: string;
-    additionalTaxCreditKrw: number;
-    dependentCount: number;
-    dependentTaxCreditPerPersonKrw: number;
-    requireMonthlyBoundary: boolean;
-    incomeTaxRate: number;
-    localIncomeTaxRate: number;
-    nationalPensionRate: number;
-    nationalPensionCapKrw?: number;
-    healthInsuranceRate: number;
-    healthInsuranceCapKrw?: number;
-    longTermCareRateOnHealth: number;
-    employmentInsuranceRate: number;
-    employmentInsuranceCapKrw?: number;
-    insuranceRounding?: {
-      mode: "round" | "floor" | "ceil";
-      nationalPensionUnitKrw: number;
-      healthInsuranceUnitKrw: number;
-      longTermCareUnitKrw: number;
-      employmentInsuranceUnitKrw: number;
-    };
-    otherDeductionsKrw: number;
-  };
-};
-
-type PreviewPayrollWithDeductionsInput = PreviewPayrollInput &
-  (ManualDeductions | ProfileDeductions | StatutoryKrBaselineDeductions);
-
-type PreviewPayrollInsuranceSettlementInput = PreviewPayrollInput & {
-  employeeId: string;
-  settlement?: {
-    nonTaxableIncomeKrw: number;
-    requireMonthlyBoundary: boolean;
-    insuranceRounding?: {
-      mode: "round" | "floor" | "ceil";
-      nationalPensionUnitKrw: number;
-      healthInsuranceUnitKrw: number;
-      longTermCareUnitKrw: number;
-      employmentInsuranceUnitKrw: number;
-      industrialAccidentUnitKrw: number;
-    };
-    nationalPensionEmployeeRate: number;
-    nationalPensionEmployerRate: number;
-    nationalPensionCapKrw?: number;
-    healthInsuranceEmployeeRate: number;
-    healthInsuranceEmployerRate: number;
-    healthInsuranceCapKrw?: number;
-    longTermCareRateOnHealth: number;
-    employmentInsuranceEmployeeRate: number;
-    employmentInsuranceEmployerRate: number;
-    employmentInsuranceCapKrw?: number;
-    industrialAccidentEmployerRate: number;
-    priorWithheldKrw: number;
-    priorEmployerPaidKrw: number;
-  };
-};
-
-type ClosePayrollPeriodInput = {
-  periodStart: Date;
-  periodEnd: Date;
-  apply: boolean;
-  settlement?: {
-    priorPaidWithholdingTaxKrw: number;
-    priorPaidSocialInsuranceKrw: number;
-    priorPaidNetPayKrw: number;
-  };
-};
-
-type PayslipDeliveryChannel = "in_app" | "email";
-
-type DistributePayrollPayslipsInput = {
-  periodStart: Date;
-  periodEnd: Date;
-  employeeId?: string;
-  deliveryChannel: PayslipDeliveryChannel;
-  dryRun: boolean;
-};
-
-type AcknowledgePayrollPayslipReceiptInput = {
-  runId: string;
-};
-
-type YearEndTaxCreditItemsInput = {
-  earnedIncomeTaxCreditKrw: number;
-  childTaxCreditKrw: number;
-  additionalTaxCreditKrw: number;
-};
-
-type PreviewPayrollYearEndSettlementInput = {
-  year: number;
-  employeeId: string;
-  nonTaxableAnnualIncomeKrw: number;
-  additionalTaxCreditKrw: number;
-  taxCredits?: Partial<YearEndTaxCreditItemsInput>;
-  annualIncomeTaxRate: number;
-  localIncomeTaxRate: number;
-};
-
-type YearEndDeductionItemsInput = {
-  personalPensionKrw: number;
-  insurancePremiumKrw: number;
-  medicalExpenseKrw: number;
-  educationExpenseKrw: number;
-  donationKrw: number;
-  housingSavingsKrw: number;
-};
-
-type YearEndDeductionEligibilityInput = {
-  personalPensionEligible: boolean;
-  insurancePremiumEligible: boolean;
-  medicalExpenseEligible: boolean;
-  educationExpenseEligible: boolean;
-  donationEligible: boolean;
-  housingSavingsEligible: boolean;
-};
-
-type YearEndTaxCreditItemKey = keyof YearEndTaxCreditItemsInput;
-
-type YearEndTaxCreditCapAppliedItemKrw = {
-  inputKrw: number;
-  capKrw: number;
-  appliedKrw: number;
-  capped: boolean;
-  applicationReasonCode: YearEndAppliedReasonCode;
-  applicationReason: string;
-};
-
-type YearEndTaxCreditCapAppliedBreakdownKrw = Record<
-  YearEndTaxCreditItemKey,
-  YearEndTaxCreditCapAppliedItemKrw
->;
-
-type YearEndDeductionItemKey = keyof YearEndDeductionItemsInput;
-
-type YearEndDeductionCapAppliedItemKrw = {
-  inputKrw: number;
-  capKrw: number;
-  appliedKrw: number;
-  capped: boolean;
-  applicationReasonCode: YearEndAppliedReasonCode;
-  applicationReason: string;
-};
-
-type YearEndAppliedReasonCode = "NO_INPUT" | "CAPPED_BY_RULE" | "APPLIED_AS_ENTERED";
-
-type YearEndDeductionCapAppliedBreakdownKrw = Record<
-  YearEndDeductionItemKey,
-  YearEndDeductionCapAppliedItemKrw
->;
-
-type PayrollYearEndFilingExportFormat = "json" | "csv" | "jsonl" | "hometax_csv";
-type PayrollYearEndFilingValidationMode = "basic" | "strict";
-type PayrollYearEndFilingTransport = "manual_portal" | "hometax_upload" | "nts_api_mock";
-type PayrollYearEndFilingAckStatus = "accepted" | "rejected";
-
-type RecalculatePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
-  deductionItems: YearEndDeductionItemsInput;
-  deductionEligibility?: Partial<YearEndDeductionEligibilityInput>;
-};
-
-type FinalizePayrollYearEndSettlementInput = PreviewPayrollYearEndSettlementInput & {
-  deductionItems: YearEndDeductionItemsInput;
-  deductionEligibility?: Partial<YearEndDeductionEligibilityInput>;
-  apply: boolean;
-  finalizedByNote?: string;
-  expectedSettlementHash?: string;
-};
-
-type ExportPayrollYearEndFilingDataInput = {
-  year: number;
-  employeeId: string;
-  format: PayrollYearEndFilingExportFormat;
-  validationMode: PayrollYearEndFilingValidationMode;
-  expectedSettlementHash?: string;
-};
-
-type SubmitPayrollYearEndFilingPackageInput = {
-  year: number;
-  employeeId: string;
-  format: PayrollYearEndFilingExportFormat;
-  validationMode: PayrollYearEndFilingValidationMode;
-  expectedSettlementHash?: string;
-  transport: PayrollYearEndFilingTransport;
-  submissionNote?: string;
-};
-
-type ResubmitPayrollYearEndFilingPackageInput = {
-  year: number;
-  employeeId: string;
-  submissionId: string;
-  format: PayrollYearEndFilingExportFormat;
-  validationMode: PayrollYearEndFilingValidationMode;
-  expectedSettlementHash?: string;
-  transport: PayrollYearEndFilingTransport;
-  submissionNote?: string;
-  resubmissionReason?: string;
-};
-
-type AcknowledgePayrollYearEndFilingPackageInput = {
-  year: number;
-  employeeId: string;
-  submissionId: string;
-  expectedSettlementHash?: string;
-  ackStatus: PayrollYearEndFilingAckStatus;
-  ackCode?: string;
-  ackNote?: string;
-  rejectionReasonCode?: string;
-  rejectionReasonDetail?: string;
-};
-
-type CancelPayrollYearEndFilingPackageInput = {
-  year: number;
-  employeeId: string;
-  submissionId: string;
-};
-
-type ReopenPayrollYearEndFilingPackageInput = {
-  year: number;
-  employeeId: string;
-  submissionId: string;
-};
-
-type PayrollYearEndFilingSubmissionStatusFilter =
-  | PayrollYearEndFilingSubmissionStatus
-  | "all";
-type PayrollYearEndFilingSubmissionAckStatusFilter = PayrollYearEndFilingAckStatus | "none" | "all";
-type PayrollYearEndFilingSubmissionValidationStatusFilter = "pass" | "fail" | "all";
-type PayrollYearEndFilingSubmissionTransportFilter = PayrollYearEndFilingTransport | "all";
-type PayrollYearEndFilingSubmissionSortBy =
-  | "submittedAt"
-  | "attempt"
-  | "status"
-  | "ackStatus"
-  | "validationStatus"
-  | "transport";
-type PayrollYearEndFilingSubmissionSortDirection = "asc" | "desc";
-
-type ListPayrollYearEndFilingSubmissionsInput = {
-  year: number;
-  employeeId: string;
-  status?: PayrollYearEndFilingSubmissionStatusFilter;
-  ackStatus?: PayrollYearEndFilingSubmissionAckStatusFilter;
-  validationStatus?: PayrollYearEndFilingSubmissionValidationStatusFilter;
-  transport?: PayrollYearEndFilingSubmissionTransportFilter;
-  settlementHash?: string;
-  search?: string;
-  sortBy?: PayrollYearEndFilingSubmissionSortBy;
-  sortDirection?: PayrollYearEndFilingSubmissionSortDirection;
-};
-
-type ListPayrollYearEndFilingSubmissionTimelineInput = {
-  year: number;
-  employeeId: string;
-  submissionId: string;
-};
-
-type AddPayrollYearEndFilingEvidenceNoteInput = {
-  year: number;
-  employeeId: string;
-  submissionId: string;
-  note: string;
-};
-
-type IssuePayrollYearEndWithholdingReceiptInput = {
-  year: number;
-  employeeId: string;
-  issue: boolean;
-  issuerName?: string;
-};
-
-type PayrollYearEndWithholdingReceiptDocumentFormat = "json" | "text";
-
-type GetPayrollYearEndWithholdingReceiptDocumentInput = {
-  year: number;
-  employeeId: string;
-  format: PayrollYearEndWithholdingReceiptDocumentFormat;
-};
-
-type GetPayrollYearEndFinalizedSettlementInput = {
-  year: number;
-  employeeId: string;
-};
-
-type GetPayrollYearEndInsuranceReconciliationReportInput = {
-  year: number;
-  employeeId: string;
-};
-
-type GetPayrollYearEndPreflightChecklistInput = {
-  year: number;
-  employeeId: string;
-  nonTaxableAnnualIncomeKrw?: number;
-};
-
-type UpsertDeductionProfileInput = {
-  profileId: string;
-  name: string;
-  mode: "manual" | "profile";
-  withholdingRate: number | null;
-  socialInsuranceRate: number | null;
-  fixedOtherDeductionKrw: number;
-  active: boolean;
-};
 
 type ServiceContext = {
   actor: Actor | null;
