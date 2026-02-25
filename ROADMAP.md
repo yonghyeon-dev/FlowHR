@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.131 (Notice-Benefits-Recruitment Baseline Routes and Nav i18n Wiring)
+> **Current version**: 0.1.132 (Mobile RootNavigator Locale-Dynamic Title Baseline)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -664,3 +664,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0397 scheduling dedicated admin/employee workspace baseline (`/admin/scheduling` CRUD workspace + `/employee/schedule` own-board summary + i18n nav/copy + regression test)
 - WI-0398 payslip page view decomposition and render-orchestrator split (`/employee/payslips` render extract to `page-view.tsx` + orchestration-only `page.tsx` and line-count reduction + regression test)
 - WI-0399 notice-benefits-recruitment baseline routes and nav i18n wiring (`/admin/notices`, `/admin/benefits`, `/admin/recruitment`, `/employee/benefits`, `/employee/recruitment` baseline routes + admin/employee nav and ko/en i18n key wiring + regression test)
+- WI-0400 mobile root navigator locale-dynamic title baseline (`apps/mobile` navigator title/splash copy locale switch for `ko`/`en` + locale resolver helper + regression test)
