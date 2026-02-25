@@ -5,6 +5,13 @@ import { useMemo, useState } from "react";
 
 import { payrollYearEndCopyByLocale } from "@/components/payroll-year-end/copy";
 import { PayrollAccuracyEvidencePanel } from "@/components/payroll-year-end/PayrollAccuracyEvidencePanel";
+import {
+  extractPayrollYearEndErrorMessage,
+  normalizePayrollYearEndRuntimeMessage,
+  resolvePayrollYearEndBlockingReasons,
+  resolvePayrollYearEndReasonCodeLabel,
+  resolvePayrollYearEndReconciliationStatusLabel
+} from "@/components/payroll-year-end/runtime-copy-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -37,25 +44,27 @@ function summarizeCappedDeductionItems(
   capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"],
   deductionItemLabels: Record<string, string>,
   runtimeLocale: string,
-  capLabel: string
+  capLabel: string,
+  locale: "ko" | "en"
 ) {
   const cappedLines = Object.entries(capAppliedByItemKrw)
     .filter(([, value]) => value.capped)
     .map(([key, value]) => {
       const label = deductionItemLabels[key] ?? key;
-      return `${label}: ${formatKrw(value.inputKrw, runtimeLocale)} -> ${formatKrw(value.appliedKrw, runtimeLocale)} (${capLabel} ${formatKrw(value.capKrw, runtimeLocale)}) [${value.applicationReasonCode}]`;
+      return `${label}: ${formatKrw(value.inputKrw, runtimeLocale)} -> ${formatKrw(value.appliedKrw, runtimeLocale)} (${capLabel} ${formatKrw(value.capKrw, runtimeLocale)}) [${resolvePayrollYearEndReasonCodeLabel(value.applicationReasonCode, locale)}]`;
     });
   return cappedLines.length ? cappedLines.join(" | ") : "-";
 }
 
 function summarizeDeductionReasonCodes(
   capAppliedByItemKrw: PayrollYearEndRecalculationResponse["recalculation"]["deductionItemsKrw"]["capAppliedByItemKrw"],
-  deductionItemLabels: Record<string, string>
+  deductionItemLabels: Record<string, string>,
+  locale: "ko" | "en"
 ) {
   return Object.entries(capAppliedByItemKrw)
     .map(([key, value]) => {
       const label = deductionItemLabels[key] ?? key;
-      return `${label}:${value.applicationReasonCode}`;
+      return `${label}:${resolvePayrollYearEndReasonCodeLabel(value.applicationReasonCode, locale)}`;
     })
     .join(" | ");
 }
@@ -64,25 +73,27 @@ function summarizeCappedTaxCreditItems(
   capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"],
   taxCreditItemLabels: Record<string, string>,
   runtimeLocale: string,
-  capLabel: string
+  capLabel: string,
+  locale: "ko" | "en"
 ) {
   const cappedLines = Object.entries(capAppliedByItemKrw)
     .filter(([, value]) => value.capped)
     .map(([key, value]) => {
       const label = taxCreditItemLabels[key] ?? key;
-      return `${label}: ${formatKrw(value.inputKrw, runtimeLocale)} -> ${formatKrw(value.appliedKrw, runtimeLocale)} (${capLabel} ${formatKrw(value.capKrw, runtimeLocale)}) [${value.applicationReasonCode}]`;
+      return `${label}: ${formatKrw(value.inputKrw, runtimeLocale)} -> ${formatKrw(value.appliedKrw, runtimeLocale)} (${capLabel} ${formatKrw(value.capKrw, runtimeLocale)}) [${resolvePayrollYearEndReasonCodeLabel(value.applicationReasonCode, locale)}]`;
     });
   return cappedLines.length ? cappedLines.join(" | ") : "-";
 }
 
 function summarizeTaxCreditReasonCodes(
   capAppliedByItemKrw: PayrollYearEndSettlementResponse["summary"]["settlementKrw"]["taxCreditAppliedByItemKrw"],
-  taxCreditItemLabels: Record<string, string>
+  taxCreditItemLabels: Record<string, string>,
+  locale: "ko" | "en"
 ) {
   return Object.entries(capAppliedByItemKrw)
     .map(([key, value]) => {
       const label = taxCreditItemLabels[key] ?? key;
-      return `${label}:${value.applicationReasonCode}`;
+      return `${label}:${resolvePayrollYearEndReasonCodeLabel(value.applicationReasonCode, locale)}`;
     })
     .join(" | ");
 }
@@ -139,6 +150,16 @@ export default function PayrollYearEndConsole() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizePayrollYearEndRuntimeMessage(
+      supabaseSessionError,
+      locale,
+      "인증 세션 상태를 확인하지 못했습니다."
+    );
+  }, [locale, supabaseSessionError]);
 
   function buildHeaders() {
     const headers: Record<string, string> = {
@@ -217,7 +238,7 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
         return;
       }
       setSettlement(body);
@@ -226,7 +247,11 @@ export default function PayrollYearEndConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.statusInvalidInput)
+          : copy.statusInvalidInput
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -329,7 +354,7 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
         return;
       }
       setRecalculation(body);
@@ -338,7 +363,11 @@ export default function PayrollYearEndConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.statusInvalidInput)
+          : copy.statusInvalidInput
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -370,7 +399,7 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
         return;
       }
       setReceipt(body);
@@ -381,7 +410,11 @@ export default function PayrollYearEndConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.statusInvalidInput)
+          : copy.statusInvalidInput
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -417,16 +450,24 @@ export default function PayrollYearEndConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
         return;
       }
+      const reconciliationStatusLabel = resolvePayrollYearEndReconciliationStatusLabel(
+        body.report.reconciliation.status,
+        locale
+      );
       setInsuranceReconciliationReport(body);
       setStatusMessage(
-        `${copy.statusLoadedInsuranceReconciliationPrefix} (${body.report.reconciliation.status}, ${copy.statusDeltaLabel} ${formatKrw(body.report.reconciliation.deltaKrw, runtimeLocale)})`
+        `${copy.statusLoadedInsuranceReconciliationPrefix} (${reconciliationStatusLabel}, ${copy.statusDeltaLabel} ${formatKrw(body.report.reconciliation.deltaKrw, runtimeLocale)})`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.statusInvalidInput)
+          : copy.statusInvalidInput
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -476,7 +517,11 @@ export default function PayrollYearEndConsole() {
             <button className="btn btn-primary" onClick={() => void runReceipt(true)} disabled={pendingLabel !== null}>{copy.issueReceiptAction}</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {normalizedSupabaseSessionError ? (
+            <p className="small fail">
+              {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
+            </p>
+          ) : null}
         </article>
         <article className="panel">
           <h2>{copy.settlementTitle}</h2>
@@ -485,8 +530,8 @@ export default function PayrollYearEndConsole() {
               <li><span>{copy.grossNetLabel}</span><strong>{formatKrw(settlement.summary.annualTotalsKrw.grossPayKrw, runtimeLocale)} / {formatKrw(settlement.summary.annualTotalsKrw.netPayKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.inputVectorHashLabel}</span><strong>{settlement.summary.inputVectorHash.slice(0, 16)}...</strong></li>
               <li><span>{copy.taxCreditInputAppliedLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.totalTaxCreditInputKrw, runtimeLocale)}{" / "}{formatKrw(settlement.summary.settlementKrw.totalTaxCreditAppliedKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.cappedTaxCreditsLabel}</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, runtimeLocale, copy.capLabel)}</strong></li>
-              <li><span>{copy.taxCreditReasonCodesLabel}</span><strong>{summarizeTaxCreditReasonCodes(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels)}</strong></li>
+              <li><span>{copy.cappedTaxCreditsLabel}</span><strong>{summarizeCappedTaxCreditItems(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, runtimeLocale, copy.capLabel, locale)}</strong></li>
+              <li><span>{copy.taxCreditReasonCodesLabel}</span><strong>{summarizeTaxCreditReasonCodes(settlement.summary.settlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, locale)}</strong></li>
               <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.priorWithheldLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.priorWithheldTaxKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(settlement.summary.settlementKrw.withholdingDeltaKrw, runtimeLocale)}</strong></li>
@@ -505,13 +550,13 @@ export default function PayrollYearEndConsole() {
               <li><span>{copy.cappedDeductionLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.cappedIncomeDeductionKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.appliedDeductionLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.appliedIncomeDeductionKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.taxCreditInputAppliedLabel}</span><strong>{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditInputKrw, runtimeLocale)}{" / "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.totalTaxCreditAppliedKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.cappedTaxCreditsLabel}</span><strong>{summarizeCappedTaxCreditItems(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, runtimeLocale, copy.capLabel)}</strong></li>
-              <li><span>{copy.taxCreditReasonCodesLabel}</span><strong>{summarizeTaxCreditReasonCodes(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels)}</strong></li>
+              <li><span>{copy.cappedTaxCreditsLabel}</span><strong>{summarizeCappedTaxCreditItems(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, runtimeLocale, copy.capLabel, locale)}</strong></li>
+              <li><span>{copy.taxCreditReasonCodesLabel}</span><strong>{summarizeTaxCreditReasonCodes(recalculation.recalculation.recalculatedSettlementKrw.taxCreditAppliedByItemKrw, copy.taxCreditItemLabels, locale)}</strong></li>
               <li><span>{copy.taxableIncomeLabel}</span><strong>{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeBeforeDeductionKrw, runtimeLocale)}{" -> "}{formatKrw(recalculation.recalculation.deductionItemsKrw.taxableAnnualIncomeAfterDeductionKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.cappedItemsLabel}</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw, copy.deductionItemLabels, runtimeLocale, copy.capLabel)}</strong></li>
-              <li><span>{copy.deductionReasonCodesLabel}</span><strong>{summarizeDeductionReasonCodes(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw, copy.deductionItemLabels)}</strong></li>
+              <li><span>{copy.cappedItemsLabel}</span><strong>{summarizeCappedDeductionItems(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw, copy.deductionItemLabels, runtimeLocale, copy.capLabel, locale)}</strong></li>
+              <li><span>{copy.deductionReasonCodesLabel}</span><strong>{summarizeDeductionReasonCodes(recalculation.recalculation.deductionItemsKrw.capAppliedByItemKrw, copy.deductionItemLabels, locale)}</strong></li>
               <li><span>{copy.deductionEligibilityLabel}</span><strong>{Object.entries(recalculation.recalculation.deductionEligibility).filter(([, value]) => value).map(([key]) => copy.deductionEligibilityLabels[key] ?? key).join(", ") || "-"}</strong></li>
-              <li><span>{copy.eligibilityBlockingReasonsLabel}</span><strong>{recalculation.recalculation.deductionEligibilityBlockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.eligibilityBlockingReasonsLabel}</span><strong>{resolvePayrollYearEndBlockingReasons(recalculation.recalculation.deductionEligibilityBlockingReasons, locale).join(" | ") || "-"}</strong></li>
               <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(recalculation.recalculation.baselineSettlementKrw.annualTaxLiabilityKrw, runtimeLocale)}{" -> "}{formatKrw(recalculation.recalculation.recalculatedSettlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.taxLiabilityDeltaLabel}</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.annualTaxLiabilityDeltaKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.withholdingDeltaChangeLabel}</span><strong>{formatKrw(recalculation.recalculation.deltaKrw.withholdingDeltaChangeKrw, runtimeLocale)}</strong></li>
@@ -524,12 +569,12 @@ export default function PayrollYearEndConsole() {
           <h2>{copy.insuranceReconciliationTitle}</h2>
           {!insuranceReconciliationReport ? <p className="small">{copy.noInsuranceReconciliationReportYet}</p> : (
             <ul className="simple-list">
-              <li><span>{copy.statusLabel}</span><strong>{insuranceReconciliationReport.report.reconciliation.status}</strong></li>
+              <li><span>{copy.statusLabel}</span><strong>{resolvePayrollYearEndReconciliationStatusLabel(insuranceReconciliationReport.report.reconciliation.status, locale)}</strong></li>
               <li><span>{copy.annualSocialInsuranceRunsLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.annualRunSocialInsuranceKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.comparedInsurancePremiumFinalizationLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.comparedKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.deltaLabel}</span><strong>{formatKrw(insuranceReconciliationReport.report.reconciliation.deltaKrw, runtimeLocale)}</strong></li>
               <li><span>{copy.finalizationHashLabel}</span><strong>{insuranceReconciliationReport.report.finalization.finalizationId ?? "-"} / {insuranceReconciliationReport.report.finalization.settlementHash?.slice(0, 12) ?? "-"}</strong></li>
-              <li><span>{copy.insuranceReasonCodeLabel}</span><strong>{insuranceReconciliationReport.report.finalization.applicationReasonCode ?? "-"}</strong></li>
+              <li><span>{copy.insuranceReasonCodeLabel}</span><strong>{resolvePayrollYearEndReasonCodeLabel(insuranceReconciliationReport.report.finalization.applicationReasonCode, locale)}</strong></li>
               <li><span>{copy.monthlyBreakdownLabel}</span><strong>{insuranceReconciliationReport.report.monthlyBreakdown.map((row) => `${row.month}:${formatKrw(row.socialInsuranceKrw, runtimeLocale)}`).join(" | ") || "-"}</strong></li>
             </ul>
           )}
@@ -542,7 +587,7 @@ export default function PayrollYearEndConsole() {
               <li><span>{copy.canIssueIssuedLabel}</span><strong>{receipt.receipt.canIssue ? copy.yesLabel : copy.noLabel} / {receipt.receipt.issued ? copy.yesLabel : copy.noLabel}</strong></li>
               <li><span>{copy.issuedAtLabel}</span><strong>{receipt.receipt.issuedAt ? new Date(receipt.receipt.issuedAt).toLocaleString(runtimeLocale) : "-"}</strong></li>
               <li><span>{copy.pendingReceiptRunsLabel}</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
-              <li><span>{copy.blockingReasonsLabel}</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.blockingReasonsLabel}</span><strong>{resolvePayrollYearEndBlockingReasons(receipt.receipt.blockingReasons, locale).join(" | ") || "-"}</strong></li>
             </ul>
           )}
         </article>

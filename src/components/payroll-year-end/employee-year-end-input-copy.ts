@@ -20,6 +20,7 @@ export type EmployeeYearEndInputCopy = {
   annualIncomeTaxRateLabel: string;
   localIncomeTaxRateLabel: string;
   accessTokenLabel: string;
+  bearerTokenPlaceholder: string;
   organizationIdFallbackLabel: string;
   loadFinalizedSettlementAction: string;
   pendingFinalizedSettlement: string;
@@ -92,6 +93,7 @@ export const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEn
     annualIncomeTaxRateLabel: "연간 소득세율",
     localIncomeTaxRateLabel: "지방소득세율",
     accessTokenLabel: "액세스 토큰(선택)",
+    bearerTokenPlaceholder: "액세스 토큰",
     organizationIdFallbackLabel: "조직 식별자(개발용 대체값)",
     loadFinalizedSettlementAction: "확정 정산 불러오기",
     pendingFinalizedSettlement: "확정 정산 조회",
@@ -164,6 +166,7 @@ export const employeeYearEndInputCopyByLocale: Record<FlowLocale, EmployeeYearEn
     annualIncomeTaxRateLabel: "Annual Income Tax Rate",
     localIncomeTaxRateLabel: "Local Income Tax Rate",
     accessTokenLabel: "Access Token (optional)",
+    bearerTokenPlaceholder: "Bearer token",
     organizationIdFallbackLabel: "Organization ID (dev fallback)",
     loadFinalizedSettlementAction: "Load Finalized Settlement",
     pendingFinalizedSettlement: "finalized settlement load",

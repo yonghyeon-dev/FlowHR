@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.167 (Payroll Accuracy Evidence Panel and Regression Bundle)
+> **Current version**: 0.1.168 (Korean Runtime Localization Sweep for Year-End, Payslips, and Contracts)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -750,3 +750,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0483 korean runtime mixed-language suppression for withholding/payslip/contracts (ko 런타임에서 혼합 오류문구(한글+영문) 유입 시 known-pattern 한국어 매핑 우선 적용 + 미매핑 혼합 문자열은 한국어 fallback으로 강제 + 회귀 테스트 추가)
 - WI-0484 korean runtime mixed-language suppression for payslip receipts (ko 런타임에서 payslip-receipt 혼합 오류문구(한글+영문) 유입 시 known-pattern 한국어 매핑 우선 적용 + 미매핑 혼합 문자열은 한국어 fallback으로 강제 + 회귀 테스트 추가)
 - WI-0485 payroll accuracy regression bundle and admin evidence panel (`/admin/payroll-year-end`에 계산 정확성 증빙 패널 추가 + 정산/재계산/보험대사 수치 균형 검사 helper 분리 + 회귀 테스트 추가)
+- WI-0486 korean runtime localization sweep for year-end/payslips/contracts (연말정산 콘솔 상태/사유/차단사유 및 세션 오류 한국어 정규화 + payslip 파일명 ko prefix 적용 + contracts 증빙 파일명 ko 표시 정규화 + 회귀 테스트 추가)

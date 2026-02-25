@@ -12,7 +12,10 @@ import {
   readJson,
   setContractsRuntimeLocale
 } from "@/components/contracts/http";
-import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
+import {
+  normalizeContractsEntityTitle,
+  normalizeContractsEvidenceFileName
+} from "@/components/contracts/runtime-copy-helpers";
 import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
@@ -268,7 +271,7 @@ export default function EmployeeContractsInbox() {
                   <ul className="simple-list">
                     <li>
                       <span>{copy.evidenceFileLabel}</span>
-                      <strong>{signatureEvidence.fileName}</strong>
+                      <strong>{normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)}</strong>
                     </li>
                     <li>
                       <span>{copy.generatedAtLabel}</span>

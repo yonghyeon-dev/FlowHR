@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { payrollYearEndPreflightCopyByLocale } from "@/components/payroll-year-end/copy";
+import {
+  extractPayrollYearEndErrorMessage,
+  normalizePayrollYearEndRuntimeMessage
+} from "@/components/payroll-year-end/runtime-copy-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -51,6 +55,16 @@ export default function PayrollYearEndPreflightConsole() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizePayrollYearEndRuntimeMessage(
+      supabaseSessionError,
+      locale,
+      "인증 세션 상태를 확인하지 못했습니다."
+    );
+  }, [locale, supabaseSessionError]);
 
   function buildHeaders() {
     const headers: Record<string, string> = {
@@ -102,7 +116,7 @@ export default function PayrollYearEndPreflightConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        setStatusMessage(extractPayrollYearEndErrorMessage(body, locale, copy.statusRequestFailed));
         return;
       }
       setChecklist(body);
@@ -113,7 +127,11 @@ export default function PayrollYearEndPreflightConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.statusInvalidInput)
+          : copy.statusInvalidInput
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -141,7 +159,11 @@ export default function PayrollYearEndPreflightConsole() {
             <button className="btn btn-primary" onClick={() => void runLoadChecklist()} disabled={pendingLabel !== null}>{copy.loadPreflightChecklistAction}</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {normalizedSupabaseSessionError ? (
+            <p className="small fail">
+              {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
+            </p>
+          ) : null}
         </article>
 
         <article className="panel">

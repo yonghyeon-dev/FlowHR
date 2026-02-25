@@ -292,5 +292,6 @@ export function currentYear() {
 }
 
 export function formatKrw(value: number, runtimeLocale = "ko-KR") {
-  return `${value.toLocaleString(runtimeLocale)} KRW`;
+  const unitLabel = runtimeLocale.toLowerCase().startsWith("ko") ? "원" : " KRW";
+  return `${value.toLocaleString(runtimeLocale)}${unitLabel}`;
 }
