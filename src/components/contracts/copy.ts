@@ -1,4 +1,4 @@
-import { type FlowLocale } from "@/lib/i18n/locales";
+﻿import { type FlowLocale } from "@/lib/i18n/locales";
 
 export type ContractCategory = "employment" | "amendment" | "nda" | "policy";
 export type ContractTemplateStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
@@ -165,12 +165,12 @@ export const adminContractsCopyByLocale: Record<FlowLocale, AdminContractsCopy> 
     actionFailedPrefix: "작업 실패",
     templateCreatedMessage: "템플릿을 생성했습니다",
     draftCreatedMessage: "문서 초안을 생성했습니다",
-    loadError: "계약 데이터를 불러오지 못했습니다",
+    loadError: "계약 데이터를 불러오지 못했습니다.",
     templateCreateError: "템플릿 생성에 실패했습니다",
     draftCreateError: "문서 생성에 실패했습니다",
     requiredTemplateAndEmployeeError: "템플릿과 직원 번호를 입력해 주세요",
     manualExpireReason: "관리자 수동 만료",
-    draftTitlePrefix: "계약서"
+    draftTitlePrefix: "계약"
   },
   en: adminContractsCopyEn
 };
@@ -227,7 +227,7 @@ export const contractTemplateBuilderCopyByLocale: Record<FlowLocale, ContractTem
   ko: {
     heroEyebrow: "FlowHR 관리자",
     title: "계약 템플릿 빌더",
-    description: "조항 블록을 구성하고 예측 가능한 본문을 생성해 계약 템플릿 초안을 만듭니다.",
+    description: "조항 블록을 구성하고 일관된 본문을 생성해 계약 템플릿 초안을 만듭니다.",
     builderTitle: "빌더",
     templateNameLabel: "템플릿 이름",
     categoryLabel: "카테고리",
@@ -240,7 +240,7 @@ export const contractTemplateBuilderCopyByLocale: Record<FlowLocale, ContractTem
     optionalChip: "선택",
     titleLabel: "제목",
     bodyLabel: "본문",
-    removeClauseAction: "조항 삭제",
+    removeClauseAction: "조항 제거",
     generatedBodyTitle: "생성 본문 미리보기",
     noClauseContent: "조항 내용이 없습니다.",
     noTemplateMessage: "템플릿을 생성하면 저장된 메타데이터를 확인할 수 있습니다.",
@@ -257,14 +257,14 @@ export const contractTemplateBuilderCopyByLocale: Record<FlowLocale, ContractTem
     defaultClauses: [
       {
         title: "직무 및 책임",
-        body: "직원은 담당 업무를 수행하고 내부 정책을 준수합니다."
+        body: "직원은 해당 업무를 수행하고 내부 정책을 준수합니다."
       },
       {
         title: "보상",
         body: "월 보상과 급여 일정은 회사 정책을 따릅니다."
       },
       {
-        title: "기밀유지",
+        title: "기밀 유지",
         body: "직원은 회사의 기밀 정보를 보호해야 합니다."
       }
     ]
@@ -321,17 +321,17 @@ export const employeeContractsCopyByLocale: Record<FlowLocale, EmployeeContracts
     description: "대기 중인 계약을 검토하고 서명 해시 검증 기반으로 응답하세요.",
     inboxTitle: "받은함",
     inboxAria: "직원 계약 받은함 목록",
-    inboxSearchLabel: "\uBC1B\uC740\uD568 \uAC80\uC0C9",
-    inboxSearchPlaceholder: "\uC81C\uBAA9/\uBB38\uC11C \uBC88\uD638/\uC0C1\uD0DC \uAC80\uC0C9",
-    clearSearchAction: "\uAC80\uC0C9 \uCD08\uAE30\uD654",
-    visibleCountLabel: "\uD45C\uC2DC \uBB38\uC11C",
-    inboxFilteredEmpty: "\uD604\uC7AC \uAC80\uC0C9 \uC870\uAC74\uC5D0 \uB9DE\uB294 \uBB38\uC11C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    inboxSearchLabel: "받은함 검색",
+    inboxSearchPlaceholder: "제목/문서 번호/상태 검색",
+    clearSearchAction: "검색 초기화",
+    visibleCountLabel: "표시 문서",
+    inboxFilteredEmpty: "현재 검색 조건에 맞는 문서가 없습니다.",
     approvalPrefix: "승인",
     expiresPrefix: "만료",
     selectAction: "선택",
     responseTitle: "응답",
     noDocumentMessage: "표시할 문서가 없습니다.",
-    detailAria: "선택한 직원 계약 상세",
+    detailAria: "선택된 직원 계약 상세",
     idLabel: "문서 번호",
     statusLabel: "상태",
     hashLabel: "해시",
@@ -339,7 +339,7 @@ export const employeeContractsCopyByLocale: Record<FlowLocale, EmployeeContracts
     respondedLabel: "응답",
     signatureHashLabel: "서명 해시",
     evidenceHashLabel: "증빙 해시",
-    signatureInputLabel: "서명 입력 (서명 시 필수)",
+    signatureInputLabel: "서명 입력(서명 시 필수)",
     commentLabel: "의견",
     signAction: "서명",
     rejectAction: "거절",
@@ -349,10 +349,10 @@ export const employeeContractsCopyByLocale: Record<FlowLocale, EmployeeContracts
     generatedAtLabel: "생성 시각",
     contentShaLabel: "콘텐츠 해시값",
     downloadEvidenceAction: "증빙 다운로드",
-    signedMessage: "계약에 서명했습니다",
+    signedMessage: "계약을 서명했습니다",
     rejectedMessage: "계약을 거절했습니다",
     evidenceLoadedPrefix: "증빙 파일을 불러왔습니다",
-    loadError: "계약함을 불러오지 못했습니다",
+    loadError: "계약함을 불러오지 못했습니다.",
     respondError: "응답 처리에 실패했습니다",
     evidenceLoadError: "증빙 파일 로드에 실패했습니다"
   },
