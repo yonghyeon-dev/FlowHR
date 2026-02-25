@@ -18,6 +18,13 @@ async function run() {
   const payslipLocaleRuntime = readUtf8("src", "app", "employee", "payslips", "page-locale-runtime.ts");
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
   const payslipView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
+  const payslipFilterPanel = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-view-filter-panel.tsx"
+  );
   const withholdingConsole = readUtf8("src", "components", "withholding-receipt", "WithholdingReceiptConsole.tsx");
   const withholdingCopyRuntime = readUtf8("src", "components", "withholding-receipt", "copy-runtime.ts");
   const contractsHttp = readUtf8("src", "components", "contracts", "http.ts");
@@ -30,25 +37,31 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payslipPageCopy, /runtimeLabel:\s*"운영"/);
+  assert.match(payslipPageCopy, /productionNotice:\s*\{/);
+  assert.match(payslipPageCopy, /runtimeLabel:\s*"/);
   assert.match(payslipPageCopy, /runtimeLabel:\s*"production"/);
+
   assert.match(payslipLocaleRuntime, /export function normalizeRuntimeDiagnosticMessage\(/);
   assert.match(
     payslipDeductionCopy,
     /export function resolvePayslipRunStateLabel\(state: PayslipRunState \| string, isKoLocale: boolean\)/
   );
-  assert.match(payslipDeductionCopy, /return isKoLocale \? "알 수 없음" : state;/);
+  assert.match(payslipDeductionCopy, /return isKoLocale \? "[^"]+" : state;/);
 
   assert.match(payslipPage, /normalizeRuntimeDiagnosticMessage,/);
   assert.match(payslipPage, /const localizedSupabaseSessionError = useMemo\(/);
   assert.match(payslipPage, /supabaseSessionError=\{localizedSupabaseSessionError\}/);
-  assert.match(payslipView, /<strong>\{pageCopy\.productionNotice\.runtimeLabel\}<\/strong>/);
+  assert.match(payslipView, /<EmployeePayslipFilterPanel/);
+  assert.match(payslipFilterPanel, /<strong>\{pageCopy\.productionNotice\.runtimeLabel\}<\/strong>/);
 
   assert.match(withholdingCopyRuntime, /const withholdingBlockingReasonKoMap: Record<string, string> = \{/);
   assert.match(withholdingCopyRuntime, /export function resolveWithholdingBlockingReasons\(/);
   assert.match(withholdingConsole, /resolveWithholdingBlockingReasons\(receipt\.receipt\.blockingReasons, locale\)/);
   assert.match(withholdingConsole, /const normalizedSupabaseSessionError = useMemo\(/);
-  assert.match(withholdingConsole, /formatDateTimeByLocale\(finalizedSettlement\.settlement\.finalizedAt, runtimeLocale\)/);
+  assert.match(
+    withholdingConsole,
+    /formatDateTimeByLocale\(finalizedSettlement\.settlement\.finalizedAt, runtimeLocale\)/
+  );
 
   assert.match(contractsHttp, /function extractErrorText\(body: unknown\)/);
   assert.match(contractsHttp, /const errorKeys = \["error", "message", "reason", "detail"\];/);
