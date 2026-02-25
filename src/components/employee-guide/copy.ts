@@ -111,15 +111,15 @@ export const employeeGuideCopyByLocale: Record<FlowLocale, EmployeeGuideCopy> = 
     productionWarning: "프로덕션 환경에서는 API 호출을 위해 베어러 토큰 세션이 필요합니다.",
     loginCta: "로그인 열기",
     contextTitle: "컨텍스트",
-    organizationIdLabel: "조직 ID",
-    employeeIdLabel: "직원 ID",
+    organizationIdLabel: "조직 식별자",
+    employeeIdLabel: "직원 번호",
     accessTokenLabel: "액세스 토큰(선택)",
     loadButton: "가이드 상태 새로고침",
     loadingLabel: "가이드 상태를 불러오는 중입니다...",
     progressLabel: "가이드 진척도",
     journeyTitle: "권장 시작 경로",
     journeySteps: [
-      "1) 계정 컨텍스트(조직/직원 ID)를 먼저 확인합니다.",
+      "1) 계정 컨텍스트(조직/직원 번호)를 먼저 확인합니다.",
       "2) 근태 정정 요청 1건을 제출해 승인 흐름을 확인합니다.",
       "3) 휴가 요청 1건을 제출하고 상태를 확인합니다.",
       "4) 급여 명세서를 열어 최신 확정 급여를 확인합니다."
@@ -144,7 +144,7 @@ export const employeeGuideCopyByLocale: Record<FlowLocale, EmployeeGuideCopy> = 
       leave: "휴가 요청",
       payslip: "확정 명세"
     },
-    logsTitle: "API 로그",
+    logsTitle: "요청 로그",
     logsEmpty: "아직 로그가 없습니다.",
     doneLabel: "완료",
     todoLabel: "진행 필요",

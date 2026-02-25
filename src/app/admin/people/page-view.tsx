@@ -201,11 +201,11 @@ export function AdminPeoplePageView({
           <h2>{isKoLocale ? "필터" : "Filters"}</h2>
           <div className="input-grid">
             <label>
-              {isKoLocale ? "조직 ID" : "Organization ID"}
+              {isKoLocale ? "조직 식별자" : "Organization ID"}
               <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
             </label>
             <label>
-              {isKoLocale ? "관리자 액터 ID" : "Admin actor ID"}
+              {isKoLocale ? "관리자 액터 식별자" : "Admin actor ID"}
               <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
             </label>
             <label>

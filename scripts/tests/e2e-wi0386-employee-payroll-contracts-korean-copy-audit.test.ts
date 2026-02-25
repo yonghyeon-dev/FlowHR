@@ -55,6 +55,9 @@ async function run() {
   const payslipPageSource = readFileSync(
     join(process.cwd(), "src", "app", "employee", "payslips", "page.tsx")
   ).toString("latin1");
+  const payslipPageViewSource = readFileSync(
+    join(process.cwd(), "src", "app", "employee", "payslips", "page-view.tsx")
+  ).toString("latin1");
   const contractsCopySource = readUtf8("src", "components", "contracts", "copy.ts");
   const workItem = readUtf8(
     "work-items",
@@ -113,9 +116,9 @@ async function run() {
   );
   assert.match(payslipLocaleSource, /runId:\s*"실행 번호"/);
   assert.match(payslipLocaleKoBlock, /bearerStatusLabel:\s*"토큰 모드"/);
-  assert.match(payslipPageSource, /\(\{pageCopy\.devTools\.bearerStatusLabel\}/);
+  assert.match(payslipPageViewSource, /\(\{pageCopy\.devTools\.bearerStatusLabel\}/);
   assert.doesNotMatch(
-    payslipPageSource,
+    payslipPageViewSource,
     /\(Bearer \{usesBearerToken \? pageCopy\.devTools\.bearerOn : pageCopy\.devTools\.bearerOff\}\)/
   );
 

@@ -81,7 +81,7 @@ export function AdminAggregateLeavePanels({
         <h2>근태 집계</h2>
         <div className="input-grid">
           <label>
-            직원 ID (선택)
+            직원 번호 (선택)
             <input
               value={aggregateEmployeeId}
               onChange={(event) => onAggregateEmployeeIdChange(event.target.value)}
@@ -124,7 +124,7 @@ export function AdminAggregateLeavePanels({
         <p className="small">조직 단위 휴가 정책(연간 부여/이월 상한)을 저장하고, 정산 시 부여/이월 값을 비워두면 정책 기본값이 적용됩니다.</p>
         <div className="input-grid">
           <label>
-            직원 ID
+            직원 번호
             <input value={accrualEmployeeId} onChange={(event) => onAccrualEmployeeIdChange(event.target.value)} />
           </label>
           <label>

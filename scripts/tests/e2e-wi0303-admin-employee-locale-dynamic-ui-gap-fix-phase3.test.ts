@@ -52,8 +52,8 @@ async function run() {
     /isKoLocale\s*\?\s*"현재 환경은 "\s*:\s*"Current environment is "/
   );
   assert.match(adminChrome, /<p>\{isKoLocale \? "API 호출" : "API calls"\}<\/p>/);
-  assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "조직 ID" : "Organization ID"\}/);
-  assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "액터 ID \(선택\)" : "Actor ID \(optional\)"\}/);
+  assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "조직 식별자" : "Organization ID"\}/);
+  assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "액터 식별자 \(선택\)" : "Actor ID \(optional\)"\}/);
   assert.match(
     adminPayrollPanel,
     /\{isKoLocale \? "법정공제\(한국 기준\)" : "Statutory deductions \(KR baseline\)"\}/
@@ -66,7 +66,7 @@ async function run() {
   );
   assert.match(
     employeeAccountOverviewPanels,
-    /\{isKoLocale\s*\?\s*"조직 ID \(선택\)"\s*:\s*"Organization ID \(optional\)"\}/
+    /\{isKoLocale\s*\?\s*"조직 식별자 \(선택\)"\s*:\s*"Organization ID \(optional\)"\}/
   );
   assert.match(
     employeeAttendanceLeavePanels,

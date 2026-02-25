@@ -583,7 +583,7 @@ export default function AdminDashboardPage() {
       setLogs((prev) => [
         buildAdminValidationFailureLog({
           label: "휴가 정책 조회",
-          error: "조직 ID가 필요합니다.",
+          error: "조직 식별자가 필요합니다.",
           runtimeLocale
         }),
         ...prev
@@ -633,7 +633,7 @@ export default function AdminDashboardPage() {
       setLogs((prev) => [
         buildAdminValidationFailureLog({
           label: "휴가 정책 저장",
-          error: "조직 ID가 필요합니다.",
+          error: "조직 식별자가 필요합니다.",
           runtimeLocale
         }),
         ...prev

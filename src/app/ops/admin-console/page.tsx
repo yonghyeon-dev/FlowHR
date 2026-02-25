@@ -1230,7 +1230,7 @@ export default function HomePage() {
 
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input value={peopleEmployeeId} onChange={(event) => setPeopleEmployeeId(event.target.value)} />
             </label>
             <label>
@@ -1316,7 +1316,7 @@ export default function HomePage() {
           <h2>출퇴근 처리</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input
                 value={attendanceEmployeeId}
                 onChange={(event) => setAttendanceEmployeeId(event.target.value)}
@@ -1383,7 +1383,7 @@ export default function HomePage() {
           <h2>휴가 처리</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input value={leaveEmployeeId} onChange={(event) => setLeaveEmployeeId(event.target.value)} />
             </label>
             <label>
@@ -1443,7 +1443,7 @@ export default function HomePage() {
           <h2>급여 처리</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input
                 value={payrollEmployeeId}
                 onChange={(event) => setPayrollEmployeeId(event.target.value)}
@@ -1500,7 +1500,7 @@ export default function HomePage() {
           <h2>근무 일정</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input value={scheduleEmployeeId} onChange={(event) => setScheduleEmployeeId(event.target.value)} />
             </label>
             <label>

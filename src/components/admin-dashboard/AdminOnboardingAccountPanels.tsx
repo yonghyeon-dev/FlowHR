@@ -56,7 +56,7 @@ export function AdminOnboardingAccountPanels({
           {isKoLocale ? " 헤더를 생략합니다." : " header in Dev Header mode to bypass tenantScope restriction."}
         </p>
         <p className="small">
-          {isKoLocale ? "현재 선택된 조직 ID" : "Current organization ID"}: <code>{organizationId.trim() || "-"}</code>
+          {isKoLocale ? "현재 선택된 조직 식별자" : "Current organization ID"}: <code>{organizationId.trim() || "-"}</code>
         </p>
 
         <div className="input-grid">
@@ -130,7 +130,7 @@ export function AdminOnboardingAccountPanels({
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <label>
-                {isKoLocale ? "조직 ID" : "Organization ID"}
+                {isKoLocale ? "조직 식별자" : "Organization ID"}
                 <input
                   value={organizationId}
                   placeholder={isKoLocale ? "예: ORG-00001" : "e.g. ORG-00001"}
@@ -138,7 +138,7 @@ export function AdminOnboardingAccountPanels({
                 />
               </label>
               <label>
-                {isKoLocale ? "관리자 액터 ID" : "Admin actor ID"}
+                {isKoLocale ? "관리자 액터 식별자" : "Admin actor ID"}
                 <input value={adminActorId} onChange={(event) => onAdminActorIdChange(event.target.value)} />
               </label>
               {showDevTools ? (

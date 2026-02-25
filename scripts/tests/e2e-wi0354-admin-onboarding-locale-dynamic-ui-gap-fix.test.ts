@@ -17,7 +17,7 @@ async function run() {
   assert.match(copy, /heroEyebrow/);
   assert.match(copy, /leavePolicyFields/);
   assert.match(copy, /requestLabels/);
-  assert.match(copy, /organizationIdLabel: "조직 ID"/);
+  assert.match(copy, /organizationIdLabel: "조직 식별자"/);
   assert.match(copy, /doneLabel: "완료"/);
   assert.match(copy, /okLabel: "성공"/);
 
