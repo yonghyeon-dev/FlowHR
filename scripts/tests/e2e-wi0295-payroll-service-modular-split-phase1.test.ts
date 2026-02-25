@@ -33,6 +33,7 @@ async function run() {
     "year-end-filing-submission-query-helpers.ts"
   );
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPageState = readUtf8("src", "app", "admin", "page-state.ts");
   const adminPageHelpers = readUtf8("src", "app", "admin", "page-helpers.ts");
   const adminPageTypes = readUtf8("src", "app", "admin", "page-types.ts");
   const workItem = readUtf8(
@@ -73,9 +74,15 @@ async function run() {
   );
 
   assert.match(adminPage, /from \"@\/app\/admin\/page-helpers\"/);
-  assert.match(adminPage, /from \"@\/app\/admin\/page-types\"/);
+  assert.match(
+    `${adminPage}\n${adminPageState}`,
+    /from \"@\/app\/admin\/page-types\"/
+  );
   assert.match(adminPage, /const showDevTools = isTruthyFlag/);
-  assert.match(adminPage, /const \[periodStart, setPeriodStart\] = useState\(firstDayOfMonthLocal\(\)\)/);
+  assert.match(
+    `${adminPage}\n${adminPageState}`,
+    /const \[periodStart, setPeriodStart\] = useState\(firstDayOfMonthLocal\(\)\)/
+  );
 
   assert.match(adminPageHelpers, /export function buildQuery/);
   assert.match(adminPageHelpers, /export function toWaitHours/);
