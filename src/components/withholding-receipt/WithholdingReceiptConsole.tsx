@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
@@ -11,6 +10,10 @@ import type {
   WithholdingReceiptDocumentResponse,
   WithholdingReceiptResponse
 } from "@/components/withholding-receipt/types";
+import {
+  WithholdingLogsPanel,
+  WithholdingSummaryPanel
+} from "@/components/withholding-receipt/WithholdingReceiptPanels";
 import { currentYear } from "@/components/withholding-receipt/types";
 import { type FlowLocale } from "@/lib/i18n/locales";
 import { useI18n } from "@/lib/i18n/provider";
@@ -430,42 +433,72 @@ export default function WithholdingReceiptConsole() {
     return headers;
   }
 
-  async function previewReceipt() {
+  function isErrorPayload(value: unknown): value is { error: string } {
+    return typeof value === "object" && value !== null && "error" in value;
+  }
+
+  async function runRequest<T>({
+    label,
+    pending,
+    url,
+    method,
+    body
+  }: {
+    label: string;
+    pending: string;
+    url: string;
+    method: "GET" | "POST";
+    body?: Record<string, unknown>;
+  }) {
     try {
-      setPendingLabel(copy.pendingReceiptPreview);
-      const payload = {
-        year: parseRequiredInt(year, copy.yearLabel, locale),
-        employeeId: employeeId.trim(),
-        issue: false
-      };
-      const response = await fetch("/api/payroll/year-end/withholding-receipts", {
-        method: "POST",
+      setPendingLabel(pending);
+      const response = await fetch(url, {
+        method,
         headers: buildHeaders(),
-        body: JSON.stringify(payload)
+        body: body ? JSON.stringify(body) : undefined
       });
-      const body = (await response.json()) as WithholdingReceiptResponse | { error: string };
+      const payload = (await response.json()) as T | { error: string };
       setLogs((prev) => [
         {
           id: Date.now(),
-          label: copy.logPreviewReceipt,
+          label,
           status: response.status,
           ok: response.ok,
           at: new Date().toLocaleString(runtimeLocale)
         },
         ...prev
       ]);
-      if (!response.ok || "error" in body) {
+      if (!response.ok || isErrorPayload(payload)) {
         setStatusMessage(copy.requestFailedCheckLogsStatus);
-        return;
+        return null;
       }
-      setReceipt(body);
-      setStatusMessage(`${copy.loadedReceiptPrefix} ${body.receipt.receiptNumber}`);
-      setTimeout(() => setStatusMessage(""), 3000);
+      return payload as T;
     } catch {
       setStatusMessage(copy.invalidInputStatus);
+      return null;
     } finally {
       setPendingLabel(null);
     }
+  }
+
+  async function previewReceipt() {
+    const body = await runRequest<WithholdingReceiptResponse>({
+      label: copy.logPreviewReceipt,
+      pending: copy.pendingReceiptPreview,
+      url: "/api/payroll/year-end/withholding-receipts",
+      method: "POST",
+      body: {
+        year: parseRequiredInt(year, copy.yearLabel, locale),
+        employeeId: employeeId.trim(),
+        issue: false
+      }
+    });
+    if (!body) {
+      return;
+    }
+    setReceipt(body);
+    setStatusMessage(`${copy.loadedReceiptPrefix} ${body.receipt.receiptNumber}`);
+    setTimeout(() => setStatusMessage(""), 3000);
   }
 
   function downloadDocument(document: WithholdingReceiptDocumentResponse["document"]) {
@@ -481,80 +514,42 @@ export default function WithholdingReceiptConsole() {
   }
 
   async function loadIssuedDocument() {
-    try {
-      setPendingLabel(copy.pendingReceiptDocument);
-      const query = new URLSearchParams({
-        year: String(parseRequiredInt(year, copy.yearLabel, locale)),
-        employeeId: employeeId.trim(),
-        format: documentFormat
-      });
-      const response = await fetch(`/api/payroll/year-end/withholding-receipts?${query.toString()}`, {
-        method: "GET",
-        headers: buildHeaders()
-      });
-      const body = (await response.json()) as
-        | WithholdingReceiptDocumentResponse
-        | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logLoadDocument,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
-      if (!response.ok || "error" in body) {
-        setStatusMessage(copy.requestFailedCheckLogsStatus);
-        return;
-      }
-      setReceiptDocument(body);
-      setStatusMessage(`${copy.loadedDocumentPrefix} ${body.document.fileName}`);
-      setTimeout(() => setStatusMessage(""), 3000);
-    } catch {
-      setStatusMessage(copy.invalidInputStatus);
-    } finally {
-      setPendingLabel(null);
+    const query = new URLSearchParams({
+      year: String(parseRequiredInt(year, copy.yearLabel, locale)),
+      employeeId: employeeId.trim(),
+      format: documentFormat
+    });
+    const body = await runRequest<WithholdingReceiptDocumentResponse>({
+      label: copy.logLoadDocument,
+      pending: copy.pendingReceiptDocument,
+      url: `/api/payroll/year-end/withholding-receipts?${query.toString()}`,
+      method: "GET"
+    });
+    if (!body) {
+      return;
     }
+    setReceiptDocument(body);
+    setStatusMessage(`${copy.loadedDocumentPrefix} ${body.document.fileName}`);
+    setTimeout(() => setStatusMessage(""), 3000);
   }
 
   async function loadFinalizedSettlement() {
-    try {
-      setPendingLabel(copy.pendingFinalizedSettlement);
-      const query = new URLSearchParams({
-        year: String(parseRequiredInt(year, copy.yearLabel, locale)),
-        employeeId: employeeId.trim()
-      });
-      const response = await fetch(`/api/payroll/year-end/finalized-settlement?${query.toString()}`, {
-        method: "GET",
-        headers: buildHeaders()
-      });
-      const body = (await response.json()) as
-        | FinalizedYearEndSettlementResponse
-        | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logLoadFinalizedSettlement,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
-      if (!response.ok || "error" in body) {
-        setStatusMessage(copy.requestFailedCheckLogsStatus);
-        return;
-      }
-      setFinalizedSettlement(body);
-      setStatusMessage(`${copy.loadedFinalizedSettlementPrefix} ${body.settlement.finalizationId}`);
-      setTimeout(() => setStatusMessage(""), 3000);
-    } catch {
-      setStatusMessage(copy.invalidInputStatus);
-    } finally {
-      setPendingLabel(null);
+    const query = new URLSearchParams({
+      year: String(parseRequiredInt(year, copy.yearLabel, locale)),
+      employeeId: employeeId.trim()
+    });
+    const body = await runRequest<FinalizedYearEndSettlementResponse>({
+      label: copy.logLoadFinalizedSettlement,
+      pending: copy.pendingFinalizedSettlement,
+      url: `/api/payroll/year-end/finalized-settlement?${query.toString()}`,
+      method: "GET"
+    });
+    if (!body) {
+      return;
     }
+    setFinalizedSettlement(body);
+    setStatusMessage(`${copy.loadedFinalizedSettlementPrefix} ${body.settlement.finalizationId}`);
+    setTimeout(() => setStatusMessage(""), 3000);
   }
 
   const runGuardSnapshot = finalizedSettlement
@@ -585,6 +580,18 @@ export default function WithholdingReceiptConsole() {
   };
   const blockingReasonText = receipt
     ? resolveWithholdingBlockingReasons(receipt.receipt.blockingReasons, locale).join(" | ") || "-"
+    : "-";
+  const finalizedAtText = finalizedSettlement
+    ? formatDateTimeByLocale(finalizedSettlement.settlement.finalizedAt, runtimeLocale)
+    : "-";
+  const documentFormatTypeText = receiptDocument
+    ? `${resolveDocumentFormatLabel(receiptDocument.document.format)} / ${resolveContentTypeLabel(receiptDocument.document.contentType)}`
+    : "-";
+  const issuedAtText = receiptDocument
+    ? formatDateTimeByLocale(receiptDocument.document.issuedAt, runtimeLocale)
+    : "-";
+  const generatedAtText = receiptDocument
+    ? formatDateTimeByLocale(receiptDocument.document.generatedAt, runtimeLocale)
     : "-";
 
   return (
@@ -625,86 +632,28 @@ export default function WithholdingReceiptConsole() {
             </p>
           ) : null}
         </article>
-        <article className="panel">
-          <h2>{copy.receiptSummaryTitle}</h2>
-          {!receipt ? <p className="small">{copy.noReceiptSummary}</p> : (
-            <ul className="simple-list">
-              <li><span>{copy.receiptNumberLabel}</span><strong>{receipt.receipt.receiptNumber}</strong></li>
-              <li><span>{copy.canIssueIssuedLabel}</span><strong>{receipt.receipt.canIssue ? copy.yesLabel : copy.noLabel} / {receipt.receipt.issued ? copy.yesLabel : copy.noLabel}</strong></li>
-              <li><span>{copy.grossNetLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.grossPayKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.netPayKrw)}</strong></li>
-              <li><span>{copy.withholdingSocialLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.withholdingTaxKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.socialInsuranceKrw)}</strong></li>
-              <li><span>{copy.pendingReceiptRunsLabel}</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
-              <li><span>{copy.blockingReasonsLabel}</span><strong>{blockingReasonText}</strong></li>
-            </ul>
-          )}
-          {!finalizedSettlement ? <p className="small">{copy.noFinalizedSettlement}</p> : (
-            <ul className="simple-list">
-              <li><span>{copy.finalizationIdLabel}</span><strong>{finalizedSettlement.settlement.finalizationId}</strong></li>
-              <li>
-                <span>{copy.finalizedAtLabel}</span>
-                <strong>{formatDateTimeByLocale(finalizedSettlement.settlement.finalizedAt, runtimeLocale)}</strong>
-              </li>
-              <li><span>{copy.settlementHashLabel}</span><strong>{finalizedSettlement.settlement.settlementHash.slice(0, 16)}...</strong></li>
-              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
-              <li><span>{copy.priorWithheldLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.priorWithheldTaxKrw)}</strong></li>
-              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.withholdingDeltaKrw)}</strong></li>
-              <li><span>{copy.additionalDueRefundLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.additionalWithholdingDueKrw)} / {formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.withholdingRefundKrw)}</strong></li>
-              <li><span>{copy.runGuardSnapshotLabel}</span><strong>{runGuardSnapshot}</strong></li>
-            </ul>
-          )}
-          {!receiptDocument ? <p className="small">{copy.noIssuedDocument}</p> : (
-            <>
-              <ul className="simple-list">
-                <li><span>{copy.documentFileLabel}</span><strong>{receiptDocument.document.fileName}</strong></li>
-                <li>
-                  <span>{copy.formatTypeLabel}</span>
-                  <strong>
-                    {resolveDocumentFormatLabel(receiptDocument.document.format)} /{" "}
-                    {resolveContentTypeLabel(receiptDocument.document.contentType)}
-                  </strong>
-                </li>
-                <li>
-                  <span>{copy.issuedAtLabel}</span>
-                  <strong>{formatDateTimeByLocale(receiptDocument.document.issuedAt, runtimeLocale)}</strong>
-                </li>
-                <li>
-                  <span>{copy.generatedAtLabel}</span>
-                  <strong>{formatDateTimeByLocale(receiptDocument.document.generatedAt, runtimeLocale)}</strong>
-                </li>
-                <li><span>{copy.contentSha256Label}</span><strong>{receiptDocument.document.contentSha256.slice(0, 16)}...</strong></li>
-              </ul>
-              <div className="panel-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => downloadDocument(receiptDocument.document)}
-                >
-                  {copy.actionDownloadLoadedDocument}
-                </button>
-              </div>
-              <pre className="small">{receiptDocument.document.content.slice(0, 1000)}</pre>
-            </>
-          )}
-        </article>
-        <article className="panel">
-          <h2>{copy.apiLogsTitle}</h2>
-          <p className="small">
-            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
-            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? <p className="small">{copy.apiLogsEmpty}</p> : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/employee" className="btn btn-secondary">{copy.actionBackToEmployee}</Link>
-          </div>
-        </article>
+        <WithholdingSummaryPanel
+          title={copy.receiptSummaryTitle}
+          copy={copy}
+          receipt={receipt}
+          finalizedSettlement={finalizedSettlement}
+          receiptDocument={receiptDocument}
+          blockingReasonText={blockingReasonText}
+          runGuardSnapshot={runGuardSnapshot}
+          finalizedAtText={finalizedAtText}
+          documentFormatTypeText={documentFormatTypeText}
+          issuedAtText={issuedAtText}
+          generatedAtText={generatedAtText}
+          formatKrwByLocale={formatKrwByLocale}
+          onDownloadDocument={downloadDocument}
+        />
+        <WithholdingLogsPanel
+          title={copy.apiLogsTitle}
+          copy={copy}
+          logs={logs}
+          stats={stats}
+          pendingLabel={pendingLabel}
+        />
       </section>
     </main>
   );
