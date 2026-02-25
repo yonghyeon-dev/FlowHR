@@ -8,6 +8,8 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
+  const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
+  const payslipSurface = `${payslipPage}\n${payslipPageView}`;
   const payslipLocaleHelpers = readUtf8(
     "src",
     "app",
@@ -23,13 +25,13 @@ async function run() {
 
   assert.match(payslipPage, /from "@\/app\/employee\/payslips\/page-locale-helpers"/);
   assert.match(payslipPage, /resolvePayslipSearchSortCopy\(isKoLocale\)/);
-  assert.match(payslipPage, /formatDateTime\(run\.periodStart\)/);
-  assert.match(payslipPage, /formatKrw\(selectedRun\.netPayKrw\)/);
+  assert.match(payslipPageView, /formatDateTime\(run\.periodStart\)/);
+  assert.match(payslipPageView, /formatKrw\(selectedRun\.netPayKrw\)/);
 
-  assert.doesNotMatch(payslipPage, /function resolveRuntimeLocale\(\)/);
-  assert.doesNotMatch(payslipPage, /function formatDateTime\(value: string \| null\)/);
-  assert.doesNotMatch(payslipPage, /function formatKrw\(value: number \| null\)/);
-  assert.doesNotMatch(payslipPage, /function formatDateOnly\(value: string \| null\)/);
+  assert.doesNotMatch(payslipSurface, /function resolveRuntimeLocale\(\)/);
+  assert.doesNotMatch(payslipSurface, /function formatDateTime\(value: string \| null\)/);
+  assert.doesNotMatch(payslipSurface, /function formatKrw\(value: number \| null\)/);
+  assert.doesNotMatch(payslipSurface, /function formatDateOnly\(value: string \| null\)/);
 
   assert.match(payslipLocaleHelpers, /export function resolveRuntimeLocale\(\)/);
   assert.match(payslipLocaleHelpers, /export function formatDateTime\(value: string \| null\)/);
