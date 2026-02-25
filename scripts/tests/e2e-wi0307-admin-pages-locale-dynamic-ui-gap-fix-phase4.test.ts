@@ -12,6 +12,12 @@ async function run() {
   const adminPeoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
   const adminPeopleSurface = `${adminPeoplePage}\n${adminPeoplePageView}`;
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeInteractionActions = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "page-interaction-actions.ts"
+  );
   const workItem = readUtf8("work-items", "WI-0307-admin-pages-locale-dynamic-ui-gap-fix-phase4.md");
   const roadmap = readUtf8("ROADMAP.md");
 
@@ -38,7 +44,10 @@ async function run() {
   assert.doesNotMatch(adminPeopleSurface, /Filter Reset/);
   assert.doesNotMatch(adminPeopleSurface, /History Change Summary/);
 
-  assert.match(employeePage, /feedback: feedbackCopy\.pendingRequestFilterApplied/);
+  assert.ok(
+    /feedback: feedbackCopy\.pendingRequestFilterApplied/.test(employeePage) ||
+      /feedback:\s*input\.feedbackCopy\.pendingRequestFilterApplied/.test(employeeInteractionActions)
+  );
 
   assert.match(workItem, /WI-0307/i);
   assert.match(workItem, /locale/i);
