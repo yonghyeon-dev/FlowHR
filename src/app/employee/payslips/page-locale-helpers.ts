@@ -215,6 +215,33 @@ function isRuntimeKoLocale() {
   return resolveRuntimeLocale().toLowerCase().startsWith("ko");
 }
 
+function hasHangulText(value: string) {
+  return /[\uac00-\ud7a3]/.test(value);
+}
+
+function isAsciiHeavyText(value: string) {
+  const compact = value.replace(/\s+/g, "");
+  if (compact.length === 0) {
+    return false;
+  }
+  const asciiCount = (compact.match(/[A-Za-z0-9]/g) ?? []).length;
+  return asciiCount / compact.length >= 0.6;
+}
+
+function normalizeLocaleErrorMessage(value: string, koLocale: boolean) {
+  const normalized = value.trim();
+  if (!koLocale) {
+    return normalized;
+  }
+  if (normalized.length === 0) {
+    return "요청 처리 중 오류가 발생했습니다.";
+  }
+  if (hasHangulText(normalized) || !isAsciiHeavyText(normalized)) {
+    return normalized;
+  }
+  return "요청 처리 중 오류가 발생했습니다.";
+}
+
 export function formatDateTime(value: string | null) {
   if (!value) {
     return "-";
@@ -241,20 +268,20 @@ export function extractErrorMessage(body: unknown) {
     return koLocale ? "원인을 확인할 수 없습니다." : "Unable to identify the cause.";
   }
   if (typeof body === "string") {
-    return body;
+    return normalizeLocaleErrorMessage(body, koLocale);
   }
   if (typeof body !== "object" || Array.isArray(body)) {
-    return String(body);
+    return normalizeLocaleErrorMessage(String(body), koLocale);
   }
 
   const candidateKeys = ["error", "message", "reason", "detail"];
   for (const key of candidateKeys) {
     const value = (body as Record<string, unknown>)[key];
     if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
+      return normalizeLocaleErrorMessage(value, koLocale);
     }
   }
-  return JSON.stringify(body);
+  return normalizeLocaleErrorMessage(JSON.stringify(body), koLocale);
 }
 
 export function formatDiffKrw(value: number | null) {

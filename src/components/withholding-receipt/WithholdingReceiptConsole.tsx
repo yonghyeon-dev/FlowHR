@@ -40,6 +40,8 @@ type WithholdingReceiptCopy = {
   organizationIdFallbackLabel: string;
   formatJsonLabel: string;
   formatTextLabel: string;
+  unknownFormatLabel: string;
+  unknownContentTypeLabel: string;
   actionPreviewReceipt: string;
   actionLoadFinalizedSettlement: string;
   actionLoadIssuedDocument: string;
@@ -111,6 +113,8 @@ const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>
     organizationIdFallbackLabel: "조직 식별자(개발 대체값)",
     formatJsonLabel: "구조 데이터",
     formatTextLabel: "텍스트",
+    unknownFormatLabel: "알 수 없는 형식",
+    unknownContentTypeLabel: "알 수 없는 타입",
     actionPreviewReceipt: "영수증 프리뷰",
     actionLoadFinalizedSettlement: "확정 정산 불러오기",
     actionLoadIssuedDocument: "발급 문서 불러오기",
@@ -180,6 +184,8 @@ const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>
     organizationIdFallbackLabel: "Organization ID (dev fallback)",
     formatJsonLabel: "JSON",
     formatTextLabel: "Text",
+    unknownFormatLabel: "Unknown format",
+    unknownContentTypeLabel: "Unknown type",
     actionPreviewReceipt: "Preview Receipt",
     actionLoadFinalizedSettlement: "Load Finalized Settlement",
     actionLoadIssuedDocument: "Load Issued Document",
@@ -420,8 +426,16 @@ export default function WithholdingReceiptConsole() {
   const runGuardSnapshot = finalizedSettlement
     ? `${copy.runGuardConfirmedLabel} ${finalizedSettlement.settlement.runStates.confirmedRuns}, ${copy.runGuardPreviewedLabel} ${finalizedSettlement.settlement.runStates.previewedRuns}, ${copy.runGuardUndistributedLabel} ${finalizedSettlement.settlement.runStates.undistributedRuns}, ${copy.runGuardPendingReceiptLabel} ${finalizedSettlement.settlement.runStates.pendingReceiptRuns}`
     : "";
-  const resolveDocumentFormatLabel = (format: "json" | "text") =>
-    format === "json" ? copy.formatJsonLabel : copy.formatTextLabel;
+  const resolveDocumentFormatLabel = (format: "json" | "text" | string) => {
+    const lowered = format.trim().toLowerCase();
+    if (lowered === "json") {
+      return copy.formatJsonLabel;
+    }
+    if (lowered === "text") {
+      return copy.formatTextLabel;
+    }
+    return copy.unknownFormatLabel;
+  };
   const resolveContentTypeLabel = (contentType: string) => {
     if (locale !== "ko") {
       return contentType;
@@ -433,7 +447,7 @@ export default function WithholdingReceiptConsole() {
     if (lowered === "text/plain") {
       return "텍스트 데이터";
     }
-    return contentType;
+    return copy.unknownContentTypeLabel;
   };
 
   return (

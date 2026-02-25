@@ -28,10 +28,13 @@ async function run() {
   assert.match(payslipLocale, /copyPdfFileName:\s*"문서 파일명 복사"/);
   assert.match(payslipLocale, /deductionBreakdownRaw:\s*"공제 원본\(구조 데이터\)"/);
 
-  assert.match(withholdingConsole, /const resolveDocumentFormatLabel = \(format: "json" \| "text"\) =>/);
+  assert.match(
+    withholdingConsole,
+    /const resolveDocumentFormatLabel = \(format: "json" \| "text"( \| string)?\) =>/
+  );
   assert.match(withholdingConsole, /const resolveContentTypeLabel = \(contentType: string\) =>/);
-  assert.match(withholdingConsole, /if \(lowered === "application\/json"\) \{\s*return "구조 데이터";/);
-  assert.match(withholdingConsole, /if \(lowered === "text\/plain"\) \{\s*return "텍스트 데이터";/);
+  assert.match(withholdingConsole, /if \(lowered === "application\/json"\)\s*\{\s*return "구조 데이터";/);
+  assert.match(withholdingConsole, /if \(lowered === "text\/plain"\)\s*\{\s*return "텍스트 데이터";/);
   assert.match(withholdingConsole, /resolveDocumentFormatLabel\(receiptDocument\.document\.format\)/);
   assert.match(withholdingConsole, /resolveContentTypeLabel\(receiptDocument\.document\.contentType\)/);
 
