@@ -9,7 +9,8 @@ import {
   toDateText,
 } from "@/components/contracts/copy";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
-import { readJson } from "@/components/contracts/http";
+import { normalizeContractsErrorMessageForRuntime, readJson } from "@/components/contracts/http";
+import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
 import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
@@ -37,7 +38,6 @@ export default function EmployeeContractsInbox() {
     [documents, selectedDocumentId]
   );
 
-
   const reload = useCallback(async () => {
     setError(null);
     const data = (await fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
@@ -48,7 +48,11 @@ export default function EmployeeContractsInbox() {
 
   useEffect(() => {
     reload().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : copy.loadError);
+      setError(
+        loadError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.loadError)
+          : copy.loadError
+      );
     });
   }, [copy.loadError, reload]);
 
@@ -82,7 +86,11 @@ export default function EmployeeContractsInbox() {
       setSignatureEvidence(null);
       await reload();
     } catch (responseError) {
-      setError(responseError instanceof Error ? responseError.message : copy.respondError);
+      setError(
+        responseError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(responseError.message, copy.respondError)
+          : copy.respondError
+      );
     }
   }
 
@@ -113,7 +121,11 @@ export default function EmployeeContractsInbox() {
       setSignatureEvidence(body.evidence);
       setMessage(`${copy.evidenceLoadedPrefix}: ${body.evidence.fileName}`);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : copy.evidenceLoadError);
+      setError(
+        loadError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.evidenceLoadError)
+          : copy.evidenceLoadError
+      );
     }
   }
 
@@ -141,7 +153,7 @@ export default function EmployeeContractsInbox() {
                 }`}
               >
                 <div className="contract-template-head">
-                  <strong>{document.title}</strong>
+                  <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
                   <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
                 </div>
                 <p>

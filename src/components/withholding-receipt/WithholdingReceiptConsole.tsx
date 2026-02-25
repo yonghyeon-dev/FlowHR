@@ -244,6 +244,92 @@ const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>
   }
 };
 
+const withholdingBlockingReasonKoMap: Record<string, string> = {
+  "no confirmed payroll runs found for selected year": "선택한 연도에 확정된 급여 실행이 없습니다.",
+  "all payroll runs must be confirmed before withholding receipt issue":
+    "원천징수영수증 발급 전 모든 급여 실행이 확정되어야 합니다.",
+  "all confirmed runs must be distributed before withholding receipt issue":
+    "원천징수영수증 발급 전 확정된 실행이 모두 배포되어야 합니다.",
+  "all distributed runs must have payslip receipt confirmation before withholding receipt issue":
+    "원천징수영수증 발급 전 배포된 실행의 명세서 수신 확인이 필요합니다.",
+  "personalPensionKrw deduction is not eligible for selected employee/year":
+    "개인연금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "insurancePremiumKrw deduction is not eligible for selected employee/year":
+    "보험료 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "medicalExpenseKrw deduction is not eligible for selected employee/year":
+    "의료비 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "educationExpenseKrw deduction is not eligible for selected employee/year":
+    "교육비 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "donationKrw deduction is not eligible for selected employee/year":
+    "기부금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "housingSavingsKrw deduction is not eligible for selected employee/year":
+    "주택저축 공제는 선택한 직원/연도에 적용 대상이 아닙니다."
+};
+
+function hasHangulText(value: string) {
+  return /[\uac00-\ud7a3]/.test(value);
+}
+
+function isAsciiHeavyText(value: string) {
+  const compact = value.replace(/\s+/g, "");
+  if (compact.length === 0) {
+    return false;
+  }
+  const asciiCount = (compact.match(/[A-Za-z0-9]/g) ?? []).length;
+  return asciiCount / compact.length >= 0.6;
+}
+
+function normalizeRuntimeDiagnosticMessage(
+  value: string,
+  locale: FlowLocale,
+  koFallback: string
+) {
+  const normalized = value.trim();
+  if (locale !== "ko") {
+    return normalized;
+  }
+  if (normalized.length === 0) {
+    return koFallback;
+  }
+  if (hasHangulText(normalized) || !isAsciiHeavyText(normalized)) {
+    return normalized;
+  }
+  return koFallback;
+}
+
+function resolveWithholdingBlockingReasonLabel(reason: string, locale: FlowLocale) {
+  const normalized = reason.trim();
+  if (locale !== "ko") {
+    return normalized;
+  }
+  if (normalized.length === 0) {
+    return "발급 조건을 확인할 수 없습니다.";
+  }
+  if (normalized in withholdingBlockingReasonKoMap) {
+    return withholdingBlockingReasonKoMap[normalized];
+  }
+  return normalizeRuntimeDiagnosticMessage(
+    normalized,
+    locale,
+    "발급 조건을 충족하지 않아 원천징수영수증을 발급할 수 없습니다."
+  );
+}
+
+function resolveWithholdingBlockingReasons(reasons: string[], locale: FlowLocale) {
+  return reasons.map((reason) => resolveWithholdingBlockingReasonLabel(reason, locale));
+}
+
+function formatDateTimeByLocale(value: string | null | undefined, runtimeLocale: string) {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString(runtimeLocale);
+}
+
 export default function WithholdingReceiptConsole() {
   const { locale } = useI18n();
   const copy = withholdingReceiptCopyByLocale[locale];
@@ -279,6 +365,16 @@ export default function WithholdingReceiptConsole() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizeRuntimeDiagnosticMessage(
+      supabaseSessionError,
+      locale,
+      "인증 세션 상태를 확인하지 못했습니다."
+    );
+  }, [locale, supabaseSessionError]);
 
   function buildHeaders() {
     const headers: Record<string, string> = {
@@ -449,6 +545,9 @@ export default function WithholdingReceiptConsole() {
     }
     return copy.unknownContentTypeLabel;
   };
+  const blockingReasonText = receipt
+    ? resolveWithholdingBlockingReasons(receipt.receipt.blockingReasons, locale).join(" | ") || "-"
+    : "-";
 
   return (
     <main className="saas-content">
@@ -482,7 +581,11 @@ export default function WithholdingReceiptConsole() {
             <button className="btn btn-secondary" onClick={() => void loadIssuedDocument()} disabled={pendingLabel !== null}>{copy.actionLoadIssuedDocument}</button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {normalizedSupabaseSessionError ? (
+            <p className="small fail">
+              {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
+            </p>
+          ) : null}
         </article>
         <article className="panel">
           <h2>{copy.receiptSummaryTitle}</h2>
@@ -493,13 +596,16 @@ export default function WithholdingReceiptConsole() {
               <li><span>{copy.grossNetLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.grossPayKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.netPayKrw)}</strong></li>
               <li><span>{copy.withholdingSocialLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.withholdingTaxKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.socialInsuranceKrw)}</strong></li>
               <li><span>{copy.pendingReceiptRunsLabel}</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
-              <li><span>{copy.blockingReasonsLabel}</span><strong>{receipt.receipt.blockingReasons.join(" | ") || "-"}</strong></li>
+              <li><span>{copy.blockingReasonsLabel}</span><strong>{blockingReasonText}</strong></li>
             </ul>
           )}
           {!finalizedSettlement ? <p className="small">{copy.noFinalizedSettlement}</p> : (
             <ul className="simple-list">
               <li><span>{copy.finalizationIdLabel}</span><strong>{finalizedSettlement.settlement.finalizationId}</strong></li>
-              <li><span>{copy.finalizedAtLabel}</span><strong>{finalizedSettlement.settlement.finalizedAt}</strong></li>
+              <li>
+                <span>{copy.finalizedAtLabel}</span>
+                <strong>{formatDateTimeByLocale(finalizedSettlement.settlement.finalizedAt, runtimeLocale)}</strong>
+              </li>
               <li><span>{copy.settlementHashLabel}</span><strong>{finalizedSettlement.settlement.settlementHash.slice(0, 16)}...</strong></li>
               <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.annualTaxLiabilityKrw)}</strong></li>
               <li><span>{copy.priorWithheldLabel}</span><strong>{formatKrwByLocale(finalizedSettlement.settlement.settlementKrw.priorWithheldTaxKrw)}</strong></li>
@@ -519,8 +625,14 @@ export default function WithholdingReceiptConsole() {
                     {resolveContentTypeLabel(receiptDocument.document.contentType)}
                   </strong>
                 </li>
-                <li><span>{copy.issuedAtLabel}</span><strong>{receiptDocument.document.issuedAt}</strong></li>
-                <li><span>{copy.generatedAtLabel}</span><strong>{receiptDocument.document.generatedAt}</strong></li>
+                <li>
+                  <span>{copy.issuedAtLabel}</span>
+                  <strong>{formatDateTimeByLocale(receiptDocument.document.issuedAt, runtimeLocale)}</strong>
+                </li>
+                <li>
+                  <span>{copy.generatedAtLabel}</span>
+                  <strong>{formatDateTimeByLocale(receiptDocument.document.generatedAt, runtimeLocale)}</strong>
+                </li>
                 <li><span>{copy.contentSha256Label}</span><strong>{receiptDocument.document.contentSha256.slice(0, 16)}...</strong></li>
               </ul>
               <div className="panel-actions">

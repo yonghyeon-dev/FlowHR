@@ -38,8 +38,33 @@ function shouldSuppressRawEnglishMessage(message: string, koRuntime: boolean) {
   return asciiCount / normalized.length >= 0.6;
 }
 
-export async function readJson(response: Response, fallbackMessage?: string) {
+function extractErrorText(body: unknown) {
+  if (typeof body === "string" && body.trim().length > 0) {
+    return body;
+  }
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return null;
+  }
+  const errorKeys = ["error", "message", "reason", "detail"];
+  for (const key of errorKeys) {
+    const value = (body as Record<string, unknown>)[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
+export function normalizeContractsErrorMessageForRuntime(message: string, fallbackMessage: string) {
   const koRuntime = isKoRuntimeLocale();
+  const normalized = message.trim();
+  if (normalized.length === 0) {
+    return fallbackMessage;
+  }
+  return shouldSuppressRawEnglishMessage(normalized, koRuntime) ? fallbackMessage : normalized;
+}
+
+export async function readJson(response: Response, fallbackMessage?: string) {
   let body: unknown;
   try {
     body = await response.json();
@@ -48,13 +73,9 @@ export async function readJson(response: Response, fallbackMessage?: string) {
   }
 
   if (!response.ok) {
-    const rawMessage =
-      typeof body === "object" && body !== null && "error" in body
-        ? String((body as { error: unknown }).error)
-        : fallbackMessage ?? resolveContractsHttpFallbackMessage(response.status);
-    const message = shouldSuppressRawEnglishMessage(rawMessage, koRuntime)
-      ? fallbackMessage ?? resolveContractsHttpFallbackMessage(response.status)
-      : rawMessage;
+    const resolvedFallbackMessage = fallbackMessage ?? resolveContractsHttpFallbackMessage(response.status);
+    const rawMessage = extractErrorText(body) ?? resolvedFallbackMessage;
+    const message = normalizeContractsErrorMessageForRuntime(rawMessage, resolvedFallbackMessage);
     throw new Error(message);
   }
 

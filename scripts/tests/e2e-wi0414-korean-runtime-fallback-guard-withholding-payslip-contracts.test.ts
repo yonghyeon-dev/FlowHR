@@ -41,10 +41,11 @@ async function run() {
   );
 
   assert.match(contractsHttp, /function shouldSuppressRawEnglishMessage\(/);
+  assert.match(contractsHttp, /export function normalizeContractsErrorMessageForRuntime\(/);
   assert.match(contractsHttp, /const koRuntime = isKoRuntimeLocale\(\);/);
   assert.match(
     contractsHttp,
-    /const message = shouldSuppressRawEnglishMessage\(rawMessage, koRuntime\)/
+    /const message = normalizeContractsErrorMessageForRuntime\(rawMessage, resolvedFallbackMessage\);/
   );
 
   assert.match(withholdingConsole, /unknownFormatLabel: string;/);
