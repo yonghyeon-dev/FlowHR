@@ -9,11 +9,14 @@ import { useI18n } from "@/lib/i18n/provider";
 import {
   type DeductionDescriptionMap,
   extractErrorMessage,
+  formatCompareWindowLabel,
   formatDateOnly,
   formatDateTime,
   formatDiffKrw,
   formatKrw,
   formatMonthLabel,
+  resolveCompareInsightAriaLabel,
+  resolveCompareInsightTitle,
   resolveDeductionDescriptionMap,
   resolvePayslipPageCopy,
   resolvePayslipRunStateLabel,
@@ -21,6 +24,7 @@ import {
 } from "@/app/employee/payslips/page-locale-helpers";
 
 import {
+  buildCompareMetrics,
   buildCompareInsightCards,
   buildQuery,
   escapeCsv,
@@ -32,8 +36,6 @@ import {
   matchesPayslipSearch,
   minutesToHours,
   previousMonthRangeLocal,
-  safeDiff,
-  safeDiffRate,
   sortPayslipSearchRows,
   toBreakdownRecord,
   toIso,
@@ -202,46 +204,15 @@ export default function EmployeePayslipsPage() {
   }, [compareCandidates, compareRunId]);
 
   const compareMetrics = useMemo<CompareMetric[]>(() => {
-    if (!selectedRun || !compareRun) {
-      return [];
-    }
-
-    const rows: Array<{ id: string; label: string; selectedValue: number | null; compareValue: number | null }> = [
-      {
-        id: "gross",
-        label: pageCopy.compare.metrics.gross,
-        selectedValue: selectedRun.grossPayKrw,
-        compareValue: compareRun.grossPayKrw
-      },
-      {
-        id: "deduction",
-        label: pageCopy.compare.metrics.deduction,
-        selectedValue: selectedRun.totalDeductionsKrw,
-        compareValue: compareRun.totalDeductionsKrw
-      },
-      {
-        id: "net",
-        label: pageCopy.compare.metrics.net,
-        selectedValue: selectedRun.netPayKrw,
-        compareValue: compareRun.netPayKrw
-      }
-    ];
-
-    return rows.map((row) => ({
-      ...row,
-      diffValue: safeDiff(row.selectedValue, row.compareValue),
-      diffRate: safeDiffRate(row.selectedValue, row.compareValue)
-    }));
+    return buildCompareMetrics(selectedRun, compareRun, pageCopy.compare.metrics);
   }, [compareRun, pageCopy.compare.metrics.deduction, pageCopy.compare.metrics.gross, pageCopy.compare.metrics.net, selectedRun]);
 
   const compareInsightCards = useMemo<CompareInsightCard[]>(() => {
     return buildCompareInsightCards(compareMetrics, isKoLocale);
   }, [compareMetrics, isKoLocale]);
 
-  const compareInsightTitle = isKoLocale ? "전월 대비 설명" : "Month-over-month explanation";
-  const compareInsightAriaLabel = isKoLocale
-    ? "전월 대비 설명 카드"
-    : "Month-over-month explanation cards";
+  const compareInsightTitle = useMemo(() => resolveCompareInsightTitle(isKoLocale), [isKoLocale]);
+  const compareInsightAriaLabel = useMemo(() => resolveCompareInsightAriaLabel(isKoLocale), [isKoLocale]);
 
   const compareWindowLabel = useMemo(() => {
     if (!selectedRun || !compareRun) {
@@ -249,7 +220,7 @@ export default function EmployeePayslipsPage() {
     }
     const selectedLabel = `${formatDateOnly(selectedRun.periodStart)} ~ ${formatDateOnly(selectedRun.periodEnd)}`;
     const compareLabel = `${formatDateOnly(compareRun.periodStart)} ~ ${formatDateOnly(compareRun.periodEnd)}`;
-    return isKoLocale ? `${selectedLabel} 대비 ${compareLabel}` : `${selectedLabel} vs ${compareLabel}`;
+    return formatCompareWindowLabel(selectedLabel, compareLabel, isKoLocale);
   }, [compareRun, isKoLocale, selectedRun]);
 
   const fixedDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {

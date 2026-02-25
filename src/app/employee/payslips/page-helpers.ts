@@ -237,6 +237,43 @@ export function safeDiffRate(selectedValue: number | null, compareValue: number 
   return ((selectedValue - compareValue) / compareValue) * 100;
 }
 
+export function buildCompareMetrics(
+  selectedRun: PayrollRunDto | null,
+  compareRun: PayrollRunDto | null,
+  labels: { gross: string; deduction: string; net: string }
+): CompareMetric[] {
+  if (!selectedRun || !compareRun) {
+    return [];
+  }
+
+  const rows: Array<{ id: string; label: string; selectedValue: number | null; compareValue: number | null }> = [
+    {
+      id: "gross",
+      label: labels.gross,
+      selectedValue: selectedRun.grossPayKrw,
+      compareValue: compareRun.grossPayKrw
+    },
+    {
+      id: "deduction",
+      label: labels.deduction,
+      selectedValue: selectedRun.totalDeductionsKrw,
+      compareValue: compareRun.totalDeductionsKrw
+    },
+    {
+      id: "net",
+      label: labels.net,
+      selectedValue: selectedRun.netPayKrw,
+      compareValue: compareRun.netPayKrw
+    }
+  ];
+
+  return rows.map((row) => ({
+    ...row,
+    diffValue: safeDiff(row.selectedValue, row.compareValue),
+    diffRate: safeDiffRate(row.selectedValue, row.compareValue)
+  }));
+}
+
 export function formatPercent(value: number | null) {
   if (value === null) {
     return "-";

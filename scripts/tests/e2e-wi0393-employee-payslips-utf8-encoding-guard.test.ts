@@ -10,6 +10,7 @@ async function run() {
   const payslipPath = join(process.cwd(), "src", "app", "employee", "payslips", "page.tsx");
   const payslipRaw = readFileSync(payslipPath);
   const payslipSource = payslipRaw.toString("utf8");
+  const localeHelperSource = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const workItem = readUtf8("work-items", "WI-0393-employee-payslips-utf8-encoding-guard.md");
   const roadmap = readUtf8("ROADMAP.md");
 
@@ -21,14 +22,39 @@ async function run() {
 
   assert.match(
     payslipSource,
-    /const compareInsightTitle = isKoLocale \? "전월 대비 설명" : "Month-over-month explanation";/
+    /const compareInsightTitle = useMemo\(\(\) => resolveCompareInsightTitle\(isKoLocale\), \[isKoLocale\]\);/
   );
   assert.match(
     payslipSource,
-    /const compareInsightAriaLabel = isKoLocale[\s\S]*\? "전월 대비 설명 카드"/
+    /const compareInsightAriaLabel = useMemo\(\(\) => resolveCompareInsightAriaLabel\(isKoLocale\), \[isKoLocale\]\);/
   );
   assert.match(
     payslipSource,
+    /return formatCompareWindowLabel\(selectedLabel, compareLabel, isKoLocale\);/
+  );
+
+  assert.match(
+    localeHelperSource,
+    /export function resolveCompareInsightTitle\(isKoLocale: boolean\)/
+  );
+  assert.match(
+    localeHelperSource,
+    /return isKoLocale \? "전월 대비 설명" : "Month-over-month explanation";/
+  );
+  assert.match(
+    localeHelperSource,
+    /export function resolveCompareInsightAriaLabel\(isKoLocale: boolean\)/
+  );
+  assert.match(
+    localeHelperSource,
+    /return isKoLocale \? "전월 대비 설명 카드" : "Month-over-month explanation cards";/
+  );
+  assert.match(
+    localeHelperSource,
+    /export function formatCompareWindowLabel\([\s\S]*isKoLocale: boolean[\s\S]*\)/
+  );
+  assert.match(
+    localeHelperSource,
     /return isKoLocale \? `\$\{selectedLabel\} 대비 \$\{compareLabel\}` : `\$\{selectedLabel\} vs \$\{compareLabel\}`;/
   );
 

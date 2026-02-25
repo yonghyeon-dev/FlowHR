@@ -296,6 +296,22 @@ export function formatMonthLabel(value: string | null) {
   return new Intl.DateTimeFormat(runtimeLocale, { year: "numeric", month: "long" }).format(parsed);
 }
 
+export function resolveCompareInsightTitle(isKoLocale: boolean) {
+  return isKoLocale ? "전월 대비 설명" : "Month-over-month explanation";
+}
+
+export function resolveCompareInsightAriaLabel(isKoLocale: boolean) {
+  return isKoLocale ? "전월 대비 설명 카드" : "Month-over-month explanation cards";
+}
+
+export function formatCompareWindowLabel(
+  selectedLabel: string,
+  compareLabel: string,
+  isKoLocale: boolean
+) {
+  return isKoLocale ? `${selectedLabel} 대비 ${compareLabel}` : `${selectedLabel} vs ${compareLabel}`;
+}
+
 export function resolvePayslipSearchSortCopy(isKoLocale: boolean): PayslipSearchSortCopy {
   if (isKoLocale) {
     return {
