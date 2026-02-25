@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const adminSchedulingPanel = readUtf8("src", "components", "admin-dashboard", "AdminSchedulingPanel.tsx");
   const adminDebugLogsPanel = readUtf8("src", "components", "admin-dashboard", "AdminDebugLogsPanel.tsx");
   const queueHelpers = readUtf8("src", "app", "admin", "page-queue-helpers.ts");
@@ -20,7 +21,9 @@ async function run() {
     adminPage,
     /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
   );
-  assert.match(adminPage, /const \{\s*queueLabels,\s*workTypeLabels,\s*logStatusLabels,/);
+  assert.match(adminPage, /const \{ queueLabels, logStatusLabels \} = localeLabelBundle;/);
+  assert.match(adminPanels, /workTypeLabels/);
+  assert.match(adminPanels, /logStatusLabels/);
 
   assert.match(adminSchedulingPanel, /\{schedule\.isHoliday \? workTypeLabels\.holiday : workTypeLabels\.work\}/);
   assert.match(adminDebugLogsPanel, /\{log\.ok \? logStatusLabels\.success : logStatusLabels\.fail\}/);

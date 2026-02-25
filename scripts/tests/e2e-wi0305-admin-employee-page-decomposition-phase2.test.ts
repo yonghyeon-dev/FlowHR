@@ -32,6 +32,7 @@ async function run() {
   );
   const adminPayrollPanel = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const adminCompensationPanels = readUtf8("src", "app", "admin", "page-compensation-panels.tsx");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
 
   const employeeChrome = readUtf8("src", "components", "employee-dashboard", "EmployeeDashboardChrome.tsx");
   const employeeAccountOverviewPanels = readUtf8(
@@ -57,15 +58,9 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminPage, /from "@\/components\/admin-dashboard\/AdminDashboardChrome"/);
-  assert.match(adminPage, /from "@\/components\/admin-dashboard\/AdminOnboardingAccountPanels"/);
-  assert.match(adminPage, /from "@\/components\/admin-dashboard\/AdminPeopleInvitePanels"/);
-  assert.match(adminPage, /from "@\/components\/admin-dashboard\/AdminSchedulingPanel"/);
-  assert.match(adminPage, /from "@\/app\/admin\/page-compensation-panels"/);
+  assert.match(adminPage, /from "@\/app\/admin\/page-panels"/);
   assert.match(adminPage, /<AdminDashboardChrome/);
-  assert.match(adminPage, /<AdminOnboardingAccountPanels/);
-  assert.match(adminPage, /<AdminPeopleInvitePanels/);
-  assert.match(adminPage, /<AdminSchedulingPanel/);
-  assert.match(adminPage, /<AdminCompensationPanels/);
+  assert.match(adminPage, /<AdminDashboardPanels/);
   assert.doesNotMatch(adminPage, /<article className="panel" id="onboarding">/);
   assert.doesNotMatch(adminPage, /<article className="panel" id="payroll">/);
 
@@ -74,6 +69,14 @@ async function run() {
   assert.match(adminPeopleInvitePanels, /id="people"/);
   assert.match(adminPeopleInvitePanels, /id="invites"/);
   assert.match(adminSchedulingPanel, /id="scheduling"/);
+  assert.match(adminPanels, /from "@\/components\/admin-dashboard\/AdminOnboardingAccountPanels"/);
+  assert.match(adminPanels, /from "@\/components\/admin-dashboard\/AdminPeopleInvitePanels"/);
+  assert.match(adminPanels, /from "@\/components\/admin-dashboard\/AdminSchedulingPanel"/);
+  assert.match(adminPanels, /from "@\/app\/admin\/page-compensation-panels"/);
+  assert.match(adminPanels, /<AdminOnboardingAccountPanels/);
+  assert.match(adminPanels, /<AdminPeopleInvitePanels/);
+  assert.match(adminPanels, /<AdminSchedulingPanel/);
+  assert.match(adminPanels, /<AdminCompensationPanels/);
   assert.match(adminAggregateLeavePanels, /id="aggregates"/);
   assert.match(adminAggregateLeavePanels, /id="leave-policy"/);
   assert.match(adminPayrollPanel, /id="payroll"/);

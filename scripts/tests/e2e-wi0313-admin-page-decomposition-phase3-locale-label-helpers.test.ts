@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPageState = readUtf8("src", "app", "admin", "page-state.ts");
   const localeHelpers = readUtf8("src", "app", "admin", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -17,7 +18,7 @@ async function run() {
 
   assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
   assert.match(adminPage, /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/);
-  assert.match(adminPage, /isDefaultDemoOrganizationName\(previous\)/);
+  assert.match(adminPageState, /isDefaultDemoOrganizationName\(previous\)/);
 
   assert.doesNotMatch(adminPage, /const queueLabels = useMemo\(/);
   assert.doesNotMatch(adminPage, /const inviteRoleLabels = useMemo\(/);

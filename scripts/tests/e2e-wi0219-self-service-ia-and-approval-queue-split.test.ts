@@ -12,6 +12,7 @@ function countLines(source: string) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPanelsSource = readUtf8("src", "app", "admin", "page-panels.tsx");
   const employeePageSource = readUtf8("src", "app", "employee", "page.tsx");
   const employeeAccountOverviewPanelsSource = readUtf8(
     "src",
@@ -33,7 +34,11 @@ function run() {
     "EmployeeJourneyShortcutPanel.tsx"
   );
 
-  assert.match(adminPageSource, /ApprovalQueuePanel/, "admin page should render extracted approval queue component");
+  assert.ok(
+    /ApprovalQueuePanel/.test(adminPageSource) || /AdminDashboardPanels/.test(adminPageSource),
+    "admin page should render extracted approval queue component directly or via panel orchestrator"
+  );
+  assert.match(adminPanelsSource, /ApprovalQueuePanel/, "admin panel orchestrator should render approval queue");
   assert.doesNotMatch(
     adminPageSource,
     /<article className="panel" id="approvals">/,

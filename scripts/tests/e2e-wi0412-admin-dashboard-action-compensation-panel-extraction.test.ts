@@ -12,6 +12,7 @@ function countLines(source: string) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const dashboardActions = readUtf8("src", "app", "admin", "page-dashboard-actions.ts");
   const compensationPanels = readUtf8("src", "app", "admin", "page-compensation-panels.tsx");
   const workItem = readUtf8(
@@ -24,15 +25,17 @@ async function run() {
     adminPage,
     /import \{ buildAdminDashboardActions \} from "@\/app\/admin\/page-dashboard-actions";/
   );
+  assert.match(adminPage, /import \{ AdminDashboardPanels \} from "@\/app\/admin\/page-panels";/);
+  assert.match(adminPage, /const dashboardActions = buildAdminDashboardActions\(/);
+  assert.match(adminPage, /<AdminDashboardPanels/);
   assert.match(
-    adminPage,
+    adminPanels,
     /import \{ AdminCompensationPanels \} from "@\/app\/admin\/page-compensation-panels";/
   );
-  assert.match(adminPage, /const dashboardActions = buildAdminDashboardActions\(/);
-  assert.match(adminPage, /onRefreshInbox=\{\(\) => void dashboardActions\.refreshInbox\(\)\}/);
-  assert.match(adminPage, /onLoadLeavePolicy=\{\(\) => void dashboardActions\.loadLeavePolicy\(\)\}/);
-  assert.match(adminPage, /onPreviewPayroll=\{\(\) => void dashboardActions\.previewPayroll\(\)\}/);
-  assert.match(adminPage, /onClearLogs=\{dashboardActions\.clearLogs\}/);
+  assert.match(adminPanels, /onRefreshInbox=\{\(\) => void dashboardActions\.refreshInbox\(\)\}/);
+  assert.match(adminPanels, /onLoadLeavePolicy=\{\(\) => void dashboardActions\.loadLeavePolicy\(\)\}/);
+  assert.match(adminPanels, /onPreviewPayroll=\{\(\) => void dashboardActions\.previewPayroll\(\)\}/);
+  assert.match(adminPanels, /onClearLogs=\{dashboardActions\.clearLogs\}/);
 
   assert.doesNotMatch(adminPage, /const refreshInbox = useCallback\(/);
   assert.doesNotMatch(adminPage, /const previewPayroll = useCallback\(/);
@@ -56,6 +59,10 @@ async function run() {
   assert.ok(
     countLines(adminPage) < 800,
     `admin/page.tsx must stay under 800 lines after extraction (current: ${countLines(adminPage)})`
+  );
+  assert.ok(
+    countLines(adminPanels) <= 350,
+    `page-panels.tsx must stay <= 350 lines (current: ${countLines(adminPanels)})`
   );
   assert.ok(
     countLines(dashboardActions) <= 400,
