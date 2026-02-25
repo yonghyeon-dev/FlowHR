@@ -1,17 +1,8 @@
-﻿import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+﻿import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import ShellCard from "../components/ShellCard";
 import { resolveMobileLocale } from "../lib/mobileLocale";
 import { colors, spacing } from "../theme/tokens";
-
-function action(label, locale) {
-  const title = locale === "ko" ? "준비 중" : "Coming Soon";
-  const message =
-    locale === "ko"
-      ? `${label} 화면은 다음 WI에서 확장됩니다.`
-      : `${label} screen will be expanded in a follow-up WI.`;
-  Alert.alert(title, message);
-}
 
 const copyByLocale = {
   ko: {
@@ -29,7 +20,7 @@ const copyByLocale = {
     requestFollowUpAction: "요청 후속 조치 보기",
     payslipCardTitle: "명세서 확인",
     payslipCardDesc: "최신 명세서 수신/확인 상태를 확인합니다.",
-    payslipAction: "명세서 보기",
+    payslipsAction: "급여 명세서 열기",
     analyticsCardTitle: "분석 대시보드",
     analyticsCardDesc: "요청/알림 흐름 KPI를 모바일에서도 확인합니다.",
     analyticsAction: "분석 대시보드 열기",
@@ -38,10 +29,12 @@ const copyByLocale = {
     notificationCenterAction: "알림 센터 열기",
     notificationHistoryAction: "알림 이력 열기",
     extensionsCardTitle: "셀프서비스 확장",
-    extensionsCardDesc: "공지, 복리후생, 채용 화면을 웹으로 바로 연결합니다.",
+    extensionsCardDesc: "공지, 복리후생, 채용, 스케줄, 계약함 화면을 웹으로 바로 연결합니다.",
     noticesAction: "공지 열기",
     benefitsAction: "복리후생 열기",
     recruitmentAction: "채용 열기",
+    scheduleAction: "스케줄 열기",
+    contractsAction: "전자계약함 열기",
     tenantLabel: "tenant",
     actorLabel: "actor",
     logoutAction: "로그아웃"
@@ -61,7 +54,7 @@ const copyByLocale = {
     requestFollowUpAction: "Open Follow-Up",
     payslipCardTitle: "Payslip",
     payslipCardDesc: "Check latest payslip delivery and read status.",
-    payslipAction: "Open Payslip",
+    payslipsAction: "Open Payslips",
     analyticsCardTitle: "Analytics Dashboard",
     analyticsCardDesc: "Review request and notification KPIs on mobile.",
     analyticsAction: "Open Analytics",
@@ -70,10 +63,12 @@ const copyByLocale = {
     notificationCenterAction: "Open Notification Center",
     notificationHistoryAction: "Open Notification History",
     extensionsCardTitle: "Extended Self-Service",
-    extensionsCardDesc: "Jump to notices, benefits, and recruitment on web.",
+    extensionsCardDesc: "Jump to notices, benefits, recruitment, schedule, and contracts on web.",
     noticesAction: "Open Notices",
     benefitsAction: "Open Benefits",
     recruitmentAction: "Open Recruitment",
+    scheduleAction: "Open Schedule",
+    contractsAction: "Open Contracts",
     tenantLabel: "tenant",
     actorLabel: "actor",
     logoutAction: "Logout"
@@ -92,7 +87,10 @@ export default function EmployeeHomeScreen({
   onOpenNotificationHistory,
   onOpenNotices,
   onOpenBenefits,
-  onOpenRecruitment
+  onOpenRecruitment,
+  onOpenSchedule,
+  onOpenContracts,
+  onOpenPayslips
 }) {
   const locale = resolveMobileLocale();
   const copy = locale === "ko" ? copyByLocale.ko : copyByLocale.en;
@@ -129,8 +127,8 @@ export default function EmployeeHomeScreen({
 
         <ShellCard title={copy.payslipCardTitle}>
           <Text style={styles.desc}>{copy.payslipCardDesc}</Text>
-          <Pressable style={styles.btn} onPress={() => action(copy.payslipAction, locale)}>
-            <Text style={styles.btnText}>{copy.payslipAction}</Text>
+          <Pressable style={styles.btn} onPress={onOpenPayslips}>
+            <Text style={styles.btnText}>{copy.payslipsAction}</Text>
           </Pressable>
         </ShellCard>
 
@@ -164,6 +162,12 @@ export default function EmployeeHomeScreen({
             </Pressable>
             <Pressable style={styles.btn} onPress={onOpenRecruitment}>
               <Text style={styles.btnText}>{copy.recruitmentAction}</Text>
+            </Pressable>
+            <Pressable style={styles.btn} onPress={onOpenSchedule}>
+              <Text style={styles.btnText}>{copy.scheduleAction}</Text>
+            </Pressable>
+            <Pressable style={styles.btn} onPress={onOpenContracts}>
+              <Text style={styles.btnText}>{copy.contractsAction}</Text>
             </Pressable>
           </View>
         </ShellCard>
@@ -244,4 +248,3 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   }
 });
-

@@ -7,7 +7,8 @@ const referralStageSchema = z.enum([
   "INTERVIEW",
   "OFFER",
   "HIRED",
-  "REJECTED"
+  "REJECTED",
+  "WITHDRAWN"
 ]);
 
 export const listRecruitmentOpeningsQuerySchema = z.object({
@@ -41,4 +42,8 @@ export const createRecruitmentReferralSchema = z.object({
 export const updateRecruitmentReferralStageSchema = z.object({
   referralId: z.string().trim().min(1),
   stage: referralStageSchema
+});
+
+export const withdrawRecruitmentReferralSchema = z.object({
+  referralId: z.string().trim().min(1)
 });

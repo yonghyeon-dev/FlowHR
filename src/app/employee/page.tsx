@@ -8,9 +8,11 @@ import {
   buildLeaveCalendarCells,
   buildLeaveCalendarRows,
   buildLeaveBalanceCards,
+  buildRequestFlowStats,
   buildLeaveStatusSummary,
   buildLeaveUsageProjectionLabel,
   buildResubmitCandidates,
+  resolveSelectedResubmitCandidate,
   summarizeEmployeeApiLogs
 } from "@/app/employee/page-derived-helpers";
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
@@ -382,19 +384,14 @@ export default function EmployeeSelfServicePage() {
     [leaveRequests]
   );
 
-  const totalPendingRequestCount = attendanceStatusSummary.pending + leaveStatusSummary.pending;
-  const totalApprovedRequestCount = attendanceStatusSummary.approved + leaveStatusSummary.approved;
-  const totalRejectedOrCanceledRequestCount =
-    attendanceStatusSummary.rejected + leaveStatusSummary.rejected + (leaveStatusSummary.canceled ?? 0);
-
-  const requestCompletionRatePercent = useMemo(() => {
-    const totalHandled = totalApprovedRequestCount + totalRejectedOrCanceledRequestCount;
-    const total = totalHandled + totalPendingRequestCount;
-    if (total === 0) {
-      return 0;
-    }
-    return Math.max(0, Math.min(100, Math.round((totalHandled / total) * 100)));
-  }, [totalApprovedRequestCount, totalPendingRequestCount, totalRejectedOrCanceledRequestCount]);
+  const requestFlowStats = useMemo(
+    () =>
+      buildRequestFlowStats({
+        attendanceStatusSummary,
+        leaveStatusSummary
+      }),
+    [attendanceStatusSummary, leaveStatusSummary]
+  );
 
   const resubmitCandidates = useMemo<ResubmitCandidate[]>(
     () =>
@@ -408,16 +405,10 @@ export default function EmployeeSelfServicePage() {
     [attendance, defaultsCopy.noReasonProvided, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]
   );
 
-  const selectedResubmitCandidate = useMemo(() => {
-    if (resubmitCandidates.length === 0) {
-      return null;
-    }
-    const explicit = selectedResubmitCandidateKey.trim();
-    if (explicit.length === 0) {
-      return resubmitCandidates[0];
-    }
-    return resubmitCandidates.find((candidate) => candidate.key === explicit) ?? resubmitCandidates[0];
-  }, [resubmitCandidates, selectedResubmitCandidateKey]);
+  const selectedResubmitCandidate = useMemo(
+    () => resolveSelectedResubmitCandidate(resubmitCandidates, selectedResubmitCandidateKey),
+    [resubmitCandidates, selectedResubmitCandidateKey]
+  );
 
   useEffect(() => {
     if (resubmitCandidates.length === 0) {
@@ -440,7 +431,7 @@ export default function EmployeeSelfServicePage() {
       buildIntegratedSummaryCards({
         attendanceStatusSummary,
         leaveStatusSummary,
-        requestCompletionRatePercent,
+        requestCompletionRatePercent: requestFlowStats.requestCompletionRatePercent,
         resubmitNeededCount: resubmitCandidates.length,
         successCount: stats.success,
         failCount: stats.fail,
@@ -449,7 +440,7 @@ export default function EmployeeSelfServicePage() {
     [
       attendanceStatusSummary,
       leaveStatusSummary,
-      requestCompletionRatePercent,
+      requestFlowStats.requestCompletionRatePercent,
       resubmitCandidates.length,
       stats.fail,
       stats.success,

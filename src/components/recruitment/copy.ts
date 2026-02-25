@@ -58,6 +58,7 @@ export type EmployeeRecruitmentCopy = {
   referralSummaryLabel: string;
   openingTitleLabel: string;
   unknownOpeningLabel: string;
+  withdrawAction: string;
   messages: {
     needOrganization: string;
     needOpening: string;
@@ -65,6 +66,8 @@ export type EmployeeRecruitmentCopy = {
     needCandidateEmail: string;
     needNote: string;
     submitted: string;
+    withdrawn: string;
+    withdrawFailed: string;
     loadFailed: string;
   };
   referralStage: Record<RecruitmentReferralStage, string>;
@@ -76,6 +79,7 @@ export type EmployeeRecruitmentCopy = {
     OFFER: string;
     HIRED: string;
     REJECTED: string;
+    WITHDRAWN: string;
   };
 };
 
@@ -120,7 +124,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
       INTERVIEW: "면접",
       OFFER: "오퍼",
       HIRED: "채용 완료",
-      REJECTED: "불합격"
+      REJECTED: "불합격",
+      WITHDRAWN: "철회"
     }
   },
   en: {
@@ -163,7 +168,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
       INTERVIEW: "Interview",
       OFFER: "Offer",
       HIRED: "Hired",
-      REJECTED: "Rejected"
+      REJECTED: "Rejected",
+      WITHDRAWN: "Withdrawn"
     }
   }
 };
@@ -192,6 +198,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     referralSummaryLabel: "단계별 건수",
     openingTitleLabel: "공고명",
     unknownOpeningLabel: "알 수 없는 공고",
+    withdrawAction: "추천 철회",
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
       needOpening: "채용 공고를 선택하세요.",
@@ -199,6 +206,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       needCandidateEmail: "후보자 이메일을 입력하세요.",
       needNote: "추천 메모를 입력하세요.",
       submitted: "후보자 추천을 제출했습니다.",
+      withdrawn: "추천을 철회했습니다.",
+      withdrawFailed: "추천 철회에 실패했습니다.",
       loadFailed: "채용 데이터를 불러오지 못했습니다."
     },
     referralStage: {
@@ -207,7 +216,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       INTERVIEW: "면접",
       OFFER: "오퍼",
       HIRED: "채용 완료",
-      REJECTED: "불합격"
+      REJECTED: "불합격",
+      WITHDRAWN: "철회"
     },
     referralStageFilter: {
       all: "전체",
@@ -216,7 +226,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       INTERVIEW: "면접",
       OFFER: "오퍼",
       HIRED: "채용 완료",
-      REJECTED: "불합격"
+      REJECTED: "불합격",
+      WITHDRAWN: "철회"
     }
   },
   en: {
@@ -242,6 +253,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     referralSummaryLabel: "Stage summary",
     openingTitleLabel: "Opening title",
     unknownOpeningLabel: "Unknown opening",
+    withdrawAction: "Withdraw referral",
     messages: {
       needOrganization: "Organization ID is required.",
       needOpening: "Select an opening.",
@@ -249,6 +261,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       needCandidateEmail: "Candidate email is required.",
       needNote: "Referral note is required.",
       submitted: "Referral submitted.",
+      withdrawn: "Referral withdrawn.",
+      withdrawFailed: "Failed to withdraw referral.",
       loadFailed: "Failed to load recruitment data."
     },
     referralStage: {
@@ -257,7 +271,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       INTERVIEW: "Interview",
       OFFER: "Offer",
       HIRED: "Hired",
-      REJECTED: "Rejected"
+      REJECTED: "Rejected",
+      WITHDRAWN: "Withdrawn"
     },
     referralStageFilter: {
       all: "All",
@@ -266,7 +281,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       INTERVIEW: "Interview",
       OFFER: "Offer",
       HIRED: "Hired",
-      REJECTED: "Rejected"
+      REJECTED: "Rejected",
+      WITHDRAWN: "Withdrawn"
     }
   }
 };

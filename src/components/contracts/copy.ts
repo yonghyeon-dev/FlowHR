@@ -330,7 +330,7 @@ export const employeeContractsCopyByLocale: Record<FlowLocale, EmployeeContracts
     signatureHashLabel: "서명 해시",
     evidenceHashLabel: "증빙 해시",
     signatureInputLabel: "서명 입력 (서명 시 필수)",
-    commentLabel: "코멘트",
+    commentLabel: "의견",
     signAction: "서명",
     rejectAction: "거절",
     loadEvidenceJsonAction: "증빙 구조 데이터 불러오기",

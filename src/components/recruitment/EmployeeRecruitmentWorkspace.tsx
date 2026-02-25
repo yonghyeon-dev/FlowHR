@@ -21,6 +21,7 @@ type ReferralSummary = {
   offer: number;
   hired: number;
   rejected: number;
+  withdrawn: number;
 };
 
 const EMPTY_REFERRAL_SUMMARY: ReferralSummary = {
@@ -30,7 +31,8 @@ const EMPTY_REFERRAL_SUMMARY: ReferralSummary = {
   interview: 0,
   offer: 0,
   hired: 0,
-  rejected: 0
+  rejected: 0,
+  withdrawn: 0
 };
 
 function parseOpenings(payload: unknown) {
@@ -55,7 +57,8 @@ function parseSummary(payload: unknown) {
     interview: Number(summary.interview ?? 0),
     offer: Number(summary.offer ?? 0),
     hired: Number(summary.hired ?? 0),
-    rejected: Number(summary.rejected ?? 0)
+    rejected: Number(summary.rejected ?? 0),
+    withdrawn: Number(summary.withdrawn ?? 0)
   };
 }
 
@@ -215,6 +218,20 @@ export default function EmployeeRecruitmentWorkspace() {
     await loadWorkspace();
   }
 
+  async function withdrawReferral(referralId: string) {
+    const { response } = await callApi(
+      "POST",
+      `/api/recruitment/referrals/${encodeURIComponent(referralId)}/withdraw`,
+      {}
+    );
+    if (!response.ok) {
+      setStatusMessage(copy.messages.withdrawFailed);
+      return;
+    }
+    setStatusMessage(copy.messages.withdrawn);
+    await loadWorkspace();
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -260,6 +277,7 @@ export default function EmployeeRecruitmentWorkspace() {
               <option value="OFFER">{copy.referralStageFilter.OFFER}</option>
               <option value="HIRED">{copy.referralStageFilter.HIRED}</option>
               <option value="REJECTED">{copy.referralStageFilter.REJECTED}</option>
+              <option value="WITHDRAWN">{copy.referralStageFilter.WITHDRAWN}</option>
             </select>
           </label>
           <div className="actions">
@@ -268,7 +286,7 @@ export default function EmployeeRecruitmentWorkspace() {
             </button>
           </div>
           <p className="small muted">
-            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected})
+            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn})
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
@@ -350,6 +368,19 @@ export default function EmployeeRecruitmentWorkspace() {
                       </span>
                       <br />
                       <span className="small muted">{referral.note}</span>
+                      {referral.stage === "SUBMITTED" || referral.stage === "SCREENING" ? (
+                        <>
+                          <br />
+                          <button
+                            className="btn btn-secondary btn-small"
+                            type="button"
+                            disabled={pending}
+                            onClick={() => void withdrawReferral(referral.id)}
+                          >
+                            {copy.withdrawAction}
+                          </button>
+                        </>
+                      ) : null}
                     </span>
                   </li>
                 );

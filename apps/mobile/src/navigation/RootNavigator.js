@@ -156,6 +156,9 @@ export default function RootNavigator() {
                 onOpenNotices={() => void Linking.openURL(resolveMobileWebUrl("/employee/notices"))}
                 onOpenBenefits={() => void Linking.openURL(resolveMobileWebUrl("/employee/benefits"))}
                 onOpenRecruitment={() => void Linking.openURL(resolveMobileWebUrl("/employee/recruitment"))}
+                onOpenSchedule={() => void Linking.openURL(resolveMobileWebUrl("/employee/schedule"))}
+                onOpenContracts={() => void Linking.openURL(resolveMobileWebUrl("/employee/contracts"))}
+                onOpenPayslips={() => void Linking.openURL(resolveMobileWebUrl("/employee/payslips"))}
               />
             )}
           </Stack.Screen>

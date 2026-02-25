@@ -178,6 +178,40 @@ export default function EmployeeNoticeBoard() {
     }
   }
 
+  async function markAllAsRead() {
+    if (!organizationId.trim() && !usesBearerToken) {
+      setStatusMessage(copy.messages.needOrganization);
+      return;
+    }
+    if (unreadCount === 0) {
+      return;
+    }
+
+    setPending(true);
+    try {
+      const headers = {
+        ...buildActorHeaders(),
+        "content-type": "application/json"
+      };
+      const response = await fetch("/api/notices/read-all", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ organizationId })
+      });
+      if (!response.ok) {
+        setStatusMessage(copy.messages.markAllReadFailed);
+        return;
+      }
+
+      setStatusMessage(copy.messages.markedAllRead);
+      await loadNotices();
+    } catch {
+      setStatusMessage(copy.messages.markAllReadFailed);
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -214,11 +248,19 @@ export default function EmployeeNoticeBoard() {
             <button className="btn btn-primary" type="button" onClick={() => void loadNotices()} disabled={pending}>
               {copy.refreshAction}
             </button>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={() => void markAllAsRead()}
+              disabled={pending || unreadCount === 0}
+            >
+              {copy.markAllReadAction}
+            </button>
           </div>
           <p className="small muted">
             {copy.summaryLabel}: {publishedCount} · {copy.unreadLabel}: {unreadCount}
           </p>
-          <p className="small muted">logs: {logs.length}</p>
+          <p className="small muted">{copy.logsCountLabel}: {logs.length}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
 

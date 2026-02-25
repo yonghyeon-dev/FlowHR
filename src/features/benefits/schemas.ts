@@ -1,7 +1,7 @@
 ﻿import { z } from "zod";
 
 const benefitCatalogStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
-const benefitRequestStatusSchema = z.enum(["SUBMITTED", "APPROVED", "REJECTED"]);
+const benefitRequestStatusSchema = z.enum(["SUBMITTED", "APPROVED", "REJECTED", "CANCELED"]);
 
 export const listBenefitCatalogQuerySchema = z.object({
   organizationId: z.string().trim().optional(),
@@ -34,4 +34,9 @@ export const decideBenefitRequestSchema = z.object({
   requestId: z.string().trim().min(1),
   decision: z.enum(["APPROVED", "REJECTED"]),
   reviewNote: z.string().trim().max(1000).optional()
+});
+
+export const cancelBenefitRequestSchema = z.object({
+  requestId: z.string().trim().min(1),
+  cancelNote: z.string().trim().max(1000).optional()
 });

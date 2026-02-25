@@ -27,6 +27,12 @@ type MarkNoticeReadInput = {
   actorId: string;
 };
 
+type MarkAllNoticesReadInput = {
+  organizationId: string;
+  actorId: string;
+  audience?: NoticeAudience | "all";
+};
+
 const DEFAULT_ORG_ID = "ORG-DEMO";
 const INITIAL_NOTICE_STORE: NoticeItem[] = [
   {
@@ -209,5 +215,29 @@ export function markNoticeRead(input: MarkNoticeReadInput) {
   };
   noticeReadStore.unshift(next);
   return next;
+}
+
+export function markAllNoticesRead(input: MarkAllNoticesReadInput) {
+  const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
+  const actorId = input.actorId.trim();
+  if (!actorId) {
+    return [];
+  }
+
+  const notices = listNotices({
+    organizationId,
+    audience: input.audience ?? "all",
+    publishedOnly: true
+  });
+
+  return notices
+    .map((notice) =>
+      markNoticeRead({
+        organizationId,
+        noticeId: notice.id,
+        actorId
+      })
+    )
+    .filter((receipt): receipt is NoticeReadReceipt => receipt !== null);
 }
 

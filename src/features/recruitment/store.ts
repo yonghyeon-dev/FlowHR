@@ -38,6 +38,11 @@ type UpdateReferralStageInput = {
   stage: RecruitmentReferralStage;
 };
 
+type WithdrawReferralInput = {
+  referralId: string;
+  actorId: string;
+};
+
 const DEFAULT_ORG_ID = "ORG-DEMO";
 
 const initialOpeningsStore: RecruitmentOpeningItem[] = [
@@ -162,8 +167,29 @@ export function updateRecruitmentReferralStage(input: UpdateReferralStageInput) 
   return target;
 }
 
+export function withdrawRecruitmentReferral(input: WithdrawReferralInput) {
+  const target = referralsStore.find((referral) => referral.id === input.referralId);
+  if (!target) {
+    return null;
+  }
+  if (target.referrerEmployeeId !== input.actorId) {
+    return null;
+  }
+  if (!(target.stage === "SUBMITTED" || target.stage === "SCREENING")) {
+    return null;
+  }
+
+  target.stage = "WITHDRAWN";
+  target.updatedAt = new Date().toISOString();
+  return target;
+}
+
 export function findRecruitmentOpening(openingId: string) {
   return openingsStore.find((opening) => opening.id === openingId) ?? null;
+}
+
+export function findRecruitmentReferral(referralId: string) {
+  return referralsStore.find((referral) => referral.id === referralId) ?? null;
 }
 
 export function summarizeRecruitmentReferrals(items: RecruitmentReferralItem[]) {
@@ -174,5 +200,6 @@ export function summarizeRecruitmentReferrals(items: RecruitmentReferralItem[]) 
   const offer = items.filter((item) => item.stage === "OFFER").length;
   const hired = items.filter((item) => item.stage === "HIRED").length;
   const rejected = items.filter((item) => item.stage === "REJECTED").length;
-  return { total, submitted, screening, interview, offer, hired, rejected };
+  const withdrawn = items.filter((item) => item.stage === "WITHDRAWN").length;
+  return { total, submitted, screening, interview, offer, hired, rejected, withdrawn };
 }

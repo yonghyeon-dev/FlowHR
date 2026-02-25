@@ -14,13 +14,15 @@ type RequestSummary = {
   submitted: number;
   approved: number;
   rejected: number;
+  canceled: number;
 };
 
 const EMPTY_REQUEST_SUMMARY: RequestSummary = {
   total: 0,
   submitted: 0,
   approved: 0,
-  rejected: 0
+  rejected: 0,
+  canceled: 0
 };
 
 function parseCatalog(payload: unknown) {
@@ -42,7 +44,8 @@ function parseSummary(payload: unknown) {
     total: Number(summary.total ?? 0),
     submitted: Number(summary.submitted ?? 0),
     approved: Number(summary.approved ?? 0),
-    rejected: Number(summary.rejected ?? 0)
+    rejected: Number(summary.rejected ?? 0),
+    canceled: Number(summary.canceled ?? 0)
   };
 }
 
@@ -196,6 +199,16 @@ export default function EmployeeBenefitsWorkspace() {
     await loadWorkspace();
   }
 
+  async function cancelRequest(requestId: string) {
+    const { response } = await callApi("POST", `/api/benefits/requests/${encodeURIComponent(requestId)}/cancel`, {});
+    if (!response.ok) {
+      setStatusMessage(copy.messages.cancelFailed);
+      return;
+    }
+    setStatusMessage(copy.messages.canceled);
+    await loadWorkspace();
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -238,6 +251,7 @@ export default function EmployeeBenefitsWorkspace() {
               <option value="SUBMITTED">{copy.requestFilter.SUBMITTED}</option>
               <option value="APPROVED">{copy.requestFilter.APPROVED}</option>
               <option value="REJECTED">{copy.requestFilter.REJECTED}</option>
+              <option value="CANCELED">{copy.requestFilter.CANCELED}</option>
             </select>
           </label>
           <div className="actions">
@@ -246,7 +260,7 @@ export default function EmployeeBenefitsWorkspace() {
             </button>
           </div>
           <p className="small muted">
-            {copy.requestSummaryLabel}: {requestSummary.total} (S {requestSummary.submitted} / A {requestSummary.approved} / R {requestSummary.rejected})
+            {copy.requestSummaryLabel}: {requestSummary.total} (S {requestSummary.submitted} / A {requestSummary.approved} / R {requestSummary.rejected} / C {requestSummary.canceled})
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
@@ -326,6 +340,19 @@ export default function EmployeeBenefitsWorkspace() {
                       <span className="small muted">
                         {copy.requestedAtLabel}: {item.requestedAt}
                       </span>
+                      {item.status === "SUBMITTED" ? (
+                        <>
+                          <br />
+                          <button
+                            className="btn btn-secondary btn-small"
+                            type="button"
+                            disabled={pending}
+                            onClick={() => void cancelRequest(item.id)}
+                          >
+                            {copy.cancelAction}
+                          </button>
+                        </>
+                      ) : null}
                     </span>
                   </li>
                 );

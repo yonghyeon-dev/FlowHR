@@ -1,5 +1,5 @@
 ﻿export type BenefitCatalogStatus = "ACTIVE" | "INACTIVE";
-export type BenefitRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED";
+export type BenefitRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
 
 export type BenefitCatalogItem = {
   id: string;
