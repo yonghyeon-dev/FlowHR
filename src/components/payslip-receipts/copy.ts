@@ -19,7 +19,12 @@ export type PayslipReceiptCopy = {
   receiptConfirmedLabel: string;
   pendingConfirmationLabel: string;
   runsTitle: string;
+  runsSearchLabel: string;
+  runsSearchPlaceholder: string;
+  clearSearchAction: string;
+  visibleRunsLabel: string;
   noConfirmedPayslipsLoaded: string;
+  noFilteredRunsMessage: string;
   netLabel: string;
   deliveredLabel: string;
   receiptLabel: string;
@@ -64,7 +69,12 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     receiptConfirmedLabel: "수신 확인 완료",
     pendingConfirmationLabel: "수신 확인 대기",
     runsTitle: "실행 목록",
+    runsSearchLabel: "\uBA85\uC138\uC11C \uAC80\uC0C9",
+    runsSearchPlaceholder: "\uC2E4\uD589 ID/\uAE30\uAC04/\uBC30\uD3EC/\uC218\uC2E0 \uAC80\uC0C9",
+    clearSearchAction: "\uAC80\uC0C9 \uCD08\uAE30\uD654",
+    visibleRunsLabel: "\uD45C\uC2DC \uBA85\uC138\uC11C",
     noConfirmedPayslipsLoaded: "아직 확정 급여명세를 불러오지 않았습니다.",
+    noFilteredRunsMessage: "\uD604\uC7AC \uAC80\uC0C9 \uC870\uAC74\uC5D0 \uB9DE\uB294 \uBA85\uC138\uC11C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
     netLabel: "실수령",
     deliveredLabel: "배포",
     receiptLabel: "수신",
@@ -107,7 +117,12 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     receiptConfirmedLabel: "Receipt Confirmed",
     pendingConfirmationLabel: "Pending Confirmation",
     runsTitle: "Runs",
+    runsSearchLabel: "Runs search",
+    runsSearchPlaceholder: "Search by run ID/period/delivery/receipt",
+    clearSearchAction: "Clear search",
+    visibleRunsLabel: "Visible runs",
     noConfirmedPayslipsLoaded: "No confirmed payslips loaded yet.",
+    noFilteredRunsMessage: "No runs match the current search.",
     netLabel: "Net",
     deliveredLabel: "Delivered",
     receiptLabel: "Receipt",
