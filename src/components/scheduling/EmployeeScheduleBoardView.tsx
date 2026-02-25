@@ -22,6 +22,7 @@ type EmployeeScheduleBoardViewProps = {
     totalShifts: number;
     holidayShifts: number;
     totalMinutes: number;
+    averageMinutesPerShift: number;
     upcomingShifts: number;
     inProgressShifts: number;
     completedShifts: number;
@@ -184,6 +185,10 @@ export default function EmployeeScheduleBoardView({
             <li>
               <span>{copy.summaryWorkHours}</span>
               <strong>{formatHours(summary.totalMinutes)}h</strong>
+            </li>
+            <li>
+              <span>{copy.summaryAverageShiftHours}</span>
+              <strong>{formatHours(summary.averageMinutesPerShift)}h</strong>
             </li>
             <li>
               <span>{copy.summaryUpcomingShifts}</span>

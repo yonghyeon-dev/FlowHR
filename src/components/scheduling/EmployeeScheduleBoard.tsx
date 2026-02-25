@@ -73,10 +73,13 @@ export default function EmployeeScheduleBoard() {
         completedShifts += 1;
       }
     }
+    const averageMinutesPerShift =
+      summaryTotalShifts === 0 ? 0 : Math.round((totalMinutes / summaryTotalShifts) * 10) / 10;
     return {
       totalShifts: summaryTotalShifts,
       holidayShifts,
       totalMinutes,
+      averageMinutesPerShift,
       upcomingShifts,
       inProgressShifts,
       completedShifts

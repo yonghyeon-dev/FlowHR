@@ -90,6 +90,7 @@ export type EmployeeScheduleCopy = {
   summaryTotalShifts: string;
   summaryHolidayShifts: string;
   summaryWorkHours: string;
+  summaryAverageShiftHours: string;
   summaryUpcomingShifts: string;
   summaryInProgressShifts: string;
   summaryCompletedShifts: string;
@@ -275,6 +276,7 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     summaryTotalShifts: "근무 건수",
     summaryHolidayShifts: "휴일 근무",
     summaryWorkHours: "총 근무 시간",
+    summaryAverageShiftHours: "교대당 평균 근무 시간",
     summaryUpcomingShifts: "예정 근무",
     summaryInProgressShifts: "진행 중 근무",
     summaryCompletedShifts: "완료 근무",
@@ -339,6 +341,7 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     summaryTotalShifts: "Total shifts",
     summaryHolidayShifts: "Holiday shifts",
     summaryWorkHours: "Total work hours",
+    summaryAverageShiftHours: "Avg hours per shift",
     summaryUpcomingShifts: "Upcoming shifts",
     summaryInProgressShifts: "In progress shifts",
     summaryCompletedShifts: "Completed shifts",
