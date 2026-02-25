@@ -1,4 +1,4 @@
-export type WorkScheduleDto = {
+﻿export type WorkScheduleDto = {
   id: string;
   employeeId: string;
   startAt: string;
@@ -132,7 +132,9 @@ export async function parseResponseBody(response: Response): Promise<unknown> {
 
 export function extractErrorMessage(body: unknown, isKoLocale: boolean) {
   if (!body) {
-    return isKoLocale ? "오류 원인을 확인할 수 없습니다." : "Unable to identify the failure cause.";
+    return isKoLocale
+      ? "\uC624\uB958 \uC6D0\uC778\uC744 \uD655\uC778\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+      : "Unable to identify the failure cause.";
   }
 
   if (typeof body === "string") {
@@ -194,47 +196,4 @@ export function resolveScheduleTimeStatus(
   return "in_progress";
 }
 
-function escapeCsvValue(value: string) {
-  const normalized = value.replace(/"/g, "\"\"");
-  return `"${normalized}"`;
-}
-
-export function exportScheduleRowsCsv(input: {
-  rows: Array<{ schedule: WorkScheduleDto; status: ScheduleTimeStatus }>;
-  runtimeLocale: string;
-  isKoLocale: boolean;
-}) {
-  if (input.rows.length === 0) {
-    return false;
-  }
-
-  const headers = input.isKoLocale
-    ? ["스케줄 ID", "상태", "시작", "종료", "휴일", "휴게(분)", "메모"]
-    : ["Schedule ID", "Status", "Start", "End", "Holiday", "Break Minutes", "Notes"];
-  const lines = input.rows.map((row) => {
-    const { schedule } = row;
-    const values = [
-      schedule.id,
-      row.status,
-      formatDateTime(schedule.startAt, input.runtimeLocale),
-      formatDateTime(schedule.endAt, input.runtimeLocale),
-      schedule.isHoliday ? "Y" : "N",
-      String(schedule.breakMinutes),
-      schedule.notes?.trim() ?? ""
-    ];
-    return values.map(escapeCsvValue).join(",");
-  });
-
-  const csv = [headers.map(escapeCsvValue).join(","), ...lines].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = window.document.createElement("a");
-  const stamp = new Date().toISOString().slice(0, 10);
-  anchor.href = objectUrl;
-  anchor.download = `employee-schedule-${stamp}.csv`;
-  window.document.body.appendChild(anchor);
-  anchor.click();
-  window.document.body.removeChild(anchor);
-  URL.revokeObjectURL(objectUrl);
-  return true;
-}
+export { exportScheduleRowsCsv, exportScheduleRowsIcs } from "@/components/scheduling/export-helpers";
