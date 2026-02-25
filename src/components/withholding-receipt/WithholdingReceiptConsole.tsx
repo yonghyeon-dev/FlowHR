@@ -33,7 +33,7 @@ export default function WithholdingReceiptConsole() {
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
   const formatKrwByLocale = (value: number) =>
-    `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "원" : " KRW"}`;
+    `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "\uC6D0" : " KRW"}`;
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState(
     "flowhr:ctx:employeeId",
@@ -70,7 +70,7 @@ export default function WithholdingReceiptConsole() {
     return normalizeRuntimeDiagnosticMessage(
       supabaseSessionError,
       locale,
-      "인증 세션 상태를 확인하지 못했습니다."
+      "\uC778\uC99D \uC138\uC158 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4."
     );
   }, [locale, supabaseSessionError]);
   const normalizedEmployeeIdForApi = useMemo(
@@ -244,10 +244,10 @@ export default function WithholdingReceiptConsole() {
     }
     const lowered = contentType.trim().toLowerCase();
     if (lowered === "application/json") {
-      return "구조 데이터";
+      return "\uAD6C\uC870 \uB370\uC774\uD130";
     }
     if (lowered === "text/plain") {
-      return "텍스트 데이터";
+      return "\uD14D\uC2A4\uD2B8 \uB370\uC774\uD130";
     }
     return copy.unknownContentTypeLabel;
   };

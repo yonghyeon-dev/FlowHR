@@ -1,4 +1,4 @@
-import type { DeductionDescriptionMap, PayslipRunState } from "@/app/employee/payslips/page-locale-types";
+﻿import type { DeductionDescriptionMap, PayslipRunState } from "@/app/employee/payslips/page-locale-types";
 
 export function resolvePayslipRunStateLabel(state: PayslipRunState | string, isKoLocale: boolean) {
   if (state === "CONFIRMED") {
@@ -31,7 +31,7 @@ export function resolveDeductionDescriptionMap(isKoLocale: boolean): DeductionDe
       },
       localIncomeTaxKrw: {
         label: "지방소득세",
-        description: "소득세 연동 지방세 항목입니다."
+        description: "소득세와 연동되는 지방세 항목입니다."
       },
       nationalPensionKrw: {
         label: "국민연금",
@@ -50,7 +50,7 @@ export function resolveDeductionDescriptionMap(isKoLocale: boolean): DeductionDe
         description: "고용보험 근로자 부담분입니다."
       },
       preCreditIncomeTaxKrw: {
-        label: "세액공제 전 소득세",
+        label: "공제 전 소득세",
         description: "추가 세액공제 적용 전 계산된 소득세입니다."
       },
       dependentTaxCreditKrw: {

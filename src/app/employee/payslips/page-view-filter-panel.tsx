@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 
@@ -197,14 +197,13 @@ export function EmployeePayslipFilterPanel({
               </label>
             </div>
             <p className="small">
-              {pageCopy.devTools.callCount} {stats.total} ({pageCopy.kpi.ok} {stats.success} / {pageCopy.kpi.fail}{" "}
-              {stats.fail}) · {pageCopy.devTools.current} {pendingLabel ?? "-"}
+              {pageCopy.devTools.callCount} {stats.total} ({pageCopy.kpi.ok} {stats.success} / {pageCopy.kpi.fail} {stats.fail}) / {pageCopy.devTools.current} {pendingLabel ?? "-"}
             </p>
             {isProductionRuntime ? (
               <p className="small muted">
                 {pageCopy.devTools.session}:{" "}
                 {supabaseSession
-                  ? `${supabaseSession.email ?? supabaseSession.userId} · ${pageCopy.devTools.sessionRoleLabel}: ${supabaseSession.role ?? "-"} · ${pageCopy.devTools.sessionOrganizationLabel}: ${supabaseSession.organizationId ?? "-"} · ${pageCopy.devTools.sessionActorLabel}: ${supabaseSession.actorId ?? "-"}`
+                  ? `${supabaseSession.email ?? supabaseSession.userId} / ${pageCopy.devTools.sessionRoleLabel}: ${supabaseSession.role ?? "-"} / ${pageCopy.devTools.sessionOrganizationLabel}: ${supabaseSession.organizationId ?? "-"} / ${pageCopy.devTools.sessionActorLabel}: ${supabaseSession.actorId ?? "-"}`
                   : pageCopy.devTools.none}{" "}
                 ({pageCopy.devTools.bearerStatusLabel}{" "}
                 {usesBearerToken ? pageCopy.devTools.bearerOn : pageCopy.devTools.bearerOff})

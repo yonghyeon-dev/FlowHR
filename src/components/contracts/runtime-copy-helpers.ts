@@ -1,4 +1,4 @@
-const contractEnglishKeywordPatterns = [
+﻿const contractEnglishKeywordPatterns = [
   /\bcontract(?:s)?\b/i,
   /\bemployment\b/i,
   /\bamendment\b/i,

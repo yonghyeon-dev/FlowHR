@@ -1,4 +1,4 @@
-import { type FlowLocale } from "@/lib/i18n/locales";
+﻿import { type FlowLocale } from "@/lib/i18n/locales";
 
 export const defaultEmployeeIdForApi = "EMP-1001";
 const koreanEmployeeIdPrefix = "직원-";
@@ -68,8 +68,7 @@ export function formatEmployeeIdForLocaleDisplay(value: string, locale: FlowLoca
     return trimmed;
   }
   if (locale !== "ko") {
-    const normalizedEnglish = normalizeEnglishEmployeeId(trimmed);
-    return normalizedEnglish;
+    return normalizeEnglishEmployeeId(trimmed);
   }
 
   const englishMatch = englishEmployeeIdPattern.exec(trimmed);
