@@ -11,6 +11,12 @@ async function run() {
   const employeeValidationHelpers = readUtf8("src", "app", "employee", "page-validation-helpers.ts");
   const employeeDerivedHelpers = readUtf8("src", "app", "employee", "page-derived-helpers.ts");
   const employeeRequestHelpers = readUtf8("src", "app", "employee", "page-request-helpers.ts");
+  const employeeInteractionActions = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "page-interaction-actions.ts"
+  );
   const employeeValidationSources = `${employeePage}\n${employeeValidationHelpers}`;
   const employeeDerivedSources = `${employeePage}\n${employeeDerivedHelpers}\n${employeeRequestHelpers}`;
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
@@ -21,7 +27,10 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeePage, /validationCopy/);
-  assert.match(employeePage, /feedback: feedbackCopy\.pendingRequestFilterApplied/);
+  assert.ok(
+    /feedback: feedbackCopy\.pendingRequestFilterApplied/.test(employeePage) ||
+      /feedback:\s*input\.feedbackCopy\.pendingRequestFilterApplied/.test(employeeInteractionActions)
+  );
   assert.match(employeeValidationSources, /correctionValidationCopy\.missingTargetRecordId/);
   assert.match(employeeValidationSources, /attendanceCheckCopy\.targetLabel/);
   assert.match(employeeValidationSources, /leaveCheckCopy\.startDateFormatLabel/);
