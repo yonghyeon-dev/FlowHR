@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.145 (Korean Static Sweep + Payslip API/Locale Split + Scheduling Normalizers)
+> **Current version**: 0.1.146 (Approval/People Decomposition + Scheduling/Leave Helper Split)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -718,3 +718,9 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0451 payslips locale copy modular split (`page-locale-types/search-sort/page-copy/deduction` 분해 + `page-locale-copy.ts` 경량 배럴 전환 + 기존 회귀 테스트 기준 갱신 + regression test)
 - WI-0452 scheduling service incident normalizer extraction and line-budget 5500 (`incident-normalizers.ts` 신규 + incident SLA/escalation/archive/replay/reconcile parser/normalizer 분리 + `service.ts` 5616->5471 축소 + regression test)
 - WI-0453 core line budget guard (`payslips page/locale/scheduling service` 핵심 파일 예산 가드 + ko 토큰 정규화 회귀 고정 + regression test)
+- WI-0454 admin approval-policy type/utility extraction and line-budget 500 (`page-types.ts` 신규 + `page.tsx` 중복 type/util 제거 + 456 lines 회복 + regression test)
+- WI-0455 admin people page-view panel decomposition and line-budget 300 (directory/org-chart/compare/history/logs 패널 분리 + `page-view.tsx` orchestration-only 전환 + 290 lines 회복 + regression test)
+- WI-0456 scheduling incident audit projection extraction and line-budget 5300 (`incident-audit-projection.ts` 신규 + audit projection 상수/빌더 분리 + `service.ts` 5471->5254 축소 + regression test)
+- WI-0457 leave promotion delivery helper extraction and line-budget 3000 (`promotion-delivery-helpers.ts` 신규 + webhook/email-template resolver/sender 분리 + `service.ts` 3176->2928 축소 + regression test)
+- WI-0458 korean residual sweep phase3 (approval-policy/people/payslip-receipts/contracts 용어 `조직 식별자`/`관리자 액터 식별자`/`요청 로그`/`직원-0001` 고정 + legacy token 회귀 차단 test)
+- WI-0459 core line budget guard phase2 (approval-policy/people/scheduling/leave 핵심 파일+추출 모듈 통합 예산 가드 + decomposition import wiring 고정 + regression test)

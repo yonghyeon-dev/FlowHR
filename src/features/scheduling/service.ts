@@ -19,6 +19,14 @@ import type {
 } from "@/features/shared/data-access";
 import { listAttendanceRecords } from "@/features/attendance/service";
 import {
+  ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
+  ANOMALY_INCIDENT_LIFECYCLE_AUDIT_ACTION_BY_ACTION,
+  ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION,
+  ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
+  ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
+  buildScheduleAnomalyIncidentReadModelsFromAuditLogs
+} from "@/features/scheduling/incident-audit-projection";
+import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
   normalizeAnomalyIncidentArchiveReason,
@@ -3582,237 +3590,12 @@ function toScheduleAnomalyIncidentUpsertInput(
   };
 }
 
-const anomalyIncidentLifecycleStateByAction: Record<
-  ScheduleAnomalyIncidentLifecycleAction,
-  ScheduleAnomalyIncidentLifecycleState
-> = {
-  ACKNOWLEDGE: "ACKNOWLEDGED",
-  ASSIGN: "ASSIGNED",
-  RESOLVE: "RESOLVED"
-};
-
-const anomalyIncidentLifecycleAuditActionByAction: Record<
-  ScheduleAnomalyIncidentLifecycleAction,
-  string
-> = {
-  ACKNOWLEDGE: "scheduling.anomaly.incident.acknowledged",
-  ASSIGN: "scheduling.anomaly.incident.assigned",
-  RESOLVE: "scheduling.anomaly.incident.resolved"
-};
-
-const anomalyIncidentArchiveAuditAction = "scheduling.anomaly.incident.archived";
-const anomalyIncidentReplayAuditAction = "scheduling.anomaly.incident.replayed";
-
-const anomalyIncidentLifecycleActionByAuditAction: Record<
-  string,
-  ScheduleAnomalyIncidentLifecycleAction
-> = {
-  "scheduling.anomaly.incident.acknowledged": "ACKNOWLEDGE",
-  "scheduling.anomaly.incident.assigned": "ASSIGN",
-  "scheduling.anomaly.incident.resolved": "RESOLVE"
-};
-
-const anomalyIncidentLifecycleAuditActions = Object.values(
-  anomalyIncidentLifecycleAuditActionByAction
-);
-const anomalyIncidentProjectionAuditActions = [
-  ...anomalyIncidentLifecycleAuditActions,
-  anomalyIncidentArchiveAuditAction,
-  anomalyIncidentReplayAuditAction
-];
-
-function toTrimmedString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function toIncidentLifecycleState(
-  value: unknown,
-  fallback: ScheduleAnomalyIncidentLifecycleState
-): ScheduleAnomalyIncidentLifecycleState {
-  if (value === "ACKNOWLEDGED" || value === "ASSIGNED" || value === "RESOLVED") {
-    return value;
-  }
-  return fallback;
-}
-
-function toIncidentResolutionCode(value: unknown): ScheduleAnomalyIncidentResolutionCode | null {
-  if (
-    value === "FALSE_POSITIVE" ||
-    value === "ATTENDANCE_CORRECTED" ||
-    value === "MANUAL_CONFIRMED" ||
-    value === "OTHER"
-  ) {
-    return value;
-  }
-  return null;
-}
-
-function toIncidentHistoryEntriesFromAuditPayload(
-  value: unknown
-): ScheduleAnomalyIncidentHistoryEntry[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const entries: ScheduleAnomalyIncidentHistoryEntry[] = [];
-  for (const raw of value) {
-    if (!raw || typeof raw !== "object") {
-      continue;
-    }
-    const item = raw as Record<string, unknown>;
-    const actionRaw = item.action;
-    const action =
-      actionRaw === "ACKNOWLEDGE" || actionRaw === "ASSIGN" || actionRaw === "RESOLVE"
-        ? actionRaw
-        : "ACKNOWLEDGE";
-    const fallbackState = anomalyIncidentLifecycleStateByAction[action];
-    entries.push({
-      action,
-      state: toIncidentLifecycleState(item.state, fallbackState),
-      assigneeId: toTrimmedString(item.assigneeId),
-      resolutionCode: toIncidentResolutionCode(item.resolutionCode),
-      note: toTrimmedString(item.note),
-      updatedAt: toTrimmedString(item.updatedAt) ?? new Date(0).toISOString(),
-      updatedBy: {
-        actorId: toTrimmedString(item.updatedByActorId),
-        actorRole: toTrimmedString(item.updatedByActorRole) ?? "system"
-      }
-    });
-  }
-  entries.sort((left, right) => left.updatedAt.localeCompare(right.updatedAt));
-  return entries.slice(-MAX_ANOMALY_INCIDENT_HISTORY);
-}
-
-function buildScheduleAnomalyIncidentReadModelsFromAuditLogs(
-  logs: Array<{
-    action: string;
-    entityId: string | null;
-    organizationId: string | null;
-    actorRole: string;
-    actorId: string | null;
-    payload: unknown;
-    createdAt: Date;
-  }>,
-  options?: {
-    applyArchiveActions?: boolean;
-  }
-): ScheduleAnomalyIncidentReadModel[] {
-  const applyArchiveActions = options?.applyArchiveActions ?? true;
-  const byIncidentId = new Map<string, ScheduleAnomalyIncidentReadModel>();
-
-  for (const row of logs) {
-    const payload =
-      row.payload && typeof row.payload === "object"
-        ? (row.payload as Record<string, unknown>)
-        : {};
-    const incidentId = toTrimmedString(row.entityId) ?? toTrimmedString(payload.incidentId);
-    if (!incidentId) {
-      continue;
-    }
-
-    if (applyArchiveActions && row.action === anomalyIncidentArchiveAuditAction) {
-      byIncidentId.delete(incidentId);
-      continue;
-    }
-
-    if (row.action === anomalyIncidentReplayAuditAction) {
-      const existing = byIncidentId.get(incidentId);
-      const fallbackState = existing?.state ?? "ACKNOWLEDGED";
-      const state = toIncidentLifecycleState(payload.state, fallbackState);
-      const assigneeId = toTrimmedString(payload.assigneeId);
-      const resolutionCode = toIncidentResolutionCode(payload.resolutionCode);
-      const note = toTrimmedString(payload.note);
-      const updatedAt = toTrimmedString(payload.updatedAt) ?? row.createdAt.toISOString();
-      const history = toIncidentHistoryEntriesFromAuditPayload(payload.history);
-      const fallbackHistoryEntry: ScheduleAnomalyIncidentHistoryEntry = {
-        action: "ACKNOWLEDGE",
-        state,
-        assigneeId,
-        resolutionCode,
-        note,
-        updatedAt,
-        updatedBy: {
-          actorId: row.actorId ?? null,
-          actorRole: row.actorRole
-        }
-      };
-      const resolvedHistory =
-        history.length > 0
-          ? history
-          : [...(existing?.history ?? []), fallbackHistoryEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
-
-      byIncidentId.set(incidentId, {
-        incidentId,
-        organizationId: existing?.organizationId ?? row.organizationId ?? null,
-        state,
-        assigneeId,
-        resolutionCode,
-        note,
-        updatedAt,
-        updatedBy: {
-          actorId: toTrimmedString(payload.updatedByActorId) ?? row.actorId ?? null,
-          actorRole: toTrimmedString(payload.updatedByActorRole) ?? row.actorRole
-        },
-        history: resolvedHistory
-      });
-      continue;
-    }
-
-    const lifecycleAction = anomalyIncidentLifecycleActionByAuditAction[row.action];
-    if (!lifecycleAction) {
-      continue;
-    }
-
-    const fallbackState = anomalyIncidentLifecycleStateByAction[lifecycleAction];
-    const state = toIncidentLifecycleState(payload.state, fallbackState);
-    const assigneeId = toTrimmedString(payload.assigneeId);
-    const resolutionCode = toIncidentResolutionCode(payload.resolutionCode);
-    const note = toTrimmedString(payload.note);
-    const updatedAt = toTrimmedString(payload.updatedAt) ?? row.createdAt.toISOString();
-
-    const historyEntry: ScheduleAnomalyIncidentHistoryEntry = {
-      action: lifecycleAction,
-      state,
-      assigneeId,
-      resolutionCode,
-      note,
-      updatedAt,
-      updatedBy: {
-        actorId: row.actorId ?? null,
-        actorRole: row.actorRole
-      }
-    };
-
-    const existing = byIncidentId.get(incidentId);
-    const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
-    const organizationId = existing?.organizationId ?? row.organizationId ?? null;
-
-    byIncidentId.set(incidentId, {
-      incidentId,
-      organizationId,
-      state: historyEntry.state,
-      assigneeId: historyEntry.assigneeId,
-      resolutionCode: historyEntry.resolutionCode,
-      note: historyEntry.note,
-      updatedAt: historyEntry.updatedAt,
-      updatedBy: { ...historyEntry.updatedBy },
-      history
-    });
-  }
-
-  return Array.from(byIncidentId.values());
-}
-
 async function listScheduleAnomalyIncidentReadModelsFromAudit(
   context: ServiceContext,
   input?: { organizationId?: string; applyArchiveActions?: boolean }
 ) {
   const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentProjectionAuditActions,
+    actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
     entityType: "WorkSchedule",
     organizationId: input?.organizationId,
     limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
@@ -3828,7 +3611,7 @@ async function getScheduleAnomalyIncidentReadModelFromAudit(
   input?: { applyArchiveActions?: boolean }
 ) {
   const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentProjectionAuditActions,
+    actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
     entityType: "WorkSchedule",
     entityId: incidentId,
     limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
@@ -3966,7 +3749,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   }
 
   const note = input.note?.trim() || null;
-  const state = anomalyIncidentLifecycleStateByAction[input.action];
+  const state = ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION[input.action];
   const updatedAt = new Date().toISOString();
   const tenantScope = resolveTenantScope(actor) ?? undefined;
   const existing = await getScheduleAnomalyIncidentReadModel(context, incidentId);
@@ -4025,7 +3808,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   };
 
   await context.dataAccess.audit.append({
-    action: anomalyIncidentLifecycleAuditActionByAction[input.action],
+    action: ANOMALY_INCIDENT_LIFECYCLE_AUDIT_ACTION_BY_ACTION[input.action],
     entityType: "WorkSchedule",
     entityId: incidentId,
     organizationId: organizationId ?? undefined,
@@ -4840,7 +4623,7 @@ export async function archiveScheduleAnomalyIncidents(
 
       const archivedAt = new Date().toISOString();
       await context.dataAccess.audit.append({
-        action: anomalyIncidentArchiveAuditAction,
+        action: ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
         entityType: "WorkSchedule",
         entityId: candidate.incidentId,
         organizationId: candidate.organizationId ?? tenantScope ?? undefined,
@@ -4961,7 +4744,7 @@ export async function replayScheduleAnomalyIncidentStore(
   const tenantScope = resolveTenantScope(actor) ?? undefined;
 
   const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentProjectionAuditActions,
+    actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
     entityType: "WorkSchedule",
     organizationId: tenantScope,
     limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
@@ -5024,7 +4807,7 @@ export async function replayScheduleAnomalyIncidentStore(
         lastEscalationRequestedAt: existing?.lastEscalationRequestedAt ?? null
       });
       await context.dataAccess.audit.append({
-        action: anomalyIncidentReplayAuditAction,
+        action: ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
         entityType: "WorkSchedule",
         entityId: incidentId,
         organizationId: replayModel.organizationId ?? tenantScope ?? undefined,
