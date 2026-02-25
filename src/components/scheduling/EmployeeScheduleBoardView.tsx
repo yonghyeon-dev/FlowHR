@@ -34,6 +34,8 @@ type EmployeeScheduleBoardViewProps = {
   toDate: string;
   statusFilter: ScheduleStatusFilter;
   holidayFilter: ScheduleHolidayFilter;
+  searchQuery: string;
+  visibleScheduleCount: number;
   onOrganizationIdChange: (value: string) => void;
   onEmployeeIdChange: (value: string) => void;
   onAccessTokenChange: (value: string) => void;
@@ -41,32 +43,23 @@ type EmployeeScheduleBoardViewProps = {
   onToDateChange: (value: string) => void;
   onStatusFilterChange: (value: ScheduleStatusFilter) => void;
   onHolidayFilterChange: (value: ScheduleHolidayFilter) => void;
+  onSearchQueryChange: (value: string) => void;
   onLoadSchedules: () => void;
   onApplyCurrentMonthRange: () => void;
   onApplyCurrentWeekRange: () => void;
   onApplyNextWeekRange: () => void;
+  onClearSearch: () => void;
 };
-
 function resolveStatusText(copy: EmployeeScheduleCopy, status: ScheduleTimeStatus) {
-  if (status === "upcoming") {
-    return copy.statusUpcoming;
-  }
-  if (status === "in_progress") {
-    return copy.statusInProgress;
-  }
-  return copy.statusCompleted;
+  return status === "upcoming"
+    ? copy.statusUpcoming
+    : status === "in_progress"
+      ? copy.statusInProgress
+      : copy.statusCompleted;
 }
-
 function resolveStatusTone(status: ScheduleTimeStatus) {
-  if (status === "in_progress") {
-    return "ok";
-  }
-  if (status === "completed") {
-    return "fail";
-  }
-  return "idle";
+  return status === "in_progress" ? "ok" : status === "completed" ? "fail" : "idle";
 }
-
 export default function EmployeeScheduleBoardView({
   copy,
   runtimeLocale,
@@ -85,6 +78,8 @@ export default function EmployeeScheduleBoardView({
   toDate,
   statusFilter,
   holidayFilter,
+  searchQuery,
+  visibleScheduleCount,
   onOrganizationIdChange,
   onEmployeeIdChange,
   onAccessTokenChange,
@@ -92,10 +87,12 @@ export default function EmployeeScheduleBoardView({
   onToDateChange,
   onStatusFilterChange,
   onHolidayFilterChange,
+  onSearchQueryChange,
   onLoadSchedules,
   onApplyCurrentMonthRange,
   onApplyCurrentWeekRange,
-  onApplyNextWeekRange
+  onApplyNextWeekRange,
+  onClearSearch
 }: EmployeeScheduleBoardViewProps) {
   return (
     <main className="saas-content">
@@ -133,10 +130,7 @@ export default function EmployeeScheduleBoardView({
           <div className="input-grid">
             <label>
               {copy.statusFilterLabel}
-              <select
-                value={statusFilter}
-                onChange={(event) => onStatusFilterChange(event.target.value as ScheduleStatusFilter)}
-              >
+              <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value as ScheduleStatusFilter)}>
                 <option value="all">{copy.statusFilterAll}</option>
                 <option value="upcoming">{copy.statusFilterUpcoming}</option>
                 <option value="in_progress">{copy.statusFilterInProgress}</option>
@@ -145,16 +139,17 @@ export default function EmployeeScheduleBoardView({
             </label>
             <label>
               {copy.holidayFilterLabel}
-              <select
-                value={holidayFilter}
-                onChange={(event) => onHolidayFilterChange(event.target.value as ScheduleHolidayFilter)}
-              >
+              <select value={holidayFilter} onChange={(event) => onHolidayFilterChange(event.target.value as ScheduleHolidayFilter)}>
                 <option value="all">{copy.holidayFilterAll}</option>
                 <option value="holiday">{copy.holidayFilterHoliday}</option>
                 <option value="workday">{copy.holidayFilterWorkday}</option>
               </select>
             </label>
           </div>
+          <label>
+            {copy.searchLabel}
+            <input value={searchQuery} placeholder={copy.searchPlaceholder} onChange={(event) => onSearchQueryChange(event.target.value)} />
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onLoadSchedules}>
               {copy.loadAction}
@@ -168,10 +163,13 @@ export default function EmployeeScheduleBoardView({
             <button className="btn btn-secondary" type="button" onClick={onApplyNextWeekRange}>
               {copy.nextWeekAction}
             </button>
+            <button className="btn btn-secondary" type="button" onClick={onClearSearch}>
+              {copy.clearSearchAction}
+            </button>
           </div>
+          <p className="small muted">{copy.visibleCountLabel}: {visibleScheduleCount} / {allScheduleCount}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
-
         <article className="panel">
           <h2>{copy.summaryTitle}</h2>
           <ul className="simple-list">
@@ -201,7 +199,6 @@ export default function EmployeeScheduleBoardView({
             </li>
           </ul>
         </article>
-
         <article className="panel">
           <h2>{copy.nextShiftTitle}</h2>
           {!nextSchedule ? (
@@ -209,24 +206,17 @@ export default function EmployeeScheduleBoardView({
           ) : (
             <ul className="simple-list">
               <li>
-                <span>
-                  <strong>{copy.scheduleIdLabel}: {nextSchedule.id}</strong>
-                  <br />
-                  <span className="small">
-                    {copy.periodLabel}: {formatDateTime(nextSchedule.startAt, runtimeLocale)} ~{" "}
-                    {formatDateTime(nextSchedule.endAt, runtimeLocale)}
+                  <span>
+                    <strong>{copy.scheduleIdLabel}: {nextSchedule.id}</strong>
+                    <br />
+                    <span className="small">{copy.periodLabel}: {formatDateTime(nextSchedule.startAt, runtimeLocale)} ~ {formatDateTime(nextSchedule.endAt, runtimeLocale)}</span>
+                    <br />
+                    <span className="small">{copy.breakLabel}: {nextSchedule.breakMinutes}m / {copy.holidayLabel}: {nextSchedule.isHoliday ? copy.holidayYes : copy.holidayNo}</span>
                   </span>
-                  <br />
-                  <span className="small">
-                    {copy.breakLabel}: {nextSchedule.breakMinutes}m / {copy.holidayLabel}:{" "}
-                    {nextSchedule.isHoliday ? copy.holidayYes : copy.holidayNo}
-                  </span>
-                </span>
-              </li>
-            </ul>
-          )}
-        </article>
-
+                </li>
+              </ul>
+            )}
+          </article>
         <article className="panel">
           <h2>{copy.listTitle}</h2>
           {allScheduleCount === 0 ? (
@@ -243,30 +233,19 @@ export default function EmployeeScheduleBoardView({
                       {resolveStatusText(copy, row.status)}
                     </span>
                     <br />
-                    <span className="small">
-                      {copy.periodLabel}: {formatDateTime(row.schedule.startAt, runtimeLocale)} ~{" "}
-                      {formatDateTime(row.schedule.endAt, runtimeLocale)}
-                    </span>
+                    <span className="small">{copy.periodLabel}: {formatDateTime(row.schedule.startAt, runtimeLocale)} ~ {formatDateTime(row.schedule.endAt, runtimeLocale)}</span>
                     <br />
-                    <span className="small">
-                      {copy.breakLabel}: {row.schedule.breakMinutes}m / {copy.holidayLabel}:{" "}
-                      {row.schedule.isHoliday ? copy.holidayYes : copy.holidayNo}
-                    </span>
+                    <span className="small">{copy.breakLabel}: {row.schedule.breakMinutes}m / {copy.holidayLabel}: {row.schedule.isHoliday ? copy.holidayYes : copy.holidayNo}</span>
                     <br />
-                    <span className="small">
-                      {copy.updatedAtLabel}: {formatDateTime(row.schedule.updatedAt, runtimeLocale)}
-                    </span>
+                    <span className="small">{copy.updatedAtLabel}: {formatDateTime(row.schedule.updatedAt, runtimeLocale)}</span>
                     <br />
-                    <span className="small">
-                      {row.schedule.notes?.trim() ? row.schedule.notes : copy.notesFallback}
-                    </span>
+                    <span className="small">{row.schedule.notes?.trim() ? row.schedule.notes : copy.notesFallback}</span>
                   </span>
                 </li>
               ))}
             </ul>
           )}
         </article>
-
         <article className="panel">
           <h2>{copy.logsTitle}</h2>
           <p className="small">

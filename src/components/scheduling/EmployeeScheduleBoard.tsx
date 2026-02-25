@@ -38,6 +38,7 @@ export default function EmployeeScheduleBoard() {
   const [toDate, setToDate] = useState(monthRange.toDate);
   const [statusFilter, setStatusFilter] = useState<ScheduleStatusFilter>("all");
   const [holidayFilter, setHolidayFilter] = useState<ScheduleHolidayFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [schedules, setSchedules] = useState<WorkScheduleDto[]>([]);
   const [logs, setLogs] = useState<ScheduleApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -84,6 +85,7 @@ export default function EmployeeScheduleBoard() {
 
   const rows = useMemo(() => {
     const nowMs = Date.now();
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
     return schedules
       .map((schedule) => ({ schedule, status: resolveScheduleTimeStatus(schedule, nowMs) }))
       .filter((row) => {
@@ -96,6 +98,12 @@ export default function EmployeeScheduleBoard() {
         if (holidayFilter === "workday") {
           return !row.schedule.isHoliday;
         }
+        if (normalizedSearchQuery) {
+          const searchable = `${row.schedule.id} ${row.schedule.notes ?? ""}`.toLowerCase();
+          if (!searchable.includes(normalizedSearchQuery)) {
+            return false;
+          }
+        }
         return true;
       })
       .sort((left, right) => {
@@ -103,7 +111,7 @@ export default function EmployeeScheduleBoard() {
         const rightMs = new Date(right.schedule.startAt).getTime();
         return leftMs - rightMs;
       });
-  }, [holidayFilter, schedules, statusFilter]);
+  }, [holidayFilter, schedules, searchQuery, statusFilter]);
 
   const nextSchedule = useMemo(() => {
     const nowMs = Date.now();
@@ -193,6 +201,10 @@ export default function EmployeeScheduleBoard() {
     setToDate(range.toDate);
   }
 
+  function clearSearch() {
+    setSearchQuery("");
+  }
+
   return (
     <EmployeeScheduleBoardView
       copy={copy}
@@ -212,6 +224,8 @@ export default function EmployeeScheduleBoard() {
       toDate={toDate}
       statusFilter={statusFilter}
       holidayFilter={holidayFilter}
+      searchQuery={searchQuery}
+      visibleScheduleCount={rows.length}
       onOrganizationIdChange={setOrganizationId}
       onEmployeeIdChange={setEmployeeId}
       onAccessTokenChange={setAccessToken}
@@ -219,10 +233,12 @@ export default function EmployeeScheduleBoard() {
       onToDateChange={setToDate}
       onStatusFilterChange={setStatusFilter}
       onHolidayFilterChange={setHolidayFilter}
+      onSearchQueryChange={setSearchQuery}
       onLoadSchedules={() => void loadSchedules()}
       onApplyCurrentMonthRange={applyCurrentMonthRange}
       onApplyCurrentWeekRange={applyCurrentWeekRange}
       onApplyNextWeekRange={applyNextWeekRange}
+      onClearSearch={clearSearch}
     />
   );
 }

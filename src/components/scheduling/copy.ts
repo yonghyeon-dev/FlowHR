@@ -73,6 +73,10 @@ export type EmployeeScheduleCopy = {
   currentMonthAction: string;
   currentWeekAction: string;
   nextWeekAction: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  clearSearchAction: string;
+  visibleCountLabel: string;
   statusFilterLabel: string;
   statusFilterAll: string;
   statusFilterUpcoming: string;
@@ -254,6 +258,10 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     currentMonthAction: "이번 달",
     currentWeekAction: "이번 주",
     nextWeekAction: "다음 주",
+    searchLabel: "\uC2A4\uCF00\uC904 \uAC80\uC0C9",
+    searchPlaceholder: "\uC2A4\uCF00\uC904 ID/\uBA54\uBAA8 \uAC80\uC0C9",
+    clearSearchAction: "\uAC80\uC0C9 \uCD08\uAE30\uD654",
+    visibleCountLabel: "\uD45C\uC2DC \uC2A4\uCF00\uC904",
     statusFilterLabel: "진행 상태 필터",
     statusFilterAll: "전체 상태",
     statusFilterUpcoming: "예정",
@@ -314,6 +322,10 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     currentMonthAction: "Current month",
     currentWeekAction: "Current week",
     nextWeekAction: "Next week",
+    searchLabel: "Schedule search",
+    searchPlaceholder: "Search by schedule ID/notes",
+    clearSearchAction: "Clear search",
+    visibleCountLabel: "Visible schedules",
     statusFilterLabel: "Status filter",
     statusFilterAll: "All statuses",
     statusFilterUpcoming: "Upcoming",
