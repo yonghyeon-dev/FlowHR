@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -41,7 +41,6 @@ import {
   firstDayOfMonthLocal,
   formatDateTime,
   formatDays,
-  isDevToolsEnabled,
   lastDayOfMonthLocal,
   matchesRequestSearch,
   sortRequestRowsByOption,
@@ -56,6 +55,7 @@ import {
   isDefaultEmployeeCancelReason,
   resolveEmployeeLocaleLabelBundle
 } from "@/app/employee/page-locale-helpers";
+import { useEmployeeRuntimeSession } from "@/app/employee/page-session-helpers";
 import type {
   ApiLog,
   AttendanceRecordDto,
@@ -81,7 +81,6 @@ import { EmployeeAttendanceLeavePanels } from "@/components/employee-dashboard/E
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
 import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/EmployeeRequestFeedbackPanels";
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -160,19 +159,22 @@ export default function EmployeeSelfServicePage() {
     [runtimeLocale]
   );
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
-  const showDevTools = isDevToolsEnabled();
-  const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
-
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
-
-  const usesBearerToken = bearerToken.trim().length > 0;
+  const {
+    showDevTools,
+    isProductionRuntime,
+    supabaseSession,
+    supabaseSessionError,
+    bearerToken,
+    usesBearerToken,
+    supabaseUrl
+  } = useEmployeeRuntimeSession({
+    accessToken,
+    organizationId,
+    setOrganizationId,
+    employeeId,
+    setEmployeeId,
+    notConfiguredLabel
+  });
   const newestLog = logs[0];
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
@@ -196,26 +198,6 @@ export default function EmployeeSelfServicePage() {
     resubmitFlowChecks: resubmitFlowCheckCopy,
     submitChecklistCards: submitChecklistCardCopy
   } = validationCopy;
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0 && !organizationId.trim()) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const actorId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim();
-    if (actorId.length > 0 && employeeId.trim() !== actorId) {
-      setEmployeeId(actorId);
-    }
-  }, [employeeId, isProductionRuntime, setEmployeeId, supabaseSession?.actorId, supabaseSession?.userId]);
 
   useEffect(() => {
     setCancelReason((previous) =>
@@ -972,4 +954,5 @@ export default function EmployeeSelfServicePage() {
     </main>
   );
 }
+
 

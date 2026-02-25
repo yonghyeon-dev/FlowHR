@@ -60,6 +60,9 @@ export type EmployeeBenefitsCopy = {
   annualLimitLabel: string;
   statusLabel: string;
   requestedAtLabel: string;
+  requestFilterLabel: string;
+  requestSummaryLabel: string;
+  unknownBenefitLabel: string;
   messages: {
     needOrganization: string;
     needCatalog: string;
@@ -69,6 +72,12 @@ export type EmployeeBenefitsCopy = {
     loadFailed: string;
   };
   requestStatus: Record<BenefitRequestStatus, string>;
+  requestFilter: {
+    all: string;
+    SUBMITTED: string;
+    APPROVED: string;
+    REJECTED: string;
+  };
 };
 
 const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
@@ -185,6 +194,9 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     annualLimitLabel: "연간 한도",
     statusLabel: "상태",
     requestedAtLabel: "신청 시각",
+    requestFilterLabel: "요청 상태 필터",
+    requestSummaryLabel: "상태별 건수",
+    unknownBenefitLabel: "알 수 없는 항목",
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
       needCatalog: "복리후생 항목을 선택하세요.",
@@ -194,6 +206,12 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
       loadFailed: "복리후생 데이터를 불러오지 못했습니다."
     },
     requestStatus: {
+      SUBMITTED: "신청",
+      APPROVED: "승인",
+      REJECTED: "반려"
+    },
+    requestFilter: {
+      all: "전체",
       SUBMITTED: "신청",
       APPROVED: "승인",
       REJECTED: "반려"
@@ -219,6 +237,9 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     annualLimitLabel: "Annual limit",
     statusLabel: "Status",
     requestedAtLabel: "Requested at",
+    requestFilterLabel: "Request status filter",
+    requestSummaryLabel: "Status summary",
+    unknownBenefitLabel: "Unknown benefit",
     messages: {
       needOrganization: "Organization ID is required.",
       needCatalog: "Select a benefit item.",
@@ -228,6 +249,12 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
       loadFailed: "Failed to load benefit data."
     },
     requestStatus: {
+      SUBMITTED: "Submitted",
+      APPROVED: "Approved",
+      REJECTED: "Rejected"
+    },
+    requestFilter: {
+      all: "All",
       SUBMITTED: "Submitted",
       APPROVED: "Approved",
       REJECTED: "Rejected"

@@ -14,3 +14,10 @@ export type NoticeItem = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type NoticeReadReceipt = {
+  noticeId: string;
+  organizationId: string;
+  actorId: string;
+  readAt: string;
+};

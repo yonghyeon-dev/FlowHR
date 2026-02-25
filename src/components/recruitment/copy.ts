@@ -54,6 +54,10 @@ export type EmployeeRecruitmentCopy = {
   emptyOpenings: string;
   emptyReferrals: string;
   stageLabel: string;
+  stageFilterLabel: string;
+  referralSummaryLabel: string;
+  openingTitleLabel: string;
+  unknownOpeningLabel: string;
   messages: {
     needOrganization: string;
     needOpening: string;
@@ -64,6 +68,15 @@ export type EmployeeRecruitmentCopy = {
     loadFailed: string;
   };
   referralStage: Record<RecruitmentReferralStage, string>;
+  referralStageFilter: {
+    all: string;
+    SUBMITTED: string;
+    SCREENING: string;
+    INTERVIEW: string;
+    OFFER: string;
+    HIRED: string;
+    REJECTED: string;
+  };
 };
 
 const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
@@ -175,6 +188,10 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     emptyOpenings: "추천 가능한 채용 공고가 없습니다.",
     emptyReferrals: "추천 이력이 없습니다.",
     stageLabel: "단계",
+    stageFilterLabel: "추천 단계 필터",
+    referralSummaryLabel: "단계별 건수",
+    openingTitleLabel: "공고명",
+    unknownOpeningLabel: "알 수 없는 공고",
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
       needOpening: "채용 공고를 선택하세요.",
@@ -185,6 +202,15 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       loadFailed: "채용 데이터를 불러오지 못했습니다."
     },
     referralStage: {
+      SUBMITTED: "추천 접수",
+      SCREENING: "서류 검토",
+      INTERVIEW: "면접",
+      OFFER: "오퍼",
+      HIRED: "채용 완료",
+      REJECTED: "불합격"
+    },
+    referralStageFilter: {
+      all: "전체",
       SUBMITTED: "추천 접수",
       SCREENING: "서류 검토",
       INTERVIEW: "면접",
@@ -212,6 +238,10 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     emptyOpenings: "No active opening available.",
     emptyReferrals: "No referral history.",
     stageLabel: "Stage",
+    stageFilterLabel: "Referral stage filter",
+    referralSummaryLabel: "Stage summary",
+    openingTitleLabel: "Opening title",
+    unknownOpeningLabel: "Unknown opening",
     messages: {
       needOrganization: "Organization ID is required.",
       needOpening: "Select an opening.",
@@ -222,6 +252,15 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       loadFailed: "Failed to load recruitment data."
     },
     referralStage: {
+      SUBMITTED: "Submitted",
+      SCREENING: "Screening",
+      INTERVIEW: "Interview",
+      OFFER: "Offer",
+      HIRED: "Hired",
+      REJECTED: "Rejected"
+    },
+    referralStageFilter: {
+      all: "All",
       SUBMITTED: "Submitted",
       SCREENING: "Screening",
       INTERVIEW: "Interview",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { NoticeItem } from "@/features/notices/types";
+import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -19,6 +19,16 @@ type NoticeBoardLog = {
 function parseNotices(payload: unknown) {
   const notices = (payload as { notices?: NoticeItem[] } | null)?.notices;
   return Array.isArray(notices) ? notices : [];
+}
+
+function parseReadNoticeIds(payload: unknown) {
+  const ids = (payload as { readNoticeIds?: string[] } | null)?.readNoticeIds;
+  return Array.isArray(ids) ? ids.filter((value) => typeof value === "string") : [];
+}
+
+function parseReadReceipts(payload: unknown) {
+  const receipts = (payload as { readReceipts?: NoticeReadReceipt[] } | null)?.readReceipts;
+  return Array.isArray(receipts) ? receipts : [];
 }
 
 function buildQuery(input: Record<string, string>) {
@@ -45,6 +55,8 @@ export default function EmployeeNoticeBoard() {
   const [accessToken, setAccessToken] = useState("");
 
   const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [readNoticeIds, setReadNoticeIds] = useState<string[]>([]);
+  const [readReceipts, setReadReceipts] = useState<NoticeReadReceipt[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [logs, setLogs] = useState<NoticeBoardLog[]>([]);
@@ -61,6 +73,30 @@ export default function EmployeeNoticeBoard() {
     () => notices.filter((notice) => notice.status === "PUBLISHED").length,
     [notices]
   );
+  const unreadCount = useMemo(
+    () => notices.filter((notice) => !readNoticeIds.includes(notice.id)).length,
+    [notices, readNoticeIds]
+  );
+  const readAtByNoticeId = useMemo(() => {
+    const map = new Map<string, string>();
+    readReceipts.forEach((receipt) => {
+      map.set(receipt.noticeId, receipt.readAt);
+    });
+    return map;
+  }, [readReceipts]);
+
+  function buildActorHeaders() {
+    const headers: Record<string, string> = {};
+    if (usesBearerToken) {
+      headers.authorization = `Bearer ${bearerToken}`;
+      return headers;
+    }
+
+    headers["x-actor-role"] = "employee";
+    headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
+    headers["x-actor-organization-id"] = organizationId.trim();
+    return headers;
+  }
 
   async function loadNotices() {
     if (!organizationId.trim() && !usesBearerToken) {
@@ -70,14 +106,7 @@ export default function EmployeeNoticeBoard() {
 
     setPending(true);
     try {
-      const headers: Record<string, string> = {};
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken}`;
-      } else {
-        headers["x-actor-role"] = "employee";
-        headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
-        headers["x-actor-organization-id"] = organizationId.trim();
-      }
+      const headers = buildActorHeaders();
 
       const query = buildQuery({
         organizationId,
@@ -108,9 +137,42 @@ export default function EmployeeNoticeBoard() {
       }
 
       setNotices(parseNotices(parsed));
+      setReadNoticeIds(parseReadNoticeIds(parsed));
+      setReadReceipts(parseReadReceipts(parsed));
       setStatusMessage("");
     } catch {
       setStatusMessage(copy.messages.loadFailed);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function markAsRead(noticeId: string) {
+    if (!organizationId.trim() && !usesBearerToken) {
+      setStatusMessage(copy.messages.needOrganization);
+      return;
+    }
+
+    setPending(true);
+    try {
+      const headers = {
+        ...buildActorHeaders(),
+        "content-type": "application/json"
+      };
+      const response = await fetch(`/api/notices/${encodeURIComponent(noticeId)}/read`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ organizationId })
+      });
+      if (!response.ok) {
+        setStatusMessage(copy.messages.markReadFailed);
+        return;
+      }
+
+      setStatusMessage(copy.messages.markedRead);
+      await loadNotices();
+    } catch {
+      setStatusMessage(copy.messages.markReadFailed);
     } finally {
       setPending(false);
     }
@@ -154,7 +216,7 @@ export default function EmployeeNoticeBoard() {
             </button>
           </div>
           <p className="small muted">
-            {copy.summaryLabel}: {publishedCount}
+            {copy.summaryLabel}: {publishedCount} · {copy.unreadLabel}: {unreadCount}
           </p>
           <p className="small muted">logs: {logs.length}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -166,19 +228,38 @@ export default function EmployeeNoticeBoard() {
             <p className="small muted">{copy.listEmpty}</p>
           ) : (
             <ul className="simple-list">
-              {notices.map((notice) => (
-                <li key={notice.id}>
-                  <span>
-                    <strong>{notice.title}</strong>
-                    <br />
-                    <span className="small muted">{notice.body}</span>
-                    <br />
-                    <span className="small muted">
-                      {copy.audienceLabel}: {resolveNoticeAudienceLabel(copy, notice.audience)} · {notice.publishedAt ?? notice.updatedAt}
+              {notices.map((notice) => {
+                const isRead = readNoticeIds.includes(notice.id);
+                const readAt = readAtByNoticeId.get(notice.id) ?? null;
+                return (
+                  <li key={notice.id}>
+                    <span>
+                      <strong>{notice.title}</strong>
+                      <br />
+                      <span className="small muted">{notice.body}</span>
+                      <br />
+                      <span className="small muted">
+                        {copy.audienceLabel}: {resolveNoticeAudienceLabel(copy, notice.audience)} · {notice.publishedAt ?? notice.updatedAt}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {isRead ? copy.readBadge : copy.unreadBadge}
+                        {readAt ? ` · ${copy.readAtLabel}: ${new Date(readAt).toLocaleString(runtimeLocale)}` : ""}
+                      </span>
                     </span>
-                  </span>
-                </li>
-              ))}
+                    {isRead ? null : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        disabled={pending}
+                        onClick={() => void markAsRead(notice.id)}
+                      >
+                        {copy.markReadAction}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
@@ -186,3 +267,4 @@ export default function EmployeeNoticeBoard() {
     </main>
   );
 }
+

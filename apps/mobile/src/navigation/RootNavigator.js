@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 
 import ApprovalQueueScreen from "../screens/ApprovalQueueScreen";
 import AdminHomeScreen from "../screens/AdminHomeScreen";
@@ -53,6 +53,12 @@ const copy = {
     }
   }
 };
+
+function resolveMobileWebUrl(pathname) {
+  const base = (process.env.EXPO_PUBLIC_FLOWHR_WEB_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `${base}${path}`;
+}
 
 export default function RootNavigator() {
   const [loading, setLoading] = useState(true);
@@ -147,6 +153,9 @@ export default function RootNavigator() {
                 onOpenMobileAnalytics={() => navigation.navigate("MobileAnalyticsDashboard")}
                 onOpenNotifications={() => navigation.navigate("Notifications")}
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
+                onOpenNotices={() => void Linking.openURL(resolveMobileWebUrl("/employee/notices"))}
+                onOpenBenefits={() => void Linking.openURL(resolveMobileWebUrl("/employee/benefits"))}
+                onOpenRecruitment={() => void Linking.openURL(resolveMobileWebUrl("/employee/recruitment"))}
               />
             )}
           </Stack.Screen>

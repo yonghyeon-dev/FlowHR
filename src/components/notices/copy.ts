@@ -25,6 +25,7 @@ export type NoticeWorkspaceCopy = {
   statusMessagePrefix: string;
   logsTitle: string;
   logsEmpty: string;
+  readCountLabel: string;
   badge: {
     DRAFT: string;
     SCHEDULED: string;
@@ -67,8 +68,13 @@ export type EmployeeNoticeBoardCopy = {
   refreshAction: string;
   audienceLabel: string;
   summaryLabel: string;
+  unreadLabel: string;
   listTitle: string;
   listEmpty: string;
+  markReadAction: string;
+  readAtLabel: string;
+  readBadge: string;
+  unreadBadge: string;
   audience: {
     all: string;
     employees: string;
@@ -76,6 +82,8 @@ export type EmployeeNoticeBoardCopy = {
   messages: {
     needOrganization: string;
     loadFailed: string;
+    markedRead: string;
+    markReadFailed: string;
   };
 };
 
@@ -121,6 +129,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     statusMessagePrefix: "상태",
     logsTitle: "요청 로그",
     logsEmpty: "아직 요청 로그가 없습니다.",
+    readCountLabel: "읽음 수",
     badge: {
       DRAFT: "임시저장",
       SCHEDULED: "예약",
@@ -176,6 +185,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     statusMessagePrefix: "Status",
     logsTitle: "Request logs",
     logsEmpty: "No request logs yet.",
+    readCountLabel: "Read count",
     badge: {
       DRAFT: "Draft",
       SCHEDULED: "Scheduled",
@@ -220,15 +230,22 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     refreshAction: "공지 새로고침",
     audienceLabel: "대상",
     summaryLabel: "게시 공지",
+    unreadLabel: "미확인 공지",
     listTitle: "게시 공지 목록",
     listEmpty: "확인 가능한 게시 공지가 없습니다.",
+    markReadAction: "확인 완료",
+    readAtLabel: "확인 시각",
+    readBadge: "확인함",
+    unreadBadge: "미확인",
     audience: {
       all: "전체",
       employees: "직원"
     },
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
-      loadFailed: "공지 목록을 불러오지 못했습니다."
+      loadFailed: "공지 목록을 불러오지 못했습니다.",
+      markedRead: "공지 확인 처리를 완료했습니다.",
+      markReadFailed: "공지 확인 처리에 실패했습니다."
     }
   },
   en: {
@@ -241,15 +258,22 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     refreshAction: "Refresh notices",
     audienceLabel: "Audience",
     summaryLabel: "Published notices",
+    unreadLabel: "Unread notices",
     listTitle: "Published notice list",
     listEmpty: "No published notice is available.",
+    markReadAction: "Mark as read",
+    readAtLabel: "Read at",
+    readBadge: "Read",
+    unreadBadge: "Unread",
     audience: {
       all: "All",
       employees: "Employees"
     },
     messages: {
       needOrganization: "Organization ID is required.",
-      loadFailed: "Failed to load notices."
+      loadFailed: "Failed to load notices.",
+      markedRead: "Notice marked as read.",
+      markReadFailed: "Failed to mark notice as read."
     }
   }
 };
