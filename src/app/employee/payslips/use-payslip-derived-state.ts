@@ -75,6 +75,17 @@ interface UsePayslipDerivedStateOutput {
   statusRecoveryGuide: string;
 }
 
+function resolveDeductionFallbackLabel(
+  key: string,
+  isKoLocale: boolean,
+  kind: "component" | "tax-credit"
+) {
+  if (!isKoLocale) {
+    return key;
+  }
+  return kind === "component" ? "기타 공제 항목" : "기타 세액공제 항목";
+}
+
 export function usePayslipDerivedState(input: UsePayslipDerivedStateInput): UsePayslipDerivedStateOutput {
   const {
     compareRunId,
@@ -260,13 +271,18 @@ export function usePayslipDerivedState(input: UsePayslipDerivedStateInput): UseP
       return [
         {
           key,
-          label: mapped?.label ?? key,
+          label: mapped?.label ?? resolveDeductionFallbackLabel(key, isKoLocale, "component"),
           amountKrw: amount,
           description: mapped?.description ?? pageCopy.deductionFallback.statutoryDetail
         }
       ];
     });
-  }, [deductionDescriptionMap, pageCopy.deductionFallback.statutoryDetail, selectedRunBreakdown]);
+  }, [
+    deductionDescriptionMap,
+    isKoLocale,
+    pageCopy.deductionFallback.statutoryDetail,
+    selectedRunBreakdown
+  ]);
 
   const taxCreditExplainItems = useMemo(() => {
     const additional = toBreakdownRecord(selectedRunBreakdown?.additional ?? null);
@@ -285,14 +301,14 @@ export function usePayslipDerivedState(input: UsePayslipDerivedStateInput): UseP
         return [
           {
             key,
-            label: mapped?.label ?? key,
+            label: mapped?.label ?? resolveDeductionFallbackLabel(key, isKoLocale, "tax-credit"),
             amountKrw: amount,
             description: mapped?.description ?? pageCopy.deductionFallback.taxCreditDetail
           }
         ];
       }
     );
-  }, [deductionDescriptionMap, pageCopy.deductionFallback.taxCreditDetail, selectedRunBreakdown]);
+  }, [deductionDescriptionMap, isKoLocale, pageCopy.deductionFallback.taxCreditDetail, selectedRunBreakdown]);
 
   const deductionExplainSections = useMemo(() => {
     if (!selectedRun) {
