@@ -19,8 +19,8 @@ async function run() {
 
   assert.match(employeePage, /from "@\/app\/employee\/page-session-helpers";/);
   assert.match(employeePage, /const \{[\s\S]*\} = useEmployeeRuntimeSession\(\{/);
+  assert.match(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
   assert.doesNotMatch(employeePage, /const \{ snapshot: supabaseSession, error: supabaseSessionError \} = useSupabaseSession\(\);/);
-  assert.doesNotMatch(employeePage, /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? notConfiguredLabel;/);
 
   assert.match(sessionHelpers, /export function useEmployeeRuntimeSession\(/);
   assert.match(sessionHelpers, /const \{ snapshot: supabaseSession, error: supabaseSessionError \} = useSupabaseSession\(\);/);

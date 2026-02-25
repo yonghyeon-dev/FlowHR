@@ -167,8 +167,7 @@ export default function EmployeeSelfServicePage() {
     supabaseSession,
     supabaseSessionError,
     bearerToken,
-    usesBearerToken,
-    supabaseUrl
+    usesBearerToken
   } = useEmployeeRuntimeSession({
     accessToken,
     organizationId,
@@ -177,6 +176,7 @@ export default function EmployeeSelfServicePage() {
     setEmployeeId,
     notConfiguredLabel
   });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const newestLog = logs[0];
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
