@@ -56,7 +56,6 @@ export default function EmployeeContractsInbox() {
     )) as { documents?: ContractDocument[] };
     setDocuments(data.documents ?? []);
   }, [copy.loadError]);
-
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {

@@ -19,6 +19,7 @@ async function run() {
     "contracts",
     "EmployeeContractJourneyPanel.tsx"
   );
+  const journeyCopy = readUtf8("src", "components", "contracts", "journey-copy.ts");
   const globalsCss = readUtf8("src", "app", "globals.css");
   const workItem = readUtf8(
     "work-items",
@@ -27,8 +28,9 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeeContractsInbox, /EmployeeContractJourneyPanel/);
-  assert.match(journeyPanel, /Signature journey timeline/);
-  assert.match(journeyPanel, /Recovery guide/);
+  assert.match(journeyPanel, /contractJourneyCopyByLocale/);
+  assert.match(journeyCopy, /Signature journey timeline/);
+  assert.match(journeyCopy, /Recovery guide/);
   assert.match(journeyPanel, /contractJourneySteps/);
   assert.match(globalsCss, /\.contract-journey-panel/);
   assert.match(globalsCss, /\.contract-recovery-guide/);

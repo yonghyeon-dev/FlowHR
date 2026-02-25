@@ -46,7 +46,6 @@ export default function AdminContractsWorkspace() {
   );
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
   const selectedTemplateId = useMemo(() => templates[0]?.id ?? "", [templates]);
   const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
     () => ({
@@ -59,6 +58,7 @@ export default function AdminContractsWorkspace() {
     }),
     [copy]
   );
+  const documentActions = useMemo<ContractDocumentAction[]>(() => ["request", "approve", "reject", "send", "expire", "renew"], []);
   const reload = useCallback(async () => {
     setError(null);
     const [templateBodyRaw, documentBodyRaw] = await Promise.all([
@@ -280,24 +280,11 @@ export default function AdminContractsWorkspace() {
                   {toDateText(document.expiresAt, runtimeLocale)}
                 </p>
                 <div className="contract-action-row">
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "request")}>
-                    {copy.requestApprovalAction}
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "approve")}>
-                    {copy.approveAction}
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "reject")}>
-                    {copy.rejectAction}
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "send")}>
-                    {copy.sendAction}
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "expire")}>
-                    {copy.expireAction}
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, "renew")}>
-                    {copy.renewAction}
-                  </button>
+                  {documentActions.map((action) => (
+                    <button key={action} type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, action)}>
+                      {actionLabelByAction[action]}
+                    </button>
+                  ))}
                 </div>
               </li>
             ))}
