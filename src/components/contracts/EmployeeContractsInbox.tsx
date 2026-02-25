@@ -9,7 +9,7 @@ import {
   toDateText,
 } from "@/components/contracts/copy";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
-import { readJson } from "@/components/contracts/http";
+import { normalizeContractsErrorMessageForRuntime, readJson } from "@/components/contracts/http";
 import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
@@ -37,6 +37,24 @@ export default function EmployeeContractsInbox() {
     [documents, selectedDocumentId]
   );
 
+  function normalizeContractTitle(title: string, documentId: string) {
+    if (!isKoLocale) {
+      return title;
+    }
+    const normalized = title.trim();
+    if (normalized.length === 0) {
+      return `계약서 ${documentId.slice(0, 8)}`;
+    }
+    if (/[\uac00-\ud7a3]/.test(normalized)) {
+      return normalized;
+    }
+    const asciiCount = (normalized.match(/[A-Za-z0-9]/g) ?? []).length;
+    if (asciiCount / normalized.length >= 0.6) {
+      return `계약서 ${documentId.slice(0, 8)}`;
+    }
+    return normalized;
+  }
+
 
   const reload = useCallback(async () => {
     setError(null);
@@ -48,7 +66,11 @@ export default function EmployeeContractsInbox() {
 
   useEffect(() => {
     reload().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : copy.loadError);
+      setError(
+        loadError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.loadError)
+          : copy.loadError
+      );
     });
   }, [copy.loadError, reload]);
 
@@ -82,7 +104,11 @@ export default function EmployeeContractsInbox() {
       setSignatureEvidence(null);
       await reload();
     } catch (responseError) {
-      setError(responseError instanceof Error ? responseError.message : copy.respondError);
+      setError(
+        responseError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(responseError.message, copy.respondError)
+          : copy.respondError
+      );
     }
   }
 
@@ -113,7 +139,11 @@ export default function EmployeeContractsInbox() {
       setSignatureEvidence(body.evidence);
       setMessage(`${copy.evidenceLoadedPrefix}: ${body.evidence.fileName}`);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : copy.evidenceLoadError);
+      setError(
+        loadError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.evidenceLoadError)
+          : copy.evidenceLoadError
+      );
     }
   }
 
@@ -141,7 +171,7 @@ export default function EmployeeContractsInbox() {
                 }`}
               >
                 <div className="contract-template-head">
-                  <strong>{document.title}</strong>
+                  <strong>{normalizeContractTitle(document.title, document.id)}</strong>
                   <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
                 </div>
                 <p>

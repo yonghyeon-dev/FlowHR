@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import {
   type DeductionDescriptionMap,
   extractErrorMessage,
+  normalizeRuntimeDiagnosticMessage,
   resolveDeductionDescriptionMap,
   resolvePayslipPageCopy,
   resolvePayslipSearchSortCopy
@@ -57,6 +58,16 @@ export default function EmployeePayslipsPage() {
 
   const searchSortCopy = useMemo(() => resolvePayslipSearchSortCopy(isKoLocale), [isKoLocale]);
   const pageCopy = useMemo(() => resolvePayslipPageCopy(isKoLocale), [isKoLocale]);
+  const localizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizeRuntimeDiagnosticMessage(
+      supabaseSessionError,
+      isKoLocale,
+      "인증 세션 상태를 확인하지 못했습니다."
+    );
+  }, [isKoLocale, supabaseSessionError]);
   const deductionDescriptionMap = useMemo<DeductionDescriptionMap>(
     () => resolveDeductionDescriptionMap(isKoLocale),
     [isKoLocale]
@@ -474,7 +485,7 @@ export default function EmployeePayslipsPage() {
       setAccessToken={setAccessToken}
       pendingLabel={pendingLabel}
       supabaseSession={supabaseSession}
-      supabaseSessionError={supabaseSessionError}
+      supabaseSessionError={localizedSupabaseSessionError}
       clearLogs={clearLogs}
       logs={logs}
       aggregate={aggregate}

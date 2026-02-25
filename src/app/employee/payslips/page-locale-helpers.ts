@@ -42,6 +42,7 @@ export type PayslipPageCopy = {
   };
   productionNotice: {
     prefix: string;
+    runtimeLabel: string;
     suffix: string;
   };
   kpi: {
@@ -228,18 +229,26 @@ function isAsciiHeavyText(value: string) {
   return asciiCount / compact.length >= 0.6;
 }
 
-function normalizeLocaleErrorMessage(value: string, koLocale: boolean) {
+function normalizeLocaleErrorMessage(value: string, koLocale: boolean, koFallback = "요청 처리 중 오류가 발생했습니다.") {
   const normalized = value.trim();
   if (!koLocale) {
     return normalized;
   }
   if (normalized.length === 0) {
-    return "요청 처리 중 오류가 발생했습니다.";
+    return koFallback;
   }
   if (hasHangulText(normalized) || !isAsciiHeavyText(normalized)) {
     return normalized;
   }
-  return "요청 처리 중 오류가 발생했습니다.";
+  return koFallback;
+}
+
+export function normalizeRuntimeDiagnosticMessage(
+  value: string,
+  isKoLocale: boolean,
+  koFallback: string
+) {
+  return normalizeLocaleErrorMessage(value, isKoLocale, koFallback);
 }
 
 export function formatDateTime(value: string | null) {
@@ -425,6 +434,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       },
       productionNotice: {
         prefix: "현재 환경은",
+        runtimeLabel: "운영",
         suffix: "입니다. 명세서 조회를 위해 로그인 세션(인증 토큰)이 필요합니다:"
       },
       kpi: {
@@ -586,6 +596,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
     },
     productionNotice: {
       prefix: "Current runtime is",
+      runtimeLabel: "production",
       suffix: ". A login session (Bearer) is required to view payslips:"
     },
     kpi: {
@@ -736,14 +747,14 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
   };
 }
 
-export function resolvePayslipRunStateLabel(state: PayslipRunState, isKoLocale: boolean) {
+export function resolvePayslipRunStateLabel(state: PayslipRunState | string, isKoLocale: boolean) {
   if (state === "CONFIRMED") {
     return isKoLocale ? "확정" : "Confirmed";
   }
   if (state === "PREVIEWED") {
     return isKoLocale ? "미확정" : "Previewed";
   }
-  return state;
+  return isKoLocale ? "알 수 없음" : state;
 }
 
 export function resolveDeductionDescriptionMap(isKoLocale: boolean): DeductionDescriptionMap {

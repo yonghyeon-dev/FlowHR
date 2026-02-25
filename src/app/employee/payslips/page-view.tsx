@@ -206,7 +206,7 @@ export function EmployeePayslipsPageView({
 
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          {pageCopy.productionNotice.prefix} <strong>production</strong>
+          {pageCopy.productionNotice.prefix} <strong>{pageCopy.productionNotice.runtimeLabel}</strong>
           {pageCopy.productionNotice.suffix}{" "}
           <Link href="/login">/login</Link>
         </p>

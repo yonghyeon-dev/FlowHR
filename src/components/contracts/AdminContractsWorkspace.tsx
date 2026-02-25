@@ -13,7 +13,7 @@ import {
   type ContractCategory
 } from "@/components/contracts/copy";
 import { resolveContractDocumentActionRequest } from "@/components/contracts/action-payloads";
-import { readJson } from "@/components/contracts/http";
+import { normalizeContractsErrorMessageForRuntime, readJson } from "@/components/contracts/http";
 import {
   type AdminContractDocument as ContractDocument,
   type ContractDocumentAction,
@@ -23,6 +23,7 @@ import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminContractsWorkspace() {
   const { locale } = useI18n();
+  const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = adminContractsCopyByLocale[locale];
   const categoryLabels = contractCategoryLabelByLocale[locale];
@@ -58,6 +59,24 @@ export default function AdminContractsWorkspace() {
     [copy]
   );
 
+  function normalizeContractTitle(title: string, stableId: string) {
+    if (!isKoLocale) {
+      return title;
+    }
+    const normalized = title.trim();
+    if (normalized.length === 0) {
+      return `계약서 ${stableId.slice(0, 8)}`;
+    }
+    if (/[\uac00-\ud7a3]/.test(normalized)) {
+      return normalized;
+    }
+    const asciiCount = (normalized.match(/[A-Za-z0-9]/g) ?? []).length;
+    if (asciiCount / normalized.length >= 0.6) {
+      return `계약서 ${stableId.slice(0, 8)}`;
+    }
+    return normalized;
+  }
+
   const reload = useCallback(async () => {
     setError(null);
     const [templateBodyRaw, documentBodyRaw] = await Promise.all([
@@ -75,7 +94,11 @@ export default function AdminContractsWorkspace() {
 
   useEffect(() => {
     reload().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : copy.loadError);
+      setError(
+        loadError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.loadError)
+          : copy.loadError
+      );
     });
   }, [copy.loadError, reload]);
 
@@ -96,7 +119,11 @@ export default function AdminContractsWorkspace() {
       setMessage(copy.templateCreatedMessage);
       await reload();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : copy.templateCreateError);
+      setError(
+        submitError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(submitError.message, copy.templateCreateError)
+          : copy.templateCreateError
+      );
     }
   }
 
@@ -122,7 +149,11 @@ export default function AdminContractsWorkspace() {
       setMessage(copy.draftCreatedMessage);
       await reload();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : copy.draftCreateError);
+      setError(
+        createError instanceof Error
+          ? normalizeContractsErrorMessageForRuntime(createError.message, copy.draftCreateError)
+          : copy.draftCreateError
+      );
     }
   }
 
@@ -144,7 +175,10 @@ export default function AdminContractsWorkspace() {
     } catch (actionError) {
       setError(
         actionError instanceof Error
-          ? actionError.message
+          ? normalizeContractsErrorMessageForRuntime(
+              actionError.message,
+              `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`
+            )
           : `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`
       );
     }
@@ -217,7 +251,7 @@ export default function AdminContractsWorkspace() {
             {templates.map((template) => (
               <li key={template.id} className={`tone-${template.status === "ACTIVE" ? "ready" : template.status === "DRAFT" ? "watch" : "risk"}`}>
                 <div className="contract-template-head">
-                  <strong>{template.name}</strong>
+                  <strong>{normalizeContractTitle(template.name, template.id)}</strong>
                   <span className="queue-history-chip">v{template.version}</span>
                 </div>
                 <div className="contract-template-meta">
@@ -258,7 +292,7 @@ export default function AdminContractsWorkspace() {
             {documents.map((document) => (
               <li key={document.id} className={`tone-${document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"}`}>
                 <div className="contract-signature-readiness-head">
-                  <strong>{document.title}</strong>
+                  <strong>{normalizeContractTitle(document.title, document.id)}</strong>
                   <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
                 </div>
                 <p>
