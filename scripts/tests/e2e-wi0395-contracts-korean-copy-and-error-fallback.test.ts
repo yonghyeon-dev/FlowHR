@@ -64,7 +64,7 @@ async function run() {
   assert.match(employeeInbox, /readJson\(response,\s*copy\.respondError\)/);
   assert.match(employeeInbox, /readJson\(response,\s*copy\.evidenceLoadError\)/);
 
-  assert.match(templateBuilder, /import \{ readJson \} from "@\/components\/contracts\/http";/);
+  assert.match(templateBuilder, /import \{[^}]*readJson[^}]*\} from "@\/components\/contracts\/http";/);
   assert.match(templateBuilder, /readJson\(response,\s*copy\.templateCreateError\)/);
   assert.doesNotMatch(templateBuilder, /async function readJson\(response: Response\)/);
 

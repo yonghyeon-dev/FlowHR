@@ -23,6 +23,7 @@ async function run() {
     "use-payslip-derived-state.ts"
   );
   const payslipLocaleHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
+  const payslipLocaleRuntime = readUtf8("src", "app", "employee", "payslips", "page-locale-runtime.ts");
   const payslipHelpers = readUtf8("src", "app", "employee", "payslips", "page-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -56,9 +57,12 @@ async function run() {
   );
   assert.ok(countLines(payslipPage) < 1300, "payslip page should stay bounded after helper extraction");
 
-  assert.match(payslipLocaleHelpers, /export function resolveCompareInsightTitle\(isKoLocale: boolean\)/);
-  assert.match(payslipLocaleHelpers, /export function resolveCompareInsightAriaLabel\(isKoLocale: boolean\)/);
-  assert.match(payslipLocaleHelpers, /export function formatCompareWindowLabel\(/);
+  assert.match(payslipLocaleHelpers, /resolveCompareInsightTitle/);
+  assert.match(payslipLocaleHelpers, /resolveCompareInsightAriaLabel/);
+  assert.match(payslipLocaleHelpers, /formatCompareWindowLabel/);
+  assert.match(payslipLocaleRuntime, /export function resolveCompareInsightTitle\(isKoLocale: boolean\)/);
+  assert.match(payslipLocaleRuntime, /export function resolveCompareInsightAriaLabel\(isKoLocale: boolean\)/);
+  assert.match(payslipLocaleRuntime, /export function formatCompareWindowLabel\(/);
   assert.match(payslipHelpers, /export function buildCompareMetrics\(/);
 
   assert.match(workItem, /WI-0396/i);

@@ -15,6 +15,7 @@ async function run() {
   const payslipView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
   const payslipHelpers = readUtf8("src", "app", "employee", "payslips", "page-helpers.ts");
   const payslipLocaleHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
+  const payslipLocalePageCopy = readUtf8("src", "app", "employee", "payslips", "page-locale-page-copy.ts");
   const peoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
   const workItem = readUtf8(
     "work-items",
@@ -35,7 +36,8 @@ async function run() {
   assert.match(payslipView, /resolvePayslipRunStateLabel\(selectedRun\.state, isKoLocale\)/);
 
   assert.match(payslipHelpers, /export function buildCompareMetrics\(/);
-  assert.match(payslipLocaleHelpers, /export function resolvePayslipPageCopy\(isKoLocale: boolean\)/);
+  assert.match(payslipLocaleHelpers, /resolvePayslipPageCopy/);
+  assert.match(payslipLocalePageCopy, /export function resolvePayslipPageCopy\(isKoLocale: boolean\)/);
 
   assert.ok(countLines(peoplePage) < 500, "admin people page should remain under 500 lines");
 

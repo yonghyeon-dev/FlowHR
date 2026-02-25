@@ -50,15 +50,20 @@ function collectAsciiTokensFromStringLiterals(source: string) {
 }
 
 function isAllowedKoAsciiToken(token: string) {
-  return /^FlowHR$/.test(token) || /^EMP-\d+$/.test(token) || /^EMP$/.test(token);
+  return (
+    /^FlowHR$/.test(token) ||
+    /^EMP-\d+$/.test(token) ||
+    /^EMP$/.test(token) ||
+    /^u[0-9A-Fa-f]{4}$/.test(token)
+  );
 }
 
 async function run() {
-  const withholdingConsole = readUtf8(
+  const withholdingCopyRuntime = readUtf8(
     "src",
     "components",
     "withholding-receipt",
-    "WithholdingReceiptConsole.tsx"
+    "copy-runtime.ts"
   );
   const payslipReceiptCopy = readUtf8("src", "components", "payslip-receipts", "copy.ts");
   const contractsCopy = readUtf8("src", "components", "contracts", "copy.ts");
@@ -75,7 +80,7 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   const koSources = [
-    { name: "withholding-receipt", source: withholdingConsole },
+    { name: "withholding-receipt", source: withholdingCopyRuntime },
     { name: "payslip-receipts", source: payslipReceiptCopy },
     { name: "contracts-copy", source: contractsCopy }
   ];
