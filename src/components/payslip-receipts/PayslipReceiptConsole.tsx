@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { payslipReceiptCopyByLocale } from "@/components/payslip-receipts/copy";
 import { normalizePayslipReceiptRuntimeMessage } from "@/components/payslip-receipts/runtime-copy-helpers";
@@ -16,6 +16,12 @@ import {
 } from "@/components/payslip-receipts/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import {
+  defaultEmployeeIdForApi,
+  getLocalizedEmployeeIdInputDefault,
+  normalizeEmployeeIdForApi,
+  normalizeEmployeeIdForLocaleInput
+} from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 
 function buildQuery(params: Record<string, string | undefined>) {
@@ -47,9 +53,13 @@ export default function PayslipReceiptConsole() {
   const copy = payslipReceiptCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const range = defaultMonthRange();
+  const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
 
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
+  const [employeeId, setEmployeeId] = useStickyStringState(
+    "flowhr:ctx:employeeId",
+    localeEmployeeIdDefault
+  );
   const [accessToken, setAccessToken] = useState("");
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
@@ -89,6 +99,17 @@ export default function PayslipReceiptConsole() {
         : null,
     [locale, supabaseSessionError]
   );
+  const normalizedEmployeeIdForApi = useMemo(
+    () => normalizeEmployeeIdForApi(employeeId, locale),
+    [employeeId, locale]
+  );
+
+  useEffect(() => {
+    const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
+    if (localizedInput && localizedInput !== employeeId) {
+      setEmployeeId(localizedInput);
+    }
+  }, [employeeId, locale, setEmployeeId]);
 
   const receiptSummary = useMemo(() => {
     const distributed = runs.filter((run) => run.payslipDistributedAt !== null).length;
@@ -115,7 +136,7 @@ export default function PayslipReceiptConsole() {
       return headers;
     }
     headers["x-actor-role"] = "employee";
-    headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
+    headers["x-actor-id"] = normalizedEmployeeIdForApi || defaultEmployeeIdForApi;
     if (organizationId.trim()) {
       headers["x-actor-organization-id"] = organizationId.trim();
     }
@@ -136,7 +157,7 @@ export default function PayslipReceiptConsole() {
   }
 
   async function loadRuns() {
-    if (!employeeId.trim()) {
+    if (!normalizedEmployeeIdForApi) {
       setStatusMessage(copy.employeeIdRequiredStatus);
       return;
     }
@@ -146,7 +167,7 @@ export default function PayslipReceiptConsole() {
       const query = buildQuery({
         from: toSeoulStartIso(periodStartDate),
         to: toSeoulEndIso(periodEndDate),
-        employeeId: employeeId.trim(),
+        employeeId: normalizedEmployeeIdForApi,
         state: "CONFIRMED"
       });
       const response = await fetch(`/api/payroll/runs${query}`, { method: "GET", headers: actorHeaders() });
