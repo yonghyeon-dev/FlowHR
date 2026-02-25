@@ -125,12 +125,14 @@ export function normalizeContractsErrorMessageForRuntime(message: string, fallba
     return fallbackMessage;
   }
   if (koRuntime) {
-    if (/[\uac00-\ud7a3]/.test(normalized)) {
-      return normalized;
-    }
     const knownKoMessage = resolveKnownKoContractsErrorMessage(normalized);
     if (knownKoMessage) {
       return knownKoMessage;
+    }
+    const hasHangulText = /[\uac00-\ud7a3]/.test(normalized);
+    if (hasHangulText) {
+      // Suppress mixed ko+latin diagnostics to avoid leaking raw English snippets in ko runtime.
+      return /[A-Za-z]/.test(normalized) ? fallbackMessage : normalized;
     }
   }
   return shouldSuppressRawEnglishMessage(normalized, koRuntime) ? fallbackMessage : normalized;
