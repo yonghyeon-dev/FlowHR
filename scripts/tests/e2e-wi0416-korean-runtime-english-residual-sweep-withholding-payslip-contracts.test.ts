@@ -17,6 +17,12 @@ async function run() {
     "WithholdingReceiptConsole.tsx"
   );
   const contractsHttp = readUtf8("src", "components", "contracts", "http.ts");
+  const contractsRuntimeCopyHelpers = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "runtime-copy-helpers.ts"
+  );
   const contractsInbox = readUtf8("src", "components", "contracts", "EmployeeContractsInbox.tsx");
   const contractsAdmin = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
   const workItem = readUtf8(
@@ -48,16 +54,23 @@ async function run() {
   assert.match(contractsHttp, /function extractErrorText\(body: unknown\)/);
   assert.match(contractsHttp, /const errorKeys = \["error", "message", "reason", "detail"\];/);
   assert.match(contractsHttp, /export function normalizeContractsErrorMessageForRuntime\(/);
+  assert.match(contractsRuntimeCopyHelpers, /export function normalizeContractsEntityTitle\(/);
 
   assert.match(contractsInbox, /normalizeContractsErrorMessageForRuntime, readJson/);
+  assert.match(contractsInbox, /normalizeContractsEntityTitle/);
   assert.match(contractsInbox, /normalizeContractsErrorMessageForRuntime\(loadError\.message, copy\.loadError\)/);
-  assert.match(contractsInbox, /function normalizeContractTitle\(title: string, documentId: string\)/);
-  assert.match(contractsInbox, /normalizeContractTitle\(document\.title, document\.id\)/);
+  assert.match(
+    contractsInbox,
+    /normalizeContractsEntityTitle\(document\.title, document\.id, isKoLocale\)/
+  );
 
   assert.match(contractsAdmin, /normalizeContractsErrorMessageForRuntime, readJson/);
+  assert.match(contractsAdmin, /normalizeContractsEntityTitle/);
   assert.match(contractsAdmin, /normalizeContractsErrorMessageForRuntime\(loadError\.message, copy\.loadError\)/);
-  assert.match(contractsAdmin, /function normalizeContractTitle\(title: string, stableId: string\)/);
-  assert.match(contractsAdmin, /normalizeContractTitle\(template\.name, template\.id\)/);
+  assert.match(
+    contractsAdmin,
+    /normalizeContractsEntityTitle\(template\.name, template\.id, isKoLocale\)/
+  );
 
   assert.match(workItem, /WI-0416/i);
   assert.match(workItem, /korean|runtime|english|withholding|payslip|contracts/i);

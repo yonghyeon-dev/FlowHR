@@ -30,6 +30,7 @@
 - `src/app/employee/payslips/page.tsx`
 - `src/app/employee/payslips/page-view.tsx`
 - `src/components/contracts/http.ts`
+- `src/components/contracts/runtime-copy-helpers.ts`
 - `src/components/contracts/EmployeeContractsInbox.tsx`
 - `src/components/contracts/AdminContractsWorkspace.tsx`
 - `scripts/tests/e2e-wi0416-korean-runtime-english-residual-sweep-withholding-payslip-contracts.test.ts`

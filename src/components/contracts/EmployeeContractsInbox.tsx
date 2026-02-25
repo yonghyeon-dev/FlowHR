@@ -10,6 +10,7 @@ import {
 } from "@/components/contracts/copy";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { normalizeContractsErrorMessageForRuntime, readJson } from "@/components/contracts/http";
+import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
 import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
@@ -36,25 +37,6 @@ export default function EmployeeContractsInbox() {
     () => documents.find((document) => document.id === selectedDocumentId) ?? documents[0] ?? null,
     [documents, selectedDocumentId]
   );
-
-  function normalizeContractTitle(title: string, documentId: string) {
-    if (!isKoLocale) {
-      return title;
-    }
-    const normalized = title.trim();
-    if (normalized.length === 0) {
-      return `계약서 ${documentId.slice(0, 8)}`;
-    }
-    if (/[\uac00-\ud7a3]/.test(normalized)) {
-      return normalized;
-    }
-    const asciiCount = (normalized.match(/[A-Za-z0-9]/g) ?? []).length;
-    if (asciiCount / normalized.length >= 0.6) {
-      return `계약서 ${documentId.slice(0, 8)}`;
-    }
-    return normalized;
-  }
-
 
   const reload = useCallback(async () => {
     setError(null);
@@ -171,7 +153,7 @@ export default function EmployeeContractsInbox() {
                 }`}
               >
                 <div className="contract-template-head">
-                  <strong>{normalizeContractTitle(document.title, document.id)}</strong>
+                  <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
                   <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
                 </div>
                 <p>
