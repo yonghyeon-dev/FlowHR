@@ -1,4 +1,4 @@
-# FlowHR Production Roadmap
+﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
 > **Current version**: 0.1.133 (Korean Copy Residual Sweep - Withholding/Payslip/Contracts)
@@ -672,3 +672,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0405 payslip/contracts residual english token cleanup (`/employee/payslips/page-view.tsx` session line role/org/actor labels localized via locale copy keys + `contracts/http.ts` locale-aware default fallback message + regression test hardening)
 - WI-0406 global i18n residual token cleanup (`/admin/notices`, `/admin/benefits`, `/admin/recruitment`, `/employee/benefits`, `/employee/recruitment` ko copy residual 표현 정리 + `apps/mobile` notification/history/preset locale-copy 분기 및 한국어 기본 문구 정리 + regression test)
 - WI-0407 notices core journey implementation (`/api/notices` list/create + `/api/notices/{noticeId}/publish` 게시 액션 + `/admin/notices` 작성/게시 워크스페이스 + `/employee/notices` 게시 공지 보드 + notices nav/i18n wiring)
+- WI-0408 benefits core journey implementation (`/api/benefits/catalog`, `/api/benefits/requests`, `/api/benefits/requests/{requestId}/decision` + `/admin/benefits` catalog/decision workspace + `/employee/benefits` request submit/history workspace)
