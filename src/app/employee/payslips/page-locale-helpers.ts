@@ -74,6 +74,9 @@ export type PayslipPageCopy = {
     bearerTokenOptional: string;
     bearerPlaceholder: string;
     bearerStatusLabel: string;
+    sessionRoleLabel: string;
+    sessionOrganizationLabel: string;
+    sessionActorLabel: string;
     callCount: string;
     current: string;
     session: string;
@@ -427,6 +430,9 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         bearerTokenOptional: "접근 토큰 (선택)",
         bearerPlaceholder: "비어 있으면 액터 헤더 모드(x-actor-*)가 사용됩니다.",
         bearerStatusLabel: "토큰 모드",
+        sessionRoleLabel: "권한",
+        sessionOrganizationLabel: "조직 식별자",
+        sessionActorLabel: "액터 식별자",
         callCount: "호출",
         current: "현재",
         session: "세션",
@@ -585,6 +591,9 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       bearerTokenOptional: "Bearer Access Token (optional)",
       bearerPlaceholder: "When empty, x-actor-* header mode is used.",
       bearerStatusLabel: "Bearer mode",
+      sessionRoleLabel: "Role",
+      sessionOrganizationLabel: "Organization",
+      sessionActorLabel: "Actor",
       callCount: "Calls",
       current: "Current",
       session: "Session",

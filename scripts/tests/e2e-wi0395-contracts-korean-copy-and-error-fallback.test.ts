@@ -47,7 +47,10 @@ async function run() {
   assert.doesNotMatch(builderKo, /템플릿 ID/);
 
   assert.match(contractsHttp, /readJson\(response: Response, fallbackMessage\?: string\)/);
-  assert.match(contractsHttp, /fallbackMessage \?\? `request failed \(\$\{response\.status\}\)`/);
+  assert.match(contractsHttp, /function resolveContractsHttpFallbackMessage\(status: number\)/);
+  assert.match(contractsHttp, /fallbackMessage \?\? resolveContractsHttpFallbackMessage\(response\.status\)/);
+  assert.match(contractsHttp, /요청이 실패했습니다/);
+  assert.match(contractsHttp, /request failed/);
 
   assert.match(adminWorkspace, /readJson\(response,\s*copy\.loadError\)/);
   assert.match(adminWorkspace, /readJson\(response,\s*copy\.templateCreateError\)/);
