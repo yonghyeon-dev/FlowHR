@@ -17,6 +17,7 @@ type PresetPayloadPreviewCopy = {
   notSelected: string;
   requestPreviewLabel: string;
   serverTemplateLabel: string;
+  presetModeOmittedLabel: string;
   taxableAmountExplicit: string;
   taxableAmountDerived: string;
   nonTaxableOmittedWhenZero: string;
@@ -32,13 +33,12 @@ type PresetPayloadPreviewCopy = {
   shareSummaryLabel: string;
 };
 
-const PRESET_MODE_OMITTED_LABEL = "(omitted in preset mode)";
-
 const defaultCopy: PresetPayloadPreviewCopy = {
   title: "Preset mode sample payload preview",
   notSelected: "Sample payload preview appears when an item preset is selected.",
   requestPreviewLabel: "Request payload (sample)",
   serverTemplateLabel: "Server template application (sample)",
+  presetModeOmittedLabel: "(omitted in preset mode)",
   taxableAmountExplicit: "Uses explicit taxableIncomeKrw value",
   taxableAmountDerived: "Computed on server as grossPayKrw - nonTaxableIncomeKrw",
   nonTaxableOmittedWhenZero: "When nonTaxableIncomeKrw=0, non-taxable template row is not generated",
@@ -55,7 +55,26 @@ const defaultCopy: PresetPayloadPreviewCopy = {
 };
 
 const presetPayloadPreviewCopy: Record<FlowLocale, PresetPayloadPreviewCopy> = {
-  ko: defaultCopy,
+  ko: {
+    title: "프리셋 모드 샘플 페이로드 미리보기",
+    notSelected: "아이템 프리셋을 선택하면 샘플 페이로드 미리보기가 표시됩니다.",
+    requestPreviewLabel: "요청 페이로드(샘플)",
+    serverTemplateLabel: "서버 템플릿 적용 결과(샘플)",
+    presetModeOmittedLabel: "(프리셋 모드에서는 생략)",
+    taxableAmountExplicit: "taxableIncomeKrw 입력값을 그대로 사용",
+    taxableAmountDerived: "서버에서 grossPayKrw - nonTaxableIncomeKrw로 계산",
+    nonTaxableOmittedWhenZero: "nonTaxableIncomeKrw=0이면 비과세 템플릿 행을 생성하지 않음",
+    copyRequestButton: "요청 페이로드 복사",
+    copyTemplateButton: "템플릿 미리보기 복사",
+    copyCombinedButton: "통합 미리보기 복사",
+    shareButton: "미리보기 공유",
+    copySuccess: "샘플 페이로드 미리보기를 클립보드에 복사했습니다.",
+    shareSuccess: "샘플 페이로드 미리보기를 공유했습니다.",
+    shareFallbackCopySuccess: "공유를 사용할 수 없어 미리보기 내용을 클립보드에 복사했습니다.",
+    actionFailed: "샘플 페이로드 미리보기 복사 또는 공유에 실패했습니다.",
+    shareUnavailable: "이 브라우저는 공유 또는 클립보드 API를 지원하지 않습니다.",
+    shareSummaryLabel: "프리셋 미리보기"
+  },
   en: defaultCopy
 };
 
@@ -107,11 +126,11 @@ export function PayrollKrIncomeSplitPresetPayloadPreviewPanel({
         incomeSplitItemPresetId: selectedPreset.id,
         taxableIncomeKrw: parsedTaxableIncomeKrw ?? undefined,
         nonTaxableIncomeKrw: parsedNonTaxableIncomeKrw,
-        taxableIncomeItems: PRESET_MODE_OMITTED_LABEL,
-        nonTaxableIncomeItems: PRESET_MODE_OMITTED_LABEL
+        taxableIncomeItems: copy.presetModeOmittedLabel,
+        nonTaxableIncomeItems: copy.presetModeOmittedLabel
       }
     };
-  }, [selectedPreset, parsedTaxableIncomeKrw, parsedNonTaxableIncomeKrw]);
+  }, [selectedPreset, parsedTaxableIncomeKrw, parsedNonTaxableIncomeKrw, copy.presetModeOmittedLabel]);
 
   const serverTemplatePreview = useMemo(() => {
     if (!selectedPreset) {
