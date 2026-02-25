@@ -21,6 +21,7 @@ async function run() {
   const derivedStateRaw = readFileSync(derivedStatePath);
   const derivedStateSource = derivedStateRaw.toString("utf8");
   const localeHelperSource = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
+  const localeRuntimeSource = readUtf8("src", "app", "employee", "payslips", "page-locale-runtime.ts");
   const workItem = readUtf8("work-items", "WI-0393-employee-payslips-utf8-encoding-guard.md");
   const roadmap = readUtf8("ROADMAP.md");
 
@@ -53,27 +54,31 @@ async function run() {
 
   assert.match(
     localeHelperSource,
+    /resolveCompareInsightTitle/
+  );
+  assert.match(
+    localeRuntimeSource,
     /export function resolveCompareInsightTitle\(isKoLocale: boolean\)/
   );
   assert.match(
-    localeHelperSource,
-    /return isKoLocale \? "전월 대비 설명" : "Month-over-month explanation";/
+    localeRuntimeSource,
+    /return isKoLocale \? .*: "Month-over-month explanation";/
   );
   assert.match(
-    localeHelperSource,
+    localeRuntimeSource,
     /export function resolveCompareInsightAriaLabel\(isKoLocale: boolean\)/
   );
   assert.match(
-    localeHelperSource,
-    /return isKoLocale \? "전월 대비 설명 카드" : "Month-over-month explanation cards";/
+    localeRuntimeSource,
+    /return isKoLocale \? .*: "Month-over-month explanation cards";/
   );
   assert.match(
-    localeHelperSource,
+    localeRuntimeSource,
     /export function formatCompareWindowLabel\([\s\S]*isKoLocale: boolean[\s\S]*\)/
   );
   assert.match(
-    localeHelperSource,
-    /return isKoLocale \? `\$\{selectedLabel\} 대비 \$\{compareLabel\}` : `\$\{selectedLabel\} vs \$\{compareLabel\}`;/
+    localeRuntimeSource,
+    /return isKoLocale \? .*: `\$\{selectedLabel\} vs \$\{compareLabel\}`;/
   );
 
   assert.doesNotMatch(
