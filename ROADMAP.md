@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.154 (Employee Schedule Average Shift-Hours Summary)
+> **Current version**: 0.1.155 (Employee Schedule CSV Export Action)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -732,3 +732,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0465 korean runtime fetch-failure guard for withholding/payslip/contracts (`failed to fetch|fetch failed|econnreset|econnrefused|enotfound|getaddrinfo` ko 패턴 확장 + runtime normalizer regression test)
 - WI-0466 core line-budget guard phase3 for scheduling/leave/runtime (scheduling/leave service-helper + payroll/contract runtime helper budgets 고정 + decomposition wiring regression test)
 - WI-0467 employee schedule average shift-hours summary (`/employee/schedule` 요약 카드에 교대당 평균 근무시간 추가 + ko/en locale copy 확장 + regression test)
+- WI-0468 employee schedule csv export action (`/employee/schedule` 필터 결과 CSV 다운로드 액션 + locale status copy + export helper regression test)

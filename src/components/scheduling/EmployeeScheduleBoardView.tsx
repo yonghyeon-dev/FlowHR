@@ -50,6 +50,7 @@ type EmployeeScheduleBoardViewProps = {
   onApplyCurrentWeekRange: () => void;
   onApplyNextWeekRange: () => void;
   onClearSearch: () => void;
+  onExportCsv: () => void;
 };
 function resolveStatusText(copy: EmployeeScheduleCopy, status: ScheduleTimeStatus) {
   return status === "upcoming"
@@ -93,7 +94,8 @@ export default function EmployeeScheduleBoardView({
   onApplyCurrentMonthRange,
   onApplyCurrentWeekRange,
   onApplyNextWeekRange,
-  onClearSearch
+  onClearSearch,
+  onExportCsv
 }: EmployeeScheduleBoardViewProps) {
   return (
     <main className="saas-content">
@@ -166,6 +168,9 @@ export default function EmployeeScheduleBoardView({
             </button>
             <button className="btn btn-secondary" type="button" onClick={onClearSearch}>
               {copy.clearSearchAction}
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={onExportCsv}>
+              {copy.exportCsvAction}
             </button>
           </div>
           <p className="small muted">{copy.visibleCountLabel}: {visibleScheduleCount} / {allScheduleCount}</p>

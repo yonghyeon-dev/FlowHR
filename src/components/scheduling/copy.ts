@@ -76,6 +76,7 @@ export type EmployeeScheduleCopy = {
   searchLabel: string;
   searchPlaceholder: string;
   clearSearchAction: string;
+  exportCsvAction: string;
   visibleCountLabel: string;
   statusFilterLabel: string;
   statusFilterAll: string;
@@ -110,6 +111,8 @@ export type EmployeeScheduleCopy = {
   statusNeedsRange: string;
   statusNeedsOrgDev: string;
   statusListLoaded: string;
+  statusExported: string;
+  statusNoSchedulesToExport: string;
   pendingList: string;
   loadErrorPrefix: string;
   scheduleIdLabel: string;
@@ -262,6 +265,7 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     searchLabel: "\uC2A4\uCF00\uC904 \uAC80\uC0C9",
     searchPlaceholder: "\uC2A4\uCF00\uC904 ID/\uBA54\uBAA8 \uAC80\uC0C9",
     clearSearchAction: "\uAC80\uC0C9 \uCD08\uAE30\uD654",
+    exportCsvAction: "CSV \uB0B4\uBCF4\uB0B4\uAE30",
     visibleCountLabel: "\uD45C\uC2DC \uC2A4\uCF00\uC904",
     statusFilterLabel: "진행 상태 필터",
     statusFilterAll: "전체 상태",
@@ -296,6 +300,8 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     statusNeedsRange: "조회 기간을 입력하세요.",
     statusNeedsOrgDev: "개발 헤더 모드에서는 조직 식별자가 필요합니다.",
     statusListLoaded: "내 스케줄을 불러왔습니다.",
+    statusExported: "CSV 파일을 내보냈습니다.",
+    statusNoSchedulesToExport: "내보낼 스케줄이 없습니다.",
     pendingList: "내 스케줄 조회",
     loadErrorPrefix: "요청 실패",
     scheduleIdLabel: "스케줄 ID",
@@ -327,6 +333,7 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     searchLabel: "Schedule search",
     searchPlaceholder: "Search by schedule ID/notes",
     clearSearchAction: "Clear search",
+    exportCsvAction: "Export CSV",
     visibleCountLabel: "Visible schedules",
     statusFilterLabel: "Status filter",
     statusFilterAll: "All statuses",
@@ -361,6 +368,8 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     statusNeedsRange: "from/to date is required.",
     statusNeedsOrgDev: "organization ID is required in dev header mode.",
     statusListLoaded: "my schedules loaded.",
+    statusExported: "CSV export completed.",
+    statusNoSchedulesToExport: "No schedules to export.",
     pendingList: "load my schedules",
     loadErrorPrefix: "request failed",
     scheduleIdLabel: "Schedule ID",
