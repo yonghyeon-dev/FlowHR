@@ -8,28 +8,46 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payslipPath = join(process.cwd(), "src", "app", "employee", "payslips", "page.tsx");
+  const derivedStatePath = join(
+    process.cwd(),
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "use-payslip-derived-state.ts"
+  );
   const payslipRaw = readFileSync(payslipPath);
   const payslipSource = payslipRaw.toString("utf8");
+  const derivedStateRaw = readFileSync(derivedStatePath);
+  const derivedStateSource = derivedStateRaw.toString("utf8");
   const localeHelperSource = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const workItem = readUtf8("work-items", "WI-0393-employee-payslips-utf8-encoding-guard.md");
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.ok(!payslipSource.includes("\uFFFD"), "payslip page should not contain UTF-8 replacement chars");
   assert.ok(
+    !derivedStateSource.includes("\uFFFD"),
+    "payslip derived-state hook should not contain UTF-8 replacement chars"
+  );
+  assert.ok(
     Buffer.from(payslipSource, "utf8").equals(payslipRaw),
     "payslip page should be valid UTF-8 bytes"
   );
+  assert.ok(
+    Buffer.from(derivedStateSource, "utf8").equals(derivedStateRaw),
+    "payslip derived-state hook should be valid UTF-8 bytes"
+  );
 
   assert.match(
-    payslipSource,
+    derivedStateSource,
     /const compareInsightTitle = useMemo\(\(\) => resolveCompareInsightTitle\(isKoLocale\), \[isKoLocale\]\);/
   );
   assert.match(
-    payslipSource,
+    derivedStateSource,
     /const compareInsightAriaLabel = useMemo\(\(\) => resolveCompareInsightAriaLabel\(isKoLocale\), \[isKoLocale\]\);/
   );
   assert.match(
-    payslipSource,
+    derivedStateSource,
     /return formatCompareWindowLabel\(selectedLabel, compareLabel, isKoLocale\);/
   );
 
@@ -58,7 +76,10 @@ async function run() {
     /return isKoLocale \? `\$\{selectedLabel\} 대비 \$\{compareLabel\}` : `\$\{selectedLabel\} vs \$\{compareLabel\}`;/
   );
 
-  assert.doesNotMatch(payslipSource, /Àü¿ù|´ëºñ|¼³¸í|ì „ì›”|ëŒ€ë¹„|ì„¤ëª…|\?€ë¹?/);
+  assert.doesNotMatch(
+    `${payslipSource}\n${derivedStateSource}`,
+    /Àü¿ù|´ëºñ|¼³¸í|ì „ì›”|ëŒ€ë¹„|ì„¤ëª…|\?€ë¹?/
+  );
 
   assert.match(workItem, /WI-0393/i);
   assert.match(workItem, /UTF-8|encoding|인코딩/i);
