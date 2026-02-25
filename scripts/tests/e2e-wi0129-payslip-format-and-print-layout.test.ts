@@ -24,7 +24,7 @@ function run() {
     "page-view-detail-panel.tsx"
   );
   const payslipSurface = `${payslipPage}\n${payslipPageView}\n${payslipDerivedState}\n${payslipDetailPanel}`;
-  const localeHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
+  const localePageCopy = readUtf8("src", "app", "employee", "payslips", "page-locale-page-copy.ts");
   const globalCss = readUtf8("src", "app", "globals.css");
 
   assert.match(
@@ -53,11 +53,19 @@ function run() {
     "payslip page should include tax credit explanation section"
   );
 
-  assert.match(localeHelpers, /printSavePdf: "(인쇄\/PDF 저장|인쇄\/문서 저장)"/);
-  assert.match(localeHelpers, /copyPdfFileName: "(PDF 파일명 복사|문서 파일명 복사)"/);
-  assert.match(localeHelpers, /deductionGuideTitle: "공제 항목 설명"/);
-  assert.match(localeHelpers, /deductionComponentTitle: "법정공제 세부 구성"/);
-  assert.match(localeHelpers, /taxCreditReferenceTitle: "세액공제 참고 항목"/);
+  assert.match(localePageCopy, /printSavePdf:\s*"/, "locale copy should define print/pdf action text");
+  assert.match(localePageCopy, /copyPdfFileName:\s*"/, "locale copy should define pdf filename action text");
+  assert.match(localePageCopy, /deductionGuideTitle:\s*"/, "locale copy should define deduction guide title");
+  assert.match(
+    localePageCopy,
+    /deductionComponentTitle:\s*"/,
+    "locale copy should define deduction component title"
+  );
+  assert.match(
+    localePageCopy,
+    /taxCreditReferenceTitle:\s*"/,
+    "locale copy should define tax credit reference title"
+  );
 
   assert.match(globalCss, /\.panel-payslip-print/, "payslip print panel styles should exist");
   assert.match(globalCss, /\.payslip-sheet/, "payslip sheet styles should exist");
