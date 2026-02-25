@@ -7,7 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const payslipLocaleHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
+  const payslipLocaleRuntime = readUtf8("src", "app", "employee", "payslips", "page-locale-runtime.ts");
   const payslipReceiptRuntimeHelpers = readUtf8(
     "src",
     "components",
@@ -15,21 +15,18 @@ async function run() {
     "runtime-copy-helpers.ts"
   );
   const contractsHttp = readUtf8("src", "components", "contracts", "http.ts");
-  const withholdingConsole = readUtf8(
+  const withholdingCopyRuntime = readUtf8(
     "src",
     "components",
     "withholding-receipt",
-    "WithholdingReceiptConsole.tsx"
+    "copy-runtime.ts"
   );
-  const workItem = readUtf8(
-    "work-items",
-    "WI-0432-korean-runtime-latin-fallback-hardening.md"
-  );
+  const workItem = readUtf8("work-items", "WI-0432-korean-runtime-latin-fallback-hardening.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payslipLocaleHelpers, /function hasLatinText\(value: string\)/);
-  assert.match(payslipLocaleHelpers, /if \(!hasLatinText\(normalized\)\) \{\s*return normalized;\s*\}/);
-  assert.doesNotMatch(payslipLocaleHelpers, /function isAsciiHeavyText\(value: string\)/);
+  assert.match(payslipLocaleRuntime, /function hasLatinText\(value: string\)/);
+  assert.match(payslipLocaleRuntime, /if \(!hasLatinText\(normalized\)\) \{\s*return normalized;\s*\}/);
+  assert.doesNotMatch(payslipLocaleRuntime, /function isAsciiHeavyText\(value: string\)/);
 
   assert.match(payslipReceiptRuntimeHelpers, /function hasLatinText\(value: string\)/);
   assert.match(
@@ -41,9 +38,9 @@ async function run() {
   assert.match(contractsHttp, /return \/\[A-Za-z\]\/\.test\(normalized\);/);
   assert.doesNotMatch(contractsHttp, /asciiCount \//);
 
-  assert.match(withholdingConsole, /function hasLatinText\(value: string\)/);
-  assert.match(withholdingConsole, /if \(!hasLatinText\(normalized\)\) \{\s*return normalized;\s*\}/);
-  assert.doesNotMatch(withholdingConsole, /function isAsciiHeavyText\(value: string\)/);
+  assert.match(withholdingCopyRuntime, /function hasLatinText\(value: string\)/);
+  assert.match(withholdingCopyRuntime, /if \(!hasLatinText\(normalized\)\) \{\s*return normalized;\s*\}/);
+  assert.doesNotMatch(withholdingCopyRuntime, /function isAsciiHeavyText\(value: string\)/);
 
   assert.match(workItem, /WI-0432/i);
   assert.match(workItem, /korean|runtime|fallback|latin|withholding|payslip|contracts/i);

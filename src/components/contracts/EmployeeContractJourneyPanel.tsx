@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { toDateText } from "@/components/contracts/copy";
+import { contractJourneyCopyByLocale } from "@/components/contracts/journey-copy";
 import type { EmployeeContractDocument } from "@/components/contracts/types";
 
 type EmployeeContractJourneyPanelProps = {
@@ -16,24 +17,20 @@ export function EmployeeContractJourneyPanel({
   isKoLocale,
   runtimeLocale
 }: EmployeeContractJourneyPanelProps) {
+  const locale = isKoLocale ? "ko" : "en";
+  const copy = contractJourneyCopyByLocale[locale];
+
   const contractJourneySteps = useMemo(() => {
     if (!selected) {
       return [];
     }
 
-    const stepLabels = isKoLocale
-      ? [
-          { id: "draft", label: "초안 생성" },
-          { id: "approval", label: "승인 단계" },
-          { id: "sent", label: "직원 발송" },
-          { id: "response", label: "직원 응답" }
-        ]
-      : [
-          { id: "draft", label: "Draft created" },
-          { id: "approval", label: "Approval step" },
-          { id: "sent", label: "Sent to employee" },
-          { id: "response", label: "Employee response" }
-        ];
+    const stepLabels = [
+      { id: "draft", label: copy.stepLabels.draft },
+      { id: "approval", label: copy.stepLabels.approval },
+      { id: "sent", label: copy.stepLabels.sent },
+      { id: "response", label: copy.stepLabels.response }
+    ] as const;
 
     const statusLevel = (() => {
       if (selected.status === "DRAFT") {
@@ -60,76 +57,59 @@ export function EmployeeContractJourneyPanel({
             : level === statusLevel
               ? "active"
               : "pending";
+
+      let detail = "-";
+      if (step.id === "response") {
+        if (selected.respondedAt) {
+          detail = toDateText(selected.respondedAt, runtimeLocale);
+        } else if (selected.status === "SIGNED") {
+          detail = copy.responseStatus.signed;
+        } else if (selected.status === "REJECTED") {
+          detail = copy.responseStatus.rejected;
+        } else {
+          detail = copy.responseStatus.empty;
+        }
+      } else if (step.id === "sent") {
+        detail = toDateText(selected.updatedAt, runtimeLocale);
+      }
+
       return {
         ...step,
         tone,
-        detail:
-          step.id === "response"
-            ? selected.respondedAt
-              ? toDateText(selected.respondedAt, runtimeLocale)
-              : selected.status === "SIGNED"
-                ? isKoLocale
-                  ? "서명 처리 완료"
-                  : "Signed"
-                : selected.status === "REJECTED"
-                  ? isKoLocale
-                    ? "거절 처리됨"
-                    : "Rejected by employee"
-                  : "-"
-            : step.id === "sent"
-              ? toDateText(selected.updatedAt, runtimeLocale)
-              : "-"
+        detail
       };
     });
-  }, [isKoLocale, runtimeLocale, selected]);
+  }, [copy, runtimeLocale, selected]);
 
   const recoveryGuide = useMemo(() => {
     if (!selected) {
-      return isKoLocale
-        ? "문서를 선택하면 상태별 후속 가이드를 확인할 수 있습니다."
-        : "Select a document to view recovery guidance.";
+      return copy.recovery.noDocument;
     }
-
     if (selected.status === "SIGNED") {
-      return isKoLocale
-        ? "서명이 완료되었습니다. 증빙 파일을 내려받아 보관하세요."
-        : "Signature completed. Download and archive evidence.";
+      return copy.recovery.signed;
     }
     if (selected.status === "APPROVAL_REQUESTED") {
-      return isKoLocale
-        ? "관리자 승인 대기 중입니다. 급한 건이면 관리자 큐에서 우선 처리 요청하세요."
-        : "Waiting for admin approval. Ask admins to prioritize if urgent.";
+      return copy.recovery.approvalRequested;
     }
     if (selected.status === "SENT") {
-      return isKoLocale
-        ? "내용 확인 후 서명 또는 거절 사유를 입력해 응답하세요."
-        : "Review document and respond with sign or reject reason.";
+      return copy.recovery.sent;
     }
     if (selected.status === "REJECTED") {
-      return isKoLocale
-        ? "거절 사유를 확인한 뒤 수정 계약서를 요청하세요."
-        : "Review rejection reason and request a revised contract.";
+      return copy.recovery.rejected;
     }
     if (selected.status === "EXPIRED") {
-      return isKoLocale
-        ? "만료된 문서입니다. 갱신본 재발송을 요청하세요."
-        : "Document is expired. Request a renewed copy.";
+      return copy.recovery.expired;
     }
     if (selected.status === "RENEWED") {
-      return isKoLocale
-        ? "갱신된 문서가 준비되었습니다. 최신 버전을 선택해 응답하세요."
-        : "Renewed version is available. Select latest document to respond.";
+      return copy.recovery.renewed;
     }
-
-    return isKoLocale
-      ? "승인/발송 상태를 확인한 뒤 다음 단계로 진행하세요."
-      : "Check approval/send status before proceeding to next step.";
-  }, [isKoLocale, selected]);
+    return copy.recovery.default;
+  }, [copy, selected]);
 
   return (
     <>
       <section className="contract-journey-panel">
-        <h3>{isKoLocale ? "서명 여정 타임라인" : "Signature journey timeline"}</h3>
+        <h3>{copy.timelineTitle}</h3>
         <ul className="contract-journey-list">
           {contractJourneySteps.map((step) => (
             <li key={step.id} className={`tone-${step.tone}`}>
@@ -141,7 +121,7 @@ export function EmployeeContractJourneyPanel({
       </section>
 
       <section className="contract-recovery-guide">
-        <h3>{isKoLocale ? "복구 가이드" : "Recovery guide"}</h3>
+        <h3>{copy.recoveryTitle}</h3>
         <p>{recoveryGuide}</p>
       </section>
     </>

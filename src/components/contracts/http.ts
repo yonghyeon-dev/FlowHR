@@ -1,4 +1,15 @@
+import type { FlowLocale } from "@/lib/i18n/locales";
+
+let contractsLocaleOverride: FlowLocale | null = null;
+
+export function setContractsRuntimeLocale(locale: FlowLocale | null) {
+  contractsLocaleOverride = locale;
+}
+
 function isKoRuntimeLocale() {
+  if (contractsLocaleOverride) {
+    return contractsLocaleOverride === "ko";
+  }
   if (typeof document !== "undefined") {
     const htmlLang = document.documentElement.lang?.trim().toLowerCase();
     if (htmlLang.startsWith("ko")) {

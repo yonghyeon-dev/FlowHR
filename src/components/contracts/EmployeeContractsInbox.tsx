@@ -7,7 +7,11 @@ import {
   toDateText,
 } from "@/components/contracts/copy";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
-import { normalizeContractsErrorMessageForRuntime, readJson } from "@/components/contracts/http";
+import {
+  normalizeContractsErrorMessageForRuntime,
+  readJson,
+  setContractsRuntimeLocale
+} from "@/components/contracts/http";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
 import {
   type ContractSignatureEvidenceResponse,
@@ -52,6 +56,13 @@ export default function EmployeeContractsInbox() {
     )) as { documents?: ContractDocument[] };
     setDocuments(data.documents ?? []);
   }, [copy.loadError]);
+
+  useEffect(() => {
+    setContractsRuntimeLocale(locale);
+    return () => {
+      setContractsRuntimeLocale(null);
+    };
+  }, [locale]);
 
   useEffect(() => {
     reload().catch((loadError) => {

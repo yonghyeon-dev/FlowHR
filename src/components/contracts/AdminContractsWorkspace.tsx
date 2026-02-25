@@ -11,7 +11,11 @@ import {
   type ContractCategory
 } from "@/components/contracts/copy";
 import { resolveContractDocumentActionRequest } from "@/components/contracts/action-payloads";
-import { normalizeContractsErrorMessageForRuntime, readJson } from "@/components/contracts/http";
+import {
+  normalizeContractsErrorMessageForRuntime,
+  readJson,
+  setContractsRuntimeLocale
+} from "@/components/contracts/http";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
 import {
   type AdminContractDocument as ContractDocument,
@@ -69,6 +73,12 @@ export default function AdminContractsWorkspace() {
     setTemplates((templateBodyRaw as { templates?: ContractTemplate[] }).templates ?? []);
     setDocuments((documentBodyRaw as { documents?: ContractDocument[] }).documents ?? []);
   }, [copy.loadError]);
+  useEffect(() => {
+    setContractsRuntimeLocale(locale);
+    return () => {
+      setContractsRuntimeLocale(null);
+    };
+  }, [locale]);
   useEffect(() => {
     reload().catch((loadError) => {
       setError(

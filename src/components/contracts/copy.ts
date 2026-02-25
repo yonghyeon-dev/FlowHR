@@ -148,7 +148,7 @@ export const adminContractsCopyByLocale: Record<FlowLocale, AdminContractsCopy> 
     updatedPrefix: "업데이트",
     documentLifecycleTitle: "문서 라이프사이클",
     employeeIdLabel: "직원 번호",
-    employeeIdPlaceholder: "EMP-0001",
+    employeeIdPlaceholder: "직원-0001",
     selectedTemplateLabel: "선택된 템플릿",
     createDraftAction: "초안 생성",
     documentListAria: "계약 문서 목록",

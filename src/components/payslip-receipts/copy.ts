@@ -70,7 +70,7 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     pendingConfirmationLabel: "수신 확인 대기",
     runsTitle: "실행 목록",
     runsSearchLabel: "\uBA85\uC138\uC11C \uAC80\uC0C9",
-    runsSearchPlaceholder: "\uC2E4\uD589 ID/\uAE30\uAC04/\uBC30\uD3EC/\uC218\uC2E0 \uAC80\uC0C9",
+    runsSearchPlaceholder: "실행 번호/기간/배포/수신 검색",
     clearSearchAction: "\uAC80\uC0C9 \uCD08\uAE30\uD654",
     visibleRunsLabel: "\uD45C\uC2DC \uBA85\uC138\uC11C",
     noConfirmedPayslipsLoaded: "아직 확정 급여명세를 불러오지 않았습니다.",

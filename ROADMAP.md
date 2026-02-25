@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.133 (Korean Copy Residual Sweep - Withholding/Payslip/Contracts)
+> **Current version**: 0.1.145 (Korean Static Sweep + Payslip API/Locale Split + Scheduling Normalizers)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -706,3 +706,15 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0439 employee payslip receipts search filter and line-budget hardening (PayslipReceiptConsole.tsx run-list search + clear-search + visible-count/filtered-empty guidance + response/log helper compaction to <=300 lines + payslip-receipts ko/en copy extension + regression tests)
 - WI-0440 withholding receipt console panel decomposition phase1 (WithholdingReceiptPanels.tsx summary/log panel extraction + WithholdingReceiptConsole.tsx runRequest boilerplate consolidation + regression-anchor preservation + line count reduction 711->660 + regression test)
 - WI-0441 payroll service filing submission context helper and line-budget 500 (service.ts duplicated filing precondition flow extracted to loadFilingSubmissionContext, stale import surface trimmed, submit/resubmit rewired without behavior change, and service line count reduced 546->486 with regression test)
+- WI-0442 withholding receipt copy/runtime extraction and line-budget 300 (`copy-runtime.ts`로 locale copy/runtime helper 분리 + `WithholdingReceiptConsole.tsx` orchestration-only 축소(<=300) + regression test)
+- WI-0443 payslips runtime locale lock (`setPayslipRuntimeLocale` override 추가 + `/employee/payslips` i18n locale 기반 runtime formatter lock/unlock + regression test)
+- WI-0444 contracts journey copy extraction and runtime locale lock (`journey-copy.ts` 신규 + `EmployeeContractJourneyPanel.tsx` locale copy 전환 + `contracts/http.ts` locale override + contracts 화면 3곳 lock 적용 + regression test)
+- WI-0445 payslips locale helper split copy/runtime/barrel (`page-locale-copy.ts`/`page-locale-runtime.ts` 분해 + `page-locale-helpers.ts` 배럴 경량화 + regression test)
+- WI-0446 employee attendance/leave panel decomposition (`EmployeeAttendanceLeaveFormsPanel.tsx` + `EmployeeLeaveCalendarPanel.tsx` 분리 + `EmployeeAttendanceLeavePanels.tsx` orchestration 축소(<=220) + regression test)
+- WI-0447 korean locale residual guard phase2 (`withholding`/`payslip`/`contracts` ko copy 금지 영어 토큰 회귀 가드 테스트 추가)
+- WI-0448 korean locale static latin sweep (`withholding`/`payslip`/`contracts` ko copy 블록 전수 스캔 + 허용 토큰 최소화(`FlowHR`) + regression test)
+- WI-0449 payslips korean copy token normalization (`/employee/payslips` ko placeholder에서 RUN/ORG/x-actor-* 노출 제거 + 한국어 예시/안내 문구 정규화 + regression test)
+- WI-0450 payslips page api hook extraction and line-budget 500 (`use-payslip-api.ts` 신규 + `page.tsx` inline callApi/refresh/logging 제거 + 537->399 line budget 회복 + regression test)
+- WI-0451 payslips locale copy modular split (`page-locale-types/search-sort/page-copy/deduction` 분해 + `page-locale-copy.ts` 경량 배럴 전환 + 기존 회귀 테스트 기준 갱신 + regression test)
+- WI-0452 scheduling service incident normalizer extraction and line-budget 5500 (`incident-normalizers.ts` 신규 + incident SLA/escalation/archive/replay/reconcile parser/normalizer 분리 + `service.ts` 5616->5471 축소 + regression test)
+- WI-0453 core line budget guard (`payslips page/locale/scheduling service` 핵심 파일 예산 가드 + ko 토큰 정규화 회귀 고정 + regression test)

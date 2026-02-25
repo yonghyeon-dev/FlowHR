@@ -19,11 +19,11 @@ async function run() {
     "payslip-receipts",
     "PayslipReceiptConsole.tsx"
   );
-  const withholdingConsole = readUtf8(
+  const withholdingCopyRuntime = readUtf8(
     "src",
     "components",
     "withholding-receipt",
-    "WithholdingReceiptConsole.tsx"
+    "copy-runtime.ts"
   );
   const contractsCopy = readUtf8("src", "components", "contracts", "copy.ts");
 
@@ -41,12 +41,12 @@ async function run() {
   assert.match(payslipReceiptConsole, /const normalizedSupabaseSessionError = useMemo\(/);
   assert.match(payslipReceiptConsole, /copy\.sessionErrorPrefix\}: \{normalizedSupabaseSessionError\}/);
 
-  assert.match(withholdingConsole, /actionPreviewReceipt: "영수증 미리보기"/);
-  assert.match(withholdingConsole, /pendingReceiptPreview: "원천징수영수증 미리보기"/);
-  assert.match(withholdingConsole, /logPreviewReceipt: "원천징수영수증 미리보기"/);
-  assert.match(withholdingConsole, /runGuardPreviewedLabel: "미리보기"/);
+  assert.match(withholdingCopyRuntime, /actionPreviewReceipt:\s*"영수증 미리보기"/);
+  assert.match(withholdingCopyRuntime, /pendingReceiptPreview:\s*"원천징수영수증 미리보기"/);
+  assert.match(withholdingCopyRuntime, /logPreviewReceipt:\s*"원천징수영수증 미리보기"/);
+  assert.match(withholdingCopyRuntime, /runGuardPreviewedLabel:\s*"미리보기"/);
 
-  assert.match(contractsCopy, /commentLabel: "의견"/);
+  assert.match(contractsCopy, /commentLabel:\s*"의견"/);
 
   assert.match(workItem, /WI-0427/i);
   assert.match(workItem, /korean|runtime|withholding|payslip|contracts/i);
