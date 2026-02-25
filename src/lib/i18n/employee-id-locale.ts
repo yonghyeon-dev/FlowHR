@@ -61,3 +61,20 @@ export function normalizeEmployeeIdForLocaleInput(value: string, locale: FlowLoc
   }
   return trimmed;
 }
+
+export function formatEmployeeIdForLocaleDisplay(value: string, locale: FlowLocale) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+  if (locale !== "ko") {
+    const normalizedEnglish = normalizeEnglishEmployeeId(trimmed);
+    return normalizedEnglish;
+  }
+
+  const englishMatch = englishEmployeeIdPattern.exec(trimmed);
+  if (englishMatch) {
+    return `${koreanEmployeeIdPrefix}${englishMatch[1]}`;
+  }
+  return trimmed;
+}

@@ -22,6 +22,11 @@ import {
   type ContractDocumentAction,
   type ContractTemplate
 } from "@/components/contracts/types";
+import {
+  formatEmployeeIdForLocaleDisplay,
+  normalizeEmployeeIdForApi,
+  normalizeEmployeeIdForLocaleInput
+} from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 export default function AdminContractsWorkspace() {
   const { locale } = useI18n();
@@ -47,6 +52,10 @@ export default function AdminContractsWorkspace() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const selectedTemplateId = useMemo(() => templates[0]?.id ?? "", [templates]);
+  const normalizedEmployeeIdForApi = useMemo(
+    () => normalizeEmployeeIdForApi(employeeId, locale),
+    [employeeId, locale]
+  );
   const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
     () => ({
       request: copy.requestApprovalAction,
@@ -79,6 +88,12 @@ export default function AdminContractsWorkspace() {
       setContractsRuntimeLocale(null);
     };
   }, [locale]);
+  useEffect(() => {
+    const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
+    if (localizedInput && localizedInput !== employeeId) {
+      setEmployeeId(localizedInput);
+    }
+  }, [employeeId, locale]);
   useEffect(() => {
     reload().catch((loadError) => {
       setError(
@@ -113,7 +128,7 @@ export default function AdminContractsWorkspace() {
     }
   }
   async function createDraftDocument() {
-    if (!selectedTemplateId || employeeId.trim().length === 0) {
+    if (!selectedTemplateId || normalizedEmployeeIdForApi.length === 0) {
       setError(copy.requiredTemplateAndEmployeeError);
       return;
     }
@@ -126,8 +141,8 @@ export default function AdminContractsWorkspace() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           templateId: selectedTemplateId,
-          employeeId: employeeId.trim(),
-          title: `${copy.draftTitlePrefix} ${employeeId.trim()}`,
+          employeeId: normalizedEmployeeIdForApi,
+          title: `${copy.draftTitlePrefix} ${formatEmployeeIdForLocaleDisplay(normalizedEmployeeIdForApi, locale)}`,
           requiresApproval: true
         })
       }).then((response) => readJson(response, copy.draftCreateError));
@@ -275,7 +290,8 @@ export default function AdminContractsWorkspace() {
                   <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
                 </div>
                 <p>
-                  {document.id} | {copy.employeePrefix} {document.employeeId} | {copy.approvalPrefix}{" "}
+                  {document.id} | {copy.employeePrefix}{" "}
+                  {formatEmployeeIdForLocaleDisplay(document.employeeId, locale)} | {copy.approvalPrefix}{" "}
                   {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
                   {toDateText(document.expiresAt, runtimeLocale)}
                 </p>
