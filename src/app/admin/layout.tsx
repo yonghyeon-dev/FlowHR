@@ -31,6 +31,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin#leave-policy", label: t("admin.nav.leavePolicy") },
     { href: "/admin/leave-accrual", label: t("admin.nav.leaveAccrual") },
     { href: "/admin/leave-calendar", label: t("admin.nav.leaveCalendar") },
+    { href: "/admin/scheduling", label: t("admin.nav.scheduling") },
     { href: "/admin#payroll", label: t("admin.nav.payroll") },
     { href: "/admin/payroll-insurance", label: t("admin.nav.insurance") },
     { href: "/admin/payroll-close", label: t("admin.nav.payrollClose") },
