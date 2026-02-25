@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -33,16 +33,16 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.equal(defaultEmployeeIdForApi, "EMP-1001");
-  assert.equal(getLocalizedEmployeeIdInputDefault("ko"), "직원-1001");
+  assert.equal(getLocalizedEmployeeIdInputDefault("ko"), "\uC9C1\uC6D0-1001");
   assert.equal(getLocalizedEmployeeIdInputDefault("en"), "EMP-1001");
 
-  assert.equal(normalizeEmployeeIdForApi("직원-1001", "ko"), "EMP-1001");
-  assert.equal(normalizeEmployeeIdForApi("직원-1001", "en"), "EMP-1001");
+  assert.equal(normalizeEmployeeIdForApi("\uC9C1\uC6D0-1001", "ko"), "EMP-1001");
+  assert.equal(normalizeEmployeeIdForApi("\uC9C1\uC6D0-1001", "en"), "EMP-1001");
   assert.equal(normalizeEmployeeIdForApi("emp-1001", "ko"), "EMP-1001");
   assert.equal(normalizeEmployeeIdForApi("EMP-1001", "en"), "EMP-1001");
 
-  assert.equal(normalizeEmployeeIdForLocaleInput("EMP-1001", "ko"), "직원-1001");
-  assert.equal(normalizeEmployeeIdForLocaleInput("직원-1001", "en"), "EMP-1001");
+  assert.equal(normalizeEmployeeIdForLocaleInput("EMP-1001", "ko"), "\uC9C1\uC6D0-1001");
+  assert.equal(normalizeEmployeeIdForLocaleInput("\uC9C1\uC6D0-1001", "en"), "EMP-1001");
 
   for (const source of [withholdingConsole, payslipReceiptConsole]) {
     assert.match(source, /getLocalizedEmployeeIdInputDefault/);

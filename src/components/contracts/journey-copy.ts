@@ -1,4 +1,4 @@
-import type { FlowLocale } from "@/lib/i18n/locales";
+﻿import type { FlowLocale } from "@/lib/i18n/locales";
 
 type ContractJourneyStepLabels = {
   draft: string;
@@ -50,12 +50,13 @@ export const contractJourneyCopyByLocale: Record<FlowLocale, ContractJourneyCopy
     recovery: {
       noDocument: "문서를 선택하면 상태별 후속 가이드를 확인할 수 있습니다.",
       signed: "서명이 완료되었습니다. 증빙 파일을 내려받아 보관해 주세요.",
-      approvalRequested: "관리자 승인 대기 중입니다. 급한 건이면 관리자 큐에 우선 처리를 요청해 주세요.",
-      sent: "내용 확인 후 서명 또는 거절 사유를 입력해 응답해 주세요.",
-      rejected: "거절 사유를 확인한 뒤 수정 계약서를 요청해 주세요.",
-      expired: "만료된 문서입니다. 갱신본 발송을 요청해 주세요.",
+      approvalRequested:
+        "관리자 승인 대기 중입니다. 긴급한 건이면 관리자에게 우선 처리를 요청해 주세요.",
+      sent: "문서를 확인하고 서명 또는 거절 사유를 입력해 응답해 주세요.",
+      rejected: "거절 사유를 확인하고 수정 계약서를 요청해 주세요.",
+      expired: "만료된 문서입니다. 갱신본 재발송을 요청해 주세요.",
       renewed: "갱신 문서가 준비되었습니다. 최신 문서를 선택해 응답해 주세요.",
-      default: "승인/발송 상태를 확인한 뒤 다음 단계로 진행해 주세요."
+      default: "승인/발송 상태를 확인한 후 다음 단계로 진행해 주세요."
     }
   },
   en: {

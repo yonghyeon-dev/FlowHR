@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -24,9 +24,9 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.equal(normalizeEmployeeIdForApi("직원-1001", "ko"), "EMP-1001");
-  assert.equal(formatEmployeeIdForLocaleDisplay("EMP-1001", "ko"), "직원-1001");
-  assert.equal(formatEmployeeIdForLocaleDisplay("직원-1001", "en"), "직원-1001");
+  assert.equal(normalizeEmployeeIdForApi("\uC9C1\uC6D0-1001", "ko"), "EMP-1001");
+  assert.equal(formatEmployeeIdForLocaleDisplay("EMP-1001", "ko"), "\uC9C1\uC6D0-1001");
+  assert.equal(formatEmployeeIdForLocaleDisplay("\uC9C1\uC6D0-1001", "en"), "\uC9C1\uC6D0-1001");
   assert.equal(formatEmployeeIdForLocaleDisplay("emp-1001", "en"), "EMP-1001");
 
   assert.match(contractsWorkspace, /normalizeEmployeeIdForApi/);

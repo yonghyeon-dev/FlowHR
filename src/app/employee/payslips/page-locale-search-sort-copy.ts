@@ -1,4 +1,4 @@
-import type { PayslipSearchSortCopy } from "@/app/employee/payslips/page-locale-types";
+﻿import type { PayslipSearchSortCopy } from "@/app/employee/payslips/page-locale-types";
 
 export function resolvePayslipSearchSortCopy(isKoLocale: boolean): PayslipSearchSortCopy {
   if (isKoLocale) {
@@ -18,19 +18,19 @@ export function resolvePayslipSearchSortCopy(isKoLocale: boolean): PayslipSearch
       sort: {
         latest: "최신순",
         oldest: "오래된순",
-        netDesc: "실지급 높은순",
+        netDesc: "실수령 높은순",
         grossDesc: "총지급 높은순"
       },
       actions: {
         reset: "초기화",
-        focusSelected: "선택 명세서로 포커스",
-        netPayHigh: "실지급 높은순"
+        focusSelected: "선택 명세서로 스크롤",
+        netPayHigh: "실수령 높은순"
       },
       empty: "현재 검색 조건과 일치하는 확정 명세서가 없습니다.",
-      listAriaLabel: "명세서 검색 정렬 목록",
+      listAriaLabel: "명세서 검색/정렬 목록",
       gross: "총지급",
       deduction: "공제",
-      net: "실지급",
+      net: "실수령",
       confirmed: "확정",
       select: "선택"
     };

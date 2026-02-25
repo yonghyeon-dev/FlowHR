@@ -1,10 +1,10 @@
-import type { PayslipPageCopy } from "@/app/employee/payslips/page-locale-types";
+﻿import type { PayslipPageCopy } from "@/app/employee/payslips/page-locale-types";
 
 export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
   if (isKoLocale) {
     return {
       pageTitle: "급여 명세서",
-      pageSubtitle: "직원은 본인의 확정된 급여 내역만 조회할 수 있습니다.",
+      pageSubtitle: "직원은 본인 확정 급여 내역만 조회할 수 있습니다.",
       nav: {
         employeePortal: "직원 포털",
         login: "로그인",
@@ -12,22 +12,22 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         home: "홈"
       },
       productionNotice: {
-        prefix: "현재 환경은",
+        prefix: "현재 런타임은",
         runtimeLabel: "운영",
-        suffix: "입니다. 명세서 조회를 위해 로그인 세션(인증 토큰)이 필요합니다:"
+        suffix: "입니다. 명세서를 조회하려면 로그인 세션(토큰)이 필요합니다:"
       },
       kpi: {
         count: "명세서 건수",
         totalGross: "총지급 합계",
         totalDeductions: "총공제 합계",
-        totalNet: "실지급 합계",
+        totalNet: "실수령 합계",
         apiCalls: "요청 호출",
         ok: "성공",
         fail: "실패"
       },
       filters: {
         title: "조회 조건",
-        organizationIdOptional: "조직 식별자 (선택)",
+        organizationIdOptional: "조직 식별자(선택)",
         organizationIdPlaceholder: "예: 조직-00001",
         employeeId: "내 직원 번호",
         periodStart: "기간 시작",
@@ -37,14 +37,14 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
           currentMonth: "이번 달",
           previousMonth: "지난 달",
           lastThreeMonths: "최근 3개월",
-          downloadCsv: "표 내려받기"
+          downloadCsv: "내보내기"
         }
       },
       devTools: {
         summary: "개발/검증 설정",
         hiddenByDefault: "기본은 숨김",
-        bearerTokenOptional: "접근 토큰 (선택)",
-        bearerPlaceholder: "비어 있으면 세션 기반 액터 헤더 모드가 사용됩니다.",
+        bearerTokenOptional: "액세스 토큰(선택)",
+        bearerPlaceholder: "비워두면 세션 기반 요청 헤더 모드를 사용합니다.",
         bearerStatusLabel: "토큰 모드",
         sessionRoleLabel: "권한",
         sessionOrganizationLabel: "조직 식별자",
@@ -64,17 +64,17 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         overtime: "연장",
         night: "야간",
         holiday: "휴일",
-        payable: "급여반영",
+        payable: "급여 반영",
         payableUnit: "건",
         empty: "근태 집계가 없습니다."
       },
       payslipList: {
         title: "명세서 목록",
-        empty: "확정된 급여가 없습니다.",
+        empty: "확정 급여가 없습니다.",
         ariaLabel: "급여 명세서 목록",
         gross: "총지급",
         deduction: "공제",
-        net: "실지급",
+        net: "실수령",
         confirmed: "확정",
         select: "선택"
       },
@@ -97,13 +97,13 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         noRecentResult: "최근 조회 결과가 없습니다.",
         successSuffix: "요청이 정상 처리되었습니다.",
         failureSuffix: "요청이 실패했습니다.",
-        guideIfNoFailure: "실패 이력이 없으면 최신 명세서를 선택한 뒤 전달 준비를 진행하세요.",
-        guideIfFailure: "실패 원인을 확인한 뒤 조회 기간/사번/조직 식별자를 점검하고 다시 조회하세요."
+        guideIfNoFailure: "실패 이력이 없으면 최신 명세서를 선택해 후속 작업을 진행하세요.",
+        guideIfFailure: "실패 원인을 확인하고 조회 기간/직원/조직 식별자를 점검한 뒤 다시 조회하세요."
       },
       compare: {
         title: "명세서 비교 조회",
         copySnapshot: "비교 스냅샷 복사",
-        empty: "비교 가능한 명세서가 없습니다. 기간을 넓혀 조회하세요.",
+        empty: "비교 가능한 명세서가 없습니다. 기간을 넓혀 다시 조회하세요.",
         target: "비교 대상",
         window: "비교 기간",
         diffSuffix: "차이",
@@ -117,19 +117,19 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         metrics: {
           gross: "총지급",
           deduction: "총공제",
-          net: "실지급"
+          net: "실수령"
         }
       },
       detail: {
         title: "선택 명세서 상세",
-        empty: "선택된 명세서가 없습니다.",
+        empty: "선택한 명세서가 없습니다.",
         actions: {
           printSavePdf: "인쇄/문서 저장",
           copyPdfFileName: "문서 파일명 복사",
           copyPayslipId: "명세서 번호 복사"
         },
         recommendedFileName: "권장 파일명",
-        sheetAriaLabel: "급여 명세서 문서 서식",
+        sheetAriaLabel: "급여 명세서 문서 형식",
         sheetEyebrow: "FlowHR 급여 명세서",
         sheetTitleSuffix: "급여 명세서",
         payPeriod: "지급 기간",
@@ -138,7 +138,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         confirmedDate: "확정일",
         settlementState: "정산 상태",
         summaryTitle: "요약",
-        paymentDeductionTitle: "지급/공제 상세",
+        paymentDeductionTitle: "지급 공제 상세",
         withholdingTax: "원천세",
         socialInsurance: "사회보험",
         otherDeductions: "기타 공제",
@@ -159,7 +159,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       },
       deductionFallback: {
         statutoryDetail: "법정공제 세부 항목입니다.",
-        taxCreditDetail: "세액공제 계산에 사용된 항목입니다."
+        taxCreditDetail: "세액공제 계산에 사용되는 참고 항목입니다."
       }
     };
   }
@@ -220,16 +220,16 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       sessionError: "Session error",
       clearLogs: "Clear logs"
     },
-      attendance: {
-        summaryPrefix: "Attendance summary",
-        regular: "Regular",
-        overtime: "Overtime",
-        night: "Night",
-        holiday: "Holiday",
-        payable: "Payroll applied",
-        payableUnit: " records",
-        empty: "No attendance aggregate found."
-      },
+    attendance: {
+      summaryPrefix: "Attendance summary",
+      regular: "Regular",
+      overtime: "Overtime",
+      night: "Night",
+      holiday: "Holiday",
+      payable: "Payroll applied",
+      payableUnit: " records",
+      empty: "No attendance aggregate found."
+    },
     payslipList: {
       title: "Payslip list",
       empty: "No confirmed payroll run found.",
@@ -300,16 +300,16 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       confirmedDate: "Confirmed at",
       settlementState: "Settlement state",
       summaryTitle: "Summary",
-        paymentDeductionTitle: "Payment and deduction detail",
-        withholdingTax: "Withholding tax",
-        socialInsurance: "Social insurance",
-        otherDeductions: "Other deductions",
-        deductionGuideTitle: "Deduction item guide",
-        deductionComponentTitle: "Statutory deduction components",
-        taxCreditReferenceTitle: "Tax credit reference items",
-        noItems: "No items to display.",
-        attendanceReference: "Attendance reference",
-        deductionBreakdownRaw: "Raw deduction breakdown"
+      paymentDeductionTitle: "Payment and deduction detail",
+      withholdingTax: "Withholding tax",
+      socialInsurance: "Social insurance",
+      otherDeductions: "Other deductions",
+      deductionGuideTitle: "Deduction item guide",
+      deductionComponentTitle: "Statutory deduction components",
+      taxCreditReferenceTitle: "Tax credit reference items",
+      noItems: "No items to display.",
+      attendanceReference: "Attendance reference",
+      deductionBreakdownRaw: "Raw deduction breakdown"
     },
     logs: {
       fetchPayslips: "Fetch payslips",
