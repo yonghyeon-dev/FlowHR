@@ -35,7 +35,10 @@ async function run() {
   assert.match(payslipView, /id="compare-view"/);
   assert.match(payslipView, /resolvePayslipRunStateLabel\(selectedRun\.state, isKoLocale\)/);
 
-  assert.match(payslipHelpers, /export function buildCompareMetrics\(/);
+  assert.match(
+    payslipHelpers,
+    /export function buildCompareMetrics\(|export\s*\{\s*buildCompareInsightCards,\s*buildCompareMetrics,\s*formatPercent\s*\}\s*from/
+  );
   assert.match(payslipLocaleHelpers, /resolvePayslipPageCopy/);
   assert.match(payslipLocalePageCopy, /export function resolvePayslipPageCopy\(isKoLocale: boolean\)/);
 
