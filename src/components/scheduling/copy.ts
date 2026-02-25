@@ -70,12 +70,30 @@ export type EmployeeScheduleCopy = {
   toDateLabel: string;
   accessTokenLabel: string;
   loadAction: string;
+  currentMonthAction: string;
+  currentWeekAction: string;
+  nextWeekAction: string;
+  statusFilterLabel: string;
+  statusFilterAll: string;
+  statusFilterUpcoming: string;
+  statusFilterInProgress: string;
+  statusFilterCompleted: string;
+  holidayFilterLabel: string;
+  holidayFilterAll: string;
+  holidayFilterHoliday: string;
+  holidayFilterWorkday: string;
   summaryTitle: string;
   summaryTotalShifts: string;
   summaryHolidayShifts: string;
   summaryWorkHours: string;
+  summaryUpcomingShifts: string;
+  summaryInProgressShifts: string;
+  summaryCompletedShifts: string;
+  nextShiftTitle: string;
+  nextShiftEmpty: string;
   listTitle: string;
   listEmpty: string;
+  listFilteredEmpty: string;
   logsTitle: string;
   logsEmpty: string;
   logTotals: string;
@@ -97,6 +115,9 @@ export type EmployeeScheduleCopy = {
   notesFallback: string;
   holidayNo: string;
   holidayYes: string;
+  statusUpcoming: string;
+  statusInProgress: string;
+  statusCompleted: string;
 };
 
 export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy> = {
@@ -230,12 +251,30 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     toDateLabel: "조회 종료일",
     accessTokenLabel: "접근 토큰(선택)",
     loadAction: "내 스케줄 조회",
+    currentMonthAction: "이번 달",
+    currentWeekAction: "이번 주",
+    nextWeekAction: "다음 주",
+    statusFilterLabel: "진행 상태 필터",
+    statusFilterAll: "전체 상태",
+    statusFilterUpcoming: "예정",
+    statusFilterInProgress: "진행 중",
+    statusFilterCompleted: "완료",
+    holidayFilterLabel: "휴일 필터",
+    holidayFilterAll: "전체",
+    holidayFilterHoliday: "휴일 근무만",
+    holidayFilterWorkday: "평일 근무만",
     summaryTitle: "요약",
     summaryTotalShifts: "근무 건수",
     summaryHolidayShifts: "휴일 근무",
     summaryWorkHours: "총 근무 시간",
+    summaryUpcomingShifts: "예정 근무",
+    summaryInProgressShifts: "진행 중 근무",
+    summaryCompletedShifts: "완료 근무",
+    nextShiftTitle: "다음 근무",
+    nextShiftEmpty: "예정된 근무가 없습니다.",
     listTitle: "스케줄 목록",
     listEmpty: "해당 기간에 등록된 스케줄이 없습니다.",
+    listFilteredEmpty: "현재 필터 조건에 맞는 스케줄이 없습니다.",
     logsTitle: "요청 로그",
     logsEmpty: "아직 API 호출이 없습니다.",
     logTotals: "전체",
@@ -256,7 +295,10 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     updatedAtLabel: "수정 시각",
     notesFallback: "메모 없음",
     holidayNo: "아니오",
-    holidayYes: "예"
+    holidayYes: "예",
+    statusUpcoming: "예정",
+    statusInProgress: "진행 중",
+    statusCompleted: "완료"
   },
   en: {
     eyebrow: "FlowHR Employee",
@@ -269,12 +311,30 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     toDateLabel: "To date",
     accessTokenLabel: "Access Token (optional)",
     loadAction: "Load my schedules",
+    currentMonthAction: "Current month",
+    currentWeekAction: "Current week",
+    nextWeekAction: "Next week",
+    statusFilterLabel: "Status filter",
+    statusFilterAll: "All statuses",
+    statusFilterUpcoming: "Upcoming",
+    statusFilterInProgress: "In progress",
+    statusFilterCompleted: "Completed",
+    holidayFilterLabel: "Holiday filter",
+    holidayFilterAll: "All",
+    holidayFilterHoliday: "Holiday shifts only",
+    holidayFilterWorkday: "Workday shifts only",
     summaryTitle: "Summary",
     summaryTotalShifts: "Total shifts",
     summaryHolidayShifts: "Holiday shifts",
     summaryWorkHours: "Total work hours",
+    summaryUpcomingShifts: "Upcoming shifts",
+    summaryInProgressShifts: "In progress shifts",
+    summaryCompletedShifts: "Completed shifts",
+    nextShiftTitle: "Next shift",
+    nextShiftEmpty: "No upcoming shift.",
     listTitle: "Schedule list",
     listEmpty: "No schedule found in current range.",
+    listFilteredEmpty: "No schedules match the current filters.",
     logsTitle: "API logs",
     logsEmpty: "No API call yet.",
     logTotals: "total",
@@ -295,6 +355,9 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     updatedAtLabel: "Updated at",
     notesFallback: "No notes",
     holidayNo: "No",
-    holidayYes: "Yes"
+    holidayYes: "Yes",
+    statusUpcoming: "Upcoming",
+    statusInProgress: "In progress",
+    statusCompleted: "Completed"
   }
 };
