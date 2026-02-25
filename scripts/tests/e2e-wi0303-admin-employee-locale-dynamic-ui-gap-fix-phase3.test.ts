@@ -41,6 +41,12 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeavePanels.tsx"
   );
+  const employeeAttendanceLeaveFormsPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeaveFormsPanel.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0303-admin-employee-locale-dynamic-ui-gap-fix-phase3.md"
@@ -69,7 +75,7 @@ async function run() {
     /\{isKoLocale\s*\?\s*"조직 식별자 \(선택\)"\s*:\s*"Organization ID \(optional\)"\}/
   );
   assert.match(
-    employeeAttendanceLeavePanels,
+    employeeAttendanceLeaveFormsPanel,
     /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/
   );
   assert.ok(

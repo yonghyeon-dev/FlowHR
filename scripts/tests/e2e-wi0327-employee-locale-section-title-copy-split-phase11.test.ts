@@ -14,7 +14,19 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeavePanels.tsx"
   );
-  const employeeSectionSources = `${employeePage}\n${employeeAttendanceLeavePanels}`;
+  const employeeAttendanceLeaveFormsPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeaveFormsPanel.tsx"
+  );
+  const employeeLeaveCalendarPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveCalendarPanel.tsx"
+  );
+  const employeeSectionSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeLeaveCalendarPanel}`;
   const localeHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",

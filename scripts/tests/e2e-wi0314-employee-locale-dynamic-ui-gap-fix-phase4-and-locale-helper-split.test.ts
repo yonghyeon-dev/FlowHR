@@ -16,7 +16,19 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeavePanels.tsx"
   );
-  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}`;
+  const employeeAttendanceLeaveFormsPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeAttendanceLeaveFormsPanel.tsx"
+  );
+  const employeeLeaveCalendarPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveCalendarPanel.tsx"
+  );
+  const employeeSurfaceSources = `${employeePage}\n${employeeAttendanceLeavePanels}\n${employeeAttendanceLeaveFormsPanel}\n${employeeLeaveCalendarPanel}`;
   const employeeLocaleSources = `${employeePage}\n${employeeHelpers}`;
   const workItem = readUtf8(
     "work-items",
