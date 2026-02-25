@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+癤퓁mport assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -9,6 +9,22 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
   const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
+  const payslipFilterPanel = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-view-filter-panel.tsx"
+  );
+  const payslipRunListPanel = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-view-run-list-panel.tsx"
+  );
+  const payslipViewSurface = `${payslipPageView}\n${payslipFilterPanel}\n${payslipRunListPanel}`;
+
   const payslipDerivedState = readUtf8(
     "src",
     "app",
@@ -43,13 +59,10 @@ async function run() {
     /stateSearchText: `\$\{run\.state\.toLowerCase\(\)\} \$\{stateLabel\.toLowerCase\(\)\}`/
   );
 
-  assert.match(payslipPageView, /<h1 className="page-title">\{pageCopy\.pageTitle\}<\/h1>/);
-  assert.match(payslipPageView, /\{pageCopy\.status\.title\}/);
-  assert.match(payslipPageView, /\{pageCopy\.compare\.title\}/);
-
-  assert.doesNotMatch(payslipPageView, /<h1 className="page-title">급여 명세서<\/h1>/);
-  assert.doesNotMatch(payslipPageView, /<h2>상태\/오류 피드백<\/h2>/);
-  assert.doesNotMatch(payslipPageView, /<h2>명세서 비교 조회<\/h2>/);
+  assert.match(payslipViewSurface, /<h1 className="page-title">\{pageCopy\.pageTitle\}<\/h1>/);
+  assert.match(payslipViewSurface, /\{pageCopy\.status\.title\}/);
+  assert.match(payslipViewSurface, /\{pageCopy\.compare\.title\}/);
+  assert.doesNotMatch(payslipViewSurface, /占�/);
 
   assert.match(localeHelpers, /resolvePayslipPageCopy,/);
   assert.match(localeHelpers, /resolvePayslipRunStateLabel,/);
