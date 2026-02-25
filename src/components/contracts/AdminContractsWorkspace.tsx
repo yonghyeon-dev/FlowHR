@@ -168,7 +168,7 @@ export default function AdminContractsWorkspace() {
       {error ? <p className="inline-error">{error}</p> : null}
       {message ? <p className="small">{message}</p> : null}
 
-      <section className="kpi-strip" aria-label="contract summary kpi">
+      <section className="kpi-strip" aria-label={copy.summaryKpiAria}>
         <article className="kpi-card">
           <span>{copy.templatesKpiLabel}</span>
           <strong>{templates.length}</strong>

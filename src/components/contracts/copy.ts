@@ -92,6 +92,7 @@ const adminContractsCopyEn = {
   templatesKpiLabel: "Templates",
   documentsKpiLabel: "Documents",
   pendingApprovalKpiLabel: "Pending Approval",
+  summaryKpiAria: "contract summary kpi",
   templateLibraryTitle: "Contract Template Library",
   nameLabel: "Name",
   categoryLabel: "Category",
@@ -137,6 +138,7 @@ export const adminContractsCopyByLocale: Record<FlowLocale, AdminContractsCopy> 
     templatesKpiLabel: "템플릿",
     documentsKpiLabel: "문서",
     pendingApprovalKpiLabel: "승인 대기",
+    summaryKpiAria: "전자계약 요약 지표",
     templateLibraryTitle: "계약 템플릿 라이브러리",
     nameLabel: "이름",
     categoryLabel: "카테고리",
@@ -251,7 +253,7 @@ export const contractTemplateBuilderCopyByLocale: Record<FlowLocale, ContractTem
     templateCreateError: "템플릿 생성에 실패했습니다",
     untitledClause: "제목 없는 조항",
     emptyClauseBody: "-",
-    defaultTemplateName: "근로계약서 v1",
+    defaultTemplateName: "근로계약서 버전 1",
     defaultClauses: [
       {
         title: "직무 및 책임",

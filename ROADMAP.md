@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.132 (Mobile RootNavigator Locale-Dynamic Title Baseline)
+> **Current version**: 0.1.133 (Korean Copy Residual Sweep - Withholding/Payslip/Contracts)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -665,3 +665,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0398 payslip page view decomposition and render-orchestrator split (`/employee/payslips` render extract to `page-view.tsx` + orchestration-only `page.tsx` and line-count reduction + regression test)
 - WI-0399 notice-benefits-recruitment baseline routes and nav i18n wiring (`/admin/notices`, `/admin/benefits`, `/admin/recruitment`, `/employee/benefits`, `/employee/recruitment` baseline routes + admin/employee nav and ko/en i18n key wiring + regression test)
 - WI-0400 mobile root navigator locale-dynamic title baseline (`apps/mobile` navigator title/splash copy locale switch for `ko`/`en` + locale resolver helper + regression test)
+- WI-0401 korean copy residual sweep for withholding/payslip/contracts (`/employee/withholding-receipt`, `/employee/payslip-receipts`, `/employee/contracts`, `/admin/contracts` ko copy residual english label cleanup + contracts KPI aria locale copy + regression guard test)
