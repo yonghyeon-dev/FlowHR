@@ -17,6 +17,20 @@ async function run() {
     "payslips",
     "page-locale-helpers.ts"
   );
+  const payslipLocaleRuntime = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-locale-runtime.ts"
+  );
+  const payslipSearchSortCopy = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-locale-search-sort-copy.ts"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0318-employee-payslips-locale-helper-split-phase6.md"
@@ -33,11 +47,19 @@ async function run() {
   assert.doesNotMatch(payslipSurface, /function formatKrw\(value: number \| null\)/);
   assert.doesNotMatch(payslipSurface, /function formatDateOnly\(value: string \| null\)/);
 
-  assert.match(payslipLocaleHelpers, /export function resolveRuntimeLocale\(\)/);
-  assert.match(payslipLocaleHelpers, /export function formatDateTime\(value: string \| null\)/);
-  assert.match(payslipLocaleHelpers, /export function formatKrw\(value: number \| null\)/);
-  assert.match(payslipLocaleHelpers, /export function formatDateOnly\(value: string \| null\)/);
-  assert.match(payslipLocaleHelpers, /export function resolvePayslipSearchSortCopy\(isKoLocale: boolean\)/);
+  assert.match(payslipLocaleHelpers, /from "@\/app\/employee\/payslips\/page-locale-copy"/);
+  assert.match(payslipLocaleHelpers, /from "@\/app\/employee\/payslips\/page-locale-runtime"/);
+  assert.match(payslipLocaleHelpers, /resolveRuntimeLocale,/);
+  assert.match(payslipLocaleHelpers, /formatDateTime,/);
+  assert.match(payslipLocaleHelpers, /formatKrw,/);
+  assert.match(payslipLocaleHelpers, /formatDateOnly,/);
+  assert.match(payslipLocaleHelpers, /resolvePayslipSearchSortCopy/);
+
+  assert.match(payslipLocaleRuntime, /export function resolveRuntimeLocale\(\)/);
+  assert.match(payslipLocaleRuntime, /export function formatDateTime\(value: string \| null\)/);
+  assert.match(payslipLocaleRuntime, /export function formatKrw\(value: number \| null\)/);
+  assert.match(payslipLocaleRuntime, /export function formatDateOnly\(value: string \| null\)/);
+  assert.match(payslipSearchSortCopy, /export function resolvePayslipSearchSortCopy\(isKoLocale: boolean\)/);
 
   const payslipPageLineCount = payslipPage.split(/\r?\n/).length;
   assert.ok(

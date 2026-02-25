@@ -1,4 +1,4 @@
-Ôªøimport assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -17,6 +17,15 @@ async function run() {
     "use-payslip-derived-state.ts"
   );
   const localeHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
+  const localeCopy = readUtf8("src", "app", "employee", "payslips", "page-locale-copy.ts");
+  const localePageCopy = readUtf8("src", "app", "employee", "payslips", "page-locale-page-copy.ts");
+  const localeDeductionCopy = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-locale-deduction-copy.ts"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0319-employee-payslips-locale-dynamic-residual-gap-fix-phase7.md"
@@ -38,18 +47,23 @@ async function run() {
   assert.match(payslipPageView, /\{pageCopy\.status\.title\}/);
   assert.match(payslipPageView, /\{pageCopy\.compare\.title\}/);
 
-  assert.doesNotMatch(payslipPageView, /<h1 className="page-title">Í∏âÏó¨ Î™ÖÏÑ∏ÏÑú<\/h1>/);
-  assert.doesNotMatch(payslipPageView, /<h2>ÏÉÅÌÉú\/Ïò§Î•ò ÌîºÎìúÎ∞±<\/h2>/);
-  assert.doesNotMatch(payslipPageView, /<h2>Î™ÖÏÑ∏ÏÑú ÎπÑÍµê Ï°∞Ìöå<\/h2>/);
+  assert.doesNotMatch(payslipPageView, /<h1 className="page-title">±ﬁø© ∏Ìººº≠<\/h1>/);
+  assert.doesNotMatch(payslipPageView, /<h2>ªÛ≈¬\/ø¿∑˘ ««µÂπÈ<\/h2>/);
+  assert.doesNotMatch(payslipPageView, /<h2>∏Ìººº≠ ∫Ò±≥ ¡∂»∏<\/h2>/);
 
-  assert.match(localeHelpers, /export function resolvePayslipPageCopy\(isKoLocale: boolean\)/);
-  assert.match(
-    localeHelpers,
-    /export function resolvePayslipRunStateLabel\(state: PayslipRunState( \| string)?, isKoLocale: boolean\)/
-  );
-  assert.match(localeHelpers, /export function resolveDeductionDescriptionMap\(isKoLocale: boolean\)/);
-  assert.match(localeHelpers, /pageTitle: "Í∏âÏó¨ Î™ÖÏÑ∏ÏÑú"/);
-  assert.match(localeHelpers, /pageTitle: "Payslips"/);
+  assert.match(localeHelpers, /resolvePayslipPageCopy,/);
+  assert.match(localeHelpers, /resolvePayslipRunStateLabel,/);
+  assert.match(localeHelpers, /resolveDeductionDescriptionMap,/);
+  assert.match(localeHelpers, /from "@\/app\/employee\/payslips\/page-locale-copy"/);
+
+  assert.match(localeCopy, /export \{ resolvePayslipPageCopy \} from "@\/app\/employee\/payslips\/page-locale-page-copy";/);
+  assert.match(localeCopy, /resolveDeductionDescriptionMap,/);
+  assert.match(localeCopy, /resolvePayslipRunStateLabel/);
+
+  assert.match(localePageCopy, /export function resolvePayslipPageCopy\(isKoLocale: boolean\): PayslipPageCopy/);
+  assert.match(localePageCopy, /pageTitle: "Payslips"/);
+  assert.match(localeDeductionCopy, /export function resolvePayslipRunStateLabel\(state: PayslipRunState \| string, isKoLocale: boolean\)/);
+  assert.match(localeDeductionCopy, /export function resolveDeductionDescriptionMap\(isKoLocale: boolean\): DeductionDescriptionMap/);
 
   const payslipPageLineCount = payslipPage.split(/\r?\n/).length;
   assert.ok(
