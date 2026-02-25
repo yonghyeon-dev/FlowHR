@@ -78,7 +78,8 @@ const koContractsErrorMessagePatterns: Array<{ pattern: RegExp; message: string 
     message: "\uC785\uB825\uAC12\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."
   },
   {
-    pattern: /request failed|failed to load|load failed|response failed|network error/i,
+    pattern:
+      /request failed|failed to load|load failed|response failed|network error|failed to fetch|fetch failed|econnreset|econnrefused|enotfound|getaddrinfo/i,
     message: "\uC694\uCCAD\uC774 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
   },
   {
