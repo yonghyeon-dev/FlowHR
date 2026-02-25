@@ -2,20 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  buildAttendanceStatusSummary,
-  buildIntegratedSummaryCards,
-  buildLeaveCalendarCells,
-  buildLeaveCalendarRows,
-  buildLeaveBalanceCards,
-  buildRequestFlowStats,
-  buildLeaveStatusSummary,
-  buildLeaveUsageProjectionLabel,
-  buildResubmitCandidates,
-  resolveSelectedResubmitCandidate,
-  summarizeEmployeeApiLogs
-} from "@/app/employee/page-derived-helpers";
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
+import { useEmployeeDashboardDerivedState } from "@/app/employee/page-dashboard-derived-state";
 import { buildEmployeeMutationActions } from "@/app/employee/page-mutation-actions";
 import {
   buildEmployeeInteractionHandlers
@@ -23,7 +11,6 @@ import {
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import {
   buildQuery,
-  calculateNetMinutes,
   coerceNumber,
   firstDayOfMonthLocal,
   formatDateTime,
@@ -36,7 +23,6 @@ import {
 } from "@/app/employee/page-helpers";
 import {
   extractEmployeeErrorMessage,
-  formatEmployeeDeltaMinutes,
   isDefaultEmployeeCancelReason,
   resolveEmployeeLocaleLabelBundle
 } from "@/app/employee/page-locale-helpers";
@@ -44,14 +30,11 @@ import { useEmployeeRuntimeSession } from "@/app/employee/page-session-helpers";
 import type {
   ApiLog,
   AttendanceRecordDto,
-  IntegratedSummaryCard,
   LeaveBalanceDto,
-  LeaveCalendarDayCell,
   LeaveRequestDto,
   RequestSearchScope,
   RequestSortOption,
   RequestStatusFilter,
-  ResubmitCandidate,
   TimelineChannelFilter,
   WorkScheduleDto
 } from "@/app/employee/page-types";
@@ -154,7 +137,6 @@ export default function EmployeeSelfServicePage() {
     notConfiguredLabel
   });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
-  const newestLog = logs[0];
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
   const {
@@ -249,181 +231,49 @@ export default function EmployeeSelfServicePage() {
     setLogs([]);
   }
 
-  const latestPayload = useMemo(() => {
-    if (!newestLog) {
-      return defaultsCopy.noApiCallHistory;
-    }
-    try {
-      return JSON.stringify(newestLog.body, null, 2);
-    } catch {
-      return String(newestLog.body);
-    }
-  }, [defaultsCopy.noApiCallHistory, newestLog]);
-
-  const stats = useMemo(() => {
-    return summarizeEmployeeApiLogs(logs);
-  }, [logs]);
-
-  const leaveBalanceSummary = useMemo(() => {
-    if (!leaveBalance) {
-      return leaveBalanceCopy.notLoaded;
-    }
-    return leaveBalanceCopy.summary(
-      formatDays(leaveBalance.remainingDays),
-      formatDays(leaveBalance.grantedDays),
-      formatDays(leaveBalance.usedDays)
-    );
-  }, [leaveBalance, leaveBalanceCopy]);
-
-  const pendingLeaveCount = useMemo(
-    () => leaveRequests.filter((request) => request.state === "PENDING").length,
-    [leaveRequests]
-  );
-
-  const latestAttendance = useMemo(() => {
-    if (attendance.length === 0) {
-      return null;
-    }
-    return attendance[attendance.length - 1] ?? null;
-  }, [attendance]);
-
-  const selectedCorrectionRecord = useMemo(() => {
-    const targetId = selectedCorrectionRecordId.trim() || lastAttendanceId.trim();
-    if (!targetId) {
-      return null;
-    }
-    return attendance.find((record) => record.id === targetId) ?? null;
-  }, [attendance, lastAttendanceId, selectedCorrectionRecordId]);
-
-  const attendanceSummary = useMemo(() => {
-    if (!latestAttendance) {
-      return defaultsCopy.noRecord;
-    }
-    if (!latestAttendance.checkOutAt) {
-      return defaultsCopy.working;
-    }
-    return defaultsCopy.checkedOut;
-  }, [defaultsCopy.checkedOut, defaultsCopy.noRecord, defaultsCopy.working, latestAttendance]);
-
-  const leaveUsageRatePercent = useMemo(() => {
-    if (!leaveBalance || leaveBalance.grantedDays <= 0) {
-      return 0;
-    }
-    const ratio = (leaveBalance.usedDays / leaveBalance.grantedDays) * 100;
-    return Math.max(0, Math.min(100, Math.round(ratio)));
-  }, [leaveBalance]);
-
-  const leaveUsageRingStyle = useMemo(
-    () => ({
-      background: `conic-gradient(#1f5fd1 0 ${leaveUsageRatePercent}%, #dbe8ff ${leaveUsageRatePercent}% 100%)`
-    }),
-    [leaveUsageRatePercent]
-  );
-
-  const leaveBalanceCards = useMemo(() => {
-    return buildLeaveBalanceCards(leaveBalance, leaveBalanceCopy, formatDays);
-  }, [leaveBalance, leaveBalanceCopy]);
-
-  const leaveUsageProjectionLabel = useMemo(() => {
-    return buildLeaveUsageProjectionLabel(leaveBalance, leaveBalanceCopy, formatDays);
-  }, [leaveBalance, leaveBalanceCopy]);
-
-  const leaveCalendarMonthLabel = useMemo(() => {
-    const parsedPeriodStart = new Date(periodStart);
-    const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
-    return new Intl.DateTimeFormat(runtimeLocale, { year: "numeric", month: "long" }).format(anchor);
-  }, [periodStart, runtimeLocale]);
-
-  const leaveCalendarCells = useMemo<LeaveCalendarDayCell[]>(
-    () => buildLeaveCalendarCells(leaveRequests, periodStart),
-    [leaveRequests, periodStart]
-  );
-
-  const leaveCalendarRows = useMemo(
-    () =>
-      buildLeaveCalendarRows({
-        leaveRequests,
-        toLeaveTypeLabel,
-        leaveUnitCopy,
-        formatDays,
-        formatDateTime: formatDateTimeByLocale
-      }),
-    [formatDateTimeByLocale, leaveRequests, leaveUnitCopy, toLeaveTypeLabel]
-  );
-
-  const attendanceStatusSummary = useMemo(
-    () => buildAttendanceStatusSummary(attendance),
-    [attendance]
-  );
-
-  const leaveStatusSummary = useMemo(
-    () => buildLeaveStatusSummary(leaveRequests),
-    [leaveRequests]
-  );
-
-  const requestFlowStats = useMemo(
-    () =>
-      buildRequestFlowStats({
-        attendanceStatusSummary,
-        leaveStatusSummary
-      }),
-    [attendanceStatusSummary, leaveStatusSummary]
-  );
-
-  const resubmitCandidates = useMemo<ResubmitCandidate[]>(
-    () =>
-      buildResubmitCandidates({
-        attendance,
-        leaveRequests,
-        noReasonProvidedLabel: defaultsCopy.noReasonProvided,
-        formatDateTime: formatDateTimeByLocale,
-        toLeaveTypeLabel
-      }),
-    [attendance, defaultsCopy.noReasonProvided, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]
-  );
-
-  const selectedResubmitCandidate = useMemo(
-    () => resolveSelectedResubmitCandidate(resubmitCandidates, selectedResubmitCandidateKey),
-    [resubmitCandidates, selectedResubmitCandidateKey]
-  );
-
-  useEffect(() => {
-    if (resubmitCandidates.length === 0) {
-      if (selectedResubmitCandidateKey) {
-        setSelectedResubmitCandidateKey("");
-      }
-      return;
-    }
-    if (!selectedResubmitCandidateKey) {
-      setSelectedResubmitCandidateKey(resubmitCandidates[0].key);
-      return;
-    }
-    if (!resubmitCandidates.some((candidate) => candidate.key === selectedResubmitCandidateKey)) {
-      setSelectedResubmitCandidateKey(resubmitCandidates[0].key);
-    }
-  }, [resubmitCandidates, selectedResubmitCandidateKey]);
-
-  const integratedSummaryCards = useMemo<IntegratedSummaryCard[]>(
-    () =>
-      buildIntegratedSummaryCards({
-        attendanceStatusSummary,
-        leaveStatusSummary,
-        requestCompletionRatePercent: requestFlowStats.requestCompletionRatePercent,
-        resubmitNeededCount: resubmitCandidates.length,
-        successCount: stats.success,
-        failCount: stats.fail,
-        summaryCardCopy
-      }),
-    [
-      attendanceStatusSummary,
-      leaveStatusSummary,
-      requestFlowStats.requestCompletionRatePercent,
-      resubmitCandidates.length,
-      stats.fail,
-      stats.success,
-      summaryCardCopy
-    ]
-  );
+  const {
+    latestPayload,
+    stats,
+    leaveBalanceSummary,
+    pendingLeaveCount,
+    latestAttendance,
+    selectedCorrectionRecord,
+    attendanceSummary,
+    leaveUsageRatePercent,
+    leaveUsageRingStyle,
+    leaveBalanceCards,
+    leaveUsageProjectionLabel,
+    leaveCalendarMonthLabel,
+    leaveCalendarCells,
+    leaveCalendarRows,
+    resubmitCandidates,
+    selectedResubmitCandidate,
+    integratedSummaryCards,
+    correctionDeltaLabel
+  } = useEmployeeDashboardDerivedState({
+    logs,
+    attendance,
+    leaveRequests,
+    leaveBalance,
+    selectedCorrectionRecordId,
+    lastAttendanceId,
+    selectedResubmitCandidateKey,
+    setSelectedResubmitCandidateKey,
+    periodStart,
+    runtimeLocale,
+    checkInAt,
+    checkOutAt,
+    breakMinutes,
+    isKoLocale,
+    defaultsCopy,
+    summaryCardCopy,
+    leaveBalanceCopy,
+    leaveUnitCopy,
+    attendanceCopy,
+    formatDays,
+    formatDateTimeByLocale,
+    toLeaveTypeLabel
+  });
 
   const {
     filteredRequestFeedbackRows,
@@ -491,27 +341,6 @@ export default function EmployeeSelfServicePage() {
     resubmitFlowCheckCopy,
     submitChecklistCardCopy
   });
-
-  const correctionDeltaLabel = useMemo(() => {
-    if (!selectedCorrectionRecord) {
-      return attendanceCopy.noComparisonTarget;
-    }
-    const originalNetMinutes = calculateNetMinutes({
-      checkInAt: selectedCorrectionRecord.checkInAt,
-      checkOutAt: selectedCorrectionRecord.checkOutAt,
-      breakMinutes: selectedCorrectionRecord.breakMinutes
-    });
-    const draftNetMinutes = calculateNetMinutes({
-      checkInAt: toIso(checkInAt),
-      checkOutAt: checkOutAt.trim() ? toIso(checkOutAt) : null,
-      breakMinutes: Math.max(0, Math.trunc(coerceNumber(breakMinutes)))
-    });
-
-    if (originalNetMinutes === null || draftNetMinutes === null) {
-      return defaultsCopy.notComparable;
-    }
-    return formatEmployeeDeltaMinutes(draftNetMinutes - originalNetMinutes, isKoLocale);
-  }, [attendanceCopy.noComparisonTarget, breakMinutes, checkInAt, checkOutAt, defaultsCopy.notComparable, isKoLocale, selectedCorrectionRecord]);
 
   const {
     applyAttendanceRecordToCorrectionForm,

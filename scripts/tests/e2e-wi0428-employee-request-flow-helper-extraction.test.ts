@@ -9,6 +9,12 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const derivedHelpers = readUtf8("src", "app", "employee", "page-derived-helpers.ts");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const dashboardDerivedHook = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "page-dashboard-derived-state.ts"
+  );
 
   const workItem = readUtf8("work-items", "WI-0428-employee-request-flow-helper-extraction.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -17,11 +23,18 @@ async function run() {
   assert.match(derivedHelpers, /requestCompletionRatePercent/);
   assert.match(derivedHelpers, /export function resolveSelectedResubmitCandidate\(/);
 
-  assert.match(employeePage, /buildRequestFlowStats,/);
-  assert.match(employeePage, /resolveSelectedResubmitCandidate,/);
-  assert.match(employeePage, /const requestFlowStats = useMemo\(/);
-  assert.match(employeePage, /resolveSelectedResubmitCandidate\(resubmitCandidates, selectedResubmitCandidateKey\)/);
-  assert.match(employeePage, /requestCompletionRatePercent: requestFlowStats\.requestCompletionRatePercent/);
+  assert.match(dashboardDerivedHook, /buildRequestFlowStats,/);
+  assert.match(dashboardDerivedHook, /resolveSelectedResubmitCandidate,/);
+  assert.match(dashboardDerivedHook, /const requestFlowStats = useMemo\(/);
+  assert.match(
+    dashboardDerivedHook,
+    /resolveSelectedResubmitCandidate\(resubmitCandidates, selectedResubmitCandidateKey\)/
+  );
+  assert.match(
+    dashboardDerivedHook,
+    /requestCompletionRatePercent: requestFlowStats\.requestCompletionRatePercent/
+  );
+  assert.match(employeePage, /useEmployeeDashboardDerivedState/);
 
   assert.match(workItem, /WI-0428/i);
   assert.match(workItem, /employee|request flow|helper|extraction|decomposition/i);
