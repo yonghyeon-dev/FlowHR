@@ -1,4 +1,5 @@
 import { type FlowLocale } from "@/lib/i18n/locales";
+import type { PayrollAccuracyCheckKey } from "@/components/payroll-year-end/accuracy-evidence";
 
 const yearEndCopyEn = {
   heroEyebrow: "FlowHR Admin",
@@ -80,6 +81,24 @@ const yearEndCopyEn = {
   issuedAtLabel: "Issued At",
   pendingReceiptRunsLabel: "Pending Receipt Runs",
   blockingReasonsLabel: "Blocking Reasons",
+  accuracyEvidenceTitle: "Calculation Accuracy Evidence",
+  noAccuracyEvidenceYet: "Run settlement/recalculation/reconciliation to generate evidence.",
+  accuracySummaryLabel: "Evidence Summary",
+  accuracyPassLabel: "PASS",
+  accuracyFailLabel: "FAIL",
+  accuracyCheckLabels: {
+    gross_net_balance: "Gross/Net balance",
+    deduction_components_balance: "Deduction component balance",
+    withholding_delta_balance: "Withholding delta balance",
+    due_refund_exclusive: "Additional due/refund exclusivity",
+    tax_credit_cap_balance: "Tax credit cap balance",
+    taxable_income_deduction_balance: "Taxable income deduction balance",
+    tax_liability_delta_balance: "Tax liability delta balance",
+    withholding_delta_change_balance: "Withholding delta change balance",
+    taxable_income_reduction_balance: "Taxable income reduction balance",
+    insurance_reconciliation_status_balance: "Insurance reconciliation status balance",
+    insurance_monthly_sum_balance: "Insurance monthly sum balance"
+  } as Record<PayrollAccuracyCheckKey, string>,
   apiLogsTitle: "API Logs",
   apiLogsTotalLabel: "total",
   apiLogsSuccessLabel: "success",
@@ -219,6 +238,24 @@ export const payrollYearEndCopyByLocale: Record<FlowLocale, PayrollYearEndCopy> 
     issuedAtLabel: "발급 시각",
     pendingReceiptRunsLabel: "수신 확인 대기 실행",
     blockingReasonsLabel: "차단 사유",
+    accuracyEvidenceTitle: "계산 정확성 증빙",
+    noAccuracyEvidenceYet: "정산/재계산/보험 대사를 실행하면 증빙이 생성됩니다.",
+    accuracySummaryLabel: "증빙 요약",
+    accuracyPassLabel: "통과",
+    accuracyFailLabel: "실패",
+    accuracyCheckLabels: {
+      gross_net_balance: "총지급/실지급 균형",
+      deduction_components_balance: "공제 항목 합계 균형",
+      withholding_delta_balance: "원천세 차이 균형",
+      due_refund_exclusive: "추가 납부/환급 상호배타",
+      tax_credit_cap_balance: "세액공제 상한 균형",
+      taxable_income_deduction_balance: "과세소득 공제 균형",
+      tax_liability_delta_balance: "세액 차이 반영 균형",
+      withholding_delta_change_balance: "원천세 차이 변경 균형",
+      taxable_income_reduction_balance: "과세소득 감소량 균형",
+      insurance_reconciliation_status_balance: "보험 대사 상태 균형",
+      insurance_monthly_sum_balance: "보험 월별 합계 균형"
+    },
     apiLogsTitle: "요청 로그",
     apiLogsTotalLabel: "총",
     apiLogsSuccessLabel: "성공",

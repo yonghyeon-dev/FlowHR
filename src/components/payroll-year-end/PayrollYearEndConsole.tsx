@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { payrollYearEndCopyByLocale } from "@/components/payroll-year-end/copy";
+import { PayrollAccuracyEvidencePanel } from "@/components/payroll-year-end/PayrollAccuracyEvidencePanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -545,6 +546,12 @@ export default function PayrollYearEndConsole() {
             </ul>
           )}
         </article>
+        <PayrollAccuracyEvidencePanel
+          copy={copy}
+          settlement={settlement}
+          recalculation={recalculation}
+          insuranceReconciliationReport={insuranceReconciliationReport}
+        />
         <article className="panel">
           <h2>{copy.apiLogsTitle}</h2>
           <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
