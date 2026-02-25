@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.129 (Scheduling Dedicated Workspace Baseline)
+> **Current version**: 0.1.131 (Notice-Benefits-Recruitment Baseline Routes and Nav i18n Wiring)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -662,3 +662,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0395 contracts Korean copy residual cleanup and localized request fallback (`/admin/contracts`, `/admin/contracts/builder`, `/employee/contracts` ko 용어 `ID` 잔여 제거 + contracts API fallback 에러문 locale copy 연결 + regression guard test)
 - WI-0396 payslip copy regression reversal and people page decomposition (`/employee/payslips` 비교 인사이트 copy/helper 추출로 page 역행 해소 + `/admin/people` view/types/helpers 분해로 `page.tsx` 500줄 미만 회복 + 회귀 테스트 갱신)
 - WI-0397 scheduling dedicated admin/employee workspace baseline (`/admin/scheduling` CRUD workspace + `/employee/schedule` own-board summary + i18n nav/copy + regression test)
+- WI-0398 payslip page view decomposition and render-orchestrator split (`/employee/payslips` render extract to `page-view.tsx` + orchestration-only `page.tsx` and line-count reduction + regression test)
+- WI-0399 notice-benefits-recruitment baseline routes and nav i18n wiring (`/admin/notices`, `/admin/benefits`, `/admin/recruitment`, `/employee/benefits`, `/employee/recruitment` baseline routes + admin/employee nav and ko/en i18n key wiring + regression test)
