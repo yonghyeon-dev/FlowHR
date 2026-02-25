@@ -8,6 +8,8 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
+  const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
+  const payslipSurface = `${payslipPage}\n${payslipPageView}`;
   const payslipLocaleHelpers = readUtf8(
     "src",
     "app",
@@ -27,8 +29,8 @@ async function run() {
   assert.match(payslipPage, /const runtimeLocale = isKoLocale \? "ko-KR" : "en-US";/);
   assert.match(payslipPage, /from "@\/app\/employee\/payslips\/page-locale-helpers"/);
   assert.match(payslipPage, /const searchSortCopy = useMemo\(\(\) => resolvePayslipSearchSortCopy\(isKoLocale\), \[isKoLocale\]\);/);
-  assert.match(payslipPage, /<h2>\{searchSortCopy\.title\}<\/h2>/);
-  assert.match(payslipPage, /<p className="small">\{searchSortCopy\.description\}<\/p>/);
+  assert.match(payslipPageView, /<h2>\{searchSortCopy\.title\}<\/h2>/);
+  assert.match(payslipPageView, /<p className="small">\{searchSortCopy\.description\}<\/p>/);
   assert.match(payslipPage, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
 
   assert.match(payslipLocaleHelpers, /export function resolveRuntimeLocale\(\)/);
@@ -39,8 +41,8 @@ async function run() {
   assert.match(payslipLocaleHelpers, /title: "명세서 검색\/정렬"/);
   assert.match(payslipLocaleHelpers, /title: "Payslip Search\/Sort"/);
 
-  assert.doesNotMatch(payslipPage, /toLocaleString\("ko-KR"\)/);
-  assert.doesNotMatch(payslipPage, /toLocaleDateString\("ko-KR"\)/);
+  assert.doesNotMatch(payslipSurface, /toLocaleString\("ko-KR"\)/);
+  assert.doesNotMatch(payslipSurface, /toLocaleDateString\("ko-KR"\)/);
 
   assert.match(workItem, /WI-0316/i);
   assert.match(workItem, /locale/i);
