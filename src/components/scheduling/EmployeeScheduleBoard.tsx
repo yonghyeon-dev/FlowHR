@@ -14,6 +14,7 @@ import {
   buildNextWeekDateRange,
   buildQuery,
   exportScheduleRowsCsv,
+  exportScheduleRowsIcs,
   extractErrorMessage,
   parseResponseBody,
   resolveScheduleTimeStatus,
@@ -205,13 +206,12 @@ export default function EmployeeScheduleBoard() {
     setToDate(range.toDate);
   }
 
-  function clearSearch() {
-    setSearchQuery("");
-  }
-
+  function clearSearch() { setSearchQuery(""); }
   function exportCsv() {
-    const exported = exportScheduleRowsCsv({ rows, runtimeLocale, isKoLocale });
-    setStatusMessage(exported ? copy.statusExported : copy.statusNoSchedulesToExport);
+    setStatusMessage(exportScheduleRowsCsv({ rows, runtimeLocale, isKoLocale }) ? copy.statusExported : copy.statusNoSchedulesToExport);
+  }
+  function exportIcs() {
+    setStatusMessage(exportScheduleRowsIcs({ rows, isKoLocale }) ? copy.statusIcsExported : copy.statusNoSchedulesToExport);
   }
 
   return (
@@ -249,6 +249,7 @@ export default function EmployeeScheduleBoard() {
       onApplyNextWeekRange={applyNextWeekRange}
       onClearSearch={clearSearch}
       onExportCsv={exportCsv}
+      onExportIcs={exportIcs}
     />
   );
 }

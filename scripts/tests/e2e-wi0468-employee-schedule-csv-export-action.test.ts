@@ -12,6 +12,12 @@ function countLines(source: string) {
 
 async function run() {
   const scheduleHelpers = readUtf8("src", "components", "scheduling", "helpers.ts");
+  const scheduleExportHelpers = readUtf8(
+    "src",
+    "components",
+    "scheduling",
+    "export-helpers.ts"
+  );
   const scheduleBoard = readUtf8("src", "components", "scheduling", "EmployeeScheduleBoard.tsx");
   const scheduleBoardView = readUtf8(
     "src",
@@ -26,10 +32,11 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(scheduleHelpers, /export function exportScheduleRowsCsv\(/);
-  assert.match(scheduleHelpers, /employee-schedule-\$\{stamp\}\.csv/);
-  assert.match(scheduleHelpers, /return false;/);
-  assert.match(scheduleHelpers, /return true;/);
+  assert.match(scheduleHelpers, /export \{ exportScheduleRowsCsv, exportScheduleRowsIcs \}/);
+  assert.match(scheduleExportHelpers, /export function exportScheduleRowsCsv\(/);
+  assert.match(scheduleExportHelpers, /employee-schedule-\$\{stamp\}\.csv/);
+  assert.match(scheduleExportHelpers, /return false;/);
+  assert.match(scheduleExportHelpers, /return true;/);
 
   assert.match(scheduleBoard, /import[\s\S]*exportScheduleRowsCsv/);
   assert.match(scheduleBoard, /function exportCsv\(\)/);
@@ -44,7 +51,7 @@ async function run() {
   assert.match(schedulingCopy, /exportCsvAction: string;/);
   assert.match(schedulingCopy, /statusExported: string;/);
   assert.match(schedulingCopy, /statusNoSchedulesToExport: string;/);
-  assert.match(schedulingCopy, /exportCsvAction: "CSV \\uB0B4\\uBCF4\\uB0B4\\uAE30"/);
+  assert.match(schedulingCopy, /exportCsvAction: "CSV 내보내기"/);
   assert.match(schedulingCopy, /exportCsvAction: "Export CSV"/);
   assert.match(schedulingCopy, /statusExported: "CSV export completed\."/);
   assert.match(schedulingCopy, /statusNoSchedulesToExport: "No schedules to export\."/);
@@ -60,6 +67,10 @@ async function run() {
   assert.ok(
     countLines(scheduleHelpers) <= 280,
     `scheduling/helpers.ts should stay <= 280 lines (current: ${countLines(scheduleHelpers)})`
+  );
+  assert.ok(
+    countLines(scheduleExportHelpers) <= 220,
+    `scheduling/export-helpers.ts should stay <= 220 lines (current: ${countLines(scheduleExportHelpers)})`
   );
 
   assert.match(workItem, /WI-0468/i);
