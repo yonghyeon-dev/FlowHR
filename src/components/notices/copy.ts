@@ -65,14 +65,20 @@ export type EmployeeNoticeBoardCopy = {
   organizationIdLabel: string;
   employeeIdLabel: string;
   accessTokenLabel: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  unreadOnlyLabel: string;
+  clearFiltersAction: string;
   refreshAction: string;
   markAllReadAction: string;
   audienceLabel: string;
   summaryLabel: string;
+  filteredSummaryLabel: string;
   unreadLabel: string;
   logsCountLabel: string;
   listTitle: string;
   listEmpty: string;
+  filteredListEmpty: string;
   markReadAction: string;
   readAtLabel: string;
   readBadge: string;
@@ -231,14 +237,20 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     organizationIdLabel: "조직 식별자",
     employeeIdLabel: "직원 식별자",
     accessTokenLabel: "접근 토큰(선택)",
+    searchLabel: "검색어",
+    searchPlaceholder: "제목/본문에서 검색",
+    unreadOnlyLabel: "미확인 공지만 보기",
+    clearFiltersAction: "필터 초기화",
     refreshAction: "공지 새로고침",
     markAllReadAction: "전체 확인 처리",
     audienceLabel: "대상",
     summaryLabel: "게시 공지",
+    filteredSummaryLabel: "표시 공지",
     unreadLabel: "미확인 공지",
     logsCountLabel: "요청 로그 수",
     listTitle: "게시 공지 목록",
     listEmpty: "확인 가능한 게시 공지가 없습니다.",
+    filteredListEmpty: "현재 필터 조건에 맞는 공지가 없습니다.",
     markReadAction: "확인 완료",
     readAtLabel: "확인 시각",
     readBadge: "확인함",
@@ -263,14 +275,20 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     organizationIdLabel: "Organization ID",
     employeeIdLabel: "Employee ID",
     accessTokenLabel: "Access token (optional)",
+    searchLabel: "Search",
+    searchPlaceholder: "Search in title/body",
+    unreadOnlyLabel: "Unread only",
+    clearFiltersAction: "Clear filters",
     refreshAction: "Refresh notices",
     markAllReadAction: "Mark all as read",
     audienceLabel: "Audience",
     summaryLabel: "Published notices",
+    filteredSummaryLabel: "Visible notices",
     unreadLabel: "Unread notices",
     logsCountLabel: "Request log count",
     listTitle: "Published notice list",
     listEmpty: "No published notice is available.",
+    filteredListEmpty: "No notice matches current filters.",
     markReadAction: "Mark as read",
     readAtLabel: "Read at",
     readBadge: "Read",
