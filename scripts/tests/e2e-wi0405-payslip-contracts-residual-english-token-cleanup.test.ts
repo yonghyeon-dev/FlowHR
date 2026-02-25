@@ -8,12 +8,19 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
-  const payslipLocaleHelpers = readUtf8(
+  const payslipFilterPanel = readUtf8(
     "src",
     "app",
     "employee",
     "payslips",
-    "page-locale-helpers.ts"
+    "page-view-filter-panel.tsx"
+  );
+  const payslipPageCopy = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-locale-page-copy.ts"
   );
   const contractsHttp = readUtf8("src", "components", "contracts", "http.ts");
   const workItem = readUtf8(
@@ -22,22 +29,20 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payslipPageView, /pageCopy\.devTools\.sessionRoleLabel/);
-  assert.match(payslipPageView, /pageCopy\.devTools\.sessionOrganizationLabel/);
-  assert.match(payslipPageView, /pageCopy\.devTools\.sessionActorLabel/);
-  assert.doesNotMatch(payslipPageView, /role=/);
-  assert.doesNotMatch(payslipPageView, /org=/);
-  assert.doesNotMatch(payslipPageView, /actor=/);
+  assert.match(payslipPageView, /<EmployeePayslipFilterPanel/);
+  assert.match(payslipFilterPanel, /pageCopy\.devTools\.sessionRoleLabel/);
+  assert.match(payslipFilterPanel, /pageCopy\.devTools\.sessionOrganizationLabel/);
+  assert.match(payslipFilterPanel, /pageCopy\.devTools\.sessionActorLabel/);
+  assert.doesNotMatch(payslipFilterPanel, /role=/);
+  assert.doesNotMatch(payslipFilterPanel, /org=/);
+  assert.doesNotMatch(payslipFilterPanel, /actor=/);
 
-  assert.match(payslipLocaleHelpers, /sessionRoleLabel: string;/);
-  assert.match(payslipLocaleHelpers, /sessionOrganizationLabel: string;/);
-  assert.match(payslipLocaleHelpers, /sessionActorLabel: string;/);
-  assert.match(payslipLocaleHelpers, /sessionRoleLabel:\s*"권한"/);
-  assert.match(payslipLocaleHelpers, /sessionOrganizationLabel:\s*"조직 식별자"/);
-  assert.match(payslipLocaleHelpers, /sessionActorLabel:\s*"액터 식별자"/);
-  assert.match(payslipLocaleHelpers, /sessionRoleLabel:\s*"Role"/);
-  assert.match(payslipLocaleHelpers, /sessionOrganizationLabel:\s*"Organization"/);
-  assert.match(payslipLocaleHelpers, /sessionActorLabel:\s*"Actor"/);
+  assert.match(payslipPageCopy, /sessionRoleLabel:\s*"권한"/);
+  assert.match(payslipPageCopy, /sessionOrganizationLabel:\s*"조직 식별자"/);
+  assert.match(payslipPageCopy, /sessionActorLabel:\s*"액터 식별자"/);
+  assert.match(payslipPageCopy, /sessionRoleLabel:\s*"Role"/);
+  assert.match(payslipPageCopy, /sessionOrganizationLabel:\s*"Organization"/);
+  assert.match(payslipPageCopy, /sessionActorLabel:\s*"Actor"/);
 
   assert.match(contractsHttp, /function isKoRuntimeLocale\(\)/);
   assert.match(contractsHttp, /function resolveContractsHttpFallbackMessage\(status: number\)/);

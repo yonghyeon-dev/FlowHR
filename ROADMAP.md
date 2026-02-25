@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.163 (Admin Non-Payroll Workspace Decomposition and Line-Budget Guard)
+> **Current version**: 0.1.164 (Legacy Korean Regression Anchor Alignment for Decomposed Payslip DevTools)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -746,3 +746,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0479 payslips helper budget split (`page-helpers.ts`의 비교/인사이트 계산 블록을 `page-compare-helpers.ts`로 분리 + 기존 호출부는 re-export로 호환 유지 + legacy WI-0318/0319/0396/0398 회귀 테스트를 분해 구조에 맞게 보정 + `page-helpers.ts` 394->230)
 - WI-0480 korean regression suite alignment after payslips decomposition (`WI-0386`/`WI-0416`의 구식 토큰 검증을 분해 후 파일 구조(`copy-runtime.ts`, `page-view-filter-panel.tsx`) 기준으로 보정 + 회귀 정합성 가드 테스트 추가)
 - WI-0481 korean copy residual runtime hardening for withholding/payslip/contracts (깨진 한글 카피 복구: payslip locale/page-runtime + contracts journey/runtime helper + employee-id locale prefix + withholding runtime label/세션 fallback + filter panel separator 토큰 정규화 + 회귀 테스트 추가)
+- WI-0482 legacy korean regression anchor alignment for payslip devtools/contracts fallback (`e2e-wi0405`를 분해 후 구조(`page-view-filter-panel.tsx`, `page-locale-page-copy.ts`) 기준으로 보정 + contracts HTTP fallback 회귀 앵커 유지 + 회귀 테스트 재정렬)
