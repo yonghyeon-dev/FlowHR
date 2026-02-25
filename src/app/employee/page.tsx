@@ -16,6 +16,9 @@ import {
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
 import { buildEmployeeMutationActions } from "@/app/employee/page-mutation-actions";
 import {
+  buildEmployeeInteractionHandlers
+} from "@/app/employee/page-interaction-actions";
+import {
   buildMobileRequestTimeline,
   buildRequestFailureCauses,
   buildRequestFeedbackRows,
@@ -41,14 +44,11 @@ import {
   isDevToolsEnabled,
   lastDayOfMonthLocal,
   matchesRequestSearch,
-  shiftDays,
   sortRequestRowsByOption,
-  startOfLocalDay,
   statusToTone,
   todayEndLocal,
   todayStartLocal,
-  toIso,
-  toLocalInputValue
+  toIso
 } from "@/app/employee/page-helpers";
 import {
   extractEmployeeErrorMessage,
@@ -283,232 +283,6 @@ export default function EmployeeSelfServicePage() {
     cancelReason,
     lastLeaveRequestId
   });
-
-  function applyLeaveQuickPreset(preset: "today-half" | "tomorrow-full" | "next-week-full") {
-    const now = new Date();
-    let start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
-    let end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
-    let nextUnit: "FULL_DAY" | "HALF_DAY" | "HOUR" = "FULL_DAY";
-
-    if (preset === "today-half") {
-      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0);
-      nextUnit = "HALF_DAY";
-    } else if (preset === "tomorrow-full") {
-      const tomorrow = shiftDays(startOfLocalDay(now), 1);
-      start = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 9, 0, 0);
-      end = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 18, 0, 0);
-      nextUnit = "FULL_DAY";
-    } else {
-      const todayStart = startOfLocalDay(now);
-      const daysUntilNextMonday = ((8 - todayStart.getDay()) % 7) || 7;
-      const nextMonday = shiftDays(todayStart, daysUntilNextMonday);
-      start = new Date(nextMonday.getFullYear(), nextMonday.getMonth(), nextMonday.getDate(), 9, 0, 0);
-      end = new Date(nextMonday.getFullYear(), nextMonday.getMonth(), nextMonday.getDate(), 18, 0, 0);
-      nextUnit = "FULL_DAY";
-    }
-
-    setLeaveType("ANNUAL");
-    setLeaveUnit(nextUnit);
-    setLeaveStartDate(toLocalInputValue(start));
-    setLeaveEndDate(toLocalInputValue(end));
-  }
-
-  function prefillLeaveFormFromCalendarDate(dateKey: string) {
-    const [yearText, monthText, dayText] = dateKey.split("-");
-    const yearNumber = Number(yearText);
-    const monthNumber = Number(monthText);
-    const dayNumber = Number(dayText);
-    if (
-      !Number.isInteger(yearNumber) ||
-      !Number.isInteger(monthNumber) ||
-      !Number.isInteger(dayNumber) ||
-      monthNumber < 1 ||
-      monthNumber > 12 ||
-      dayNumber < 1 ||
-      dayNumber > 31
-    ) {
-      pushMobileFlowFeedback(
-        isKoLocale ? "선택한 날짜를 해석할 수 없습니다." : "Unable to parse selected calendar date."
-      );
-      return;
-    }
-
-    const start = new Date(yearNumber, monthNumber - 1, dayNumber, 9, 0, 0);
-    const end = new Date(yearNumber, monthNumber - 1, dayNumber, 18, 0, 0);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      pushMobileFlowFeedback(
-        isKoLocale ? "선택한 날짜를 해석할 수 없습니다." : "Unable to parse selected calendar date."
-      );
-      return;
-    }
-
-    setLeaveType("ANNUAL");
-    setLeaveUnit("FULL_DAY");
-    setLeaveStartDate(toLocalInputValue(start));
-    setLeaveEndDate(toLocalInputValue(end));
-    setLeaveReason(
-      isKoLocale
-        ? `${dateKey} 캘린더 선택으로 자동 입력`
-        : `Auto-prefilled from calendar selection (${dateKey})`
-    );
-    jumpToSection("leave");
-    pushMobileFlowFeedback(
-      isKoLocale
-        ? `${dateKey} 휴가 신청 초안이 자동 입력되었습니다.`
-        : `Leave request draft for ${dateKey} was auto-prefilled.`
-    );
-  }
-
-  async function setCalendarMonthFromAnchor(anchor: Date, monthOffset: number) {
-    const monthStart = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset, 1, 0, 0, 0);
-    const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + monthOffset + 1, 0, 23, 59, 0);
-    const nextPeriodStart = toLocalInputValue(monthStart);
-    const nextPeriodEnd = toLocalInputValue(monthEnd);
-    setPeriodStart(nextPeriodStart);
-    setPeriodEnd(nextPeriodEnd);
-    await mutationActions.refreshEmployeeSnapshot({
-      fromIso: toIso(nextPeriodStart),
-      toIso: toIso(nextPeriodEnd)
-    });
-  }
-
-  async function moveCalendarMonth(monthOffset: number) {
-    const parsedPeriodStart = new Date(periodStart);
-    const anchor = Number.isNaN(parsedPeriodStart.getTime()) ? new Date() : parsedPeriodStart;
-    await setCalendarMonthFromAnchor(anchor, monthOffset);
-  }
-
-  async function resetCalendarToCurrentMonth() {
-    await setCalendarMonthFromAnchor(new Date(), 0);
-  }
-
-  function pushMobileFlowFeedback(message: string) {
-    setMobileFlowFeedback(message);
-    if (typeof window !== "undefined") {
-      window.setTimeout(() => {
-        setMobileFlowFeedback((current) => (current === message ? "" : current));
-      }, 2200);
-    }
-  }
-
-  function jumpToSection(sectionId: string) {
-    if (typeof document === "undefined") {
-      return;
-    }
-    const target = document.getElementById(sectionId);
-    if (!target) {
-      return;
-    }
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `#${sectionId}`);
-    }
-  }
-
-  function applyRequestSearchPreset(preset: {
-    scope: RequestSearchScope;
-    query: string;
-    sortOption: RequestSortOption;
-    targetSectionId: string;
-    feedback: string;
-  }) {
-    setRequestSearchScope(preset.scope);
-    setRequestSearchQuery(preset.query);
-    setRequestSortOption(preset.sortOption);
-    jumpToSection(preset.targetSectionId);
-    pushMobileFlowFeedback(preset.feedback);
-  }
-
-  function openPendingRequestSearch() {
-    applyRequestSearchPreset({
-      scope: "status",
-      query: "pending",
-      sortOption: "pending_first",
-      targetSectionId: "request-search-sort",
-      feedback: feedbackCopy.pendingRequestFilterApplied
-    });
-  }
-
-
-  function applyLeaveRequestToResubmitDraft(request: LeaveRequestDto) {
-    setLeaveType(request.leaveType);
-    setLeaveUnit(request.unit);
-    setLeaveStartDate(toLocalInputValue(new Date(request.startDate)));
-    setLeaveEndDate(toLocalInputValue(new Date(request.endDate)));
-    if (request.unit === "HOUR") {
-      setLeaveHours(request.hours !== null ? String(request.hours) : "4");
-    }
-    setLeaveReason(request.reason?.trim() || request.decisionReason?.trim() || "Resubmit draft");
-    setLastLeaveRequestId(request.id);
-  }
-
-  function applyResubmitCandidateToDraft(candidate: ResubmitCandidate) {
-    if (candidate.channel === "attendance") {
-      const targetAttendance = attendance.find((record) => record.id === candidate.recordId);
-      if (!targetAttendance) {
-        pushMobileFlowFeedback(feedbackCopy.selectedAttendanceResubmitMissing);
-        return;
-      }
-      applyAttendanceRecordToCorrectionForm(targetAttendance);
-      setAttendanceNotes(targetAttendance.notes?.trim() || defaultsCopy.resubmitCorrectionNote);
-      setLastAppliedResubmitCandidateKey(candidate.key);
-      jumpToSection("attendance");
-      pushMobileFlowFeedback(feedbackCopy.attendanceResubmitDraftApplied);
-      return;
-    }
-
-    const targetLeave = leaveRequests.find((request) => request.id === candidate.recordId);
-    if (!targetLeave) {
-      pushMobileFlowFeedback(feedbackCopy.selectedLeaveResubmitMissing);
-      return;
-    }
-    applyLeaveRequestToResubmitDraft(targetLeave);
-    setLastAppliedResubmitCandidateKey(candidate.key);
-    jumpToSection("leave");
-    pushMobileFlowFeedback(feedbackCopy.leaveResubmitDraftApplied);
-  }
-
-  function applySelectedResubmitCandidate() {
-    if (!selectedResubmitCandidate) {
-      pushMobileFlowFeedback(feedbackCopy.selectResubmitCandidateFirst);
-      return;
-    }
-    applyResubmitCandidateToDraft(selectedResubmitCandidate);
-  }
-
-  function applyLatestResubmitCandidate() {
-    if (resubmitCandidates.length === 0) {
-      pushMobileFlowFeedback(feedbackCopy.noResubmitTarget);
-      return;
-    }
-    const latest = resubmitCandidates[0];
-    setSelectedResubmitCandidateKey(latest.key);
-    applyResubmitCandidateToDraft(latest);
-  }
-
-  function clearResubmitSelection() {
-    setSelectedResubmitCandidateKey("");
-    setLastAppliedResubmitCandidateKey("");
-    pushMobileFlowFeedback(feedbackCopy.resetResubmitSelection);
-  }
-
-  async function copyFailureCause(message: string | null) {
-    if (!message) {
-      pushMobileFlowFeedback(feedbackCopy.noFailureCauseToCopy);
-      return;
-    }
-    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-      pushMobileFlowFeedback(feedbackCopy.clipboardUnavailable);
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(message);
-      pushMobileFlowFeedback(feedbackCopy.copiedLatestFailureCause);
-    } catch {
-      pushMobileFlowFeedback(feedbackCopy.copyFailureCauseFailed);
-    }
-  }
 
   function clearLogs() {
     setLogs([]);
@@ -951,34 +725,75 @@ export default function EmployeeSelfServicePage() {
     return formatEmployeeDeltaMinutes(draftNetMinutes - originalNetMinutes, isKoLocale);
   }, [attendanceCopy.noComparisonTarget, breakMinutes, checkInAt, checkOutAt, defaultsCopy.notComparable, isKoLocale, selectedCorrectionRecord]);
 
-  function applyAttendanceRecordToCorrectionForm(record: AttendanceRecordDto) {
-    setSelectedCorrectionRecordId(record.id);
-    setLastAttendanceId(record.id);
-    setCheckInAt(toLocalInputValue(new Date(record.checkInAt)));
-    setCheckOutAt(record.checkOutAt ? toLocalInputValue(new Date(record.checkOutAt)) : "");
-    setBreakMinutes(String(record.breakMinutes));
-    setIsHoliday(record.isHoliday);
-    setAttendanceNotes(record.notes ?? correctionRequestNote);
-  }
-
-  function applySelectedCorrectionRecord() {
-    if (!selectedCorrectionRecord) {
-      return;
-    }
-    applyAttendanceRecordToCorrectionForm(selectedCorrectionRecord);
-  }
-
-  function applyLatestAttendanceToCorrectionForm() {
-    if (!latestAttendance) {
-      return;
-    }
-    applyAttendanceRecordToCorrectionForm(latestAttendance);
-  }
-
-  function selectCorrectionTarget(recordId: string) {
-    setSelectedCorrectionRecordId(recordId);
-    setLastAttendanceId(recordId);
-  }
+  const {
+    applyAttendanceRecordToCorrectionForm,
+    applyLatestAttendanceToCorrectionForm,
+    applyLatestResubmitCandidate,
+    applyLeaveQuickPreset,
+    applyResubmitCandidateToDraft,
+    applySelectedCorrectionRecord,
+    applySelectedResubmitCandidate,
+    clearResubmitSelection,
+    copyFailureCause,
+    jumpToSection,
+    moveCalendarMonth,
+    openPendingRequestSearch,
+    prefillLeaveFormFromCalendarDate,
+    resetCalendarToCurrentMonth,
+    selectCorrectionTarget
+  } = buildEmployeeInteractionHandlers({
+    attendance,
+    correctionRequestNote,
+    defaultsCopy: {
+      resubmitCorrectionNote: defaultsCopy.resubmitCorrectionNote
+    },
+    feedbackCopy: {
+      attendanceResubmitDraftApplied: feedbackCopy.attendanceResubmitDraftApplied,
+      clipboardUnavailable: feedbackCopy.clipboardUnavailable,
+      copiedLatestFailureCause: feedbackCopy.copiedLatestFailureCause,
+      copyFailureCauseFailed: feedbackCopy.copyFailureCauseFailed,
+      leaveResubmitDraftApplied: feedbackCopy.leaveResubmitDraftApplied,
+      noFailureCauseToCopy: feedbackCopy.noFailureCauseToCopy,
+      noResubmitTarget: feedbackCopy.noResubmitTarget,
+      pendingRequestFilterApplied: feedbackCopy.pendingRequestFilterApplied,
+      resetResubmitSelection: feedbackCopy.resetResubmitSelection,
+      selectResubmitCandidateFirst: feedbackCopy.selectResubmitCandidateFirst,
+      selectedAttendanceResubmitMissing: feedbackCopy.selectedAttendanceResubmitMissing,
+      selectedLeaveResubmitMissing: feedbackCopy.selectedLeaveResubmitMissing
+    },
+    isKoLocale,
+    latestAttendance,
+    leaveRequests,
+    periodStart,
+    refreshEmployeeSnapshot: async ({ fromIso, toIso }) => {
+      await mutationActions.refreshEmployeeSnapshot({ fromIso, toIso });
+    },
+    resubmitCandidates,
+    selectedCorrectionRecord,
+    selectedResubmitCandidate,
+    setAttendanceNotes,
+    setBreakMinutes,
+    setCheckInAt,
+    setCheckOutAt,
+    setIsHoliday,
+    setLastAppliedResubmitCandidateKey,
+    setLastAttendanceId,
+    setLastLeaveRequestId,
+    setLeaveEndDate,
+    setLeaveHours,
+    setLeaveReason,
+    setLeaveStartDate,
+    setLeaveType,
+    setLeaveUnit,
+    setMobileFlowFeedback,
+    setPeriodEnd,
+    setPeriodStart,
+    setRequestSearchQuery,
+    setRequestSearchScope,
+    setRequestSortOption,
+    setSelectedCorrectionRecordId,
+    setSelectedResubmitCandidateKey
+  });
 
   return (
     <main className="saas-content">
