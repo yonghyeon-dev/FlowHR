@@ -119,7 +119,7 @@ export default function EmployeeContractsInbox() {
       );
       const body = (await readJson(response, copy.evidenceLoadError)) as ContractSignatureEvidenceResponse;
       setSignatureEvidence(body.evidence);
-      setMessage(`${copy.evidenceLoadedPrefix}: ${body.evidence.fileName}`);
+      setMessage(isKoLocale ? copy.evidenceLoadedPrefix : `${copy.evidenceLoadedPrefix}: ${body.evidence.fileName}`);
     } catch (loadError) {
       setError(
         loadError instanceof Error
