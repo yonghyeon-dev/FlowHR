@@ -8,31 +8,33 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
+  const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
+  const payslipSurface = `${payslipPage}\n${payslipPageView}`;
   const localeHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const globalCss = readUtf8("src", "app", "globals.css");
 
   assert.match(
-    payslipPage,
+    payslipSurface,
     /pageCopy\.detail\.actions\.printSavePdf/,
     "payslip page should provide print/pdf action via locale copy"
   );
   assert.match(
-    payslipPage,
+    payslipSurface,
     /pageCopy\.detail\.actions\.copyPdfFileName/,
     "payslip page should provide pdf filename copy action via locale copy"
   );
   assert.match(
-    payslipPage,
+    payslipSurface,
     /pageCopy\.detail\.deductionGuideTitle/,
     "payslip page should include deduction explanation section"
   );
   assert.match(
-    payslipPage,
+    payslipSurface,
     /pageCopy\.detail\.deductionComponentTitle/,
     "payslip page should include statutory component section"
   );
   assert.match(
-    payslipPage,
+    payslipSurface,
     /pageCopy\.detail\.taxCreditReferenceTitle/,
     "payslip page should include tax credit explanation section"
   );

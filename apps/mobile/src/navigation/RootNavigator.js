@@ -14,14 +14,51 @@ import LoginScreen from "../screens/LoginScreen";
 import MobileAnalyticsDashboardScreen from "../screens/MobileAnalyticsDashboardScreen";
 import NotificationCenterScreen from "../screens/NotificationCenterScreen";
 import NotificationHistoryScreen from "../screens/NotificationHistoryScreen";
+import { resolveMobileLocale } from "../lib/mobileLocale";
 import { clearSession, loadSession, saveSession } from "../lib/sessionStore";
 import { colors } from "../theme/tokens";
 
 const Stack = createNativeStackNavigator();
+const copy = {
+  ko: {
+    splashTitle: "FlowHR 모바일",
+    splashSub: "앱 셸을 불러오는 중...",
+    titles: {
+      adminHome: "관리자 홈",
+      approvalQueue: "승인 대기 큐",
+      employeeHome: "직원 홈",
+      requestFollowUp: "요청 후속 조치",
+      requestHistory: "요청 이력",
+      requestSubmit: "요청 제출",
+      analytics: "모바일 분석 대시보드",
+      notificationCenter: "알림 센터",
+      notificationHistory: "알림 이력",
+      emailTemplates: "이메일 템플릿"
+    }
+  },
+  en: {
+    splashTitle: "FlowHR Mobile",
+    splashSub: "Loading app shell...",
+    titles: {
+      adminHome: "Admin Home",
+      approvalQueue: "Approval Queue",
+      employeeHome: "Employee Home",
+      requestFollowUp: "Request Follow-Up",
+      requestHistory: "Request History",
+      requestSubmit: "Request Submit",
+      analytics: "Analytics Dashboard",
+      notificationCenter: "Notification Center",
+      notificationHistory: "Notification History",
+      emailTemplates: "Email Templates"
+    }
+  }
+};
 
 export default function RootNavigator() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
+  const locale = resolveMobileLocale();
+  const appCopy = locale === "ko" ? copy.ko : copy.en;
 
   useEffect(() => {
     let active = true;
@@ -59,8 +96,8 @@ export default function RootNavigator() {
   if (loading) {
     return (
       <View style={styles.splash}>
-        <Text style={styles.splashTitle}>FlowHR Mobile</Text>
-        <Text style={styles.splashSub}>Loading app shell...</Text>
+        <Text style={styles.splashTitle}>{appCopy.splashTitle}</Text>
+        <Text style={styles.splashSub}>{appCopy.splashSub}</Text>
       </View>
     );
   }
@@ -74,7 +111,7 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session?.role === "ADMIN" ? (
-          <Stack.Screen name="AdminHome" options={{ title: "Admin Home" }}>
+          <Stack.Screen name="AdminHome" options={{ title: appCopy.titles.adminHome }}>
             {({ navigation }) => (
               <AdminHomeScreen
                 session={session}
@@ -89,12 +126,12 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session?.role === "ADMIN" ? (
-          <Stack.Screen name="ApprovalQueue" options={{ title: "Approval Queue" }}>
+          <Stack.Screen name="ApprovalQueue" options={{ title: appCopy.titles.approvalQueue }}>
             {() => <ApprovalQueueScreen session={session} />}
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
-          <Stack.Screen name="EmployeeHome" options={{ title: "Employee Home" }}>
+          <Stack.Screen name="EmployeeHome" options={{ title: appCopy.titles.employeeHome }}>
             {({ navigation }) => (
               <EmployeeHomeScreen
                 session={session}
@@ -115,7 +152,7 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
-          <Stack.Screen name="EmployeeRequestFollowUp" options={{ title: "Request Follow-Up" }}>
+          <Stack.Screen name="EmployeeRequestFollowUp" options={{ title: appCopy.titles.requestFollowUp }}>
             {({ navigation }) => (
               <EmployeeRequestFollowUpScreen
                 session={session}
@@ -128,7 +165,7 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
-          <Stack.Screen name="EmployeeRequestHistory" options={{ title: "Request History" }}>
+          <Stack.Screen name="EmployeeRequestHistory" options={{ title: appCopy.titles.requestHistory }}>
             {({ navigation }) => (
               <EmployeeRequestHistoryScreen
                 session={session}
@@ -138,7 +175,7 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session?.role === "EMPLOYEE" ? (
-          <Stack.Screen name="EmployeeRequestSubmit" options={{ title: "Request Submit" }}>
+          <Stack.Screen name="EmployeeRequestSubmit" options={{ title: appCopy.titles.requestSubmit }}>
             {({ route, navigation }) => (
               <EmployeeRequestSubmitScreen
                 session={session}
@@ -150,7 +187,7 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session ? (
-          <Stack.Screen name="MobileAnalyticsDashboard" options={{ title: "Analytics Dashboard" }}>
+          <Stack.Screen name="MobileAnalyticsDashboard" options={{ title: appCopy.titles.analytics }}>
             {({ navigation }) => (
               <MobileAnalyticsDashboardScreen
                 session={session}
@@ -163,7 +200,7 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session ? (
-          <Stack.Screen name="Notifications" options={{ title: "Notification Center" }}>
+          <Stack.Screen name="Notifications" options={{ title: appCopy.titles.notificationCenter }}>
             {({ navigation }) => (
               <NotificationCenterScreen
                 session={session}
@@ -173,12 +210,12 @@ export default function RootNavigator() {
           </Stack.Screen>
         ) : null}
         {session ? (
-          <Stack.Screen name="NotificationHistory" options={{ title: "Notification History" }}>
+          <Stack.Screen name="NotificationHistory" options={{ title: appCopy.titles.notificationHistory }}>
             {() => <NotificationHistoryScreen session={session} />}
           </Stack.Screen>
         ) : null}
         {session?.role === "ADMIN" ? (
-          <Stack.Screen name="EmailTemplates" options={{ title: "Email Templates" }}>
+          <Stack.Screen name="EmailTemplates" options={{ title: appCopy.titles.emailTemplates }}>
             {() => <EmailTemplateScreen session={session} />}
           </Stack.Screen>
         ) : null}

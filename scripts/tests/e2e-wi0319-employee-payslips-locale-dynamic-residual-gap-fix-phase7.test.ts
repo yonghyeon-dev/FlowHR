@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
+  const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
   const localeHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -26,13 +27,13 @@ async function run() {
     /stateSearchText: `\$\{run\.state\.toLowerCase\(\)\} \$\{stateLabel\.toLowerCase\(\)\}`/
   );
 
-  assert.match(payslipPage, /<h1 className="page-title">\{pageCopy\.pageTitle\}<\/h1>/);
-  assert.match(payslipPage, /\{pageCopy\.status\.title\}/);
-  assert.match(payslipPage, /\{pageCopy\.compare\.title\}/);
+  assert.match(payslipPageView, /<h1 className="page-title">\{pageCopy\.pageTitle\}<\/h1>/);
+  assert.match(payslipPageView, /\{pageCopy\.status\.title\}/);
+  assert.match(payslipPageView, /\{pageCopy\.compare\.title\}/);
 
-  assert.doesNotMatch(payslipPage, /<h1 className="page-title">급여 명세서<\/h1>/);
-  assert.doesNotMatch(payslipPage, /<h2>상태\/오류 피드백<\/h2>/);
-  assert.doesNotMatch(payslipPage, /<h2>명세서 비교 조회<\/h2>/);
+  assert.doesNotMatch(payslipPageView, /<h1 className="page-title">급여 명세서<\/h1>/);
+  assert.doesNotMatch(payslipPageView, /<h2>상태\/오류 피드백<\/h2>/);
+  assert.doesNotMatch(payslipPageView, /<h2>명세서 비교 조회<\/h2>/);
 
   assert.match(localeHelpers, /export function resolvePayslipPageCopy\(isKoLocale: boolean\)/);
   assert.match(localeHelpers, /export function resolvePayslipRunStateLabel\(state: PayslipRunState, isKoLocale: boolean\)/);
