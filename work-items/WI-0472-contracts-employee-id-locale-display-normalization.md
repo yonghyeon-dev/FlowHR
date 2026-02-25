@@ -11,7 +11,6 @@
   - Added `formatEmployeeIdForLocaleDisplay(value, locale)` for locale-safe visible labels.
 - Updated `src/components/contracts/AdminContractsWorkspace.tsx`
   - Applied `normalizeEmployeeIdForApi` for draft-document API payload.
-  - Applied `normalizeEmployeeIdForLocaleInput` to sync input shape on locale change.
   - Applied `formatEmployeeIdForLocaleDisplay` to:
     - Draft title composition
     - Document list employee-id rendering

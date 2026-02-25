@@ -4,8 +4,7 @@ import { join } from "node:path";
 
 import {
   formatEmployeeIdForLocaleDisplay,
-  normalizeEmployeeIdForApi,
-  normalizeEmployeeIdForLocaleInput
+  normalizeEmployeeIdForApi
 } from "@/lib/i18n/employee-id-locale";
 
 function readUtf8(...parts: string[]) {
@@ -26,13 +25,11 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.equal(normalizeEmployeeIdForApi("직원-1001", "ko"), "EMP-1001");
-  assert.equal(normalizeEmployeeIdForLocaleInput("EMP-1001", "ko"), "직원-1001");
   assert.equal(formatEmployeeIdForLocaleDisplay("EMP-1001", "ko"), "직원-1001");
   assert.equal(formatEmployeeIdForLocaleDisplay("직원-1001", "en"), "직원-1001");
   assert.equal(formatEmployeeIdForLocaleDisplay("emp-1001", "en"), "EMP-1001");
 
   assert.match(contractsWorkspace, /normalizeEmployeeIdForApi/);
-  assert.match(contractsWorkspace, /normalizeEmployeeIdForLocaleInput/);
   assert.match(contractsWorkspace, /formatEmployeeIdForLocaleDisplay/);
   assert.doesNotMatch(contractsWorkspace, /employeeId:\s*employeeId\.trim\(\)/);
   assert.doesNotMatch(contractsWorkspace, /\{copy\.employeePrefix\}\s+\{document\.employeeId\}/);

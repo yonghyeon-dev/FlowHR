@@ -24,8 +24,7 @@ import {
 } from "@/components/contracts/types";
 import {
   formatEmployeeIdForLocaleDisplay,
-  normalizeEmployeeIdForApi,
-  normalizeEmployeeIdForLocaleInput
+  normalizeEmployeeIdForApi
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 export default function AdminContractsWorkspace() {
@@ -52,10 +51,7 @@ export default function AdminContractsWorkspace() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const selectedTemplateId = useMemo(() => templates[0]?.id ?? "", [templates]);
-  const normalizedEmployeeIdForApi = useMemo(
-    () => normalizeEmployeeIdForApi(employeeId, locale),
-    [employeeId, locale]
-  );
+  const normalizedEmployeeIdForApi = normalizeEmployeeIdForApi(employeeId, locale);
   const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
     () => ({
       request: copy.requestApprovalAction,
@@ -78,7 +74,6 @@ export default function AdminContractsWorkspace() {
         readJson(response, copy.loadError)
       )
     ]);
-
     setTemplates((templateBodyRaw as { templates?: ContractTemplate[] }).templates ?? []);
     setDocuments((documentBodyRaw as { documents?: ContractDocument[] }).documents ?? []);
   }, [copy.loadError]);
@@ -88,12 +83,6 @@ export default function AdminContractsWorkspace() {
       setContractsRuntimeLocale(null);
     };
   }, [locale]);
-  useEffect(() => {
-    const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
-    if (localizedInput && localizedInput !== employeeId) {
-      setEmployeeId(localizedInput);
-    }
-  }, [employeeId, locale]);
   useEffect(() => {
     reload().catch((loadError) => {
       setError(
@@ -132,7 +121,6 @@ export default function AdminContractsWorkspace() {
       setError(copy.requiredTemplateAndEmployeeError);
       return;
     }
-
     setError(null);
     setMessage(null);
     try {
@@ -160,7 +148,6 @@ export default function AdminContractsWorkspace() {
     setError(null);
     setMessage(null);
     const request = resolveContractDocumentActionRequest(documentId, action, copy.manualExpireReason);
-
     try {
       await fetch(request.endpoint, {
         method: "POST",
