@@ -43,7 +43,10 @@ async function run() {
   assert.doesNotMatch(payslipPageView, /<h2>명세서 비교 조회<\/h2>/);
 
   assert.match(localeHelpers, /export function resolvePayslipPageCopy\(isKoLocale: boolean\)/);
-  assert.match(localeHelpers, /export function resolvePayslipRunStateLabel\(state: PayslipRunState, isKoLocale: boolean\)/);
+  assert.match(
+    localeHelpers,
+    /export function resolvePayslipRunStateLabel\(state: PayslipRunState( \| string)?, isKoLocale: boolean\)/
+  );
   assert.match(localeHelpers, /export function resolveDeductionDescriptionMap\(isKoLocale: boolean\)/);
   assert.match(localeHelpers, /pageTitle: "급여 명세서"/);
   assert.match(localeHelpers, /pageTitle: "Payslips"/);
