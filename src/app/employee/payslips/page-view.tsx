@@ -304,7 +304,7 @@ export function EmployeePayslipsPageView({
                 <p className="small muted">
                   {pageCopy.devTools.session}:{" "}
                   {supabaseSession
-                    ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"} · actor=${supabaseSession.actorId ?? "-"}`
+                    ? `${supabaseSession.email ?? supabaseSession.userId} · ${pageCopy.devTools.sessionRoleLabel}: ${supabaseSession.role ?? "-"} · ${pageCopy.devTools.sessionOrganizationLabel}: ${supabaseSession.organizationId ?? "-"} · ${pageCopy.devTools.sessionActorLabel}: ${supabaseSession.actorId ?? "-"}`
                     : pageCopy.devTools.none}{" "}
                   ({pageCopy.devTools.bearerStatusLabel} {usesBearerToken ? pageCopy.devTools.bearerOn : pageCopy.devTools.bearerOff})
                 </p>
