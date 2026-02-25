@@ -9,6 +9,8 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const adminApprovalExecutionsPage = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
   const adminPeoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
+  const adminPeoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
+  const adminPeopleSurface = `${adminPeoplePage}\n${adminPeoplePageView}`;
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const workItem = readUtf8("work-items", "WI-0307-admin-pages-locale-dynamic-ui-gap-fix-phase4.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -24,17 +26,17 @@ async function run() {
   assert.doesNotMatch(adminApprovalExecutionsPage, /Escalation Channel/);
 
   assert.match(adminPeoplePage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminPeoplePage, /\{isKoLocale \? "조직 ID" : "Organization ID"\}/);
-  assert.match(adminPeoplePage, /\{isKoLocale \? "부서 필터" : "Department filter"\}/);
-  assert.match(adminPeoplePage, /\{isKoLocale \? "직급 필터" : "Position filter"\}/);
-  assert.match(adminPeoplePage, /\{isKoLocale \? "필터 초기화" : "Reset filters"\}/);
-  assert.match(adminPeoplePage, /aria-label=\{isKoLocale \? "이력 변경 요약" : "History change summary"\}/);
-  assert.doesNotMatch(adminPeoplePage, /Department Filter/);
-  assert.doesNotMatch(adminPeoplePage, /Position Filter/);
-  assert.doesNotMatch(adminPeoplePage, /Updated Window/);
-  assert.doesNotMatch(adminPeoplePage, /History Limit/);
-  assert.doesNotMatch(adminPeoplePage, /Filter Reset/);
-  assert.doesNotMatch(adminPeoplePage, /History Change Summary/);
+  assert.match(adminPeopleSurface, /\{isKoLocale \? "조직 ID" : "Organization ID"\}/);
+  assert.match(adminPeopleSurface, /\{isKoLocale \? "부서 필터" : "Department filter"\}/);
+  assert.match(adminPeopleSurface, /\{isKoLocale \? "직급 필터" : "Position filter"\}/);
+  assert.match(adminPeopleSurface, /\{isKoLocale \? "필터 초기화" : "Reset filters"\}/);
+  assert.match(adminPeopleSurface, /aria-label=\{isKoLocale \? "이력 변경 요약" : "History change summary"\}/);
+  assert.doesNotMatch(adminPeopleSurface, /Department Filter/);
+  assert.doesNotMatch(adminPeopleSurface, /Position Filter/);
+  assert.doesNotMatch(adminPeopleSurface, /Updated Window/);
+  assert.doesNotMatch(adminPeopleSurface, /History Limit/);
+  assert.doesNotMatch(adminPeopleSurface, /Filter Reset/);
+  assert.doesNotMatch(adminPeopleSurface, /History Change Summary/);
 
   assert.match(employeePage, /feedback: feedbackCopy\.pendingRequestFilterApplied/);
 

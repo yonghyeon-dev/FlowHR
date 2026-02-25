@@ -9,6 +9,8 @@ function readUtf8(...parts: string[]) {
 function run() {
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
   const adminPeoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
+  const adminPeoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
+  const peopleSurface = `${adminPeoplePage}\n${adminPeoplePageView}`;
   const historyRoute = readUtf8(
     "src",
     "app",
@@ -25,11 +27,11 @@ function run() {
 
   assert.match(adminLayout, /\/admin\/people/, "admin navigation should link to people directory page");
 
-  assert.match(adminPeoplePage, /id="org-chart"/, "people page should include organization chart section");
-  assert.match(adminPeoplePage, /id="employee-compare"/, "people page should include employee comparison section");
-  assert.match(adminPeoplePage, /id="employee-history"/, "people page should include employee history section");
+  assert.match(peopleSurface, /id="org-chart"/, "people page should include organization chart section");
+  assert.match(peopleSurface, /id="employee-compare"/, "people page should include employee comparison section");
+  assert.match(peopleSurface, /id="employee-history"/, "people page should include employee history section");
   assert.match(
-    adminPeoplePage,
+    peopleSurface,
     /\/api\/people\/employees\/\$\{encodeURIComponent\(employeeId\)\}\/history/,
     "people page should call employee history API"
   );

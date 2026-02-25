@@ -1,7 +1,7 @@
 # FlowHR Production Roadmap
 
-> **Last updated**: 2026-02-24
-> **Current version**: 0.1.127 (Contracts Korean Copy Residual Cleanup and Localized Request Fallback)
+> **Last updated**: 2026-02-25
+> **Current version**: 0.1.128 (Payslip Regression Reversal and People Page Decomposition)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -660,3 +660,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0393 employee payslips UTF-8 encoding guard (`/employee/payslips` compare insight Korean strings UTF-8 recovery + mojibake regression guard test + `.vercel` git ignore hardening)
 - WI-0394 Korean copy terminology normalization (`/employee/withholding-receipt`, `/employee/payslip-receipts`, `/employee/contracts` 용어 일관화: 직원 번호/실행/해시값 + contracts ko locale spread 제거 + regression guard test)
 - WI-0395 contracts Korean copy residual cleanup and localized request fallback (`/admin/contracts`, `/admin/contracts/builder`, `/employee/contracts` ko 용어 `ID` 잔여 제거 + contracts API fallback 에러문 locale copy 연결 + regression guard test)
+- WI-0396 payslip copy regression reversal and people page decomposition (`/employee/payslips` 비교 인사이트 copy/helper 추출로 page 역행 해소 + `/admin/people` view/types/helpers 분해로 `page.tsx` 500줄 미만 회복 + 회귀 테스트 갱신)

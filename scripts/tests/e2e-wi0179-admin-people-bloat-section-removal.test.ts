@@ -8,6 +8,8 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const peoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
+  const peoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
+  const peopleSurface = `${peoplePage}\n${peoplePageView}`;
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
   const peoplePageLineCount = peoplePage.split(/\r?\n/).length;
 
@@ -38,7 +40,7 @@ function run() {
 
   for (const sectionId of removedSectionIds) {
     assert.equal(
-      peoplePage.includes(`id="${sectionId}"`),
+      peopleSurface.includes(`id="${sectionId}"`),
       false,
       `people page should remove bloated section id="${sectionId}"`
     );
@@ -58,15 +60,15 @@ function run() {
 
   for (const sectionId of requiredSectionIds) {
     assert.equal(
-      peoplePage.includes(`id="${sectionId}"`),
+      peopleSurface.includes(`id="${sectionId}"`),
       true,
       `people page should keep core section id="${sectionId}"`
     );
   }
 
   assert.ok(
-    peoplePageLineCount < 2200,
-    `people page should stay under 2200 lines after WI-0179 cleanup (current: ${peoplePageLineCount})`
+    peoplePageLineCount < 700,
+    `people page should stay under 700 lines after decomposition cleanup (current: ${peoplePageLineCount})`
   );
 }
 
