@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.147 (Scheduling Anomaly Automation Helper Extraction)
+> **Current version**: 0.1.148 (Leave Promotion History View Helper Extraction)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -725,3 +725,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0458 korean residual sweep phase3 (approval-policy/people/payslip-receipts/contracts 용어 `조직 식별자`/`관리자 액터 식별자`/`요청 로그`/`직원-0001` 고정 + legacy token 회귀 차단 test)
 - WI-0459 core line budget guard phase2 (approval-policy/people/scheduling/leave 핵심 파일+추출 모듈 통합 예산 가드 + decomposition import wiring 고정 + regression test)
 - WI-0460 scheduling anomaly automation helper extraction and line-budget 5100 (`anomaly-automation-helpers.ts` 신규 + anomaly alert/escalation/ticket env-parser 및 payload builder 분리 + `service.ts` 중복 helper 제거 + regression test)
+- WI-0461 leave promotion history view helper extraction and line-budget 2850 (`promotion-history-views.ts` 신규 + 연차촉진 delivery/recipient/target 뷰 타입/매핑/retry-status helper 분리 + `leave/service.ts` 2928->2740 축소 + regression test)
