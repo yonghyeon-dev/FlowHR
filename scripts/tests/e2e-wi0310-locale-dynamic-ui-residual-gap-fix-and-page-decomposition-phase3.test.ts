@@ -8,6 +8,8 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPageState = readUtf8("src", "app", "admin", "page-state.ts");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const adminLocaleHelpers = readUtf8("src", "app", "admin", "page-locale-helpers.ts");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const employeeLocaleHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
@@ -68,9 +70,10 @@ async function run() {
   );
   assert.match(
     adminPage,
-    /const \{\s*queueLabels,\s*workTypeLabels,\s*logStatusLabels,\s*inviteRoleLabels,\s*inviteDeliveryModeLabels,\s*updatedAtLabel\s*\} = localeLabelBundle;/
+    /const \{ queueLabels, logStatusLabels \} = localeLabelBundle;/
   );
-  assert.match(adminPage, /isDefaultDemoOrganizationName\(previous\)/);
+  assert.match(adminPanels, /workTypeLabels/);
+  assert.match(adminPageState, /isDefaultDemoOrganizationName\(previous\)/);
   assert.doesNotMatch(adminPage, /const updatedAtLabel = isKoLocale \?/);
 
   assert.match(adminLocaleHelpers, /export function isDefaultDemoOrganizationName\(/);

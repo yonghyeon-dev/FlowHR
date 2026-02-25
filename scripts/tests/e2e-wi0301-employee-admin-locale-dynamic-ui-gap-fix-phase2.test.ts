@@ -18,6 +18,7 @@ async function run() {
   const employeeResubmitPanel = readUtf8("src", "components", "employee-dashboard", "EmployeeResubmitPanel.tsx");
   const employeeTypes = readUtf8("src", "app", "employee", "page-types.ts");
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const adminPeopleInvitePanels = readUtf8("src", "components", "admin-dashboard", "AdminPeopleInvitePanels.tsx");
   const workItem = readUtf8("work-items", "WI-0301-employee-admin-locale-dynamic-ui-gap-fix-phase2.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -64,11 +65,11 @@ async function run() {
 
   assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
   assert.match(
-    adminPage,
-    /const \{\s*queueLabels,\s*workTypeLabels,\s*logStatusLabels,\s*inviteRoleLabels,\s*inviteDeliveryModeLabels,\s*updatedAtLabel\s*\} = localeLabelBundle;/
+    adminPanels,
+    /workTypeLabels/
   );
-  assert.match(adminPage, /const toInviteRoleLabel = \(role: string\) =>/);
-  assert.match(adminPage, /const toInviteDeliveryModeLabel = \(mode: string\) =>/);
+  assert.match(adminPanels, /const toInviteRoleLabel = \(role: string\) =>/);
+  assert.match(adminPanels, /const toInviteDeliveryModeLabel = \(mode: string\) =>/);
 
   assert.match(adminPeopleInvitePanels, /<option value="employee">\{inviteRoleLabels\.employee\}<\/option>/);
   assert.match(adminPeopleInvitePanels, /<option value="manager">\{inviteRoleLabels\.manager\}<\/option>/);
