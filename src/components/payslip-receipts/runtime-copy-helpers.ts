@@ -4,13 +4,8 @@ function hasHangulText(value: string) {
   return /[\uac00-\ud7a3]/.test(value);
 }
 
-function isAsciiHeavyText(value: string) {
-  const compact = value.replace(/\s+/g, "");
-  if (compact.length === 0) {
-    return false;
-  }
-  const asciiCount = (compact.match(/[A-Za-z0-9]/g) ?? []).length;
-  return asciiCount / compact.length >= 0.6;
+function hasLatinText(value: string) {
+  return /[A-Za-z]/.test(value);
 }
 
 const koRuntimeMessagePatterns: Array<{ pattern: RegExp; message: string }> = [
@@ -68,7 +63,7 @@ export function normalizePayslipReceiptRuntimeMessage(
   if (knownKoMessage) {
     return knownKoMessage;
   }
-  if (!isAsciiHeavyText(normalized)) {
+  if (!hasLatinText(normalized)) {
     return normalized;
   }
   return koFallback;

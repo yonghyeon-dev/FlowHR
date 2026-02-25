@@ -34,8 +34,7 @@ function shouldSuppressRawEnglishMessage(message: string, koRuntime: boolean) {
   if (/[\uac00-\ud7a3]/.test(normalized)) {
     return false;
   }
-  const asciiCount = (normalized.match(/[A-Za-z0-9]/g) ?? []).length;
-  return asciiCount / normalized.length >= 0.6;
+  return /[A-Za-z]/.test(normalized);
 }
 
 const koContractsErrorMessagePatterns: Array<{ pattern: RegExp; message: string }> = [
