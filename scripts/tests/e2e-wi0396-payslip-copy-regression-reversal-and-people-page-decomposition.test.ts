@@ -63,7 +63,10 @@ async function run() {
   assert.match(payslipLocaleRuntime, /export function resolveCompareInsightTitle\(isKoLocale: boolean\)/);
   assert.match(payslipLocaleRuntime, /export function resolveCompareInsightAriaLabel\(isKoLocale: boolean\)/);
   assert.match(payslipLocaleRuntime, /export function formatCompareWindowLabel\(/);
-  assert.match(payslipHelpers, /export function buildCompareMetrics\(/);
+  assert.match(
+    payslipHelpers,
+    /export function buildCompareMetrics\(|export\s*\{\s*buildCompareInsightCards,\s*buildCompareMetrics,\s*formatPercent\s*\}\s*from/
+  );
 
   assert.match(workItem, /WI-0396/i);
   assert.match(workItem, /payslip|people|decomposition|역행|500/i);
