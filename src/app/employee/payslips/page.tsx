@@ -8,44 +8,27 @@ import { useI18n } from "@/lib/i18n/provider";
 import {
   type DeductionDescriptionMap,
   extractErrorMessage,
-  formatCompareWindowLabel,
-  formatDateOnly,
-  resolveCompareInsightAriaLabel,
-  resolveCompareInsightTitle,
   resolveDeductionDescriptionMap,
   resolvePayslipPageCopy,
-  resolvePayslipRunStateLabel,
   resolvePayslipSearchSortCopy
 } from "@/app/employee/payslips/page-locale-helpers";
 
 import {
-  buildCompareMetrics,
-  buildCompareInsightCards,
   buildQuery,
   escapeCsv,
   firstDayOfMonthLocal,
   isDevToolsEnabled,
   lastDayOfMonthLocal,
   lastThreeMonthsRangeLocal,
-  matchesPayslipSearch,
   previousMonthRangeLocal,
-  sortPayslipSearchRows,
-  toBreakdownRecord,
   toIso,
-  toNumberOrNull,
-  toTimestamp,
   type ApiLog,
   type AttendanceAggregateDto,
-  type BreakdownRecord,
-  type CompareInsightCard,
-  type CompareMetric,
-  type DeductionExplainItem,
-  type DeductionExplainSection,
   type PayrollRunDto,
-  type PayslipSearchRow,
   type PayslipSearchScope,
   type PayslipSortOption
 } from "@/app/employee/payslips/page-helpers";
+import { usePayslipDerivedState } from "@/app/employee/payslips/use-payslip-derived-state";
 import { EmployeePayslipsPageView } from "@/app/employee/payslips/page-view";
 export default function EmployeePayslipsPage() {
   const [accessToken, setAccessToken] = useState("");
@@ -87,253 +70,39 @@ export default function EmployeePayslipsPage() {
         : "";
 
   const usesBearerToken = bearerToken.trim().length > 0;
-  const normalizedPayslipSearchQuery = payslipSearchQuery.trim().toLowerCase();
-
-  const stats = useMemo(() => {
-    const total = logs.length;
-    const success = logs.filter((log) => log.ok).length;
-    const fail = total - success;
-    return { total, success, fail };
-  }, [logs]);
-
-  const payslipStats = useMemo(() => {
-    const totalGross = runs.reduce((sum, run) => sum + run.grossPayKrw, 0);
-    const totalDeductions = runs.reduce((sum, run) => sum + (run.totalDeductionsKrw ?? 0), 0);
-    const totalNet = runs.reduce((sum, run) => sum + (run.netPayKrw ?? 0), 0);
-    return {
-      count: runs.length,
-      totalGross,
-      totalDeductions,
-      totalNet
-    };
-  }, [runs]);
-
-  const payslipSearchRows = useMemo<PayslipSearchRow[]>(() => {
-    return runs.map((run) => {
-      const confirmedAtTs = toTimestamp(run.confirmedAt);
-      const periodEndTs = toTimestamp(run.periodEnd);
-      const stateLabel = resolvePayslipRunStateLabel(run.state, isKoLocale);
-      return {
-        key: run.id,
-        runId: run.id,
-        periodLabel: `${formatDateOnly(run.periodStart)} ~ ${formatDateOnly(run.periodEnd)}`,
-        state: run.state,
-        stateLabel,
-        stateSearchText: `${run.state.toLowerCase()} ${stateLabel.toLowerCase()}`,
-        grossPayKrw: run.grossPayKrw,
-        totalDeductionsKrw: run.totalDeductionsKrw,
-        netPayKrw: run.netPayKrw,
-        confirmedAt: run.confirmedAt,
-        sortTimestamp: confirmedAtTs > 0 ? confirmedAtTs : periodEndTs
-      };
-    });
-  }, [isKoLocale, runs]);
-
-  const filteredPayslipSearchRows = useMemo(() => {
-    const filtered = payslipSearchRows.filter((row) =>
-      matchesPayslipSearch(payslipSearchScope, normalizedPayslipSearchQuery, row)
-    );
-
-    return sortPayslipSearchRows(filtered, payslipSortOption);
-  }, [normalizedPayslipSearchQuery, payslipSearchRows, payslipSearchScope, payslipSortOption]);
-
-  const selectedRun = useMemo(
-    () => runs.find((run) => run.id === selectedRunId) ?? runs[0] ?? null,
-    [runs, selectedRunId]
-  );
-
-  const selectedRunBreakdown = useMemo(
-    () => toBreakdownRecord(selectedRun?.deductionBreakdown ?? null),
-    [selectedRun]
-  );
-
-  const latestLog = useMemo(() => logs[0] ?? null, [logs]);
-  const latestFailedLog = useMemo(() => logs.find((log) => !log.ok) ?? null, [logs]);
-
-  const statusFeedbackTone = useMemo(() => {
-    if (!latestLog) {
-      return "idle";
-    }
-    return latestLog.ok ? "ok" : "fail";
-  }, [latestLog]);
-
-  const statusFeedbackMessage = useMemo(() => {
-    if (!latestLog) {
-      return pageCopy.status.noRecentResult;
-    }
-    if (latestLog.ok) {
-      return `${latestLog.label} ${pageCopy.status.successSuffix}`;
-    }
-    return `${latestLog.label} ${pageCopy.status.failureSuffix}`;
-  }, [latestLog, pageCopy.status.failureSuffix, pageCopy.status.noRecentResult, pageCopy.status.successSuffix]);
-
-  const latestFailureMessage = useMemo(() => {
-    if (!latestFailedLog) {
-      return "";
-    }
-    return extractErrorMessage(latestFailedLog.body);
-  }, [latestFailedLog]);
-
-  const statusRecoveryGuide = useMemo(() => {
-    if (!latestFailedLog) {
-      return pageCopy.status.guideIfNoFailure;
-    }
-    return pageCopy.status.guideIfFailure;
-  }, [latestFailedLog, pageCopy.status.guideIfFailure, pageCopy.status.guideIfNoFailure]);
-
-  const compareCandidates = useMemo(() => {
-    if (!selectedRun) {
-      return [];
-    }
-    return runs
-      .filter((run) => run.id !== selectedRun.id)
-      .sort((left, right) => toTimestamp(right.periodStart) - toTimestamp(left.periodStart));
-  }, [runs, selectedRun]);
-
-  const compareRun = useMemo(() => {
-    if (compareCandidates.length === 0) {
-      return null;
-    }
-    return compareCandidates.find((run) => run.id === compareRunId) ?? compareCandidates[0];
-  }, [compareCandidates, compareRunId]);
-
-  const compareMetrics = useMemo<CompareMetric[]>(() => {
-    return buildCompareMetrics(selectedRun, compareRun, pageCopy.compare.metrics);
-  }, [compareRun, pageCopy.compare.metrics.deduction, pageCopy.compare.metrics.gross, pageCopy.compare.metrics.net, selectedRun]);
-
-  const compareInsightCards = useMemo<CompareInsightCard[]>(() => {
-    return buildCompareInsightCards(compareMetrics, isKoLocale);
-  }, [compareMetrics, isKoLocale]);
-
-  const compareInsightTitle = useMemo(() => resolveCompareInsightTitle(isKoLocale), [isKoLocale]);
-  const compareInsightAriaLabel = useMemo(() => resolveCompareInsightAriaLabel(isKoLocale), [isKoLocale]);
-
-  const compareWindowLabel = useMemo(() => {
-    if (!selectedRun || !compareRun) {
-      return "-";
-    }
-    const selectedLabel = `${formatDateOnly(selectedRun.periodStart)} ~ ${formatDateOnly(selectedRun.periodEnd)}`;
-    const compareLabel = `${formatDateOnly(compareRun.periodStart)} ~ ${formatDateOnly(compareRun.periodEnd)}`;
-    return formatCompareWindowLabel(selectedLabel, compareLabel, isKoLocale);
-  }, [compareRun, isKoLocale, selectedRun]);
-
-  const fixedDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
-    if (!selectedRun) {
-      return [];
-    }
-    return [
-      {
-        key: "withholdingTaxKrw",
-        label: deductionDescriptionMap.withholdingTaxKrw.label,
-        amountKrw: selectedRun.withholdingTaxKrw,
-        description: deductionDescriptionMap.withholdingTaxKrw.description
-      },
-      {
-        key: "socialInsuranceKrw",
-        label: deductionDescriptionMap.socialInsuranceKrw.label,
-        amountKrw: selectedRun.socialInsuranceKrw,
-        description: deductionDescriptionMap.socialInsuranceKrw.description
-      },
-      {
-        key: "otherDeductionsKrw",
-        label: deductionDescriptionMap.otherDeductionsKrw.label,
-        amountKrw: selectedRun.otherDeductionsKrw,
-        description: deductionDescriptionMap.otherDeductionsKrw.description
-      }
-    ];
-  }, [deductionDescriptionMap, selectedRun]);
-
-  const componentDeductionExplainItems = useMemo<DeductionExplainItem[]>(() => {
-    const additional = toBreakdownRecord(selectedRunBreakdown?.additional ?? null);
-    const components = toBreakdownRecord(additional?.components ?? null);
-    if (!components) {
-      return [];
-    }
-
-    return Object.entries(components).flatMap(([key, value]) => {
-      const amount = toNumberOrNull(value);
-      if (amount === null || amount === 0) {
-        return [];
-      }
-      const mapped = deductionDescriptionMap[key];
-      return [
-        {
-          key,
-          label: mapped?.label ?? key,
-          amountKrw: amount,
-          description: mapped?.description ?? pageCopy.deductionFallback.statutoryDetail
-        }
-      ];
-    });
-  }, [pageCopy.deductionFallback.statutoryDetail, selectedRunBreakdown, deductionDescriptionMap]);
-
-  const taxCreditExplainItems = useMemo<DeductionExplainItem[]>(() => {
-    const additional = toBreakdownRecord(selectedRunBreakdown?.additional ?? null);
-    const taxCredits = toBreakdownRecord(additional?.taxCreditsKrw ?? null);
-    if (!taxCredits) {
-      return [];
-    }
-
-    return ["preCreditIncomeTaxKrw", "dependentTaxCreditKrw", "additionalTaxCreditKrw", "totalTaxCreditKrw"].flatMap(
-      (key) => {
-        const amount = toNumberOrNull(taxCredits[key]);
-        if (amount === null || amount === 0) {
-          return [];
-        }
-        const mapped = deductionDescriptionMap[key];
-        return [
-          {
-            key,
-            label: mapped?.label ?? key,
-            amountKrw: amount,
-            description: mapped?.description ?? pageCopy.deductionFallback.taxCreditDetail
-          }
-        ];
-      }
-    );
-  }, [pageCopy.deductionFallback.taxCreditDetail, selectedRunBreakdown, deductionDescriptionMap]);
-
-  const deductionExplainSections = useMemo<DeductionExplainSection[]>(() => {
-    if (!selectedRun) {
-      return [];
-    }
-    return [
-      {
-        id: "fixed",
-        title: pageCopy.detail.deductionGuideTitle,
-        items: fixedDeductionExplainItems
-      },
-      {
-        id: "component",
-        title: pageCopy.detail.deductionComponentTitle,
-        items: componentDeductionExplainItems
-      },
-      {
-        id: "tax-credit",
-        title: pageCopy.detail.taxCreditReferenceTitle,
-        items: taxCreditExplainItems
-      }
-    ];
-  }, [
-    componentDeductionExplainItems,
-    fixedDeductionExplainItems,
-    pageCopy.detail.deductionComponentTitle,
-    pageCopy.detail.deductionGuideTitle,
-    pageCopy.detail.taxCreditReferenceTitle,
+  const {
+    compareCandidates,
+    compareInsightAriaLabel,
+    compareInsightCards,
+    compareInsightTitle,
+    compareMetrics,
+    compareRun,
+    compareWindowLabel,
+    deductionExplainSections,
+    filteredPayslipSearchRows,
+    latestFailedLog,
+    latestFailureMessage,
+    latestLog,
+    payslipFileName,
+    payslipStats,
     selectedRun,
-    taxCreditExplainItems
-  ]);
-
-  const payslipFileName = useMemo(() => {
-    if (!selectedRun) {
-      return "";
-    }
-    const period = new Date(selectedRun.periodStart);
-    const year = Number.isNaN(period.getTime()) ? "unknown" : String(period.getFullYear());
-    const month = Number.isNaN(period.getTime()) ? "00" : String(period.getMonth() + 1).padStart(2, "0");
-    const actor = (selectedRun.employeeId ?? employeeId ?? "employee").replace(/\s+/g, "-");
-    return `flowhr-payslip-${actor}-${year}${month}.pdf`;
-  }, [employeeId, selectedRun]);
+    stats,
+    statusFeedbackMessage,
+    statusFeedbackTone,
+    statusRecoveryGuide
+  } = usePayslipDerivedState({
+    compareRunId,
+    deductionDescriptionMap,
+    employeeId,
+    isKoLocale,
+    logs,
+    pageCopy,
+    payslipSearchQuery,
+    payslipSearchScope,
+    payslipSortOption,
+    runs,
+    selectedRunId
+  });
 
   useEffect(() => {
     if (runs.length === 0) {
