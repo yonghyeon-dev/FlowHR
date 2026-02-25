@@ -20,32 +20,15 @@ import { buildEmployeeMutationActions } from "@/app/employee/page-mutation-actio
 import {
   buildEmployeeInteractionHandlers
 } from "@/app/employee/page-interaction-actions";
-import {
-  buildMobileRequestTimeline,
-  buildRequestFailureCauses,
-  buildRequestFeedbackRows,
-  buildRequestSearchRows,
-  filterMobileRequestTimeline,
-  filterRequestFeedbackRows
-} from "@/app/employee/page-request-helpers";
-import {
-  buildAttendancePreSubmitChecks,
-  buildCorrectionValidation,
-  buildIntegratedSubmitChecklistCards,
-  buildLeavePreSubmitChecks,
-  buildResubmitFlowChecks
-} from "@/app/employee/page-validation-helpers";
+import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import {
   buildQuery,
   calculateNetMinutes,
   coerceNumber,
-  estimateLeaveRequestedDays,
   firstDayOfMonthLocal,
   formatDateTime,
   formatDays,
   lastDayOfMonthLocal,
-  matchesRequestSearch,
-  sortRequestRowsByOption,
   statusToTone,
   todayEndLocal,
   todayStartLocal,
@@ -61,16 +44,10 @@ import { useEmployeeRuntimeSession } from "@/app/employee/page-session-helpers";
 import type {
   ApiLog,
   AttendanceRecordDto,
-  IntegratedSubmitChecklistCard,
   IntegratedSummaryCard,
   LeaveBalanceDto,
   LeaveCalendarDayCell,
   LeaveRequestDto,
-  MobileRequestTimelineItem,
-  PreSubmitCheckItem,
-  RequestFailureCause,
-  RequestFeedbackRow,
-  RequestSearchRow,
   RequestSearchScope,
   RequestSortOption,
   RequestStatusFilter,
@@ -448,234 +425,72 @@ export default function EmployeeSelfServicePage() {
     ]
   );
 
-  const latestLeaveRequest = useMemo(() => {
-    if (leaveRequests.length === 0) {
-      return null;
-    }
-    return leaveRequests[leaveRequests.length - 1] ?? null;
-  }, [leaveRequests]);
-
-  const requestFeedbackRows = useMemo<RequestFeedbackRow[]>(() => {
-    return buildRequestFeedbackRows({
-      latestAttendance,
-      latestLeaveRequest,
-      defaultsCopy: {
-        noReasonProvided: defaultsCopy.noReasonProvided
-      },
-      requestFeedbackCopy
-    });
-  }, [defaultsCopy.noReasonProvided, latestAttendance, latestLeaveRequest, requestFeedbackCopy]);
-
-  const requestSearchRows = useMemo<RequestSearchRow[]>(() => {
-    return buildRequestSearchRows({
-      attendance,
-      leaveRequests,
-      requestNowMs,
-      defaultsCopy: {
-        noNote: defaultsCopy.noNote,
-        noReason: defaultsCopy.noReason
-      },
-      leaveUnitCopy,
-      formatDays,
-      toLeaveTypeLabel,
-      formatDateTime: formatDateTimeByLocale
-    });
-  }, [attendance, defaultsCopy.noNote, defaultsCopy.noReason, formatDateTimeByLocale, leaveRequests, leaveUnitCopy, requestNowMs, toLeaveTypeLabel]);
-
-  const filteredRequestSearchRows = useMemo(() => {
-    const filtered = requestSearchRows.filter((row) =>
-      matchesRequestSearch(requestSearchScope, normalizedRequestSearchQuery, row)
-    );
-
-    return sortRequestRowsByOption(filtered, requestSortOption);
-  }, [normalizedRequestSearchQuery, requestSearchRows, requestSearchScope, requestSortOption]);
-
-  const filteredRequestFeedbackRows = useMemo(() => {
-    return filterRequestFeedbackRows(requestFeedbackRows, requestFeedbackStatusFilter);
-  }, [requestFeedbackStatusFilter, requestFeedbackRows]);
-
-  const mobileRequestTimeline = useMemo<MobileRequestTimelineItem[]>(() => {
-    return buildMobileRequestTimeline({
-      attendance,
-      leaveRequests,
-      defaultsCopy: {
-        attendanceRequestTitle: defaultsCopy.attendanceRequestTitle,
-        leaveRequestTitle: defaultsCopy.leaveRequestTitle
-      },
-      toLeaveTypeLabel,
-      formatDateTime: formatDateTimeByLocale
-    });
-  }, [attendance, defaultsCopy.attendanceRequestTitle, defaultsCopy.leaveRequestTitle, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]);
-
-  const filteredMobileRequestTimeline = useMemo(() => {
-    return filterMobileRequestTimeline(
-      mobileRequestTimeline,
-      timelineChannelFilter,
-      timelineStatusFilter
-    );
-  }, [mobileRequestTimeline, timelineChannelFilter, timelineStatusFilter]);
-
-  const requestFailureCauses = useMemo<RequestFailureCause[]>(() => {
-    return buildRequestFailureCauses({
-      logs,
-      attendance,
-      leaveRequests,
-      defaultsCopy: {
-        attendanceRejectedSource: defaultsCopy.attendanceRejectedSource,
-        leaveRejectedSource: defaultsCopy.leaveRejectedSource,
-        leaveCanceledSource: defaultsCopy.leaveCanceledSource,
-        rejectionReasonMissing: defaultsCopy.rejectionReasonMissing,
-        reasonMissing: defaultsCopy.reasonMissing
-      },
-      isKoLocale,
-      formatDateTime: formatDateTimeByLocale,
-      extractEmployeeErrorMessage
-    });
-  }, [attendance, defaultsCopy.attendanceRejectedSource, defaultsCopy.leaveCanceledSource, defaultsCopy.leaveRejectedSource, defaultsCopy.reasonMissing, defaultsCopy.rejectionReasonMissing, formatDateTimeByLocale, isKoLocale, leaveRequests, logs]);
-
-  const latestFailureCauseMessage = requestFailureCauses[0]?.message ?? null;
-
-  const correctionValidation = useMemo(
-    () =>
-      buildCorrectionValidation({
-        lastAttendanceId,
-        checkInAt,
-        checkOutAt,
-        breakMinutes,
-        correctionValidationCopy
-      }),
-    [breakMinutes, checkInAt, checkOutAt, correctionValidationCopy, lastAttendanceId]
-  );
-
-  const attendancePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(
-    () =>
-      buildAttendancePreSubmitChecks({
-        lastAttendanceId,
-        checkInAt,
-        checkOutAt,
-        breakMinutes,
-        attendanceCheckCopy
-      }),
-    [attendanceCheckCopy, breakMinutes, checkInAt, checkOutAt, lastAttendanceId]
-  );
-
-  const attendancePreSubmitValid = useMemo(
-    () => attendancePreSubmitChecks.every((check) => check.pass),
-    [attendancePreSubmitChecks]
-  );
-
-  const attendanceFirstFailCheck = useMemo(
-    () => attendancePreSubmitChecks.find((check) => !check.pass) ?? null,
-    [attendancePreSubmitChecks]
-  );
-
-  const estimatedLeaveRequestedDays = useMemo(
-    () =>
-      estimateLeaveRequestedDays({
-        startDate: leaveStartDate,
-        endDate: leaveEndDate,
-        unit: leaveUnit,
-        hoursInput: leaveHours
-      }),
-    [leaveEndDate, leaveHours, leaveStartDate, leaveUnit]
-  );
-
-  const leavePreSubmitChecks = useMemo<PreSubmitCheckItem[]>(
-    () =>
-      buildLeavePreSubmitChecks({
-        leaveStartDate,
-        leaveEndDate,
-        leaveUnit,
-        leaveHours,
-        leaveType,
-        leaveBalance,
-        estimatedLeaveRequestedDays,
-        leaveCheckCopy,
-        formatDays
-      }),
-    [
-      estimatedLeaveRequestedDays,
-      leaveBalance,
-      leaveCheckCopy,
-      leaveEndDate,
-      leaveHours,
-      leaveStartDate,
-      leaveType,
-      leaveUnit
-    ]
-  );
-
-  const leavePreSubmitValid = useMemo(() => leavePreSubmitChecks.every((check) => check.pass), [leavePreSubmitChecks]);
-
-  const leaveFirstFailCheck = useMemo(
-    () => leavePreSubmitChecks.find((check) => !check.pass) ?? null,
-    [leavePreSubmitChecks]
-  );
-
-  const resubmitFlowChecks = useMemo<PreSubmitCheckItem[]>(
-    () =>
-      buildResubmitFlowChecks({
-        selectedResubmitCandidate,
-        lastAppliedResubmitCandidateKey,
-        correctionValidationIsValid: correctionValidation.isValid,
-        attendancePreSubmitValid,
-        leavePreSubmitValid,
-        resubmitFlowCheckCopy
-      }),
-    [
-      attendancePreSubmitValid,
-      correctionValidation.isValid,
-      lastAppliedResubmitCandidateKey,
-      leavePreSubmitValid,
-      resubmitFlowCheckCopy,
-      selectedResubmitCandidate
-    ]
-  );
-
-  const resubmitFlowReady = useMemo(
-    () => resubmitFlowChecks.every((check) => check.pass),
-    [resubmitFlowChecks]
-  );
-
-  const resubmitFirstFailCheck = useMemo(
-    () => resubmitFlowChecks.find((check) => !check.pass) ?? null,
-    [resubmitFlowChecks]
-  );
-
-  const integratedSubmitChecklistCards = useMemo<IntegratedSubmitChecklistCard[]>(
-    () =>
-      buildIntegratedSubmitChecklistCards({
-        attendancePreSubmitChecks,
-        leavePreSubmitChecks,
-        resubmitFlowChecks,
-        attendancePreSubmitValid,
-        correctionValidation,
-        lastAttendanceId,
-        attendanceFirstFailCheck,
-        leavePreSubmitValid,
-        estimatedLeaveRequestedDays,
-        leaveFirstFailCheck,
-        resubmitFlowReady,
-        resubmitFirstFailCheck,
-        submitChecklistCardCopy,
-        formatDays
-      }),
-    [
-      attendanceFirstFailCheck,
-      attendancePreSubmitChecks,
-      attendancePreSubmitValid,
-      correctionValidation,
-      estimatedLeaveRequestedDays,
-      lastAttendanceId,
-      leaveFirstFailCheck,
-      leavePreSubmitChecks,
-      leavePreSubmitValid,
-      resubmitFirstFailCheck,
-      resubmitFlowChecks,
-      resubmitFlowReady,
-      submitChecklistCardCopy
-    ]
-  );
+  const {
+    filteredRequestFeedbackRows,
+    filteredRequestSearchRows,
+    filteredMobileRequestTimeline,
+    requestFailureCauses,
+    latestFailureCauseMessage,
+    correctionValidation,
+    attendancePreSubmitChecks,
+    attendancePreSubmitValid,
+    leavePreSubmitChecks,
+    leavePreSubmitValid,
+    resubmitFlowChecks,
+    integratedSubmitChecklistCards
+  } = useEmployeeRequestChecklistDerivedState({
+    latestAttendance,
+    attendance,
+    leaveRequests,
+    logs,
+    isKoLocale,
+    requestNowMs,
+    requestSearchScope,
+    normalizedRequestSearchQuery,
+    requestSortOption,
+    requestFeedbackStatusFilter,
+    timelineChannelFilter,
+    timelineStatusFilter,
+    selectedResubmitCandidate,
+    lastAppliedResubmitCandidateKey,
+    lastAttendanceId,
+    checkInAt,
+    checkOutAt,
+    breakMinutes,
+    leaveType,
+    leaveUnit,
+    leaveHours,
+    leaveStartDate,
+    leaveEndDate,
+    leaveBalance,
+    formatDays,
+    formatDateTimeByLocale,
+    toLeaveTypeLabel,
+    extractEmployeeErrorMessage,
+    requestFeedbackCopy,
+    requestFeedbackNoReasonProvided: defaultsCopy.noReasonProvided,
+    requestSearchDefaultsCopy: {
+      noNote: defaultsCopy.noNote,
+      noReason: defaultsCopy.noReason
+    },
+    mobileRequestDefaultsCopy: {
+      attendanceRequestTitle: defaultsCopy.attendanceRequestTitle,
+      leaveRequestTitle: defaultsCopy.leaveRequestTitle
+    },
+    leaveUnitCopy,
+    requestFailureDefaultsCopy: {
+      attendanceRejectedSource: defaultsCopy.attendanceRejectedSource,
+      leaveRejectedSource: defaultsCopy.leaveRejectedSource,
+      leaveCanceledSource: defaultsCopy.leaveCanceledSource,
+      rejectionReasonMissing: defaultsCopy.rejectionReasonMissing,
+      reasonMissing: defaultsCopy.reasonMissing
+    },
+    correctionValidationCopy,
+    attendanceCheckCopy,
+    leaveCheckCopy,
+    resubmitFlowCheckCopy,
+    submitChecklistCardCopy
+  });
 
   const correctionDeltaLabel = useMemo(() => {
     if (!selectedCorrectionRecord) {
