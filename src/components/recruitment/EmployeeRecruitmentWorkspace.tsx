@@ -93,6 +93,7 @@ export default function EmployeeRecruitmentWorkspace() {
   const [candidateEmail, setCandidateEmail] = useState("");
   const [note, setNote] = useState("");
   const [stageFilter, setStageFilter] = useState<RecruitmentReferralStage | "all">("all");
+  const [referralSearchQuery, setReferralSearchQuery] = useState("");
 
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -112,6 +113,24 @@ export default function EmployeeRecruitmentWorkspace() {
     });
     return map;
   }, [openings]);
+  const normalizedReferralSearchQuery = referralSearchQuery.trim().toLowerCase();
+  const filteredReferrals = useMemo(() => {
+    if (!normalizedReferralSearchQuery) {
+      return referrals;
+    }
+    return referrals.filter((referral) => {
+      const openingTitle = (openingById.get(referral.openingId)?.title ?? "").toLowerCase();
+      const candidateNameText = referral.candidateName.toLowerCase();
+      const candidateEmailText = referral.candidateEmail.toLowerCase();
+      const noteText = referral.note.toLowerCase();
+      return (
+        openingTitle.includes(normalizedReferralSearchQuery) ||
+        candidateNameText.includes(normalizedReferralSearchQuery) ||
+        candidateEmailText.includes(normalizedReferralSearchQuery) ||
+        noteText.includes(normalizedReferralSearchQuery)
+      );
+    });
+  }, [normalizedReferralSearchQuery, openingById, referrals]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -232,6 +251,10 @@ export default function EmployeeRecruitmentWorkspace() {
     await loadWorkspace();
   }
 
+  function clearReferralSearch() {
+    setReferralSearchQuery("");
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -280,13 +303,24 @@ export default function EmployeeRecruitmentWorkspace() {
               <option value="WITHDRAWN">{copy.referralStageFilter.WITHDRAWN}</option>
             </select>
           </label>
+          <label>
+            {copy.referralSearchLabel}
+            <input
+              value={referralSearchQuery}
+              placeholder={copy.referralSearchPlaceholder}
+              onChange={(event) => setReferralSearchQuery(event.target.value)}
+            />
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void loadWorkspace()} disabled={pending}>
               {copy.refreshAction}
             </button>
+            <button className="btn btn-secondary" type="button" onClick={clearReferralSearch} disabled={pending}>
+              {copy.clearSearchAction}
+            </button>
           </div>
           <p className="small muted">
-            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn})
+            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn}) · {copy.filteredReferralSummaryLabel}: {filteredReferrals.length}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
@@ -348,9 +382,11 @@ export default function EmployeeRecruitmentWorkspace() {
           <h2>{copy.referralsTitle}</h2>
           {referrals.length === 0 ? (
             <p className="small muted">{copy.emptyReferrals}</p>
+          ) : filteredReferrals.length === 0 ? (
+            <p className="small muted">{copy.filteredEmptyReferrals}</p>
           ) : (
             <ul className="simple-list">
-              {referrals.map((referral) => {
+              {filteredReferrals.map((referral) => {
                 const openingTitle = openingById.get(referral.openingId)?.title ?? copy.unknownOpeningLabel;
                 return (
                   <li key={referral.id}>
