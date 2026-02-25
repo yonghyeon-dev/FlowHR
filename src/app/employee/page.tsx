@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -8,9 +8,11 @@ import {
   buildLeaveCalendarCells,
   buildLeaveCalendarRows,
   buildLeaveBalanceCards,
+  buildRequestFlowStats,
   buildLeaveStatusSummary,
   buildLeaveUsageProjectionLabel,
   buildResubmitCandidates,
+  resolveSelectedResubmitCandidate,
   summarizeEmployeeApiLogs
 } from "@/app/employee/page-derived-helpers";
 import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
@@ -41,7 +43,6 @@ import {
   firstDayOfMonthLocal,
   formatDateTime,
   formatDays,
-  isDevToolsEnabled,
   lastDayOfMonthLocal,
   matchesRequestSearch,
   sortRequestRowsByOption,
@@ -56,6 +57,7 @@ import {
   isDefaultEmployeeCancelReason,
   resolveEmployeeLocaleLabelBundle
 } from "@/app/employee/page-locale-helpers";
+import { useEmployeeRuntimeSession } from "@/app/employee/page-session-helpers";
 import type {
   ApiLog,
   AttendanceRecordDto,
@@ -81,7 +83,6 @@ import { EmployeeAttendanceLeavePanels } from "@/components/employee-dashboard/E
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
 import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/EmployeeRequestFeedbackPanels";
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
-import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -160,19 +161,22 @@ export default function EmployeeSelfServicePage() {
     [runtimeLocale]
   );
 
+  const {
+    showDevTools,
+    isProductionRuntime,
+    supabaseSession,
+    supabaseSessionError,
+    bearerToken,
+    usesBearerToken
+  } = useEmployeeRuntimeSession({
+    accessToken,
+    organizationId,
+    setOrganizationId,
+    employeeId,
+    setEmployeeId,
+    notConfiguredLabel
+  });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
-  const showDevTools = isDevToolsEnabled();
-  const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
-
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
-
-  const usesBearerToken = bearerToken.trim().length > 0;
   const newestLog = logs[0];
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
@@ -196,26 +200,6 @@ export default function EmployeeSelfServicePage() {
     resubmitFlowChecks: resubmitFlowCheckCopy,
     submitChecklistCards: submitChecklistCardCopy
   } = validationCopy;
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0 && !organizationId.trim()) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const actorId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim();
-    if (actorId.length > 0 && employeeId.trim() !== actorId) {
-      setEmployeeId(actorId);
-    }
-  }, [employeeId, isProductionRuntime, setEmployeeId, supabaseSession?.actorId, supabaseSession?.userId]);
 
   useEffect(() => {
     setCancelReason((previous) =>
@@ -400,19 +384,14 @@ export default function EmployeeSelfServicePage() {
     [leaveRequests]
   );
 
-  const totalPendingRequestCount = attendanceStatusSummary.pending + leaveStatusSummary.pending;
-  const totalApprovedRequestCount = attendanceStatusSummary.approved + leaveStatusSummary.approved;
-  const totalRejectedOrCanceledRequestCount =
-    attendanceStatusSummary.rejected + leaveStatusSummary.rejected + (leaveStatusSummary.canceled ?? 0);
-
-  const requestCompletionRatePercent = useMemo(() => {
-    const totalHandled = totalApprovedRequestCount + totalRejectedOrCanceledRequestCount;
-    const total = totalHandled + totalPendingRequestCount;
-    if (total === 0) {
-      return 0;
-    }
-    return Math.max(0, Math.min(100, Math.round((totalHandled / total) * 100)));
-  }, [totalApprovedRequestCount, totalPendingRequestCount, totalRejectedOrCanceledRequestCount]);
+  const requestFlowStats = useMemo(
+    () =>
+      buildRequestFlowStats({
+        attendanceStatusSummary,
+        leaveStatusSummary
+      }),
+    [attendanceStatusSummary, leaveStatusSummary]
+  );
 
   const resubmitCandidates = useMemo<ResubmitCandidate[]>(
     () =>
@@ -426,16 +405,10 @@ export default function EmployeeSelfServicePage() {
     [attendance, defaultsCopy.noReasonProvided, formatDateTimeByLocale, leaveRequests, toLeaveTypeLabel]
   );
 
-  const selectedResubmitCandidate = useMemo(() => {
-    if (resubmitCandidates.length === 0) {
-      return null;
-    }
-    const explicit = selectedResubmitCandidateKey.trim();
-    if (explicit.length === 0) {
-      return resubmitCandidates[0];
-    }
-    return resubmitCandidates.find((candidate) => candidate.key === explicit) ?? resubmitCandidates[0];
-  }, [resubmitCandidates, selectedResubmitCandidateKey]);
+  const selectedResubmitCandidate = useMemo(
+    () => resolveSelectedResubmitCandidate(resubmitCandidates, selectedResubmitCandidateKey),
+    [resubmitCandidates, selectedResubmitCandidateKey]
+  );
 
   useEffect(() => {
     if (resubmitCandidates.length === 0) {
@@ -458,7 +431,7 @@ export default function EmployeeSelfServicePage() {
       buildIntegratedSummaryCards({
         attendanceStatusSummary,
         leaveStatusSummary,
-        requestCompletionRatePercent,
+        requestCompletionRatePercent: requestFlowStats.requestCompletionRatePercent,
         resubmitNeededCount: resubmitCandidates.length,
         successCount: stats.success,
         failCount: stats.fail,
@@ -467,7 +440,7 @@ export default function EmployeeSelfServicePage() {
     [
       attendanceStatusSummary,
       leaveStatusSummary,
-      requestCompletionRatePercent,
+      requestFlowStats.requestCompletionRatePercent,
       resubmitCandidates.length,
       stats.fail,
       stats.success,
@@ -972,4 +945,5 @@ export default function EmployeeSelfServicePage() {
     </main>
   );
 }
+
 

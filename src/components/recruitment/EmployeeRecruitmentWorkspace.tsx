@@ -1,13 +1,39 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import type { RecruitmentOpeningItem, RecruitmentReferralItem } from "@/features/recruitment/types";
+import type {
+  RecruitmentOpeningItem,
+  RecruitmentReferralItem,
+  RecruitmentReferralStage
+} from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveEmployeeRecruitmentCopy } from "@/components/recruitment/copy";
+
+type ReferralSummary = {
+  total: number;
+  submitted: number;
+  screening: number;
+  interview: number;
+  offer: number;
+  hired: number;
+  rejected: number;
+  withdrawn: number;
+};
+
+const EMPTY_REFERRAL_SUMMARY: ReferralSummary = {
+  total: 0,
+  submitted: 0,
+  screening: 0,
+  interview: 0,
+  offer: 0,
+  hired: 0,
+  rejected: 0,
+  withdrawn: 0
+};
 
 function parseOpenings(payload: unknown) {
   const openings = (payload as { openings?: RecruitmentOpeningItem[] } | null)?.openings;
@@ -17,6 +43,23 @@ function parseOpenings(payload: unknown) {
 function parseReferrals(payload: unknown) {
   const referrals = (payload as { referrals?: RecruitmentReferralItem[] } | null)?.referrals;
   return Array.isArray(referrals) ? referrals : [];
+}
+
+function parseSummary(payload: unknown) {
+  const summary = (payload as { summary?: Partial<ReferralSummary> } | null)?.summary;
+  if (!summary) {
+    return EMPTY_REFERRAL_SUMMARY;
+  }
+  return {
+    total: Number(summary.total ?? 0),
+    submitted: Number(summary.submitted ?? 0),
+    screening: Number(summary.screening ?? 0),
+    interview: Number(summary.interview ?? 0),
+    offer: Number(summary.offer ?? 0),
+    hired: Number(summary.hired ?? 0),
+    rejected: Number(summary.rejected ?? 0),
+    withdrawn: Number(summary.withdrawn ?? 0)
+  };
 }
 
 function buildQuery(input: Record<string, string>) {
@@ -43,11 +86,13 @@ export default function EmployeeRecruitmentWorkspace() {
 
   const [openings, setOpenings] = useState<RecruitmentOpeningItem[]>([]);
   const [referrals, setReferrals] = useState<RecruitmentReferralItem[]>([]);
+  const [referralSummary, setReferralSummary] = useState<ReferralSummary>(EMPTY_REFERRAL_SUMMARY);
 
   const [selectedOpeningId, setSelectedOpeningId] = useState("");
   const [candidateName, setCandidateName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
   const [note, setNote] = useState("");
+  const [stageFilter, setStageFilter] = useState<RecruitmentReferralStage | "all">("all");
 
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -59,6 +104,14 @@ export default function EmployeeRecruitmentWorkspace() {
         ? (supabaseSession?.accessToken ?? "")
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+
+  const openingById = useMemo(() => {
+    const map = new Map<string, RecruitmentOpeningItem>();
+    openings.forEach((opening) => {
+      map.set(opening.id, opening);
+    });
+    return map;
+  }, [openings]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -96,7 +149,11 @@ export default function EmployeeRecruitmentWorkspace() {
     }
 
     const openingsQuery = buildQuery({ organizationId, status: "OPEN" });
-    const referralsQuery = buildQuery({ organizationId, referrerEmployeeId: employeeId });
+    const referralsQuery = buildQuery({
+      organizationId,
+      referrerEmployeeId: employeeId,
+      stage: stageFilter
+    });
 
     const [openingsRes, referralsRes] = await Promise.all([
       callApi("GET", `/api/recruitment/openings${openingsQuery}`),
@@ -111,6 +168,7 @@ export default function EmployeeRecruitmentWorkspace() {
     const nextOpenings = parseOpenings(openingsRes.parsed);
     setOpenings(nextOpenings);
     setReferrals(parseReferrals(referralsRes.parsed));
+    setReferralSummary(parseSummary(referralsRes.parsed));
     if (nextOpenings.length > 0 && !selectedOpeningId) {
       setSelectedOpeningId(nextOpenings[0].id);
     }
@@ -160,6 +218,20 @@ export default function EmployeeRecruitmentWorkspace() {
     await loadWorkspace();
   }
 
+  async function withdrawReferral(referralId: string) {
+    const { response } = await callApi(
+      "POST",
+      `/api/recruitment/referrals/${encodeURIComponent(referralId)}/withdraw`,
+      {}
+    );
+    if (!response.ok) {
+      setStatusMessage(copy.messages.withdrawFailed);
+      return;
+    }
+    setStatusMessage(copy.messages.withdrawn);
+    await loadWorkspace();
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -192,11 +264,30 @@ export default function EmployeeRecruitmentWorkspace() {
             {copy.accessTokenLabel}
             <textarea rows={2} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
           </label>
+          <label>
+            {copy.stageFilterLabel}
+            <select
+              value={stageFilter}
+              onChange={(event) => setStageFilter(event.target.value as RecruitmentReferralStage | "all")}
+            >
+              <option value="all">{copy.referralStageFilter.all}</option>
+              <option value="SUBMITTED">{copy.referralStageFilter.SUBMITTED}</option>
+              <option value="SCREENING">{copy.referralStageFilter.SCREENING}</option>
+              <option value="INTERVIEW">{copy.referralStageFilter.INTERVIEW}</option>
+              <option value="OFFER">{copy.referralStageFilter.OFFER}</option>
+              <option value="HIRED">{copy.referralStageFilter.HIRED}</option>
+              <option value="REJECTED">{copy.referralStageFilter.REJECTED}</option>
+              <option value="WITHDRAWN">{copy.referralStageFilter.WITHDRAWN}</option>
+            </select>
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void loadWorkspace()} disabled={pending}>
               {copy.refreshAction}
             </button>
           </div>
+          <p className="small muted">
+            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn})
+          </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
 
@@ -259,21 +350,41 @@ export default function EmployeeRecruitmentWorkspace() {
             <p className="small muted">{copy.emptyReferrals}</p>
           ) : (
             <ul className="simple-list">
-              {referrals.map((referral) => (
-                <li key={referral.id}>
-                  <span>
-                    <strong>{referral.candidateName}</strong>
-                    <br />
-                    <span className="small muted">{referral.candidateEmail}</span>
-                    <br />
-                    <span className="small muted">
-                      {copy.stageLabel}: {copy.referralStage[referral.stage]}
+              {referrals.map((referral) => {
+                const openingTitle = openingById.get(referral.openingId)?.title ?? copy.unknownOpeningLabel;
+                return (
+                  <li key={referral.id}>
+                    <span>
+                      <strong>{referral.candidateName}</strong>
+                      <br />
+                      <span className="small muted">{referral.candidateEmail}</span>
+                      <br />
+                      <span className="small muted">
+                        {copy.openingTitleLabel}: {openingTitle}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.stageLabel}: {copy.referralStage[referral.stage]}
+                      </span>
+                      <br />
+                      <span className="small muted">{referral.note}</span>
+                      {referral.stage === "SUBMITTED" || referral.stage === "SCREENING" ? (
+                        <>
+                          <br />
+                          <button
+                            className="btn btn-secondary btn-small"
+                            type="button"
+                            disabled={pending}
+                            onClick={() => void withdrawReferral(referral.id)}
+                          >
+                            {copy.withdrawAction}
+                          </button>
+                        </>
+                      ) : null}
                     </span>
-                    <br />
-                    <span className="small muted">{referral.note}</span>
-                  </span>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
@@ -281,3 +392,4 @@ export default function EmployeeRecruitmentWorkspace() {
     </main>
   );
 }
+

@@ -24,3 +24,12 @@ export const createNoticeSchema = z.object({
 export const publishNoticeSchema = z.object({
   noticeId: z.string().trim().min(1)
 });
+
+export const readNoticeSchema = z.object({
+  noticeId: z.string().trim().min(1),
+  organizationId: z.string().trim().min(1).optional()
+});
+
+export const readAllNoticesSchema = z.object({
+  organizationId: z.string().trim().min(1).optional()
+});

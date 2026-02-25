@@ -13,6 +13,7 @@ import type {
   ReceiptAcknowledgeResponse
 } from "@/components/payslip-receipts/types";
 import { payslipReceiptCopyByLocale } from "@/components/payslip-receipts/copy";
+import { normalizePayslipReceiptRuntimeMessage } from "@/components/payslip-receipts/runtime-copy-helpers";
 import {
   defaultMonthRange,
   toSeoulEndIso,
@@ -66,6 +67,16 @@ export default function PayslipReceiptConsole() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizePayslipReceiptRuntimeMessage(
+      supabaseSessionError,
+      locale,
+      "인증 세션 상태를 확인하지 못했습니다."
+    );
+  }, [locale, supabaseSessionError]);
 
   const receiptSummary = useMemo(() => {
     const distributed = runs.filter((run) => run.payslipDistributedAt !== null).length;
@@ -234,7 +245,9 @@ export default function PayslipReceiptConsole() {
             </button>
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {normalizedSupabaseSessionError ? (
+            <p className="small fail">{copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}</p>
+          ) : null}
         </article>
 
         <article className="panel">

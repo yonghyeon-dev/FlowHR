@@ -33,10 +33,6 @@ type LeaveUnitCopyLike = {
   dayUnit: (value: string) => string;
 };
 
-type DefaultsCopyLike = {
-  noReasonProvided: string;
-};
-
 type SummaryCardCopyLike = {
   pendingRequestsLabel: string;
   pendingRequestsDetail: (attendancePending: number, leavePending: number) => string;
@@ -305,6 +301,48 @@ type BuildIntegratedSummaryCardsArgs = {
   failCount: number;
   summaryCardCopy: SummaryCardCopyLike;
 };
+
+type BuildRequestFlowStatsInput = {
+  attendanceStatusSummary: RequestStatusSummary;
+  leaveStatusSummary: RequestStatusSummary;
+};
+
+export function buildRequestFlowStats({
+  attendanceStatusSummary,
+  leaveStatusSummary
+}: BuildRequestFlowStatsInput) {
+  const totalPendingRequestCount = attendanceStatusSummary.pending + leaveStatusSummary.pending;
+  const totalApprovedRequestCount = attendanceStatusSummary.approved + leaveStatusSummary.approved;
+  const totalRejectedOrCanceledRequestCount =
+    attendanceStatusSummary.rejected +
+    leaveStatusSummary.rejected +
+    (leaveStatusSummary.canceled ?? 0);
+  const totalHandled = totalApprovedRequestCount + totalRejectedOrCanceledRequestCount;
+  const total = totalHandled + totalPendingRequestCount;
+  const requestCompletionRatePercent =
+    total === 0 ? 0 : Math.max(0, Math.min(100, Math.round((totalHandled / total) * 100)));
+
+  return {
+    totalPendingRequestCount,
+    totalApprovedRequestCount,
+    totalRejectedOrCanceledRequestCount,
+    requestCompletionRatePercent
+  };
+}
+
+export function resolveSelectedResubmitCandidate(
+  resubmitCandidates: ResubmitCandidate[],
+  selectedResubmitCandidateKey: string
+) {
+  if (resubmitCandidates.length === 0) {
+    return null;
+  }
+  const explicit = selectedResubmitCandidateKey.trim();
+  if (explicit.length === 0) {
+    return resubmitCandidates[0];
+  }
+  return resubmitCandidates.find((candidate) => candidate.key === explicit) ?? resubmitCandidates[0];
+}
 
 export function buildIntegratedSummaryCards({
   attendanceStatusSummary,

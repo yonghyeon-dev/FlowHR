@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { NoticeItem, NoticeStatus } from "@/features/notices/types";
+import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -53,6 +53,11 @@ function parseNotices(payload: unknown) {
   return Array.isArray(notices) ? notices : [];
 }
 
+function parseReadReceipts(payload: unknown) {
+  const readReceipts = (payload as { readReceipts?: NoticeReadReceipt[] } | null)?.readReceipts;
+  return Array.isArray(readReceipts) ? readReceipts : [];
+}
+
 function toDateTimeLocalValue() {
   const now = new Date();
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -94,6 +99,7 @@ export default function AdminNoticeWorkspace() {
 
   const [summary, setSummary] = useState<NoticeApiSummary>(DEFAULT_SUMMARY);
   const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [readReceipts, setReadReceipts] = useState<NoticeReadReceipt[]>([]);
   const [logs, setLogs] = useState<NoticeApiLog[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -106,10 +112,20 @@ export default function AdminNoticeWorkspace() {
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
-  const stats = useMemo(() => ({
-    total: logs.length,
-    success: logs.filter((log) => log.ok).length
-  }), [logs]);
+  const stats = useMemo(
+    () => ({
+      total: logs.length,
+      success: logs.filter((log) => log.ok).length
+    }),
+    [logs]
+  );
+  const readCountByNoticeId = useMemo(() => {
+    const byNotice = new Map<string, number>();
+    readReceipts.forEach((receipt) => {
+      byNotice.set(receipt.noticeId, (byNotice.get(receipt.noticeId) ?? 0) + 1);
+    });
+    return byNotice;
+  }, [readReceipts]);
 
   function appendLog(action: string, status: number, ok: boolean) {
     setLogs((previous) => [
@@ -175,6 +191,7 @@ export default function AdminNoticeWorkspace() {
 
     setNotices(parseNotices(parsed));
     setSummary(parseSummary(parsed));
+    setReadReceipts(parseReadReceipts(parsed));
     setStatusMessage(`${copy.statusMessagePrefix}: ${copy.refreshAction}`);
   }
 
@@ -337,6 +354,10 @@ export default function AdminNoticeWorkspace() {
                     <span className="small muted">
                       {resolveNoticeAudienceLabel(copy, notice.audience)} · {resolveNoticeStatusLabel(copy, notice.status)} · {notice.updatedAt}
                     </span>
+                    <br />
+                    <span className="small muted">
+                      {copy.readCountLabel}: {readCountByNoticeId.get(notice.id) ?? 0}
+                    </span>
                   </span>
                   {notice.status === "PUBLISHED" ? null : (
                     <button
@@ -372,3 +393,4 @@ export default function AdminNoticeWorkspace() {
     </main>
   );
 }
+

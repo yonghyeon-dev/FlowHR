@@ -39,6 +39,12 @@ type DecideRequestInput = {
   reviewNote?: string | null;
 };
 
+type CancelRequestInput = {
+  requestId: string;
+  actorId: string;
+  cancelNote?: string | null;
+};
+
 const DEFAULT_ORG_ID = "ORG-DEMO";
 const initialCatalogStore: BenefitCatalogItem[] = [
   {
@@ -175,14 +181,37 @@ export function decideBenefitRequest(input: DecideRequestInput) {
   return target;
 }
 
+export function cancelBenefitRequest(input: CancelRequestInput) {
+  const target = requestStore.find((item) => item.id === input.requestId);
+  if (!target) {
+    return null;
+  }
+  if (target.status !== "SUBMITTED" || target.employeeId !== input.actorId) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  target.status = "CANCELED";
+  target.reviewedAt = now;
+  target.reviewedByActorId = input.actorId;
+  target.reviewNote = input.cancelNote?.trim() ? input.cancelNote.trim() : null;
+  target.updatedAt = now;
+  return target;
+}
+
 export function summarizeBenefitRequests(items: BenefitRequestItem[]) {
   const total = items.length;
   const submitted = items.filter((item) => item.status === "SUBMITTED").length;
   const approved = items.filter((item) => item.status === "APPROVED").length;
   const rejected = items.filter((item) => item.status === "REJECTED").length;
-  return { total, submitted, approved, rejected };
+  const canceled = items.filter((item) => item.status === "CANCELED").length;
+  return { total, submitted, approved, rejected, canceled };
 }
 
 export function findBenefitCatalogItem(benefitId: string) {
   return catalogStore.find((item) => item.id === benefitId) ?? null;
+}
+
+export function findBenefitRequest(requestId: string) {
+  return requestStore.find((item) => item.id === requestId) ?? null;
 }

@@ -5,7 +5,8 @@ export type RecruitmentReferralStage =
   | "INTERVIEW"
   | "OFFER"
   | "HIRED"
-  | "REJECTED";
+  | "REJECTED"
+  | "WITHDRAWN";
 
 export type RecruitmentOpeningItem = {
   id: string;

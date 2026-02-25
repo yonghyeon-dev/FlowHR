@@ -1,13 +1,29 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import type { BenefitCatalogItem, BenefitRequestItem } from "@/features/benefits/types";
+import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveEmployeeBenefitsCopy } from "@/components/benefits/copy";
+
+type RequestSummary = {
+  total: number;
+  submitted: number;
+  approved: number;
+  rejected: number;
+  canceled: number;
+};
+
+const EMPTY_REQUEST_SUMMARY: RequestSummary = {
+  total: 0,
+  submitted: 0,
+  approved: 0,
+  rejected: 0,
+  canceled: 0
+};
 
 function parseCatalog(payload: unknown) {
   const catalog = (payload as { catalog?: BenefitCatalogItem[] } | null)?.catalog;
@@ -17,6 +33,20 @@ function parseCatalog(payload: unknown) {
 function parseRequests(payload: unknown) {
   const requests = (payload as { requests?: BenefitRequestItem[] } | null)?.requests;
   return Array.isArray(requests) ? requests : [];
+}
+
+function parseSummary(payload: unknown) {
+  const summary = (payload as { summary?: Partial<RequestSummary> } | null)?.summary;
+  if (!summary) {
+    return EMPTY_REQUEST_SUMMARY;
+  }
+  return {
+    total: Number(summary.total ?? 0),
+    submitted: Number(summary.submitted ?? 0),
+    approved: Number(summary.approved ?? 0),
+    rejected: Number(summary.rejected ?? 0),
+    canceled: Number(summary.canceled ?? 0)
+  };
 }
 
 function buildQuery(input: Record<string, string>) {
@@ -44,10 +74,12 @@ export default function EmployeeBenefitsWorkspace() {
 
   const [catalog, setCatalog] = useState<BenefitCatalogItem[]>([]);
   const [requests, setRequests] = useState<BenefitRequestItem[]>([]);
+  const [requestSummary, setRequestSummary] = useState<RequestSummary>(EMPTY_REQUEST_SUMMARY);
 
   const [selectedBenefitId, setSelectedBenefitId] = useState("");
   const [amountKrw, setAmountKrw] = useState("100000");
   const [reason, setReason] = useState("");
+  const [requestStatusFilter, setRequestStatusFilter] = useState<BenefitRequestStatus | "all">("all");
 
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -59,6 +91,14 @@ export default function EmployeeBenefitsWorkspace() {
         ? (supabaseSession?.accessToken ?? "")
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+
+  const catalogById = useMemo(() => {
+    const map = new Map<string, BenefitCatalogItem>();
+    catalog.forEach((item) => {
+      map.set(item.id, item);
+    });
+    return map;
+  }, [catalog]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -96,7 +136,11 @@ export default function EmployeeBenefitsWorkspace() {
     }
 
     const catalogQuery = buildQuery({ organizationId, status: "ACTIVE" });
-    const requestsQuery = buildQuery({ organizationId, employeeId });
+    const requestsQuery = buildQuery({
+      organizationId,
+      employeeId,
+      status: requestStatusFilter
+    });
 
     const [catalogRes, requestsRes] = await Promise.all([
       callApi("GET", `/api/benefits/catalog${catalogQuery}`),
@@ -111,6 +155,7 @@ export default function EmployeeBenefitsWorkspace() {
     const nextCatalog = parseCatalog(catalogRes.parsed);
     setCatalog(nextCatalog);
     setRequests(parseRequests(requestsRes.parsed));
+    setRequestSummary(parseSummary(requestsRes.parsed));
     if (nextCatalog.length > 0 && !selectedBenefitId) {
       setSelectedBenefitId(nextCatalog[0].id);
     }
@@ -154,6 +199,16 @@ export default function EmployeeBenefitsWorkspace() {
     await loadWorkspace();
   }
 
+  async function cancelRequest(requestId: string) {
+    const { response } = await callApi("POST", `/api/benefits/requests/${encodeURIComponent(requestId)}/cancel`, {});
+    if (!response.ok) {
+      setStatusMessage(copy.messages.cancelFailed);
+      return;
+    }
+    setStatusMessage(copy.messages.canceled);
+    await loadWorkspace();
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -186,11 +241,27 @@ export default function EmployeeBenefitsWorkspace() {
             {copy.accessTokenLabel}
             <textarea rows={2} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
           </label>
+          <label>
+            {copy.requestFilterLabel}
+            <select
+              value={requestStatusFilter}
+              onChange={(event) => setRequestStatusFilter(event.target.value as BenefitRequestStatus | "all")}
+            >
+              <option value="all">{copy.requestFilter.all}</option>
+              <option value="SUBMITTED">{copy.requestFilter.SUBMITTED}</option>
+              <option value="APPROVED">{copy.requestFilter.APPROVED}</option>
+              <option value="REJECTED">{copy.requestFilter.REJECTED}</option>
+              <option value="CANCELED">{copy.requestFilter.CANCELED}</option>
+            </select>
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void loadWorkspace()} disabled={pending}>
               {copy.refreshAction}
             </button>
           </div>
+          <p className="small muted">
+            {copy.requestSummaryLabel}: {requestSummary.total} (S {requestSummary.submitted} / A {requestSummary.approved} / R {requestSummary.rejected} / C {requestSummary.canceled})
+          </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
 
@@ -251,25 +322,41 @@ export default function EmployeeBenefitsWorkspace() {
             <p className="small muted">{copy.emptyRequests}</p>
           ) : (
             <ul className="simple-list">
-              {requests.map((item) => (
-                <li key={item.id}>
-                  <span>
-                    <strong>{item.benefitId}</strong>
-                    <br />
-                    <span className="small muted">
-                      {copy.amountLabel}: {item.amountKrw.toLocaleString(runtimeLocale)} · {copy.statusLabel}: {copy.requestStatus[item.status]}
+              {requests.map((item) => {
+                const benefitName = catalogById.get(item.benefitId)?.name ?? copy.unknownBenefitLabel;
+                return (
+                  <li key={item.id}>
+                    <span>
+                      <strong>{benefitName}</strong>
+                      <br />
+                      <span className="small muted">
+                        {copy.amountLabel}: {item.amountKrw.toLocaleString(runtimeLocale)} · {copy.statusLabel}: {copy.requestStatus[item.status]}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.reasonLabel}: {item.reason}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.requestedAtLabel}: {item.requestedAt}
+                      </span>
+                      {item.status === "SUBMITTED" ? (
+                        <>
+                          <br />
+                          <button
+                            className="btn btn-secondary btn-small"
+                            type="button"
+                            disabled={pending}
+                            onClick={() => void cancelRequest(item.id)}
+                          >
+                            {copy.cancelAction}
+                          </button>
+                        </>
+                      ) : null}
                     </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.reasonLabel}: {item.reason}
-                    </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.requestedAtLabel}: {item.requestedAt}
-                    </span>
-                  </span>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
@@ -277,3 +364,4 @@ export default function EmployeeBenefitsWorkspace() {
     </main>
   );
 }
+

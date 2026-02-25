@@ -60,15 +60,28 @@ export type EmployeeBenefitsCopy = {
   annualLimitLabel: string;
   statusLabel: string;
   requestedAtLabel: string;
+  requestFilterLabel: string;
+  requestSummaryLabel: string;
+  unknownBenefitLabel: string;
+  cancelAction: string;
   messages: {
     needOrganization: string;
     needCatalog: string;
     needAmount: string;
     needReason: string;
     submitted: string;
+    canceled: string;
+    cancelFailed: string;
     loadFailed: string;
   };
   requestStatus: Record<BenefitRequestStatus, string>;
+  requestFilter: {
+    all: string;
+    SUBMITTED: string;
+    APPROVED: string;
+    REJECTED: string;
+    CANCELED: string;
+  };
 };
 
 const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
@@ -114,7 +127,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     requestStatus: {
       SUBMITTED: "신청",
       APPROVED: "승인",
-      REJECTED: "반려"
+      REJECTED: "반려",
+      CANCELED: "취소"
     }
   },
   en: {
@@ -159,7 +173,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     requestStatus: {
       SUBMITTED: "Submitted",
       APPROVED: "Approved",
-      REJECTED: "Rejected"
+      REJECTED: "Rejected",
+      CANCELED: "Canceled"
     }
   }
 };
@@ -185,18 +200,32 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     annualLimitLabel: "연간 한도",
     statusLabel: "상태",
     requestedAtLabel: "신청 시각",
+    requestFilterLabel: "요청 상태 필터",
+    requestSummaryLabel: "상태별 건수",
+    unknownBenefitLabel: "알 수 없는 항목",
+    cancelAction: "신청 취소",
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
       needCatalog: "복리후생 항목을 선택하세요.",
       needAmount: "신청 금액을 입력하세요.",
       needReason: "신청 사유를 입력하세요.",
       submitted: "복리후생 신청을 제출했습니다.",
+      canceled: "복리후생 신청을 취소했습니다.",
+      cancelFailed: "복리후생 신청 취소에 실패했습니다.",
       loadFailed: "복리후생 데이터를 불러오지 못했습니다."
     },
     requestStatus: {
       SUBMITTED: "신청",
       APPROVED: "승인",
-      REJECTED: "반려"
+      REJECTED: "반려",
+      CANCELED: "취소"
+    },
+    requestFilter: {
+      all: "전체",
+      SUBMITTED: "신청",
+      APPROVED: "승인",
+      REJECTED: "반려",
+      CANCELED: "취소"
     }
   },
   en: {
@@ -219,18 +248,32 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     annualLimitLabel: "Annual limit",
     statusLabel: "Status",
     requestedAtLabel: "Requested at",
+    requestFilterLabel: "Request status filter",
+    requestSummaryLabel: "Status summary",
+    unknownBenefitLabel: "Unknown benefit",
+    cancelAction: "Cancel request",
     messages: {
       needOrganization: "Organization ID is required.",
       needCatalog: "Select a benefit item.",
       needAmount: "Amount is required.",
       needReason: "Reason is required.",
       submitted: "Benefit request submitted.",
+      canceled: "Benefit request canceled.",
+      cancelFailed: "Failed to cancel benefit request.",
       loadFailed: "Failed to load benefit data."
     },
     requestStatus: {
       SUBMITTED: "Submitted",
       APPROVED: "Approved",
-      REJECTED: "Rejected"
+      REJECTED: "Rejected",
+      CANCELED: "Canceled"
+    },
+    requestFilter: {
+      all: "All",
+      SUBMITTED: "Submitted",
+      APPROVED: "Approved",
+      REJECTED: "Rejected",
+      CANCELED: "Canceled"
     }
   }
 };

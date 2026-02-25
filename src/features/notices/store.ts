@@ -1,4 +1,4 @@
-﻿import type { NoticeAudience, NoticeItem, NoticeStatus } from "@/features/notices/types";
+﻿import type { NoticeAudience, NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 
 type ListNoticesInput = {
   organizationId?: string;
@@ -14,6 +14,23 @@ type CreateNoticeInput = {
   audience: NoticeAudience;
   publishAt?: string | null;
   createdByActorId: string;
+};
+
+type ListNoticeReadReceiptsInput = {
+  organizationId?: string;
+  actorId?: string;
+};
+
+type MarkNoticeReadInput = {
+  organizationId: string;
+  noticeId: string;
+  actorId: string;
+};
+
+type MarkAllNoticesReadInput = {
+  organizationId: string;
+  actorId: string;
+  audience?: NoticeAudience | "all";
 };
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
@@ -60,6 +77,7 @@ const INITIAL_NOTICE_STORE: NoticeItem[] = [
 ];
 
 const noticeStore: NoticeItem[] = [...INITIAL_NOTICE_STORE];
+const noticeReadStore: NoticeReadReceipt[] = [];
 
 function normalizeAudience(audience: NoticeAudience | "all" | undefined) {
   return audience === "all" || !audience ? null : audience;
@@ -153,3 +171,73 @@ export function summarizeNotices(items: NoticeItem[]) {
   const published = items.filter((item) => item.status === "PUBLISHED").length;
   return { total, draft, scheduled, published };
 }
+
+export function listNoticeReadReceipts(input: ListNoticeReadReceiptsInput = {}) {
+  const organizationId = input.organizationId?.trim() || DEFAULT_ORG_ID;
+  const actorId = input.actorId?.trim();
+
+  return noticeReadStore
+    .filter((receipt) => receipt.organizationId === organizationId)
+    .filter((receipt) => (actorId ? receipt.actorId === actorId : true))
+    .sort((a, b) => Date.parse(b.readAt) - Date.parse(a.readAt));
+}
+
+export function markNoticeRead(input: MarkNoticeReadInput) {
+  const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
+  const actorId = input.actorId.trim();
+  const noticeId = input.noticeId.trim();
+  if (!actorId || !noticeId) {
+    return null;
+  }
+
+  const target = noticeStore.find((notice) => notice.id === noticeId && notice.organizationId === organizationId);
+  if (!target) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const existing = noticeReadStore.find(
+    (receipt) =>
+      receipt.organizationId === organizationId &&
+      receipt.noticeId === noticeId &&
+      receipt.actorId === actorId
+  );
+  if (existing) {
+    existing.readAt = now;
+    return existing;
+  }
+
+  const next: NoticeReadReceipt = {
+    organizationId,
+    noticeId,
+    actorId,
+    readAt: now
+  };
+  noticeReadStore.unshift(next);
+  return next;
+}
+
+export function markAllNoticesRead(input: MarkAllNoticesReadInput) {
+  const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
+  const actorId = input.actorId.trim();
+  if (!actorId) {
+    return [];
+  }
+
+  const notices = listNotices({
+    organizationId,
+    audience: input.audience ?? "all",
+    publishedOnly: true
+  });
+
+  return notices
+    .map((notice) =>
+      markNoticeRead({
+        organizationId,
+        noticeId: notice.id,
+        actorId
+      })
+    )
+    .filter((receipt): receipt is NoticeReadReceipt => receipt !== null);
+}
+

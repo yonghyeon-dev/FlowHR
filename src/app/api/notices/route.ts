@@ -1,5 +1,10 @@
 ﻿import { createNoticeSchema, listNoticesQuerySchema } from "@/features/notices/schemas";
-import { createNotice, listNotices, summarizeNotices } from "@/features/notices/store";
+import {
+  createNotice,
+  listNoticeReadReceipts,
+  listNotices,
+  summarizeNotices
+} from "@/features/notices/store";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -32,8 +37,18 @@ export async function GET(request: Request) {
     status: parsed.data.status,
     publishedOnly: parsed.data.publishedOnly ?? !isAdminActor
   });
+  const readReceipts = isAdminActor
+    ? listNoticeReadReceipts({ organizationId })
+    : actor?.id && actor.id.trim().length > 0
+      ? listNoticeReadReceipts({ organizationId, actorId: actor.id })
+      : [];
 
-  return ok({ notices, summary: summarizeNotices(notices) });
+  return ok({
+    notices,
+    summary: summarizeNotices(notices),
+    readReceipts,
+    readNoticeIds: readReceipts.map((receipt) => receipt.noticeId)
+  });
 }
 
 export async function POST(request: Request) {
@@ -67,3 +82,4 @@ export async function POST(request: Request) {
 
   return ok({ notice: created }, 201);
 }
+
