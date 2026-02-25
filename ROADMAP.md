@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.160 (Admin Notice Workspace View Decomposition)
+> **Current version**: 0.1.163 (Admin Non-Payroll Workspace Decomposition and Line-Budget Guard)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -738,3 +738,6 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0471 korean locale employee-id input normalization for withholding/payslip receipts (`/employee/withholding-receipt`, `/employee/payslip-receipts`의 기본 직원번호 입력값 ko 표시(`직원-1001`)로 통일 + API 호출 시 `EMP-1001` 포맷 자동 정규화 + locale 전환 시 입력값 표기 동기화 + regression test)
 - WI-0472 contracts employee-id locale display normalization (`/admin/contracts`에서 직원번호 입력/표시를 locale 친화(`직원-*`)로 통일 + 문서 생성 API는 `EMP-*` 포맷 자동 정규화 + 문서 목록 employeeId 표시 locale 변환 + regression test)
 - WI-0473 admin notice workspace view decomposition (`/admin/notices` 화면을 `AdminNoticeWorkspaceView`로 분리해 `AdminNoticeWorkspace.tsx`를 orchestration 전용으로 축소(<=300) + 기존 공지 작성/게시/이력 UI 토큰 유지 + regression test)
+- WI-0474 admin benefits workspace view decomposition (`/admin/benefits` 화면을 `AdminBenefitsWorkspaceView`로 분리해 `AdminBenefitsWorkspace.tsx`를 orchestration 전용으로 축소(<=300) + 카탈로그/요청 의사결정 UI 토큰 유지 + regression test)
+- WI-0475 admin recruitment workspace view decomposition (`/admin/recruitment` 화면을 `AdminRecruitmentWorkspaceView`로 분리해 `AdminRecruitmentWorkspace.tsx`를 orchestration 전용으로 축소(<=300) + 채용공고/추천 stage UI 토큰 유지 + regression test)
+- WI-0476 admin non-payroll workspace line-budget guard (`/admin/notices`, `/admin/benefits`, `/admin/recruitment` line-budget <=300 회귀 가드 + phase-loop 금지 패턴 회귀 차단 테스트 추가)
