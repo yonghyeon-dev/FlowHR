@@ -9,6 +9,7 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const payslipsPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
   const payslipHelpers = readUtf8("src", "app", "employee", "payslips", "page-helpers.ts");
+  const payslipLocaleHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const globalsCss = readUtf8("src", "app", "globals.css");
   const workItem = readUtf8(
     "work-items",
@@ -20,7 +21,8 @@ async function run() {
   assert.match(payslipHelpers, /type CompareInsightCard/);
   assert.match(payslipsPage, /compareInsightCards/);
   assert.match(payslipsPage, /payslip-compare-insight/);
-  assert.match(payslipsPage, /Month-over-month explanation/);
+  assert.match(payslipsPage, /resolveCompareInsightTitle\(isKoLocale\)/);
+  assert.match(payslipLocaleHelpers, /Month-over-month explanation/);
   assert.match(globalsCss, /\.payslip-compare-insight/);
   assert.match(globalsCss, /\.payslip-compare-insight-grid/);
 
