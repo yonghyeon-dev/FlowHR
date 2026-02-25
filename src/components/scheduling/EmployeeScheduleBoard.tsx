@@ -3,15 +3,20 @@
 import { useMemo, useState } from "react";
 
 import { employeeScheduleCopyByLocale } from "@/components/scheduling/copy";
+import EmployeeScheduleBoardView from "@/components/scheduling/EmployeeScheduleBoardView";
 import {
   type ScheduleApiLog,
+  type ScheduleHolidayFilter,
+  type ScheduleStatusFilter,
   type WorkScheduleDto,
   buildCurrentMonthDateRange,
+  buildCurrentWeekDateRange,
+  buildNextWeekDateRange,
   buildQuery,
   extractErrorMessage,
-  formatDateTime,
-  formatHours,
   parseResponseBody,
+  resolveScheduleTimeStatus,
+  resolveScheduleWorkMinutes,
   toIsoDateRangeEndExclusive,
   toIsoDateRangeStart
 } from "@/components/scheduling/helpers";
@@ -31,6 +36,8 @@ export default function EmployeeScheduleBoard() {
   const [accessToken, setAccessToken] = useState("");
   const [fromDate, setFromDate] = useState(monthRange.fromDate);
   const [toDate, setToDate] = useState(monthRange.toDate);
+  const [statusFilter, setStatusFilter] = useState<ScheduleStatusFilter>("all");
+  const [holidayFilter, setHolidayFilter] = useState<ScheduleHolidayFilter>("all");
   const [schedules, setSchedules] = useState<WorkScheduleDto[]>([]);
   const [logs, setLogs] = useState<ScheduleApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -47,17 +54,62 @@ export default function EmployeeScheduleBoard() {
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const summary = useMemo(() => {
-    const totalShifts = schedules.length;
+    const nowMs = Date.now();
+    const summaryTotalShifts = schedules.length;
     const holidayShifts = schedules.filter((schedule) => schedule.isHoliday).length;
-    const totalMinutes = schedules.reduce((sum, schedule) => {
-      const start = new Date(schedule.startAt).getTime();
-      const end = new Date(schedule.endAt).getTime();
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
-        return sum;
+    let totalMinutes = 0;
+    let upcomingShifts = 0;
+    let inProgressShifts = 0;
+    let completedShifts = 0;
+    for (const schedule of schedules) {
+      totalMinutes += resolveScheduleWorkMinutes(schedule);
+      const status = resolveScheduleTimeStatus(schedule, nowMs);
+      if (status === "upcoming") {
+        upcomingShifts += 1;
+      } else if (status === "in_progress") {
+        inProgressShifts += 1;
+      } else {
+        completedShifts += 1;
       }
-      return sum + Math.max(0, Math.round((end - start) / 60000) - schedule.breakMinutes);
-    }, 0);
-    return { totalShifts, holidayShifts, totalMinutes };
+    }
+    return {
+      totalShifts: summaryTotalShifts,
+      holidayShifts,
+      totalMinutes,
+      upcomingShifts,
+      inProgressShifts,
+      completedShifts
+    };
+  }, [schedules]);
+
+  const rows = useMemo(() => {
+    const nowMs = Date.now();
+    return schedules
+      .map((schedule) => ({ schedule, status: resolveScheduleTimeStatus(schedule, nowMs) }))
+      .filter((row) => {
+        if (statusFilter !== "all" && row.status !== statusFilter) {
+          return false;
+        }
+        if (holidayFilter === "holiday") {
+          return row.schedule.isHoliday;
+        }
+        if (holidayFilter === "workday") {
+          return !row.schedule.isHoliday;
+        }
+        return true;
+      })
+      .sort((left, right) => {
+        const leftMs = new Date(left.schedule.startAt).getTime();
+        const rightMs = new Date(right.schedule.startAt).getTime();
+        return leftMs - rightMs;
+      });
+  }, [holidayFilter, schedules, statusFilter]);
+
+  const nextSchedule = useMemo(() => {
+    const nowMs = Date.now();
+    return schedules
+      .filter((schedule) => resolveScheduleTimeStatus(schedule, nowMs) === "upcoming")
+      .sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime())[0] ?? null;
   }, [schedules]);
 
   const logStats = useMemo(() => {
@@ -123,118 +175,54 @@ export default function EmployeeScheduleBoard() {
     }
   }
 
+  function applyCurrentMonthRange() {
+    const range = buildCurrentMonthDateRange();
+    setFromDate(range.fromDate);
+    setToDate(range.toDate);
+  }
+
+  function applyCurrentWeekRange() {
+    const range = buildCurrentWeekDateRange();
+    setFromDate(range.fromDate);
+    setToDate(range.toDate);
+  }
+
+  function applyNextWeekRange() {
+    const range = buildNextWeekDateRange();
+    setFromDate(range.fromDate);
+    setToDate(range.toDate);
+  }
+
   return (
-    <main className="saas-content">
-      <header className="hero">
-        <p className="eyebrow">{copy.eyebrow}</p>
-        <h1>{copy.title}</h1>
-        <p>{copy.description}</p>
-      </header>
-
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{copy.filtersTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {copy.employeeIdLabel}
-            <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
-          </label>
-          <div className="input-grid">
-            <label>
-              {copy.fromDateLabel}
-              <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-            </label>
-            <label>
-              {copy.toDateLabel}
-              <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={() => void loadSchedules()}>
-              {copy.loadAction}
-            </button>
-          </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-        </article>
-
-        <article className="panel">
-          <h2>{copy.summaryTitle}</h2>
-          <ul className="simple-list">
-            <li>
-              <span>{copy.summaryTotalShifts}</span>
-              <strong>{summary.totalShifts}</strong>
-            </li>
-            <li>
-              <span>{copy.summaryHolidayShifts}</span>
-              <strong>{summary.holidayShifts}</strong>
-            </li>
-            <li>
-              <span>{copy.summaryWorkHours}</span>
-              <strong>{formatHours(summary.totalMinutes)}h</strong>
-            </li>
-          </ul>
-        </article>
-
-        <article className="panel">
-          <h2>{copy.listTitle}</h2>
-          {schedules.length === 0 ? (
-            <p className="small muted">{copy.listEmpty}</p>
-          ) : (
-            <ul className="simple-list">
-              {schedules.map((schedule) => (
-                <li key={schedule.id}>
-                  <span>
-                    <strong>{copy.scheduleIdLabel}: {schedule.id}</strong>
-                    <br />
-                    <span className="small">
-                      {copy.periodLabel}: {formatDateTime(schedule.startAt, runtimeLocale)} ~ {formatDateTime(schedule.endAt, runtimeLocale)}
-                    </span>
-                    <br />
-                    <span className="small">
-                      {copy.breakLabel}: {schedule.breakMinutes}m / {copy.holidayLabel}:{" "}
-                      {schedule.isHoliday ? copy.holidayYes : copy.holidayNo}
-                    </span>
-                    <br />
-                    <span className="small">
-                      {copy.updatedAtLabel}: {formatDateTime(schedule.updatedAt, runtimeLocale)}
-                    </span>
-                    <br />
-                    <span className="small">{schedule.notes?.trim() ? schedule.notes : copy.notesFallback}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-
-        <article className="panel">
-          <h2>{copy.logsTitle}</h2>
-          <p className="small">
-            {copy.logTotals} {logStats.total} / {copy.logSuccess} {logStats.success} / {copy.logFail} {logStats.fail}
-            {pendingLabel ? ` / ${copy.logRunning} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small muted">{copy.logsEmpty}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} /{" "}
-                  {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-      </section>
-    </main>
+    <EmployeeScheduleBoardView
+      copy={copy}
+      runtimeLocale={runtimeLocale}
+      statusMessage={statusMessage}
+      pendingLabel={pendingLabel}
+      logStats={logStats}
+      rows={rows}
+      allScheduleCount={schedules.length}
+      nextSchedule={nextSchedule}
+      summary={summary}
+      logs={logs}
+      organizationId={organizationId}
+      employeeId={employeeId}
+      accessToken={accessToken}
+      fromDate={fromDate}
+      toDate={toDate}
+      statusFilter={statusFilter}
+      holidayFilter={holidayFilter}
+      onOrganizationIdChange={setOrganizationId}
+      onEmployeeIdChange={setEmployeeId}
+      onAccessTokenChange={setAccessToken}
+      onFromDateChange={setFromDate}
+      onToDateChange={setToDate}
+      onStatusFilterChange={setStatusFilter}
+      onHolidayFilterChange={setHolidayFilter}
+      onLoadSchedules={() => void loadSchedules()}
+      onApplyCurrentMonthRange={applyCurrentMonthRange}
+      onApplyCurrentWeekRange={applyCurrentWeekRange}
+      onApplyNextWeekRange={applyNextWeekRange}
+    />
   );
 }

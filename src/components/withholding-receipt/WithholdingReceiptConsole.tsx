@@ -420,6 +420,21 @@ export default function WithholdingReceiptConsole() {
   const runGuardSnapshot = finalizedSettlement
     ? `${copy.runGuardConfirmedLabel} ${finalizedSettlement.settlement.runStates.confirmedRuns}, ${copy.runGuardPreviewedLabel} ${finalizedSettlement.settlement.runStates.previewedRuns}, ${copy.runGuardUndistributedLabel} ${finalizedSettlement.settlement.runStates.undistributedRuns}, ${copy.runGuardPendingReceiptLabel} ${finalizedSettlement.settlement.runStates.pendingReceiptRuns}`
     : "";
+  const resolveDocumentFormatLabel = (format: "json" | "text") =>
+    format === "json" ? copy.formatJsonLabel : copy.formatTextLabel;
+  const resolveContentTypeLabel = (contentType: string) => {
+    if (locale !== "ko") {
+      return contentType;
+    }
+    const lowered = contentType.trim().toLowerCase();
+    if (lowered === "application/json") {
+      return "구조 데이터";
+    }
+    if (lowered === "text/plain") {
+      return "텍스트 데이터";
+    }
+    return contentType;
+  };
 
   return (
     <main className="saas-content">
@@ -483,7 +498,13 @@ export default function WithholdingReceiptConsole() {
             <>
               <ul className="simple-list">
                 <li><span>{copy.documentFileLabel}</span><strong>{receiptDocument.document.fileName}</strong></li>
-                <li><span>{copy.formatTypeLabel}</span><strong>{receiptDocument.document.format} / {receiptDocument.document.contentType}</strong></li>
+                <li>
+                  <span>{copy.formatTypeLabel}</span>
+                  <strong>
+                    {resolveDocumentFormatLabel(receiptDocument.document.format)} /{" "}
+                    {resolveContentTypeLabel(receiptDocument.document.contentType)}
+                  </strong>
+                </li>
                 <li><span>{copy.issuedAtLabel}</span><strong>{receiptDocument.document.issuedAt}</strong></li>
                 <li><span>{copy.generatedAtLabel}</span><strong>{receiptDocument.document.generatedAt}</strong></li>
                 <li><span>{copy.contentSha256Label}</span><strong>{receiptDocument.document.contentSha256.slice(0, 16)}...</strong></li>

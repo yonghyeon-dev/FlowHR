@@ -41,11 +41,11 @@ async function run() {
   assert.match(messages, /"employee\.nav\.benefits": "Benefits"/);
   assert.match(messages, /"employee\.nav\.recruitment": "Recruitment"/);
 
-  assert.match(adminNoticesPage, /id="notice-baseline"/);
-  assert.match(adminBenefitsPage, /id="benefits-baseline"/);
-  assert.match(adminRecruitmentPage, /id="recruitment-baseline"/);
-  assert.match(employeeBenefitsPage, /id="employee-benefits-baseline"/);
-  assert.match(employeeRecruitmentPage, /id="employee-recruitment-baseline"/);
+  assert.match(adminNoticesPage, /AdminNoticeWorkspace/);
+  assert.match(adminBenefitsPage, /AdminBenefitsWorkspace|id="benefits-baseline"/);
+  assert.match(adminRecruitmentPage, /AdminRecruitmentWorkspace|id="recruitment-baseline"/);
+  assert.match(employeeBenefitsPage, /EmployeeBenefitsWorkspace|id="employee-benefits-baseline"/);
+  assert.match(employeeRecruitmentPage, /EmployeeRecruitmentWorkspace|id="employee-recruitment-baseline"/);
 
   assert.match(workItem, /WI-0399/i);
   assert.match(workItem, /notice|benefits|recruitment|baseline|i18n/i);

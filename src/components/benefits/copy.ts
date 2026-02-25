@@ -1,0 +1,244 @@
+﻿import type { FlowLocale } from "@/lib/i18n/locales";
+import type { BenefitCatalogStatus, BenefitRequestStatus } from "@/features/benefits/types";
+
+export type AdminBenefitsCopy = {
+  pageTitle: string;
+  pageSubtitle: string;
+  sessionTitle: string;
+  organizationIdLabel: string;
+  actorIdLabel: string;
+  accessTokenLabel: string;
+  refreshAction: string;
+  catalogTitle: string;
+  requestTitle: string;
+  createCatalogTitle: string;
+  nameLabel: string;
+  descriptionLabel: string;
+  annualLimitLabel: string;
+  createCatalogAction: string;
+  decisionNoteLabel: string;
+  approveAction: string;
+  rejectAction: string;
+  emptyCatalog: string;
+  emptyRequests: string;
+  statusLabel: string;
+  amountLabel: string;
+  reasonLabel: string;
+  requestedAtLabel: string;
+  statsLabel: string;
+  requestStatsLabel: string;
+  logsTitle: string;
+  messages: {
+    needOrganization: string;
+    needName: string;
+    needDescription: string;
+    catalogCreated: string;
+    requestDecided: string;
+    loadFailed: string;
+  };
+  catalogStatus: Record<BenefitCatalogStatus, string>;
+  requestStatus: Record<BenefitRequestStatus, string>;
+};
+
+export type EmployeeBenefitsCopy = {
+  pageTitle: string;
+  pageSubtitle: string;
+  sessionTitle: string;
+  organizationIdLabel: string;
+  employeeIdLabel: string;
+  accessTokenLabel: string;
+  refreshAction: string;
+  catalogTitle: string;
+  submitTitle: string;
+  requestTitle: string;
+  benefitLabel: string;
+  amountLabel: string;
+  reasonLabel: string;
+  submitAction: string;
+  emptyCatalog: string;
+  emptyRequests: string;
+  annualLimitLabel: string;
+  statusLabel: string;
+  requestedAtLabel: string;
+  messages: {
+    needOrganization: string;
+    needCatalog: string;
+    needAmount: string;
+    needReason: string;
+    submitted: string;
+    loadFailed: string;
+  };
+  requestStatus: Record<BenefitRequestStatus, string>;
+};
+
+const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
+  ko: {
+    pageTitle: "복리후생 워크스페이스",
+    pageSubtitle: "복리후생 항목 관리와 신청 승인 큐를 한 화면에서 처리합니다.",
+    sessionTitle: "세션/필터",
+    organizationIdLabel: "조직 식별자",
+    actorIdLabel: "관리자 액터 식별자",
+    accessTokenLabel: "접근 토큰(선택)",
+    refreshAction: "목록 새로고침",
+    catalogTitle: "복리후생 카탈로그",
+    requestTitle: "신청 승인 큐",
+    createCatalogTitle: "복리후생 항목 추가",
+    nameLabel: "항목명",
+    descriptionLabel: "설명",
+    annualLimitLabel: "연간 한도(원)",
+    createCatalogAction: "항목 저장",
+    decisionNoteLabel: "검토 메모(선택)",
+    approveAction: "승인",
+    rejectAction: "반려",
+    emptyCatalog: "등록된 복리후생 항목이 없습니다.",
+    emptyRequests: "검토할 신청 건이 없습니다.",
+    statusLabel: "상태",
+    amountLabel: "신청 금액",
+    reasonLabel: "신청 사유",
+    requestedAtLabel: "신청 시각",
+    statsLabel: "카탈로그 수",
+    requestStatsLabel: "요청 수",
+    logsTitle: "요청 로그",
+    messages: {
+      needOrganization: "조직 식별자를 입력하세요.",
+      needName: "항목명을 입력하세요.",
+      needDescription: "설명을 입력하세요.",
+      catalogCreated: "복리후생 항목을 추가했습니다.",
+      requestDecided: "신청 상태를 변경했습니다.",
+      loadFailed: "복리후생 데이터를 불러오지 못했습니다."
+    },
+    catalogStatus: {
+      ACTIVE: "활성",
+      INACTIVE: "비활성"
+    },
+    requestStatus: {
+      SUBMITTED: "신청",
+      APPROVED: "승인",
+      REJECTED: "반려"
+    }
+  },
+  en: {
+    pageTitle: "Benefits Workspace",
+    pageSubtitle: "Manage benefit catalog and review request queue in one screen.",
+    sessionTitle: "Session / Filters",
+    organizationIdLabel: "Organization ID",
+    actorIdLabel: "Admin Actor ID",
+    accessTokenLabel: "Access token (optional)",
+    refreshAction: "Refresh",
+    catalogTitle: "Benefit catalog",
+    requestTitle: "Request review queue",
+    createCatalogTitle: "Create catalog item",
+    nameLabel: "Name",
+    descriptionLabel: "Description",
+    annualLimitLabel: "Annual limit (KRW)",
+    createCatalogAction: "Save item",
+    decisionNoteLabel: "Review note (optional)",
+    approveAction: "Approve",
+    rejectAction: "Reject",
+    emptyCatalog: "No benefit catalog item found.",
+    emptyRequests: "No request in queue.",
+    statusLabel: "Status",
+    amountLabel: "Amount",
+    reasonLabel: "Reason",
+    requestedAtLabel: "Requested at",
+    statsLabel: "Catalog count",
+    requestStatsLabel: "Request count",
+    logsTitle: "Request logs",
+    messages: {
+      needOrganization: "Organization ID is required.",
+      needName: "Name is required.",
+      needDescription: "Description is required.",
+      catalogCreated: "Benefit catalog item created.",
+      requestDecided: "Benefit request decision applied.",
+      loadFailed: "Failed to load benefit data."
+    },
+    catalogStatus: {
+      ACTIVE: "Active",
+      INACTIVE: "Inactive"
+    },
+    requestStatus: {
+      SUBMITTED: "Submitted",
+      APPROVED: "Approved",
+      REJECTED: "Rejected"
+    }
+  }
+};
+
+const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
+  ko: {
+    pageTitle: "복리후생",
+    pageSubtitle: "복리후생 항목을 조회하고 신청 상태를 확인합니다.",
+    sessionTitle: "조회 설정",
+    organizationIdLabel: "조직 식별자",
+    employeeIdLabel: "직원 식별자",
+    accessTokenLabel: "접근 토큰(선택)",
+    refreshAction: "데이터 새로고침",
+    catalogTitle: "신청 가능 항목",
+    submitTitle: "복리후생 신청",
+    requestTitle: "내 신청 이력",
+    benefitLabel: "항목",
+    amountLabel: "신청 금액(원)",
+    reasonLabel: "신청 사유",
+    submitAction: "신청 제출",
+    emptyCatalog: "신청 가능한 항목이 없습니다.",
+    emptyRequests: "신청 이력이 없습니다.",
+    annualLimitLabel: "연간 한도",
+    statusLabel: "상태",
+    requestedAtLabel: "신청 시각",
+    messages: {
+      needOrganization: "조직 식별자를 입력하세요.",
+      needCatalog: "복리후생 항목을 선택하세요.",
+      needAmount: "신청 금액을 입력하세요.",
+      needReason: "신청 사유를 입력하세요.",
+      submitted: "복리후생 신청을 제출했습니다.",
+      loadFailed: "복리후생 데이터를 불러오지 못했습니다."
+    },
+    requestStatus: {
+      SUBMITTED: "신청",
+      APPROVED: "승인",
+      REJECTED: "반려"
+    }
+  },
+  en: {
+    pageTitle: "Benefits",
+    pageSubtitle: "Browse benefit catalog and track your request status.",
+    sessionTitle: "Filters",
+    organizationIdLabel: "Organization ID",
+    employeeIdLabel: "Employee ID",
+    accessTokenLabel: "Access token (optional)",
+    refreshAction: "Refresh data",
+    catalogTitle: "Available benefits",
+    submitTitle: "Submit request",
+    requestTitle: "My request history",
+    benefitLabel: "Benefit",
+    amountLabel: "Amount (KRW)",
+    reasonLabel: "Reason",
+    submitAction: "Submit request",
+    emptyCatalog: "No available benefit item.",
+    emptyRequests: "No request history.",
+    annualLimitLabel: "Annual limit",
+    statusLabel: "Status",
+    requestedAtLabel: "Requested at",
+    messages: {
+      needOrganization: "Organization ID is required.",
+      needCatalog: "Select a benefit item.",
+      needAmount: "Amount is required.",
+      needReason: "Reason is required.",
+      submitted: "Benefit request submitted.",
+      loadFailed: "Failed to load benefit data."
+    },
+    requestStatus: {
+      SUBMITTED: "Submitted",
+      APPROVED: "Approved",
+      REJECTED: "Rejected"
+    }
+  }
+};
+
+export function resolveAdminBenefitsCopy(locale: FlowLocale) {
+  return adminCopyByLocale[locale];
+}
+
+export function resolveEmployeeBenefitsCopy(locale: FlowLocale) {
+  return employeeCopyByLocale[locale];
+}

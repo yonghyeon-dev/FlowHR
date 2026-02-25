@@ -405,7 +405,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         totalGross: "총지급 합계",
         totalDeductions: "총공제 합계",
         totalNet: "실지급 합계",
-        apiCalls: "API 호출",
+        apiCalls: "요청 호출",
         ok: "성공",
         fail: "실패"
       },
@@ -421,7 +421,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
           currentMonth: "이번 달",
           previousMonth: "지난 달",
           lastThreeMonths: "최근 3개월",
-          downloadCsv: "CSV 다운로드"
+          downloadCsv: "표 내려받기"
         }
       },
       devTools: {
@@ -464,7 +464,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
       },
       status: {
         title: "상태/오류 피드백",
-        latestApi: "최근 API 상태",
+        latestApi: "최근 요청 상태",
         tone: {
           ok: "정상",
           fail: "실패",
@@ -508,8 +508,8 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         title: "선택 명세서 상세",
         empty: "선택된 명세서가 없습니다.",
         actions: {
-          printSavePdf: "인쇄/PDF 저장",
-          copyPdfFileName: "PDF 파일명 복사",
+          printSavePdf: "인쇄/문서 저장",
+          copyPdfFileName: "문서 파일명 복사",
           copyPayslipId: "명세서 번호 복사"
         },
         recommendedFileName: "권장 파일명",
@@ -531,13 +531,13 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         taxCreditReferenceTitle: "세액공제 참고 항목",
         noItems: "표시할 항목이 없습니다.",
         attendanceReference: "근태 기준(참고)",
-        deductionBreakdownRaw: "공제 원본(JSON)"
+        deductionBreakdownRaw: "공제 원본(구조 데이터)"
       },
       logs: {
         fetchPayslips: "급여 명세서 조회",
         fetchAttendance: "근태 집계 조회",
         copyPayslipId: "명세서 번호 복사",
-        copyPdfFileName: "PDF 파일명 복사",
+        copyPdfFileName: "문서 파일명 복사",
         copyFailureCause: "실패 원인 복사",
         copyCompareSnapshot: "비교 스냅샷 복사"
       },

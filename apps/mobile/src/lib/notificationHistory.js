@@ -1,25 +1,69 @@
-function normalizeText(value) {
+﻿function normalizeText(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
-export const NOTIFICATION_HISTORY_CATEGORY_OPTIONS = [
-  { key: "all", label: "All categories" },
-  { key: "approvalRequest", label: "Approval request" },
-  { key: "approvalResult", label: "Approval result" },
-  { key: "payslipReady", label: "Payslip ready" }
-];
+const NOTIFICATION_HISTORY_COPY_BY_LOCALE = {
+  ko: {
+    categoryOptions: [
+      { key: "all", label: "전체 분류" },
+      { key: "approvalRequest", label: "승인 요청" },
+      { key: "approvalResult", label: "승인 결과" },
+      { key: "payslipReady", label: "명세서 발행" }
+    ],
+    readOptions: [
+      { key: "all", label: "전체 읽음 상태" },
+      { key: "unread", label: "읽지 않음만" },
+      { key: "read", label: "읽음만" }
+    ],
+    archiveOptions: [
+      { key: "all", label: "전체 보관 상태" },
+      { key: "active", label: "활성만" },
+      { key: "archived", label: "보관만" }
+    ],
+    archiveStateActive: "활성",
+    archiveStateArchivedAt: "보관 시각"
+  },
+  en: {
+    categoryOptions: [
+      { key: "all", label: "All categories" },
+      { key: "approvalRequest", label: "Approval request" },
+      { key: "approvalResult", label: "Approval result" },
+      { key: "payslipReady", label: "Payslip ready" }
+    ],
+    readOptions: [
+      { key: "all", label: "All read states" },
+      { key: "unread", label: "Unread only" },
+      { key: "read", label: "Read only" }
+    ],
+    archiveOptions: [
+      { key: "all", label: "All archive states" },
+      { key: "active", label: "Active only" },
+      { key: "archived", label: "Archived only" }
+    ],
+    archiveStateActive: "active",
+    archiveStateArchivedAt: "archived at"
+  }
+};
 
-export const NOTIFICATION_HISTORY_READ_OPTIONS = [
-  { key: "all", label: "All read states" },
-  { key: "unread", label: "Unread only" },
-  { key: "read", label: "Read only" }
-];
+function resolveHistoryCopy(locale) {
+  return locale === "en" ? NOTIFICATION_HISTORY_COPY_BY_LOCALE.en : NOTIFICATION_HISTORY_COPY_BY_LOCALE.ko;
+}
 
-export const NOTIFICATION_HISTORY_ARCHIVE_OPTIONS = [
-  { key: "all", label: "All archive states" },
-  { key: "active", label: "Active only" },
-  { key: "archived", label: "Archived only" }
-];
+export function getNotificationHistoryCategoryOptions(locale = "ko") {
+  return resolveHistoryCopy(locale).categoryOptions;
+}
+
+export function getNotificationHistoryReadOptions(locale = "ko") {
+  return resolveHistoryCopy(locale).readOptions;
+}
+
+export function getNotificationHistoryArchiveOptions(locale = "ko") {
+  return resolveHistoryCopy(locale).archiveOptions;
+}
+
+export const NOTIFICATION_HISTORY_CATEGORY_OPTIONS = getNotificationHistoryCategoryOptions();
+export const NOTIFICATION_HISTORY_READ_OPTIONS = getNotificationHistoryReadOptions();
+export const NOTIFICATION_HISTORY_ARCHIVE_OPTIONS = getNotificationHistoryArchiveOptions();
 
 function hasArchive(item) {
   return Boolean(item?.archivedAt);
@@ -94,11 +138,12 @@ export function buildNotificationHistoryStats(items) {
   };
 }
 
-export function formatNotificationArchiveMeta(item) {
+export function formatNotificationArchiveMeta(item, locale = "ko") {
+  const copy = resolveHistoryCopy(locale);
   if (!item.archivedAt) {
-    return "active";
+    return copy.archiveStateActive;
   }
-  return `archived at ${item.archivedAt}`;
+  return `${copy.archiveStateArchivedAt} ${item.archivedAt}`;
 }
 
 export function toggleNotificationArchive(items, notificationId, archived, now = new Date()) {

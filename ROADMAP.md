@@ -1,4 +1,4 @@
-# FlowHR Production Roadmap
+﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
 > **Current version**: 0.1.133 (Korean Copy Residual Sweep - Withholding/Payslip/Contracts)
@@ -670,3 +670,11 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0403 employee payslips derived-state hook extraction (`/employee/payslips/page.tsx` derived memo blocks extracted to `use-payslip-derived-state.ts` + page line count reduction 749->517 + decomposition regression test)
 - WI-0404 employee interaction handler builder extraction (`/employee/page.tsx` local interaction wrapper functions consolidated into `buildEmployeeInteractionHandlers` wiring + interaction handler delegation hardening in `page-interaction-actions.ts` + line count reduction to 976 + decomposition regression test)
 - WI-0405 payslip/contracts residual english token cleanup (`/employee/payslips/page-view.tsx` session line role/org/actor labels localized via locale copy keys + `contracts/http.ts` locale-aware default fallback message + regression test hardening)
+- WI-0406 global i18n residual token cleanup (`/admin/notices`, `/admin/benefits`, `/admin/recruitment`, `/employee/benefits`, `/employee/recruitment` ko copy residual 표현 정리 + `apps/mobile` notification/history/preset locale-copy 분기 및 한국어 기본 문구 정리 + regression test)
+- WI-0407 notices core journey implementation (`/api/notices` list/create + `/api/notices/{noticeId}/publish` 게시 액션 + `/admin/notices` 작성/게시 워크스페이스 + `/employee/notices` 게시 공지 보드 + notices nav/i18n wiring)
+- WI-0408 benefits core journey implementation (`/api/benefits/catalog`, `/api/benefits/requests`, `/api/benefits/requests/{requestId}/decision` + `/admin/benefits` catalog/decision workspace + `/employee/benefits` request submit/history workspace)
+- WI-0409 recruitment core journey implementation (`/api/recruitment/openings`, `/api/recruitment/referrals`, `/api/recruitment/referrals/{referralId}/stage` + `/admin/recruitment` opening/referral stage workspace + `/employee/recruitment` referral submit/history workspace)
+- WI-0410 schedule user journey enhancement (`/employee/schedule` 기간 단축 액션(이번 달/주/다음 주) + 상태/휴일 필터 + 다음 근무 카드 + 상태 뱃지 목록 + `EmployeeScheduleBoardView` 분리 + regression test)
+- WI-0411 payslips page-view section decomposition (`/employee/payslips/page-view.tsx`를 search/status/compare/detail 섹션 컴포넌트로 분해 + `page-view-shared-sections.tsx`/`page-view-detail-panel.tsx` 추가 + 기존 회귀 토큰/id 유지 + regression test)
+- WI-0412 admin dashboard actions and compensation panels extraction (`src/app/admin/page-dashboard-actions.ts`로 inbox/payroll/leave-policy/aggregate/dashboard 액션 오케스트레이션 분리 + `src/app/admin/page-compensation-panels.tsx`로 aggregate/payroll/debug 패널 조합 이동 + `src/app/admin/page.tsx` wiring 간소화 + regression test)
+- WI-0413 korean label normalization for withholding/payslip/contracts (`/employee/payslips` ko copy에서 API/CSV/PDF/JSON 잔여 표현을 요청/표/문서/구조 데이터 중심으로 정규화 + `/components/withholding-receipt` 문서 format/contentType ko 라벨 매핑 추가 + contracts ko 핵심 라벨 회귀 guard)

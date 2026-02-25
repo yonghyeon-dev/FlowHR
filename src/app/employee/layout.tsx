@@ -36,6 +36,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
     { href: "/employee#leave-calendar", label: t("employee.nav.leaveCalendar") },
     { href: "/employee#schedule", label: t("employee.nav.schedule") },
     { href: "/employee/schedule", label: t("employee.nav.scheduleBoard") },
+    { href: "/employee/notices", label: t("employee.nav.notices") },
     { href: "/employee/benefits", label: t("employee.nav.benefits") },
     { href: "/employee/recruitment", label: t("employee.nav.recruitment") },
     { href: "/employee/contracts", label: t("employee.nav.contracts") },
@@ -83,6 +84,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
             <Link href="/employee#leave-calendar">{t("employee.nav.leaveCalendar")}</Link>
             <Link href="/employee#schedule">{t("employee.nav.schedule")}</Link>
             <Link href="/employee/schedule">{t("employee.nav.scheduleBoard")}</Link>
+            <Link href="/employee/notices">{t("employee.nav.notices")}</Link>
             <Link href="/employee/benefits">{t("employee.nav.benefits")}</Link>
             <Link href="/employee/recruitment">{t("employee.nav.recruitment")}</Link>
             <Link href="/employee/contracts">{t("employee.nav.contracts")}</Link>

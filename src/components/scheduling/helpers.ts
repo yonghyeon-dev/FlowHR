@@ -19,6 +19,10 @@ export type ScheduleApiLog = {
   body?: unknown;
 };
 
+export type ScheduleTimeStatus = "upcoming" | "in_progress" | "completed";
+export type ScheduleStatusFilter = "all" | ScheduleTimeStatus;
+export type ScheduleHolidayFilter = "all" | "holiday" | "workday";
+
 export function pad2(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -38,6 +42,30 @@ export function buildCurrentMonthDateRange(baseDate = new Date()) {
     fromDate: toDateInputValue(from),
     toDate: toDateInputValue(to)
   };
+}
+
+function buildWeekDateRange(start: Date) {
+  const from = new Date(start);
+  const to = new Date(start);
+  to.setDate(to.getDate() + 6);
+  return {
+    fromDate: toDateInputValue(from),
+    toDate: toDateInputValue(to)
+  };
+}
+
+export function buildCurrentWeekDateRange(baseDate = new Date()) {
+  const date = new Date(baseDate);
+  const dayOfWeek = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - dayOfWeek);
+  return buildWeekDateRange(date);
+}
+
+export function buildNextWeekDateRange(baseDate = new Date()) {
+  const date = new Date(baseDate);
+  const dayOfWeek = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - dayOfWeek + 7);
+  return buildWeekDateRange(date);
 }
 
 export function buildDefaultScheduleWindow(baseDate = new Date()) {
@@ -137,4 +165,31 @@ export function formatDateTime(value: string, runtimeLocale: string) {
 
 export function formatHours(totalMinutes: number) {
   return (totalMinutes / 60).toFixed(1);
+}
+
+export function resolveScheduleWorkMinutes(schedule: WorkScheduleDto) {
+  const start = new Date(schedule.startAt).getTime();
+  const end = new Date(schedule.endAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+    return 0;
+  }
+  return Math.max(0, Math.round((end - start) / 60000) - schedule.breakMinutes);
+}
+
+export function resolveScheduleTimeStatus(
+  schedule: Pick<WorkScheduleDto, "startAt" | "endAt">,
+  nowMs = Date.now()
+): ScheduleTimeStatus {
+  const start = new Date(schedule.startAt).getTime();
+  const end = new Date(schedule.endAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return "completed";
+  }
+  if (nowMs < start) {
+    return "upcoming";
+  }
+  if (nowMs >= end) {
+    return "completed";
+  }
+  return "in_progress";
 }

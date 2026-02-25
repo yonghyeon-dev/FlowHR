@@ -1,0 +1,274 @@
+﻿import type { FlowLocale } from "@/lib/i18n/locales";
+import type { NoticeAudience, NoticeStatus } from "@/features/notices/types";
+
+export type NoticeWorkspaceCopy = {
+  pageTitle: string;
+  pageSubtitle: string;
+  filtersTitle: string;
+  organizationIdLabel: string;
+  actorIdLabel: string;
+  accessTokenLabel: string;
+  statusFilterLabel: string;
+  audienceFilterLabel: string;
+  refreshAction: string;
+  composeTitle: string;
+  titleLabel: string;
+  bodyLabel: string;
+  audienceLabel: string;
+  scheduleLabel: string;
+  createAction: string;
+  publishAction: string;
+  listTitle: string;
+  listEmpty: string;
+  statsLabel: string;
+  pendingLabelPrefix: string;
+  statusMessagePrefix: string;
+  logsTitle: string;
+  logsEmpty: string;
+  badge: {
+    DRAFT: string;
+    SCHEDULED: string;
+    PUBLISHED: string;
+  };
+  audience: {
+    all: string;
+    employees: string;
+    admins: string;
+  };
+  statusFilter: {
+    all: string;
+    DRAFT: string;
+    SCHEDULED: string;
+    PUBLISHED: string;
+  };
+  audienceFilter: {
+    all: string;
+    allAudience: string;
+    employees: string;
+    admins: string;
+  };
+  messages: {
+    needOrganization: string;
+    needTitle: string;
+    needBody: string;
+    created: string;
+    published: string;
+    loadFailed: string;
+  };
+};
+
+export type EmployeeNoticeBoardCopy = {
+  pageTitle: string;
+  pageSubtitle: string;
+  filtersTitle: string;
+  organizationIdLabel: string;
+  employeeIdLabel: string;
+  accessTokenLabel: string;
+  refreshAction: string;
+  audienceLabel: string;
+  summaryLabel: string;
+  listTitle: string;
+  listEmpty: string;
+  audience: {
+    all: string;
+    employees: string;
+  };
+  messages: {
+    needOrganization: string;
+    loadFailed: string;
+  };
+};
+
+function mapStatusLabel(copy: NoticeWorkspaceCopy, status: NoticeStatus) {
+  return copy.badge[status];
+}
+
+function mapAudienceLabel(
+  copy: NoticeWorkspaceCopy | EmployeeNoticeBoardCopy,
+  audience: NoticeAudience | "all"
+) {
+  if (audience === "all") {
+    return copy.audience.all;
+  }
+  if (audience === "admins") {
+    return "admins" in copy.audience ? copy.audience.admins : copy.audience.all;
+  }
+  return copy.audience.employees;
+}
+
+const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
+  ko: {
+    pageTitle: "공지사항 워크스페이스",
+    pageSubtitle: "공지 작성, 예약 게시, 게시 처리까지 한 화면에서 관리합니다.",
+    filtersTitle: "조회/세션 설정",
+    organizationIdLabel: "조직 식별자",
+    actorIdLabel: "관리자 액터 식별자",
+    accessTokenLabel: "접근 토큰(선택)",
+    statusFilterLabel: "상태 필터",
+    audienceFilterLabel: "대상 필터",
+    refreshAction: "목록 새로고침",
+    composeTitle: "공지 작성",
+    titleLabel: "제목",
+    bodyLabel: "본문",
+    audienceLabel: "대상",
+    scheduleLabel: "예약 게시 시각(선택)",
+    createAction: "공지 저장",
+    publishAction: "즉시 게시",
+    listTitle: "공지 목록",
+    listEmpty: "조건에 맞는 공지가 없습니다.",
+    statsLabel: "요약",
+    pendingLabelPrefix: "실행 중",
+    statusMessagePrefix: "상태",
+    logsTitle: "요청 로그",
+    logsEmpty: "아직 요청 로그가 없습니다.",
+    badge: {
+      DRAFT: "임시저장",
+      SCHEDULED: "예약",
+      PUBLISHED: "게시됨"
+    },
+    audience: {
+      all: "전체",
+      employees: "직원",
+      admins: "관리자"
+    },
+    statusFilter: {
+      all: "전체",
+      DRAFT: "임시저장",
+      SCHEDULED: "예약",
+      PUBLISHED: "게시됨"
+    },
+    audienceFilter: {
+      all: "전체",
+      allAudience: "전체",
+      employees: "직원",
+      admins: "관리자"
+    },
+    messages: {
+      needOrganization: "조직 식별자를 입력하세요.",
+      needTitle: "제목을 입력하세요.",
+      needBody: "본문을 입력하세요.",
+      created: "공지를 저장했습니다.",
+      published: "공지를 게시했습니다.",
+      loadFailed: "공지 목록 조회에 실패했습니다."
+    }
+  },
+  en: {
+    pageTitle: "Notice Workspace",
+    pageSubtitle: "Manage notice compose, schedule, and publish actions in one screen.",
+    filtersTitle: "Filters / Session",
+    organizationIdLabel: "Organization ID",
+    actorIdLabel: "Admin Actor ID",
+    accessTokenLabel: "Access token (optional)",
+    statusFilterLabel: "Status filter",
+    audienceFilterLabel: "Audience filter",
+    refreshAction: "Refresh list",
+    composeTitle: "Compose notice",
+    titleLabel: "Title",
+    bodyLabel: "Body",
+    audienceLabel: "Audience",
+    scheduleLabel: "Schedule publish at (optional)",
+    createAction: "Save notice",
+    publishAction: "Publish now",
+    listTitle: "Notice list",
+    listEmpty: "No notice found for current filters.",
+    statsLabel: "Summary",
+    pendingLabelPrefix: "Running",
+    statusMessagePrefix: "Status",
+    logsTitle: "Request logs",
+    logsEmpty: "No request logs yet.",
+    badge: {
+      DRAFT: "Draft",
+      SCHEDULED: "Scheduled",
+      PUBLISHED: "Published"
+    },
+    audience: {
+      all: "All",
+      employees: "Employees",
+      admins: "Admins"
+    },
+    statusFilter: {
+      all: "All",
+      DRAFT: "Draft",
+      SCHEDULED: "Scheduled",
+      PUBLISHED: "Published"
+    },
+    audienceFilter: {
+      all: "All",
+      allAudience: "All",
+      employees: "Employees",
+      admins: "Admins"
+    },
+    messages: {
+      needOrganization: "Organization ID is required.",
+      needTitle: "Title is required.",
+      needBody: "Body is required.",
+      created: "Notice saved.",
+      published: "Notice published.",
+      loadFailed: "Failed to load notices."
+    }
+  }
+};
+
+const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
+  ko: {
+    pageTitle: "내 공지사항",
+    pageSubtitle: "게시된 공지를 확인하고 최신 전달 사항을 빠르게 확인합니다.",
+    filtersTitle: "조회 설정",
+    organizationIdLabel: "조직 식별자",
+    employeeIdLabel: "직원 식별자",
+    accessTokenLabel: "접근 토큰(선택)",
+    refreshAction: "공지 새로고침",
+    audienceLabel: "대상",
+    summaryLabel: "게시 공지",
+    listTitle: "게시 공지 목록",
+    listEmpty: "확인 가능한 게시 공지가 없습니다.",
+    audience: {
+      all: "전체",
+      employees: "직원"
+    },
+    messages: {
+      needOrganization: "조직 식별자를 입력하세요.",
+      loadFailed: "공지 목록을 불러오지 못했습니다."
+    }
+  },
+  en: {
+    pageTitle: "My Notices",
+    pageSubtitle: "Review published notices and catch up on the latest updates.",
+    filtersTitle: "Filters",
+    organizationIdLabel: "Organization ID",
+    employeeIdLabel: "Employee ID",
+    accessTokenLabel: "Access token (optional)",
+    refreshAction: "Refresh notices",
+    audienceLabel: "Audience",
+    summaryLabel: "Published notices",
+    listTitle: "Published notice list",
+    listEmpty: "No published notice is available.",
+    audience: {
+      all: "All",
+      employees: "Employees"
+    },
+    messages: {
+      needOrganization: "Organization ID is required.",
+      loadFailed: "Failed to load notices."
+    }
+  }
+};
+
+export function resolveNoticeWorkspaceCopy(locale: FlowLocale) {
+  return workspaceCopyByLocale[locale];
+}
+
+export function resolveEmployeeNoticeBoardCopy(locale: FlowLocale) {
+  return employeeCopyByLocale[locale];
+}
+
+export function resolveNoticeStatusLabel(copy: NoticeWorkspaceCopy, status: NoticeStatus) {
+  return mapStatusLabel(copy, status);
+}
+
+export function resolveNoticeAudienceLabel(
+  copy: NoticeWorkspaceCopy | EmployeeNoticeBoardCopy,
+  audience: NoticeAudience | "all"
+) {
+  return mapAudienceLabel(copy, audience);
+}

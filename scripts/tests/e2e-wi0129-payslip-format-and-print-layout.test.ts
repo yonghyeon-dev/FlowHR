@@ -16,7 +16,14 @@ function run() {
     "payslips",
     "use-payslip-derived-state.ts"
   );
-  const payslipSurface = `${payslipPage}\n${payslipPageView}\n${payslipDerivedState}`;
+  const payslipDetailPanel = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-view-detail-panel.tsx"
+  );
+  const payslipSurface = `${payslipPage}\n${payslipPageView}\n${payslipDerivedState}\n${payslipDetailPanel}`;
   const localeHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const globalCss = readUtf8("src", "app", "globals.css");
 
@@ -46,8 +53,8 @@ function run() {
     "payslip page should include tax credit explanation section"
   );
 
-  assert.match(localeHelpers, /printSavePdf: "인쇄\/PDF 저장"/);
-  assert.match(localeHelpers, /copyPdfFileName: "PDF 파일명 복사"/);
+  assert.match(localeHelpers, /printSavePdf: "(인쇄\/PDF 저장|인쇄\/문서 저장)"/);
+  assert.match(localeHelpers, /copyPdfFileName: "(PDF 파일명 복사|문서 파일명 복사)"/);
   assert.match(localeHelpers, /deductionGuideTitle: "공제 항목 설명"/);
   assert.match(localeHelpers, /deductionComponentTitle: "법정공제 세부 구성"/);
   assert.match(localeHelpers, /taxCreditReferenceTitle: "세액공제 참고 항목"/);

@@ -1,0 +1,79 @@
+﻿import {
+  createBenefitRequestSchema,
+  listBenefitRequestsQuerySchema
+} from "@/features/benefits/schemas";
+import {
+  createBenefitRequest,
+  findBenefitCatalogItem,
+  listBenefitRequests,
+  summarizeBenefitRequests
+} from "@/features/benefits/store";
+import { readActor } from "@/lib/actor";
+import { fail, ok } from "@/lib/http";
+
+const DEFAULT_ORG_ID = "ORG-DEMO";
+
+function canReviewRequests(role: string | null | undefined) {
+  return role === "admin" || role === "manager";
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const parsed = listBenefitRequestsQuerySchema.safeParse({
+    organizationId: url.searchParams.get("organizationId") ?? undefined,
+    employeeId: url.searchParams.get("employeeId") ?? undefined,
+    status: url.searchParams.get("status") ?? undefined
+  });
+
+  if (!parsed.success) {
+    return fail(400, "invalid query", parsed.error.flatten());
+  }
+
+  const actor = await readActor(request);
+  const isReviewer = canReviewRequests(actor?.role);
+  const employeeId = isReviewer ? parsed.data.employeeId : (parsed.data.employeeId ?? actor?.id ?? undefined);
+  const requests = listBenefitRequests({
+    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+    employeeId,
+    status: parsed.data.status
+  });
+
+  return ok({ requests, summary: summarizeBenefitRequests(requests) });
+}
+
+export async function POST(request: Request) {
+  const actor = await readActor(request);
+  if (!actor) {
+    return fail(401, "benefits.request.create.unauthorized");
+  }
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return fail(400, "invalid JSON body");
+  }
+
+  const parsed = createBenefitRequestSchema.safeParse(payload);
+  if (!parsed.success) {
+    return fail(400, "invalid payload", parsed.error.flatten());
+  }
+
+  const targetEmployeeId = canReviewRequests(actor.role) ? parsed.data.employeeId : actor.id;
+  const benefit = findBenefitCatalogItem(parsed.data.benefitId);
+  if (!benefit) {
+    return fail(404, "benefits.catalog.not_found", {
+      benefitId: parsed.data.benefitId
+    });
+  }
+
+  const created = createBenefitRequest({
+    organizationId: parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID,
+    benefitId: parsed.data.benefitId,
+    employeeId: targetEmployeeId,
+    amountKrw: parsed.data.amountKrw,
+    reason: parsed.data.reason
+  });
+
+  return ok({ request: created }, 201);
+}

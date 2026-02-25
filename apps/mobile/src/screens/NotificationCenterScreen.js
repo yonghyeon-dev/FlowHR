@@ -7,6 +7,7 @@ import {
   buildNotificationCategoryStats,
   filterNotificationsByCategory,
   formatSyncClock,
+  resolveNotificationCategoryLabelMap,
   sortNotificationsNewest
 } from "../lib/notificationFeed";
 import { filterNotificationHistory } from "../lib/notificationHistory";
@@ -22,28 +23,82 @@ import {
   registerDevicePushTokenAsync,
   requestPushPermissionAsync
 } from "../lib/notifications";
+import { resolveMobileLocale } from "../lib/mobileLocale";
 import { colors, spacing } from "../theme/tokens";
 
 const LIVE_SYNC_MS = 30000;
 
-const PREFERENCE_LABEL = {
-  approvalRequest: "Approval request",
-  approvalResult: "Approval result",
-  payslipReady: "Payslip ready"
+const COPY_BY_LOCALE = {
+  ko: {
+    title: "알림 센터",
+    subtitle: "실시간 폴링, 푸시 권한 설정, 앱 내 활성 피드를 관리합니다.",
+    pushPermissionTitle: "푸시 권한",
+    requestPermission: "권한 요청/새로고침",
+    refreshNow: "지금 새로고침",
+    liveSyncOn: "실시간 동기화 켜짐",
+    liveSyncOff: "실시간 동기화 꺼짐",
+    lastSync: "마지막 동기화",
+    tenant: "테넌트",
+    actor: "액터",
+    pushToken: "푸시 토큰",
+    preferencesTitle: "알림 수신 설정",
+    feedFilterTitle: "피드 필터",
+    activeFilter: "현재 필터",
+    unreadCount: "읽지 않음",
+    appendLiveEvent: "모의 실시간 이벤트 추가",
+    activeFeedTitle: "활성 피드",
+    loading: "불러오는 중...",
+    itemSuffix: "건",
+    markAllRead: "전체 읽음 처리",
+    openHistory: "이력 검색/보관",
+    on: "켜짐",
+    off: "꺼짐",
+    preferenceLabel: {
+      approvalRequest: "승인 요청",
+      approvalResult: "승인 결과",
+      payslipReady: "명세서 발행"
+    }
+  },
+  en: {
+    title: "Notification Center",
+    subtitle: "Manage live polling, push preference controls, and active in-app feed.",
+    pushPermissionTitle: "Push permission",
+    requestPermission: "Request / Refresh permission",
+    refreshNow: "Refresh now",
+    liveSyncOn: "Live sync ON",
+    liveSyncOff: "Live sync OFF",
+    lastSync: "last sync",
+    tenant: "tenant",
+    actor: "actor",
+    pushToken: "push token",
+    preferencesTitle: "Notification preferences",
+    feedFilterTitle: "Feed filters",
+    activeFilter: "active filter",
+    unreadCount: "unread",
+    appendLiveEvent: "Append simulated live event",
+    activeFeedTitle: "Active feed",
+    loading: "Loading...",
+    itemSuffix: "item(s)",
+    markAllRead: "Mark all read",
+    openHistory: "History search/archive",
+    on: "ON",
+    off: "OFF",
+    preferenceLabel: {
+      approvalRequest: "Approval request",
+      approvalResult: "Approval result",
+      payslipReady: "Payslip ready"
+    }
+  }
 };
 
-const CATEGORY_LABEL = {
-  all: "All",
-  approvalRequest: "Approval request",
-  approvalResult: "Approval result",
-  payslipReady: "Payslip ready"
-};
-
-function normalizeInbox(messages) {
-  return sortNotificationsNewest(messages.map(mapFlowHrNotification));
+function normalizeInbox(messages, locale) {
+  return sortNotificationsNewest(messages.map((item) => mapFlowHrNotification(item, locale)));
 }
 
 export default function NotificationCenterScreen({ session, onOpenHistory }) {
+  const locale = resolveMobileLocale();
+  const copy = locale === "en" ? COPY_BY_LOCALE.en : COPY_BY_LOCALE.ko;
+  const categoryLabel = useMemo(() => resolveNotificationCategoryLabelMap(locale), [locale]);
   const [loading, setLoading] = useState(true);
   const [permission, setPermission] = useState("undetermined");
   const [pushToken, setPushToken] = useState("");
@@ -54,20 +109,20 @@ export default function NotificationCenterScreen({ session, onOpenHistory }) {
   const [lastSyncedAt, setLastSyncedAt] = useState("");
 
   async function refreshInbox() {
-    const messages = await loadNotificationInbox();
-    setInbox(normalizeInbox(messages));
+    const messages = await loadNotificationInbox(locale);
+    setInbox(normalizeInbox(messages, locale));
     setLastSyncedAt(new Date().toISOString());
   }
 
   useEffect(() => {
     let active = true;
-    Promise.all([loadNotificationPreference(), loadNotificationInbox()])
+    Promise.all([loadNotificationPreference(), loadNotificationInbox(locale)])
       .then(([pref, messages]) => {
         if (!active) {
           return;
         }
         setPreference(pref);
-        setInbox(normalizeInbox(messages));
+        setInbox(normalizeInbox(messages, locale));
         setLastSyncedAt(new Date().toISOString());
         setLoading(false);
       })
@@ -79,7 +134,7 @@ export default function NotificationCenterScreen({ session, onOpenHistory }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (!liveSyncEnabled) {
@@ -123,7 +178,7 @@ export default function NotificationCenterScreen({ session, onOpenHistory }) {
   }
 
   async function appendLiveEvent() {
-    const next = appendLiveMockNotification(inbox);
+    const next = appendLiveMockNotification(inbox, new Date(), locale);
     setInbox(next);
     await saveNotificationInbox(next);
     setLastSyncedAt(new Date().toISOString());
@@ -132,43 +187,46 @@ export default function NotificationCenterScreen({ session, onOpenHistory }) {
   return (
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Notification Center</Text>
-        <Text style={styles.subtitle}>Live polling, push preference controls, and active in-app feed.</Text>
+        <Text style={styles.title}>{copy.title}</Text>
+        <Text style={styles.subtitle}>{copy.subtitle}</Text>
 
-        <ShellCard title="Push permission" subtitle={`status: ${permissionLabel(permission)}`}>
+        <ShellCard title={copy.pushPermissionTitle} subtitle={`status: ${permissionLabel(permission, locale)}`}>
           <Pressable style={styles.btn} onPress={enablePush}>
-            <Text style={styles.btnText}>Request / Refresh permission</Text>
+            <Text style={styles.btnText}>{copy.requestPermission}</Text>
           </Pressable>
           <View style={styles.controlRow}>
             <Pressable style={styles.secondaryBtn} onPress={() => refreshInbox()}>
-              <Text style={styles.secondaryBtnText}>Refresh now</Text>
+              <Text style={styles.secondaryBtnText}>{copy.refreshNow}</Text>
             </Pressable>
             <Pressable style={styles.secondaryBtn} onPress={() => setLiveSyncEnabled((value) => !value)}>
-              <Text style={styles.secondaryBtnText}>{liveSyncEnabled ? "Live sync ON" : "Live sync OFF"}</Text>
+              <Text style={styles.secondaryBtnText}>{liveSyncEnabled ? copy.liveSyncOn : copy.liveSyncOff}</Text>
             </Pressable>
           </View>
-          <Text style={styles.meta}>last sync: {formatSyncClock(lastSyncedAt)}</Text>
-          <Text style={styles.meta}>tenant: {session.tenantId}</Text>
-          <Text style={styles.meta}>actor: {session.actorId}</Text>
-          {pushToken ? <Text style={styles.token}>push token: {pushToken}</Text> : null}
+          <Text style={styles.meta}>{copy.lastSync}: {formatSyncClock(lastSyncedAt)}</Text>
+          <Text style={styles.meta}>{copy.tenant}: {session.tenantId}</Text>
+          <Text style={styles.meta}>{copy.actor}: {session.actorId}</Text>
+          {pushToken ? <Text style={styles.token}>{copy.pushToken}: {pushToken}</Text> : null}
         </ShellCard>
 
-        <ShellCard title="Notification preferences">
-          {Object.entries(PREFERENCE_LABEL).map(([key, label]) => (
+        <ShellCard title={copy.preferencesTitle}>
+          {Object.entries(copy.preferenceLabel).map(([key, label]) => (
             <Pressable key={key} style={styles.preferenceRow} onPress={() => togglePreference(key)}>
               <Text style={styles.preferenceLabel}>{label}</Text>
               <View style={[styles.toggle, preference[key] ? styles.toggleOn : null]}>
                 <Text style={[styles.toggleText, preference[key] ? styles.toggleTextOn : null]}>
-                  {preference[key] ? "ON" : "OFF"}
+                  {preference[key] ? copy.on : copy.off}
                 </Text>
               </View>
             </Pressable>
           ))}
         </ShellCard>
 
-        <ShellCard title="Feed filters" subtitle={`active filter: ${CATEGORY_LABEL[activeCategory]} · unread ${unreadCount}`}>
+        <ShellCard
+          title={copy.feedFilterTitle}
+          subtitle={`${copy.activeFilter}: ${categoryLabel[activeCategory] ?? activeCategory} · ${copy.unreadCount} ${unreadCount}`}
+        >
           <View style={styles.categoryRow}>
-            {Object.entries(CATEGORY_LABEL).map(([key, label]) => {
+            {Object.entries(categoryLabel).map(([key, label]) => {
               const stat = categoryStats[key] ?? { total: 0, unread: 0 };
               return (
                 <Pressable
@@ -184,17 +242,20 @@ export default function NotificationCenterScreen({ session, onOpenHistory }) {
             })}
           </View>
           <Pressable style={styles.secondaryBtn} onPress={appendLiveEvent}>
-            <Text style={styles.secondaryBtnText}>Append simulated live event</Text>
+            <Text style={styles.secondaryBtnText}>{copy.appendLiveEvent}</Text>
           </Pressable>
         </ShellCard>
 
-        <ShellCard title="Active feed" subtitle={loading ? "Loading..." : `${filteredInbox.length} item(s)`}>
+        <ShellCard
+          title={copy.activeFeedTitle}
+          subtitle={loading ? copy.loading : `${filteredInbox.length} ${copy.itemSuffix}`}
+        >
           <View style={styles.controlRow}>
             <Pressable style={styles.secondaryBtn} onPress={markAllRead}>
-              <Text style={styles.secondaryBtnText}>Mark all read</Text>
+              <Text style={styles.secondaryBtnText}>{copy.markAllRead}</Text>
             </Pressable>
             <Pressable style={styles.secondaryBtn} onPress={onOpenHistory}>
-              <Text style={styles.secondaryBtnText}>History search/archive</Text>
+              <Text style={styles.secondaryBtnText}>{copy.openHistory}</Text>
             </Pressable>
           </View>
           {filteredInbox.map((item) => (
@@ -202,7 +263,7 @@ export default function NotificationCenterScreen({ session, onOpenHistory }) {
               <Text style={styles.itemTitle}>{item.title}</Text>
               <Text style={styles.itemBody}>{item.body}</Text>
               <Text style={styles.itemMeta}>
-                {CATEGORY_LABEL[item.category] ?? item.category} · {item.createdAt}
+                {categoryLabel[item.category] ?? item.category} · {item.createdAt}
               </Text>
             </View>
           ))}

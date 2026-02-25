@@ -4,17 +4,13 @@ import Link from "next/link";
 
 import type { SupabaseSessionSnapshot } from "@/lib/client/useSupabaseSession";
 import {
-  formatDateOnly,
   formatDateTime,
-  formatDiffKrw,
   formatKrw,
-  formatMonthLabel,
   resolvePayslipRunStateLabel,
   type PayslipPageCopy,
   type PayslipSearchSortCopy
 } from "@/app/employee/payslips/page-locale-helpers";
 import {
-  formatPercent,
   minutesToHours,
   type ApiLog,
   type AttendanceAggregateDto,
@@ -26,6 +22,12 @@ import {
   type PayslipSearchScope,
   type PayslipSortOption
 } from "@/app/employee/payslips/page-helpers";
+import { PayslipDetailPanel } from "@/app/employee/payslips/page-view-detail-panel";
+import {
+  PayslipComparePanelContent,
+  PayslipSearchSortPanelContent,
+  PayslipStatusFeedbackPanelContent
+} from "@/app/employee/payslips/page-view-shared-sections";
 
 type PayslipStats = {
   count: number;
@@ -173,6 +175,12 @@ export function EmployeePayslipsPageView({
   copySelectedRunId,
   deductionExplainSections
 }: EmployeePayslipsPageViewProps) {
+  const selectedRunStateLabel = selectedRun
+    ? resolvePayslipRunStateLabel(selectedRun.state, isKoLocale)
+    : "-";
+  const selectedRunNetPayText = selectedRun ? formatKrw(selectedRun.netPayKrw) : "-";
+  const compareInsightClassName = "payslip-compare-insight";
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -373,137 +381,36 @@ export function EmployeePayslipsPageView({
         <article id="payslip-search-sort" className="panel panel-payslip-search-sort">
           <h2>{searchSortCopy.title}</h2>
           <p className="small">{searchSortCopy.description}</p>
-          <div className="payslip-search-toolbar">
-            <label>
-              {searchSortCopy.scopeLabel}
-              <select
-                value={payslipSearchScope}
-                onChange={(event) => setPayslipSearchScope(event.target.value as PayslipSearchScope)}
-              >
-                <option value="all">{searchSortCopy.scope.all}</option>
-                <option value="run_id">{searchSortCopy.scope.runId}</option>
-                <option value="period">{searchSortCopy.scope.period}</option>
-                <option value="state">{searchSortCopy.scope.state}</option>
-              </select>
-            </label>
-            <label className="full">
-              {searchSortCopy.queryLabel}
-              <input
-                value={payslipSearchQuery}
-                onChange={(event) => setPayslipSearchQuery(event.target.value)}
-                placeholder={searchSortCopy.queryPlaceholder}
-              />
-            </label>
-            <label>
-              {searchSortCopy.sortLabel}
-              <select
-                value={payslipSortOption}
-                onChange={(event) => setPayslipSortOption(event.target.value as PayslipSortOption)}
-              >
-                <option value="latest_desc">{searchSortCopy.sort.latest}</option>
-                <option value="oldest_asc">{searchSortCopy.sort.oldest}</option>
-                <option value="net_desc">{searchSortCopy.sort.netDesc}</option>
-                <option value="gross_desc">{searchSortCopy.sort.grossDesc}</option>
-              </select>
-            </label>
-            <div className="payslip-search-actions">
-              <button type="button" className="btn btn-secondary btn-small" onClick={resetPayslipSearchControls}>
-                {searchSortCopy.actions.reset}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-small"
-                onClick={focusSelectedPayslipInSearch}
-                disabled={!selectedRun}
-              >
-                {searchSortCopy.actions.focusSelected}
-              </button>
-              <button type="button" className="btn btn-secondary btn-small" onClick={prioritizeNetPaySearchSort}>
-                {searchSortCopy.actions.netPayHigh}
-              </button>
-            </div>
-          </div>
-          {filteredPayslipSearchRows.length === 0 ? (
-            <p className="small muted">{searchSortCopy.empty}</p>
-          ) : (
-            <ul className="payslip-search-list" aria-label={searchSortCopy.listAriaLabel}>
-              {filteredPayslipSearchRows.slice(0, 24).map((row) => (
-                <li key={row.key}>
-                  <div className="payslip-search-head">
-                    <strong>{row.runId}</strong>
-                    <span className={`status-pill tone-${row.state === "CONFIRMED" ? "ok" : "idle"}`}>
-                      {row.stateLabel}
-                    </span>
-                  </div>
-                  <p>{row.periodLabel}</p>
-                  <p className="small muted">
-                    {searchSortCopy.gross} {formatKrw(row.grossPayKrw)} / {searchSortCopy.deduction}{" "}
-                    {formatKrw(row.totalDeductionsKrw)} / {searchSortCopy.net}{" "}
-                    {formatKrw(row.netPayKrw)}
-                  </p>
-                  <div className="payslip-search-meta">
-                    <span className="queue-history-chip">
-                      {searchSortCopy.confirmed} {formatDateTime(row.confirmedAt)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-small"
-                    onClick={() => setSelectedRunId(row.runId)}
-                  >
-                    {searchSortCopy.select}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <PayslipSearchSortPanelContent
+            searchSortCopy={searchSortCopy}
+            payslipSearchScope={payslipSearchScope}
+            setPayslipSearchScope={setPayslipSearchScope}
+            payslipSearchQuery={payslipSearchQuery}
+            setPayslipSearchQuery={setPayslipSearchQuery}
+            payslipSortOption={payslipSortOption}
+            setPayslipSortOption={setPayslipSortOption}
+            resetPayslipSearchControls={resetPayslipSearchControls}
+            focusSelectedPayslipInSearch={focusSelectedPayslipInSearch}
+            prioritizeNetPaySearchSort={prioritizeNetPaySearchSort}
+            selectedRun={selectedRun}
+            filteredPayslipSearchRows={filteredPayslipSearchRows}
+            setSelectedRunId={setSelectedRunId}
+          />
         </article>
-
 
         <article id="status-feedback" className="panel panel-payslip-status-feedback">
           <h2>{pageCopy.status.title}</h2>
-          <div className="payslip-status-grid">
-            <article className="payslip-status-card">
-              <p>{pageCopy.status.latestApi}</p>
-              <strong>{statusFeedbackMessage}</strong>
-              <span className={`status-pill tone-${statusFeedbackTone}`}>
-                {statusFeedbackTone === "ok"
-                  ? pageCopy.status.tone.ok
-                  : statusFeedbackTone === "fail"
-                    ? pageCopy.status.tone.fail
-                    : pageCopy.status.tone.idle}
-              </span>
-            </article>
-            <article className="payslip-status-card">
-              <p>{pageCopy.status.latestFailureCause}</p>
-              <strong>{latestFailureMessage || pageCopy.status.noFailureHistory}</strong>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-small"
-                  onClick={() => void copyLatestFailureCause()}
-                  disabled={!latestFailedLog}
-                >
-                  {pageCopy.status.copyFailureCause}
-                </button>
-              </div>
-            </article>
-            <article className="payslip-status-card">
-              <p>{pageCopy.status.latestConfirmed}</p>
-              <strong>{selectedRun ? formatDateTime(selectedRun.confirmedAt) : "-"}</strong>
-              <span className="muted">
-                {pageCopy.status.payslipId} {selectedRun?.id ?? "-"}
-              </span>
-            </article>
-            <article className="payslip-status-card">
-              <p>{pageCopy.status.recoveryGuide}</p>
-              <strong>{statusRecoveryGuide}</strong>
-              <span className="muted">
-                {pageCopy.status.lastErrorAt} {latestFailedLog ? latestFailedLog.at : "-"} /{" "}
-                {pageCopy.status.lastCheckedAt} {latestLog ? latestLog.at : "-"}
-              </span>
-            </article>
-          </div>
+          <PayslipStatusFeedbackPanelContent
+            pageCopy={pageCopy}
+            statusFeedbackMessage={statusFeedbackMessage}
+            statusFeedbackTone={statusFeedbackTone}
+            latestFailureMessage={latestFailureMessage}
+            copyLatestFailureCause={copyLatestFailureCause}
+            latestFailedLog={latestFailedLog}
+            selectedRun={selectedRun}
+            statusRecoveryGuide={statusRecoveryGuide}
+            latestLog={latestLog}
+          />
         </article>
 
         <article id="compare-view" className="panel panel-payslip-compare">
@@ -520,214 +427,33 @@ export function EmployeePayslipsPageView({
               </button>
             </div>
           </div>
-          {!selectedRun || compareCandidates.length === 0 ? (
-            <p className="small muted">{pageCopy.compare.empty}</p>
-          ) : (
-            <>
-              <div className="payslip-compare-controls">
-                <label>
-                  {pageCopy.compare.target}
-                  <select value={compareRunId} onChange={(event) => setCompareRunId(event.target.value)}>
-                    {compareCandidates.map((run) => (
-                      <option key={run.id} value={run.id}>
-                        {formatDateOnly(run.periodStart)} ~ {formatDateOnly(run.periodEnd)} ({run.id})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <p className="small muted">
-                  {pageCopy.compare.window}: {compareWindowLabel}
-                </p>
-              </div>
-              <div className="payslip-compare-delta-grid">
-                {compareMetrics.map((metric) => (
-                  <article key={metric.id} className="payslip-compare-delta-card">
-                    <p>
-                      {metric.label} {pageCopy.compare.diffSuffix}
-                    </p>
-                    <strong>{formatDiffKrw(metric.diffValue)}</strong>
-                    <span>{formatPercent(metric.diffRate)}</span>
-                  </article>
-                ))}
-              </div>
-              <section className="payslip-compare-insight" aria-label={compareInsightAriaLabel}>
-                <h3>{compareInsightTitle}</h3>
-                <div className="payslip-compare-insight-grid">
-                  {compareInsightCards.map((card) => (
-                    <article key={card.key} className={`payslip-compare-insight-card tone-${card.tone}`}>
-                      <p>{card.title}</p>
-                      <strong>{card.message}</strong>
-                    </article>
-                  ))}
-                </div>
-              </section>
-              <div className="compare-table-wrap">
-                <table className="compare-table" aria-label={pageCopy.compare.tableAriaLabel}>
-                  <thead>
-                    <tr>
-                      <th>{pageCopy.compare.headers.metric}</th>
-                      <th>{pageCopy.compare.headers.selected}</th>
-                      <th>{pageCopy.compare.headers.compare}</th>
-                      <th>{pageCopy.compare.headers.diff}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {compareMetrics.map((metric) => (
-                      <tr key={metric.id}>
-                        <th scope="row">{metric.label}</th>
-                        <td>{formatKrw(metric.selectedValue)}</td>
-                        <td>{formatKrw(metric.compareValue)}</td>
-                        <td>{formatDiffKrw(metric.diffValue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+          <PayslipComparePanelContent
+            pageCopy={pageCopy}
+            selectedRun={selectedRun}
+            compareCandidates={compareCandidates}
+            compareRunId={compareRunId}
+            setCompareRunId={setCompareRunId}
+            compareWindowLabel={compareWindowLabel}
+            compareMetrics={compareMetrics}
+            compareInsightAriaLabel={compareInsightAriaLabel}
+            compareInsightTitle={compareInsightTitle}
+            compareInsightCards={compareInsightCards}
+            compareInsightClassName={compareInsightClassName}
+          />
         </article>
 
-
-        <article className="panel panel-payslip-print">
-          <h2>{pageCopy.detail.title}</h2>
-          {!selectedRun ? (
-            <p className="small muted">{pageCopy.detail.empty}</p>
-          ) : (
-            <>
-              <div className="payslip-print-actions actions no-print">
-                <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-                  {pageCopy.detail.actions.printSavePdf}
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={() => void copyPayslipFileName()}>
-                  {pageCopy.detail.actions.copyPdfFileName}
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={() => void copySelectedRunId()}>
-                  {pageCopy.detail.actions.copyPayslipId}
-                </button>
-              </div>
-              {payslipFileName ? (
-                <p className="small muted no-print" style={{ marginTop: 8 }}>
-                  {pageCopy.detail.recommendedFileName}: <code>{payslipFileName}</code>
-                </p>
-              ) : null}
-
-              <article className="payslip-sheet" aria-label={pageCopy.detail.sheetAriaLabel}>
-                <header className="payslip-sheet-header">
-                  <div>
-                    <p className="eyebrow">{pageCopy.detail.sheetEyebrow}</p>
-                    <h3>
-                      {formatMonthLabel(selectedRun.periodStart)} {pageCopy.detail.sheetTitleSuffix}
-                    </h3>
-                    <p className="small muted">
-                      {pageCopy.detail.payPeriod} {formatDateOnly(selectedRun.periodStart)} ~{" "}
-                      {formatDateOnly(selectedRun.periodEnd)}
-                    </p>
-                  </div>
-                  <ul className="payslip-meta-list">
-                    <li>
-                      <span>{pageCopy.detail.employeeId}</span>
-                      <strong>{selectedRun.employeeId ?? employeeId}</strong>
-                    </li>
-                    <li>
-                      <span>{pageCopy.detail.payslipId}</span>
-                      <strong>{selectedRun.id}</strong>
-                    </li>
-                    <li>
-                      <span>{pageCopy.detail.confirmedDate}</span>
-                      <strong>{formatDateOnly(selectedRun.confirmedAt)}</strong>
-                    </li>
-                    <li>
-                      <span>{pageCopy.detail.settlementState}</span>
-                      <strong>{resolvePayslipRunStateLabel(selectedRun.state, isKoLocale)}</strong>
-                    </li>
-                  </ul>
-                </header>
-
-                <section>
-                  <h4>{pageCopy.detail.summaryTitle}</h4>
-                  <div className="payslip-grid">
-                    <article className="summary-card">
-                      <p>{pageCopy.compare.metrics.gross}</p>
-                      <strong>{formatKrw(selectedRun.grossPayKrw)}</strong>
-                    </article>
-                    <article className="summary-card">
-                      <p>{pageCopy.compare.metrics.deduction}</p>
-                      <strong>{formatKrw(selectedRun.totalDeductionsKrw)}</strong>
-                    </article>
-                    <article className="summary-card">
-                      <p>{pageCopy.compare.metrics.net}</p>
-                      <strong>{formatKrw(selectedRun.netPayKrw)}</strong>
-                    </article>
-                  </div>
-                </section>
-
-                <section>
-                  <h4>{pageCopy.detail.paymentDeductionTitle}</h4>
-                  <ul className="simple-list">
-                    <li>
-                      <span>{pageCopy.detail.withholdingTax}</span>
-                      <strong>{formatKrw(selectedRun.withholdingTaxKrw)}</strong>
-                    </li>
-                    <li>
-                      <span>{pageCopy.detail.socialInsurance}</span>
-                      <strong>{formatKrw(selectedRun.socialInsuranceKrw)}</strong>
-                    </li>
-                    <li>
-                      <span>{pageCopy.detail.otherDeductions}</span>
-                      <strong>{formatKrw(selectedRun.otherDeductionsKrw)}</strong>
-                    </li>
-                  </ul>
-                </section>
-
-                <section className="payslip-explain">
-                  {deductionExplainSections.map((section) => (
-                    <div key={section.id} className="payslip-explain-section">
-                      <h4>{section.title}</h4>
-                      {section.items.length === 0 ? (
-                        <p className="small muted">{pageCopy.detail.noItems}</p>
-                      ) : (
-                        <ul className="payslip-explain-list">
-                          {section.items.map((item) => (
-                            <li key={item.key}>
-                              <div>
-                                <strong>{item.label}</strong>
-                                <p>{item.description}</p>
-                              </div>
-                              <strong className="payslip-explain-amount">{formatKrw(item.amountKrw)}</strong>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </section>
-
-                {aggregate ? (
-                  <section>
-                    <h4>{pageCopy.detail.attendanceReference}</h4>
-                    <p className="small">
-                      {pageCopy.attendance.regular} {minutesToHours(aggregate.totals.regular)} /{" "}
-                      {pageCopy.attendance.overtime} {minutesToHours(aggregate.totals.overtime)} /{" "}
-                      {pageCopy.attendance.night} {minutesToHours(aggregate.totals.night)} /{" "}
-                      {pageCopy.attendance.holiday} {minutesToHours(aggregate.totals.holiday)} ({pageCopy.attendance.payable}{" "}
-                      {aggregate.counts.payable}
-                      {pageCopy.attendance.payableUnit})
-                    </p>
-                  </section>
-                ) : null}
-
-                {selectedRun.deductionBreakdown ? (
-                  <details className="details no-print" style={{ marginTop: 12 }}>
-                    <summary>{pageCopy.detail.deductionBreakdownRaw}</summary>
-                    <pre className="small" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
-                      {JSON.stringify(selectedRun.deductionBreakdown, null, 2)}
-                    </pre>
-                  </details>
-                ) : null}
-              </article>
-            </>
-          )}
-        </article>
+        <PayslipDetailPanel
+          pageCopy={pageCopy}
+          selectedRun={selectedRun}
+          employeeId={employeeId}
+          selectedRunStateLabel={selectedRunStateLabel}
+          selectedRunNetPayText={selectedRunNetPayText}
+          aggregate={aggregate}
+          deductionExplainSections={deductionExplainSections}
+          payslipFileName={payslipFileName}
+          copyPayslipFileName={copyPayslipFileName}
+          copySelectedRunId={copySelectedRunId}
+        />
 
       </section>
     </main>
