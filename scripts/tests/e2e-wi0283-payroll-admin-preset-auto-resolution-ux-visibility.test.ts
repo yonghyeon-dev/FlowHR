@@ -12,6 +12,7 @@ function countLines(source: string) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPageStateSource = readUtf8("src", "app", "admin", "page-state.ts");
   const adminPayrollHelperSource = readUtf8("src", "app", "admin", "page-payroll-helpers.ts");
   const adminPayrollPanelSource = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const presetGuidePanelSource = readUtf8(
@@ -28,14 +29,14 @@ function run() {
   );
 
   assert.match(
-    adminPageSource,
+    `${adminPageSource}\n${adminPageStateSource}`,
     /const \[payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto\] = useState\(false\);/,
-    "admin payroll preview should keep preset auto mode state"
+    "admin payroll preview should keep preset auto mode state (page or extracted state hook)"
   );
   assert.match(
-    adminPageSource,
+    `${adminPageSource}\n${adminPageStateSource}`,
     /const \[payrollIncomeTaxLookupAsOf, setPayrollIncomeTaxLookupAsOf\] = useState\(""\);/,
-    "admin payroll preview should keep preset asOf state"
+    "admin payroll preview should keep preset asOf state (page or extracted state hook)"
   );
   assert.match(
     `${adminPageSource}\n${adminPayrollHelperSource}`,
