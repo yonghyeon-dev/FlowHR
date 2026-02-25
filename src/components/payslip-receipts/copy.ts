@@ -1,4 +1,4 @@
-import { type FlowLocale } from "@/lib/i18n/locales";
+﻿import { type FlowLocale } from "@/lib/i18n/locales";
 
 export type PayslipReceiptCopy = {
   heroEyebrow: string;
@@ -53,15 +53,15 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
   ko: {
     heroEyebrow: "FlowHR 직원",
     title: "급여명세 수신 확인",
-    description: "배포된 급여명세를 확인하고 수신 확인 상태를 처리합니다.",
+    description: "배포된 급여명세서를 확인하고 수신 상태를 처리합니다.",
     filtersTitle: "필터",
     employeeIdLabel: "직원 번호",
     periodStartLabel: "기간 시작",
     periodEndLabel: "기간 종료",
     accessTokenLabel: "액세스 토큰(선택)",
-    bearerTokenPlaceholder: "인증 토큰",
+    bearerTokenPlaceholder: "액세스 토큰",
     organizationIdFallbackLabel: "조직 식별자(개발 대체값)",
-    loadPayslipsAction: "급여명세 불러오기",
+    loadPayslipsAction: "급여명세서 불러오기",
     sessionErrorPrefix: "세션 오류",
     receiptStatusTitle: "수신 상태",
     totalConfirmedRunsLabel: "확정 실행 수",
@@ -69,12 +69,12 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     receiptConfirmedLabel: "수신 확인 완료",
     pendingConfirmationLabel: "수신 확인 대기",
     runsTitle: "실행 목록",
-    runsSearchLabel: "\uBA85\uC138\uC11C \uAC80\uC0C9",
+    runsSearchLabel: "명세서 검색",
     runsSearchPlaceholder: "실행 번호/기간/배포/수신 검색",
-    clearSearchAction: "\uAC80\uC0C9 \uCD08\uAE30\uD654",
-    visibleRunsLabel: "\uD45C\uC2DC \uBA85\uC138\uC11C",
-    noConfirmedPayslipsLoaded: "아직 확정 급여명세를 불러오지 않았습니다.",
-    noFilteredRunsMessage: "\uD604\uC7AC \uAC80\uC0C9 \uC870\uAC74\uC5D0 \uB9DE\uB294 \uBA85\uC138\uC11C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    clearSearchAction: "검색 초기화",
+    visibleRunsLabel: "표시 명세서",
+    noConfirmedPayslipsLoaded: "아직 확정 급여명세서를 불러오지 않았습니다.",
+    noFilteredRunsMessage: "현재 검색 조건에 맞는 명세서가 없습니다.",
     netLabel: "실수령",
     deliveredLabel: "배포",
     receiptLabel: "수신",
@@ -88,11 +88,11 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     backToEmployeeAction: "직원 화면으로",
     requestFailedCheckLogsStatus: "요청이 실패했습니다. 로그를 확인하세요.",
     employeeIdRequiredStatus: "직원 번호는 필수입니다.",
-    loadedConfirmedPayslipsPrefix: "확정 급여명세 로드 완료",
-    pendingLoadPayslipList: "급여명세 수신 대상 조회",
+    loadedConfirmedPayslipsPrefix: "확정 급여명세서 로드 완료",
+    pendingLoadPayslipList: "급여명세서 수신 대상 조회",
     pendingConfirmReceiptPrefix: "수신 확인",
-    logListReceiptEligiblePayslips: "급여명세 수신 대상 조회",
-    logAcknowledgePayslipReceiptPrefix: "급여명세 수신 확인",
+    logListReceiptEligiblePayslips: "급여명세서 수신 대상 조회",
+    logAcknowledgePayslipReceiptPrefix: "급여명세서 수신 확인",
     receiptAlreadyConfirmedPrefix: "이미 수신 확인된 실행",
     receiptConfirmedPrefix: "수신 확인 완료 실행",
     okLabel: "성공",
@@ -147,3 +147,4 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     failLabel: "FAIL"
   }
 };
+

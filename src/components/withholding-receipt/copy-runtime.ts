@@ -1,4 +1,4 @@
-import { type FlowLocale } from "@/lib/i18n/locales";
+﻿import { type FlowLocale } from "@/lib/i18n/locales";
 
 export function parseRequiredInt(value: string, fieldName: string, locale: FlowLocale) {
   const parsed = Number(value);
@@ -92,9 +92,9 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     inputTitle: "입력",
     yearLabel: "연도",
     employeeIdLabel: "직원 번호",
-    documentFormatLabel: "문서 포맷",
+    documentFormatLabel: "문서 형식",
     accessTokenLabel: "액세스 토큰(선택)",
-    bearerTokenPlaceholder: "인증 토큰",
+    bearerTokenPlaceholder: "액세스 토큰",
     organizationIdFallbackLabel: "조직 식별자(개발 대체값)",
     formatJsonLabel: "구조 데이터",
     formatTextLabel: "텍스트",
@@ -122,14 +122,14 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     noIssuedDocument: "아직 발급 문서를 불러오지 않았습니다.",
     receiptNumberLabel: "영수증 번호",
     canIssueIssuedLabel: "발급 가능 / 발급 완료",
-    grossNetLabel: "총급여 / 실수령",
+    grossNetLabel: "총지급 / 실수령",
     withholdingSocialLabel: "원천징수 / 사회보험",
     pendingReceiptRunsLabel: "수신확인 대기 실행",
     blockingReasonsLabel: "차단 사유",
     finalizationIdLabel: "확정 번호",
     finalizedAtLabel: "확정 시각",
     settlementHashLabel: "정산 해시",
-    taxLiabilityLabel: "세부담",
+    taxLiabilityLabel: "세액",
     priorWithheldLabel: "기납부 원천징수",
     withholdingDeltaLabel: "원천징수 차액",
     additionalDueRefundLabel: "추가 납부 / 환급",
@@ -139,7 +139,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     runGuardUndistributedLabel: "미배포",
     runGuardPendingReceiptLabel: "수신확인 대기",
     documentFileLabel: "문서 파일",
-    formatTypeLabel: "포맷 / 타입",
+    formatTypeLabel: "형식 / 타입",
     issuedAtLabel: "발급 시각",
     generatedAtLabel: "생성 시각",
     contentSha256Label: "콘텐츠 해시값",
@@ -236,7 +236,7 @@ const withholdingBlockingReasonKoMap: Record<string, string> = {
   "all confirmed runs must be distributed before withholding receipt issue":
     "원천징수영수증 발급 전 확정된 실행이 모두 배포되어야 합니다.",
   "all distributed runs must have payslip receipt confirmation before withholding receipt issue":
-    "원천징수영수증 발급 전 배포된 실행의 명세서 수신 확인이 필요합니다.",
+    "원천징수영수증 발급 전 배포된 실행은 모두 명세서 수신 확인이 필요합니다.",
   "personalPensionKrw deduction is not eligible for selected employee/year":
     "개인연금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
   "insurancePremiumKrw deduction is not eligible for selected employee/year":
@@ -262,36 +262,36 @@ function hasLatinText(value: string) {
 const koRuntimeDiagnosticPatterns: Array<{ pattern: RegExp; message: string }> = [
   {
     pattern: /employee\s*id.*required|employeeid.*required/i,
-    message: "\uC9C1\uC6D0 \uBC88\uD638\uB294 \uD544\uC218\uC785\uB2C8\uB2E4."
+    message: "직원 번호는 필수입니다."
   },
   {
     pattern: /organization\s*id.*required|organizationid.*required/i,
-    message: "\uC870\uC9C1 \uC2DD\uBCC4\uC790\uB294 \uD544\uC218\uC785\uB2C8\uB2E4."
+    message: "조직 식별자는 필수입니다."
   },
   {
     pattern: /session.*(missing|expired|invalid|not\s*found)|unauthorized|forbidden/i,
-    message: "\uC778\uC99D \uC138\uC158\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574 \uC8FC\uC138\uC694."
+    message: "인증 세션이 유효하지 않습니다. 다시 로그인해 주세요."
   },
   {
     pattern: /permission|not\s*allowed|insufficient/i,
-    message: "\uAD8C\uD55C\uC774 \uC5C6\uC5B4 \uC694\uCCAD\uC744 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+    message: "권한이 없어 요청을 처리할 수 없습니다."
   },
   {
     pattern: /invalid input|validation/i,
-    message: "\uC785\uB825\uAC12\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."
+    message: "입력값을 확인해 주세요."
   },
   {
     pattern:
       /request failed|failed to load|load failed|response failed|network error|failed to fetch|fetch failed|econnreset|econnrefused|enotfound|getaddrinfo/i,
-    message: "\uC694\uCCAD\uC774 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
+    message: "요청이 실패했습니다. 잠시 후 다시 시도해 주세요."
   },
   {
     pattern: /timeout|timed out|gateway timeout/i,
-    message: "\uC751\uB2F5 \uC2DC\uAC04\uC774 \uCD08\uACFC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
+    message: "응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요."
   },
   {
     pattern: /internal server error|service unavailable|bad gateway/i,
-    message: "\uC11C\uBC84 \uCC98\uB9AC \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
+    message: "서버 처리 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
   }
 ];
 
@@ -343,7 +343,7 @@ function resolveWithholdingBlockingReasonLabel(reason: string, locale: FlowLocal
   return normalizeRuntimeDiagnosticMessage(
     normalized,
     locale,
-    "발급 조건을 충족하지 않아 원천징수영수증을 발급할 수 없습니다."
+    "발급 조건이 충족되지 않아 원천징수영수증을 발급할 수 없습니다."
   );
 }
 
@@ -361,3 +361,5 @@ export function formatDateTimeByLocale(value: string | null | undefined, runtime
   }
   return parsed.toLocaleString(runtimeLocale);
 }
+
+
