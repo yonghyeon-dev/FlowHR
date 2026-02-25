@@ -9,7 +9,14 @@ function readUtf8(...parts: string[]) {
 function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
   const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
-  const payslipSurface = `${payslipPage}\n${payslipPageView}`;
+  const payslipDerivedState = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "use-payslip-derived-state.ts"
+  );
+  const payslipSurface = `${payslipPage}\n${payslipPageView}\n${payslipDerivedState}`;
   const localeHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const globalCss = readUtf8("src", "app", "globals.css");
 
