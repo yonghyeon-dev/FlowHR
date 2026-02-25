@@ -41,7 +41,7 @@ async function run() {
   assert.match(messages, /"employee\.nav\.benefits": "Benefits"/);
   assert.match(messages, /"employee\.nav\.recruitment": "Recruitment"/);
 
-  assert.match(adminNoticesPage, /id="notice-baseline"/);
+  assert.match(adminNoticesPage, /AdminNoticeWorkspace/);
   assert.match(adminBenefitsPage, /id="benefits-baseline"/);
   assert.match(adminRecruitmentPage, /id="recruitment-baseline"/);
   assert.match(employeeBenefitsPage, /id="employee-benefits-baseline"/);

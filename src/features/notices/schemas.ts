@@ -1,0 +1,26 @@
+﻿import { z } from "zod";
+
+const noticeAudienceSchema = z.enum(["all", "employees", "admins"]);
+const noticeStatusSchema = z.enum(["DRAFT", "SCHEDULED", "PUBLISHED"]);
+
+export const listNoticesQuerySchema = z.object({
+  organizationId: z.string().trim().optional(),
+  audience: noticeAudienceSchema.or(z.literal("all")).optional(),
+  status: noticeStatusSchema.or(z.literal("all")).optional(),
+  publishedOnly: z
+    .enum(["true", "false"]) 
+    .transform((value) => value === "true")
+    .optional()
+});
+
+export const createNoticeSchema = z.object({
+  organizationId: z.string().trim().min(1).optional(),
+  title: z.string().trim().min(2).max(120),
+  body: z.string().trim().min(4).max(2000),
+  audience: noticeAudienceSchema,
+  publishAt: z.string().datetime().optional()
+});
+
+export const publishNoticeSchema = z.object({
+  noticeId: z.string().trim().min(1)
+});
