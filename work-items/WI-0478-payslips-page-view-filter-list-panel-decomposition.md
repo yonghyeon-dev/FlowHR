@@ -24,6 +24,7 @@
 ## Validation
 - [x] `npm.cmd exec tsx scripts/tests/e2e-wi0478-payslips-page-view-filter-list-panel-decomposition.test.ts`
 - [x] `npm.cmd exec tsx scripts/tests/e2e-wi0318-employee-payslips-locale-helper-split-phase6.test.ts`
+- [x] `npm.cmd exec tsx scripts/tests/e2e-wi0319-employee-payslips-locale-dynamic-residual-gap-fix-phase7.test.ts`
 - [x] `npm.cmd exec tsx scripts/tests/e2e-wi0398-payslip-page-view-decomposition-and-render-orchestrator-split.test.ts`
 - [x] `npm.cmd exec tsx scripts/tests/e2e-wi0450-payslips-page-api-hook-extraction-and-line-budget-500.test.ts`
 - [x] `npm.cmd run -s typecheck`
