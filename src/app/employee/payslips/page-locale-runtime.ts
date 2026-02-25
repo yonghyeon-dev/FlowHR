@@ -39,27 +39,35 @@ function hasLatinText(value: string) {
 const koRuntimeErrorMessagePatterns: Array<{ pattern: RegExp; message: string }> = [
   {
     pattern: /employee\s*id.*required|employeeid.*required/i,
-    message: "직원 번호는 필수입니다."
+    message: "\uC9C1\uC6D0 \uBC88\uD638\uB294 \uD544\uC218\uC785\uB2C8\uB2E4."
   },
   {
     pattern: /organization\s*id.*required|organizationid.*required/i,
-    message: "조직 식별자는 필수입니다."
+    message: "\uC870\uC9C1 \uC2DD\uBCC4\uC790\uB294 \uD544\uC218\uC785\uB2C8\uB2E4."
   },
   {
     pattern: /session.*(missing|expired|invalid|not\s*found)|unauthorized|forbidden/i,
-    message: "인증 세션이 유효하지 않습니다. 다시 로그인해 주세요."
+    message: "\uC778\uC99D \uC138\uC158\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574 \uC8FC\uC138\uC694."
   },
   {
     pattern: /permission|not\s*allowed|insufficient/i,
-    message: "권한이 없어 요청을 처리할 수 없습니다."
+    message: "\uAD8C\uD55C\uC774 \uC5C6\uC5B4 \uC694\uCCAD\uC744 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
   },
   {
     pattern: /invalid input|validation/i,
-    message: "입력값을 확인해 주세요."
+    message: "\uC785\uB825\uAC12\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."
   },
   {
     pattern: /request failed|failed to load|load failed|response failed|network error/i,
-    message: "요청이 실패했습니다. 잠시 후 다시 시도해 주세요."
+    message: "\uC694\uCCAD\uC774 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
+  },
+  {
+    pattern: /timeout|timed out|gateway timeout/i,
+    message: "\uC751\uB2F5 \uC2DC\uAC04\uC774 \uCD08\uACFC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
+  },
+  {
+    pattern: /internal server error|service unavailable|bad gateway/i,
+    message: "\uC11C\uBC84 \uCC98\uB9AC \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
   }
 ];
 
