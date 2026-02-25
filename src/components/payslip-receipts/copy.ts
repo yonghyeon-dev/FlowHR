@@ -52,7 +52,7 @@ export type PayslipReceiptCopy = {
 export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> = {
   ko: {
     heroEyebrow: "FlowHR 직원",
-    title: "급여명세서 수신 확인",
+    title: "급여명세 수신 확인",
     description: "배포된 급여명세서를 확인하고 수신 상태를 처리합니다.",
     filtersTitle: "필터",
     employeeIdLabel: "직원 번호",
