@@ -37,7 +37,7 @@ async function run() {
     "src",
     "components",
     "withholding-receipt",
-    "WithholdingReceiptConsole.tsx"
+    "copy-runtime.ts"
   );
   const payslipReceiptCopySource = readUtf8("src", "components", "payslip-receipts", "copy.ts");
   const contractsCopySource = readUtf8("src", "components", "contracts", "copy.ts");

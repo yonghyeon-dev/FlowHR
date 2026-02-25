@@ -14,6 +14,12 @@ async function run() {
     "employee-dashboard",
     "EmployeeAttendanceLeavePanels.tsx"
   );
+  const leaveCalendarPanel = readUtf8(
+    "src",
+    "components",
+    "employee-dashboard",
+    "EmployeeLeaveCalendarPanel.tsx"
+  );
   const localeHelpers = readUtf8("src", "app", "employee", "page-locale-helpers.ts");
   const globalsCss = readUtf8("src", "app", "globals.css");
   const workItem = readUtf8(
@@ -25,8 +31,8 @@ async function run() {
   assert.match(employeePage, /prefillLeaveFormFromCalendarDate/);
   assert.match(employeePage, /onPrefillLeaveFromCalendarDate=\{prefillLeaveFormFromCalendarDate\}/);
   assert.match(attendanceLeavePanels, /onPrefillLeaveFromCalendarDate: \(dateKey: string\) => void/);
-  assert.match(attendanceLeavePanels, /clickToPrefill/);
-  assert.match(attendanceLeavePanels, /is-clickable/);
+  assert.match(leaveCalendarPanel, /clickToPrefill/);
+  assert.match(leaveCalendarPanel, /is-clickable/);
   assert.match(localeHelpers, /clickToPrefill/);
   assert.match(globalsCss, /\.leave-calendar-day\.is-clickable/);
 

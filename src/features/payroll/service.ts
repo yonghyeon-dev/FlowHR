@@ -8,30 +8,11 @@ import type {
 } from "@/features/shared/data-access";
 import { ServiceError } from "@/features/shared/service-error";
 import {
-  applyYearEndDeductionCaps,
-  asYearEndFinalizationAuditPayload,
-  buildYearEndFilingArtifact,
-  buildYearEndFilingGuard,
-  buildYearEndFilingRecords,
-  buildYearEndInputVectorHash,
-  buildYearEndSettlementHash,
-  calculateYearEndSettlementKrw,
-  collectYearEndDeductionEligibilityBlockingReasons,
   ensureNoPendingFilingSubmission,
   listYearEndFilingSubmissionSummaries,
-  normalizeYearEndDeductionEligibility,
-  normalizeYearEndDeductionItems,
-  normalizeYearEndSettlementHash,
-  normalizeYearEndTaxCreditItems,
-  resolveYearEndSettlementHashFromFinalizationPayload,
-  validateYearEndFilingRecords,
-  type YearEndFilingGuard,
-  type YearEndFinalizationAuditPayload
 } from "@/features/payroll/service-year-end-adapter-helpers";
 import {
   ensureValidPeriod,
-  getYearPeriodInSeoul,
-  isPayrollYearEndDeductionInputEnabled,
   isPayrollYearEndEnabled,
   isPayrollYearEndFilingExportEnabled,
   isPayrollYearEndFilingSubmissionEnabled,
@@ -52,9 +33,6 @@ import type {
   IssuePayrollYearEndWithholdingReceiptInput,
   ListPayrollYearEndFilingSubmissionTimelineInput,
   ListPayrollYearEndFilingSubmissionsInput,
-  PayrollYearEndFilingSubmissionSortBy,
-  PayrollYearEndFilingSubmissionSortDirection,
-  PayrollYearEndWithholdingReceiptDocumentFormat,
   PreviewPayrollInput,
   PreviewPayrollInsuranceSettlementInput,
   PreviewPayrollWithDeductionsInput,
@@ -64,9 +42,6 @@ import type {
   ResubmitPayrollYearEndFilingPackageInput,
   SubmitPayrollYearEndFilingPackageInput,
   UpsertDeductionProfileInput,
-  YearEndDeductionEligibilityInput,
-  YearEndDeductionItemsInput,
-  YearEndTaxCreditItemsInput
 } from "@/features/payroll/service-input-types";
 import type {
   AcknowledgePayrollPayslipReceiptResult,
@@ -87,7 +62,6 @@ import type {
   ListPayrollYearEndFilingAckCatalogResult,
   ListPayrollYearEndFilingSubmissionTimelineResult,
   ListPayrollYearEndFilingSubmissionsResult,
-  PayrollTotalsKrw,
   PreviewPayrollInsuranceSettlementResult,
   PreviewPayrollResult,
   PreviewPayrollWithDeductionsResult,
@@ -97,13 +71,9 @@ import type {
   ResubmitPayrollYearEndFilingPackageResult,
   SubmitPayrollYearEndFilingPackageResult,
   UpsertDeductionProfileResult,
-  YearEndDeductionSummaryKrw,
-  YearEndSettlementKrw,
-  YearEndSettlementSummary
 } from "@/features/payroll/service-output-types";
 import {
   loadYearEndRunSnapshot,
-  type YearEndRunSnapshot
 } from "@/features/payroll/service-year-end-run-snapshot-helpers";
 import {
   getPayrollYearEndFinalizedSettlementFromHelper,
@@ -291,42 +261,36 @@ export async function closePayrollPeriod(
 ): Promise<ClosePayrollPeriodResult> {
   return closePayrollPeriodFromHelper(context, input);
 }
-
 export async function distributePayrollPayslips(
   context: ServiceContext,
   input: DistributePayrollPayslipsInput
 ): Promise<DistributePayrollPayslipsResult> {
   return distributePayrollPayslipsFromHelper(context, input);
 }
-
 export async function acknowledgePayrollPayslipReceipt(
   context: ServiceContext,
   input: AcknowledgePayrollPayslipReceiptInput
 ): Promise<AcknowledgePayrollPayslipReceiptResult> {
   return acknowledgePayrollPayslipReceiptFromHelper(context, input);
 }
-
 export async function previewPayrollYearEndSettlement(
   context: ServiceContext,
   input: PreviewPayrollYearEndSettlementInput
 ): Promise<PreviewPayrollYearEndSettlementResult> {
   return previewPayrollYearEndSettlementFromHelper(context, input);
 }
-
 export async function recalculatePayrollYearEndSettlement(
   context: ServiceContext,
   input: RecalculatePayrollYearEndSettlementInput
 ): Promise<RecalculatePayrollYearEndSettlementResult> {
   return recalculatePayrollYearEndSettlementFromHelper(context, input);
 }
-
 export async function finalizePayrollYearEndSettlement(
   context: ServiceContext,
   input: FinalizePayrollYearEndSettlementInput
 ): Promise<FinalizePayrollYearEndSettlementResult> {
   return finalizePayrollYearEndSettlementFromHelper(context, input);
 }
-
 export async function exportPayrollYearEndFilingData(
   context: ServiceContext,
   input: ExportPayrollYearEndFilingDataInput
@@ -334,11 +298,11 @@ export async function exportPayrollYearEndFilingData(
   return exportPayrollYearEndFilingDataFromHelper(context, input);
 }
 
-export async function submitPayrollYearEndFilingPackage(
+async function loadFilingSubmissionContext(
   context: ServiceContext,
-  input: SubmitPayrollYearEndFilingPackageInput
-): Promise<SubmitPayrollYearEndFilingPackageResult> {
-  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  year: number,
+  employeeId: string
+) {
   if (!isPayrollYearEndEnabled()) {
     throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
   }
@@ -348,11 +312,16 @@ export async function submitPayrollYearEndFilingPackage(
   if (!isPayrollYearEndFilingSubmissionEnabled()) {
     throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
   }
-  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const submissions = await listYearEndFilingSubmissionSummaries(context, {
-    year: input.year,
-    employeeId: input.employeeId
-  });
+  await loadYearEndRunSnapshot(context, year, employeeId);
+  return await listYearEndFilingSubmissionSummaries(context, { year, employeeId });
+}
+
+export async function submitPayrollYearEndFilingPackage(
+  context: ServiceContext,
+  input: SubmitPayrollYearEndFilingPackageInput
+): Promise<SubmitPayrollYearEndFilingPackageResult> {
+  await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
+  const submissions = await loadFilingSubmissionContext(context, input.year, input.employeeId);
   ensureNoPendingFilingSubmission(submissions);
   if (submissions.length > 0) {
     throw new ServiceError(
@@ -388,21 +357,7 @@ export async function resubmitPayrollYearEndFilingPackage(
   input: ResubmitPayrollYearEndFilingPackageInput
 ): Promise<ResubmitPayrollYearEndFilingPackageResult> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
-  if (!isPayrollYearEndEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndFilingExportEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_export_v1 feature flag is disabled");
-  }
-  if (!isPayrollYearEndFilingSubmissionEnabled()) {
-    throw new ServiceError(409, "payroll_year_end_filing_submission_v1 feature flag is disabled");
-  }
-
-  await loadYearEndRunSnapshot(context, input.year, input.employeeId);
-  const submissions = await listYearEndFilingSubmissionSummaries(context, {
-    year: input.year,
-    employeeId: input.employeeId
-  });
+  const submissions = await loadFilingSubmissionContext(context, input.year, input.employeeId);
   const target = submissions.find((submission) => submission.submissionId === input.submissionId);
   if (!target) {
     throw new ServiceError(404, "filing submission not found for resubmission");
@@ -440,104 +395,89 @@ export async function resubmitPayrollYearEndFilingPackage(
 
   return { submission };
 }
-
 export async function acknowledgePayrollYearEndFilingPackage(
   context: ServiceContext,
   input: AcknowledgePayrollYearEndFilingPackageInput
 ): Promise<AcknowledgePayrollYearEndFilingPackageResult> {
   return acknowledgePayrollYearEndFilingPackageFromHelper(context, input);
 }
-
 export async function cancelPayrollYearEndFilingPackage(
   context: ServiceContext,
   input: CancelPayrollYearEndFilingPackageInput
 ): Promise<CancelPayrollYearEndFilingPackageResult> {
   return cancelPayrollYearEndFilingPackageFromHelper(context, input);
 }
-
 export async function reopenPayrollYearEndFilingPackage(
   context: ServiceContext,
   input: ReopenPayrollYearEndFilingPackageInput
 ): Promise<ReopenPayrollYearEndFilingPackageResult> {
   return reopenPayrollYearEndFilingPackageFromHelper(context, input);
 }
-
 export async function listPayrollYearEndFilingSubmissions(
   context: ServiceContext,
   input: ListPayrollYearEndFilingSubmissionsInput
 ): Promise<ListPayrollYearEndFilingSubmissionsResult> {
   return listPayrollYearEndFilingSubmissionsFromHelper(context, input);
 }
-
 export async function listPayrollYearEndFilingAckCatalog(
   context: ServiceContext
 ): Promise<ListPayrollYearEndFilingAckCatalogResult> {
   return listPayrollYearEndFilingAckCatalogFromHelper(context);
 }
-
 export async function listPayrollYearEndFilingSubmissionTimeline(
   context: ServiceContext,
   input: ListPayrollYearEndFilingSubmissionTimelineInput
 ): Promise<ListPayrollYearEndFilingSubmissionTimelineResult> {
   return listPayrollYearEndFilingSubmissionTimelineFromHelper(context, input);
 }
-
 export async function addPayrollYearEndFilingEvidenceNote(
   context: ServiceContext,
   input: AddPayrollYearEndFilingEvidenceNoteInput
 ): Promise<AddPayrollYearEndFilingEvidenceNoteResult> {
   return addPayrollYearEndFilingEvidenceNoteFromHelper(context, input);
 }
-
 export async function getPayrollYearEndInsuranceReconciliationReport(
   context: ServiceContext,
   input: GetPayrollYearEndInsuranceReconciliationReportInput
 ): Promise<GetPayrollYearEndInsuranceReconciliationReportResult> {
   return await getPayrollYearEndInsuranceReconciliationReportFromHelper(context, input);
 }
-
 export async function getPayrollYearEndPreflightChecklist(
   context: ServiceContext,
   input: GetPayrollYearEndPreflightChecklistInput
 ): Promise<GetPayrollYearEndPreflightChecklistResult> {
   return await getPayrollYearEndPreflightChecklistFromHelper(context, input);
 }
-
 export async function getPayrollYearEndWithholdingReceiptDocument(
   context: ServiceContext,
   input: GetPayrollYearEndWithholdingReceiptDocumentInput
 ): Promise<GetPayrollYearEndWithholdingReceiptDocumentResult> {
   return await getPayrollYearEndWithholdingReceiptDocumentFromHelper(context, input);
 }
-
 export async function getPayrollYearEndFinalizedSettlement(
   context: ServiceContext,
   input: GetPayrollYearEndFinalizedSettlementInput
 ): Promise<GetPayrollYearEndFinalizedSettlementResult> {
   return await getPayrollYearEndFinalizedSettlementFromHelper(context, input);
 }
-
 export async function issuePayrollYearEndWithholdingReceipt(
   context: ServiceContext,
   input: IssuePayrollYearEndWithholdingReceiptInput
 ): Promise<IssuePayrollYearEndWithholdingReceiptResult> {
   return await issuePayrollYearEndWithholdingReceiptFromHelper(context, input);
 }
-
 export async function readDeductionProfile(
   context: ServiceContext,
   profileId: string
 ): Promise<DeductionProfileEntity> {
   return await readDeductionProfileFromHelper(context, profileId);
 }
-
 export async function upsertDeductionProfile(
   context: ServiceContext,
   input: UpsertDeductionProfileInput
 ): Promise<UpsertDeductionProfileResult> {
   return await upsertDeductionProfileFromHelper(context, input);
 }
-
 export async function listDeductionProfiles(
   context: ServiceContext,
   input: ListDeductionProfilesInput

@@ -17,6 +17,21 @@ async function run() {
     "payslips",
     "page-locale-helpers.ts"
   );
+  const payslipLocaleRuntime = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-locale-runtime.ts"
+  );
+  const payslipSearchSortCopy = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-locale-search-sort-copy.ts"
+  );
+  const payslipApi = readUtf8("src", "app", "employee", "payslips", "use-payslip-api.ts");
   const workItem = readUtf8(
     "work-items",
     "WI-0316-employee-payslips-locale-dynamic-ui-gap-fix-phase5.md"
@@ -29,17 +44,33 @@ async function run() {
   assert.match(payslipPage, /const runtimeLocale = isKoLocale \? "ko-KR" : "en-US";/);
   assert.match(payslipPage, /from "@\/app\/employee\/payslips\/page-locale-helpers"/);
   assert.match(payslipPage, /const searchSortCopy = useMemo\(\(\) => resolvePayslipSearchSortCopy\(isKoLocale\), \[isKoLocale\]\);/);
+  assert.match(payslipPage, /setPayslipRuntimeLocale\(runtimeLocale\)/);
+  assert.match(payslipPage, /setPayslipRuntimeLocale\(null\)/);
+  assert.match(payslipPage, /usePayslipApi\(\{/);
+  assert.match(payslipPage, /runtimeLocale,/);
   assert.match(payslipPageView, /<h2>\{searchSortCopy\.title\}<\/h2>/);
   assert.match(payslipPageView, /<p className="small">\{searchSortCopy\.description\}<\/p>/);
-  assert.match(payslipPage, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
 
-  assert.match(payslipLocaleHelpers, /export function resolveRuntimeLocale\(\)/);
-  assert.match(payslipLocaleHelpers, /export function formatDateTime\(value: string \| null\)/);
-  assert.match(payslipLocaleHelpers, /export function formatDateOnly\(value: string \| null\)/);
-  assert.match(payslipLocaleHelpers, /parsed\.toLocaleString\(resolveRuntimeLocale\(\)\)/);
-  assert.match(payslipLocaleHelpers, /parsed\.toLocaleDateString\(resolveRuntimeLocale\(\)\)/);
-  assert.match(payslipLocaleHelpers, /title: "명세서 검색\/정렬"/);
-  assert.match(payslipLocaleHelpers, /title: "Payslip Search\/Sort"/);
+  assert.match(
+    payslipApi,
+    /function buildApiLogEntry\(label: string, runtimeLocale: string, status: number, ok: boolean, body: unknown\)/
+  );
+  assert.match(payslipApi, /at: new Date\(\)\.toLocaleString\(runtimeLocale\),/);
+  assert.match(payslipApi, /buildApiLogEntry\(label, runtimeLocale, status, ok, body\)/);
+
+  assert.match(payslipLocaleHelpers, /resolveRuntimeLocale,/);
+  assert.match(payslipLocaleHelpers, /formatDateTime,/);
+  assert.match(payslipLocaleHelpers, /formatDateOnly,/);
+  assert.match(payslipLocaleHelpers, /setPayslipRuntimeLocale/);
+
+  assert.match(payslipLocaleRuntime, /export function resolveRuntimeLocale\(\)/);
+  assert.match(payslipLocaleRuntime, /export function formatDateTime\(value: string \| null\)/);
+  assert.match(payslipLocaleRuntime, /export function formatDateOnly\(value: string \| null\)/);
+  assert.match(payslipLocaleRuntime, /parsed\.toLocaleString\(resolveRuntimeLocale\(\)\)/);
+  assert.match(payslipLocaleRuntime, /parsed\.toLocaleDateString\(resolveRuntimeLocale\(\)\)/);
+
+  assert.match(payslipSearchSortCopy, /export function resolvePayslipSearchSortCopy\(isKoLocale: boolean\)/);
+  assert.match(payslipSearchSortCopy, /title: "Payslip Search\/Sort"/);
 
   assert.doesNotMatch(payslipSurface, /toLocaleString\("ko-KR"\)/);
   assert.doesNotMatch(payslipSurface, /toLocaleDateString\("ko-KR"\)/);

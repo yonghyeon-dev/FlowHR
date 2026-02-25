@@ -193,3 +193,48 @@ export function resolveScheduleTimeStatus(
   }
   return "in_progress";
 }
+
+function escapeCsvValue(value: string) {
+  const normalized = value.replace(/"/g, "\"\"");
+  return `"${normalized}"`;
+}
+
+export function exportScheduleRowsCsv(input: {
+  rows: Array<{ schedule: WorkScheduleDto; status: ScheduleTimeStatus }>;
+  runtimeLocale: string;
+  isKoLocale: boolean;
+}) {
+  if (input.rows.length === 0) {
+    return false;
+  }
+
+  const headers = input.isKoLocale
+    ? ["스케줄 ID", "상태", "시작", "종료", "휴일", "휴게(분)", "메모"]
+    : ["Schedule ID", "Status", "Start", "End", "Holiday", "Break Minutes", "Notes"];
+  const lines = input.rows.map((row) => {
+    const { schedule } = row;
+    const values = [
+      schedule.id,
+      row.status,
+      formatDateTime(schedule.startAt, input.runtimeLocale),
+      formatDateTime(schedule.endAt, input.runtimeLocale),
+      schedule.isHoliday ? "Y" : "N",
+      String(schedule.breakMinutes),
+      schedule.notes?.trim() ?? ""
+    ];
+    return values.map(escapeCsvValue).join(",");
+  });
+
+  const csv = [headers.map(escapeCsvValue).join(","), ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = window.document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  anchor.href = objectUrl;
+  anchor.download = `employee-schedule-${stamp}.csv`;
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  window.document.body.removeChild(anchor);
+  URL.revokeObjectURL(objectUrl);
+  return true;
+}

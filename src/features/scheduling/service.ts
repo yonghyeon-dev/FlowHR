@@ -1,4 +1,4 @@
-import type { Actor } from "@/lib/actor";
+﻿import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import type {
@@ -8,16 +8,59 @@ import type {
   DataAccess,
   EmployeeEntity,
   ScheduleAnomalyIncidentEntity,
-  ScheduleAnomalyIncidentHistoryEntryEntity,
-  ScheduleAnomalyIncidentLifecycleAction as ScheduleAnomalyIncidentLifecycleActionEntity,
-  ScheduleAnomalyIncidentLifecycleState as ScheduleAnomalyIncidentLifecycleStateEntity,
-  ScheduleAnomalyIncidentResolutionCode as ScheduleAnomalyIncidentResolutionCodeEntity,
-  UpsertScheduleAnomalyIncidentInput,
   UpdateWorkScheduleInput,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
 import { listAttendanceRecords } from "@/features/attendance/service";
+import {
+  ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
+  ANOMALY_INCIDENT_LIFECYCLE_AUDIT_ACTION_BY_ACTION,
+  ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION,
+  ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
+  ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
+  buildScheduleAnomalyIncidentReadModelsFromAuditLogs
+} from "@/features/scheduling/incident-audit-projection";
+import {
+  anomalyEscalationSeverityWeight,
+  buildAnomalyAlertPayload,
+  buildAnomalyEscalationPayload,
+  buildAnomalyTicketRequestPayload,
+  classifyAnomalyEscalationSeverity,
+  isSchedulingAnomalyAlertsEnabled,
+  isSchedulingAnomalyEscalationEnabled,
+  isSchedulingAnomalyTicketAutomationEnabled,
+  parseAnomalySeverityFromEnv,
+  parsePositiveIntegerRangeFromEnv,
+  type AnomalyEscalationSeverity
+} from "@/features/scheduling/anomaly-automation-helpers";
+import {
+  isWithinOptionalCreatedAtRange,
+  normalizeAnomalyIncidentArchiveOlderThanMinutes,
+  normalizeAnomalyIncidentArchiveReason,
+  normalizeAnomalyIncidentEscalationChannel,
+  normalizeAnomalyIncidentEscalationCooldownMinutes,
+  normalizeAnomalyIncidentReplayIncidentIds,
+  normalizeAnomalyIncidentReplayTopN,
+  normalizeIncidentListTopN,
+  normalizeReconcileTopN,
+  parseIsoTimestampToMillis,
+  resolveAnomalyIncidentSlaTargetMinutes,
+  resolveAnomalyIncidentWarningMinutes
+} from "@/features/scheduling/incident-normalizers";
+import {
+  MAX_ANOMALY_INCIDENT_AUDIT_ROWS,
+  MAX_ANOMALY_INCIDENT_HISTORY,
+  cloneScheduleAnomalyIncidentReadModel,
+  getScheduleAnomalyIncidentReadModel,
+  listScheduleAnomalyIncidentReadModels,
+  listScheduleAnomalyIncidentReadModelsFromAudit,
+  normalizeAnomalyIncidentAutoAssigneeId,
+  normalizeAnomalyIncidentAutoAssignMode,
+  normalizeAnomalyIncidentAutoAssignNote,
+  toScheduleAnomalyIncidentUpsertInput,
+  toSlaStatusWeight
+} from "@/features/scheduling/incident-read-model-helpers";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
@@ -773,221 +816,6 @@ function normalizeTopN(value: number | undefined) {
   return normalized;
 }
 
-function isTruthyFlag(value: string | undefined) {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
-function isSchedulingAnomalyAlertsEnabled() {
-  return isTruthyFlag(
-    process.env.FLOWHR_SCHEDULING_ANOMALY_ALERTS_ENABLED ??
-      process.env.SCHEDULING_ANOMALY_ALERTS_ENABLED
-  );
-}
-
-function isSchedulingAnomalyEscalationEnabled() {
-  return isTruthyFlag(
-    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_ENABLED ??
-      process.env.SCHEDULING_ANOMALY_ESCALATION_ENABLED
-  );
-}
-
-function isSchedulingAnomalyTicketAutomationEnabled() {
-  return isTruthyFlag(
-    process.env.FLOWHR_SCHEDULING_ANOMALY_TICKET_AUTOMATION_ENABLED ??
-      process.env.SCHEDULING_ANOMALY_TICKET_AUTOMATION_ENABLED
-  );
-}
-
-function buildAnomalyAlertPayload(
-  input: ListScheduleAnomaliesInput,
-  lateThresholdMinutes: number,
-  evaluatedSchedules: number,
-  anomalies: ScheduleAttendanceAnomaly[],
-  lateCount: number,
-  noShowCount: number
-) {
-  return {
-    periodStart: input.periodStart.toISOString(),
-    periodEnd: input.periodEnd.toISOString(),
-    employeeId: input.employeeId ?? null,
-    lateThresholdMinutes,
-    evaluatedSchedules,
-    anomalies: anomalies.length,
-    lateCount,
-    noShowCount,
-    samples: anomalies.slice(0, 20).map((anomaly) => ({
-      scheduleId: anomaly.scheduleId,
-      employeeId: anomaly.employeeId,
-      anomalyType: anomaly.anomalyType,
-      lateMinutes: anomaly.lateMinutes
-    }))
-  };
-}
-
-type AnomalyEscalationSeverity = "MINOR" | "MAJOR" | "CRITICAL";
-
-function parsePositiveIntegerEnv(raw: string | undefined, defaultValue: number, fieldName: string): number {
-  if (raw === undefined) {
-    return defaultValue;
-  }
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new ServiceError(
-      500,
-      `scheduling anomaly escalation policy is enabled but ${fieldName} configuration is invalid`
-    );
-  }
-  return parsed;
-}
-
-function parseAnomalyEscalationRouting() {
-  const raw =
-    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_POLICY ??
-    process.env.SCHEDULING_ANOMALY_ESCALATION_POLICY ??
-    "";
-  const entries = raw
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
-
-  if (entries.length === 0) {
-    throw new ServiceError(
-      500,
-      "scheduling anomaly escalation policy is enabled but routing configuration is empty"
-    );
-  }
-
-  const routing: Partial<Record<AnomalyEscalationSeverity, string>> = {};
-  for (const entry of entries) {
-    const [severityRaw, ownerRaw, ...extra] = entry.split(":");
-    const severity = severityRaw?.trim().toUpperCase() as AnomalyEscalationSeverity;
-    const owner = ownerRaw?.trim() ?? "";
-    if (
-      !severity ||
-      (severity !== "MINOR" && severity !== "MAJOR" && severity !== "CRITICAL") ||
-      !owner ||
-      extra.length > 0
-    ) {
-      throw new ServiceError(
-        500,
-        "scheduling anomaly escalation policy is enabled but routing configuration is invalid"
-      );
-    }
-    routing[severity] = owner;
-  }
-
-  if (!routing.MINOR || !routing.MAJOR || !routing.CRITICAL) {
-    throw new ServiceError(
-      500,
-      "scheduling anomaly escalation policy is enabled but routing configuration is incomplete"
-    );
-  }
-
-  return routing as Record<AnomalyEscalationSeverity, string>;
-}
-
-function classifyAnomalyEscalationSeverity(
-  anomalies: ScheduleAttendanceAnomaly[],
-  lateCount: number,
-  noShowCount: number
-): AnomalyEscalationSeverity {
-  if (noShowCount > 0) {
-    return "CRITICAL";
-  }
-  if (lateCount >= 3 || anomalies.length >= 5) {
-    return "MAJOR";
-  }
-  return "MINOR";
-}
-
-function anomalyEscalationSeverityWeight(severity: AnomalyEscalationSeverity) {
-  if (severity === "CRITICAL") {
-    return 3;
-  }
-  if (severity === "MAJOR") {
-    return 2;
-  }
-  return 1;
-}
-
-function parseAnomalySeverityFromEnv(
-  raw: string | undefined,
-  fallback: AnomalyEscalationSeverity,
-  fieldName: string,
-  contextName: string
-): AnomalyEscalationSeverity {
-  if (raw === undefined) {
-    return fallback;
-  }
-
-  const normalized = raw.trim().toUpperCase();
-  if (normalized === "MINOR" || normalized === "MAJOR" || normalized === "CRITICAL") {
-    return normalized;
-  }
-
-  throw new ServiceError(500, `${contextName} is enabled but ${fieldName} configuration is invalid`);
-}
-
-function parsePositiveIntegerRangeFromEnv(
-  raw: string | undefined,
-  fallback: number,
-  min: number,
-  max: number,
-  fieldName: string,
-  contextName: string
-): number {
-  if (raw === undefined) {
-    return fallback;
-  }
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new ServiceError(500, `${contextName} is enabled but ${fieldName} configuration is invalid`);
-  }
-  return parsed;
-}
-
-function buildAnomalyEscalationPayload(
-  input: ListScheduleAnomaliesInput,
-  lateThresholdMinutes: number,
-  evaluatedSchedules: number,
-  anomalies: ScheduleAttendanceAnomaly[],
-  lateCount: number,
-  noShowCount: number
-) {
-  const severity = classifyAnomalyEscalationSeverity(anomalies, lateCount, noShowCount);
-  const routing = parseAnomalyEscalationRouting();
-  const retryMaxAttempts = parsePositiveIntegerEnv(
-    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_MAX,
-    3,
-    "FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_MAX"
-  );
-  const retryBackoffSeconds = parsePositiveIntegerEnv(
-    process.env.FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_BACKOFF_SECONDS,
-    60,
-    "FLOWHR_SCHEDULING_ANOMALY_ESCALATION_RETRY_BACKOFF_SECONDS"
-  );
-
-  return {
-    ...buildAnomalyAlertPayload(
-      input,
-      lateThresholdMinutes,
-      evaluatedSchedules,
-      anomalies,
-      lateCount,
-      noShowCount
-    ),
-    escalation: {
-      severity,
-      owner: routing[severity],
-      retry: {
-        maxAttempts: retryMaxAttempts,
-        backoffSeconds: retryBackoffSeconds
-      }
-    }
-  };
-}
-
 async function emitAnomalyAlertIfEnabled(
   context: ServiceContext,
   actor: Actor,
@@ -1106,40 +934,6 @@ async function emitAnomalyEscalationIfEnabled(
       // Non-blocking path: do not fail anomaly report API on escalation side-effects.
     }
   }
-}
-
-function buildAnomalyTicketRequestPayload(
-  input: ListScheduleAnomalyCockpitInput,
-  lateThresholdMinutes: number,
-  topN: number,
-  queue: ScheduleAnomalyCockpitQueueEntry[],
-  minSeverity: AnomalyEscalationSeverity,
-  maxPerRun: number
-) {
-  const minSeverityWeight = anomalyEscalationSeverityWeight(minSeverity);
-  const tickets = queue
-    .filter((entry) => anomalyEscalationSeverityWeight(entry.severity) >= minSeverityWeight)
-    .slice(0, maxPerRun)
-    .map((entry) => ({
-      scheduleId: entry.scheduleId,
-      employeeId: entry.employeeId,
-      anomalyType: entry.anomalyType,
-      severity: entry.severity,
-      lateMinutes: entry.lateMinutes,
-      scheduleStartAt: entry.scheduleStartAt.toISOString(),
-      recommendedAction: entry.recommendedAction
-    }));
-
-  return {
-    periodStart: input.periodStart.toISOString(),
-    periodEnd: input.periodEnd.toISOString(),
-    lateThresholdMinutes,
-    topN,
-    minSeverity,
-    maxPerRun,
-    requestedCount: tickets.length,
-    tickets
-  };
 }
 
 async function emitAnomalyCockpitTicketRequestsIfEnabled(
@@ -3184,23 +2978,23 @@ export async function listWorkScheduleRotationBalance(
 
   const recommendations: string[] = [];
   if (schedules.length === 0) {
-    recommendations.push("조회 범위에 회전 스케줄이 없습니다.");
+    recommendations.push("議고쉶 踰붿쐞???뚯쟾 ?ㅼ?以꾩씠 ?놁뒿?덈떎.");
   } else if (grade === "BALANCED") {
-    recommendations.push("현재 범위에서 회전 부하가 균형적입니다.");
+    recommendations.push("?꾩옱 踰붿쐞?먯꽌 ?뚯쟾 遺?섍? 洹좏삎?곸엯?덈떎.");
   } else {
     if (weekdayGap > 1) {
-      recommendations.push("요일별 배치 편차가 큽니다. 회전 템플릿 순서를 재조정하세요.");
+      recommendations.push("?붿씪蹂?諛곗튂 ?몄감媛 ?쎈땲?? ?뚯쟾 ?쒗뵆由??쒖꽌瑜??ъ“?뺥븯?몄슂.");
     }
     if (plannedMinutesGap > 480) {
-      recommendations.push("요일별 계획 근로시간 편차가 큽니다. 템플릿 근무시간 또는 휴게시간을 조정하세요.");
+      recommendations.push("?붿씪蹂?怨꾪쉷 洹쇰줈?쒓컙 ?몄감媛 ?쎈땲?? ?쒗뵆由?洹쇰Т?쒓컙 ?먮뒗 ?닿쾶?쒓컙??議곗젙?섏꽭??");
     }
     if (activeWeekdays.length < 3) {
-      recommendations.push("활성 요일이 적어 편중 위험이 큽니다. 회전 적용 요일을 확장하세요.");
+      recommendations.push("?쒖꽦 ?붿씪???곸뼱 ?몄쨷 ?꾪뿕???쎈땲?? ?뚯쟾 ?곸슜 ?붿씪???뺤옣?섏꽭??");
     }
   }
 
   if (recommendations.length === 0) {
-    recommendations.push("현재 회전 밸런스는 허용 범위입니다.");
+    recommendations.push("?꾩옱 ?뚯쟾 諛몃윴?ㅻ뒗 ?덉슜 踰붿쐞?낅땲??");
   }
 
   await context.dataAccess.audit.append({
@@ -3412,668 +3206,12 @@ export async function listScheduleAttendanceAnomalies(
 
 function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnomaly) {
   if (anomaly.anomalyType === "NO_SHOW") {
-    return "출근 확인 및 사유 수집";
+    return "\uCD9C\uACB0 \uD655\uC778 \uBC0F \uC0AC\uC720 \uC218\uC9D1";
   }
   if (anomaly.lateMinutes !== null && anomaly.lateMinutes >= 30) {
-    return "지각 원인 확인 및 즉시 에스컬레이션 검토";
+    return "\uC9C0\uAC01 \uC6D0\uC778 \uD655\uC778 \uBC0F \uC989\uC2DC \uC5D0\uC2A4\uCEEC\uB808\uC774\uC158 \uAC80\uD1A0";
   }
-  return "지각 사유 확인 및 재발 방지 조치";
-}
-
-const MAX_ANOMALY_INCIDENT_HISTORY = 50;
-const MAX_ANOMALY_INCIDENT_AUDIT_ROWS = 5000;
-const DEFAULT_ANOMALY_INCIDENT_SLA_TARGET_MINUTES = 60;
-const DEFAULT_ANOMALY_INCIDENT_ESCALATION_COOLDOWN_MINUTES = 60;
-const DEFAULT_ANOMALY_INCIDENT_ESCALATION_CHANNEL = "ops-oncall";
-const DEFAULT_ANOMALY_INCIDENT_ARCHIVE_OLDER_THAN_MINUTES = 60 * 24 * 90;
-const DEFAULT_ANOMALY_INCIDENT_AUTO_ASSIGN_MODE: ScheduleAnomalyIncidentAutoAssignMode =
-  "ASSIGN_IF_UNASSIGNED";
-
-function normalizeIncidentListTopN(value: number | undefined) {
-  const normalized = value ?? 50;
-  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 200) {
-    throw new ServiceError(400, "topN must be an integer in range 1..200");
-  }
-  return normalized;
-}
-
-function parseAnomalyIncidentSlaMinutesEnvValue(
-  raw: string | undefined,
-  fieldName: string
-): number | undefined {
-  if (raw === undefined) {
-    return undefined;
-  }
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10080) {
-    throw new ServiceError(500, `${fieldName} configuration is invalid`);
-  }
-  return parsed;
-}
-
-function resolveAnomalyIncidentSlaTargetMinutes(overrideValue: number | undefined) {
-  if (overrideValue !== undefined) {
-    return overrideValue;
-  }
-
-  const parsed = parseAnomalyIncidentSlaMinutesEnvValue(
-    process.env.FLOWHR_SCHEDULING_ANOMALY_INCIDENT_SLA_MINUTES ??
-      process.env.SCHEDULING_ANOMALY_INCIDENT_SLA_MINUTES,
-    "FLOWHR_SCHEDULING_ANOMALY_INCIDENT_SLA_MINUTES"
-  );
-  return parsed ?? DEFAULT_ANOMALY_INCIDENT_SLA_TARGET_MINUTES;
-}
-
-function resolveAnomalyIncidentWarningMinutes(
-  overrideValue: number | undefined,
-  slaTargetMinutes: number
-) {
-  const normalized =
-    overrideValue ??
-    parseAnomalyIncidentSlaMinutesEnvValue(
-      process.env.FLOWHR_SCHEDULING_ANOMALY_INCIDENT_WARNING_MINUTES ??
-        process.env.SCHEDULING_ANOMALY_INCIDENT_WARNING_MINUTES,
-      "FLOWHR_SCHEDULING_ANOMALY_INCIDENT_WARNING_MINUTES"
-    ) ??
-    Math.max(0, Math.floor(slaTargetMinutes / 2));
-
-  if (normalized >= slaTargetMinutes) {
-    throw new ServiceError(
-      overrideValue !== undefined ? 400 : 500,
-      "warningMinutes must be less than slaTargetMinutes"
-    );
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentEscalationCooldownMinutes(value: number | undefined) {
-  const normalized = value ?? DEFAULT_ANOMALY_INCIDENT_ESCALATION_COOLDOWN_MINUTES;
-  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 10080) {
-    throw new ServiceError(400, "cooldownMinutes must be an integer in range 1..10080");
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentEscalationChannel(value: string | undefined) {
-  const normalized = (value ?? DEFAULT_ANOMALY_INCIDENT_ESCALATION_CHANNEL).trim();
-  if (!normalized) {
-    throw new ServiceError(400, "escalationChannel is required");
-  }
-  if (normalized.length > 100) {
-    throw new ServiceError(400, "escalationChannel must be 100 characters or fewer");
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentAutoAssigneeId(value: string) {
-  const normalized = value.trim();
-  if (!normalized) {
-    throw new ServiceError(400, "autoAssigneeId is required");
-  }
-  if (normalized.length > 100) {
-    throw new ServiceError(400, "autoAssigneeId must be 100 characters or fewer");
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentAutoAssignMode(
-  value: ScheduleAnomalyIncidentAutoAssignMode | undefined
-) {
-  return value ?? DEFAULT_ANOMALY_INCIDENT_AUTO_ASSIGN_MODE;
-}
-
-function normalizeAnomalyIncidentAutoAssignNote(value: string | undefined) {
-  if (value === undefined) {
-    return null;
-  }
-  const normalized = value.trim();
-  if (!normalized) {
-    return null;
-  }
-  if (normalized.length > 500) {
-    throw new ServiceError(400, "autoAssignNote must be 500 characters or fewer");
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentArchiveOlderThanMinutes(value: number | undefined) {
-  const normalized = value ?? DEFAULT_ANOMALY_INCIDENT_ARCHIVE_OLDER_THAN_MINUTES;
-  if (!Number.isInteger(normalized) || normalized < 0 || normalized > 5256000) {
-    throw new ServiceError(400, "olderThanMinutes must be an integer in range 0..5256000");
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentArchiveReason(value: string | undefined) {
-  if (value === undefined) {
-    return null;
-  }
-  const normalized = value.trim();
-  if (!normalized) {
-    return null;
-  }
-  if (normalized.length > 500) {
-    throw new ServiceError(400, "reason must be 500 characters or fewer");
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentReplayTopN(value: number | undefined) {
-  const normalized = value ?? 50;
-  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 200) {
-    throw new ServiceError(400, "topN must be an integer in range 1..200");
-  }
-  return normalized;
-}
-
-function normalizeAnomalyIncidentReplayIncidentIds(value: string[] | undefined) {
-  if (!value) {
-    return null;
-  }
-  const normalized = Array.from(
-    new Set(
-      value
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0)
-    )
-  );
-  if (normalized.length === 0) {
-    return null;
-  }
-  if (normalized.length > 200) {
-    throw new ServiceError(400, "incidentIds must contain at most 200 ids");
-  }
-  return normalized;
-}
-
-function normalizeReconcileTopN(value: number | undefined) {
-  const normalized = value ?? 100;
-  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 500) {
-    throw new ServiceError(400, "topN must be an integer in range 1..500");
-  }
-  return normalized;
-}
-
-function parseIsoTimestampToMillis(value: string) {
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) {
-    return null;
-  }
-  return parsed;
-}
-
-function isWithinOptionalCreatedAtRange(
-  value: Date,
-  input: { from?: Date; to?: Date }
-) {
-  if (input.from && value < input.from) {
-    return false;
-  }
-  if (input.to && value > input.to) {
-    return false;
-  }
-  return true;
-}
-
-function toSlaStatusWeight(status: ScheduleAnomalyIncidentSlaStatus) {
-  if (status === "BREACHED") {
-    return 4;
-  }
-  if (status === "WARNING") {
-    return 3;
-  }
-  if (status === "HEALTHY") {
-    return 2;
-  }
-  return 1;
-}
-
-function cloneScheduleAnomalyIncidentReadModel(
-  item: ScheduleAnomalyIncidentReadModel
-): ScheduleAnomalyIncidentReadModel {
-  return {
-    ...item,
-    updatedBy: { ...item.updatedBy },
-    history: item.history.map((entry) => ({
-      ...entry,
-      updatedBy: { ...entry.updatedBy }
-    }))
-  };
-}
-
-function toIncidentEntityLifecycleAction(
-  action: ScheduleAnomalyIncidentLifecycleAction
-): ScheduleAnomalyIncidentLifecycleActionEntity {
-  return action;
-}
-
-function toIncidentEntityLifecycleState(
-  state: ScheduleAnomalyIncidentLifecycleState
-): ScheduleAnomalyIncidentLifecycleStateEntity {
-  return state;
-}
-
-function toIncidentEntityResolutionCode(
-  resolutionCode: ScheduleAnomalyIncidentResolutionCode | null
-): ScheduleAnomalyIncidentResolutionCodeEntity | null {
-  return resolutionCode;
-}
-
-function toIncidentHistoryEntity(
-  entry: ScheduleAnomalyIncidentHistoryEntry
-): ScheduleAnomalyIncidentHistoryEntryEntity {
-  return {
-    action: toIncidentEntityLifecycleAction(entry.action),
-    state: toIncidentEntityLifecycleState(entry.state),
-    assigneeId: entry.assigneeId,
-    resolutionCode: toIncidentEntityResolutionCode(entry.resolutionCode),
-    note: entry.note,
-    updatedAt: entry.updatedAt,
-    updatedByActorId: entry.updatedBy.actorId,
-    updatedByActorRole: entry.updatedBy.actorRole
-  };
-}
-
-function fromIncidentHistoryEntity(
-  entry: ScheduleAnomalyIncidentHistoryEntryEntity
-): ScheduleAnomalyIncidentHistoryEntry {
-  return {
-    action: entry.action,
-    state: entry.state,
-    assigneeId: entry.assigneeId,
-    resolutionCode: entry.resolutionCode,
-    note: entry.note,
-    updatedAt: entry.updatedAt,
-    updatedBy: {
-      actorId: entry.updatedByActorId,
-      actorRole: entry.updatedByActorRole
-    }
-  };
-}
-
-function toScheduleAnomalyIncidentReadModelFromEntity(
-  entity: ScheduleAnomalyIncidentEntity
-): ScheduleAnomalyIncidentReadModel {
-  return {
-    incidentId: entity.incidentId,
-    organizationId: entity.organizationId,
-    state: entity.state,
-    assigneeId: entity.assigneeId,
-    resolutionCode: entity.resolutionCode,
-    note: entity.note,
-    updatedAt: entity.updatedAt,
-    updatedBy: {
-      actorId: entity.updatedByActorId,
-      actorRole: entity.updatedByActorRole
-    },
-    history: entity.history.map(fromIncidentHistoryEntity)
-  };
-}
-
-function toScheduleAnomalyIncidentUpsertInput(
-  readModel: ScheduleAnomalyIncidentReadModel
-): UpsertScheduleAnomalyIncidentInput {
-  return {
-    incidentId: readModel.incidentId,
-    organizationId: readModel.organizationId,
-    state: toIncidentEntityLifecycleState(readModel.state),
-    assigneeId: readModel.assigneeId,
-    resolutionCode: toIncidentEntityResolutionCode(readModel.resolutionCode),
-    note: readModel.note,
-    updatedAt: readModel.updatedAt,
-    updatedByActorId: readModel.updatedBy.actorId,
-    updatedByActorRole: readModel.updatedBy.actorRole,
-    history: readModel.history.map(toIncidentHistoryEntity)
-  };
-}
-
-const anomalyIncidentLifecycleStateByAction: Record<
-  ScheduleAnomalyIncidentLifecycleAction,
-  ScheduleAnomalyIncidentLifecycleState
-> = {
-  ACKNOWLEDGE: "ACKNOWLEDGED",
-  ASSIGN: "ASSIGNED",
-  RESOLVE: "RESOLVED"
-};
-
-const anomalyIncidentLifecycleAuditActionByAction: Record<
-  ScheduleAnomalyIncidentLifecycleAction,
-  string
-> = {
-  ACKNOWLEDGE: "scheduling.anomaly.incident.acknowledged",
-  ASSIGN: "scheduling.anomaly.incident.assigned",
-  RESOLVE: "scheduling.anomaly.incident.resolved"
-};
-
-const anomalyIncidentArchiveAuditAction = "scheduling.anomaly.incident.archived";
-const anomalyIncidentReplayAuditAction = "scheduling.anomaly.incident.replayed";
-
-const anomalyIncidentLifecycleActionByAuditAction: Record<
-  string,
-  ScheduleAnomalyIncidentLifecycleAction
-> = {
-  "scheduling.anomaly.incident.acknowledged": "ACKNOWLEDGE",
-  "scheduling.anomaly.incident.assigned": "ASSIGN",
-  "scheduling.anomaly.incident.resolved": "RESOLVE"
-};
-
-const anomalyIncidentLifecycleAuditActions = Object.values(
-  anomalyIncidentLifecycleAuditActionByAction
-);
-const anomalyIncidentProjectionAuditActions = [
-  ...anomalyIncidentLifecycleAuditActions,
-  anomalyIncidentArchiveAuditAction,
-  anomalyIncidentReplayAuditAction
-];
-
-function toTrimmedString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function toIncidentLifecycleState(
-  value: unknown,
-  fallback: ScheduleAnomalyIncidentLifecycleState
-): ScheduleAnomalyIncidentLifecycleState {
-  if (value === "ACKNOWLEDGED" || value === "ASSIGNED" || value === "RESOLVED") {
-    return value;
-  }
-  return fallback;
-}
-
-function toIncidentResolutionCode(value: unknown): ScheduleAnomalyIncidentResolutionCode | null {
-  if (
-    value === "FALSE_POSITIVE" ||
-    value === "ATTENDANCE_CORRECTED" ||
-    value === "MANUAL_CONFIRMED" ||
-    value === "OTHER"
-  ) {
-    return value;
-  }
-  return null;
-}
-
-function toIncidentHistoryEntriesFromAuditPayload(
-  value: unknown
-): ScheduleAnomalyIncidentHistoryEntry[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const entries: ScheduleAnomalyIncidentHistoryEntry[] = [];
-  for (const raw of value) {
-    if (!raw || typeof raw !== "object") {
-      continue;
-    }
-    const item = raw as Record<string, unknown>;
-    const actionRaw = item.action;
-    const action =
-      actionRaw === "ACKNOWLEDGE" || actionRaw === "ASSIGN" || actionRaw === "RESOLVE"
-        ? actionRaw
-        : "ACKNOWLEDGE";
-    const fallbackState = anomalyIncidentLifecycleStateByAction[action];
-    entries.push({
-      action,
-      state: toIncidentLifecycleState(item.state, fallbackState),
-      assigneeId: toTrimmedString(item.assigneeId),
-      resolutionCode: toIncidentResolutionCode(item.resolutionCode),
-      note: toTrimmedString(item.note),
-      updatedAt: toTrimmedString(item.updatedAt) ?? new Date(0).toISOString(),
-      updatedBy: {
-        actorId: toTrimmedString(item.updatedByActorId),
-        actorRole: toTrimmedString(item.updatedByActorRole) ?? "system"
-      }
-    });
-  }
-  entries.sort((left, right) => left.updatedAt.localeCompare(right.updatedAt));
-  return entries.slice(-MAX_ANOMALY_INCIDENT_HISTORY);
-}
-
-function buildScheduleAnomalyIncidentReadModelsFromAuditLogs(
-  logs: Array<{
-    action: string;
-    entityId: string | null;
-    organizationId: string | null;
-    actorRole: string;
-    actorId: string | null;
-    payload: unknown;
-    createdAt: Date;
-  }>,
-  options?: {
-    applyArchiveActions?: boolean;
-  }
-): ScheduleAnomalyIncidentReadModel[] {
-  const applyArchiveActions = options?.applyArchiveActions ?? true;
-  const byIncidentId = new Map<string, ScheduleAnomalyIncidentReadModel>();
-
-  for (const row of logs) {
-    const payload =
-      row.payload && typeof row.payload === "object"
-        ? (row.payload as Record<string, unknown>)
-        : {};
-    const incidentId = toTrimmedString(row.entityId) ?? toTrimmedString(payload.incidentId);
-    if (!incidentId) {
-      continue;
-    }
-
-    if (applyArchiveActions && row.action === anomalyIncidentArchiveAuditAction) {
-      byIncidentId.delete(incidentId);
-      continue;
-    }
-
-    if (row.action === anomalyIncidentReplayAuditAction) {
-      const existing = byIncidentId.get(incidentId);
-      const fallbackState = existing?.state ?? "ACKNOWLEDGED";
-      const state = toIncidentLifecycleState(payload.state, fallbackState);
-      const assigneeId = toTrimmedString(payload.assigneeId);
-      const resolutionCode = toIncidentResolutionCode(payload.resolutionCode);
-      const note = toTrimmedString(payload.note);
-      const updatedAt = toTrimmedString(payload.updatedAt) ?? row.createdAt.toISOString();
-      const history = toIncidentHistoryEntriesFromAuditPayload(payload.history);
-      const fallbackHistoryEntry: ScheduleAnomalyIncidentHistoryEntry = {
-        action: "ACKNOWLEDGE",
-        state,
-        assigneeId,
-        resolutionCode,
-        note,
-        updatedAt,
-        updatedBy: {
-          actorId: row.actorId ?? null,
-          actorRole: row.actorRole
-        }
-      };
-      const resolvedHistory =
-        history.length > 0
-          ? history
-          : [...(existing?.history ?? []), fallbackHistoryEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
-
-      byIncidentId.set(incidentId, {
-        incidentId,
-        organizationId: existing?.organizationId ?? row.organizationId ?? null,
-        state,
-        assigneeId,
-        resolutionCode,
-        note,
-        updatedAt,
-        updatedBy: {
-          actorId: toTrimmedString(payload.updatedByActorId) ?? row.actorId ?? null,
-          actorRole: toTrimmedString(payload.updatedByActorRole) ?? row.actorRole
-        },
-        history: resolvedHistory
-      });
-      continue;
-    }
-
-    const lifecycleAction = anomalyIncidentLifecycleActionByAuditAction[row.action];
-    if (!lifecycleAction) {
-      continue;
-    }
-
-    const fallbackState = anomalyIncidentLifecycleStateByAction[lifecycleAction];
-    const state = toIncidentLifecycleState(payload.state, fallbackState);
-    const assigneeId = toTrimmedString(payload.assigneeId);
-    const resolutionCode = toIncidentResolutionCode(payload.resolutionCode);
-    const note = toTrimmedString(payload.note);
-    const updatedAt = toTrimmedString(payload.updatedAt) ?? row.createdAt.toISOString();
-
-    const historyEntry: ScheduleAnomalyIncidentHistoryEntry = {
-      action: lifecycleAction,
-      state,
-      assigneeId,
-      resolutionCode,
-      note,
-      updatedAt,
-      updatedBy: {
-        actorId: row.actorId ?? null,
-        actorRole: row.actorRole
-      }
-    };
-
-    const existing = byIncidentId.get(incidentId);
-    const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
-    const organizationId = existing?.organizationId ?? row.organizationId ?? null;
-
-    byIncidentId.set(incidentId, {
-      incidentId,
-      organizationId,
-      state: historyEntry.state,
-      assigneeId: historyEntry.assigneeId,
-      resolutionCode: historyEntry.resolutionCode,
-      note: historyEntry.note,
-      updatedAt: historyEntry.updatedAt,
-      updatedBy: { ...historyEntry.updatedBy },
-      history
-    });
-  }
-
-  return Array.from(byIncidentId.values());
-}
-
-async function listScheduleAnomalyIncidentReadModelsFromAudit(
-  context: ServiceContext,
-  input?: { organizationId?: string; applyArchiveActions?: boolean }
-) {
-  const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentProjectionAuditActions,
-    entityType: "WorkSchedule",
-    organizationId: input?.organizationId,
-    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
-  });
-  return buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs, {
-    applyArchiveActions: input?.applyArchiveActions
-  });
-}
-
-async function getScheduleAnomalyIncidentReadModelFromAudit(
-  context: ServiceContext,
-  incidentId: string,
-  input?: { applyArchiveActions?: boolean }
-) {
-  const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentProjectionAuditActions,
-    entityType: "WorkSchedule",
-    entityId: incidentId,
-    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
-  });
-  const readModel = buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logs, {
-    applyArchiveActions: input?.applyArchiveActions
-  }).find((item) => item.incidentId === incidentId);
-  return readModel ?? null;
-}
-
-async function backfillScheduleAnomalyIncidentStoreFromReadModel(
-  context: ServiceContext,
-  readModel: ScheduleAnomalyIncidentReadModel
-) {
-  const persisted = await context.dataAccess.scheduling.upsertIncident(
-    toScheduleAnomalyIncidentUpsertInput(readModel)
-  );
-
-  try {
-    await context.dataAccess.audit.append({
-      action: "scheduling.anomaly.incident.backfilled",
-      entityType: "WorkSchedule",
-      entityId: readModel.incidentId,
-      organizationId: readModel.organizationId,
-      actorRole: "system",
-      actorId: "SCHEDULING-INCIDENT-BACKFILL",
-      payload: {
-        incidentId: readModel.incidentId,
-        state: readModel.state,
-        historyCount: readModel.history.length
-      }
-    });
-  } catch {
-    // Non-blocking path for backfill telemetry.
-  }
-
-  return toScheduleAnomalyIncidentReadModelFromEntity(persisted);
-}
-
-async function listScheduleAnomalyIncidentReadModelsFromStore(
-  context: ServiceContext,
-  input?: {
-    organizationId?: string;
-    state?: ScheduleAnomalyIncidentLifecycleState;
-    assigneeId?: string;
-    incidentIds?: string[];
-  }
-): Promise<ScheduleAnomalyIncidentReadModel[]> {
-  const incidents = await context.dataAccess.scheduling.listIncidents({
-    organizationId: input?.organizationId,
-    state: input?.state,
-    assigneeId: input?.assigneeId,
-    incidentIds: input?.incidentIds
-  });
-  return incidents.map(toScheduleAnomalyIncidentReadModelFromEntity);
-}
-
-async function listScheduleAnomalyIncidentReadModels(
-  context: ServiceContext,
-  input?: {
-    organizationId?: string;
-    state?: ScheduleAnomalyIncidentLifecycleState;
-    assigneeId?: string;
-    incidentIds?: string[];
-  }
-): Promise<ScheduleAnomalyIncidentReadModel[]> {
-  const stored = await listScheduleAnomalyIncidentReadModelsFromStore(context, input);
-  if (stored.length > 0) {
-    return stored;
-  }
-
-  const fromAudit = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
-    organizationId: input?.organizationId
-  });
-  if (fromAudit.length === 0) {
-    return [];
-  }
-
-  for (const item of fromAudit) {
-    await backfillScheduleAnomalyIncidentStoreFromReadModel(context, item);
-  }
-
-  const reloaded = await listScheduleAnomalyIncidentReadModelsFromStore(context, input);
-  return reloaded;
-}
-
-async function getScheduleAnomalyIncidentReadModel(
-  context: ServiceContext,
-  incidentId: string
-): Promise<ScheduleAnomalyIncidentReadModel | null> {
-  const stored = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
-  if (stored) {
-    return toScheduleAnomalyIncidentReadModelFromEntity(stored);
-  }
-
-  const fromAudit = await getScheduleAnomalyIncidentReadModelFromAudit(context, incidentId);
-  if (!fromAudit) {
-    return null;
-  }
-  return backfillScheduleAnomalyIncidentStoreFromReadModel(context, fromAudit);
+  return "\uC9C0\uAC01 \uC0AC\uC720 \uD655\uC778 \uBC0F \uC7AC\uBC1C \uBC29\uC9C0 \uC870\uCE58";
 }
 
 export async function updateScheduleAnomalyIncidentLifecycle(
@@ -4111,10 +3249,10 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   }
 
   const note = input.note?.trim() || null;
-  const state = anomalyIncidentLifecycleStateByAction[input.action];
+  const state = ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION[input.action];
   const updatedAt = new Date().toISOString();
   const tenantScope = resolveTenantScope(actor) ?? undefined;
-  const existing = await getScheduleAnomalyIncidentReadModel(context, incidentId);
+  const existing = await getScheduleAnomalyIncidentReadModel(context.dataAccess, incidentId);
   if (
     existing &&
     tenantScope &&
@@ -4146,17 +3284,21 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
 
   await context.dataAccess.scheduling.upsertIncident({
-    incidentId,
-    organizationId,
-    state: toIncidentEntityLifecycleState(state),
-    assigneeId: normalizedAssigneeId,
-    resolutionCode: toIncidentEntityResolutionCode(normalizedResolutionCode),
-    note: normalizedNote,
-    updatedAt,
-    updatedByActorId: actor.id ?? null,
-    updatedByActorRole: actor.role,
-    lastEscalationRequestedAt: existingStore?.lastEscalationRequestedAt ?? null,
-    history: history.map(toIncidentHistoryEntity)
+    ...toScheduleAnomalyIncidentUpsertInput({
+      incidentId,
+      organizationId,
+      state,
+      assigneeId: normalizedAssigneeId,
+      resolutionCode: normalizedResolutionCode,
+      note: normalizedNote,
+      updatedAt,
+      updatedBy: {
+        actorId: actor.id ?? null,
+        actorRole: actor.role
+      },
+      history
+    }),
+    lastEscalationRequestedAt: existingStore?.lastEscalationRequestedAt ?? null
   });
 
   const payload = {
@@ -4170,7 +3312,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   };
 
   await context.dataAccess.audit.append({
-    action: anomalyIncidentLifecycleAuditActionByAction[input.action],
+    action: ANOMALY_INCIDENT_LIFECYCLE_AUDIT_ACTION_BY_ACTION[input.action],
     entityType: "WorkSchedule",
     entityId: incidentId,
     organizationId: organizationId ?? undefined,
@@ -4222,7 +3364,7 @@ export async function listScheduleAnomalyIncidents(
   const tenantScope = resolveTenantScope(actor);
   const assigneeId = input.assigneeId?.trim();
 
-  const readModels = await listScheduleAnomalyIncidentReadModels(context, {
+  const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
     organizationId: tenantScope ?? undefined
   });
   const matched = readModels
@@ -4286,7 +3428,7 @@ export async function listScheduleAnomalyIncidentSla(
   const asOf = input.asOf ?? new Date();
   const asOfMillis = asOf.getTime();
 
-  const readModels = await listScheduleAnomalyIncidentReadModels(context, {
+  const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
     organizationId: tenantScope ?? undefined
   });
 
@@ -4985,7 +4127,7 @@ export async function archiveScheduleAnomalyIncidents(
 
       const archivedAt = new Date().toISOString();
       await context.dataAccess.audit.append({
-        action: anomalyIncidentArchiveAuditAction,
+        action: ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
         entityType: "WorkSchedule",
         entityId: candidate.incidentId,
         organizationId: candidate.organizationId ?? tenantScope ?? undefined,
@@ -5106,7 +4248,7 @@ export async function replayScheduleAnomalyIncidentStore(
   const tenantScope = resolveTenantScope(actor) ?? undefined;
 
   const logs = await context.dataAccess.audit.list({
-    actions: anomalyIncidentProjectionAuditActions,
+    actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
     entityType: "WorkSchedule",
     organizationId: tenantScope,
     limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
@@ -5169,7 +4311,7 @@ export async function replayScheduleAnomalyIncidentStore(
         lastEscalationRequestedAt: existing?.lastEscalationRequestedAt ?? null
       });
       await context.dataAccess.audit.append({
-        action: anomalyIncidentReplayAuditAction,
+        action: ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
         entityType: "WorkSchedule",
         entityId: incidentId,
         organizationId: replayModel.organizationId ?? tenantScope ?? undefined,
@@ -5286,10 +4428,13 @@ export async function reconcileScheduleAnomalyIncidentStore(
   const storeRows = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope
   });
-  const auditRows = await listScheduleAnomalyIncidentReadModelsFromAudit(context, {
-    organizationId: tenantScope,
-    applyArchiveActions: true
-  });
+  const auditRows = await listScheduleAnomalyIncidentReadModelsFromAudit(
+    context.dataAccess.audit,
+    {
+      organizationId: tenantScope,
+      applyArchiveActions: true
+    }
+  );
 
   const storeById = new Map(storeRows.map((item) => [item.incidentId, item]));
   const auditById = new Map(auditRows.map((item) => [item.incidentId, item]));
@@ -5423,7 +4568,7 @@ export async function getScheduleAnomalyIncident(
     throw new ServiceError(400, "incidentId is required");
   }
 
-  const incident = await getScheduleAnomalyIncidentReadModel(context, normalizedIncidentId);
+  const incident = await getScheduleAnomalyIncidentReadModel(context.dataAccess, normalizedIncidentId);
   if (!incident) {
     throw new ServiceError(404, "anomaly incident not found");
   }
@@ -5614,3 +4759,5 @@ export async function listScheduleAttendanceAnomalyCockpit(
     queue
   };
 }
+
+

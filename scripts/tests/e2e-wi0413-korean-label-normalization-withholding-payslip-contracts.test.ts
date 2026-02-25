@@ -7,26 +7,18 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const payslipLocale = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
-  const withholdingConsole = readUtf8(
-    "src",
-    "components",
-    "withholding-receipt",
-    "WithholdingReceiptConsole.tsx"
-  );
+  const payslipPageCopy = readUtf8("src", "app", "employee", "payslips", "page-locale-page-copy.ts");
+  const withholdingConsole = readUtf8("src", "components", "withholding-receipt", "WithholdingReceiptConsole.tsx");
   const contractsCopy = readUtf8("src", "components", "contracts", "copy.ts");
-  const workItem = readUtf8(
-    "work-items",
-    "WI-0413-korean-label-normalization-withholding-payslip-contracts.md"
-  );
+  const workItem = readUtf8("work-items", "WI-0413-korean-label-normalization-withholding-payslip-contracts.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(payslipLocale, /apiCalls:\s*"요청 호출"/);
-  assert.match(payslipLocale, /downloadCsv:\s*"표 내려받기"/);
-  assert.match(payslipLocale, /latestApi:\s*"최근 요청 상태"/);
-  assert.match(payslipLocale, /printSavePdf:\s*"인쇄\/문서 저장"/);
-  assert.match(payslipLocale, /copyPdfFileName:\s*"문서 파일명 복사"/);
-  assert.match(payslipLocale, /deductionBreakdownRaw:\s*"공제 원본\(구조 데이터\)"/);
+  assert.match(payslipPageCopy, /apiCalls:\s*"요청 호출"/);
+  assert.match(payslipPageCopy, /downloadCsv:\s*"표 내려받기"/);
+  assert.match(payslipPageCopy, /latestApi:\s*"최근 요청 상태"/);
+  assert.match(payslipPageCopy, /printSavePdf:\s*"인쇄\/문서 저장"/);
+  assert.match(payslipPageCopy, /copyPdfFileName:\s*"문서 파일명 복사"/);
+  assert.match(payslipPageCopy, /deductionBreakdownRaw:\s*"공제 원본\(구조 데이터\)"/);
 
   assert.match(
     withholdingConsole,

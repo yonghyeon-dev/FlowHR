@@ -11,24 +11,23 @@ import {
   normalizeRuntimeDiagnosticMessage,
   resolveDeductionDescriptionMap,
   resolvePayslipPageCopy,
-  resolvePayslipSearchSortCopy
+  resolvePayslipSearchSortCopy,
+  setPayslipRuntimeLocale
 } from "@/app/employee/payslips/page-locale-helpers";
 
 import {
-  buildQuery,
   escapeCsv,
   firstDayOfMonthLocal,
   isDevToolsEnabled,
   lastDayOfMonthLocal,
   lastThreeMonthsRangeLocal,
   previousMonthRangeLocal,
-  toIso,
-  type ApiLog,
   type AttendanceAggregateDto,
   type PayrollRunDto,
   type PayslipSearchScope,
   type PayslipSortOption
 } from "@/app/employee/payslips/page-helpers";
+import { usePayslipApi } from "@/app/employee/payslips/use-payslip-api";
 import { usePayslipDerivedState } from "@/app/employee/payslips/use-payslip-derived-state";
 import { EmployeePayslipsPageView } from "@/app/employee/payslips/page-view";
 export default function EmployeePayslipsPage() {
@@ -46,8 +45,6 @@ export default function EmployeePayslipsPage() {
   const [payslipSearchQuery, setPayslipSearchQuery] = useState("");
   const [payslipSortOption, setPayslipSortOption] = useState<PayslipSortOption>("latest_desc");
   const [aggregate, setAggregate] = useState<AttendanceAggregateDto | null>(null);
-  const [logs, setLogs] = useState<ApiLog[]>([]);
-  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -58,6 +55,14 @@ export default function EmployeePayslipsPage() {
 
   const searchSortCopy = useMemo(() => resolvePayslipSearchSortCopy(isKoLocale), [isKoLocale]);
   const pageCopy = useMemo(() => resolvePayslipPageCopy(isKoLocale), [isKoLocale]);
+
+  useEffect(() => {
+    setPayslipRuntimeLocale(runtimeLocale);
+    return () => {
+      setPayslipRuntimeLocale(null);
+    };
+  }, [runtimeLocale]);
+
   const localizedSupabaseSessionError = useMemo(() => {
     if (!supabaseSessionError) {
       return null;
@@ -81,6 +86,18 @@ export default function EmployeePayslipsPage() {
         : "";
 
   const usesBearerToken = bearerToken.trim().length > 0;
+  const { logs, pendingLabel, refreshPayslips, appendClientLog, clearLogs } = usePayslipApi({
+    pageCopy,
+    runtimeLocale,
+    usesBearerToken,
+    bearerToken,
+    employeeId,
+    organizationId,
+    periodStart,
+    periodEnd,
+    setRuns,
+    setAggregate
+  });
   const {
     compareCandidates,
     compareInsightAriaLabel,
@@ -156,98 +173,6 @@ export default function EmployeePayslipsPage() {
     }
   }, [employeeId, isProductionRuntime, setEmployeeId, supabaseSession?.actorId, supabaseSession?.userId]);
 
-  async function callApi(
-    label: string,
-    method: "GET" | "POST",
-    path: string,
-    payload?: Record<string, unknown>
-  ) {
-    setPendingLabel(label);
-    try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
-
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken.trim()}`;
-      } else {
-        headers["x-actor-role"] = "employee";
-        headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
-        if (organizationId.trim().length > 0) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      }
-
-      const response = await fetch(path, {
-        method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
-      });
-
-      const text = await response.text();
-      let body: unknown = null;
-      if (text.trim().length > 0) {
-        try {
-          body = JSON.parse(text);
-        } catch {
-          body = text;
-        }
-      }
-
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale),
-          body
-        },
-        ...prev
-      ]);
-
-      return { response, body };
-    } finally {
-      setPendingLabel(null);
-    }
-  }
-
-  async function refreshPayslips() {
-    const from = toIso(periodStart);
-    const to = toIso(periodEnd);
-    const targetEmployeeId = employeeId.trim() || "EMP-1001";
-
-    const [runsRes, aggregateRes] = await Promise.all([
-      callApi(
-        pageCopy.logs.fetchPayslips,
-        "GET",
-        `/api/payroll/runs${buildQuery({
-          from,
-          to,
-          employeeId: targetEmployeeId,
-          state: "CONFIRMED"
-        })}`
-      ),
-      callApi(
-        pageCopy.logs.fetchAttendance,
-        "GET",
-        `/api/attendance/aggregates${buildQuery({ from, to, employeeId: targetEmployeeId })}`
-      )
-    ]);
-
-    if (runsRes.response.ok) {
-      const parsed = runsRes.body as { runs?: PayrollRunDto[] };
-      setRuns(Array.isArray(parsed.runs) ? parsed.runs : []);
-    }
-
-    if (aggregateRes.response.ok) {
-      const parsed = aggregateRes.body as { aggregates?: AttendanceAggregateDto[] };
-      const aggregates = Array.isArray(parsed.aggregates) ? parsed.aggregates : [];
-      setAggregate(aggregates[0] ?? null);
-    }
-  }
-
   function applyCurrentMonthRange() {
     setPeriodStart(firstDayOfMonthLocal());
     setPeriodEnd(lastDayOfMonthLocal());
@@ -271,29 +196,11 @@ export default function EmployeePayslipsPage() {
     }
     try {
       await navigator.clipboard.writeText(selectedRun.id);
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: pageCopy.logs.copyPayslipId,
-          status: 200,
-          ok: true,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: { runId: selectedRun.id }
-        },
-        ...prev
-      ]);
+      appendClientLog(pageCopy.logs.copyPayslipId, true, 200, { runId: selectedRun.id });
     } catch (error) {
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: pageCopy.logs.copyPayslipId,
-          status: 500,
-          ok: false,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: { error: error instanceof Error ? error.message : String(error) }
-        },
-        ...prev
-      ]);
+      appendClientLog(pageCopy.logs.copyPayslipId, false, 500, {
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
@@ -303,44 +210,12 @@ export default function EmployeePayslipsPage() {
     }
     try {
       await navigator.clipboard.writeText(payslipFileName);
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: pageCopy.logs.copyPdfFileName,
-          status: 200,
-          ok: true,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: { fileName: payslipFileName }
-        },
-        ...prev
-      ]);
+      appendClientLog(pageCopy.logs.copyPdfFileName, true, 200, { fileName: payslipFileName });
     } catch (error) {
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: pageCopy.logs.copyPdfFileName,
-          status: 500,
-          ok: false,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: { error: error instanceof Error ? error.message : String(error) }
-        },
-        ...prev
-      ]);
+      appendClientLog(pageCopy.logs.copyPdfFileName, false, 500, {
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
-  }
-
-  function appendClientLog(label: string, ok: boolean, status: number, body: unknown) {
-    setLogs((prev) => [
-      {
-        id: Date.now(),
-        label,
-        status,
-        ok,
-        at: new Date().toLocaleString(runtimeLocale),
-        body
-      },
-      ...prev
-    ]);
   }
 
   async function copyLatestFailureCause() {
@@ -431,10 +306,6 @@ export default function EmployeePayslipsPage() {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
-  }
-
-  function clearLogs() {
-    setLogs([]);
   }
 
   function resetPayslipSearchControls() {

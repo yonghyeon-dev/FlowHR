@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   contractCategoryLabelByLocale,
@@ -10,7 +10,7 @@ import {
   type ContractCategory,
   type ContractTemplateBuilderCopy
 } from "@/components/contracts/copy";
-import { readJson } from "@/components/contracts/http";
+import { readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
 import { useI18n } from "@/lib/i18n/provider";
 
 type ClauseDraft = {
@@ -76,6 +76,13 @@ export default function ContractTemplateBuilder() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [createdTemplate, setCreatedTemplate] = useState<CreatedTemplate | null>(null);
+
+  useEffect(() => {
+    setContractsRuntimeLocale(locale);
+    return () => {
+      setContractsRuntimeLocale(null);
+    };
+  }, [locale]);
 
   const templateBody = useMemo(
     () =>

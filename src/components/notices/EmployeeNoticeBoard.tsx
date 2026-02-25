@@ -59,6 +59,8 @@ export default function EmployeeNoticeBoard() {
   const [readReceipts, setReadReceipts] = useState<NoticeReadReceipt[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [logs, setLogs] = useState<NoticeBoardLog[]>([]);
 
   const bearerToken =
@@ -77,6 +79,20 @@ export default function EmployeeNoticeBoard() {
     () => notices.filter((notice) => !readNoticeIds.includes(notice.id)).length,
     [notices, readNoticeIds]
   );
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredNotices = useMemo(() => {
+    return notices.filter((notice) => {
+      if (unreadOnly && readNoticeIds.includes(notice.id)) {
+        return false;
+      }
+      if (!normalizedSearchQuery) {
+        return true;
+      }
+      const title = notice.title.toLowerCase();
+      const body = notice.body.toLowerCase();
+      return title.includes(normalizedSearchQuery) || body.includes(normalizedSearchQuery);
+    });
+  }, [notices, normalizedSearchQuery, readNoticeIds, unreadOnly]);
   const readAtByNoticeId = useMemo(() => {
     const map = new Map<string, string>();
     readReceipts.forEach((receipt) => {
@@ -212,6 +228,11 @@ export default function EmployeeNoticeBoard() {
     }
   }
 
+  function clearFilters() {
+    setSearchQuery("");
+    setUnreadOnly(false);
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -244,9 +265,28 @@ export default function EmployeeNoticeBoard() {
             {copy.accessTokenLabel}
             <textarea rows={2} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
           </label>
+          <label>
+            {copy.searchLabel}
+            <input
+              value={searchQuery}
+              placeholder={copy.searchPlaceholder}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </label>
+          <label className="checkbox-inline">
+            <input
+              type="checkbox"
+              checked={unreadOnly}
+              onChange={(event) => setUnreadOnly(event.target.checked)}
+            />
+            <span>{copy.unreadOnlyLabel}</span>
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void loadNotices()} disabled={pending}>
               {copy.refreshAction}
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={clearFilters} disabled={pending}>
+              {copy.clearFiltersAction}
             </button>
             <button
               className="btn btn-secondary"
@@ -258,7 +298,7 @@ export default function EmployeeNoticeBoard() {
             </button>
           </div>
           <p className="small muted">
-            {copy.summaryLabel}: {publishedCount} · {copy.unreadLabel}: {unreadCount}
+            {copy.summaryLabel}: {publishedCount} · {copy.filteredSummaryLabel}: {filteredNotices.length} · {copy.unreadLabel}: {unreadCount}
           </p>
           <p className="small muted">{copy.logsCountLabel}: {logs.length}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -268,9 +308,11 @@ export default function EmployeeNoticeBoard() {
           <h2>{copy.listTitle}</h2>
           {notices.length === 0 ? (
             <p className="small muted">{copy.listEmpty}</p>
+          ) : filteredNotices.length === 0 ? (
+            <p className="small muted">{copy.filteredListEmpty}</p>
           ) : (
             <ul className="simple-list">
-              {notices.map((notice) => {
+              {filteredNotices.map((notice) => {
                 const isRead = readNoticeIds.includes(notice.id);
                 const readAt = readAtByNoticeId.get(notice.id) ?? null;
                 return (

@@ -19,6 +19,7 @@ async function run() {
   const payslipsSurface = `${payslipsPage}\n${payslipsDerivedState}\n${payslipsPageView}`;
   const payslipHelpers = readUtf8("src", "app", "employee", "payslips", "page-helpers.ts");
   const payslipLocaleHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
+  const payslipLocaleRuntime = readUtf8("src", "app", "employee", "payslips", "page-locale-runtime.ts");
   const globalsCss = readUtf8("src", "app", "globals.css");
   const workItem = readUtf8(
     "work-items",
@@ -31,7 +32,8 @@ async function run() {
   assert.match(payslipsSurface, /compareInsightCards/);
   assert.match(payslipsPageView, /payslip-compare-insight/);
   assert.match(payslipsDerivedState, /resolveCompareInsightTitle\(isKoLocale\)/);
-  assert.match(payslipLocaleHelpers, /Month-over-month explanation/);
+  assert.match(payslipLocaleHelpers, /resolveCompareInsightTitle,/);
+  assert.match(payslipLocaleRuntime, /Month-over-month explanation/);
   assert.match(globalsCss, /\.payslip-compare-insight/);
   assert.match(globalsCss, /\.payslip-compare-insight-grid/);
 

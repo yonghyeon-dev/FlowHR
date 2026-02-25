@@ -62,6 +62,12 @@ async function run() {
     "withholding-receipt",
     "WithholdingReceiptConsole.tsx"
   );
+  const withholdingCopySource = readUtf8(
+    "src",
+    "components",
+    "withholding-receipt",
+    "copy-runtime.ts"
+  );
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
 
@@ -94,8 +100,13 @@ async function run() {
   );
   assert.match(
     employeeConsoleSource,
-    /Withholding Receipt/,
-    "employee console should include heading text"
+    /withholdingReceiptCopyByLocale/,
+    "employee console should resolve locale copy at runtime"
+  );
+  assert.match(
+    withholdingCopySource,
+    /title: "Withholding Receipt"/,
+    "withholding receipt copy should include english heading text"
   );
   assert.match(
     payrollApiSpec,

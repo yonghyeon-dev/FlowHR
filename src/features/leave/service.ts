@@ -1,11 +1,61 @@
-import type { Actor } from "@/lib/actor";
+﻿import type { Actor } from "@/lib/actor";
 import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
+import {
+  buildPromotionNoticeMessage,
+  type PromotionDeliveryProvider,
+  type PromotionEmailTemplateConfig,
+  type PromotionWebhookConfig,
+  sendPromotionEmailTemplate,
+  sendPromotionWebhook,
+  resolvePromotionEmailTemplateConfig,
+  resolvePromotionWebhookConfig
+} from "@/features/leave/promotion-delivery-helpers";
+import {
+  toPromotionDeliveryRecipientView,
+  toPromotionDeliverySummaryView,
+  toPromotionDispatchRecipients,
+  toPromotionTargetSnapshots,
+  toPromotionTargetSnapshotsFromRecipients,
+  toRecipientStatus,
+  toRetryCountByEmployeeId,
+  type PromotionDeliveryRecipientView,
+  type PromotionDeliveryStatus,
+  type PromotionDeliverySummaryView,
+  type PromotionTargetSnapshot
+} from "@/features/leave/promotion-history-views";
+import {
+  DEFAULT_ALLOW_HALF_DAY,
+  DEFAULT_ALLOW_HOURLY,
+  DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED,
+  DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS,
+  DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE,
+  DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS,
+  DEFAULT_CARRY_OVER_CAP_DAYS,
+  DEFAULT_GRANTED_DAYS,
+  DEFAULT_HOURLY_INCREMENT_MINUTES,
+  DEFAULT_MAX_CONSECUTIVE_DAYS,
+  DEFAULT_MAX_HOURS_PER_REQUEST,
+  DEFAULT_MIN_NOTICE_DAYS,
+  SEOUL_OFFSET_MS,
+  assertPolicyRequestConstraints,
+  calculateLeaveDays,
+  calculateProRatedAnnualGrantDays,
+  calculateRequestedLeave,
+  ensureValidPeriod,
+  formatSeoulDay,
+  fromSeoulDayIndex,
+  renderPromotionMessageTemplate,
+  resolvePolicyRules,
+  resolveSeoulYearEnd,
+  roundTo2,
+  toSeoulDayIndex,
+  type LeavePolicyRules
+} from "@/features/leave/policy-time-helpers";
 import type {
   DataAccess,
   LeaveBalanceEntity,
-  LeavePromotionDeliveryEntity,
   LeavePromotionDeliveryRecipientEntity,
   LeaveRequestEntity,
   LeaveRequestUnit,
@@ -15,23 +65,6 @@ import type { DomainEventPublisher } from "@/features/shared/domain-event-publis
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
-
-const SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
-const FULL_DAY_HOURS = 8;
-const DEFAULT_GRANTED_DAYS = 15;
-const DEFAULT_CARRY_OVER_CAP_DAYS = 5;
-const DEFAULT_ALLOW_HALF_DAY = true;
-const DEFAULT_ALLOW_HOURLY = true;
-const DEFAULT_HOURLY_INCREMENT_MINUTES = 30;
-const DEFAULT_MAX_HOURS_PER_REQUEST = 8;
-const DEFAULT_MIN_NOTICE_DAYS = 0;
-const DEFAULT_MAX_CONSECUTIVE_DAYS: number | null = null;
-const DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED = false;
-const DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS = 5;
-const DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS = 30;
-const DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE =
-  "Annual leave notice: Please use your remaining annual leave before year end.";
 
 type ServiceContext = {
   actor: Actor | null;
@@ -96,21 +129,6 @@ type UpsertLeavePolicyInput = {
   annualLeavePromotionMessageTemplate?: string | null;
 };
 
-type LeavePolicyRules = {
-  annualGrantDays: number;
-  carryOverCapDays: number;
-  allowHalfDay: boolean;
-  allowHourly: boolean;
-  hourlyIncrementMinutes: number;
-  maxHoursPerRequest: number;
-  minNoticeDays: number;
-  maxConsecutiveDays: number | null;
-  annualLeavePromotionEnabled: boolean;
-  annualLeavePromotionThresholdDays: number;
-  annualLeavePromotionLeadDays: number;
-  annualLeavePromotionMessageTemplate: string;
-};
-
 type PreviewAnnualLeavePromotionInput = {
   organizationId?: string;
   asOf?: Date;
@@ -147,593 +165,12 @@ type RetryLeavePromotionDeliveryInput = {
   recipientEmployeeIds?: string[];
 };
 
-type PromotionWebhookProvider = "discord" | "slack";
-type PromotionDeliveryProvider = PromotionWebhookProvider | "email_template";
-
-type PromotionWebhookConfig = {
-  url: string;
-  provider: PromotionWebhookProvider;
-  source: string;
-};
-
-type PromotionEmailTemplateConfig = {
-  url: string;
-  token: string | null;
-  from: string;
-  urlSource: string;
-  tokenSource: string | null;
-  fromSource: string;
-};
-
-type PromotionDeliveryStatus = "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
-type PromotionRecipientStatus = "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
-
-type PromotionTargetSnapshot = {
-  employeeId: string;
-  name: string | null;
-  email: string | null;
-  remainingDays: number;
-  grantedDays: number;
-  usedDays: number;
-  lastAccrualYear: number | null;
-  eligibleNow: boolean;
-};
-
-type PromotionDeliverySummaryView = {
-  id: string;
-  organizationId: string;
-  asOf: string;
-  includeUpcoming: boolean;
-  dryRun: boolean;
-  channel: "webhook" | "email_template";
-  provider: string | null;
-  status: PromotionDeliveryStatus;
-  targetCount: number;
-  recipientCount: number;
-  missingEmailCount: number;
-  sentTargetCount: number;
-  webhookSource: string | null;
-  emailTemplateSource: string | null;
-  emailTemplateId: string | null;
-  dispatchedAt: string | null;
-  requestedByActorRole: string;
-  requestedByActorId: string | null;
-  retryOfDeliveryId: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type PromotionDeliveryRecipientView = {
-  id: string;
-  deliveryId: string;
-  employeeId: string;
-  email: string | null;
-  name: string | null;
-  remainingDays: number;
-  grantedDays: number;
-  usedDays: number;
-  lastAccrualYear: number | null;
-  eligibleNow: boolean;
-  status: PromotionRecipientStatus;
-  lastError: string | null;
-  sentAt: string | null;
-  retryCount: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
 type ListLeaveRequestsInput = {
   periodStart: Date;
   periodEnd: Date;
   employeeId?: string;
   state?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 };
-
-function toSeoulDayIndex(value: Date) {
-  const adjusted = new Date(value.getTime() + SEOUL_OFFSET_MS);
-  return Math.floor(
-    Date.UTC(adjusted.getUTCFullYear(), adjusted.getUTCMonth(), adjusted.getUTCDate()) / DAY_MS
-  );
-}
-
-function fromSeoulDayIndex(dayIndex: number) {
-  return new Date(dayIndex * DAY_MS - SEOUL_OFFSET_MS);
-}
-
-function formatSeoulDay(value: Date) {
-  const adjusted = new Date(value.getTime() + SEOUL_OFFSET_MS);
-  const year = adjusted.getUTCFullYear();
-  const month = String(adjusted.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(adjusted.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function resolveSeoulYearEnd(value: Date) {
-  const adjusted = new Date(value.getTime() + SEOUL_OFFSET_MS);
-  const year = adjusted.getUTCFullYear();
-  return new Date(Date.UTC(year, 11, 31, 14, 59, 59, 999));
-}
-
-function calculateLeaveDays(startDate: Date, endDate: Date) {
-  if (endDate < startDate) {
-    throw new ServiceError(400, "endDate must be same or after startDate");
-  }
-  const startDay = toSeoulDayIndex(startDate);
-  const endDay = toSeoulDayIndex(endDate);
-  const days = endDay - startDay + 1;
-  if (days <= 0) {
-    throw new ServiceError(400, "leave days must be positive");
-  }
-  return days;
-}
-
-function roundTo2(value: number) {
-  return Math.round(value * 100) / 100;
-}
-
-function calculateProRatedAnnualGrantDays(input: {
-  joinDate: Date;
-  year: number;
-  annualGrantDays: number;
-}) {
-  const adjustedJoin = new Date(input.joinDate.getTime() + SEOUL_OFFSET_MS);
-  const joinYear = adjustedJoin.getUTCFullYear();
-
-  if (joinYear > input.year) {
-    return 0;
-  }
-  if (joinYear < input.year) {
-    return input.annualGrantDays;
-  }
-
-  const joinMonthIndex = adjustedJoin.getUTCMonth();
-  const activeMonths = 12 - joinMonthIndex;
-  if (activeMonths <= 0) {
-    return 0;
-  }
-
-  const prorated = Math.floor((input.annualGrantDays * activeMonths) / 12);
-  return Math.max(1, prorated);
-}
-
-function calculateHoursBetween(startDate: Date, endDate: Date) {
-  if (endDate <= startDate) {
-    throw new ServiceError(400, "endDate must be after startDate");
-  }
-  return roundTo2((endDate.getTime() - startDate.getTime()) / (60 * 60 * 1000));
-}
-
-function isSameSeoulDay(left: Date, right: Date) {
-  return toSeoulDayIndex(left) === toSeoulDayIndex(right);
-}
-
-function resolvePolicyRules(policy?: {
-  annualGrantDays: number;
-  carryOverCapDays: number;
-  allowHalfDay?: boolean;
-  allowHourly?: boolean;
-  hourlyIncrementMinutes?: number;
-  maxHoursPerRequest?: number;
-  minNoticeDays?: number;
-  maxConsecutiveDays?: number | null;
-  annualLeavePromotionEnabled?: boolean;
-  annualLeavePromotionThresholdDays?: number;
-  annualLeavePromotionLeadDays?: number;
-  annualLeavePromotionMessageTemplate?: string | null;
-} | null): LeavePolicyRules {
-  return {
-    annualGrantDays: policy?.annualGrantDays ?? DEFAULT_GRANTED_DAYS,
-    carryOverCapDays: policy?.carryOverCapDays ?? DEFAULT_CARRY_OVER_CAP_DAYS,
-    allowHalfDay: policy?.allowHalfDay ?? DEFAULT_ALLOW_HALF_DAY,
-    allowHourly: policy?.allowHourly ?? DEFAULT_ALLOW_HOURLY,
-    hourlyIncrementMinutes: policy?.hourlyIncrementMinutes ?? DEFAULT_HOURLY_INCREMENT_MINUTES,
-    maxHoursPerRequest: policy?.maxHoursPerRequest ?? DEFAULT_MAX_HOURS_PER_REQUEST,
-    minNoticeDays: policy?.minNoticeDays ?? DEFAULT_MIN_NOTICE_DAYS,
-    maxConsecutiveDays: policy?.maxConsecutiveDays ?? DEFAULT_MAX_CONSECUTIVE_DAYS,
-    annualLeavePromotionEnabled:
-      policy?.annualLeavePromotionEnabled ?? DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED,
-    annualLeavePromotionThresholdDays:
-      policy?.annualLeavePromotionThresholdDays ?? DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS,
-    annualLeavePromotionLeadDays:
-      policy?.annualLeavePromotionLeadDays ?? DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS,
-    annualLeavePromotionMessageTemplate:
-      policy?.annualLeavePromotionMessageTemplate?.trim() ||
-      DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE
-  };
-}
-
-function renderPromotionMessageTemplate(
-  template: string,
-  values: Record<string, string | number>
-): string {
-  return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) => {
-    const value = values[key];
-    return value === undefined || value === null ? match : String(value);
-  });
-}
-
-function normalizeEnvValue(value: string | undefined) {
-  return (value ?? "").trim();
-}
-
-function resolvePromotionWebhookProvider(webhookUrl: string): PromotionWebhookProvider {
-  const configured = normalizeEnvValue(
-    process.env.FLOWHR_LEAVE_PROMOTION_WEBHOOK_PROVIDER ??
-      process.env.FLOWHR_ALERT_WEBHOOK_PROVIDER
-  ).toLowerCase();
-  if (configured === "discord" || configured === "slack") {
-    return configured;
-  }
-
-  if (
-    webhookUrl.includes("discord.com/api/webhooks/") ||
-    webhookUrl.includes("discordapp.com/api/webhooks/")
-  ) {
-    return "discord";
-  }
-  if (webhookUrl.includes("hooks.slack.com/services/")) {
-    return "slack";
-  }
-  return "slack";
-}
-
-function resolvePromotionWebhookConfig(): PromotionWebhookConfig | null {
-  const candidates: Array<{ source: string; value: string }> = [
-    {
-      source: "FLOWHR_LEAVE_PROMOTION_WEBHOOK_URL",
-      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_WEBHOOK_URL)
-    },
-    {
-      source: "FLOWHR_LEAVE_PROMOTION_DISCORD_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_DISCORD_WEBHOOK)
-    },
-    {
-      source: "FLOWHR_LEAVE_PROMOTION_SLACK_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_SLACK_WEBHOOK)
-    },
-    {
-      source: "FLOWHR_ALERT_WEBHOOK_URL",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_WEBHOOK_URL)
-    },
-    {
-      source: "FLOWHR_ALERT_DISCORD_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_DISCORD_WEBHOOK)
-    },
-    {
-      source: "FLOWHR_ALERT_SLACK_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_SLACK_WEBHOOK)
-    }
-  ];
-
-  const matched = candidates.find((candidate) => candidate.value.length > 0);
-  if (!matched) {
-    return null;
-  }
-
-  return {
-    url: matched.value,
-    provider: resolvePromotionWebhookProvider(matched.value),
-    source: matched.source
-  };
-}
-
-function resolvePromotionEmailTemplateConfig(): PromotionEmailTemplateConfig | null {
-  const urlCandidates: Array<{ source: string; value: string }> = [
-    {
-      source: "FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL",
-      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL)
-    },
-    {
-      source: "FLOWHR_ALERT_EMAIL_TEMPLATE_URL",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_EMAIL_TEMPLATE_URL)
-    }
-  ];
-  const fromCandidates: Array<{ source: string; value: string }> = [
-    {
-      source: "FLOWHR_LEAVE_PROMOTION_EMAIL_FROM",
-      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)
-    },
-    {
-      source: "FLOWHR_ALERT_EMAIL_FROM",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_EMAIL_FROM)
-    }
-  ];
-  const tokenCandidates: Array<{ source: string; value: string }> = [
-    {
-      source: "FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_TOKEN",
-      value: normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_TOKEN)
-    },
-    {
-      source: "FLOWHR_ALERT_EMAIL_TEMPLATE_TOKEN",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_EMAIL_TEMPLATE_TOKEN)
-    }
-  ];
-
-  const matchedUrl = urlCandidates.find((candidate) => candidate.value.length > 0);
-  const matchedFrom = fromCandidates.find((candidate) => candidate.value.length > 0);
-  if (!matchedUrl || !matchedFrom) {
-    return null;
-  }
-  const matchedToken = tokenCandidates.find((candidate) => candidate.value.length > 0);
-
-  return {
-    url: matchedUrl.value,
-    token: matchedToken?.value ?? null,
-    from: matchedFrom.value,
-    urlSource: matchedUrl.source,
-    tokenSource: matchedToken?.source ?? null,
-    fromSource: matchedFrom.source
-  };
-}
-
-function buildPromotionNoticeMessage(input: {
-  organizationId: string;
-  asOf: string;
-  includeUpcoming: boolean;
-  dryRun: boolean;
-  noticeWindow: {
-    startAt: string;
-    endAt: string;
-    isOpen: boolean;
-  };
-  summary: {
-    potentialTargetCount: number;
-    displayTargetCount: number;
-    eligibleNowCount: number;
-  };
-  targets: Array<{
-    employeeId: string;
-    name: string | null;
-    email: string | null;
-    remainingDays: number;
-    eligibleNow: boolean;
-  }>;
-  announcementDraft: {
-    title: string;
-    body: string;
-  };
-}) {
-  const headline = input.dryRun
-    ? "[FlowHR] 연차 촉진 공지 드라이런"
-    : "[FlowHR] 연차 촉진 공지 발송";
-
-  const lines = [
-    headline,
-    `- 조직: ${input.organizationId}`,
-    `- 기준 시각(asOf): ${input.asOf}`,
-    `- 공지 윈도우: ${input.noticeWindow.startAt} ~ ${input.noticeWindow.endAt}`,
-    `- 윈도우 오픈: ${input.noticeWindow.isOpen ? "yes" : "no"}`,
-    `- includeUpcoming: ${input.includeUpcoming ? "yes" : "no"}`,
-    `- 대상자: 표시 ${input.summary.displayTargetCount}명 / 즉시 ${input.summary.eligibleNowCount}명 / 잠재 ${input.summary.potentialTargetCount}명`,
-    "- 공지 제목:",
-    input.announcementDraft.title,
-    "- 공지 본문:",
-    input.announcementDraft.body
-  ];
-
-  const sampleTargets = input.targets.slice(0, 30);
-  if (sampleTargets.length > 0) {
-    lines.push("- 대상자 샘플:");
-    for (const target of sampleTargets) {
-      const name = target.name?.trim() || "-";
-      const email = target.email?.trim() || "-";
-      lines.push(
-        `  - ${target.employeeId} | ${name} | ${email} | remaining=${target.remainingDays} | ${target.eligibleNow ? "eligible" : "upcoming"}`
-      );
-    }
-  }
-  if (input.targets.length > sampleTargets.length) {
-    lines.push(`  - ... and ${input.targets.length - sampleTargets.length} more target(s)`);
-  }
-
-  return lines.join("\n");
-}
-
-async function sendPromotionWebhook(config: PromotionWebhookConfig, message: string) {
-  const payload =
-    config.provider === "discord"
-      ? JSON.stringify({ content: message })
-      : JSON.stringify({ text: message });
-
-  const response = await fetch(config.url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: payload
-  });
-
-  if (!response.ok) {
-    const responseBody = await response.text();
-    throw new Error(`${config.provider} webhook request failed: ${response.status} ${responseBody}`);
-  }
-}
-
-async function sendPromotionEmailTemplate(
-  config: PromotionEmailTemplateConfig,
-  payload: {
-    templateId: string;
-    from: string;
-    subject: string;
-    body: string;
-    organizationId: string;
-    asOf: string;
-    includeUpcoming: boolean;
-    noticeWindow?: { startAt: string; endAt: string; isOpen: boolean };
-    summary?: { potentialTargetCount: number; displayTargetCount: number; eligibleNowCount: number };
-    recipients: Array<{
-      employeeId: string;
-      email: string;
-      name: string | null;
-      remainingDays: number;
-      grantedDays: number;
-      usedDays: number;
-      lastAccrualYear: number | null;
-      eligibleNow: boolean;
-    }>;
-  }
-) {
-  const headers: Record<string, string> = {
-    "content-type": "application/json"
-  };
-  if (config.token) {
-    headers.authorization = `Bearer ${config.token}`;
-  }
-
-  const response = await fetch(config.url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const responseBody = await response.text();
-    throw new Error(`email template request failed: ${response.status} ${responseBody}`);
-  }
-}
-
-function toPromotionTargetSnapshots(targets: Array<{
-  employeeId: string;
-  name: string | null;
-  email: string | null;
-  remainingDays: number;
-  grantedDays: number;
-  usedDays: number;
-  lastAccrualYear: number | null;
-  eligibleNow: boolean;
-}>): PromotionTargetSnapshot[] {
-  return targets.map((target) => ({
-    employeeId: target.employeeId,
-    name: target.name,
-    email: target.email,
-    remainingDays: target.remainingDays,
-    grantedDays: target.grantedDays,
-    usedDays: target.usedDays,
-    lastAccrualYear: target.lastAccrualYear,
-    eligibleNow: target.eligibleNow
-  }));
-}
-
-function toPromotionTargetSnapshotsFromRecipients(
-  recipients: LeavePromotionDeliveryRecipientEntity[]
-): PromotionTargetSnapshot[] {
-  return recipients.map((recipient) => ({
-    employeeId: recipient.employeeId,
-    name: recipient.name,
-    email: recipient.email,
-    remainingDays: recipient.remainingDays,
-    grantedDays: recipient.grantedDays,
-    usedDays: recipient.usedDays,
-    lastAccrualYear: recipient.lastAccrualYear,
-    eligibleNow: recipient.eligibleNow
-  }));
-}
-
-function toPromotionDispatchRecipients(targets: PromotionTargetSnapshot[]) {
-  return targets.flatMap((target) => {
-    const email = target.email?.trim() || "";
-    if (!email) {
-      return [];
-    }
-    return [
-      {
-        employeeId: target.employeeId,
-        email,
-        name: target.name,
-        remainingDays: target.remainingDays,
-        grantedDays: target.grantedDays,
-        usedDays: target.usedDays,
-        lastAccrualYear: target.lastAccrualYear,
-        eligibleNow: target.eligibleNow
-      }
-    ];
-  });
-}
-
-function toPromotionDeliverySummaryView(
-  delivery: LeavePromotionDeliveryEntity
-): PromotionDeliverySummaryView {
-  return {
-    id: delivery.id,
-    organizationId: delivery.organizationId,
-    asOf: delivery.asOf.toISOString(),
-    includeUpcoming: delivery.includeUpcoming,
-    dryRun: delivery.dryRun,
-    channel: delivery.channel,
-    provider: delivery.provider,
-    status: delivery.status,
-    targetCount: delivery.targetCount,
-    recipientCount: delivery.recipientCount,
-    missingEmailCount: delivery.missingEmailCount,
-    sentTargetCount: delivery.sentTargetCount,
-    webhookSource: delivery.webhookSource,
-    emailTemplateSource: delivery.emailTemplateSource,
-    emailTemplateId: delivery.emailTemplateId,
-    dispatchedAt: delivery.dispatchedAt ? delivery.dispatchedAt.toISOString() : null,
-    requestedByActorRole: delivery.requestedByActorRole,
-    requestedByActorId: delivery.requestedByActorId,
-    retryOfDeliveryId: delivery.retryOfDeliveryId,
-    createdAt: delivery.createdAt.toISOString(),
-    updatedAt: delivery.updatedAt.toISOString()
-  };
-}
-
-function toPromotionDeliveryRecipientView(
-  recipient: LeavePromotionDeliveryRecipientEntity
-): PromotionDeliveryRecipientView {
-  return {
-    id: recipient.id,
-    deliveryId: recipient.deliveryId,
-    employeeId: recipient.employeeId,
-    email: recipient.email,
-    name: recipient.name,
-    remainingDays: recipient.remainingDays,
-    grantedDays: recipient.grantedDays,
-    usedDays: recipient.usedDays,
-    lastAccrualYear: recipient.lastAccrualYear,
-    eligibleNow: recipient.eligibleNow,
-    status: recipient.status,
-    lastError: recipient.lastError,
-    sentAt: recipient.sentAt ? recipient.sentAt.toISOString() : null,
-    retryCount: recipient.retryCount,
-    createdAt: recipient.createdAt.toISOString(),
-    updatedAt: recipient.updatedAt.toISOString()
-  };
-}
-
-function toRetryCountByEmployeeId(
-  sourceRecipients: LeavePromotionDeliveryRecipientEntity[]
-): Record<string, number> {
-  const map: Record<string, number> = {};
-  for (const recipient of sourceRecipients) {
-    const current = map[recipient.employeeId] ?? 0;
-    map[recipient.employeeId] = Math.max(current, recipient.retryCount);
-  }
-  return map;
-}
-
-function toRecipientStatus(
-  target: PromotionTargetSnapshot,
-  input: {
-    status: PromotionDeliveryStatus;
-    channel: "webhook" | "email_template";
-    dryRun: boolean;
-    attempted: boolean;
-    sentAt: Date | null;
-  }
-): PromotionRecipientStatus {
-  const email = target.email?.trim() || "";
-  if (!email) {
-    return "SKIPPED_NO_EMAIL";
-  }
-  if (input.status === "failed" && input.attempted) {
-    return "FAILED";
-  }
-  if (input.status === "dispatched") {
-    return "SENT";
-  }
-  return "PENDING";
-}
 
 async function persistPromotionDeliveryHistory(
   context: ServiceContext,
@@ -819,97 +256,6 @@ async function persistPromotionDeliveryHistory(
     recipientCount: recipients.length,
     missingEmailCount
   };
-}
-
-function calculateRequestedLeave(input: {
-  unit: LeaveRequestUnit;
-  startDate: Date;
-  endDate: Date;
-  hours?: number | null;
-  policy: LeavePolicyRules;
-}): { unit: LeaveRequestUnit; days: number; hours: number | null } {
-  const unit = input.unit;
-
-  if (unit === "FULL_DAY") {
-    const days = calculateLeaveDays(input.startDate, input.endDate);
-    return {
-      unit,
-      days: roundTo2(days),
-      hours: roundTo2(days * FULL_DAY_HOURS)
-    };
-  }
-
-  if (unit === "HALF_DAY") {
-    if (!input.policy.allowHalfDay) {
-      throw new ServiceError(409, "leave policy does not allow half-day requests");
-    }
-    if (!isSameSeoulDay(input.startDate, input.endDate)) {
-      throw new ServiceError(400, "half-day leave must be within the same day");
-    }
-    return {
-      unit,
-      days: 0.5,
-      hours: FULL_DAY_HOURS / 2
-    };
-  }
-
-  if (!input.policy.allowHourly) {
-    throw new ServiceError(409, "leave policy does not allow hourly requests");
-  }
-  if (!isSameSeoulDay(input.startDate, input.endDate)) {
-    throw new ServiceError(400, "hourly leave must be within the same day");
-  }
-  const hoursFromRange = calculateHoursBetween(input.startDate, input.endDate);
-  const requestedHours = input.hours ?? hoursFromRange;
-  if (!Number.isFinite(requestedHours) || requestedHours <= 0) {
-    throw new ServiceError(400, "hourly leave hours must be positive");
-  }
-  if (requestedHours > input.policy.maxHoursPerRequest) {
-    throw new ServiceError(400, "hourly leave exceeds maxHoursPerRequest policy");
-  }
-  const minutes = Math.round(requestedHours * 60);
-  if (minutes % input.policy.hourlyIncrementMinutes !== 0) {
-    throw new ServiceError(400, "hourly leave must align with policy increment");
-  }
-  return {
-    unit,
-    days: roundTo2(requestedHours / FULL_DAY_HOURS),
-    hours: roundTo2(requestedHours)
-  };
-}
-
-function assertPolicyRequestConstraints(input: {
-  startDate: Date;
-  requestedDays: number;
-  policy: LeavePolicyRules;
-  now?: Date;
-}) {
-  const maxConsecutiveDays = input.policy.maxConsecutiveDays;
-  if (
-    maxConsecutiveDays !== null &&
-    Number.isFinite(maxConsecutiveDays) &&
-    input.requestedDays > maxConsecutiveDays
-  ) {
-    throw new ServiceError(
-      409,
-      `leave policy maxConsecutiveDays exceeded (${maxConsecutiveDays} days)`
-    );
-  }
-
-  const now = input.now ?? new Date();
-  const noticeDays = toSeoulDayIndex(input.startDate) - toSeoulDayIndex(now);
-  if (input.policy.minNoticeDays > 0 && noticeDays < input.policy.minNoticeDays) {
-    throw new ServiceError(
-      409,
-      `leave policy requires at least ${input.policy.minNoticeDays} day(s) notice`
-    );
-  }
-}
-
-function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
-  if (periodEnd <= periodStart) {
-    throw new ServiceError(400, "to must be after from");
-  }
 }
 
 function resolveTargetOrganizationId(actor: Actor | null, inputOrganizationId?: string) {
@@ -2302,7 +1648,7 @@ export async function dispatchAnnualLeavePromotionNotice(
   const includeUpcoming = Boolean(input.includeUpcoming);
   const channel = input.deliveryChannel ?? "webhook";
   const requestedTemplateId = input.emailTemplateId?.trim() || "";
-  const configuredTemplateId = normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID);
+  const configuredTemplateId = (process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID ?? "").trim();
   const emailTemplateId = requestedTemplateId || configuredTemplateId || null;
   const targetCount = preview.targets.length;
   const targetSnapshots = toPromotionTargetSnapshots(preview.targets);
@@ -2927,7 +2273,7 @@ export async function retryLeavePromotionDelivery(
   const attempted = !dryRun && recipientCount > 0;
   const requestedTemplateId = input.emailTemplateId?.trim() || "";
   const sourceTemplateId = sourceDelivery.emailTemplateId?.trim() || "";
-  const configuredTemplateId = normalizeEnvValue(process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID);
+  const configuredTemplateId = (process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID ?? "").trim();
   const emailTemplateId = requestedTemplateId || sourceTemplateId || configuredTemplateId || null;
   const emailTemplateConfig = resolvePromotionEmailTemplateConfig();
   const provider: PromotionDeliveryProvider | null = emailTemplateConfig ? "email_template" : null;
@@ -3174,3 +2520,5 @@ export const leaveServiceInternals = {
   resolveSeoulYearEnd,
   renderPromotionMessageTemplate
 };
+
+

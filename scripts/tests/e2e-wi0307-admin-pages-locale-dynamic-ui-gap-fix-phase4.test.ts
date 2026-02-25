@@ -10,21 +10,30 @@ async function run() {
   const adminApprovalExecutionsPage = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
   const adminPeoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
   const adminPeoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
-  const adminPeopleSurface = `${adminPeoplePage}\n${adminPeoplePageView}`;
-  const employeePage = readUtf8("src", "app", "employee", "page.tsx");
-  const employeeInteractionActions = readUtf8(
+  const adminPeopleDirectoryFiltersPanel = readUtf8(
     "src",
     "app",
-    "employee",
-    "page-interaction-actions.ts"
+    "admin",
+    "people",
+    "page-view-directory-filters-panel.tsx"
   );
+  const adminPeopleHistoryPanel = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "people",
+    "page-view-history-panel.tsx"
+  );
+  const adminPeopleSurface = `${adminPeoplePage}\n${adminPeoplePageView}\n${adminPeopleDirectoryFiltersPanel}\n${adminPeopleHistoryPanel}`;
+  const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const employeeInteractionActions = readUtf8("src", "app", "employee", "page-interaction-actions.ts");
   const workItem = readUtf8("work-items", "WI-0307-admin-pages-locale-dynamic-ui-gap-fix-phase4.md");
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminApprovalExecutionsPage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminApprovalExecutionsPage, /\{isKoLocale \? "조직 식별자" : "Organization ID"\}/);
-  assert.match(adminApprovalExecutionsPage, /\{isKoLocale \? "에스컬레이션 채널" : "Escalation channel"\}/);
-  assert.match(adminApprovalExecutionsPage, /\{isKoLocale \? "요청 시각" : "requestedAt"\}/);
+  assert.match(adminApprovalExecutionsPage, /Organization ID/);
+  assert.match(adminApprovalExecutionsPage, /Escalation channel/);
+  assert.match(adminApprovalExecutionsPage, /requestedAt/);
   assert.match(adminApprovalExecutionsPage, /toDomainLabel\(execution\.domain\)/);
   assert.match(adminApprovalExecutionsPage, /toStateLabel\(execution\.state\)/);
   assert.doesNotMatch(adminApprovalExecutionsPage, /Execution Limit/);
@@ -32,11 +41,11 @@ async function run() {
   assert.doesNotMatch(adminApprovalExecutionsPage, /Escalation Channel/);
 
   assert.match(adminPeoplePage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminPeopleSurface, /\{isKoLocale \? "조직 식별자" : "Organization ID"\}/);
-  assert.match(adminPeopleSurface, /\{isKoLocale \? "부서 필터" : "Department filter"\}/);
-  assert.match(adminPeopleSurface, /\{isKoLocale \? "직급 필터" : "Position filter"\}/);
-  assert.match(adminPeopleSurface, /\{isKoLocale \? "필터 초기화" : "Reset filters"\}/);
-  assert.match(adminPeopleSurface, /aria-label=\{isKoLocale \? "이력 변경 요약" : "History change summary"\}/);
+  assert.match(adminPeopleSurface, /Organization ID/);
+  assert.match(adminPeopleSurface, /Department filter/);
+  assert.match(adminPeopleSurface, /Position filter/);
+  assert.match(adminPeopleSurface, /Reset filters/);
+  assert.match(adminPeopleSurface, /History change summary/);
   assert.doesNotMatch(adminPeopleSurface, /Department Filter/);
   assert.doesNotMatch(adminPeopleSurface, /Position Filter/);
   assert.doesNotMatch(adminPeopleSurface, /Updated Window/);

@@ -25,10 +25,10 @@ async function run() {
     /from "@\/features\/payroll\/service-year-end-run-snapshot-helpers"/
   );
   assert.match(payrollService, /\bloadYearEndRunSnapshot,/);
-  assert.match(payrollService, /type YearEndRunSnapshot/);
 
   assert.doesNotMatch(payrollService, /function aggregatePayrollTotalsKrw\(/);
   assert.doesNotMatch(payrollService, /async function loadYearEndRunSnapshot\(/);
+  assert.doesNotMatch(payrollService, /type YearEndRunSnapshot/);
 
   assert.match(snapshotHelpers, /export type YearEndRunSnapshotContext = {/);
   assert.match(snapshotHelpers, /export type YearEndRunSnapshot = {/);

@@ -7,18 +7,20 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const source = readUtf8("src", "components", "withholding-receipt", "WithholdingReceiptConsole.tsx");
+  const consoleSource = readUtf8("src", "components", "withholding-receipt", "WithholdingReceiptConsole.tsx");
+  const copyRuntimeSource = readUtf8("src", "components", "withholding-receipt", "copy-runtime.ts");
   const workItem = readUtf8("work-items", "WI-0293-employee-withholding-receipt-locale-dynamic-ui.md");
 
-  assert.match(source, /useI18n\(\)/);
-  assert.match(source, /withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>/);
-  assert.match(source, /title:\s*"원천징수영수증"/);
-  assert.match(source, /title:\s*"Withholding Receipt"/);
-  assert.match(source, /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US"/);
-  assert.match(source, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
-  assert.match(source, /copy\.actionPreviewReceipt/);
-  assert.match(source, /copy\.receiptSummaryTitle/);
-  assert.match(source, /copy\.apiLogsTitle/);
+  assert.match(consoleSource, /useI18n\(\)/);
+  assert.match(consoleSource, /from "@\/components\/withholding-receipt\/copy-runtime"/);
+  assert.match(copyRuntimeSource, /withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingReceiptCopy>/);
+  assert.match(copyRuntimeSource, /title:\s*"원천징수영수증"/);
+  assert.match(copyRuntimeSource, /title:\s*"Withholding Receipt"/);
+  assert.match(consoleSource, /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US"/);
+  assert.match(consoleSource, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
+  assert.match(consoleSource, /copy\.actionPreviewReceipt/);
+  assert.match(consoleSource, /copy\.receiptSummaryTitle/);
+  assert.match(consoleSource, /copy\.apiLogsTitle/);
 
   assert.match(workItem, /WI-0293/i);
   assert.match(workItem, /\/employee\/withholding-receipt/);
@@ -33,4 +35,3 @@ run()
     console.error(error);
     process.exit(1);
   });
-

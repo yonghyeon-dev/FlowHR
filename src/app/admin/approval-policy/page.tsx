@@ -7,69 +7,21 @@ import {
   formatApprovalPolicyDateTime,
   resolveAdminApprovalPolicyLocaleCopy
 } from "@/app/admin/approval-policy/page-locale-helpers";
+import {
+  type ApiLog,
+  type ApprovalDelegationDto,
+  type ApprovalDelegationExpireResultDto,
+  type ApprovalDomain,
+  type ApprovalPolicyDto,
+  domainOptions,
+  isTruthyFlag,
+  toIso,
+  toLocalInputValue
+} from "@/app/admin/approval-policy/page-types";
 import { actorRoles } from "@/lib/actor";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-
-type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
-
-type ApprovalPolicyDto = {
-  id: string;
-  organizationId: string;
-  attendanceApproverRole: string;
-  leaveApproverRole: string;
-  payrollApproverRole: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type ApprovalDelegationDto = {
-  id: string;
-  organizationId: string;
-  domain: ApprovalDomain;
-  delegatorRole: string;
-  delegateActorId: string;
-  reason: string | null;
-  startsAt: string;
-  endsAt: string;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type ApprovalDelegationExpireResultDto = {
-  organizationId: string;
-  checkedCount: number;
-  expiredCount: number;
-  delegationIds: string[];
-  effectiveAt: string;
-  dryRun: boolean;
-};
-
-type ApiLog = {
-  id: number;
-  label: string;
-  ok: boolean;
-  status: number;
-  at: string;
-};
-
-const domainOptions: ApprovalDomain[] = ["ATTENDANCE", "LEAVE", "PAYROLL"];
-
-function isTruthyFlag(value: string | undefined) {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
-function toLocalInputValue(value: Date) {
-  const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
-  return adjusted.toISOString().slice(0, 16);
-}
-
-function toIso(value: string) {
-  return new Date(value).toISOString();
-}
 
 export default function AdminApprovalPolicyPage() {
   const [accessToken, setAccessToken] = useState("");

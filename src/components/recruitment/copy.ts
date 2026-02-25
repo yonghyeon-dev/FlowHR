@@ -55,10 +55,15 @@ export type EmployeeRecruitmentCopy = {
   emptyReferrals: string;
   stageLabel: string;
   stageFilterLabel: string;
+  referralSearchLabel: string;
+  referralSearchPlaceholder: string;
+  clearSearchAction: string;
   referralSummaryLabel: string;
+  filteredReferralSummaryLabel: string;
   openingTitleLabel: string;
   unknownOpeningLabel: string;
   withdrawAction: string;
+  filteredEmptyReferrals: string;
   messages: {
     needOrganization: string;
     needOpening: string;
@@ -195,10 +200,15 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     emptyReferrals: "추천 이력이 없습니다.",
     stageLabel: "단계",
     stageFilterLabel: "추천 단계 필터",
+    referralSearchLabel: "추천 검색",
+    referralSearchPlaceholder: "후보자/공고/메모 검색",
+    clearSearchAction: "검색 초기화",
     referralSummaryLabel: "단계별 건수",
+    filteredReferralSummaryLabel: "표시 건수",
     openingTitleLabel: "공고명",
     unknownOpeningLabel: "알 수 없는 공고",
     withdrawAction: "추천 철회",
+    filteredEmptyReferrals: "현재 검색 조건에 맞는 추천 이력이 없습니다.",
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
       needOpening: "채용 공고를 선택하세요.",
@@ -250,10 +260,15 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     emptyReferrals: "No referral history.",
     stageLabel: "Stage",
     stageFilterLabel: "Referral stage filter",
+    referralSearchLabel: "Referral search",
+    referralSearchPlaceholder: "Search by candidate/opening/note",
+    clearSearchAction: "Clear search",
     referralSummaryLabel: "Stage summary",
+    filteredReferralSummaryLabel: "Visible items",
     openingTitleLabel: "Opening title",
     unknownOpeningLabel: "Unknown opening",
     withdrawAction: "Withdraw referral",
+    filteredEmptyReferrals: "No referral matches current search.",
     messages: {
       needOrganization: "Organization ID is required.",
       needOpening: "Select an opening.",
