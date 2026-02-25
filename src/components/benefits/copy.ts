@@ -61,9 +61,14 @@ export type EmployeeBenefitsCopy = {
   statusLabel: string;
   requestedAtLabel: string;
   requestFilterLabel: string;
+  requestSearchLabel: string;
+  requestSearchPlaceholder: string;
+  clearSearchAction: string;
   requestSummaryLabel: string;
+  filteredRequestSummaryLabel: string;
   unknownBenefitLabel: string;
   cancelAction: string;
+  filteredEmptyRequests: string;
   messages: {
     needOrganization: string;
     needCatalog: string;
@@ -201,9 +206,14 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     statusLabel: "상태",
     requestedAtLabel: "신청 시각",
     requestFilterLabel: "요청 상태 필터",
+    requestSearchLabel: "요청 검색",
+    requestSearchPlaceholder: "항목명/사유로 검색",
+    clearSearchAction: "검색 초기화",
     requestSummaryLabel: "상태별 건수",
+    filteredRequestSummaryLabel: "표시 건수",
     unknownBenefitLabel: "알 수 없는 항목",
     cancelAction: "신청 취소",
+    filteredEmptyRequests: "현재 검색 조건에 맞는 신청 이력이 없습니다.",
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
       needCatalog: "복리후생 항목을 선택하세요.",
@@ -249,9 +259,14 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     statusLabel: "Status",
     requestedAtLabel: "Requested at",
     requestFilterLabel: "Request status filter",
+    requestSearchLabel: "Request search",
+    requestSearchPlaceholder: "Search by benefit/reason",
+    clearSearchAction: "Clear search",
     requestSummaryLabel: "Status summary",
+    filteredRequestSummaryLabel: "Visible items",
     unknownBenefitLabel: "Unknown benefit",
     cancelAction: "Cancel request",
+    filteredEmptyRequests: "No request matches current search.",
     messages: {
       needOrganization: "Organization ID is required.",
       needCatalog: "Select a benefit item.",

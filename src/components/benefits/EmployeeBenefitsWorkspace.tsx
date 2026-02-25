@@ -80,6 +80,7 @@ export default function EmployeeBenefitsWorkspace() {
   const [amountKrw, setAmountKrw] = useState("100000");
   const [reason, setReason] = useState("");
   const [requestStatusFilter, setRequestStatusFilter] = useState<BenefitRequestStatus | "all">("all");
+  const [requestSearchQuery, setRequestSearchQuery] = useState("");
 
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -99,6 +100,20 @@ export default function EmployeeBenefitsWorkspace() {
     });
     return map;
   }, [catalog]);
+  const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
+  const filteredRequests = useMemo(() => {
+    if (!normalizedRequestSearchQuery) {
+      return requests;
+    }
+    return requests.filter((item) => {
+      const benefitName = (catalogById.get(item.benefitId)?.name ?? "").toLowerCase();
+      const reasonText = item.reason.toLowerCase();
+      return (
+        benefitName.includes(normalizedRequestSearchQuery) ||
+        reasonText.includes(normalizedRequestSearchQuery)
+      );
+    });
+  }, [catalogById, normalizedRequestSearchQuery, requests]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -209,6 +224,10 @@ export default function EmployeeBenefitsWorkspace() {
     await loadWorkspace();
   }
 
+  function clearRequestSearch() {
+    setRequestSearchQuery("");
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -254,13 +273,24 @@ export default function EmployeeBenefitsWorkspace() {
               <option value="CANCELED">{copy.requestFilter.CANCELED}</option>
             </select>
           </label>
+          <label>
+            {copy.requestSearchLabel}
+            <input
+              value={requestSearchQuery}
+              placeholder={copy.requestSearchPlaceholder}
+              onChange={(event) => setRequestSearchQuery(event.target.value)}
+            />
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void loadWorkspace()} disabled={pending}>
               {copy.refreshAction}
             </button>
+            <button className="btn btn-secondary" type="button" onClick={clearRequestSearch} disabled={pending}>
+              {copy.clearSearchAction}
+            </button>
           </div>
           <p className="small muted">
-            {copy.requestSummaryLabel}: {requestSummary.total} (S {requestSummary.submitted} / A {requestSummary.approved} / R {requestSummary.rejected} / C {requestSummary.canceled})
+            {copy.requestSummaryLabel}: {requestSummary.total} (S {requestSummary.submitted} / A {requestSummary.approved} / R {requestSummary.rejected} / C {requestSummary.canceled}) · {copy.filteredRequestSummaryLabel}: {filteredRequests.length}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
@@ -320,9 +350,11 @@ export default function EmployeeBenefitsWorkspace() {
           <h2>{copy.requestTitle}</h2>
           {requests.length === 0 ? (
             <p className="small muted">{copy.emptyRequests}</p>
+          ) : filteredRequests.length === 0 ? (
+            <p className="small muted">{copy.filteredEmptyRequests}</p>
           ) : (
             <ul className="simple-list">
-              {requests.map((item) => {
+              {filteredRequests.map((item) => {
                 const benefitName = catalogById.get(item.benefitId)?.name ?? copy.unknownBenefitLabel;
                 return (
                   <li key={item.id}>
