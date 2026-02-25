@@ -93,12 +93,13 @@ function normalizeLocaleErrorMessage(
   if (normalized.length === 0) {
     return koFallback;
   }
-  if (hasHangulText(normalized)) {
-    return normalized;
-  }
   const knownKoMessage = resolveKnownKoRuntimeErrorMessage(normalized);
   if (knownKoMessage) {
     return knownKoMessage;
+  }
+  if (hasHangulText(normalized)) {
+    // Suppress mixed ko+latin diagnostics to avoid leaking raw English snippets in ko runtime.
+    return hasLatinText(normalized) ? koFallback : normalized;
   }
   if (!hasLatinText(normalized)) {
     return normalized;
