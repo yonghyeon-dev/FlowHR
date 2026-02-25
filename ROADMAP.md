@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.150 (Scheduling Incident Read-Model Helper Extraction)
+> **Current version**: 0.1.151 (Leave Policy/Time Helper Extraction)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -728,3 +728,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0461 leave promotion history view helper extraction and line-budget 2850 (`promotion-history-views.ts` 신규 + 연차촉진 delivery/recipient/target 뷰 타입/매핑/retry-status helper 분리 + `leave/service.ts` 2928->2740 축소 + regression test)
 - WI-0462 korean runtime message guard for withholding/payslip/contracts (runtime error pattern 확장: timeout/internal-server/service-unavailable + ko 런타임 영문 suppress 강화 + runtime-normalizer regression test)
 - WI-0463 scheduling incident read-model helper extraction and line-budget 4800 (`incident-read-model-helpers.ts` 신규 + anomaly incident read-model 변환/upsert/audit-store fallback/backfill/list-get orchestration 분리 + `scheduling/service.ts` 5018->4763 축소 + regression test)
+- WI-0464 leave policy/time helper extraction and line-budget 2600 (`policy-time-helpers.ts` 신규 + 서울일자/정책 기본값/요청 제약/연차 계산 helper 분리 + `leave/service.ts` 2740->2524 축소 + regression test)
