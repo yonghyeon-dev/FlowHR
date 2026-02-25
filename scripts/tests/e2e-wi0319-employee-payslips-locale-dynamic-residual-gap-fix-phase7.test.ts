@@ -9,6 +9,13 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
   const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
+  const payslipDerivedState = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "use-payslip-derived-state.ts"
+  );
   const localeHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -21,9 +28,9 @@ async function run() {
     payslipPage,
     /const deductionDescriptionMap = useMemo<DeductionDescriptionMap>\(\s*\(\) => resolveDeductionDescriptionMap\(isKoLocale\),/
   );
-  assert.match(payslipPage, /resolvePayslipRunStateLabel\(run\.state, isKoLocale\)/);
+  assert.match(payslipDerivedState, /resolvePayslipRunStateLabel\(run\.state, isKoLocale\)/);
   assert.match(
-    payslipPage,
+    payslipDerivedState,
     /stateSearchText: `\$\{run\.state\.toLowerCase\(\)\} \$\{stateLabel\.toLowerCase\(\)\}`/
   );
 

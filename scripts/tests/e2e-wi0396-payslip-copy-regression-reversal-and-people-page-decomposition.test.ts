@@ -15,6 +15,13 @@ async function run() {
   const peopleView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
   const peopleHelpers = readUtf8("src", "app", "admin", "people", "page-helpers.ts");
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
+  const payslipDerivedState = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "use-payslip-derived-state.ts"
+  );
   const payslipLocaleHelpers = readUtf8("src", "app", "employee", "payslips", "page-locale-helpers.ts");
   const payslipHelpers = readUtf8("src", "app", "employee", "payslips", "page-helpers.ts");
   const workItem = readUtf8(
@@ -36,9 +43,9 @@ async function run() {
   assert.match(peopleHelpers, /export function buildOrgTree\(input: BuildOrgTreeInput\): OrgTreeNode\[]/);
   assert.match(peopleHelpers, /export function buildCompareRows\(input: BuildCompareRowsInput\): CompareRow\[]/);
 
-  assert.match(payslipPage, /resolveCompareInsightTitle\(isKoLocale\)/);
-  assert.match(payslipPage, /resolveCompareInsightAriaLabel\(isKoLocale\)/);
-  assert.match(payslipPage, /formatCompareWindowLabel\(selectedLabel, compareLabel, isKoLocale\)/);
+  assert.match(payslipDerivedState, /resolveCompareInsightTitle\(isKoLocale\)/);
+  assert.match(payslipDerivedState, /resolveCompareInsightAriaLabel\(isKoLocale\)/);
+  assert.match(payslipDerivedState, /formatCompareWindowLabel\(selectedLabel, compareLabel, isKoLocale\)/);
   assert.doesNotMatch(
     payslipPage,
     /const compareInsightTitle = isKoLocale \? "전월 대비 설명" : "Month-over-month explanation";/
