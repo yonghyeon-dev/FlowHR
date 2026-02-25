@@ -9,14 +9,15 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const mutationActions = readUtf8("src", "app", "employee", "page-mutation-actions.ts");
+  const mutationRuntime = readUtf8("src", "app", "employee", "page-mutation-runtime.ts");
   const workItem = readUtf8(
     "work-items",
     "WI-0389-employee-mutation-action-orchestrator-extraction.md"
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(employeePage, /from "@\/app\/employee\/page-mutation-actions";/);
-  assert.match(employeePage, /const mutationActions = buildEmployeeMutationActions\(\{/);
+  assert.match(employeePage, /from "@\/app\/employee\/page-mutation-runtime";/);
+  assert.match(employeePage, /const \{ mutationActions, clearLogs \} = buildEmployeeMutationRuntime\(\{/);
   assert.match(
     employeePage,
     /onRefreshEmployeeSnapshot=\{\(\) => void mutationActions\.refreshEmployeeSnapshot\(\)\}/
@@ -48,6 +49,11 @@ async function run() {
   assert.match(mutationActions, /async function requestAttendanceCorrection\(/);
   assert.match(mutationActions, /async function createLeave\(/);
   assert.match(mutationActions, /async function cancelLeave\(/);
+
+  assert.match(mutationRuntime, /import \{ buildEmployeeMutationActions \} from "@\/app\/employee\/page-mutation-actions";/);
+  assert.match(mutationRuntime, /export function buildEmployeeMutationRuntime\(/);
+  assert.match(mutationRuntime, /const mutationActions = buildEmployeeMutationActions\(\{/);
+  assert.match(mutationRuntime, /const clearLogs = \(\) => \{\s*setLogs\(\[\]\);/);
 
   assert.match(workItem, /WI-0389/i);
   assert.match(workItem, /action orchestrator extraction|decomposition/i);

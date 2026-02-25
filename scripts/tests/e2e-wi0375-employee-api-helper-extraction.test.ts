@@ -9,14 +9,23 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const employeeApiHelpers = readUtf8("src", "app", "employee", "page-api-helpers.ts");
+  const employeeMutationRuntime = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "page-mutation-runtime.ts"
+  );
   const workItem = readUtf8("work-items", "WI-0375-employee-api-helper-extraction.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(employeePage, /import \{ performEmployeeApiCall \} from \"@\/app\/employee\/page-api-helpers\";/);
-  assert.match(employeePage, /const \{ response, body, log \} = await performEmployeeApiCall\(/);
-  assert.match(employeePage, /setLogs\(\(prev\) => \[log, \.\.\.prev\]\);/);
+  assert.match(employeePage, /from "@\/app\/employee\/page-mutation-runtime";/);
+  assert.match(employeePage, /const \{ mutationActions, clearLogs \} = buildEmployeeMutationRuntime\(\{/);
   assert.doesNotMatch(employeePage, /headers\["x-actor-role"\] = "employee";/);
   assert.doesNotMatch(employeePage, /const raw = await response\.text\(\);/);
+
+  assert.match(employeeMutationRuntime, /import \{ performEmployeeApiCall \} from "@\/app\/employee\/page-api-helpers";/);
+  assert.match(employeeMutationRuntime, /const \{ response, body, log \} = await performEmployeeApiCall\(/);
+  assert.match(employeeMutationRuntime, /setLogs\(\(previousLogs\) => \[log, \.\.\.previousLogs\]\);/);
 
   assert.match(employeeApiHelpers, /export async function performEmployeeApiCall/);
   assert.match(employeeApiHelpers, /buildEmployeeRequestHeaders/);

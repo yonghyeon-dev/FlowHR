@@ -1,25 +1,19 @@
 ﻿"use client";
-
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-import { performEmployeeApiCall } from "@/app/employee/page-api-helpers";
 import { useEmployeeDashboardDerivedState } from "@/app/employee/page-dashboard-derived-state";
-import { buildEmployeeMutationActions } from "@/app/employee/page-mutation-actions";
+import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runtime";
 import {
   buildEmployeeInteractionHandlers
 } from "@/app/employee/page-interaction-actions";
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import {
-  buildQuery,
-  coerceNumber,
   firstDayOfMonthLocal,
   formatDateTime,
   formatDays,
   lastDayOfMonthLocal,
   statusToTone,
   todayEndLocal,
-  todayStartLocal,
-  toIso
+  todayStartLocal
 } from "@/app/employee/page-helpers";
 import {
   extractEmployeeErrorMessage,
@@ -45,7 +39,6 @@ import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/E
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-
 export default function EmployeeSelfServicePage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -66,14 +59,11 @@ export default function EmployeeSelfServicePage() {
     validationCopy,
     summaryCopy
   } = localeLabelBundle;
-
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
-
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
-
   const [checkInAt, setCheckInAt] = useState(todayStartLocal());
   const [checkOutAt, setCheckOutAt] = useState(todayEndLocal());
   const [breakMinutes, setBreakMinutes] = useState("60");
@@ -81,7 +71,6 @@ export default function EmployeeSelfServicePage() {
   const [attendanceNotes, setAttendanceNotes] = useState("");
   const [lastAttendanceId, setLastAttendanceId] = useState("");
   const [selectedCorrectionRecordId, setSelectedCorrectionRecordId] = useState("");
-
   const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
   const [leaveUnit, setLeaveUnit] = useState<"FULL_DAY" | "HALF_DAY" | "HOUR">("FULL_DAY");
   const [leaveHours, setLeaveHours] = useState("4");
@@ -90,12 +79,10 @@ export default function EmployeeSelfServicePage() {
   const [leaveReason, setLeaveReason] = useState("");
   const [lastLeaveRequestId, setLastLeaveRequestId] = useState("");
   const [cancelReason, setCancelReason] = useState<string>(defaultCancelReason);
-
   const [attendance, setAttendance] = useState<AttendanceRecordDto[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequestDto[]>([]);
   const [schedules, setSchedules] = useState<WorkScheduleDto[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalanceDto | null>(null);
-
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [, setMobileFlowFeedback] = useState("");
@@ -107,7 +94,6 @@ export default function EmployeeSelfServicePage() {
   const [requestSortOption, setRequestSortOption] = useState<RequestSortOption>("pending_first");
   const [selectedResubmitCandidateKey, setSelectedResubmitCandidateKey] = useState("");
   const [lastAppliedResubmitCandidateKey, setLastAppliedResubmitCandidateKey] = useState("");
-
   const toRequestStatusLabel = useCallback(
     (status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status],
     [requestStatusLabels]
@@ -120,7 +106,6 @@ export default function EmployeeSelfServicePage() {
     (value: string | null) => formatDateTime(value, runtimeLocale),
     [runtimeLocale]
   );
-
   const {
     showDevTools,
     isProductionRuntime,
@@ -159,46 +144,19 @@ export default function EmployeeSelfServicePage() {
     resubmitFlowChecks: resubmitFlowCheckCopy,
     submitChecklistCards: submitChecklistCardCopy
   } = validationCopy;
-
   useEffect(() => {
     setCancelReason((previous) =>
       isDefaultEmployeeCancelReason(previous) ? defaultCancelReason : previous
     );
   }, [defaultCancelReason]);
-
-  async function callApi(
-    label: string,
-    method: "GET" | "POST" | "PUT" | "PATCH",
-    path: string,
-    payload?: Record<string, unknown>
-  ) {
-    setPendingLabel(label);
-    try {
-      const { response, body, log } = await performEmployeeApiCall({
-        label,
-        method,
-        path,
-        payload,
-        usesBearerToken,
-        bearerToken,
-        employeeId,
-        organizationId,
-        runtimeLocale
-      });
-      setLogs((prev) => [log, ...prev]);
-
-      return { response, body };
-    } finally {
-      setPendingLabel(null);
-    }
-  }
-
-  const mutationActions = buildEmployeeMutationActions({
-    callApi,
+  const { mutationActions, clearLogs } = buildEmployeeMutationRuntime({
     callApiLabels,
-    buildQuery,
-    toIso,
-    coerceNumber,
+    usesBearerToken,
+    bearerToken,
+    organizationId,
+    runtimeLocale,
+    setLogs,
+    setPendingLabel,
     periodStart,
     periodEnd,
     employeeId,
@@ -226,11 +184,6 @@ export default function EmployeeSelfServicePage() {
     cancelReason,
     lastLeaveRequestId
   });
-
-  function clearLogs() {
-    setLogs([]);
-  }
-
   const {
     latestPayload,
     stats,
@@ -274,7 +227,9 @@ export default function EmployeeSelfServicePage() {
     formatDateTimeByLocale,
     toLeaveTypeLabel
   });
-
+  const requestSearchDefaultsCopy = { noNote: defaultsCopy.noNote, noReason: defaultsCopy.noReason };
+  const mobileRequestDefaultsCopy = { attendanceRequestTitle: defaultsCopy.attendanceRequestTitle, leaveRequestTitle: defaultsCopy.leaveRequestTitle };
+  const requestFailureDefaultsCopy = { attendanceRejectedSource: defaultsCopy.attendanceRejectedSource, leaveRejectedSource: defaultsCopy.leaveRejectedSource, leaveCanceledSource: defaultsCopy.leaveCanceledSource, rejectionReasonMissing: defaultsCopy.rejectionReasonMissing, reasonMissing: defaultsCopy.reasonMissing };
   const {
     filteredRequestFeedbackRows,
     filteredRequestSearchRows,
@@ -319,29 +274,20 @@ export default function EmployeeSelfServicePage() {
     extractEmployeeErrorMessage,
     requestFeedbackCopy,
     requestFeedbackNoReasonProvided: defaultsCopy.noReasonProvided,
-    requestSearchDefaultsCopy: {
-      noNote: defaultsCopy.noNote,
-      noReason: defaultsCopy.noReason
-    },
-    mobileRequestDefaultsCopy: {
-      attendanceRequestTitle: defaultsCopy.attendanceRequestTitle,
-      leaveRequestTitle: defaultsCopy.leaveRequestTitle
-    },
+    requestSearchDefaultsCopy,
+    mobileRequestDefaultsCopy,
     leaveUnitCopy,
-    requestFailureDefaultsCopy: {
-      attendanceRejectedSource: defaultsCopy.attendanceRejectedSource,
-      leaveRejectedSource: defaultsCopy.leaveRejectedSource,
-      leaveCanceledSource: defaultsCopy.leaveCanceledSource,
-      rejectionReasonMissing: defaultsCopy.rejectionReasonMissing,
-      reasonMissing: defaultsCopy.reasonMissing
-    },
+    requestFailureDefaultsCopy,
     correctionValidationCopy,
     attendanceCheckCopy,
     leaveCheckCopy,
     resubmitFlowCheckCopy,
     submitChecklistCardCopy
   });
-
+  const attendanceInteractionSetters = { setAttendanceNotes, setBreakMinutes, setCheckInAt, setCheckOutAt, setIsHoliday, setLastAttendanceId, setSelectedCorrectionRecordId };
+  const leaveInteractionSetters = { setLastLeaveRequestId, setLeaveEndDate, setLeaveHours, setLeaveReason, setLeaveStartDate, setLeaveType, setLeaveUnit };
+  const requestInteractionSetters = { setLastAppliedResubmitCandidateKey, setMobileFlowFeedback, setRequestSearchQuery, setRequestSearchScope, setRequestSortOption, setSelectedResubmitCandidateKey };
+  const periodInteractionSetters = { setPeriodEnd, setPeriodStart };
   const {
     applyAttendanceRecordToCorrectionForm,
     applyLatestAttendanceToCorrectionForm,
@@ -361,23 +307,8 @@ export default function EmployeeSelfServicePage() {
   } = buildEmployeeInteractionHandlers({
     attendance,
     correctionRequestNote,
-    defaultsCopy: {
-      resubmitCorrectionNote: defaultsCopy.resubmitCorrectionNote
-    },
-    feedbackCopy: {
-      attendanceResubmitDraftApplied: feedbackCopy.attendanceResubmitDraftApplied,
-      clipboardUnavailable: feedbackCopy.clipboardUnavailable,
-      copiedLatestFailureCause: feedbackCopy.copiedLatestFailureCause,
-      copyFailureCauseFailed: feedbackCopy.copyFailureCauseFailed,
-      leaveResubmitDraftApplied: feedbackCopy.leaveResubmitDraftApplied,
-      noFailureCauseToCopy: feedbackCopy.noFailureCauseToCopy,
-      noResubmitTarget: feedbackCopy.noResubmitTarget,
-      pendingRequestFilterApplied: feedbackCopy.pendingRequestFilterApplied,
-      resetResubmitSelection: feedbackCopy.resetResubmitSelection,
-      selectResubmitCandidateFirst: feedbackCopy.selectResubmitCandidateFirst,
-      selectedAttendanceResubmitMissing: feedbackCopy.selectedAttendanceResubmitMissing,
-      selectedLeaveResubmitMissing: feedbackCopy.selectedLeaveResubmitMissing
-    },
+    defaultsCopy,
+    feedbackCopy,
     isKoLocale,
     latestAttendance,
     leaveRequests,
@@ -388,30 +319,11 @@ export default function EmployeeSelfServicePage() {
     resubmitCandidates,
     selectedCorrectionRecord,
     selectedResubmitCandidate,
-    setAttendanceNotes,
-    setBreakMinutes,
-    setCheckInAt,
-    setCheckOutAt,
-    setIsHoliday,
-    setLastAppliedResubmitCandidateKey,
-    setLastAttendanceId,
-    setLastLeaveRequestId,
-    setLeaveEndDate,
-    setLeaveHours,
-    setLeaveReason,
-    setLeaveStartDate,
-    setLeaveType,
-    setLeaveUnit,
-    setMobileFlowFeedback,
-    setPeriodEnd,
-    setPeriodStart,
-    setRequestSearchQuery,
-    setRequestSearchScope,
-    setRequestSortOption,
-    setSelectedCorrectionRecordId,
-    setSelectedResubmitCandidateKey
+    ...attendanceInteractionSetters,
+    ...leaveInteractionSetters,
+    ...requestInteractionSetters,
+    ...periodInteractionSetters
   });
-
   return (
     <main className="saas-content">
       <EmployeeDashboardChrome
@@ -425,7 +337,6 @@ export default function EmployeeSelfServicePage() {
         stats={stats}
         pendingLabel={pendingLabel}
       />
-
       <section className="panel-grid">
         <EmployeeAccountOverviewPanels
           isKoLocale={isKoLocale}
@@ -450,7 +361,6 @@ export default function EmployeeSelfServicePage() {
           onRefreshEmployeeSnapshot={() => void mutationActions.refreshEmployeeSnapshot()}
           onJumpToSection={jumpToSection}
         />
-
         <EmployeeRequestFeedbackPanels
           isKoLocale={isKoLocale}
           requestFeedbackStatusFilter={requestFeedbackStatusFilter}
@@ -481,7 +391,6 @@ export default function EmployeeSelfServicePage() {
           onTimelineChannelFilterChange={setTimelineChannelFilter}
           onTimelineStatusFilterChange={setTimelineStatusFilter}
         />
-
         <EmployeeResubmitPanel
           isKoLocale={isKoLocale}
           selectedResubmitCandidateKey={selectedResubmitCandidateKey}
@@ -498,7 +407,6 @@ export default function EmployeeSelfServicePage() {
           onClearResubmitSelection={clearResubmitSelection}
           onApplyResubmitCandidateToDraft={applyResubmitCandidateToDraft}
         />
-
         <EmployeeAttendanceLeavePanels
           sectionTitles={sectionTitles}
           attendanceCopy={attendanceCopy}
@@ -589,5 +497,3 @@ export default function EmployeeSelfServicePage() {
     </main>
   );
 }
-
-

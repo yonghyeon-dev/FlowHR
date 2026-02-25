@@ -30,7 +30,8 @@ async function run() {
 
   assert.match(employeePage, /useEmployeeRequestChecklistDerivedState/);
   assert.match(employeePage, /requestFeedbackNoReasonProvided: defaultsCopy\.noReasonProvided/);
-  assert.match(employeePage, /requestFailureDefaultsCopy: \{/);
+  assert.match(employeePage, /const requestFailureDefaultsCopy = \{/);
+  assert.match(employeePage, /requestFailureDefaultsCopy,/);
   assert.match(employeePage, /correctionValidationCopy/);
   assert.match(employeePage, /submitChecklistCardCopy/);
 
