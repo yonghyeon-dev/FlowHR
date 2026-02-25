@@ -1,17 +1,13 @@
 ﻿"use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-import {
-  resolveNoticeAudienceLabel,
-  resolveNoticeStatusLabel,
-  resolveNoticeWorkspaceCopy
-} from "@/components/notices/copy";
+import { resolveNoticeWorkspaceCopy } from "@/components/notices/copy";
+import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceView";
 
 type NoticeApiSummary = {
   total: number;
@@ -119,13 +115,6 @@ export default function AdminNoticeWorkspace() {
     }),
     [logs]
   );
-  const readCountByNoticeId = useMemo(() => {
-    const byNotice = new Map<string, number>();
-    readReceipts.forEach((receipt) => {
-      byNotice.set(receipt.noticeId, (byNotice.get(receipt.noticeId) ?? 0) + 1);
-    });
-    return byNotice;
-  }, [readReceipts]);
 
   function appendLog(action: string, status: number, ok: boolean) {
     setLogs((previous) => [
@@ -239,158 +228,37 @@ export default function AdminNoticeWorkspace() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{copy.pageTitle}</h1>
-          <p className="page-subtitle">{copy.pageSubtitle}</p>
-        </div>
-        <div className="page-actions">
-          <Link className="btn btn-secondary" href="/admin">
-            /admin
-          </Link>
-          <Link className="btn btn-secondary" href="/employee/notices">
-            /employee/notices
-          </Link>
-        </div>
-      </header>
-
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{copy.filtersTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {copy.actorIdLabel}
-            <input value={actorId} onChange={(event) => setActorId(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <textarea rows={2} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
-          </label>
-          <div className="input-grid">
-            <label>
-              {copy.statusFilterLabel}
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as NoticeStatus | "all")}>
-                <option value="all">{copy.statusFilter.all}</option>
-                <option value="DRAFT">{copy.statusFilter.DRAFT}</option>
-                <option value="SCHEDULED">{copy.statusFilter.SCHEDULED}</option>
-                <option value="PUBLISHED">{copy.statusFilter.PUBLISHED}</option>
-              </select>
-            </label>
-            <label>
-              {copy.audienceFilterLabel}
-              <select
-                value={audienceFilter}
-                onChange={(event) => setAudienceFilter(event.target.value as "all" | "employees" | "admins")}
-              >
-                <option value="all">{copy.audienceFilter.all}</option>
-                <option value="employees">{copy.audienceFilter.employees}</option>
-                <option value="admins">{copy.audienceFilter.admins}</option>
-              </select>
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={() => void loadNotices()}>
-              {copy.refreshAction}
-            </button>
-          </div>
-          <p className="small muted">
-            {copy.statsLabel}: {summary.total} (D {summary.draft} / S {summary.scheduled} / P {summary.published})
-          </p>
-          <p className="small muted">
-            {copy.logsTitle}: {stats.total} / OK {stats.success} / FAIL {stats.total - stats.success}
-            {pendingLabel ? ` · ${copy.pendingLabelPrefix}: ${pendingLabel}` : ""}
-          </p>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-        </article>
-
-        <article className="panel">
-          <h2>{copy.composeTitle}</h2>
-          <label>
-            {copy.titleLabel}
-            <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} />
-          </label>
-          <label>
-            {copy.bodyLabel}
-            <textarea rows={5} value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} />
-          </label>
-          <div className="input-grid">
-            <label>
-              {copy.audienceLabel}
-              <select value={audience} onChange={(event) => setAudience(event.target.value as "all" | "employees" | "admins") }>
-                <option value="all">{copy.audience.all}</option>
-                <option value="employees">{copy.audience.employees}</option>
-                <option value="admins">{copy.audience.admins}</option>
-              </select>
-            </label>
-            <label>
-              {copy.scheduleLabel}
-              <input type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={() => void createNoticeItem()}>
-              {copy.createAction}
-            </button>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>{copy.listTitle}</h2>
-          {notices.length === 0 ? (
-            <p className="small muted">{copy.listEmpty}</p>
-          ) : (
-            <ul className="simple-list">
-              {notices.map((notice) => (
-                <li key={notice.id}>
-                  <span>
-                    <strong>{notice.title}</strong>
-                    <br />
-                    <span className="small muted">{notice.body}</span>
-                    <br />
-                    <span className="small muted">
-                      {resolveNoticeAudienceLabel(copy, notice.audience)} · {resolveNoticeStatusLabel(copy, notice.status)} · {notice.updatedAt}
-                    </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.readCountLabel}: {readCountByNoticeId.get(notice.id) ?? 0}
-                    </span>
-                  </span>
-                  {notice.status === "PUBLISHED" ? null : (
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      onClick={() => void publishNow(notice.id)}
-                    >
-                      {copy.publishAction}
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-
-        <article className="panel">
-          <h2>{copy.logsTitle}</h2>
-          {logs.length === 0 ? (
-            <p className="small muted">{copy.logsEmpty}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.action} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-      </section>
-    </main>
+    <AdminNoticeWorkspaceView
+      copy={copy}
+      organizationId={organizationId}
+      actorId={actorId}
+      accessToken={accessToken}
+      statusFilter={statusFilter}
+      audienceFilter={audienceFilter}
+      title={title}
+      body={body}
+      audience={audience}
+      publishAt={publishAt}
+      summary={summary}
+      notices={notices}
+      readReceipts={readReceipts}
+      logs={logs}
+      stats={stats}
+      pendingLabel={pendingLabel}
+      statusMessage={statusMessage}
+      onOrganizationIdChange={setOrganizationId}
+      onActorIdChange={setActorId}
+      onAccessTokenChange={setAccessToken}
+      onStatusFilterChange={setStatusFilter}
+      onAudienceFilterChange={setAudienceFilter}
+      onTitleChange={setTitle}
+      onBodyChange={setBody}
+      onAudienceChange={setAudience}
+      onPublishAtChange={setPublishAt}
+      onLoadNotices={() => void loadNotices()}
+      onCreateNotice={() => void createNoticeItem()}
+      onPublishNow={(noticeId) => void publishNow(noticeId)}
+    />
   );
 }
 
