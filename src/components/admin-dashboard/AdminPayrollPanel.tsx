@@ -117,7 +117,7 @@ export function AdminPayrollPanel({
     ? {
         previewMode: "프리뷰 모드",
         grossOnly: "총지급만",
-        employeeId: "대상 직원 ID",
+        employeeId: "대상 직원 번호",
         hourlyRate: "시급 (KRW)",
         nonTaxableIncome: "비과세 소득(KRW)",
         otherDeductions: "기타 공제(KRW)",

@@ -590,8 +590,8 @@ export default function MvpConsolePage() {
         <article className="panel">
           <h2>리스트 조회</h2>
           <p className="small">
-            조회 기간은 급여 섹션의 <strong>기간 시작/종료</strong> 값을 사용합니다. 직원 ID는 각
-            섹션의 직원 ID 값을 사용합니다.
+            조회 기간은 급여 섹션의 <strong>기간 시작/종료</strong> 값을 사용합니다. 직원 번호는 각
+            섹션의 직원 번호 값을 사용합니다.
           </p>
           <div className="input-grid">
             <label>
@@ -654,7 +654,7 @@ export default function MvpConsolePage() {
           <h2>출퇴근</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input
                 value={attendanceEmployeeId}
                 onChange={(event) => setAttendanceEmployeeId(event.target.value)}
@@ -717,7 +717,7 @@ export default function MvpConsolePage() {
           <h2>근무일정</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input value={scheduleEmployeeId} onChange={(event) => setScheduleEmployeeId(event.target.value)} />
             </label>
             <label>
@@ -774,7 +774,7 @@ export default function MvpConsolePage() {
           <h2>급여 프리뷰/확정</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input
                 value={payrollEmployeeId}
                 onChange={(event) => setPayrollEmployeeId(event.target.value)}
@@ -936,7 +936,7 @@ export default function MvpConsolePage() {
           <h2>휴가 요청/승인</h2>
           <div className="input-grid">
             <label>
-              직원 ID
+              직원 번호
               <input value={leaveEmployeeId} onChange={(event) => setLeaveEmployeeId(event.target.value)} />
             </label>
             <label>

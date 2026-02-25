@@ -84,7 +84,7 @@ const queuePanelCopyByLocale = {
     periodEnd: "기간 종료",
     searchScope: "검색 범위",
     searchScopeAll: "전체 필드",
-    searchScopeEmployee: "직원 ID",
+    searchScopeEmployee: "직원 번호",
     searchScopeRequestId: "요청 ID",
     searchScopeContent: "메모/사유",
     query: "큐 검색",

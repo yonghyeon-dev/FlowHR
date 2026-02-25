@@ -87,7 +87,7 @@ export function EmployeeAccountOverviewPanels({
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
               <label>
-                {isKoLocale ? "조직 ID (선택)" : "Organization ID (optional)"}
+                {isKoLocale ? "조직 식별자 (선택)" : "Organization ID (optional)"}
                 <input
                   value={organizationId}
                   placeholder={isKoLocale ? "예: ORG-00001" : "e.g. ORG-00001"}
@@ -95,7 +95,7 @@ export function EmployeeAccountOverviewPanels({
                 />
               </label>
               <label>
-                {isKoLocale ? "내 직원 ID" : "My Employee ID"}
+                {isKoLocale ? "내 직원 번호" : "My Employee ID"}
                 <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
               </label>
               {showDevTools ? (

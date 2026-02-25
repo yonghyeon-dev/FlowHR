@@ -16,7 +16,7 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminApprovalExecutionsPage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminApprovalExecutionsPage, /\{isKoLocale \? "조직 ID" : "Organization ID"\}/);
+  assert.match(adminApprovalExecutionsPage, /\{isKoLocale \? "조직 식별자" : "Organization ID"\}/);
   assert.match(adminApprovalExecutionsPage, /\{isKoLocale \? "에스컬레이션 채널" : "Escalation channel"\}/);
   assert.match(adminApprovalExecutionsPage, /\{isKoLocale \? "요청 시각" : "requestedAt"\}/);
   assert.match(adminApprovalExecutionsPage, /toDomainLabel\(execution\.domain\)/);
@@ -26,7 +26,7 @@ async function run() {
   assert.doesNotMatch(adminApprovalExecutionsPage, /Escalation Channel/);
 
   assert.match(adminPeoplePage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminPeopleSurface, /\{isKoLocale \? "조직 ID" : "Organization ID"\}/);
+  assert.match(adminPeopleSurface, /\{isKoLocale \? "조직 식별자" : "Organization ID"\}/);
   assert.match(adminPeopleSurface, /\{isKoLocale \? "부서 필터" : "Department filter"\}/);
   assert.match(adminPeopleSurface, /\{isKoLocale \? "직급 필터" : "Position filter"\}/);
   assert.match(adminPeopleSurface, /\{isKoLocale \? "필터 초기화" : "Reset filters"\}/);

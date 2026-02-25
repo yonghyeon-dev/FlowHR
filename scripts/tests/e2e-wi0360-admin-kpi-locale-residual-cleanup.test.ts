@@ -15,7 +15,7 @@ async function run() {
   assert.match(copySource, /metricLabel: string;/);
   assert.match(copySource, /logSuccessLabel: string;/);
   assert.match(copySource, /logFailLabel: string;/);
-  assert.match(copySource, /organizationIdLabel: "조직 ID"/);
+  assert.match(copySource, /organizationIdLabel: "조직 식별자"/);
   assert.match(copySource, /accessTokenLabel: "액세스 토큰 \(선택\)"/);
 
   assert.match(sectionsSource, /<th>\{copy\.metricLabel\}<\/th>/);

@@ -489,11 +489,11 @@ export default function AdminApprovalExecutionsPage() {
         <article className="panel">
           <h2>{isKoLocale ? "컨텍스트/필터" : "Context and filters"}</h2>
           <label>
-            {isKoLocale ? "조직 ID" : "Organization ID"}
+            {isKoLocale ? "조직 식별자" : "Organization ID"}
             <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
           </label>
           <label>
-            {isKoLocale ? "관리자 액터 ID (개발 대체값)" : "Admin actor ID (dev fallback)"}
+            {isKoLocale ? "관리자 액터 식별자 (개발 대체값)" : "Admin actor ID (dev fallback)"}
             <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
           </label>
           <label>

@@ -44,7 +44,7 @@ const searchSortCopyByLocale = {
     sortEmployee: "직원 오름차순",
     sortQueue: "큐 오름차순",
     query: "검색어",
-    queryPlaceholder: "직원 ID, 요청 ID, 상태, 메모",
+    queryPlaceholder: "직원 번호, 요청 ID, 상태, 메모",
     pendingFirst: "대기 우선",
     urgentOnly: "긴급만 보기",
     reset: "초기화",

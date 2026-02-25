@@ -60,7 +60,7 @@ export function AdminSchedulingPanel({
       <p className="small">직원별 근무 일정을 생성/조회/삭제합니다. 기간 필터(시작/종료)는 아래 기능들과 동일하게 공유됩니다.</p>
       <div className="input-grid">
         <label>
-          직원 ID
+          직원 번호
           <input
             value={scheduleEmployeeId}
             onChange={(event) => onScheduleEmployeeIdChange(event.target.value)}

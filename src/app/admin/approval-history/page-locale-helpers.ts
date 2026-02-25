@@ -62,8 +62,8 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalHistoryLocaleCopy> = {
     },
     filters: {
       title: "컨텍스트/필터",
-      organizationId: "조직 ID",
-      adminActorId: "관리자 액터 ID (개발용 대체값)",
+      organizationId: "조직 식별자",
+      adminActorId: "관리자 액터 식별자 (개발용 대체값)",
       accessTokenOptional: "액세스 토큰 (선택)",
       bearerPlaceholder: "베어러 토큰",
       domain: "도메인",

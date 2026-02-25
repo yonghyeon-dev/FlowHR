@@ -82,7 +82,7 @@ export function AdminPeopleInvitePanels({
         </p>
         <div className="input-grid">
           <label>
-            {isKoLocale ? "직원 ID" : "Employee ID"}
+            {isKoLocale ? "직원 번호" : "Employee ID"}
             <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
           </label>
           <label>
@@ -134,7 +134,7 @@ export function AdminPeopleInvitePanels({
         <h2>{isKoLocale ? "초대/가입" : "Invite/Sign-up"}</h2>
         <p className="small">
           {isKoLocale
-            ? "직원에게 전달할 초대 링크를 생성합니다. 액터 ID에 직원 ID를 넣으면 직원 포털이 해당 직원으로 매핑됩니다."
+            ? "직원에게 전달할 초대 링크를 생성합니다. 액터 식별자에 직원 번호를 넣으면 직원 포털이 해당 직원으로 매핑됩니다."
             : "Generate invite links for employees. If actor ID contains the employee ID, the employee portal maps to that employee."}
         </p>
         <div className="input-grid">
@@ -163,7 +163,7 @@ export function AdminPeopleInvitePanels({
             </select>
           </label>
           <label>
-            {isKoLocale ? "액터 ID (선택)" : "Actor ID (optional)"}
+            {isKoLocale ? "액터 식별자 (선택)" : "Actor ID (optional)"}
             <input
               value={inviteActorId}
               onChange={(event) => onInviteActorIdChange(event.target.value)}
@@ -171,7 +171,7 @@ export function AdminPeopleInvitePanels({
             />
           </label>
           <label className="full">
-            {isKoLocale ? "조직 ID" : "Organization ID"}
+            {isKoLocale ? "조직 식별자" : "Organization ID"}
             <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
           </label>
         </div>
