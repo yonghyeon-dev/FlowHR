@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-25
-> **Current version**: 0.1.159 (Contracts Employee ID Locale Display Normalization)
+> **Current version**: 0.1.160 (Admin Notice Workspace View Decomposition)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -737,3 +737,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0470 korean copy utf8 recovery for withholding/payslip/contracts (원천징수·명세서·전자계약함 ko 카피 깨짐 복구 + 용어 정규화 + existing korean-copy regression suite 재통과)
 - WI-0471 korean locale employee-id input normalization for withholding/payslip receipts (`/employee/withholding-receipt`, `/employee/payslip-receipts`의 기본 직원번호 입력값 ko 표시(`직원-1001`)로 통일 + API 호출 시 `EMP-1001` 포맷 자동 정규화 + locale 전환 시 입력값 표기 동기화 + regression test)
 - WI-0472 contracts employee-id locale display normalization (`/admin/contracts`에서 직원번호 입력/표시를 locale 친화(`직원-*`)로 통일 + 문서 생성 API는 `EMP-*` 포맷 자동 정규화 + 문서 목록 employeeId 표시 locale 변환 + regression test)
+- WI-0473 admin notice workspace view decomposition (`/admin/notices` 화면을 `AdminNoticeWorkspaceView`로 분리해 `AdminNoticeWorkspace.tsx`를 orchestration 전용으로 축소(<=300) + 기존 공지 작성/게시/이력 UI 토큰 유지 + regression test)
