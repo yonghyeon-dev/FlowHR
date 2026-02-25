@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   formatDateTimeByLocale,
   normalizeRuntimeDiagnosticMessage,
@@ -20,15 +20,25 @@ import type {
 import { currentYear } from "@/components/withholding-receipt/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import {
+  defaultEmployeeIdForApi,
+  getLocalizedEmployeeIdInputDefault,
+  normalizeEmployeeIdForApi,
+  normalizeEmployeeIdForLocaleInput
+} from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 export default function WithholdingReceiptConsole() {
   const { locale } = useI18n();
   const copy = withholdingReceiptCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
   const formatKrwByLocale = (value: number) =>
     `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "원" : " KRW"}`;
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
+  const [employeeId, setEmployeeId] = useStickyStringState(
+    "flowhr:ctx:employeeId",
+    localeEmployeeIdDefault
+  );
   const [accessToken, setAccessToken] = useState("");
   const [year, setYear] = useState(String(currentYear()));
   const [documentFormat, setDocumentFormat] = useState<"json" | "text">("json");
@@ -63,6 +73,18 @@ export default function WithholdingReceiptConsole() {
       "인증 세션 상태를 확인하지 못했습니다."
     );
   }, [locale, supabaseSessionError]);
+  const normalizedEmployeeIdForApi = useMemo(
+    () => normalizeEmployeeIdForApi(employeeId, locale),
+    [employeeId, locale]
+  );
+
+  useEffect(() => {
+    const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
+    if (localizedInput && localizedInput !== employeeId) {
+      setEmployeeId(localizedInput);
+    }
+  }, [employeeId, locale, setEmployeeId]);
+
   function buildHeaders() {
     const headers: Record<string, string> = {
       "content-type": "application/json"
@@ -71,7 +93,7 @@ export default function WithholdingReceiptConsole() {
       headers.authorization = `Bearer ${bearerToken}`;
     } else {
       headers["x-actor-role"] = "employee";
-      headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
+      headers["x-actor-id"] = normalizedEmployeeIdForApi || defaultEmployeeIdForApi;
       if (organizationId.trim()) {
         headers["x-actor-organization-id"] = organizationId.trim();
       }
@@ -125,6 +147,10 @@ export default function WithholdingReceiptConsole() {
     }
   }
   async function previewReceipt() {
+    if (!normalizedEmployeeIdForApi) {
+      setStatusMessage(copy.invalidInputStatus);
+      return;
+    }
     const body = await runRequest<WithholdingReceiptResponse>({
       label: copy.logPreviewReceipt,
       pending: copy.pendingReceiptPreview,
@@ -132,7 +158,7 @@ export default function WithholdingReceiptConsole() {
       method: "POST",
       body: {
         year: parseRequiredInt(year, copy.yearLabel, locale),
-        employeeId: employeeId.trim(),
+        employeeId: normalizedEmployeeIdForApi,
         issue: false
       }
     });
@@ -155,9 +181,13 @@ export default function WithholdingReceiptConsole() {
     URL.revokeObjectURL(objectUrl);
   }
   async function loadIssuedDocument() {
+    if (!normalizedEmployeeIdForApi) {
+      setStatusMessage(copy.invalidInputStatus);
+      return;
+    }
     const query = new URLSearchParams({
       year: String(parseRequiredInt(year, copy.yearLabel, locale)),
-      employeeId: employeeId.trim(),
+      employeeId: normalizedEmployeeIdForApi,
       format: documentFormat
     });
     const body = await runRequest<WithholdingReceiptDocumentResponse>({
@@ -174,9 +204,13 @@ export default function WithholdingReceiptConsole() {
     setTimeout(() => setStatusMessage(""), 3000);
   }
   async function loadFinalizedSettlement() {
+    if (!normalizedEmployeeIdForApi) {
+      setStatusMessage(copy.invalidInputStatus);
+      return;
+    }
     const query = new URLSearchParams({
       year: String(parseRequiredInt(year, copy.yearLabel, locale)),
-      employeeId: employeeId.trim()
+      employeeId: normalizedEmployeeIdForApi
     });
     const body = await runRequest<FinalizedYearEndSettlementResponse>({
       label: copy.logLoadFinalizedSettlement,
