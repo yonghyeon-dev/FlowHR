@@ -14,17 +14,8 @@ import {
   toLocalInputValue
 } from "@/app/admin/page-helpers";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
-import {
-  buildAdminValidationFailureLog,
-  listAttendanceAggregatesFromHelper,
-  loadLeavePolicyFromHelper,
-  refreshAdminInboxFromHelper,
-  confirmPayrollFromHelper,
-  saveLeavePolicyFromHelper,
-  settleLeaveAccrualFromHelper
-} from "@/app/admin/page-action-helpers";
+import { buildAdminDashboardActions } from "@/app/admin/page-dashboard-actions";
 import { buildAdminDirectoryActions } from "@/app/admin/page-directory-actions";
-import { buildAdminPayrollPreviewRequest } from "@/app/admin/page-payroll-helpers";
 import {
   isDefaultDemoOrganizationName,
   resolveAdminLocaleLabelBundle
@@ -59,11 +50,9 @@ import {
   type QueueSearchSortOption,
   type QueueSearchSortScope
 } from "@/components/admin-approval/approval-queue-types";
-import { AdminAggregateLeavePanels } from "@/components/admin-dashboard/AdminAggregateLeavePanels";
+import { AdminCompensationPanels } from "@/app/admin/page-compensation-panels";
 import { AdminDashboardChrome } from "@/components/admin-dashboard/AdminDashboardChrome";
-import { AdminDebugLogsPanel } from "@/components/admin-dashboard/AdminDebugLogsPanel";
 import { AdminOnboardingAccountPanels } from "@/components/admin-dashboard/AdminOnboardingAccountPanels";
-import { AdminPayrollPanel } from "@/components/admin-dashboard/AdminPayrollPanel";
 import { AdminPeopleInvitePanels } from "@/components/admin-dashboard/AdminPeopleInvitePanels";
 import { AdminSchedulingPanel } from "@/components/admin-dashboard/AdminSchedulingPanel";
 import { type PayrollKrPresetShareLinkFeedback } from "@/components/payroll/PayrollKrPresetShareLinkFeedbackPanel";
@@ -306,11 +295,6 @@ export default function AdminDashboardPage() {
 
   const queueNowMs = Date.now();
   const {
-    queueSlaWatchHours,
-    queueSlaCriticalHours,
-    filteredPendingAttendance,
-    filteredPendingLeave,
-    filteredPreviewedPayroll,
     queueBadgeSummaries,
     activeQueueBadgeSummary,
     queueAlertOverview,
@@ -393,47 +377,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  function appendApprovalActivity(input: {
-    queue: "attendance" | "leave" | "payroll";
-    actionKind?: "approve" | "reject" | "confirm" | "other";
-    action: string;
-    itemId: string;
-    ok: boolean;
-    status: number;
-  }) {
-    const createdAtMs = Date.now();
-    setApprovalActivities((prev) => [
-      {
-        id: createdAtMs + Math.floor(Math.random() * 1000),
-        queue: input.queue,
-        actionKind: input.actionKind ?? "other",
-        action: input.action,
-        itemId: input.itemId,
-        ok: input.ok,
-        status: input.status,
-        createdAtMs,
-        at: new Date().toLocaleString(runtimeLocale)
-      },
-      ...prev
-    ].slice(0, 30));
-  }
-
-  function publishMobileApprovalFeedback(input: {
-    queue: "attendance" | "leave" | "payroll" | "mixed";
-    action: string;
-    okCount: number;
-    failCount: number;
-  }) {
-    setMobileApprovalFeedback({
-      queue: input.queue,
-      action: input.action,
-      okCount: input.okCount,
-      failCount: input.failCount,
-      total: input.okCount + input.failCount,
-      at: new Date().toLocaleString(runtimeLocale)
-    });
-  }
-
   const directoryActions = buildAdminDirectoryActions({
     callApi,
     buildQuery,
@@ -470,214 +413,62 @@ export default function AdminDashboardPage() {
     confirmScheduleDelete: (scheduleId) => window.confirm(`근무 일정을 삭제할까요?\n\nID: ${scheduleId}`)
   });
 
-  async function refreshInbox() {
-    const inbox = await refreshAdminInboxFromHelper({
-      callApi,
-      periodStart,
-      periodEnd,
-      toIso,
-      buildQuery
-    });
-    setPendingAttendance(inbox.pendingAttendance);
-    setPendingLeave(inbox.pendingLeave);
-    setPreviewedPayroll(inbox.previewedPayroll);
-  }
-
-  async function confirmPayroll(runId: string) {
-    const confirmed = await confirmPayrollFromHelper({
-      callApi,
-      runId
-    });
-    appendApprovalActivity({
-      queue: "payroll",
-      actionKind: "confirm",
-      action: "확정",
-      itemId: runId,
-      ok: confirmed.ok,
-      status: confirmed.status
-    });
-    publishMobileApprovalFeedback({
-      queue: "payroll",
-      action: "payroll-single-confirm",
-      okCount: confirmed.ok ? 1 : 0,
-      failCount: confirmed.ok ? 0 : 1
-    });
-    if (confirmed.ok && confirmed.confirmedRunId) {
-      setLastPayrollRunId(confirmed.confirmedRunId);
-    }
-    await refreshInbox();
-  }
-
-  async function previewPayroll() {
-    const previewRequest = buildAdminPayrollPreviewRequest({
-      payrollPreviewMode,
-      periodStart,
-      periodEnd,
-      employeeId,
-      payrollHourlyRateKrw,
-      payrollNonTaxableIncomeKrw,
-      payrollTaxableIncomeKrw,
-      payrollTaxableItems,
-      payrollNonTaxableItems,
-      payrollIncomeSplitItemPresetId,
-      payrollOtherDeductionsKrw,
-      payrollAdditionalTaxCreditKrw,
-      payrollDependentCount,
-      payrollDependentTaxCreditPerPersonKrw,
-      payrollIncomeTaxLookupPresetId,
-      payrollIncomeTaxLookupPresetAuto,
-      payrollIncomeTaxLookupAsOf,
-      payrollRequireMonthlyBoundary,
-      payrollNationalPensionCapKrw,
-      payrollHealthInsuranceCapKrw,
-      payrollEmploymentInsuranceCapKrw,
-      toIso
-    });
-
-    if (previewRequest.hasBlockingConsistencyIssues) {
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: "Payroll preview (client consistency guard)",
-          status: 400,
-          ok: false,
-          durationMs: 0,
-          at: new Date().toLocaleString(runtimeLocale),
-          body: {
-            error: "Fix split-item rows before submit.",
-            details: previewRequest.consistencySummary
-          }
-        },
-        ...prev
-      ]);
-      return;
-    }
-
-    const { response, body } = await callApi(previewRequest.label, "POST", previewRequest.path, previewRequest.payload);
-    if (!response.ok) {
-      return;
-    }
-    const parsed = body as { run?: { id?: string } };
-    if (parsed.run?.id) {
-      setLastPayrollRunId(parsed.run.id);
-    }
-    await refreshInbox();
-  }
-
-  async function settleLeaveAccrual() {
-    const balance = await settleLeaveAccrualFromHelper({
-      callApi,
-      accrualYear,
-      accrualGrantDays,
-      accrualCarryCapDays,
-      accrualEmployeeId
-    });
-    if (!balance) {
-      return;
-    }
-    setAccrualResult(balance);
-  }
-
-  async function loadLeavePolicy() {
-    if (!organizationId.trim()) {
-      setLogs((prev) => [
-        buildAdminValidationFailureLog({
-          label: "휴가 정책 조회",
-          error: "조직 식별자가 필요합니다.",
-          runtimeLocale
-        }),
-        ...prev
-      ]);
-      return;
-    }
-
-    const policy = await loadLeavePolicyFromHelper({
-      callApi,
-      organizationId,
-      buildQuery
-    });
-    if (!policy) {
-      return;
-    }
-
-    if (typeof policy.annualGrantDays === "number") {
-      setAccrualGrantDays(String(policy.annualGrantDays));
-    }
-    if (typeof policy.carryOverCapDays === "number") {
-      setAccrualCarryCapDays(String(policy.carryOverCapDays));
-    }
-    if (typeof policy.allowHalfDay === "boolean") {
-      setLeaveAllowHalfDay(policy.allowHalfDay);
-    }
-    if (typeof policy.allowHourly === "boolean") {
-      setLeaveAllowHourly(policy.allowHourly);
-    }
-    if (typeof policy.hourlyIncrementMinutes === "number") {
-      setLeaveHourlyIncrementMinutes(String(policy.hourlyIncrementMinutes));
-    }
-    if (typeof policy.maxHoursPerRequest === "number") {
-      setLeaveMaxHoursPerRequest(String(policy.maxHoursPerRequest));
-    }
-    if (typeof policy.minNoticeDays === "number") {
-      setLeaveMinNoticeDays(String(policy.minNoticeDays));
-    }
-    if (typeof policy.maxConsecutiveDays === "number") {
-      setLeaveMaxConsecutiveDays(String(policy.maxConsecutiveDays));
-    } else if (policy.maxConsecutiveDays === null) {
-      setLeaveMaxConsecutiveDays("");
-    }
-  }
-
-  async function saveLeavePolicy() {
-    if (!organizationId.trim()) {
-      setLogs((prev) => [
-        buildAdminValidationFailureLog({
-          label: "휴가 정책 저장",
-          error: "조직 식별자가 필요합니다.",
-          runtimeLocale
-        }),
-        ...prev
-      ]);
-      return;
-    }
-
-    await saveLeavePolicyFromHelper({
-      callApi,
-      organizationId,
-      accrualGrantDays,
-      accrualCarryCapDays,
-      leaveAllowHalfDay,
-      leaveAllowHourly,
-      leaveHourlyIncrementMinutes,
-      leaveMaxHoursPerRequest,
-      leaveMinNoticeDays,
-      leaveMaxConsecutiveDays
-    });
-  }
-
-  async function listAttendanceAggregates(options?: { employeeId?: string }) {
-    const nextAggregates = await listAttendanceAggregatesFromHelper({
-      callApi,
-      periodStart,
-      periodEnd,
-      aggregateEmployeeId,
-      employeeIdOverride: options?.employeeId,
-      toIso,
-      buildQuery
-    });
-    if (!nextAggregates) {
-      return;
-    }
-    setAggregates(nextAggregates);
-  }
-
-  function clearLogs() {
-    setLogs([]);
-  }
-
-  async function refreshDashboard() {
-    await Promise.all([refreshInbox(), listAttendanceAggregates()]);
-  }
+  const dashboardActions = buildAdminDashboardActions({
+    callApi,
+    buildQuery,
+    toIso,
+    runtimeLocale,
+    periodStart,
+    periodEnd,
+    organizationId,
+    setPendingAttendance,
+    setPendingLeave,
+    setPreviewedPayroll,
+    setLastPayrollRunId,
+    setLogs,
+    setAccrualResult,
+    setLeaveAllowHalfDay,
+    setLeaveAllowHourly,
+    setLeaveHourlyIncrementMinutes,
+    setLeaveMaxHoursPerRequest,
+    setLeaveMinNoticeDays,
+    setLeaveMaxConsecutiveDays,
+    setAccrualGrantDays,
+    setAccrualCarryCapDays,
+    aggregateEmployeeId,
+    setAggregates,
+    accrualEmployeeId,
+    accrualYear,
+    accrualGrantDays,
+    accrualCarryCapDays,
+    leaveAllowHalfDay,
+    leaveAllowHourly,
+    leaveHourlyIncrementMinutes,
+    leaveMaxHoursPerRequest,
+    leaveMinNoticeDays,
+    leaveMaxConsecutiveDays,
+    payrollPreviewMode,
+    employeeId,
+    payrollHourlyRateKrw,
+    payrollNonTaxableIncomeKrw,
+    payrollTaxableIncomeKrw,
+    payrollTaxableItems,
+    payrollNonTaxableItems,
+    payrollIncomeSplitItemPresetId,
+    payrollOtherDeductionsKrw,
+    payrollAdditionalTaxCreditKrw,
+    payrollDependentCount,
+    payrollDependentTaxCreditPerPersonKrw,
+    payrollIncomeTaxLookupPresetId,
+    payrollIncomeTaxLookupPresetAuto,
+    payrollIncomeTaxLookupAsOf,
+    payrollRequireMonthlyBoundary,
+    payrollNationalPensionCapKrw,
+    payrollHealthInsuranceCapKrw,
+    payrollEmploymentInsuranceCapKrw,
+    setApprovalActivities,
+    setMobileApprovalFeedback
+  });
 
   return (
     <main className="saas-content">
@@ -692,7 +483,7 @@ export default function AdminDashboardPage() {
         stats={stats}
         logStatusLabels={logStatusLabels}
         pendingLabel={pendingLabel}
-        onRefreshDashboard={() => void refreshDashboard()}
+        onRefreshDashboard={() => void dashboardActions.refreshDashboard()}
       />
 
       <section className="panel-grid">
@@ -799,7 +590,7 @@ export default function AdminDashboardPage() {
           queueSearchSortQuery={queueSearchSortQuery}
           filteredQueueSearchSortRows={filteredQueueSearchSortRows}
           approvalActivities={approvalActivities}
-          onRefreshInbox={() => void refreshInbox()}
+          onRefreshInbox={() => void dashboardActions.refreshInbox()}
           onApprovalQueueFocusChange={setApprovalQueueFocus}
           onPeriodStartChange={setPeriodStart}
           onPeriodEndChange={setPeriodEnd}
@@ -838,7 +629,11 @@ export default function AdminDashboardPage() {
           }}
         />
 
-        <AdminAggregateLeavePanels
+        <AdminCompensationPanels
+          isKoLocale={isKoLocale}
+          showDevTools={showDevTools}
+          organizationId={organizationId}
+          employeeId={employeeId}
           aggregateEmployeeId={aggregateEmployeeId}
           aggregates={aggregates}
           accrualEmployeeId={accrualEmployeeId}
@@ -852,16 +647,15 @@ export default function AdminDashboardPage() {
           leaveMinNoticeDays={leaveMinNoticeDays}
           leaveMaxConsecutiveDays={leaveMaxConsecutiveDays}
           accrualResult={accrualResult}
-          organizationId={organizationId}
           updatedAtLabel={updatedAtLabel}
-          formatDateTime={formatDateTimeByLocale}
+          formatDateTimeByLocale={formatDateTimeByLocale}
           minutesToHours={minutesToHours}
           formatDays={formatDays}
           onAggregateEmployeeIdChange={setAggregateEmployeeId}
-          onListAttendanceAggregates={() => void listAttendanceAggregates()}
+          onListAttendanceAggregates={() => void dashboardActions.listAttendanceAggregates()}
           onListAttendanceAggregatesAll={() => {
             setAggregateEmployeeId("");
-            void listAttendanceAggregates({ employeeId: "" });
+            void dashboardActions.listAttendanceAggregates({ employeeId: "" });
           }}
           onApplyAggregateEmployee={(id) => {
             setAggregateEmployeeId(id);
@@ -878,15 +672,10 @@ export default function AdminDashboardPage() {
           onLeaveMaxHoursPerRequestChange={setLeaveMaxHoursPerRequest}
           onLeaveMinNoticeDaysChange={setLeaveMinNoticeDays}
           onLeaveMaxConsecutiveDaysChange={setLeaveMaxConsecutiveDays}
-          onLoadLeavePolicy={() => void loadLeavePolicy()}
-          onSaveLeavePolicy={() => void saveLeavePolicy()}
-          onSettleLeaveAccrual={() => void settleLeaveAccrual()}
-        />
-
-        <AdminPayrollPanel
-          isKoLocale={isKoLocale}
+          onLoadLeavePolicy={() => void dashboardActions.loadLeavePolicy()}
+          onSaveLeavePolicy={() => void dashboardActions.saveLeavePolicy()}
+          onSettleLeaveAccrual={() => void dashboardActions.settleLeaveAccrual()}
           payrollPreviewMode={payrollPreviewMode}
-          employeeId={employeeId}
           payrollHourlyRateKrw={payrollHourlyRateKrw}
           payrollNonTaxableIncomeKrw={payrollNonTaxableIncomeKrw}
           payrollTaxableIncomeKrw={payrollTaxableIncomeKrw}
@@ -906,8 +695,10 @@ export default function AdminDashboardPage() {
           payrollEmploymentInsuranceCapKrw={payrollEmploymentInsuranceCapKrw}
           payrollPresetShareLinkFeedback={payrollPresetShareLinkFeedback}
           lastPayrollRunId={lastPayrollRunId}
-          onPayrollPreviewModeChange={setPayrollPreviewMode}
+          logs={logs}
+          logStatusLabels={logStatusLabels}
           onEmployeeIdChange={setEmployeeId}
+          onPayrollPreviewModeChange={setPayrollPreviewMode}
           onPayrollHourlyRateKrwChange={setPayrollHourlyRateKrw}
           onPayrollNonTaxableIncomeKrwChange={setPayrollNonTaxableIncomeKrw}
           onPayrollTaxableIncomeKrwChange={setPayrollTaxableIncomeKrw}
@@ -931,22 +722,15 @@ export default function AdminDashboardPage() {
           onPayrollHealthInsuranceCapKrwChange={setPayrollHealthInsuranceCapKrw}
           onPayrollEmploymentInsuranceCapKrwChange={setPayrollEmploymentInsuranceCapKrw}
           onLastPayrollRunIdChange={setLastPayrollRunId}
-          onPreviewPayroll={() => void previewPayroll()}
-          onConfirmPayroll={() => void confirmPayroll(lastPayrollRunId)}
+          onPreviewPayroll={() => void dashboardActions.previewPayroll()}
+          onConfirmPayroll={() => void dashboardActions.confirmPayroll(lastPayrollRunId)}
           onResetPayrollPresetShareContext={resetPayrollPresetShareContext}
           onReapplyPayrollPresetShareContext={reapplyPayrollPresetShareContext}
           onClearManualIncomeSplitItems={() => {
             setPayrollTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
             setPayrollNonTaxableItems([createEmptyPayrollKrIncomeSplitItemDraft()]);
           }}
-        />
-
-        <AdminDebugLogsPanel
-          showDevTools={showDevTools}
-          isKoLocale={isKoLocale}
-          logs={logs}
-          logStatusLabels={logStatusLabels}
-          onClearLogs={clearLogs}
+          onClearLogs={dashboardActions.clearLogs}
         />
       </section>
     </main>
