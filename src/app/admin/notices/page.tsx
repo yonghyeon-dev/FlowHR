@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/provider";
 const copy = {
   ko: {
     title: "공지사항 워크스페이스",
-    subtitle: "관리자 공지 작성과 게시 이력을 한 화면에서 시작하는 baseline입니다.",
+    subtitle: "관리자 공지 작성과 게시 이력을 한 화면에서 시작하는 기본 화면입니다.",
     baseline: "현재 상태",
     baselineBody: "공지 도메인 착수 완료. 다음 WI에서 작성/예약/대상 선택 흐름을 확장합니다.",
     actions: {

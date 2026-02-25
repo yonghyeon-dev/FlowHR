@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/provider";
 const copy = {
   ko: {
     title: "복리후생 워크스페이스",
-    subtitle: "복리후생 정책/신청 영역의 baseline 라우트입니다.",
+    subtitle: "복리후생 정책/신청 영역의 기본 라우트입니다.",
     baseline: "현재 상태",
     baselineBody: "복리후생 영역 착수 완료. 다음 WI에서 항목 정의와 신청 처리 UX를 연결합니다.",
     actions: {

@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/provider";
 const copy = {
   ko: {
     title: "복리후생",
-    subtitle: "직원 복리후생 신청/조회 baseline 화면입니다.",
+    subtitle: "직원 복리후생 신청/조회 기본 화면입니다.",
     baseline: "현재 상태",
     baselineBody: "직원 복리후생 영역 착수 완료. 다음 WI에서 신청서/상태 추적 UX를 연결합니다.",
     actions: {

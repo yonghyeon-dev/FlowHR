@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/provider";
 const copy = {
   ko: {
     title: "채용",
-    subtitle: "직원 추천/채용 현황 baseline 화면입니다.",
+    subtitle: "직원 추천/채용 현황 기본 화면입니다.",
     baseline: "현재 상태",
     baselineBody: "직원 채용 영역 착수 완료. 다음 WI에서 추천 등록과 진행 상태 흐름을 연결합니다.",
     actions: {

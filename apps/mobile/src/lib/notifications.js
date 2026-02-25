@@ -31,20 +31,26 @@ export async function registerDevicePushTokenAsync(projectId) {
   return result.data ?? null;
 }
 
-export function permissionLabel(status) {
+export function permissionLabel(status, locale = "ko") {
+  const copy =
+    locale === "en"
+      ? { granted: "Granted", denied: "Denied", undetermined: "Undetermined" }
+      : { granted: "허용됨", denied: "거부됨", undetermined: "미결정" };
+
   if (status === "granted") {
-    return "Granted";
+    return copy.granted;
   }
   if (status === "denied") {
-    return "Denied";
+    return copy.denied;
   }
-  return "Undetermined";
+  return copy.undetermined;
 }
 
-export function mapFlowHrNotification(payload) {
+export function mapFlowHrNotification(payload, locale = "ko") {
+  const defaultTitle = locale === "en" ? "FlowHR notification" : "FlowHR 알림";
   return {
     id: payload?.id ?? `msg-${Date.now()}`,
-    title: payload?.title ?? "FlowHR notification",
+    title: payload?.title ?? defaultTitle,
     body: payload?.body ?? "",
     category: payload?.category ?? "general",
     createdAt: payload?.createdAt ?? new Date().toISOString(),

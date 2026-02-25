@@ -1,20 +1,66 @@
-﻿const CATEGORY_SEED = [
-  {
-    key: "approvalRequest",
-    title: "New approval request",
-    body: "A new item entered the approval queue."
+﻿const CATEGORY_SEED_BY_LOCALE = {
+  ko: [
+    {
+      key: "approvalRequest",
+      title: "새 승인 요청",
+      body: "승인 대기 큐에 새 항목이 등록되었습니다."
+    },
+    {
+      key: "approvalResult",
+      title: "승인 결과 업데이트",
+      body: "요청 처리 상태가 변경되었습니다."
+    },
+    {
+      key: "payslipReady",
+      title: "명세서 발행",
+      body: "이번 달 급여 명세서가 발행되었습니다."
+    }
+  ],
+  en: [
+    {
+      key: "approvalRequest",
+      title: "New approval request",
+      body: "A new item entered the approval queue."
+    },
+    {
+      key: "approvalResult",
+      title: "Approval result updated",
+      body: "Your request status has been updated."
+    },
+    {
+      key: "payslipReady",
+      title: "Payslip ready",
+      body: "This month's payslip has been issued."
+    }
+  ]
+};
+
+const CATEGORY_LABEL_BY_LOCALE = {
+  ko: {
+    all: "전체",
+    approvalRequest: "승인 요청",
+    approvalResult: "승인 결과",
+    payslipReady: "명세서 발행"
   },
-  {
-    key: "approvalResult",
-    title: "Approval result updated",
-    body: "Your request status has been updated."
-  },
-  {
-    key: "payslipReady",
-    title: "Payslip ready",
-    body: "This month's payslip has been issued."
+  en: {
+    all: "All",
+    approvalRequest: "Approval request",
+    approvalResult: "Approval result",
+    payslipReady: "Payslip ready"
   }
-];
+};
+
+function normalizeLocale(locale) {
+  return locale === "en" ? "en" : "ko";
+}
+
+function resolveCategorySeed(locale) {
+  return CATEGORY_SEED_BY_LOCALE[normalizeLocale(locale)];
+}
+
+export function resolveNotificationCategoryLabelMap(locale) {
+  return CATEGORY_LABEL_BY_LOCALE[normalizeLocale(locale)];
+}
 
 export function sortNotificationsNewest(items) {
   return [...items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
@@ -42,8 +88,9 @@ export function buildNotificationCategoryStats(items) {
   return stats;
 }
 
-export function appendLiveMockNotification(items, now = new Date()) {
-  const slot = CATEGORY_SEED[items.length % CATEGORY_SEED.length];
+export function appendLiveMockNotification(items, now = new Date(), locale = "ko") {
+  const categorySeed = resolveCategorySeed(locale);
+  const slot = categorySeed[items.length % categorySeed.length];
   const next = {
     id: `live-${now.getTime()}`,
     title: slot.title,
