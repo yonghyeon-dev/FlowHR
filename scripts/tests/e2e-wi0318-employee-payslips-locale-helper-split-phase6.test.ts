@@ -9,7 +9,21 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const payslipPage = readUtf8("src", "app", "employee", "payslips", "page.tsx");
   const payslipPageView = readUtf8("src", "app", "employee", "payslips", "page-view.tsx");
-  const payslipSurface = `${payslipPage}\n${payslipPageView}`;
+  const payslipFilterPanel = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-view-filter-panel.tsx"
+  );
+  const payslipRunListPanel = readUtf8(
+    "src",
+    "app",
+    "employee",
+    "payslips",
+    "page-view-run-list-panel.tsx"
+  );
+  const payslipSurface = `${payslipPage}\n${payslipPageView}\n${payslipFilterPanel}\n${payslipRunListPanel}`;
   const payslipLocaleHelpers = readUtf8(
     "src",
     "app",
@@ -39,7 +53,7 @@ async function run() {
 
   assert.match(payslipPage, /from "@\/app\/employee\/payslips\/page-locale-helpers"/);
   assert.match(payslipPage, /resolvePayslipSearchSortCopy\(isKoLocale\)/);
-  assert.match(payslipPageView, /formatDateTime\(run\.periodStart\)/);
+  assert.match(payslipSurface, /formatDateTime\(run\.periodStart\)/);
   assert.match(payslipPageView, /formatKrw\(selectedRun\.netPayKrw\)/);
 
   assert.doesNotMatch(payslipSurface, /function resolveRuntimeLocale\(\)/);
