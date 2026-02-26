@@ -46,8 +46,7 @@ import {
   executeScheduleAnomalyIncidentArchiveActions
 } from "@/features/scheduling/anomaly-incident-archive-helpers";
 import {
-  buildScheduleAnomalyIncidentSlaQueue,
-  filterScheduleAnomalyIncidentQueue
+  buildScheduleAnomalyIncidentSlaQueue
 } from "@/features/scheduling/anomaly-incident-queue-helpers";
 import {
   executeScheduleAnomalyIncidentReplayActions,
@@ -61,6 +60,7 @@ import {
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
   executeScheduleAnomalyIncidentEscalationRequests
 } from "@/features/scheduling/anomaly-incident-escalation-helpers";
+import { buildScheduleAnomalyIncidentListResult } from "@/features/scheduling/anomaly-incident-list-helpers";
 import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
@@ -3243,12 +3243,12 @@ export async function listScheduleAnomalyIncidents(
   const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
     organizationId: tenantScope ?? undefined
   });
-  const matched = filterScheduleAnomalyIncidentQueue(readModels, {
+  const { total, items } = buildScheduleAnomalyIncidentListResult({
+    readModels,
+    topN,
     state: input.state,
     assigneeId
   });
-
-  const items = matched.slice(0, topN).map(cloneScheduleAnomalyIncidentReadModel);
 
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.listed",
@@ -3260,13 +3260,13 @@ export async function listScheduleAnomalyIncidents(
       state: input.state ?? null,
       assigneeId: assigneeId ?? null,
       topN,
-      total: matched.length,
+      total,
       returned: items.length
     }
   });
 
   return {
-    total: matched.length,
+    total,
     items
   };
 }
