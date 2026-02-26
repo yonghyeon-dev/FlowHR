@@ -19,6 +19,10 @@ type AdminRecruitmentWorkspaceViewProps = {
   employmentType: string;
   openings: RecruitmentOpeningItem[];
   referrals: RecruitmentReferralItem[];
+  filteredReferrals: RecruitmentReferralItem[];
+  openingTitleById: Record<string, string>;
+  referralFilter: RecruitmentReferralStage | "all";
+  referralSearchQuery: string;
   stageSelection: Record<string, RecruitmentReferralStage>;
   pending: boolean;
   statusMessage: string;
@@ -28,6 +32,9 @@ type AdminRecruitmentWorkspaceViewProps = {
   onOpeningTitleChange: (value: string) => void;
   onDepartmentChange: (value: string) => void;
   onEmploymentTypeChange: (value: string) => void;
+  onReferralFilterChange: (value: RecruitmentReferralStage | "all") => void;
+  onReferralSearchQueryChange: (value: string) => void;
+  onClearReferralSearch: () => void;
   onLoadWorkspace: () => void;
   onCreateOpening: () => void;
   onStageSelectionChange: (referralId: string, stage: RecruitmentReferralStage) => void;
@@ -44,6 +51,10 @@ export default function AdminRecruitmentWorkspaceView({
   employmentType,
   openings,
   referrals,
+  filteredReferrals,
+  openingTitleById,
+  referralFilter,
+  referralSearchQuery,
   stageSelection,
   pending,
   statusMessage,
@@ -53,6 +64,9 @@ export default function AdminRecruitmentWorkspaceView({
   onOpeningTitleChange,
   onDepartmentChange,
   onEmploymentTypeChange,
+  onReferralFilterChange,
+  onReferralSearchQueryChange,
+  onClearReferralSearch,
   onLoadWorkspace,
   onCreateOpening,
   onStageSelectionChange,
@@ -150,17 +164,55 @@ export default function AdminRecruitmentWorkspaceView({
 
         <article className="panel">
           <h2>{copy.referralsTitle}</h2>
+          <label>
+            {copy.referralFilterLabel}
+            <select
+              value={referralFilter}
+              onChange={(event) => onReferralFilterChange(event.target.value as RecruitmentReferralStage | "all")}
+            >
+              <option value="all">{copy.referralStageFilter.all}</option>
+              <option value="SUBMITTED">{copy.referralStageFilter.SUBMITTED}</option>
+              <option value="SCREENING">{copy.referralStageFilter.SCREENING}</option>
+              <option value="INTERVIEW">{copy.referralStageFilter.INTERVIEW}</option>
+              <option value="OFFER">{copy.referralStageFilter.OFFER}</option>
+              <option value="HIRED">{copy.referralStageFilter.HIRED}</option>
+              <option value="REJECTED">{copy.referralStageFilter.REJECTED}</option>
+              <option value="WITHDRAWN">{copy.referralStageFilter.WITHDRAWN}</option>
+            </select>
+          </label>
+          <label>
+            {copy.referralSearchLabel}
+            <input
+              value={referralSearchQuery}
+              onChange={(event) => onReferralSearchQueryChange(event.target.value)}
+              placeholder={copy.referralSearchPlaceholder}
+            />
+          </label>
+          <div className="actions">
+            <button className="btn btn-secondary btn-small" type="button" onClick={onClearReferralSearch} disabled={pending}>
+              {copy.clearSearchAction}
+            </button>
+          </div>
+          <p className="small muted">
+            {copy.filteredReferralSummaryLabel}: {filteredReferrals.length} / {referrals.length}
+          </p>
           {referrals.length === 0 ? (
             <p className="small muted">{copy.emptyReferrals}</p>
+          ) : filteredReferrals.length === 0 ? (
+            <p className="small muted">{copy.filteredEmptyReferrals}</p>
           ) : (
             <ul className="simple-list">
-              {referrals.map((referral) => (
+              {filteredReferrals.map((referral) => (
                 <li key={referral.id}>
                   <span>
                     <strong>{referral.candidateName}</strong>
                     <br />
                     <span className="small muted">
                       {referral.candidateEmail} · {referral.referrerEmployeeId}
+                    </span>
+                    <br />
+                    <span className="small muted">
+                      {copy.referralOpeningTitleLabel}: {openingTitleById[referral.openingId] ?? copy.unknownOpeningLabel}
                     </span>
                     <br />
                     <span className="small muted">

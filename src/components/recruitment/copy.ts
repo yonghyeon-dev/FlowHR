@@ -16,6 +16,14 @@ export type AdminRecruitmentCopy = {
   createOpeningAction: string;
   openingsTitle: string;
   referralsTitle: string;
+  referralFilterLabel: string;
+  referralSearchLabel: string;
+  referralSearchPlaceholder: string;
+  clearSearchAction: string;
+  filteredReferralSummaryLabel: string;
+  referralOpeningTitleLabel: string;
+  unknownOpeningLabel: string;
+  filteredEmptyReferrals: string;
   stageUpdateLabel: string;
   updateStageAction: string;
   emptyOpenings: string;
@@ -33,6 +41,16 @@ export type AdminRecruitmentCopy = {
   };
   openingStatus: Record<RecruitmentOpeningStatus, string>;
   referralStage: Record<RecruitmentReferralStage, string>;
+  referralStageFilter: {
+    all: string;
+    SUBMITTED: string;
+    SCREENING: string;
+    INTERVIEW: string;
+    OFFER: string;
+    HIRED: string;
+    REJECTED: string;
+    WITHDRAWN: string;
+  };
 };
 
 export type EmployeeRecruitmentCopy = {
@@ -104,6 +122,14 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     createOpeningAction: "공고 저장",
     openingsTitle: "채용 공고",
     referralsTitle: "추천 후보자",
+    referralFilterLabel: "추천 단계 필터",
+    referralSearchLabel: "추천 검색",
+    referralSearchPlaceholder: "후보자/공고/추천인/메모 검색",
+    clearSearchAction: "검색 초기화",
+    filteredReferralSummaryLabel: "표시 추천 수",
+    referralOpeningTitleLabel: "공고명",
+    unknownOpeningLabel: "알 수 없는 공고",
+    filteredEmptyReferrals: "현재 필터 조건에 맞는 추천 후보자가 없습니다.",
     stageUpdateLabel: "단계 변경",
     updateStageAction: "단계 업데이트",
     emptyOpenings: "등록된 채용 공고가 없습니다.",
@@ -131,6 +157,16 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
       HIRED: "채용 완료",
       REJECTED: "불합격",
       WITHDRAWN: "철회"
+    },
+    referralStageFilter: {
+      all: "전체",
+      SUBMITTED: "추천 접수",
+      SCREENING: "서류 검토",
+      INTERVIEW: "면접",
+      OFFER: "오퍼",
+      HIRED: "채용 완료",
+      REJECTED: "불합격",
+      WITHDRAWN: "철회"
     }
   },
   en: {
@@ -148,6 +184,14 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     createOpeningAction: "Save opening",
     openingsTitle: "Openings",
     referralsTitle: "Referrals",
+    referralFilterLabel: "Referral stage filter",
+    referralSearchLabel: "Referral search",
+    referralSearchPlaceholder: "Search by candidate/opening/referrer/note",
+    clearSearchAction: "Clear search",
+    filteredReferralSummaryLabel: "Visible referrals",
+    referralOpeningTitleLabel: "Opening title",
+    unknownOpeningLabel: "Unknown opening",
+    filteredEmptyReferrals: "No referral matches current filters.",
     stageUpdateLabel: "Update stage",
     updateStageAction: "Apply stage",
     emptyOpenings: "No opening found.",
@@ -168,6 +212,16 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
       CLOSED: "Closed"
     },
     referralStage: {
+      SUBMITTED: "Submitted",
+      SCREENING: "Screening",
+      INTERVIEW: "Interview",
+      OFFER: "Offer",
+      HIRED: "Hired",
+      REJECTED: "Rejected",
+      WITHDRAWN: "Withdrawn"
+    },
+    referralStageFilter: {
+      all: "All",
       SUBMITTED: "Submitted",
       SCREENING: "Screening",
       INTERVIEW: "Interview",

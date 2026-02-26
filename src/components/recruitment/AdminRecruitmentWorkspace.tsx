@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { RecruitmentOpeningItem, RecruitmentReferralItem, RecruitmentReferralStage } from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
@@ -44,6 +44,8 @@ export default function AdminRecruitmentWorkspace() {
   const [openingTitle, setOpeningTitle] = useState("");
   const [department, setDepartment] = useState("");
   const [employmentType, setEmploymentType] = useState("정규직");
+  const [referralFilter, setReferralFilter] = useState<RecruitmentReferralStage | "all">("all");
+  const [referralSearchQuery, setReferralSearchQuery] = useState("");
 
   const [openings, setOpenings] = useState<RecruitmentOpeningItem[]>([]);
   const [referrals, setReferrals] = useState<RecruitmentReferralItem[]>([]);
@@ -58,6 +60,28 @@ export default function AdminRecruitmentWorkspace() {
         ? (supabaseSession?.accessToken ?? "")
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const openingTitleById = useMemo(() => {
+    const next: Record<string, string> = {};
+    openings.forEach((opening) => {
+      next[opening.id] = opening.title;
+    });
+    return next;
+  }, [openings]);
+  const filteredReferrals = useMemo(() => {
+    const query = referralSearchQuery.trim().toLowerCase();
+    return referrals.filter((referral) => {
+      if (referralFilter !== "all" && referral.stage !== referralFilter) {
+        return false;
+      }
+      if (query.length === 0) {
+        return true;
+      }
+      const openingTitle = (openingTitleById[referral.openingId] ?? "").toLowerCase();
+      const haystack =
+        `${referral.candidateName} ${referral.candidateEmail} ${referral.referrerEmployeeId} ${openingTitle} ${referral.note}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [openingTitleById, referralFilter, referralSearchQuery, referrals]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -188,6 +212,10 @@ export default function AdminRecruitmentWorkspace() {
       employmentType={employmentType}
       openings={openings}
       referrals={referrals}
+      filteredReferrals={filteredReferrals}
+      openingTitleById={openingTitleById}
+      referralFilter={referralFilter}
+      referralSearchQuery={referralSearchQuery}
       stageSelection={stageSelection}
       pending={pending}
       statusMessage={statusMessage}
@@ -197,6 +225,9 @@ export default function AdminRecruitmentWorkspace() {
       onOpeningTitleChange={setOpeningTitle}
       onDepartmentChange={setDepartment}
       onEmploymentTypeChange={setEmploymentType}
+      onReferralFilterChange={setReferralFilter}
+      onReferralSearchQueryChange={setReferralSearchQuery}
+      onClearReferralSearch={() => setReferralSearchQuery("")}
       onLoadWorkspace={() => void loadWorkspace()}
       onCreateOpening={() => void createOpening()}
       onStageSelectionChange={(referralId, stage) =>
