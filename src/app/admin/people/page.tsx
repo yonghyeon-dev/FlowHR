@@ -17,6 +17,8 @@ import {
   type Department,
   type Employee,
   type EmployeeHistory,
+  type HistoryActionFilter,
+  type HistoryFieldFilter,
   type Organization,
   type Position,
   type ProfileField,
@@ -38,6 +40,8 @@ export default function AdminPeoplePage() {
   const [positionFilter, setPositionFilter] = useState("");
   const [recentlyUpdatedDays, setRecentlyUpdatedDays] = useState<UpdatedWindow>("all");
   const [historyLimit, setHistoryLimit] = useState("30");
+  const [historyActionFilter, setHistoryActionFilter] = useState<HistoryActionFilter>("all");
+  const [historyFieldFilter, setHistoryFieldFilter] = useState<HistoryFieldFilter>("all");
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -211,6 +215,18 @@ export default function AdminPeoplePage() {
     [formatProfileValue]
   );
 
+  const filteredHistory = useMemo(() => {
+    return history.filter((entry) => {
+      if (historyActionFilter !== "all" && entry.action !== historyActionFilter) {
+        return false;
+      }
+      if (historyFieldFilter === "all") {
+        return true;
+      }
+      return historyChanges(entry).some((change) => change.field === historyFieldFilter);
+    });
+  }, [history, historyActionFilter, historyChanges, historyFieldFilter]);
+
   const {
     loadOrganizations,
     loadDepartments,
@@ -254,7 +270,7 @@ export default function AdminPeoplePage() {
     };
     const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
 
-    for (const entry of history) {
+    for (const entry of filteredHistory) {
       const payload = asRecord(entry.payload);
       if (!payload) {
         continue;
@@ -289,7 +305,7 @@ export default function AdminPeoplePage() {
         count: counters[field]
       }))
       .sort((left, right) => right.count - left.count);
-  }, [history, profileFieldLabel]);
+  }, [filteredHistory, profileFieldLabel]);
 
   const selectedDepartments = selectedEmployee?.organizationId
     ? departments.filter((department) => department.organizationId === selectedEmployee.organizationId)
@@ -364,6 +380,11 @@ export default function AdminPeoplePage() {
       selectedPositions={selectedPositions}
       applySelectedProfileUpdate={applySelectedProfileUpdate}
       history={history}
+      filteredHistory={filteredHistory}
+      historyActionFilter={historyActionFilter}
+      setHistoryActionFilter={setHistoryActionFilter}
+      historyFieldFilter={historyFieldFilter}
+      setHistoryFieldFilter={setHistoryFieldFilter}
       historyChangeSummary={historyChangeSummary}
       historyChanges={historyChanges}
       profileFieldLabel={profileFieldLabel}

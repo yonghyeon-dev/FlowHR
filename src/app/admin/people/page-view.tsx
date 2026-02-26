@@ -1,5 +1,4 @@
 import Link from "next/link";
-
 import { AdminPeopleComparePanel } from "@/app/admin/people/page-view-compare-panel";
 import { AdminPeopleDirectoryFiltersPanel } from "@/app/admin/people/page-view-directory-filters-panel";
 import { AdminPeopleHistoryPanel } from "@/app/admin/people/page-view-history-panel";
@@ -12,15 +11,16 @@ import {
   type Department,
   type Employee,
   type EmployeeHistory,
+  type HistoryActionFilter,
   type HistoryChangeSummaryItem,
   type HistoryEntryChange,
+  type HistoryFieldFilter,
   type OrgTreeNode,
   type Organization,
   type Position,
   type ProfileField,
   type UpdatedWindow
 } from "@/app/admin/people/page-types";
-
 type AdminPeoplePageViewProps = {
   isKoLocale: boolean;
   runtimeLocale: string;
@@ -78,6 +78,11 @@ type AdminPeoplePageViewProps = {
   selectedPositions: Position[];
   applySelectedProfileUpdate: () => Promise<void>;
   history: EmployeeHistory[];
+  filteredHistory: EmployeeHistory[];
+  historyActionFilter: HistoryActionFilter;
+  setHistoryActionFilter: (value: HistoryActionFilter) => void;
+  historyFieldFilter: HistoryFieldFilter;
+  setHistoryFieldFilter: (value: HistoryFieldFilter) => void;
   historyChangeSummary: HistoryChangeSummaryItem[];
   historyChanges: (entry: EmployeeHistory) => HistoryEntryChange[];
   profileFieldLabel: Record<ProfileField, string>;
@@ -85,69 +90,75 @@ type AdminPeoplePageViewProps = {
   pendingLabel: string | null;
 };
 
-export function AdminPeoplePageView({
-  isKoLocale,
-  runtimeLocale,
-  organizations,
-  departments,
-  positions,
-  employees,
-  filteredEmployees,
-  tree,
-  stats,
-  refreshDirectory,
-  organizationId,
-  setOrganizationId,
-  adminActorId,
-  setAdminActorId,
-  search,
-  setSearch,
-  activeFilter,
-  setActiveFilter,
-  departmentFilter,
-  setDepartmentFilter,
-  positionFilter,
-  setPositionFilter,
-  recentlyUpdatedDays,
-  setRecentlyUpdatedDays,
-  historyLimit,
-  setHistoryLimit,
-  showDevTools,
-  accessToken,
-  setAccessToken,
-  loadOrganizations,
-  loadDepartments,
-  loadPositions,
-  loadEmployees,
-  resetDirectoryFilters,
-  supabaseSessionError,
-  selectedEmployeeId,
-  setSelectedEmployeeId,
-  loadSelectedEmployeeHistory,
-  compareA,
-  setCompareA,
-  compareB,
-  setCompareB,
-  compareRows,
-  compareEmployeeA,
-  compareEmployeeB,
-  selectedEmployee,
-  editDepartmentId,
-  setEditDepartmentId,
-  editPositionId,
-  setEditPositionId,
-  editActive,
-  setEditActive,
-  selectedDepartments,
-  selectedPositions,
-  applySelectedProfileUpdate,
-  history,
-  historyChangeSummary,
-  historyChanges,
-  profileFieldLabel,
-  logs,
-  pendingLabel
-}: AdminPeoplePageViewProps) {
+export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
+  const {
+    isKoLocale,
+    runtimeLocale,
+    organizations,
+    departments,
+    positions,
+    employees,
+    filteredEmployees,
+    tree,
+    stats,
+    refreshDirectory,
+    organizationId,
+    setOrganizationId,
+    adminActorId,
+    setAdminActorId,
+    search,
+    setSearch,
+    activeFilter,
+    setActiveFilter,
+    departmentFilter,
+    setDepartmentFilter,
+    positionFilter,
+    setPositionFilter,
+    recentlyUpdatedDays,
+    setRecentlyUpdatedDays,
+    historyLimit,
+    setHistoryLimit,
+    showDevTools,
+    accessToken,
+    setAccessToken,
+    loadOrganizations,
+    loadDepartments,
+    loadPositions,
+    loadEmployees,
+    resetDirectoryFilters,
+    supabaseSessionError,
+    selectedEmployeeId,
+    setSelectedEmployeeId,
+    loadSelectedEmployeeHistory,
+    compareA,
+    setCompareA,
+    compareB,
+    setCompareB,
+    compareRows,
+    compareEmployeeA,
+    compareEmployeeB,
+    selectedEmployee,
+    editDepartmentId,
+    setEditDepartmentId,
+    editPositionId,
+    setEditPositionId,
+    editActive,
+    setEditActive,
+    selectedDepartments,
+    selectedPositions,
+    applySelectedProfileUpdate,
+    history,
+    filteredHistory,
+    historyActionFilter,
+    setHistoryActionFilter,
+    historyFieldFilter,
+    setHistoryFieldFilter,
+    historyChangeSummary,
+    historyChanges,
+    profileFieldLabel,
+    logs,
+    pendingLabel
+  } = props;
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -155,7 +166,7 @@ export function AdminPeoplePageView({
           <h1 className="page-title">{isKoLocale ? "조직도/인사 이력" : "Organization chart and HR history"}</h1>
           <p className="page-subtitle">
             {isKoLocale
-              ? "조직도 트리, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다."
+              ? "조직도, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다."
               : "Manage org tree, employee comparison, and HR history cards in one screen."}
           </p>
         </div>
@@ -168,7 +179,6 @@ export function AdminPeoplePageView({
           </Link>
         </div>
       </header>
-
       <section className="kpi-strip">
         <article className="kpi-card">
           <p>{isKoLocale ? "조직" : "Organizations"}</p>
@@ -195,7 +205,6 @@ export function AdminPeoplePageView({
           </strong>
         </article>
       </section>
-
       <section className="panel-grid">
         <section id="directory-filters">
           <AdminPeopleDirectoryFiltersPanel
@@ -270,6 +279,11 @@ export function AdminPeoplePageView({
             applySelectedProfileUpdate={applySelectedProfileUpdate}
             loadSelectedEmployeeHistory={loadSelectedEmployeeHistory}
             history={history}
+            filteredHistory={filteredHistory}
+            historyActionFilter={historyActionFilter}
+            setHistoryActionFilter={setHistoryActionFilter}
+            historyFieldFilter={historyFieldFilter}
+            setHistoryFieldFilter={setHistoryFieldFilter}
             historyChangeSummary={historyChangeSummary}
             historyChanges={historyChanges}
             profileFieldLabel={profileFieldLabel}
@@ -277,12 +291,7 @@ export function AdminPeoplePageView({
         </section>
 
         <section aria-label={isKoLocale ? "요청 로그" : "Request logs"}>
-          <AdminPeopleLogsPanel
-            isKoLocale={isKoLocale}
-            stats={stats}
-            pendingLabel={pendingLabel}
-            logs={logs}
-          />
+          <AdminPeopleLogsPanel isKoLocale={isKoLocale} stats={stats} pendingLabel={pendingLabel} logs={logs} />
         </section>
       </section>
     </main>
