@@ -72,6 +72,10 @@ export type EmployeeNoticeBoardCopy = {
   accessTokenLabel: string;
   searchLabel: string;
   searchPlaceholder: string;
+  readStatusFilterLabel: string;
+  readStatusFilterAllOption: string;
+  readStatusFilterUnreadOption: string;
+  readStatusFilterReadOption: string;
   unreadOnlyLabel: string;
   clearFiltersAction: string;
   refreshAction: string;
@@ -254,6 +258,10 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     accessTokenLabel: "접근 토큰(선택)",
     searchLabel: "검색어",
     searchPlaceholder: "제목/본문에서 검색",
+    readStatusFilterLabel: "읽음 상태",
+    readStatusFilterAllOption: "전체",
+    readStatusFilterUnreadOption: "미확인",
+    readStatusFilterReadOption: "확인함",
     unreadOnlyLabel: "미확인 공지만 보기",
     clearFiltersAction: "필터 초기화",
     refreshAction: "공지 새로고침",
@@ -292,6 +300,10 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     accessTokenLabel: "Access token (optional)",
     searchLabel: "Search",
     searchPlaceholder: "Search in title/body",
+    readStatusFilterLabel: "Read status",
+    readStatusFilterAllOption: "All",
+    readStatusFilterUnreadOption: "Unread",
+    readStatusFilterReadOption: "Read",
     unreadOnlyLabel: "Unread only",
     clearFiltersAction: "Clear filters",
     refreshAction: "Refresh notices",
