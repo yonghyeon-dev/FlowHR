@@ -4,6 +4,7 @@ import {
 } from "@/components/contracts/copy";
 import {
   contractDocumentStatusFilters,
+  type ContractDocumentExpirationWindow,
   type ContractDocumentStatusFilter
 } from "@/components/contracts/useAdminContractsDocumentFilters";
 
@@ -13,9 +14,15 @@ type AdminContractsDocumentFilterControlsProps = {
   onSearchQueryChange: (value: string) => void;
   statusFilter: ContractDocumentStatusFilter;
   onStatusFilterChange: (value: ContractDocumentStatusFilter) => void;
+  expirationWindowDays: ContractDocumentExpirationWindow;
+  onExpirationWindowDaysChange: (value: ContractDocumentExpirationWindow) => void;
+  renewalCandidateOnly: boolean;
+  onRenewalCandidateOnlyChange: (value: boolean) => void;
   statusLabels: Record<ContractDocumentStatus, string>;
   visibleCount: number;
   totalCount: number;
+  expiringSoonCount: number;
+  renewalCandidateCount: number;
 };
 
 export function AdminContractsDocumentFilterControls({
@@ -24,9 +31,15 @@ export function AdminContractsDocumentFilterControls({
   onSearchQueryChange,
   statusFilter,
   onStatusFilterChange,
+  expirationWindowDays,
+  onExpirationWindowDaysChange,
+  renewalCandidateOnly,
+  onRenewalCandidateOnlyChange,
   statusLabels,
   visibleCount,
-  totalCount
+  totalCount,
+  expiringSoonCount,
+  renewalCandidateCount
 }: AdminContractsDocumentFilterControlsProps) {
   return (
     <>
@@ -53,9 +66,33 @@ export function AdminContractsDocumentFilterControls({
             ))}
           </select>
         </label>
+        <label>
+          {copy.expirationWindowFilterLabel}
+          <select
+            value={expirationWindowDays}
+            onChange={(event) => onExpirationWindowDaysChange(event.target.value as ContractDocumentExpirationWindow)}
+          >
+            <option value="ALL">{copy.expirationWindowAllOption}</option>
+            <option value="7">{copy.expirationWindow7Option}</option>
+            <option value="14">{copy.expirationWindow14Option}</option>
+            <option value="30">{copy.expirationWindow30Option}</option>
+          </select>
+        </label>
       </div>
+      <label>
+        <input
+          type="checkbox"
+          checked={renewalCandidateOnly}
+          onChange={(event) => onRenewalCandidateOnlyChange(event.target.checked)}
+        />{" "}
+        {copy.renewalCandidateOnlyLabel}
+      </label>
       <p className="small">
         {copy.documentVisibleCountLabel} {visibleCount} / {totalCount}
+      </p>
+      <p className="small muted">
+        {copy.expiringSoonCountLabel} {expiringSoonCount} | {copy.renewalCandidateCountLabel}{" "}
+        {renewalCandidateCount}
       </p>
     </>
   );

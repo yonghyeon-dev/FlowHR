@@ -81,21 +81,13 @@ export default function AdminContractsWorkspace() {
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
-  const {
-    documentSearchQuery,
-    setDocumentSearchQuery,
-    documentStatusFilter,
-    setDocumentStatusFilter,
-    visibleDocuments
-  } = useAdminContractsDocumentFilters({ documents, locale });
-
+  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, renewalCandidateOnly, setRenewalCandidateOnly, expiringSoonCount, renewalCandidateCount, visibleDocuments } = useAdminContractsDocumentFilters({ documents, locale });
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
       setContractsRuntimeLocale(null);
     };
   }, [locale]);
-
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -110,10 +102,8 @@ export default function AdminContractsWorkspace() {
           </div>
         </div>
       </header>
-
       {error ? <p className="inline-error">{error}</p> : null}
       {message ? <p className="small">{message}</p> : null}
-
       <section className="kpi-strip" aria-label={copy.summaryKpiAria}>
         <article className="kpi-card">
           <span>{copy.templatesKpiLabel}</span>
@@ -128,7 +118,6 @@ export default function AdminContractsWorkspace() {
           <strong>{documents.filter((item) => item.approvalStatus === "PENDING").length}</strong>
         </article>
       </section>
-
       <section className="panel-grid">
         <article id="contract-template-library" className="panel panel-contract-template-library">
           <h2>{copy.templateLibraryTitle}</h2>
@@ -181,7 +170,6 @@ export default function AdminContractsWorkspace() {
             ))}
           </ul>
         </article>
-
         <article id="contract-signature-readiness" className="panel panel-contract-signature-readiness">
           <h2>{copy.documentLifecycleTitle}</h2>
           <div className="contract-form-grid">
@@ -209,9 +197,15 @@ export default function AdminContractsWorkspace() {
             onSearchQueryChange={setDocumentSearchQuery}
             statusFilter={documentStatusFilter}
             onStatusFilterChange={setDocumentStatusFilter}
+            expirationWindowDays={expirationWindowDays}
+            onExpirationWindowDaysChange={setExpirationWindowDays}
+            renewalCandidateOnly={renewalCandidateOnly}
+            onRenewalCandidateOnlyChange={setRenewalCandidateOnly}
             statusLabels={documentStatusLabels}
             visibleCount={visibleDocuments.length}
             totalCount={documents.length}
+            expiringSoonCount={expiringSoonCount}
+            renewalCandidateCount={renewalCandidateCount}
           />
           <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>
             {visibleDocuments.map((document) => {
