@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -8,6 +8,12 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeeWorkspace = readUtf8("src", "components", "benefits", "EmployeeBenefitsWorkspace.tsx");
+  const employeeWorkspaceView = readUtf8(
+    "src",
+    "components",
+    "benefits",
+    "EmployeeBenefitsWorkspaceView.tsx"
+  );
   const benefitsRequestsRoute = readUtf8("src", "app", "api", "benefits", "requests", "route.ts");
   const benefitsCopy = readUtf8("src", "components", "benefits", "copy.ts");
 
@@ -19,10 +25,13 @@ async function run() {
 
   assert.match(employeeWorkspace, /requestStatusFilter/);
   assert.match(employeeWorkspace, /status: requestStatusFilter/);
-  assert.match(employeeWorkspace, /setRequestSummary\(parseSummary\(requestsRes\.parsed\)\)/);
-  assert.match(employeeWorkspace, /copy\.requestFilterLabel/);
-  assert.match(employeeWorkspace, /copy\.requestSummaryLabel/);
-  assert.match(employeeWorkspace, /catalogById\.get\(item\.benefitId\)\?\.name \?\? copy\.unknownBenefitLabel/);
+  assert.match(employeeWorkspace, /setRequestSummary\(parseBenefitRequestSummary\(requestsRes\.parsed\)\)/);
+  assert.match(employeeWorkspaceView, /copy\.requestFilterLabel/);
+  assert.match(employeeWorkspaceView, /copy\.requestSummaryLabel/);
+  assert.match(
+    employeeWorkspace,
+    /resolveBenefitName=\{\(benefitId\) => catalogById\.get\(benefitId\)\?\.name \?\? copy\.unknownBenefitLabel\}/
+  );
 
   assert.match(benefitsCopy, /requestFilterLabel/);
   assert.match(benefitsCopy, /requestSummaryLabel/);

@@ -21,6 +21,12 @@ async function run() {
     "route.ts"
   );
   const employeeWorkspace = readUtf8("src", "components", "benefits", "EmployeeBenefitsWorkspace.tsx");
+  const employeeWorkspaceView = readUtf8(
+    "src",
+    "components",
+    "benefits",
+    "EmployeeBenefitsWorkspaceView.tsx"
+  );
   const benefitsCopy = readUtf8("src", "components", "benefits", "copy.ts");
 
   const workItem = readUtf8("work-items", "WI-0424-benefits-request-cancel-self-service.md");
@@ -39,11 +45,11 @@ async function run() {
 
   assert.match(employeeWorkspace, /async function cancelRequest\(requestId: string\)/);
   assert.match(employeeWorkspace, /\/api\/benefits\/requests\/\$\{encodeURIComponent\(requestId\)\}\/cancel/);
-  assert.match(employeeWorkspace, /copy\.requestFilter\.CANCELED/);
-  assert.match(employeeWorkspace, /copy\.cancelAction/);
+  assert.match(employeeWorkspaceView, /copy\.requestFilter\.CANCELED/);
+  assert.match(employeeWorkspaceView, /copy\.cancelAction/);
 
   assert.match(benefitsCopy, /cancelAction/);
-  assert.match(benefitsCopy, /CANCELED: "취소"/);
+  assert.match(benefitsCopy, /CANCELED: "痍⑥냼"/);
   assert.match(benefitsCopy, /CANCELED: "Canceled"/);
   assert.match(benefitsCopy, /cancelFailed/);
 

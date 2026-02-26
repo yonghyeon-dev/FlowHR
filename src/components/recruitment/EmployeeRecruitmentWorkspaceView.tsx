@@ -1,0 +1,330 @@
+import Link from "next/link";
+
+import {
+  isReferralStalledForRiskFilter,
+  resolveReferralStalledDays,
+  type EmployeeReferralRiskFilter,
+  type EmployeeReferralSummary
+} from "@/components/recruitment/employee-recruitment-helpers";
+import { resolveEmployeeRecruitmentCopy } from "@/components/recruitment/copy";
+import type {
+  RecruitmentOpeningItem,
+  RecruitmentReferralItem,
+  RecruitmentReferralStage
+} from "@/features/recruitment/types";
+
+type EmployeeRecruitmentCopy = ReturnType<typeof resolveEmployeeRecruitmentCopy>;
+
+type EmployeeRecruitmentWorkspaceViewProps = {
+  copy: EmployeeRecruitmentCopy;
+  organizationId: string;
+  employeeId: string;
+  accessToken: string;
+  openings: RecruitmentOpeningItem[];
+  referrals: RecruitmentReferralItem[];
+  filteredReferrals: RecruitmentReferralItem[];
+  referralSummary: EmployeeReferralSummary;
+  selectedOpeningId: string;
+  candidateName: string;
+  candidateEmail: string;
+  note: string;
+  stageFilter: RecruitmentReferralStage | "all";
+  riskFilter: EmployeeReferralRiskFilter;
+  openingFilter: string;
+  referralSearchQuery: string;
+  stalledReferralCount: number;
+  stalledCriticalReferralCount: number;
+  openingFilteredReferralCount: number;
+  pending: boolean;
+  statusMessage: string;
+  onOrganizationIdChange: (value: string) => void;
+  onEmployeeIdChange: (value: string) => void;
+  onAccessTokenChange: (value: string) => void;
+  onStageFilterChange: (value: RecruitmentReferralStage | "all") => void;
+  onRiskFilterChange: (value: EmployeeReferralRiskFilter) => void;
+  onOpeningFilterChange: (value: string) => void;
+  onReferralSearchQueryChange: (value: string) => void;
+  onClearReferralSearch: () => void;
+  onLoadWorkspace: () => void;
+  onSelectedOpeningChange: (value: string) => void;
+  onCandidateNameChange: (value: string) => void;
+  onCandidateEmailChange: (value: string) => void;
+  onNoteChange: (value: string) => void;
+  onSubmitReferral: () => void;
+  onWithdrawReferral: (referralId: string) => void;
+  resolveOpeningTitle: (openingId: string) => string;
+};
+
+export default function EmployeeRecruitmentWorkspaceView({
+  copy,
+  organizationId,
+  employeeId,
+  accessToken,
+  openings,
+  referrals,
+  filteredReferrals,
+  referralSummary,
+  selectedOpeningId,
+  candidateName,
+  candidateEmail,
+  note,
+  stageFilter,
+  riskFilter,
+  openingFilter,
+  referralSearchQuery,
+  stalledReferralCount,
+  stalledCriticalReferralCount,
+  openingFilteredReferralCount,
+  pending,
+  statusMessage,
+  onOrganizationIdChange,
+  onEmployeeIdChange,
+  onAccessTokenChange,
+  onStageFilterChange,
+  onRiskFilterChange,
+  onOpeningFilterChange,
+  onReferralSearchQueryChange,
+  onClearReferralSearch,
+  onLoadWorkspace,
+  onSelectedOpeningChange,
+  onCandidateNameChange,
+  onCandidateEmailChange,
+  onNoteChange,
+  onSubmitReferral,
+  onWithdrawReferral,
+  resolveOpeningTitle
+}: EmployeeRecruitmentWorkspaceViewProps) {
+  return (
+    <main className="saas-content">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">{copy.pageTitle}</h1>
+          <p className="page-subtitle">{copy.pageSubtitle}</p>
+        </div>
+        <div className="page-actions">
+          <Link className="btn btn-secondary" href="/employee">
+            /employee
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/recruitment">
+            /admin/recruitment
+          </Link>
+        </div>
+      </header>
+
+      <section className="panel-grid">
+        <article className="panel">
+          <h2>{copy.sessionTitle}</h2>
+          <label>
+            {copy.organizationIdLabel}
+            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
+          </label>
+          <label>
+            {copy.employeeIdLabel}
+            <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
+          </label>
+          <label>
+            {copy.accessTokenLabel}
+            <textarea rows={2} value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
+          </label>
+          <label>
+            {copy.stageFilterLabel}
+            <select
+              value={stageFilter}
+              onChange={(event) => onStageFilterChange(event.target.value as RecruitmentReferralStage | "all")}
+            >
+              <option value="all">{copy.referralStageFilter.all}</option>
+              <option value="SUBMITTED">{copy.referralStageFilter.SUBMITTED}</option>
+              <option value="SCREENING">{copy.referralStageFilter.SCREENING}</option>
+              <option value="INTERVIEW">{copy.referralStageFilter.INTERVIEW}</option>
+              <option value="OFFER">{copy.referralStageFilter.OFFER}</option>
+              <option value="HIRED">{copy.referralStageFilter.HIRED}</option>
+              <option value="REJECTED">{copy.referralStageFilter.REJECTED}</option>
+              <option value="WITHDRAWN">{copy.referralStageFilter.WITHDRAWN}</option>
+            </select>
+          </label>
+          <label>
+            {copy.referralRiskFilterLabel}
+            <select
+              value={riskFilter}
+              onChange={(event) => onRiskFilterChange(event.target.value as EmployeeReferralRiskFilter)}
+            >
+              <option value="all">{copy.referralRiskFilter.all}</option>
+              <option value="stalled_7d">{copy.referralRiskFilter.stalled7d}</option>
+              <option value="stalled_14d">{copy.referralRiskFilter.stalled14d}</option>
+            </select>
+          </label>
+          <label>
+            {copy.openingFilterLabel}
+            <select value={openingFilter} onChange={(event) => onOpeningFilterChange(event.target.value)}>
+              <option value="all">{copy.openingFilterAllOption}</option>
+              {openings.map((opening) => (
+                <option key={opening.id} value={opening.id}>
+                  {opening.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {copy.referralSearchLabel}
+            <input
+              value={referralSearchQuery}
+              placeholder={copy.referralSearchPlaceholder}
+              onChange={(event) => onReferralSearchQueryChange(event.target.value)}
+            />
+          </label>
+          <div className="actions">
+            <button className="btn btn-primary" type="button" onClick={onLoadWorkspace} disabled={pending}>
+              {copy.refreshAction}
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={onClearReferralSearch} disabled={pending}>
+              {copy.clearSearchAction}
+            </button>
+          </div>
+          <p className="small muted">
+            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn})
+            {" · "}
+            {copy.filteredReferralSummaryLabel}: {filteredReferrals.length}
+            {" · "}
+            {copy.referralRiskSummaryLabel}: {stalledReferralCount}
+            {" · "}
+            {copy.criticalReferralRiskSummaryLabel}: {stalledCriticalReferralCount}
+            {" · "}
+            {copy.openingFilteredReferralSummaryLabel}: {openingFilteredReferralCount}
+          </p>
+          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+        </article>
+
+        <article className="panel">
+          <h2>{copy.submitTitle}</h2>
+          <label>
+            {copy.openingLabel}
+            <select value={selectedOpeningId} onChange={(event) => onSelectedOpeningChange(event.target.value)}>
+              <option value="">-</option>
+              {openings.map((opening) => (
+                <option key={opening.id} value={opening.id}>
+                  {opening.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {copy.candidateNameLabel}
+            <input value={candidateName} onChange={(event) => onCandidateNameChange(event.target.value)} maxLength={120} />
+          </label>
+          <label>
+            {copy.candidateEmailLabel}
+            <input
+              value={candidateEmail}
+              onChange={(event) => onCandidateEmailChange(event.target.value)}
+              type="email"
+              maxLength={120}
+            />
+          </label>
+          <label>
+            {copy.noteLabel}
+            <textarea rows={4} value={note} onChange={(event) => onNoteChange(event.target.value)} maxLength={1000} />
+          </label>
+          <div className="actions">
+            <button className="btn btn-primary" type="button" onClick={onSubmitReferral} disabled={pending}>
+              {copy.submitAction}
+            </button>
+          </div>
+        </article>
+
+        <article className="panel">
+          <h2>{copy.openingsTitle}</h2>
+          {openings.length === 0 ? (
+            <p className="small muted">{copy.emptyOpenings}</p>
+          ) : (
+            <ul className="simple-list">
+              {openings.map((opening) => (
+                <li key={opening.id}>
+                  <span>
+                    <strong>{opening.title}</strong>
+                    <br />
+                    <span className="small muted">
+                      {opening.department} · {opening.employmentType}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article className="panel">
+          <h2>{copy.referralsTitle}</h2>
+          {referrals.length === 0 ? (
+            <p className="small muted">{copy.emptyReferrals}</p>
+          ) : filteredReferrals.length === 0 ? (
+            <p className="small muted">{copy.filteredEmptyReferrals}</p>
+          ) : (
+            <ul className="simple-list">
+              {filteredReferrals.map((referral) => {
+                const openingTitle = resolveOpeningTitle(referral.openingId);
+                const stalledDays = resolveReferralStalledDays(referral);
+                const isStalled7d = isReferralStalledForRiskFilter(referral, "stalled_7d");
+                const isStalled14d = isReferralStalledForRiskFilter(referral, "stalled_14d");
+                return (
+                  <li key={referral.id}>
+                    <span>
+                      <strong>{referral.candidateName}</strong>
+                      <br />
+                      <span className="small muted">{referral.candidateEmail}</span>
+                      <br />
+                      <span className="small muted">
+                        {copy.openingTitleLabel}: {openingTitle}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.stageLabel}: {copy.referralStage[referral.stage]}
+                      </span>
+                      {typeof stalledDays === "number" ? (
+                        <>
+                          <br />
+                          <span className="small muted">
+                            {copy.stalledDaysLabel}: D+{stalledDays}
+                          </span>
+                        </>
+                      ) : null}
+                      {isStalled14d ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.stalledCriticalBadgeLabel}
+                          </span>
+                        </>
+                      ) : isStalled7d ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.stalledBadgeLabel}
+                          </span>
+                        </>
+                      ) : null}
+                      <br />
+                      <span className="small muted">{referral.note}</span>
+                      {referral.stage === "SUBMITTED" || referral.stage === "SCREENING" ? (
+                        <>
+                          <br />
+                          <button
+                            className="btn btn-secondary btn-small"
+                            type="button"
+                            disabled={pending}
+                            onClick={() => onWithdrawReferral(referral.id)}
+                          >
+                            {copy.withdrawAction}
+                          </button>
+                        </>
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </article>
+      </section>
+    </main>
+  );
+}

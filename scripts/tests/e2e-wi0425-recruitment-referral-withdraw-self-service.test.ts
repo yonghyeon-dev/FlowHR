@@ -26,6 +26,12 @@ async function run() {
     "recruitment",
     "EmployeeRecruitmentWorkspace.tsx"
   );
+  const employeeWorkspaceView = readUtf8(
+    "src",
+    "components",
+    "recruitment",
+    "EmployeeRecruitmentWorkspaceView.tsx"
+  );
   const recruitmentCopy = readUtf8("src", "components", "recruitment", "copy.ts");
 
   const workItem = readUtf8("work-items", "WI-0425-recruitment-referral-withdraw-self-service.md");
@@ -50,12 +56,12 @@ async function run() {
     employeeWorkspace,
     /\/api\/recruitment\/referrals\/\$\{encodeURIComponent\(referralId\)\}\/withdraw/
   );
-  assert.match(employeeWorkspace, /copy\.withdrawAction/);
-  assert.match(employeeWorkspace, /copy\.referralStageFilter\.WITHDRAWN/);
-  assert.match(employeeWorkspace, /referralSummary\.withdrawn/);
+  assert.match(employeeWorkspaceView, /copy\.withdrawAction/);
+  assert.match(employeeWorkspaceView, /copy\.referralStageFilter\.WITHDRAWN/);
+  assert.match(employeeWorkspaceView, /referralSummary\.withdrawn/);
 
   assert.match(recruitmentCopy, /withdrawAction/);
-  assert.match(recruitmentCopy, /WITHDRAWN: "철회"/);
+  assert.match(recruitmentCopy, /WITHDRAWN: "泥좏쉶"/);
   assert.match(recruitmentCopy, /WITHDRAWN: "Withdrawn"/);
   assert.match(recruitmentCopy, /withdrawFailed/);
 

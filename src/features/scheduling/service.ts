@@ -1,4 +1,4 @@
-﻿import type { Actor } from "@/lib/actor";
+import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import type {
@@ -55,6 +55,10 @@ import {
   executeScheduleAnomalyIncidentReplayActions,
   selectScheduleAnomalyIncidentReplayTargets
 } from "@/features/scheduling/anomaly-incident-replay-helpers";
+import {
+  buildRotationFairnessAdvancedSummary,
+  selectRotationFairnessRecommendations
+} from "@/features/scheduling/rotation-fairness-selection-helpers";
 import {
   buildScheduleAnomalyIncidentReconcileSnapshot,
   selectScheduleAnomalyIncidentReconcileItems
@@ -1687,155 +1691,6 @@ async function evaluateBestRotationForEmployee(
     employee: input.employee,
     options: evaluations,
     best: evaluations[0]
-  };
-}
-
-function addDailyPlannedMinutes(
-  totals: Map<string, number>,
-  entries: Array<{ date: string; plannedMinutes: number }>
-) {
-  for (const entry of entries) {
-    totals.set(entry.date, (totals.get(entry.date) ?? 0) + entry.plannedMinutes);
-  }
-}
-
-function calculateDailyPlannedMinutesGap(totals: Map<string, number>, matchedDates: string[]) {
-  if (matchedDates.length === 0) {
-    return 0;
-  }
-  const values = matchedDates.map((date) => totals.get(date) ?? 0);
-  return Math.max(...values) - Math.min(...values);
-}
-
-function buildRotationFairnessGlobalSummary(
-  globalConstraints: {
-    objective: RotationFairnessGlobalObjective;
-    maxDailyPlannedMinutesGap: number | null;
-  },
-  totals: Map<string, number>,
-  matchedDates: string[]
-): RotationFairnessGlobalSummary {
-  const dailyPlannedMinutes = matchedDates.map((date) => ({
-    date,
-    plannedMinutes: totals.get(date) ?? 0
-  }));
-  const dailyPlannedMinutesGap = calculateDailyPlannedMinutesGap(totals, matchedDates);
-  const maxDailyPlannedMinutesGap = globalConstraints.maxDailyPlannedMinutesGap;
-  const thresholdBreached =
-    maxDailyPlannedMinutesGap !== null && dailyPlannedMinutesGap > maxDailyPlannedMinutesGap;
-
-  return {
-    objective: globalConstraints.objective,
-    dailyPlannedMinutesGap,
-    maxDailyPlannedMinutesGap,
-    thresholdBreached,
-    dailyPlannedMinutes
-  };
-}
-
-function selectRotationFairnessRecommendations(
-  evaluations: EmployeeRotationOptimizationEvaluation[],
-  matchedDates: string[],
-  globalConstraints:
-    | {
-        objective: RotationFairnessGlobalObjective;
-        maxDailyPlannedMinutesGap: number | null;
-      }
-    | undefined
-): {
-  selectedByEmployeeId: Map<string, RotationOffsetEvaluation>;
-  global: RotationFairnessGlobalSummary | null;
-} {
-  const selectedByEmployeeId = new Map<string, RotationOffsetEvaluation>();
-  if (!globalConstraints) {
-    for (const evaluation of evaluations) {
-      selectedByEmployeeId.set(evaluation.employee.id, evaluation.best);
-    }
-    return {
-      selectedByEmployeeId,
-      global: null
-    };
-  }
-
-  const ordered = [...evaluations].sort((left, right) => left.employee.id.localeCompare(right.employee.id));
-  const totals = new Map<string, number>();
-
-  for (const evaluation of ordered) {
-    let bestOption = evaluation.options[0];
-    let bestGap = Number.POSITIVE_INFINITY;
-    let bestLocalPenalty = Number.POSITIVE_INFINITY;
-
-    for (const option of evaluation.options) {
-      const candidateTotals = new Map(totals);
-      addDailyPlannedMinutes(candidateTotals, option.dailyPlannedMinutes);
-      const gap = calculateDailyPlannedMinutesGap(candidateTotals, matchedDates);
-      const localPenalty = option.plannedMinutesGap * 10 + option.weekdayGap + (option.advancedScore?.totalPenalty ?? 0);
-
-      if (gap < bestGap) {
-        bestOption = option;
-        bestGap = gap;
-        bestLocalPenalty = localPenalty;
-        continue;
-      }
-
-      if (gap === bestGap && localPenalty < bestLocalPenalty) {
-        bestOption = option;
-        bestLocalPenalty = localPenalty;
-        continue;
-      }
-
-      if (gap === bestGap && localPenalty === bestLocalPenalty && option.offset < bestOption.offset) {
-        bestOption = option;
-      }
-    }
-
-    selectedByEmployeeId.set(evaluation.employee.id, bestOption);
-    addDailyPlannedMinutes(totals, bestOption.dailyPlannedMinutes);
-  }
-
-  return {
-    selectedByEmployeeId,
-    global: buildRotationFairnessGlobalSummary(globalConstraints, totals, matchedDates)
-  };
-}
-
-function buildRotationFairnessAdvancedSummary(
-  results: RotationFairnessEmployeeResult[],
-  advancedConstraints: RotationFairnessAdvancedConstraints | undefined
-): RotationFairnessAdvancedSummary | null {
-  if (!advancedConstraints) {
-    return null;
-  }
-
-  const totals = {
-    totalPreferencePenalty: 0,
-    totalLaborLawPenalty: 0,
-    totalPenalty: 0,
-    totalPreferenceMismatchCount: 0,
-    totalAvoidTemplateViolationCount: 0,
-    totalMinRestViolationCount: 0,
-    totalMaxConsecutiveWorkDayViolationCount: 0
-  };
-
-  for (const result of results) {
-    const advancedScore = result.advancedScore;
-    if (!advancedScore) {
-      continue;
-    }
-    totals.totalPreferencePenalty += advancedScore.preferencePenalty;
-    totals.totalLaborLawPenalty += advancedScore.laborLawPenalty;
-    totals.totalPenalty += advancedScore.totalPenalty;
-    totals.totalPreferenceMismatchCount += advancedScore.preferenceMismatchCount;
-    totals.totalAvoidTemplateViolationCount += advancedScore.avoidTemplateViolationCount;
-    totals.totalMinRestViolationCount += advancedScore.minRestViolationCount;
-    totals.totalMaxConsecutiveWorkDayViolationCount += advancedScore.maxConsecutiveWorkDayViolationCount;
-  }
-
-  return {
-    enabled: true,
-    preferenceWeight: advancedConstraints.preference?.weight ?? null,
-    laborLawWeight: advancedConstraints.laborLaw?.weight ?? null,
-    ...totals
   };
 }
 

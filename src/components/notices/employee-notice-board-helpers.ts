@@ -1,6 +1,7 @@
 import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
 
 export type EmployeeNoticeReadStatusFilter = "all" | "unread" | "read";
+export type EmployeeNoticeAgingRiskFilter = "all" | "aging_3d";
 
 export function parseNotices(payload: unknown) {
   const notices = (payload as { notices?: NoticeItem[] } | null)?.notices;
@@ -19,6 +20,13 @@ export function parseReadReceipts(payload: unknown) {
 
 export function normalizeEmployeeNoticeReadStatusFilter(value: string): EmployeeNoticeReadStatusFilter {
   if (value === "unread" || value === "read") {
+    return value;
+  }
+  return "all";
+}
+
+export function normalizeEmployeeNoticeAgingRiskFilter(value: string): EmployeeNoticeAgingRiskFilter {
+  if (value === "aging_3d") {
     return value;
   }
   return "all";
@@ -57,12 +65,18 @@ export function resolveNoticeUnreadAgingDays(notice: NoticeItem) {
   return Math.floor(diffMs / (24 * 60 * 60 * 1000));
 }
 
+export function isNoticeUnreadAgingRisk(notice: NoticeItem) {
+  const agingDays = resolveNoticeUnreadAgingDays(notice);
+  return typeof agingDays === "number" && agingDays >= 3;
+}
+
 type FilterEmployeeNoticesInput = {
   notices: NoticeItem[];
   readNoticeIds: string[];
   searchQuery: string;
   unreadOnly: boolean;
   readStatusFilter: EmployeeNoticeReadStatusFilter;
+  agingRiskFilter: EmployeeNoticeAgingRiskFilter;
 };
 
 export function filterEmployeeNotices({
@@ -70,7 +84,8 @@ export function filterEmployeeNotices({
   readNoticeIds,
   searchQuery,
   unreadOnly,
-  readStatusFilter
+  readStatusFilter,
+  agingRiskFilter
 }: FilterEmployeeNoticesInput) {
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   return notices.filter((notice) => {
@@ -83,6 +98,14 @@ export function filterEmployeeNotices({
     }
     if (readStatusFilter === "unread" && isRead) {
       return false;
+    }
+    if (agingRiskFilter === "aging_3d") {
+      if (isRead) {
+        return false;
+      }
+      if (!isNoticeUnreadAgingRisk(notice)) {
+        return false;
+      }
     }
     if (!normalizedSearchQuery) {
       return true;

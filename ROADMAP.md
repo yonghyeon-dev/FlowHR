@@ -1,7 +1,7 @@
-﻿# FlowHR Production Roadmap
+# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-26
-> **Current version**: 0.1.181 (Scheduling Anomaly Cockpit Projection Helper Extraction Phase 2)
+> **Current version**: 0.1.187 (Employee Core Journey Risk Filter + Workspace Decomposition + Scheduling Fairness Helper Extraction)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -810,3 +810,9 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0543 admin analytics contract SLA overdue metric (`/admin/analytics`에 계약 SLA 기한초과 지표 추가 + 포커스 필터/카드/추세행/CSV 스냅샷 반영 + summary/copy 확장 + `e2e-wi0543` 회귀 테스트 추가)
 - WI-0544 admin people history top-change hotspot summary (`/admin/people` 인사이력 패널에 현재 필터 기준 최다 변경 필드(핫스팟) 요약 추가 + line-budget 유지 + `e2e-wi0544` 회귀 테스트 추가)
 - WI-0545 contracts risk filter quick toggles (`/admin/contracts` SLA 필터 원클릭 토글 + `/employee/contracts` 기한 필터 원클릭 토글 추가로 위험 큐 전환 속도 개선 + `e2e-wi0545` 회귀 테스트 추가)
+- WI-0546 employee notices unread-aging risk filter and summary (`/employee/notices`에 읽음 지연 위험 필터(`all/aging_3d`) + 3일 이상 미확인 요약 카운트 추가 + notice helper에 aging risk 정규화/필터링 로직 확장 + `e2e-wi0546` 회귀 테스트 추가)
+- WI-0547 employee benefits pending-aging risk filter and badge (`/employee/benefits` 신청 이력에 승인대기 위험 필터(`all/pending_3d`) + 3일 이상 대기 요약/행 배지/D+일수 표시 + benefits copy/helper 확장 + `e2e-wi0547` 회귀 테스트 추가)
+- WI-0548 employee recruitment opening filter and stalled-days visibility (`/employee/recruitment` 추천 이력에 공고 필터(`all/openingId`) + 공고 기준 표시 건수 요약 + 추천별 정체 경과(D+일수) 표시 + `e2e-wi0548` 회귀 테스트 추가)
+- WI-0549 employee benefits workspace view decomposition and line-budget recovery (`EmployeeBenefitsWorkspace.tsx`를 orchestration 전용으로 축소 + `EmployeeBenefitsWorkspaceView.tsx`/`employee-benefits-helpers.ts` 분리 + workspace line-budget <=300 유지 + `e2e-wi0549` 회귀 테스트 추가)
+- WI-0550 employee recruitment workspace view decomposition and line-budget recovery (`EmployeeRecruitmentWorkspace.tsx`를 orchestration 전용으로 축소 + `EmployeeRecruitmentWorkspaceView.tsx`/`employee-recruitment-helpers.ts` 분리 + workspace line-budget <=300 유지 + `e2e-wi0550` 회귀 테스트 추가)
+- WI-0551 scheduling rotation fairness selection helper extraction and line-budget recovery (`rotation-fairness-selection-helpers.ts` 신규 + 추천 선택/advanced summary 집계 helper 분리 + `scheduling/service.ts` 4000 라인 가드 유지 + `e2e-wi0551` 회귀 테스트 추가)

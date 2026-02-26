@@ -1,0 +1,306 @@
+import Link from "next/link";
+
+import {
+  isBenefitRequestPendingAgingRisk,
+  resolveBenefitRequestPendingAgingDays,
+  type EmployeeBenefitRequestRiskFilter,
+  type EmployeeBenefitRequestSummary
+} from "@/components/benefits/employee-benefits-helpers";
+import { resolveEmployeeBenefitsCopy } from "@/components/benefits/copy";
+import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
+
+type EmployeeBenefitsCopy = ReturnType<typeof resolveEmployeeBenefitsCopy>;
+
+type EmployeeBenefitsWorkspaceViewProps = {
+  copy: EmployeeBenefitsCopy;
+  runtimeLocale: string;
+  organizationId: string;
+  employeeId: string;
+  accessToken: string;
+  catalog: BenefitCatalogItem[];
+  requests: BenefitRequestItem[];
+  filteredRequests: BenefitRequestItem[];
+  requestSummary: EmployeeBenefitRequestSummary;
+  requestStatusFilter: BenefitRequestStatus | "all";
+  requestRiskFilter: EmployeeBenefitRequestRiskFilter;
+  requestSearchQuery: string;
+  pendingAgingRiskCount: number;
+  selectedBenefitId: string;
+  amountKrw: string;
+  reason: string;
+  selectedBenefitUsage: number;
+  estimatedRemainingAmount: number | null;
+  isProjectedOverLimit: boolean;
+  pending: boolean;
+  statusMessage: string;
+  onOrganizationIdChange: (value: string) => void;
+  onEmployeeIdChange: (value: string) => void;
+  onAccessTokenChange: (value: string) => void;
+  onRequestStatusFilterChange: (value: BenefitRequestStatus | "all") => void;
+  onRequestRiskFilterChange: (value: EmployeeBenefitRequestRiskFilter) => void;
+  onRequestSearchQueryChange: (value: string) => void;
+  onClearRequestSearch: () => void;
+  onLoadWorkspace: () => void;
+  onSelectedBenefitChange: (value: string) => void;
+  onAmountChange: (value: string) => void;
+  onReasonChange: (value: string) => void;
+  onSubmitRequest: () => void;
+  onCancelRequest: (requestId: string) => void;
+  resolveBenefitName: (benefitId: string) => string;
+  selectedBenefit: BenefitCatalogItem | null;
+};
+
+export default function EmployeeBenefitsWorkspaceView({
+  copy,
+  runtimeLocale,
+  organizationId,
+  employeeId,
+  accessToken,
+  catalog,
+  requests,
+  filteredRequests,
+  requestSummary,
+  requestStatusFilter,
+  requestRiskFilter,
+  requestSearchQuery,
+  pendingAgingRiskCount,
+  selectedBenefitId,
+  amountKrw,
+  reason,
+  selectedBenefitUsage,
+  estimatedRemainingAmount,
+  isProjectedOverLimit,
+  pending,
+  statusMessage,
+  onOrganizationIdChange,
+  onEmployeeIdChange,
+  onAccessTokenChange,
+  onRequestStatusFilterChange,
+  onRequestRiskFilterChange,
+  onRequestSearchQueryChange,
+  onClearRequestSearch,
+  onLoadWorkspace,
+  onSelectedBenefitChange,
+  onAmountChange,
+  onReasonChange,
+  onSubmitRequest,
+  onCancelRequest,
+  resolveBenefitName,
+  selectedBenefit
+}: EmployeeBenefitsWorkspaceViewProps) {
+  return (
+    <main className="saas-content">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">{copy.pageTitle}</h1>
+          <p className="page-subtitle">{copy.pageSubtitle}</p>
+        </div>
+        <div className="page-actions">
+          <Link className="btn btn-secondary" href="/employee">
+            /employee
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/benefits">
+            /admin/benefits
+          </Link>
+        </div>
+      </header>
+
+      <section className="panel-grid">
+        <article className="panel">
+          <h2>{copy.sessionTitle}</h2>
+          <label>
+            {copy.organizationIdLabel}
+            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
+          </label>
+          <label>
+            {copy.employeeIdLabel}
+            <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
+          </label>
+          <label>
+            {copy.accessTokenLabel}
+            <textarea rows={2} value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
+          </label>
+          <label>
+            {copy.requestFilterLabel}
+            <select
+              value={requestStatusFilter}
+              onChange={(event) => onRequestStatusFilterChange(event.target.value as BenefitRequestStatus | "all")}
+            >
+              <option value="all">{copy.requestFilter.all}</option>
+              <option value="SUBMITTED">{copy.requestFilter.SUBMITTED}</option>
+              <option value="APPROVED">{copy.requestFilter.APPROVED}</option>
+              <option value="REJECTED">{copy.requestFilter.REJECTED}</option>
+              <option value="CANCELED">{copy.requestFilter.CANCELED}</option>
+            </select>
+          </label>
+          <label>
+            {copy.requestRiskFilterLabel}
+            <select
+              value={requestRiskFilter}
+              onChange={(event) => onRequestRiskFilterChange(event.target.value as EmployeeBenefitRequestRiskFilter)}
+            >
+              <option value="all">{copy.requestRiskFilter.all}</option>
+              <option value="pending_3d">{copy.requestRiskFilter.pending3d}</option>
+            </select>
+          </label>
+          <label>
+            {copy.requestSearchLabel}
+            <input
+              value={requestSearchQuery}
+              placeholder={copy.requestSearchPlaceholder}
+              onChange={(event) => onRequestSearchQueryChange(event.target.value)}
+            />
+          </label>
+          <div className="actions">
+            <button className="btn btn-primary" type="button" onClick={onLoadWorkspace} disabled={pending}>
+              {copy.refreshAction}
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={onClearRequestSearch} disabled={pending}>
+              {copy.clearSearchAction}
+            </button>
+          </div>
+          <p className="small muted">
+            {copy.requestSummaryLabel}: {requestSummary.total} (S {requestSummary.submitted} / A {requestSummary.approved} / R {requestSummary.rejected} / C {requestSummary.canceled})
+            {" · "}
+            {copy.filteredRequestSummaryLabel}: {filteredRequests.length}
+            {" · "}
+            {copy.pendingAgingRiskSummaryLabel}: {pendingAgingRiskCount}
+          </p>
+          {statusMessage ? <p className="small">{statusMessage}</p> : null}
+        </article>
+
+        <article className="panel">
+          <h2>{copy.submitTitle}</h2>
+          <label>
+            {copy.benefitLabel}
+            <select value={selectedBenefitId} onChange={(event) => onSelectedBenefitChange(event.target.value)}>
+              <option value="">-</option>
+              {catalog.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {copy.amountLabel}
+            <input value={amountKrw} onChange={(event) => onAmountChange(event.target.value)} inputMode="numeric" />
+          </label>
+          <label>
+            {copy.reasonLabel}
+            <textarea rows={4} value={reason} onChange={(event) => onReasonChange(event.target.value)} maxLength={1000} />
+          </label>
+          {selectedBenefit ? (
+            <>
+              <p className="small muted">
+                {copy.annualUsageSummaryLabel}: {selectedBenefitUsage.toLocaleString(runtimeLocale)} /{" "}
+                {selectedBenefit.annualLimitKrw.toLocaleString(runtimeLocale)}
+              </p>
+              <p className="small muted">
+                {copy.estimatedRemainingLabel}: {(estimatedRemainingAmount ?? 0).toLocaleString(runtimeLocale)}
+              </p>
+              {isProjectedOverLimit ? (
+                <p className="small" style={{ color: "var(--danger)" }}>
+                  {copy.overLimitWarningLabel}
+                </p>
+              ) : null}
+            </>
+          ) : null}
+          <div className="actions">
+            <button className="btn btn-primary" type="button" onClick={onSubmitRequest} disabled={pending}>
+              {copy.submitAction}
+            </button>
+          </div>
+        </article>
+
+        <article className="panel">
+          <h2>{copy.catalogTitle}</h2>
+          {catalog.length === 0 ? (
+            <p className="small muted">{copy.emptyCatalog}</p>
+          ) : (
+            <ul className="simple-list">
+              {catalog.map((item) => (
+                <li key={item.id}>
+                  <span>
+                    <strong>{item.name}</strong>
+                    <br />
+                    <span className="small muted">{item.description}</span>
+                    <br />
+                    <span className="small muted">
+                      {copy.annualLimitLabel}: {item.annualLimitKrw.toLocaleString(runtimeLocale)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article className="panel">
+          <h2>{copy.requestTitle}</h2>
+          {requests.length === 0 ? (
+            <p className="small muted">{copy.emptyRequests}</p>
+          ) : filteredRequests.length === 0 ? (
+            <p className="small muted">{copy.filteredEmptyRequests}</p>
+          ) : (
+            <ul className="simple-list">
+              {filteredRequests.map((item) => {
+                const benefitName = resolveBenefitName(item.benefitId);
+                const pendingAgingDays = resolveBenefitRequestPendingAgingDays(item);
+                const isPendingAgingRisk = isBenefitRequestPendingAgingRisk(item);
+                return (
+                  <li key={item.id}>
+                    <span>
+                      <strong>{benefitName}</strong>
+                      <br />
+                      <span className="small muted">
+                        {copy.amountLabel}: {item.amountKrw.toLocaleString(runtimeLocale)} · {copy.statusLabel}: {copy.requestStatus[item.status]}
+                      </span>
+                      {typeof pendingAgingDays === "number" ? (
+                        <>
+                          <br />
+                          <span className="small muted">
+                            {copy.pendingAgingLabel}: D+{pendingAgingDays}
+                          </span>
+                        </>
+                      ) : null}
+                      {isPendingAgingRisk ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.pendingAgingRiskBadgeLabel}
+                          </span>
+                        </>
+                      ) : null}
+                      <br />
+                      <span className="small muted">
+                        {copy.reasonLabel}: {item.reason}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.requestedAtLabel}: {item.requestedAt}
+                      </span>
+                      {item.status === "SUBMITTED" ? (
+                        <>
+                          <br />
+                          <button
+                            className="btn btn-secondary btn-small"
+                            type="button"
+                            disabled={pending}
+                            onClick={() => onCancelRequest(item.id)}
+                          >
+                            {copy.cancelAction}
+                          </button>
+                        </>
+                      ) : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </article>
+      </section>
+    </main>
+  );
+}

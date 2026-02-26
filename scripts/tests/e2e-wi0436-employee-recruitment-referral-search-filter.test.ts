@@ -13,6 +13,18 @@ async function run() {
     "recruitment",
     "EmployeeRecruitmentWorkspace.tsx"
   );
+  const employeeWorkspaceView = readUtf8(
+    "src",
+    "components",
+    "recruitment",
+    "EmployeeRecruitmentWorkspaceView.tsx"
+  );
+  const employeeWorkspaceHelpers = readUtf8(
+    "src",
+    "components",
+    "recruitment",
+    "employee-recruitment-helpers.ts"
+  );
   const recruitmentCopy = readUtf8("src", "components", "recruitment", "copy.ts");
   const workItem = readUtf8(
     "work-items",
@@ -21,24 +33,24 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeeWorkspace, /const \[referralSearchQuery, setReferralSearchQuery\] = useState\(""\);/);
-  assert.match(employeeWorkspace, /const filteredReferrals = useMemo\(\(\) => \{/);
-  assert.match(employeeWorkspace, /openingById\.get\(referral\.openingId\)\?\.title \?\? ""/);
-  assert.match(employeeWorkspace, /referral\.candidateName\.toLowerCase\(\)/);
-  assert.match(employeeWorkspace, /referral\.candidateEmail\.toLowerCase\(\)/);
-  assert.match(employeeWorkspace, /referral\.note\.toLowerCase\(\)/);
-  assert.match(employeeWorkspace, /copy\.referralSearchLabel/);
-  assert.match(employeeWorkspace, /copy\.referralSearchPlaceholder/);
-  assert.match(employeeWorkspace, /copy\.clearSearchAction/);
-  assert.match(employeeWorkspace, /copy\.filteredReferralSummaryLabel/);
-  assert.match(employeeWorkspace, /copy\.filteredEmptyReferrals/);
-  assert.match(employeeWorkspace, /filteredReferrals\.map\(\(referral\) => \{/);
+  assert.match(employeeWorkspace, /const filteredReferrals = useMemo/);
+  assert.match(employeeWorkspaceHelpers, /openingById\.get\(referral\.openingId\)\?\.title \?\? ""/);
+  assert.match(employeeWorkspaceHelpers, /referral\.candidateName\.toLowerCase\(\)/);
+  assert.match(employeeWorkspaceHelpers, /referral\.candidateEmail\.toLowerCase\(\)/);
+  assert.match(employeeWorkspaceHelpers, /referral\.note\.toLowerCase\(\)/);
+  assert.match(employeeWorkspaceView, /copy\.referralSearchLabel/);
+  assert.match(employeeWorkspaceView, /copy\.referralSearchPlaceholder/);
+  assert.match(employeeWorkspaceView, /copy\.clearSearchAction/);
+  assert.match(employeeWorkspaceView, /copy\.filteredReferralSummaryLabel/);
+  assert.match(employeeWorkspaceView, /copy\.filteredEmptyReferrals/);
+  assert.match(employeeWorkspaceView, /filteredReferrals\.map\(\(referral\) => \{/);
 
   assert.match(recruitmentCopy, /referralSearchLabel: string;/);
   assert.match(recruitmentCopy, /referralSearchPlaceholder: string;/);
   assert.match(recruitmentCopy, /clearSearchAction: string;/);
   assert.match(recruitmentCopy, /filteredReferralSummaryLabel: string;/);
   assert.match(recruitmentCopy, /filteredEmptyReferrals: string;/);
-  assert.match(recruitmentCopy, /referralSearchLabel: "추천 검색"/);
+  assert.match(recruitmentCopy, /referralSearchLabel: "異붿쿇 寃??/);
   assert.match(recruitmentCopy, /referralSearchLabel: "Referral search"/);
 
   assert.match(workItem, /WI-0436/i);
