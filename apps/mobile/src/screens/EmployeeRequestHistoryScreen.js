@@ -14,7 +14,8 @@ import {
   formatEmployeeRequestStatus,
   sortEmployeeRequests
 } from "../lib/employeeRequest";
-import { loadEmployeeRequests, saveEmployeeRequests } from "../lib/employeeRequestStore";
+import { loadEmployeeRequestsWithApiFallback } from "../lib/employeeRequestSync";
+import { saveEmployeeRequests } from "../lib/employeeRequestStore";
 import { colors, spacing } from "../theme/tokens";
 
 const REQUEST_TYPE_FILTER_OPTIONS = [{ key: "all", label: "All request types" }, ...EMPLOYEE_REQUEST_TYPE_OPTIONS];
@@ -44,18 +45,17 @@ export default function EmployeeRequestHistoryScreen({ session, onOpenRequestFol
   const [sortKey, setSortKey] = useState("newest");
 
   async function refreshHistory() {
-    const items = await loadEmployeeRequests();
+    const { items } = await loadEmployeeRequestsWithApiFallback(session);
     setRequests(items);
   }
 
   useEffect(() => {
     let active = true;
-    loadEmployeeRequests()
-      .then((items) => {
+    refreshHistory()
+      .then(() => {
         if (!active) {
           return;
         }
-        setRequests(items);
         setLoading(false);
       })
       .catch(() => {
@@ -66,7 +66,7 @@ export default function EmployeeRequestHistoryScreen({ session, onOpenRequestFol
     return () => {
       active = false;
     };
-  }, []);
+  }, [session]);
 
   const stats = useMemo(() => buildEmployeeRequestStats(requests), [requests]);
   const followUpStats = useMemo(() => buildEmployeeRequestFollowUpStats(buildEmployeeRequestFollowUps(requests)), [requests]);

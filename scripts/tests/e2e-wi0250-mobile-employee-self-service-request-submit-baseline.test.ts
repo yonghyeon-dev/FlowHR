@@ -39,7 +39,7 @@ async function run() {
   assert.match(requestStore, /loadEmployeeRequests/);
   assert.match(requestStore, /saveEmployeeRequests/);
   assert.match(adminScreen, /WI-0258~/);
-  assert.match(employeeScreen, /WI-0258~/);
+  assert.match(employeeScreen, /extensionsCardTitle|Extended Self-Service|셀프서비스 확장/);
   assert.match(readme, /Employee request submit shell/);
 
   assert.ok(

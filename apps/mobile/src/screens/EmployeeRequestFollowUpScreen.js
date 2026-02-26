@@ -14,7 +14,8 @@ import {
   formatEmployeeRequestStatus,
   sortEmployeeRequestFollowUps
 } from "../lib/employeeRequest";
-import { loadEmployeeRequests, saveEmployeeRequests } from "../lib/employeeRequestStore";
+import { loadEmployeeRequestsWithApiFallback } from "../lib/employeeRequestSync";
+import { saveEmployeeRequests } from "../lib/employeeRequestStore";
 import { colors, spacing } from "../theme/tokens";
 
 const REQUEST_TYPE_LABEL = {
@@ -74,18 +75,17 @@ export default function EmployeeRequestFollowUpScreen({
   const [dismissedMap, setDismissedMap] = useState({});
 
   async function refreshRequests() {
-    const items = await loadEmployeeRequests();
+    const { items } = await loadEmployeeRequestsWithApiFallback(session);
     setRequests(items);
   }
 
   useEffect(() => {
     let active = true;
-    loadEmployeeRequests()
-      .then((items) => {
+    refreshRequests()
+      .then(() => {
         if (!active) {
           return;
         }
-        setRequests(items);
         setLoading(false);
       })
       .catch(() => {
@@ -96,7 +96,7 @@ export default function EmployeeRequestFollowUpScreen({
     return () => {
       active = false;
     };
-  }, []);
+  }, [session]);
 
   const followUps = useMemo(() => {
     return buildEmployeeRequestFollowUps(requests).filter((item) => !dismissedMap[item.id]);
