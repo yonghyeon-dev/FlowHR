@@ -2978,23 +2978,23 @@ export async function listWorkScheduleRotationBalance(
 
   const recommendations: string[] = [];
   if (schedules.length === 0) {
-    recommendations.push("議고쉶 踰붿쐞???뚯쟾 ?ㅼ?以꾩씠 ?놁뒿?덈떎.");
+    recommendations.push("조회 범위에 회전 일정이 없습니다.");
   } else if (grade === "BALANCED") {
-    recommendations.push("?꾩옱 踰붿쐞?먯꽌 ?뚯쟾 遺?섍? 洹좏삎?곸엯?덈떎.");
+    recommendations.push("현재 범위에서 회전 부하가 균형적입니다.");
   } else {
     if (weekdayGap > 1) {
-      recommendations.push("?붿씪蹂?諛곗튂 ?몄감媛 ?쎈땲?? ?뚯쟾 ?쒗뵆由??쒖꽌瑜??ъ“?뺥븯?몄슂.");
+      recommendations.push("요일별 배치 편차가 큽니다. 회전 템플릿 순서를 조정하세요.");
     }
     if (plannedMinutesGap > 480) {
-      recommendations.push("?붿씪蹂?怨꾪쉷 洹쇰줈?쒓컙 ?몄감媛 ?쎈땲?? ?쒗뵆由?洹쇰Т?쒓컙 ?먮뒗 ?닿쾶?쒓컙??議곗젙?섏꽭??");
+      recommendations.push("요일별 계획 근로시간 편차가 큽니다. 템플릿 근무시간 또는 휴게시간을 조정하세요.");
     }
     if (activeWeekdays.length < 3) {
-      recommendations.push("?쒖꽦 ?붿씪???곸뼱 ?몄쨷 ?꾪뿕???쎈땲?? ?뚯쟾 ?곸슜 ?붿씪???뺤옣?섏꽭??");
+      recommendations.push("활성 요일이 적어 편중 위험이 큽니다. 회전 적용 요일을 확장하세요.");
     }
   }
 
   if (recommendations.length === 0) {
-    recommendations.push("?꾩옱 ?뚯쟾 諛몃윴?ㅻ뒗 ?덉슜 踰붿쐞?낅땲??");
+    recommendations.push("현재 회전 밸런스는 허용 범위입니다.");
   }
 
   await context.dataAccess.audit.append({

@@ -167,7 +167,11 @@ async function run() {
   assert.equal(managerBody.report.counts.weekdayGap, 3);
   assert.equal(managerBody.report.counts.plannedMinutesGap, 1440);
   assert.equal(managerBody.report.counts.grade, "IMBALANCED");
-  assert.ok(managerBody.report.recommendations.length > 0);
+  assert.deepEqual(managerBody.report.recommendations, [
+    "요일별 배치 편차가 큽니다. 회전 템플릿 순서를 조정하세요.",
+    "요일별 계획 근로시간 편차가 큽니다. 템플릿 근무시간 또는 휴게시간을 조정하세요.",
+    "활성 요일이 적어 편중 위험이 큽니다. 회전 적용 요일을 확장하세요."
+  ]);
 
   assert.equal(
     getRuntimeMemoryDomainEvents().length,

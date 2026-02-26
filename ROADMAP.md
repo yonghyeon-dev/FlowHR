@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-26
-> **Current version**: 0.1.169 (Korean Surface English Suppression for Withholding, Payslips, and Contracts)
+> **Current version**: 0.1.170 (Scheduling Rotation Korean Copy Recovery)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -752,3 +752,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0485 payroll accuracy regression bundle and admin evidence panel (`/admin/payroll-year-end`에 계산 정확성 증빙 패널 추가 + 정산/재계산/보험대사 수치 균형 검사 helper 분리 + 회귀 테스트 추가)
 - WI-0486 korean runtime localization sweep for year-end/payslips/contracts (연말정산 콘솔 상태/사유/차단사유 및 세션 오류 한국어 정규화 + payslip 파일명 ko prefix 적용 + contracts 증빙 파일명 ko 표시 정규화 + 회귀 테스트 추가)
 - WI-0487 korean surface english suppression for withholding/payslips/contracts (원천징수 문서 파일명 ko 정규화 + ko 환경 원천징수/명세서 raw JSON 영어 노출 억제 + 전자계약 증빙 다운로드 파일명 ko 정규화 + 회귀 테스트 추가)
+- WI-0488 scheduling rotation korean copy recovery (`listWorkScheduleRotationBalance` 추천 문구 6종 깨짐 복구 + `e2e-wi0057` 추천 문구 정합성 고정 + `e2e-wi0488` 회귀 가드 추가)
