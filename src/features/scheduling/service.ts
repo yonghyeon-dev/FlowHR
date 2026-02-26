@@ -58,6 +58,10 @@ import {
   selectScheduleAnomalyIncidentReconcileItems
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
 import {
+  buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
+  executeScheduleAnomalyIncidentEscalationRequests
+} from "@/features/scheduling/anomaly-incident-escalation-helpers";
+import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
   normalizeAnomalyIncidentArchiveReason,
@@ -67,7 +71,6 @@ import {
   normalizeAnomalyIncidentReplayTopN,
   normalizeIncidentListTopN,
   normalizeReconcileTopN,
-  parseIsoTimestampToMillis,
   resolveAnomalyIncidentSlaTargetMinutes,
   resolveAnomalyIncidentWarningMinutes
 } from "@/features/scheduling/incident-normalizers";
@@ -3388,121 +3391,57 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   const storedIncidents = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope ?? undefined
   });
-  const latestRequestedAtMillisByIncident = new Map<string, number>();
-  for (const incident of storedIncidents) {
-    if (!incident.lastEscalationRequestedAt) {
-      continue;
-    }
-    const requestedAtMillis = parseIsoTimestampToMillis(incident.lastEscalationRequestedAt);
-    if (requestedAtMillis === null) {
-      continue;
-    }
-    const previous = latestRequestedAtMillisByIncident.get(incident.incidentId);
-    if (previous === undefined || requestedAtMillis > previous) {
-      latestRequestedAtMillisByIncident.set(incident.incidentId, requestedAtMillis);
-    }
-  }
+  const latestRequestedAtMillisByIncident =
+    buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(storedIncidents);
 
-  let requested = 0;
-  let skippedCooldown = 0;
-  let failed = 0;
-  const items: ScheduleAnomalyIncidentEscalationItem[] = [];
-
-  for (const candidate of candidates) {
-    const lastRequestedAtMillis = latestRequestedAtMillisByIncident.get(candidate.incidentId);
-    if (lastRequestedAtMillis !== undefined && lastRequestedAtMillis >= cooldownWindowStartMillis) {
-      skippedCooldown += 1;
-      items.push({
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        status: candidate.status,
-        elapsedMinutes: candidate.elapsedMinutes,
-        assigneeId: candidate.assigneeId,
-        decision: "SKIPPED_COOLDOWN",
-        reason: `cooldown active (${cooldownMinutes}m)`
-      });
-      continue;
-    }
-
-    if (dryRun) {
-      items.push({
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        status: candidate.status,
-        elapsedMinutes: candidate.elapsedMinutes,
-        assigneeId: candidate.assigneeId,
-        decision: "DRY_RUN",
-        reason: "dry-run mode"
-      });
-      continue;
-    }
-
-    const requestedAt = new Date().toISOString();
-    const payload = {
-      incidentId: candidate.incidentId,
-      state: candidate.state,
-      status: candidate.status,
-      elapsedMinutes: candidate.elapsedMinutes,
-      assigneeId: candidate.assigneeId,
-      slaTargetMinutes: candidate.slaTargetMinutes,
-      warningMinutes: candidate.warningMinutes,
+  const { requested, skippedCooldown, failed, items } =
+    await executeScheduleAnomalyIncidentEscalationRequests({
+      candidates,
+      dryRun,
+      cooldownWindowStartMillis,
       cooldownMinutes,
-      escalationChannel,
-      requestedAt
-    };
+      latestRequestedAtMillisByIncident,
+      requestEscalation: async ({ candidate, requestedAt }) => {
+        const payload = {
+          incidentId: candidate.incidentId,
+          state: candidate.state,
+          status: candidate.status,
+          elapsedMinutes: candidate.elapsedMinutes,
+          assigneeId: candidate.assigneeId,
+          slaTargetMinutes: candidate.slaTargetMinutes,
+          warningMinutes: candidate.warningMinutes,
+          cooldownMinutes,
+          escalationChannel,
+          requestedAt
+        };
 
-    try {
-      await getEventPublisher(context).publish({
-        name: "scheduling.anomaly.incident.escalation.requested.v1",
-        occurredAt: requestedAt,
-        entityType: "WorkSchedule",
-        entityId: candidate.incidentId,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload
-      });
+        await getEventPublisher(context).publish({
+          name: "scheduling.anomaly.incident.escalation.requested.v1",
+          occurredAt: requestedAt,
+          entityType: "WorkSchedule",
+          entityId: candidate.incidentId,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload
+        });
 
-      await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.incident.escalation.requested",
-        entityType: "WorkSchedule",
-        entityId: candidate.incidentId,
-        organizationId: tenantScope ?? undefined,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload
-      });
+        await context.dataAccess.audit.append({
+          action: "scheduling.anomaly.incident.escalation.requested",
+          entityType: "WorkSchedule",
+          entityId: candidate.incidentId,
+          organizationId: tenantScope ?? undefined,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload
+        });
 
-      await context.dataAccess.scheduling.markIncidentEscalationRequested({
-        incidentId: candidate.incidentId,
-        organizationId: tenantScope ?? undefined,
-        requestedAt
-      });
-
-      requested += 1;
-      latestRequestedAtMillisByIncident.set(candidate.incidentId, Date.parse(requestedAt));
-      items.push({
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        status: candidate.status,
-        elapsedMinutes: candidate.elapsedMinutes,
-        assigneeId: candidate.assigneeId,
-        decision: "REQUESTED",
-        reason: null
-      });
-    } catch (error) {
-      failed += 1;
-      const reason = error instanceof Error ? error.message : "unknown error";
-      items.push({
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        status: candidate.status,
-        elapsedMinutes: candidate.elapsedMinutes,
-        assigneeId: candidate.assigneeId,
-        decision: "FAILED",
-        reason
-      });
-
-      try {
+        await context.dataAccess.scheduling.markIncidentEscalationRequested({
+          incidentId: candidate.incidentId,
+          organizationId: tenantScope ?? undefined,
+          requestedAt
+        });
+      },
+      onRequestFailed: async ({ candidate, error }) => {
         await context.dataAccess.audit.append({
           action: "scheduling.anomaly.incident.escalation.request.failed",
           entityType: "WorkSchedule",
@@ -3516,14 +3455,11 @@ export async function triggerScheduleAnomalyIncidentEscalation(
             elapsedMinutes: candidate.elapsedMinutes,
             cooldownMinutes,
             escalationChannel,
-            error: reason
+            error
           }
         });
-      } catch {
-        // Non-blocking failure path for escalation command telemetry.
       }
-    }
-  }
+    });
 
   const requestedAt = new Date().toISOString();
   await context.dataAccess.audit.append({
