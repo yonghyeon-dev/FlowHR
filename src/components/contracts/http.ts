@@ -50,6 +50,14 @@ function shouldSuppressRawEnglishMessage(message: string, koRuntime: boolean) {
 
 const koContractsErrorMessagePatterns: Array<{ pattern: RegExp; message: string }> = [
   {
+    pattern: /missing or invalid actor context|actor context/i,
+    message: "\uC778\uC99D \uC138\uC158\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574 \uC8FC\uC138\uC694."
+  },
+  {
+    pattern: /invalid datetime|invalid date|datetime value/i,
+    message: "\uB0A0\uC9DC \uB610\uB294 \uC2DC\uAC04 \uD615\uC2DD\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."
+  },
+  {
     pattern: /signature\s*input.*required/i,
     message: "\uC11C\uBA85 \uC785\uB825\uAC12\uC740 \uD544\uC218\uC785\uB2C8\uB2E4."
   },
@@ -62,8 +70,61 @@ const koContractsErrorMessagePatterns: Array<{ pattern: RegExp; message: string 
     message: "\uC870\uC9C1 \uC2DD\uBCC4\uC790\uB294 \uD544\uC218\uC785\uB2C8\uB2E4."
   },
   {
+    pattern: /organization\s*not\s*found/i,
+    message: "\uC870\uC9C1 \uC815\uBCF4\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    pattern: /contract\s*template\s*not\s*found/i,
+    message: "\uACC4\uC57D \uD15C\uD50C\uB9BF\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    pattern: /employee\s*not\s*found/i,
+    message: "\uC9C1\uC6D0 \uC815\uBCF4\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    pattern: /signed\s*contract\s*signature\s*evidence\s*not\s*found/i,
+    message: "\uC11C\uBA85 \uC99D\uBE59 \uD30C\uC77C\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+  },
+  {
     pattern: /document.*not\s*found|contract.*not\s*found/i,
     message: "\uACC4\uC57D \uBB38\uC11C\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    pattern: /approval\s*can\s*be\s*requested\s*only\s*from\s*draft\s*state/i,
+    message: "\uC2B9\uC778 \uC694\uCCAD\uC740 \uCD08\uC548 \uC0C1\uD0DC\uC5D0\uC11C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4."
+  },
+  {
+    pattern: /approval\s*action\s*is\s*allowed\s*only\s*for\s*approval_requested\s*state/i,
+    message: "\uC2B9\uC778 \uCC98\uB9AC\uB294 \uC2B9\uC778 \uC694\uCCAD \uC0C1\uD0DC\uC5D0\uC11C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4."
+  },
+  {
+    pattern: /approval\s*cycle\s*is\s*not\s*initialized/i,
+    message: "\uC2B9\uC778 \uD750\uB984\uC774 \uCD08\uAE30\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    pattern: /document\s*can\s*be\s*sent\s*only\s*from\s*draft\s*state/i,
+    message: "\uBB38\uC11C \uBC1C\uC1A1\uC740 \uCD08\uC548 \uC0C1\uD0DC\uC5D0\uC11C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4."
+  },
+  {
+    pattern: /document\s*approval\s*must\s*be\s*completed\s*before\s*sending/i,
+    message: "\uBB38\uC11C\uB97C \uBC1C\uC1A1\uD558\uB824\uBA74 \uC2B9\uC778 \uC644\uB8CC\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4."
+  },
+  {
+    pattern: /employee\s*response\s*is\s*allowed\s*only\s*when\s*status\s*is\s*sent/i,
+    message: "\uC9C1\uC6D0 \uC751\uB2F5\uC740 \uBC1C\uC1A1 \uC644\uB8CC \uC0C1\uD0DC\uC5D0\uC11C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4."
+  },
+  {
+    pattern: /expected\s*document\s*hash\s*mismatch|expecteddocumenthash\s*mismatch/i,
+    message:
+      "\uBB38\uC11C \uD574\uC2DC\uAC00 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uCD5C\uC2E0 \uBB38\uC11C\uB85C \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
+  },
+  {
+    pattern: /manual\s*expire\s*is\s*allowed\s*only\s*for\s*sent\s*document/i,
+    message: "\uC218\uB3D9 \uB9CC\uB8CC \uCC98\uB9AC\uB294 \uBC1C\uC1A1\uB41C \uBB38\uC11C\uC5D0\uC11C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4."
+  },
+  {
+    pattern: /renew\s*is\s*allowed\s*only\s*for\s*signed\/rejected\/expired\s*documents/i,
+    message: "\uAC31\uC2E0\uC740 \uC11C\uBA85/\uAC70\uC808/\uB9CC\uB8CC \uC0C1\uD0DC \uBB38\uC11C\uC5D0\uC11C\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4."
   },
   {
     pattern: /session.*(missing|expired|invalid|not\s*found)|unauthorized|forbidden/i,
