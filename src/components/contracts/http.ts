@@ -15,15 +15,11 @@ function isKoRuntimeLocale() {
     if (htmlLang.startsWith("ko")) {
       return true;
     }
-    if (htmlLang.startsWith("en")) {
-      return false;
-    }
+    if (htmlLang.startsWith("en")) return false;
   }
   if (typeof navigator !== "undefined") {
     const runtimeLanguage = navigator.language?.trim().toLowerCase() ?? "";
-    if (runtimeLanguage.startsWith("ko")) {
-      return true;
-    }
+    if (runtimeLanguage.startsWith("ko")) return true;
   }
   return false;
 }
@@ -35,17 +31,9 @@ function resolveContractsHttpFallbackMessage(status: number) {
 }
 
 function shouldSuppressRawEnglishMessage(message: string, koRuntime: boolean) {
-  if (!koRuntime) {
-    return false;
-  }
+  if (!koRuntime) return false;
   const normalized = message.trim();
-  if (normalized.length === 0) {
-    return false;
-  }
-  if (/[\uac00-\ud7a3]/.test(normalized)) {
-    return false;
-  }
-  return /[A-Za-z]/.test(normalized);
+  return normalized.length > 0 && !/[\uac00-\ud7a3]/.test(normalized) && /[A-Za-z]/.test(normalized);
 }
 
 const koContractsErrorMessagePatterns: Array<{ pattern: RegExp; message: string }> = [
@@ -167,26 +155,19 @@ const koContractsErrorMessagePatterns: Array<{ pattern: RegExp; message: string 
 
 function resolveKnownKoContractsErrorMessage(value: string) {
   for (const candidate of koContractsErrorMessagePatterns) {
-    if (candidate.pattern.test(value)) {
-      return candidate.message;
-    }
+    if (candidate.pattern.test(value)) return candidate.message;
   }
   return null;
 }
 
 function extractErrorText(body: unknown) {
-  if (typeof body === "string" && body.trim().length > 0) {
-    return body;
-  }
+  if (typeof body === "string" && body.trim().length > 0) return body;
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return null;
   }
-  const errorKeys = ["error", "message", "reason", "detail"];
-  for (const key of errorKeys) {
+  for (const key of ["error", "message", "reason", "detail"]) {
     const value = (body as Record<string, unknown>)[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value;
-    }
+    if (typeof value === "string" && value.trim().length > 0) return value;
   }
   return null;
 }
@@ -218,7 +199,6 @@ export async function readJson(response: Response, fallbackMessage?: string) {
   } catch {
     body = null;
   }
-
   if (!response.ok) {
     const resolvedFallbackMessage = fallbackMessage ?? resolveContractsHttpFallbackMessage(response.status);
     const rawMessage = extractErrorText(body) ?? resolvedFallbackMessage;
