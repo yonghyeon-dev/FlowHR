@@ -29,6 +29,7 @@ export type KpiCopy = {
     attendanceApprovalRate: string;
     leaveApprovedDays: string;
     payrollConfirmedRate: string;
+    contractSlaOverdueCount: string;
   };
   details: {
     attendanceTotal: string;
@@ -52,6 +53,7 @@ export type KpiCopy = {
     attendanceApprovalRate: string;
     leaveApprovedDays: string;
     payrollConfirmedRate: string;
+    contractSlaOverdueCount: string;
   };
 };
 
@@ -85,7 +87,8 @@ const defaultCopy: KpiCopy = {
     stalledApprovals: "Stalled approvals (24h+)",
     attendanceApprovalRate: "Attendance approval rate",
     leaveApprovedDays: "Approved leave days",
-    payrollConfirmedRate: "Payroll confirmed rate"
+    payrollConfirmedRate: "Payroll confirmed rate",
+    contractSlaOverdueCount: "Contract SLA overdue"
   },
   details: {
     attendanceTotal: "total records",
@@ -108,7 +111,8 @@ const defaultCopy: KpiCopy = {
     stalledApprovals: "Stalled approvals (24h+)",
     attendanceApprovalRate: "Attendance approval rate",
     leaveApprovedDays: "Approved leave days",
-    payrollConfirmedRate: "Payroll confirmed rate"
+    payrollConfirmedRate: "Payroll confirmed rate",
+    contractSlaOverdueCount: "Contract SLA overdue"
   }
 };
 
@@ -142,7 +146,8 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       stalledApprovals: "정체 결재 (24시간+)",
       attendanceApprovalRate: "근태 승인률",
       leaveApprovedDays: "휴가 승인 일수",
-      payrollConfirmedRate: "급여 확정률"
+      payrollConfirmedRate: "급여 확정률",
+      contractSlaOverdueCount: "계약 SLA 기한 초과"
     },
     details: {
       attendanceTotal: "총 근태 건",
@@ -165,7 +170,8 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       stalledApprovals: "정체 결재 (24시간+)",
       attendanceApprovalRate: "근태 승인률",
       leaveApprovedDays: "휴가 승인 일수",
-      payrollConfirmedRate: "급여 확정률"
+      payrollConfirmedRate: "급여 확정률",
+      contractSlaOverdueCount: "계약 SLA 기한 초과"
     }
   },
   en: defaultCopy

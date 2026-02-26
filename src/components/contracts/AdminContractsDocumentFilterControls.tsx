@@ -4,6 +4,7 @@ import {
 } from "@/components/contracts/copy";
 import {
   contractDocumentStatusFilters,
+  type ContractDocumentSlaRiskFilter,
   type ContractDocumentExpirationWindow,
   type ContractDocumentStatusFilter
 } from "@/components/contracts/useAdminContractsDocumentFilters";
@@ -16,12 +17,16 @@ type AdminContractsDocumentFilterControlsProps = {
   onStatusFilterChange: (value: ContractDocumentStatusFilter) => void;
   expirationWindowDays: ContractDocumentExpirationWindow;
   onExpirationWindowDaysChange: (value: ContractDocumentExpirationWindow) => void;
+  slaRiskFilter: ContractDocumentSlaRiskFilter;
+  onSlaRiskFilterChange: (value: ContractDocumentSlaRiskFilter) => void;
   renewalCandidateOnly: boolean;
   onRenewalCandidateOnlyChange: (value: boolean) => void;
   statusLabels: Record<ContractDocumentStatus, string>;
   visibleCount: number;
   totalCount: number;
   expiringSoonCount: number;
+  dueSoonSlaCount: number;
+  overdueSlaCount: number;
   renewalCandidateCount: number;
 };
 
@@ -33,12 +38,16 @@ export function AdminContractsDocumentFilterControls({
   onStatusFilterChange,
   expirationWindowDays,
   onExpirationWindowDaysChange,
+  slaRiskFilter,
+  onSlaRiskFilterChange,
   renewalCandidateOnly,
   onRenewalCandidateOnlyChange,
   statusLabels,
   visibleCount,
   totalCount,
   expiringSoonCount,
+  dueSoonSlaCount,
+  overdueSlaCount,
   renewalCandidateCount
 }: AdminContractsDocumentFilterControlsProps) {
   return (
@@ -78,6 +87,17 @@ export function AdminContractsDocumentFilterControls({
             <option value="30">{copy.expirationWindow30Option}</option>
           </select>
         </label>
+        <label>
+          {copy.slaRiskFilterLabel}
+          <select
+            value={slaRiskFilter}
+            onChange={(event) => onSlaRiskFilterChange(event.target.value as ContractDocumentSlaRiskFilter)}
+          >
+            <option value="ALL">{copy.slaRiskAllOption}</option>
+            <option value="DUE_SOON">{copy.slaRiskDueSoonOption}</option>
+            <option value="OVERDUE">{copy.slaRiskOverdueOption}</option>
+          </select>
+        </label>
       </div>
       <label>
         <input
@@ -91,9 +111,15 @@ export function AdminContractsDocumentFilterControls({
         {copy.documentVisibleCountLabel} {visibleCount} / {totalCount}
       </p>
       <p className="small muted">
-        {copy.expiringSoonCountLabel} {expiringSoonCount} | {copy.renewalCandidateCountLabel}{" "}
-        {renewalCandidateCount}
+        {copy.expiringSoonCountLabel} {expiringSoonCount} | {copy.slaRiskDueSoonOption} {dueSoonSlaCount} |{" "}
+        {copy.overdueSlaCountLabel} {overdueSlaCount} | {copy.renewalCandidateCountLabel} {renewalCandidateCount}
       </p>
+      <div className="contract-action-row">
+        <span className="small muted">{copy.slaRiskFilterLabel}</span>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("ALL")}>{copy.slaRiskAllOption}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("DUE_SOON")}>{copy.slaRiskDueSoonOption}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("OVERDUE")}>{copy.slaRiskOverdueOption}</button>
+      </div>
     </>
   );
 }

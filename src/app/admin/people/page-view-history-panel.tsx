@@ -140,6 +140,11 @@ export function AdminPeopleHistoryPanel({
           <p className="small muted">
             {isKoLocale ? "표시 이력" : "Visible history"}: {filteredHistory.length} / {history.length}
           </p>
+          {historyChangeSummary[0] ? (
+            <p className="small muted">
+              {isKoLocale ? "변경 집중 필드" : "Top changed field"}: {historyChangeSummary[0].label} ({historyChangeSummary[0].count})
+            </p>
+          ) : null}
         </>
       ) : (
         <p className="small muted">

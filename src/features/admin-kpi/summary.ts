@@ -6,6 +6,7 @@ export type AdminKpiSummaryInput = {
   leaveApprovedDays: number;
   payrollConfirmedCount: number;
   payrollTotalCount: number;
+  contractSlaOverdueCount: number;
 };
 
 export type AdminKpiSummary = {
@@ -14,6 +15,7 @@ export type AdminKpiSummary = {
   attendanceApprovalRate: number;
   leaveApprovedDays: number;
   payrollConfirmedRate: number;
+  contractSlaOverdueCount: number;
 };
 
 function safePercent(numerator: number, denominator: number) {
@@ -29,7 +31,8 @@ export function buildAdminKpiSummary(input: AdminKpiSummaryInput): AdminKpiSumma
     approvalStalledCount: Math.max(0, Math.trunc(input.approvalStalledCount)),
     attendanceApprovalRate: safePercent(input.attendanceApprovedCount, input.attendanceTotalCount),
     leaveApprovedDays: Number.isFinite(input.leaveApprovedDays) ? Math.max(0, input.leaveApprovedDays) : 0,
-    payrollConfirmedRate: safePercent(input.payrollConfirmedCount, input.payrollTotalCount)
+    payrollConfirmedRate: safePercent(input.payrollConfirmedCount, input.payrollTotalCount),
+    contractSlaOverdueCount: Math.max(0, Math.trunc(input.contractSlaOverdueCount))
   };
 }
 

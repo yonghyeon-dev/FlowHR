@@ -38,6 +38,8 @@ type ApprovalExecutionLite = { updatedAt: string };
 type AttendanceAggregateLite = { counts: { total: number; approved: number } };
 type LeaveRequestLite = { days: number };
 type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
+type ContractDocumentLite = { status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED"; expiresAt: string | null };
+const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>(["DRAFT", "APPROVAL_REQUESTED", "SENT"]);
 type AdminKpiDashboardProps = {
   analyticsMode?: boolean;
 };
@@ -119,19 +121,21 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         limit: "500",
         sort: "priority_desc"
       });
-      const [approvalBody, attendanceBody, leaveBody, payrollBody] = await Promise.all([
+      const [approvalBody, attendanceBody, leaveBody, payrollBody, contractBody] = await Promise.all([
         requestJson("approval executions", `/api/approval/executions${approvalQuery}`),
         requestJson("attendance aggregates", `/api/attendance/aggregates${rangeQuery}`),
         requestJson(
           "leave requests approved",
           `/api/leave/requests${buildQuery({ from: range.from, to: range.to, state: "APPROVED" })}`
         ),
-        requestJson("payroll runs", `/api/payroll/runs${rangeQuery}`)
+        requestJson("payroll runs", `/api/payroll/runs${rangeQuery}`),
+        requestJson("contract documents", `/api/contracts/documents${buildQuery({ organizationId: organizationId.trim() || undefined })}`)
       ]);
       const approvalExecutions = parseArray<ApprovalExecutionLite>(approvalBody, "executions");
       const attendanceAggregates = parseArray<AttendanceAggregateLite>(attendanceBody, "aggregates");
       const approvedLeaveRequests = parseArray<LeaveRequestLite>(leaveBody, "requests");
       const payrollRuns = parseArray<PayrollRunLite>(payrollBody, "runs");
+      const contractDocuments = parseArray<ContractDocumentLite>(contractBody, "documents");
       const attendanceTotal = attendanceAggregates.reduce((sum, item) => sum + (item.counts?.total ?? 0), 0);
       const attendanceApproved = attendanceAggregates.reduce(
         (sum, item) => sum + (item.counts?.approved ?? 0),
@@ -144,6 +148,14 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       const approvalStalledCount = approvalExecutions.filter(
         (execution) => computeStalledHours(execution.updatedAt, asOfDate) >= 24
       ).length;
+      const asOfMillis = asOfDate.getTime();
+      const contractSlaOverdueCount = contractDocuments.filter((document) => {
+        if (!contractSlaTrackedStatuses.has(document.status)) {
+          return false;
+        }
+        const expiresAtMillis = document.expiresAt ? new Date(document.expiresAt).getTime() : Number.NaN;
+        return Number.isFinite(expiresAtMillis) && expiresAtMillis < asOfMillis;
+      }).length;
       return {
         summary: buildAdminKpiSummary({
           approvalPendingCount: approvalExecutions.length,
@@ -152,7 +164,8 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
           attendanceTotalCount: attendanceTotal,
           leaveApprovedDays,
           payrollConfirmedCount: payrollConfirmed,
-          payrollTotalCount: payrollTotal
+          payrollTotalCount: payrollTotal,
+          contractSlaOverdueCount
         }),
         detail: {
           attendanceTotal,

@@ -37,7 +37,8 @@ export type AdminKpiFocusMetric =
   | "stalledApprovals"
   | "attendanceApprovalRate"
   | "leaveApprovedDays"
-  | "payrollConfirmedRate";
+  | "payrollConfirmedRate"
+  | "contractSlaOverdueCount";
 
 type ContextPanelProps = {
   copy: KpiCopy;
@@ -90,6 +91,7 @@ export function AdminKpiAnalyticsControls({
             <option value="attendanceApprovalRate">{copy.metrics.attendanceApprovalRate}</option>
             <option value="leaveApprovedDays">{copy.metrics.leaveApprovedDays}</option>
             <option value="payrollConfirmedRate">{copy.metrics.payrollConfirmedRate}</option>
+            <option value="contractSlaOverdueCount">{copy.metrics.contractSlaOverdueCount}</option>
           </select>
         </label>
       </div>
@@ -202,6 +204,10 @@ export function AdminKpiCards({ copy, kpi }: CardsProps) {
         <small>
           {kpi.detail.payrollConfirmed} / {kpi.detail.payrollTotal} {copy.details.payrollConfirmedRuns}
         </small>
+      </article>
+      <article className="kpi-card">
+        <p>{copy.cards.contractSlaOverdueCount}</p>
+        <strong>{kpi.summary.contractSlaOverdueCount}</strong>
       </article>
     </section>
   );
