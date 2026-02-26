@@ -21,8 +21,14 @@ export type PayslipReceiptCopy = {
   runsTitle: string;
   runsSearchLabel: string;
   runsSearchPlaceholder: string;
+  runsStatusFilterLabel: string;
+  runsStatusFilterAllOption: string;
+  runsStatusFilterPendingOption: string;
+  runsStatusFilterConfirmedOption: string;
+  runsStatusFilterUndistributedOption: string;
   clearSearchAction: string;
   visibleRunsLabel: string;
+  visiblePendingRunsLabel: string;
   noConfirmedPayslipsLoaded: string;
   noFilteredRunsMessage: string;
   netLabel: string;
@@ -71,8 +77,14 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     runsTitle: "실행 목록",
     runsSearchLabel: "명세서 검색",
     runsSearchPlaceholder: "실행 번호/기간/배포/수신 검색",
+    runsStatusFilterLabel: "실행 상태 필터",
+    runsStatusFilterAllOption: "전체",
+    runsStatusFilterPendingOption: "수신 확인 대기",
+    runsStatusFilterConfirmedOption: "수신 확인 완료",
+    runsStatusFilterUndistributedOption: "미배포",
     clearSearchAction: "검색 초기화",
     visibleRunsLabel: "표시 명세서",
+    visiblePendingRunsLabel: "표시 대기 건",
     noConfirmedPayslipsLoaded: "아직 확정 급여명세서를 불러오지 않았습니다.",
     noFilteredRunsMessage: "현재 검색 조건에 맞는 명세서가 없습니다.",
     netLabel: "실수령",
@@ -119,8 +131,14 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     runsTitle: "Runs",
     runsSearchLabel: "Runs search",
     runsSearchPlaceholder: "Search by run ID/period/delivery/receipt",
+    runsStatusFilterLabel: "Run status filter",
+    runsStatusFilterAllOption: "All",
+    runsStatusFilterPendingOption: "Pending receipt confirmation",
+    runsStatusFilterConfirmedOption: "Receipt confirmed",
+    runsStatusFilterUndistributedOption: "Undistributed",
     clearSearchAction: "Clear search",
     visibleRunsLabel: "Visible runs",
+    visiblePendingRunsLabel: "Visible pending runs",
     noConfirmedPayslipsLoaded: "No confirmed payslips loaded yet.",
     noFilteredRunsMessage: "No runs match the current search.",
     netLabel: "Net",

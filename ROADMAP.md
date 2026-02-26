@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-26
-> **Current version**: 0.1.174 (Payslips Employee ID Locale Normalization)
+> **Current version**: 0.1.175 (Payslip Receipt Status Filter Pending Focus)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -764,3 +764,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0497 admin benefits request filter/search and benefit-name visibility (`/admin/benefits` 요청 승인 큐에 상태 필터 + 직원/항목/사유 검색 + visible/total 건수 안내 추가 + 요청 행에 benefitId 기반 항목명 표시 + `e2e-wi0497` 회귀 테스트 추가)
 - WI-0498 admin recruitment referral filter/search and opening visibility (`/admin/recruitment` 추천 후보자 큐에 단계 필터 + 후보자/공고/추천인/메모 검색 + visible/total 건수 안내 추가 + 추천 행에 openingId 기반 공고명 표시 + `e2e-wi0498` 회귀 테스트 추가)
 - WI-0499 admin notices list search and visible-count guidance (`/admin/notices` 공지 목록에 제목/본문 검색 + 검색 초기화 + visible/total 건수 안내 + filtered-empty 안내 추가 + `e2e-wi0499` 회귀 테스트 추가)
+- WI-0500 employee payslip receipt status filter and pending focus (`/employee/payslip-receipts` 실행 목록에 상태 필터(전체/수신대기/확인완료/미배포) 추가 + 검색과 조합된 visible 목록/대기 건수 요약 제공 + `PayslipReceiptConsole.tsx` 라인예산(<=300) 유지 + `e2e-wi0500` 회귀 테스트 추가)

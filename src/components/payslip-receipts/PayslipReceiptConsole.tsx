@@ -1,8 +1,6 @@
 "use client";
-
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-
 import { payslipReceiptCopyByLocale } from "@/components/payslip-receipts/copy";
 import {
   buildPayslipReceiptQuery,
@@ -27,14 +25,12 @@ import {
   normalizeEmployeeIdForLocaleInput
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-
 export default function PayslipReceiptConsole() {
   const { locale } = useI18n();
   const copy = payslipReceiptCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const range = defaultMonthRange();
   const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
-
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState(
     "flowhr:ctx:employeeId",
@@ -44,11 +40,11 @@ export default function PayslipReceiptConsole() {
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
   const [runsSearchQuery, setRunsSearchQuery] = useState("");
+  const [runsStatusFilter, setRunsStatusFilter] = useState<"all" | "pending_confirmation" | "confirmed" | "undistributed">("pending_confirmation");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [runs, setRuns] = useState<PayrollRunReceiptDto[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
-
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
   const bearerToken =
@@ -58,16 +54,13 @@ export default function PayslipReceiptConsole() {
         ? (supabaseSession?.accessToken ?? "")
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-
   const formatKrwByLocale = (value: number | null) =>
     value === null ? "-" : `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "\uC6D0" : " KRW"}`;
   const formatDateTimeByLocale = (value: string | null) => (value ? new Date(value).toLocaleString(runtimeLocale) : "-");
-
   const stats = useMemo(() => {
     const success = logs.filter((log) => log.ok).length;
     return { total: logs.length, success, fail: logs.length - success };
   }, [logs]);
-
   const normalizedSupabaseSessionError = useMemo(
     () =>
       supabaseSessionError
@@ -83,7 +76,6 @@ export default function PayslipReceiptConsole() {
     () => normalizeEmployeeIdForApi(employeeId, locale),
     [employeeId, locale]
   );
-
   useEffect(() => {
     const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
     if (!localizedInput) {
@@ -96,25 +88,43 @@ export default function PayslipReceiptConsole() {
       setEmployeeId(localizedInput);
     }
   }, [employeeId, locale, localeEmployeeIdDefault, setEmployeeId]);
-
   const receiptSummary = useMemo(() => {
     const distributed = runs.filter((run) => run.payslipDistributedAt !== null).length;
     const confirmed = runs.filter((run) => run.payslipReceiptConfirmedAt !== null).length;
     return { total: runs.length, distributed, confirmed, pending: distributed - confirmed };
   }, [runs]);
-
   const normalizedRunsSearchQuery = runsSearchQuery.trim().toLowerCase();
+  const statusFilteredRuns = useMemo(() => {
+    if (runsStatusFilter === "pending_confirmation") {
+      return runs.filter(
+        (run) => run.payslipDistributedAt !== null && run.payslipReceiptConfirmedAt === null
+      );
+    }
+    if (runsStatusFilter === "confirmed") {
+      return runs.filter((run) => run.payslipReceiptConfirmedAt !== null);
+    }
+    if (runsStatusFilter === "undistributed") {
+      return runs.filter((run) => run.payslipDistributedAt === null);
+    }
+    return runs;
+  }, [runs, runsStatusFilter]);
   const filteredRuns = useMemo(() => {
     if (!normalizedRunsSearchQuery) {
-      return runs;
+      return statusFilteredRuns;
     }
-    return runs.filter((run) =>
+    return statusFilteredRuns.filter((run) =>
       `${run.id} ${run.periodStart} ${run.periodEnd} ${run.payslipDistributedAt ?? ""} ${run.payslipReceiptConfirmedAt ?? ""}`
         .toLowerCase()
         .includes(normalizedRunsSearchQuery)
     );
-  }, [normalizedRunsSearchQuery, runs]);
-
+  }, [normalizedRunsSearchQuery, statusFilteredRuns]);
+  const pendingRunsInViewCount = useMemo(
+    () =>
+      filteredRuns.filter(
+        (run) => run.payslipDistributedAt !== null && run.payslipReceiptConfirmedAt === null
+      ).length,
+    [filteredRuns]
+  );
   function actorHeaders() {
     const headers: Record<string, string> = {};
     if (usesBearerToken) {
@@ -128,7 +138,6 @@ export default function PayslipReceiptConsole() {
     }
     return headers;
   }
-
   function appendLog(label: string, response: Response) {
     setLogs((prev) => [
       {
@@ -141,13 +150,11 @@ export default function PayslipReceiptConsole() {
       ...prev
     ]);
   }
-
   async function loadRuns() {
     if (!normalizedEmployeeIdForApi) {
       setStatusMessage(copy.employeeIdRequiredStatus);
       return;
     }
-
     try {
       setPendingLabel(copy.pendingLoadPayslipList);
       const query = buildPayslipReceiptQuery({
@@ -158,13 +165,11 @@ export default function PayslipReceiptConsole() {
       });
       const response = await fetch(`/api/payroll/runs${query}`, { method: "GET", headers: actorHeaders() });
       const body = await parsePayslipReceiptResponseBody(response);
-
       appendLog(copy.logListReceiptEligiblePayslips, response);
       if (!response.ok || !body || typeof body !== "object") {
         setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
-
       const parsed = body as PayrollRunsResponse;
       setRuns(parsed.runs ?? []);
       setStatusMessage(`${copy.loadedConfirmedPayslipsPrefix} ${parsed.runs?.length ?? 0}`);
@@ -173,7 +178,6 @@ export default function PayslipReceiptConsole() {
       setPendingLabel(null);
     }
   }
-
   async function acknowledgeReceipt(runId: string) {
     try {
       setPendingLabel(`${copy.pendingConfirmReceiptPrefix} ${runId}`);
@@ -182,13 +186,11 @@ export default function PayslipReceiptConsole() {
         headers: actorHeaders()
       });
       const body = await parsePayslipReceiptResponseBody(response);
-
       appendLog(`${copy.logAcknowledgePayslipReceiptPrefix} (${runId})`, response);
       if (!response.ok || !body || typeof body !== "object") {
         setStatusMessage(copy.requestFailedCheckLogsStatus);
         return;
       }
-
       const parsed = body as ReceiptAcknowledgeResponse;
       setStatusMessage(
         parsed.receipt.alreadyConfirmed
@@ -200,7 +202,6 @@ export default function PayslipReceiptConsole() {
       setPendingLabel(null);
     }
   }
-
   return (
     <main className="saas-content">
       <header className="hero">
@@ -208,7 +209,6 @@ export default function PayslipReceiptConsole() {
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
       </header>
-
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
@@ -225,7 +225,6 @@ export default function PayslipReceiptConsole() {
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
           {normalizedSupabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}</p> : null}
         </article>
-
         <article className="panel">
           <h2>{copy.receiptStatusTitle}</h2>
           <ul className="simple-list">
@@ -235,13 +234,22 @@ export default function PayslipReceiptConsole() {
             <li><span>{copy.pendingConfirmationLabel}</span><strong>{receiptSummary.pending}</strong></li>
           </ul>
         </article>
-
         <article className="panel">
           <h2>{copy.runsTitle}</h2>
           <label>{copy.runsSearchLabel}<input value={runsSearchQuery} placeholder={copy.runsSearchPlaceholder} onChange={(event) => setRunsSearchQuery(event.target.value)} /></label>
+          <label>
+            {copy.runsStatusFilterLabel}
+            <select value={runsStatusFilter} onChange={(event) => setRunsStatusFilter(event.target.value as "all" | "pending_confirmation" | "confirmed" | "undistributed")}>
+              <option value="all">{copy.runsStatusFilterAllOption}</option>
+              <option value="pending_confirmation">{copy.runsStatusFilterPendingOption}</option>
+              <option value="confirmed">{copy.runsStatusFilterConfirmedOption}</option>
+              <option value="undistributed">{copy.runsStatusFilterUndistributedOption}</option>
+            </select>
+          </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => setRunsSearchQuery("")} disabled={pendingLabel !== null}>{copy.clearSearchAction}</button>
             <p className="small muted">{copy.visibleRunsLabel}: {filteredRuns.length} / {runs.length}</p>
+            <p className="small muted">{copy.visiblePendingRunsLabel}: {pendingRunsInViewCount}</p>
           </div>
           {runs.length === 0 ? (
             <p className="small">{copy.noConfirmedPayslipsLoaded}</p>
@@ -264,7 +272,6 @@ export default function PayslipReceiptConsole() {
             </ul>
           )}
         </article>
-
         <article className="panel">
           <h2>{copy.apiLogsTitle}</h2>
           <p className="small">
