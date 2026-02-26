@@ -5,6 +5,7 @@ import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runti
 import { buildEmployeeInteractionHandlers } from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
+import { buildEmployeeInteractionSetterBundles } from "@/app/employee/page-interaction-setter-bundles";
 import {
   firstDayOfMonthLocal,
   formatDateTime,
@@ -42,22 +43,7 @@ export default function EmployeeSelfServicePage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const localeLabelBundle = useMemo(() => resolveEmployeeLocaleLabelBundle(isKoLocale), [isKoLocale]);
-  const {
-    attendanceNotePresets,
-    callApiLabels,
-    correctionRequestNote,
-    defaultCancelReason,
-    leaveCalendarWeekdays,
-    leaveTypeLabels,
-    listBadgeLabels,
-    notConfiguredLabel,
-    preSubmitStatusLabels,
-    requestStatusLabels,
-    runtimeLocale,
-    surfaceCopy,
-    validationCopy,
-    summaryCopy
-  } = localeLabelBundle;
+  const { attendanceNotePresets, callApiLabels, correctionRequestNote, defaultCancelReason, leaveCalendarWeekdays, leaveTypeLabels, listBadgeLabels, notConfiguredLabel, preSubmitStatusLabels, requestStatusLabels, runtimeLocale, surfaceCopy, validationCopy, summaryCopy } = localeLabelBundle;
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
@@ -93,26 +79,10 @@ export default function EmployeeSelfServicePage() {
   const [requestSortOption, setRequestSortOption] = useState<RequestSortOption>("pending_first");
   const [selectedResubmitCandidateKey, setSelectedResubmitCandidateKey] = useState("");
   const [lastAppliedResubmitCandidateKey, setLastAppliedResubmitCandidateKey] = useState("");
-  const toRequestStatusLabel = useCallback(
-    (status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status],
-    [requestStatusLabels]
-  );
-  const toLeaveTypeLabel = useCallback(
-    (leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType,
-    [leaveTypeLabels]
-  );
-  const formatDateTimeByLocale = useCallback(
-    (value: string | null) => formatDateTime(value, runtimeLocale),
-    [runtimeLocale]
-  );
-  const {
-    showDevTools,
-    isProductionRuntime,
-    supabaseSession,
-    supabaseSessionError,
-    bearerToken,
-    usesBearerToken
-  } = useEmployeeRuntimeSession({
+  const toRequestStatusLabel = useCallback((status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status], [requestStatusLabels]);
+  const toLeaveTypeLabel = useCallback((leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType, [leaveTypeLabels]);
+  const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
+  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, bearerToken, usesBearerToken } = useEmployeeRuntimeSession({
     accessToken,
     organizationId,
     setOrganizationId,
@@ -123,26 +93,9 @@ export default function EmployeeSelfServicePage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
-  const {
-    sectionTitles,
-    attendance: attendanceCopy,
-    leave: leaveCopy,
-    leaveCalendar: leaveCalendarCopy,
-    schedule: scheduleCopy,
-    apiLogs: apiLogsCopy
-  } = surfaceCopy;
+  const { sectionTitles, attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } = surfaceCopy;
   const { leaveBalance: leaveBalanceCopy, leaveUnits: leaveUnitCopy } = summaryCopy;
-  const {
-    feedback: feedbackCopy,
-    defaults: defaultsCopy,
-    summaryCards: summaryCardCopy,
-    requestFeedback: requestFeedbackCopy,
-    correctionValidation: correctionValidationCopy,
-    attendanceChecks: attendanceCheckCopy,
-    leaveChecks: leaveCheckCopy,
-    resubmitFlowChecks: resubmitFlowCheckCopy,
-    submitChecklistCards: submitChecklistCardCopy
-  } = validationCopy;
+  const { feedback: feedbackCopy, defaults: defaultsCopy, summaryCards: summaryCardCopy, requestFeedback: requestFeedbackCopy, correctionValidation: correctionValidationCopy, attendanceChecks: attendanceCheckCopy, leaveChecks: leaveCheckCopy, resubmitFlowChecks: resubmitFlowCheckCopy, submitChecklistCards: submitChecklistCardCopy } = validationCopy;
   useEffect(() => {
     setCancelReason((previous) =>
       isDefaultEmployeeCancelReason(previous) ? defaultCancelReason : previous
@@ -283,10 +236,35 @@ export default function EmployeeSelfServicePage() {
     resubmitFlowCheckCopy,
     submitChecklistCardCopy
   });
-  const attendanceInteractionSetters = { setAttendanceNotes, setBreakMinutes, setCheckInAt, setCheckOutAt, setIsHoliday, setLastAttendanceId, setSelectedCorrectionRecordId };
-  const leaveInteractionSetters = { setLastLeaveRequestId, setLeaveEndDate, setLeaveHours, setLeaveReason, setLeaveStartDate, setLeaveType, setLeaveUnit };
-  const requestInteractionSetters = { setLastAppliedResubmitCandidateKey, setMobileFlowFeedback, setRequestSearchQuery, setRequestSearchScope, setRequestSortOption, setSelectedResubmitCandidateKey };
-  const periodInteractionSetters = { setPeriodEnd, setPeriodStart };
+  const {
+    attendanceInteractionSetters,
+    leaveInteractionSetters,
+    requestInteractionSetters,
+    periodInteractionSetters
+  } = buildEmployeeInteractionSetterBundles({
+    setAttendanceNotes,
+    setBreakMinutes,
+    setCheckInAt,
+    setCheckOutAt,
+    setIsHoliday,
+    setLastAttendanceId,
+    setSelectedCorrectionRecordId,
+    setLastLeaveRequestId,
+    setLeaveEndDate,
+    setLeaveHours,
+    setLeaveReason,
+    setLeaveStartDate,
+    setLeaveType,
+    setLeaveUnit,
+    setLastAppliedResubmitCandidateKey,
+    setMobileFlowFeedback,
+    setRequestSearchQuery,
+    setRequestSearchScope,
+    setRequestSortOption,
+    setSelectedResubmitCandidateKey,
+    setPeriodEnd,
+    setPeriodStart
+  });
   const interactionOrchestratorInput = useEmployeeInteractionOrchestratorInput({
     attendance,
     correctionRequestNote,
@@ -305,23 +283,7 @@ export default function EmployeeSelfServicePage() {
     requestInteractionSetters,
     periodInteractionSetters
   });
-  const {
-    applyAttendanceRecordToCorrectionForm,
-    applyLatestAttendanceToCorrectionForm,
-    applyLatestResubmitCandidate,
-    applyLeaveQuickPreset,
-    applyResubmitCandidateToDraft,
-    applySelectedCorrectionRecord,
-    applySelectedResubmitCandidate,
-    clearResubmitSelection,
-    copyFailureCause,
-    jumpToSection,
-    moveCalendarMonth,
-    openPendingRequestSearch,
-    prefillLeaveFormFromCalendarDate,
-    resetCalendarToCurrentMonth,
-    selectCorrectionTarget
-  } = buildEmployeeInteractionHandlers({
+  const { applyAttendanceRecordToCorrectionForm, applyLatestAttendanceToCorrectionForm, applyLatestResubmitCandidate, applyLeaveQuickPreset, applyResubmitCandidateToDraft, applySelectedCorrectionRecord, applySelectedResubmitCandidate, clearResubmitSelection, copyFailureCause, jumpToSection, moveCalendarMonth, openPendingRequestSearch, prefillLeaveFormFromCalendarDate, resetCalendarToCurrentMonth, selectCorrectionTarget } = buildEmployeeInteractionHandlers({
     ...interactionOrchestratorInput
   });
   return (
