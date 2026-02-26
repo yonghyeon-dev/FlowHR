@@ -124,6 +124,22 @@ export default function WithholdingReceiptConsole() {
     window.document.body.removeChild(anchor);
     URL.revokeObjectURL(objectUrl);
   }
+  async function copyDocumentMetadata(document: WithholdingReceiptDocumentResponse["document"]) {
+    const metadataText = [
+      `receiptNumber=${document.receiptNumber}`,
+      `format=${document.format}`,
+      `contentType=${document.contentType}`,
+      `issuedAt=${document.issuedAt}`,
+      `generatedAt=${document.generatedAt}`,
+      `contentSha256=${document.contentSha256}`
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(metadataText);
+      setStatusMessage(copy.copiedDocumentMetadataStatus);
+    } catch {
+      setStatusMessage(copy.requestFailedCheckLogsStatus);
+    }
+  }
 
   const runGuardSnapshot = finalizedSettlement
     ? `${copy.runGuardConfirmedLabel} ${finalizedSettlement.settlement.runStates.confirmedRuns}, ${copy.runGuardPreviewedLabel} ${finalizedSettlement.settlement.runStates.previewedRuns}, ${copy.runGuardUndistributedLabel} ${finalizedSettlement.settlement.runStates.undistributedRuns}, ${copy.runGuardPendingReceiptLabel} ${finalizedSettlement.settlement.runStates.pendingReceiptRuns}`
@@ -222,6 +238,7 @@ export default function WithholdingReceiptConsole() {
           hideDocumentRawPreview={locale === "ko"}
           formatKrwByLocale={formatKrwByLocale}
           onDownloadDocument={(document) => downloadDocument(document, normalizedDocumentFileName)}
+          onCopyDocumentMetadata={(document) => void copyDocumentMetadata(document)}
         />
         <WithholdingLogsPanel
           title={copy.apiLogsTitle}

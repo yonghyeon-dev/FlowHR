@@ -29,6 +29,7 @@ export type PayslipReceiptCopy = {
   clearSearchAction: string;
   visibleRunsLabel: string;
   visiblePendingRunsLabel: string;
+  statusCountSummaryLabel: string;
   noConfirmedPayslipsLoaded: string;
   noFilteredRunsMessage: string;
   netLabel: string;
@@ -85,6 +86,7 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     clearSearchAction: "검색 초기화",
     visibleRunsLabel: "표시 명세서",
     visiblePendingRunsLabel: "표시 대기 건",
+    statusCountSummaryLabel: "상태 요약",
     noConfirmedPayslipsLoaded: "아직 확정 급여명세서를 불러오지 않았습니다.",
     noFilteredRunsMessage: "현재 검색 조건에 맞는 명세서가 없습니다.",
     netLabel: "실수령",
@@ -139,6 +141,7 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     clearSearchAction: "Clear search",
     visibleRunsLabel: "Visible runs",
     visiblePendingRunsLabel: "Visible pending runs",
+    statusCountSummaryLabel: "Status summary",
     noConfirmedPayslipsLoaded: "No confirmed payslips loaded yet.",
     noFilteredRunsMessage: "No runs match the current search.",
     netLabel: "Net",

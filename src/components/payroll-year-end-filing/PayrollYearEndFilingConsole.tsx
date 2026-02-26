@@ -183,6 +183,15 @@ export default function PayrollYearEndFilingConsole() {
     }
     return chips;
   }, [submissions]);
+  const hasFilteredSubmissionEmptyState = useMemo(
+    () =>
+      Boolean(
+        submissionListSummary &&
+          submissionListSummary.totalCount > 0 &&
+          submissionListSummary.filteredCount === 0
+      ),
+    [submissionListSummary]
+  );
 
   useEffect(() => {
     if (ackCodeOptions.length === 0) {
@@ -1180,11 +1189,11 @@ export default function PayrollYearEndFilingConsole() {
               <li><span>{copy.statusSummaryLabel}</span><strong>{copy.submissionStatusOptionLabels.submitted} {submissionListSummary.statusCounts.submitted} / {copy.submissionStatusOptionLabels.acknowledged} {submissionListSummary.statusCounts.acknowledged} / {copy.submissionStatusOptionLabels.canceled} {submissionListSummary.statusCounts.canceled}</strong></li>
               <li><span>{copy.ackStatusSummaryLabel}</span><strong>{copy.ackStatusOptionLabels.accepted} {submissionListSummary.ackStatusCounts.accepted} / {copy.ackStatusOptionLabels.rejected} {submissionListSummary.ackStatusCounts.rejected} / {copy.ackStatusOptionLabels.none} {submissionListSummary.ackStatusCounts.none}</strong></li>
               <li><span>{copy.validationSummaryLabel}</span><strong>{copy.validationStatusOptionLabels.pass} {submissionListSummary.validationStatusCounts.pass} / {copy.validationStatusOptionLabels.fail} {submissionListSummary.validationStatusCounts.fail}</strong></li>
-              <li><span>{copy.transportSummaryLabel}</span><strong>{copy.transportShortManualLabel} {submissionListSummary.transportCounts.manual_portal} / {copy.transportShortHometaxLabel} {submissionListSummary.transportCounts.hometax_upload} / nts_api_mock {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
+              <li><span>{copy.transportSummaryLabel}</span><strong>{copy.transportShortManualLabel} {submissionListSummary.transportCounts.manual_portal} / {copy.transportShortHometaxLabel} {submissionListSummary.transportCounts.hometax_upload} / {copy.transportShortNtsApiMockLabel} {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
               <li><span>{copy.activeFiltersLabel}</span><strong>status={copy.submissionStatusOptionLabels[submissionStatusFilter] ?? submissionStatusFilter}, ackStatus={copy.ackStatusOptionLabels[submissionAckStatusFilter] ?? submissionAckStatusFilter}, validation={copy.validationStatusOptionLabels[submissionValidationStatusFilter] ?? submissionValidationStatusFilter}, transport={copy.submissionTransportOptionLabels[submissionTransportFilter] ?? submissionTransportFilter}, settlementHash={submissionSettlementHashFilter.trim() || copy.dashLabel}, search={submissionSearch.trim() || copy.dashLabel}, sort={copy.submissionSortByOptionLabels[submissionSortBy] ?? submissionSortBy}:{copy.submissionSortDirectionOptionLabels[submissionSortDirection] ?? submissionSortDirection}</strong></li>
             </ul>
           )}
-          {submissions.length === 0 ? <p className="small">{copy.noFilingSubmissionYet}</p> : (
+          {submissions.length === 0 ? <p className="small">{hasFilteredSubmissionEmptyState ? copy.noSubmissionMatchesFilters : copy.noFilingSubmissionYet}</p> : (
             <ul className="log-list">
               {submissions.map((submission) => (
                 <li key={submission.submissionId}>

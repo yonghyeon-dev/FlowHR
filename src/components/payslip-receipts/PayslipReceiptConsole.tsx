@@ -8,6 +8,13 @@ import {
 } from "@/components/payslip-receipts/request-helpers";
 import { normalizePayslipReceiptRuntimeMessage } from "@/components/payslip-receipts/runtime-copy-helpers";
 import {
+  countPendingPayslipRuns,
+  filterPayslipRunsByQuery,
+  filterPayslipRunsByStatus,
+  summarizePayslipRunsStatusCounts,
+  type PayslipRunsStatusFilter
+} from "@/components/payslip-receipts/payslip-receipt-filter-helpers";
+import {
   defaultMonthRange,
   toSeoulEndIso,
   toSeoulStartIso,
@@ -40,7 +47,7 @@ export default function PayslipReceiptConsole() {
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
   const [runsSearchQuery, setRunsSearchQuery] = useState("");
-  const [runsStatusFilter, setRunsStatusFilter] = useState<"all" | "pending_confirmation" | "confirmed" | "undistributed">("pending_confirmation");
+  const [runsStatusFilter, setRunsStatusFilter] = useState<PayslipRunsStatusFilter>("pending_confirmation");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [runs, setRuns] = useState<PayrollRunReceiptDto[]>([]);
@@ -93,36 +100,18 @@ export default function PayslipReceiptConsole() {
     const confirmed = runs.filter((run) => run.payslipReceiptConfirmedAt !== null).length;
     return { total: runs.length, distributed, confirmed, pending: distributed - confirmed };
   }, [runs]);
+  const statusCounts = useMemo(() => summarizePayslipRunsStatusCounts(runs), [runs]);
   const normalizedRunsSearchQuery = runsSearchQuery.trim().toLowerCase();
-  const statusFilteredRuns = useMemo(() => {
-    if (runsStatusFilter === "pending_confirmation") {
-      return runs.filter(
-        (run) => run.payslipDistributedAt !== null && run.payslipReceiptConfirmedAt === null
-      );
-    }
-    if (runsStatusFilter === "confirmed") {
-      return runs.filter((run) => run.payslipReceiptConfirmedAt !== null);
-    }
-    if (runsStatusFilter === "undistributed") {
-      return runs.filter((run) => run.payslipDistributedAt === null);
-    }
-    return runs;
-  }, [runs, runsStatusFilter]);
-  const filteredRuns = useMemo(() => {
-    if (!normalizedRunsSearchQuery) {
-      return statusFilteredRuns;
-    }
-    return statusFilteredRuns.filter((run) =>
-      `${run.id} ${run.periodStart} ${run.periodEnd} ${run.payslipDistributedAt ?? ""} ${run.payslipReceiptConfirmedAt ?? ""}`
-        .toLowerCase()
-        .includes(normalizedRunsSearchQuery)
-    );
-  }, [normalizedRunsSearchQuery, statusFilteredRuns]);
+  const statusFilteredRuns = useMemo(
+    () => filterPayslipRunsByStatus(runs, runsStatusFilter),
+    [runs, runsStatusFilter]
+  );
+  const filteredRuns = useMemo(
+    () => filterPayslipRunsByQuery(statusFilteredRuns, normalizedRunsSearchQuery),
+    [normalizedRunsSearchQuery, statusFilteredRuns]
+  );
   const pendingRunsInViewCount = useMemo(
-    () =>
-      filteredRuns.filter(
-        (run) => run.payslipDistributedAt !== null && run.payslipReceiptConfirmedAt === null
-      ).length,
+    () => countPendingPayslipRuns(filteredRuns),
     [filteredRuns]
   );
   function actorHeaders() {
@@ -250,6 +239,7 @@ export default function PayslipReceiptConsole() {
             <button className="btn btn-secondary" onClick={() => setRunsSearchQuery("")} disabled={pendingLabel !== null}>{copy.clearSearchAction}</button>
             <p className="small muted">{copy.visibleRunsLabel}: {filteredRuns.length} / {runs.length}</p>
             <p className="small muted">{copy.visiblePendingRunsLabel}: {pendingRunsInViewCount}</p>
+            <p className="small muted">{copy.statusCountSummaryLabel}: {copy.runsStatusFilterPendingOption} {statusCounts.pendingConfirmation} / {copy.runsStatusFilterConfirmedOption} {statusCounts.confirmed} / {copy.runsStatusFilterUndistributedOption} {statusCounts.undistributed}</p>
           </div>
           {runs.length === 0 ? (
             <p className="small">{copy.noConfirmedPayslipsLoaded}</p>

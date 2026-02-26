@@ -21,7 +21,7 @@ async function run() {
 
   assert.match(receiptConsole, /const \[runsStatusFilter, setRunsStatusFilter\] = useState</);
   assert.match(receiptConsole, /pending_confirmation/);
-  assert.match(receiptConsole, /const statusFilteredRuns = useMemo\(\(\) => \{/);
+  assert.match(receiptConsole, /filterPayslipRunsByStatus\(runs, runsStatusFilter\)/);
   assert.match(receiptConsole, /copy\.runsStatusFilterLabel/);
   assert.match(receiptConsole, /copy\.runsStatusFilterAllOption/);
   assert.match(receiptConsole, /copy\.runsStatusFilterPendingOption/);
