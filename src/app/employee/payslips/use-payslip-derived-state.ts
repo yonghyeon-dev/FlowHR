@@ -1,6 +1,11 @@
 import { useMemo } from "react";
 
 import {
+  formatEmployeeIdForLocaleDisplay,
+  getLocalizedEmployeeIdInputDefault,
+  normalizeEmployeeIdForApi
+} from "@/lib/i18n/employee-id-locale";
+import {
   type DeductionDescriptionMap,
   extractErrorMessage,
   formatCompareWindowLabel,
@@ -348,8 +353,13 @@ export function usePayslipDerivedState(input: UsePayslipDerivedStateInput): UseP
     const period = new Date(selectedRun.periodStart);
     const year = Number.isNaN(period.getTime()) ? "unknown" : String(period.getFullYear());
     const month = Number.isNaN(period.getTime()) ? "00" : String(period.getMonth() + 1).padStart(2, "0");
-    const actorFallback = isKoLocale ? "직원" : "employee";
-    const actor = (selectedRun.employeeId ?? employeeId ?? actorFallback).replace(/\s+/g, "-");
+    const locale = isKoLocale ? "ko" : "en";
+    const actorFallback = getLocalizedEmployeeIdInputDefault(locale);
+    const actorSource = selectedRun.employeeId ?? employeeId ?? actorFallback;
+    const actor = formatEmployeeIdForLocaleDisplay(normalizeEmployeeIdForApi(actorSource, locale), locale).replace(
+      /\s+/g,
+      "-"
+    );
     const filePrefix = isKoLocale ? "플로우HR-급여명세" : "flowhr-payslip";
     return `${filePrefix}-${actor}-${year}${month}.pdf`;
   }, [employeeId, isKoLocale, selectedRun]);

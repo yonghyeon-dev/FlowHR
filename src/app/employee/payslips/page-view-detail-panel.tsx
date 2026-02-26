@@ -4,6 +4,7 @@ import {
   formatMonthLabel,
   type PayslipPageCopy
 } from "@/app/employee/payslips/page-locale-helpers";
+import { formatEmployeeIdForLocaleDisplay } from "@/lib/i18n/employee-id-locale";
 import {
   minutesToHours,
   type AttendanceAggregateDto,
@@ -38,6 +39,8 @@ export function PayslipDetailPanel({
   copyPayslipFileName,
   copySelectedRunId
 }: PayslipDetailPanelProps) {
+  const locale = isKoLocale ? "ko" : "en";
+
   return (
     <article className="panel panel-payslip-print">
       <h2>{pageCopy.detail.title}</h2>
@@ -77,7 +80,7 @@ export function PayslipDetailPanel({
               <ul className="payslip-meta-list">
                 <li>
                   <span>{pageCopy.detail.employeeId}</span>
-                  <strong>{selectedRun.employeeId ?? employeeId}</strong>
+                  <strong>{formatEmployeeIdForLocaleDisplay(selectedRun.employeeId ?? employeeId, locale)}</strong>
                 </li>
                 <li>
                   <span>{pageCopy.detail.payslipId}</span>
