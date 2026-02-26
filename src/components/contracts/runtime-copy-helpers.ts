@@ -38,6 +38,14 @@ function toKoFallbackTitle(stableId: string) {
   return `계약서 ${stableId.slice(0, 8)}`;
 }
 
+function resolveFileExtension(fileName: string) {
+  const match = /\.([A-Za-z0-9]+)$/.exec(fileName.trim());
+  if (!match) {
+    return ".txt";
+  }
+  return `.${match[1].toLowerCase()}`;
+}
+
 export function normalizeContractsEntityTitle(title: string, stableId: string, isKoLocale: boolean) {
   const normalized = title.trim();
   if (!isKoLocale) {
@@ -50,4 +58,24 @@ export function normalizeContractsEntityTitle(title: string, stableId: string, i
     return toKoFallbackTitle(stableId);
   }
   return normalized;
+}
+
+export function normalizeContractsEvidenceFileName(
+  fileName: string,
+  stableId: string,
+  isKoLocale: boolean
+) {
+  const normalized = fileName.trim();
+  if (!isKoLocale) {
+    return normalized.length > 0 ? normalized : fileName;
+  }
+  const extension = resolveFileExtension(normalized);
+  const fallbackName = `계약-증빙-${stableId.slice(0, 8)}${extension}`;
+  if (normalized.length === 0) {
+    return fallbackName;
+  }
+  if (hasHangulText(normalized) && !shouldNormalizeAsKoFallbackTitle(normalized)) {
+    return normalized;
+  }
+  return shouldNormalizeAsKoFallbackTitle(normalized) ? fallbackName : normalized;
 }

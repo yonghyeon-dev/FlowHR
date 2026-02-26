@@ -15,6 +15,10 @@ import {
   parseNonNegativeInt
 } from "@/components/payroll-year-end/employee-year-end-input-helpers";
 import { employeeYearEndInputCopyByLocale } from "@/components/payroll-year-end/employee-year-end-input-copy";
+import {
+  extractPayrollYearEndErrorMessage,
+  normalizePayrollYearEndRuntimeMessage
+} from "@/components/payroll-year-end/runtime-copy-helpers";
 
 type ApiLog = {
   id: number;
@@ -159,6 +163,16 @@ export default function EmployeeYearEndInputConsole() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const normalizedSupabaseSessionError = useMemo(() => {
+    if (!supabaseSessionError) {
+      return null;
+    }
+    return normalizePayrollYearEndRuntimeMessage(
+      supabaseSessionError,
+      locale,
+      "인증 세션 상태를 확인하지 못했습니다."
+    );
+  }, [locale, supabaseSessionError]);
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -206,14 +220,20 @@ export default function EmployeeYearEndInputConsole() {
         ...prev
       ]);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.requestFailedCheckLogsStatus);
+        setStatusMessage(
+          extractPayrollYearEndErrorMessage(body, locale, copy.requestFailedCheckLogsStatus)
+        );
         return;
       }
       setFinalizedSettlement(body);
       setStatusMessage(`${copy.loadedStatusPrefix} ${body.settlement.finalizationId}`);
       setTimeout(() => setStatusMessage(null), 2500);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.requestFailedStatus);
+      setStatusMessage(
+        error instanceof Error
+          ? normalizePayrollYearEndRuntimeMessage(error.message, locale, copy.requestFailedStatus)
+          : copy.requestFailedStatus
+      );
     } finally {
       setPendingLabel(null);
     }
@@ -315,7 +335,7 @@ export default function EmployeeYearEndInputConsole() {
             <label>{copy.annualIncomeTaxRateLabel}<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
             <label>{copy.localIncomeTaxRateLabel}<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
           </div>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder="Bearer token" /></label>
+          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
           <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button
@@ -349,7 +369,11 @@ export default function EmployeeYearEndInputConsole() {
             </p>
           ) : null}
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
+          {normalizedSupabaseSessionError ? (
+            <p className="small fail">
+              {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
+            </p>
+          ) : null}
         </article>
         <article className="panel">
           <h2>{copy.simulationTitle}</h2>

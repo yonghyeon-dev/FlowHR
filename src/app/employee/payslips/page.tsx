@@ -301,7 +301,9 @@ export default function EmployeePayslipsPage() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `flowhr-payslips-${employeeId || "employee"}.csv`;
+    const csvPrefix = isKoLocale ? "플로우HR-명세서" : "flowhr-payslips";
+    const employeeLabel = (employeeId || (isKoLocale ? "직원" : "employee")).replace(/\s+/g, "-");
+    anchor.download = `${csvPrefix}-${employeeLabel}.csv`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();

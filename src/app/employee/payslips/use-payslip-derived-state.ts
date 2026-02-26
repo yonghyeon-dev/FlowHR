@@ -348,9 +348,11 @@ export function usePayslipDerivedState(input: UsePayslipDerivedStateInput): UseP
     const period = new Date(selectedRun.periodStart);
     const year = Number.isNaN(period.getTime()) ? "unknown" : String(period.getFullYear());
     const month = Number.isNaN(period.getTime()) ? "00" : String(period.getMonth() + 1).padStart(2, "0");
-    const actor = (selectedRun.employeeId ?? employeeId ?? "employee").replace(/\s+/g, "-");
-    return `flowhr-payslip-${actor}-${year}${month}.pdf`;
-  }, [employeeId, selectedRun]);
+    const actorFallback = isKoLocale ? "직원" : "employee";
+    const actor = (selectedRun.employeeId ?? employeeId ?? actorFallback).replace(/\s+/g, "-");
+    const filePrefix = isKoLocale ? "플로우HR-급여명세" : "flowhr-payslip";
+    return `${filePrefix}-${actor}-${year}${month}.pdf`;
+  }, [employeeId, isKoLocale, selectedRun]);
 
   return {
     stats,
