@@ -4,10 +4,10 @@ import {
   formatDateTimeByLocale,
   normalizeWithholdingDocumentFileName,
   normalizeRuntimeDiagnosticMessage,
-  parseRequiredInt,
   resolveWithholdingBlockingReasons,
   withholdingReceiptCopyByLocale
 } from "@/components/withholding-receipt/copy-runtime";
+import { WithholdingReceiptInputPanel } from "@/components/withholding-receipt/WithholdingReceiptInputPanel";
 import {
   WithholdingLogsPanel,
   WithholdingSummaryPanel
@@ -18,11 +18,11 @@ import type {
   WithholdingReceiptDocumentResponse,
   WithholdingReceiptResponse
 } from "@/components/withholding-receipt/types";
+import { useWithholdingReceiptRequests } from "@/components/withholding-receipt/useWithholdingReceiptRequests";
 import { currentYear } from "@/components/withholding-receipt/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import {
-  defaultEmployeeIdForApi,
   getLocalizedEmployeeIdInputDefault,
   normalizeEmployeeIdForApi,
   normalizeEmployeeIdForLocaleInput
@@ -81,95 +81,35 @@ export default function WithholdingReceiptConsole() {
 
   useEffect(() => {
     const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
-    if (localizedInput && localizedInput !== employeeId) {
+    if (!localizedInput) {
+      if (employeeId.trim().length === 0 && employeeId !== localeEmployeeIdDefault) {
+        setEmployeeId(localeEmployeeIdDefault);
+      }
+      return;
+    }
+    if (localizedInput !== employeeId) {
       setEmployeeId(localizedInput);
     }
-  }, [employeeId, locale, setEmployeeId]);
+  }, [employeeId, locale, localeEmployeeIdDefault, setEmployeeId]);
 
-  function buildHeaders() {
-    const headers: Record<string, string> = {
-      "content-type": "application/json"
-    };
-    if (usesBearerToken) {
-      headers.authorization = `Bearer ${bearerToken}`;
-    } else {
-      headers["x-actor-role"] = "employee";
-      headers["x-actor-id"] = normalizedEmployeeIdForApi || defaultEmployeeIdForApi;
-      if (organizationId.trim()) {
-        headers["x-actor-organization-id"] = organizationId.trim();
-      }
-    }
-    return headers;
-  }
-  function isErrorPayload(value: unknown): value is { error: string } {
-    return typeof value === "object" && value !== null && "error" in value;
-  }
-  async function runRequest<T>({
-    label,
-    pending,
-    url,
-    method,
-    body
-  }: {
-    label: string;
-    pending: string;
-    url: string;
-    method: "GET" | "POST";
-    body?: Record<string, unknown>;
-  }) {
-    try {
-      setPendingLabel(pending);
-      const response = await fetch(url, {
-        method,
-        headers: buildHeaders(),
-        body: body ? JSON.stringify(body) : undefined
-      });
-      const payload = (await response.json()) as T | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
-      if (!response.ok || isErrorPayload(payload)) {
-        setStatusMessage(copy.requestFailedCheckLogsStatus);
-        return null;
-      }
-      return payload as T;
-    } catch {
-      setStatusMessage(copy.invalidInputStatus);
-      return null;
-    } finally {
-      setPendingLabel(null);
-    }
-  }
-  async function previewReceipt() {
-    if (!normalizedEmployeeIdForApi) {
-      setStatusMessage(copy.invalidInputStatus);
-      return;
-    }
-    const body = await runRequest<WithholdingReceiptResponse>({
-      label: copy.logPreviewReceipt,
-      pending: copy.pendingReceiptPreview,
-      url: "/api/payroll/year-end/withholding-receipts",
-      method: "POST",
-      body: {
-        year: parseRequiredInt(year, copy.yearLabel, locale),
-        employeeId: normalizedEmployeeIdForApi,
-        issue: false
-      }
-    });
-    if (!body) {
-      return;
-    }
-    setReceipt(body);
-    setStatusMessage(`${copy.loadedReceiptPrefix} ${body.receipt.receiptNumber}`);
-    setTimeout(() => setStatusMessage(""), 3000);
-  }
+  const { previewReceipt, loadIssuedDocument, loadFinalizedSettlement } = useWithholdingReceiptRequests({
+    copy,
+    locale,
+    runtimeLocale,
+    year,
+    organizationId,
+    documentFormat,
+    usesBearerToken,
+    bearerToken,
+    normalizedEmployeeIdForApi,
+    setPendingLabel,
+    setStatusMessage,
+    setLogs,
+    setReceipt,
+    setReceiptDocument,
+    setFinalizedSettlement
+  });
+
   function downloadDocument(
     document: WithholdingReceiptDocumentResponse["document"],
     downloadFileName: string
@@ -184,57 +124,7 @@ export default function WithholdingReceiptConsole() {
     window.document.body.removeChild(anchor);
     URL.revokeObjectURL(objectUrl);
   }
-  async function loadIssuedDocument() {
-    if (!normalizedEmployeeIdForApi) {
-      setStatusMessage(copy.invalidInputStatus);
-      return;
-    }
-    const query = new URLSearchParams({
-      year: String(parseRequiredInt(year, copy.yearLabel, locale)),
-      employeeId: normalizedEmployeeIdForApi,
-      format: documentFormat
-    });
-    const body = await runRequest<WithholdingReceiptDocumentResponse>({
-      label: copy.logLoadDocument,
-      pending: copy.pendingReceiptDocument,
-      url: `/api/payroll/year-end/withholding-receipts?${query.toString()}`,
-      method: "GET"
-    });
-    if (!body) {
-      return;
-    }
-    setReceiptDocument(body);
-    const normalizedFileName = normalizeWithholdingDocumentFileName(
-      body.document.fileName,
-      body.document.receiptNumber,
-      body.document.format,
-      locale
-    );
-    setStatusMessage(`${copy.loadedDocumentPrefix} ${normalizedFileName}`);
-    setTimeout(() => setStatusMessage(""), 3000);
-  }
-  async function loadFinalizedSettlement() {
-    if (!normalizedEmployeeIdForApi) {
-      setStatusMessage(copy.invalidInputStatus);
-      return;
-    }
-    const query = new URLSearchParams({
-      year: String(parseRequiredInt(year, copy.yearLabel, locale)),
-      employeeId: normalizedEmployeeIdForApi
-    });
-    const body = await runRequest<FinalizedYearEndSettlementResponse>({
-      label: copy.logLoadFinalizedSettlement,
-      pending: copy.pendingFinalizedSettlement,
-      url: `/api/payroll/year-end/finalized-settlement?${query.toString()}`,
-      method: "GET"
-    });
-    if (!body) {
-      return;
-    }
-    setFinalizedSettlement(body);
-    setStatusMessage(`${copy.loadedFinalizedSettlementPrefix} ${body.settlement.finalizationId}`);
-    setTimeout(() => setStatusMessage(""), 3000);
-  }
+
   const runGuardSnapshot = finalizedSettlement
     ? `${copy.runGuardConfirmedLabel} ${finalizedSettlement.settlement.runStates.confirmedRuns}, ${copy.runGuardPreviewedLabel} ${finalizedSettlement.settlement.runStates.previewedRuns}, ${copy.runGuardUndistributedLabel} ${finalizedSettlement.settlement.runStates.undistributedRuns}, ${copy.runGuardPendingReceiptLabel} ${finalizedSettlement.settlement.runStates.pendingReceiptRuns}`
     : "";
@@ -292,36 +182,30 @@ export default function WithholdingReceiptConsole() {
         <p>{copy.description}</p>
       </header>
       <section className="panel-grid">
-        <article className="panel">
-          <h2>{copy.inputTitle}</h2>
-          <div className="input-grid">
-            <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
-            <label>
-              {copy.documentFormatLabel}
-              <select
-                value={documentFormat}
-                onChange={(event) => setDocumentFormat(event.target.value === "text" ? "text" : "json")}
-              >
-                <option value="json">{copy.formatJsonLabel}</option>
-                <option value="text">{copy.formatTextLabel}</option>
-              </select>
-            </label>
-          </div>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
-          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
-          <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void previewReceipt()} disabled={pendingLabel !== null}>{copy.actionPreviewReceipt}</button>
-            <button className="btn btn-secondary" onClick={() => void loadFinalizedSettlement()} disabled={pendingLabel !== null}>{copy.actionLoadFinalizedSettlement}</button>
-            <button className="btn btn-secondary" onClick={() => void loadIssuedDocument()} disabled={pendingLabel !== null}>{copy.actionLoadIssuedDocument}</button>
-          </div>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {normalizedSupabaseSessionError ? (
-            <p className="small fail">
-              {copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}
-            </p>
-          ) : null}
-        </article>
+        <WithholdingReceiptInputPanel
+          copy={copy}
+          year={year}
+          employeeId={employeeId}
+          documentFormat={documentFormat}
+          accessToken={accessToken}
+          organizationId={organizationId}
+          pendingLabel={pendingLabel}
+          statusMessage={statusMessage}
+          normalizedSupabaseSessionError={normalizedSupabaseSessionError}
+          onYearChange={setYear}
+          onEmployeeIdChange={setEmployeeId}
+          onEmployeeIdBlur={() => {
+            if (!employeeId.trim()) {
+              setEmployeeId(localeEmployeeIdDefault);
+            }
+          }}
+          onDocumentFormatChange={setDocumentFormat}
+          onAccessTokenChange={setAccessToken}
+          onOrganizationIdChange={setOrganizationId}
+          onPreviewReceipt={() => void previewReceipt()}
+          onLoadFinalizedSettlement={() => void loadFinalizedSettlement()}
+          onLoadIssuedDocument={() => void loadIssuedDocument()}
+        />
         <WithholdingSummaryPanel
           title={copy.receiptSummaryTitle}
           copy={copy}

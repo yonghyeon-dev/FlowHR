@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { payslipReceiptCopyByLocale } from "@/components/payslip-receipts/copy";
+import {
+  buildPayslipReceiptQuery,
+  parsePayslipReceiptResponseBody
+} from "@/components/payslip-receipts/request-helpers";
 import { normalizePayslipReceiptRuntimeMessage } from "@/components/payslip-receipts/runtime-copy-helpers";
 import {
   defaultMonthRange,
@@ -23,30 +27,6 @@ import {
   normalizeEmployeeIdForLocaleInput
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-
-function buildQuery(params: Record<string, string | undefined>) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (!value || value.trim() === "") {
-      continue;
-    }
-    search.set(key, value);
-  }
-  const query = search.toString();
-  return query ? `?${query}` : "";
-}
-
-async function parseResponseBody(response: Response) {
-  const text = await response.text();
-  if (!text.trim()) {
-    return null;
-  }
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
-  }
-}
 
 export default function PayslipReceiptConsole() {
   const { locale } = useI18n();
@@ -106,10 +86,16 @@ export default function PayslipReceiptConsole() {
 
   useEffect(() => {
     const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
-    if (localizedInput && localizedInput !== employeeId) {
+    if (!localizedInput) {
+      if (employeeId.trim().length === 0 && employeeId !== localeEmployeeIdDefault) {
+        setEmployeeId(localeEmployeeIdDefault);
+      }
+      return;
+    }
+    if (localizedInput !== employeeId) {
       setEmployeeId(localizedInput);
     }
-  }, [employeeId, locale, setEmployeeId]);
+  }, [employeeId, locale, localeEmployeeIdDefault, setEmployeeId]);
 
   const receiptSummary = useMemo(() => {
     const distributed = runs.filter((run) => run.payslipDistributedAt !== null).length;
@@ -164,14 +150,14 @@ export default function PayslipReceiptConsole() {
 
     try {
       setPendingLabel(copy.pendingLoadPayslipList);
-      const query = buildQuery({
+      const query = buildPayslipReceiptQuery({
         from: toSeoulStartIso(periodStartDate),
         to: toSeoulEndIso(periodEndDate),
         employeeId: normalizedEmployeeIdForApi,
         state: "CONFIRMED"
       });
       const response = await fetch(`/api/payroll/runs${query}`, { method: "GET", headers: actorHeaders() });
-      const body = await parseResponseBody(response);
+      const body = await parsePayslipReceiptResponseBody(response);
 
       appendLog(copy.logListReceiptEligiblePayslips, response);
       if (!response.ok || !body || typeof body !== "object") {
@@ -195,7 +181,7 @@ export default function PayslipReceiptConsole() {
         method: "POST",
         headers: actorHeaders()
       });
-      const body = await parseResponseBody(response);
+      const body = await parsePayslipReceiptResponseBody(response);
 
       appendLog(`${copy.logAcknowledgePayslipReceiptPrefix} (${runId})`, response);
       if (!response.ok || !body || typeof body !== "object") {
