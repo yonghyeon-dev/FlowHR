@@ -592,6 +592,7 @@ export default function PayrollYearEndConsole() {
           )}
         </article>
         <PayrollAccuracyEvidencePanel
+          locale={locale}
           copy={copy}
           settlement={settlement}
           recalculation={recalculation}
