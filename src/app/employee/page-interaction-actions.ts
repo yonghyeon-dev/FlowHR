@@ -491,7 +491,7 @@ type EmployeeFeedbackCopy = {
   selectedLeaveResubmitMissing: string;
 };
 
-interface BuildEmployeeInteractionHandlersInput {
+export interface BuildEmployeeInteractionHandlersInput {
   attendance: AttendanceRecordDto[];
   correctionRequestNote: string;
   defaultsCopy: EmployeeDefaultsCopy;

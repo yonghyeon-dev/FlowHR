@@ -2,9 +2,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEmployeeDashboardDerivedState } from "@/app/employee/page-dashboard-derived-state";
 import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runtime";
-import {
-  buildEmployeeInteractionHandlers
-} from "@/app/employee/page-interaction-actions";
+import { buildEmployeeInteractionHandlers } from "@/app/employee/page-interaction-actions";
+import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import {
   firstDayOfMonthLocal,
@@ -288,6 +287,24 @@ export default function EmployeeSelfServicePage() {
   const leaveInteractionSetters = { setLastLeaveRequestId, setLeaveEndDate, setLeaveHours, setLeaveReason, setLeaveStartDate, setLeaveType, setLeaveUnit };
   const requestInteractionSetters = { setLastAppliedResubmitCandidateKey, setMobileFlowFeedback, setRequestSearchQuery, setRequestSearchScope, setRequestSortOption, setSelectedResubmitCandidateKey };
   const periodInteractionSetters = { setPeriodEnd, setPeriodStart };
+  const interactionOrchestratorInput = useEmployeeInteractionOrchestratorInput({
+    attendance,
+    correctionRequestNote,
+    defaultsCopy,
+    feedbackCopy,
+    isKoLocale,
+    latestAttendance,
+    leaveRequests,
+    periodStart,
+    refreshEmployeeSnapshot: mutationActions.refreshEmployeeSnapshot,
+    resubmitCandidates,
+    selectedCorrectionRecord,
+    selectedResubmitCandidate,
+    attendanceInteractionSetters,
+    leaveInteractionSetters,
+    requestInteractionSetters,
+    periodInteractionSetters
+  });
   const {
     applyAttendanceRecordToCorrectionForm,
     applyLatestAttendanceToCorrectionForm,
@@ -305,24 +322,7 @@ export default function EmployeeSelfServicePage() {
     resetCalendarToCurrentMonth,
     selectCorrectionTarget
   } = buildEmployeeInteractionHandlers({
-    attendance,
-    correctionRequestNote,
-    defaultsCopy,
-    feedbackCopy,
-    isKoLocale,
-    latestAttendance,
-    leaveRequests,
-    periodStart,
-    refreshEmployeeSnapshot: async ({ fromIso, toIso }) => {
-      await mutationActions.refreshEmployeeSnapshot({ fromIso, toIso });
-    },
-    resubmitCandidates,
-    selectedCorrectionRecord,
-    selectedResubmitCandidate,
-    ...attendanceInteractionSetters,
-    ...leaveInteractionSetters,
-    ...requestInteractionSetters,
-    ...periodInteractionSetters
+    ...interactionOrchestratorInput
   });
   return (
     <main className="saas-content">
