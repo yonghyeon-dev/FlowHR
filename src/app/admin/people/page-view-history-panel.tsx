@@ -1,14 +1,12 @@
-import {
-  actionLabel,
-  changeHighlightClass,
-  formatDateTime
-} from "@/app/admin/people/page-helpers";
+import { actionLabel, changeHighlightClass, formatDateTime } from "@/app/admin/people/page-helpers";
 import {
   type Department,
   type Employee,
   type EmployeeHistory,
+  type HistoryActionFilter,
   type HistoryChangeSummaryItem,
   type HistoryEntryChange,
+  type HistoryFieldFilter,
   type Position,
   type ProfileField
 } from "@/app/admin/people/page-types";
@@ -28,6 +26,11 @@ type AdminPeopleHistoryPanelProps = {
   applySelectedProfileUpdate: () => Promise<void>;
   loadSelectedEmployeeHistory: (employeeId: string) => Promise<void>;
   history: EmployeeHistory[];
+  filteredHistory: EmployeeHistory[];
+  historyActionFilter: HistoryActionFilter;
+  setHistoryActionFilter: (value: HistoryActionFilter) => void;
+  historyFieldFilter: HistoryFieldFilter;
+  setHistoryFieldFilter: (value: HistoryFieldFilter) => void;
   historyChangeSummary: HistoryChangeSummaryItem[];
   historyChanges: (entry: EmployeeHistory) => HistoryEntryChange[];
   profileFieldLabel: Record<ProfileField, string>;
@@ -48,6 +51,11 @@ export function AdminPeopleHistoryPanel({
   applySelectedProfileUpdate,
   loadSelectedEmployeeHistory,
   history,
+  filteredHistory,
+  historyActionFilter,
+  setHistoryActionFilter,
+  historyFieldFilter,
+  setHistoryFieldFilter,
   historyChangeSummary,
   historyChanges,
   profileFieldLabel
@@ -58,12 +66,12 @@ export function AdminPeopleHistoryPanel({
       {selectedEmployee ? (
         <>
           <p className="small">
-            {isKoLocale ? "선택 직원" : "Selected employee"}: <strong>{selectedEmployee.id}</strong> · {isKoLocale ? "최근 업데이트" : "Last updated"}{" "}
-            {formatDateTime(selectedEmployee.updatedAt, runtimeLocale)}
+            {isKoLocale ? "선택 직원" : "Selected employee"}: <strong>{selectedEmployee.id}</strong> /{" "}
+            {isKoLocale ? "최근 업데이트" : "Last updated"} {formatDateTime(selectedEmployee.updatedAt, runtimeLocale)}
           </p>
           <div className="input-grid">
             <label>
-              {isKoLocale ? "부서 재배정" : "Reassign department"}
+              {isKoLocale ? "부서 재배치" : "Reassign department"}
               <select value={editDepartmentId} onChange={(event) => setEditDepartmentId(event.target.value)}>
                 <option value="">{isKoLocale ? "미지정" : "Unassigned"}</option>
                 {selectedDepartments.map((department) => (
@@ -74,7 +82,7 @@ export function AdminPeopleHistoryPanel({
               </select>
             </label>
             <label>
-              {isKoLocale ? "직급 재배정" : "Reassign position"}
+              {isKoLocale ? "직급 재배치" : "Reassign position"}
               <select value={editPositionId} onChange={(event) => setEditPositionId(event.target.value)}>
                 <option value="">{isKoLocale ? "미지정" : "Unassigned"}</option>
                 {selectedPositions.map((position) => (
@@ -100,13 +108,49 @@ export function AdminPeopleHistoryPanel({
               {isKoLocale ? "이력 조회" : "Load history"}
             </button>
           </div>
+          <div className="input-grid">
+            <label>
+              {isKoLocale ? "액션 필터" : "Action filter"}
+              <select
+                value={historyActionFilter}
+                onChange={(event) => setHistoryActionFilter(event.target.value as HistoryActionFilter)}
+              >
+                <option value="all">{isKoLocale ? "전체" : "All actions"}</option>
+                <option value="employee.created">{isKoLocale ? "직원 생성" : "Employee created"}</option>
+                <option value="employee.profile.updated">
+                  {isKoLocale ? "직원 프로필 변경" : "Employee profile updated"}
+                </option>
+              </select>
+            </label>
+            <label>
+              {isKoLocale ? "변경 필드 필터" : "Changed field filter"}
+              <select
+                value={historyFieldFilter}
+                onChange={(event) => setHistoryFieldFilter(event.target.value as HistoryFieldFilter)}
+              >
+                <option value="all">{isKoLocale ? "전체" : "All fields"}</option>
+                {(Object.keys(profileFieldLabel) as ProfileField[]).map((field) => (
+                  <option key={field} value={field}>
+                    {profileFieldLabel[field]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="small muted">
+            {isKoLocale ? "표시 이력" : "Visible history"}: {filteredHistory.length} / {history.length}
+          </p>
         </>
       ) : (
-        <p className="small muted">{isKoLocale ? "조직도 트리에서 직원을 선택하세요." : "Select an employee from the org chart."}</p>
+        <p className="small muted">
+          {isKoLocale ? "조직도에서 직원을 선택하세요." : "Select an employee from the org chart."}
+        </p>
       )}
 
-      {history.length === 0 ? (
-        <p className="small muted">표시할 이력이 없습니다.</p>
+      {filteredHistory.length === 0 ? (
+        <p className="small muted">
+          {isKoLocale ? "표시할 인사 이력이 없습니다." : "No HR history matches this filter."}
+        </p>
       ) : (
         <>
           {historyChangeSummary.length > 0 ? (
@@ -123,7 +167,7 @@ export function AdminPeopleHistoryPanel({
             </ul>
           ) : null}
           <ul className="history-card-list" aria-label={isKoLocale ? "직원 인사 이력" : "Employee HR history"}>
-            {history.map((entry, index) => {
+            {filteredHistory.map((entry, index) => {
               const changes = historyChanges(entry);
               return (
                 <li key={`${entry.action}-${entry.createdAt}-${index}`} className="history-card">
@@ -136,7 +180,9 @@ export function AdminPeopleHistoryPanel({
                     {entry.actorId ? ` (${entry.actorId})` : ""}
                   </p>
                   {changes.length === 0 ? (
-                    <p className="small muted">변경 필드 정보가 없습니다.</p>
+                    <p className="small muted">
+                      {isKoLocale ? "변경 필드 정보가 없습니다." : "No changed-field details provided."}
+                    </p>
                   ) : (
                     <ul className="history-change-list">
                       {changes.map((change) => (

@@ -47,6 +47,9 @@ export type ProfileField =
   | "email"
   | "active";
 
+export type HistoryActionFilter = "all" | "employee.created" | "employee.profile.updated";
+export type HistoryFieldFilter = "all" | ProfileField;
+
 export type OrgTreeDepartmentNode = {
   deptKey: string;
   deptName: string;
