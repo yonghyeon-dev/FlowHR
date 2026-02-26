@@ -42,7 +42,7 @@ async function run() {
   assert.doesNotMatch(schedulingService, /const sorted = incidents\.slice\(\)\.sort/);
   assert.doesNotMatch(
     schedulingService,
-    /for \(const candidate of candidates\)[\s\S]*if \(dryRun\)\s*\{/
+    /const eligible:\s*ScheduleAnomalyIncidentEntity\[\]\s*=\s*\[\]/
   );
 
   assert.match(archiveHelpers, /export function buildScheduleAnomalyIncidentArchiveCandidates\(/);
