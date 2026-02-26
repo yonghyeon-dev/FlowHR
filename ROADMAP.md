@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-26
-> **Current version**: 0.1.170 (Scheduling Rotation Korean Copy Recovery)
+> **Current version**: 0.1.171 (Contracts HTTP Fallback Runtime Alignment)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -753,3 +753,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0486 korean runtime localization sweep for year-end/payslips/contracts (연말정산 콘솔 상태/사유/차단사유 및 세션 오류 한국어 정규화 + payslip 파일명 ko prefix 적용 + contracts 증빙 파일명 ko 표시 정규화 + 회귀 테스트 추가)
 - WI-0487 korean surface english suppression for withholding/payslips/contracts (원천징수 문서 파일명 ko 정규화 + ko 환경 원천징수/명세서 raw JSON 영어 노출 억제 + 전자계약 증빙 다운로드 파일명 ko 정규화 + 회귀 테스트 추가)
 - WI-0488 scheduling rotation korean copy recovery (`listWorkScheduleRotationBalance` 추천 문구 6종 깨짐 복구 + `e2e-wi0057` 추천 문구 정합성 고정 + `e2e-wi0488` 회귀 가드 추가)
+- WI-0489 contracts http fallback runtime alignment (`contracts/http.ts` ko 런타임 계약 도메인 오류 매핑 확장 + 상태 제약/해시 불일치/리소스 미존재 한국어 안내 고정 + `e2e-wi0489` 회귀 테스트 추가)
