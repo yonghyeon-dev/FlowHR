@@ -22,7 +22,9 @@ type AdminRecruitmentWorkspaceViewProps = {
   filteredReferrals: RecruitmentReferralItem[];
   openingTitleById: Record<string, string>;
   referralFilter: RecruitmentReferralStage | "all";
+  referralRiskFilter: "all" | "stalled_7d";
   referralSearchQuery: string;
+  stalledReferralCount: number;
   stageSelection: Record<string, RecruitmentReferralStage>;
   pending: boolean;
   statusMessage: string;
@@ -33,6 +35,7 @@ type AdminRecruitmentWorkspaceViewProps = {
   onDepartmentChange: (value: string) => void;
   onEmploymentTypeChange: (value: string) => void;
   onReferralFilterChange: (value: RecruitmentReferralStage | "all") => void;
+  onReferralRiskFilterChange: (value: "all" | "stalled_7d") => void;
   onReferralSearchQueryChange: (value: string) => void;
   onClearReferralSearch: () => void;
   onLoadWorkspace: () => void;
@@ -54,7 +57,9 @@ export default function AdminRecruitmentWorkspaceView({
   filteredReferrals,
   openingTitleById,
   referralFilter,
+  referralRiskFilter,
   referralSearchQuery,
+  stalledReferralCount,
   stageSelection,
   pending,
   statusMessage,
@@ -65,6 +70,7 @@ export default function AdminRecruitmentWorkspaceView({
   onDepartmentChange,
   onEmploymentTypeChange,
   onReferralFilterChange,
+  onReferralRiskFilterChange,
   onReferralSearchQueryChange,
   onClearReferralSearch,
   onLoadWorkspace,
@@ -181,6 +187,16 @@ export default function AdminRecruitmentWorkspaceView({
             </select>
           </label>
           <label>
+            {copy.referralRiskFilterLabel}
+            <select
+              value={referralRiskFilter}
+              onChange={(event) => onReferralRiskFilterChange(event.target.value as "all" | "stalled_7d")}
+            >
+              <option value="all">{copy.referralRiskFilter.all}</option>
+              <option value="stalled_7d">{copy.referralRiskFilter.stalled7d}</option>
+            </select>
+          </label>
+          <label>
             {copy.referralSearchLabel}
             <input
               value={referralSearchQuery}
@@ -194,7 +210,8 @@ export default function AdminRecruitmentWorkspaceView({
             </button>
           </div>
           <p className="small muted">
-            {copy.filteredReferralSummaryLabel}: {filteredReferrals.length} / {referrals.length}
+            {copy.filteredReferralSummaryLabel}: {filteredReferrals.length} / {referrals.length} ·{" "}
+            {copy.referralRiskSummaryLabel}: {stalledReferralCount}
           </p>
           {referrals.length === 0 ? (
             <p className="small muted">{copy.emptyReferrals}</p>
@@ -202,8 +219,15 @@ export default function AdminRecruitmentWorkspaceView({
             <p className="small muted">{copy.filteredEmptyReferrals}</p>
           ) : (
             <ul className="simple-list">
-              {filteredReferrals.map((referral) => (
-                <li key={referral.id}>
+              {filteredReferrals.map((referral) => {
+                const isTerminalStage = ["HIRED", "REJECTED", "WITHDRAWN"].includes(referral.stage);
+                const updatedAtMs = Date.parse(referral.updatedAt);
+                const isStalled =
+                  !isTerminalStage &&
+                  Number.isFinite(updatedAtMs) &&
+                  Date.now() - updatedAtMs >= 7 * 24 * 60 * 60 * 1000;
+                return (
+                  <li key={referral.id}>
                   <span>
                     <strong>{referral.candidateName}</strong>
                     <br />
@@ -218,6 +242,14 @@ export default function AdminRecruitmentWorkspaceView({
                     <span className="small muted">
                       {copy.stageLabel}: {copy.referralStage[referral.stage]}
                     </span>
+                    {isStalled ? (
+                      <>
+                        <br />
+                        <span className="small" style={{ color: "var(--danger)" }}>
+                          {copy.stalledBadgeLabel}
+                        </span>
+                      </>
+                    ) : null}
                   </span>
                   <div className="actions" style={{ marginTop: 0 }}>
                     <select
@@ -241,8 +273,9 @@ export default function AdminRecruitmentWorkspaceView({
                       {copy.updateStageAction}
                     </button>
                   </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>

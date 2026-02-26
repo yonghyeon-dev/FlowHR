@@ -17,10 +17,13 @@ export type AdminRecruitmentCopy = {
   openingsTitle: string;
   referralsTitle: string;
   referralFilterLabel: string;
+  referralRiskFilterLabel: string;
   referralSearchLabel: string;
   referralSearchPlaceholder: string;
   clearSearchAction: string;
   filteredReferralSummaryLabel: string;
+  referralRiskSummaryLabel: string;
+  stalledBadgeLabel: string;
   referralOpeningTitleLabel: string;
   unknownOpeningLabel: string;
   filteredEmptyReferrals: string;
@@ -50,6 +53,10 @@ export type AdminRecruitmentCopy = {
     HIRED: string;
     REJECTED: string;
     WITHDRAWN: string;
+  };
+  referralRiskFilter: {
+    all: string;
+    stalled7d: string;
   };
 };
 
@@ -123,10 +130,13 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     openingsTitle: "채용 공고",
     referralsTitle: "추천 후보자",
     referralFilterLabel: "추천 단계 필터",
+    referralRiskFilterLabel: "정체 위험 필터",
     referralSearchLabel: "추천 검색",
     referralSearchPlaceholder: "후보자/공고/추천인/메모 검색",
     clearSearchAction: "검색 초기화",
     filteredReferralSummaryLabel: "표시 추천 수",
+    referralRiskSummaryLabel: "7일 이상 정체",
+    stalledBadgeLabel: "정체 위험",
     referralOpeningTitleLabel: "공고명",
     unknownOpeningLabel: "알 수 없는 공고",
     filteredEmptyReferrals: "현재 필터 조건에 맞는 추천 후보자가 없습니다.",
@@ -167,6 +177,10 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
       HIRED: "채용 완료",
       REJECTED: "불합격",
       WITHDRAWN: "철회"
+    },
+    referralRiskFilter: {
+      all: "전체",
+      stalled7d: "7일 이상 정체"
     }
   },
   en: {
@@ -185,10 +199,13 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     openingsTitle: "Openings",
     referralsTitle: "Referrals",
     referralFilterLabel: "Referral stage filter",
+    referralRiskFilterLabel: "Stall risk filter",
     referralSearchLabel: "Referral search",
     referralSearchPlaceholder: "Search by candidate/opening/referrer/note",
     clearSearchAction: "Clear search",
     filteredReferralSummaryLabel: "Visible referrals",
+    referralRiskSummaryLabel: "Stalled over 7 days",
+    stalledBadgeLabel: "Stall risk",
     referralOpeningTitleLabel: "Opening title",
     unknownOpeningLabel: "Unknown opening",
     filteredEmptyReferrals: "No referral matches current filters.",
@@ -229,6 +246,10 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
       HIRED: "Hired",
       REJECTED: "Rejected",
       WITHDRAWN: "Withdrawn"
+    },
+    referralRiskFilter: {
+      all: "All",
+      stalled7d: "Stalled >= 7d"
     }
   }
 };
