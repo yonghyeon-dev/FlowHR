@@ -9,6 +9,9 @@ import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
 import AdminRecruitmentWorkspaceView from "@/components/recruitment/AdminRecruitmentWorkspaceView";
 
+const TERMINAL_REFERRAL_STAGES: RecruitmentReferralStage[] = ["HIRED", "REJECTED", "WITHDRAWN"];
+const STALLED_REFERRAL_DAYS = 7;
+
 function parseOpenings(payload: unknown) {
   const openings = (payload as { openings?: RecruitmentOpeningItem[] } | null)?.openings;
   return Array.isArray(openings) ? openings : [];
@@ -45,6 +48,7 @@ export default function AdminRecruitmentWorkspace() {
   const [department, setDepartment] = useState("");
   const [employmentType, setEmploymentType] = useState("정규직");
   const [referralFilter, setReferralFilter] = useState<RecruitmentReferralStage | "all">("all");
+  const [referralRiskFilter, setReferralRiskFilter] = useState<"all" | "stalled_7d">("all");
   const [referralSearchQuery, setReferralSearchQuery] = useState("");
 
   const [openings, setOpenings] = useState<RecruitmentOpeningItem[]>([]);
@@ -67,11 +71,32 @@ export default function AdminRecruitmentWorkspace() {
     });
     return next;
   }, [openings]);
+  const stalledThresholdMs = STALLED_REFERRAL_DAYS * 24 * 60 * 60 * 1000;
+  const stalledReferralCount = useMemo(() => {
+    const nowMs = Date.now();
+    return referrals.filter((referral) => {
+      if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
+        return false;
+      }
+      const updatedAtMs = Date.parse(referral.updatedAt);
+      return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= stalledThresholdMs;
+    }).length;
+  }, [referrals, stalledThresholdMs]);
   const filteredReferrals = useMemo(() => {
+    const nowMs = Date.now();
     const query = referralSearchQuery.trim().toLowerCase();
     return referrals.filter((referral) => {
       if (referralFilter !== "all" && referral.stage !== referralFilter) {
         return false;
+      }
+      if (referralRiskFilter === "stalled_7d") {
+        if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
+          return false;
+        }
+        const updatedAtMs = Date.parse(referral.updatedAt);
+        if (!Number.isFinite(updatedAtMs) || nowMs - updatedAtMs < stalledThresholdMs) {
+          return false;
+        }
       }
       if (query.length === 0) {
         return true;
@@ -81,7 +106,7 @@ export default function AdminRecruitmentWorkspace() {
         `${referral.candidateName} ${referral.candidateEmail} ${referral.referrerEmployeeId} ${openingTitle} ${referral.note}`.toLowerCase();
       return haystack.includes(query);
     });
-  }, [openingTitleById, referralFilter, referralSearchQuery, referrals]);
+  }, [openingTitleById, referralFilter, referralRiskFilter, referralSearchQuery, referrals, stalledThresholdMs]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -215,7 +240,9 @@ export default function AdminRecruitmentWorkspace() {
       filteredReferrals={filteredReferrals}
       openingTitleById={openingTitleById}
       referralFilter={referralFilter}
+      referralRiskFilter={referralRiskFilter}
       referralSearchQuery={referralSearchQuery}
+      stalledReferralCount={stalledReferralCount}
       stageSelection={stageSelection}
       pending={pending}
       statusMessage={statusMessage}
@@ -226,6 +253,7 @@ export default function AdminRecruitmentWorkspace() {
       onDepartmentChange={setDepartment}
       onEmploymentTypeChange={setEmploymentType}
       onReferralFilterChange={setReferralFilter}
+      onReferralRiskFilterChange={setReferralRiskFilter}
       onReferralSearchQueryChange={setReferralSearchQuery}
       onClearReferralSearch={() => setReferralSearchQuery("")}
       onLoadWorkspace={() => void loadWorkspace()}
