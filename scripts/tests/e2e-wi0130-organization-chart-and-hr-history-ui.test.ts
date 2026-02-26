@@ -9,8 +9,15 @@ function readUtf8(...parts: string[]) {
 function run() {
   const adminLayout = readUtf8("src", "app", "admin", "layout.tsx");
   const adminPeoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
+  const adminPeopleDirectoryActions = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "people",
+    "page-directory-actions.ts"
+  );
   const adminPeoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
-  const peopleSurface = `${adminPeoplePage}\n${adminPeoplePageView}`;
+  const peopleSurface = `${adminPeoplePage}\n${adminPeopleDirectoryActions}\n${adminPeoplePageView}`;
   const historyRoute = readUtf8(
     "src",
     "app",
