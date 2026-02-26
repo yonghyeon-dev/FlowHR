@@ -81,7 +81,7 @@ export default function AdminContractsWorkspace() {
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
-  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, renewalCandidateOnly, setRenewalCandidateOnly, expiringSoonCount, renewalCandidateCount, visibleDocuments } = useAdminContractsDocumentFilters({ documents, locale });
+  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({ documents, locale });
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
@@ -199,12 +199,16 @@ export default function AdminContractsWorkspace() {
             onStatusFilterChange={setDocumentStatusFilter}
             expirationWindowDays={expirationWindowDays}
             onExpirationWindowDaysChange={setExpirationWindowDays}
+            slaRiskFilter={slaRiskFilter}
+            onSlaRiskFilterChange={setSlaRiskFilter}
             renewalCandidateOnly={renewalCandidateOnly}
             onRenewalCandidateOnlyChange={setRenewalCandidateOnly}
             statusLabels={documentStatusLabels}
             visibleCount={visibleDocuments.length}
             totalCount={documents.length}
             expiringSoonCount={expiringSoonCount}
+            dueSoonSlaCount={dueSoonSlaCount}
+            overdueSlaCount={overdueSlaCount}
             renewalCandidateCount={renewalCandidateCount}
           />
           <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>
@@ -228,6 +232,11 @@ export default function AdminContractsWorkspace() {
                     {toDateText(document.expiresAt, runtimeLocale)}
                   </p>
                   <p className="small muted">{copy.nextStepLabel}: {nextStepLabelByKey[nextStep]}</p>
+                  {isOverdueSlaRisk(document) ? (
+                    <p className="small" style={{ color: "var(--danger)" }}>{copy.slaOverdueBadgeLabel}</p>
+                  ) : isDueSoonSlaRisk(document) ? (
+                    <p className="small" style={{ color: "var(--danger)" }}>{copy.slaDueSoonBadgeLabel}</p>
+                  ) : null}
                   <div className="contract-action-row">
                     {availableActions.map((action) => (
                       <button key={action} type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, action)}>

@@ -59,6 +59,13 @@ export function buildAdminKpiTrendRows(
       current: currentRangeKpi.summary.payrollConfirmedRate,
       previous: previousRangeKpi.summary.payrollConfirmedRate,
       percent: true
+    },
+    {
+      key: "contractSlaOverdueCount",
+      label: metrics.contractSlaOverdueCount,
+      current: currentRangeKpi.summary.contractSlaOverdueCount,
+      previous: previousRangeKpi.summary.contractSlaOverdueCount,
+      percent: false
     }
   ];
 
@@ -77,7 +84,8 @@ export function buildAdminKpiCsvPayload(input: BuildCsvPayloadInput): CsvPayload
     toCsvRow(["snapshot", "approvalStalledCount", summary.approvalStalledCount]),
     toCsvRow(["snapshot", "attendanceApprovalRate", summary.attendanceApprovalRate]),
     toCsvRow(["snapshot", "leaveApprovedDays", summary.leaveApprovedDays]),
-    toCsvRow(["snapshot", "payrollConfirmedRate", summary.payrollConfirmedRate])
+    toCsvRow(["snapshot", "payrollConfirmedRate", summary.payrollConfirmedRate]),
+    toCsvRow(["snapshot", "contractSlaOverdueCount", summary.contractSlaOverdueCount])
   ];
   const prefix = analyticsMode ? "flowhr-admin-analytics" : "flowhr-admin-kpi";
   const timestamp = generatedAt.toISOString().replace(/[:.]/g, "-");

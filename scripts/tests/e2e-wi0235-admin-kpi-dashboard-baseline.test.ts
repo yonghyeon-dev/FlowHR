@@ -58,7 +58,8 @@ async function run() {
     attendanceTotalCount: 20,
     leaveApprovedDays: 3.5,
     payrollConfirmedCount: 9,
-    payrollTotalCount: 10
+    payrollTotalCount: 10,
+    contractSlaOverdueCount: 4
   });
 
   assert.equal(summary.approvalPendingCount, 7);
@@ -66,6 +67,7 @@ async function run() {
   assert.equal(summary.attendanceApprovalRate, 90);
   assert.equal(summary.leaveApprovedDays, 3.5);
   assert.equal(summary.payrollConfirmedRate, 90);
+  assert.equal(summary.contractSlaOverdueCount, 4);
   assert.equal(computeKpiDelta(100, 96), 4);
 
   const previous = computePreviousPeriodRange(

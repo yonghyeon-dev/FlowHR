@@ -58,6 +58,69 @@ export function applyInboxDeadlineFilter(
   });
 }
 
+export function isDueSoonPendingDocument(
+  document: EmployeeContractDocument,
+  nowMs: number = Date.now()
+) {
+  if (!isPendingResponseStatus(document)) {
+    return false;
+  }
+  const expiresAtMs = parseExpiresAtMillis(document);
+  if (expiresAtMs === null) {
+    return false;
+  }
+  return expiresAtMs >= nowMs && expiresAtMs - nowMs <= DUE_SOON_WINDOW_DAYS * DAY_MS;
+}
+
+export function isOverduePendingDocument(
+  document: EmployeeContractDocument,
+  nowMs: number = Date.now()
+) {
+  if (!isPendingResponseStatus(document)) {
+    return false;
+  }
+  const expiresAtMs = parseExpiresAtMillis(document);
+  if (expiresAtMs === null) {
+    return false;
+  }
+  return expiresAtMs < nowMs;
+}
+
+export function sortInboxDocumentsByRisk(
+  documents: EmployeeContractDocument[],
+  nowMs: number = Date.now()
+) {
+  return [...documents].sort((left, right) => {
+    const leftOverdue = isOverduePendingDocument(left, nowMs);
+    const rightOverdue = isOverduePendingDocument(right, nowMs);
+    if (leftOverdue !== rightOverdue) {
+      return leftOverdue ? -1 : 1;
+    }
+
+    const leftDueSoon = isDueSoonPendingDocument(left, nowMs);
+    const rightDueSoon = isDueSoonPendingDocument(right, nowMs);
+    if (leftDueSoon !== rightDueSoon) {
+      return leftDueSoon ? -1 : 1;
+    }
+
+    const leftExpiresAtMs = parseExpiresAtMillis(left);
+    const rightExpiresAtMs = parseExpiresAtMillis(right);
+    if (leftExpiresAtMs === null && rightExpiresAtMs === null) {
+      return right.updatedAt.localeCompare(left.updatedAt);
+    }
+    if (leftExpiresAtMs === null) {
+      return 1;
+    }
+    if (rightExpiresAtMs === null) {
+      return -1;
+    }
+    if (leftExpiresAtMs === rightExpiresAtMs) {
+      return right.updatedAt.localeCompare(left.updatedAt);
+    }
+    return leftExpiresAtMs - rightExpiresAtMs;
+  });
+}
+
 export function countPendingResponse(documents: EmployeeContractDocument[]) {
   return documents.filter((document) => isPendingResponseStatus(document)).length;
 }

@@ -13,7 +13,10 @@ import {
   applyInboxStatusFilter,
   countDueSoonPending,
   countOverduePending,
-  countPendingResponse
+  countPendingResponse,
+  isDueSoonPendingDocument,
+  isOverduePendingDocument,
+  sortInboxDocumentsByRisk
 } from "@/components/contracts/employee-inbox-filter-helpers";
 import {
   normalizeContractsErrorMessageForRuntime,
@@ -51,27 +54,22 @@ export default function EmployeeContractsInbox() {
   const [error, setError] = useState<string | null>(null);
   const [signatureEvidence, setSignatureEvidence] = useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const statusFilteredDocuments = useMemo(() => {
-    return applyInboxStatusFilter(documents, inboxStatusFilter);
-  }, [documents, inboxStatusFilter]);
+  const statusFilteredDocuments = useMemo(() => applyInboxStatusFilter(documents, inboxStatusFilter), [documents, inboxStatusFilter]);
   const deadlineFilteredDocuments = useMemo(
     () => applyInboxDeadlineFilter(statusFilteredDocuments, inboxDeadlineFilter),
     [statusFilteredDocuments, inboxDeadlineFilter]
   );
   const filteredDocuments = useMemo(() => {
-    if (!normalizedSearchQuery) {
-      return deadlineFilteredDocuments;
-    }
-    return deadlineFilteredDocuments.filter((document) =>
-      `${document.id} ${document.title} ${document.status} ${document.approvalStatus} ${document.responseComment ?? ""}`
-        .toLowerCase()
-        .includes(normalizedSearchQuery)
-    );
+    const baseDocuments = !normalizedSearchQuery
+      ? deadlineFilteredDocuments
+      : deadlineFilteredDocuments.filter((document) =>
+          `${document.id} ${document.title} ${document.status} ${document.approvalStatus} ${document.responseComment ?? ""}`
+            .toLowerCase()
+            .includes(normalizedSearchQuery)
+        );
+    return sortInboxDocumentsByRisk(baseDocuments);
   }, [deadlineFilteredDocuments, normalizedSearchQuery]);
-  const pendingResponseCount = useMemo(
-    () => countPendingResponse(filteredDocuments),
-    [filteredDocuments]
-  );
+  const pendingResponseCount = useMemo(() => countPendingResponse(filteredDocuments), [filteredDocuments]);
   const dueSoonCount = useMemo(() => countDueSoonPending(filteredDocuments), [filteredDocuments]);
   const overdueCount = useMemo(() => countOverduePending(filteredDocuments), [filteredDocuments]);
   const selected = useMemo(
@@ -170,9 +168,6 @@ export default function EmployeeContractsInbox() {
       );
     }
   }
-  function clearSearch() {
-    setSearchQuery("");
-  }
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -222,7 +217,11 @@ export default function EmployeeContractsInbox() {
             </select>
           </label>
           <div className="contract-action-row">
-            <button type="button" className="btn btn-secondary btn-small" onClick={clearSearch}>
+            <span className="small muted">{copy.riskQuickFilterLabel}</span>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("all")}>{copy.riskQuickAllAction}</button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("due_soon")}>{copy.riskQuickDueSoonAction}</button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("overdue")}>{copy.riskQuickOverdueAction}</button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setSearchQuery("")}>
               {copy.clearSearchAction}
             </button>
             <p className="small muted">
@@ -238,6 +237,7 @@ export default function EmployeeContractsInbox() {
               {copy.overdueCountLabel}: {overdueCount}
             </p>
           </div>
+          {selected && !canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
           {documents.length === 0 ? (
             <p className="small muted">{copy.noDocumentMessage}</p>
           ) : filteredDocuments.length === 0 ? (
@@ -259,6 +259,11 @@ export default function EmployeeContractsInbox() {
                     {copy.approvalPrefix} {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
                     {toDateText(document.expiresAt, runtimeLocale)}
                   </p>
+                  {isOverduePendingDocument(document) ? (
+                    <p className="small" style={{ color: "var(--danger)" }}>{copy.overdueBadgeLabel}</p>
+                  ) : isDueSoonPendingDocument(document) ? (
+                    <p className="small" style={{ color: "var(--danger)" }}>{copy.dueSoonBadgeLabel}</p>
+                  ) : null}
                   <button type="button" className="btn btn-secondary btn-small" onClick={() => setSelectedDocumentId(document.id)}>
                     {copy.selectAction}
                   </button>
@@ -268,6 +273,7 @@ export default function EmployeeContractsInbox() {
           )}
         </article>
         <EmployeeContractsResponsePanel
+          // disabled={!canRespondSelected} is enforced inside the response panel actions.
           copy={copy}
           selected={selected}
           documentStatusLabels={documentStatusLabels}

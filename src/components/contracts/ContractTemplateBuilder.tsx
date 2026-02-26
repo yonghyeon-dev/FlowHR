@@ -1,16 +1,20 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-
 import {
   contractCategoryLabelByLocale,
   contractTemplateStatusLabelByLocale,
   contractTemplateBuilderCopyByLocale,
-  type ContractCategory,
-  type ContractTemplateBuilderCopy
+  type ContractCategory
 } from "@/components/contracts/copy";
 import { readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
+import {
+  buildTemplateBody,
+  buildTemplateBodyDiffSummary,
+  createClauseId,
+  createInitialClauses
+} from "@/components/contracts/template-builder-helpers";
 import {
   buildTemplateValidationChecklist,
   ContractTemplateValidationChecklist,
@@ -28,41 +32,6 @@ type CreatedTemplate = {
   version: number;
 };
 
-function createClauseId(index: number) {
-  return `clause-${Date.now()}-${index}`;
-}
-
-function normalizeClause(value: ClauseDraft) {
-  return {
-    ...value,
-    title: value.title.trim(),
-    body: value.body.trim()
-  };
-}
-
-function buildTemplateBody(
-  clauses: ClauseDraft[],
-  copy: Pick<ContractTemplateBuilderCopy, "requiredChip" | "optionalChip" | "untitledClause" | "emptyClauseBody">
-) {
-  return clauses
-    .map(normalizeClause)
-    .filter((clause) => clause.title.length > 0 || clause.body.length > 0)
-    .map((clause, index) => {
-      const badge = clause.required ? `[${copy.requiredChip}]` : `[${copy.optionalChip}]`;
-      return `## ${index + 1}. ${clause.title || copy.untitledClause} ${badge}\n${clause.body || copy.emptyClauseBody}`;
-    })
-    .join("\n\n");
-}
-
-function createInitialClauses(copy: ContractTemplateBuilderCopy): ClauseDraft[] {
-  return copy.defaultClauses.map((clause, index) => ({
-    id: createClauseId(index + 1),
-    title: clause.title,
-    body: clause.body,
-    required: true
-  }));
-}
-
 export default function ContractTemplateBuilder() {
   const { locale } = useI18n();
   const copy = contractTemplateBuilderCopyByLocale[locale];
@@ -76,6 +45,7 @@ export default function ContractTemplateBuilder() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [createdTemplate, setCreatedTemplate] = useState<CreatedTemplate | null>(null);
+  const [baselineBody, setBaselineBody] = useState("");
 
   useEffect(() => {
     setContractsRuntimeLocale(locale);
@@ -112,25 +82,27 @@ export default function ContractTemplateBuilder() {
     ]
   );
   const canCreateTemplate = validationChecklist.every((item) => item.passed);
+  const templateDiff = useMemo(() => {
+    if (!baselineBody.trim()) return { addedLines: [], removedLines: [] };
+    return buildTemplateBodyDiffSummary(baselineBody, templateBody);
+  }, [baselineBody, templateBody]);
 
   function updateClause(id: string, patch: Partial<ClauseDraft>) {
     setClauses((prev) => prev.map((clause) => (clause.id === id ? { ...clause, ...patch } : clause)));
   }
 
   function addClause() {
-    setClauses((prev) => [
-      ...prev,
-      {
-        id: createClauseId(prev.length + 1),
-        title: "",
-        body: "",
-        required: true
-      }
-    ]);
+    setClauses((prev) => [...prev, { id: createClauseId(prev.length + 1), title: "", body: "", required: true }]);
   }
 
   function removeClause(id: string) {
     setClauses((prev) => prev.filter((clause) => clause.id !== id));
+  }
+
+  function captureBaseline() {
+    setBaselineBody(templateBody);
+    setStatusMessage(copy.baselineCapturedMessage);
+    setError(null);
   }
 
   async function createTemplate() {
@@ -199,6 +171,17 @@ export default function ContractTemplateBuilder() {
             <button type="button" className="btn btn-secondary" onClick={addClause} disabled={pending}>
               {copy.addClauseAction}
             </button>
+            <button type="button" className="btn btn-secondary" onClick={captureBaseline} disabled={pending}>
+              {copy.captureBaselineAction}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setBaselineBody("")}
+              disabled={pending || !baselineBody}
+            >
+              {copy.resetBaselineAction}
+            </button>
             <button
               type="button"
               className="btn"
@@ -265,6 +248,33 @@ export default function ContractTemplateBuilder() {
         <article className="panel">
           <h2>{copy.generatedBodyTitle}</h2>
           <pre className="small">{templateBody || copy.noClauseContent}</pre>
+          <h3>{copy.diffPanelTitle}</h3>
+          {!baselineBody ? (
+            <p className="small muted">{copy.noBaselineMessage}</p>
+          ) : (
+            <>
+              <p className="small muted">
+                {copy.diffAddedCountLabel}: {templateDiff.addedLines.length} / {copy.diffRemovedCountLabel}:{" "}
+                {templateDiff.removedLines.length}
+              </p>
+              {templateDiff.addedLines.length === 0 && templateDiff.removedLines.length === 0 ? (
+                <p className="small muted">{copy.diffNoChangesLabel}</p>
+              ) : (
+                <ul className="simple-list">
+                  {templateDiff.addedLines.slice(0, 5).map((line, index) => (
+                    <li key={`added-${index}`}>
+                      <span className="small">+ {line}</span>
+                    </li>
+                  ))}
+                  {templateDiff.removedLines.slice(0, 5).map((line, index) => (
+                    <li key={`removed-${index}`}>
+                      <span className="small">- {line}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
           {createdTemplate ? (
             <ul className="simple-list">
               <li><span>{copy.templateIdLabel}</span><strong>{createdTemplate.id}</strong></li>
