@@ -24,6 +24,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   const adminLinks: SaasMobileMenuLink[] = [
     { href: "/admin", label: t("admin.nav.dashboard") },
     { href: "/admin/kpi", label: t("admin.nav.kpi") },
+    { href: "/admin/analytics", label: t("admin.nav.analytics") },
     { href: "/admin/attendance-live", label: t("admin.nav.attendanceLive") },
     { href: "/admin/onboarding", label: t("admin.nav.onboarding") },
     { href: "/admin#approvals", label: t("admin.nav.approvals") },

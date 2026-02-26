@@ -13,6 +13,12 @@ import {
 } from "@/components/admin-kpi/AdminKpiSections";
 import { kpiCopyByLocale } from "@/components/admin-kpi/copy";
 import {
+  buildAdminKpiCsvPayload,
+  buildAdminKpiTrendRows,
+  safeParseBody,
+  triggerCsvDownload
+} from "@/components/admin-kpi/dashboard-utils";
+import {
   buildQuery,
   getLast30DaysRangeLocal,
   getThisMonthRangeLocal,
@@ -22,7 +28,6 @@ import {
 } from "@/components/admin-kpi/helpers";
 import {
   buildAdminKpiSummary,
-  computeKpiDelta,
   computePreviousPeriodRange,
   computeStalledHours
 } from "@/features/admin-kpi/summary";
@@ -35,7 +40,11 @@ type AttendanceAggregateLite = { counts: { total: number; approved: number } };
 type LeaveRequestLite = { days: number };
 type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
 
-export function AdminKpiDashboard() {
+type AdminKpiDashboardProps = {
+  analyticsMode?: boolean;
+};
+
+export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardProps) {
   const { locale } = useI18n();
   const copy = kpiCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -192,58 +201,52 @@ export function AdminKpiDashboard() {
     void loadKpis();
   }, [loadKpis]);
 
-  const trendRows = useMemo(() => {
-    if (!currentRangeKpi || !previousRangeKpi) {
-      return [];
-    }
-
-    return [
-      {
-        key: "pending",
-        label: copy.metrics.pendingApprovals,
-        current: currentRangeKpi.summary.approvalPendingCount,
-        previous: previousRangeKpi.summary.approvalPendingCount,
-        percent: false
-      },
-      {
-        key: "stalled",
-        label: copy.metrics.stalledApprovals,
-        current: currentRangeKpi.summary.approvalStalledCount,
-        previous: previousRangeKpi.summary.approvalStalledCount,
-        percent: false
-      },
-      {
-        key: "attendanceRate",
-        label: copy.metrics.attendanceApprovalRate,
-        current: currentRangeKpi.summary.attendanceApprovalRate,
-        previous: previousRangeKpi.summary.attendanceApprovalRate,
-        percent: true
-      },
-      {
-        key: "leaveDays",
-        label: copy.metrics.leaveApprovedDays,
-        current: currentRangeKpi.summary.leaveApprovedDays,
-        previous: previousRangeKpi.summary.leaveApprovedDays,
-        percent: false
-      },
-      {
-        key: "payrollRate",
-        label: copy.metrics.payrollConfirmedRate,
-        current: currentRangeKpi.summary.payrollConfirmedRate,
-        previous: previousRangeKpi.summary.payrollConfirmedRate,
-        percent: true
-      }
-    ].map((row) => ({ ...row, delta: computeKpiDelta(row.current, row.previous) }));
-  }, [copy.metrics, currentRangeKpi, previousRangeKpi]);
+  const trendRows = useMemo(
+    () => buildAdminKpiTrendRows(copy.metrics, currentRangeKpi, previousRangeKpi),
+    [copy.metrics, currentRangeKpi, previousRangeKpi]
+  );
 
   const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim() && !showDevTools);
+  const exportDisabled = !currentRangeKpi || !previousRangeKpi || Boolean(pendingLabel);
+
+  const exportCsv = useCallback(() => {
+    if (!currentRangeKpi || !previousRangeKpi) {
+      return;
+    }
+    const generatedAt = new Date();
+    const payload = buildAdminKpiCsvPayload({
+      analyticsMode,
+      trendRows,
+      summary: currentRangeKpi.summary,
+      generatedAt
+    });
+    triggerCsvDownload(payload.fileName, payload.content);
+    setLogs((prev) => [
+      {
+        id: Date.now(),
+        label: copy.exportCsvDone,
+        ok: true,
+        status: 200,
+        at: generatedAt.toLocaleString(runtimeLocale),
+        durationMs: 0
+      },
+      ...prev
+    ]);
+  }, [analyticsMode, copy.exportCsvDone, currentRangeKpi, previousRangeKpi, runtimeLocale, trendRows]);
 
   return (
     <main className="saas-content">
       <header className="hero">
         <p className="eyebrow">FlowHR Admin</p>
-        <h1>{copy.title}</h1>
-        <p>{copy.description}</p>
+        <h1>{analyticsMode ? copy.analyticsTitle : copy.title}</h1>
+        <p>{analyticsMode ? copy.analyticsDescription : copy.description}</p>
+        {analyticsMode ? (
+          <div className="actions" style={{ marginTop: 12 }}>
+            <button className="btn btn-secondary" onClick={exportCsv} disabled={exportDisabled}>
+              {copy.exportCsvButton}
+            </button>
+          </div>
+        ) : null}
       </header>
 
       {isProductionRuntime && !usesBearerToken ? (
@@ -289,12 +292,4 @@ export function AdminKpiDashboard() {
       </section>
     </main>
   );
-}
-
-function safeParseBody(text: string) {
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
-  }
 }
