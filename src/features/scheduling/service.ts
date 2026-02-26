@@ -50,6 +50,10 @@ import {
   filterScheduleAnomalyIncidentQueue
 } from "@/features/scheduling/anomaly-incident-queue-helpers";
 import {
+  executeScheduleAnomalyIncidentReplayActions,
+  selectScheduleAnomalyIncidentReplayTargets
+} from "@/features/scheduling/anomaly-incident-replay-helpers";
+import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
   normalizeAnomalyIncidentArchiveReason,
@@ -3919,102 +3923,55 @@ export async function replayScheduleAnomalyIncidentStore(
     applyArchiveActions: !includeArchived
   });
 
-  const replayModelById = new Map(replayModels.map((item) => [item.incidentId, item]));
-  const selectedIncidentIds = (
-    normalizedIncidentIds ??
-    replayModels
-      .slice()
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-      .map((item) => item.incidentId)
-  ).slice(0, topN);
+  const { replayModelById, selectedIncidentIds } = selectScheduleAnomalyIncidentReplayTargets({
+    replayModels,
+    incidentIds: normalizedIncidentIds,
+    topN
+  });
 
-  let replayed = 0;
-  let dryRunCount = 0;
-  let notFound = 0;
-  let failed = 0;
-  const items: ScheduleAnomalyIncidentReplayItem[] = [];
-
-  for (const incidentId of selectedIncidentIds) {
-    const replayModel = replayModelById.get(incidentId);
-    if (!replayModel) {
-      notFound += 1;
-      items.push({
-        incidentId,
-        state: null,
-        historyCount: 0,
-        decision: "NOT_FOUND",
-        reason: "incident not found in audit projection"
-      });
-      continue;
-    }
-
-    if (dryRun) {
-      dryRunCount += 1;
-      items.push({
-        incidentId,
-        state: replayModel.state,
-        historyCount: replayModel.history.length,
-        decision: "DRY_RUN",
-        reason: "dry-run mode"
-      });
-      continue;
-    }
-
-    try {
-      const existing = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
-      await context.dataAccess.scheduling.upsertIncident({
-        ...toScheduleAnomalyIncidentUpsertInput(replayModel),
-        lastEscalationRequestedAt: existing?.lastEscalationRequestedAt ?? null
-      });
-      await context.dataAccess.audit.append({
-        action: ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
-        entityType: "WorkSchedule",
-        entityId: incidentId,
-        organizationId: replayModel.organizationId ?? tenantScope ?? undefined,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          incidentId,
-          state: replayModel.state,
-          assigneeId: replayModel.assigneeId,
-          resolutionCode: replayModel.resolutionCode,
-          note: replayModel.note,
-          updatedAt: replayModel.updatedAt,
-          updatedByActorId: replayModel.updatedBy.actorId,
-          updatedByActorRole: replayModel.updatedBy.actorRole,
-          history: replayModel.history.map((entry) => ({
-            action: entry.action,
-            state: entry.state,
-            assigneeId: entry.assigneeId,
-            resolutionCode: entry.resolutionCode,
-            note: entry.note,
-            updatedAt: entry.updatedAt,
-            updatedByActorId: entry.updatedBy.actorId,
-            updatedByActorRole: entry.updatedBy.actorRole
-          })),
-          includeArchived,
-          replayedAt: new Date().toISOString()
-        }
-      });
-      replayed += 1;
-      items.push({
-        incidentId,
-        state: replayModel.state,
-        historyCount: replayModel.history.length,
-        decision: "REPLAYED",
-        reason: null
-      });
-    } catch (error) {
-      failed += 1;
-      items.push({
-        incidentId,
-        state: replayModel.state,
-        historyCount: replayModel.history.length,
-        decision: "FAILED",
-        reason: error instanceof Error ? error.message : "unknown error"
-      });
-    }
-  }
+  const { replayed, dryRunCount, notFound, failed, items } =
+    await executeScheduleAnomalyIncidentReplayActions({
+      selectedIncidentIds,
+      replayModelById,
+      dryRun,
+      onReplay: async ({ incidentId, replayModel }) => {
+        const existing = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
+        await context.dataAccess.scheduling.upsertIncident({
+          ...toScheduleAnomalyIncidentUpsertInput(replayModel),
+          lastEscalationRequestedAt: existing?.lastEscalationRequestedAt ?? null
+        });
+        await context.dataAccess.audit.append({
+          action: ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
+          entityType: "WorkSchedule",
+          entityId: incidentId,
+          organizationId: replayModel.organizationId ?? tenantScope ?? undefined,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            incidentId,
+            state: replayModel.state,
+            assigneeId: replayModel.assigneeId,
+            resolutionCode: replayModel.resolutionCode,
+            note: replayModel.note,
+            updatedAt: replayModel.updatedAt,
+            updatedByActorId: replayModel.updatedBy.actorId,
+            updatedByActorRole: replayModel.updatedBy.actorRole,
+            history: replayModel.history.map((entry) => ({
+              action: entry.action,
+              state: entry.state,
+              assigneeId: entry.assigneeId,
+              resolutionCode: entry.resolutionCode,
+              note: entry.note,
+              updatedAt: entry.updatedAt,
+              updatedByActorId: entry.updatedBy.actorId,
+              updatedByActorRole: entry.updatedBy.actorRole
+            })),
+            includeArchived,
+            replayedAt: new Date().toISOString()
+          }
+        });
+      }
+    });
 
   const replayedAt = new Date().toISOString();
   await context.dataAccess.audit.append({
