@@ -6,10 +6,10 @@ import {
   asRecord,
   buildCompareRows,
   buildOrgTree,
-  buildQuery,
   filterEmployees,
   isTruthyFlag
 } from "@/app/admin/people/page-helpers";
+import { useAdminPeopleDirectoryActions } from "@/app/admin/people/page-directory-actions";
 import { AdminPeoplePageView } from "@/app/admin/people/page-view";
 import {
   type ActiveFilter,
@@ -211,159 +211,37 @@ export default function AdminPeoplePage() {
     [formatProfileValue]
   );
 
-  async function callApi(label: string, method: "GET" | "PATCH", path: string, payload?: Record<string, unknown>) {
-    setPendingLabel(label);
-    try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken}`;
-      } else {
-        headers["x-actor-role"] = "admin";
-        headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-        if (organizationId.trim()) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      }
-
-      const response = await fetch(path, {
-        method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
-      });
-      const text = await response.text();
-      let body: unknown = null;
-      if (text.trim()) {
-        try {
-          body = JSON.parse(text);
-        } catch {
-          body = text;
-        }
-      }
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
-      return { response, body };
-    } finally {
-      setPendingLabel(null);
-    }
-  }
-
-  async function loadOrganizations() {
-    const { response, body } = await callApi(
-      isKoLocale ? "조직 목록 조회" : "Load organizations",
-      "GET",
-      "/api/people/organizations"
-    );
-    if (!response.ok || !body || typeof body !== "object") {
-      return;
-    }
-    const parsed = body as { organizations?: Organization[] };
-    setOrganizations(Array.isArray(parsed.organizations) ? parsed.organizations : []);
-  }
-
-  async function loadDepartments() {
-    const { response, body } = await callApi(
-      isKoLocale ? "부서 목록 조회" : "Load departments",
-      "GET",
-      `/api/people/departments${buildQuery({ organizationId: organizationId.trim() || undefined })}`
-    );
-    if (!response.ok || !body || typeof body !== "object") {
-      return;
-    }
-    const parsed = body as { departments?: Department[] };
-    setDepartments(Array.isArray(parsed.departments) ? parsed.departments : []);
-  }
-
-  async function loadPositions() {
-    const { response, body } = await callApi(
-      isKoLocale ? "직급 목록 조회" : "Load positions",
-      "GET",
-      `/api/people/positions${buildQuery({ organizationId: organizationId.trim() || undefined })}`
-    );
-    if (!response.ok || !body || typeof body !== "object") {
-      return;
-    }
-    const parsed = body as { positions?: Position[] };
-    setPositions(Array.isArray(parsed.positions) ? parsed.positions : []);
-  }
-
-  async function loadEmployees() {
-    const { response, body } = await callApi(
-      isKoLocale ? "직원 목록 조회" : "Load employees",
-      "GET",
-      `/api/people/employees${buildQuery({ organizationId: organizationId.trim() || undefined })}`
-    );
-    if (!response.ok || !body || typeof body !== "object") {
-      return;
-    }
-    const parsed = body as { employees?: Employee[] };
-    const nextEmployees = Array.isArray(parsed.employees) ? parsed.employees : [];
-    setEmployees(nextEmployees);
-    if (!selectedEmployeeId && nextEmployees.length > 0) {
-      setSelectedEmployeeId(nextEmployees[0]!.id);
-    }
-  }
-
-  async function refreshDirectory() {
-    await loadOrganizations();
-    await Promise.all([loadDepartments(), loadPositions(), loadEmployees()]);
-  }
-
-  async function loadSelectedEmployeeHistory(employeeId: string) {
-    if (!employeeId.trim()) {
-      return;
-    }
-    const { response, body } = await callApi(
-      isKoLocale ? "직원 인사 이력 조회" : "Load employee history",
-      "GET",
-      `/api/people/employees/${encodeURIComponent(employeeId)}/history${buildQuery({
-        limit: historyLimit.trim() || undefined
-      })}`
-    );
-    if (!response.ok || !body || typeof body !== "object") {
-      return;
-    }
-    const parsed = body as { history?: EmployeeHistory[] };
-    setHistory(Array.isArray(parsed.history) ? parsed.history : []);
-  }
-
-  async function applySelectedProfileUpdate() {
-    if (!selectedEmployeeId.trim()) {
-      return;
-    }
-    const payload = {
-      departmentId: editDepartmentId.trim() || null,
-      positionId: editPositionId.trim() || null,
-      active: editActive === "true"
-    };
-    const { response } = await callApi(
-      isKoLocale ? "직원 프로필 업데이트" : "Update employee profile",
-      "PATCH",
-      `/api/people/employees/${encodeURIComponent(selectedEmployeeId)}`,
-      payload
-    );
-    if (!response.ok) {
-      return;
-    }
-    await loadEmployees();
-    await loadSelectedEmployeeHistory(selectedEmployeeId);
-  }
-
-  const stats = useMemo(() => {
-    const total = logs.length;
-    const success = logs.filter((log) => log.ok).length;
-    return { total, success, fail: total - success };
-  }, [logs]);
+  const {
+    loadOrganizations,
+    loadDepartments,
+    loadPositions,
+    loadEmployees,
+    refreshDirectory,
+    loadSelectedEmployeeHistory,
+    applySelectedProfileUpdate,
+    stats
+  } = useAdminPeopleDirectoryActions({
+    isKoLocale,
+    runtimeLocale,
+    usesBearerToken,
+    bearerToken,
+    adminActorId,
+    organizationId,
+    historyLimit,
+    selectedEmployeeId,
+    editDepartmentId,
+    editPositionId,
+    editActive,
+    logs,
+    setPendingLabel,
+    setLogs,
+    setOrganizations,
+    setDepartments,
+    setPositions,
+    setEmployees,
+    setHistory,
+    setSelectedEmployeeId
+  });
 
   const historyChangeSummary = useMemo(() => {
     const counters: Record<ProfileField, number> = {
