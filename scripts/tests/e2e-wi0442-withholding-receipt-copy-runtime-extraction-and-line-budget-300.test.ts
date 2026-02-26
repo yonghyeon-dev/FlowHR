@@ -12,6 +12,12 @@ function countLines(source: string) {
 
 async function run() {
   const consoleSource = readUtf8("src", "components", "withholding-receipt", "WithholdingReceiptConsole.tsx");
+  const requestHookSource = readUtf8(
+    "src",
+    "components",
+    "withholding-receipt",
+    "useWithholdingReceiptRequests.ts"
+  );
   const copyRuntimeSource = readUtf8("src", "components", "withholding-receipt", "copy-runtime.ts");
   const workItem = readUtf8(
     "work-items",
@@ -20,8 +26,9 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(consoleSource, /from "@\/components\/withholding-receipt\/copy-runtime"/);
-  assert.match(consoleSource, /async function runRequest<\w+>\(/);
-  assert.match(consoleSource, /function isErrorPayload\(value: unknown\)/);
+  assert.match(consoleSource, /useWithholdingReceiptRequests/);
+  assert.match(requestHookSource, /function isErrorPayload\(value: unknown\)/);
+  assert.match(requestHookSource, /const runRequest = useCallback\(/);
   assert.ok(
     countLines(consoleSource) <= 300,
     `WithholdingReceiptConsole.tsx must stay <= 300 lines (current: ${countLines(consoleSource)})`
