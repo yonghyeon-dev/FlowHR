@@ -13,6 +13,12 @@ async function run() {
     "contracts",
     "EmployeeContractsInbox.tsx"
   );
+  const employeeContractsResponsePanel = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "EmployeeContractsResponsePanel.tsx"
+  );
   const journeyPanel = readUtf8(
     "src",
     "components",
@@ -27,7 +33,8 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(employeeContractsInbox, /EmployeeContractJourneyPanel/);
+  assert.match(employeeContractsInbox, /EmployeeContractsResponsePanel/);
+  assert.match(employeeContractsResponsePanel, /EmployeeContractJourneyPanel/);
   assert.match(journeyPanel, /contractJourneyCopyByLocale/);
   assert.match(journeyCopy, /Signature journey timeline/);
   assert.match(journeyCopy, /Recovery guide/);

@@ -6,25 +6,33 @@ import {
   employeeContractsCopyByLocale,
   toDateText
 } from "@/components/contracts/copy";
-import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
+import { EmployeeContractsResponsePanel } from "@/components/contracts/EmployeeContractsResponsePanel";
 import { canEmployeeRespondToContractDocument } from "@/components/contracts/document-action-policy";
+import {
+  applyInboxDeadlineFilter,
+  applyInboxStatusFilter,
+  countDueSoonPending,
+  countOverduePending,
+  countPendingResponse
+} from "@/components/contracts/employee-inbox-filter-helpers";
 import {
   normalizeContractsErrorMessageForRuntime,
   readJson,
   setContractsRuntimeLocale
 } from "@/components/contracts/http";
 import {
-  normalizeContractsEntityTitle,
-  normalizeContractsEvidenceFileName
+  normalizeContractsEntityTitle
 } from "@/components/contracts/runtime-copy-helpers";
 import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
 } from "@/components/contracts/types";
 import { useI18n } from "@/lib/i18n/provider";
+
 function isPendingResponseStatus(document: ContractDocument) {
   return canEmployeeRespondToContractDocument(document.status);
 }
+
 export default function EmployeeContractsInbox() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -36,6 +44,7 @@ export default function EmployeeContractsInbox() {
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [inboxStatusFilter, setInboxStatusFilter] = useState<"all" | "pending_response" | "responded" | "expired">("pending_response");
+  const [inboxDeadlineFilter, setInboxDeadlineFilter] = useState<"all" | "due_soon" | "overdue">("all");
   const [signatureInput, setSignatureInput] = useState("");
   const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -43,38 +52,33 @@ export default function EmployeeContractsInbox() {
   const [signatureEvidence, setSignatureEvidence] = useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const statusFilteredDocuments = useMemo(() => {
-    if (inboxStatusFilter === "pending_response") {
-      return documents.filter((document) => isPendingResponseStatus(document));
-    }
-    if (inboxStatusFilter === "responded") {
-      return documents.filter(
-        (document) => document.status === "SIGNED" || document.status === "REJECTED"
-      );
-    }
-    if (inboxStatusFilter === "expired") {
-      return documents.filter((document) => document.status === "EXPIRED");
-    }
-    return documents;
+    return applyInboxStatusFilter(documents, inboxStatusFilter);
   }, [documents, inboxStatusFilter]);
+  const deadlineFilteredDocuments = useMemo(
+    () => applyInboxDeadlineFilter(statusFilteredDocuments, inboxDeadlineFilter),
+    [statusFilteredDocuments, inboxDeadlineFilter]
+  );
   const filteredDocuments = useMemo(() => {
     if (!normalizedSearchQuery) {
-      return statusFilteredDocuments;
+      return deadlineFilteredDocuments;
     }
-    return statusFilteredDocuments.filter((document) =>
+    return deadlineFilteredDocuments.filter((document) =>
       `${document.id} ${document.title} ${document.status} ${document.approvalStatus} ${document.responseComment ?? ""}`
         .toLowerCase()
         .includes(normalizedSearchQuery)
     );
-  }, [statusFilteredDocuments, normalizedSearchQuery]);
+  }, [deadlineFilteredDocuments, normalizedSearchQuery]);
   const pendingResponseCount = useMemo(
-    () => filteredDocuments.filter((document) => isPendingResponseStatus(document)).length,
+    () => countPendingResponse(filteredDocuments),
     [filteredDocuments]
   );
+  const dueSoonCount = useMemo(() => countDueSoonPending(filteredDocuments), [filteredDocuments]);
+  const overdueCount = useMemo(() => countOverduePending(filteredDocuments), [filteredDocuments]);
   const selected = useMemo(
     () => filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
     [filteredDocuments, selectedDocumentId]
   );
-  const canRespondSelected = Boolean(selected && canEmployeeRespondToContractDocument(selected.status));
+  const canRespondSelected = Boolean(selected && isPendingResponseStatus(selected));
   const reload = useCallback(async () => {
     setError(null);
     const data = (await fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
@@ -206,6 +210,17 @@ export default function EmployeeContractsInbox() {
               <option value="expired">{copy.inboxStatusFilterExpiredOption}</option>
             </select>
           </label>
+          <label>
+            {copy.inboxDeadlineFilterLabel}
+            <select
+              value={inboxDeadlineFilter}
+              onChange={(event) => setInboxDeadlineFilter(event.target.value as "all" | "due_soon" | "overdue")}
+            >
+              <option value="all">{copy.inboxDeadlineFilterAllOption}</option>
+              <option value="due_soon">{copy.inboxDeadlineFilterDueSoonOption}</option>
+              <option value="overdue">{copy.inboxDeadlineFilterOverdueOption}</option>
+            </select>
+          </label>
           <div className="contract-action-row">
             <button type="button" className="btn btn-secondary btn-small" onClick={clearSearch}>
               {copy.clearSearchAction}
@@ -215,6 +230,12 @@ export default function EmployeeContractsInbox() {
             </p>
             <p className="small muted">
               {copy.pendingResponseCountLabel}: {pendingResponseCount}
+            </p>
+            <p className="small muted">
+              {copy.dueSoonCountLabel}: {dueSoonCount}
+            </p>
+            <p className="small muted">
+              {copy.overdueCountLabel}: {overdueCount}
             </p>
           </div>
           {documents.length === 0 ? (
@@ -246,52 +267,22 @@ export default function EmployeeContractsInbox() {
             </ul>
           )}
         </article>
-        <article className="panel panel-contract-template-detail">
-          <h2>{copy.responseTitle}</h2>
-          {!selected ? (
-            <p className="small muted">{copy.noDocumentMessage}</p>
-          ) : (
-            <>
-              <ul className="contract-template-detail-list" aria-label={copy.detailAria}>
-                <li><span>{copy.idLabel}</span><strong>{selected.id}</strong></li>
-                <li><span>{copy.statusLabel}</span><strong>{documentStatusLabels[selected.status]}</strong></li>
-                <li><span>{copy.hashLabel}</span><strong>{selected.documentHash.slice(0, 16)}...</strong></li>
-                <li><span>{copy.updatedLabel}</span><strong>{toDateText(selected.updatedAt, runtimeLocale)}</strong></li>
-                <li><span>{copy.respondedLabel}</span><strong>{toDateText(selected.respondedAt, runtimeLocale)}</strong></li>
-                <li><span>{copy.signatureHashLabel}</span><strong>{selected.signatureHash ? `${selected.signatureHash.slice(0, 16)}...` : "-"}</strong></li>
-                <li><span>{copy.evidenceHashLabel}</span><strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong></li>
-              </ul>
-              <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
-              <label>{copy.signatureInputLabel}<input value={signatureInput} onChange={(event) => setSignatureInput(event.target.value)} /></label>
-              <label>{copy.commentLabel}<textarea rows={3} value={comment} onChange={(event) => setComment(event.target.value)} /></label>
-              {!canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
-              <div className="contract-action-row">
-                <button type="button" className="btn" onClick={() => respond("SIGN")} disabled={!canRespondSelected}>{copy.signAction}</button>
-                <button type="button" className="btn btn-secondary" onClick={() => respond("REJECT")} disabled={!canRespondSelected}>{copy.rejectAction}</button>
-                <button type="button" className="btn btn-secondary" onClick={() => void loadSignatureEvidence("json")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceJsonAction}</button>
-                <button type="button" className="btn btn-secondary" onClick={() => void loadSignatureEvidence("text")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceTextAction}</button>
-              </div>
-              {signatureEvidence ? (
-                <>
-                  <ul className="simple-list">
-                    <li><span>{copy.evidenceFileLabel}</span><strong>{normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)}</strong></li>
-                    <li><span>{copy.generatedAtLabel}</span><strong>{toDateText(signatureEvidence.generatedAt, runtimeLocale)}</strong></li>
-                    <li><span>{copy.contentShaLabel}</span><strong>{signatureEvidence.contentSha256.slice(0, 16)}...</strong></li>
-                  </ul>
-                  <div className="contract-action-row">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => downloadEvidence(signatureEvidence, normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale))}
-                    >
-                      {copy.downloadEvidenceAction}
-                    </button>
-                  </div>
-                </>
-              ) : null}
-            </>
-          )}
-        </article>
+        <EmployeeContractsResponsePanel
+          copy={copy}
+          selected={selected}
+          documentStatusLabels={documentStatusLabels}
+          runtimeLocale={runtimeLocale}
+          isKoLocale={isKoLocale}
+          signatureInput={signatureInput}
+          comment={comment}
+          onSignatureInputChange={setSignatureInput}
+          onCommentChange={setComment}
+          canRespondSelected={canRespondSelected}
+          onRespond={respond}
+          onLoadSignatureEvidence={loadSignatureEvidence}
+          signatureEvidence={signatureEvidence}
+          onDownloadEvidence={downloadEvidence}
+        />
       </section>
     </main>
   );
