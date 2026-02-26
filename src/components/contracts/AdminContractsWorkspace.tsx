@@ -13,7 +13,9 @@ import {
   type ContractCategory
 } from "@/components/contracts/copy";
 import type { ContractDocumentAction } from "@/components/contracts/types";
+import { AdminContractsDocumentFilterControls } from "@/components/contracts/AdminContractsDocumentFilterControls";
 import { useAdminContractsWorkspaceActions } from "@/components/contracts/useAdminContractsWorkspaceActions";
+import { useAdminContractsDocumentFilters } from "@/components/contracts/useAdminContractsDocumentFilters";
 import { setContractsRuntimeLocale } from "@/components/contracts/http";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
 import {
@@ -21,6 +23,8 @@ import {
   normalizeEmployeeIdForApi
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
+
+const contractDocumentActions: ContractDocumentAction[] = ["request", "approve", "reject", "send", "expire", "renew"];
 
 export default function AdminContractsWorkspace() {
   const { locale } = useI18n();
@@ -55,10 +59,6 @@ export default function AdminContractsWorkspace() {
     }),
     [copy]
   );
-  const documentActions = useMemo<ContractDocumentAction[]>(
-    () => ["request", "approve", "reject", "send", "expire", "renew"],
-    []
-  );
 
   const {
     templates,
@@ -78,6 +78,13 @@ export default function AdminContractsWorkspace() {
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
+  const {
+    documentSearchQuery,
+    setDocumentSearchQuery,
+    documentStatusFilter,
+    setDocumentStatusFilter,
+    visibleDocuments
+  } = useAdminContractsDocumentFilters({ documents, locale });
 
   useEffect(() => {
     setContractsRuntimeLocale(locale);
@@ -193,8 +200,18 @@ export default function AdminContractsWorkspace() {
               {copy.createDraftAction}
             </button>
           </div>
+          <AdminContractsDocumentFilterControls
+            copy={copy}
+            searchQuery={documentSearchQuery}
+            onSearchQueryChange={setDocumentSearchQuery}
+            statusFilter={documentStatusFilter}
+            onStatusFilterChange={setDocumentStatusFilter}
+            statusLabels={documentStatusLabels}
+            visibleCount={visibleDocuments.length}
+            totalCount={documents.length}
+          />
           <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>
-            {documents.map((document) => (
+            {visibleDocuments.map((document) => (
               <li
                 key={document.id}
                 className={`tone-${document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"}`}
@@ -210,7 +227,7 @@ export default function AdminContractsWorkspace() {
                   {toDateText(document.expiresAt, runtimeLocale)}
                 </p>
                 <div className="contract-action-row">
-                  {documentActions.map((action) => (
+                  {contractDocumentActions.map((action) => (
                     <button
                       key={action}
                       type="button"
