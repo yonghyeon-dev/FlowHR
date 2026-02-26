@@ -130,9 +130,10 @@ export function toIso(value: string) {
   return new Date(value).toISOString();
 }
 
-export function minutesToHours(minutes: number) {
+export function minutesToHours(minutes: number, isKoLocale = false) {
   const hours = minutes / 60;
-  return `${hours.toFixed(1)}h`;
+  const unitLabel = isKoLocale ? "시간" : "h";
+  return `${hours.toFixed(1)}${unitLabel}`;
 }
 
 export function buildQuery(params: Record<string, string | undefined>) {
