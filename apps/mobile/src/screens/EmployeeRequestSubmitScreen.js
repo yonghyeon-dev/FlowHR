@@ -9,6 +9,8 @@ import {
   createEmployeeRequestRecord,
   validateEmployeeRequestDraft
 } from "../lib/employeeRequest";
+import { submitEmployeeRequestToApi } from "../lib/employeeRequestApi";
+import { loadEmployeeRequestsWithApiFallback } from "../lib/employeeRequestSync";
 import { loadEmployeeRequests, saveEmployeeRequests } from "../lib/employeeRequestStore";
 import { colors, spacing } from "../theme/tokens";
 
@@ -38,29 +40,40 @@ export default function EmployeeRequestSubmitScreen({
   const [errorMessage, setErrorMessage] = useState("");
   const [requests, setRequests] = useState([]);
 
+  async function loadRecentRequests({ silent = false } = {}) {
+    const { items, source } = await loadEmployeeRequestsWithApiFallback(session);
+    setRequests(items);
+    if (!silent) {
+      setErrorMessage("");
+      setStatusMessage(
+        source === "api" ? "Synced request history from FlowHR API." : "Loaded request history from local cache."
+      );
+    }
+  }
+
   useEffect(() => {
     setRequestType(initialRequestType);
   }, [initialRequestType]);
 
   useEffect(() => {
     let active = true;
-    loadEmployeeRequests()
-      .then((items) => {
+    loadRecentRequests({ silent: true })
+      .then(() => {
         if (!active) {
           return;
         }
-        setRequests(items);
         setLoading(false);
       })
       .catch(() => {
         if (active) {
+          loadEmployeeRequests().then((items) => setRequests(items));
           setLoading(false);
         }
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [session]);
 
   const stats = useMemo(() => buildEmployeeRequestStats(requests), [requests]);
   const isLeaveRequest = requestType === "leaveRequest";
@@ -91,12 +104,21 @@ export default function EmployeeRequestSubmitScreen({
       setStatusMessage("");
       return;
     }
-    const record = createEmployeeRequestRecord(validation.normalized, session.actorId);
-    const next = [record, ...requests];
-    setRequests(next);
-    await saveEmployeeRequests(next);
-    setErrorMessage("");
-    setStatusMessage("Request submitted and saved locally.");
+    try {
+      const record = await submitEmployeeRequestToApi({ session, draft: validation.normalized });
+      const next = [record, ...requests.filter((item) => item.id !== record.id)];
+      setRequests(next);
+      await saveEmployeeRequests(next);
+      setErrorMessage("");
+      setStatusMessage("Request submitted to FlowHR API.");
+    } catch (error) {
+      const fallbackRecord = createEmployeeRequestRecord(validation.normalized, session.actorId);
+      const next = [fallbackRecord, ...requests];
+      setRequests(next);
+      await saveEmployeeRequests(next);
+      setErrorMessage(error instanceof Error ? `${error.message} (saved locally)` : "API submit failed (saved locally)");
+      setStatusMessage("");
+    }
     clearForm();
   }
 
@@ -185,6 +207,11 @@ export default function EmployeeRequestSubmitScreen({
             </Pressable>
             <Pressable style={styles.secondaryBtn} onPress={onOpenRequestFollowUp}>
               <Text style={styles.secondaryBtnText}>Open follow-up inbox</Text>
+            </Pressable>
+          </View>
+          <View style={styles.row}>
+            <Pressable style={styles.secondaryBtn} onPress={() => loadRecentRequests()}>
+              <Text style={styles.secondaryBtnText}>Sync API history</Text>
             </Pressable>
           </View>
 

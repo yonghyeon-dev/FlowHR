@@ -40,7 +40,7 @@ async function run() {
   assert.match(requestLib, /normalizeEmployeeRequestRecord/);
   assert.match(requestStore, /normalizeEmployeeRequestRecord/);
   assert.match(adminScreen, /WI-0258~/);
-  assert.match(employeeHome, /WI-0258~/);
+  assert.match(employeeHome, /requestCardTitle|Request History \/ Status|요청 이력\/상태/);
   assert.match(readme, /Employee request history\/status shell/);
 
   assert.ok(

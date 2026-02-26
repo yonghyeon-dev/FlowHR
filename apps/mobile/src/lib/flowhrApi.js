@@ -6,11 +6,27 @@ function defaultBaseUrl() {
   return trimTrailingSlash(process.env.EXPO_PUBLIC_FLOWHR_API_BASE_URL ?? "http://localhost:3000");
 }
 
+function resolveActorRole(session) {
+  const raw = String(session?.role ?? "").trim().toUpperCase();
+  if (raw === "ADMIN") {
+    return "admin";
+  }
+  if (raw === "EMPLOYEE") {
+    return "employee";
+  }
+  if (raw === "MANAGER") {
+    return "manager";
+  }
+  return "";
+}
+
 function buildHeaders(session, overrides) {
   const headers = {
     "content-type": "application/json",
     "x-tenant-id": session?.tenantId ?? "",
     "x-actor-id": session?.actorId ?? "",
+    "x-actor-role": resolveActorRole(session),
+    "x-actor-organization-id": session?.tenantId ?? "",
     ...overrides
   };
   if (session?.accessToken) {

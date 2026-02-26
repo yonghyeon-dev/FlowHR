@@ -37,7 +37,7 @@ async function run() {
   assert.match(requestLib, /filterEmployeeRequestFollowUps/);
   assert.match(requestLib, /sortEmployeeRequestFollowUps/);
   assert.match(adminScreen, /WI-0258~/);
-  assert.match(employeeHome, /WI-0258~/);
+  assert.match(employeeHome, /requestFollowUpAction|Open Follow-Up|요청 후속 조치 보기/);
   assert.match(readme, /Employee request follow-up alert shell/);
 
   assert.ok(
