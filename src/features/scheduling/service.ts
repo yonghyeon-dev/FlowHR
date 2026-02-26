@@ -41,6 +41,8 @@ import {
   type AnomalyEscalationSeverity
 } from "@/features/scheduling/anomaly-automation-helpers";
 import {
+  buildScheduleAnomalyIncidentAutoActionResult,
+  buildScheduleAnomalyIncidentAutoActionSummaryPayload,
   executeScheduleAnomalyIncidentAutoActionAssignments,
   notifyScheduleAnomalyIncidentAutoActionExecution
 } from "@/features/scheduling/anomaly-incident-auto-action-helpers";
@@ -3179,65 +3181,54 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     dryRun: input.dryRun
   });
 
-  const { assigned, skippedEscalation, skippedAssigned, failed, dryRun, items, escalated } =
-    await executeScheduleAnomalyIncidentAutoActionAssignments({
-      escalationItems: escalation.items,
-      escalationDryRun: escalation.dryRun,
-      autoAssigneeId,
-      autoAssignMode,
-      assignIncident: async ({ incidentId }) => {
-        const updated = await updateScheduleAnomalyIncidentLifecycle(context, {
+  const assignmentSummary = await executeScheduleAnomalyIncidentAutoActionAssignments({
+    escalationItems: escalation.items,
+    escalationDryRun: escalation.dryRun,
+    autoAssigneeId,
+    autoAssignMode,
+    assignIncident: async ({ incidentId }) => {
+      const updated = await updateScheduleAnomalyIncidentLifecycle(context, {
+        incidentId,
+        action: "ASSIGN",
+        assigneeId: autoAssigneeId,
+        note: autoAssignNote ?? undefined
+      });
+      return { state: updated.state, assigneeId: updated.assigneeId };
+    },
+    onAssignFailed: async ({ incidentId, previousAssigneeId, escalationDecision, error }) => {
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.incident.auto_action.assign.failed",
+        entityType: "WorkSchedule",
+        entityId: incidentId,
+        organizationId: tenantScope,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
           incidentId,
-          action: "ASSIGN",
-          assigneeId: autoAssigneeId,
-          note: autoAssignNote ?? undefined
-        });
-        return { state: updated.state, assigneeId: updated.assigneeId };
-      },
-      onAssignFailed: async ({ incidentId, previousAssigneeId, escalationDecision, error }) => {
-        await context.dataAccess.audit.append({
-          action: "scheduling.anomaly.incident.auto_action.assign.failed",
-          entityType: "WorkSchedule",
-          entityId: incidentId,
-          organizationId: tenantScope,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: {
-            incidentId,
-            previousAssigneeId,
-            autoAssigneeId,
-            autoAssignMode,
-            escalationDecision,
-            error
-          }
-        });
-      }
-    });
+          previousAssigneeId,
+          autoAssigneeId,
+          autoAssignMode,
+          escalationDecision,
+          error
+        }
+      });
+    }
+  });
+  const { assigned, skippedEscalation, skippedAssigned, failed, dryRun, items, escalated } =
+    assignmentSummary;
 
   const executedAt = new Date().toISOString();
-  const summaryPayload = {
+  const summaryPayload = buildScheduleAnomalyIncidentAutoActionSummaryPayload({
     executedAt,
-    dryRun: escalation.dryRun,
-    state: input.state ?? null,
-    assigneeId: input.assigneeId?.trim() ?? null,
-    topN: input.topN ?? 50,
-    includeResolved: escalation.policy.includeResolved,
-    includeWarning: escalation.policy.includeWarning,
-    slaTargetMinutes: escalation.policy.slaTargetMinutes,
-    warningMinutes: escalation.policy.warningMinutes,
-    cooldownMinutes: escalation.policy.cooldownMinutes,
-    escalationChannel: escalation.policy.escalationChannel,
+    state: input.state,
+    assigneeId: input.assigneeId,
+    topN: input.topN,
+    escalation,
     autoAssigneeId,
     autoAssignMode,
     autoAssignNote,
-    candidates: escalation.counts.candidates,
-    escalated,
-    assigned,
-    skippedEscalation,
-    skippedAssigned,
-    failed,
-    dryRunCount: dryRun
-  };
+    assignmentSummary
+  });
 
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.auto_action.generated",
@@ -3279,31 +3270,15 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     }
   });
 
-  return {
+  return buildScheduleAnomalyIncidentAutoActionResult({
     executedAt,
-    dryRun: escalation.dryRun,
-    policy: {
-      slaTargetMinutes: escalation.policy.slaTargetMinutes,
-      warningMinutes: escalation.policy.warningMinutes,
-      includeResolved: escalation.policy.includeResolved,
-      includeWarning: escalation.policy.includeWarning,
-      cooldownMinutes: escalation.policy.cooldownMinutes,
-      escalationChannel: escalation.policy.escalationChannel,
-      autoAssigneeId,
-      autoAssignMode,
-      autoAssignNote
-    },
-    counts: {
-      candidates: escalation.counts.candidates,
-      escalated,
-      assigned,
-      skippedEscalation,
-      skippedAssigned,
-      failed,
-      dryRun
-    },
+    escalation,
+    autoAssigneeId,
+    autoAssignMode,
+    autoAssignNote,
+    assignmentSummary,
     items
-  };
+  });
 }
 
 export async function archiveScheduleAnomalyIncidents(
