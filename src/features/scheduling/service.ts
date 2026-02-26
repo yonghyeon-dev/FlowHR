@@ -40,7 +40,10 @@ import {
   parsePositiveIntegerRangeFromEnv,
   type AnomalyEscalationSeverity
 } from "@/features/scheduling/anomaly-automation-helpers";
-import { executeScheduleAnomalyIncidentAutoActionAssignments } from "@/features/scheduling/anomaly-incident-auto-action-helpers";
+import {
+  executeScheduleAnomalyIncidentAutoActionAssignments,
+  notifyScheduleAnomalyIncidentAutoActionExecution
+} from "@/features/scheduling/anomaly-incident-auto-action-helpers";
 import {
   buildScheduleAnomalyIncidentArchiveCandidates,
   executeScheduleAnomalyIncidentArchiveActions
@@ -3610,63 +3613,36 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     payload: summaryPayload
   });
 
-  if (!escalation.dryRun) {
-    try {
+  await notifyScheduleAnomalyIncidentAutoActionExecution({
+    dryRun: escalation.dryRun,
+    executedAt,
+    candidates: escalation.counts.candidates,
+    escalated,
+    assigned,
+    failed,
+    summaryPayload,
+    items,
+    publishExecuted: async (payload) => {
       await getEventPublisher(context).publish({
         name: "scheduling.anomaly.incident.auto_action.executed.v1",
         occurredAt: executedAt,
         entityType: "WorkSchedule",
         actorRole: actor.role,
         actorId: actor.id,
-        payload: {
-          ...summaryPayload,
-          items: items.slice(0, 50).map((item) => ({
-            incidentId: item.incidentId,
-            escalationDecision: item.escalationDecision,
-            decision: item.decision,
-            previousAssigneeId: item.previousAssigneeId,
-            assignedAssigneeId: item.assignedAssigneeId,
-            reason: item.reason
-          }))
-        }
+        payload
       });
-
+    },
+    appendAudit: async ({ action, payload }) => {
       await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.incident.auto_action.notified",
+        action,
         entityType: "WorkSchedule",
         organizationId: tenantScope,
         actorRole: actor.role,
         actorId: actor.id,
-        payload: {
-          executedAt,
-          candidates: escalation.counts.candidates,
-          escalated,
-          assigned,
-          failed
-        }
+        payload
       });
-    } catch (error) {
-      try {
-        await context.dataAccess.audit.append({
-          action: "scheduling.anomaly.incident.auto_action.notify.failed",
-          entityType: "WorkSchedule",
-          organizationId: tenantScope,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: {
-            executedAt,
-            candidates: escalation.counts.candidates,
-            escalated,
-            assigned,
-            failed,
-            error: error instanceof Error ? error.message : "unknown error"
-          }
-        });
-      } catch {
-        // Non-blocking failure path for auto-action notification telemetry.
-      }
     }
-  }
+  });
 
   return {
     executedAt,
