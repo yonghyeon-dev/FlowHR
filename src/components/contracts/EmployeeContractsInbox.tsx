@@ -1,21 +1,13 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  contractApprovalStatusLabelByLocale,
-  contractDocumentStatusLabelByLocale,
-  employeeContractsCopyByLocale,
-  toDateText,
-} from "@/components/contracts/copy";
+import { contractApprovalStatusLabelByLocale, contractDocumentStatusLabelByLocale, employeeContractsCopyByLocale, toDateText } from "@/components/contracts/copy";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import {
   normalizeContractsErrorMessageForRuntime,
   readJson,
   setContractsRuntimeLocale
 } from "@/components/contracts/http";
-import {
-  normalizeContractsEntityTitle,
-  normalizeContractsEvidenceFileName
-} from "@/components/contracts/runtime-copy-helpers";
+import { normalizeContractsEntityTitle, normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
 import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
