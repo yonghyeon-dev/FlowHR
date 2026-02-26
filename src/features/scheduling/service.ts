@@ -42,6 +42,10 @@ import {
   type AnomalyEscalationSeverity
 } from "@/features/scheduling/anomaly-automation-helpers";
 import {
+  buildScheduleAnomalyIncidentSlaQueue,
+  filterScheduleAnomalyIncidentQueue
+} from "@/features/scheduling/anomaly-incident-queue-helpers";
+import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
   normalizeAnomalyIncidentArchiveReason,
@@ -65,8 +69,7 @@ import {
   normalizeAnomalyIncidentAutoAssigneeId,
   normalizeAnomalyIncidentAutoAssignMode,
   normalizeAnomalyIncidentAutoAssignNote,
-  toScheduleAnomalyIncidentUpsertInput,
-  toSlaStatusWeight
+  toScheduleAnomalyIncidentUpsertInput
 } from "@/features/scheduling/incident-read-model-helpers";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
@@ -3225,16 +3228,10 @@ export async function listScheduleAnomalyIncidents(
   const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
     organizationId: tenantScope ?? undefined
   });
-  const matched = readModels
-    .filter((item) => (input.state ? item.state === input.state : true))
-    .filter((item) => (assigneeId ? item.assigneeId === assigneeId : true))
-    .sort((left, right) => {
-      const byUpdatedAt = right.updatedAt.localeCompare(left.updatedAt);
-      if (byUpdatedAt !== 0) {
-        return byUpdatedAt;
-      }
-      return left.incidentId.localeCompare(right.incidentId);
-    });
+  const matched = filterScheduleAnomalyIncidentQueue(readModels, {
+    state: input.state,
+    assigneeId
+  });
 
   const items = matched.slice(0, topN).map(cloneScheduleAnomalyIncidentReadModel);
 
@@ -3290,60 +3287,17 @@ export async function listScheduleAnomalyIncidentSla(
     organizationId: tenantScope ?? undefined
   });
 
-  const matched = readModels
-    .filter((item) => (input.state ? item.state === input.state : true))
-    .filter((item) => (assigneeId ? item.assigneeId === assigneeId : true))
-    .map((item) => {
-      const updatedAtMillis = parseIsoTimestampToMillis(item.updatedAt) ?? asOfMillis;
-      const elapsedMinutes = Math.max(0, Math.floor((asOfMillis - updatedAtMillis) / 60_000));
-      const status: ScheduleAnomalyIncidentSlaStatus =
-        item.state === "RESOLVED"
-          ? "RESOLVED"
-          : elapsedMinutes >= slaTargetMinutes
-            ? "BREACHED"
-            : elapsedMinutes >= warningMinutes
-              ? "WARNING"
-              : "HEALTHY";
-
-      const result: ScheduleAnomalyIncidentSlaItem = {
-        incidentId: item.incidentId,
-        state: item.state,
-        assigneeId: item.assigneeId,
-        updatedAt: item.updatedAt,
-        elapsedMinutes,
-        slaTargetMinutes,
-        warningMinutes,
-        status,
-        updatedBy: { ...item.updatedBy },
-        historyCount: item.history.length
-      };
-      return result;
-    })
-    .filter((item) => (includeResolved ? true : item.state !== "RESOLVED"))
-    .sort((left, right) => {
-      const byStatus = toSlaStatusWeight(right.status) - toSlaStatusWeight(left.status);
-      if (byStatus !== 0) {
-        return byStatus;
-      }
-      if (left.elapsedMinutes !== right.elapsedMinutes) {
-        return right.elapsedMinutes - left.elapsedMinutes;
-      }
-      const byUpdatedAt = left.updatedAt.localeCompare(right.updatedAt);
-      if (byUpdatedAt !== 0) {
-        return byUpdatedAt;
-      }
-      return left.incidentId.localeCompare(right.incidentId);
-    });
+  const { matched, counts } = buildScheduleAnomalyIncidentSlaQueue({
+    readModels,
+    state: input.state,
+    assigneeId,
+    includeResolved,
+    slaTargetMinutes,
+    warningMinutes,
+    asOfMillis
+  });
 
   const items = matched.slice(0, topN);
-  const counts = {
-    total: matched.length,
-    open: matched.filter((item) => item.status !== "RESOLVED").length,
-    healthy: matched.filter((item) => item.status === "HEALTHY").length,
-    warning: matched.filter((item) => item.status === "WARNING").length,
-    breached: matched.filter((item) => item.status === "BREACHED").length,
-    resolved: matched.filter((item) => item.status === "RESOLVED").length
-  };
 
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.sla.generated",
