@@ -22,7 +22,7 @@ async function run() {
   assert.match(employeeInbox, /const \[inboxStatusFilter, setInboxStatusFilter\] = useState</);
   assert.match(employeeInbox, /"all" \| "pending_response" \| "responded" \| "expired"/);
   assert.match(employeeInbox, /const statusFilteredDocuments = useMemo\(\(\) => \{/);
-  assert.match(employeeInbox, /document\.status === "SENT" \|\| document\.status === "RENEWED"/);
+  assert.match(employeeInbox, /canEmployeeRespondToContractDocument\(document\.status\)/);
   assert.match(employeeInbox, /copy\.inboxStatusFilterLabel/);
   assert.match(employeeInbox, /copy\.inboxStatusFilterAllOption/);
   assert.match(employeeInbox, /copy\.inboxStatusFilterPendingOption/);

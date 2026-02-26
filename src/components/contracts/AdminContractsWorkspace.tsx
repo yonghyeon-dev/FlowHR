@@ -1,8 +1,6 @@
 ﻿"use client";
-
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-
 import {
   adminContractsCopyByLocale,
   contractApprovalStatusLabelByLocale,
@@ -17,14 +15,13 @@ import { AdminContractsDocumentFilterControls } from "@/components/contracts/Adm
 import { useAdminContractsWorkspaceActions } from "@/components/contracts/useAdminContractsWorkspaceActions";
 import { useAdminContractsDocumentFilters } from "@/components/contracts/useAdminContractsDocumentFilters";
 import { setContractsRuntimeLocale } from "@/components/contracts/http";
+import { resolveAdminContractDocumentNextStep, resolveAllowedContractDocumentActions, type ContractDocumentNextStepKey } from "@/components/contracts/document-action-policy";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
 import {
   formatEmployeeIdForLocaleDisplay,
   normalizeEmployeeIdForApi
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-
-const contractDocumentActions: ContractDocumentAction[] = ["request", "approve", "reject", "send", "expire", "renew"];
 
 export default function AdminContractsWorkspace() {
   const { locale } = useI18n();
@@ -37,9 +34,7 @@ export default function AdminContractsWorkspace() {
   const approvalStatusLabels = contractApprovalStatusLabelByLocale[locale];
 
   const [employeeId, setEmployeeId] = useState("");
-  const [templateName, setTemplateName] = useState(
-    locale === "ko" ? "근로계약 기본" : "Employment Standard"
-  );
+  const [templateName, setTemplateName] = useState(locale === "ko" ? "근로계약 기본" : "Employment Standard");
   const [templateCategory, setTemplateCategory] = useState<ContractCategory>("employment");
   const [templateBody, setTemplateBody] = useState(
     locale === "ko"
@@ -59,6 +54,14 @@ export default function AdminContractsWorkspace() {
     }),
     [copy]
   );
+  const nextStepLabelByKey = useMemo<Record<ContractDocumentNextStepKey, string>>(() => ({
+    REQUEST_APPROVAL: copy.nextStepRequestApproval,
+    APPROVE_OR_REJECT: copy.nextStepApproveOrReject,
+    SEND_DOCUMENT: copy.nextStepSendDocument,
+    WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse,
+    RENEW_DOCUMENT: copy.nextStepRenewDocument,
+    NO_ACTION: copy.nextStepNoAction
+  }), [copy]);
 
   const {
     templates,
@@ -211,38 +214,41 @@ export default function AdminContractsWorkspace() {
             totalCount={documents.length}
           />
           <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>
-            {visibleDocuments.map((document) => (
-              <li
-                key={document.id}
-                className={`tone-${document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"}`}
-              >
-                <div className="contract-signature-readiness-head">
-                  <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
-                  <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
-                </div>
-                <p>
-                  {document.id} | {copy.employeePrefix}{" "}
-                  {formatEmployeeIdForLocaleDisplay(document.employeeId, locale)} | {copy.approvalPrefix}{" "}
-                  {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
-                  {toDateText(document.expiresAt, runtimeLocale)}
-                </p>
-                <div className="contract-action-row">
-                  {contractDocumentActions.map((action) => (
-                    <button
-                      key={action}
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      onClick={() => runDocumentAction(document.id, action)}
-                    >
-                      {actionLabelByAction[action]}
-                    </button>
-                  ))}
-                </div>
-              </li>
-            ))}
+            {visibleDocuments.map((document) => {
+              const policyInput = { status: document.status, approvalStatus: document.approvalStatus, requiresApproval: document.requiresApproval };
+              const availableActions = resolveAllowedContractDocumentActions(policyInput);
+              const nextStep = resolveAdminContractDocumentNextStep(policyInput);
+              return (
+                <li
+                  key={document.id}
+                  className={`tone-${document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"}`}
+                >
+                  <div className="contract-signature-readiness-head">
+                    <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
+                    <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
+                  </div>
+                  <p>
+                    {document.id} | {copy.employeePrefix}{" "}
+                    {formatEmployeeIdForLocaleDisplay(document.employeeId, locale)} | {copy.approvalPrefix}{" "}
+                    {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
+                    {toDateText(document.expiresAt, runtimeLocale)}
+                  </p>
+                  <p className="small muted">{copy.nextStepLabel}: {nextStepLabelByKey[nextStep]}</p>
+                  <div className="contract-action-row">
+                    {availableActions.map((action) => (
+                      <button key={action} type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, action)}>
+                        {actionLabelByAction[action]}
+                      </button>
+                    ))}
+                    {availableActions.length === 0 ? <span className="small muted">{copy.nextStepNoAction}</span> : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </article>
       </section>
     </main>
   );
 }
+
