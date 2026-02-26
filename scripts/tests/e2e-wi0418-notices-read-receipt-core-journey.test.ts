@@ -12,6 +12,12 @@ async function run() {
   const noticesStore = readUtf8("src", "features", "notices", "store.ts");
   const noticesSchema = readUtf8("src", "features", "notices", "schemas.ts");
   const employeeBoard = readUtf8("src", "components", "notices", "EmployeeNoticeBoard.tsx");
+  const employeeBoardList = readUtf8(
+    "src",
+    "components",
+    "notices",
+    "EmployeeNoticeBoardList.tsx"
+  );
   const noticesCopy = readUtf8("src", "components", "notices", "copy.ts");
 
   const workItem = readUtf8("work-items", "WI-0418-notices-read-receipt-core-journey.md");
@@ -34,11 +40,12 @@ async function run() {
   assert.match(employeeBoard, /parseReadNoticeIds/);
   assert.match(employeeBoard, /parseReadReceipts/);
   assert.match(employeeBoard, /markAsRead/);
+  assert.match(employeeBoard, /EmployeeNoticeBoardList/);
   assert.match(employeeBoard, /\/api\/notices\/\$\{encodeURIComponent\(noticeId\)\}\/read/);
-  assert.match(employeeBoard, /copy\.markReadAction/);
-  assert.match(employeeBoard, /copy\.readBadge/);
-  assert.match(employeeBoard, /copy\.unreadBadge/);
   assert.match(employeeBoard, /copy\.unreadLabel/);
+  assert.match(employeeBoardList, /copy\.markReadAction/);
+  assert.match(employeeBoardList, /copy\.readBadge/);
+  assert.match(employeeBoardList, /copy\.unreadBadge/);
 
   assert.match(noticesCopy, /markReadAction/);
   assert.match(noticesCopy, /readBadge/);

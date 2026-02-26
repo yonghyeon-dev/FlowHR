@@ -8,6 +8,18 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeeNoticeBoard = readUtf8("src", "components", "notices", "EmployeeNoticeBoard.tsx");
+  const employeeNoticeBoardList = readUtf8(
+    "src",
+    "components",
+    "notices",
+    "EmployeeNoticeBoardList.tsx"
+  );
+  const employeeNoticeBoardHelpers = readUtf8(
+    "src",
+    "components",
+    "notices",
+    "employee-notice-board-helpers.ts"
+  );
   const noticesCopy = readUtf8("src", "components", "notices", "copy.ts");
   const workItem = readUtf8(
     "work-items",
@@ -17,27 +29,35 @@ async function run() {
 
   assert.match(employeeNoticeBoard, /const \[searchQuery, setSearchQuery\] = useState\(""\);/);
   assert.match(employeeNoticeBoard, /const \[unreadOnly, setUnreadOnly\] = useState\(false\);/);
-  assert.match(employeeNoticeBoard, /const filteredNotices = useMemo\(\(\) => \{/);
-  assert.match(employeeNoticeBoard, /notice\.title\.toLowerCase\(\)/);
-  assert.match(employeeNoticeBoard, /notice\.body\.toLowerCase\(\)/);
+  assert.match(employeeNoticeBoard, /const filteredNotices = useMemo\(/);
   assert.match(employeeNoticeBoard, /type="checkbox"/);
   assert.match(employeeNoticeBoard, /copy\.searchLabel/);
   assert.match(employeeNoticeBoard, /copy\.unreadOnlyLabel/);
   assert.match(employeeNoticeBoard, /copy\.clearFiltersAction/);
   assert.match(employeeNoticeBoard, /copy\.filteredSummaryLabel/);
-  assert.match(employeeNoticeBoard, /copy\.filteredListEmpty/);
-  assert.match(employeeNoticeBoard, /filteredNotices\.map\(\(notice\) => \{/);
+  assert.match(employeeNoticeBoard, /copy\.readStatusFilterLabel/);
+  assert.match(employeeNoticeBoard, /normalizeEmployeeNoticeReadStatusFilter/);
+  assert.match(employeeNoticeBoard, /<EmployeeNoticeBoardList/);
+
+  assert.match(employeeNoticeBoardList, /filteredNotices\.map\(\(notice\) => \{/);
+  assert.match(employeeNoticeBoardList, /copy\.filteredListEmpty/);
+  assert.match(employeeNoticeBoardHelpers, /notice\.title\.toLowerCase\(\)/);
+  assert.match(employeeNoticeBoardHelpers, /notice\.body\.toLowerCase\(\)/);
 
   assert.match(noticesCopy, /searchLabel: string;/);
   assert.match(noticesCopy, /searchPlaceholder: string;/);
+  assert.match(noticesCopy, /readStatusFilterLabel: string;/);
+  assert.match(noticesCopy, /readStatusFilterUnreadOption: string;/);
   assert.match(noticesCopy, /unreadOnlyLabel: string;/);
   assert.match(noticesCopy, /clearFiltersAction: string;/);
   assert.match(noticesCopy, /filteredSummaryLabel: string;/);
   assert.match(noticesCopy, /filteredListEmpty: string;/);
-  assert.match(noticesCopy, /searchLabel: "검색어"/);
-  assert.match(noticesCopy, /unreadOnlyLabel: "미확인 공지만 보기"/);
+  assert.match(noticesCopy, /searchLabel: "\uAC80\uC0C9\uC5B4"/);
+  assert.match(noticesCopy, /unreadOnlyLabel: "\uBBF8\uD655\uC778 \uACF5\uC9C0\uB9CC \uBCF4\uAE30"/);
+  assert.match(noticesCopy, /readStatusFilterLabel: "\uC77D\uC74C \uC0C1\uD0DC"/);
   assert.match(noticesCopy, /searchLabel: "Search"/);
   assert.match(noticesCopy, /unreadOnlyLabel: "Unread only"/);
+  assert.match(noticesCopy, /readStatusFilterLabel: "Read status"/);
 
   assert.match(workItem, /WI-0434/i);
   assert.match(workItem, /notices|search|unread|filter|employee/i);

@@ -4,10 +4,21 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
+import { EmployeeNoticeBoardList } from "@/components/notices/EmployeeNoticeBoardList";
+import { resolveEmployeeNoticeBoardCopy } from "@/components/notices/copy";
+import {
+  buildNoticeQuery,
+  buildReadAtByNoticeIdMap,
+  filterEmployeeNotices,
+  normalizeEmployeeNoticeReadStatusFilter,
+  parseNotices,
+  parseReadNoticeIds,
+  parseReadReceipts,
+  type EmployeeNoticeReadStatusFilter
+} from "@/components/notices/employee-notice-board-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-import { resolveEmployeeNoticeBoardCopy, resolveNoticeAudienceLabel } from "@/components/notices/copy";
 
 type NoticeBoardLog = {
   id: number;
@@ -15,33 +26,6 @@ type NoticeBoardLog = {
   ok: boolean;
   at: string;
 };
-
-function parseNotices(payload: unknown) {
-  const notices = (payload as { notices?: NoticeItem[] } | null)?.notices;
-  return Array.isArray(notices) ? notices : [];
-}
-
-function parseReadNoticeIds(payload: unknown) {
-  const ids = (payload as { readNoticeIds?: string[] } | null)?.readNoticeIds;
-  return Array.isArray(ids) ? ids.filter((value) => typeof value === "string") : [];
-}
-
-function parseReadReceipts(payload: unknown) {
-  const receipts = (payload as { readReceipts?: NoticeReadReceipt[] } | null)?.readReceipts;
-  return Array.isArray(receipts) ? receipts : [];
-}
-
-function buildQuery(input: Record<string, string>) {
-  const query = new URLSearchParams();
-  Object.entries(input).forEach(([key, value]) => {
-    if (!value.trim()) {
-      return;
-    }
-    query.set(key, value.trim());
-  });
-  const text = query.toString();
-  return text ? `?${text}` : "";
-}
 
 export default function EmployeeNoticeBoard() {
   const { locale } = useI18n();
@@ -61,6 +45,7 @@ export default function EmployeeNoticeBoard() {
   const [pending, setPending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [readStatusFilter, setReadStatusFilter] = useState<EmployeeNoticeReadStatusFilter>("all");
   const [logs, setLogs] = useState<NoticeBoardLog[]>([]);
 
   const bearerToken =
@@ -79,27 +64,18 @@ export default function EmployeeNoticeBoard() {
     () => notices.filter((notice) => !readNoticeIds.includes(notice.id)).length,
     [notices, readNoticeIds]
   );
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const filteredNotices = useMemo(() => {
-    return notices.filter((notice) => {
-      if (unreadOnly && readNoticeIds.includes(notice.id)) {
-        return false;
-      }
-      if (!normalizedSearchQuery) {
-        return true;
-      }
-      const title = notice.title.toLowerCase();
-      const body = notice.body.toLowerCase();
-      return title.includes(normalizedSearchQuery) || body.includes(normalizedSearchQuery);
-    });
-  }, [notices, normalizedSearchQuery, readNoticeIds, unreadOnly]);
-  const readAtByNoticeId = useMemo(() => {
-    const map = new Map<string, string>();
-    readReceipts.forEach((receipt) => {
-      map.set(receipt.noticeId, receipt.readAt);
-    });
-    return map;
-  }, [readReceipts]);
+  const filteredNotices = useMemo(
+    () =>
+      filterEmployeeNotices({
+        notices,
+        readNoticeIds,
+        searchQuery,
+        unreadOnly,
+        readStatusFilter
+      }),
+    [notices, readNoticeIds, searchQuery, unreadOnly, readStatusFilter]
+  );
+  const readAtByNoticeId = useMemo(() => buildReadAtByNoticeIdMap(readReceipts), [readReceipts]);
 
   function buildActorHeaders() {
     const headers: Record<string, string> = {};
@@ -124,7 +100,7 @@ export default function EmployeeNoticeBoard() {
     try {
       const headers = buildActorHeaders();
 
-      const query = buildQuery({
+      const query = buildNoticeQuery({
         organizationId,
         audience: "employees",
         status: "PUBLISHED",
@@ -231,6 +207,7 @@ export default function EmployeeNoticeBoard() {
   function clearFilters() {
     setSearchQuery("");
     setUnreadOnly(false);
+    setReadStatusFilter("all");
   }
 
   return (
@@ -273,6 +250,17 @@ export default function EmployeeNoticeBoard() {
               onChange={(event) => setSearchQuery(event.target.value)}
             />
           </label>
+          <label>
+            {copy.readStatusFilterLabel}
+            <select
+              value={readStatusFilter}
+              onChange={(event) => setReadStatusFilter(normalizeEmployeeNoticeReadStatusFilter(event.target.value))}
+            >
+              <option value="all">{copy.readStatusFilterAllOption}</option>
+              <option value="unread">{copy.readStatusFilterUnreadOption}</option>
+              <option value="read">{copy.readStatusFilterReadOption}</option>
+            </select>
+          </label>
           <label className="checkbox-inline">
             <input
               type="checkbox"
@@ -306,46 +294,16 @@ export default function EmployeeNoticeBoard() {
 
         <article className="panel">
           <h2>{copy.listTitle}</h2>
-          {notices.length === 0 ? (
-            <p className="small muted">{copy.listEmpty}</p>
-          ) : filteredNotices.length === 0 ? (
-            <p className="small muted">{copy.filteredListEmpty}</p>
-          ) : (
-            <ul className="simple-list">
-              {filteredNotices.map((notice) => {
-                const isRead = readNoticeIds.includes(notice.id);
-                const readAt = readAtByNoticeId.get(notice.id) ?? null;
-                return (
-                  <li key={notice.id}>
-                    <span>
-                      <strong>{notice.title}</strong>
-                      <br />
-                      <span className="small muted">{notice.body}</span>
-                      <br />
-                      <span className="small muted">
-                        {copy.audienceLabel}: {resolveNoticeAudienceLabel(copy, notice.audience)} · {notice.publishedAt ?? notice.updatedAt}
-                      </span>
-                      <br />
-                      <span className="small muted">
-                        {isRead ? copy.readBadge : copy.unreadBadge}
-                        {readAt ? ` · ${copy.readAtLabel}: ${new Date(readAt).toLocaleString(runtimeLocale)}` : ""}
-                      </span>
-                    </span>
-                    {isRead ? null : (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        disabled={pending}
-                        onClick={() => void markAsRead(notice.id)}
-                      >
-                        {copy.markReadAction}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <EmployeeNoticeBoardList
+            copy={copy}
+            notices={notices}
+            filteredNotices={filteredNotices}
+            readNoticeIds={readNoticeIds}
+            readAtByNoticeId={readAtByNoticeId}
+            pending={pending}
+            runtimeLocale={runtimeLocale}
+            onMarkAsRead={(noticeId) => void markAsRead(noticeId)}
+          />
         </article>
       </section>
     </main>
