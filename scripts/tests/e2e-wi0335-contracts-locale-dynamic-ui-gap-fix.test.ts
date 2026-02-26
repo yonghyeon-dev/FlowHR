@@ -25,6 +25,12 @@ async function run() {
     "contracts",
     "EmployeeContractsInbox.tsx"
   );
+  const employeeContractsResponsePanel = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "EmployeeContractsResponsePanel.tsx"
+  );
   const contractsCopy = readUtf8("src", "components", "contracts", "copy.ts");
   const workItem = readUtf8("work-items", "WI-0335-contracts-locale-dynamic-ui-gap-fix.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -48,7 +54,7 @@ async function run() {
   assert.match(employeeContractsInbox, /const \{ locale \} = useI18n\(\);/);
   assert.match(employeeContractsInbox, /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US";/);
   assert.match(employeeContractsInbox, /const copy = employeeContractsCopyByLocale\[locale\];/);
-  assert.match(employeeContractsInbox, /toDateText\(signatureEvidence\.generatedAt, runtimeLocale\)/);
+  assert.match(employeeContractsResponsePanel, /toDateText\(signatureEvidence\.generatedAt, runtimeLocale\)/);
   assert.doesNotMatch(employeeContractsInbox, /<h2>Inbox<\/h2>/);
 
   assert.match(contractsCopy, /export const adminContractsCopyByLocale/);
