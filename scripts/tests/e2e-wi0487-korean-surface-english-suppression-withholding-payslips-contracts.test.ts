@@ -41,6 +41,12 @@ async function run() {
     "contracts",
     "EmployeeContractsInbox.tsx"
   );
+  const contractsResponsePanelSource = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "EmployeeContractsResponsePanel.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0487-korean-surface-english-suppression-withholding-payslips-contracts.md"
@@ -71,8 +77,11 @@ async function run() {
   assert.match(payslipDetailPanelSource, /selectedRun\.deductionBreakdown && !isKoLocale/);
   assert.doesNotMatch(payslipDetailPanelSource, /selectedRun\.deductionBreakdown \? \(/);
 
-  assert.match(contractsInboxSource, /normalizeContractsEvidenceFileName\(signatureEvidence\.fileName, selected\.id, isKoLocale\)/);
-  assert.match(contractsInboxSource, /anchor\.download = downloadFileName/);
+  assert.match(contractsInboxSource, /EmployeeContractsResponsePanel/);
+  assert.match(
+    contractsResponsePanelSource,
+    /normalizeContractsEvidenceFileName\(signatureEvidence\.fileName, selected\.id, isKoLocale\)/
+  );
 
   assert.match(workItem, /WI-0487/i);
   assert.match(workItem, /korean|english|withholding|payslip|contracts/i);

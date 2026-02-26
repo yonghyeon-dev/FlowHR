@@ -30,8 +30,11 @@ async function run() {
   assertLineBudget(payslipsApiHook, 220, "payslips/use-payslip-api.ts");
   assertLineBudget(schedulingService, 5500, "scheduling/service.ts");
 
-  assert.match(payslipsLocalePageCopy, /organizationIdPlaceholder:\s*"예: 조직-00001"/);
-  assert.match(payslipsLocalePageCopy, /bearerPlaceholder:\s*"비어 있으면 세션 기반 액터 헤더 모드가 사용됩니다\."/);
+  assert.match(payslipsLocalePageCopy, /organizationIdPlaceholder:\s*"\uC608: \uC870\uC9C1-00001"/);
+  assert.match(
+    payslipsLocalePageCopy,
+    /bearerPlaceholder:\s*"\uBE44\uC6CC\uB450\uBA74 \uC138\uC158 \uAE30\uBC18 \uC694\uCCAD \uD5E4\uB354 \uBAA8\uB4DC\uB97C \uC0AC\uC6A9\uD569\uB2C8\uB2E4\."/
+  );
   assert.match(payslipsPage, /appendClientLog\(pageCopy\.logs\.copyPayslipId, true, 200/);
   assert.match(schedulingService, /resolveAnomalyIncidentWarningMinutes/);
 

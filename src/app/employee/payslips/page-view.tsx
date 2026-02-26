@@ -89,6 +89,7 @@ export function EmployeePayslipsPageView({
     <main className="saas-content">
       <EmployeePayslipFilterPanel
         pageCopy={pageCopy}
+        isKoLocale={isKoLocale}
         isProductionRuntime={isProductionRuntime}
         usesBearerToken={usesBearerToken}
         payslipStats={payslipStats}

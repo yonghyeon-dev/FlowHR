@@ -160,10 +160,10 @@ export function PayslipDetailPanel({
               <section>
                 <h4>{pageCopy.detail.attendanceReference}</h4>
                 <p className="small">
-                  {pageCopy.attendance.regular} {minutesToHours(aggregate.totals.regular)} /{" "}
-                  {pageCopy.attendance.overtime} {minutesToHours(aggregate.totals.overtime)} /{" "}
-                  {pageCopy.attendance.night} {minutesToHours(aggregate.totals.night)} /{" "}
-                  {pageCopy.attendance.holiday} {minutesToHours(aggregate.totals.holiday)} (
+                  {pageCopy.attendance.regular} {minutesToHours(aggregate.totals.regular, isKoLocale)} /{" "}
+                  {pageCopy.attendance.overtime} {minutesToHours(aggregate.totals.overtime, isKoLocale)} /{" "}
+                  {pageCopy.attendance.night} {minutesToHours(aggregate.totals.night, isKoLocale)} /{" "}
+                  {pageCopy.attendance.holiday} {minutesToHours(aggregate.totals.holiday, isKoLocale)} (
                   {pageCopy.attendance.payable} {aggregate.counts.payable}
                   {pageCopy.attendance.payableUnit})
                 </p>
