@@ -234,68 +234,29 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
 
 const withholdingBlockingReasonKoMap: Record<string, string> = {
   "no confirmed payroll runs found for selected year": "선택한 연도에 확정된 급여 실행이 없습니다.",
-  "all payroll runs must be confirmed before withholding receipt issue":
-    "원천징수영수증 발급 전 모든 급여 실행이 확정되어야 합니다.",
-  "all confirmed runs must be distributed before withholding receipt issue":
-    "원천징수영수증 발급 전 확정된 실행이 모두 배포되어야 합니다.",
-  "all distributed runs must have payslip receipt confirmation before withholding receipt issue":
-    "원천징수영수증 발급 전 배포된 실행은 모두 명세서 수신 확인이 필요합니다.",
-  "personalPensionKrw deduction is not eligible for selected employee/year":
-    "개인연금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
-  "insurancePremiumKrw deduction is not eligible for selected employee/year":
-    "보험료 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
-  "medicalExpenseKrw deduction is not eligible for selected employee/year":
-    "의료비 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
-  "educationExpenseKrw deduction is not eligible for selected employee/year":
-    "교육비 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
-  "donationKrw deduction is not eligible for selected employee/year":
-    "기부금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
-  "housingSavingsKrw deduction is not eligible for selected employee/year":
-    "주택저축 공제는 선택한 직원/연도에 적용 대상이 아닙니다."
+  "all payroll runs must be confirmed before withholding receipt issue": "원천징수영수증 발급 전 모든 급여 실행이 확정되어야 합니다.",
+  "all confirmed runs must be distributed before withholding receipt issue": "원천징수영수증 발급 전 확정된 실행이 모두 배포되어야 합니다.",
+  "all distributed runs must have payslip receipt confirmation before withholding receipt issue": "원천징수영수증 발급 전 배포된 실행은 모두 명세서 수신 확인이 필요합니다.",
+  "personalPensionKrw deduction is not eligible for selected employee/year": "개인연금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "insurancePremiumKrw deduction is not eligible for selected employee/year": "보험료 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "medicalExpenseKrw deduction is not eligible for selected employee/year": "의료비 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "educationExpenseKrw deduction is not eligible for selected employee/year": "교육비 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "donationKrw deduction is not eligible for selected employee/year": "기부금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
+  "housingSavingsKrw deduction is not eligible for selected employee/year": "주택저축 공제는 선택한 직원/연도에 적용 대상이 아닙니다."
 };
 
-function hasHangulText(value: string) {
-  return /[\uac00-\ud7a3]/.test(value);
-}
-
-function hasLatinText(value: string) {
-  return /[A-Za-z]/.test(value);
-}
+function hasHangulText(value: string) { return /[\uac00-\ud7a3]/.test(value); }
+function hasLatinText(value: string) { return /[A-Za-z]/.test(value); }
 
 const koRuntimeDiagnosticPatterns: Array<{ pattern: RegExp; message: string }> = [
-  {
-    pattern: /employee\s*id.*required|employeeid.*required/i,
-    message: "직원 번호는 필수입니다."
-  },
-  {
-    pattern: /organization\s*id.*required|organizationid.*required/i,
-    message: "조직 식별자는 필수입니다."
-  },
-  {
-    pattern: /session.*(missing|expired|invalid|not\s*found)|unauthorized|forbidden/i,
-    message: "인증 세션이 유효하지 않습니다. 다시 로그인해 주세요."
-  },
-  {
-    pattern: /permission|not\s*allowed|insufficient/i,
-    message: "권한이 없어 요청을 처리할 수 없습니다."
-  },
-  {
-    pattern: /invalid input|validation/i,
-    message: "입력값을 확인해 주세요."
-  },
-  {
-    pattern:
-      /request failed|failed to load|load failed|response failed|network error|failed to fetch|fetch failed|econnreset|econnrefused|enotfound|getaddrinfo/i,
-    message: "요청이 실패했습니다. 잠시 후 다시 시도해 주세요."
-  },
-  {
-    pattern: /timeout|timed out|gateway timeout/i,
-    message: "응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요."
-  },
-  {
-    pattern: /internal server error|service unavailable|bad gateway/i,
-    message: "서버 처리 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
-  }
+  { pattern: /employee\s*id.*required|employeeid.*required/i, message: "직원 번호는 필수입니다." },
+  { pattern: /organization\s*id.*required|organizationid.*required/i, message: "조직 식별자는 필수입니다." },
+  { pattern: /session.*(missing|expired|invalid|not\s*found)|unauthorized|forbidden/i, message: "인증 세션이 유효하지 않습니다. 다시 로그인해 주세요." },
+  { pattern: /permission|not\s*allowed|insufficient/i, message: "권한이 없어 요청을 처리할 수 없습니다." },
+  { pattern: /invalid input|validation/i, message: "입력값을 확인해 주세요." },
+  { pattern: /request failed|failed to load|load failed|response failed|network error|failed to fetch|fetch failed|econnreset|econnrefused|enotfound|getaddrinfo/i, message: "요청이 실패했습니다. 잠시 후 다시 시도해 주세요." },
+  { pattern: /timeout|timed out|gateway timeout/i, message: "응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요." },
+  { pattern: /internal server error|service unavailable|bad gateway/i, message: "서버 처리 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." }
 ];
 
 function resolveKnownKoRuntimeDiagnosticMessage(value: string) {
@@ -307,11 +268,7 @@ function resolveKnownKoRuntimeDiagnosticMessage(value: string) {
   return null;
 }
 
-export function normalizeRuntimeDiagnosticMessage(
-  value: string,
-  locale: FlowLocale,
-  koFallback: string
-) {
+export function normalizeRuntimeDiagnosticMessage(value: string, locale: FlowLocale, koFallback: string) {
   const normalized = value.trim();
   if (locale !== "ko") {
     return normalized;
@@ -327,10 +284,7 @@ export function normalizeRuntimeDiagnosticMessage(
     // Suppress mixed ko+latin diagnostics to avoid leaking raw English snippets in ko runtime.
     return hasLatinText(normalized) ? koFallback : normalized;
   }
-  if (!hasLatinText(normalized)) {
-    return normalized;
-  }
-  return koFallback;
+  return hasLatinText(normalized) ? koFallback : normalized;
 }
 
 function resolveWithholdingBlockingReasonLabel(reason: string, locale: FlowLocale) {
@@ -344,11 +298,7 @@ function resolveWithholdingBlockingReasonLabel(reason: string, locale: FlowLocal
   if (normalized in withholdingBlockingReasonKoMap) {
     return withholdingBlockingReasonKoMap[normalized];
   }
-  return normalizeRuntimeDiagnosticMessage(
-    normalized,
-    locale,
-    "발급 조건이 충족되지 않아 원천징수영수증을 발급할 수 없습니다."
-  );
+  return normalizeRuntimeDiagnosticMessage(normalized, locale, "발급 조건이 충족되지 않아 원천징수영수증을 발급할 수 없습니다.");
 }
 
 export function resolveWithholdingBlockingReasons(reasons: string[], locale: FlowLocale) {
@@ -357,18 +307,12 @@ export function resolveWithholdingBlockingReasons(reasons: string[], locale: Flo
 
 function resolveWithholdingDocumentExtension(fileName: string, format: "json" | "text" | string) {
   const match = /\.([A-Za-z0-9]+)$/.exec(fileName.trim());
-  if (match) {
-    return `.${match[1].toLowerCase()}`;
-  }
-  return format === "json" ? ".json" : ".txt";
+  return match ? `.${match[1].toLowerCase()}` : format === "json" ? ".json" : ".txt";
 }
 
 function shouldNormalizeAsKoWithholdingDocumentFileName(value: string) {
   if (value.trim().length === 0) {
     return true;
-  }
-  if (hasHangulText(value)) {
-    return hasLatinText(value);
   }
   return hasLatinText(value);
 }
@@ -384,12 +328,8 @@ export function normalizeWithholdingDocumentFileName(
     return normalized.length > 0 ? normalized : fileName;
   }
   const stableId = receiptNumber.trim().length > 0 ? receiptNumber.trim() : "미확인";
-  const extension = resolveWithholdingDocumentExtension(normalized, format);
-  const fallbackName = `원천징수영수증-${stableId}${extension}`;
-  if (shouldNormalizeAsKoWithholdingDocumentFileName(normalized)) {
-    return fallbackName;
-  }
-  return normalized;
+  const fallbackName = `원천징수영수증-${stableId}${resolveWithholdingDocumentExtension(normalized, format)}`;
+  return shouldNormalizeAsKoWithholdingDocumentFileName(normalized) ? fallbackName : normalized;
 }
 
 export function formatDateTimeByLocale(value: string | null | undefined, runtimeLocale: string) {
@@ -397,10 +337,7 @@ export function formatDateTimeByLocale(value: string | null | undefined, runtime
     return "-";
   }
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString(runtimeLocale);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString(runtimeLocale);
 }
 
 
