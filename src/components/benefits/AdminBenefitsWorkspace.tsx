@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { BenefitCatalogItem, BenefitRequestItem } from "@/features/benefits/types";
+import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -73,6 +73,8 @@ export default function AdminBenefitsWorkspace() {
   const [catalogDescription, setCatalogDescription] = useState("");
   const [annualLimitKrw, setAnnualLimitKrw] = useState("300000");
   const [decisionNote, setDecisionNote] = useState("");
+  const [requestFilter, setRequestFilter] = useState<BenefitRequestStatus | "all">("all");
+  const [requestSearchQuery, setRequestSearchQuery] = useState("");
 
   const [catalog, setCatalog] = useState<BenefitCatalogItem[]>([]);
   const [requests, setRequests] = useState<BenefitRequestItem[]>([]);
@@ -97,6 +99,27 @@ export default function AdminBenefitsWorkspace() {
       inactive: catalog.length - active
     };
   }, [catalog]);
+  const catalogNameById = useMemo(() => {
+    const next: Record<string, string> = {};
+    catalog.forEach((item) => {
+      next[item.id] = item.name;
+    });
+    return next;
+  }, [catalog]);
+  const visibleRequests = useMemo(() => {
+    const query = requestSearchQuery.trim().toLowerCase();
+    return requests.filter((request) => {
+      if (requestFilter !== "all" && request.status !== requestFilter) {
+        return false;
+      }
+      if (query.length === 0) {
+        return true;
+      }
+      const benefitName = (catalogNameById[request.benefitId] ?? "").toLowerCase();
+      const haystack = `${request.employeeId} ${benefitName} ${request.reason}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [catalogNameById, requestFilter, requestSearchQuery, requests]);
 
   function appendLog(label: string) {
     setLogs((previous) => [`${new Date().toLocaleString(runtimeLocale)} · ${label}`, ...previous]);
@@ -226,6 +249,10 @@ export default function AdminBenefitsWorkspace() {
       decisionNote={decisionNote}
       catalog={catalog}
       requests={requests}
+      visibleRequests={visibleRequests}
+      catalogNameById={catalogNameById}
+      requestFilter={requestFilter}
+      requestSearchQuery={requestSearchQuery}
       requestSummary={requestSummary}
       catalogStats={catalogStats}
       pendingLabel={pendingLabel}
@@ -238,6 +265,9 @@ export default function AdminBenefitsWorkspace() {
       onCatalogDescriptionChange={setCatalogDescription}
       onAnnualLimitChange={setAnnualLimitKrw}
       onDecisionNoteChange={setDecisionNote}
+      onRequestFilterChange={setRequestFilter}
+      onRequestSearchQueryChange={setRequestSearchQuery}
+      onClearRequestSearch={() => setRequestSearchQuery("")}
       onLoadWorkspace={() => void loadWorkspace()}
       onCreateCatalogItem={() => void createCatalogItem()}
       onDecideRequest={(requestId, decision) => void decideRequest(requestId, decision)}
