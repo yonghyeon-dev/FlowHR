@@ -24,7 +24,7 @@ async function run() {
   assert.match(workItem, /Admin KPI Dashboard Baseline/);
   assert.match(messages, /"admin\.nav\.kpi": "KPI 대시보드"/);
   assert.match(messages, /"admin\.nav\.kpi": "KPI Dashboard"/);
-  assert.match(adminLayout, /href="\/admin\/kpi"/);
+  assert.match(adminLayout, /href:\s*"\/admin\/kpi"/);
   assert.match(adminKpiPage, /AdminKpiDashboard/);
   assert.match(dashboard, /computePreviousPeriodRange/);
   assert.match(dashboard, /\/api\/approval\/executions/);

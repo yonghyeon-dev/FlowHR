@@ -3,6 +3,8 @@
 export type KpiCopy = {
   title: string;
   description: string;
+  analyticsTitle: string;
+  analyticsDescription: string;
   productionWarning: string;
   loginCta: string;
   contextTitle: string;
@@ -14,6 +16,8 @@ export type KpiCopy = {
   thisMonthButton: string;
   recent30DaysButton: string;
   refreshButton: string;
+  exportCsvButton: string;
+  exportCsvDone: string;
   loadingLabel: string;
   currentPeriodLabel: string;
   previousPeriodLabel: string;
@@ -53,6 +57,9 @@ const defaultCopy: KpiCopy = {
   title: "Admin KPI Dashboard",
   description:
     "Track core journey metrics for approvals, attendance, leave, and payroll with current-vs-previous period comparison.",
+  analyticsTitle: "Admin Analytics & Report",
+  analyticsDescription:
+    "Generate KPI snapshots and trend rows for reporting, then export the current view as CSV.",
   productionWarning: "Production runtime requires bearer token session to call APIs.",
   loginCta: "Open /login",
   contextTitle: "Context & Period",
@@ -64,6 +71,8 @@ const defaultCopy: KpiCopy = {
   thisMonthButton: "This month",
   recent30DaysButton: "Last 30 days",
   refreshButton: "Refresh KPIs",
+  exportCsvButton: "Export CSV",
+  exportCsvDone: "CSV export is ready",
   loadingLabel: "Loading KPI metrics...",
   currentPeriodLabel: "Current period",
   previousPeriodLabel: "Previous period",
@@ -104,6 +113,8 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
     ...defaultCopy,
     title: "관리자 KPI 대시보드",
     description: "결재, 근태, 휴가, 급여 핵심 지표를 현재 기간과 이전 동일 기간으로 비교합니다.",
+    analyticsTitle: "관리자 분석/리포트",
+    analyticsDescription: "현재 KPI 스냅샷과 기간 비교 데이터를 CSV로 내려받아 리포팅에 활용하세요.",
     productionWarning: "프로덕션 환경에서는 API 호출을 위해 베어러 토큰 세션이 필요합니다.",
     loginCta: "로그인 열기",
     contextTitle: "컨텍스트 및 기간",
@@ -115,6 +126,8 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
     thisMonthButton: "이번 달",
     recent30DaysButton: "최근 30일",
     refreshButton: "KPI 새로고침",
+    exportCsvButton: "CSV 내보내기",
+    exportCsvDone: "CSV 파일을 내려받았습니다",
     loadingLabel: "KPI 지표를 불러오는 중입니다...",
     currentPeriodLabel: "현재 기간",
     previousPeriodLabel: "이전 동일 기간",
