@@ -11,6 +11,7 @@ export type AdminBenefitsCopy = {
   refreshAction: string;
   catalogTitle: string;
   requestTitle: string;
+  benefitLabel: string;
   createCatalogTitle: string;
   nameLabel: string;
   descriptionLabel: string;
@@ -25,6 +26,13 @@ export type AdminBenefitsCopy = {
   amountLabel: string;
   reasonLabel: string;
   requestedAtLabel: string;
+  requestFilterLabel: string;
+  requestSearchLabel: string;
+  requestSearchPlaceholder: string;
+  clearSearchAction: string;
+  filteredRequestSummaryLabel: string;
+  filteredEmptyRequests: string;
+  unknownBenefitLabel: string;
   statsLabel: string;
   requestStatsLabel: string;
   logsTitle: string;
@@ -38,6 +46,13 @@ export type AdminBenefitsCopy = {
   };
   catalogStatus: Record<BenefitCatalogStatus, string>;
   requestStatus: Record<BenefitRequestStatus, string>;
+  requestFilter: {
+    all: string;
+    SUBMITTED: string;
+    APPROVED: string;
+    REJECTED: string;
+    CANCELED: string;
+  };
 };
 
 export type EmployeeBenefitsCopy = {
@@ -100,6 +115,7 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     refreshAction: "목록 새로고침",
     catalogTitle: "복리후생 카탈로그",
     requestTitle: "신청 승인 큐",
+    benefitLabel: "복리후생 항목",
     createCatalogTitle: "복리후생 항목 추가",
     nameLabel: "항목명",
     descriptionLabel: "설명",
@@ -114,6 +130,13 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     amountLabel: "신청 금액",
     reasonLabel: "신청 사유",
     requestedAtLabel: "신청 시각",
+    requestFilterLabel: "요청 상태 필터",
+    requestSearchLabel: "요청 검색",
+    requestSearchPlaceholder: "직원/항목/사유 검색",
+    clearSearchAction: "검색 초기화",
+    filteredRequestSummaryLabel: "표시 요청 수",
+    filteredEmptyRequests: "현재 필터 조건에 맞는 요청이 없습니다.",
+    unknownBenefitLabel: "알 수 없는 항목",
     statsLabel: "카탈로그 수",
     requestStatsLabel: "요청 수",
     logsTitle: "요청 로그",
@@ -134,6 +157,13 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
       APPROVED: "승인",
       REJECTED: "반려",
       CANCELED: "취소"
+    },
+    requestFilter: {
+      all: "전체",
+      SUBMITTED: "신청",
+      APPROVED: "승인",
+      REJECTED: "반려",
+      CANCELED: "취소"
     }
   },
   en: {
@@ -146,6 +176,7 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     refreshAction: "Refresh",
     catalogTitle: "Benefit catalog",
     requestTitle: "Request review queue",
+    benefitLabel: "Benefit",
     createCatalogTitle: "Create catalog item",
     nameLabel: "Name",
     descriptionLabel: "Description",
@@ -160,6 +191,13 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     amountLabel: "Amount",
     reasonLabel: "Reason",
     requestedAtLabel: "Requested at",
+    requestFilterLabel: "Request status filter",
+    requestSearchLabel: "Request search",
+    requestSearchPlaceholder: "Search by employee/benefit/reason",
+    clearSearchAction: "Clear search",
+    filteredRequestSummaryLabel: "Visible requests",
+    filteredEmptyRequests: "No request matches current filters.",
+    unknownBenefitLabel: "Unknown benefit",
     statsLabel: "Catalog count",
     requestStatsLabel: "Request count",
     logsTitle: "Request logs",
@@ -176,6 +214,13 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
       INACTIVE: "Inactive"
     },
     requestStatus: {
+      SUBMITTED: "Submitted",
+      APPROVED: "Approved",
+      REJECTED: "Rejected",
+      CANCELED: "Canceled"
+    },
+    requestFilter: {
+      all: "All",
       SUBMITTED: "Submitted",
       APPROVED: "Approved",
       REJECTED: "Rejected",

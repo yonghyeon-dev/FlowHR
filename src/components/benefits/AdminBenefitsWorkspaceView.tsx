@@ -1,7 +1,11 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
-import type { BenefitCatalogItem, BenefitRequestItem } from "@/features/benefits/types";
+import type {
+  BenefitCatalogItem,
+  BenefitRequestItem,
+  BenefitRequestStatus
+} from "@/features/benefits/types";
 
 type RequestSummary = {
   total: number;
@@ -24,6 +28,10 @@ type AdminBenefitsWorkspaceViewProps = {
   decisionNote: string;
   catalog: BenefitCatalogItem[];
   requests: BenefitRequestItem[];
+  visibleRequests: BenefitRequestItem[];
+  catalogNameById: Record<string, string>;
+  requestFilter: BenefitRequestStatus | "all";
+  requestSearchQuery: string;
   requestSummary: RequestSummary;
   catalogStats: {
     total: number;
@@ -40,6 +48,9 @@ type AdminBenefitsWorkspaceViewProps = {
   onCatalogDescriptionChange: (value: string) => void;
   onAnnualLimitChange: (value: string) => void;
   onDecisionNoteChange: (value: string) => void;
+  onRequestFilterChange: (value: BenefitRequestStatus | "all") => void;
+  onRequestSearchQueryChange: (value: string) => void;
+  onClearRequestSearch: () => void;
   onLoadWorkspace: () => void;
   onCreateCatalogItem: () => void;
   onDecideRequest: (requestId: string, decision: "APPROVED" | "REJECTED") => void;
@@ -57,6 +68,10 @@ export default function AdminBenefitsWorkspaceView({
   decisionNote,
   catalog,
   requests,
+  visibleRequests,
+  catalogNameById,
+  requestFilter,
+  requestSearchQuery,
   requestSummary,
   catalogStats,
   pendingLabel,
@@ -69,6 +84,9 @@ export default function AdminBenefitsWorkspaceView({
   onCatalogDescriptionChange,
   onAnnualLimitChange,
   onDecisionNoteChange,
+  onRequestFilterChange,
+  onRequestSearchQueryChange,
+  onClearRequestSearch,
   onLoadWorkspace,
   onCreateCatalogItem,
   onDecideRequest
@@ -181,14 +199,49 @@ export default function AdminBenefitsWorkspaceView({
             {copy.decisionNoteLabel}
             <input value={decisionNote} onChange={(event) => onDecisionNoteChange(event.target.value)} maxLength={1000} />
           </label>
+          <label>
+            {copy.requestFilterLabel}
+            <select
+              value={requestFilter}
+              onChange={(event) => onRequestFilterChange(event.target.value as BenefitRequestStatus | "all")}
+            >
+              <option value="all">{copy.requestFilter.all}</option>
+              <option value="SUBMITTED">{copy.requestFilter.SUBMITTED}</option>
+              <option value="APPROVED">{copy.requestFilter.APPROVED}</option>
+              <option value="REJECTED">{copy.requestFilter.REJECTED}</option>
+              <option value="CANCELED">{copy.requestFilter.CANCELED}</option>
+            </select>
+          </label>
+          <label>
+            {copy.requestSearchLabel}
+            <input
+              value={requestSearchQuery}
+              onChange={(event) => onRequestSearchQueryChange(event.target.value)}
+              placeholder={copy.requestSearchPlaceholder}
+            />
+          </label>
+          <div className="actions">
+            <button className="btn btn-secondary btn-small" type="button" onClick={onClearRequestSearch}>
+              {copy.clearSearchAction}
+            </button>
+          </div>
+          <p className="small muted">
+            {copy.filteredRequestSummaryLabel}: {visibleRequests.length} / {requests.length}
+          </p>
           {requests.length === 0 ? (
             <p className="small muted">{copy.emptyRequests}</p>
+          ) : visibleRequests.length === 0 ? (
+            <p className="small muted">{copy.filteredEmptyRequests}</p>
           ) : (
             <ul className="simple-list">
-              {requests.map((request) => (
+              {visibleRequests.map((request) => (
                 <li key={request.id}>
                   <span>
                     <strong>{request.employeeId}</strong>
+                    <br />
+                    <span className="small muted">
+                      {copy.benefitLabel}: {catalogNameById[request.benefitId] ?? copy.unknownBenefitLabel}
+                    </span>
                     <br />
                     <span className="small muted">
                       {copy.amountLabel}: {request.amountKrw.toLocaleString(runtimeLocale)} · {copy.statusLabel}:{" "}
@@ -243,3 +296,5 @@ export default function AdminBenefitsWorkspaceView({
     </main>
   );
 }
+
+
