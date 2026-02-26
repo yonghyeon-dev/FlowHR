@@ -39,6 +39,7 @@ export type AdminKpiFocusMetric =
   | "leaveApprovedDays"
   | "payrollConfirmedRate"
   | "contractSlaOverdueCount";
+type AdminKpiDrilldownMetric = Exclude<AdminKpiFocusMetric, "all">;
 
 type ContextPanelProps = {
   copy: KpiCopy;
@@ -68,6 +69,8 @@ type AnalyticsControlsProps = {
   onExportCsv: () => void;
 };
 
+const analyticsDrilldownMetrics: AdminKpiDrilldownMetric[] = ["pendingApprovals", "stalledApprovals", "attendanceApprovalRate", "leaveApprovedDays", "payrollConfirmedRate", "contractSlaOverdueCount"];
+
 export function AdminKpiAnalyticsControls({
   copy,
   focusMetric,
@@ -94,6 +97,15 @@ export function AdminKpiAnalyticsControls({
             <option value="contractSlaOverdueCount">{copy.metrics.contractSlaOverdueCount}</option>
           </select>
         </label>
+      </div>
+      <div className="actions" style={{ marginTop: 8 }}>
+        <span className="small muted">{copy.quickDrilldownLabel}</span>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onFocusMetricChange("all")} disabled={focusMetric === "all"}>{copy.quickDrilldownAllAction}</button>
+        {analyticsDrilldownMetrics.map((metric) => (
+          <button key={metric} type="button" className="btn btn-secondary btn-small" onClick={() => onFocusMetricChange(metric)} disabled={focusMetric === metric}>
+            {copy.metrics[metric]}
+          </button>
+        ))}
       </div>
       <div className="actions" style={{ marginTop: 8 }}>
         <button className="btn btn-secondary" onClick={onExportCsv} disabled={exportDisabled}>

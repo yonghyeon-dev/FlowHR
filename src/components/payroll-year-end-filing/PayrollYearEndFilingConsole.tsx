@@ -4,10 +4,26 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { payrollYearEndFilingCopyByLocale } from "@/components/payroll-year-end-filing/copy";
+import {
+  buildAcknowledgeSubmissionPayload,
+  buildFilingSubmissionListQuery,
+  buildResubmitSubmissionPayload,
+  buildSubmitFilingPackagePayload
+} from "@/components/payroll-year-end-filing/submission-request-helpers";
+import {
+  buildActiveSubmissionFiltersSummary,
+  replaceSubmissionById,
+  upsertSubmissionAtTop
+} from "@/components/payroll-year-end-filing/submission-state-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
+import {
+  formatTimelineEntry,
+  parseRate,
+  parseRequiredInt
+} from "@/components/payroll-year-end-filing/value-helpers";
 import type {
   ApiLog,
   PayrollYearEndFilingAckCatalogResponse,
@@ -27,52 +43,6 @@ import type {
   PayrollYearEndFilingTimelineEntry,
   PayrollYearEndFinalizationResponse
 } from "@/components/payroll-year-end-filing/types";
-
-function parseRequiredInt(value: string, fieldName: string, nonNegativeIntegerLabel: string) {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${fieldName} ${nonNegativeIntegerLabel}`);
-  }
-  return parsed;
-}
-
-function parseRate(value: string, fieldName: string, rateBetweenZeroAndOneLabel: string) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
-    throw new Error(`${fieldName} ${rateBetweenZeroAndOneLabel}`);
-  }
-  return parsed;
-}
-
-function formatTimelineEntry(
-  entry: PayrollYearEndFilingTimelineEntry,
-  copy: (typeof payrollYearEndFilingCopyByLocale)["en"]
-) {
-  if (entry.action === "submitted" || entry.action === "resubmitted") {
-    const parts = [
-      `${copy.timelineActionBadgeLabels[entry.action]} ${copy.timelineAttemptLabel} ${entry.attempt ?? copy.dashLabel}`,
-      entry.resubmissionOfSubmissionId ? `${copy.timelineFromLabel} ${entry.resubmissionOfSubmissionId}` : null,
-      entry.resubmissionReason ? `${copy.timelineReasonLabel}: ${entry.resubmissionReason}` : null,
-      entry.submissionNote ? `${copy.timelineNoteLabel}: ${entry.submissionNote}` : null
-    ].filter(Boolean);
-    return parts.join(" / ");
-  }
-  if (entry.action === "acknowledged") {
-    return `${copy.timelineAckPrefix} ${entry.ackStatus ?? copy.dashLabel}${
-      entry.ackCode ? ` (${entry.ackCode})` : ""
-    }${entry.rejectionReasonCode ? ` / ${copy.timelineReasonCodeLabel} ${entry.rejectionReasonCode}` : ""}${
-      entry.rejectionReasonDetail ? ` / ${copy.timelineDetailLabel} ${entry.rejectionReasonDetail}` : ""
-    }${entry.ackNote ? ` / ${entry.ackNote}` : ""
-    }`;
-  }
-  if (entry.action === "canceled") {
-    return copy.timelineCanceledLabel;
-  }
-  if (entry.action === "reopened") {
-    return copy.timelineReopenedLabel;
-  }
-  return `${copy.timelineEvidencePrefix}: ${entry.evidenceNote ?? copy.dashLabel}`;
-}
 
 export default function PayrollYearEndFilingConsole() {
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
@@ -191,6 +161,31 @@ export default function PayrollYearEndFilingConsole() {
           submissionListSummary.filteredCount === 0
       ),
     [submissionListSummary]
+  );
+  const activeSubmissionFiltersSummary = useMemo(
+    () =>
+      buildActiveSubmissionFiltersSummary({
+        copy,
+        submissionStatusFilter,
+        submissionAckStatusFilter,
+        submissionValidationStatusFilter,
+        submissionTransportFilter,
+        submissionSettlementHashFilter,
+        submissionSearch,
+        submissionSortBy,
+        submissionSortDirection
+      }),
+    [
+      copy,
+      submissionAckStatusFilter,
+      submissionSearch,
+      submissionSettlementHashFilter,
+      submissionSortBy,
+      submissionSortDirection,
+      submissionStatusFilter,
+      submissionTransportFilter,
+      submissionValidationStatusFilter
+    ]
   );
 
   useEffect(() => {
@@ -381,15 +376,15 @@ export default function PayrollYearEndFilingConsole() {
   async function runSubmitFilingPackage() {
     try {
       setPendingLabel(copy.pendingSubmitPackage);
-      const payload = {
+      const payload = buildSubmitFilingPackagePayload({
         year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
-        employeeId: employeeId.trim(),
+        employeeId,
         format: exportFormat,
         validationMode,
-        expectedSettlementHash: expectedExportSettlementHash.trim() || undefined,
+        expectedSettlementHash: expectedExportSettlementHash,
         transport: submissionTransport,
-        submissionNote: submissionNote.trim() || undefined
-      };
+        submissionNote
+      });
       const response = await fetch("/api/payroll/year-end/filing-submissions", {
         method: "POST",
         headers: buildHeaders(),
@@ -410,7 +405,7 @@ export default function PayrollYearEndFilingConsole() {
         setStatusMessage(copy.statusRequestFailed);
         return;
       }
-      setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
+      setSubmissions((prev) => upsertSubmissionAtTop(prev, body.submission));
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
       setStatusMessage(`${copy.statusSubmittedPrefix} ${body.submission.submissionId}`);
@@ -427,33 +422,18 @@ export default function PayrollYearEndFilingConsole() {
       setPendingLabel(copy.pendingListSubmissions);
       const requestYear = parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger);
       const requestEmployeeId = employeeId.trim();
-      const query = new URLSearchParams({
-        year: String(requestYear),
-        employeeId: requestEmployeeId
+      const query = buildFilingSubmissionListQuery({
+        year: requestYear,
+        employeeId: requestEmployeeId,
+        submissionStatusFilter,
+        submissionAckStatusFilter,
+        submissionValidationStatusFilter,
+        submissionTransportFilter,
+        submissionSettlementHashFilter: settlementHashFilterOverride ?? submissionSettlementHashFilter,
+        submissionSearch,
+        submissionSortBy,
+        submissionSortDirection
       });
-      if (submissionStatusFilter !== "all") {
-        query.set("status", submissionStatusFilter);
-      }
-      if (submissionAckStatusFilter !== "all") {
-        query.set("ackStatus", submissionAckStatusFilter);
-      }
-      if (submissionValidationStatusFilter !== "all") {
-        query.set("validationStatus", submissionValidationStatusFilter);
-      }
-      if (submissionTransportFilter !== "all") {
-        query.set("transport", submissionTransportFilter);
-      }
-      const settlementHashFilter = (
-        settlementHashFilterOverride ?? submissionSettlementHashFilter
-      ).trim();
-      if (settlementHashFilter.length > 0) {
-        query.set("settlementHash", settlementHashFilter);
-      }
-      if (submissionSearch.trim().length > 0) {
-        query.set("search", submissionSearch.trim());
-      }
-      query.set("sortBy", submissionSortBy);
-      query.set("sortDirection", submissionSortDirection);
       const response = await fetch(
         `/api/payroll/year-end/filing-submissions?${query.toString()}`,
         {
@@ -551,18 +531,16 @@ export default function PayrollYearEndFilingConsole() {
         requestAckStatus === "accepted" && ackStatusOverride === "accepted"
           ? ackCatalog?.acceptedCodes[0]?.code ?? "ACK-OK"
           : ackCode.trim() || undefined;
-      const payload = {
+      const payload = buildAcknowledgeSubmissionPayload({
         year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
-        employeeId: employeeId.trim(),
-        expectedSettlementHash: expectedAckSettlementHash.trim() || undefined,
+        employeeId,
+        expectedSettlementHash: expectedAckSettlementHash,
         ackStatus: requestAckStatus,
         ackCode: requestAckCode,
-        ackNote: ackNote.trim() || undefined,
-        rejectionReasonCode:
-          requestAckStatus === "rejected" ? rejectionReasonCode.trim() || undefined : undefined,
-        rejectionReasonDetail:
-          requestAckStatus === "rejected" ? rejectionReasonDetail.trim() || undefined : undefined
-      };
+        ackNote,
+        rejectionReasonCode,
+        rejectionReasonDetail
+      });
       const response = await fetch(
         `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/ack`,
         {
@@ -586,9 +564,7 @@ export default function PayrollYearEndFilingConsole() {
         setStatusMessage(copy.statusRequestFailed);
         return;
       }
-      setSubmissions((prev) =>
-        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
-      );
+      setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
       if (body.submission.ack?.ackStatus === "rejected") {
@@ -612,16 +588,16 @@ export default function PayrollYearEndFilingConsole() {
 
     try {
       setPendingLabel(copy.pendingResubmitSubmission);
-      const payload = {
+      const payload = buildResubmitSubmissionPayload({
         year: parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger),
-        employeeId: employeeId.trim(),
+        employeeId,
         format: exportFormat,
         validationMode,
-        expectedSettlementHash: expectedExportSettlementHash.trim() || undefined,
+        expectedSettlementHash: expectedExportSettlementHash,
         transport: submissionTransport,
-        submissionNote: submissionNote.trim() || undefined,
-        resubmissionReason: resubmissionReason.trim() || undefined
-      };
+        submissionNote,
+        resubmissionReason
+      });
       const response = await fetch(
         `/api/payroll/year-end/filing-submissions/${encodeURIComponent(submissionId)}/resubmit`,
         {
@@ -645,7 +621,7 @@ export default function PayrollYearEndFilingConsole() {
         setStatusMessage(copy.statusRequestFailed);
         return;
       }
-      setSubmissions((prev) => [body.submission, ...prev.filter((item) => item.submissionId !== body.submission.submissionId)]);
+      setSubmissions((prev) => upsertSubmissionAtTop(prev, body.submission));
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
       setResubmitSubmissionId(body.submission.submissionId);
@@ -694,9 +670,7 @@ export default function PayrollYearEndFilingConsole() {
         setStatusMessage(copy.statusRequestFailed);
         return;
       }
-      setSubmissions((prev) =>
-        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
-      );
+      setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setReopenSubmissionId(body.submission.submissionId);
       setStatusMessage(`${copy.statusCanceledPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
@@ -743,9 +717,7 @@ export default function PayrollYearEndFilingConsole() {
         setStatusMessage(copy.statusRequestFailed);
         return;
       }
-      setSubmissions((prev) =>
-        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
-      );
+      setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setCancelSubmissionId(body.submission.submissionId);
       setAckSubmissionId(body.submission.submissionId);
       setStatusMessage(`${copy.statusReopenedPrefix} ${body.submission.submissionId}`);
@@ -792,9 +764,7 @@ export default function PayrollYearEndFilingConsole() {
       }
       setTimelineSubmissionId(submissionId);
       setTimelineEntries(body.timeline);
-      setSubmissions((prev) =>
-        prev.map((item) => (item.submissionId === body.submission.submissionId ? body.submission : item))
-      );
+      setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setStatusMessage(`${copy.statusLoadedTimelinePrefix} ${body.timeline.length}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
@@ -1190,7 +1160,7 @@ export default function PayrollYearEndFilingConsole() {
               <li><span>{copy.ackStatusSummaryLabel}</span><strong>{copy.ackStatusOptionLabels.accepted} {submissionListSummary.ackStatusCounts.accepted} / {copy.ackStatusOptionLabels.rejected} {submissionListSummary.ackStatusCounts.rejected} / {copy.ackStatusOptionLabels.none} {submissionListSummary.ackStatusCounts.none}</strong></li>
               <li><span>{copy.validationSummaryLabel}</span><strong>{copy.validationStatusOptionLabels.pass} {submissionListSummary.validationStatusCounts.pass} / {copy.validationStatusOptionLabels.fail} {submissionListSummary.validationStatusCounts.fail}</strong></li>
               <li><span>{copy.transportSummaryLabel}</span><strong>{copy.transportShortManualLabel} {submissionListSummary.transportCounts.manual_portal} / {copy.transportShortHometaxLabel} {submissionListSummary.transportCounts.hometax_upload} / {copy.transportShortNtsApiMockLabel} {submissionListSummary.transportCounts.nts_api_mock}</strong></li>
-              <li><span>{copy.activeFiltersLabel}</span><strong>status={copy.submissionStatusOptionLabels[submissionStatusFilter] ?? submissionStatusFilter}, ackStatus={copy.ackStatusOptionLabels[submissionAckStatusFilter] ?? submissionAckStatusFilter}, validation={copy.validationStatusOptionLabels[submissionValidationStatusFilter] ?? submissionValidationStatusFilter}, transport={copy.submissionTransportOptionLabels[submissionTransportFilter] ?? submissionTransportFilter}, settlementHash={submissionSettlementHashFilter.trim() || copy.dashLabel}, search={submissionSearch.trim() || copy.dashLabel}, sort={copy.submissionSortByOptionLabels[submissionSortBy] ?? submissionSortBy}:{copy.submissionSortDirectionOptionLabels[submissionSortDirection] ?? submissionSortDirection}</strong></li>
+              <li><span>{copy.activeFiltersLabel}</span><strong>{activeSubmissionFiltersSummary}</strong></li>
             </ul>
           )}
           {submissions.length === 0 ? <p className="small">{hasFilteredSubmissionEmptyState ? copy.noSubmissionMatchesFilters : copy.noFilingSubmissionYet}</p> : (

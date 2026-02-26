@@ -20,17 +20,17 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(service, /from "@\/features\/scheduling\/template-date-helpers"/);
+  assert.match(service, /from "@\/features\/scheduling\/rotation-window-helpers"/);
   assert.match(service, /parseDateToKstBase\(/);
   assert.match(service, /weekdayFromKstDate\(/);
   assert.match(service, /weekdayFromKstDateTime\(/);
   assert.match(service, /formatKstDateYmd\(/);
-  assert.match(service, /dateTimeFromKstDateAndMinute\(/);
+  assert.match(service, /buildScheduleWindowFromTemplateDate\(/);
   assert.match(service, /enumerateTemplateMatchedDates\(/);
 
   assert.doesNotMatch(service, /function parseDateToKstBase\(/);
   assert.doesNotMatch(service, /function weekdayFromKstDate\(/);
   assert.doesNotMatch(service, /function weekdayFromKstDateTime\(/);
-  assert.doesNotMatch(service, /function dateTimeFromKstDateAndMinute\(/);
   assert.doesNotMatch(service, /function formatKstDateYmd\(/);
   assert.doesNotMatch(service, /function enumerateTemplateMatchedDates\(/);
 

@@ -60,13 +60,19 @@ import {
   selectRotationFairnessRecommendations
 } from "@/features/scheduling/rotation-fairness-selection-helpers";
 import {
-  dateTimeFromKstDateAndMinute,
   enumerateTemplateMatchedDates,
   formatKstDateYmd,
   parseDateToKstBase,
   weekdayFromKstDate,
   weekdayFromKstDateTime
 } from "@/features/scheduling/template-date-helpers";
+import {
+  buildRotationWindowsForTemplates,
+  buildScheduleWindowFromTemplateDate,
+  buildTemplateRangeWindows,
+  rotateTemplatesByOffset,
+  type GeneratedScheduleWindow
+} from "@/features/scheduling/rotation-window-helpers";
 import {
   buildScheduleAnomalyIncidentReconcileSnapshot,
   selectScheduleAnomalyIncidentReconcileItems
@@ -214,16 +220,6 @@ type AssignRotationOptimizeInput = {
   toDate: string;
   templateIds: string[];
   apply: boolean;
-};
-
-type GeneratedScheduleWindow = {
-  date: string;
-  templateId: string;
-  startAt: Date;
-  endAt: Date;
-  breakMinutes: number;
-  isHoliday: boolean;
-  notes: string | undefined;
 };
 
 export type RotationAssignmentResult = {
@@ -1446,46 +1442,6 @@ type EmployeeRotationOptimizationEvaluation = {
   best: RotationOffsetEvaluation;
 };
 
-function rotateTemplatesByOffset(
-  templates: WorkScheduleTemplateEntity[],
-  offset: number
-): WorkScheduleTemplateEntity[] {
-  if (templates.length === 0) {
-    return [];
-  }
-  const normalizedOffset = ((offset % templates.length) + templates.length) % templates.length;
-  if (normalizedOffset === 0) {
-    return [...templates];
-  }
-  return [...templates.slice(normalizedOffset), ...templates.slice(0, normalizedOffset)];
-}
-
-function buildRotationWindowsForTemplates(
-  templates: WorkScheduleTemplateEntity[],
-  matchedDates: string[]
-) {
-  return matchedDates.map((date, index) => {
-    const template = templates[index % templates.length];
-    const window = buildScheduleWindowFromTemplateDate(template, date);
-    return {
-      date,
-      templateId: template.id,
-      startAt: window.startAt,
-      endAt: window.endAt,
-      breakMinutes: template.breakMinutes,
-      isHoliday: template.isHoliday,
-      notes: template.notes ?? undefined
-    } satisfies GeneratedScheduleWindow;
-  });
-}
-
-function buildTemplateRangeWindows(
-  template: WorkScheduleTemplateEntity,
-  matchedDates: string[]
-) {
-  return buildRotationWindowsForTemplates([template], matchedDates);
-}
-
 function evaluateRotationOffset(
   existingSchedules: WorkScheduleEntity[],
   templates: WorkScheduleTemplateEntity[],
@@ -1709,15 +1665,6 @@ async function createSchedulesFromGeneratedWindows(
     createdScheduleIds.push(created.id);
   }
   return createdScheduleIds;
-}
-
-function buildScheduleWindowFromTemplateDate(template: WorkScheduleTemplateEntity, dateYmd: string) {
-  const startAt = dateTimeFromKstDateAndMinute(dateYmd, template.startMinute);
-  let endAt = dateTimeFromKstDateAndMinute(dateYmd, template.endMinute);
-  if (template.endMinute <= template.startMinute) {
-    endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
-  }
-  return { startAt, endAt };
 }
 
 export async function createWorkSchedule(

@@ -20,6 +20,8 @@ export type KpiCopy = {
   exportCsvDone: string;
   focusMetricLabel: string;
   focusMetricAllOption: string;
+  quickDrilldownLabel: string;
+  quickDrilldownAllAction: string;
   loadingLabel: string;
   currentPeriodLabel: string;
   previousPeriodLabel: string;
@@ -79,6 +81,8 @@ const defaultCopy: KpiCopy = {
   exportCsvDone: "CSV export is ready",
   focusMetricLabel: "Focus metric",
   focusMetricAllOption: "All metrics",
+  quickDrilldownLabel: "Quick drilldown",
+  quickDrilldownAllAction: "All",
   loadingLabel: "Loading KPI metrics...",
   currentPeriodLabel: "Current period",
   previousPeriodLabel: "Previous period",
@@ -138,6 +142,8 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
     exportCsvDone: "CSV 파일을 내려받았습니다",
     focusMetricLabel: "집중 지표",
     focusMetricAllOption: "전체 지표",
+    quickDrilldownLabel: "빠른 드릴다운",
+    quickDrilldownAllAction: "전체",
     loadingLabel: "KPI 지표를 불러오는 중입니다...",
     currentPeriodLabel: "현재 기간",
     previousPeriodLabel: "이전 동일 기간",
