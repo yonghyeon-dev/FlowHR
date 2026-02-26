@@ -21,9 +21,9 @@ import {
   buildScheduleAnomalyIncidentReadModelsFromAuditLogs
 } from "@/features/scheduling/incident-audit-projection";
 import {
-  anomalyCockpitRecommendedAction,
   buildScheduleAttendanceAnomalySet
 } from "@/features/scheduling/anomaly-report-helpers";
+import { buildScheduleAttendanceAnomalyCockpitProjection } from "@/features/scheduling/anomaly-cockpit-report-helpers";
 import type {
   ScheduleAnomalyCockpitQueueEntry,
   ScheduleAttendanceAnomaly,
@@ -31,11 +31,9 @@ import type {
   ScheduleAttendanceAnomalyReport
 } from "@/features/scheduling/anomaly-report-helpers";
 import {
-  anomalyEscalationSeverityWeight,
   buildAnomalyAlertPayload,
   buildAnomalyEscalationPayload,
   buildAnomalyTicketRequestPayload,
-  classifyAnomalyEscalationSeverity,
   isSchedulingAnomalyAlertsEnabled,
   isSchedulingAnomalyEscalationEnabled,
   isSchedulingAnomalyTicketAutomationEnabled,
@@ -4491,84 +4489,13 @@ export async function listScheduleAttendanceAnomalyCockpit(
     organizationId: tenantScope ?? undefined
   });
 
-  const { anomalies, lateCount, noShowCount } = buildScheduleAttendanceAnomalySet(
-    schedules,
-    attendances,
-    lateThresholdMinutes
-  );
-
-  const anomaliesByEmployee = new Map<string, ScheduleAttendanceAnomaly[]>();
-  for (const anomaly of anomalies) {
-    const rows = anomaliesByEmployee.get(anomaly.employeeId);
-    if (rows) {
-      rows.push(anomaly);
-      continue;
-    }
-    anomaliesByEmployee.set(anomaly.employeeId, [anomaly]);
-  }
-
-  const employees = Array.from(anomaliesByEmployee.entries()).map(([employeeId, rows]) => {
-    const late = rows.filter((row) => row.anomalyType === "LATE").length;
-    const noShow = rows.length - late;
-    const lastAnomalyAt =
-      rows.length === 0
-        ? null
-        : rows.reduce((max, row) =>
-            row.scheduleStartAt.getTime() > max.getTime() ? row.scheduleStartAt : max
-          , rows[0].scheduleStartAt);
-    const severity = classifyAnomalyEscalationSeverity(rows, late, noShow);
-    return {
-      employeeId,
-      anomalies: rows.length,
-      late,
-      noShow,
-      severity,
-      lastAnomalyAt
-    };
-  });
-
-  employees.sort((left, right) => {
-    const bySeverity =
-      anomalyEscalationSeverityWeight(right.severity) - anomalyEscalationSeverityWeight(left.severity);
-    if (bySeverity !== 0) {
-      return bySeverity;
-    }
-    if (left.anomalies !== right.anomalies) {
-      return right.anomalies - left.anomalies;
-    }
-    return left.employeeId.localeCompare(right.employeeId);
-  });
-
-  const severityByEmployee = new Map(employees.map((employee) => [employee.employeeId, employee.severity]));
-  const queue: ScheduleAnomalyCockpitQueueEntry[] = anomalies
-    .map((anomaly) => ({
-      scheduleId: anomaly.scheduleId,
-      employeeId: anomaly.employeeId,
-      anomalyType: anomaly.anomalyType,
-      severity: severityByEmployee.get(anomaly.employeeId) ?? "MINOR",
-      lateMinutes: anomaly.lateMinutes,
-      scheduleStartAt: anomaly.scheduleStartAt,
-      recommendedAction: anomalyCockpitRecommendedAction(anomaly)
-    }))
-    .sort((left, right) => {
-      const bySeverity =
-        anomalyEscalationSeverityWeight(right.severity) - anomalyEscalationSeverityWeight(left.severity);
-      if (bySeverity !== 0) {
-        return bySeverity;
-      }
-      const byStart = left.scheduleStartAt.getTime() - right.scheduleStartAt.getTime();
-      if (byStart !== 0) {
-        return byStart;
-      }
-      return left.scheduleId.localeCompare(right.scheduleId);
-    })
-    .slice(0, topN);
-
-  const severities = {
-    minor: employees.filter((employee) => employee.severity === "MINOR").length,
-    major: employees.filter((employee) => employee.severity === "MAJOR").length,
-    critical: employees.filter((employee) => employee.severity === "CRITICAL").length
-  };
+  const { anomalies, lateCount, noShowCount, employees, queue, severities } =
+    buildScheduleAttendanceAnomalyCockpitProjection(
+      schedules,
+      attendances,
+      lateThresholdMinutes,
+      topN
+    );
   const generatedAt = new Date().toISOString();
 
   await context.dataAccess.audit.append({
