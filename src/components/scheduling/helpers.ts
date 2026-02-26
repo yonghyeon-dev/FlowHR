@@ -1,4 +1,6 @@
-﻿export type WorkScheduleDto = {
+import { normalizeSchedulingRuntimeMessage as normalizeSchedulingRuntimeMessageInternal } from "@/components/scheduling/runtime-error-copy";
+
+export type WorkScheduleDto = {
   id: string;
   employeeId: string;
   startAt: string;
@@ -130,6 +132,17 @@ export async function parseResponseBody(response: Response): Promise<unknown> {
   }
 }
 
+const defaultKoSchedulingFallbackMessage =
+  "\uC694\uCCAD \uCC98\uB9AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.";
+
+export function normalizeSchedulingRuntimeMessage(
+  message: string,
+  isKoLocale: boolean,
+  koFallbackMessage = defaultKoSchedulingFallbackMessage
+) {
+  return normalizeSchedulingRuntimeMessageInternal(message, isKoLocale, koFallbackMessage);
+}
+
 export function extractErrorMessage(body: unknown, isKoLocale: boolean) {
   if (!body) {
     return isKoLocale
@@ -138,11 +151,11 @@ export function extractErrorMessage(body: unknown, isKoLocale: boolean) {
   }
 
   if (typeof body === "string") {
-    return body;
+    return normalizeSchedulingRuntimeMessage(body, isKoLocale, defaultKoSchedulingFallbackMessage);
   }
 
   if (typeof body !== "object" || Array.isArray(body)) {
-    return String(body);
+    return normalizeSchedulingRuntimeMessage(String(body), isKoLocale, defaultKoSchedulingFallbackMessage);
   }
 
   const payload = body as Record<string, unknown>;
@@ -150,11 +163,11 @@ export function extractErrorMessage(body: unknown, isKoLocale: boolean) {
   for (const key of keys) {
     const value = payload[key];
     if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
+      return normalizeSchedulingRuntimeMessage(value, isKoLocale, defaultKoSchedulingFallbackMessage);
     }
   }
 
-  return JSON.stringify(body);
+  return normalizeSchedulingRuntimeMessage(JSON.stringify(body), isKoLocale, defaultKoSchedulingFallbackMessage);
 }
 
 export function formatDateTime(value: string, runtimeLocale: string) {
