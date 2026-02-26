@@ -1,3 +1,9 @@
+## I18N One-Shot Guard (WI-0522)
+
+- Korean i18n cleanup must be completed as a single sweep, then locked by CI checks.
+- Do not create repeated phase-style i18n WIs (`phase2`, `phase3`, `hardening-plus`, `upgrade-N`).
+- After the one-shot sweep, only bug-fix updates discovered in QA are allowed.
+- If i18n-only WIs are queued three times in a row, stop and switch to core journey feature WIs.
 # Codex 방향성 가이드
 
 > **Last updated**: 2026-02-26
