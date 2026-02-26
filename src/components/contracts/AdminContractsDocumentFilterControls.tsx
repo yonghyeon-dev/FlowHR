@@ -120,6 +120,13 @@ export function AdminContractsDocumentFilterControls({
         <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("DUE_SOON")}>{copy.slaRiskDueSoonOption}</button>
         <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("OVERDUE")}>{copy.slaRiskOverdueOption}</button>
       </div>
+      <div className="contract-action-row">
+        <span className="small muted">{copy.expirationWindowFilterLabel}</span>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onExpirationWindowDaysChange("ALL")}>{copy.expirationWindowAllOption}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onExpirationWindowDaysChange("7")}>{copy.expirationWindow7Option}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onExpirationWindowDaysChange("14")}>{copy.expirationWindow14Option}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onExpirationWindowDaysChange("30")}>{copy.expirationWindow30Option}</button>
+      </div>
     </>
   );
 }

@@ -42,6 +42,7 @@ export type WithholdingReceiptCopy = {
   loadedReceiptPrefix: string;
   loadedDocumentPrefix: string;
   loadedFinalizedSettlementPrefix: string;
+  copiedDocumentMetadataStatus: string;
   sessionErrorPrefix: string;
   receiptSummaryTitle: string;
   noReceiptSummary: string;
@@ -71,6 +72,7 @@ export type WithholdingReceiptCopy = {
   generatedAtLabel: string;
   contentSha256Label: string;
   actionDownloadLoadedDocument: string;
+  actionCopyDocumentMetadata: string;
   documentPreviewHiddenNotice: string;
   apiLogsTitle: string;
   apiLogsTotalLabel: string;
@@ -116,6 +118,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     loadedReceiptPrefix: "영수증 로드 완료",
     loadedDocumentPrefix: "문서 로드 완료",
     loadedFinalizedSettlementPrefix: "확정 정산 로드 완료",
+    copiedDocumentMetadataStatus: "문서 메타데이터를 복사했습니다.",
     sessionErrorPrefix: "세션 오류",
     receiptSummaryTitle: "영수증 요약",
     noReceiptSummary: "아직 영수증 요약이 없습니다.",
@@ -144,8 +147,9 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     issuedAtLabel: "발급 시각",
     generatedAtLabel: "생성 시각",
     contentSha256Label: "콘텐츠 해시값",
-    actionDownloadLoadedDocument: "불러온 문서 다운로드",
-    documentPreviewHiddenNotice: "문서 본문 미리보기는 다운로드에서 확인할 수 있습니다.",
+  actionDownloadLoadedDocument: "불러온 문서 다운로드",
+  actionCopyDocumentMetadata: "문서 메타데이터 복사",
+  documentPreviewHiddenNotice: "문서 본문 미리보기는 다운로드에서 확인할 수 있습니다.",
     apiLogsTitle: "요청 로그",
     apiLogsTotalLabel: "총",
     apiLogsSuccessLabel: "성공",
@@ -188,6 +192,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     loadedReceiptPrefix: "loaded receipt",
     loadedDocumentPrefix: "loaded document",
     loadedFinalizedSettlementPrefix: "loaded finalized settlement",
+    copiedDocumentMetadataStatus: "copied document metadata",
     sessionErrorPrefix: "Session error",
     receiptSummaryTitle: "Receipt Summary",
     noReceiptSummary: "No receipt summary yet.",
@@ -216,8 +221,9 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     issuedAtLabel: "Issued At",
     generatedAtLabel: "Generated At",
     contentSha256Label: "Content SHA256",
-    actionDownloadLoadedDocument: "Download Loaded Document",
-    documentPreviewHiddenNotice: "Use download to review full document content.",
+  actionDownloadLoadedDocument: "Download Loaded Document",
+  actionCopyDocumentMetadata: "Copy Document Metadata",
+  documentPreviewHiddenNotice: "Use download to review full document content.",
     apiLogsTitle: "API Logs",
     apiLogsTotalLabel: "total",
     apiLogsSuccessLabel: "success",

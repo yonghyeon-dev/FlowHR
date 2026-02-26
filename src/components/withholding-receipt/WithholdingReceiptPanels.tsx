@@ -33,6 +33,7 @@ type WithholdingSummaryPanelProps = {
     generatedAtLabel: string;
     contentSha256Label: string;
     actionDownloadLoadedDocument: string;
+    actionCopyDocumentMetadata: string;
     documentPreviewHiddenNotice: string;
     yesLabel: string;
     noLabel: string;
@@ -50,6 +51,7 @@ type WithholdingSummaryPanelProps = {
   hideDocumentRawPreview: boolean;
   formatKrwByLocale: (value: number) => string;
   onDownloadDocument: (document: WithholdingReceiptDocumentResponse["document"]) => void;
+  onCopyDocumentMetadata: (document: WithholdingReceiptDocumentResponse["document"]) => void;
 };
 
 export function WithholdingSummaryPanel({
@@ -67,7 +69,8 @@ export function WithholdingSummaryPanel({
   documentFileNameText,
   hideDocumentRawPreview,
   formatKrwByLocale,
-  onDownloadDocument
+  onDownloadDocument,
+  onCopyDocumentMetadata
 }: WithholdingSummaryPanelProps) {
   return (
     <article className="panel">
@@ -112,6 +115,9 @@ export function WithholdingSummaryPanel({
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => onDownloadDocument(receiptDocument.document)}>
               {copy.actionDownloadLoadedDocument}
+            </button>
+            <button className="btn btn-secondary" onClick={() => onCopyDocumentMetadata(receiptDocument.document)}>
+              {copy.actionCopyDocumentMetadata}
             </button>
           </div>
           {hideDocumentRawPreview ? (

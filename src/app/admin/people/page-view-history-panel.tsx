@@ -161,12 +161,15 @@ export function AdminPeopleHistoryPanel({
           {historyChangeSummary.length > 0 ? (
             <ul className="history-change-summary-list" aria-label={isKoLocale ? "이력 변경 요약" : "History change summary"}>
               {historyChangeSummary.map((item) => (
-                <li key={item.field} className={`history-change-summary-chip ${changeHighlightClass(item.field)}`}>
-                  <strong>{item.label}</strong>
-                  <span>
-                    {item.count}
-                    {isKoLocale ? "건 변경" : " changes"}
-                  </span>
+                <li key={item.field}>
+                  <button
+                    type="button"
+                    className={`history-change-summary-chip ${changeHighlightClass(item.field)}`}
+                    onClick={() => setHistoryFieldFilter(item.field)}
+                  >
+                    <strong>{item.label}</strong>
+                    <span>{item.count}{isKoLocale ? "건 변경" : " changes"}</span>
+                  </button>
                 </li>
               ))}
             </ul>

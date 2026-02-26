@@ -105,6 +105,7 @@ const filingCopyEn = {
   transportSummaryLabel: "Transport",
   activeFiltersLabel: "Active Filters",
   noFilingSubmissionYet: "No filing submission yet.",
+  noSubmissionMatchesFilters: "No submissions match current filters.",
   quickAckAcceptedAction: "Quick ACK Accepted",
   quickCancelAction: "Quick Cancel",
   quickResubmitAction: "Quick Resubmit",
@@ -167,6 +168,7 @@ const filingCopyEn = {
   dashLabel: "-",
   transportShortManualLabel: "manual",
   transportShortHometaxLabel: "hometax",
+  transportShortNtsApiMockLabel: "nts-api",
   exportFormatOptionLabels: {
     json: "json",
     csv: "csv",
@@ -346,6 +348,7 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     transportSummaryLabel: "전송",
     activeFiltersLabel: "현재 필터",
     noFilingSubmissionYet: "아직 신고 제출 이력이 없습니다.",
+    noSubmissionMatchesFilters: "현재 필터 조건과 일치하는 제출이 없습니다.",
     quickAckAcceptedAction: "빠른 ACK 승인",
     quickCancelAction: "빠른 취소",
     quickResubmitAction: "빠른 재제출",
@@ -407,6 +410,7 @@ export const payrollYearEndFilingCopyByLocale: Record<FlowLocale, PayrollYearEnd
     readyLabel: "준비됨",
     transportShortManualLabel: "수동",
     transportShortHometaxLabel: "홈택스",
+    transportShortNtsApiMockLabel: "국세청-모의",
     submissionTransportOptionLabels: {
       manual_portal: "수동 포털",
       hometax_upload: "홈택스 업로드",
