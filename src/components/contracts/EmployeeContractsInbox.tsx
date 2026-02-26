@@ -7,6 +7,7 @@ import {
   toDateText
 } from "@/components/contracts/copy";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
+import { canEmployeeRespondToContractDocument } from "@/components/contracts/document-action-policy";
 import {
   normalizeContractsErrorMessageForRuntime,
   readJson,
@@ -22,7 +23,7 @@ import {
 } from "@/components/contracts/types";
 import { useI18n } from "@/lib/i18n/provider";
 function isPendingResponseStatus(document: ContractDocument) {
-  return document.status === "SENT" || document.status === "RENEWED";
+  return canEmployeeRespondToContractDocument(document.status);
 }
 export default function EmployeeContractsInbox() {
   const { locale } = useI18n();
@@ -34,15 +35,12 @@ export default function EmployeeContractsInbox() {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [inboxStatusFilter, setInboxStatusFilter] = useState<
-    "all" | "pending_response" | "responded" | "expired"
-  >("pending_response");
+  const [inboxStatusFilter, setInboxStatusFilter] = useState<"all" | "pending_response" | "responded" | "expired">("pending_response");
   const [signatureInput, setSignatureInput] = useState("");
   const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [signatureEvidence, setSignatureEvidence] =
-    useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
+  const [signatureEvidence, setSignatureEvidence] = useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const statusFilteredDocuments = useMemo(() => {
     if (inboxStatusFilter === "pending_response") {
@@ -76,6 +74,7 @@ export default function EmployeeContractsInbox() {
     () => filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
     [filteredDocuments, selectedDocumentId]
   );
+  const canRespondSelected = Boolean(selected && canEmployeeRespondToContractDocument(selected.status));
   const reload = useCallback(async () => {
     setError(null);
     const data = (await fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
@@ -265,9 +264,10 @@ export default function EmployeeContractsInbox() {
               <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
               <label>{copy.signatureInputLabel}<input value={signatureInput} onChange={(event) => setSignatureInput(event.target.value)} /></label>
               <label>{copy.commentLabel}<textarea rows={3} value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+              {!canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
               <div className="contract-action-row">
-                <button type="button" className="btn" onClick={() => respond("SIGN")}>{copy.signAction}</button>
-                <button type="button" className="btn btn-secondary" onClick={() => respond("REJECT")}>{copy.rejectAction}</button>
+                <button type="button" className="btn" onClick={() => respond("SIGN")} disabled={!canRespondSelected}>{copy.signAction}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => respond("REJECT")} disabled={!canRespondSelected}>{copy.rejectAction}</button>
                 <button type="button" className="btn btn-secondary" onClick={() => void loadSignatureEvidence("json")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceJsonAction}</button>
                 <button type="button" className="btn btn-secondary" onClick={() => void loadSignatureEvidence("text")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceTextAction}</button>
               </div>
