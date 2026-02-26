@@ -54,6 +54,10 @@ import {
   selectScheduleAnomalyIncidentReplayTargets
 } from "@/features/scheduling/anomaly-incident-replay-helpers";
 import {
+  buildScheduleAnomalyIncidentReconcileSnapshot,
+  selectScheduleAnomalyIncidentReconcileItems
+} from "@/features/scheduling/anomaly-incident-reconcile-helpers";
+import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
   normalizeAnomalyIncidentArchiveReason,
@@ -4049,90 +4053,16 @@ export async function reconcileScheduleAnomalyIncidentStore(
     }
   );
 
-  const storeById = new Map(storeRows.map((item) => [item.incidentId, item]));
-  const auditById = new Map(auditRows.map((item) => [item.incidentId, item]));
-  const allIncidentIds = Array.from(
-    new Set([...storeById.keys(), ...auditById.keys()])
-  ).sort((left, right) => left.localeCompare(right));
-
-  const compared: ScheduleAnomalyIncidentReconcileItem[] = [];
-  for (const incidentId of allIncidentIds) {
-    const store = storeById.get(incidentId) ?? null;
-    const audit = auditById.get(incidentId) ?? null;
-
-    if (!store && audit) {
-      compared.push({
-        incidentId,
-        status: "STORE_MISSING",
-        fields: ["incident"],
-        storeState: null,
-        auditState: audit.state,
-        storeHistoryCount: 0,
-        auditHistoryCount: audit.history.length
-      });
-      continue;
-    }
-
-    if (store && !audit) {
-      compared.push({
-        incidentId,
-        status: "ORPHANED_STORE",
-        fields: ["incident"],
-        storeState: store.state,
-        auditState: null,
-        storeHistoryCount: store.history.length,
-        auditHistoryCount: 0
-      });
-      continue;
-    }
-
-    if (!store || !audit) {
-      continue;
-    }
-
-    const fields: string[] = [];
-    if (store.state !== audit.state) {
-      fields.push("state");
-    }
-    if (store.assigneeId !== audit.assigneeId) {
-      fields.push("assigneeId");
-    }
-    if (store.resolutionCode !== audit.resolutionCode) {
-      fields.push("resolutionCode");
-    }
-    if (store.note !== audit.note) {
-      fields.push("note");
-    }
-    if (store.updatedAt !== audit.updatedAt) {
-      fields.push("updatedAt");
-    }
-    if (store.history.length !== audit.history.length) {
-      fields.push("historyCount");
-    }
-
-    compared.push({
-      incidentId,
-      status: fields.length > 0 ? "FIELD_MISMATCH" : "MATCH",
-      fields,
-      storeState: store.state,
-      auditState: audit.state,
-      storeHistoryCount: store.history.length,
-      auditHistoryCount: audit.history.length
-    });
-  }
-
-  const counts = {
-    total: compared.length,
-    match: compared.filter((item) => item.status === "MATCH").length,
-    storeMissing: compared.filter((item) => item.status === "STORE_MISSING").length,
-    orphanedStore: compared.filter((item) => item.status === "ORPHANED_STORE").length,
-    fieldMismatch: compared.filter((item) => item.status === "FIELD_MISMATCH").length
-  };
+  const { compared, counts } = buildScheduleAnomalyIncidentReconcileSnapshot({
+    storeRows,
+    auditRows
+  });
 
   const reconciledAt = new Date().toISOString();
-  const items = compared
-    .filter((item) => (includeMatching ? true : item.status !== "MATCH"))
-    .slice(0, topN);
+  const items = selectScheduleAnomalyIncidentReconcileItems(compared, {
+    includeMatching,
+    topN
+  });
 
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.reconciliation.generated",
