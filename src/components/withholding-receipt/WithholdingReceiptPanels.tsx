@@ -33,6 +33,7 @@ type WithholdingSummaryPanelProps = {
     generatedAtLabel: string;
     contentSha256Label: string;
     actionDownloadLoadedDocument: string;
+    documentPreviewHiddenNotice: string;
     yesLabel: string;
     noLabel: string;
   };
@@ -45,6 +46,8 @@ type WithholdingSummaryPanelProps = {
   documentFormatTypeText: string;
   issuedAtText: string;
   generatedAtText: string;
+  documentFileNameText: string;
+  hideDocumentRawPreview: boolean;
   formatKrwByLocale: (value: number) => string;
   onDownloadDocument: (document: WithholdingReceiptDocumentResponse["document"]) => void;
 };
@@ -61,6 +64,8 @@ export function WithholdingSummaryPanel({
   documentFormatTypeText,
   issuedAtText,
   generatedAtText,
+  documentFileNameText,
+  hideDocumentRawPreview,
   formatKrwByLocale,
   onDownloadDocument
 }: WithholdingSummaryPanelProps) {
@@ -98,7 +103,7 @@ export function WithholdingSummaryPanel({
       ) : (
         <>
           <ul className="simple-list">
-            <li><span>{copy.documentFileLabel}</span><strong>{receiptDocument.document.fileName}</strong></li>
+            <li><span>{copy.documentFileLabel}</span><strong>{documentFileNameText}</strong></li>
             <li><span>{copy.formatTypeLabel}</span><strong>{documentFormatTypeText}</strong></li>
             <li><span>{copy.issuedAtLabel}</span><strong>{issuedAtText}</strong></li>
             <li><span>{copy.generatedAtLabel}</span><strong>{generatedAtText}</strong></li>
@@ -109,7 +114,11 @@ export function WithholdingSummaryPanel({
               {copy.actionDownloadLoadedDocument}
             </button>
           </div>
-          <pre className="small">{receiptDocument.document.content.slice(0, 1000)}</pre>
+          {hideDocumentRawPreview ? (
+            <p className="small muted">{copy.documentPreviewHiddenNotice}</p>
+          ) : (
+            <pre className="small">{receiptDocument.document.content.slice(0, 1000)}</pre>
+          )}
         </>
       )}
     </article>

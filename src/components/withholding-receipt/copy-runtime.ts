@@ -71,6 +71,7 @@ export type WithholdingReceiptCopy = {
   generatedAtLabel: string;
   contentSha256Label: string;
   actionDownloadLoadedDocument: string;
+  documentPreviewHiddenNotice: string;
   apiLogsTitle: string;
   apiLogsTotalLabel: string;
   apiLogsSuccessLabel: string;
@@ -144,6 +145,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     generatedAtLabel: "생성 시각",
     contentSha256Label: "콘텐츠 해시값",
     actionDownloadLoadedDocument: "불러온 문서 다운로드",
+    documentPreviewHiddenNotice: "문서 본문 미리보기는 다운로드에서 확인할 수 있습니다.",
     apiLogsTitle: "요청 로그",
     apiLogsTotalLabel: "총",
     apiLogsSuccessLabel: "성공",
@@ -215,6 +217,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     generatedAtLabel: "Generated At",
     contentSha256Label: "Content SHA256",
     actionDownloadLoadedDocument: "Download Loaded Document",
+    documentPreviewHiddenNotice: "Use download to review full document content.",
     apiLogsTitle: "API Logs",
     apiLogsTotalLabel: "total",
     apiLogsSuccessLabel: "success",
@@ -350,6 +353,43 @@ function resolveWithholdingBlockingReasonLabel(reason: string, locale: FlowLocal
 
 export function resolveWithholdingBlockingReasons(reasons: string[], locale: FlowLocale) {
   return reasons.map((reason) => resolveWithholdingBlockingReasonLabel(reason, locale));
+}
+
+function resolveWithholdingDocumentExtension(fileName: string, format: "json" | "text" | string) {
+  const match = /\.([A-Za-z0-9]+)$/.exec(fileName.trim());
+  if (match) {
+    return `.${match[1].toLowerCase()}`;
+  }
+  return format === "json" ? ".json" : ".txt";
+}
+
+function shouldNormalizeAsKoWithholdingDocumentFileName(value: string) {
+  if (value.trim().length === 0) {
+    return true;
+  }
+  if (hasHangulText(value)) {
+    return hasLatinText(value);
+  }
+  return hasLatinText(value);
+}
+
+export function normalizeWithholdingDocumentFileName(
+  fileName: string,
+  receiptNumber: string,
+  format: "json" | "text" | string,
+  locale: FlowLocale
+) {
+  const normalized = fileName.trim();
+  if (locale !== "ko") {
+    return normalized.length > 0 ? normalized : fileName;
+  }
+  const stableId = receiptNumber.trim().length > 0 ? receiptNumber.trim() : "미확인";
+  const extension = resolveWithholdingDocumentExtension(normalized, format);
+  const fallbackName = `원천징수영수증-${stableId}${extension}`;
+  if (shouldNormalizeAsKoWithholdingDocumentFileName(normalized)) {
+    return fallbackName;
+  }
+  return normalized;
 }
 
 export function formatDateTimeByLocale(value: string | null | undefined, runtimeLocale: string) {

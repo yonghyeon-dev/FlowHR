@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   formatDateTimeByLocale,
+  normalizeWithholdingDocumentFileName,
   normalizeRuntimeDiagnosticMessage,
   parseRequiredInt,
   resolveWithholdingBlockingReasons,
@@ -169,12 +170,15 @@ export default function WithholdingReceiptConsole() {
     setStatusMessage(`${copy.loadedReceiptPrefix} ${body.receipt.receiptNumber}`);
     setTimeout(() => setStatusMessage(""), 3000);
   }
-  function downloadDocument(document: WithholdingReceiptDocumentResponse["document"]) {
+  function downloadDocument(
+    document: WithholdingReceiptDocumentResponse["document"],
+    downloadFileName: string
+  ) {
     const blob = new Blob([document.content], { type: document.contentType });
     const objectUrl = URL.createObjectURL(blob);
     const anchor = window.document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = document.fileName;
+    anchor.download = downloadFileName;
     window.document.body.appendChild(anchor);
     anchor.click();
     window.document.body.removeChild(anchor);
@@ -200,7 +204,13 @@ export default function WithholdingReceiptConsole() {
       return;
     }
     setReceiptDocument(body);
-    setStatusMessage(`${copy.loadedDocumentPrefix} ${body.document.fileName}`);
+    const normalizedFileName = normalizeWithholdingDocumentFileName(
+      body.document.fileName,
+      body.document.receiptNumber,
+      body.document.format,
+      locale
+    );
+    setStatusMessage(`${copy.loadedDocumentPrefix} ${normalizedFileName}`);
     setTimeout(() => setStatusMessage(""), 3000);
   }
   async function loadFinalizedSettlement() {
@@ -266,6 +276,14 @@ export default function WithholdingReceiptConsole() {
   const generatedAtText = receiptDocument
     ? formatDateTimeByLocale(receiptDocument.document.generatedAt, runtimeLocale)
     : "-";
+  const normalizedDocumentFileName = receiptDocument
+    ? normalizeWithholdingDocumentFileName(
+        receiptDocument.document.fileName,
+        receiptDocument.document.receiptNumber,
+        receiptDocument.document.format,
+        locale
+      )
+    : "-";
   return (
     <main className="saas-content">
       <header className="hero">
@@ -316,8 +334,10 @@ export default function WithholdingReceiptConsole() {
           documentFormatTypeText={documentFormatTypeText}
           issuedAtText={issuedAtText}
           generatedAtText={generatedAtText}
+          documentFileNameText={normalizedDocumentFileName}
+          hideDocumentRawPreview={locale === "ko"}
           formatKrwByLocale={formatKrwByLocale}
-          onDownloadDocument={downloadDocument}
+          onDownloadDocument={(document) => downloadDocument(document, normalizedDocumentFileName)}
         />
         <WithholdingLogsPanel
           title={copy.apiLogsTitle}

@@ -193,6 +193,7 @@ export function EmployeePayslipsPageView({
 
         <PayslipDetailPanel
           pageCopy={pageCopy}
+          isKoLocale={isKoLocale}
           selectedRun={selectedRun}
           employeeId={employeeId}
           selectedRunStateLabel={selectedRunStateLabel}
