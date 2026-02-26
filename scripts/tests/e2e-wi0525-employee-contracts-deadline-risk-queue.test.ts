@@ -47,7 +47,7 @@ async function run() {
   assert.match(copy, /dueSoonCountLabel: "Due soon"/);
   assert.match(copy, /overdueCountLabel: "Overdue"/);
   assert.match(copy, /inboxDeadlineFilterLabel: "기한 위험"/);
-  assert.match(copy, /inboxDeadlineFilterDueSoonOption: "임박\(D-3\)"/);
+  assert.match(copy, /inboxDeadlineFilterDueSoonOption: "임박\(3일 이내\)"/);
   assert.match(copy, /inboxDeadlineFilterOverdueOption: "기한 초과"/);
 
   assert.match(workItem, /WI-0525/i);
@@ -63,4 +63,3 @@ run()
     console.error(error);
     process.exit(1);
   });
-

@@ -383,7 +383,7 @@ export const employeeContractsCopyByLocale: Record<FlowLocale, EmployeeContracts
     inboxStatusFilterExpiredOption: "만료",
     inboxDeadlineFilterLabel: "기한 위험",
     inboxDeadlineFilterAllOption: "전체 기한",
-    inboxDeadlineFilterDueSoonOption: "임박(D-3)",
+    inboxDeadlineFilterDueSoonOption: "임박(3일 이내)",
     inboxDeadlineFilterOverdueOption: "기한 초과",
     clearSearchAction: "검색 초기화",
     visibleCountLabel: "표시 문서",
