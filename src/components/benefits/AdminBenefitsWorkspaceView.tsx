@@ -15,6 +15,18 @@ type RequestSummary = {
 };
 
 type AdminBenefitsCopy = ReturnType<typeof resolveAdminBenefitsCopy>;
+const PENDING_AGING_THRESHOLD_DAYS = 3;
+
+function isPendingAgingRisk(request: BenefitRequestItem) {
+  if (request.status !== "SUBMITTED") {
+    return false;
+  }
+  const requestedAtMs = Date.parse(request.requestedAt);
+  if (!Number.isFinite(requestedAtMs)) {
+    return false;
+  }
+  return Date.now() - requestedAtMs >= PENDING_AGING_THRESHOLD_DAYS * 24 * 60 * 60 * 1000;
+}
 
 type AdminBenefitsWorkspaceViewProps = {
   copy: AdminBenefitsCopy;
@@ -97,6 +109,8 @@ export default function AdminBenefitsWorkspaceView({
   onCreateCatalogItem,
   onDecideRequest
 }: AdminBenefitsWorkspaceViewProps) {
+  const pendingAgingRiskCount = requests.filter((request) => isPendingAgingRisk(request)).length;
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -142,6 +156,8 @@ export default function AdminBenefitsWorkspaceView({
             {requestSummary.approved} / R {requestSummary.rejected})
             {" · "}
             {copy.overLimitRequestSummaryLabel}: {overLimitRequestCount}
+            {" · "}
+            {copy.pendingAgingRiskSummaryLabel}: {pendingAgingRiskCount}
             {pendingLabel ? ` · ${pendingLabel}` : ""}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -257,6 +273,7 @@ export default function AdminBenefitsWorkspaceView({
                 const overLimitAmount =
                   typeof annualLimitKrw === "number" ? Math.max(0, request.amountKrw - annualLimitKrw) : 0;
                 const isOverLimit = overLimitAmount > 0;
+                const isAgingRisk = isPendingAgingRisk(request);
                 return (
                   <li key={request.id}>
                     <span>
@@ -276,6 +293,14 @@ export default function AdminBenefitsWorkspaceView({
                           <span className="small" style={{ color: "var(--danger)" }}>
                             {copy.overLimitBadgeLabel} · {copy.overLimitAmountLabel}:{" "}
                             {overLimitAmount.toLocaleString(runtimeLocale)}
+                          </span>
+                        </>
+                      ) : null}
+                      {isAgingRisk ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.pendingAgingRiskBadgeLabel}
                           </span>
                         </>
                       ) : null}

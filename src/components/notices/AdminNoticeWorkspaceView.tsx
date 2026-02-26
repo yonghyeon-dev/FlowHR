@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import {
   resolveNoticeAudienceLabel,
@@ -64,6 +64,10 @@ type AdminNoticeWorkspaceViewProps = {
   onPublishNow: (noticeId: string) => void;
 };
 
+function isReadCoverageRisk(notice: NoticeItem, readCountByNoticeId: Map<string, number>) {
+  return notice.status === "PUBLISHED" && (readCountByNoticeId.get(notice.id) ?? 0) === 0;
+}
+
 export default function AdminNoticeWorkspaceView({
   copy,
   organizationId,
@@ -100,6 +104,8 @@ export default function AdminNoticeWorkspaceView({
   onCreateNotice,
   onPublishNow
 }: AdminNoticeWorkspaceViewProps) {
+  const publishedWithoutReadCount = notices.filter((notice) => isReadCoverageRisk(notice, readCountByNoticeId)).length;
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -165,12 +171,14 @@ export default function AdminNoticeWorkspaceView({
             </button>
           </div>
           <p className="small muted">
-            {copy.statsLabel}: {summary.total} (D {summary.draft} / S {summary.scheduled} / P{" "}
-            {summary.published})
+            {copy.statsLabel}: {summary.total} (D {summary.draft} / S {summary.scheduled} / P {summary.published})
+          </p>
+          <p className="small muted">
+            {copy.readRiskSummaryLabel}: {publishedWithoutReadCount}
           </p>
           <p className="small muted">
             {copy.logsTitle}: {stats.total} / OK {stats.success} / FAIL {stats.total - stats.success}
-            {pendingLabel ? ` · ${copy.pendingLabelPrefix}: ${pendingLabel}` : ""}
+            {pendingLabel ? ` / ${copy.pendingLabelPrefix}: ${pendingLabel}` : ""}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
@@ -233,33 +241,44 @@ export default function AdminNoticeWorkspaceView({
             <p className="small muted">{copy.filteredListEmpty}</p>
           ) : (
             <ul className="simple-list">
-              {filteredNotices.map((notice) => (
-                <li key={notice.id}>
-                  <span>
-                    <strong>{notice.title}</strong>
-                    <br />
-                    <span className="small muted">{notice.body}</span>
-                    <br />
-                    <span className="small muted">
-                      {resolveNoticeAudienceLabel(copy, notice.audience)} ·{" "}
-                      {resolveNoticeStatusLabel(copy, notice.status)} · {notice.updatedAt}
+              {filteredNotices.map((notice) => {
+                const readCount = readCountByNoticeId.get(notice.id) ?? 0;
+                const needsReadCoverage = isReadCoverageRisk(notice, readCountByNoticeId);
+                return (
+                  <li key={notice.id}>
+                    <span>
+                      <strong>{notice.title}</strong>
+                      <br />
+                      <span className="small muted">{notice.body}</span>
+                      <br />
+                      <span className="small muted">
+                        {resolveNoticeAudienceLabel(copy, notice.audience)} / {resolveNoticeStatusLabel(copy, notice.status)} / {notice.updatedAt}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {readCountLabel}: {readCount}
+                      </span>
+                      {needsReadCoverage ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.readRiskBadgeLabel}
+                          </span>
+                        </>
+                      ) : null}
                     </span>
-                    <br />
-                    <span className="small muted">
-                      {readCountLabel}: {readCountByNoticeId.get(notice.id) ?? 0}
-                    </span>
-                  </span>
-                  {notice.status === "PUBLISHED" ? null : (
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      onClick={() => onPublishNow(notice.id)}
-                    >
-                      {copy.publishAction}
-                    </button>
-                  )}
-                </li>
-              ))}
+                    {notice.status === "PUBLISHED" ? null : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onPublishNow(notice.id)}
+                      >
+                        {copy.publishAction}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
@@ -272,8 +291,7 @@ export default function AdminNoticeWorkspaceView({
             <ul className="log-list">
               {logs.map((log) => (
                 <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.action} /{" "}
-                  {log.status}
+                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.action} / {log.status}
                   <time>{log.at}</time>
                 </li>
               ))}

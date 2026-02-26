@@ -1,8 +1,9 @@
-import type { NoticeItem } from "@/features/notices/types";
+﻿import type { NoticeItem } from "@/features/notices/types";
 import {
   resolveNoticeAudienceLabel,
   type EmployeeNoticeBoardCopy
 } from "@/components/notices/copy";
+import { resolveNoticeUnreadAgingDays } from "@/components/notices/employee-notice-board-helpers";
 
 type EmployeeNoticeBoardListProps = {
   copy: EmployeeNoticeBoardCopy;
@@ -38,6 +39,8 @@ export function EmployeeNoticeBoardList({
       {filteredNotices.map((notice) => {
         const isRead = readNoticeIds.includes(notice.id);
         const readAt = readAtByNoticeId.get(notice.id) ?? null;
+        const unreadAgingDays = isRead ? null : resolveNoticeUnreadAgingDays(notice);
+        const isUnreadAgingRisk = typeof unreadAgingDays === "number" && unreadAgingDays >= 3;
         return (
           <li key={notice.id}>
             <span>
@@ -46,14 +49,29 @@ export function EmployeeNoticeBoardList({
               <span className="small muted">{notice.body}</span>
               <br />
               <span className="small muted">
-                {copy.audienceLabel}: {resolveNoticeAudienceLabel(copy, notice.audience)} ·{" "}
-                {notice.publishedAt ?? notice.updatedAt}
+                {copy.audienceLabel}: {resolveNoticeAudienceLabel(copy, notice.audience)} / {notice.publishedAt ?? notice.updatedAt}
               </span>
               <br />
               <span className="small muted">
                 {isRead ? copy.readBadge : copy.unreadBadge}
-                {readAt ? ` · ${copy.readAtLabel}: ${new Date(readAt).toLocaleString(runtimeLocale)}` : ""}
+                {readAt ? ` / ${copy.readAtLabel}: ${new Date(readAt).toLocaleString(runtimeLocale)}` : ""}
               </span>
+              {!isRead && typeof unreadAgingDays === "number" ? (
+                <>
+                  <br />
+                  <span className="small muted">
+                    {copy.unreadAgingLabel}: D+{unreadAgingDays}
+                  </span>
+                  {isUnreadAgingRisk ? (
+                    <>
+                      <br />
+                      <span className="small" style={{ color: "var(--danger)" }}>
+                        {copy.unreadAgingRiskBadgeLabel}
+                      </span>
+                    </>
+                  ) : null}
+                </>
+              ) : null}
             </span>
             {isRead ? null : (
               <button

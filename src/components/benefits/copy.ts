@@ -33,8 +33,10 @@ export type AdminBenefitsCopy = {
   clearSearchAction: string;
   filteredRequestSummaryLabel: string;
   overLimitRequestSummaryLabel: string;
+  pendingAgingRiskSummaryLabel: string;
   overLimitBadgeLabel: string;
   overLimitAmountLabel: string;
+  pendingAgingRiskBadgeLabel: string;
   filteredEmptyRequests: string;
   unknownBenefitLabel: string;
   statsLabel: string;
@@ -89,6 +91,9 @@ export type EmployeeBenefitsCopy = {
   clearSearchAction: string;
   requestSummaryLabel: string;
   filteredRequestSummaryLabel: string;
+  annualUsageSummaryLabel: string;
+  estimatedRemainingLabel: string;
+  overLimitWarningLabel: string;
   unknownBenefitLabel: string;
   cancelAction: string;
   filteredEmptyRequests: string;
@@ -145,8 +150,10 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     clearSearchAction: "검색 초기화",
     filteredRequestSummaryLabel: "표시 요청 수",
     overLimitRequestSummaryLabel: "한도 초과 요청",
+    pendingAgingRiskSummaryLabel: "3일 이상 승인대기",
     overLimitBadgeLabel: "한도 초과",
     overLimitAmountLabel: "초과 금액",
+    pendingAgingRiskBadgeLabel: "장기 대기",
     filteredEmptyRequests: "현재 필터 조건에 맞는 요청이 없습니다.",
     unknownBenefitLabel: "알 수 없는 항목",
     statsLabel: "카탈로그 수",
@@ -214,8 +221,10 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     clearSearchAction: "Clear search",
     filteredRequestSummaryLabel: "Visible requests",
     overLimitRequestSummaryLabel: "Over-limit requests",
+    pendingAgingRiskSummaryLabel: "Pending review over 3 days",
     overLimitBadgeLabel: "Over limit",
     overLimitAmountLabel: "Exceed amount",
+    pendingAgingRiskBadgeLabel: "Aging pending",
     filteredEmptyRequests: "No request matches current filters.",
     unknownBenefitLabel: "Unknown benefit",
     statsLabel: "Catalog count",
@@ -280,6 +289,9 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     clearSearchAction: "검색 초기화",
     requestSummaryLabel: "상태별 건수",
     filteredRequestSummaryLabel: "표시 건수",
+    annualUsageSummaryLabel: "현재 사용/대기 합계",
+    estimatedRemainingLabel: "신청 후 예상 잔여 한도",
+    overLimitWarningLabel: "한도를 초과한 신청입니다. 관리자 승인 전에 금액을 다시 확인하세요.",
     unknownBenefitLabel: "알 수 없는 항목",
     cancelAction: "신청 취소",
     filteredEmptyRequests: "현재 검색 조건에 맞는 신청 이력이 없습니다.",
@@ -333,6 +345,9 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     clearSearchAction: "Clear search",
     requestSummaryLabel: "Status summary",
     filteredRequestSummaryLabel: "Visible items",
+    annualUsageSummaryLabel: "Current used/pending amount",
+    estimatedRemainingLabel: "Estimated remaining limit after submit",
+    overLimitWarningLabel: "This request exceeds the annual limit. Review amount before admin approval.",
     unknownBenefitLabel: "Unknown benefit",
     cancelAction: "Cancel request",
     filteredEmptyRequests: "No request matches current search.",

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
 import type {
@@ -22,9 +22,10 @@ type AdminRecruitmentWorkspaceViewProps = {
   filteredReferrals: RecruitmentReferralItem[];
   openingTitleById: Record<string, string>;
   referralFilter: RecruitmentReferralStage | "all";
-  referralRiskFilter: "all" | "stalled_7d";
+  referralRiskFilter: "all" | "stalled_7d" | "stalled_14d";
   referralSearchQuery: string;
   stalledReferralCount: number;
+  stalledCriticalReferralCount: number;
   stageSelection: Record<string, RecruitmentReferralStage>;
   pending: boolean;
   statusMessage: string;
@@ -35,7 +36,7 @@ type AdminRecruitmentWorkspaceViewProps = {
   onDepartmentChange: (value: string) => void;
   onEmploymentTypeChange: (value: string) => void;
   onReferralFilterChange: (value: RecruitmentReferralStage | "all") => void;
-  onReferralRiskFilterChange: (value: "all" | "stalled_7d") => void;
+  onReferralRiskFilterChange: (value: "all" | "stalled_7d" | "stalled_14d") => void;
   onReferralSearchQueryChange: (value: string) => void;
   onClearReferralSearch: () => void;
   onLoadWorkspace: () => void;
@@ -60,6 +61,7 @@ export default function AdminRecruitmentWorkspaceView({
   referralRiskFilter,
   referralSearchQuery,
   stalledReferralCount,
+  stalledCriticalReferralCount,
   stageSelection,
   pending,
   statusMessage,
@@ -155,7 +157,7 @@ export default function AdminRecruitmentWorkspaceView({
                     <strong>{opening.title}</strong>
                     <br />
                     <span className="small muted">
-                      {opening.department} · {opening.employmentType}
+                      {opening.department} / {opening.employmentType}
                     </span>
                     <br />
                     <span className="small muted">
@@ -190,10 +192,13 @@ export default function AdminRecruitmentWorkspaceView({
             {copy.referralRiskFilterLabel}
             <select
               value={referralRiskFilter}
-              onChange={(event) => onReferralRiskFilterChange(event.target.value as "all" | "stalled_7d")}
+              onChange={(event) =>
+                onReferralRiskFilterChange(event.target.value as "all" | "stalled_7d" | "stalled_14d")
+              }
             >
               <option value="all">{copy.referralRiskFilter.all}</option>
               <option value="stalled_7d">{copy.referralRiskFilter.stalled7d}</option>
+              <option value="stalled_14d">{copy.referralRiskFilter.stalled14d}</option>
             </select>
           </label>
           <label>
@@ -210,8 +215,7 @@ export default function AdminRecruitmentWorkspaceView({
             </button>
           </div>
           <p className="small muted">
-            {copy.filteredReferralSummaryLabel}: {filteredReferrals.length} / {referrals.length} ·{" "}
-            {copy.referralRiskSummaryLabel}: {stalledReferralCount}
+            {copy.filteredReferralSummaryLabel}: {filteredReferrals.length} / {referrals.length} / {copy.referralRiskSummaryLabel}: {stalledReferralCount} / {copy.criticalReferralRiskSummaryLabel}: {stalledCriticalReferralCount}
           </p>
           {referrals.length === 0 ? (
             <p className="small muted">{copy.emptyReferrals}</p>
@@ -222,57 +226,62 @@ export default function AdminRecruitmentWorkspaceView({
               {filteredReferrals.map((referral) => {
                 const isTerminalStage = ["HIRED", "REJECTED", "WITHDRAWN"].includes(referral.stage);
                 const updatedAtMs = Date.parse(referral.updatedAt);
-                const isStalled =
-                  !isTerminalStage &&
-                  Number.isFinite(updatedAtMs) &&
-                  Date.now() - updatedAtMs >= 7 * 24 * 60 * 60 * 1000;
+                const isStalled7d = !isTerminalStage && Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs >= 7 * 24 * 60 * 60 * 1000;
+                const isStalled14d = !isTerminalStage && Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs >= 14 * 24 * 60 * 60 * 1000;
                 return (
                   <li key={referral.id}>
-                  <span>
-                    <strong>{referral.candidateName}</strong>
-                    <br />
-                    <span className="small muted">
-                      {referral.candidateEmail} · {referral.referrerEmployeeId}
+                    <span>
+                      <strong>{referral.candidateName}</strong>
+                      <br />
+                      <span className="small muted">
+                        {referral.candidateEmail} / {referral.referrerEmployeeId}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.referralOpeningTitleLabel}: {openingTitleById[referral.openingId] ?? copy.unknownOpeningLabel}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.stageLabel}: {copy.referralStage[referral.stage]}
+                      </span>
+                      {isStalled14d ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.stalledCriticalBadgeLabel}
+                          </span>
+                        </>
+                      ) : isStalled7d ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.stalledBadgeLabel}
+                          </span>
+                        </>
+                      ) : null}
                     </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.referralOpeningTitleLabel}: {openingTitleById[referral.openingId] ?? copy.unknownOpeningLabel}
-                    </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.stageLabel}: {copy.referralStage[referral.stage]}
-                    </span>
-                    {isStalled ? (
-                      <>
-                        <br />
-                        <span className="small" style={{ color: "var(--danger)" }}>
-                          {copy.stalledBadgeLabel}
-                        </span>
-                      </>
-                    ) : null}
-                  </span>
-                  <div className="actions" style={{ marginTop: 0 }}>
-                    <select
-                      value={stageSelection[referral.id] ?? referral.stage}
-                      onChange={(event) =>
-                        onStageSelectionChange(referral.id, event.target.value as RecruitmentReferralStage)
-                      }
-                    >
-                      {Object.entries(copy.referralStage).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      onClick={() => onUpdateStage(referral.id)}
-                      disabled={pending}
-                    >
-                      {copy.updateStageAction}
-                    </button>
-                  </div>
+                    <div className="actions" style={{ marginTop: 0 }}>
+                      <select
+                        value={stageSelection[referral.id] ?? referral.stage}
+                        onChange={(event) =>
+                          onStageSelectionChange(referral.id, event.target.value as RecruitmentReferralStage)
+                        }
+                      >
+                        {Object.entries(copy.referralStage).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onUpdateStage(referral.id)}
+                        disabled={pending}
+                      >
+                        {copy.updateStageAction}
+                      </button>
+                    </div>
                   </li>
                 );
               })}

@@ -114,6 +114,25 @@ export default function EmployeeBenefitsWorkspace() {
       );
     });
   }, [catalogById, normalizedRequestSearchQuery, requests]);
+  const selectedBenefit = useMemo(
+    () => (selectedBenefitId ? catalogById.get(selectedBenefitId) ?? null : null),
+    [catalogById, selectedBenefitId]
+  );
+  const selectedBenefitUsage = useMemo(
+    () =>
+      requests
+        .filter(
+          (item) =>
+            item.benefitId === selectedBenefitId &&
+            (item.status === "SUBMITTED" || item.status === "APPROVED")
+        )
+        .reduce((total, item) => total + item.amountKrw, 0),
+    [requests, selectedBenefitId]
+  );
+  const requestAmount = Math.max(0, Math.trunc(Number(amountKrw) || 0));
+  const estimatedRemainingAmount =
+    selectedBenefit ? selectedBenefit.annualLimitKrw - selectedBenefitUsage - requestAmount : null;
+  const isProjectedOverLimit = typeof estimatedRemainingAmount === "number" && estimatedRemainingAmount < 0;
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -316,6 +335,22 @@ export default function EmployeeBenefitsWorkspace() {
             {copy.reasonLabel}
             <textarea rows={4} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={1000} />
           </label>
+          {selectedBenefit ? (
+            <>
+              <p className="small muted">
+                {copy.annualUsageSummaryLabel}: {selectedBenefitUsage.toLocaleString(runtimeLocale)} /{" "}
+                {selectedBenefit.annualLimitKrw.toLocaleString(runtimeLocale)}
+              </p>
+              <p className="small muted">
+                {copy.estimatedRemainingLabel}: {(estimatedRemainingAmount ?? 0).toLocaleString(runtimeLocale)}
+              </p>
+              {isProjectedOverLimit ? (
+                <p className="small" style={{ color: "var(--danger)" }}>
+                  {copy.overLimitWarningLabel}
+                </p>
+              ) : null}
+            </>
+          ) : null}
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void submitRequest()} disabled={pending}>
               {copy.submitAction}
