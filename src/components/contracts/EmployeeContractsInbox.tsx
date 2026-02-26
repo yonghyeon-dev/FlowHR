@@ -104,12 +104,12 @@ export default function EmployeeContractsInbox() {
       );
     }
   }
-  function downloadEvidence(evidence: ContractSignatureEvidenceResponse["evidence"]) {
+  function downloadEvidence(evidence: ContractSignatureEvidenceResponse["evidence"], downloadFileName: string) {
     const blob = new Blob([evidence.content], { type: evidence.contentType });
     const objectUrl = URL.createObjectURL(blob);
     const anchor = window.document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = evidence.fileName;
+    anchor.download = downloadFileName;
     window.document.body.appendChild(anchor);
     anchor.click();
     window.document.body.removeChild(anchor);
@@ -278,7 +278,12 @@ export default function EmployeeContractsInbox() {
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      onClick={() => downloadEvidence(signatureEvidence)}
+                      onClick={() =>
+                        downloadEvidence(
+                          signatureEvidence,
+                          normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
+                        )
+                      }
                     >
                       {copy.downloadEvidenceAction}
                     </button>

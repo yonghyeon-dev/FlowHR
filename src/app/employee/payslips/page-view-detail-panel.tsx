@@ -13,6 +13,7 @@ import {
 
 type PayslipDetailPanelProps = {
   pageCopy: PayslipPageCopy;
+  isKoLocale: boolean;
   selectedRun: PayrollRunDto | null;
   employeeId: string;
   selectedRunStateLabel: string;
@@ -26,6 +27,7 @@ type PayslipDetailPanelProps = {
 
 export function PayslipDetailPanel({
   pageCopy,
+  isKoLocale,
   selectedRun,
   employeeId,
   selectedRunStateLabel,
@@ -165,7 +167,7 @@ export function PayslipDetailPanel({
               </section>
             ) : null}
 
-            {selectedRun.deductionBreakdown ? (
+            {selectedRun.deductionBreakdown && !isKoLocale ? (
               <details className="details no-print" style={{ marginTop: 12 }}>
                 <summary>{pageCopy.detail.deductionBreakdownRaw}</summary>
                 <pre className="small" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
