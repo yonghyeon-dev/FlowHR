@@ -1,4 +1,4 @@
-﻿import type { FlowLocale } from "@/lib/i18n/locales";
+import type { FlowLocale } from "@/lib/i18n/locales";
 import type { NoticeAudience, NoticeStatus } from "@/features/notices/types";
 
 export type NoticeWorkspaceCopy = {
@@ -78,6 +78,9 @@ export type EmployeeNoticeBoardCopy = {
   readStatusFilterAllOption: string;
   readStatusFilterUnreadOption: string;
   readStatusFilterReadOption: string;
+  agingRiskFilterLabel: string;
+  agingRiskFilterAllOption: string;
+  agingRiskFilterOnlyOption: string;
   unreadOnlyLabel: string;
   clearFiltersAction: string;
   refreshAction: string;
@@ -86,6 +89,7 @@ export type EmployeeNoticeBoardCopy = {
   summaryLabel: string;
   filteredSummaryLabel: string;
   unreadLabel: string;
+  unreadAgingRiskSummaryLabel: string;
   logsCountLabel: string;
   listTitle: string;
   listEmpty: string;
@@ -270,6 +274,9 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     readStatusFilterAllOption: "전체",
     readStatusFilterUnreadOption: "미확인",
     readStatusFilterReadOption: "확인함",
+    agingRiskFilterLabel: "확인 지연 필터",
+    agingRiskFilterAllOption: "전체",
+    agingRiskFilterOnlyOption: "3일 이상 지연",
     unreadOnlyLabel: "미확인 공지만 보기",
     clearFiltersAction: "필터 초기화",
     refreshAction: "공지 새로고침",
@@ -278,6 +285,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     summaryLabel: "게시 공지",
     filteredSummaryLabel: "표시 공지",
     unreadLabel: "미확인 공지",
+    unreadAgingRiskSummaryLabel: "3일 이상 미확인",
     logsCountLabel: "요청 로그 수",
     listTitle: "게시 공지 목록",
     listEmpty: "확인 가능한 게시 공지가 없습니다.",
@@ -314,6 +322,9 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     readStatusFilterAllOption: "All",
     readStatusFilterUnreadOption: "Unread",
     readStatusFilterReadOption: "Read",
+    agingRiskFilterLabel: "Unread aging filter",
+    agingRiskFilterAllOption: "All",
+    agingRiskFilterOnlyOption: "Aging >= 3d",
     unreadOnlyLabel: "Unread only",
     clearFiltersAction: "Clear filters",
     refreshAction: "Refresh notices",
@@ -322,6 +333,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     summaryLabel: "Published notices",
     filteredSummaryLabel: "Visible notices",
     unreadLabel: "Unread notices",
+    unreadAgingRiskSummaryLabel: "Unread >= 3 days",
     logsCountLabel: "Request log count",
     listTitle: "Published notice list",
     listEmpty: "No published notice is available.",

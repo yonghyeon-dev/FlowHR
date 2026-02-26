@@ -1,8 +1,19 @@
-﻿"use client";
+"use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import {
+  EMPTY_EMPLOYEE_REFERRAL_SUMMARY,
+  buildRecruitmentQuery,
+  countStalledReferrals,
+  filterEmployeeReferrals,
+  parseRecruitmentOpenings,
+  parseRecruitmentReferrals,
+  parseRecruitmentReferralSummary,
+  type EmployeeReferralRiskFilter
+} from "@/components/recruitment/employee-recruitment-helpers";
+import EmployeeRecruitmentWorkspaceView from "@/components/recruitment/EmployeeRecruitmentWorkspaceView";
+import { resolveEmployeeRecruitmentCopy } from "@/components/recruitment/copy";
 import type {
   RecruitmentOpeningItem,
   RecruitmentReferralItem,
@@ -11,71 +22,6 @@ import type {
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-import { resolveEmployeeRecruitmentCopy } from "@/components/recruitment/copy";
-
-type ReferralSummary = {
-  total: number;
-  submitted: number;
-  screening: number;
-  interview: number;
-  offer: number;
-  hired: number;
-  rejected: number;
-  withdrawn: number;
-};
-
-const EMPTY_REFERRAL_SUMMARY: ReferralSummary = {
-  total: 0,
-  submitted: 0,
-  screening: 0,
-  interview: 0,
-  offer: 0,
-  hired: 0,
-  rejected: 0,
-  withdrawn: 0
-};
-const TERMINAL_REFERRAL_STAGES: RecruitmentReferralStage[] = ["HIRED", "REJECTED", "WITHDRAWN"];
-const STALLED_REFERRAL_DAYS = 7;
-const CRITICAL_STALLED_REFERRAL_DAYS = 14;
-
-function parseOpenings(payload: unknown) {
-  const openings = (payload as { openings?: RecruitmentOpeningItem[] } | null)?.openings;
-  return Array.isArray(openings) ? openings : [];
-}
-
-function parseReferrals(payload: unknown) {
-  const referrals = (payload as { referrals?: RecruitmentReferralItem[] } | null)?.referrals;
-  return Array.isArray(referrals) ? referrals : [];
-}
-
-function parseSummary(payload: unknown) {
-  const summary = (payload as { summary?: Partial<ReferralSummary> } | null)?.summary;
-  if (!summary) {
-    return EMPTY_REFERRAL_SUMMARY;
-  }
-  return {
-    total: Number(summary.total ?? 0),
-    submitted: Number(summary.submitted ?? 0),
-    screening: Number(summary.screening ?? 0),
-    interview: Number(summary.interview ?? 0),
-    offer: Number(summary.offer ?? 0),
-    hired: Number(summary.hired ?? 0),
-    rejected: Number(summary.rejected ?? 0),
-    withdrawn: Number(summary.withdrawn ?? 0)
-  };
-}
-
-function buildQuery(input: Record<string, string>) {
-  const query = new URLSearchParams();
-  Object.entries(input).forEach(([key, value]) => {
-    if (!value.trim()) {
-      return;
-    }
-    query.set(key, value.trim());
-  });
-  const text = query.toString();
-  return text ? `?${text}` : "";
-}
 
 export default function EmployeeRecruitmentWorkspace() {
   const { locale } = useI18n();
@@ -89,14 +35,15 @@ export default function EmployeeRecruitmentWorkspace() {
 
   const [openings, setOpenings] = useState<RecruitmentOpeningItem[]>([]);
   const [referrals, setReferrals] = useState<RecruitmentReferralItem[]>([]);
-  const [referralSummary, setReferralSummary] = useState<ReferralSummary>(EMPTY_REFERRAL_SUMMARY);
+  const [referralSummary, setReferralSummary] = useState(EMPTY_EMPLOYEE_REFERRAL_SUMMARY);
 
   const [selectedOpeningId, setSelectedOpeningId] = useState("");
   const [candidateName, setCandidateName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
   const [note, setNote] = useState("");
   const [stageFilter, setStageFilter] = useState<RecruitmentReferralStage | "all">("all");
-  const [riskFilter, setRiskFilter] = useState<"all" | "stalled_7d" | "stalled_14d">("all");
+  const [riskFilter, setRiskFilter] = useState<EmployeeReferralRiskFilter>("all");
+  const [openingFilter, setOpeningFilter] = useState("all");
   const [referralSearchQuery, setReferralSearchQuery] = useState("");
 
   const [pending, setPending] = useState(false);
@@ -117,80 +64,42 @@ export default function EmployeeRecruitmentWorkspace() {
     });
     return map;
   }, [openings]);
-  const stalledThresholdMs = STALLED_REFERRAL_DAYS * 24 * 60 * 60 * 1000;
-  const criticalStalledThresholdMs = CRITICAL_STALLED_REFERRAL_DAYS * 24 * 60 * 60 * 1000;
-  const stalledReferralCount = useMemo(() => {
-    const nowMs = Date.now();
-    return referrals.filter((referral) => {
-      if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
-        return false;
-      }
-      const updatedAtMs = Date.parse(referral.updatedAt);
-      return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= stalledThresholdMs;
-    }).length;
-  }, [referrals, stalledThresholdMs]);
-  const stalledCriticalReferralCount = useMemo(() => {
-    const nowMs = Date.now();
-    return referrals.filter((referral) => {
-      if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
-        return false;
-      }
-      const updatedAtMs = Date.parse(referral.updatedAt);
-      return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= criticalStalledThresholdMs;
-    }).length;
-  }, [criticalStalledThresholdMs, referrals]);
-  const normalizedReferralSearchQuery = referralSearchQuery.trim().toLowerCase();
-  const filteredReferrals = useMemo(() => {
-    const nowMs = Date.now();
-    if (!normalizedReferralSearchQuery) {
-      return referrals.filter((referral) => {
-        if (riskFilter === "all") {
-          return true;
-        }
-        if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
-          return false;
-        }
-        const updatedAtMs = Date.parse(referral.updatedAt);
-        if (!Number.isFinite(updatedAtMs)) {
-          return false;
-        }
-        const thresholdMs = riskFilter === "stalled_14d" ? criticalStalledThresholdMs : stalledThresholdMs;
-        return nowMs - updatedAtMs >= thresholdMs;
-      });
-    }
-    return referrals.filter((referral) => {
-      if (riskFilter !== "all") {
-        if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
-          return false;
-        }
-        const updatedAtMs = Date.parse(referral.updatedAt);
-        if (!Number.isFinite(updatedAtMs)) {
-          return false;
-        }
-        const thresholdMs = riskFilter === "stalled_14d" ? criticalStalledThresholdMs : stalledThresholdMs;
-        if (nowMs - updatedAtMs < thresholdMs) {
-          return false;
-        }
-      }
-      const openingTitle = (openingById.get(referral.openingId)?.title ?? "").toLowerCase();
-      const candidateNameText = referral.candidateName.toLowerCase();
-      const candidateEmailText = referral.candidateEmail.toLowerCase();
-      const noteText = referral.note.toLowerCase();
-      return (
-        openingTitle.includes(normalizedReferralSearchQuery) ||
-        candidateNameText.includes(normalizedReferralSearchQuery) ||
-        candidateEmailText.includes(normalizedReferralSearchQuery) ||
-        noteText.includes(normalizedReferralSearchQuery)
-      );
-    });
-  }, [
-    criticalStalledThresholdMs,
-    normalizedReferralSearchQuery,
-    openingById,
-    referrals,
-    riskFilter,
-    stalledThresholdMs
-  ]);
+
+  const stageFilteredReferrals = useMemo(
+    () =>
+      referrals.filter((referral) =>
+        stageFilter === "all" ? true : referral.stage === stageFilter
+      ),
+    [referrals, stageFilter]
+  );
+
+  const filteredReferrals = useMemo(
+    () =>
+      filterEmployeeReferrals({
+        referrals: stageFilteredReferrals,
+        openingById,
+        searchQuery: referralSearchQuery,
+        riskFilter,
+        openingFilter
+      }),
+    [openingById, openingFilter, referralSearchQuery, riskFilter, stageFilteredReferrals]
+  );
+
+  const stalledReferralCount = useMemo(
+    () => countStalledReferrals(referrals, "stalled_7d"),
+    [referrals]
+  );
+  const stalledCriticalReferralCount = useMemo(
+    () => countStalledReferrals(referrals, "stalled_14d"),
+    [referrals]
+  );
+  const openingFilteredReferralCount = useMemo(
+    () =>
+      stageFilteredReferrals.filter((referral) =>
+        openingFilter === "all" ? true : referral.openingId === openingFilter
+      ).length,
+    [openingFilter, stageFilteredReferrals]
+  );
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -227,8 +136,8 @@ export default function EmployeeRecruitmentWorkspace() {
       return;
     }
 
-    const openingsQuery = buildQuery({ organizationId, status: "OPEN" });
-    const referralsQuery = buildQuery({
+    const openingsQuery = buildRecruitmentQuery({ organizationId, status: "OPEN" });
+    const referralsQuery = buildRecruitmentQuery({
       organizationId,
       referrerEmployeeId: employeeId,
       stage: stageFilter
@@ -244,12 +153,15 @@ export default function EmployeeRecruitmentWorkspace() {
       return;
     }
 
-    const nextOpenings = parseOpenings(openingsRes.parsed);
+    const nextOpenings = parseRecruitmentOpenings(openingsRes.parsed);
     setOpenings(nextOpenings);
-    setReferrals(parseReferrals(referralsRes.parsed));
-    setReferralSummary(parseSummary(referralsRes.parsed));
+    setReferrals(parseRecruitmentReferrals(referralsRes.parsed));
+    setReferralSummary(parseRecruitmentReferralSummary(referralsRes.parsed));
     if (nextOpenings.length > 0 && !selectedOpeningId) {
       setSelectedOpeningId(nextOpenings[0].id);
+    }
+    if (openingFilter !== "all" && !nextOpenings.some((opening) => opening.id === openingFilter)) {
+      setOpeningFilter("all");
     }
     setStatusMessage("");
   }
@@ -311,216 +223,45 @@ export default function EmployeeRecruitmentWorkspace() {
     await loadWorkspace();
   }
 
-  function clearReferralSearch() {
-    setReferralSearchQuery("");
-  }
-
   return (
-    <main className="saas-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">{copy.pageTitle}</h1>
-          <p className="page-subtitle">{copy.pageSubtitle}</p>
-        </div>
-        <div className="page-actions">
-          <Link className="btn btn-secondary" href="/employee">
-            /employee
-          </Link>
-          <Link className="btn btn-secondary" href="/admin/recruitment">
-            /admin/recruitment
-          </Link>
-        </div>
-      </header>
-
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{copy.sessionTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {copy.employeeIdLabel}
-            <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <textarea rows={2} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
-          </label>
-          <label>
-            {copy.stageFilterLabel}
-            <select
-              value={stageFilter}
-              onChange={(event) => setStageFilter(event.target.value as RecruitmentReferralStage | "all")}
-            >
-              <option value="all">{copy.referralStageFilter.all}</option>
-              <option value="SUBMITTED">{copy.referralStageFilter.SUBMITTED}</option>
-              <option value="SCREENING">{copy.referralStageFilter.SCREENING}</option>
-              <option value="INTERVIEW">{copy.referralStageFilter.INTERVIEW}</option>
-              <option value="OFFER">{copy.referralStageFilter.OFFER}</option>
-              <option value="HIRED">{copy.referralStageFilter.HIRED}</option>
-              <option value="REJECTED">{copy.referralStageFilter.REJECTED}</option>
-              <option value="WITHDRAWN">{copy.referralStageFilter.WITHDRAWN}</option>
-            </select>
-          </label>
-          <label>
-            {copy.referralSearchLabel}
-            <input
-              value={referralSearchQuery}
-              placeholder={copy.referralSearchPlaceholder}
-              onChange={(event) => setReferralSearchQuery(event.target.value)}
-            />
-          </label>
-          <label>
-            {copy.referralRiskFilterLabel}
-            <select
-              value={riskFilter}
-              onChange={(event) => setRiskFilter(event.target.value as "all" | "stalled_7d" | "stalled_14d")}
-            >
-              <option value="all">{copy.referralRiskFilter.all}</option>
-              <option value="stalled_7d">{copy.referralRiskFilter.stalled7d}</option>
-              <option value="stalled_14d">{copy.referralRiskFilter.stalled14d}</option>
-            </select>
-          </label>
-          <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={() => void loadWorkspace()} disabled={pending}>
-              {copy.refreshAction}
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={clearReferralSearch} disabled={pending}>
-              {copy.clearSearchAction}
-            </button>
-          </div>
-          <p className="small muted">
-            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn}) · {copy.filteredReferralSummaryLabel}: {filteredReferrals.length} · {copy.referralRiskSummaryLabel}: {stalledReferralCount} · {copy.criticalReferralRiskSummaryLabel}: {stalledCriticalReferralCount}
-          </p>
-          {statusMessage ? <p className="small">{statusMessage}</p> : null}
-        </article>
-
-        <article className="panel">
-          <h2>{copy.submitTitle}</h2>
-          <label>
-            {copy.openingLabel}
-            <select value={selectedOpeningId} onChange={(event) => setSelectedOpeningId(event.target.value)}>
-              <option value="">-</option>
-              {openings.map((opening) => (
-                <option key={opening.id} value={opening.id}>
-                  {opening.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {copy.candidateNameLabel}
-            <input value={candidateName} onChange={(event) => setCandidateName(event.target.value)} maxLength={120} />
-          </label>
-          <label>
-            {copy.candidateEmailLabel}
-            <input value={candidateEmail} onChange={(event) => setCandidateEmail(event.target.value)} type="email" maxLength={120} />
-          </label>
-          <label>
-            {copy.noteLabel}
-            <textarea rows={4} value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} />
-          </label>
-          <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={() => void submitReferral()} disabled={pending}>
-              {copy.submitAction}
-            </button>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>{copy.openingsTitle}</h2>
-          {openings.length === 0 ? (
-            <p className="small muted">{copy.emptyOpenings}</p>
-          ) : (
-            <ul className="simple-list">
-              {openings.map((opening) => (
-                <li key={opening.id}>
-                  <span>
-                    <strong>{opening.title}</strong>
-                    <br />
-                    <span className="small muted">
-                      {opening.department} · {opening.employmentType}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-
-        <article className="panel">
-          <h2>{copy.referralsTitle}</h2>
-          {referrals.length === 0 ? (
-            <p className="small muted">{copy.emptyReferrals}</p>
-          ) : filteredReferrals.length === 0 ? (
-            <p className="small muted">{copy.filteredEmptyReferrals}</p>
-          ) : (
-            <ul className="simple-list">
-              {filteredReferrals.map((referral) => {
-                const openingTitle = openingById.get(referral.openingId)?.title ?? copy.unknownOpeningLabel;
-                const updatedAtMs = Date.parse(referral.updatedAt);
-                const isStalled7d =
-                  !TERMINAL_REFERRAL_STAGES.includes(referral.stage) &&
-                  Number.isFinite(updatedAtMs) &&
-                  Date.now() - updatedAtMs >= stalledThresholdMs;
-                const isStalled14d =
-                  !TERMINAL_REFERRAL_STAGES.includes(referral.stage) &&
-                  Number.isFinite(updatedAtMs) &&
-                  Date.now() - updatedAtMs >= criticalStalledThresholdMs;
-                return (
-                  <li key={referral.id}>
-                    <span>
-                      <strong>{referral.candidateName}</strong>
-                      <br />
-                      <span className="small muted">{referral.candidateEmail}</span>
-                      <br />
-                      <span className="small muted">
-                        {copy.openingTitleLabel}: {openingTitle}
-                      </span>
-                      <br />
-                      <span className="small muted">
-                        {copy.stageLabel}: {copy.referralStage[referral.stage]}
-                      </span>
-                      {isStalled14d ? (
-                        <>
-                          <br />
-                          <span className="small" style={{ color: "var(--danger)" }}>
-                            {copy.stalledCriticalBadgeLabel}
-                          </span>
-                        </>
-                      ) : isStalled7d ? (
-                        <>
-                          <br />
-                          <span className="small" style={{ color: "var(--danger)" }}>
-                            {copy.stalledBadgeLabel}
-                          </span>
-                        </>
-                      ) : null}
-                      <br />
-                      <span className="small muted">{referral.note}</span>
-                      {referral.stage === "SUBMITTED" || referral.stage === "SCREENING" ? (
-                        <>
-                          <br />
-                          <button
-                            className="btn btn-secondary btn-small"
-                            type="button"
-                            disabled={pending}
-                            onClick={() => void withdrawReferral(referral.id)}
-                          >
-                            {copy.withdrawAction}
-                          </button>
-                        </>
-                      ) : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </article>
-      </section>
-    </main>
+    <EmployeeRecruitmentWorkspaceView
+      copy={copy}
+      organizationId={organizationId}
+      employeeId={employeeId}
+      accessToken={accessToken}
+      openings={openings}
+      referrals={referrals}
+      filteredReferrals={filteredReferrals}
+      referralSummary={referralSummary}
+      selectedOpeningId={selectedOpeningId}
+      candidateName={candidateName}
+      candidateEmail={candidateEmail}
+      note={note}
+      stageFilter={stageFilter}
+      riskFilter={riskFilter}
+      openingFilter={openingFilter}
+      referralSearchQuery={referralSearchQuery}
+      stalledReferralCount={stalledReferralCount}
+      stalledCriticalReferralCount={stalledCriticalReferralCount}
+      openingFilteredReferralCount={openingFilteredReferralCount}
+      pending={pending}
+      statusMessage={statusMessage}
+      onOrganizationIdChange={setOrganizationId}
+      onEmployeeIdChange={setEmployeeId}
+      onAccessTokenChange={setAccessToken}
+      onStageFilterChange={setStageFilter}
+      onRiskFilterChange={setRiskFilter}
+      onOpeningFilterChange={setOpeningFilter}
+      onReferralSearchQueryChange={setReferralSearchQuery}
+      onClearReferralSearch={() => setReferralSearchQuery("")}
+      onLoadWorkspace={() => void loadWorkspace()}
+      onSelectedOpeningChange={setSelectedOpeningId}
+      onCandidateNameChange={setCandidateName}
+      onCandidateEmailChange={setCandidateEmail}
+      onNoteChange={setNote}
+      onSubmitReferral={() => void submitReferral()}
+      onWithdrawReferral={(referralId) => void withdrawReferral(referralId)}
+      resolveOpeningTitle={(openingId) => openingById.get(openingId)?.title ?? copy.unknownOpeningLabel}
+    />
   );
 }
-

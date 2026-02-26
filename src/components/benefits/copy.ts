@@ -1,4 +1,4 @@
-﻿import type { FlowLocale } from "@/lib/i18n/locales";
+import type { FlowLocale } from "@/lib/i18n/locales";
 import type { BenefitCatalogStatus, BenefitRequestStatus } from "@/features/benefits/types";
 
 export type AdminBenefitsCopy = {
@@ -86,11 +86,15 @@ export type EmployeeBenefitsCopy = {
   statusLabel: string;
   requestedAtLabel: string;
   requestFilterLabel: string;
+  requestRiskFilterLabel: string;
   requestSearchLabel: string;
   requestSearchPlaceholder: string;
   clearSearchAction: string;
   requestSummaryLabel: string;
   filteredRequestSummaryLabel: string;
+  pendingAgingRiskSummaryLabel: string;
+  pendingAgingLabel: string;
+  pendingAgingRiskBadgeLabel: string;
   annualUsageSummaryLabel: string;
   estimatedRemainingLabel: string;
   overLimitWarningLabel: string;
@@ -114,6 +118,10 @@ export type EmployeeBenefitsCopy = {
     APPROVED: string;
     REJECTED: string;
     CANCELED: string;
+  };
+  requestRiskFilter: {
+    all: string;
+    pending3d: string;
   };
 };
 
@@ -284,11 +292,15 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     statusLabel: "상태",
     requestedAtLabel: "신청 시각",
     requestFilterLabel: "요청 상태 필터",
+    requestRiskFilterLabel: "요청 위험 필터",
     requestSearchLabel: "요청 검색",
     requestSearchPlaceholder: "항목명/사유로 검색",
     clearSearchAction: "검색 초기화",
     requestSummaryLabel: "상태별 건수",
     filteredRequestSummaryLabel: "표시 건수",
+    pendingAgingRiskSummaryLabel: "3일 이상 승인대기",
+    pendingAgingLabel: "승인대기 경과",
+    pendingAgingRiskBadgeLabel: "장기 승인대기",
     annualUsageSummaryLabel: "현재 사용/대기 합계",
     estimatedRemainingLabel: "신청 후 예상 잔여 한도",
     overLimitWarningLabel: "한도를 초과한 신청입니다. 관리자 승인 전에 금액을 다시 확인하세요.",
@@ -317,6 +329,10 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
       APPROVED: "승인",
       REJECTED: "반려",
       CANCELED: "취소"
+    },
+    requestRiskFilter: {
+      all: "전체",
+      pending3d: "3일 이상 승인대기"
     }
   },
   en: {
@@ -340,11 +356,15 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
     statusLabel: "Status",
     requestedAtLabel: "Requested at",
     requestFilterLabel: "Request status filter",
+    requestRiskFilterLabel: "Request risk filter",
     requestSearchLabel: "Request search",
     requestSearchPlaceholder: "Search by benefit/reason",
     clearSearchAction: "Clear search",
     requestSummaryLabel: "Status summary",
     filteredRequestSummaryLabel: "Visible items",
+    pendingAgingRiskSummaryLabel: "Pending over 3 days",
+    pendingAgingLabel: "Pending age",
+    pendingAgingRiskBadgeLabel: "Aging pending",
     annualUsageSummaryLabel: "Current used/pending amount",
     estimatedRemainingLabel: "Estimated remaining limit after submit",
     overLimitWarningLabel: "This request exceeds the annual limit. Review amount before admin approval.",
@@ -373,6 +393,10 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
       APPROVED: "Approved",
       REJECTED: "Rejected",
       CANCELED: "Canceled"
+    },
+    requestRiskFilter: {
+      all: "All",
+      pending3d: "Pending >= 3d"
     }
   }
 };

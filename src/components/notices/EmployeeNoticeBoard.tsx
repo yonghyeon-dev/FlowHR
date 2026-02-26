@@ -1,8 +1,6 @@
-﻿"use client";
-
+"use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-
 import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
 import { EmployeeNoticeBoardList } from "@/components/notices/EmployeeNoticeBoardList";
 import { resolveEmployeeNoticeBoardCopy } from "@/components/notices/copy";
@@ -10,34 +8,33 @@ import {
   buildNoticeQuery,
   buildReadAtByNoticeIdMap,
   filterEmployeeNotices,
+  isNoticeUnreadAgingRisk,
+  normalizeEmployeeNoticeAgingRiskFilter,
   normalizeEmployeeNoticeReadStatusFilter,
   parseNotices,
   parseReadNoticeIds,
   parseReadReceipts,
+  type EmployeeNoticeAgingRiskFilter,
   type EmployeeNoticeReadStatusFilter
 } from "@/components/notices/employee-notice-board-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-
 type NoticeBoardLog = {
   id: number;
   status: number;
   ok: boolean;
   at: string;
 };
-
 export default function EmployeeNoticeBoard() {
   const { locale } = useI18n();
   const copy = resolveEmployeeNoticeBoardCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
   const [accessToken, setAccessToken] = useState("");
-
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [readNoticeIds, setReadNoticeIds] = useState<string[]>([]);
   const [readReceipts, setReadReceipts] = useState<NoticeReadReceipt[]>([]);
@@ -46,8 +43,8 @@ export default function EmployeeNoticeBoard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [readStatusFilter, setReadStatusFilter] = useState<EmployeeNoticeReadStatusFilter>("all");
+  const [agingRiskFilter, setAgingRiskFilter] = useState<EmployeeNoticeAgingRiskFilter>("all");
   const [logs, setLogs] = useState<NoticeBoardLog[]>([]);
-
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -55,13 +52,17 @@ export default function EmployeeNoticeBoard() {
         ? (supabaseSession?.accessToken ?? "")
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-
   const publishedCount = useMemo(
     () => notices.filter((notice) => notice.status === "PUBLISHED").length,
     [notices]
   );
   const unreadCount = useMemo(
     () => notices.filter((notice) => !readNoticeIds.includes(notice.id)).length,
+    [notices, readNoticeIds]
+  );
+  const unreadAgingRiskCount = useMemo(
+    () =>
+      notices.filter((notice) => !readNoticeIds.includes(notice.id) && isNoticeUnreadAgingRisk(notice)).length,
     [notices, readNoticeIds]
   );
   const filteredNotices = useMemo(
@@ -71,35 +72,31 @@ export default function EmployeeNoticeBoard() {
         readNoticeIds,
         searchQuery,
         unreadOnly,
-        readStatusFilter
+        readStatusFilter,
+        agingRiskFilter
       }),
-    [notices, readNoticeIds, searchQuery, unreadOnly, readStatusFilter]
+    [agingRiskFilter, notices, readNoticeIds, searchQuery, unreadOnly, readStatusFilter]
   );
   const readAtByNoticeId = useMemo(() => buildReadAtByNoticeIdMap(readReceipts), [readReceipts]);
-
   function buildActorHeaders() {
     const headers: Record<string, string> = {};
     if (usesBearerToken) {
       headers.authorization = `Bearer ${bearerToken}`;
       return headers;
     }
-
     headers["x-actor-role"] = "employee";
     headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
     headers["x-actor-organization-id"] = organizationId.trim();
     return headers;
   }
-
   async function loadNotices() {
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
     }
-
     setPending(true);
     try {
       const headers = buildActorHeaders();
-
       const query = buildNoticeQuery({
         organizationId,
         audience: "employees",
@@ -112,7 +109,6 @@ export default function EmployeeNoticeBoard() {
       });
       const text = await response.text();
       const parsed = text.trim() ? JSON.parse(text) : {};
-
       setLogs((previous) => [
         {
           id: Date.now(),
@@ -122,12 +118,10 @@ export default function EmployeeNoticeBoard() {
         },
         ...previous
       ]);
-
       if (!response.ok) {
         setStatusMessage(copy.messages.loadFailed);
         return;
       }
-
       setNotices(parseNotices(parsed));
       setReadNoticeIds(parseReadNoticeIds(parsed));
       setReadReceipts(parseReadReceipts(parsed));
@@ -138,13 +132,11 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
-
   async function markAsRead(noticeId: string) {
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
     }
-
     setPending(true);
     try {
       const headers = {
@@ -160,7 +152,6 @@ export default function EmployeeNoticeBoard() {
         setStatusMessage(copy.messages.markReadFailed);
         return;
       }
-
       setStatusMessage(copy.messages.markedRead);
       await loadNotices();
     } catch {
@@ -169,7 +160,6 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
-
   async function markAllAsRead() {
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
@@ -178,7 +168,6 @@ export default function EmployeeNoticeBoard() {
     if (unreadCount === 0) {
       return;
     }
-
     setPending(true);
     try {
       const headers = {
@@ -194,7 +183,6 @@ export default function EmployeeNoticeBoard() {
         setStatusMessage(copy.messages.markAllReadFailed);
         return;
       }
-
       setStatusMessage(copy.messages.markedAllRead);
       await loadNotices();
     } catch {
@@ -203,13 +191,12 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
-
   function clearFilters() {
     setSearchQuery("");
     setUnreadOnly(false);
     setReadStatusFilter("all");
+    setAgingRiskFilter("all");
   }
-
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -226,7 +213,6 @@ export default function EmployeeNoticeBoard() {
           </Link>
         </div>
       </header>
-
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
@@ -261,6 +247,16 @@ export default function EmployeeNoticeBoard() {
               <option value="read">{copy.readStatusFilterReadOption}</option>
             </select>
           </label>
+          <label>
+            {copy.agingRiskFilterLabel}
+            <select
+              value={agingRiskFilter}
+              onChange={(event) => setAgingRiskFilter(normalizeEmployeeNoticeAgingRiskFilter(event.target.value))}
+            >
+              <option value="all">{copy.agingRiskFilterAllOption}</option>
+              <option value="aging_3d">{copy.agingRiskFilterOnlyOption}</option>
+            </select>
+          </label>
           <label className="checkbox-inline">
             <input
               type="checkbox"
@@ -286,12 +282,11 @@ export default function EmployeeNoticeBoard() {
             </button>
           </div>
           <p className="small muted">
-            {copy.summaryLabel}: {publishedCount} · {copy.filteredSummaryLabel}: {filteredNotices.length} · {copy.unreadLabel}: {unreadCount}
+            {copy.summaryLabel}: {publishedCount} · {copy.filteredSummaryLabel}: {filteredNotices.length} · {copy.unreadLabel}: {unreadCount} · {copy.unreadAgingRiskSummaryLabel}: {unreadAgingRiskCount}
           </p>
           <p className="small muted">{copy.logsCountLabel}: {logs.length}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
-
         <article className="panel">
           <h2>{copy.listTitle}</h2>
           <EmployeeNoticeBoardList

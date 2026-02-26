@@ -1,4 +1,4 @@
-﻿import type { FlowLocale } from "@/lib/i18n/locales";
+import type { FlowLocale } from "@/lib/i18n/locales";
 import type { RecruitmentOpeningStatus, RecruitmentReferralStage } from "@/features/recruitment/types";
 
 export type AdminRecruitmentCopy = {
@@ -84,13 +84,17 @@ export type EmployeeRecruitmentCopy = {
   stageLabel: string;
   stageFilterLabel: string;
   referralRiskFilterLabel: string;
+  openingFilterLabel: string;
+  openingFilterAllOption: string;
   referralSearchLabel: string;
   referralSearchPlaceholder: string;
   clearSearchAction: string;
   referralSummaryLabel: string;
   filteredReferralSummaryLabel: string;
+  openingFilteredReferralSummaryLabel: string;
   referralRiskSummaryLabel: string;
   criticalReferralRiskSummaryLabel: string;
+  stalledDaysLabel: string;
   openingTitleLabel: string;
   unknownOpeningLabel: string;
   withdrawAction: string;
@@ -295,13 +299,17 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     stageLabel: "단계",
     stageFilterLabel: "추천 단계 필터",
     referralRiskFilterLabel: "정체 위험 필터",
+    openingFilterLabel: "공고 필터",
+    openingFilterAllOption: "전체 공고",
     referralSearchLabel: "추천 검색",
     referralSearchPlaceholder: "후보자/공고/메모 검색",
     clearSearchAction: "검색 초기화",
     referralSummaryLabel: "단계별 건수",
     filteredReferralSummaryLabel: "표시 건수",
+    openingFilteredReferralSummaryLabel: "선택 공고 추천 수",
     referralRiskSummaryLabel: "7일 이상 정체",
     criticalReferralRiskSummaryLabel: "14일 이상 정체",
+    stalledDaysLabel: "정체 경과",
     openingTitleLabel: "공고명",
     unknownOpeningLabel: "알 수 없는 공고",
     withdrawAction: "추천 철회",
@@ -365,13 +373,17 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     stageLabel: "Stage",
     stageFilterLabel: "Referral stage filter",
     referralRiskFilterLabel: "Stall risk filter",
+    openingFilterLabel: "Opening filter",
+    openingFilterAllOption: "All openings",
     referralSearchLabel: "Referral search",
     referralSearchPlaceholder: "Search by candidate/opening/note",
     clearSearchAction: "Clear search",
     referralSummaryLabel: "Stage summary",
     filteredReferralSummaryLabel: "Visible items",
+    openingFilteredReferralSummaryLabel: "Visible for selected opening",
     referralRiskSummaryLabel: "Stalled over 7 days",
     criticalReferralRiskSummaryLabel: "Stalled over 14 days",
+    stalledDaysLabel: "Stalled days",
     openingTitleLabel: "Opening title",
     unknownOpeningLabel: "Unknown opening",
     withdrawAction: "Withdraw referral",

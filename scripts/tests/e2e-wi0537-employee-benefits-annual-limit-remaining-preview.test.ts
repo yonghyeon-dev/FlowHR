@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const workspace = readUtf8("src", "components", "benefits", "EmployeeBenefitsWorkspace.tsx");
+  const workspaceView = readUtf8("src", "components", "benefits", "EmployeeBenefitsWorkspaceView.tsx");
   const copy = readUtf8("src", "components", "benefits", "copy.ts");
   const workItem = readUtf8("work-items", "WI-0537-employee-benefits-annual-limit-remaining-preview.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -16,9 +17,9 @@ async function run() {
   assert.match(workspace, /const selectedBenefitUsage = useMemo/);
   assert.match(workspace, /const estimatedRemainingAmount =/);
   assert.match(workspace, /const isProjectedOverLimit =/);
-  assert.match(workspace, /copy\.annualUsageSummaryLabel/);
-  assert.match(workspace, /copy\.estimatedRemainingLabel/);
-  assert.match(workspace, /copy\.overLimitWarningLabel/);
+  assert.match(workspaceView, /copy\.annualUsageSummaryLabel/);
+  assert.match(workspaceView, /copy\.estimatedRemainingLabel/);
+  assert.match(workspaceView, /copy\.overLimitWarningLabel/);
 
   assert.match(copy, /annualUsageSummaryLabel: string;/);
   assert.match(copy, /estimatedRemainingLabel: string;/);

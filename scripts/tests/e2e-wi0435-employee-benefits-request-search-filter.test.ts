@@ -8,27 +8,39 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeeWorkspace = readUtf8("src", "components", "benefits", "EmployeeBenefitsWorkspace.tsx");
+  const employeeWorkspaceView = readUtf8(
+    "src",
+    "components",
+    "benefits",
+    "EmployeeBenefitsWorkspaceView.tsx"
+  );
+  const employeeWorkspaceHelpers = readUtf8(
+    "src",
+    "components",
+    "benefits",
+    "employee-benefits-helpers.ts"
+  );
   const benefitsCopy = readUtf8("src", "components", "benefits", "copy.ts");
   const workItem = readUtf8("work-items", "WI-0435-employee-benefits-request-search-filter.md");
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(employeeWorkspace, /const \[requestSearchQuery, setRequestSearchQuery\] = useState\(""\);/);
-  assert.match(employeeWorkspace, /const filteredRequests = useMemo\(\(\) => \{/);
-  assert.match(employeeWorkspace, /catalogById\.get\(item\.benefitId\)\?\.name \?\? ""/);
-  assert.match(employeeWorkspace, /item\.reason\.toLowerCase\(\)/);
-  assert.match(employeeWorkspace, /copy\.requestSearchLabel/);
-  assert.match(employeeWorkspace, /copy\.requestSearchPlaceholder/);
-  assert.match(employeeWorkspace, /copy\.clearSearchAction/);
-  assert.match(employeeWorkspace, /copy\.filteredRequestSummaryLabel/);
-  assert.match(employeeWorkspace, /copy\.filteredEmptyRequests/);
-  assert.match(employeeWorkspace, /filteredRequests\.map\(\(item\) => \{/);
+  assert.match(employeeWorkspace, /const filteredRequests = useMemo/);
+  assert.match(employeeWorkspaceHelpers, /catalogById\.get\(item\.benefitId\)\?\.name \?\? ""/);
+  assert.match(employeeWorkspaceHelpers, /item\.reason\.toLowerCase\(\)/);
+  assert.match(employeeWorkspaceView, /copy\.requestSearchLabel/);
+  assert.match(employeeWorkspaceView, /copy\.requestSearchPlaceholder/);
+  assert.match(employeeWorkspaceView, /copy\.clearSearchAction/);
+  assert.match(employeeWorkspaceView, /copy\.filteredRequestSummaryLabel/);
+  assert.match(employeeWorkspaceView, /copy\.filteredEmptyRequests/);
+  assert.match(employeeWorkspaceView, /filteredRequests\.map\(\(item\) => \{/);
 
   assert.match(benefitsCopy, /requestSearchLabel: string;/);
   assert.match(benefitsCopy, /requestSearchPlaceholder: string;/);
   assert.match(benefitsCopy, /clearSearchAction: string;/);
   assert.match(benefitsCopy, /filteredRequestSummaryLabel: string;/);
   assert.match(benefitsCopy, /filteredEmptyRequests: string;/);
-  assert.match(benefitsCopy, /requestSearchLabel: "요청 검색"/);
+  assert.match(benefitsCopy, /requestSearchLabel: "?붿껌 寃??/);
   assert.match(benefitsCopy, /requestSearchLabel: "Request search"/);
 
   assert.match(workItem, /WI-0435/i);
