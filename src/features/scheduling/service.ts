@@ -6,7 +6,6 @@ import type {
   CreateWorkScheduleInput,
   DataAccess,
   EmployeeEntity,
-  ScheduleAnomalyIncidentEntity,
   UpdateWorkScheduleInput,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
@@ -42,6 +41,10 @@ import {
   type AnomalyEscalationSeverity
 } from "@/features/scheduling/anomaly-automation-helpers";
 import { executeScheduleAnomalyIncidentAutoActionAssignments } from "@/features/scheduling/anomaly-incident-auto-action-helpers";
+import {
+  buildScheduleAnomalyIncidentArchiveCandidates,
+  executeScheduleAnomalyIncidentArchiveActions
+} from "@/features/scheduling/anomaly-incident-archive-helpers";
 import {
   buildScheduleAnomalyIncidentSlaQueue,
   filterScheduleAnomalyIncidentQueue
@@ -3781,109 +3784,44 @@ export async function archiveScheduleAnomalyIncidents(
     assigneeId: assigneeFilter
   });
 
-  const sorted = incidents.slice().sort((left, right) => {
-    const byUpdatedAt = left.updatedAt.localeCompare(right.updatedAt);
-    if (byUpdatedAt !== 0) {
-      return byUpdatedAt;
-    }
-    return left.incidentId.localeCompare(right.incidentId);
-  });
+  const { eligible, candidates, skippedState, skippedRecent } =
+    buildScheduleAnomalyIncidentArchiveCandidates({
+      incidents,
+      includeNonResolved,
+      cutoffMillis,
+      topN
+    });
 
-  let skippedState = 0;
-  let skippedRecent = 0;
-  const eligible: ScheduleAnomalyIncidentEntity[] = [];
-  for (const incident of sorted) {
-    if (!includeNonResolved && incident.state !== "RESOLVED") {
-      skippedState += 1;
-      continue;
-    }
-    const updatedAtMillis = parseIsoTimestampToMillis(incident.updatedAt);
-    if (updatedAtMillis === null || updatedAtMillis > cutoffMillis) {
-      skippedRecent += 1;
-      continue;
-    }
-    eligible.push(incident);
-  }
-
-  const candidates = eligible.slice(0, topN);
-  let archived = 0;
-  let dryRunCount = 0;
-  let failed = 0;
-  const items: ScheduleAnomalyIncidentArchiveItem[] = [];
-
-  for (const candidate of candidates) {
-    if (dryRun) {
-      dryRunCount += 1;
-      items.push({
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        assigneeId: candidate.assigneeId,
-        updatedAt: candidate.updatedAt,
-        decision: "DRY_RUN",
-        reason: "dry-run mode"
-      });
-      continue;
-    }
-
-    try {
-      const deleted = await context.dataAccess.scheduling.deleteIncident({
-        incidentId: candidate.incidentId,
-        organizationId: tenantScope
-      });
-      if (!deleted) {
-        failed += 1;
-        items.push({
-          incidentId: candidate.incidentId,
-          state: candidate.state,
-          assigneeId: candidate.assigneeId,
-          updatedAt: candidate.updatedAt,
-          decision: "FAILED",
-          reason: "incident not found"
+  const { archived, dryRunCount, failed, items } =
+    await executeScheduleAnomalyIncidentArchiveActions({
+      candidates,
+      dryRun,
+      deleteIncident: async ({ incidentId }) =>
+        context.dataAccess.scheduling.deleteIncident({
+          incidentId,
+          organizationId: tenantScope
+        }),
+      onArchived: async ({ candidate, archivedAt }) => {
+        await context.dataAccess.audit.append({
+          action: ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
+          entityType: "WorkSchedule",
+          entityId: candidate.incidentId,
+          organizationId: candidate.organizationId ?? tenantScope ?? undefined,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: {
+            incidentId: candidate.incidentId,
+            state: candidate.state,
+            assigneeId: candidate.assigneeId,
+            updatedAt: candidate.updatedAt,
+            archivedAt,
+            asOf: asOfIso,
+            olderThanMinutes,
+            reason: archiveReason
+          }
         });
-        continue;
       }
-
-      const archivedAt = new Date().toISOString();
-      await context.dataAccess.audit.append({
-        action: ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
-        entityType: "WorkSchedule",
-        entityId: candidate.incidentId,
-        organizationId: candidate.organizationId ?? tenantScope ?? undefined,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          incidentId: candidate.incidentId,
-          state: candidate.state,
-          assigneeId: candidate.assigneeId,
-          updatedAt: candidate.updatedAt,
-          archivedAt,
-          asOf: asOfIso,
-          olderThanMinutes,
-          reason: archiveReason
-        }
-      });
-
-      archived += 1;
-      items.push({
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        assigneeId: candidate.assigneeId,
-        updatedAt: candidate.updatedAt,
-        decision: "ARCHIVED",
-        reason: null
-      });
-    } catch (error) {
-      failed += 1;
-      items.push({
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        assigneeId: candidate.assigneeId,
-        updatedAt: candidate.updatedAt,
-        decision: "FAILED",
-        reason: error instanceof Error ? error.message : "unknown error"
-      });
-    }
-  }
+    });
 
   const archivedAt = new Date().toISOString();
   await context.dataAccess.audit.append({
