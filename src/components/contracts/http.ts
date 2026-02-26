@@ -131,6 +131,18 @@ const koContractsErrorMessagePatterns: Array<{ pattern: RegExp; message: string 
     message: "\uC778\uC99D \uC138\uC158\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574 \uC8FC\uC138\uC694."
   },
   {
+    pattern: /contract\s*admin\s*permission\s*required/i,
+    message: "\uACC4\uC57D \uAD00\uB9AC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4."
+  },
+  {
+    pattern: /employee\s*can\s*only\s*read\s*own\s*contract\s*documents|employee\s*can\s*only\s*respond\s*to\s*own\s*document/i,
+    message: "\uBCF8\uC778 \uACC4\uC57D \uBB38\uC11C\uB9CC \uC870\uD68C\uD558\uAC70\uB098 \uC751\uB2F5\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+  },
+  {
+    pattern: /contract\s*response\s*permission\s*denied|contract\s*signature\s*evidence\s*permission\s*denied/i,
+    message: "\uACC4\uC57D \uC751\uB2F5 \uB610\uB294 \uC99D\uBE59 \uC870\uD68C \uAD8C\uD55C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."
+  },
+  {
     pattern: /permission|not\s*allowed|insufficient/i,
     message: "\uAD8C\uD55C\uC774 \uC5C6\uC5B4 \uC694\uCCAD\uC744 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
   },
