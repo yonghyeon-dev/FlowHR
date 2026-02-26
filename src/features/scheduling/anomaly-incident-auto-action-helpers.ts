@@ -43,6 +43,24 @@ export type ScheduleAnomalyIncidentAutoActionAssignmentSummary = {
   items: ScheduleAnomalyIncidentAutoActionItem[];
 };
 
+type ScheduleAnomalyIncidentAutoActionNotificationAuditInput = {
+  action: string;
+  payload: Record<string, unknown>;
+};
+
+type NotifyScheduleAnomalyIncidentAutoActionExecutionInput = {
+  dryRun: boolean;
+  executedAt: string;
+  candidates: number;
+  escalated: number;
+  assigned: number;
+  failed: number;
+  summaryPayload: Record<string, unknown>;
+  items: ScheduleAnomalyIncidentAutoActionItem[];
+  publishExecuted: (payload: Record<string, unknown>) => Promise<void>;
+  appendAudit: (input: ScheduleAnomalyIncidentAutoActionNotificationAuditInput) => Promise<void>;
+};
+
 function isEscalatedDecision(decision: ScheduleAnomalyIncidentEscalationDecision) {
   return decision === "REQUESTED" || decision === "DRY_RUN";
 }
@@ -175,4 +193,57 @@ export async function executeScheduleAnomalyIncidentAutoActionAssignments(
     dryRun,
     items
   };
+}
+
+function buildScheduleAnomalyIncidentAutoActionEventItems(items: ScheduleAnomalyIncidentAutoActionItem[]) {
+  return items.slice(0, 50).map((item) => ({
+    incidentId: item.incidentId,
+    escalationDecision: item.escalationDecision,
+    decision: item.decision,
+    previousAssigneeId: item.previousAssigneeId,
+    assignedAssigneeId: item.assignedAssigneeId,
+    reason: item.reason
+  }));
+}
+
+export async function notifyScheduleAnomalyIncidentAutoActionExecution(
+  input: NotifyScheduleAnomalyIncidentAutoActionExecutionInput
+) {
+  if (input.dryRun) {
+    return;
+  }
+
+  try {
+    await input.publishExecuted({
+      ...input.summaryPayload,
+      items: buildScheduleAnomalyIncidentAutoActionEventItems(input.items)
+    });
+
+    await input.appendAudit({
+      action: "scheduling.anomaly.incident.auto_action.notified",
+      payload: {
+        executedAt: input.executedAt,
+        candidates: input.candidates,
+        escalated: input.escalated,
+        assigned: input.assigned,
+        failed: input.failed
+      }
+    });
+  } catch (error) {
+    try {
+      await input.appendAudit({
+        action: "scheduling.anomaly.incident.auto_action.notify.failed",
+        payload: {
+          executedAt: input.executedAt,
+          candidates: input.candidates,
+          escalated: input.escalated,
+          assigned: input.assigned,
+          failed: input.failed,
+          error: error instanceof Error ? error.message : "unknown error"
+        }
+      });
+    } catch {
+      // Non-blocking failure path for auto-action notification telemetry.
+    }
+  }
 }
