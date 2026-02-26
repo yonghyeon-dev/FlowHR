@@ -1,7 +1,5 @@
 ﻿"use client";
-
 import { useMemo, useState } from "react";
-
 import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
@@ -74,6 +72,7 @@ export default function AdminBenefitsWorkspace() {
   const [annualLimitKrw, setAnnualLimitKrw] = useState("300000");
   const [decisionNote, setDecisionNote] = useState("");
   const [requestFilter, setRequestFilter] = useState<BenefitRequestStatus | "all">("all");
+  const [requestRiskFilter, setRequestRiskFilter] = useState<"all" | "over_limit">("all");
   const [requestSearchQuery, setRequestSearchQuery] = useState("");
 
   const [catalog, setCatalog] = useState<BenefitCatalogItem[]>([]);
@@ -99,18 +98,39 @@ export default function AdminBenefitsWorkspace() {
       inactive: catalog.length - active
     };
   }, [catalog]);
-  const catalogNameById = useMemo(() => {
-    const next: Record<string, string> = {};
+  const catalogById = useMemo(() => {
+    const next: Record<string, BenefitCatalogItem> = {};
     catalog.forEach((item) => {
-      next[item.id] = item.name;
+      next[item.id] = item;
     });
     return next;
   }, [catalog]);
+  const catalogNameById = useMemo(() => {
+    const next: Record<string, string> = {};
+    Object.entries(catalogById).forEach(([id, item]) => {
+      next[id] = item.name;
+    });
+    return next;
+  }, [catalogById]);
+  const overLimitRequestCount = useMemo(
+    () =>
+      requests.filter((request) => {
+        const annualLimitKrw = catalogById[request.benefitId]?.annualLimitKrw ?? Number.POSITIVE_INFINITY;
+        return request.amountKrw > annualLimitKrw;
+      }).length,
+    [catalogById, requests]
+  );
   const visibleRequests = useMemo(() => {
     const query = requestSearchQuery.trim().toLowerCase();
     return requests.filter((request) => {
       if (requestFilter !== "all" && request.status !== requestFilter) {
         return false;
+      }
+      if (requestRiskFilter === "over_limit") {
+        const annualLimitKrw = catalogById[request.benefitId]?.annualLimitKrw ?? Number.POSITIVE_INFINITY;
+        if (request.amountKrw <= annualLimitKrw) {
+          return false;
+        }
       }
       if (query.length === 0) {
         return true;
@@ -119,7 +139,7 @@ export default function AdminBenefitsWorkspace() {
       const haystack = `${request.employeeId} ${benefitName} ${request.reason}`.toLowerCase();
       return haystack.includes(query);
     });
-  }, [catalogNameById, requestFilter, requestSearchQuery, requests]);
+  }, [catalogById, catalogNameById, requestFilter, requestRiskFilter, requestSearchQuery, requests]);
 
   function appendLog(label: string) {
     setLogs((previous) => [`${new Date().toLocaleString(runtimeLocale)} · ${label}`, ...previous]);
@@ -252,8 +272,10 @@ export default function AdminBenefitsWorkspace() {
       visibleRequests={visibleRequests}
       catalogNameById={catalogNameById}
       requestFilter={requestFilter}
+      requestRiskFilter={requestRiskFilter}
       requestSearchQuery={requestSearchQuery}
       requestSummary={requestSummary}
+      overLimitRequestCount={overLimitRequestCount}
       catalogStats={catalogStats}
       pendingLabel={pendingLabel}
       statusMessage={statusMessage}
@@ -266,6 +288,7 @@ export default function AdminBenefitsWorkspace() {
       onAnnualLimitChange={setAnnualLimitKrw}
       onDecisionNoteChange={setDecisionNote}
       onRequestFilterChange={setRequestFilter}
+      onRequestRiskFilterChange={setRequestRiskFilter}
       onRequestSearchQueryChange={setRequestSearchQuery}
       onClearRequestSearch={() => setRequestSearchQuery("")}
       onLoadWorkspace={() => void loadWorkspace()}
