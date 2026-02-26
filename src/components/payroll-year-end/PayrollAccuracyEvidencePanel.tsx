@@ -53,10 +53,21 @@ export function PayrollAccuracyEvidencePanel({
     [showFailOnly, sortedChecks]
   );
 
-  const failOnlyActionLabel = locale === "ko" ? "실패 항목만 보기" : "Show fail only";
-  const showAllActionLabel = locale === "ko" ? "전체 항목 보기" : "Show all";
-  const noVisibleChecksLabel = locale === "ko" ? "현재 조건에서 표시할 검증 항목이 없습니다." : "No checks match current filter.";
-  const downloadEvidenceActionLabel = locale === "ko" ? "증빙 JSON 다운로드" : "Download evidence JSON";
+  const failedChecks = useMemo(() => sortedChecks.filter((check) => !check.passed), [sortedChecks]);
+
+  const failOnlyActionLabel = locale === "ko" ? "\uC2E4\uD328 \uD56D\uBAA9\uB9CC \uBCF4\uAE30" : "Show fail only";
+  const showAllActionLabel = locale === "ko" ? "\uC804\uCCB4 \uD56D\uBAA9 \uBCF4\uAE30" : "Show all";
+  const noVisibleChecksLabel =
+    locale === "ko"
+      ? "\uD604\uC7AC \uC870\uAC74\uC5D0\uC11C \uD45C\uC2DC\uD560 \uAC80\uC99D \uD56D\uBAA9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."
+      : "No checks match current filter.";
+  const downloadEvidenceActionLabel =
+    locale === "ko" ? "\uC99D\uBE59 JSON \uB2E4\uC6B4\uB85C\uB4DC" : "Download evidence JSON";
+  const mismatchSummaryLabel = locale === "ko" ? "\uBD88\uC77C\uCE58 \uD56D\uBAA9" : "Mismatch checks";
+  const allChecksBalancedLabel =
+    locale === "ko"
+      ? "\uBAA8\uB4E0 \uAC80\uC99D \uD56D\uBAA9\uC774 \uC77C\uCE58\uD569\uB2C8\uB2E4."
+      : "All checks are balanced.";
 
   function downloadEvidenceJson() {
     const now = new Date().toISOString();
@@ -97,6 +108,14 @@ export function PayrollAccuracyEvidencePanel({
           <p className="small">
             {copy.accuracySummaryLabel}: {copy.accuracyPassLabel} {evidence.passCount} /{" "}
             {copy.accuracyFailLabel} {evidence.failCount}
+          </p>
+          <p className="small muted">
+            {mismatchSummaryLabel}:{" "}
+            {failedChecks.length === 0
+              ? allChecksBalancedLabel
+              : failedChecks
+                  .map((check) => copy.accuracyCheckLabels[check.key as PayrollAccuracyCheckKey])
+                  .join(", ")}
           </p>
           <div className="panel-actions">
             <button

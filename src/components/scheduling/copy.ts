@@ -112,6 +112,8 @@ export type EmployeeScheduleCopy = {
   statusNeedsRange: string;
   statusNeedsOrgDev: string;
   statusListLoaded: string;
+  statusConflictCandidatesLabel: string;
+  statusRequestTrackingHint: string;
   statusExported: string;
   statusIcsExported: string;
   statusNoSchedulesToExport: string;
@@ -303,6 +305,8 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     statusNeedsRange: "조회 기간을 입력하세요.",
     statusNeedsOrgDev: "개발 헤더 모드에서는 조직 식별자가 필요합니다.",
     statusListLoaded: "내 일정을 불러왔습니다.",
+    statusConflictCandidatesLabel: "충돌 후보",
+    statusRequestTrackingHint: "일정 충돌이 있으면 관리자에게 근태 정정 요청으로 후속 추적을 남겨 주세요.",
     statusExported: "CSV 파일을 내보냈습니다.",
     statusIcsExported: "ICS 파일을 내보냈습니다.",
     statusNoSchedulesToExport: "내보낼 일정이 없습니다.",
@@ -373,6 +377,8 @@ export const employeeScheduleCopyByLocale: Record<FlowLocale, EmployeeScheduleCo
     statusNeedsRange: "from/to date is required.",
     statusNeedsOrgDev: "organization ID is required in dev header mode.",
     statusListLoaded: "my schedules loaded.",
+    statusConflictCandidatesLabel: "Conflict candidates",
+    statusRequestTrackingHint: "If shifts overlap, submit an attendance correction request for follow-up tracking.",
     statusExported: "CSV export completed.",
     statusIcsExported: "ICS export completed.",
     statusNoSchedulesToExport: "No schedules to export.",

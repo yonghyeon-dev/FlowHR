@@ -1533,6 +1533,13 @@ function buildRotationWindowsForTemplates(
   });
 }
 
+function buildTemplateRangeWindows(
+  template: WorkScheduleTemplateEntity,
+  matchedDates: string[]
+) {
+  return buildRotationWindowsForTemplates([template], matchedDates);
+}
+
 function evaluateRotationOffset(
   existingSchedules: WorkScheduleEntity[],
   templates: WorkScheduleTemplateEntity[],
@@ -2300,18 +2307,7 @@ export async function assignWorkScheduleRangeFromTemplate(
   }
 
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, template.weekdays);
-  const generatedWindows: GeneratedScheduleWindow[] = matchedDates.map((date) => {
-    const window = buildScheduleWindowFromTemplateDate(template, date);
-    return {
-      date,
-      templateId: template.id,
-      startAt: window.startAt,
-      endAt: window.endAt,
-      breakMinutes: template.breakMinutes,
-      isHoliday: template.isHoliday,
-      notes: template.notes ?? undefined
-    };
-  });
+  const generatedWindows = buildTemplateRangeWindows(template, matchedDates);
 
   await ensureNoOverlapsForGeneratedWindows(
     context,
@@ -2320,18 +2316,11 @@ export async function assignWorkScheduleRangeFromTemplate(
     generatedWindows
   );
 
-  const createdScheduleIds: string[] = [];
-  for (const candidate of generatedWindows) {
-    const created = await createWorkSchedule(context, {
-      employeeId: input.employeeId,
-      startAt: candidate.startAt,
-      endAt: candidate.endAt,
-      breakMinutes: candidate.breakMinutes,
-      isHoliday: candidate.isHoliday,
-      notes: candidate.notes
-    });
-    createdScheduleIds.push(created.id);
-  }
+  const createdScheduleIds = await createSchedulesFromGeneratedWindows(
+    context,
+    input.employeeId,
+    generatedWindows
+  );
 
   await context.dataAccess.audit.append({
     action: "scheduling.template.range_assigned",
@@ -2411,19 +2400,7 @@ export async function assignWorkScheduleRotation(
   }
 
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
-  const generatedWindows: GeneratedScheduleWindow[] = matchedDates.map((date, index) => {
-    const template = templates[index % templates.length];
-    const window = buildScheduleWindowFromTemplateDate(template, date);
-    return {
-      date,
-      templateId: template.id,
-      startAt: window.startAt,
-      endAt: window.endAt,
-      breakMinutes: template.breakMinutes,
-      isHoliday: template.isHoliday,
-      notes: template.notes ?? undefined
-    };
-  });
+  const generatedWindows = buildRotationWindowsForTemplates(templates, matchedDates);
 
   await ensureNoOverlapsForGeneratedWindows(
     context,
@@ -2432,18 +2409,11 @@ export async function assignWorkScheduleRotation(
     generatedWindows
   );
 
-  const createdScheduleIds: string[] = [];
-  for (const candidate of generatedWindows) {
-    const created = await createWorkSchedule(context, {
-      employeeId: input.employeeId,
-      startAt: candidate.startAt,
-      endAt: candidate.endAt,
-      breakMinutes: candidate.breakMinutes,
-      isHoliday: candidate.isHoliday,
-      notes: candidate.notes
-    });
-    createdScheduleIds.push(created.id);
-  }
+  const createdScheduleIds = await createSchedulesFromGeneratedWindows(
+    context,
+    input.employeeId,
+    generatedWindows
+  );
 
   await context.dataAccess.audit.append({
     action: "scheduling.rotation.assigned",

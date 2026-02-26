@@ -96,6 +96,7 @@ const yearEndCopyEn = {
     tax_liability_delta_balance: "Tax liability delta balance",
     withholding_delta_change_balance: "Withholding delta change balance",
     taxable_income_reduction_balance: "Taxable income reduction balance",
+    settlement_recalculation_baseline_balance: "Settlement/recalculation baseline balance",
     insurance_reconciliation_status_balance: "Insurance reconciliation status balance",
     insurance_monthly_sum_balance: "Insurance monthly sum balance"
   } as Record<PayrollAccuracyCheckKey, string>,
@@ -253,6 +254,7 @@ export const payrollYearEndCopyByLocale: Record<FlowLocale, PayrollYearEndCopy> 
       tax_liability_delta_balance: "세액 차이 반영 균형",
       withholding_delta_change_balance: "원천세 차이 변경 균형",
       taxable_income_reduction_balance: "과세소득 감소량 균형",
+      settlement_recalculation_baseline_balance: "정산/재계산 기준 균형",
       insurance_reconciliation_status_balance: "보험 대사 상태 균형",
       insurance_monthly_sum_balance: "보험 월별 합계 균형"
     },

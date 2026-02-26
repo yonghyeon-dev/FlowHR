@@ -11,14 +11,14 @@ import {
   type ContractTemplateBuilderCopy
 } from "@/components/contracts/copy";
 import { readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
+import {
+  buildTemplateValidationChecklist,
+  ContractTemplateValidationChecklist,
+  type TemplateClauseDraft
+} from "@/components/contracts/template-builder-checklist";
 import { useI18n } from "@/lib/i18n/provider";
 
-type ClauseDraft = {
-  id: string;
-  title: string;
-  body: string;
-  required: boolean;
-};
+type ClauseDraft = TemplateClauseDraft;
 
 type CreatedTemplate = {
   id: string;
@@ -94,6 +94,24 @@ export default function ContractTemplateBuilder() {
       }),
     [clauses, copy.emptyClauseBody, copy.optionalChip, copy.requiredChip, copy.untitledClause]
   );
+  const validationChecklist = useMemo(
+    () =>
+      buildTemplateValidationChecklist(templateName, clauses, {
+        checklistNameRule: copy.checklistNameRule,
+        checklistClauseRule: copy.checklistClauseRule,
+        checklistRequiredRule: copy.checklistRequiredRule,
+        checklistDuplicateRule: copy.checklistDuplicateRule
+      }),
+    [
+      clauses,
+      copy.checklistClauseRule,
+      copy.checklistDuplicateRule,
+      copy.checklistNameRule,
+      copy.checklistRequiredRule,
+      templateName
+    ]
+  );
+  const canCreateTemplate = validationChecklist.every((item) => item.passed);
 
   function updateClause(id: string, patch: Partial<ClauseDraft>) {
     setClauses((prev) => prev.map((clause) => (clause.id === id ? { ...clause, ...patch } : clause)));
@@ -116,6 +134,10 @@ export default function ContractTemplateBuilder() {
   }
 
   async function createTemplate() {
+    if (!canCreateTemplate) {
+      setError(copy.validationFailedMessage);
+      return;
+    }
     setPending(true);
     setError(null);
     setStatusMessage(null);
@@ -177,10 +199,21 @@ export default function ContractTemplateBuilder() {
             <button type="button" className="btn btn-secondary" onClick={addClause} disabled={pending}>
               {copy.addClauseAction}
             </button>
-            <button type="button" className="btn" onClick={() => void createTemplate()} disabled={pending}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void createTemplate()}
+              disabled={pending || !canCreateTemplate}
+            >
               {copy.createTemplateAction}
             </button>
           </div>
+          <ContractTemplateValidationChecklist
+            title={copy.checklistTitle}
+            readyLabel={copy.checklistReadyLabel}
+            needsFixLabel={copy.checklistNeedsFixLabel}
+            items={validationChecklist}
+          />
           <ul className="contract-template-list" aria-label={copy.clauseBuilderAria}>
             {clauses.map((clause, index) => (
               <li key={clause.id}>

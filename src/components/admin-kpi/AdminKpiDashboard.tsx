@@ -1,13 +1,13 @@
-﻿"use client";
-
+"use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 import {
+  AdminKpiAnalyticsControls,
   AdminKpiCards,
   AdminKpiContextPanel,
   AdminKpiLogsPanel,
   AdminKpiTrendPanel,
+  type AdminKpiFocusMetric,
   type ApiLog,
   type RangeKpi
 } from "@/components/admin-kpi/AdminKpiSections";
@@ -34,36 +34,31 @@ import {
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-
 type ApprovalExecutionLite = { updatedAt: string };
 type AttendanceAggregateLite = { counts: { total: number; approved: number } };
 type LeaveRequestLite = { days: number };
 type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
-
 type AdminKpiDashboardProps = {
   analyticsMode?: boolean;
 };
-
 export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardProps) {
   const { locale } = useI18n();
   const copy = kpiCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
   const initialRange = useMemo(() => getThisMonthRangeLocal(), []);
   const [periodStart, setPeriodStart] = useState(initialRange.from);
   const [periodEnd, setPeriodEnd] = useState(initialRange.to);
+  const [focusMetric, setFocusMetric] = useState<AdminKpiFocusMetric>("all");
   const [currentRangeKpi, setCurrentRangeKpi] = useState<RangeKpi | null>(null);
   const [previousRangeKpi, setPreviousRangeKpi] = useState<RangeKpi | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
-
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -71,7 +66,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         ? (supabaseSession?.accessToken ?? "")
         : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-
   useEffect(() => {
     if (!isProductionRuntime || organizationId.trim()) {
       return;
@@ -81,7 +75,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       setOrganizationId(orgId.trim());
     }
   }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
-
   const requestJson = useCallback(
     async (label: string, path: string) => {
       const startedAt = Date.now();
@@ -95,11 +88,9 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
           headers["x-actor-organization-id"] = organizationId.trim();
         }
       }
-
       const response = await fetch(path, { method: "GET", headers });
       const text = await response.text();
       const body = text.trim().length > 0 ? safeParseBody(text) : null;
-
       setLogs((prev) => [
         {
           id: Date.now(),
@@ -111,7 +102,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         },
         ...prev
       ]);
-
       if (!response.ok) {
         throw new Error(`${label} failed (${response.status})`);
       }
@@ -119,7 +109,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     },
     [adminActorId, bearerToken, organizationId, runtimeLocale, usesBearerToken]
   );
-
   const loadRangeKpi = useCallback(
     async (range: { from: string; to: string }) => {
       const rangeQuery = buildQuery({ from: range.from, to: range.to });
@@ -130,7 +119,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         limit: "500",
         sort: "priority_desc"
       });
-
       const [approvalBody, attendanceBody, leaveBody, payrollBody] = await Promise.all([
         requestJson("approval executions", `/api/approval/executions${approvalQuery}`),
         requestJson("attendance aggregates", `/api/attendance/aggregates${rangeQuery}`),
@@ -140,12 +128,10 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         ),
         requestJson("payroll runs", `/api/payroll/runs${rangeQuery}`)
       ]);
-
       const approvalExecutions = parseArray<ApprovalExecutionLite>(approvalBody, "executions");
       const attendanceAggregates = parseArray<AttendanceAggregateLite>(attendanceBody, "aggregates");
       const approvedLeaveRequests = parseArray<LeaveRequestLite>(leaveBody, "requests");
       const payrollRuns = parseArray<PayrollRunLite>(payrollBody, "runs");
-
       const attendanceTotal = attendanceAggregates.reduce((sum, item) => sum + (item.counts?.total ?? 0), 0);
       const attendanceApproved = attendanceAggregates.reduce(
         (sum, item) => sum + (item.counts?.approved ?? 0),
@@ -158,7 +144,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       const approvalStalledCount = approvalExecutions.filter(
         (execution) => computeStalledHours(execution.updatedAt, asOfDate) >= 24
       ).length;
-
       return {
         summary: buildAdminKpiSummary({
           approvalPendingCount: approvalExecutions.length,
@@ -180,7 +165,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     },
     [organizationId, requestJson]
   );
-
   const loadKpis = useCallback(async () => {
     if (!usesBearerToken && !organizationId.trim()) {
       return;
@@ -196,19 +180,19 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       setPendingLabel(null);
     }
   }, [copy.loadingLabel, loadRangeKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
-
   useEffect(() => {
     void loadKpis();
   }, [loadKpis]);
-
   const trendRows = useMemo(
     () => buildAdminKpiTrendRows(copy.metrics, currentRangeKpi, previousRangeKpi),
     [copy.metrics, currentRangeKpi, previousRangeKpi]
   );
-
+  const visibleTrendRows = useMemo(
+    () => (focusMetric === "all" ? trendRows : trendRows.filter((row) => row.key === focusMetric)),
+    [focusMetric, trendRows]
+  );
   const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim() && !showDevTools);
   const exportDisabled = !currentRangeKpi || !previousRangeKpi || Boolean(pendingLabel);
-
   const exportCsv = useCallback(() => {
     if (!currentRangeKpi || !previousRangeKpi) {
       return;
@@ -216,8 +200,9 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     const generatedAt = new Date();
     const payload = buildAdminKpiCsvPayload({
       analyticsMode,
-      trendRows,
+      trendRows: visibleTrendRows,
       summary: currentRangeKpi.summary,
+      focusMetric,
       generatedAt
     });
     triggerCsvDownload(payload.fileName, payload.content);
@@ -232,8 +217,15 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       },
       ...prev
     ]);
-  }, [analyticsMode, copy.exportCsvDone, currentRangeKpi, previousRangeKpi, runtimeLocale, trendRows]);
-
+  }, [
+    analyticsMode,
+    copy.exportCsvDone,
+    currentRangeKpi,
+    focusMetric,
+    previousRangeKpi,
+    runtimeLocale,
+    visibleTrendRows
+  ]);
   return (
     <main className="saas-content">
       <header className="hero">
@@ -241,20 +233,21 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         <h1>{analyticsMode ? copy.analyticsTitle : copy.title}</h1>
         <p>{analyticsMode ? copy.analyticsDescription : copy.description}</p>
         {analyticsMode ? (
-          <div className="actions" style={{ marginTop: 12 }}>
-            <button className="btn btn-secondary" onClick={exportCsv} disabled={exportDisabled}>
-              {copy.exportCsvButton}
-            </button>
-          </div>
+          <AdminKpiAnalyticsControls
+            copy={copy}
+            focusMetric={focusMetric}
+            exportButtonLabel={copy.exportCsvButton}
+            exportDisabled={exportDisabled}
+            onFocusMetricChange={setFocusMetric}
+            onExportCsv={exportCsv}
+          />
         ) : null}
       </header>
-
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
           {copy.productionWarning} <Link href="/login">{copy.loginCta}</Link>
         </p>
       ) : null}
-
       <AdminKpiContextPanel
         copy={copy}
         organizationId={organizationId}
@@ -283,11 +276,9 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
           void loadKpis();
         }}
       />
-
       {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
-
       <section className="panel-grid">
-        <AdminKpiTrendPanel copy={copy} rows={trendRows} />
+        <AdminKpiTrendPanel copy={copy} rows={visibleTrendRows} />
         <AdminKpiLogsPanel copy={copy} logs={logs} />
       </section>
     </main>

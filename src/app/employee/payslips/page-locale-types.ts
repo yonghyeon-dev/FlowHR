@@ -168,6 +168,12 @@ export type PayslipPageCopy = {
     settlementState: string;
     summaryTitle: string;
     paymentDeductionTitle: string;
+    printVerificationTitle: string;
+    printVerificationExpectedNet: string;
+    printVerificationActualNet: string;
+    printVerificationResult: string;
+    printVerificationPass: string;
+    printVerificationFail: string;
     withholdingTax: string;
     socialInsurance: string;
     otherDeductions: string;

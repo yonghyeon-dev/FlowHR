@@ -13,6 +13,7 @@ import {
   buildCurrentWeekDateRange,
   buildNextWeekDateRange,
   buildQuery,
+  countScheduleOverlapCandidates,
   exportScheduleRowsCsv,
   exportScheduleRowsIcs,
   extractErrorMessage,
@@ -180,7 +181,10 @@ export default function EmployeeScheduleBoard() {
         ? ((body as { schedules?: WorkScheduleDto[] }).schedules ?? [])
         : [];
       setSchedules(list);
-      setStatusMessage(copy.statusListLoaded);
+      const overlapCandidates = countScheduleOverlapCandidates(list);
+      setStatusMessage(
+        `${copy.statusListLoaded} (${copy.statusConflictCandidatesLabel}: ${overlapCandidates}). ${copy.statusRequestTrackingHint}`
+      );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : copy.loadErrorPrefix);
     } finally {

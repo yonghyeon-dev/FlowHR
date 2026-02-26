@@ -14,6 +14,7 @@ export type PayrollAccuracyCheckKey =
   | "tax_liability_delta_balance"
   | "withholding_delta_change_balance"
   | "taxable_income_reduction_balance"
+  | "settlement_recalculation_baseline_balance"
   | "insurance_reconciliation_status_balance"
   | "insurance_monthly_sum_balance";
 
@@ -149,6 +150,25 @@ function buildInsuranceChecks(report: InsuranceReconciliationReport): PayrollAcc
   ];
 }
 
+function buildSettlementRecalculationCrossChecks(
+  summary: SettlementSummary,
+  recalculation: RecalculationSummary
+): PayrollAccuracyCheck[] {
+  const settlementTaxLiability = summary.settlementKrw.annualTaxLiabilityKrw;
+  const settlementWithholdingDelta = summary.settlementKrw.withholdingDeltaKrw;
+  const baselineTaxLiability = recalculation.baselineSettlementKrw.annualTaxLiabilityKrw;
+  const baselineWithholdingDelta = recalculation.baselineSettlementKrw.withholdingDeltaKrw;
+  return [
+    {
+      key: "settlement_recalculation_baseline_balance",
+      passed:
+        settlementTaxLiability === baselineTaxLiability &&
+        settlementWithholdingDelta === baselineWithholdingDelta,
+      detail: `settlementTax=${settlementTaxLiability}, baselineTax=${baselineTaxLiability}, settlementDelta=${settlementWithholdingDelta}, baselineDelta=${baselineWithholdingDelta}`
+    }
+  ];
+}
+
 export function buildPayrollAccuracyEvidence(params: {
   settlement: PayrollYearEndSettlementResponse | null;
   recalculation: PayrollYearEndRecalculationResponse | null;
@@ -160,6 +180,14 @@ export function buildPayrollAccuracyEvidence(params: {
   }
   if (params.recalculation) {
     checks.push(...buildRecalculationChecks(params.recalculation.recalculation));
+  }
+  if (params.settlement && params.recalculation) {
+    checks.push(
+      ...buildSettlementRecalculationCrossChecks(
+        params.settlement.summary,
+        params.recalculation.recalculation
+      )
+    );
   }
   if (params.insuranceReconciliationReport) {
     checks.push(...buildInsuranceChecks(params.insuranceReconciliationReport.report));
