@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 
+import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import type { PayslipPageCopy } from "@/app/employee/payslips/page-locale-helpers";
 import {
   buildQuery,
@@ -14,7 +15,7 @@ type UsePayslipApiParams = {
   runtimeLocale: string;
   usesBearerToken: boolean;
   bearerToken: string;
-  employeeId: string;
+  employeeIdForApi: string;
   organizationId: string;
   periodStart: string;
   periodEnd: string;
@@ -48,7 +49,7 @@ export function usePayslipApi({
   runtimeLocale,
   usesBearerToken,
   bearerToken,
-  employeeId,
+  employeeIdForApi,
   organizationId,
   periodStart,
   periodEnd,
@@ -83,7 +84,7 @@ export function usePayslipApi({
           headers.authorization = `Bearer ${bearerToken.trim()}`;
         } else {
           headers["x-actor-role"] = "employee";
-          headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
+          headers["x-actor-id"] = employeeIdForApi.trim() || defaultEmployeeIdForApi;
           if (organizationId.trim().length > 0) {
             headers["x-actor-organization-id"] = organizationId.trim();
           }
@@ -115,13 +116,13 @@ export function usePayslipApi({
         setPendingLabel(null);
       }
     },
-    [bearerToken, employeeId, organizationId, runtimeLocale, usesBearerToken]
+    [bearerToken, employeeIdForApi, organizationId, runtimeLocale, usesBearerToken]
   );
 
   const refreshPayslips = useCallback(async () => {
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
-    const targetEmployeeId = employeeId.trim() || "EMP-1001";
+    const targetEmployeeId = employeeIdForApi.trim() || defaultEmployeeIdForApi;
 
     const [runsRes, aggregateRes] = await Promise.all([
       callApi(
@@ -151,7 +152,16 @@ export function usePayslipApi({
       const aggregates = Array.isArray(parsed.aggregates) ? parsed.aggregates : [];
       setAggregate(aggregates[0] ?? null);
     }
-  }, [callApi, employeeId, pageCopy.logs.fetchAttendance, pageCopy.logs.fetchPayslips, periodEnd, periodStart, setAggregate, setRuns]);
+  }, [
+    callApi,
+    employeeIdForApi,
+    pageCopy.logs.fetchAttendance,
+    pageCopy.logs.fetchPayslips,
+    periodEnd,
+    periodStart,
+    setAggregate,
+    setRuns
+  ]);
 
   const clearLogs = useCallback(() => {
     setLogs([]);

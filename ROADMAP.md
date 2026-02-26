@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-26
-> **Current version**: 0.1.173 (Scheduling Runtime Korean Error Normalization)
+> **Current version**: 0.1.174 (Payslips Employee ID Locale Normalization)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -756,3 +756,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0489 contracts http fallback runtime alignment (`contracts/http.ts` ko 런타임 계약 도메인 오류 매핑 확장 + 상태 제약/해시 불일치/리소스 미존재 한국어 안내 고정 + `e2e-wi0489` 회귀 테스트 추가)
 - WI-0490 contracts permission message korean normalization phase 2 (`contracts/http.ts` 권한/본인문서 제약 오류 한국어 매핑 확장 + generic permission fallback 유지 + `e2e-wi0490` 회귀 테스트 추가)
 - WI-0491 scheduling runtime korean error normalization (`scheduling/helpers.ts` 런타임 오류 한국어 정규화 helper 추가 + admin/employee 일정 오류 메시지 매핑 강화 + `e2e-wi0491` 회귀 테스트 추가)
+- WI-0492 payslips employee-id locale normalization (`/employee/payslips` 직원번호 입력/표시를 `직원-*`↔`EMP-*` locale helper로 일원화 + API 호출은 `EMP-*` 정규화 고정 + CSV/상세/파일명 표기 한국어화 + `e2e-wi0492` 회귀 테스트 추가)
