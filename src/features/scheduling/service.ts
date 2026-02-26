@@ -41,6 +41,7 @@ import {
   parsePositiveIntegerRangeFromEnv,
   type AnomalyEscalationSeverity
 } from "@/features/scheduling/anomaly-automation-helpers";
+import { executeScheduleAnomalyIncidentAutoActionAssignments } from "@/features/scheduling/anomaly-incident-auto-action-helpers";
 import {
   buildScheduleAnomalyIncidentSlaQueue,
   filterScheduleAnomalyIncidentQueue
@@ -3592,137 +3593,42 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     dryRun: input.dryRun
   });
 
-  let assigned = 0;
-  let skippedEscalation = 0;
-  let skippedAssigned = 0;
-  let failed = 0;
-  let dryRun = 0;
-  const items: ScheduleAnomalyIncidentAutoActionItem[] = [];
-
-  for (const escalationItem of escalation.items) {
-    const previousAssigneeId = escalationItem.assigneeId ?? null;
-    const isEscalated =
-      escalationItem.decision === "REQUESTED" || escalationItem.decision === "DRY_RUN";
-    if (!isEscalated) {
-      skippedEscalation += 1;
-      items.push({
-        incidentId: escalationItem.incidentId,
-        state: escalationItem.state,
-        status: escalationItem.status,
-        escalationDecision: escalationItem.decision,
-        previousAssigneeId,
-        assignedAssigneeId: previousAssigneeId,
-        decision: "SKIPPED_ESCALATION",
-        reason: escalationItem.reason ?? `escalation decision ${escalationItem.decision}`
-      });
-      continue;
-    }
-
-    if (autoAssignMode === "ASSIGN_IF_UNASSIGNED" && previousAssigneeId) {
-      skippedAssigned += 1;
-      items.push({
-        incidentId: escalationItem.incidentId,
-        state: escalationItem.state,
-        status: escalationItem.status,
-        escalationDecision: escalationItem.decision,
-        previousAssigneeId,
-        assignedAssigneeId: previousAssigneeId,
-        decision: "SKIPPED_ALREADY_ASSIGNED",
-        reason: "incident already has assignee"
-      });
-      continue;
-    }
-
-    if (autoAssignMode === "FORCE_ASSIGN" && previousAssigneeId === autoAssigneeId) {
-      skippedAssigned += 1;
-      items.push({
-        incidentId: escalationItem.incidentId,
-        state: escalationItem.state,
-        status: escalationItem.status,
-        escalationDecision: escalationItem.decision,
-        previousAssigneeId,
-        assignedAssigneeId: previousAssigneeId,
-        decision: "SKIPPED_SAME_ASSIGNEE",
-        reason: "incident is already assigned to autoAssigneeId"
-      });
-      continue;
-    }
-
-    if (escalation.dryRun || escalationItem.decision === "DRY_RUN") {
-      dryRun += 1;
-      items.push({
-        incidentId: escalationItem.incidentId,
-        state: escalationItem.state,
-        status: escalationItem.status,
-        escalationDecision: escalationItem.decision,
-        previousAssigneeId,
-        assignedAssigneeId: autoAssigneeId,
-        decision: "DRY_RUN",
-        reason: "dry-run mode"
-      });
-      continue;
-    }
-
-    try {
-      const updated = await updateScheduleAnomalyIncidentLifecycle(context, {
-        incidentId: escalationItem.incidentId,
-        action: "ASSIGN",
-        assigneeId: autoAssigneeId,
-        note: autoAssignNote ?? undefined
-      });
-
-      assigned += 1;
-      items.push({
-        incidentId: escalationItem.incidentId,
-        state: updated.state,
-        status: escalationItem.status,
-        escalationDecision: escalationItem.decision,
-        previousAssigneeId,
-        assignedAssigneeId: updated.assigneeId,
-        decision: "ASSIGNED",
-        reason: null
-      });
-    } catch (error) {
-      failed += 1;
-      const reason = error instanceof Error ? error.message : "unknown error";
-      items.push({
-        incidentId: escalationItem.incidentId,
-        state: escalationItem.state,
-        status: escalationItem.status,
-        escalationDecision: escalationItem.decision,
-        previousAssigneeId,
-        assignedAssigneeId: previousAssigneeId,
-        decision: "FAILED",
-        reason
-      });
-
-      try {
+  const { assigned, skippedEscalation, skippedAssigned, failed, dryRun, items, escalated } =
+    await executeScheduleAnomalyIncidentAutoActionAssignments({
+      escalationItems: escalation.items,
+      escalationDryRun: escalation.dryRun,
+      autoAssigneeId,
+      autoAssignMode,
+      assignIncident: async ({ incidentId }) => {
+        const updated = await updateScheduleAnomalyIncidentLifecycle(context, {
+          incidentId,
+          action: "ASSIGN",
+          assigneeId: autoAssigneeId,
+          note: autoAssignNote ?? undefined
+        });
+        return { state: updated.state, assigneeId: updated.assigneeId };
+      },
+      onAssignFailed: async ({ incidentId, previousAssigneeId, escalationDecision, error }) => {
         await context.dataAccess.audit.append({
           action: "scheduling.anomaly.incident.auto_action.assign.failed",
           entityType: "WorkSchedule",
-          entityId: escalationItem.incidentId,
+          entityId: incidentId,
           organizationId: tenantScope,
           actorRole: actor.role,
           actorId: actor.id,
           payload: {
-            incidentId: escalationItem.incidentId,
+            incidentId,
             previousAssigneeId,
             autoAssigneeId,
             autoAssignMode,
-            escalationDecision: escalationItem.decision,
-            error: reason
+            escalationDecision,
+            error
           }
         });
-      } catch {
-        // Non-blocking failure path for auto-action assignment telemetry.
       }
-    }
-  }
+    });
 
   const executedAt = new Date().toISOString();
-  const escalated = escalation.items.filter(
-    (item) => item.decision === "REQUESTED" || item.decision === "DRY_RUN"
-  ).length;
   const summaryPayload = {
     executedAt,
     dryRun: escalation.dryRun,
