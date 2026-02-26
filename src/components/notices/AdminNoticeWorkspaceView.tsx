@@ -5,7 +5,7 @@ import {
   resolveNoticeStatusLabel,
   resolveNoticeWorkspaceCopy
 } from "@/components/notices/copy";
-import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
+import type { NoticeItem, NoticeStatus } from "@/features/notices/types";
 
 type NoticeApiSummary = {
   total: number;
@@ -37,7 +37,10 @@ type AdminNoticeWorkspaceViewProps = {
   publishAt: string;
   summary: NoticeApiSummary;
   notices: NoticeItem[];
-  readReceipts: NoticeReadReceipt[];
+  filteredNotices: NoticeItem[];
+  listSearchQuery: string;
+  readCountByNoticeId: Map<string, number>;
+  readCountLabel: string;
   logs: NoticeApiLog[];
   stats: {
     total: number;
@@ -54,6 +57,8 @@ type AdminNoticeWorkspaceViewProps = {
   onBodyChange: (value: string) => void;
   onAudienceChange: (value: "all" | "employees" | "admins") => void;
   onPublishAtChange: (value: string) => void;
+  onListSearchQueryChange: (value: string) => void;
+  onClearListSearch: () => void;
   onLoadNotices: () => void;
   onCreateNotice: () => void;
   onPublishNow: (noticeId: string) => void;
@@ -72,7 +77,10 @@ export default function AdminNoticeWorkspaceView({
   publishAt,
   summary,
   notices,
-  readReceipts,
+  filteredNotices,
+  listSearchQuery,
+  readCountByNoticeId,
+  readCountLabel,
   logs,
   stats,
   pendingLabel,
@@ -86,15 +94,12 @@ export default function AdminNoticeWorkspaceView({
   onBodyChange,
   onAudienceChange,
   onPublishAtChange,
+  onListSearchQueryChange,
+  onClearListSearch,
   onLoadNotices,
   onCreateNotice,
   onPublishNow
 }: AdminNoticeWorkspaceViewProps) {
-  const readCountByNoticeId = new Map<string, number>();
-  readReceipts.forEach((receipt) => {
-    readCountByNoticeId.set(receipt.noticeId, (readCountByNoticeId.get(receipt.noticeId) ?? 0) + 1);
-  });
-
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -206,11 +211,29 @@ export default function AdminNoticeWorkspaceView({
 
         <article className="panel">
           <h2>{copy.listTitle}</h2>
+          <label>
+            {copy.listSearchLabel}
+            <input
+              value={listSearchQuery}
+              onChange={(event) => onListSearchQueryChange(event.target.value)}
+              placeholder={copy.listSearchPlaceholder}
+            />
+          </label>
+          <div className="actions">
+            <button className="btn btn-secondary btn-small" type="button" onClick={onClearListSearch}>
+              {copy.clearListSearchAction}
+            </button>
+          </div>
+          <p className="small muted">
+            {copy.filteredListSummaryLabel}: {filteredNotices.length} / {notices.length}
+          </p>
           {notices.length === 0 ? (
             <p className="small muted">{copy.listEmpty}</p>
+          ) : filteredNotices.length === 0 ? (
+            <p className="small muted">{copy.filteredListEmpty}</p>
           ) : (
             <ul className="simple-list">
-              {notices.map((notice) => (
+              {filteredNotices.map((notice) => (
                 <li key={notice.id}>
                   <span>
                     <strong>{notice.title}</strong>
@@ -223,7 +246,7 @@ export default function AdminNoticeWorkspaceView({
                     </span>
                     <br />
                     <span className="small muted">
-                      {copy.readCountLabel}: {readCountByNoticeId.get(notice.id) ?? 0}
+                      {readCountLabel}: {readCountByNoticeId.get(notice.id) ?? 0}
                     </span>
                   </span>
                   {notice.status === "PUBLISHED" ? null : (

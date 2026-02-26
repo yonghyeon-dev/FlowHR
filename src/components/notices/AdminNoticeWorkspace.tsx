@@ -92,6 +92,7 @@ export default function AdminNoticeWorkspace() {
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState<"all" | "employees" | "admins">("all");
   const [publishAt, setPublishAt] = useState(toDateTimeLocalValue());
+  const [listSearchQuery, setListSearchQuery] = useState("");
 
   const [summary, setSummary] = useState<NoticeApiSummary>(DEFAULT_SUMMARY);
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -115,6 +116,30 @@ export default function AdminNoticeWorkspace() {
     }),
     [logs]
   );
+  const filteredNotices = useMemo(() => {
+    const query = listSearchQuery.trim().toLowerCase();
+    if (query.length === 0) {
+      return notices;
+    }
+    return notices.filter((notice) => {
+      const haystack = `${notice.title} ${notice.body}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [listSearchQuery, notices]);
+  const readCountByNoticeId = useMemo(() => {
+    const map = new Map<string, number>();
+    readReceipts.forEach((receipt) => {
+      map.set(receipt.noticeId, (map.get(receipt.noticeId) ?? 0) + 1);
+    });
+    return map;
+  }, [readReceipts]);
+  const noticeReadCountByNoticeId = useMemo(() => {
+    const map = new Map<string, number>();
+    notices.forEach((notice) => {
+      map.set(notice.id, readCountByNoticeId.get(notice.id) ?? 0);
+    });
+    return map;
+  }, [notices, readCountByNoticeId]);
 
   function appendLog(action: string, status: number, ok: boolean) {
     setLogs((previous) => [
@@ -241,7 +266,10 @@ export default function AdminNoticeWorkspace() {
       publishAt={publishAt}
       summary={summary}
       notices={notices}
-      readReceipts={readReceipts}
+      filteredNotices={filteredNotices}
+      listSearchQuery={listSearchQuery}
+      readCountByNoticeId={noticeReadCountByNoticeId}
+      readCountLabel={copy.readCountLabel}
       logs={logs}
       stats={stats}
       pendingLabel={pendingLabel}
@@ -255,6 +283,8 @@ export default function AdminNoticeWorkspace() {
       onBodyChange={setBody}
       onAudienceChange={setAudience}
       onPublishAtChange={setPublishAt}
+      onListSearchQueryChange={setListSearchQuery}
+      onClearListSearch={() => setListSearchQuery("")}
       onLoadNotices={() => void loadNotices()}
       onCreateNotice={() => void createNoticeItem()}
       onPublishNow={(noticeId) => void publishNow(noticeId)}

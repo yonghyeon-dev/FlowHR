@@ -20,6 +20,11 @@ export type NoticeWorkspaceCopy = {
   publishAction: string;
   listTitle: string;
   listEmpty: string;
+  listSearchLabel: string;
+  listSearchPlaceholder: string;
+  clearListSearchAction: string;
+  filteredListSummaryLabel: string;
+  filteredListEmpty: string;
   statsLabel: string;
   pendingLabelPrefix: string;
   statusMessagePrefix: string;
@@ -134,6 +139,11 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     publishAction: "즉시 게시",
     listTitle: "공지 목록",
     listEmpty: "조건에 맞는 공지가 없습니다.",
+    listSearchLabel: "공지 검색",
+    listSearchPlaceholder: "제목/본문 검색",
+    clearListSearchAction: "검색 초기화",
+    filteredListSummaryLabel: "표시 공지 수",
+    filteredListEmpty: "현재 검색 조건에 맞는 공지가 없습니다.",
     statsLabel: "요약",
     pendingLabelPrefix: "실행 중",
     statusMessagePrefix: "상태",
@@ -190,6 +200,11 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     publishAction: "Publish now",
     listTitle: "Notice list",
     listEmpty: "No notice found for current filters.",
+    listSearchLabel: "Notice search",
+    listSearchPlaceholder: "Search in title/body",
+    clearListSearchAction: "Clear search",
+    filteredListSummaryLabel: "Visible notices",
+    filteredListEmpty: "No notice matches current search.",
     statsLabel: "Summary",
     pendingLabelPrefix: "Running",
     statusMessagePrefix: "Status",
