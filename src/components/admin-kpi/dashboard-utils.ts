@@ -6,6 +6,7 @@ type BuildCsvPayloadInput = {
   analyticsMode: boolean;
   trendRows: TrendRow[];
   summary: RangeKpi["summary"];
+  focusMetric: string;
   generatedAt: Date;
 };
 
@@ -25,35 +26,35 @@ export function buildAdminKpiTrendRows(
 
   const rows: Omit<TrendRow, "delta">[] = [
     {
-      key: "pending",
+      key: "pendingApprovals",
       label: metrics.pendingApprovals,
       current: currentRangeKpi.summary.approvalPendingCount,
       previous: previousRangeKpi.summary.approvalPendingCount,
       percent: false
     },
     {
-      key: "stalled",
+      key: "stalledApprovals",
       label: metrics.stalledApprovals,
       current: currentRangeKpi.summary.approvalStalledCount,
       previous: previousRangeKpi.summary.approvalStalledCount,
       percent: false
     },
     {
-      key: "attendanceRate",
+      key: "attendanceApprovalRate",
       label: metrics.attendanceApprovalRate,
       current: currentRangeKpi.summary.attendanceApprovalRate,
       previous: previousRangeKpi.summary.attendanceApprovalRate,
       percent: true
     },
     {
-      key: "leaveDays",
+      key: "leaveApprovedDays",
       label: metrics.leaveApprovedDays,
       current: currentRangeKpi.summary.leaveApprovedDays,
       previous: previousRangeKpi.summary.leaveApprovedDays,
       percent: false
     },
     {
-      key: "payrollRate",
+      key: "payrollConfirmedRate",
       label: metrics.payrollConfirmedRate,
       current: currentRangeKpi.summary.payrollConfirmedRate,
       previous: previousRangeKpi.summary.payrollConfirmedRate,
@@ -65,12 +66,13 @@ export function buildAdminKpiTrendRows(
 }
 
 export function buildAdminKpiCsvPayload(input: BuildCsvPayloadInput): CsvPayload {
-  const { analyticsMode, trendRows, summary, generatedAt } = input;
+  const { analyticsMode, trendRows, summary, focusMetric, generatedAt } = input;
   const kpiRows = [
     toCsvRow(["section", "metric", "current", "previous", "delta"]),
     ...trendRows.map((row) => toCsvRow([analyticsMode ? "analytics" : "kpi", row.label, row.current, row.previous, row.delta]))
   ];
   const snapshotRows = [
+    toCsvRow(["snapshot", "focusMetric", focusMetric]),
     toCsvRow(["snapshot", "approvalPendingCount", summary.approvalPendingCount]),
     toCsvRow(["snapshot", "approvalStalledCount", summary.approvalStalledCount]),
     toCsvRow(["snapshot", "attendanceApprovalRate", summary.attendanceApprovalRate]),

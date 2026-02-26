@@ -209,4 +209,24 @@ export function resolveScheduleTimeStatus(
   return "in_progress";
 }
 
+export function countScheduleOverlapCandidates(
+  schedules: Array<Pick<WorkScheduleDto, "startAt" | "endAt">>
+) {
+  if (schedules.length <= 1) {
+    return 0;
+  }
+  const sorted = [...schedules].sort(
+    (left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime()
+  );
+  let overlapCount = 0;
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previousEndMs = new Date(sorted[index - 1].endAt).getTime();
+    const currentStartMs = new Date(sorted[index].startAt).getTime();
+    if (Number.isFinite(previousEndMs) && Number.isFinite(currentStartMs) && previousEndMs > currentStartMs) {
+      overlapCount += 1;
+    }
+  }
+  return overlapCount;
+}
+
 export { exportScheduleRowsCsv, exportScheduleRowsIcs } from "@/components/scheduling/export-helpers";

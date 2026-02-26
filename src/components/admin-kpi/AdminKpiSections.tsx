@@ -31,6 +31,14 @@ export type TrendRow = {
   delta: number;
 };
 
+export type AdminKpiFocusMetric =
+  | "all"
+  | "pendingApprovals"
+  | "stalledApprovals"
+  | "attendanceApprovalRate"
+  | "leaveApprovedDays"
+  | "payrollConfirmedRate";
+
 type ContextPanelProps = {
   copy: KpiCopy;
   organizationId: string;
@@ -49,6 +57,50 @@ type ContextPanelProps = {
   onSetLast30Days: () => void;
   onRefresh: () => void;
 };
+
+type AnalyticsControlsProps = {
+  copy: KpiCopy;
+  focusMetric: AdminKpiFocusMetric;
+  exportButtonLabel: string;
+  exportDisabled: boolean;
+  onFocusMetricChange: (value: AdminKpiFocusMetric) => void;
+  onExportCsv: () => void;
+};
+
+export function AdminKpiAnalyticsControls({
+  copy,
+  focusMetric,
+  exportButtonLabel,
+  exportDisabled,
+  onFocusMetricChange,
+  onExportCsv
+}: AnalyticsControlsProps) {
+  return (
+    <section className="panel">
+      <div className="input-grid">
+        <label>
+          {copy.focusMetricLabel}
+          <select
+            value={focusMetric}
+            onChange={(event) => onFocusMetricChange(event.target.value as AdminKpiFocusMetric)}
+          >
+            <option value="all">{copy.focusMetricAllOption}</option>
+            <option value="pendingApprovals">{copy.metrics.pendingApprovals}</option>
+            <option value="stalledApprovals">{copy.metrics.stalledApprovals}</option>
+            <option value="attendanceApprovalRate">{copy.metrics.attendanceApprovalRate}</option>
+            <option value="leaveApprovedDays">{copy.metrics.leaveApprovedDays}</option>
+            <option value="payrollConfirmedRate">{copy.metrics.payrollConfirmedRate}</option>
+          </select>
+        </label>
+      </div>
+      <div className="actions" style={{ marginTop: 8 }}>
+        <button className="btn btn-secondary" onClick={onExportCsv} disabled={exportDisabled}>
+          {exportButtonLabel}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 export function AdminKpiContextPanel(props: ContextPanelProps) {
   const {

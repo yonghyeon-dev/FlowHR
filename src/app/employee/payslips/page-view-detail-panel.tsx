@@ -40,6 +40,10 @@ export function PayslipDetailPanel({
   copySelectedRunId
 }: PayslipDetailPanelProps) {
   const locale = isKoLocale ? "ko" : "en";
+  const expectedNetPayKrw = selectedRun
+    ? (selectedRun.grossPayKrw ?? 0) - (selectedRun.totalDeductionsKrw ?? 0)
+    : 0;
+  const isNetPayBalanced = selectedRun ? (selectedRun.netPayKrw ?? 0) === expectedNetPayKrw : false;
 
   return (
     <article className="panel panel-payslip-print">
@@ -129,6 +133,26 @@ export function PayslipDetailPanel({
                 <li>
                   <span>{pageCopy.detail.otherDeductions}</span>
                   <strong>{formatKrw(selectedRun.otherDeductionsKrw)}</strong>
+                </li>
+              </ul>
+            </section>
+
+            <section>
+              <h4>{pageCopy.detail.printVerificationTitle}</h4>
+              <ul className="simple-list">
+                <li>
+                  <span>{pageCopy.detail.printVerificationExpectedNet}</span>
+                  <strong>{formatKrw(expectedNetPayKrw)}</strong>
+                </li>
+                <li>
+                  <span>{pageCopy.detail.printVerificationActualNet}</span>
+                  <strong>{selectedRunNetPayText}</strong>
+                </li>
+                <li>
+                  <span>{pageCopy.detail.printVerificationResult}</span>
+                  <strong className={isNetPayBalanced ? "ok" : "fail"}>
+                    {isNetPayBalanced ? pageCopy.detail.printVerificationPass : pageCopy.detail.printVerificationFail}
+                  </strong>
                 </li>
               </ul>
             </section>
