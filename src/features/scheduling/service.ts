@@ -93,6 +93,8 @@ import {
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
 import { resolveScheduleAnomalyIncidentForActor } from "@/features/scheduling/anomaly-incident-read-helpers";
 import {
+  buildScheduleAnomalyIncidentEscalationRequestFailedPayload,
+  buildScheduleAnomalyIncidentEscalationRequestPayload,
   buildScheduleAnomalyIncidentEscalationResult,
   buildScheduleAnomalyIncidentEscalationSummaryPayload,
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
@@ -3044,18 +3046,12 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     cooldownMinutes,
     latestRequestedAtMillisByIncident,
     requestEscalation: async ({ candidate, requestedAt }) => {
-      const payload = {
-        incidentId: candidate.incidentId,
-        state: candidate.state,
-        status: candidate.status,
-        elapsedMinutes: candidate.elapsedMinutes,
-        assigneeId: candidate.assigneeId,
-        slaTargetMinutes: candidate.slaTargetMinutes,
-        warningMinutes: candidate.warningMinutes,
+      const payload = buildScheduleAnomalyIncidentEscalationRequestPayload({
+        candidate,
         cooldownMinutes,
         escalationChannel,
         requestedAt
-      };
+      });
 
       await getEventPublisher(context).publish({
         name: "scheduling.anomaly.incident.escalation.requested.v1",
@@ -3091,14 +3087,12 @@ export async function triggerScheduleAnomalyIncidentEscalation(
         organizationId: tenantScope ?? undefined,
         actorRole: actor.role,
         actorId: actor.id,
-        payload: {
-          incidentId: candidate.incidentId,
-          status: candidate.status,
-          elapsedMinutes: candidate.elapsedMinutes,
+        payload: buildScheduleAnomalyIncidentEscalationRequestFailedPayload({
+          candidate,
           cooldownMinutes,
           escalationChannel,
           error
-        }
+        })
       });
     }
   });
