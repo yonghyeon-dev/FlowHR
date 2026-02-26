@@ -1,0 +1,250 @@
+import { useCallback, useMemo } from "react";
+import type { Dispatch, SetStateAction } from "react";
+
+import { buildQuery } from "@/app/admin/people/page-helpers";
+import type {
+  ApiLog,
+  Department,
+  Employee,
+  EmployeeHistory,
+  Organization,
+  Position
+} from "@/app/admin/people/page-types";
+
+type ApiMethod = "GET" | "PATCH";
+
+type UseAdminPeopleDirectoryActionsInput = {
+  isKoLocale: boolean;
+  runtimeLocale: string;
+  usesBearerToken: boolean;
+  bearerToken: string;
+  adminActorId: string;
+  organizationId: string;
+  historyLimit: string;
+  selectedEmployeeId: string;
+  editDepartmentId: string;
+  editPositionId: string;
+  editActive: string;
+  logs: ApiLog[];
+  setPendingLabel: Dispatch<SetStateAction<string | null>>;
+  setLogs: Dispatch<SetStateAction<ApiLog[]>>;
+  setOrganizations: Dispatch<SetStateAction<Organization[]>>;
+  setDepartments: Dispatch<SetStateAction<Department[]>>;
+  setPositions: Dispatch<SetStateAction<Position[]>>;
+  setEmployees: Dispatch<SetStateAction<Employee[]>>;
+  setHistory: Dispatch<SetStateAction<EmployeeHistory[]>>;
+  setSelectedEmployeeId: Dispatch<SetStateAction<string>>;
+};
+
+export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryActionsInput) {
+  const {
+    isKoLocale,
+    runtimeLocale,
+    usesBearerToken,
+    bearerToken,
+    adminActorId,
+    organizationId,
+    historyLimit,
+    selectedEmployeeId,
+    editDepartmentId,
+    editPositionId,
+    editActive,
+    logs,
+    setPendingLabel,
+    setLogs,
+    setOrganizations,
+    setDepartments,
+    setPositions,
+    setEmployees,
+    setHistory,
+    setSelectedEmployeeId
+  } = input;
+
+  const callApi = useCallback(
+    async (label: string, method: ApiMethod, path: string, payload?: Record<string, unknown>) => {
+      setPendingLabel(label);
+      try {
+        const headers: Record<string, string> = {};
+        if (payload) {
+          headers["content-type"] = "application/json";
+        }
+        if (usesBearerToken) {
+          headers.authorization = `Bearer ${bearerToken}`;
+        } else {
+          headers["x-actor-role"] = "admin";
+          headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
+          if (organizationId.trim()) {
+            headers["x-actor-organization-id"] = organizationId.trim();
+          }
+        }
+
+        const response = await fetch(path, {
+          method,
+          headers,
+          body: payload ? JSON.stringify(payload) : undefined
+        });
+        const text = await response.text();
+        let body: unknown = null;
+        if (text.trim()) {
+          try {
+            body = JSON.parse(text);
+          } catch {
+            body = text;
+          }
+        }
+        setLogs((prev) => [
+          {
+            id: Date.now(),
+            label,
+            status: response.status,
+            ok: response.ok,
+            at: new Date().toLocaleString(runtimeLocale)
+          },
+          ...prev
+        ]);
+        return { response, body };
+      } finally {
+        setPendingLabel(null);
+      }
+    },
+    [
+      adminActorId,
+      bearerToken,
+      organizationId,
+      runtimeLocale,
+      setLogs,
+      setPendingLabel,
+      usesBearerToken
+    ]
+  );
+
+  const loadOrganizations = useCallback(async () => {
+    const { response, body } = await callApi(
+      isKoLocale ? "조직 목록 조회" : "Load organizations",
+      "GET",
+      "/api/people/organizations"
+    );
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+    const parsed = body as { organizations?: Organization[] };
+    setOrganizations(Array.isArray(parsed.organizations) ? parsed.organizations : []);
+  }, [callApi, isKoLocale, setOrganizations]);
+
+  const loadDepartments = useCallback(async () => {
+    const { response, body } = await callApi(
+      isKoLocale ? "부서 목록 조회" : "Load departments",
+      "GET",
+      `/api/people/departments${buildQuery({ organizationId: organizationId.trim() || undefined })}`
+    );
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+    const parsed = body as { departments?: Department[] };
+    setDepartments(Array.isArray(parsed.departments) ? parsed.departments : []);
+  }, [callApi, isKoLocale, organizationId, setDepartments]);
+
+  const loadPositions = useCallback(async () => {
+    const { response, body } = await callApi(
+      isKoLocale ? "직급 목록 조회" : "Load positions",
+      "GET",
+      `/api/people/positions${buildQuery({ organizationId: organizationId.trim() || undefined })}`
+    );
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+    const parsed = body as { positions?: Position[] };
+    setPositions(Array.isArray(parsed.positions) ? parsed.positions : []);
+  }, [callApi, isKoLocale, organizationId, setPositions]);
+
+  const loadEmployees = useCallback(async () => {
+    const { response, body } = await callApi(
+      isKoLocale ? "직원 목록 조회" : "Load employees",
+      "GET",
+      `/api/people/employees${buildQuery({ organizationId: organizationId.trim() || undefined })}`
+    );
+    if (!response.ok || !body || typeof body !== "object") {
+      return;
+    }
+    const parsed = body as { employees?: Employee[] };
+    const nextEmployees = Array.isArray(parsed.employees) ? parsed.employees : [];
+    setEmployees(nextEmployees);
+    if (!selectedEmployeeId && nextEmployees.length > 0) {
+      setSelectedEmployeeId(nextEmployees[0]!.id);
+    }
+  }, [callApi, isKoLocale, organizationId, selectedEmployeeId, setEmployees, setSelectedEmployeeId]);
+
+  const refreshDirectory = useCallback(async () => {
+    await loadOrganizations();
+    await Promise.all([loadDepartments(), loadPositions(), loadEmployees()]);
+  }, [loadDepartments, loadEmployees, loadOrganizations, loadPositions]);
+
+  const loadSelectedEmployeeHistory = useCallback(
+    async (employeeId: string) => {
+      if (!employeeId.trim()) {
+        return;
+      }
+      const { response, body } = await callApi(
+        isKoLocale ? "직원 인사 이력 조회" : "Load employee history",
+        "GET",
+        `/api/people/employees/${encodeURIComponent(employeeId)}/history${buildQuery({
+          limit: historyLimit.trim() || undefined
+        })}`
+      );
+      if (!response.ok || !body || typeof body !== "object") {
+        return;
+      }
+      const parsed = body as { history?: EmployeeHistory[] };
+      setHistory(Array.isArray(parsed.history) ? parsed.history : []);
+    },
+    [callApi, historyLimit, isKoLocale, setHistory]
+  );
+
+  const applySelectedProfileUpdate = useCallback(async () => {
+    if (!selectedEmployeeId.trim()) {
+      return;
+    }
+    const payload = {
+      departmentId: editDepartmentId.trim() || null,
+      positionId: editPositionId.trim() || null,
+      active: editActive === "true"
+    };
+    const { response } = await callApi(
+      isKoLocale ? "직원 프로필 업데이트" : "Update employee profile",
+      "PATCH",
+      `/api/people/employees/${encodeURIComponent(selectedEmployeeId)}`,
+      payload
+    );
+    if (!response.ok) {
+      return;
+    }
+    await loadEmployees();
+    await loadSelectedEmployeeHistory(selectedEmployeeId);
+  }, [
+    callApi,
+    editActive,
+    editDepartmentId,
+    editPositionId,
+    isKoLocale,
+    loadEmployees,
+    loadSelectedEmployeeHistory,
+    selectedEmployeeId
+  ]);
+
+  const stats = useMemo(() => {
+    const total = logs.length;
+    const success = logs.filter((log) => log.ok).length;
+    return { total, success, fail: total - success };
+  }, [logs]);
+
+  return {
+    loadOrganizations,
+    loadDepartments,
+    loadPositions,
+    loadEmployees,
+    refreshDirectory,
+    loadSelectedEmployeeHistory,
+    applySelectedProfileUpdate,
+    stats
+  };
+}

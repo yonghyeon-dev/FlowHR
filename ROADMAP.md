@@ -1,7 +1,7 @@
 ﻿# FlowHR Production Roadmap
 
 > **Last updated**: 2026-02-26
-> **Current version**: 0.1.179 (Runtime Line-Budget Recovery for Withholding and Contracts)
+> **Current version**: 0.1.180 (Admin People Directory Actions Hook Extraction)
 > **Target**: Production-grade Korean HR SaaS (Shiftee/Flex superior)
 
 ---
@@ -769,3 +769,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0502 employee contracts inbox status filter and pending response count (`/employee/contracts` 받은함에 상태 필터(전체/응답대기/응답완료/만료) 추가 + 검색과 조합된 visible 목록 + 응답대기 건수 요약 추가 + `EmployeeContractsInbox.tsx` 라인예산(<=300) 유지 + `e2e-wi0502` 회귀 테스트 추가)
 - WI-0503 scheduling anomaly report helper extraction and line-budget phase 1 (`anomaly-report-helpers.ts` 신규 + 이상탐지 리포트 타입/빌더/권장조치 helper 분리 + `scheduling/service.ts` 4763->4624 축소 + 기존 타입 service re-export 유지 + `e2e-wi0503` 회귀 테스트 추가)
 - WI-0504 runtime line-budget recovery for withholding/contracts (`withholding-receipt/copy-runtime.ts` 407->344, `contracts/http.ts` 231->211 축소 + 기존 런타임 에러 정규화/읽기 함수 시그니처 유지 + `e2e-wi0466`, `e2e-wi0489`, `e2e-wi0504` 회귀 테스트 통과)
+- WI-0505 admin people directory actions hook extraction and line-budget margin (`useAdminPeopleDirectoryActions` 신규로 `admin/people/page.tsx` API 액션 오케스트레이션 분리 + `page.tsx` 499->377 축소 + `e2e-wi0505` 회귀 테스트 추가)
