@@ -1,18 +1,29 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { contractApprovalStatusLabelByLocale, contractDocumentStatusLabelByLocale, employeeContractsCopyByLocale, toDateText } from "@/components/contracts/copy";
+import {
+  contractApprovalStatusLabelByLocale,
+  contractDocumentStatusLabelByLocale,
+  employeeContractsCopyByLocale,
+  toDateText
+} from "@/components/contracts/copy";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import {
   normalizeContractsErrorMessageForRuntime,
   readJson,
   setContractsRuntimeLocale
 } from "@/components/contracts/http";
-import { normalizeContractsEntityTitle, normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
+import {
+  normalizeContractsEntityTitle,
+  normalizeContractsEvidenceFileName
+} from "@/components/contracts/runtime-copy-helpers";
 import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
 } from "@/components/contracts/types";
 import { useI18n } from "@/lib/i18n/provider";
+function isPendingResponseStatus(document: ContractDocument) {
+  return document.status === "SENT" || document.status === "RENEWED";
+}
 export default function EmployeeContractsInbox() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -23,25 +34,46 @@ export default function EmployeeContractsInbox() {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [inboxStatusFilter, setInboxStatusFilter] = useState<
+    "all" | "pending_response" | "responded" | "expired"
+  >("pending_response");
   const [signatureInput, setSignatureInput] = useState("");
   const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [signatureEvidence, setSignatureEvidence] = useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
+  const [signatureEvidence, setSignatureEvidence] =
+    useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const statusFilteredDocuments = useMemo(() => {
+    if (inboxStatusFilter === "pending_response") {
+      return documents.filter((document) => isPendingResponseStatus(document));
+    }
+    if (inboxStatusFilter === "responded") {
+      return documents.filter(
+        (document) => document.status === "SIGNED" || document.status === "REJECTED"
+      );
+    }
+    if (inboxStatusFilter === "expired") {
+      return documents.filter((document) => document.status === "EXPIRED");
+    }
+    return documents;
+  }, [documents, inboxStatusFilter]);
   const filteredDocuments = useMemo(() => {
     if (!normalizedSearchQuery) {
-      return documents;
+      return statusFilteredDocuments;
     }
-    return documents.filter((document) =>
+    return statusFilteredDocuments.filter((document) =>
       `${document.id} ${document.title} ${document.status} ${document.approvalStatus} ${document.responseComment ?? ""}`
         .toLowerCase()
         .includes(normalizedSearchQuery)
     );
-  }, [documents, normalizedSearchQuery]);
+  }, [statusFilteredDocuments, normalizedSearchQuery]);
+  const pendingResponseCount = useMemo(
+    () => filteredDocuments.filter((document) => isPendingResponseStatus(document)).length,
+    [filteredDocuments]
+  );
   const selected = useMemo(
-    () =>
-      filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
+    () => filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
     [filteredDocuments, selectedDocumentId]
   );
   const reload = useCallback(async () => {
@@ -57,7 +89,6 @@ export default function EmployeeContractsInbox() {
       setContractsRuntimeLocale(null);
     };
   }, [locale]);
-
   useEffect(() => {
     reload().catch((loadError) => {
       setError(
@@ -70,15 +101,12 @@ export default function EmployeeContractsInbox() {
   useEffect(() => {
     setSignatureEvidence(null);
   }, [selected?.id]);
-
   async function respond(action: "SIGN" | "REJECT") {
     if (!selected) {
       return;
     }
-
     setError(null);
     setMessage(null);
-
     try {
       await fetch(`/api/contracts/documents/${selected.id}/respond`, {
         method: "POST",
@@ -90,7 +118,6 @@ export default function EmployeeContractsInbox() {
           expectedDocumentHash: selected.documentHash
         })
       }).then((response) => readJson(response, copy.respondError));
-
       setMessage(action === "SIGN" ? copy.signedMessage : copy.rejectedMessage);
       setSignatureInput("");
       setComment("");
@@ -104,7 +131,10 @@ export default function EmployeeContractsInbox() {
       );
     }
   }
-  function downloadEvidence(evidence: ContractSignatureEvidenceResponse["evidence"], downloadFileName: string) {
+  function downloadEvidence(
+    evidence: ContractSignatureEvidenceResponse["evidence"],
+    downloadFileName: string
+  ) {
     const blob = new Blob([evidence.content], { type: evidence.contentType });
     const objectUrl = URL.createObjectURL(blob);
     const anchor = window.document.createElement("a");
@@ -115,7 +145,6 @@ export default function EmployeeContractsInbox() {
     window.document.body.removeChild(anchor);
     URL.revokeObjectURL(objectUrl);
   }
-
   async function loadSignatureEvidence(format: "json" | "text") {
     if (!selected) {
       return;
@@ -138,7 +167,9 @@ export default function EmployeeContractsInbox() {
       );
     }
   }
-  function clearSearch() { setSearchQuery(""); }
+  function clearSearch() {
+    setSearchQuery("");
+  }
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -154,11 +185,38 @@ export default function EmployeeContractsInbox() {
           <h2>{copy.inboxTitle}</h2>
           <label>
             {copy.inboxSearchLabel}
-            <input value={searchQuery} placeholder={copy.inboxSearchPlaceholder} onChange={(event) => setSearchQuery(event.target.value)} />
+            <input
+              value={searchQuery}
+              placeholder={copy.inboxSearchPlaceholder}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </label>
+          <label>
+            {copy.inboxStatusFilterLabel}
+            <select
+              value={inboxStatusFilter}
+              onChange={(event) =>
+                setInboxStatusFilter(
+                  event.target.value as "all" | "pending_response" | "responded" | "expired"
+                )
+              }
+            >
+              <option value="all">{copy.inboxStatusFilterAllOption}</option>
+              <option value="pending_response">{copy.inboxStatusFilterPendingOption}</option>
+              <option value="responded">{copy.inboxStatusFilterRespondedOption}</option>
+              <option value="expired">{copy.inboxStatusFilterExpiredOption}</option>
+            </select>
           </label>
           <div className="contract-action-row">
-            <button type="button" className="btn btn-secondary btn-small" onClick={clearSearch}>{copy.clearSearchAction}</button>
-            <p className="small muted">{copy.visibleCountLabel}: {filteredDocuments.length} / {documents.length}</p>
+            <button type="button" className="btn btn-secondary btn-small" onClick={clearSearch}>
+              {copy.clearSearchAction}
+            </button>
+            <p className="small muted">
+              {copy.visibleCountLabel}: {filteredDocuments.length} / {documents.length}
+            </p>
+            <p className="small muted">
+              {copy.pendingResponseCountLabel}: {pendingResponseCount}
+            </p>
           </div>
           {documents.length === 0 ? (
             <p className="small muted">{copy.noDocumentMessage}</p>
@@ -196,94 +254,35 @@ export default function EmployeeContractsInbox() {
           ) : (
             <>
               <ul className="contract-template-detail-list" aria-label={copy.detailAria}>
-                <li>
-                  <span>{copy.idLabel}</span>
-                  <strong>{selected.id}</strong>
-                </li>
-                <li>
-                  <span>{copy.statusLabel}</span>
-                  <strong>{documentStatusLabels[selected.status]}</strong>
-                </li>
-                <li>
-                  <span>{copy.hashLabel}</span>
-                  <strong>{selected.documentHash.slice(0, 16)}...</strong>
-                </li>
-                <li>
-                  <span>{copy.updatedLabel}</span>
-                  <strong>{toDateText(selected.updatedAt, runtimeLocale)}</strong>
-                </li>
-                <li>
-                  <span>{copy.respondedLabel}</span>
-                  <strong>{toDateText(selected.respondedAt, runtimeLocale)}</strong>
-                </li>
-                <li>
-                  <span>{copy.signatureHashLabel}</span>
-                  <strong>{selected.signatureHash ? `${selected.signatureHash.slice(0, 16)}...` : "-"}</strong>
-                </li>
-                <li>
-                  <span>{copy.evidenceHashLabel}</span>
-                  <strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong>
-                </li>
+                <li><span>{copy.idLabel}</span><strong>{selected.id}</strong></li>
+                <li><span>{copy.statusLabel}</span><strong>{documentStatusLabels[selected.status]}</strong></li>
+                <li><span>{copy.hashLabel}</span><strong>{selected.documentHash.slice(0, 16)}...</strong></li>
+                <li><span>{copy.updatedLabel}</span><strong>{toDateText(selected.updatedAt, runtimeLocale)}</strong></li>
+                <li><span>{copy.respondedLabel}</span><strong>{toDateText(selected.respondedAt, runtimeLocale)}</strong></li>
+                <li><span>{copy.signatureHashLabel}</span><strong>{selected.signatureHash ? `${selected.signatureHash.slice(0, 16)}...` : "-"}</strong></li>
+                <li><span>{copy.evidenceHashLabel}</span><strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong></li>
               </ul>
               <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
-              <label>
-                {copy.signatureInputLabel}
-                <input value={signatureInput} onChange={(event) => setSignatureInput(event.target.value)} />
-              </label>
-              <label>
-                {copy.commentLabel}
-                <textarea rows={3} value={comment} onChange={(event) => setComment(event.target.value)} />
-              </label>
+              <label>{copy.signatureInputLabel}<input value={signatureInput} onChange={(event) => setSignatureInput(event.target.value)} /></label>
+              <label>{copy.commentLabel}<textarea rows={3} value={comment} onChange={(event) => setComment(event.target.value)} /></label>
               <div className="contract-action-row">
-                <button type="button" className="btn" onClick={() => respond("SIGN")}>
-                  {copy.signAction}
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={() => respond("REJECT")}>
-                  {copy.rejectAction}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => void loadSignatureEvidence("json")}
-                  disabled={selected.status !== "SIGNED"}
-                >
-                  {copy.loadEvidenceJsonAction}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => void loadSignatureEvidence("text")}
-                  disabled={selected.status !== "SIGNED"}
-                >
-                  {copy.loadEvidenceTextAction}
-                </button>
+                <button type="button" className="btn" onClick={() => respond("SIGN")}>{copy.signAction}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => respond("REJECT")}>{copy.rejectAction}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => void loadSignatureEvidence("json")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceJsonAction}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => void loadSignatureEvidence("text")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceTextAction}</button>
               </div>
               {signatureEvidence ? (
                 <>
                   <ul className="simple-list">
-                    <li>
-                      <span>{copy.evidenceFileLabel}</span>
-                      <strong>{normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)}</strong>
-                    </li>
-                    <li>
-                      <span>{copy.generatedAtLabel}</span>
-                      <strong>{toDateText(signatureEvidence.generatedAt, runtimeLocale)}</strong>
-                    </li>
-                    <li>
-                      <span>{copy.contentShaLabel}</span>
-                      <strong>{signatureEvidence.contentSha256.slice(0, 16)}...</strong>
-                    </li>
+                    <li><span>{copy.evidenceFileLabel}</span><strong>{normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)}</strong></li>
+                    <li><span>{copy.generatedAtLabel}</span><strong>{toDateText(signatureEvidence.generatedAt, runtimeLocale)}</strong></li>
+                    <li><span>{copy.contentShaLabel}</span><strong>{signatureEvidence.contentSha256.slice(0, 16)}...</strong></li>
                   </ul>
                   <div className="contract-action-row">
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      onClick={() =>
-                        downloadEvidence(
-                          signatureEvidence,
-                          normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
-                        )
-                      }
+                      onClick={() => downloadEvidence(signatureEvidence, normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale))}
                     >
                       {copy.downloadEvidenceAction}
                     </button>
