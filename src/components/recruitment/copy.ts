@@ -23,7 +23,9 @@ export type AdminRecruitmentCopy = {
   clearSearchAction: string;
   filteredReferralSummaryLabel: string;
   referralRiskSummaryLabel: string;
+  criticalReferralRiskSummaryLabel: string;
   stalledBadgeLabel: string;
+  stalledCriticalBadgeLabel: string;
   referralOpeningTitleLabel: string;
   unknownOpeningLabel: string;
   filteredEmptyReferrals: string;
@@ -57,6 +59,7 @@ export type AdminRecruitmentCopy = {
   referralRiskFilter: {
     all: string;
     stalled7d: string;
+    stalled14d: string;
   };
 };
 
@@ -80,14 +83,19 @@ export type EmployeeRecruitmentCopy = {
   emptyReferrals: string;
   stageLabel: string;
   stageFilterLabel: string;
+  referralRiskFilterLabel: string;
   referralSearchLabel: string;
   referralSearchPlaceholder: string;
   clearSearchAction: string;
   referralSummaryLabel: string;
   filteredReferralSummaryLabel: string;
+  referralRiskSummaryLabel: string;
+  criticalReferralRiskSummaryLabel: string;
   openingTitleLabel: string;
   unknownOpeningLabel: string;
   withdrawAction: string;
+  stalledBadgeLabel: string;
+  stalledCriticalBadgeLabel: string;
   filteredEmptyReferrals: string;
   messages: {
     needOrganization: string;
@@ -110,6 +118,11 @@ export type EmployeeRecruitmentCopy = {
     HIRED: string;
     REJECTED: string;
     WITHDRAWN: string;
+  };
+  referralRiskFilter: {
+    all: string;
+    stalled7d: string;
+    stalled14d: string;
   };
 };
 
@@ -136,7 +149,9 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     clearSearchAction: "검색 초기화",
     filteredReferralSummaryLabel: "표시 추천 수",
     referralRiskSummaryLabel: "7일 이상 정체",
+    criticalReferralRiskSummaryLabel: "14일 이상 정체",
     stalledBadgeLabel: "정체 위험",
+    stalledCriticalBadgeLabel: "긴급 정체 위험",
     referralOpeningTitleLabel: "공고명",
     unknownOpeningLabel: "알 수 없는 공고",
     filteredEmptyReferrals: "현재 필터 조건에 맞는 추천 후보자가 없습니다.",
@@ -180,7 +195,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     },
     referralRiskFilter: {
       all: "전체",
-      stalled7d: "7일 이상 정체"
+      stalled7d: "7일 이상 정체",
+      stalled14d: "14일 이상 정체"
     }
   },
   en: {
@@ -205,7 +221,9 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     clearSearchAction: "Clear search",
     filteredReferralSummaryLabel: "Visible referrals",
     referralRiskSummaryLabel: "Stalled over 7 days",
+    criticalReferralRiskSummaryLabel: "Stalled over 14 days",
     stalledBadgeLabel: "Stall risk",
+    stalledCriticalBadgeLabel: "Critical stall risk",
     referralOpeningTitleLabel: "Opening title",
     unknownOpeningLabel: "Unknown opening",
     filteredEmptyReferrals: "No referral matches current filters.",
@@ -249,7 +267,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     },
     referralRiskFilter: {
       all: "All",
-      stalled7d: "Stalled >= 7d"
+      stalled7d: "Stalled >= 7d",
+      stalled14d: "Stalled >= 14d"
     }
   }
 };
@@ -275,14 +294,19 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     emptyReferrals: "추천 이력이 없습니다.",
     stageLabel: "단계",
     stageFilterLabel: "추천 단계 필터",
+    referralRiskFilterLabel: "정체 위험 필터",
     referralSearchLabel: "추천 검색",
     referralSearchPlaceholder: "후보자/공고/메모 검색",
     clearSearchAction: "검색 초기화",
     referralSummaryLabel: "단계별 건수",
     filteredReferralSummaryLabel: "표시 건수",
+    referralRiskSummaryLabel: "7일 이상 정체",
+    criticalReferralRiskSummaryLabel: "14일 이상 정체",
     openingTitleLabel: "공고명",
     unknownOpeningLabel: "알 수 없는 공고",
     withdrawAction: "추천 철회",
+    stalledBadgeLabel: "정체 위험",
+    stalledCriticalBadgeLabel: "긴급 정체 위험",
     filteredEmptyReferrals: "현재 검색 조건에 맞는 추천 이력이 없습니다.",
     messages: {
       needOrganization: "조직 식별자를 입력하세요.",
@@ -313,6 +337,11 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       HIRED: "채용 완료",
       REJECTED: "불합격",
       WITHDRAWN: "철회"
+    },
+    referralRiskFilter: {
+      all: "전체",
+      stalled7d: "7일 이상 정체",
+      stalled14d: "14일 이상 정체"
     }
   },
   en: {
@@ -335,14 +364,19 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     emptyReferrals: "No referral history.",
     stageLabel: "Stage",
     stageFilterLabel: "Referral stage filter",
+    referralRiskFilterLabel: "Stall risk filter",
     referralSearchLabel: "Referral search",
     referralSearchPlaceholder: "Search by candidate/opening/note",
     clearSearchAction: "Clear search",
     referralSummaryLabel: "Stage summary",
     filteredReferralSummaryLabel: "Visible items",
+    referralRiskSummaryLabel: "Stalled over 7 days",
+    criticalReferralRiskSummaryLabel: "Stalled over 14 days",
     openingTitleLabel: "Opening title",
     unknownOpeningLabel: "Unknown opening",
     withdrawAction: "Withdraw referral",
+    stalledBadgeLabel: "Stall risk",
+    stalledCriticalBadgeLabel: "Critical stall risk",
     filteredEmptyReferrals: "No referral matches current search.",
     messages: {
       needOrganization: "Organization ID is required.",
@@ -373,6 +407,11 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
       HIRED: "Hired",
       REJECTED: "Rejected",
       WITHDRAWN: "Withdrawn"
+    },
+    referralRiskFilter: {
+      all: "All",
+      stalled7d: "Stalled >= 7d",
+      stalled14d: "Stalled >= 14d"
     }
   }
 };

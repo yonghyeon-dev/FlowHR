@@ -11,6 +11,7 @@ import AdminRecruitmentWorkspaceView from "@/components/recruitment/AdminRecruit
 
 const TERMINAL_REFERRAL_STAGES: RecruitmentReferralStage[] = ["HIRED", "REJECTED", "WITHDRAWN"];
 const STALLED_REFERRAL_DAYS = 7;
+const CRITICAL_STALLED_REFERRAL_DAYS = 14;
 
 function parseOpenings(payload: unknown) {
   const openings = (payload as { openings?: RecruitmentOpeningItem[] } | null)?.openings;
@@ -48,7 +49,7 @@ export default function AdminRecruitmentWorkspace() {
   const [department, setDepartment] = useState("");
   const [employmentType, setEmploymentType] = useState("정규직");
   const [referralFilter, setReferralFilter] = useState<RecruitmentReferralStage | "all">("all");
-  const [referralRiskFilter, setReferralRiskFilter] = useState<"all" | "stalled_7d">("all");
+  const [referralRiskFilter, setReferralRiskFilter] = useState<"all" | "stalled_7d" | "stalled_14d">("all");
   const [referralSearchQuery, setReferralSearchQuery] = useState("");
 
   const [openings, setOpenings] = useState<RecruitmentOpeningItem[]>([]);
@@ -72,6 +73,7 @@ export default function AdminRecruitmentWorkspace() {
     return next;
   }, [openings]);
   const stalledThresholdMs = STALLED_REFERRAL_DAYS * 24 * 60 * 60 * 1000;
+  const criticalStalledThresholdMs = CRITICAL_STALLED_REFERRAL_DAYS * 24 * 60 * 60 * 1000;
   const stalledReferralCount = useMemo(() => {
     const nowMs = Date.now();
     return referrals.filter((referral) => {
@@ -82,6 +84,16 @@ export default function AdminRecruitmentWorkspace() {
       return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= stalledThresholdMs;
     }).length;
   }, [referrals, stalledThresholdMs]);
+  const stalledCriticalReferralCount = useMemo(() => {
+    const nowMs = Date.now();
+    return referrals.filter((referral) => {
+      if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
+        return false;
+      }
+      const updatedAtMs = Date.parse(referral.updatedAt);
+      return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= criticalStalledThresholdMs;
+    }).length;
+  }, [criticalStalledThresholdMs, referrals]);
   const filteredReferrals = useMemo(() => {
     const nowMs = Date.now();
     const query = referralSearchQuery.trim().toLowerCase();
@@ -89,12 +101,14 @@ export default function AdminRecruitmentWorkspace() {
       if (referralFilter !== "all" && referral.stage !== referralFilter) {
         return false;
       }
-      if (referralRiskFilter === "stalled_7d") {
+      if (referralRiskFilter === "stalled_7d" || referralRiskFilter === "stalled_14d") {
         if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
           return false;
         }
         const updatedAtMs = Date.parse(referral.updatedAt);
-        if (!Number.isFinite(updatedAtMs) || nowMs - updatedAtMs < stalledThresholdMs) {
+        const thresholdMs =
+          referralRiskFilter === "stalled_14d" ? criticalStalledThresholdMs : stalledThresholdMs;
+        if (!Number.isFinite(updatedAtMs) || nowMs - updatedAtMs < thresholdMs) {
           return false;
         }
       }
@@ -106,7 +120,15 @@ export default function AdminRecruitmentWorkspace() {
         `${referral.candidateName} ${referral.candidateEmail} ${referral.referrerEmployeeId} ${openingTitle} ${referral.note}`.toLowerCase();
       return haystack.includes(query);
     });
-  }, [openingTitleById, referralFilter, referralRiskFilter, referralSearchQuery, referrals, stalledThresholdMs]);
+  }, [
+    criticalStalledThresholdMs,
+    openingTitleById,
+    referralFilter,
+    referralRiskFilter,
+    referralSearchQuery,
+    referrals,
+    stalledThresholdMs
+  ]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -243,6 +265,7 @@ export default function AdminRecruitmentWorkspace() {
       referralRiskFilter={referralRiskFilter}
       referralSearchQuery={referralSearchQuery}
       stalledReferralCount={stalledReferralCount}
+      stalledCriticalReferralCount={stalledCriticalReferralCount}
       stageSelection={stageSelection}
       pending={pending}
       statusMessage={statusMessage}

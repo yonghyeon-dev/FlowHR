@@ -26,6 +26,8 @@ export type NoticeWorkspaceCopy = {
   filteredListSummaryLabel: string;
   filteredListEmpty: string;
   statsLabel: string;
+  readRiskSummaryLabel: string;
+  readRiskBadgeLabel: string;
   pendingLabelPrefix: string;
   statusMessagePrefix: string;
   logsTitle: string;
@@ -92,6 +94,8 @@ export type EmployeeNoticeBoardCopy = {
   readAtLabel: string;
   readBadge: string;
   unreadBadge: string;
+  unreadAgingLabel: string;
+  unreadAgingRiskBadgeLabel: string;
   audience: {
     all: string;
     employees: string;
@@ -149,6 +153,8 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     filteredListSummaryLabel: "표시 공지 수",
     filteredListEmpty: "현재 검색 조건에 맞는 공지가 없습니다.",
     statsLabel: "요약",
+    readRiskSummaryLabel: "전달 위험 공지(읽음 0건)",
+    readRiskBadgeLabel: "전달 확인 필요",
     pendingLabelPrefix: "실행 중",
     statusMessagePrefix: "상태",
     logsTitle: "요청 로그",
@@ -210,6 +216,8 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     filteredListSummaryLabel: "Visible notices",
     filteredListEmpty: "No notice matches current search.",
     statsLabel: "Summary",
+    readRiskSummaryLabel: "Delivery risk notices (0 reads)",
+    readRiskBadgeLabel: "Needs delivery check",
     pendingLabelPrefix: "Running",
     statusMessagePrefix: "Status",
     logsTitle: "Request logs",
@@ -278,6 +286,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     readAtLabel: "확인 시각",
     readBadge: "확인함",
     unreadBadge: "미확인",
+    unreadAgingLabel: "미확인 경과",
+    unreadAgingRiskBadgeLabel: "확인 지연",
     audience: {
       all: "전체",
       employees: "직원"
@@ -320,6 +330,8 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeNoticeBoardCopy> = {
     readAtLabel: "Read at",
     readBadge: "Read",
     unreadBadge: "Unread",
+    unreadAgingLabel: "Unread age",
+    unreadAgingRiskBadgeLabel: "Delayed acknowledgement",
     audience: {
       all: "All",
       employees: "Employees"

@@ -34,6 +34,9 @@ const EMPTY_REFERRAL_SUMMARY: ReferralSummary = {
   rejected: 0,
   withdrawn: 0
 };
+const TERMINAL_REFERRAL_STAGES: RecruitmentReferralStage[] = ["HIRED", "REJECTED", "WITHDRAWN"];
+const STALLED_REFERRAL_DAYS = 7;
+const CRITICAL_STALLED_REFERRAL_DAYS = 14;
 
 function parseOpenings(payload: unknown) {
   const openings = (payload as { openings?: RecruitmentOpeningItem[] } | null)?.openings;
@@ -93,6 +96,7 @@ export default function EmployeeRecruitmentWorkspace() {
   const [candidateEmail, setCandidateEmail] = useState("");
   const [note, setNote] = useState("");
   const [stageFilter, setStageFilter] = useState<RecruitmentReferralStage | "all">("all");
+  const [riskFilter, setRiskFilter] = useState<"all" | "stalled_7d" | "stalled_14d">("all");
   const [referralSearchQuery, setReferralSearchQuery] = useState("");
 
   const [pending, setPending] = useState(false);
@@ -113,12 +117,61 @@ export default function EmployeeRecruitmentWorkspace() {
     });
     return map;
   }, [openings]);
+  const stalledThresholdMs = STALLED_REFERRAL_DAYS * 24 * 60 * 60 * 1000;
+  const criticalStalledThresholdMs = CRITICAL_STALLED_REFERRAL_DAYS * 24 * 60 * 60 * 1000;
+  const stalledReferralCount = useMemo(() => {
+    const nowMs = Date.now();
+    return referrals.filter((referral) => {
+      if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
+        return false;
+      }
+      const updatedAtMs = Date.parse(referral.updatedAt);
+      return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= stalledThresholdMs;
+    }).length;
+  }, [referrals, stalledThresholdMs]);
+  const stalledCriticalReferralCount = useMemo(() => {
+    const nowMs = Date.now();
+    return referrals.filter((referral) => {
+      if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
+        return false;
+      }
+      const updatedAtMs = Date.parse(referral.updatedAt);
+      return Number.isFinite(updatedAtMs) && nowMs - updatedAtMs >= criticalStalledThresholdMs;
+    }).length;
+  }, [criticalStalledThresholdMs, referrals]);
   const normalizedReferralSearchQuery = referralSearchQuery.trim().toLowerCase();
   const filteredReferrals = useMemo(() => {
+    const nowMs = Date.now();
     if (!normalizedReferralSearchQuery) {
-      return referrals;
+      return referrals.filter((referral) => {
+        if (riskFilter === "all") {
+          return true;
+        }
+        if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
+          return false;
+        }
+        const updatedAtMs = Date.parse(referral.updatedAt);
+        if (!Number.isFinite(updatedAtMs)) {
+          return false;
+        }
+        const thresholdMs = riskFilter === "stalled_14d" ? criticalStalledThresholdMs : stalledThresholdMs;
+        return nowMs - updatedAtMs >= thresholdMs;
+      });
     }
     return referrals.filter((referral) => {
+      if (riskFilter !== "all") {
+        if (TERMINAL_REFERRAL_STAGES.includes(referral.stage)) {
+          return false;
+        }
+        const updatedAtMs = Date.parse(referral.updatedAt);
+        if (!Number.isFinite(updatedAtMs)) {
+          return false;
+        }
+        const thresholdMs = riskFilter === "stalled_14d" ? criticalStalledThresholdMs : stalledThresholdMs;
+        if (nowMs - updatedAtMs < thresholdMs) {
+          return false;
+        }
+      }
       const openingTitle = (openingById.get(referral.openingId)?.title ?? "").toLowerCase();
       const candidateNameText = referral.candidateName.toLowerCase();
       const candidateEmailText = referral.candidateEmail.toLowerCase();
@@ -130,7 +183,14 @@ export default function EmployeeRecruitmentWorkspace() {
         noteText.includes(normalizedReferralSearchQuery)
       );
     });
-  }, [normalizedReferralSearchQuery, openingById, referrals]);
+  }, [
+    criticalStalledThresholdMs,
+    normalizedReferralSearchQuery,
+    openingById,
+    referrals,
+    riskFilter,
+    stalledThresholdMs
+  ]);
 
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
@@ -311,6 +371,17 @@ export default function EmployeeRecruitmentWorkspace() {
               onChange={(event) => setReferralSearchQuery(event.target.value)}
             />
           </label>
+          <label>
+            {copy.referralRiskFilterLabel}
+            <select
+              value={riskFilter}
+              onChange={(event) => setRiskFilter(event.target.value as "all" | "stalled_7d" | "stalled_14d")}
+            >
+              <option value="all">{copy.referralRiskFilter.all}</option>
+              <option value="stalled_7d">{copy.referralRiskFilter.stalled7d}</option>
+              <option value="stalled_14d">{copy.referralRiskFilter.stalled14d}</option>
+            </select>
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void loadWorkspace()} disabled={pending}>
               {copy.refreshAction}
@@ -320,7 +391,7 @@ export default function EmployeeRecruitmentWorkspace() {
             </button>
           </div>
           <p className="small muted">
-            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn}) · {copy.filteredReferralSummaryLabel}: {filteredReferrals.length}
+            {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn}) · {copy.filteredReferralSummaryLabel}: {filteredReferrals.length} · {copy.referralRiskSummaryLabel}: {stalledReferralCount} · {copy.criticalReferralRiskSummaryLabel}: {stalledCriticalReferralCount}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
@@ -388,6 +459,15 @@ export default function EmployeeRecruitmentWorkspace() {
             <ul className="simple-list">
               {filteredReferrals.map((referral) => {
                 const openingTitle = openingById.get(referral.openingId)?.title ?? copy.unknownOpeningLabel;
+                const updatedAtMs = Date.parse(referral.updatedAt);
+                const isStalled7d =
+                  !TERMINAL_REFERRAL_STAGES.includes(referral.stage) &&
+                  Number.isFinite(updatedAtMs) &&
+                  Date.now() - updatedAtMs >= stalledThresholdMs;
+                const isStalled14d =
+                  !TERMINAL_REFERRAL_STAGES.includes(referral.stage) &&
+                  Number.isFinite(updatedAtMs) &&
+                  Date.now() - updatedAtMs >= criticalStalledThresholdMs;
                 return (
                   <li key={referral.id}>
                     <span>
@@ -402,6 +482,21 @@ export default function EmployeeRecruitmentWorkspace() {
                       <span className="small muted">
                         {copy.stageLabel}: {copy.referralStage[referral.stage]}
                       </span>
+                      {isStalled14d ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.stalledCriticalBadgeLabel}
+                          </span>
+                        </>
+                      ) : isStalled7d ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.stalledBadgeLabel}
+                          </span>
+                        </>
+                      ) : null}
                       <br />
                       <span className="small muted">{referral.note}</span>
                       {referral.stage === "SUBMITTED" || referral.stage === "SCREENING" ? (

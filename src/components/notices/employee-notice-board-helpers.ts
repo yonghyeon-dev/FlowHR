@@ -44,6 +44,19 @@ export function buildReadAtByNoticeIdMap(readReceipts: NoticeReadReceipt[]) {
   return map;
 }
 
+export function resolveNoticeUnreadAgingDays(notice: NoticeItem) {
+  const baseAt = notice.publishedAt ?? notice.updatedAt;
+  const baseMs = Date.parse(baseAt);
+  if (!Number.isFinite(baseMs)) {
+    return null;
+  }
+  const diffMs = Date.now() - baseMs;
+  if (diffMs <= 0) {
+    return 0;
+  }
+  return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+}
+
 type FilterEmployeeNoticesInput = {
   notices: NoticeItem[];
   readNoticeIds: string[];
