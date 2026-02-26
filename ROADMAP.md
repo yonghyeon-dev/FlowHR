@@ -833,3 +833,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0566 employee self-service interaction setter bundle extraction (`page-interaction-setter-bundles.ts` extraction for attendance/leave/request/period setter bundle composition + `employee/page.tsx` orchestration helper delegation + `e2e-wi0566` regression)
 
 - WI-0567 scheduling anomaly auto-action summary/result helper extraction (anomaly-incident-auto-action-helpers.ts extraction for auto-action audit/event summary and service result payload builders + scheduling/service.ts auto-action execution payload delegation + e2e-wi0567 regression)
+
+- WI-0568 scheduling anomaly escalation summary/result helper extraction (anomaly-incident-escalation-helpers.ts extraction for escalation generated audit summary and response payload builders + scheduling/service.ts escalation payload delegation + e2e-wi0568 regression)

@@ -93,6 +93,8 @@ import {
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
 import { resolveScheduleAnomalyIncidentForActor } from "@/features/scheduling/anomaly-incident-read-helpers";
 import {
+  buildScheduleAnomalyIncidentEscalationResult,
+  buildScheduleAnomalyIncidentEscalationSummaryPayload,
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
   executeScheduleAnomalyIncidentEscalationRequests
 } from "@/features/scheduling/anomaly-incident-escalation-helpers";
@@ -3035,72 +3037,72 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   const latestRequestedAtMillisByIncident =
     buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(storedIncidents);
 
-  const { requested, skippedCooldown, failed, items } =
-    await executeScheduleAnomalyIncidentEscalationRequests({
-      candidates,
-      dryRun,
-      cooldownWindowStartMillis,
-      cooldownMinutes,
-      latestRequestedAtMillisByIncident,
-      requestEscalation: async ({ candidate, requestedAt }) => {
-        const payload = {
+  const executionSummary = await executeScheduleAnomalyIncidentEscalationRequests({
+    candidates,
+    dryRun,
+    cooldownWindowStartMillis,
+    cooldownMinutes,
+    latestRequestedAtMillisByIncident,
+    requestEscalation: async ({ candidate, requestedAt }) => {
+      const payload = {
+        incidentId: candidate.incidentId,
+        state: candidate.state,
+        status: candidate.status,
+        elapsedMinutes: candidate.elapsedMinutes,
+        assigneeId: candidate.assigneeId,
+        slaTargetMinutes: candidate.slaTargetMinutes,
+        warningMinutes: candidate.warningMinutes,
+        cooldownMinutes,
+        escalationChannel,
+        requestedAt
+      };
+
+      await getEventPublisher(context).publish({
+        name: "scheduling.anomaly.incident.escalation.requested.v1",
+        occurredAt: requestedAt,
+        entityType: "WorkSchedule",
+        entityId: candidate.incidentId,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload
+      });
+
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.incident.escalation.requested",
+        entityType: "WorkSchedule",
+        entityId: candidate.incidentId,
+        organizationId: tenantScope ?? undefined,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload
+      });
+
+      await context.dataAccess.scheduling.markIncidentEscalationRequested({
+        incidentId: candidate.incidentId,
+        organizationId: tenantScope ?? undefined,
+        requestedAt
+      });
+    },
+    onRequestFailed: async ({ candidate, error }) => {
+      await context.dataAccess.audit.append({
+        action: "scheduling.anomaly.incident.escalation.request.failed",
+        entityType: "WorkSchedule",
+        entityId: candidate.incidentId,
+        organizationId: tenantScope ?? undefined,
+        actorRole: actor.role,
+        actorId: actor.id,
+        payload: {
           incidentId: candidate.incidentId,
-          state: candidate.state,
           status: candidate.status,
           elapsedMinutes: candidate.elapsedMinutes,
-          assigneeId: candidate.assigneeId,
-          slaTargetMinutes: candidate.slaTargetMinutes,
-          warningMinutes: candidate.warningMinutes,
           cooldownMinutes,
           escalationChannel,
-          requestedAt
-        };
-
-        await getEventPublisher(context).publish({
-          name: "scheduling.anomaly.incident.escalation.requested.v1",
-          occurredAt: requestedAt,
-          entityType: "WorkSchedule",
-          entityId: candidate.incidentId,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload
-        });
-
-        await context.dataAccess.audit.append({
-          action: "scheduling.anomaly.incident.escalation.requested",
-          entityType: "WorkSchedule",
-          entityId: candidate.incidentId,
-          organizationId: tenantScope ?? undefined,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload
-        });
-
-        await context.dataAccess.scheduling.markIncidentEscalationRequested({
-          incidentId: candidate.incidentId,
-          organizationId: tenantScope ?? undefined,
-          requestedAt
-        });
-      },
-      onRequestFailed: async ({ candidate, error }) => {
-        await context.dataAccess.audit.append({
-          action: "scheduling.anomaly.incident.escalation.request.failed",
-          entityType: "WorkSchedule",
-          entityId: candidate.incidentId,
-          organizationId: tenantScope ?? undefined,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: {
-            incidentId: candidate.incidentId,
-            status: candidate.status,
-            elapsedMinutes: candidate.elapsedMinutes,
-            cooldownMinutes,
-            escalationChannel,
-            error
-          }
-        });
-      }
-    });
+          error
+        }
+      });
+    }
+  });
+  const { requested, skippedCooldown, failed, items } = executionSummary;
 
   const requestedAt = new Date().toISOString();
   await context.dataAccess.audit.append({
@@ -3109,42 +3111,33 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     organizationId: tenantScope ?? undefined,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
+    payload: buildScheduleAnomalyIncidentEscalationSummaryPayload({
       requestedAt,
       dryRun,
       includeResolved,
       includeWarning,
       cooldownMinutes,
       escalationChannel,
-      state: input.state ?? null,
-      assigneeId: input.assigneeId?.trim() ?? null,
-      topN: input.topN ?? 50,
+      state: input.state,
+      assigneeId: input.assigneeId,
+      topN: input.topN,
       candidates: candidates.length,
-      requested,
-      skippedCooldown,
-      failed
-    }
+      executionSummary
+    })
   });
 
-  return {
+  return buildScheduleAnomalyIncidentEscalationResult({
     requestedAt,
     dryRun,
-    policy: {
-      slaTargetMinutes: slaReport.policy.slaTargetMinutes,
-      warningMinutes: slaReport.policy.warningMinutes,
-      includeResolved,
-      includeWarning,
-      cooldownMinutes,
-      escalationChannel
-    },
-    counts: {
-      candidates: candidates.length,
-      requested,
-      skippedCooldown,
-      failed
-    },
-    items
-  };
+    slaTargetMinutes: slaReport.policy.slaTargetMinutes,
+    warningMinutes: slaReport.policy.warningMinutes,
+    includeResolved,
+    includeWarning,
+    cooldownMinutes,
+    escalationChannel,
+    candidates: candidates.length,
+    executionSummary
+  });
 }
 
 export async function executeScheduleAnomalyIncidentAutoAction(
