@@ -27,10 +27,14 @@ export type AdminBenefitsCopy = {
   reasonLabel: string;
   requestedAtLabel: string;
   requestFilterLabel: string;
+  requestRiskFilterLabel: string;
   requestSearchLabel: string;
   requestSearchPlaceholder: string;
   clearSearchAction: string;
   filteredRequestSummaryLabel: string;
+  overLimitRequestSummaryLabel: string;
+  overLimitBadgeLabel: string;
+  overLimitAmountLabel: string;
   filteredEmptyRequests: string;
   unknownBenefitLabel: string;
   statsLabel: string;
@@ -52,6 +56,10 @@ export type AdminBenefitsCopy = {
     APPROVED: string;
     REJECTED: string;
     CANCELED: string;
+  };
+  requestRiskFilter: {
+    all: string;
+    overLimit: string;
   };
 };
 
@@ -131,10 +139,14 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     reasonLabel: "신청 사유",
     requestedAtLabel: "신청 시각",
     requestFilterLabel: "요청 상태 필터",
+    requestRiskFilterLabel: "한도 위험 필터",
     requestSearchLabel: "요청 검색",
     requestSearchPlaceholder: "직원/항목/사유 검색",
     clearSearchAction: "검색 초기화",
     filteredRequestSummaryLabel: "표시 요청 수",
+    overLimitRequestSummaryLabel: "한도 초과 요청",
+    overLimitBadgeLabel: "한도 초과",
+    overLimitAmountLabel: "초과 금액",
     filteredEmptyRequests: "현재 필터 조건에 맞는 요청이 없습니다.",
     unknownBenefitLabel: "알 수 없는 항목",
     statsLabel: "카탈로그 수",
@@ -164,6 +176,10 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
       APPROVED: "승인",
       REJECTED: "반려",
       CANCELED: "취소"
+    },
+    requestRiskFilter: {
+      all: "전체",
+      overLimit: "한도 초과만"
     }
   },
   en: {
@@ -192,10 +208,14 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     reasonLabel: "Reason",
     requestedAtLabel: "Requested at",
     requestFilterLabel: "Request status filter",
+    requestRiskFilterLabel: "Limit risk filter",
     requestSearchLabel: "Request search",
     requestSearchPlaceholder: "Search by employee/benefit/reason",
     clearSearchAction: "Clear search",
     filteredRequestSummaryLabel: "Visible requests",
+    overLimitRequestSummaryLabel: "Over-limit requests",
+    overLimitBadgeLabel: "Over limit",
+    overLimitAmountLabel: "Exceed amount",
     filteredEmptyRequests: "No request matches current filters.",
     unknownBenefitLabel: "Unknown benefit",
     statsLabel: "Catalog count",
@@ -225,6 +245,10 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
       APPROVED: "Approved",
       REJECTED: "Rejected",
       CANCELED: "Canceled"
+    },
+    requestRiskFilter: {
+      all: "All",
+      overLimit: "Over limit only"
     }
   }
 };

@@ -31,8 +31,10 @@ type AdminBenefitsWorkspaceViewProps = {
   visibleRequests: BenefitRequestItem[];
   catalogNameById: Record<string, string>;
   requestFilter: BenefitRequestStatus | "all";
+  requestRiskFilter: "all" | "over_limit";
   requestSearchQuery: string;
   requestSummary: RequestSummary;
+  overLimitRequestCount: number;
   catalogStats: {
     total: number;
     active: number;
@@ -49,6 +51,7 @@ type AdminBenefitsWorkspaceViewProps = {
   onAnnualLimitChange: (value: string) => void;
   onDecisionNoteChange: (value: string) => void;
   onRequestFilterChange: (value: BenefitRequestStatus | "all") => void;
+  onRequestRiskFilterChange: (value: "all" | "over_limit") => void;
   onRequestSearchQueryChange: (value: string) => void;
   onClearRequestSearch: () => void;
   onLoadWorkspace: () => void;
@@ -71,8 +74,10 @@ export default function AdminBenefitsWorkspaceView({
   visibleRequests,
   catalogNameById,
   requestFilter,
+  requestRiskFilter,
   requestSearchQuery,
   requestSummary,
+  overLimitRequestCount,
   catalogStats,
   pendingLabel,
   statusMessage,
@@ -85,6 +90,7 @@ export default function AdminBenefitsWorkspaceView({
   onAnnualLimitChange,
   onDecisionNoteChange,
   onRequestFilterChange,
+  onRequestRiskFilterChange,
   onRequestSearchQueryChange,
   onClearRequestSearch,
   onLoadWorkspace,
@@ -134,6 +140,8 @@ export default function AdminBenefitsWorkspaceView({
           <p className="small muted">
             {copy.requestStatsLabel}: {requestSummary.total} (S {requestSummary.submitted} / A{" "}
             {requestSummary.approved} / R {requestSummary.rejected})
+            {" · "}
+            {copy.overLimitRequestSummaryLabel}: {overLimitRequestCount}
             {pendingLabel ? ` · ${pendingLabel}` : ""}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -213,6 +221,16 @@ export default function AdminBenefitsWorkspaceView({
             </select>
           </label>
           <label>
+            {copy.requestRiskFilterLabel}
+            <select
+              value={requestRiskFilter}
+              onChange={(event) => onRequestRiskFilterChange(event.target.value as "all" | "over_limit")}
+            >
+              <option value="all">{copy.requestRiskFilter.all}</option>
+              <option value="over_limit">{copy.requestRiskFilter.overLimit}</option>
+            </select>
+          </label>
+          <label>
             {copy.requestSearchLabel}
             <input
               value={requestSearchQuery}
@@ -234,48 +252,63 @@ export default function AdminBenefitsWorkspaceView({
             <p className="small muted">{copy.filteredEmptyRequests}</p>
           ) : (
             <ul className="simple-list">
-              {visibleRequests.map((request) => (
-                <li key={request.id}>
-                  <span>
-                    <strong>{request.employeeId}</strong>
-                    <br />
-                    <span className="small muted">
-                      {copy.benefitLabel}: {catalogNameById[request.benefitId] ?? copy.unknownBenefitLabel}
+              {visibleRequests.map((request) => {
+                const annualLimitKrw = catalog.find((item) => item.id === request.benefitId)?.annualLimitKrw;
+                const overLimitAmount =
+                  typeof annualLimitKrw === "number" ? Math.max(0, request.amountKrw - annualLimitKrw) : 0;
+                const isOverLimit = overLimitAmount > 0;
+                return (
+                  <li key={request.id}>
+                    <span>
+                      <strong>{request.employeeId}</strong>
+                      <br />
+                      <span className="small muted">
+                        {copy.benefitLabel}: {catalogNameById[request.benefitId] ?? copy.unknownBenefitLabel}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.amountLabel}: {request.amountKrw.toLocaleString(runtimeLocale)} · {copy.statusLabel}:{" "}
+                        {copy.requestStatus[request.status]}
+                      </span>
+                      {isOverLimit ? (
+                        <>
+                          <br />
+                          <span className="small" style={{ color: "var(--danger)" }}>
+                            {copy.overLimitBadgeLabel} · {copy.overLimitAmountLabel}:{" "}
+                            {overLimitAmount.toLocaleString(runtimeLocale)}
+                          </span>
+                        </>
+                      ) : null}
+                      <br />
+                      <span className="small muted">
+                        {copy.reasonLabel}: {request.reason}
+                      </span>
+                      <br />
+                      <span className="small muted">
+                        {copy.requestedAtLabel}: {request.requestedAt}
+                      </span>
                     </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.amountLabel}: {request.amountKrw.toLocaleString(runtimeLocale)} · {copy.statusLabel}:{" "}
-                      {copy.requestStatus[request.status]}
-                    </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.reasonLabel}: {request.reason}
-                    </span>
-                    <br />
-                    <span className="small muted">
-                      {copy.requestedAtLabel}: {request.requestedAt}
-                    </span>
-                  </span>
-                  <div className="actions" style={{ marginTop: 0 }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      onClick={() => onDecideRequest(request.id, "APPROVED")}
-                      disabled={request.status !== "SUBMITTED"}
-                    >
-                      {copy.approveAction}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      onClick={() => onDecideRequest(request.id, "REJECTED")}
-                      disabled={request.status !== "SUBMITTED"}
-                    >
-                      {copy.rejectAction}
-                    </button>
-                  </div>
-                </li>
-              ))}
+                    <div className="actions" style={{ marginTop: 0 }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onDecideRequest(request.id, "APPROVED")}
+                        disabled={request.status !== "SUBMITTED"}
+                      >
+                        {copy.approveAction}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onDecideRequest(request.id, "REJECTED")}
+                        disabled={request.status !== "SUBMITTED"}
+                      >
+                        {copy.rejectAction}
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
