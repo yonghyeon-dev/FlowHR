@@ -56,6 +56,7 @@ import {
   buildScheduleAnomalyIncidentReconcileSnapshot,
   selectScheduleAnomalyIncidentReconcileItems
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
+import { resolveScheduleAnomalyIncidentForActor } from "@/features/scheduling/anomaly-incident-read-helpers";
 import {
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
   executeScheduleAnomalyIncidentEscalationRequests
@@ -4042,20 +4043,12 @@ export async function getScheduleAnomalyIncident(
     "schedule anomaly incident read requires permission"
   );
 
-  const normalizedIncidentId = incidentId.trim();
-  if (!normalizedIncidentId) {
-    throw new ServiceError(400, "incidentId is required");
-  }
-
-  const incident = await getScheduleAnomalyIncidentReadModel(context.dataAccess, normalizedIncidentId);
-  if (!incident) {
-    throw new ServiceError(404, "anomaly incident not found");
-  }
-
   const tenantScope = resolveTenantScope(actor);
-  if (tenantScope && incident.organizationId !== tenantScope) {
-    throw new ServiceError(404, "anomaly incident not found");
-  }
+  const incident = await resolveScheduleAnomalyIncidentForActor({
+    dataAccess: context.dataAccess,
+    incidentId,
+    tenantScope
+  });
 
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.read",
