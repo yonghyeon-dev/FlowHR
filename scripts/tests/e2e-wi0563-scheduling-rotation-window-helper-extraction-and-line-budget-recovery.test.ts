@@ -22,7 +22,7 @@ async function run() {
   assert.match(service, /from "@\/features\/scheduling\/rotation-window-helpers"/);
   assert.match(service, /buildRotationWindowsForTemplates\(/);
   assert.match(service, /buildTemplateRangeWindows\(/);
-  assert.match(service, /rotateTemplatesByOffset\(/);
+  assert.match(service, /rotateTemplatesByOffset/);
   assert.match(service, /buildScheduleWindowFromTemplateDate\(/);
 
   assert.doesNotMatch(service, /function rotateTemplatesByOffset\(/);

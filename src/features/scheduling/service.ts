@@ -60,6 +60,18 @@ import {
   selectRotationFairnessRecommendations
 } from "@/features/scheduling/rotation-fairness-selection-helpers";
 import {
+  buildRotationOffsetEvaluation,
+  sortRotationOffsetEvaluations,
+  type RotationOffsetEvaluation as RotationOffsetEvaluationBase
+} from "@/features/scheduling/rotation-optimization-evaluation-helpers";
+import {
+  buildAnomalyIncidentLifecycleUpdateResult,
+  buildAnomalyIncidentListAuditPayload,
+  buildAnomalyIncidentSlaAuditPayload,
+  buildAnomalyIncidentSlaReport,
+  normalizeAnomalyIncidentLifecycleMutationInput
+} from "@/features/scheduling/anomaly-incident-core-helpers";
+import {
   enumerateTemplateMatchedDates,
   formatKstDateYmd,
   parseDateToKstBase,
@@ -1422,88 +1434,13 @@ function evaluateRotationFairnessAdvancedScore(
   };
 }
 
-type RotationOffsetEvaluation = {
-  offset: number;
-  optimizedTemplateIds: string[];
-  weekdayGap: number;
-  plannedMinutesGap: number;
-  grade: RotationBalanceGrade;
-  generatedWindows: GeneratedScheduleWindow[];
-  dailyPlannedMinutes: Array<{
-    date: string;
-    plannedMinutes: number;
-  }>;
-  advancedScore: RotationFairnessAdvancedScore | null;
-};
+type RotationOffsetEvaluation = RotationOffsetEvaluationBase<RotationFairnessAdvancedScore>;
 
 type EmployeeRotationOptimizationEvaluation = {
   employee: EmployeeEntity;
   options: RotationOffsetEvaluation[];
   best: RotationOffsetEvaluation;
 };
-
-function evaluateRotationOffset(
-  existingSchedules: WorkScheduleEntity[],
-  templates: WorkScheduleTemplateEntity[],
-  matchedDates: string[],
-  offset: number,
-  employeeId: string,
-  advancedConstraints: RotationFairnessAdvancedConstraints | undefined
-): RotationOffsetEvaluation {
-  const rotated = rotateTemplatesByOffset(templates, offset);
-  const generatedWindows = buildRotationWindowsForTemplates(rotated, matchedDates);
-
-  const weekdayCounts = new Array<number>(8).fill(0);
-  const weekdayMinutes = new Array<number>(8).fill(0);
-
-  for (const schedule of existingSchedules) {
-    const weekday = weekdayFromKstDateTime(schedule.startAt);
-    weekdayCounts[weekday] += 1;
-    weekdayMinutes[weekday] += plannedMinutesForSchedule(schedule);
-  }
-  for (const window of generatedWindows) {
-    const weekday = weekdayFromKstDateTime(window.startAt);
-    const plannedMinutes = plannedMinutesForGeneratedWindow(window);
-    weekdayCounts[weekday] += 1;
-    weekdayMinutes[weekday] += plannedMinutes;
-  }
-
-  const activeWeekdays = [1, 2, 3, 4, 5, 6, 7].filter((weekday) => weekdayCounts[weekday] > 0);
-  const weekdayGap =
-    activeWeekdays.length === 0
-      ? 0
-      : Math.max(...activeWeekdays.map((weekday) => weekdayCounts[weekday])) -
-        Math.min(...activeWeekdays.map((weekday) => weekdayCounts[weekday]));
-  const plannedMinutesGap =
-    activeWeekdays.length === 0
-      ? 0
-      : Math.max(...activeWeekdays.map((weekday) => weekdayMinutes[weekday])) -
-        Math.min(...activeWeekdays.map((weekday) => weekdayMinutes[weekday]));
-  const dailyPlannedMinutes = generatedWindows.map((window) => ({
-    date: window.date,
-    plannedMinutes: plannedMinutesForGeneratedWindow(window)
-  }));
-  const advancedScore = evaluateRotationFairnessAdvancedScore(
-    employeeId,
-    {
-      optimizedTemplateIds: rotated.map((template) => template.id),
-      generatedWindows
-    },
-    existingSchedules,
-    advancedConstraints
-  );
-
-  return {
-    offset,
-    optimizedTemplateIds: rotated.map((template) => template.id),
-    weekdayGap,
-    plannedMinutesGap,
-    grade: deriveRotationBalanceGrade(weekdayGap, plannedMinutesGap),
-    generatedWindows,
-    dailyPlannedMinutes,
-    advancedScore
-  };
-}
 
 async function requireTemplatesWithinTenant(context: ServiceContext, templateIds: string[]) {
   const rows: WorkScheduleTemplateEntity[] = [];
@@ -1561,34 +1498,37 @@ async function evaluateBestRotationForEmployee(
   });
 
   const evaluations = input.templates.map((_, offset) =>
-    evaluateRotationOffset(
+    buildRotationOffsetEvaluation({
       existingSchedules,
-      input.templates,
-      input.matchedDates,
+      templates: input.templates,
+      matchedDates: input.matchedDates,
       offset,
-      input.employee.id,
-      input.advancedConstraints
-    )
+      employeeId: input.employee.id,
+      advancedConstraints: input.advancedConstraints,
+      rotateTemplatesByOffset,
+      buildRotationWindowsForTemplates,
+      weekdayFromDateTime: weekdayFromKstDateTime,
+      plannedMinutesForSchedule,
+      plannedMinutesForGeneratedWindow,
+      evaluateAdvancedScore: (evaluationInput) =>
+        evaluateRotationFairnessAdvancedScore(
+          evaluationInput.employeeId,
+          {
+            optimizedTemplateIds: evaluationInput.optimizedTemplateIds,
+            generatedWindows: evaluationInput.generatedWindows
+          },
+          evaluationInput.existingSchedules,
+          evaluationInput.advancedConstraints
+        ),
+      deriveRotationBalanceGrade
+    })
   );
-  evaluations.sort((left, right) => {
-    const leftAdvancedPenalty = left.advancedScore?.totalPenalty ?? 0;
-    const rightAdvancedPenalty = right.advancedScore?.totalPenalty ?? 0;
-    if (leftAdvancedPenalty !== rightAdvancedPenalty) {
-      return leftAdvancedPenalty - rightAdvancedPenalty;
-    }
-    if (left.plannedMinutesGap !== right.plannedMinutesGap) {
-      return left.plannedMinutesGap - right.plannedMinutesGap;
-    }
-    if (left.weekdayGap !== right.weekdayGap) {
-      return left.weekdayGap - right.weekdayGap;
-    }
-    return left.offset - right.offset;
-  });
+  const rankedEvaluations = sortRotationOffsetEvaluations(evaluations);
 
   return {
     employee: input.employee,
-    options: evaluations,
-    best: evaluations[0]
+    options: rankedEvaluations,
+    best: rankedEvaluations[0]
   };
 }
 
@@ -2827,23 +2767,12 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   if (!incidentId) {
     throw new ServiceError(400, "incidentId is required");
   }
-
-  const assigneeId = input.assigneeId?.trim();
-  if (input.action === "ASSIGN" && !assigneeId) {
-    throw new ServiceError(400, "assigneeId is required when action is ASSIGN");
-  }
-  if (input.action !== "ASSIGN" && assigneeId) {
-    throw new ServiceError(400, "assigneeId is only allowed when action is ASSIGN");
-  }
-
-  const resolutionCode =
-    input.action === "RESOLVE" ? (input.resolutionCode ?? "OTHER") : null;
-  if (input.action !== "RESOLVE" && input.resolutionCode !== undefined) {
-    throw new ServiceError(400, "resolutionCode is only allowed when action is RESOLVE");
-  }
-
-  const note = input.note?.trim() || null;
-  const state = ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION[input.action];
+  const normalizedMutationInput = normalizeAnomalyIncidentLifecycleMutationInput({
+    action: input.action,
+    assigneeId: input.assigneeId,
+    resolutionCode: input.resolutionCode,
+    note: input.note
+  });
   const updatedAt = new Date().toISOString();
   const tenantScope = resolveTenantScope(actor) ?? undefined;
   const existing = await getScheduleAnomalyIncidentReadModel(context.dataAccess, incidentId);
@@ -2858,51 +2787,47 @@ export async function updateScheduleAnomalyIncidentLifecycle(
 
   const existingStore = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
   const organizationId = tenantScope ?? existing?.organizationId ?? null;
-  const normalizedAssigneeId =
-    input.action === "ASSIGN" ? (assigneeId ?? null) : (existing?.assigneeId ?? null);
-  const normalizedResolutionCode =
-    input.action === "RESOLVE" ? resolutionCode : (existing?.resolutionCode ?? null);
-  const normalizedNote = note ?? existing?.note ?? null;
-  const historyEntry: ScheduleAnomalyIncidentHistoryEntry = {
+  const lifecycleUpdate = buildAnomalyIncidentLifecycleUpdateResult({
     action: input.action,
-    state,
-    assigneeId: normalizedAssigneeId,
-    resolutionCode: normalizedResolutionCode,
-    note: normalizedNote,
+    stateByAction: ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION,
+    existing: existing
+      ? {
+          assigneeId: existing.assigneeId,
+          resolutionCode: existing.resolutionCode,
+          note: existing.note,
+          history: existing.history
+        }
+      : null,
+    normalizedAssigneeId: normalizedMutationInput.assigneeId,
+    normalizedResolutionCode: normalizedMutationInput.resolutionCode,
+    normalizedNote: normalizedMutationInput.note,
+    actorId: actor.id ?? null,
+    actorRole: actor.role,
     updatedAt,
-    updatedBy: {
-      actorId: actor.id ?? null,
-      actorRole: actor.role
-    }
-  };
-  const history = [...(existing?.history ?? []), historyEntry].slice(-MAX_ANOMALY_INCIDENT_HISTORY);
+    maxHistory: MAX_ANOMALY_INCIDENT_HISTORY
+  });
 
   await context.dataAccess.scheduling.upsertIncident({
     ...toScheduleAnomalyIncidentUpsertInput({
       incidentId,
       organizationId,
-      state,
-      assigneeId: normalizedAssigneeId,
-      resolutionCode: normalizedResolutionCode,
-      note: normalizedNote,
+      state: lifecycleUpdate.state,
+      assigneeId: lifecycleUpdate.assigneeId,
+      resolutionCode: lifecycleUpdate.resolutionCode,
+      note: lifecycleUpdate.note,
       updatedAt,
       updatedBy: {
         actorId: actor.id ?? null,
         actorRole: actor.role
       },
-      history
+      history: lifecycleUpdate.history
     }),
     lastEscalationRequestedAt: existingStore?.lastEscalationRequestedAt ?? null
   });
 
   const payload = {
-    incidentId,
-    action: input.action,
-    state,
-    assigneeId: normalizedAssigneeId,
-    resolutionCode: normalizedResolutionCode,
-    note: normalizedNote,
-    updatedAt
+    ...lifecycleUpdate.payload,
+    incidentId
   };
 
   await context.dataAccess.audit.append({
@@ -2926,15 +2851,15 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   });
   return {
     incidentId,
-    action: historyEntry.action,
-    state: historyEntry.state,
-    assigneeId: historyEntry.assigneeId,
-    resolutionCode: historyEntry.resolutionCode,
-    note: historyEntry.note,
-    updatedAt: historyEntry.updatedAt,
+    action: lifecycleUpdate.historyEntry.action,
+    state: lifecycleUpdate.historyEntry.state,
+    assigneeId: lifecycleUpdate.historyEntry.assigneeId,
+    resolutionCode: lifecycleUpdate.historyEntry.resolutionCode,
+    note: lifecycleUpdate.historyEntry.note,
+    updatedAt: lifecycleUpdate.historyEntry.updatedAt,
     updatedBy: {
-      actorId: historyEntry.updatedBy.actorId,
-      actorRole: historyEntry.updatedBy.actorRole
+      actorId: lifecycleUpdate.historyEntry.updatedBy.actorId,
+      actorRole: lifecycleUpdate.historyEntry.updatedBy.actorRole
     }
   };
 }
@@ -2974,13 +2899,13 @@ export async function listScheduleAnomalyIncidents(
     organizationId: tenantScope ?? undefined,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      state: input.state ?? null,
+    payload: buildAnomalyIncidentListAuditPayload({
+      state: input.state,
       assigneeId: assigneeId ?? null,
       topN,
       total,
       returned: items.length
-    }
+    })
   });
 
   return {
@@ -3038,35 +2963,31 @@ export async function listScheduleAnomalyIncidentSla(
     organizationId: tenantScope ?? undefined,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      asOf: asOf.toISOString(),
-      state: input.state ?? null,
+    payload: buildAnomalyIncidentSlaAuditPayload({
+      asOfIso: asOf.toISOString(),
+      state: input.state,
       assigneeId: assigneeId ?? null,
       topN,
       includeResolved,
       slaTargetMinutes,
       warningMinutes,
-      ...counts,
+      counts,
       returned: items.length
-    }
+    })
   });
 
-  return {
+  return buildAnomalyIncidentSlaReport({
     generatedAt: new Date().toISOString(),
-    asOf: asOf.toISOString(),
-    policy: {
-      slaTargetMinutes,
-      warningMinutes,
-      includeResolved
-    },
-    filters: {
-      state: input.state ?? null,
-      assigneeId: assigneeId ?? null,
-      topN
-    },
+    asOfIso: asOf.toISOString(),
+    state: input.state,
+    assigneeId: assigneeId ?? null,
+    topN,
+    includeResolved,
+    slaTargetMinutes,
+    warningMinutes,
     counts,
     items
-  };
+  });
 }
 
 export async function triggerScheduleAnomalyIncidentEscalation(
