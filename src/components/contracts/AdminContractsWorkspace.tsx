@@ -1,6 +1,8 @@
-"use client";
+﻿"use client";
+
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import {
   adminContractsCopyByLocale,
   contractApprovalStatusLabelByLocale,
@@ -10,23 +12,16 @@ import {
   toDateText,
   type ContractCategory
 } from "@/components/contracts/copy";
-import { resolveContractDocumentActionRequest } from "@/components/contracts/action-payloads";
-import {
-  normalizeContractsErrorMessageForRuntime,
-  readJson,
-  setContractsRuntimeLocale
-} from "@/components/contracts/http";
+import type { ContractDocumentAction } from "@/components/contracts/types";
+import { useAdminContractsWorkspaceActions } from "@/components/contracts/useAdminContractsWorkspaceActions";
+import { setContractsRuntimeLocale } from "@/components/contracts/http";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
-import {
-  type AdminContractDocument as ContractDocument,
-  type ContractDocumentAction,
-  type ContractTemplate
-} from "@/components/contracts/types";
 import {
   formatEmployeeIdForLocaleDisplay,
   normalizeEmployeeIdForApi
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
+
 export default function AdminContractsWorkspace() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -36,8 +31,7 @@ export default function AdminContractsWorkspace() {
   const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
   const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
   const approvalStatusLabels = contractApprovalStatusLabelByLocale[locale];
-  const [templates, setTemplates] = useState<ContractTemplate[]>([]);
-  const [documents, setDocuments] = useState<ContractDocument[]>([]);
+
   const [employeeId, setEmployeeId] = useState("");
   const [templateName, setTemplateName] = useState(
     locale === "ko" ? "근로계약 기본" : "Employment Standard"
@@ -45,12 +39,10 @@ export default function AdminContractsWorkspace() {
   const [templateCategory, setTemplateCategory] = useState<ContractCategory>("employment");
   const [templateBody, setTemplateBody] = useState(
     locale === "ko"
-      ? "직원은 직무, 보상, 기밀유지 조항에 동의합니다."
+      ? "직원은 직무, 보상, 기밀 유지 조항에 동의합니다."
       : "Employee agrees to role, compensation, and confidentiality clauses."
   );
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const selectedTemplateId = useMemo(() => templates[0]?.id ?? "", [templates]);
+
   const normalizedEmployeeIdForApi = normalizeEmployeeIdForApi(employeeId, locale);
   const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
     () => ({
@@ -63,112 +55,37 @@ export default function AdminContractsWorkspace() {
     }),
     [copy]
   );
-  const documentActions = useMemo<ContractDocumentAction[]>(() => ["request", "approve", "reject", "send", "expire", "renew"], []);
-  const reload = useCallback(async () => {
-    setError(null);
-    const [templateBodyRaw, documentBodyRaw] = await Promise.all([
-      fetch("/api/contracts/templates", { cache: "no-store" }).then((response) =>
-        readJson(response, copy.loadError)
-      ),
-      fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
-        readJson(response, copy.loadError)
-      )
-    ]);
-    setTemplates((templateBodyRaw as { templates?: ContractTemplate[] }).templates ?? []);
-    setDocuments((documentBodyRaw as { documents?: ContractDocument[] }).documents ?? []);
-  }, [copy.loadError]);
+  const documentActions = useMemo<ContractDocumentAction[]>(
+    () => ["request", "approve", "reject", "send", "expire", "renew"],
+    []
+  );
+
+  const {
+    templates,
+    selectedTemplateId,
+    documents,
+    message,
+    error,
+    submitTemplate,
+    createDraftDocument,
+    runDocumentAction
+  } = useAdminContractsWorkspaceActions({
+    copy,
+    locale,
+    templateName,
+    templateCategory,
+    templateBody,
+    normalizedEmployeeIdForApi,
+    actionLabelByAction
+  });
+
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
       setContractsRuntimeLocale(null);
     };
   }, [locale]);
-  useEffect(() => {
-    reload().catch((loadError) => {
-      setError(
-        loadError instanceof Error
-          ? normalizeContractsErrorMessageForRuntime(loadError.message, copy.loadError)
-          : copy.loadError
-      );
-    });
-  }, [copy.loadError, reload]);
-  async function submitTemplate() {
-    setError(null);
-    setMessage(null);
-    try {
-      await fetch("/api/contracts/templates", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: templateName,
-          category: templateCategory,
-          body: templateBody,
-          status: "DRAFT"
-        })
-      }).then((response) => readJson(response, copy.templateCreateError));
-      setMessage(copy.templateCreatedMessage);
-      await reload();
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? normalizeContractsErrorMessageForRuntime(submitError.message, copy.templateCreateError)
-          : copy.templateCreateError
-      );
-    }
-  }
-  async function createDraftDocument() {
-    if (!selectedTemplateId || normalizedEmployeeIdForApi.length === 0) {
-      setError(copy.requiredTemplateAndEmployeeError);
-      return;
-    }
-    setError(null);
-    setMessage(null);
-    try {
-      await fetch("/api/contracts/documents", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          templateId: selectedTemplateId,
-          employeeId: normalizedEmployeeIdForApi,
-          title: `${copy.draftTitlePrefix} ${formatEmployeeIdForLocaleDisplay(normalizedEmployeeIdForApi, locale)}`,
-          requiresApproval: true
-        })
-      }).then((response) => readJson(response, copy.draftCreateError));
-      setMessage(copy.draftCreatedMessage);
-      await reload();
-    } catch (createError) {
-      setError(
-        createError instanceof Error
-          ? normalizeContractsErrorMessageForRuntime(createError.message, copy.draftCreateError)
-          : copy.draftCreateError
-      );
-    }
-  }
-  async function runDocumentAction(documentId: string, action: ContractDocumentAction) {
-    setError(null);
-    setMessage(null);
-    const request = resolveContractDocumentActionRequest(documentId, action, copy.manualExpireReason);
-    try {
-      await fetch(request.endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(request.payload)
-      }).then((response) =>
-        readJson(response, `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`)
-      );
-      setMessage(`${copy.actionCompletedPrefix}: ${actionLabelByAction[action]}`);
-      await reload();
-    } catch (actionError) {
-      setError(
-        actionError instanceof Error
-          ? normalizeContractsErrorMessageForRuntime(
-              actionError.message,
-              `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`
-            )
-          : `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`
-        );
-    }
-  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -183,8 +100,10 @@ export default function AdminContractsWorkspace() {
           </div>
         </div>
       </header>
+
       {error ? <p className="inline-error">{error}</p> : null}
       {message ? <p className="small">{message}</p> : null}
+
       <section className="kpi-strip" aria-label={copy.summaryKpiAria}>
         <article className="kpi-card">
           <span>{copy.templatesKpiLabel}</span>
@@ -199,6 +118,7 @@ export default function AdminContractsWorkspace() {
           <strong>{documents.filter((item) => item.approvalStatus === "PENDING").length}</strong>
         </article>
       </section>
+
       <section className="panel-grid">
         <article id="contract-template-library" className="panel panel-contract-template-library">
           <h2>{copy.templateLibraryTitle}</h2>
@@ -231,7 +151,10 @@ export default function AdminContractsWorkspace() {
           </div>
           <ul className="contract-template-list" aria-label={copy.templateListAria}>
             {templates.map((template) => (
-              <li key={template.id} className={`tone-${template.status === "ACTIVE" ? "ready" : template.status === "DRAFT" ? "watch" : "risk"}`}>
+              <li
+                key={template.id}
+                className={`tone-${template.status === "ACTIVE" ? "ready" : template.status === "DRAFT" ? "watch" : "risk"}`}
+              >
                 <div className="contract-template-head">
                   <strong>{normalizeContractsEntityTitle(template.name, template.id, isKoLocale)}</strong>
                   <span className="queue-history-chip">v{template.version}</span>
@@ -248,6 +171,7 @@ export default function AdminContractsWorkspace() {
             ))}
           </ul>
         </article>
+
         <article id="contract-signature-readiness" className="panel panel-contract-signature-readiness">
           <h2>{copy.documentLifecycleTitle}</h2>
           <div className="contract-form-grid">
@@ -271,7 +195,10 @@ export default function AdminContractsWorkspace() {
           </div>
           <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>
             {documents.map((document) => (
-              <li key={document.id} className={`tone-${document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"}`}>
+              <li
+                key={document.id}
+                className={`tone-${document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"}`}
+              >
                 <div className="contract-signature-readiness-head">
                   <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
                   <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
@@ -284,7 +211,12 @@ export default function AdminContractsWorkspace() {
                 </p>
                 <div className="contract-action-row">
                   {documentActions.map((action) => (
-                    <button key={action} type="button" className="btn btn-secondary btn-small" onClick={() => runDocumentAction(document.id, action)}>
+                    <button
+                      key={action}
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => runDocumentAction(document.id, action)}
+                    >
                       {actionLabelByAction[action]}
                     </button>
                   ))}

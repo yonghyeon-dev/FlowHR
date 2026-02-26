@@ -28,6 +28,12 @@ async function run() {
   const contractsCopy = readUtf8("src", "components", "contracts", "copy.ts");
   const contractsHttp = readUtf8("src", "components", "contracts", "http.ts");
   const adminWorkspace = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
+  const adminWorkspaceHook = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "useAdminContractsWorkspaceActions.ts"
+  );
   const employeeInbox = readUtf8("src", "components", "contracts", "EmployeeContractsInbox.tsx");
   const templateBuilder = readUtf8("src", "components", "contracts", "ContractTemplateBuilder.tsx");
   const workItem = readUtf8("work-items", "WI-0395-contracts-korean-copy-and-error-fallback.md");
@@ -52,11 +58,12 @@ async function run() {
   assert.match(contractsHttp, /요청이 실패했습니다/);
   assert.match(contractsHttp, /request failed/);
 
-  assert.match(adminWorkspace, /readJson\(response,\s*copy\.loadError\)/);
-  assert.match(adminWorkspace, /readJson\(response,\s*copy\.templateCreateError\)/);
-  assert.match(adminWorkspace, /readJson\(response,\s*copy\.draftCreateError\)/);
+  assert.match(adminWorkspace, /useAdminContractsWorkspaceActions/);
+  assert.match(adminWorkspaceHook, /readJson\(response,\s*copy\.loadError\)/);
+  assert.match(adminWorkspaceHook, /readJson\(response,\s*copy\.templateCreateError\)/);
+  assert.match(adminWorkspaceHook, /readJson\(response,\s*copy\.draftCreateError\)/);
   assert.match(
-    adminWorkspace,
+    adminWorkspaceHook,
     /readJson\(response,\s*`\$\{copy\.actionFailedPrefix\}: \$\{actionLabelByAction\[action\]\}`\)/
   );
 
