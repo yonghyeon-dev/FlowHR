@@ -2,7 +2,7 @@ import { canEmployeeRespondToContractDocument } from "@/components/contracts/doc
 import { type EmployeeContractDocument } from "@/components/contracts/types";
 
 export type EmployeeInboxStatusFilter = "all" | "pending_response" | "responded" | "expired";
-export type EmployeeInboxDeadlineFilter = "all" | "due_soon" | "overdue";
+export type EmployeeInboxDeadlineFilter = "all" | "action_needed" | "due_soon" | "overdue";
 
 const DUE_SOON_WINDOW_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,6 +42,9 @@ export function applyInboxDeadlineFilter(
 ) {
   if (deadlineFilter === "all") {
     return documents;
+  }
+  if (deadlineFilter === "action_needed") {
+    return documents.filter((document) => isActionNeededPendingDocument(document, nowMs));
   }
   return documents.filter((document) => {
     if (!isPendingResponseStatus(document)) {
@@ -84,6 +87,13 @@ export function isOverduePendingDocument(
     return false;
   }
   return expiresAtMs < nowMs;
+}
+
+export function isActionNeededPendingDocument(
+  document: EmployeeContractDocument,
+  nowMs: number = Date.now()
+) {
+  return isDueSoonPendingDocument(document, nowMs) || isOverduePendingDocument(document, nowMs);
 }
 
 function resolveDayDistance(fromMs: number, toMs: number) {
@@ -163,4 +173,8 @@ export function countDueSoonPending(documents: EmployeeContractDocument[], nowMs
 
 export function countOverduePending(documents: EmployeeContractDocument[], nowMs: number = Date.now()) {
   return applyInboxDeadlineFilter(documents, "overdue", nowMs).length;
+}
+
+export function countActionNeededPending(documents: EmployeeContractDocument[], nowMs: number = Date.now()) {
+  return applyInboxDeadlineFilter(documents, "action_needed", nowMs).length;
 }
