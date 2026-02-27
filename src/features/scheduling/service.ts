@@ -101,6 +101,11 @@ import {
   resolveScheduleAnomalyIncidentForActor
 } from "@/features/scheduling/anomaly-incident-read-helpers";
 import {
+  requireSchedulingActor,
+  requireSchedulingWriteActor,
+  resolveSchedulingTenantScope
+} from "@/features/scheduling/anomaly-service-context-helpers";
+import {
   emitAnomalyAlertIfEnabled,
   emitAnomalyCockpitTicketRequestsIfEnabled,
   emitAnomalyEscalationIfEnabled
@@ -2415,10 +2420,8 @@ export async function listScheduleAttendanceAnomalies(
   context: ServiceContext,
   input: ListScheduleAnomaliesInput
 ): Promise<ScheduleAttendanceAnomalyReport> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
+  const actor = requireSchedulingActor(context);
+  const tenantScope = resolveSchedulingTenantScope(actor);
 
   ensureValidPeriod(input.periodStart, input.periodEnd);
   const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
@@ -2448,7 +2451,7 @@ export async function listScheduleAttendanceAnomalies(
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.report.generated",
     entityType: "WorkSchedule",
-    organizationId: resolveTenantScope(actor) ?? undefined,
+    organizationId: tenantScope,
     actorRole: actor.role,
     actorId: actor.id,
     payload: buildScheduleAttendanceAnomalyReportAuditPayload({
@@ -2466,7 +2469,7 @@ export async function listScheduleAttendanceAnomalies(
   const eventPublisher = getEventPublisher(context);
   const sideEffectContext = {
     actor: { id: actor.id, role: actor.role },
-    tenantScope: resolveTenantScope(actor) ?? undefined,
+    tenantScope,
     dataAccess: context.dataAccess,
     publish: eventPublisher.publish.bind(eventPublisher)
   };
@@ -2502,14 +2505,8 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   context: ServiceContext,
   input: UpdateScheduleAnomalyIncidentLifecycleInput
 ): Promise<ScheduleAnomalyIncidentLifecycleResult> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident lifecycle requires permission"
   );
 
@@ -2524,7 +2521,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     note: input.note
   });
   const updatedAt = new Date().toISOString();
-  const tenantScope = resolveTenantScope(actor) ?? undefined;
+  const tenantScope = resolveSchedulingTenantScope(actor);
   const existing = await getScheduleAnomalyIncidentReadModel(context.dataAccess, incidentId);
   if (
     existing &&
@@ -2606,23 +2603,17 @@ export async function listScheduleAnomalyIncidents(
   context: ServiceContext,
   input: ListScheduleAnomalyIncidentsInput
 ): Promise<ScheduleAnomalyIncidentListResult> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident list requires permission"
   );
 
   const topN = normalizeIncidentListTopN(input.topN);
-  const tenantScope = resolveTenantScope(actor);
+  const tenantScope = resolveSchedulingTenantScope(actor);
   const assigneeId = input.assigneeId?.trim();
 
   const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
-    organizationId: tenantScope ?? undefined
+    organizationId: tenantScope
   });
   const { total, items } = buildScheduleAnomalyIncidentListResult({
     readModels,
@@ -2634,7 +2625,7 @@ export async function listScheduleAnomalyIncidents(
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.listed",
     entityType: "WorkSchedule",
-    organizationId: tenantScope ?? undefined,
+    organizationId: tenantScope,
     actorRole: actor.role,
     actorId: actor.id,
     payload: buildAnomalyIncidentListAuditPayload({
@@ -2656,19 +2647,13 @@ export async function listScheduleAnomalyIncidentSla(
   context: ServiceContext,
   input: ListScheduleAnomalyIncidentSlaInput
 ): Promise<ScheduleAnomalyIncidentSlaReport> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident SLA requires permission"
   );
 
   const topN = normalizeIncidentListTopN(input.topN);
-  const tenantScope = resolveTenantScope(actor);
+  const tenantScope = resolveSchedulingTenantScope(actor);
   const assigneeId = input.assigneeId?.trim();
   const includeResolved = input.includeResolved ?? false;
   const slaTargetMinutes = resolveAnomalyIncidentSlaTargetMinutes(input.slaTargetMinutes);
@@ -2680,7 +2665,7 @@ export async function listScheduleAnomalyIncidentSla(
   const asOfMillis = asOf.getTime();
 
   const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
-    organizationId: tenantScope ?? undefined
+    organizationId: tenantScope
   });
 
   const { matched, counts } = buildScheduleAnomalyIncidentSlaQueue({
@@ -2698,7 +2683,7 @@ export async function listScheduleAnomalyIncidentSla(
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.sla.generated",
     entityType: "WorkSchedule",
-    organizationId: tenantScope ?? undefined,
+    organizationId: tenantScope,
     actorRole: actor.role,
     actorId: actor.id,
     payload: buildAnomalyIncidentSlaAuditPayload({
@@ -2732,14 +2717,8 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   context: ServiceContext,
   input: TriggerScheduleAnomalyIncidentEscalationInput
 ): Promise<ScheduleAnomalyIncidentEscalationResult> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident escalation requires permission"
   );
 
@@ -2749,7 +2728,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   const cooldownMinutes = normalizeAnomalyIncidentEscalationCooldownMinutes(input.cooldownMinutes);
   const escalationChannel = normalizeAnomalyIncidentEscalationChannel(input.escalationChannel);
   const asOf = input.asOf ?? new Date();
-  const tenantScope = resolveTenantScope(actor);
+  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const slaReport = await listScheduleAnomalyIncidentSla(context, {
     state: input.state,
@@ -2766,7 +2745,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   );
   const cooldownWindowStartMillis = asOf.getTime() - cooldownMinutes * 60_000;
   const storedIncidents = await context.dataAccess.scheduling.listIncidents({
-    organizationId: tenantScope ?? undefined
+    organizationId: tenantScope
   });
   const latestRequestedAtMillisByIncident =
     buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(storedIncidents);
@@ -2799,7 +2778,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
         action: "scheduling.anomaly.incident.escalation.requested",
         entityType: "WorkSchedule",
         entityId: candidate.incidentId,
-        organizationId: tenantScope ?? undefined,
+        organizationId: tenantScope,
         actorRole: actor.role,
         actorId: actor.id,
         payload
@@ -2807,7 +2786,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
 
       await context.dataAccess.scheduling.markIncidentEscalationRequested({
         incidentId: candidate.incidentId,
-        organizationId: tenantScope ?? undefined,
+        organizationId: tenantScope,
         requestedAt
       });
     },
@@ -2816,7 +2795,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
         action: "scheduling.anomaly.incident.escalation.request.failed",
         entityType: "WorkSchedule",
         entityId: candidate.incidentId,
-        organizationId: tenantScope ?? undefined,
+        organizationId: tenantScope,
         actorRole: actor.role,
         actorId: actor.id,
         payload: buildScheduleAnomalyIncidentEscalationRequestFailedPayload({
@@ -2834,7 +2813,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.incident.escalation.generated",
     entityType: "WorkSchedule",
-    organizationId: tenantScope ?? undefined,
+    organizationId: tenantScope,
     actorRole: actor.role,
     actorId: actor.id,
     payload: buildScheduleAnomalyIncidentEscalationSummaryPayload({
@@ -2870,21 +2849,15 @@ export async function executeScheduleAnomalyIncidentAutoAction(
   context: ServiceContext,
   input: ExecuteScheduleAnomalyIncidentAutoActionInput
 ): Promise<ScheduleAnomalyIncidentAutoActionResult> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident auto action requires permission"
   );
 
   const autoAssigneeId = normalizeAnomalyIncidentAutoAssigneeId(input.autoAssigneeId);
   const autoAssignMode = normalizeAnomalyIncidentAutoAssignMode(input.autoAssignMode);
   const autoAssignNote = normalizeAnomalyIncidentAutoAssignNote(input.autoAssignNote);
-  const tenantScope = resolveTenantScope(actor) ?? undefined;
+  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const escalation = await triggerScheduleAnomalyIncidentEscalation(context, {
     state: input.state,
@@ -3001,14 +2974,8 @@ export async function archiveScheduleAnomalyIncidents(
   context: ServiceContext,
   input: ArchiveScheduleAnomalyIncidentsInput
 ): Promise<ScheduleAnomalyIncidentArchiveResult> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident archive requires permission"
   );
 
@@ -3023,7 +2990,7 @@ export async function archiveScheduleAnomalyIncidents(
 
   const stateFilter = input.state;
   const assigneeFilter = input.assigneeId?.trim() || undefined;
-  const tenantScope = resolveTenantScope(actor) ?? undefined;
+  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const incidents = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope,
@@ -3053,7 +3020,7 @@ export async function archiveScheduleAnomalyIncidents(
           action: ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
           entityType: "WorkSchedule",
           entityId: candidate.incidentId,
-          organizationId: candidate.organizationId ?? tenantScope ?? undefined,
+          organizationId: candidate.organizationId ?? tenantScope,
           actorRole: actor.role,
           actorId: actor.id,
           payload: buildScheduleAnomalyIncidentArchiveAuditPayload({
@@ -3114,14 +3081,8 @@ export async function replayScheduleAnomalyIncidentStore(
   context: ServiceContext,
   input: ReplayScheduleAnomalyIncidentStoreInput
 ): Promise<ScheduleAnomalyIncidentReplayResult> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident replay requires permission"
   );
 
@@ -3133,7 +3094,7 @@ export async function replayScheduleAnomalyIncidentStore(
 
   const dryRun = input.dryRun ?? false;
   const includeArchived = input.includeArchived ?? false;
-  const tenantScope = resolveTenantScope(actor) ?? undefined;
+  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const logs = await context.dataAccess.audit.list({
     actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
@@ -3173,7 +3134,7 @@ export async function replayScheduleAnomalyIncidentStore(
           action: ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
           entityType: "WorkSchedule",
           entityId: incidentId,
-          organizationId: replayModel.organizationId ?? tenantScope ?? undefined,
+          organizationId: replayModel.organizationId ?? tenantScope,
           actorRole: actor.role,
           actorId: actor.id,
           payload: buildScheduleAnomalyIncidentReplayAuditPayload({
@@ -3225,20 +3186,14 @@ export async function reconcileScheduleAnomalyIncidentStore(
   context: ServiceContext,
   input: ReconcileScheduleAnomalyIncidentStoreInput
 ): Promise<ScheduleAnomalyIncidentReconcileResult> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident reconciliation requires permission"
   );
 
   const topN = normalizeReconcileTopN(input.topN);
   const includeMatching = input.includeMatching ?? false;
-  const tenantScope = resolveTenantScope(actor) ?? undefined;
+  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const storeRows = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope
@@ -3290,18 +3245,12 @@ export async function getScheduleAnomalyIncident(
   context: ServiceContext,
   incidentId: string
 ): Promise<ScheduleAnomalyIncidentReadModel> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly incident read requires permission"
   );
 
-  const tenantScope = resolveTenantScope(actor);
+  const tenantScope = resolveSchedulingTenantScope(actor);
   const incident = await resolveScheduleAnomalyIncidentForActor({
     dataAccess: context.dataAccess,
     incidentId,
@@ -3325,26 +3274,20 @@ export async function listScheduleAttendanceAnomalyCockpit(
   context: ServiceContext,
   input: ListScheduleAnomalyCockpitInput
 ): Promise<ScheduleAttendanceAnomalyCockpitReport> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  await requirePermission(
+  const actor = await requireSchedulingWriteActor(
     context,
-    Permissions.schedulingScheduleWriteAny,
     "schedule anomaly cockpit requires permission"
   );
 
   ensureValidPeriod(input.periodStart, input.periodEnd);
   const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
   const topN = normalizeTopN(input.topN);
-  const tenantScope = resolveTenantScope(actor);
+  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const schedules = await context.dataAccess.scheduling.listInPeriod({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
-    organizationId: tenantScope ?? undefined
+    organizationId: tenantScope
   });
 
   const oneDayMs = 24 * 60 * 60 * 1000;
@@ -3353,7 +3296,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
   const attendances = await context.dataAccess.attendance.listInPeriod({
     periodStart: attendancePeriodStart,
     periodEnd: attendancePeriodEnd,
-    organizationId: tenantScope ?? undefined
+    organizationId: tenantScope
   });
 
   const { anomalies, lateCount, noShowCount, employees, queue, severities } =
@@ -3368,7 +3311,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
   await context.dataAccess.audit.append({
     action: "scheduling.anomaly.cockpit.generated",
     entityType: "WorkSchedule",
-    organizationId: tenantScope ?? undefined,
+    organizationId: tenantScope,
     actorRole: actor.role,
     actorId: actor.id,
     payload: buildScheduleAttendanceAnomalyCockpitAuditPayload({
@@ -3391,7 +3334,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
     await emitAnomalyCockpitTicketRequestsIfEnabled(
       {
         actor: { id: actor.id, role: actor.role },
-        tenantScope: tenantScope ?? undefined,
+        tenantScope,
         dataAccess: context.dataAccess,
         publish: eventPublisher.publish.bind(eventPublisher)
       },
