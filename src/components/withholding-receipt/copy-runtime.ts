@@ -48,6 +48,13 @@ export type WithholdingReceiptCopy = {
   noReceiptSummary: string;
   noFinalizedSettlement: string;
   noIssuedDocument: string;
+  validationSummaryTitle: string;
+  validationFailedItemsLabel: string;
+  validationMissingGuardLabel: string;
+  validationStatusLabel: string;
+  validationStatusNeedsAction: string;
+  validationStatusReady: string;
+  validationActionHint: string;
   receiptNumberLabel: string;
   canIssueIssuedLabel: string;
   grossNetLabel: string;
@@ -124,6 +131,13 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     noReceiptSummary: "아직 영수증 요약이 없습니다.",
     noFinalizedSettlement: "아직 확정 정산을 불러오지 않았습니다.",
     noIssuedDocument: "아직 발급 문서를 불러오지 않았습니다.",
+    validationSummaryTitle: "검증 요약",
+    validationFailedItemsLabel: "차단 항목",
+    validationMissingGuardLabel: "가드 누락",
+    validationStatusLabel: "상태",
+    validationStatusNeedsAction: "즉시 조치 필요",
+    validationStatusReady: "발급 준비 완료",
+    validationActionHint: "미리보기/미배포/수신확인 대기 실행을 먼저 정리한 뒤 다시 조회하세요.",
     receiptNumberLabel: "영수증 번호",
     canIssueIssuedLabel: "발급 가능 / 발급 완료",
     grossNetLabel: "총지급 / 실수령",
@@ -198,6 +212,13 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     noReceiptSummary: "No receipt summary yet.",
     noFinalizedSettlement: "No finalized settlement loaded.",
     noIssuedDocument: "No issued document loaded.",
+    validationSummaryTitle: "Validation Summary",
+    validationFailedItemsLabel: "Blocked items",
+    validationMissingGuardLabel: "Missing guards",
+    validationStatusLabel: "Status",
+    validationStatusNeedsAction: "Needs action now",
+    validationStatusReady: "Ready to issue",
+    validationActionHint: "Resolve preview/undistributed/pending-receipt runs, then refresh.",
     receiptNumberLabel: "Receipt Number",
     canIssueIssuedLabel: "Can Issue / Issued",
     grossNetLabel: "Gross / Net",

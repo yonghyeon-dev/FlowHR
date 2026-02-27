@@ -13,6 +13,13 @@ type WithholdingSummaryPanelProps = {
     noReceiptSummary: string;
     noFinalizedSettlement: string;
     noIssuedDocument: string;
+    validationSummaryTitle: string;
+    validationFailedItemsLabel: string;
+    validationMissingGuardLabel: string;
+    validationStatusLabel: string;
+    validationStatusNeedsAction: string;
+    validationStatusReady: string;
+    validationActionHint: string;
     receiptNumberLabel: string;
     canIssueIssuedLabel: string;
     grossNetLabel: string;
@@ -41,6 +48,9 @@ type WithholdingSummaryPanelProps = {
   receipt: WithholdingReceiptResponse | null;
   finalizedSettlement: FinalizedYearEndSettlementResponse | null;
   receiptDocument: WithholdingReceiptDocumentResponse | null;
+  validationBlockedCount: number;
+  validationMissingGuardCount: number;
+  validationNeedsAction: boolean;
   blockingReasonText: string;
   runGuardSnapshot: string;
   finalizedAtText: string;
@@ -60,6 +70,9 @@ export function WithholdingSummaryPanel({
   receipt,
   finalizedSettlement,
   receiptDocument,
+  validationBlockedCount,
+  validationMissingGuardCount,
+  validationNeedsAction,
   blockingReasonText,
   runGuardSnapshot,
   finalizedAtText,
@@ -78,14 +91,21 @@ export function WithholdingSummaryPanel({
       {!receipt ? (
         <p className="small">{copy.noReceiptSummary}</p>
       ) : (
-        <ul className="simple-list">
-          <li><span>{copy.receiptNumberLabel}</span><strong>{receipt.receipt.receiptNumber}</strong></li>
-          <li><span>{copy.canIssueIssuedLabel}</span><strong>{receipt.receipt.canIssue ? copy.yesLabel : copy.noLabel} / {receipt.receipt.issued ? copy.yesLabel : copy.noLabel}</strong></li>
-          <li><span>{copy.grossNetLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.grossPayKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.netPayKrw)}</strong></li>
-          <li><span>{copy.withholdingSocialLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.withholdingTaxKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.socialInsuranceKrw)}</strong></li>
-          <li><span>{copy.pendingReceiptRunsLabel}</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
-          <li><span>{copy.blockingReasonsLabel}</span><strong>{blockingReasonText}</strong></li>
-        </ul>
+        <>
+          <ul className="simple-list">
+            <li><span>{copy.validationSummaryTitle}</span><strong>{copy.validationFailedItemsLabel} {validationBlockedCount} / {copy.validationMissingGuardLabel} {validationMissingGuardCount}</strong></li>
+            <li><span>{copy.validationStatusLabel}</span><strong>{validationNeedsAction ? copy.validationStatusNeedsAction : copy.validationStatusReady}</strong></li>
+          </ul>
+          {validationNeedsAction ? <p className="small muted">{copy.validationActionHint}</p> : null}
+          <ul className="simple-list">
+            <li><span>{copy.receiptNumberLabel}</span><strong>{receipt.receipt.receiptNumber}</strong></li>
+            <li><span>{copy.canIssueIssuedLabel}</span><strong>{receipt.receipt.canIssue ? copy.yesLabel : copy.noLabel} / {receipt.receipt.issued ? copy.yesLabel : copy.noLabel}</strong></li>
+            <li><span>{copy.grossNetLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.grossPayKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.netPayKrw)}</strong></li>
+            <li><span>{copy.withholdingSocialLabel}</span><strong>{formatKrwByLocale(receipt.receipt.annualTotalsKrw.withholdingTaxKrw)} / {formatKrwByLocale(receipt.receipt.annualTotalsKrw.socialInsuranceKrw)}</strong></li>
+            <li><span>{copy.pendingReceiptRunsLabel}</span><strong>{receipt.receipt.runStates.pendingReceiptRunIds.join(", ") || "-"}</strong></li>
+            <li><span>{copy.blockingReasonsLabel}</span><strong>{blockingReasonText}</strong></li>
+          </ul>
+        </>
       )}
       {!finalizedSettlement ? (
         <p className="small">{copy.noFinalizedSettlement}</p>
