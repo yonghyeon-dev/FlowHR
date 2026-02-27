@@ -8,18 +8,19 @@ import {
 } from "@/components/contracts/copy";
 import { EmployeeContractsInboxList } from "@/components/contracts/EmployeeContractsInboxList";
 import { EmployeeContractsResponsePanel } from "@/components/contracts/EmployeeContractsResponsePanel";
+import { canEmployeeRespondToContractDocument } from "@/components/contracts/document-action-policy";
 import {
   applyInboxDeadlineFilter,
   applyInboxStatusFilter,
-  countDueSoonPending,
-  countOverduePending,
+  countActionNeededPending,
   countPendingResponse,
+  type EmployeeInboxDeadlineFilter,
+  isDueSoonPendingDocument,
+  isOverduePendingDocument,
   isPendingResponseStatus,
   sortInboxDocumentsByRisk
 } from "@/components/contracts/employee-inbox-filter-helpers";
-import {
-  resolveEmployeeContractsNextActionHint
-} from "@/components/contracts/employee-inbox-journey-helpers";
+import { resolveEmployeeContractsNextActionHint } from "@/components/contracts/employee-inbox-journey-helpers";
 import {
   normalizeContractsErrorMessageForRuntime,
   readJson,
@@ -42,7 +43,7 @@ export default function EmployeeContractsInbox() {
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [inboxStatusFilter, setInboxStatusFilter] = useState<"all" | "pending_response" | "responded" | "expired">("pending_response");
-  const [inboxDeadlineFilter, setInboxDeadlineFilter] = useState<"all" | "due_soon" | "overdue">("all");
+  const [inboxDeadlineFilter, setInboxDeadlineFilter] = useState<EmployeeInboxDeadlineFilter>("all");
   const [signatureInput, setSignatureInput] = useState("");
   const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -67,13 +68,18 @@ export default function EmployeeContractsInbox() {
     return sortInboxDocumentsByRisk(baseDocuments);
   }, [deadlineFilteredDocuments, normalizedSearchQuery]);
   const pendingResponseCount = useMemo(() => countPendingResponse(filteredDocuments), [filteredDocuments]);
-  const dueSoonCount = useMemo(() => countDueSoonPending(filteredDocuments), [filteredDocuments]);
-  const overdueCount = useMemo(() => countOverduePending(filteredDocuments), [filteredDocuments]);
+  const actionNeededCount = useMemo(() => countActionNeededPending(filteredDocuments), [filteredDocuments]);
+  const dueSoonCount = useMemo(() => filteredDocuments.filter((document) => isDueSoonPendingDocument(document)).length, [filteredDocuments]);
+  const overdueCount = useMemo(() => filteredDocuments.filter((document) => isOverduePendingDocument(document)).length, [filteredDocuments]);
+  const canRespondDocument = useCallback(
+    (document: ContractDocument) => canEmployeeRespondToContractDocument(document.status),
+    []
+  );
   const selected = useMemo(
     () => filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
     [filteredDocuments, selectedDocumentId]
   );
-  const canRespondSelected = Boolean(selected && isPendingResponseStatus(selected));
+  const canRespondSelected = Boolean(selected && canRespondDocument(selected));
   const nextActionHint = useMemo(() => resolveEmployeeContractsNextActionHint(selected, copy), [copy, selected]);
   const reload = useCallback(async () => {
     setError(null);
@@ -230,33 +236,28 @@ export default function EmployeeContractsInbox() {
             {copy.inboxDeadlineFilterLabel}
             <select
               value={inboxDeadlineFilter}
-              onChange={(event) => setInboxDeadlineFilter(event.target.value as "all" | "due_soon" | "overdue")}
+              onChange={(event) => setInboxDeadlineFilter(event.target.value as EmployeeInboxDeadlineFilter)}
             >
               <option value="all">{copy.inboxDeadlineFilterAllOption}</option>
+              <option value="action_needed">{copy.inboxDeadlineFilterActionNeededOption}</option>
               <option value="due_soon">{copy.inboxDeadlineFilterDueSoonOption}</option>
               <option value="overdue">{copy.inboxDeadlineFilterOverdueOption}</option>
             </select>
           </label>
           <div className="contract-action-row">
-            <span className="small muted">{copy.riskQuickFilterLabel}</span>
+            <span className="small muted" title={`${copy.dueSoonBadgeLabel} / ${copy.overdueBadgeLabel}`}>{copy.riskQuickFilterLabel}</span>
             <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("all")}>{copy.riskQuickAllAction}</button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("action_needed")}>{copy.riskQuickActionNeededAction}</button>
             <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("due_soon")}>{copy.riskQuickDueSoonAction}</button>
             <button type="button" className="btn btn-secondary btn-small" onClick={() => setInboxDeadlineFilter("overdue")}>{copy.riskQuickOverdueAction}</button>
             <button type="button" className="btn btn-secondary btn-small" onClick={() => setSearchQuery("")}>
               {copy.clearSearchAction}
             </button>
-            <p className="small muted">
-              {copy.visibleCountLabel}: {filteredDocuments.length} / {documents.length}
-            </p>
-            <p className="small muted">
-              {copy.pendingResponseCountLabel}: {pendingResponseCount}
-            </p>
-            <p className="small muted">
-              {copy.dueSoonCountLabel}: {dueSoonCount}
-            </p>
-            <p className="small muted">
-              {copy.overdueCountLabel}: {overdueCount}
-            </p>
+            <p className="small muted">{copy.visibleCountLabel}: {filteredDocuments.length} / {documents.length}</p>
+            <p className="small muted">{copy.actionNeededCountLabel}: {actionNeededCount}</p>
+            <p className="small muted">{copy.pendingResponseCountLabel}: {pendingResponseCount}</p>
+            <p className="small muted">{copy.dueSoonCountLabel}: {dueSoonCount}</p>
+            <p className="small muted">{copy.overdueCountLabel}: {overdueCount}</p>
           </div>
           {selected && !canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
           <EmployeeContractsInboxList
