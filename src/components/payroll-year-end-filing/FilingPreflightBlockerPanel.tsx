@@ -1,4 +1,7 @@
-﻿import Link from "next/link";
+﻿"use client";
+
+import { useState } from "react";
+import Link from "next/link";
 
 import type { PayrollYearEndFilingCopy } from "@/components/payroll-year-end-filing/copy";
 import type { PayrollYearEndPreflightChecklistResponse } from "@/components/payroll-year-end/types";
@@ -30,7 +33,12 @@ const preflightPanelCopyByLocale = {
     warningChecksTitle: "\uacbd\uace0 \ud56d\ubaa9",
     detailsAction: "\uccb4\ud06c\ub9ac\uc2a4\ud2b8 \uc0c1\uc138 \uc5f4\uae30",
     clearAction: "\uacb0\uacfc \uc228\uae30\uae30",
-    warnLabel: "\uacbd\uace0"
+    warnLabel: "\uacbd\uace0",
+    copyHashAction: "\ud574\uc2dc \ubcf5\uc0ac",
+    copiedHashStatus: "\uc815\uc0b0 \ud574\uc2dc\ub97c \ubcf5\uc0ac\ud588\uc2b5\ub2c8\ub2e4.",
+    copyHashFailedStatus: "\ud574\uc2dc \ubcf5\uc0ac\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",
+    pasteHashHint:
+      "\ubcf5\uc0ac\ud55c \ud574\uc2dc\ub97c \uc0c1\ub2e8 Expected Settlement Hash \ud544\ub4dc\uc5d0 \ubd99\uc5ec\ub123\uc5b4 \uac80\uc99d \uac00\ub4dc\ub85c \ud65c\uc6a9\ud558\uc138\uc694."
   },
   en: {
     title: "Year-End Preflight Blockers",
@@ -44,7 +52,11 @@ const preflightPanelCopyByLocale = {
     warningChecksTitle: "Warnings",
     detailsAction: "Open preflight details",
     clearAction: "Hide checklist",
-    warnLabel: "WARN"
+    warnLabel: "WARN",
+    copyHashAction: "Copy hash",
+    copiedHashStatus: "Settlement hash copied.",
+    copyHashFailedStatus: "Failed to copy settlement hash.",
+    pasteHashHint: "Paste this hash into Expected Settlement Hash fields to enforce export/ack guard."
   }
 } as const;
 
@@ -60,9 +72,27 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
     onPreviewFinalization,
     onClearChecklist
   } = props;
+  const [hashActionStatus, setHashActionStatus] = useState("");
   const panelCopy = preflightPanelCopyByLocale[locale];
   const failedChecks = checklist?.checklist.checks.filter((check) => check.status === "fail") ?? [];
   const warningChecks = checklist?.checklist.checks.filter((check) => check.status === "warn") ?? [];
+  const settlementHash = checklist?.checklist.metrics.settlementHash?.trim() ?? "";
+
+  async function copySettlementHash() {
+    if (!settlementHash) {
+      return;
+    }
+    try {
+      if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+        throw new Error("clipboard unavailable");
+      }
+      await navigator.clipboard.writeText(settlementHash);
+      setHashActionStatus(panelCopy.copiedHashStatus);
+    } catch {
+      setHashActionStatus(panelCopy.copyHashFailedStatus);
+    }
+    setTimeout(() => setHashActionStatus(""), 2500);
+  }
 
   return (
     <article className="panel">
@@ -99,6 +129,17 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
               <strong>{checklist.checklist.metrics.settlementHash ?? copy.dashLabel}</strong>
             </li>
           </ul>
+          {settlementHash ? (
+            <>
+              <div className="panel-actions">
+                <button className="btn btn-secondary" onClick={() => void copySettlementHash()} disabled={disabled}>
+                  {panelCopy.copyHashAction}
+                </button>
+              </div>
+              <p className="small">{panelCopy.pasteHashHint}</p>
+              {hashActionStatus ? <p className="small">{hashActionStatus}</p> : null}
+            </>
+          ) : null}
           {failedChecks.length === 0 ? (
             <p className="small ok">{panelCopy.noFailures}</p>
           ) : (
