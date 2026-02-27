@@ -151,7 +151,7 @@ export function useAdminDashboardState({
   const [payrollDependentTaxCreditPerPersonKrw, setPayrollDependentTaxCreditPerPersonKrw] =
     useState("0");
   const [payrollIncomeTaxLookupPresetId, setPayrollIncomeTaxLookupPresetId] = useState("");
-  const [payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto] = useState(false);
+  const [payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto] = useState(true);
   const [payrollIncomeTaxLookupAsOf, setPayrollIncomeTaxLookupAsOf] = useState("");
   const [payrollRequireMonthlyBoundary, setPayrollRequireMonthlyBoundary] = useState(false);
   const [payrollNationalPensionCapKrw, setPayrollNationalPensionCapKrw] = useState("");
