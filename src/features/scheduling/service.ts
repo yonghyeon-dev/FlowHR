@@ -41,12 +41,16 @@ import {
   type AnomalyEscalationSeverity
 } from "@/features/scheduling/anomaly-automation-helpers";
 import {
-  buildScheduleAnomalyIncidentAutoActionAssignFailedPayload,
   buildScheduleAnomalyIncidentAutoActionResult,
   buildScheduleAnomalyIncidentAutoActionSummaryPayload,
   executeScheduleAnomalyIncidentAutoActionAssignments,
   notifyScheduleAnomalyIncidentAutoActionExecution
 } from "@/features/scheduling/anomaly-incident-auto-action-helpers";
+import {
+  buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry,
+  buildScheduleAnomalyIncidentAutoActionExecutionAuditEntry,
+  buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry
+} from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
 import {
   buildScheduleAnomalyIncidentArchiveCandidates,
   executeScheduleAnomalyIncidentArchiveActions
@@ -3184,22 +3188,19 @@ export async function executeScheduleAnomalyIncidentAutoAction(
       return { state: updated.state, assigneeId: updated.assigneeId };
     },
     onAssignFailed: async ({ incidentId, previousAssigneeId, escalationDecision, error }) => {
-      await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.incident.auto_action.assign.failed",
-        entityType: "WorkSchedule",
-        entityId: incidentId,
-        organizationId: tenantScope,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: buildScheduleAnomalyIncidentAutoActionAssignFailedPayload({
+      await context.dataAccess.audit.append(
+        buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry({
           incidentId,
           previousAssigneeId,
           autoAssigneeId,
           autoAssignMode,
           escalationDecision,
-          error
+          error,
+          organizationId: tenantScope,
+          actorRole: actor.role,
+          actorId: actor.id ?? undefined
         })
-      });
+      );
     }
   });
   const { assigned, skippedEscalation, skippedAssigned, failed, dryRun, items, escalated } =
@@ -3217,15 +3218,14 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     autoAssignNote,
     assignmentSummary
   });
-
-  await context.dataAccess.audit.append({
-    action: "scheduling.anomaly.incident.auto_action.generated",
-    entityType: "WorkSchedule",
-    organizationId: tenantScope,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: summaryPayload
-  });
+  await context.dataAccess.audit.append(
+    buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry({
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id ?? undefined,
+      payload: summaryPayload
+    })
+  );
 
   await notifyScheduleAnomalyIncidentAutoActionExecution({
     dryRun: escalation.dryRun,
@@ -3247,14 +3247,15 @@ export async function executeScheduleAnomalyIncidentAutoAction(
       });
     },
     appendAudit: async ({ action, payload }) => {
-      await context.dataAccess.audit.append({
-        action,
-        entityType: "WorkSchedule",
-        organizationId: tenantScope,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload
-      });
+      await context.dataAccess.audit.append(
+        buildScheduleAnomalyIncidentAutoActionExecutionAuditEntry({
+          action,
+          organizationId: tenantScope,
+          actorRole: actor.role,
+          actorId: actor.id ?? undefined,
+          payload
+        })
+      );
     }
   });
 

@@ -13,23 +13,26 @@ function countLines(source: string) {
 async function run() {
   const service = readUtf8("src", "features", "scheduling", "service.ts");
   const helper = readUtf8("src", "features", "scheduling", "anomaly-incident-auto-action-helpers.ts");
+  const auditHelper = readUtf8(
+    "src",
+    "features",
+    "scheduling",
+    "anomaly-incident-auto-action-audit-helpers.ts"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0570-scheduling-anomaly-auto-action-assign-failed-payload-helper-extraction.md"
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(service, /buildScheduleAnomalyIncidentAutoActionAssignFailedPayload/);
-  assert.match(
-    service,
-    /payload: buildScheduleAnomalyIncidentAutoActionAssignFailedPayload\(\{/
-  );
+  assert.match(service, /buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry/);
   assert.doesNotMatch(
     service,
     /payload:\s*\{\s*incidentId,\s*previousAssigneeId,\s*autoAssigneeId,\s*autoAssignMode,\s*escalationDecision,\s*error[\s\S]*?\}/
   );
 
   assert.match(helper, /export function buildScheduleAnomalyIncidentAutoActionAssignFailedPayload/);
+  assert.match(auditHelper, /buildScheduleAnomalyIncidentAutoActionAssignFailedPayload/);
   assert.ok(countLines(service) <= 3740, `service.ts should stay <= 3740 lines (current: ${countLines(service)})`);
   assert.ok(
     countLines(helper) <= 365,
@@ -51,4 +54,3 @@ run()
     console.error(error);
     process.exit(1);
   });
-

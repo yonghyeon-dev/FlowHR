@@ -839,3 +839,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0569 scheduling anomaly escalation request payload helper extraction (anomaly-incident-escalation-helpers.ts extraction for escalation requested/failed payload builders + scheduling/service.ts escalation request payload delegation + e2e-wi0569 regression)
 
 - WI-0570 scheduling anomaly auto-action assign-failed payload helper extraction (anomaly-incident-auto-action-helpers.ts extraction for auto_action.assign.failed audit payload builder + scheduling/service.ts failure-path payload delegation + e2e-wi0570 regression)
+
+- WI-0571 scheduling anomaly auto-action audit entry helper extraction (anomaly-incident-auto-action-audit-helpers.ts extraction for assign-failed/generated/execution audit entry builders + scheduling/service.ts auto-action audit append delegation + e2e-wi0571 regression)
