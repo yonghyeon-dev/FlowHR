@@ -1,6 +1,7 @@
 import type {
   ScheduleAnomalyIncidentLifecycleState,
-  ScheduleAnomalyIncidentReplayItem
+  ScheduleAnomalyIncidentReplayItem,
+  ScheduleAnomalyIncidentReplayResult
 } from "@/features/scheduling/service";
 
 type ScheduleAnomalyIncidentReplayModelBase = {
@@ -36,6 +37,66 @@ export type ScheduleAnomalyIncidentReplayActionSummary = {
   notFound: number;
   failed: number;
   items: ScheduleAnomalyIncidentReplayItem[];
+};
+
+type ReplayModelWithAuditPayloadShape = {
+  state: ScheduleAnomalyIncidentLifecycleState;
+  assigneeId: string | null;
+  resolutionCode: string | null;
+  note: string | null;
+  updatedAt: string;
+  updatedBy: {
+    actorId: string | null;
+    actorRole: string;
+  };
+  history: Array<{
+    action: string;
+    state: ScheduleAnomalyIncidentLifecycleState;
+    assigneeId: string | null;
+    resolutionCode: string | null;
+    note: string | null;
+    updatedAt: string;
+    updatedBy: {
+      actorId: string | null;
+      actorRole: string;
+    };
+  }>;
+};
+
+type BuildScheduleAnomalyIncidentReplayAuditPayloadInput<
+  TReplayModel extends ReplayModelWithAuditPayloadShape
+> = {
+  incidentId: string;
+  replayModel: TReplayModel;
+  includeArchived: boolean;
+  replayedAt: string;
+};
+
+type BuildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInput = {
+  replayedAt: string;
+  dryRun: boolean;
+  includeArchived: boolean;
+  fromIso: string | null;
+  toIso: string | null;
+  topN: number;
+  incidentIds: string[] | null;
+  requested: number;
+  summary: Pick<
+    ScheduleAnomalyIncidentReplayActionSummary,
+    "replayed" | "dryRunCount" | "notFound" | "failed"
+  >;
+};
+
+type BuildScheduleAnomalyIncidentReplayResultInput = {
+  replayedAt: string;
+  dryRun: boolean;
+  includeArchived: boolean;
+  fromIso: string | null;
+  toIso: string | null;
+  topN: number;
+  incidentIds: string[] | null;
+  requested: number;
+  summary: ScheduleAnomalyIncidentReplayActionSummary;
 };
 
 export function selectScheduleAnomalyIncidentReplayTargets<
@@ -122,5 +183,77 @@ export async function executeScheduleAnomalyIncidentReplayActions<
     notFound,
     failed,
     items
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayAuditPayload<
+  TReplayModel extends ReplayModelWithAuditPayloadShape
+>(input: BuildScheduleAnomalyIncidentReplayAuditPayloadInput<TReplayModel>) {
+  return {
+    incidentId: input.incidentId,
+    state: input.replayModel.state,
+    assigneeId: input.replayModel.assigneeId,
+    resolutionCode: input.replayModel.resolutionCode,
+    note: input.replayModel.note,
+    updatedAt: input.replayModel.updatedAt,
+    updatedByActorId: input.replayModel.updatedBy.actorId,
+    updatedByActorRole: input.replayModel.updatedBy.actorRole,
+    history: input.replayModel.history.map((entry) => ({
+      action: entry.action,
+      state: entry.state,
+      assigneeId: entry.assigneeId,
+      resolutionCode: entry.resolutionCode,
+      note: entry.note,
+      updatedAt: entry.updatedAt,
+      updatedByActorId: entry.updatedBy.actorId,
+      updatedByActorRole: entry.updatedBy.actorRole
+    })),
+    includeArchived: input.includeArchived,
+    replayedAt: input.replayedAt
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayGeneratedAuditPayload(
+  input: BuildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInput
+) {
+  return {
+    replayedAt: input.replayedAt,
+    dryRun: input.dryRun,
+    includeArchived: input.includeArchived,
+    from: input.fromIso,
+    to: input.toIso,
+    topN: input.topN,
+    incidentIds: input.incidentIds,
+    requested: input.requested,
+    replayed: input.summary.replayed,
+    dryRunCount: input.summary.dryRunCount,
+    notFound: input.summary.notFound,
+    failed: input.summary.failed
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayResult(
+  input: BuildScheduleAnomalyIncidentReplayResultInput
+): ScheduleAnomalyIncidentReplayResult {
+  return {
+    replayedAt: input.replayedAt,
+    dryRun: input.dryRun,
+    policy: {
+      includeArchived: input.includeArchived,
+      from: input.fromIso,
+      to: input.toIso
+    },
+    filters: {
+      topN: input.topN,
+      incidentIds: input.incidentIds
+    },
+    counts: {
+      requested: input.requested,
+      replayed: input.summary.replayed,
+      dryRun: input.summary.dryRunCount,
+      notFound: input.summary.notFound,
+      failed: input.summary.failed
+    },
+    items: input.summary.items
   };
 }

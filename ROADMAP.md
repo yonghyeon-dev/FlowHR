@@ -843,3 +843,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0571 scheduling anomaly auto-action audit entry helper extraction (anomaly-incident-auto-action-audit-helpers.ts extraction for assign-failed/generated/execution audit entry builders + scheduling/service.ts auto-action audit append delegation + e2e-wi0571 regression)
 
 - WI-0572 scheduling anomaly archive summary/result helper extraction (anomaly-incident-archive-helpers.ts extraction for archive action/generated audit payload builders and archive result builder + scheduling/service.ts archive payload/result delegation + e2e-wi0572 regression)
+
+- WI-0573 scheduling anomaly replay summary/result helper extraction (anomaly-incident-replay-helpers.ts extraction for replay action/generated audit payload builders and replay result builder + scheduling/service.ts replay payload/result delegation + e2e-wi0573 regression)
