@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   contractApprovalStatusLabelByLocale,
   contractDocumentStatusLabelByLocale,
-  employeeContractsCopyByLocale
+  employeeContractsCopyByLocale,
+  toDateText
 } from "@/components/contracts/copy";
 import { EmployeeContractsInboxList } from "@/components/contracts/EmployeeContractsInboxList";
 import { EmployeeContractsResponsePanel } from "@/components/contracts/EmployeeContractsResponsePanel";
@@ -148,6 +149,24 @@ export default function EmployeeContractsInbox() {
     window.document.body.removeChild(anchor);
     URL.revokeObjectURL(objectUrl);
   }
+  async function copyEvidenceMetadata(
+    evidence: ContractSignatureEvidenceResponse["evidence"],
+    displayFileName: string
+  ) {
+    const metadataText = [
+      `${copy.evidenceFileLabel}: ${displayFileName}`,
+      `${copy.generatedAtLabel}: ${toDateText(evidence.generatedAt, runtimeLocale)}`,
+      `${copy.contentShaLabel}: ${evidence.contentSha256}`
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(metadataText);
+      setError(null);
+      setMessage(copy.copiedEvidenceMetadataStatus);
+    } catch {
+      setMessage(null);
+      setError(copy.copyEvidenceMetadataError);
+    }
+  }
   async function loadSignatureEvidence(format: "json" | "text") {
     if (!selected) {
       return;
@@ -269,6 +288,7 @@ export default function EmployeeContractsInbox() {
           onLoadSignatureEvidence={loadSignatureEvidence}
           signatureEvidence={signatureEvidence}
           onDownloadEvidence={downloadEvidence}
+          onCopyEvidenceMetadata={copyEvidenceMetadata}
         />
       </section>
     </main>

@@ -24,6 +24,10 @@ type EmployeeContractsResponsePanelProps = {
     evidence: ContractSignatureEvidenceResponse["evidence"],
     downloadFileName: string
   ) => void;
+  onCopyEvidenceMetadata: (
+    evidence: ContractSignatureEvidenceResponse["evidence"],
+    displayFileName: string
+  ) => void;
 };
 
 export function EmployeeContractsResponsePanel({
@@ -41,7 +45,8 @@ export function EmployeeContractsResponsePanel({
   onRespond,
   onLoadSignatureEvidence,
   signatureEvidence,
-  onDownloadEvidence
+  onDownloadEvidence,
+  onCopyEvidenceMetadata
 }: EmployeeContractsResponsePanelProps) {
   const quickCommentTemplates = [
     copy.quickCommentTemplateConfirmTerms,
@@ -49,6 +54,10 @@ export function EmployeeContractsResponsePanel({
     copy.quickCommentTemplateRequestRevision
   ];
   const isSignatureInputReady = signatureInput.trim().length > 0;
+  const evidenceDisplayFileName =
+    selected && signatureEvidence
+      ? normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
+      : null;
 
   return (
     <article className="panel panel-contract-template-detail">
@@ -108,10 +117,10 @@ export function EmployeeContractsResponsePanel({
             <button type="button" className="btn btn-secondary" onClick={() => onLoadSignatureEvidence("json")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceJsonAction}</button>
             <button type="button" className="btn btn-secondary" onClick={() => onLoadSignatureEvidence("text")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceTextAction}</button>
           </div>
-          {signatureEvidence ? (
+          {signatureEvidence && evidenceDisplayFileName ? (
             <>
               <ul className="simple-list">
-                <li><span>{copy.evidenceFileLabel}</span><strong>{normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)}</strong></li>
+                <li><span>{copy.evidenceFileLabel}</span><strong>{evidenceDisplayFileName}</strong></li>
                 <li><span>{copy.generatedAtLabel}</span><strong>{toDateText(signatureEvidence.generatedAt, runtimeLocale)}</strong></li>
                 <li><span>{copy.contentShaLabel}</span><strong>{signatureEvidence.contentSha256.slice(0, 16)}...</strong></li>
               </ul>
@@ -119,14 +128,16 @@ export function EmployeeContractsResponsePanel({
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() =>
-                    onDownloadEvidence(
-                      signatureEvidence,
-                      normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
-                    )
-                  }
+                  onClick={() => onDownloadEvidence(signatureEvidence, evidenceDisplayFileName)}
                 >
                   {copy.downloadEvidenceAction}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => onCopyEvidenceMetadata(signatureEvidence, evidenceDisplayFileName)}
+                >
+                  {copy.copyEvidenceMetadataAction}
                 </button>
               </div>
             </>
