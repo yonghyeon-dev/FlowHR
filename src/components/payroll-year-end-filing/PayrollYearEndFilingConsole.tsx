@@ -539,6 +539,15 @@ export default function PayrollYearEndFilingConsole() {
     setTimeout(() => void runRefreshSubmissions(), 0);
   }
 
+  function runOpenRejectedSubmissionsFromPreflight() {
+    setSubmissionStatusFilter("acknowledged");
+    setSubmissionAckStatusFilter("rejected");
+    setSubmissionValidationStatusFilter("all");
+    setSubmissionTransportFilter("all");
+    setSubmissionSearch("");
+    setTimeout(() => void runRefreshSubmissions(), 0);
+  }
+
   function resetSubmissionFilters() {
     setSubmissionStatusFilter("all");
     setSubmissionAckStatusFilter("all");
@@ -1159,6 +1168,7 @@ export default function PayrollYearEndFilingConsole() {
           disabled={pendingLabel !== null}
           onLoadChecklist={() => void runLoadPreflightChecklist()}
           onOpenPendingSubmissions={runOpenPendingSubmissionsFromPreflight}
+          onOpenRejectedSubmissions={runOpenRejectedSubmissionsFromPreflight}
           onPreviewFinalization={() => void runFinalization(false)}
           onClearChecklist={() => setPreflightChecklist(null)}
         />

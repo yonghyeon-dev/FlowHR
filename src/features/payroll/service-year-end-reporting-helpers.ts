@@ -194,6 +194,15 @@ export async function getPayrollYearEndPreflightChecklistFromHelper(
           : `${pendingSubmissionCount} pending filing submissions require acknowledge/cancel before finalize handoff`
     },
     {
+      key: "no_rejected_filing_submissions",
+      label: "No Rejected Filing Submissions",
+      status: rejectedSubmissionCount === 0 ? "pass" : "warn",
+      detail:
+        rejectedSubmissionCount === 0
+          ? "no rejected filing submissions"
+          : `${rejectedSubmissionCount} rejected filing submissions require resubmit follow-up`
+    },
+    {
       key: "settlement_hash_available",
       label: "Settlement Hash Trace",
       status: settlementHash ? "pass" : "warn",

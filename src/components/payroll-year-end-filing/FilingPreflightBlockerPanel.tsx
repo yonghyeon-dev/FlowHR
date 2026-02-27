@@ -15,6 +15,7 @@ type FilingPreflightBlockerPanelProps = {
   disabled: boolean;
   onLoadChecklist: () => void;
   onOpenPendingSubmissions: () => void;
+  onOpenRejectedSubmissions: () => void;
   onPreviewFinalization: () => void;
   onClearChecklist: () => void;
 };
@@ -41,7 +42,8 @@ const preflightPanelCopyByLocale = {
       "\ubcf5\uc0ac\ud55c \ud574\uc2dc\ub97c \uc0c1\ub2e8 Expected Settlement Hash \ud544\ub4dc\uc5d0 \ubd99\uc5ec\ub123\uc5b4 \uac80\uc99d \uac00\ub4dc\ub85c \ud65c\uc6a9\ud558\uc138\uc694.",
     openPayrollCloseAction: "\uae09\uc5ec \ub9c8\uac10 \ud654\uba74 \uc5f4\uae30",
     openPayslipDeliveryAction: "\uba85\uc138\uc11c \ubc30\ud3ec \ud654\uba74 \uc5f4\uae30",
-    refreshSettlementHashAction: "\uc815\uc0b0 \ud574\uc2dc \uac31\uc2e0"
+    refreshSettlementHashAction: "\uc815\uc0b0 \ud574\uc2dc \uac31\uc2e0",
+    openRejectedSubmissionsAction: "\uac70\uc808 \uc2e0\uace0 \ud070\uc218 \uc5f4\uae30"
   },
   en: {
     title: "Year-End Preflight Blockers",
@@ -62,7 +64,8 @@ const preflightPanelCopyByLocale = {
     pasteHashHint: "Paste this hash into Expected Settlement Hash fields to enforce export/ack guard.",
     openPayrollCloseAction: "Open payroll close",
     openPayslipDeliveryAction: "Open payslip delivery",
-    refreshSettlementHashAction: "Refresh settlement hash"
+    refreshSettlementHashAction: "Refresh settlement hash",
+    openRejectedSubmissionsAction: "Open rejected submissions"
   }
 } as const;
 
@@ -75,6 +78,7 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
     disabled,
     onLoadChecklist,
     onOpenPendingSubmissions,
+    onOpenRejectedSubmissions,
     onPreviewFinalization,
     onClearChecklist
   } = props;
@@ -215,6 +219,17 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                           disabled={disabled}
                         >
                           {panelCopy.refreshSettlementHashAction}
+                        </button>
+                      </div>
+                    ) : null}
+                    {check.key === "no_rejected_filing_submissions" ? (
+                      <div className="panel-actions">
+                        <button
+                          className="btn btn-secondary"
+                          onClick={onOpenRejectedSubmissions}
+                          disabled={disabled}
+                        >
+                          {panelCopy.openRejectedSubmissionsAction}
                         </button>
                       </div>
                     ) : null}
