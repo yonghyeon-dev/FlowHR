@@ -13,6 +13,12 @@ async function run() {
     "payroll-year-end-filing",
     "PayrollYearEndFilingConsole.tsx"
   );
+  const settlementPanels = readUtf8(
+    "src",
+    "components",
+    "payroll-year-end-filing",
+    "FilingSettlementSummaryPanels.tsx"
+  );
   const filingCopy = readUtf8("src", "components", "payroll-year-end-filing", "copy.ts");
   const workItem = readUtf8(
     "work-items",
@@ -25,12 +31,13 @@ async function run() {
   assert.match(filingConsole, /const runtimeLocale = locale === "ko" \? "ko-KR" : "en-US";/);
   assert.match(filingConsole, /const copy = payrollYearEndFilingCopyByLocale\[locale\];/);
   assert.match(filingConsole, /new Date\(\)\.toLocaleString\(runtimeLocale\)/);
+  assert.match(settlementPanels, /from "@\/components\/payroll-year-end\/types"/);
   assert.match(
-    filingConsole,
+    settlementPanels,
     /formatKrw\(filingExport\.filingData\.settlementKrw\.annualTaxLiabilityKrw, runtimeLocale\)/
   );
   assert.match(
-    filingConsole,
+    settlementPanels,
     /formatKrw\(finalization\.settlement\.settlementKrw\.annualTaxLiabilityKrw, runtimeLocale\)/
   );
   assert.doesNotMatch(

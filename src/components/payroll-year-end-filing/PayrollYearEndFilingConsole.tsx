@@ -1,8 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import FilingApiLogsPanel from "@/components/payroll-year-end-filing/FilingApiLogsPanel";
+import FilingFailureActionPanel from "@/components/payroll-year-end-filing/FilingFailureActionPanel";
+import FilingPreflightBlockerPanel from "@/components/payroll-year-end-filing/FilingPreflightBlockerPanel";
+import FilingSettlementSummaryPanels from "@/components/payroll-year-end-filing/FilingSettlementSummaryPanels";
+import FilingSubmissionTimelinePanel from "@/components/payroll-year-end-filing/FilingSubmissionTimelinePanel";
 import { payrollYearEndFilingCopyByLocale } from "@/components/payroll-year-end-filing/copy";
 import {
   appendApiLogEntry,
@@ -25,12 +29,11 @@ import {
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
-import { currentYear, formatKrw } from "@/components/payroll-year-end/types";
 import {
-  formatTimelineEntry,
-  parseRate,
-  parseRequiredInt
-} from "@/components/payroll-year-end-filing/value-helpers";
+  currentYear,
+  type PayrollYearEndPreflightChecklistResponse
+} from "@/components/payroll-year-end/types";
+import { parseRate, parseRequiredInt } from "@/components/payroll-year-end-filing/value-helpers";
 import type {
   ApiLog,
   PayrollYearEndFilingAckCatalogResponse,
@@ -105,6 +108,8 @@ export default function PayrollYearEndFilingConsole() {
   const [evidenceNote, setEvidenceNote] = useState("filing evidence note");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [preflightChecklist, setPreflightChecklist] =
+    useState<PayrollYearEndPreflightChecklistResponse | null>(null);
   const [finalization, setFinalization] = useState<PayrollYearEndFinalizationResponse | null>(null);
   const [filingExport, setFilingExport] = useState<PayrollYearEndFilingExportResponse | null>(null);
   const [submissionListSummary, setSubmissionListSummary] =
@@ -364,6 +369,47 @@ export default function PayrollYearEndFilingConsole() {
     }
   }
 
+  async function runLoadPreflightChecklist() {
+    const action: PayrollYearEndFilingFailureAction = "preflight_checklist";
+    const actionLabel = locale === "ko" ? "연말정산 사전점검 조회" : "year-end preflight checklist";
+    const blockedLabel = locale === "ko" ? "사전점검 미통과" : "preflight blocked";
+    try {
+      setPendingLabel(actionLabel);
+      const requestYear = parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger);
+      const requestNonTaxableAnnualIncomeKrw = parseRequiredInt(
+        nonTaxableAnnualIncomeKrw,
+        copy.nonTaxableAnnualIncomeLabel,
+        copy.statusFieldMustBeNonNegativeInteger
+      );
+      const query = new URLSearchParams({
+        year: String(requestYear),
+        employeeId: employeeId.trim(),
+        nonTaxableAnnualIncomeKrw: String(requestNonTaxableAnnualIncomeKrw)
+      });
+      const response = await fetch(`/api/payroll/year-end/preflight-checklist?${query.toString()}`, {
+        method: "GET",
+        headers: buildHeaders()
+      });
+      const body = (await response.json()) as PayrollYearEndPreflightChecklistResponse | { error: string };
+      appendLog(actionLabel, response);
+      if (!response.ok || "error" in body) {
+        recordFailure(action, actionLabel, response.status, body);
+        return;
+      }
+      clearFailure();
+      setPreflightChecklist(body);
+      const message = body.checklist.summary.readyToFinalize
+        ? copy.statusPreviewLoaded
+        : `${blockedLabel} (${body.checklist.summary.failCount})`;
+      setStatusMessage(message);
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (error) {
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput);
+    } finally {
+      setPendingLabel(null);
+    }
+  }
+
   async function runFilingExport() {
     const action: PayrollYearEndFilingFailureAction = "filing_export";
     const actionLabel = copy.logExportFilingData;
@@ -482,6 +528,15 @@ export default function PayrollYearEndFilingConsole() {
     } finally {
       setPendingLabel(null);
     }
+  }
+
+  function runOpenPendingSubmissionsFromPreflight() {
+    setSubmissionStatusFilter("submitted");
+    setSubmissionAckStatusFilter("all");
+    setSubmissionValidationStatusFilter("all");
+    setSubmissionTransportFilter("all");
+    setSubmissionSearch("");
+    setTimeout(() => void runRefreshSubmissions(), 0);
   }
 
   function resetSubmissionFilters() {
@@ -797,6 +852,7 @@ export default function PayrollYearEndFilingConsole() {
     if (!lastFailure) return;
     const submissionId = lastFailure.submissionId ?? undefined;
     switch (lastFailure.action) {
+      case "preflight_checklist": return runLoadPreflightChecklist();
       case "finalization_preview": return runFinalization(false);
       case "finalization_apply": return runFinalization(true);
       case "filing_export": return runFilingExport();
@@ -1088,77 +1144,42 @@ export default function PayrollYearEndFilingConsole() {
           {supabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {supabaseSessionError}</p> : null}
         </article>
 
-        <article className="panel">
-          <h2>{copy.finalizationPanelTitle}</h2>
-          {!finalization ? <p className="small">{copy.noFinalizationSummaryYet}</p> : (
-            <ul className="simple-list">
-              <li><span>{copy.canFinalizeFinalizedLabel}</span><strong>{finalization.settlement.canFinalize ? copy.yesLabel : copy.noLabel} / {finalization.settlement.finalized ? copy.yesLabel : copy.noLabel}</strong></li>
-              <li><span>{copy.finalizationIdLabel}</span><strong>{finalization.settlement.finalizationId}</strong></li>
-              <li><span>{copy.settlementHashLabel}</span><strong>{finalization.settlement.settlementHash}</strong></li>
-              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(finalization.settlement.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(finalization.settlement.settlementKrw.withholdingDeltaKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.appliedDeductionLabel}</span><strong>{formatKrw(finalization.settlement.deductionItemsKrw.appliedIncomeDeductionKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.blockingReasonsLabel}</span><strong>{finalization.settlement.blockingReasons.join(" | ") || copy.dashLabel}</strong></li>
-            </ul>
-          )}
-        </article>
+        <FilingSettlementSummaryPanels
+          copy={copy}
+          runtimeLocale={runtimeLocale}
+          finalization={finalization}
+          filingExport={filingExport}
+        />
 
-        <article className="panel">
-          <h2>{copy.filingExportPanelTitle}</h2>
-          {!filingExport ? <p className="small">{copy.noExportYet}</p> : (
-            <ul className="simple-list">
-              <li><span>{copy.finalizationIdLabel}</span><strong>{filingExport.filingData.finalizationId}</strong></li>
-              <li><span>{copy.settlementHashLabel}</span><strong>{filingExport.filingData.settlementHash}</strong></li>
-              <li><span>{copy.formatLabel}</span><strong>{copy.exportFormatOptionLabels[filingExport.filingData.format] ?? filingExport.filingData.format}</strong></li>
-              <li><span>{copy.validationModeDisplayLabel}</span><strong>{copy.validationModeOptionLabels[filingExport.filingData.validationMode] ?? filingExport.filingData.validationMode}</strong></li>
-              <li><span>{copy.validationStatusLabel}</span><strong>{copy.validationStatusOptionLabels[filingExport.filingData.validation.status] ?? filingExport.filingData.validation.status}</strong></li>
-              <li><span>{copy.exportedRecordsLabel}</span><strong>{filingExport.filingData.records.length}</strong></li>
-              <li><span>{copy.taxLiabilityLabel}</span><strong>{formatKrw(filingExport.filingData.settlementKrw.annualTaxLiabilityKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.withholdingDeltaLabel}</span><strong>{formatKrw(filingExport.filingData.settlementKrw.withholdingDeltaKrw, runtimeLocale)}</strong></li>
-              <li><span>{copy.csvLabel}</span><strong>{filingExport.filingData.csv ? copy.readyLabel : copy.dashLabel}</strong></li>
-              <li><span>{copy.artifactLabel}</span><strong>{filingExport.filingData.artifact.fileName}</strong></li>
-              <li><span>{copy.checksumLabel}</span><strong>{filingExport.filingData.artifact.checksumSha256.slice(0, 16)}...</strong></li>
-              <li><span>{copy.validationIssuesLabel}</span><strong>{filingExport.filingData.validation.issues.join(" | ") || copy.dashLabel}</strong></li>
-            </ul>
-          )}
-        </article>
+        <FilingPreflightBlockerPanel
+          locale={locale}
+          runtimeLocale={runtimeLocale}
+          checklist={preflightChecklist}
+          copy={copy}
+          disabled={pendingLabel !== null}
+          onLoadChecklist={() => void runLoadPreflightChecklist()}
+          onOpenPendingSubmissions={runOpenPendingSubmissionsFromPreflight}
+          onPreviewFinalization={() => void runFinalization(false)}
+          onClearChecklist={() => setPreflightChecklist(null)}
+        />
 
-        <article className="panel">
-          <h2>{copy.apiLogsPanelTitle}</h2>
-          <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
-          {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/admin/payroll-year-end-filing/ops" className="btn btn-secondary">{copy.openFilingOpsDashboardAction}</Link>
-            <Link href="/admin/payroll-year-end" className="btn btn-secondary">{copy.backToYearEndAction}</Link>
-            <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
-          </div>
-        </article>
+        <FilingApiLogsPanel
+          copy={copy}
+          stats={stats}
+          pendingLabel={pendingLabel}
+          logs={logs}
+        />
 
         {lastFailure ? (
-          <article className="panel">
-            <h2>{copy.failureActionPanelTitle}</h2>
-            <p className="small fail">{lastFailure.message}</p>
-            <ul className="simple-list">
-              <li><span>{copy.latestFailureActionLabel}</span><strong>{lastFailure.actionLabel}</strong></li>
-              <li><span>{copy.latestFailureStatusLabel}</span><strong>{lastFailure.status ?? copy.dashLabel}</strong></li>
-              <li><span>{copy.latestFailureAtLabel}</span><strong>{lastFailure.occurredAt}</strong></li>
-            </ul>
-            <div className="panel-actions">
-              <button className="btn btn-secondary" onClick={() => void retryLastFailureAction()} disabled={pendingLabel !== null}>{copy.retryFailureAction}</button>
-              <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>{copy.refreshSubmissionsAction}</button>
-              <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>{copy.loadAckCatalogAction}</button>
-              <button className="btn btn-secondary" onClick={clearFailure} disabled={pendingLabel !== null}>{copy.clearFailureAction}</button>
-            </div>
-          </article>
+          <FilingFailureActionPanel
+            copy={copy}
+            failure={lastFailure}
+            disabled={pendingLabel !== null}
+            onRetry={() => void retryLastFailureAction()}
+            onRefreshSubmissions={() => void runRefreshSubmissions()}
+            onLoadAckCatalog={() => void runLoadAckCatalog()}
+            onClear={clearFailure}
+          />
         ) : null}
 
         <article className="panel">
@@ -1261,30 +1282,11 @@ export default function PayrollYearEndFilingConsole() {
           )}
         </article>
 
-        <article className="panel">
-          <h2>{copy.submissionTimelinePanelTitle}</h2>
-          {timelineEntries.length === 0 ? <p className="small">{copy.noTimelineLoaded}</p> : (
-            <ul className="log-list">
-              {timelineEntries.map((entry, index) => (
-                <li key={`${entry.action}-${entry.occurredAt}-${index}`}>
-                  <span
-                    className={
-                      entry.action === "acknowledged" && entry.ackStatus === "accepted"
-                        ? "ok"
-                        : entry.action === "canceled"
-                          ? "fail"
-                          : "small"
-                    }
-                  >
-                    {copy.timelineActionBadgeLabels[entry.action] ?? entry.action}
-                  </span>{" "}
-                  {entry.submissionId} / {formatTimelineEntry(entry, copy)}
-                  <time>{new Date(entry.occurredAt).toLocaleString(runtimeLocale)}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
+        <FilingSubmissionTimelinePanel
+          copy={copy}
+          runtimeLocale={runtimeLocale}
+          timelineEntries={timelineEntries}
+        />
       </section>
     </main>
   );

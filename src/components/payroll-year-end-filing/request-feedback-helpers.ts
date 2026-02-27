@@ -2,6 +2,7 @@ import type { PayrollYearEndFilingCopy } from "@/components/payroll-year-end-fil
 import type { ApiLog } from "@/components/payroll-year-end-filing/types";
 
 export type PayrollYearEndFilingFailureAction =
+  | "preflight_checklist"
   | "finalization_preview"
   | "finalization_apply"
   | "filing_export"
