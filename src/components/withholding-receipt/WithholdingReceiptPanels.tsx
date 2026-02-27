@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { normalizeWithholdingActivityLabel } from "@/components/withholding-receipt/runtime-label-helpers";
 import type {
   ApiLog,
   FinalizedYearEndSettlementResponse,
@@ -152,6 +153,7 @@ export function WithholdingSummaryPanel({
 }
 
 type WithholdingLogsPanelProps = {
+  locale: "ko" | "en";
   title: string;
   copy: {
     apiLogsTotalLabel: string;
@@ -168,13 +170,15 @@ type WithholdingLogsPanelProps = {
   pendingLabel: string | null;
 };
 
-export function WithholdingLogsPanel({ title, copy, logs, stats, pendingLabel }: WithholdingLogsPanelProps) {
+export function WithholdingLogsPanel({ locale, title, copy, logs, stats, pendingLabel }: WithholdingLogsPanelProps) {
   return (
     <article className="panel">
       <h2>{title}</h2>
       <p className="small">
         {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
-        {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
+        {pendingLabel
+          ? ` / ${copy.apiLogsRunningLabel} ${normalizeWithholdingActivityLabel(pendingLabel, locale)}`
+          : ""}
       </p>
       {logs.length === 0 ? (
         <p className="small">{copy.apiLogsEmpty}</p>
@@ -182,7 +186,8 @@ export function WithholdingLogsPanel({ title, copy, logs, stats, pendingLabel }:
         <ul className="log-list">
           {logs.map((log) => (
             <li key={log.id}>
-              <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+              <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span>{" "}
+              {normalizeWithholdingActivityLabel(log.label, locale)} / {log.status}
               <time>{log.at}</time>
             </li>
           ))}

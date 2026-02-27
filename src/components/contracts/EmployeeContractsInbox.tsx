@@ -17,7 +17,6 @@ import {
   type EmployeeInboxDeadlineFilter,
   isDueSoonPendingDocument,
   isOverduePendingDocument,
-  isPendingResponseStatus,
   sortInboxDocumentsByRisk
 } from "@/components/contracts/employee-inbox-filter-helpers";
 import { resolveEmployeeContractsNextActionHint } from "@/components/contracts/employee-inbox-journey-helpers";

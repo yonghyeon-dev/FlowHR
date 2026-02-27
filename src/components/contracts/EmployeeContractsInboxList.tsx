@@ -40,6 +40,22 @@ function resolveDocumentTone(status: ContractDocumentStatus) {
   return "watch";
 }
 
+function resolveDocumentStatusLabel(
+  status: ContractDocumentStatus,
+  labels: Record<ContractDocumentStatus, string>,
+  isKoLocale: boolean
+) {
+  return labels[status] ?? (isKoLocale ? "알 수 없는 상태" : status);
+}
+
+function resolveApprovalStatusLabel(
+  status: ContractApprovalStatus,
+  labels: Record<ContractApprovalStatus, string>,
+  isKoLocale: boolean
+) {
+  return labels[status] ?? (isKoLocale ? "알 수 없는 승인 상태" : status);
+}
+
 export function EmployeeContractsInboxList({
   documents,
   filteredDocuments,
@@ -70,10 +86,14 @@ export function EmployeeContractsInboxList({
           >
             <div className="contract-template-head">
               <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
-              <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
+              <span className="queue-history-chip">
+                {resolveDocumentStatusLabel(document.status, documentStatusLabels, isKoLocale)}
+              </span>
             </div>
             <p>
-              {copy.approvalPrefix} {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
+              {copy.approvalPrefix}{" "}
+              {resolveApprovalStatusLabel(document.approvalStatus, approvalStatusLabels, isKoLocale)} |{" "}
+              {copy.expiresPrefix}{" "}
               {toDateText(document.expiresAt, runtimeLocale)}
             </p>
             {urgencyBadge ? (

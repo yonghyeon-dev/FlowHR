@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { formatDateTime, formatKrw, type PayslipPageCopy } from "@/app/employee/payslips/page-locale-helpers";
 import type { PayrollRunDto } from "@/app/employee/payslips/page-helpers";
@@ -36,10 +36,9 @@ export function EmployeePayslipRunListPanel({
                   {formatDateTime(run.periodStart)} ~ {formatDateTime(run.periodEnd)}
                 </strong>{" "}
                 <span className="muted">
-                  {pageCopy.payslipList.gross} {formatKrw(run.grossPayKrw)} ·{" "}
-                  {pageCopy.payslipList.deduction} {formatKrw(run.totalDeductionsKrw)} ·{" "}
-                  {pageCopy.payslipList.net} {formatKrw(run.netPayKrw)} · {pageCopy.payslipList.confirmed}{" "}
-                  {formatDateTime(run.confirmedAt)}
+                  {pageCopy.payslipList.gross} {formatKrw(run.grossPayKrw)} / {pageCopy.payslipList.deduction}{" "}
+                  {formatKrw(run.totalDeductionsKrw)} / {pageCopy.payslipList.net} {formatKrw(run.netPayKrw)} /{" "}
+                  {pageCopy.payslipList.confirmed} {formatDateTime(run.confirmedAt)}
                 </span>
               </span>
               <button
