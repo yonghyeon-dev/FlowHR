@@ -106,7 +106,6 @@ export default function EmployeeScheduleBoardView({
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
       </header>
-
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
@@ -180,6 +179,7 @@ export default function EmployeeScheduleBoardView({
           </div>
           <p className="small muted">{copy.visibleCountLabel}: {visibleScheduleCount} / {allScheduleCount}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
+          {statusMessage.includes(copy.statusConflictCandidatesLabel) && !statusMessage.includes(`${copy.statusConflictCandidatesLabel}: 0`) ? <a className="btn btn-secondary btn-small" href="/employee#attendance">{copy.statusQuickCorrectionAction}</a> : null}
         </article>
         <article className="panel">
           <h2>{copy.summaryTitle}</h2>
