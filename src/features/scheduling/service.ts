@@ -41,6 +41,7 @@ import {
   type AnomalyEscalationSeverity
 } from "@/features/scheduling/anomaly-automation-helpers";
 import {
+  buildScheduleAnomalyIncidentAutoActionAssignFailedPayload,
   buildScheduleAnomalyIncidentAutoActionResult,
   buildScheduleAnomalyIncidentAutoActionSummaryPayload,
   executeScheduleAnomalyIncidentAutoActionAssignments,
@@ -3190,14 +3191,14 @@ export async function executeScheduleAnomalyIncidentAutoAction(
         organizationId: tenantScope,
         actorRole: actor.role,
         actorId: actor.id,
-        payload: {
+        payload: buildScheduleAnomalyIncidentAutoActionAssignFailedPayload({
           incidentId,
           previousAssigneeId,
           autoAssigneeId,
           autoAssignMode,
           escalationDecision,
           error
-        }
+        })
       });
     }
   });

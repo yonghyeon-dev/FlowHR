@@ -91,6 +91,15 @@ type BuildScheduleAnomalyIncidentAutoActionResultInput = {
   items: ScheduleAnomalyIncidentAutoActionItem[];
 };
 
+type BuildScheduleAnomalyIncidentAutoActionAssignFailedPayloadInput = {
+  incidentId: string;
+  previousAssigneeId: string | null;
+  autoAssigneeId: string;
+  autoAssignMode: ScheduleAnomalyIncidentAutoAssignMode;
+  escalationDecision: ScheduleAnomalyIncidentEscalationDecision;
+  error: string;
+};
+
 function isEscalatedDecision(decision: ScheduleAnomalyIncidentEscalationDecision) {
   return decision === "REQUESTED" || decision === "DRY_RUN";
 }
@@ -333,5 +342,18 @@ export function buildScheduleAnomalyIncidentAutoActionResult(
       dryRun: input.assignmentSummary.dryRun
     },
     items: input.items
+  };
+}
+
+export function buildScheduleAnomalyIncidentAutoActionAssignFailedPayload(
+  input: BuildScheduleAnomalyIncidentAutoActionAssignFailedPayloadInput
+) {
+  return {
+    incidentId: input.incidentId,
+    previousAssigneeId: input.previousAssigneeId,
+    autoAssigneeId: input.autoAssigneeId,
+    autoAssignMode: input.autoAssignMode,
+    escalationDecision: input.escalationDecision,
+    error: input.error
   };
 }
