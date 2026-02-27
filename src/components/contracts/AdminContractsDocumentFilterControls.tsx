@@ -4,10 +4,12 @@ import {
 } from "@/components/contracts/copy";
 import {
   contractDocumentStatusFilters,
+  type ContractDocumentNextStepFilter,
   type ContractDocumentSlaRiskFilter,
   type ContractDocumentExpirationWindow,
   type ContractDocumentStatusFilter
 } from "@/components/contracts/useAdminContractsDocumentFilters";
+import type { ContractDocumentNextStepKey } from "@/components/contracts/document-action-policy";
 
 type AdminContractsDocumentFilterControlsProps = {
   copy: AdminContractsCopy;
@@ -23,6 +25,8 @@ type AdminContractsDocumentFilterControlsProps = {
   onRenewalCandidateOnlyChange: (value: boolean) => void;
   decisionQueueOnly: boolean;
   onDecisionQueueOnlyChange: (value: boolean) => void;
+  nextStepFilter: ContractDocumentNextStepFilter;
+  onNextStepFilterChange: (value: ContractDocumentNextStepFilter) => void;
   statusLabels: Record<ContractDocumentStatus, string>;
   visibleCount: number;
   totalCount: number;
@@ -30,6 +34,7 @@ type AdminContractsDocumentFilterControlsProps = {
   dueSoonSlaCount: number;
   overdueSlaCount: number;
   decisionQueueCount: number;
+  nextStepCounts: Record<ContractDocumentNextStepKey, number>;
   renewalCandidateCount: number;
 };
 
@@ -47,6 +52,8 @@ export function AdminContractsDocumentFilterControls({
   onRenewalCandidateOnlyChange,
   decisionQueueOnly,
   onDecisionQueueOnlyChange,
+  nextStepFilter,
+  onNextStepFilterChange,
   statusLabels,
   visibleCount,
   totalCount,
@@ -54,6 +61,7 @@ export function AdminContractsDocumentFilterControls({
   dueSoonSlaCount,
   overdueSlaCount,
   decisionQueueCount,
+  nextStepCounts,
   renewalCandidateCount
 }: AdminContractsDocumentFilterControlsProps) {
   return (
@@ -104,6 +112,21 @@ export function AdminContractsDocumentFilterControls({
             <option value="OVERDUE">{copy.slaRiskOverdueOption}</option>
           </select>
         </label>
+        <label>
+          {copy.nextStepFilterLabel}
+          <select
+            value={nextStepFilter}
+            onChange={(event) => onNextStepFilterChange(event.target.value as ContractDocumentNextStepFilter)}
+          >
+            <option value="ALL">{copy.nextStepAllOption}</option>
+            <option value="REQUEST_APPROVAL">{copy.nextStepRequestApproval}</option>
+            <option value="APPROVE_OR_REJECT">{copy.nextStepApproveOrReject}</option>
+            <option value="SEND_DOCUMENT">{copy.nextStepSendDocument}</option>
+            <option value="WAIT_EMPLOYEE_RESPONSE">{copy.nextStepWaitEmployeeResponse}</option>
+            <option value="RENEW_DOCUMENT">{copy.nextStepRenewDocument}</option>
+            <option value="NO_ACTION">{copy.nextStepNoAction}</option>
+          </select>
+        </label>
       </div>
       <label>
         <input
@@ -129,11 +152,23 @@ export function AdminContractsDocumentFilterControls({
         {copy.overdueSlaCountLabel} {overdueSlaCount} | {copy.decisionQueueCountLabel} {decisionQueueCount} |{" "}
         {copy.renewalCandidateCountLabel} {renewalCandidateCount}
       </p>
+      <p className="small muted">
+        {copy.nextStepSummaryLabel} {copy.nextStepRequestApproval} {nextStepCounts.REQUEST_APPROVAL} |{" "}
+        {copy.nextStepApproveOrReject} {nextStepCounts.APPROVE_OR_REJECT} | {copy.nextStepSendDocument}{" "}
+        {nextStepCounts.SEND_DOCUMENT}
+      </p>
       <div className="contract-action-row">
         <span className="small muted">{copy.slaRiskFilterLabel}</span>
         <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("ALL")}>{copy.slaRiskAllOption}</button>
         <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("DUE_SOON")}>{copy.slaRiskDueSoonOption}</button>
         <button type="button" className="btn btn-secondary btn-small" onClick={() => onSlaRiskFilterChange("OVERDUE")}>{copy.slaRiskOverdueOption}</button>
+      </div>
+      <div className="contract-action-row">
+        <span className="small muted">{copy.nextStepFilterLabel}</span>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onNextStepFilterChange("ALL")}>{copy.nextStepAllOption}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onNextStepFilterChange("REQUEST_APPROVAL")}>{copy.nextStepRequestApproval}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onNextStepFilterChange("APPROVE_OR_REJECT")}>{copy.nextStepApproveOrReject}</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onNextStepFilterChange("SEND_DOCUMENT")}>{copy.nextStepSendDocument}</button>
       </div>
       <div className="contract-action-row">
         <span className="small muted">{copy.expirationWindowFilterLabel}</span>

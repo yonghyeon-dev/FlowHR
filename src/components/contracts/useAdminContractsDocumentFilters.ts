@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 
 import type { ContractDocumentStatus } from "@/components/contracts/copy";
-import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
+import {
+  resolveAdminContractDocumentNextStep,
+  type ContractDocumentNextStepKey
+} from "@/components/contracts/document-action-policy";
 import type { AdminContractDocument } from "@/components/contracts/types";
 import { formatEmployeeIdForLocaleDisplay } from "@/lib/i18n/employee-id-locale";
 import type { FlowLocale } from "@/lib/i18n/locales";
@@ -9,6 +12,7 @@ import type { FlowLocale } from "@/lib/i18n/locales";
 export type ContractDocumentStatusFilter = ContractDocumentStatus | "ALL";
 export type ContractDocumentExpirationWindow = "ALL" | "7" | "14" | "30";
 export type ContractDocumentSlaRiskFilter = "ALL" | "DUE_SOON" | "OVERDUE";
+export type ContractDocumentNextStepFilter = ContractDocumentNextStepKey | "ALL";
 
 export const contractDocumentStatusFilters: ContractDocumentStatus[] = [
   "DRAFT",
@@ -52,12 +56,16 @@ function isSlaTrackedDocument(document: AdminContractDocument) {
   return slaTrackedStatuses.has(document.status);
 }
 
-function isDecisionQueueDocument(document: AdminContractDocument) {
-  const nextStep = resolveAdminContractDocumentNextStep({
+function resolveDocumentNextStep(document: AdminContractDocument) {
+  return resolveAdminContractDocumentNextStep({
     status: document.status,
     approvalStatus: document.approvalStatus,
     requiresApproval: document.requiresApproval
   });
+}
+
+function isDecisionQueueDocument(document: AdminContractDocument) {
+  const nextStep = resolveDocumentNextStep(document);
   return nextStep === "REQUEST_APPROVAL" || nextStep === "APPROVE_OR_REJECT" || nextStep === "SEND_DOCUMENT";
 }
 
@@ -94,6 +102,7 @@ export function useAdminContractsDocumentFilters({
   const [slaRiskFilter, setSlaRiskFilter] = useState<ContractDocumentSlaRiskFilter>("ALL");
   const [renewalCandidateOnly, setRenewalCandidateOnly] = useState(false);
   const [decisionQueueOnly, setDecisionQueueOnly] = useState(false);
+  const [nextStepFilter, setNextStepFilter] = useState<ContractDocumentNextStepFilter>("ALL");
 
   const nowMillis = Date.now();
   const expirationLimitMillis = toExpiryLimitMillis(expirationWindowDays, nowMillis);
@@ -121,6 +130,25 @@ export function useAdminContractsDocumentFilters({
     () => documents.filter((document) => isDecisionQueueDocument(document)).length,
     [documents]
   );
+  const nextStepCounts = useMemo(
+    () =>
+      documents.reduce<Record<ContractDocumentNextStepKey, number>>(
+        (counts, document) => {
+          const nextStep = resolveDocumentNextStep(document);
+          counts[nextStep] += 1;
+          return counts;
+        },
+        {
+          REQUEST_APPROVAL: 0,
+          APPROVE_OR_REJECT: 0,
+          SEND_DOCUMENT: 0,
+          WAIT_EMPLOYEE_RESPONSE: 0,
+          RENEW_DOCUMENT: 0,
+          NO_ACTION: 0
+        }
+      ),
+    [documents]
+  );
 
   const visibleDocuments = useMemo(() => {
     const query = documentSearchQuery.trim().toLowerCase();
@@ -133,6 +161,10 @@ export function useAdminContractsDocumentFilters({
         return false;
       }
       if (decisionQueueOnly && !isDecisionQueueDocument(document)) {
+        return false;
+      }
+      const nextStep = resolveDocumentNextStep(document);
+      if (nextStepFilter !== "ALL" && nextStep !== nextStepFilter) {
         return false;
       }
       if (slaRiskFilter === "DUE_SOON" && !isDueSoonSlaRisk(document, nowMillis)) {
@@ -162,6 +194,7 @@ export function useAdminContractsDocumentFilters({
     locale,
     nowMillis,
     decisionQueueOnly,
+    nextStepFilter,
     renewalCandidateOnly,
     slaRiskFilter
   ]);
@@ -179,10 +212,13 @@ export function useAdminContractsDocumentFilters({
     setRenewalCandidateOnly,
     decisionQueueOnly,
     setDecisionQueueOnly,
+    nextStepFilter,
+    setNextStepFilter,
     expiringSoonCount,
     dueSoonSlaCount,
     overdueSlaCount,
     decisionQueueCount,
+    nextStepCounts,
     renewalCandidateCount,
     visibleDocuments,
     isDueSoonSlaRisk,

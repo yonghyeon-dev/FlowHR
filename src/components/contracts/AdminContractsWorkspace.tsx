@@ -52,14 +52,10 @@ export default function AdminContractsWorkspace() {
     }),
     [copy]
   );
-  const nextStepLabelByKey = useMemo<Record<ContractDocumentNextStepKey, string>>(() => ({
-    REQUEST_APPROVAL: copy.nextStepRequestApproval,
-    APPROVE_OR_REJECT: copy.nextStepApproveOrReject,
-    SEND_DOCUMENT: copy.nextStepSendDocument,
-    WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse,
-    RENEW_DOCUMENT: copy.nextStepRenewDocument,
-    NO_ACTION: copy.nextStepNoAction
-  }), [copy]);
+  const nextStepLabelByKey = useMemo<Record<ContractDocumentNextStepKey, string>>(
+    () => ({ REQUEST_APPROVAL: copy.nextStepRequestApproval, APPROVE_OR_REJECT: copy.nextStepApproveOrReject, SEND_DOCUMENT: copy.nextStepSendDocument, WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse, RENEW_DOCUMENT: copy.nextStepRenewDocument, NO_ACTION: copy.nextStepNoAction }),
+    [copy]
+  );
 
   const {
     templates,
@@ -79,7 +75,7 @@ export default function AdminContractsWorkspace() {
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
-  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, decisionQueueOnly, setDecisionQueueOnly, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, decisionQueueCount, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({ documents, locale });
+  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, decisionQueueOnly, setDecisionQueueOnly, nextStepFilter, setNextStepFilter, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, decisionQueueCount, nextStepCounts, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({ documents, locale });
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
@@ -203,6 +199,8 @@ export default function AdminContractsWorkspace() {
             onRenewalCandidateOnlyChange={setRenewalCandidateOnly}
             decisionQueueOnly={decisionQueueOnly}
             onDecisionQueueOnlyChange={setDecisionQueueOnly}
+            nextStepFilter={nextStepFilter}
+            onNextStepFilterChange={setNextStepFilter}
             statusLabels={documentStatusLabels}
             visibleCount={visibleDocuments.length}
             totalCount={documents.length}
@@ -210,6 +208,7 @@ export default function AdminContractsWorkspace() {
             dueSoonSlaCount={dueSoonSlaCount}
             overdueSlaCount={overdueSlaCount}
             decisionQueueCount={decisionQueueCount}
+            nextStepCounts={nextStepCounts}
             renewalCandidateCount={renewalCandidateCount}
           />
           <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>
@@ -255,4 +254,3 @@ export default function AdminContractsWorkspace() {
     </main>
   );
 }
-
