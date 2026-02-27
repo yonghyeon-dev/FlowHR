@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import type { ContractDocumentStatus } from "@/components/contracts/copy";
+import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import type { AdminContractDocument } from "@/components/contracts/types";
 import { formatEmployeeIdForLocaleDisplay } from "@/lib/i18n/employee-id-locale";
 import type { FlowLocale } from "@/lib/i18n/locales";
@@ -51,6 +52,15 @@ function isSlaTrackedDocument(document: AdminContractDocument) {
   return slaTrackedStatuses.has(document.status);
 }
 
+function isDecisionQueueDocument(document: AdminContractDocument) {
+  const nextStep = resolveAdminContractDocumentNextStep({
+    status: document.status,
+    approvalStatus: document.approvalStatus,
+    requiresApproval: document.requiresApproval
+  });
+  return nextStep === "REQUEST_APPROVAL" || nextStep === "APPROVE_OR_REJECT" || nextStep === "SEND_DOCUMENT";
+}
+
 function isDueSoonSlaRisk(document: AdminContractDocument, nowMillis: number = Date.now()) {
   if (!isSlaTrackedDocument(document)) {
     return false;
@@ -83,6 +93,7 @@ export function useAdminContractsDocumentFilters({
   const [expirationWindowDays, setExpirationWindowDays] = useState<ContractDocumentExpirationWindow>("ALL");
   const [slaRiskFilter, setSlaRiskFilter] = useState<ContractDocumentSlaRiskFilter>("ALL");
   const [renewalCandidateOnly, setRenewalCandidateOnly] = useState(false);
+  const [decisionQueueOnly, setDecisionQueueOnly] = useState(false);
 
   const nowMillis = Date.now();
   const expirationLimitMillis = toExpiryLimitMillis(expirationWindowDays, nowMillis);
@@ -106,6 +117,10 @@ export function useAdminContractsDocumentFilters({
     () => documents.filter((document) => isOverdueSlaRisk(document, nowMillis)).length,
     [documents, nowMillis]
   );
+  const decisionQueueCount = useMemo(
+    () => documents.filter((document) => isDecisionQueueDocument(document)).length,
+    [documents]
+  );
 
   const visibleDocuments = useMemo(() => {
     const query = documentSearchQuery.trim().toLowerCase();
@@ -115,6 +130,9 @@ export function useAdminContractsDocumentFilters({
         return false;
       }
       if (renewalCandidateOnly && !isRenewalCandidate(document)) {
+        return false;
+      }
+      if (decisionQueueOnly && !isDecisionQueueDocument(document)) {
         return false;
       }
       if (slaRiskFilter === "DUE_SOON" && !isDueSoonSlaRisk(document, nowMillis)) {
@@ -143,6 +161,7 @@ export function useAdminContractsDocumentFilters({
     expirationWindowDays,
     locale,
     nowMillis,
+    decisionQueueOnly,
     renewalCandidateOnly,
     slaRiskFilter
   ]);
@@ -158,9 +177,12 @@ export function useAdminContractsDocumentFilters({
     setSlaRiskFilter,
     renewalCandidateOnly,
     setRenewalCandidateOnly,
+    decisionQueueOnly,
+    setDecisionQueueOnly,
     expiringSoonCount,
     dueSoonSlaCount,
     overdueSlaCount,
+    decisionQueueCount,
     renewalCandidateCount,
     visibleDocuments,
     isDueSoonSlaRisk,

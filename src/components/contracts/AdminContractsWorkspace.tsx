@@ -17,10 +17,7 @@ import { useAdminContractsDocumentFilters } from "@/components/contracts/useAdmi
 import { setContractsRuntimeLocale } from "@/components/contracts/http";
 import { resolveAdminContractDocumentNextStep, resolveAllowedContractDocumentActions, type ContractDocumentNextStepKey } from "@/components/contracts/document-action-policy";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
-import {
-  formatEmployeeIdForLocaleDisplay,
-  normalizeEmployeeIdForApi
-} from "@/lib/i18n/employee-id-locale";
+import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminContractsWorkspace() {
@@ -81,7 +78,7 @@ export default function AdminContractsWorkspace() {
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
-  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({ documents, locale });
+  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, decisionQueueOnly, setDecisionQueueOnly, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, decisionQueueCount, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({ documents, locale });
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
@@ -203,12 +200,15 @@ export default function AdminContractsWorkspace() {
             onSlaRiskFilterChange={setSlaRiskFilter}
             renewalCandidateOnly={renewalCandidateOnly}
             onRenewalCandidateOnlyChange={setRenewalCandidateOnly}
+            decisionQueueOnly={decisionQueueOnly}
+            onDecisionQueueOnlyChange={setDecisionQueueOnly}
             statusLabels={documentStatusLabels}
             visibleCount={visibleDocuments.length}
             totalCount={documents.length}
             expiringSoonCount={expiringSoonCount}
             dueSoonSlaCount={dueSoonSlaCount}
             overdueSlaCount={overdueSlaCount}
+            decisionQueueCount={decisionQueueCount}
             renewalCandidateCount={renewalCandidateCount}
           />
           <ul className="contract-signature-readiness-list" aria-label={copy.documentListAria}>

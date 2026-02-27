@@ -21,12 +21,15 @@ type AdminContractsDocumentFilterControlsProps = {
   onSlaRiskFilterChange: (value: ContractDocumentSlaRiskFilter) => void;
   renewalCandidateOnly: boolean;
   onRenewalCandidateOnlyChange: (value: boolean) => void;
+  decisionQueueOnly: boolean;
+  onDecisionQueueOnlyChange: (value: boolean) => void;
   statusLabels: Record<ContractDocumentStatus, string>;
   visibleCount: number;
   totalCount: number;
   expiringSoonCount: number;
   dueSoonSlaCount: number;
   overdueSlaCount: number;
+  decisionQueueCount: number;
   renewalCandidateCount: number;
 };
 
@@ -42,12 +45,15 @@ export function AdminContractsDocumentFilterControls({
   onSlaRiskFilterChange,
   renewalCandidateOnly,
   onRenewalCandidateOnlyChange,
+  decisionQueueOnly,
+  onDecisionQueueOnlyChange,
   statusLabels,
   visibleCount,
   totalCount,
   expiringSoonCount,
   dueSoonSlaCount,
   overdueSlaCount,
+  decisionQueueCount,
   renewalCandidateCount
 }: AdminContractsDocumentFilterControlsProps) {
   return (
@@ -107,12 +113,21 @@ export function AdminContractsDocumentFilterControls({
         />{" "}
         {copy.renewalCandidateOnlyLabel}
       </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={decisionQueueOnly}
+          onChange={(event) => onDecisionQueueOnlyChange(event.target.checked)}
+        />{" "}
+        {copy.decisionQueueOnlyLabel}
+      </label>
       <p className="small">
         {copy.documentVisibleCountLabel} {visibleCount} / {totalCount}
       </p>
       <p className="small muted">
         {copy.expiringSoonCountLabel} {expiringSoonCount} | {copy.slaRiskDueSoonOption} {dueSoonSlaCount} |{" "}
-        {copy.overdueSlaCountLabel} {overdueSlaCount} | {copy.renewalCandidateCountLabel} {renewalCandidateCount}
+        {copy.overdueSlaCountLabel} {overdueSlaCount} | {copy.decisionQueueCountLabel} {decisionQueueCount} |{" "}
+        {copy.renewalCandidateCountLabel} {renewalCandidateCount}
       </p>
       <div className="contract-action-row">
         <span className="small muted">{copy.slaRiskFilterLabel}</span>
