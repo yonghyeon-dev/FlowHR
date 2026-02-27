@@ -22,6 +22,34 @@ export type ScheduleAttendanceAnomalyCockpitProjection = {
   severities: ScheduleAttendanceAnomalyCockpitReport["severities"];
 };
 
+type BuildScheduleAttendanceAnomalyCockpitAuditPayloadInput = {
+  periodStartIso: string;
+  periodEndIso: string;
+  lateThresholdMinutes: number;
+  topN: number;
+  evaluatedSchedules: number;
+  anomalies: number;
+  lateCount: number;
+  noShowCount: number;
+  employeeCount: number;
+  severities: ScheduleAttendanceAnomalyCockpitReport["severities"];
+  generatedAt: string;
+};
+
+type BuildScheduleAttendanceAnomalyCockpitReportInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  lateThresholdMinutes: number;
+  generatedAt: string;
+  evaluatedSchedules: number;
+  anomalies: ScheduleAttendanceAnomaly[];
+  lateCount: number;
+  noShowCount: number;
+  severities: ScheduleAttendanceAnomalyCockpitReport["severities"];
+  employees: ScheduleAttendanceAnomalyCockpitReport["employees"];
+  queue: ScheduleAnomalyCockpitQueueEntry[];
+};
+
 export function buildScheduleAttendanceAnomalyCockpitProjection(
   schedules: WorkScheduleEntity[],
   attendances: AttendanceRecordEntity[],
@@ -120,5 +148,43 @@ export function buildScheduleAttendanceAnomalyCockpitProjection(
     employees,
     queue,
     severities
+  };
+}
+
+export function buildScheduleAttendanceAnomalyCockpitAuditPayload(
+  input: BuildScheduleAttendanceAnomalyCockpitAuditPayloadInput
+) {
+  return {
+    periodStart: input.periodStartIso,
+    periodEnd: input.periodEndIso,
+    lateThresholdMinutes: input.lateThresholdMinutes,
+    topN: input.topN,
+    evaluatedSchedules: input.evaluatedSchedules,
+    anomalies: input.anomalies,
+    lateCount: input.lateCount,
+    noShowCount: input.noShowCount,
+    employeeCount: input.employeeCount,
+    severities: input.severities,
+    generatedAt: input.generatedAt
+  };
+}
+
+export function buildScheduleAttendanceAnomalyCockpitReport(
+  input: BuildScheduleAttendanceAnomalyCockpitReportInput
+): ScheduleAttendanceAnomalyCockpitReport {
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes: input.lateThresholdMinutes,
+    generatedAt: input.generatedAt,
+    counts: {
+      evaluatedSchedules: input.evaluatedSchedules,
+      anomalies: input.anomalies.length,
+      late: input.lateCount,
+      noShow: input.noShowCount
+    },
+    severities: input.severities,
+    employees: input.employees,
+    queue: input.queue
   };
 }

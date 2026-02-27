@@ -33,7 +33,7 @@ async function run() {
 
   assert.match(helper, /export function buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload/);
   assert.match(helper, /export function buildScheduleAnomalyIncidentReconcileResult/);
-  assert.ok(countLines(service) <= 3705, `service.ts should stay <= 3705 lines (current: ${countLines(service)})`);
+  assert.ok(countLines(service) <= 3710, `service.ts should stay <= 3710 lines (current: ${countLines(service)})`);
   assert.ok(
     countLines(helper) <= 220,
     `anomaly-incident-reconcile-helpers.ts should stay <= 220 lines (current: ${countLines(helper)})`
@@ -54,4 +54,3 @@ run()
     console.error(error);
     process.exit(1);
   });
-

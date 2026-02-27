@@ -22,7 +22,11 @@ import {
 import {
   buildScheduleAttendanceAnomalySet
 } from "@/features/scheduling/anomaly-report-helpers";
-import { buildScheduleAttendanceAnomalyCockpitProjection } from "@/features/scheduling/anomaly-cockpit-report-helpers";
+import {
+  buildScheduleAttendanceAnomalyCockpitAuditPayload,
+  buildScheduleAttendanceAnomalyCockpitProjection,
+  buildScheduleAttendanceAnomalyCockpitReport
+} from "@/features/scheduling/anomaly-cockpit-report-helpers";
 import type {
   ScheduleAnomalyCockpitQueueEntry,
   ScheduleAttendanceAnomaly,
@@ -3657,9 +3661,9 @@ export async function listScheduleAttendanceAnomalyCockpit(
     organizationId: tenantScope ?? undefined,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      periodStart: input.periodStart.toISOString(),
-      periodEnd: input.periodEnd.toISOString(),
+    payload: buildScheduleAttendanceAnomalyCockpitAuditPayload({
+      periodStartIso: input.periodStart.toISOString(),
+      periodEndIso: input.periodEnd.toISOString(),
       lateThresholdMinutes,
       topN,
       evaluatedSchedules: schedules.length,
@@ -3669,7 +3673,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
       employeeCount: employees.length,
       severities,
       generatedAt
-    }
+    })
   });
 
   if (!input.suppressAutomation) {
@@ -3683,21 +3687,19 @@ export async function listScheduleAttendanceAnomalyCockpit(
     );
   }
 
-  return {
+  return buildScheduleAttendanceAnomalyCockpitReport({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
     lateThresholdMinutes,
     generatedAt,
-    counts: {
-      evaluatedSchedules: schedules.length,
-      anomalies: anomalies.length,
-      late: lateCount,
-      noShow: noShowCount
-    },
+    evaluatedSchedules: schedules.length,
+    anomalies,
+    lateCount,
+    noShowCount,
     severities,
     employees,
     queue
-  };
+  });
 }
 
 
