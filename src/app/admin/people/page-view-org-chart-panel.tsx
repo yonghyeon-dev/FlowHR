@@ -26,7 +26,7 @@ function resolveEmployeeActiveLabel(isKoLocale: boolean, active: boolean) {
 }
 
 function buildOrgChartSummary(tree: OrgTreeNode[]): OrgChartSummary {
-  let organizations = tree.length;
+  const organizations = tree.length;
   let departments = 0;
   let employees = 0;
   let activeEmployees = 0;
