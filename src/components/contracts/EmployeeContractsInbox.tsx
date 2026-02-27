@@ -103,8 +103,13 @@ export default function EmployeeContractsInbox() {
     if (!selected) {
       return;
     }
+    const normalizedSignatureInput = signatureInput.trim();
     setError(null);
     setMessage(null);
+    if (action === "SIGN" && !normalizedSignatureInput) {
+      setError(copy.signatureInputRequiredError);
+      return;
+    }
     try {
       await fetch(`/api/contracts/documents/${selected.id}/respond`, {
         method: "POST",
@@ -112,7 +117,7 @@ export default function EmployeeContractsInbox() {
         body: JSON.stringify({
           action,
           comment: comment.trim() || undefined,
-          signatureInput: action === "SIGN" ? signatureInput : undefined,
+          signatureInput: action === "SIGN" ? normalizedSignatureInput : undefined,
           expectedDocumentHash: selected.documentHash
         })
       }).then((response) => readJson(response, copy.respondError));
