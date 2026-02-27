@@ -71,7 +71,6 @@ import {
   buildAnomalyIncidentLifecycleAuditPayload,
   buildAnomalyIncidentLifecycleResponse,
   buildAnomalyIncidentLifecycleUpdateResult,
-  buildAnomalyIncidentListAuditPayload,
   buildAnomalyIncidentSlaAuditPayload,
   buildAnomalyIncidentSlaReport,
   normalizeAnomalyIncidentLifecycleMutationInput
@@ -97,10 +96,6 @@ import {
   selectScheduleAnomalyIncidentReconcileItems
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
 import {
-  buildScheduleAnomalyIncidentReadAuditPayload,
-  resolveScheduleAnomalyIncidentForActor
-} from "@/features/scheduling/anomaly-incident-read-helpers";
-import {
   requireSchedulingActor,
   requireSchedulingWriteActor,
   resolveSchedulingTenantScope
@@ -118,7 +113,10 @@ import {
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
   executeScheduleAnomalyIncidentEscalationRequests
 } from "@/features/scheduling/anomaly-incident-escalation-helpers";
-import { buildScheduleAnomalyIncidentListResult } from "@/features/scheduling/anomaly-incident-list-helpers";
+import {
+  getScheduleAnomalyIncidentFromHelper,
+  listScheduleAnomalyIncidentsFromHelper
+} from "@/features/scheduling/anomaly-incident-query-service-helpers";
 import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
@@ -135,7 +133,6 @@ import {
 import {
   MAX_ANOMALY_INCIDENT_AUDIT_ROWS,
   MAX_ANOMALY_INCIDENT_HISTORY,
-  cloneScheduleAnomalyIncidentReadModel,
   getScheduleAnomalyIncidentReadModel,
   listScheduleAnomalyIncidentReadModels,
   listScheduleAnomalyIncidentReadModelsFromAudit,
@@ -323,7 +320,7 @@ export type ScheduleAnomalyIncidentLifecycleResult = {
   };
 };
 
-type ListScheduleAnomalyIncidentsInput = {
+export type ListScheduleAnomalyIncidentsInput = {
   state?: ScheduleAnomalyIncidentLifecycleState;
   assigneeId?: string;
   topN?: number;
@@ -812,7 +809,7 @@ export type RotationFairnessApplyResult = {
   };
 };
 
-type ServiceContext = {
+export type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
   eventPublisher?: DomainEventPublisher;
@@ -2603,44 +2600,7 @@ export async function listScheduleAnomalyIncidents(
   context: ServiceContext,
   input: ListScheduleAnomalyIncidentsInput
 ): Promise<ScheduleAnomalyIncidentListResult> {
-  const actor = await requireSchedulingWriteActor(
-    context,
-    "schedule anomaly incident list requires permission"
-  );
-
-  const topN = normalizeIncidentListTopN(input.topN);
-  const tenantScope = resolveSchedulingTenantScope(actor);
-  const assigneeId = input.assigneeId?.trim();
-
-  const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
-    organizationId: tenantScope
-  });
-  const { total, items } = buildScheduleAnomalyIncidentListResult({
-    readModels,
-    topN,
-    state: input.state,
-    assigneeId
-  });
-
-  await context.dataAccess.audit.append({
-    action: "scheduling.anomaly.incident.listed",
-    entityType: "WorkSchedule",
-    organizationId: tenantScope,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildAnomalyIncidentListAuditPayload({
-      state: input.state,
-      assigneeId: assigneeId ?? null,
-      topN,
-      total,
-      returned: items.length
-    })
-  });
-
-  return {
-    total,
-    items
-  };
+  return listScheduleAnomalyIncidentsFromHelper(context, input);
 }
 
 export async function listScheduleAnomalyIncidentSla(
@@ -3245,29 +3205,7 @@ export async function getScheduleAnomalyIncident(
   context: ServiceContext,
   incidentId: string
 ): Promise<ScheduleAnomalyIncidentReadModel> {
-  const actor = await requireSchedulingWriteActor(
-    context,
-    "schedule anomaly incident read requires permission"
-  );
-
-  const tenantScope = resolveSchedulingTenantScope(actor);
-  const incident = await resolveScheduleAnomalyIncidentForActor({
-    dataAccess: context.dataAccess,
-    incidentId,
-    tenantScope
-  });
-
-  await context.dataAccess.audit.append({
-    action: "scheduling.anomaly.incident.read",
-    entityType: "WorkSchedule",
-    entityId: incident.incidentId,
-    organizationId: incident.organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildScheduleAnomalyIncidentReadAuditPayload(incident)
-  });
-
-  return cloneScheduleAnomalyIncidentReadModel(incident);
+  return getScheduleAnomalyIncidentFromHelper(context, incidentId);
 }
 
 export async function listScheduleAttendanceAnomalyCockpit(
