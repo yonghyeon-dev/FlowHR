@@ -249,6 +249,7 @@ export default function WithholdingReceiptConsole() {
           onCopyDocumentMetadata={(document) => void copyDocumentMetadata(document)}
         />
         <WithholdingLogsPanel
+          locale={locale}
           title={copy.apiLogsTitle}
           copy={copy}
           logs={logs}
