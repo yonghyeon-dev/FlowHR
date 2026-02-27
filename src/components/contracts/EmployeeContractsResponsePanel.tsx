@@ -110,6 +110,19 @@ export function EmployeeContractsResponsePanel({
     selected,
     signatureEvidence
   ]);
+  const responseHistoryCounts = useMemo(() => {
+    const counts: Record<ResponseHistoryEntryType, number> = { SIGNED: 0, REJECTED: 0, EVIDENCE: 0 };
+    responseHistoryEntries.forEach((entry) => {
+      counts[entry.type] += 1;
+    });
+    return counts;
+  }, [responseHistoryEntries]);
+  const responseHistoryFilterOptions = [
+    { value: "ALL" as const, label: copy.responseHistoryFilterAllAction, count: responseHistoryEntries.length },
+    { value: "SIGNED" as const, label: copy.responseHistoryFilterSignedAction, count: responseHistoryCounts.SIGNED },
+    { value: "REJECTED" as const, label: copy.responseHistoryFilterRejectedAction, count: responseHistoryCounts.REJECTED },
+    { value: "EVIDENCE" as const, label: copy.responseHistoryFilterEvidenceAction, count: responseHistoryCounts.EVIDENCE }
+  ];
   const filteredResponseHistoryEntries = useMemo(
     () => (responseHistoryFilter === "ALL"
       ? responseHistoryEntries
@@ -182,36 +195,21 @@ export function EmployeeContractsResponsePanel({
             <h3>{copy.responseHistoryTitle}</h3>
             <div className="contract-action-row">
               <span className="small muted">{copy.responseHistoryFilterLabel}</span>
-              <button
-                type="button"
-                className={responseHistoryFilter === "ALL" ? "btn btn-small" : "btn btn-secondary btn-small"}
-                onClick={() => setResponseHistoryFilter("ALL")}
-              >
-                {copy.responseHistoryFilterAllAction}
-              </button>
-              <button
-                type="button"
-                className={responseHistoryFilter === "SIGNED" ? "btn btn-small" : "btn btn-secondary btn-small"}
-                onClick={() => setResponseHistoryFilter("SIGNED")}
-              >
-                {copy.responseHistoryFilterSignedAction}
-              </button>
-              <button
-                type="button"
-                className={responseHistoryFilter === "REJECTED" ? "btn btn-small" : "btn btn-secondary btn-small"}
-                onClick={() => setResponseHistoryFilter("REJECTED")}
-              >
-                {copy.responseHistoryFilterRejectedAction}
-              </button>
-              <button
-                type="button"
-                className={responseHistoryFilter === "EVIDENCE" ? "btn btn-small" : "btn btn-secondary btn-small"}
-                onClick={() => setResponseHistoryFilter("EVIDENCE")}
-              >
-                {copy.responseHistoryFilterEvidenceAction}
-              </button>
+              {responseHistoryFilterOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={responseHistoryFilter === option.value ? "btn btn-small" : "btn btn-secondary btn-small"}
+                  onClick={() => setResponseHistoryFilter(option.value)}
+                >
+                  {option.label} ({option.count})
+                </button>
+              ))}
             </div>
             <p className="small muted">{copy.responseHistoryVisibleCountLabel}: {filteredResponseHistoryEntries.length}/{responseHistoryEntries.length}</p>
+            <p className="small muted">
+              {copy.responseHistorySignedLabel}: {responseHistoryCounts.SIGNED} / {copy.responseHistoryRejectedLabel}: {responseHistoryCounts.REJECTED} / {copy.responseHistoryEvidenceLoadedLabel}: {responseHistoryCounts.EVIDENCE}
+            </p>
             {responseHistoryEntries.length === 0 ? (
               <p className="small muted">{copy.responseHistoryEmpty}</p>
             ) : filteredResponseHistoryEntries.length === 0 ? (
@@ -297,3 +295,5 @@ export function EmployeeContractsResponsePanel({
     </article>
   );
 }
+
+
