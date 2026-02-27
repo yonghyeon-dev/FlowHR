@@ -5,6 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { payrollYearEndFilingCopyByLocale } from "@/components/payroll-year-end-filing/copy";
 import {
+  appendApiLogEntry,
+  buildRequestFailureStatusMessage,
+  extractApiErrorMessage,
+  type PayrollYearEndFilingFailureAction,
+  type PayrollYearEndFilingFailureState
+} from "@/components/payroll-year-end-filing/request-feedback-helpers";
+import {
   buildAcknowledgeSubmissionPayload,
   buildFilingSubmissionListQuery,
   buildResubmitSubmissionPayload,
@@ -105,6 +112,7 @@ export default function PayrollYearEndFilingConsole() {
   const [submissions, setSubmissions] = useState<PayrollYearEndFilingSubmission[]>([]);
   const [timelineEntries, setTimelineEntries] = useState<PayrollYearEndFilingTimelineEntry[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
+  const [lastFailure, setLastFailure] = useState<PayrollYearEndFilingFailureState | null>(null);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
@@ -292,7 +300,40 @@ export default function PayrollYearEndFilingConsole() {
     };
   }
 
+  function appendLog(label: string, response: Pick<Response, "status" | "ok">) {
+    setLogs((prev) => appendApiLogEntry(prev, { label, status: response.status, ok: response.ok, runtimeLocale }));
+  }
+
+  function recordFailure(
+    action: PayrollYearEndFilingFailureAction,
+    actionLabel: string,
+    status: number | null,
+    bodyOrMessage?: unknown,
+    submissionId: string | null = null
+  ) {
+    const detail =
+      typeof bodyOrMessage === "string"
+        ? bodyOrMessage.trim() || null
+        : extractApiErrorMessage(bodyOrMessage);
+    const message = buildRequestFailureStatusMessage(copy, status, detail);
+    setStatusMessage(message);
+    setLastFailure({
+      action,
+      actionLabel,
+      status,
+      message,
+      occurredAt: new Date().toLocaleString(runtimeLocale),
+      submissionId
+    });
+  }
+
+  function clearFailure() {
+    setLastFailure(null);
+  }
+
   async function runFinalization(apply: boolean) {
+    const action = apply ? "finalization_apply" : "finalization_preview";
+    const actionLabel = apply ? copy.logFinalizeSettlement : copy.logPreviewFinalization;
     try {
       setPendingLabel(apply ? copy.pendingFinalizationApply : copy.pendingFinalizationPreview);
       const response = await fetch("/api/payroll/year-end/finalize-settlement", {
@@ -301,20 +342,12 @@ export default function PayrollYearEndFilingConsole() {
         body: JSON.stringify(buildFinalizePayload(apply))
       });
       const body = (await response.json()) as PayrollYearEndFinalizationResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: apply ? copy.logFinalizeSettlement : copy.logPreviewFinalization,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body);
         return;
       }
+      clearFailure();
       setFinalization(body);
       setExpectedExportSettlementHash(body.settlement.settlementHash);
       setExpectedAckSettlementHash(body.settlement.settlementHash);
@@ -325,13 +358,15 @@ export default function PayrollYearEndFilingConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
   }
 
   async function runFilingExport() {
+    const action: PayrollYearEndFilingFailureAction = "filing_export";
+    const actionLabel = copy.logExportFilingData;
     try {
       setPendingLabel(copy.pendingFilingExport);
       const payload = {
@@ -347,33 +382,27 @@ export default function PayrollYearEndFilingConsole() {
         body: JSON.stringify(payload)
       });
       const body = (await response.json()) as PayrollYearEndFilingExportResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logExportFilingData,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body);
         return;
       }
+      clearFailure();
       setFilingExport(body);
       setStatusMessage(
         `${copy.statusExportedPrefix} ${body.filingData.records.length} (${body.filingData.validation.status})`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
   }
 
   async function runSubmitFilingPackage() {
+    const action: PayrollYearEndFilingFailureAction = "filing_submit";
+    const actionLabel = copy.logSubmitFilingPackage;
     try {
       setPendingLabel(copy.pendingSubmitPackage);
       const payload = buildSubmitFilingPackagePayload({
@@ -391,33 +420,27 @@ export default function PayrollYearEndFilingConsole() {
         body: JSON.stringify(payload)
       });
       const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logSubmitFilingPackage,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body);
         return;
       }
+      clearFailure();
       setSubmissions((prev) => upsertSubmissionAtTop(prev, body.submission));
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
       setStatusMessage(`${copy.statusSubmittedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
   }
 
   async function runRefreshSubmissions(settlementHashFilterOverride?: string) {
+    const action: PayrollYearEndFilingFailureAction = "submissions_refresh";
+    const actionLabel = copy.logListFilingSubmissions;
     try {
       setPendingLabel(copy.pendingListSubmissions);
       const requestYear = parseRequiredInt(year, copy.yearLabel, copy.statusFieldMustBeNonNegativeInteger);
@@ -442,20 +465,12 @@ export default function PayrollYearEndFilingConsole() {
         }
       );
       const body = (await response.json()) as PayrollYearEndFilingSubmissionListResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logListFilingSubmissions,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body);
         return;
       }
+      clearFailure();
       setSubmissionListSummary(body.summary);
       setSubmissions(body.submissions);
       setStatusMessage(
@@ -463,7 +478,7 @@ export default function PayrollYearEndFilingConsole() {
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -481,6 +496,8 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   async function runLoadAckCatalog() {
+    const action: PayrollYearEndFilingFailureAction = "ack_catalog_load";
+    const actionLabel = copy.logListAckCatalog;
     try {
       setPendingLabel(copy.pendingAckCatalog);
       const response = await fetch("/api/payroll/year-end/filing-ack-catalog", {
@@ -488,27 +505,19 @@ export default function PayrollYearEndFilingConsole() {
         headers: buildHeaders()
       });
       const body = (await response.json()) as PayrollYearEndFilingAckCatalogResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logListAckCatalog,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body);
         return;
       }
+      clearFailure();
       setAckCatalog(body);
       setStatusMessage(
         `${copy.statusLoadedAckCatalogPrefix} (${body.acceptedCodes.length}/${body.rejectedCodes.length}/${body.rejectionReasons.length})`
       );
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput);
     } finally {
       setPendingLabel(null);
     }
@@ -518,6 +527,8 @@ export default function PayrollYearEndFilingConsole() {
     submissionIdOverride?: string,
     ackStatusOverride?: "accepted" | "rejected"
   ) {
+    const action: PayrollYearEndFilingFailureAction = "submission_ack";
+    const actionLabel = copy.logAcknowledgeSubmission;
     const submissionId = (submissionIdOverride ?? ackSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage(copy.statusAckSubmissionIdRequired);
@@ -550,20 +561,12 @@ export default function PayrollYearEndFilingConsole() {
         }
       );
       const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logAcknowledgeSubmission,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body, submissionId);
         return;
       }
+      clearFailure();
       setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
@@ -573,13 +576,15 @@ export default function PayrollYearEndFilingConsole() {
       setStatusMessage(`${copy.statusAcknowledgedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
     } finally {
       setPendingLabel(null);
     }
   }
 
   async function runResubmitSubmission(submissionIdOverride?: string) {
+    const action: PayrollYearEndFilingFailureAction = "submission_resubmit";
+    const actionLabel = copy.logResubmitSubmission;
     const submissionId = (submissionIdOverride ?? resubmitSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage(copy.statusResubmitSubmissionIdRequired);
@@ -607,20 +612,12 @@ export default function PayrollYearEndFilingConsole() {
         }
       );
       const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logResubmitSubmission,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body, submissionId);
         return;
       }
+      clearFailure();
       setSubmissions((prev) => upsertSubmissionAtTop(prev, body.submission));
       setAckSubmissionId(body.submission.submissionId);
       setCancelSubmissionId(body.submission.submissionId);
@@ -628,13 +625,15 @@ export default function PayrollYearEndFilingConsole() {
       setStatusMessage(`${copy.statusResubmittedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
     } finally {
       setPendingLabel(null);
     }
   }
 
   async function runCancelSubmission(submissionIdOverride?: string) {
+    const action: PayrollYearEndFilingFailureAction = "submission_cancel";
+    const actionLabel = copy.logCancelSubmission;
     const submissionId = (submissionIdOverride ?? cancelSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage(copy.statusCancelSubmissionIdRequired);
@@ -656,32 +655,26 @@ export default function PayrollYearEndFilingConsole() {
         }
       );
       const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logCancelSubmission,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body, submissionId);
         return;
       }
+      clearFailure();
       setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setReopenSubmissionId(body.submission.submissionId);
       setStatusMessage(`${copy.statusCanceledPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
     } finally {
       setPendingLabel(null);
     }
   }
 
   async function runReopenSubmission(submissionIdOverride?: string) {
+    const action: PayrollYearEndFilingFailureAction = "submission_reopen";
+    const actionLabel = copy.logReopenSubmission;
     const submissionId = (submissionIdOverride ?? reopenSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage(copy.statusReopenSubmissionIdRequired);
@@ -703,33 +696,27 @@ export default function PayrollYearEndFilingConsole() {
         }
       );
       const body = (await response.json()) as PayrollYearEndFilingSubmissionResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logReopenSubmission,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body, submissionId);
         return;
       }
+      clearFailure();
       setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setCancelSubmissionId(body.submission.submissionId);
       setAckSubmissionId(body.submission.submissionId);
       setStatusMessage(`${copy.statusReopenedPrefix} ${body.submission.submissionId}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
     } finally {
       setPendingLabel(null);
     }
   }
 
   async function runLoadSubmissionTimeline(submissionIdOverride?: string) {
+    const action: PayrollYearEndFilingFailureAction = "submission_timeline";
+    const actionLabel = copy.logListSubmissionTimeline;
     const submissionId = (submissionIdOverride ?? timelineSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage(copy.statusTimelineSubmissionIdRequired);
@@ -748,34 +735,28 @@ export default function PayrollYearEndFilingConsole() {
         }
       );
       const body = (await response.json()) as PayrollYearEndFilingSubmissionTimelineResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logListSubmissionTimeline,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body, submissionId);
         return;
       }
+      clearFailure();
       setTimelineSubmissionId(submissionId);
       setTimelineEntries(body.timeline);
       setSubmissions((prev) => replaceSubmissionById(prev, body.submission));
       setStatusMessage(`${copy.statusLoadedTimelinePrefix} ${body.timeline.length}`);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
     } finally {
       setPendingLabel(null);
     }
   }
 
-  async function runAddEvidenceNote() {
-    const submissionId = timelineSubmissionId.trim();
+  async function runAddEvidenceNote(submissionIdOverride?: string) {
+    const action: PayrollYearEndFilingFailureAction = "evidence_note_add";
+    const actionLabel = copy.logAddEvidenceNote;
+    const submissionId = (submissionIdOverride ?? timelineSubmissionId).trim();
     if (!submissionId) {
       setStatusMessage(copy.statusTimelineSubmissionIdRequiredForEvidence);
       return;
@@ -797,26 +778,39 @@ export default function PayrollYearEndFilingConsole() {
         }
       );
       const body = (await response.json()) as PayrollYearEndFilingEvidenceNoteResponse | { error: string };
-      setLogs((prev) => [
-        {
-          id: Date.now(),
-          label: copy.logAddEvidenceNote,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale)
-        },
-        ...prev
-      ]);
+      appendLog(actionLabel, response);
       if (!response.ok || "error" in body) {
-        setStatusMessage(copy.statusRequestFailed);
+        recordFailure(action, actionLabel, response.status, body, submissionId);
         return;
       }
+      clearFailure();
       setStatusMessage(`${copy.statusAddedEvidencePrefix} ${body.evidenceNote.submissionId}`);
       await runLoadSubmissionTimeline(submissionId);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : copy.statusInvalidInput);
+      recordFailure(action, actionLabel, null, error instanceof Error ? error.message : copy.statusInvalidInput, submissionId);
     } finally {
       setPendingLabel(null);
+    }
+  }
+
+  async function retryLastFailureAction() {
+    if (!lastFailure) return;
+    const submissionId = lastFailure.submissionId ?? undefined;
+    switch (lastFailure.action) {
+      case "finalization_preview": return runFinalization(false);
+      case "finalization_apply": return runFinalization(true);
+      case "filing_export": return runFilingExport();
+      case "filing_submit": return runSubmitFilingPackage();
+      case "submissions_refresh": return runRefreshSubmissions();
+      case "ack_catalog_load": return runLoadAckCatalog();
+      case "submission_ack": return runAcknowledgeSubmission(submissionId);
+      case "submission_resubmit": return runResubmitSubmission(submissionId);
+      case "submission_cancel": return runCancelSubmission(submissionId);
+      case "submission_reopen": return runReopenSubmission(submissionId);
+      case "submission_timeline": return runLoadSubmissionTimeline(submissionId);
+      case "evidence_note_add":
+        if (submissionId) setTimelineSubmissionId(submissionId);
+        return runAddEvidenceNote(submissionId);
     }
   }
 
@@ -1148,6 +1142,24 @@ export default function PayrollYearEndFilingConsole() {
             <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
           </div>
         </article>
+
+        {lastFailure ? (
+          <article className="panel">
+            <h2>{copy.failureActionPanelTitle}</h2>
+            <p className="small fail">{lastFailure.message}</p>
+            <ul className="simple-list">
+              <li><span>{copy.latestFailureActionLabel}</span><strong>{lastFailure.actionLabel}</strong></li>
+              <li><span>{copy.latestFailureStatusLabel}</span><strong>{lastFailure.status ?? copy.dashLabel}</strong></li>
+              <li><span>{copy.latestFailureAtLabel}</span><strong>{lastFailure.occurredAt}</strong></li>
+            </ul>
+            <div className="panel-actions">
+              <button className="btn btn-secondary" onClick={() => void retryLastFailureAction()} disabled={pendingLabel !== null}>{copy.retryFailureAction}</button>
+              <button className="btn btn-secondary" onClick={() => void runRefreshSubmissions()} disabled={pendingLabel !== null}>{copy.refreshSubmissionsAction}</button>
+              <button className="btn btn-secondary" onClick={() => void runLoadAckCatalog()} disabled={pendingLabel !== null}>{copy.loadAckCatalogAction}</button>
+              <button className="btn btn-secondary" onClick={clearFailure} disabled={pendingLabel !== null}>{copy.clearFailureAction}</button>
+            </div>
+          </article>
+        ) : null}
 
         <article className="panel">
           <h2>{copy.filingSubmissionsPanelTitle}</h2>
