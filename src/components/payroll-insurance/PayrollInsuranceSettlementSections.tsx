@@ -26,6 +26,10 @@ function formatKrwRaw(value: number, runtimeLocale: string) {
   return `${value.toLocaleString(runtimeLocale, { maximumFractionDigits: 2 })} KRW`;
 }
 
+function formatRate(value: number) {
+  return `${(value * 100).toFixed(3)}%`;
+}
+
 export function PayrollInsuranceSummaryPanel({ copy, result, runtimeLocale }: SummaryPanelProps) {
   return (
     <article className="panel">
@@ -51,6 +55,43 @@ export function PayrollInsuranceSummaryPanel({ copy, result, runtimeLocale }: Su
           <li>
             <span>{copy.totalDeltaLabel}</span>
             <strong>{formatKrw(result.summary.settlementKrw.totalDeltaKrw, runtimeLocale)}</strong>
+          </li>
+          <li>
+            <span>{copy.policyPresetSummaryLabel}</span>
+            <strong>
+              {result.summary.policyPreset
+                ? `${result.summary.policyPreset.id} (${result.summary.policyPreset.effectiveFrom})`
+                : copy.policyManualFallbackLabel}
+              {result.summary.policyPresetAuto.enabled
+                ? ` / ${copy.policyAutoTagLabel} ${result.summary.policyPresetAuto.resolvedBy}`
+                : ""}
+            </strong>
+          </li>
+          <li>
+            <span>{copy.policyRatesSummaryLabel}</span>
+            <strong>
+              NP {formatRate(result.summary.policyRates.nationalPensionEmployeeRate)} / HI{" "}
+              {formatRate(result.summary.policyRates.healthInsuranceEmployeeRate)} / LTC{" "}
+              {formatRate(result.summary.policyRates.longTermCareRateOnHealth)} / EI{" "}
+              {formatRate(result.summary.policyRates.employmentInsuranceEmployeeRate)} / IA{" "}
+              {formatRate(result.summary.policyRates.industrialAccidentEmployerRate)}
+            </strong>
+          </li>
+          <li>
+            <span>{copy.policyCapsSummaryLabel}</span>
+            <strong>
+              {result.summary.policyCapsKrw.nationalPensionCapKrw === null
+                ? `NP ${copy.policyNoCapLabel}`
+                : `NP ${formatKrw(result.summary.policyCapsKrw.nationalPensionCapKrw, runtimeLocale)}`}{" "}
+              /{" "}
+              {result.summary.policyCapsKrw.healthInsuranceCapKrw === null
+                ? `HI ${copy.policyNoCapLabel}`
+                : `HI ${formatKrw(result.summary.policyCapsKrw.healthInsuranceCapKrw, runtimeLocale)}`}{" "}
+              /{" "}
+              {result.summary.policyCapsKrw.employmentInsuranceCapKrw === null
+                ? `EI ${copy.policyNoCapLabel}`
+                : `EI ${formatKrw(result.summary.policyCapsKrw.employmentInsuranceCapKrw, runtimeLocale)}`}
+            </strong>
           </li>
           <li>
             <span>{copy.roundingLabel}</span>

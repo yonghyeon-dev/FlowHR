@@ -9,6 +9,33 @@ export type PayrollInsuranceSettlementResponse = {
     };
     grossPayKrw: number;
     taxableBaseKrw: number;
+    policyPreset: {
+      id: string;
+      label: string;
+      effectiveFrom: string;
+      source: string;
+    } | null;
+    policyPresetAuto: {
+      enabled: boolean;
+      autoSelected: boolean;
+      resolvedBy: "settlement.insurancePolicyAsOf" | "periodEnd";
+      asOf: string;
+    };
+    policyRates: {
+      nationalPensionEmployeeRate: number;
+      nationalPensionEmployerRate: number;
+      healthInsuranceEmployeeRate: number;
+      healthInsuranceEmployerRate: number;
+      longTermCareRateOnHealth: number;
+      employmentInsuranceEmployeeRate: number;
+      employmentInsuranceEmployerRate: number;
+      industrialAccidentEmployerRate: number;
+    };
+    policyCapsKrw: {
+      nationalPensionCapKrw: number | null;
+      healthInsuranceCapKrw: number | null;
+      employmentInsuranceCapKrw: number | null;
+    };
     rounding: {
       mode: "round" | "floor" | "ceil";
       unitsKrw: {
@@ -93,4 +120,12 @@ export function toSeoulStartIso(dateValue: string) {
 
 export function toSeoulEndIso(dateValue: string) {
   return `${dateValue}T23:59:59+09:00`;
+}
+
+export function toSeoulDateTimeIso(dateTimeValue: string) {
+  const normalized = dateTimeValue.trim();
+  if (!normalized) {
+    return undefined;
+  }
+  return `${normalized}:00+09:00`;
 }

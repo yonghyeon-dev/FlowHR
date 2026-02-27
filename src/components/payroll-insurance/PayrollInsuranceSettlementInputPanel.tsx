@@ -22,6 +22,12 @@ type InputPanelProps = {
   setHealthInsuranceCapKrw: (value: string) => void;
   employmentInsuranceCapKrw: string;
   setEmploymentInsuranceCapKrw: (value: string) => void;
+  insurancePolicyMode: "manual" | "preset_manual" | "preset_auto";
+  setInsurancePolicyMode: (value: "manual" | "preset_manual" | "preset_auto") => void;
+  insurancePolicyPresetId: string;
+  setInsurancePolicyPresetId: (value: string) => void;
+  insurancePolicyAsOf: string;
+  setInsurancePolicyAsOf: (value: string) => void;
   insuranceRoundingMode: "round" | "floor" | "ceil";
   setInsuranceRoundingMode: (value: "round" | "floor" | "ceil") => void;
   nationalPensionUnitKrw: string;
@@ -68,6 +74,12 @@ export function PayrollInsuranceInputPanel({
   setHealthInsuranceCapKrw,
   employmentInsuranceCapKrw,
   setEmploymentInsuranceCapKrw,
+  insurancePolicyMode,
+  setInsurancePolicyMode,
+  insurancePolicyPresetId,
+  setInsurancePolicyPresetId,
+  insurancePolicyAsOf,
+  setInsurancePolicyAsOf,
   insuranceRoundingMode,
   setInsuranceRoundingMode,
   nationalPensionUnitKrw,
@@ -134,6 +146,36 @@ export function PayrollInsuranceInputPanel({
         <label>
           {copy.employmentInsuranceCapLabel}
           <input value={employmentInsuranceCapKrw} onChange={(event) => setEmploymentInsuranceCapKrw(event.target.value)} />
+        </label>
+        <label>
+          {copy.policyModeLabel}
+          <select
+            value={insurancePolicyMode}
+            onChange={(event) =>
+              setInsurancePolicyMode(event.target.value as "manual" | "preset_manual" | "preset_auto")
+            }
+          >
+            <option value="manual">{copy.policyModeManualOption}</option>
+            <option value="preset_manual">{copy.policyModePresetOption}</option>
+            <option value="preset_auto">{copy.policyModeAutoOption}</option>
+          </select>
+        </label>
+        <label>
+          {copy.policyPresetIdLabel}
+          <input
+            value={insurancePolicyPresetId}
+            disabled={insurancePolicyMode !== "preset_manual"}
+            onChange={(event) => setInsurancePolicyPresetId(event.target.value)}
+          />
+        </label>
+        <label>
+          {copy.policyAsOfLabel}
+          <input
+            type="datetime-local"
+            value={insurancePolicyAsOf}
+            disabled={insurancePolicyMode !== "preset_auto"}
+            onChange={(event) => setInsurancePolicyAsOf(event.target.value)}
+          />
         </label>
         <label>
           {copy.roundingModeLabel}

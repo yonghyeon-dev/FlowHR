@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.59.0
+version: 1.60.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -30,6 +30,7 @@ scope:
     - KR statutory baseline admin preset-mode share-link reset/reapply UX for deterministic operator reset and replay control
     - golden fixture regression coverage for statutory KR baseline deduction outputs
     - KR 4-insurance settlement preview with employee/employer contribution deltas, optional settlement insurance rounding, optional policy preset selection/auto-selection by as-of date, and prior-withheld reconciliation
+    - admin payroll-insurance policy mode controls (`manual`/`preset-id`/`preset-auto`) and summary trace visibility for insurance preset resolution
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
     - payslip distribution and employee receipt confirmation workflow for confirmed payroll runs
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
@@ -97,7 +98,7 @@ api:
       description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table or preset dataset ID, optional dependent-aware lookup-tier rows (`dependentTaxKrw`) for lookup-table mode, contribution caps, additive tax-credit fields, optional taxable/non-taxable split input validation, optional income split item code/category/amount input arrays, optional income split item preset dataset ID, configurable insurance rounding, and optional monthly-boundary validation).
     - method: POST
       path: /payroll/runs/preview-insurance-settlement
-      description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, optional settlement insurance rounding (`mode` + component units), optional policy preset selection (`insurancePolicyPresetId`) or auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`), raw contribution trace, and prior-withheld/prior-paid deltas.
+      description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, optional settlement insurance rounding (`mode` + component units), optional policy preset selection (`insurancePolicyPresetId`) or auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`), raw contribution trace, and prior-withheld/prior-paid deltas. Admin `/admin/payroll-insurance` may expose manual/preset-id/preset-auto controls while preserving the same request contract.
     - method: POST
       path: /payroll/runs/close-period
       description: Preview/apply payroll period close from confirmed runs with withholding/social/net settlement deltas and blocking reasons when unconfirmed runs remain.
@@ -430,6 +431,7 @@ test_plan:
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
     - preview-insurance-settlement validates monthly-boundary guard in Asia/Seoul when requireMonthlyBoundary=true
     - preview-insurance-settlement supports deterministic insurance policy preset selection (`insurancePolicyPresetId`) and auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`) with mixed-mode validation guards
+    - admin payroll-insurance policy mode controls deterministically wire manual/preset-id/preset-auto request payload and show summary policy preset/rate/cap trace
     - close-period preview returns run-state summary (confirmed/previewed) and withholding/social/net settlement deltas
     - close-period apply rejects requests when unconfirmed runs remain
     - close-period rejects requests when payroll_close_period_v1 is disabled
@@ -488,6 +490,7 @@ test_plan:
     - insurance settlement deterministic replay via WI-0184 e2e
     - insurance settlement rounding mode/unit deterministic replay via WI-0259 e2e
     - insurance settlement policy preset auto-selection deterministic replay via WI-0610 e2e
+    - admin payroll-insurance policy mode UI deterministic replay via WI-0611 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
     - year-end settlement and withholding receipt deterministic replay via WI-0187 e2e
@@ -562,6 +565,7 @@ test_plan:
     - preset share-link validation feedback checks for deterministic applied-value and ignored-invalid summary behavior
     - tax-credit and monthly-boundary component checks
     - insurance settlement employee/employer component, cap, policy-preset trace, and delta deterministic checks
+    - admin payroll-insurance policy mode control and summary trace deterministic checks
     - year-end insurance reconciliation delta/status and monthly breakdown remain deterministic for same run/finalization replay
     - year-end preflight checklist ready/fail/warn and guard-detail outputs remain deterministic for same run/submission/finalization replay
     - close-period withholding/social/net aggregation and settlement-delta checks
