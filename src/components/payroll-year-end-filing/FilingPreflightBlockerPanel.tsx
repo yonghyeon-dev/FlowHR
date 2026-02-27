@@ -38,7 +38,9 @@ const preflightPanelCopyByLocale = {
     copiedHashStatus: "\uc815\uc0b0 \ud574\uc2dc\ub97c \ubcf5\uc0ac\ud588\uc2b5\ub2c8\ub2e4.",
     copyHashFailedStatus: "\ud574\uc2dc \ubcf5\uc0ac\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",
     pasteHashHint:
-      "\ubcf5\uc0ac\ud55c \ud574\uc2dc\ub97c \uc0c1\ub2e8 Expected Settlement Hash \ud544\ub4dc\uc5d0 \ubd99\uc5ec\ub123\uc5b4 \uac80\uc99d \uac00\ub4dc\ub85c \ud65c\uc6a9\ud558\uc138\uc694."
+      "\ubcf5\uc0ac\ud55c \ud574\uc2dc\ub97c \uc0c1\ub2e8 Expected Settlement Hash \ud544\ub4dc\uc5d0 \ubd99\uc5ec\ub123\uc5b4 \uac80\uc99d \uac00\ub4dc\ub85c \ud65c\uc6a9\ud558\uc138\uc694.",
+    openPayrollCloseAction: "\uae09\uc5ec \ub9c8\uac10 \ud654\uba74 \uc5f4\uae30",
+    openPayslipDeliveryAction: "\uba85\uc138\uc11c \ubc30\ud3ec \ud654\uba74 \uc5f4\uae30"
   },
   en: {
     title: "Year-End Preflight Blockers",
@@ -56,7 +58,9 @@ const preflightPanelCopyByLocale = {
     copyHashAction: "Copy hash",
     copiedHashStatus: "Settlement hash copied.",
     copyHashFailedStatus: "Failed to copy settlement hash.",
-    pasteHashHint: "Paste this hash into Expected Settlement Hash fields to enforce export/ack guard."
+    pasteHashHint: "Paste this hash into Expected Settlement Hash fields to enforce export/ack guard.",
+    openPayrollCloseAction: "Open payroll close",
+    openPayslipDeliveryAction: "Open payslip delivery"
   }
 } as const;
 
@@ -168,8 +172,22 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                           {copy.previewFinalizationAction}
                         </button>
                       ) : null}
+                      {check.key === "confirmed_runs_present" || check.key === "no_previewed_runs" ? (
+                        <Link href="/admin/payroll-close" className="btn btn-secondary">
+                          {panelCopy.openPayrollCloseAction}
+                        </Link>
+                      ) : null}
+                      {check.key === "no_undistributed_runs" || check.key === "no_pending_receipts" ? (
+                        <Link href="/admin/payroll-payslip-delivery" className="btn btn-secondary">
+                          {panelCopy.openPayslipDeliveryAction}
+                        </Link>
+                      ) : null}
                       {check.key !== "no_pending_filing_submissions" &&
-                      check.key !== "non_taxable_within_annual_gross" ? (
+                      check.key !== "non_taxable_within_annual_gross" &&
+                      check.key !== "confirmed_runs_present" &&
+                      check.key !== "no_previewed_runs" &&
+                      check.key !== "no_undistributed_runs" &&
+                      check.key !== "no_pending_receipts" ? (
                         <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">
                           {panelCopy.detailsAction}
                         </Link>
