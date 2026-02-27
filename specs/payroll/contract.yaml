@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.58.0
+version: 1.59.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -29,7 +29,7 @@ scope:
     - KR statutory baseline admin preset-mode share-link validation feedback UX for deterministic applied/ignored query visibility
     - KR statutory baseline admin preset-mode share-link reset/reapply UX for deterministic operator reset and replay control
     - golden fixture regression coverage for statutory KR baseline deduction outputs
-    - KR 4-insurance settlement preview with employee/employer contribution deltas, optional settlement insurance rounding, and prior-withheld reconciliation
+    - KR 4-insurance settlement preview with employee/employer contribution deltas, optional settlement insurance rounding, optional policy preset selection/auto-selection by as-of date, and prior-withheld reconciliation
     - payroll withholding settlement and period-close preview/apply workflow for confirmed payroll runs
     - payslip distribution and employee receipt confirmation workflow for confirmed payroll runs
     - year-end settlement preview and withholding receipt preview/issue workflow for employee annual payroll totals
@@ -97,7 +97,7 @@ api:
       description: Generate payroll preview with deduction and tax components (manual/profile/statutory_kr_baseline mode with optional progressive tax brackets, simple withholding lookup table or preset dataset ID, optional dependent-aware lookup-tier rows (`dependentTaxKrw`) for lookup-table mode, contribution caps, additive tax-credit fields, optional taxable/non-taxable split input validation, optional income split item code/category/amount input arrays, optional income split item preset dataset ID, configurable insurance rounding, and optional monthly-boundary validation).
     - method: POST
       path: /payroll/runs/preview-insurance-settlement
-      description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, optional settlement insurance rounding (`mode` + component units), raw contribution trace, and prior-withheld/prior-paid deltas.
+      description: Generate 4-insurance settlement preview with employee/employer contribution breakdown, optional caps, optional settlement insurance rounding (`mode` + component units), optional policy preset selection (`insurancePolicyPresetId`) or auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`), raw contribution trace, and prior-withheld/prior-paid deltas.
     - method: POST
       path: /payroll/runs/close-period
       description: Preview/apply payroll period close from confirmed runs with withholding/social/net settlement deltas and blocking reasons when unconfirmed runs remain.
@@ -367,6 +367,7 @@ test_plan:
     - statutory_kr_baseline insurance rounding unit/mode formulas
     - statutory_kr_baseline tax-credit and monthly-boundary formulas
     - insurance settlement contribution, cap, and delta formulas
+    - insurance settlement policy preset resolution and as-of auto-selection formulas
     - close-period totals, blocking, and delta formulas
     - payslip distribution target selection and idempotent delivery state updates
     - payslip receipt confirmation ownership/distributed-state guards
@@ -425,9 +426,10 @@ test_plan:
     - admin payroll preview preset share-link feedback panel shows applied query values and ignored invalid query values deterministically
     - admin payroll preview preset share-link reset/reapply actions deterministically clear share-applied values and re-hydrate from current query
     - statutory_kr_baseline validates optional monthly-boundary guard in Asia/Seoul
-    - preview-insurance-settlement returns employee/employer contributions, capped bases, rounding/raw trace, and prior-withheld/prior-paid deltas
+    - preview-insurance-settlement returns employee/employer contributions, capped bases, policy preset trace, rounding/raw trace, and prior-withheld/prior-paid deltas
     - preview-insurance-settlement rejects requests when payroll_kr_insurance_settlement_v1 is disabled
     - preview-insurance-settlement validates monthly-boundary guard in Asia/Seoul when requireMonthlyBoundary=true
+    - preview-insurance-settlement supports deterministic insurance policy preset selection (`insurancePolicyPresetId`) and auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`) with mixed-mode validation guards
     - close-period preview returns run-state summary (confirmed/previewed) and withholding/social/net settlement deltas
     - close-period apply rejects requests when unconfirmed runs remain
     - close-period rejects requests when payroll_close_period_v1 is disabled
@@ -485,6 +487,7 @@ test_plan:
     - statutory_kr_baseline preset share-link reset/reapply UX deterministic replay via WI-0234 e2e
     - insurance settlement deterministic replay via WI-0184 e2e
     - insurance settlement rounding mode/unit deterministic replay via WI-0259 e2e
+    - insurance settlement policy preset auto-selection deterministic replay via WI-0610 e2e
     - close-period deterministic replay via WI-0185 e2e
     - payslip distribution/receipt deterministic replay via WI-0186 e2e
     - year-end settlement and withholding receipt deterministic replay via WI-0187 e2e
@@ -558,7 +561,7 @@ test_plan:
     - preset share-link auto-apply checks for deterministic query parsing, invalid-value ignore, and statutory mode auto-switch behavior
     - preset share-link validation feedback checks for deterministic applied-value and ignored-invalid summary behavior
     - tax-credit and monthly-boundary component checks
-    - insurance settlement employee/employer component, cap, and delta deterministic checks
+    - insurance settlement employee/employer component, cap, policy-preset trace, and delta deterministic checks
     - year-end insurance reconciliation delta/status and monthly breakdown remain deterministic for same run/finalization replay
     - year-end preflight checklist ready/fail/warn and guard-detail outputs remain deterministic for same run/submission/finalization replay
     - close-period withholding/social/net aggregation and settlement-delta checks

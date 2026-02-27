@@ -97,18 +97,21 @@ const statutoryKrBaselineSchema = z.object({
 const statutoryInsuranceSettlementSchema = z.object({
   nonTaxableIncomeKrw: nonNegativeInteger.default(0),
   requireMonthlyBoundary: z.boolean().default(true),
+  insurancePolicyPresetId: z.string().min(1).max(80).optional(),
+  insurancePolicyPresetAuto: z.boolean().default(false),
+  insurancePolicyAsOf: isoDateTime.optional(),
   insuranceRounding: settlementInsuranceRoundingSchema.optional(),
-  nationalPensionEmployeeRate: rate.default(0.045),
-  nationalPensionEmployerRate: rate.default(0.045),
+  nationalPensionEmployeeRate: rate.optional(),
+  nationalPensionEmployerRate: rate.optional(),
   nationalPensionCapKrw: nonNegativeInteger.optional(),
-  healthInsuranceEmployeeRate: rate.default(0.03545),
-  healthInsuranceEmployerRate: rate.default(0.03545),
+  healthInsuranceEmployeeRate: rate.optional(),
+  healthInsuranceEmployerRate: rate.optional(),
   healthInsuranceCapKrw: nonNegativeInteger.optional(),
-  longTermCareRateOnHealth: rate.default(0.1295),
-  employmentInsuranceEmployeeRate: rate.default(0.009),
-  employmentInsuranceEmployerRate: rate.default(0.0115),
+  longTermCareRateOnHealth: rate.optional(),
+  employmentInsuranceEmployeeRate: rate.optional(),
+  employmentInsuranceEmployerRate: rate.optional(),
   employmentInsuranceCapKrw: nonNegativeInteger.optional(),
-  industrialAccidentEmployerRate: rate.default(0.015),
+  industrialAccidentEmployerRate: rate.optional(),
   priorWithheldKrw: nonNegativeInteger.default(0),
   priorEmployerPaidKrw: nonNegativeInteger.default(0)
 });
@@ -380,10 +383,31 @@ export const previewPayrollWithDeductionsSchema = previewPayrollSchema
     }
   });
 
-export const previewPayrollInsuranceSettlementSchema = previewPayrollSchema.extend({
-  employeeId: z.string().min(1),
-  settlement: statutoryInsuranceSettlementSchema.optional()
-});
+export const previewPayrollInsuranceSettlementSchema = previewPayrollSchema
+  .extend({
+    employeeId: z.string().min(1),
+    settlement: statutoryInsuranceSettlementSchema.optional()
+  })
+  .superRefine((value, ctx) => {
+    const policyPresetAuto = value.settlement?.insurancePolicyPresetAuto ?? false;
+    const policyPresetId = value.settlement?.insurancePolicyPresetId;
+    const policyAsOf = value.settlement?.insurancePolicyAsOf;
+
+    if (policyPresetAuto && policyPresetId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["settlement"],
+        message: "insurancePolicyPresetAuto and insurancePolicyPresetId are mutually exclusive"
+      });
+    }
+    if (policyAsOf && !policyPresetAuto) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["settlement", "insurancePolicyAsOf"],
+        message: "insurancePolicyAsOf is supported only when insurancePolicyPresetAuto is true"
+      });
+    }
+  });
 
 const closePayrollPeriodSettlementSchema = z.object({
   priorPaidWithholdingTaxKrw: nonNegativeInteger.default(0),

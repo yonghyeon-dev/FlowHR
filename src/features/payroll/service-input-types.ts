@@ -87,6 +87,9 @@ export type PreviewPayrollInsuranceSettlementInput = PreviewPayrollInput & {
   settlement?: {
     nonTaxableIncomeKrw: number;
     requireMonthlyBoundary: boolean;
+    insurancePolicyPresetId?: string;
+    insurancePolicyPresetAuto?: boolean;
+    insurancePolicyAsOf?: string;
     insuranceRounding?: {
       mode: "round" | "floor" | "ceil";
       nationalPensionUnitKrw: number;
@@ -95,17 +98,17 @@ export type PreviewPayrollInsuranceSettlementInput = PreviewPayrollInput & {
       employmentInsuranceUnitKrw: number;
       industrialAccidentUnitKrw: number;
     };
-    nationalPensionEmployeeRate: number;
-    nationalPensionEmployerRate: number;
+    nationalPensionEmployeeRate?: number;
+    nationalPensionEmployerRate?: number;
     nationalPensionCapKrw?: number;
-    healthInsuranceEmployeeRate: number;
-    healthInsuranceEmployerRate: number;
+    healthInsuranceEmployeeRate?: number;
+    healthInsuranceEmployerRate?: number;
     healthInsuranceCapKrw?: number;
-    longTermCareRateOnHealth: number;
-    employmentInsuranceEmployeeRate: number;
-    employmentInsuranceEmployerRate: number;
+    longTermCareRateOnHealth?: number;
+    employmentInsuranceEmployeeRate?: number;
+    employmentInsuranceEmployerRate?: number;
     employmentInsuranceCapKrw?: number;
-    industrialAccidentEmployerRate: number;
+    industrialAccidentEmployerRate?: number;
     priorWithheldKrw: number;
     priorEmployerPaidKrw: number;
   };
