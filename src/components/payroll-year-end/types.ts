@@ -271,6 +271,7 @@ export type PayrollYearEndPreflightChecklistResponse = {
         | "no_pending_receipts"
         | "non_taxable_within_annual_gross"
         | "no_pending_filing_submissions"
+        | "no_rejected_filing_submissions"
         | "settlement_hash_available";
       label: string;
       status: "pass" | "fail" | "warn";
