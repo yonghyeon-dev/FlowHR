@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { type ContractDocumentStatus, type EmployeeContractsCopy, toDateText } from "@/components/contracts/copy";
 import { normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
@@ -63,6 +63,45 @@ export function EmployeeContractsResponsePanel({
       : null;
   const hasSignatureHash = Boolean(selected?.signatureHash);
   const hasEvidenceHash = Boolean(selected?.signatureEvidenceHash);
+  const responseHistoryEntries = useMemo(() => {
+    if (!selected) {
+      return [];
+    }
+    const entries: { id: string; label: string; occurredAt: string; detail: string | null }[] = [];
+    if (selected.respondedAt && selected.status === "SIGNED") {
+      entries.push({
+        id: `signed-${selected.id}-${selected.respondedAt}`,
+        label: copy.responseHistorySignedLabel,
+        occurredAt: selected.respondedAt,
+        detail: selected.responseComment
+      });
+    }
+    if (selected.respondedAt && selected.status === "REJECTED") {
+      entries.push({
+        id: `rejected-${selected.id}-${selected.respondedAt}`,
+        label: copy.responseHistoryRejectedLabel,
+        occurredAt: selected.respondedAt,
+        detail: selected.responseComment
+      });
+    }
+    if (signatureEvidence) {
+      entries.push({
+        id: `evidence-${selected.id}-${signatureEvidence.generatedAt}-${signatureEvidence.format}`,
+        label: copy.responseHistoryEvidenceLoadedLabel,
+        occurredAt: signatureEvidence.generatedAt,
+        detail: signatureEvidence.format.toUpperCase()
+      });
+    }
+    return entries.sort(
+      (left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime()
+    );
+  }, [
+    copy.responseHistoryEvidenceLoadedLabel,
+    copy.responseHistoryRejectedLabel,
+    copy.responseHistorySignedLabel,
+    selected,
+    signatureEvidence
+  ]);
 
   useEffect(() => {
     setCopyStatusMessage(null);
@@ -126,6 +165,22 @@ export function EmployeeContractsResponsePanel({
           {copyStatusError ? <p className="inline-error">{copyStatusError}</p> : null}
           {copyStatusMessage ? <p className="small">{copyStatusMessage}</p> : null}
           <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
+          <section className="contract-recovery-guide">
+            <h3>{copy.responseHistoryTitle}</h3>
+            {responseHistoryEntries.length === 0 ? (
+              <p className="small muted">{copy.responseHistoryEmpty}</p>
+            ) : (
+              <ul className="simple-list">
+                {responseHistoryEntries.map((entry) => (
+                  <li key={entry.id}>
+                    <span>{entry.label}</span>
+                    <strong>{toDateText(entry.occurredAt, runtimeLocale)}</strong>
+                    {entry.detail ? <p className="small muted">{entry.detail}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <label>
             {copy.signatureInputLabel}
             <input
