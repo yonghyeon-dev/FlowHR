@@ -855,3 +855,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0577 scheduling anomaly report summary/result helper extraction (anomaly-report-helpers.ts extraction for anomaly report generated audit payload and report result builder + scheduling/service.ts anomaly-report payload/result delegation + e2e-wi0577 regression)
 
 - WI-0578 scheduling anomaly lifecycle audit/response helper extraction (anomaly-incident-core-helpers.ts extraction for lifecycle audit payload and lifecycle response builders + scheduling/service.ts lifecycle payload/result delegation + e2e-wi0578 regression)
+- WI-0579 korean residual one-shot and CI guard (contracts/payslips runtime fallback copy corruption fix + template-builder-checklist locale label hardening + e2e-wi0579 CI guard wiring via test:e2e:ko-guard)

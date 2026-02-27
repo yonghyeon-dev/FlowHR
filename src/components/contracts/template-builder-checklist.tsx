@@ -78,7 +78,8 @@ export function ContractTemplateValidationChecklist({
       <ul className="log-list">
         {items.map((item) => (
           <li key={item.id}>
-            <span className={item.passed ? "ok" : "fail"}>{item.passed ? "OK" : "FAIL"}</span> {item.label}
+            <span className={item.passed ? "ok" : "fail"}>{item.passed ? readyLabel : needsFixLabel}</span>{" "}
+            {item.label}
           </li>
         ))}
       </ul>
