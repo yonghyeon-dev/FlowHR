@@ -20,6 +20,8 @@ import {
   buildScheduleAnomalyIncidentReadModelsFromAuditLogs
 } from "@/features/scheduling/incident-audit-projection";
 import {
+  buildScheduleAttendanceAnomalyReport,
+  buildScheduleAttendanceAnomalyReportAuditPayload,
   buildScheduleAttendanceAnomalySet
 } from "@/features/scheduling/anomaly-report-helpers";
 import {
@@ -108,7 +110,10 @@ import {
   buildScheduleAnomalyIncidentReconcileSnapshot,
   selectScheduleAnomalyIncidentReconcileItems
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
-import { resolveScheduleAnomalyIncidentForActor } from "@/features/scheduling/anomaly-incident-read-helpers";
+import {
+  buildScheduleAnomalyIncidentReadAuditPayload,
+  resolveScheduleAnomalyIncidentForActor
+} from "@/features/scheduling/anomaly-incident-read-helpers";
 import {
   buildScheduleAnomalyIncidentEscalationRequestFailedPayload,
   buildScheduleAnomalyIncidentEscalationRequestPayload,
@@ -2723,16 +2728,16 @@ export async function listScheduleAttendanceAnomalies(
     organizationId: resolveTenantScope(actor) ?? undefined,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      periodStart: input.periodStart.toISOString(),
-      periodEnd: input.periodEnd.toISOString(),
-      employeeId: input.employeeId ?? null,
+    payload: buildScheduleAttendanceAnomalyReportAuditPayload({
+      periodStartIso: input.periodStart.toISOString(),
+      periodEndIso: input.periodEnd.toISOString(),
+      employeeId: input.employeeId,
       lateThresholdMinutes,
       evaluatedSchedules: schedules.length,
       anomalies: anomalies.length,
       lateCount,
       noShowCount
-    }
+    })
   });
 
   await emitAnomalyAlertIfEnabled(
@@ -2757,18 +2762,15 @@ export async function listScheduleAttendanceAnomalies(
     noShowCount
   );
 
-  return {
+  return buildScheduleAttendanceAnomalyReport({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
     lateThresholdMinutes,
-    counts: {
-      evaluatedSchedules: schedules.length,
-      anomalies: anomalies.length,
-      late: lateCount,
-      noShow: noShowCount
-    },
-    anomalies
-  };
+    evaluatedSchedules: schedules.length,
+    anomalies,
+    lateCount,
+    noShowCount
+  });
 }
 
 export async function updateScheduleAnomalyIncidentLifecycle(
@@ -3600,12 +3602,7 @@ export async function getScheduleAnomalyIncident(
     organizationId: incident.organizationId,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      incidentId: incident.incidentId,
-      state: incident.state,
-      assigneeId: incident.assigneeId,
-      historyCount: incident.history.length
-    }
+    payload: buildScheduleAnomalyIncidentReadAuditPayload(incident)
   });
 
   return cloneScheduleAnomalyIncidentReadModel(incident);

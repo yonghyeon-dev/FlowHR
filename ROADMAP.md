@@ -849,3 +849,7 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0574 scheduling anomaly reconcile summary/result helper extraction (anomaly-incident-reconcile-helpers.ts extraction for reconcile generated audit payload and reconcile result builder + scheduling/service.ts reconcile payload/result delegation + e2e-wi0574 regression)
 
 - WI-0575 scheduling anomaly cockpit summary/result helper extraction (anomaly-cockpit-report-helpers.ts extraction for cockpit generated audit payload and cockpit report builder + scheduling/service.ts cockpit payload/result delegation + e2e-wi0575 regression)
+
+- WI-0576 scheduling anomaly read audit payload helper extraction (anomaly-incident-read-helpers.ts extraction for incident read audit payload builder + scheduling/service.ts read-audit payload delegation + e2e-wi0576 regression)
+
+- WI-0577 scheduling anomaly report summary/result helper extraction (anomaly-report-helpers.ts extraction for anomaly report generated audit payload and report result builder + scheduling/service.ts anomaly-report payload/result delegation + e2e-wi0577 regression)
