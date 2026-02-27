@@ -8,6 +8,10 @@ import {
 } from "@/components/contracts/copy";
 import { resolveEmployeeContractsUrgencyBadge } from "@/components/contracts/employee-inbox-journey-helpers";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
+import {
+  resolveContractApprovalStatusLabel,
+  resolveContractDocumentStatusLabel
+} from "@/components/contracts/status-label-helpers";
 import { type EmployeeContractDocument as ContractDocument } from "@/components/contracts/types";
 
 type EmployeeContractsInboxListCopy = Pick<
@@ -34,6 +38,9 @@ type EmployeeContractsInboxListProps = {
   onSelectDocument: (documentId: string) => void;
 };
 
+const unknownDocumentStatusLabelKo = "알 수 없는 상태";
+const unknownApprovalStatusLabelKo = "알 수 없는 승인 상태";
+
 function resolveDocumentTone(status: ContractDocumentStatus) {
   if (status === "SIGNED") return "ready";
   if (status === "REJECTED") return "risk";
@@ -45,7 +52,8 @@ function resolveDocumentStatusLabel(
   labels: Record<ContractDocumentStatus, string>,
   isKoLocale: boolean
 ) {
-  return labels[status] ?? (isKoLocale ? "알 수 없는 상태" : status);
+  const resolved = resolveContractDocumentStatusLabel(status, labels, isKoLocale);
+  return isKoLocale && resolved === status ? unknownDocumentStatusLabelKo : resolved;
 }
 
 function resolveApprovalStatusLabel(
@@ -53,7 +61,8 @@ function resolveApprovalStatusLabel(
   labels: Record<ContractApprovalStatus, string>,
   isKoLocale: boolean
 ) {
-  return labels[status] ?? (isKoLocale ? "알 수 없는 승인 상태" : status);
+  const resolved = resolveContractApprovalStatusLabel(status, labels, isKoLocale);
+  return isKoLocale && resolved === status ? unknownApprovalStatusLabelKo : resolved;
 }
 
 export function EmployeeContractsInboxList({

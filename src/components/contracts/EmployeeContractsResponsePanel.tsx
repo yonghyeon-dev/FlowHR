@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { type ContractDocumentStatus, type EmployeeContractsCopy, toDateText } from "@/components/contracts/copy";
 import { normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
+import { resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument } from "@/components/contracts/types";
 type ResponseHistoryEntryType = "SIGNED" | "REJECTED" | "EVIDENCE";
 type ResponseHistoryFilter = "ALL" | ResponseHistoryEntryType;
@@ -155,7 +156,6 @@ export function EmployeeContractsResponsePanel({
       setCopyStatusError(copy.copyHashClipboardError);
     }
   }
-
   return (
     <article className="panel panel-contract-template-detail">
       <h2>{copy.responseTitle}</h2>
@@ -167,7 +167,7 @@ export function EmployeeContractsResponsePanel({
         <>
           <ul className="contract-template-detail-list" aria-label={copy.detailAria}>
             <li><span>{copy.idLabel}</span><strong>{selected.id}</strong></li>
-            <li><span>{copy.statusLabel}</span><strong>{documentStatusLabels[selected.status]}</strong></li>
+            <li><span>{copy.statusLabel}</span><strong>{resolveContractDocumentStatusLabel(selected.status, documentStatusLabels, isKoLocale)}</strong></li>
             <li><span>{copy.hashLabel}</span><strong>{selected.documentHash.slice(0, 16)}...</strong></li>
             <li><span>{copy.updatedLabel}</span><strong>{toDateText(selected.updatedAt, runtimeLocale)}</strong></li>
             <li><span>{copy.respondedLabel}</span><strong>{toDateText(selected.respondedAt, runtimeLocale)}</strong></li>

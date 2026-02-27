@@ -17,6 +17,7 @@ import { useAdminContractsDocumentFilters } from "@/components/contracts/useAdmi
 import { setContractsRuntimeLocale } from "@/components/contracts/http";
 import { resolveAdminContractDocumentNextStep, resolveAllowedContractDocumentActions, type ContractDocumentNextStepKey } from "@/components/contracts/document-action-policy";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
+import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -223,12 +224,12 @@ export default function AdminContractsWorkspace() {
                 >
                   <div className="contract-signature-readiness-head">
                     <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
-                    <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
+                    <span className="queue-history-chip">{resolveContractDocumentStatusLabel(document.status, documentStatusLabels, isKoLocale)}</span>
                   </div>
                   <p>
                     {document.id} | {copy.employeePrefix}{" "}
                     {formatEmployeeIdForLocaleDisplay(document.employeeId, locale)} | {copy.approvalPrefix}{" "}
-                    {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
+                    {resolveContractApprovalStatusLabel(document.approvalStatus, approvalStatusLabels, isKoLocale)} | {copy.expiresPrefix}{" "}
                     {toDateText(document.expiresAt, runtimeLocale)}
                   </p>
                   <p className="small muted">{copy.nextStepLabel}: {nextStepLabelByKey[nextStep]}</p>

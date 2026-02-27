@@ -2,11 +2,8 @@ import type { Actor } from "@/lib/actor";
 import { requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import type {
-  CreateWorkScheduleTemplateInput,
-  CreateWorkScheduleInput,
   DataAccess,
   EmployeeEntity,
-  UpdateWorkScheduleInput,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
 } from "@/features/shared/data-access";
@@ -30,22 +27,9 @@ import {
   buildScheduleAttendanceAnomalyCockpitReport
 } from "@/features/scheduling/anomaly-cockpit-report-helpers";
 import type {
-  ScheduleAnomalyCockpitQueueEntry,
-  ScheduleAttendanceAnomaly,
   ScheduleAttendanceAnomalyCockpitReport,
   ScheduleAttendanceAnomalyReport
 } from "@/features/scheduling/anomaly-report-helpers";
-import {
-  buildAnomalyAlertPayload,
-  buildAnomalyEscalationPayload,
-  buildAnomalyTicketRequestPayload,
-  isSchedulingAnomalyAlertsEnabled,
-  isSchedulingAnomalyEscalationEnabled,
-  isSchedulingAnomalyTicketAutomationEnabled,
-  parseAnomalySeverityFromEnv,
-  parsePositiveIntegerRangeFromEnv,
-  type AnomalyEscalationSeverity
-} from "@/features/scheduling/anomaly-automation-helpers";
 import {
   buildScheduleAnomalyIncidentAutoActionResult,
   buildScheduleAnomalyIncidentAutoActionSummaryPayload,
@@ -117,6 +101,11 @@ import {
   resolveScheduleAnomalyIncidentForActor
 } from "@/features/scheduling/anomaly-incident-read-helpers";
 import {
+  emitAnomalyAlertIfEnabled,
+  emitAnomalyCockpitTicketRequestsIfEnabled,
+  emitAnomalyEscalationIfEnabled
+} from "@/features/scheduling/anomaly-side-effect-helpers";
+import {
   buildScheduleAnomalyIncidentEscalationRequestFailedPayload,
   buildScheduleAnomalyIncidentEscalationRequestPayload,
   buildScheduleAnomalyIncidentEscalationResult,
@@ -150,6 +139,16 @@ import {
   normalizeAnomalyIncidentAutoAssignNote,
   toScheduleAnomalyIncidentUpsertInput
 } from "@/features/scheduling/incident-read-model-helpers";
+import {
+  ensureValidPeriod,
+  ensureValidTemplateMinutes,
+  normalizeLateThresholdMinutes,
+  normalizeTopN,
+  normalizeWeekdays,
+  toCreateInput,
+  toTemplateCreateInput,
+  toUpdateInput
+} from "@/features/scheduling/schedule-input-normalization-helpers";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
@@ -816,284 +815,6 @@ type ServiceContext = {
 
 function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
-}
-
-function ensureValidPeriod(periodStart: Date, periodEnd: Date) {
-  if (periodEnd <= periodStart) {
-    throw new ServiceError(400, "to must be after from");
-  }
-}
-
-function normalizeLateThresholdMinutes(value: number | undefined) {
-  const normalized = value ?? 10;
-  if (!Number.isInteger(normalized) || normalized < 0 || normalized > 240) {
-    throw new ServiceError(400, "lateThresholdMinutes must be an integer in range 0..240");
-  }
-  return normalized;
-}
-
-function normalizeTopN(value: number | undefined) {
-  const normalized = value ?? 20;
-  if (!Number.isInteger(normalized) || normalized < 1 || normalized > 200) {
-    throw new ServiceError(400, "topN must be an integer in range 1..200");
-  }
-  return normalized;
-}
-
-async function emitAnomalyAlertIfEnabled(
-  context: ServiceContext,
-  actor: Actor,
-  input: ListScheduleAnomaliesInput,
-  lateThresholdMinutes: number,
-  evaluatedSchedules: number,
-  anomalies: ScheduleAttendanceAnomaly[],
-  lateCount: number,
-  noShowCount: number
-) {
-  if (!isSchedulingAnomalyAlertsEnabled() || anomalies.length === 0) {
-    return;
-  }
-
-  const payload = buildAnomalyAlertPayload(
-    input,
-    lateThresholdMinutes,
-    evaluatedSchedules,
-    anomalies,
-    lateCount,
-    noShowCount
-  );
-
-  try {
-    await getEventPublisher(context).publish({
-      name: "scheduling.anomaly.detected.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "WorkSchedule",
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-
-    await context.dataAccess.audit.append({
-      action: "scheduling.anomaly.alert.triggered",
-      entityType: "WorkSchedule",
-      organizationId: resolveTenantScope(actor) ?? undefined,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-  } catch (error) {
-    try {
-      await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.alert.failed",
-        entityType: "WorkSchedule",
-        organizationId: resolveTenantScope(actor) ?? undefined,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          ...payload,
-          error: error instanceof Error ? error.message : "unknown error"
-        }
-      });
-    } catch {
-      // Non-blocking path: do not fail anomaly report API on alert side-effects.
-    }
-  }
-}
-
-async function emitAnomalyEscalationIfEnabled(
-  context: ServiceContext,
-  actor: Actor,
-  input: ListScheduleAnomaliesInput,
-  lateThresholdMinutes: number,
-  evaluatedSchedules: number,
-  anomalies: ScheduleAttendanceAnomaly[],
-  lateCount: number,
-  noShowCount: number
-) {
-  if (!isSchedulingAnomalyEscalationEnabled() || anomalies.length === 0) {
-    return;
-  }
-
-  const payload = buildAnomalyEscalationPayload(
-    input,
-    lateThresholdMinutes,
-    evaluatedSchedules,
-    anomalies,
-    lateCount,
-    noShowCount
-  );
-
-  try {
-    await getEventPublisher(context).publish({
-      name: "scheduling.anomaly.escalated.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "WorkSchedule",
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-
-    await context.dataAccess.audit.append({
-      action: "scheduling.anomaly.escalation.triggered",
-      entityType: "WorkSchedule",
-      organizationId: resolveTenantScope(actor) ?? undefined,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-  } catch (error) {
-    try {
-      await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.escalation.failed",
-        entityType: "WorkSchedule",
-        organizationId: resolveTenantScope(actor) ?? undefined,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          ...payload,
-          error: error instanceof Error ? error.message : "unknown error"
-        }
-      });
-    } catch {
-      // Non-blocking path: do not fail anomaly report API on escalation side-effects.
-    }
-  }
-}
-
-async function emitAnomalyCockpitTicketRequestsIfEnabled(
-  context: ServiceContext,
-  actor: Actor,
-  input: ListScheduleAnomalyCockpitInput,
-  lateThresholdMinutes: number,
-  topN: number,
-  queue: ScheduleAnomalyCockpitQueueEntry[]
-) {
-  if (!isSchedulingAnomalyTicketAutomationEnabled() || queue.length === 0) {
-    return;
-  }
-
-  const contextName = "scheduling anomaly ticket automation";
-  const tenantScope = resolveTenantScope(actor) ?? undefined;
-  try {
-    const minSeverity = parseAnomalySeverityFromEnv(
-      process.env.FLOWHR_SCHEDULING_ANOMALY_TICKET_MIN_SEVERITY ??
-        process.env.SCHEDULING_ANOMALY_TICKET_MIN_SEVERITY,
-      "CRITICAL",
-      "FLOWHR_SCHEDULING_ANOMALY_TICKET_MIN_SEVERITY",
-      contextName
-    );
-    const maxPerRun = parsePositiveIntegerRangeFromEnv(
-      process.env.FLOWHR_SCHEDULING_ANOMALY_TICKET_MAX_PER_RUN ??
-        process.env.SCHEDULING_ANOMALY_TICKET_MAX_PER_RUN,
-      20,
-      1,
-      200,
-      "FLOWHR_SCHEDULING_ANOMALY_TICKET_MAX_PER_RUN",
-      contextName
-    );
-    const payload = buildAnomalyTicketRequestPayload(
-      input,
-      lateThresholdMinutes,
-      topN,
-      queue,
-      minSeverity,
-      maxPerRun
-    );
-    if (payload.requestedCount === 0) {
-      return;
-    }
-
-    await getEventPublisher(context).publish({
-      name: "scheduling.anomaly.ticket.requested.v1",
-      occurredAt: new Date().toISOString(),
-      entityType: "WorkSchedule",
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-
-    await context.dataAccess.audit.append({
-      action: "scheduling.anomaly.ticket.requested",
-      entityType: "WorkSchedule",
-      organizationId: tenantScope,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload
-    });
-  } catch (error) {
-    try {
-      await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.ticket.request.failed",
-        entityType: "WorkSchedule",
-        organizationId: tenantScope,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          periodStart: input.periodStart.toISOString(),
-          periodEnd: input.periodEnd.toISOString(),
-          lateThresholdMinutes,
-          topN,
-          error: error instanceof Error ? error.message : "unknown error"
-        }
-      });
-    } catch {
-      // Non-blocking path: do not fail anomaly cockpit API on ticket side-effects.
-    }
-  }
-}
-
-function toCreateInput(input: CreateScheduleInput): CreateWorkScheduleInput {
-  return {
-    employeeId: input.employeeId,
-    startAt: input.startAt,
-    endAt: input.endAt,
-    breakMinutes: input.breakMinutes,
-    isHoliday: input.isHoliday,
-    notes: input.notes
-  };
-}
-
-function toUpdateInput(input: UpdateScheduleInput): UpdateWorkScheduleInput {
-  return {
-    startAt: input.startAt,
-    endAt: input.endAt,
-    breakMinutes: input.breakMinutes,
-    isHoliday: input.isHoliday,
-    notes: input.notes
-  };
-}
-
-function toTemplateCreateInput(input: CreateTemplateInput, organizationId: string): CreateWorkScheduleTemplateInput {
-  return {
-    organizationId,
-    name: input.name,
-    startMinute: input.startMinute,
-    endMinute: input.endMinute,
-    breakMinutes: input.breakMinutes,
-    isHoliday: input.isHoliday,
-    weekdays: [...input.weekdays],
-    notes: input.notes
-  };
-}
-
-function ensureValidTemplateMinutes(startMinute: number, endMinute: number) {
-  if (startMinute < 0 || startMinute >= 1440 || endMinute < 0 || endMinute >= 1440) {
-    throw new ServiceError(400, "template minute fields must be in range 0..1439");
-  }
-  if (startMinute === endMinute) {
-    throw new ServiceError(400, "startMinute and endMinute cannot be equal");
-  }
-}
-
-function normalizeWeekdays(weekdays: number[]) {
-  const unique = Array.from(new Set(weekdays)).sort((a, b) => a - b);
-  if (unique.length === 0) {
-    throw new ServiceError(400, "weekdays must include at least one day");
-  }
-  if (unique.some((day) => day < 1 || day > 7)) {
-    throw new ServiceError(400, "weekdays must be in range 1..7");
-  }
-  return unique;
 }
 
 function requireTemplateTenantScope(context: ServiceContext) {
@@ -2742,27 +2463,29 @@ export async function listScheduleAttendanceAnomalies(
     })
   });
 
-  await emitAnomalyAlertIfEnabled(
-    context,
-    actor,
-    input,
+  const eventPublisher = getEventPublisher(context);
+  const sideEffectContext = {
+    actor: { id: actor.id, role: actor.role },
+    tenantScope: resolveTenantScope(actor) ?? undefined,
+    dataAccess: context.dataAccess,
+    publish: eventPublisher.publish.bind(eventPublisher)
+  };
+  await emitAnomalyAlertIfEnabled(sideEffectContext, {
+    window: input,
     lateThresholdMinutes,
-    schedules.length,
+    evaluatedSchedules: schedules.length,
     anomalies,
     lateCount,
     noShowCount
-  );
-
-  await emitAnomalyEscalationIfEnabled(
-    context,
-    actor,
-    input,
+  });
+  await emitAnomalyEscalationIfEnabled(sideEffectContext, {
+    window: input,
     lateThresholdMinutes,
-    schedules.length,
+    evaluatedSchedules: schedules.length,
     anomalies,
     lateCount,
     noShowCount
-  );
+  });
 
   return buildScheduleAttendanceAnomalyReport({
     periodStart: input.periodStart,
@@ -3664,13 +3387,20 @@ export async function listScheduleAttendanceAnomalyCockpit(
   });
 
   if (!input.suppressAutomation) {
+    const eventPublisher = getEventPublisher(context);
     await emitAnomalyCockpitTicketRequestsIfEnabled(
-      context,
-      actor,
-      input,
-      lateThresholdMinutes,
-      topN,
-      queue
+      {
+        actor: { id: actor.id, role: actor.role },
+        tenantScope: tenantScope ?? undefined,
+        dataAccess: context.dataAccess,
+        publish: eventPublisher.publish.bind(eventPublisher)
+      },
+      {
+        window: input,
+        lateThresholdMinutes,
+        topN,
+        queue
+      }
     );
   }
 
