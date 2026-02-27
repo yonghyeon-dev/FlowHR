@@ -40,7 +40,8 @@ const preflightPanelCopyByLocale = {
     pasteHashHint:
       "\ubcf5\uc0ac\ud55c \ud574\uc2dc\ub97c \uc0c1\ub2e8 Expected Settlement Hash \ud544\ub4dc\uc5d0 \ubd99\uc5ec\ub123\uc5b4 \uac80\uc99d \uac00\ub4dc\ub85c \ud65c\uc6a9\ud558\uc138\uc694.",
     openPayrollCloseAction: "\uae09\uc5ec \ub9c8\uac10 \ud654\uba74 \uc5f4\uae30",
-    openPayslipDeliveryAction: "\uba85\uc138\uc11c \ubc30\ud3ec \ud654\uba74 \uc5f4\uae30"
+    openPayslipDeliveryAction: "\uba85\uc138\uc11c \ubc30\ud3ec \ud654\uba74 \uc5f4\uae30",
+    refreshSettlementHashAction: "\uc815\uc0b0 \ud574\uc2dc \uac31\uc2e0"
   },
   en: {
     title: "Year-End Preflight Blockers",
@@ -60,7 +61,8 @@ const preflightPanelCopyByLocale = {
     copyHashFailedStatus: "Failed to copy settlement hash.",
     pasteHashHint: "Paste this hash into Expected Settlement Hash fields to enforce export/ack guard.",
     openPayrollCloseAction: "Open payroll close",
-    openPayslipDeliveryAction: "Open payslip delivery"
+    openPayslipDeliveryAction: "Open payslip delivery",
+    refreshSettlementHashAction: "Refresh settlement hash"
   }
 } as const;
 
@@ -205,6 +207,17 @@ export default function FilingPreflightBlockerPanel(props: FilingPreflightBlocke
                 {warningChecks.map((check) => (
                   <li key={check.key}>
                     <span className="small">{panelCopy.warnLabel}</span> {check.label} / {check.detail}
+                    {check.key === "settlement_hash_available" ? (
+                      <div className="panel-actions">
+                        <button
+                          className="btn btn-secondary"
+                          onClick={onPreviewFinalization}
+                          disabled={disabled}
+                        >
+                          {panelCopy.refreshSettlementHashAction}
+                        </button>
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
