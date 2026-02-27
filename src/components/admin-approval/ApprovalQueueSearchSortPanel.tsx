@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 
 import { useI18n } from "@/lib/i18n/provider";
@@ -54,7 +55,12 @@ const searchSortCopyByLocale = {
     severity: "위험도",
     selected: "선택됨",
     focusQueue: "큐 포커스",
-    openQueue: "큐 열기"
+    openQueue: "큐 열기",
+    summaryVisible: "표시",
+    summaryCritical: "긴급",
+    summaryWatch: "주의",
+    summarySelected: "선택",
+    focusCriticalQueue: "긴급 큐 포커스"
   },
   en: {
     title: "Approval Queue Search/Sort",
@@ -84,7 +90,12 @@ const searchSortCopyByLocale = {
     severity: "severity",
     selected: "selected",
     focusQueue: "focus queue",
-    openQueue: "open queue"
+    openQueue: "open queue",
+    summaryVisible: "visible",
+    summaryCritical: "critical",
+    summaryWatch: "watch",
+    summarySelected: "selected",
+    focusCriticalQueue: "focus critical queue"
   }
 } as const;
 
@@ -103,6 +114,37 @@ export function ApprovalQueueSearchSortPanel({
 }: ApprovalQueueSearchSortPanelProps) {
   const { locale } = useI18n();
   const copy = searchSortCopyByLocale[locale];
+  const summary = useMemo(() => {
+    let critical = 0;
+    let watch = 0;
+    let selected = 0;
+    for (const row of filteredQueueSearchSortRows) {
+      if (row.severity === "critical") {
+        critical += 1;
+      } else if (row.severity === "watch") {
+        watch += 1;
+      }
+      if (row.selected) {
+        selected += 1;
+      }
+    }
+    return { visible: filteredQueueSearchSortRows.length, critical, watch, selected };
+  }, [filteredQueueSearchSortRows]);
+  const focusCriticalQueue = useMemo(() => {
+    const mutable = { attendance: 0, leave: 0, payroll: 0 };
+    for (const row of filteredQueueSearchSortRows) {
+      if (row.severity === "critical") {
+        mutable[row.queue] += 1;
+      }
+    }
+    const entries: Array<[QueueFocus, number]> = [
+      ["attendance", mutable.attendance],
+      ["leave", mutable.leave],
+      ["payroll", mutable.payroll]
+    ];
+    const top = entries.sort((left, right) => right[1] - left[1])[0];
+    return top && top[1] > 0 ? top[0] : null;
+  }, [filteredQueueSearchSortRows]);
 
   return (
     <section className="queue-search-sort-panel" id="approval-search-sort">
@@ -156,8 +198,17 @@ export function ApprovalQueueSearchSortPanel({
           <button type="button" className="btn btn-secondary btn-small" onClick={onResetSearchSortPreset}>
             {copy.reset}
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-small"
+            onClick={() => (focusCriticalQueue ? onFocusQueue(focusCriticalQueue) : undefined)}
+            disabled={!focusCriticalQueue}
+          >
+            {copy.focusCriticalQueue}
+          </button>
         </div>
       </div>
+      <p className="small muted">{copy.summaryVisible} {summary.visible} / {copy.summaryCritical} {summary.critical} / {copy.summaryWatch} {summary.watch} / {copy.summarySelected} {summary.selected}</p>
       {filteredQueueSearchSortRows.length === 0 ? (
         <p className="small muted">{copy.empty}</p>
       ) : (
