@@ -61,6 +61,13 @@ export function buildAdminKpiTrendRows(
       percent: true
     },
     {
+      key: "contractDecisionQueueCount",
+      label: metrics.contractDecisionQueueCount,
+      current: currentRangeKpi.summary.contractDecisionQueueCount,
+      previous: previousRangeKpi.summary.contractDecisionQueueCount,
+      percent: false
+    },
+    {
       key: "contractSlaOverdueCount",
       label: metrics.contractSlaOverdueCount,
       current: currentRangeKpi.summary.contractSlaOverdueCount,
@@ -85,6 +92,7 @@ export function buildAdminKpiCsvPayload(input: BuildCsvPayloadInput): CsvPayload
     toCsvRow(["snapshot", "attendanceApprovalRate", summary.attendanceApprovalRate]),
     toCsvRow(["snapshot", "leaveApprovedDays", summary.leaveApprovedDays]),
     toCsvRow(["snapshot", "payrollConfirmedRate", summary.payrollConfirmedRate]),
+    toCsvRow(["snapshot", "contractDecisionQueueCount", summary.contractDecisionQueueCount]),
     toCsvRow(["snapshot", "contractSlaOverdueCount", summary.contractSlaOverdueCount])
   ];
   const prefix = analyticsMode ? "flowhr-admin-analytics" : "flowhr-admin-kpi";

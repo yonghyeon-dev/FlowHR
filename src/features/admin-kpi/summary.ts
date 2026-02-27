@@ -6,6 +6,7 @@ export type AdminKpiSummaryInput = {
   leaveApprovedDays: number;
   payrollConfirmedCount: number;
   payrollTotalCount: number;
+  contractDecisionQueueCount: number;
   contractSlaOverdueCount: number;
 };
 
@@ -15,6 +16,7 @@ export type AdminKpiSummary = {
   attendanceApprovalRate: number;
   leaveApprovedDays: number;
   payrollConfirmedRate: number;
+  contractDecisionQueueCount: number;
   contractSlaOverdueCount: number;
 };
 
@@ -32,6 +34,7 @@ export function buildAdminKpiSummary(input: AdminKpiSummaryInput): AdminKpiSumma
     attendanceApprovalRate: safePercent(input.attendanceApprovedCount, input.attendanceTotalCount),
     leaveApprovedDays: Number.isFinite(input.leaveApprovedDays) ? Math.max(0, input.leaveApprovedDays) : 0,
     payrollConfirmedRate: safePercent(input.payrollConfirmedCount, input.payrollTotalCount),
+    contractDecisionQueueCount: Math.max(0, Math.trunc(input.contractDecisionQueueCount)),
     contractSlaOverdueCount: Math.max(0, Math.trunc(input.contractSlaOverdueCount))
   };
 }

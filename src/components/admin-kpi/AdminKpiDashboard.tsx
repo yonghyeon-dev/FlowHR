@@ -1,36 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AdminKpiAnalyticsControls,
-  AdminKpiCards,
-  AdminKpiContextPanel,
-  AdminKpiLogsPanel,
-  AdminKpiTrendPanel,
-  type AdminKpiFocusMetric,
-  type ApiLog,
-  type RangeKpi
-} from "@/components/admin-kpi/AdminKpiSections";
+import { AdminKpiAnalyticsControls, AdminKpiCards, AdminKpiContextPanel, AdminKpiLogsPanel, AdminKpiTrendPanel, type AdminKpiFocusMetric, type ApiLog, type RangeKpi } from "@/components/admin-kpi/AdminKpiSections";
 import { kpiCopyByLocale } from "@/components/admin-kpi/copy";
-import {
-  buildAdminKpiCsvPayload,
-  buildAdminKpiTrendRows,
-  safeParseBody,
-  triggerCsvDownload
-} from "@/components/admin-kpi/dashboard-utils";
-import {
-  buildQuery,
-  getLast30DaysRangeLocal,
-  getThisMonthRangeLocal,
-  isTruthyFlag,
-  parseArray,
-  toIso
-} from "@/components/admin-kpi/helpers";
-import {
-  buildAdminKpiSummary,
-  computePreviousPeriodRange,
-  computeStalledHours
-} from "@/features/admin-kpi/summary";
+import { buildAdminKpiCsvPayload, buildAdminKpiTrendRows, safeParseBody, triggerCsvDownload } from "@/components/admin-kpi/dashboard-utils";
+import { buildQuery, getLast30DaysRangeLocal, getThisMonthRangeLocal, isTruthyFlag, parseArray, toIso } from "@/components/admin-kpi/helpers";
+import { buildAdminKpiSummary, computePreviousPeriodRange, computeStalledHours } from "@/features/admin-kpi/summary";
+import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -38,8 +14,9 @@ type ApprovalExecutionLite = { updatedAt: string };
 type AttendanceAggregateLite = { counts: { total: number; approved: number } };
 type LeaveRequestLite = { days: number };
 type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
-type ContractDocumentLite = { status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED"; expiresAt: string | null };
+type ContractDocumentLite = { status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED"; approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED"; requiresApproval: boolean; expiresAt: string | null };
 const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>(["DRAFT", "APPROVAL_REQUESTED", "SENT"]);
+const contractDecisionQueueSteps = new Set(["REQUEST_APPROVAL", "APPROVE_OR_REJECT", "SEND_DOCUMENT"]);
 type AdminKpiDashboardProps = {
   analyticsMode?: boolean;
 };
@@ -149,6 +126,15 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         (execution) => computeStalledHours(execution.updatedAt, asOfDate) >= 24
       ).length;
       const asOfMillis = asOfDate.getTime();
+      const contractDecisionQueueCount = contractDocuments.filter((document) =>
+        contractDecisionQueueSteps.has(
+          resolveAdminContractDocumentNextStep({
+            status: document.status,
+            approvalStatus: document.approvalStatus ?? "NONE",
+            requiresApproval: Boolean(document.requiresApproval)
+          })
+        )
+      ).length;
       const contractSlaOverdueCount = contractDocuments.filter((document) => {
         if (!contractSlaTrackedStatuses.has(document.status)) {
           return false;
@@ -165,6 +151,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
           leaveApprovedDays,
           payrollConfirmedCount: payrollConfirmed,
           payrollTotalCount: payrollTotal,
+          contractDecisionQueueCount,
           contractSlaOverdueCount
         }),
         detail: {

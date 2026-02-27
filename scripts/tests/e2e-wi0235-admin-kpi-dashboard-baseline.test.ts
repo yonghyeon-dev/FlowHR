@@ -59,6 +59,7 @@ async function run() {
     leaveApprovedDays: 3.5,
     payrollConfirmedCount: 9,
     payrollTotalCount: 10,
+    contractDecisionQueueCount: 5,
     contractSlaOverdueCount: 4
   });
 
@@ -67,6 +68,7 @@ async function run() {
   assert.equal(summary.attendanceApprovalRate, 90);
   assert.equal(summary.leaveApprovedDays, 3.5);
   assert.equal(summary.payrollConfirmedRate, 90);
+  assert.equal(summary.contractDecisionQueueCount, 5);
   assert.equal(summary.contractSlaOverdueCount, 4);
   assert.equal(computeKpiDelta(100, 96), 4);
 
