@@ -38,6 +38,7 @@ export type AdminKpiFocusMetric =
   | "attendanceApprovalRate"
   | "leaveApprovedDays"
   | "payrollConfirmedRate"
+  | "contractDecisionQueueCount"
   | "contractSlaOverdueCount";
 type AdminKpiDrilldownMetric = Exclude<AdminKpiFocusMetric, "all">;
 
@@ -69,7 +70,7 @@ type AnalyticsControlsProps = {
   onExportCsv: () => void;
 };
 
-const analyticsDrilldownMetrics: AdminKpiDrilldownMetric[] = ["pendingApprovals", "stalledApprovals", "attendanceApprovalRate", "leaveApprovedDays", "payrollConfirmedRate", "contractSlaOverdueCount"];
+const analyticsDrilldownMetrics: AdminKpiDrilldownMetric[] = ["pendingApprovals", "stalledApprovals", "attendanceApprovalRate", "leaveApprovedDays", "payrollConfirmedRate", "contractDecisionQueueCount", "contractSlaOverdueCount"];
 
 export function AdminKpiAnalyticsControls({
   copy,
@@ -94,6 +95,7 @@ export function AdminKpiAnalyticsControls({
             <option value="attendanceApprovalRate">{copy.metrics.attendanceApprovalRate}</option>
             <option value="leaveApprovedDays">{copy.metrics.leaveApprovedDays}</option>
             <option value="payrollConfirmedRate">{copy.metrics.payrollConfirmedRate}</option>
+            <option value="contractDecisionQueueCount">{copy.metrics.contractDecisionQueueCount}</option>
             <option value="contractSlaOverdueCount">{copy.metrics.contractSlaOverdueCount}</option>
           </select>
         </label>
@@ -216,6 +218,10 @@ export function AdminKpiCards({ copy, kpi }: CardsProps) {
         <small>
           {kpi.detail.payrollConfirmed} / {kpi.detail.payrollTotal} {copy.details.payrollConfirmedRuns}
         </small>
+      </article>
+      <article className="kpi-card">
+        <p>{copy.cards.contractDecisionQueueCount}</p>
+        <strong>{kpi.summary.contractDecisionQueueCount}</strong>
       </article>
       <article className="kpi-card">
         <p>{copy.cards.contractSlaOverdueCount}</p>

@@ -31,6 +31,7 @@ export type KpiCopy = {
     attendanceApprovalRate: string;
     leaveApprovedDays: string;
     payrollConfirmedRate: string;
+    contractDecisionQueueCount: string;
     contractSlaOverdueCount: string;
   };
   details: {
@@ -55,6 +56,7 @@ export type KpiCopy = {
     attendanceApprovalRate: string;
     leaveApprovedDays: string;
     payrollConfirmedRate: string;
+    contractDecisionQueueCount: string;
     contractSlaOverdueCount: string;
   };
 };
@@ -92,6 +94,7 @@ const defaultCopy: KpiCopy = {
     attendanceApprovalRate: "Attendance approval rate",
     leaveApprovedDays: "Approved leave days",
     payrollConfirmedRate: "Payroll confirmed rate",
+    contractDecisionQueueCount: "Contract decision queue",
     contractSlaOverdueCount: "Contract SLA overdue"
   },
   details: {
@@ -116,6 +119,7 @@ const defaultCopy: KpiCopy = {
     attendanceApprovalRate: "Attendance approval rate",
     leaveApprovedDays: "Approved leave days",
     payrollConfirmedRate: "Payroll confirmed rate",
+    contractDecisionQueueCount: "Contract decision queue",
     contractSlaOverdueCount: "Contract SLA overdue"
   }
 };
@@ -153,6 +157,7 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       attendanceApprovalRate: "근태 승인률",
       leaveApprovedDays: "휴가 승인 일수",
       payrollConfirmedRate: "급여 확정률",
+      contractDecisionQueueCount: "계약 의사결정 큐",
       contractSlaOverdueCount: "계약 SLA 기한 초과"
     },
     details: {
@@ -177,6 +182,7 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       attendanceApprovalRate: "근태 승인률",
       leaveApprovedDays: "휴가 승인 일수",
       payrollConfirmedRate: "급여 확정률",
+      contractDecisionQueueCount: "계약 의사결정 큐",
       contractSlaOverdueCount: "계약 SLA 기한 초과"
     }
   },
