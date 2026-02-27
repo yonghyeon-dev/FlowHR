@@ -11,6 +11,7 @@ type EmployeeContractsResponsePanelProps = {
   documentStatusLabels: Record<ContractDocumentStatus, string>;
   runtimeLocale: string;
   isKoLocale: boolean;
+  nextActionHint: string;
   signatureInput: string;
   comment: string;
   onSignatureInputChange: (value: string) => void;
@@ -31,6 +32,7 @@ export function EmployeeContractsResponsePanel({
   documentStatusLabels,
   runtimeLocale,
   isKoLocale,
+  nextActionHint,
   signatureInput,
   comment,
   onSignatureInputChange,
@@ -50,6 +52,8 @@ export function EmployeeContractsResponsePanel({
   return (
     <article className="panel panel-contract-template-detail">
       <h2>{copy.responseTitle}</h2>
+      <p className="small muted">{copy.nextActionTitle}</p>
+      <p className="small">{nextActionHint}</p>
       {!selected ? (
         <p className="small muted">{copy.noDocumentMessage}</p>
       ) : (

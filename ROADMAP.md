@@ -856,3 +856,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 
 - WI-0578 scheduling anomaly lifecycle audit/response helper extraction (anomaly-incident-core-helpers.ts extraction for lifecycle audit payload and lifecycle response builders + scheduling/service.ts lifecycle payload/result delegation + e2e-wi0578 regression)
 - WI-0579 korean residual one-shot and CI guard (contracts/payslips runtime fallback copy corruption fix + template-builder-checklist locale label hardening + e2e-wi0579 CI guard wiring via test:e2e:ko-guard)
+- WI-0580 employee contract inbox journey refinement (next-action locale guidance + due-soon/overdue D-day helper + employee inbox urgency badges and response-panel next-step hint + e2e-wi0580 regression)

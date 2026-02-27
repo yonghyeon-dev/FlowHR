@@ -3,38 +3,32 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   contractApprovalStatusLabelByLocale,
   contractDocumentStatusLabelByLocale,
-  employeeContractsCopyByLocale,
-  toDateText
+  employeeContractsCopyByLocale
 } from "@/components/contracts/copy";
+import { EmployeeContractsInboxList } from "@/components/contracts/EmployeeContractsInboxList";
 import { EmployeeContractsResponsePanel } from "@/components/contracts/EmployeeContractsResponsePanel";
-import { canEmployeeRespondToContractDocument } from "@/components/contracts/document-action-policy";
 import {
   applyInboxDeadlineFilter,
   applyInboxStatusFilter,
   countDueSoonPending,
   countOverduePending,
   countPendingResponse,
-  isDueSoonPendingDocument,
-  isOverduePendingDocument,
+  isPendingResponseStatus,
   sortInboxDocumentsByRisk
 } from "@/components/contracts/employee-inbox-filter-helpers";
+import {
+  resolveEmployeeContractsNextActionHint
+} from "@/components/contracts/employee-inbox-journey-helpers";
 import {
   normalizeContractsErrorMessageForRuntime,
   readJson,
   setContractsRuntimeLocale
 } from "@/components/contracts/http";
 import {
-  normalizeContractsEntityTitle
-} from "@/components/contracts/runtime-copy-helpers";
-import {
   type ContractSignatureEvidenceResponse,
   type EmployeeContractDocument as ContractDocument
 } from "@/components/contracts/types";
 import { useI18n } from "@/lib/i18n/provider";
-
-function isPendingResponseStatus(document: ContractDocument) {
-  return canEmployeeRespondToContractDocument(document.status);
-}
 
 export default function EmployeeContractsInbox() {
   const { locale } = useI18n();
@@ -79,6 +73,7 @@ export default function EmployeeContractsInbox() {
     [filteredDocuments, selectedDocumentId]
   );
   const canRespondSelected = Boolean(selected && isPendingResponseStatus(selected));
+  const nextActionHint = useMemo(() => resolveEmployeeContractsNextActionHint(selected, copy), [copy, selected]);
   const reload = useCallback(async () => {
     setError(null);
     const data = (await fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
@@ -240,39 +235,17 @@ export default function EmployeeContractsInbox() {
             </p>
           </div>
           {selected && !canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
-          {documents.length === 0 ? (
-            <p className="small muted">{copy.noDocumentMessage}</p>
-          ) : filteredDocuments.length === 0 ? (
-            <p className="small muted">{copy.inboxFilteredEmpty}</p>
-          ) : (
-            <ul className="contract-template-list" aria-label={copy.inboxAria}>
-              {filteredDocuments.map((document) => (
-                <li
-                  key={document.id}
-                  className={`${selected?.id === document.id ? "is-selected " : ""}tone-${
-                    document.status === "SIGNED" ? "ready" : document.status === "REJECTED" ? "risk" : "watch"
-                  }`}
-                >
-                  <div className="contract-template-head">
-                    <strong>{normalizeContractsEntityTitle(document.title, document.id, isKoLocale)}</strong>
-                    <span className="queue-history-chip">{documentStatusLabels[document.status]}</span>
-                  </div>
-                  <p>
-                    {copy.approvalPrefix} {approvalStatusLabels[document.approvalStatus]} | {copy.expiresPrefix}{" "}
-                    {toDateText(document.expiresAt, runtimeLocale)}
-                  </p>
-                  {isOverduePendingDocument(document) ? (
-                    <p className="small" style={{ color: "var(--danger)" }}>{copy.overdueBadgeLabel}</p>
-                  ) : isDueSoonPendingDocument(document) ? (
-                    <p className="small" style={{ color: "var(--danger)" }}>{copy.dueSoonBadgeLabel}</p>
-                  ) : null}
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => setSelectedDocumentId(document.id)}>
-                    {copy.selectAction}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <EmployeeContractsInboxList
+            documents={documents}
+            filteredDocuments={filteredDocuments}
+            selectedDocumentId={selected?.id ?? null}
+            copy={copy}
+            approvalStatusLabels={approvalStatusLabels}
+            documentStatusLabels={documentStatusLabels}
+            runtimeLocale={runtimeLocale}
+            isKoLocale={isKoLocale}
+            onSelectDocument={setSelectedDocumentId}
+          />
         </article>
         <EmployeeContractsResponsePanel
           // disabled={!canRespondSelected} is enforced inside the response panel actions.
@@ -281,6 +254,7 @@ export default function EmployeeContractsInbox() {
           documentStatusLabels={documentStatusLabels}
           runtimeLocale={runtimeLocale}
           isKoLocale={isKoLocale}
+          nextActionHint={nextActionHint}
           signatureInput={signatureInput}
           comment={comment}
           onSignatureInputChange={setSignatureInput}
