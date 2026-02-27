@@ -17,6 +17,12 @@ async function run() {
     "payroll-year-end-filing",
     "PayrollYearEndFilingConsole.tsx"
   );
+  const timelinePanel = readUtf8(
+    "src",
+    "components",
+    "payroll-year-end-filing",
+    "FilingSubmissionTimelinePanel.tsx"
+  );
   const helpers = readUtf8("src", "components", "payroll-year-end-filing", "value-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -31,11 +37,13 @@ async function run() {
   assert.match(consoleSource, /from "@\/components\/payroll-year-end-filing\/value-helpers"/);
   assert.match(consoleSource, /parseRequiredInt\(/);
   assert.match(consoleSource, /parseRate\(/);
-  assert.match(consoleSource, /formatTimelineEntry\(/);
+  assert.match(timelinePanel, /from "@\/components\/payroll-year-end-filing\/value-helpers"/);
+  assert.match(timelinePanel, /formatTimelineEntry\(/);
 
   assert.doesNotMatch(consoleSource, /function parseRequiredInt\(/);
   assert.doesNotMatch(consoleSource, /function parseRate\(/);
   assert.doesNotMatch(consoleSource, /function formatTimelineEntry\(/);
+  assert.doesNotMatch(timelinePanel, /function formatTimelineEntry\(/);
 
   assert.ok(
     countLines(consoleSource) <= 1300,

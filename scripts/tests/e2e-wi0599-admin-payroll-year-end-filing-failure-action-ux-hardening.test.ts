@@ -24,6 +24,12 @@ async function run() {
     "payroll-year-end-filing",
     "request-feedback-helpers.ts"
   );
+  const failurePanel = readUtf8(
+    "src",
+    "components",
+    "payroll-year-end-filing",
+    "FilingFailureActionPanel.tsx"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0599-admin-payroll-year-end-filing-failure-action-ux-hardening.md"
@@ -40,12 +46,15 @@ async function run() {
   assert.match(feedbackHelpers, /export type PayrollYearEndFilingFailureState/);
 
   assert.match(consoleSource, /from "@\/components\/payroll-year-end-filing\/request-feedback-helpers"/);
+  assert.match(consoleSource, /from "@\/components\/payroll-year-end-filing\/FilingFailureActionPanel"/);
   assert.match(consoleSource, /const \[lastFailure, setLastFailure\] = useState/);
   assert.match(consoleSource, /function recordFailure\(/);
   assert.match(consoleSource, /async function retryLastFailureAction\(/);
-  assert.match(consoleSource, /copy\.failureActionPanelTitle/);
-  assert.match(consoleSource, /copy\.retryFailureAction/);
-  assert.match(consoleSource, /copy\.clearFailureAction/);
+  assert.match(consoleSource, /<FilingFailureActionPanel/);
+
+  assert.match(failurePanel, /copy\.failureActionPanelTitle/);
+  assert.match(failurePanel, /copy\.retryFailureAction/);
+  assert.match(failurePanel, /copy\.clearFailureAction/);
 
   assert.ok(
     countLines(consoleSource) <= 1300,
