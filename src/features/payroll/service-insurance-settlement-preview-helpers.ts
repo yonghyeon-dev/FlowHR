@@ -15,6 +15,10 @@ import {
   normalizeSettlementInsuranceRoundingRules,
   roundKrwByRule
 } from "@/features/payroll/service-statutory-adapter-helpers";
+import {
+  getPayrollKrInsurancePolicyPreset,
+  resolvePayrollKrInsurancePolicyPresetByAsOf
+} from "@/features/payroll/kr-insurance-policy-presets";
 import type { PreviewPayrollInsuranceSettlementInput } from "@/features/payroll/service-input-types";
 import type { PreviewPayrollInsuranceSettlementResult } from "@/features/payroll/service-output-types";
 import {
@@ -45,65 +49,133 @@ export async function previewPayrollInsuranceSettlementFromHelper(
   const insuranceRoundingRules = normalizeSettlementInsuranceRoundingRules(
     input.settlement?.insuranceRounding
   );
+  const insurancePolicyPresetAuto = input.settlement?.insurancePolicyPresetAuto ?? false;
+  const insurancePolicyAsOfInput = input.settlement?.insurancePolicyAsOf;
+  const insurancePolicyAsOf = insurancePolicyAsOfInput
+    ? new Date(insurancePolicyAsOfInput)
+    : input.periodEnd;
+  if (insurancePolicyAsOfInput && Number.isNaN(insurancePolicyAsOf.getTime())) {
+    throw new ServiceError(400, "settlement.insurancePolicyAsOf must be a valid datetime");
+  }
+  const insurancePolicyPresetId = input.settlement?.insurancePolicyPresetId?.trim() || null;
+  if (insurancePolicyPresetAuto && insurancePolicyPresetId) {
+    throw new ServiceError(
+      400,
+      "settlement.insurancePolicyPresetAuto and settlement.insurancePolicyPresetId are mutually exclusive"
+    );
+  }
+  if (insurancePolicyAsOfInput && !insurancePolicyPresetAuto) {
+    throw new ServiceError(
+      400,
+      "settlement.insurancePolicyAsOf is supported only when settlement.insurancePolicyPresetAuto is true"
+    );
+  }
+  const autoSelectedInsurancePolicyPreset = insurancePolicyPresetAuto
+    ? resolvePayrollKrInsurancePolicyPresetByAsOf(insurancePolicyAsOf)
+    : null;
+  const insurancePolicyPreset = insurancePolicyPresetId
+    ? getPayrollKrInsurancePolicyPreset(insurancePolicyPresetId)
+    : autoSelectedInsurancePolicyPreset;
+  if (insurancePolicyPresetId && !insurancePolicyPreset) {
+    throw new ServiceError(
+      400,
+      `settlement.insurancePolicyPresetId is not supported: ${insurancePolicyPresetId}`
+    );
+  }
+  if (insurancePolicyPresetAuto && !autoSelectedInsurancePolicyPreset) {
+    throw new ServiceError(
+      400,
+      "settlement.insurancePolicyPresetAuto could not resolve preset for reference date"
+    );
+  }
   if (requireMonthlyBoundary) {
     ensureMonthlyBoundaryInSeoul(input.periodStart, input.periodEnd);
   }
 
+  const nationalPensionCapKrw =
+    input.settlement?.nationalPensionCapKrw ??
+    insurancePolicyPreset?.capsKrw.nationalPensionCapKrw ??
+    undefined;
+  const healthInsuranceCapKrw =
+    input.settlement?.healthInsuranceCapKrw ??
+    insurancePolicyPreset?.capsKrw.healthInsuranceCapKrw ??
+    undefined;
+  const employmentInsuranceCapKrw =
+    input.settlement?.employmentInsuranceCapKrw ??
+    insurancePolicyPreset?.capsKrw.employmentInsuranceCapKrw ??
+    undefined;
+
   const nationalPensionEmployeeRate =
     toRateNumber(
-      input.settlement?.nationalPensionEmployeeRate ?? 0.045,
+      input.settlement?.nationalPensionEmployeeRate ??
+        insurancePolicyPreset?.rates.nationalPensionEmployeeRate ??
+        0.045,
       "settlement.nationalPensionEmployeeRate"
     ) ?? 0;
   const nationalPensionEmployerRate =
     toRateNumber(
-      input.settlement?.nationalPensionEmployerRate ?? 0.045,
+      input.settlement?.nationalPensionEmployerRate ??
+        insurancePolicyPreset?.rates.nationalPensionEmployerRate ??
+        0.045,
       "settlement.nationalPensionEmployerRate"
     ) ?? 0;
   const healthInsuranceEmployeeRate =
     toRateNumber(
-      input.settlement?.healthInsuranceEmployeeRate ?? 0.03545,
+      input.settlement?.healthInsuranceEmployeeRate ??
+        insurancePolicyPreset?.rates.healthInsuranceEmployeeRate ??
+        0.03545,
       "settlement.healthInsuranceEmployeeRate"
     ) ?? 0;
   const healthInsuranceEmployerRate =
     toRateNumber(
-      input.settlement?.healthInsuranceEmployerRate ?? 0.03545,
+      input.settlement?.healthInsuranceEmployerRate ??
+        insurancePolicyPreset?.rates.healthInsuranceEmployerRate ??
+        0.03545,
       "settlement.healthInsuranceEmployerRate"
     ) ?? 0;
   const longTermCareRateOnHealth =
     toRateNumber(
-      input.settlement?.longTermCareRateOnHealth ?? 0.1295,
+      input.settlement?.longTermCareRateOnHealth ??
+        insurancePolicyPreset?.rates.longTermCareRateOnHealth ??
+        0.1295,
       "settlement.longTermCareRateOnHealth"
     ) ?? 0;
   const employmentInsuranceEmployeeRate =
     toRateNumber(
-      input.settlement?.employmentInsuranceEmployeeRate ?? 0.009,
+      input.settlement?.employmentInsuranceEmployeeRate ??
+        insurancePolicyPreset?.rates.employmentInsuranceEmployeeRate ??
+        0.009,
       "settlement.employmentInsuranceEmployeeRate"
     ) ?? 0;
   const employmentInsuranceEmployerRate =
     toRateNumber(
-      input.settlement?.employmentInsuranceEmployerRate ?? 0.0115,
+      input.settlement?.employmentInsuranceEmployerRate ??
+        insurancePolicyPreset?.rates.employmentInsuranceEmployerRate ??
+        0.0115,
       "settlement.employmentInsuranceEmployerRate"
     ) ?? 0;
   const industrialAccidentEmployerRate =
     toRateNumber(
-      input.settlement?.industrialAccidentEmployerRate ?? 0.015,
+      input.settlement?.industrialAccidentEmployerRate ??
+        insurancePolicyPreset?.rates.industrialAccidentEmployerRate ??
+        0.015,
       "settlement.industrialAccidentEmployerRate"
     ) ?? 0;
 
   const taxableBaseKrw = Math.max(computed.grossPayKrw - nonTaxableIncomeKrw, 0);
   const nationalPensionBaseKrw = applyContributionCap(
     taxableBaseKrw,
-    input.settlement?.nationalPensionCapKrw,
+    nationalPensionCapKrw,
     "settlement.nationalPensionCapKrw"
   );
   const healthInsuranceBaseKrw = applyContributionCap(
     taxableBaseKrw,
-    input.settlement?.healthInsuranceCapKrw,
+    healthInsuranceCapKrw,
     "settlement.healthInsuranceCapKrw"
   );
   const employmentInsuranceBaseKrw = applyContributionCap(
     taxableBaseKrw,
-    input.settlement?.employmentInsuranceCapKrw,
+    employmentInsuranceCapKrw,
     "settlement.employmentInsuranceCapKrw"
   );
   const industrialAccidentBaseKrw = taxableBaseKrw;
@@ -216,6 +288,35 @@ export async function previewPayrollInsuranceSettlementFromHelper(
       grossPayKrw: computed.grossPayKrw,
       taxableBaseKrw,
       requireMonthlyBoundary,
+      insurancePolicyPreset: insurancePolicyPreset
+        ? {
+            id: insurancePolicyPreset.id,
+            label: insurancePolicyPreset.label,
+            effectiveFrom: insurancePolicyPreset.effectiveFrom,
+            source: insurancePolicyPreset.source
+          }
+        : null,
+      insurancePolicyPresetAuto: {
+        enabled: insurancePolicyPresetAuto,
+        autoSelected: insurancePolicyPresetAuto && Boolean(autoSelectedInsurancePolicyPreset),
+        resolvedBy: insurancePolicyAsOfInput ? "settlement.insurancePolicyAsOf" : "periodEnd",
+        asOf: insurancePolicyAsOf.toISOString()
+      },
+      insurancePolicyRates: {
+        nationalPensionEmployeeRate,
+        nationalPensionEmployerRate,
+        healthInsuranceEmployeeRate,
+        healthInsuranceEmployerRate,
+        longTermCareRateOnHealth,
+        employmentInsuranceEmployeeRate,
+        employmentInsuranceEmployerRate,
+        industrialAccidentEmployerRate
+      },
+      contributionCapsKrw: {
+        nationalPensionCapKrw: nationalPensionCapKrw ?? null,
+        healthInsuranceCapKrw: healthInsuranceCapKrw ?? null,
+        employmentInsuranceCapKrw: employmentInsuranceCapKrw ?? null
+      },
       insuranceRounding: {
         mode: insuranceRoundingRules.mode,
         unitsKrw: {
@@ -250,6 +351,8 @@ export async function previewPayrollInsuranceSettlementFromHelper(
       sourceRecordCount: computed.recordsCount,
       grossPayKrw: computed.grossPayKrw,
       taxableBaseKrw,
+      insurancePolicyPresetId: insurancePolicyPreset?.id ?? null,
+      insurancePolicyPresetAuto,
       insuranceRoundingMode: insuranceRoundingRules.mode,
       employeeContributionTotalKrw,
       employerContributionTotalKrw,
@@ -263,6 +366,35 @@ export async function previewPayrollInsuranceSettlementFromHelper(
       totals: computed.totals,
       grossPayKrw: computed.grossPayKrw,
       taxableBaseKrw,
+      policyPreset: insurancePolicyPreset
+        ? {
+            id: insurancePolicyPreset.id,
+            label: insurancePolicyPreset.label,
+            effectiveFrom: insurancePolicyPreset.effectiveFrom,
+            source: insurancePolicyPreset.source
+          }
+        : null,
+      policyPresetAuto: {
+        enabled: insurancePolicyPresetAuto,
+        autoSelected: insurancePolicyPresetAuto && Boolean(autoSelectedInsurancePolicyPreset),
+        resolvedBy: insurancePolicyAsOfInput ? "settlement.insurancePolicyAsOf" : "periodEnd",
+        asOf: insurancePolicyAsOf.toISOString()
+      },
+      policyRates: {
+        nationalPensionEmployeeRate,
+        nationalPensionEmployerRate,
+        healthInsuranceEmployeeRate,
+        healthInsuranceEmployerRate,
+        longTermCareRateOnHealth,
+        employmentInsuranceEmployeeRate,
+        employmentInsuranceEmployerRate,
+        industrialAccidentEmployerRate
+      },
+      policyCapsKrw: {
+        nationalPensionCapKrw: nationalPensionCapKrw ?? null,
+        healthInsuranceCapKrw: healthInsuranceCapKrw ?? null,
+        employmentInsuranceCapKrw: employmentInsuranceCapKrw ?? null
+      },
       rounding: {
         mode: insuranceRoundingRules.mode,
         unitsKrw: {

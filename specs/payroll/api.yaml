@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.58.0
+  version: 1.59.0
 paths:
   /payroll/runs:
     get:
@@ -73,7 +73,7 @@ paths:
   /payroll/runs/preview-insurance-settlement:
     post:
       summary: Create payroll 4-insurance settlement preview (employee/employer contribution and delta)
-      description: Computes employee/employer national pension, health insurance, long-term care, employment insurance, and industrial accident components with optional caps, optional settlement insuranceRounding rules (`mode`, per-component unit KRW), raw contribution trace, and prior-withheld/prior-paid deltas.
+      description: Computes employee/employer national pension, health insurance, long-term care, employment insurance, and industrial accident components with optional caps, optional settlement insuranceRounding rules (`mode`, per-component unit KRW), optional insurance policy preset selection (`insurancePolicyPresetId`) or auto-selection (`insurancePolicyPresetAuto` with optional `insurancePolicyAsOf`, defaulting to `periodEnd`), raw contribution trace, and prior-withheld/prior-paid deltas.
       responses:
         "200":
           description: Insurance settlement preview generated

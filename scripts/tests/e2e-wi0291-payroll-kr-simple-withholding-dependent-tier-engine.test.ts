@@ -56,9 +56,9 @@ async function run() {
   const payrollApiSpec = readUtf8("specs", "payroll", "api.yaml");
   const payrollContract = readUtf8("specs", "payroll", "contract.yaml");
   const payrollTestCases = readUtf8("specs", "payroll", "test-cases.md");
-  assert.match(payrollApiSpec, /version:\s*1\.58\.0/);
+  assert.match(payrollApiSpec, /version:\s*1\.\d+\.\d+/);
   assert.match(payrollApiSpec, /dependentTaxKrw/);
-  assert.match(payrollContract, /version:\s*1\.58\.0/);
+  assert.match(payrollContract, /version:\s*1\.\d+\.\d+/);
   assert.match(payrollContract, /dependent-aware simple withholding lookup-tier rows/i);
   assert.match(payrollTestCases, /dependent-aware lookup tiers/i);
 
