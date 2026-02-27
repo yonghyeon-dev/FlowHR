@@ -30,8 +30,8 @@ function run() {
 
   assert.match(
     `${adminPageSource}\n${adminPageStateSource}`,
-    /const \[payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto\] = useState\(false\);/,
-    "admin payroll preview should keep preset auto mode state (page or extracted state hook)"
+    /const \[payrollIncomeTaxLookupPresetAuto, setPayrollIncomeTaxLookupPresetAuto\] = useState\(true\);/,
+    "admin payroll preview should default preset auto mode for KR withholding precision (page or extracted state hook)"
   );
   assert.match(
     `${adminPageSource}\n${adminPageStateSource}`,
