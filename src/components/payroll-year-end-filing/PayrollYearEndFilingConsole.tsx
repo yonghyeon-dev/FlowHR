@@ -124,6 +124,16 @@ export default function PayrollYearEndFilingConsole() {
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollYearEndFilingCopyByLocale[locale];
+  const shortcutStatusCopy =
+    locale === "ko"
+      ? {
+        openedPendingQueue: "\uc0ac\uc804\uc810\uac80 \ubc14\ub85c\uac00\uae30\ub85c \uc81c\ucd9c \ub300\uae30 \ud050\ub97c \uc5f4\uc5c8\uc2b5\ub2c8\ub2e4.",
+        openedRejectedQueue: "\uc0ac\uc804\uc810\uac80 \ubc14\ub85c\uac00\uae30\ub85c \uac70\uc808 \uc2e0\uace0 \ud050\ub97c \uc5f4\uc5c8\uc2b5\ub2c8\ub2e4."
+      }
+      : {
+        openedPendingQueue: "Opened pending submissions queue from preflight shortcut.",
+        openedRejectedQueue: "Opened rejected submissions queue from preflight shortcut."
+      };
   const bearerToken =
     accessToken.trim().length > 0
       ? accessToken.trim()
@@ -531,6 +541,8 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   function runOpenPendingSubmissionsFromPreflight() {
+    setStatusMessage(shortcutStatusCopy.openedPendingQueue);
+    setTimeout(() => setStatusMessage(""), 3000);
     setSubmissionStatusFilter("submitted");
     setSubmissionAckStatusFilter("all");
     setSubmissionValidationStatusFilter("all");
@@ -543,6 +555,8 @@ export default function PayrollYearEndFilingConsole() {
   }
 
   function runOpenRejectedSubmissionsFromPreflight() {
+    setStatusMessage(shortcutStatusCopy.openedRejectedQueue);
+    setTimeout(() => setStatusMessage(""), 3000);
     setSubmissionStatusFilter("acknowledged");
     setSubmissionAckStatusFilter("rejected");
     setSubmissionValidationStatusFilter("all");
