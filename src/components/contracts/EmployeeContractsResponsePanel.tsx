@@ -1,11 +1,11 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { type ContractDocumentStatus, type EmployeeContractsCopy, toDateText } from "@/components/contracts/copy";
 import { normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument } from "@/components/contracts/types";
-
+type ResponseHistoryEntryType = "SIGNED" | "REJECTED" | "EVIDENCE";
+type ResponseHistoryFilter = "ALL" | ResponseHistoryEntryType;
 type EmployeeContractsResponsePanelProps = {
   copy: EmployeeContractsCopy;
   selected: EmployeeContractDocument | null;
@@ -30,7 +30,6 @@ type EmployeeContractsResponsePanelProps = {
     displayFileName: string
   ) => void;
 };
-
 export function EmployeeContractsResponsePanel({
   copy,
   selected,
@@ -57,20 +56,27 @@ export function EmployeeContractsResponsePanel({
   const isSignatureInputReady = signatureInput.trim().length > 0;
   const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
   const [copyStatusError, setCopyStatusError] = useState<string | null>(null);
-  const evidenceDisplayFileName =
-    selected && signatureEvidence
-      ? normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
-      : null;
+  const [responseHistoryFilter, setResponseHistoryFilter] = useState<ResponseHistoryFilter>("ALL");
+  const evidenceDisplayFileName = selected && signatureEvidence
+    ? normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
+    : null;
   const hasSignatureHash = Boolean(selected?.signatureHash);
   const hasEvidenceHash = Boolean(selected?.signatureEvidenceHash);
   const responseHistoryEntries = useMemo(() => {
     if (!selected) {
       return [];
     }
-    const entries: { id: string; label: string; occurredAt: string; detail: string | null }[] = [];
+    const entries: {
+      id: string;
+      type: ResponseHistoryEntryType;
+      label: string;
+      occurredAt: string;
+      detail: string | null;
+    }[] = [];
     if (selected.respondedAt && selected.status === "SIGNED") {
       entries.push({
         id: `signed-${selected.id}-${selected.respondedAt}`,
+        type: "SIGNED",
         label: copy.responseHistorySignedLabel,
         occurredAt: selected.respondedAt,
         detail: selected.responseComment
@@ -79,6 +85,7 @@ export function EmployeeContractsResponsePanel({
     if (selected.respondedAt && selected.status === "REJECTED") {
       entries.push({
         id: `rejected-${selected.id}-${selected.respondedAt}`,
+        type: "REJECTED",
         label: copy.responseHistoryRejectedLabel,
         occurredAt: selected.respondedAt,
         detail: selected.responseComment
@@ -87,6 +94,7 @@ export function EmployeeContractsResponsePanel({
     if (signatureEvidence) {
       entries.push({
         id: `evidence-${selected.id}-${signatureEvidence.generatedAt}-${signatureEvidence.format}`,
+        type: "EVIDENCE",
         label: copy.responseHistoryEvidenceLoadedLabel,
         occurredAt: signatureEvidence.generatedAt,
         detail: signatureEvidence.format.toUpperCase()
@@ -102,12 +110,17 @@ export function EmployeeContractsResponsePanel({
     selected,
     signatureEvidence
   ]);
-
+  const filteredResponseHistoryEntries = useMemo(
+    () => (responseHistoryFilter === "ALL"
+      ? responseHistoryEntries
+      : responseHistoryEntries.filter((entry) => entry.type === responseHistoryFilter)),
+    [responseHistoryEntries, responseHistoryFilter]
+  );
   useEffect(() => {
     setCopyStatusMessage(null);
     setCopyStatusError(null);
+    setResponseHistoryFilter("ALL");
   }, [selected?.id]);
-
   async function copyHash(hashType: "signature" | "evidence") {
     const hashValue = hashType === "signature" ? selected?.signatureHash : selected?.signatureEvidenceHash;
     if (!hashValue) {
@@ -167,11 +180,45 @@ export function EmployeeContractsResponsePanel({
           <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
           <section className="contract-recovery-guide">
             <h3>{copy.responseHistoryTitle}</h3>
+            <div className="contract-action-row">
+              <span className="small muted">{copy.responseHistoryFilterLabel}</span>
+              <button
+                type="button"
+                className={responseHistoryFilter === "ALL" ? "btn btn-small" : "btn btn-secondary btn-small"}
+                onClick={() => setResponseHistoryFilter("ALL")}
+              >
+                {copy.responseHistoryFilterAllAction}
+              </button>
+              <button
+                type="button"
+                className={responseHistoryFilter === "SIGNED" ? "btn btn-small" : "btn btn-secondary btn-small"}
+                onClick={() => setResponseHistoryFilter("SIGNED")}
+              >
+                {copy.responseHistoryFilterSignedAction}
+              </button>
+              <button
+                type="button"
+                className={responseHistoryFilter === "REJECTED" ? "btn btn-small" : "btn btn-secondary btn-small"}
+                onClick={() => setResponseHistoryFilter("REJECTED")}
+              >
+                {copy.responseHistoryFilterRejectedAction}
+              </button>
+              <button
+                type="button"
+                className={responseHistoryFilter === "EVIDENCE" ? "btn btn-small" : "btn btn-secondary btn-small"}
+                onClick={() => setResponseHistoryFilter("EVIDENCE")}
+              >
+                {copy.responseHistoryFilterEvidenceAction}
+              </button>
+            </div>
+            <p className="small muted">{copy.responseHistoryVisibleCountLabel}: {filteredResponseHistoryEntries.length}/{responseHistoryEntries.length}</p>
             {responseHistoryEntries.length === 0 ? (
               <p className="small muted">{copy.responseHistoryEmpty}</p>
+            ) : filteredResponseHistoryEntries.length === 0 ? (
+              <p className="small muted">{copy.responseHistoryFilteredEmpty}</p>
             ) : (
               <ul className="simple-list">
-                {responseHistoryEntries.map((entry) => (
+                {filteredResponseHistoryEntries.map((entry) => (
                   <li key={entry.id}>
                     <span>{entry.label}</span>
                     <strong>{toDateText(entry.occurredAt, runtimeLocale)}</strong>
