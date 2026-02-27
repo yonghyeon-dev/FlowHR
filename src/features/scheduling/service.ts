@@ -99,6 +99,8 @@ import {
   type GeneratedScheduleWindow
 } from "@/features/scheduling/rotation-window-helpers";
 import {
+  buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload,
+  buildScheduleAnomalyIncidentReconcileResult,
   buildScheduleAnomalyIncidentReconcileSnapshot,
   selectScheduleAnomalyIncidentReconcileItems
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
@@ -3547,25 +3549,22 @@ export async function reconcileScheduleAnomalyIncidentStore(
     organizationId: tenantScope,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
+    payload: buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload({
       reconciledAt,
       topN,
       includeMatching,
       compared: compared.length,
       returned: items.length,
       counts
-    }
+    })
   });
-
-  return {
+  return buildScheduleAnomalyIncidentReconcileResult({
     reconciledAt,
-    filters: {
-      topN,
-      includeMatching
-    },
+    topN,
+    includeMatching,
     counts,
     items
-  };
+  });
 }
 
 export async function getScheduleAnomalyIncident(
