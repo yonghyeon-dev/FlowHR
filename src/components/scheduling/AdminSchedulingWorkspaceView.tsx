@@ -1,5 +1,7 @@
 import type { AdminSchedulingCopy } from "@/components/scheduling/copy";
 import type { ScheduleApiLog, WorkScheduleDto } from "@/components/scheduling/helpers";
+import type { AdminSchedulingIncidentPanelState } from "@/components/scheduling/use-admin-scheduling-incident-panel";
+import AdminSchedulingIncidentPanel from "@/components/scheduling/AdminSchedulingIncidentPanel";
 import { formatDateTime } from "@/components/scheduling/helpers";
 
 type AdminSchedulingWorkspaceViewProps = {
@@ -9,6 +11,7 @@ type AdminSchedulingWorkspaceViewProps = {
   pendingLabel: string | null;
   logStats: { total: number; success: number; fail: number };
   logs: ScheduleApiLog[];
+  incidentPanel: AdminSchedulingIncidentPanelState;
   schedules: WorkScheduleDto[];
   selectedSchedule: WorkScheduleDto | null;
   organizationId: string;
@@ -60,6 +63,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     pendingLabel,
     logStats,
     logs,
+    incidentPanel,
     schedules,
     selectedSchedule,
     organizationId,
@@ -219,6 +223,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
             </ul>
           )}
         </article>
+        <AdminSchedulingIncidentPanel copy={copy} runtimeLocale={runtimeLocale} incidentPanel={incidentPanel} />
         <article className="panel">
           <h2>{copy.selectedTitle}</h2>
           {!selectedSchedule ? (

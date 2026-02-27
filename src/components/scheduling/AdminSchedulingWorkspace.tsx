@@ -16,6 +16,7 @@ import {
   toIsoDateRangeStart,
   toIsoDateTime
 } from "@/components/scheduling/helpers";
+import { useAdminSchedulingIncidentPanel } from "@/components/scheduling/use-admin-scheduling-incident-panel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
@@ -132,6 +133,12 @@ export default function AdminSchedulingWorkspace() {
     }
   }
 
+  const incidentPanel = useAdminSchedulingIncidentPanel({
+    copy,
+    callApi,
+    setStatusMessage
+  });
+
   async function loadSchedules() {
     if (!organizationId.trim()) {
       setStatusMessage(copy.statusNeedsOrganization);
@@ -244,6 +251,7 @@ export default function AdminSchedulingWorkspace() {
       pendingLabel={pendingLabel}
       logStats={logStats}
       logs={logs}
+      incidentPanel={incidentPanel}
       schedules={schedules}
       selectedSchedule={selectedSchedule}
       organizationId={organizationId}
