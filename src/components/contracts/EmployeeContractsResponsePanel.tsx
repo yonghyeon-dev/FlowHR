@@ -48,6 +48,7 @@ export function EmployeeContractsResponsePanel({
     copy.quickCommentTemplateNeedClarification,
     copy.quickCommentTemplateRequestRevision
   ];
+  const isSignatureInputReady = signatureInput.trim().length > 0;
 
   return (
     <article className="panel panel-contract-template-detail">
@@ -68,7 +69,17 @@ export function EmployeeContractsResponsePanel({
             <li><span>{copy.evidenceHashLabel}</span><strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong></li>
           </ul>
           <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
-          <label>{copy.signatureInputLabel}<input value={signatureInput} onChange={(event) => onSignatureInputChange(event.target.value)} /></label>
+          <label>
+            {copy.signatureInputLabel}
+            <input
+              value={signatureInput}
+              placeholder={copy.signatureInputPlaceholder}
+              onChange={(event) => onSignatureInputChange(event.target.value)}
+            />
+          </label>
+          {canRespondSelected && !isSignatureInputReady ? (
+            <p className="small muted">{copy.signatureInputRequiredHint}</p>
+          ) : null}
           <label>{copy.commentLabel}<textarea rows={3} value={comment} onChange={(event) => onCommentChange(event.target.value)} /></label>
           <div className="contract-action-row">
             <span className="small muted">{copy.quickCommentTemplatesLabel}</span>
@@ -85,7 +96,14 @@ export function EmployeeContractsResponsePanel({
           </div>
           {!canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
           <div className="contract-action-row">
-            <button type="button" className="btn" onClick={() => onRespond("SIGN")} disabled={!canRespondSelected}>{copy.signAction}</button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => onRespond("SIGN")}
+              disabled={!canRespondSelected || !isSignatureInputReady}
+            >
+              {copy.signAction}
+            </button>
             <button type="button" className="btn btn-secondary" onClick={() => onRespond("REJECT")} disabled={!canRespondSelected}>{copy.rejectAction}</button>
             <button type="button" className="btn btn-secondary" onClick={() => onLoadSignatureEvidence("json")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceJsonAction}</button>
             <button type="button" className="btn btn-secondary" onClick={() => onLoadSignatureEvidence("text")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceTextAction}</button>
