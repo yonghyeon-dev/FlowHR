@@ -170,6 +170,11 @@ export default function WithholdingReceiptConsole() {
   const blockingReasonText = receipt
     ? resolveWithholdingBlockingReasons(receipt.receipt.blockingReasons, locale).join(" | ") || "-"
     : "-";
+  const validationBlockedCount = receipt?.receipt.blockingReasons.length ?? 0;
+  const validationMissingGuardCount = receipt
+    ? [receipt.receipt.runStates.previewedRuns, receipt.receipt.runStates.undistributedRuns, receipt.receipt.runStates.pendingReceiptRuns].filter((count) => count > 0).length
+    : 0;
+  const validationNeedsAction = validationBlockedCount > 0 || validationMissingGuardCount > 0;
   const finalizedAtText = finalizedSettlement
     ? formatDateTimeByLocale(finalizedSettlement.settlement.finalizedAt, runtimeLocale)
     : "-";
@@ -228,6 +233,9 @@ export default function WithholdingReceiptConsole() {
           receipt={receipt}
           finalizedSettlement={finalizedSettlement}
           receiptDocument={receiptDocument}
+          validationBlockedCount={validationBlockedCount}
+          validationMissingGuardCount={validationMissingGuardCount}
+          validationNeedsAction={validationNeedsAction}
           blockingReasonText={blockingReasonText}
           runGuardSnapshot={runGuardSnapshot}
           finalizedAtText={finalizedAtText}
