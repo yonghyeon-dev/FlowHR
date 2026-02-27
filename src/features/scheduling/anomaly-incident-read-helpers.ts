@@ -31,3 +31,14 @@ export async function resolveScheduleAnomalyIncidentForActor(
 
   return incident;
 }
+
+export function buildScheduleAnomalyIncidentReadAuditPayload(
+  incident: Pick<ScheduleAnomalyIncidentReadModel, "incidentId" | "state" | "assigneeId" | "history">
+) {
+  return {
+    incidentId: incident.incidentId,
+    state: incident.state,
+    assigneeId: incident.assigneeId,
+    historyCount: incident.history.length
+  };
+}

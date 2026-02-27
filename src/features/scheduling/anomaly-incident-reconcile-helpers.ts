@@ -1,6 +1,7 @@
 import type {
   ScheduleAnomalyIncidentLifecycleState,
   ScheduleAnomalyIncidentReconcileItem,
+  ScheduleAnomalyIncidentReconcileResult,
   ScheduleAnomalyIncidentResolutionCode
 } from "@/features/scheduling/service";
 
@@ -25,6 +26,23 @@ export type ScheduleAnomalyIncidentReconcileCounts = {
   storeMissing: number;
   orphanedStore: number;
   fieldMismatch: number;
+};
+
+type BuildScheduleAnomalyIncidentReconcileGeneratedAuditPayloadInput = {
+  reconciledAt: string;
+  topN: number;
+  includeMatching: boolean;
+  compared: number;
+  returned: number;
+  counts: ScheduleAnomalyIncidentReconcileCounts;
+};
+
+type BuildScheduleAnomalyIncidentReconcileResultInput = {
+  reconciledAt: string;
+  topN: number;
+  includeMatching: boolean;
+  counts: ScheduleAnomalyIncidentReconcileCounts;
+  items: ScheduleAnomalyIncidentReconcileItem[];
 };
 
 export function buildScheduleAnomalyIncidentReconcileSnapshot(
@@ -126,4 +144,31 @@ export function selectScheduleAnomalyIncidentReconcileItems(
   return compared
     .filter((item) => (input.includeMatching ? true : item.status !== "MATCH"))
     .slice(0, input.topN);
+}
+
+export function buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload(
+  input: BuildScheduleAnomalyIncidentReconcileGeneratedAuditPayloadInput
+) {
+  return {
+    reconciledAt: input.reconciledAt,
+    topN: input.topN,
+    includeMatching: input.includeMatching,
+    compared: input.compared,
+    returned: input.returned,
+    counts: input.counts
+  };
+}
+
+export function buildScheduleAnomalyIncidentReconcileResult(
+  input: BuildScheduleAnomalyIncidentReconcileResultInput
+): ScheduleAnomalyIncidentReconcileResult {
+  return {
+    reconciledAt: input.reconciledAt,
+    filters: {
+      topN: input.topN,
+      includeMatching: input.includeMatching
+    },
+    counts: input.counts,
+    items: input.items
+  };
 }

@@ -822,3 +822,36 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0555 admin contracts expiration window quick toggles (`AdminContractsDocumentFilterControls.tsx`에 만료 임박 기간 원클릭 토글(`ALL/7/14/30`) 추가 + 기존 필터 copy 재사용으로 i18n 표면 유지 + `e2e-wi0555` 회귀 테스트 추가)
 - WI-0556 admin people history hotspot quick-filter chips (`/admin/people` 이력 변경 요약 칩을 버튼화하여 클릭 시 `historyFieldFilter` 즉시 적용 + hotspot 요약→상세 필터 전환 속도 개선 + `e2e-wi0556` 회귀 테스트 추가)
 - WI-0557 scheduling template-date helper extraction and line-budget recovery (`template-date-helpers.ts` 신규로 KST 날짜 파싱/요일 계산/범위 열거 헬퍼 추출 + `scheduling/service.ts` import 재배선 및 <=4000 라인 가드 유지 + `e2e-wi0557` 회귀 테스트 추가)
+- WI-0558 payroll year-end filing value helper extraction and line-budget recovery (`value-helpers.ts` extraction for parse/format timeline helpers + `PayrollYearEndFilingConsole.tsx` helper import rewiring + `e2e-wi0558` regression)
+- WI-0559 payroll year-end filing submission request helper extraction (`submission-request-helpers.ts` extraction for list-query/submit/ack/resubmit payload builders + `PayrollYearEndFilingConsole.tsx` request payload delegation + `e2e-wi0559` regression)
+- WI-0560 payroll year-end filing submission state helper extraction (`submission-state-helpers.ts` extraction for upsert/replace/filter-summary builders + `PayrollYearEndFilingConsole.tsx` state update/active-filter summary delegation + `e2e-wi0560` regression)
+- WI-0561 employee contracts response quick comment templates (`EmployeeContractsResponsePanel.tsx` quick comment template actions + `contracts/copy.ts` locale copy extension + `e2e-wi0561` regression)
+- WI-0562 admin analytics quick drilldown controls (`AdminKpiSections.tsx` quick metric drilldown button set + `admin-kpi/copy.ts` locale keys extension + line-budget <=300 ���� + `e2e-wi0562` regression)
+- WI-0563 scheduling rotation window helper extraction and line-budget recovery (`rotation-window-helpers.ts` extraction for template window/rotation builders + `scheduling/service.ts` helper import rewiring + `e2e-wi0563` regression)
+- WI-0564 scheduling rotation optimization evaluation helper extraction and line-budget recovery (`rotation-optimization-evaluation-helpers.ts` extraction for offset evaluation/ranking logic + `scheduling/service.ts` best-rotation flow helper delegation + `e2e-wi0564` regression)
+- WI-0565 scheduling anomaly incident core helper extraction (`anomaly-incident-core-helpers.ts` extraction for lifecycle normalization/update payload builders and list/SLA audit/response builders + `scheduling/service.ts` lifecycle/list/SLA helper delegation + `e2e-wi0565` regression)
+- WI-0566 employee self-service interaction setter bundle extraction (`page-interaction-setter-bundles.ts` extraction for attendance/leave/request/period setter bundle composition + `employee/page.tsx` orchestration helper delegation + `e2e-wi0566` regression)
+
+- WI-0567 scheduling anomaly auto-action summary/result helper extraction (anomaly-incident-auto-action-helpers.ts extraction for auto-action audit/event summary and service result payload builders + scheduling/service.ts auto-action execution payload delegation + e2e-wi0567 regression)
+
+- WI-0568 scheduling anomaly escalation summary/result helper extraction (anomaly-incident-escalation-helpers.ts extraction for escalation generated audit summary and response payload builders + scheduling/service.ts escalation payload delegation + e2e-wi0568 regression)
+
+- WI-0569 scheduling anomaly escalation request payload helper extraction (anomaly-incident-escalation-helpers.ts extraction for escalation requested/failed payload builders + scheduling/service.ts escalation request payload delegation + e2e-wi0569 regression)
+
+- WI-0570 scheduling anomaly auto-action assign-failed payload helper extraction (anomaly-incident-auto-action-helpers.ts extraction for auto_action.assign.failed audit payload builder + scheduling/service.ts failure-path payload delegation + e2e-wi0570 regression)
+
+- WI-0571 scheduling anomaly auto-action audit entry helper extraction (anomaly-incident-auto-action-audit-helpers.ts extraction for assign-failed/generated/execution audit entry builders + scheduling/service.ts auto-action audit append delegation + e2e-wi0571 regression)
+
+- WI-0572 scheduling anomaly archive summary/result helper extraction (anomaly-incident-archive-helpers.ts extraction for archive action/generated audit payload builders and archive result builder + scheduling/service.ts archive payload/result delegation + e2e-wi0572 regression)
+
+- WI-0573 scheduling anomaly replay summary/result helper extraction (anomaly-incident-replay-helpers.ts extraction for replay action/generated audit payload builders and replay result builder + scheduling/service.ts replay payload/result delegation + e2e-wi0573 regression)
+
+- WI-0574 scheduling anomaly reconcile summary/result helper extraction (anomaly-incident-reconcile-helpers.ts extraction for reconcile generated audit payload and reconcile result builder + scheduling/service.ts reconcile payload/result delegation + e2e-wi0574 regression)
+
+- WI-0575 scheduling anomaly cockpit summary/result helper extraction (anomaly-cockpit-report-helpers.ts extraction for cockpit generated audit payload and cockpit report builder + scheduling/service.ts cockpit payload/result delegation + e2e-wi0575 regression)
+
+- WI-0576 scheduling anomaly read audit payload helper extraction (anomaly-incident-read-helpers.ts extraction for incident read audit payload builder + scheduling/service.ts read-audit payload delegation + e2e-wi0576 regression)
+
+- WI-0577 scheduling anomaly report summary/result helper extraction (anomaly-report-helpers.ts extraction for anomaly report generated audit payload and report result builder + scheduling/service.ts anomaly-report payload/result delegation + e2e-wi0577 regression)
+
+- WI-0578 scheduling anomaly lifecycle audit/response helper extraction (anomaly-incident-core-helpers.ts extraction for lifecycle audit payload and lifecycle response builders + scheduling/service.ts lifecycle payload/result delegation + e2e-wi0578 regression)

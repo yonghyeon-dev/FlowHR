@@ -64,6 +64,27 @@ export type ScheduleAnomalyCockpitQueueEntry = {
   recommendedAction: string;
 };
 
+type BuildScheduleAttendanceAnomalyReportAuditPayloadInput = {
+  periodStartIso: string;
+  periodEndIso: string;
+  employeeId: string | undefined;
+  lateThresholdMinutes: number;
+  evaluatedSchedules: number;
+  anomalies: number;
+  lateCount: number;
+  noShowCount: number;
+};
+
+type BuildScheduleAttendanceAnomalyReportInput = {
+  periodStart: Date;
+  periodEnd: Date;
+  lateThresholdMinutes: number;
+  evaluatedSchedules: number;
+  anomalies: ScheduleAttendanceAnomaly[];
+  lateCount: number;
+  noShowCount: number;
+};
+
 function attendanceOverlapsSchedule(attendance: AttendanceRecordEntity, schedule: WorkScheduleEntity) {
   if (attendance.state === "REJECTED") {
     return false;
@@ -153,4 +174,36 @@ export function anomalyCockpitRecommendedAction(anomaly: ScheduleAttendanceAnoma
     return "\uC9C0\uAC01 \uC6D0\uC778 \uD655\uC778 \uBC0F \uC989\uC2DC \uC5D0\uC2A4\uCEEC\uB808\uC774\uC158 \uAC80\uD1A0";
   }
   return "\uC9C0\uAC01 \uC0AC\uC720 \uD655\uC778 \uBC0F \uC7AC\uBC1C \uBC29\uC9C0 \uC870\uCE58";
+}
+
+export function buildScheduleAttendanceAnomalyReportAuditPayload(
+  input: BuildScheduleAttendanceAnomalyReportAuditPayloadInput
+) {
+  return {
+    periodStart: input.periodStartIso,
+    periodEnd: input.periodEndIso,
+    employeeId: input.employeeId ?? null,
+    lateThresholdMinutes: input.lateThresholdMinutes,
+    evaluatedSchedules: input.evaluatedSchedules,
+    anomalies: input.anomalies,
+    lateCount: input.lateCount,
+    noShowCount: input.noShowCount
+  };
+}
+
+export function buildScheduleAttendanceAnomalyReport(
+  input: BuildScheduleAttendanceAnomalyReportInput
+): ScheduleAttendanceAnomalyReport {
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes: input.lateThresholdMinutes,
+    counts: {
+      evaluatedSchedules: input.evaluatedSchedules,
+      anomalies: input.anomalies.length,
+      late: input.lateCount,
+      noShow: input.noShowCount
+    },
+    anomalies: input.anomalies
+  };
 }

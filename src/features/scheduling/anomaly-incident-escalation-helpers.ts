@@ -1,5 +1,6 @@
 import { parseIsoTimestampToMillis } from "@/features/scheduling/incident-normalizers";
 import type {
+  ScheduleAnomalyIncidentEscalationResult,
   ScheduleAnomalyIncidentEscalationItem,
   ScheduleAnomalyIncidentSlaItem
 } from "@/features/scheduling/service";
@@ -30,6 +31,50 @@ export type ScheduleAnomalyIncidentEscalationExecutionSummary = {
   skippedCooldown: number;
   failed: number;
   items: ScheduleAnomalyIncidentEscalationItem[];
+};
+
+type BuildScheduleAnomalyIncidentEscalationSummaryPayloadInput = {
+  requestedAt: string;
+  dryRun: boolean;
+  includeResolved: boolean;
+  includeWarning: boolean;
+  cooldownMinutes: number;
+  escalationChannel: string;
+  state: string | undefined;
+  assigneeId: string | undefined;
+  topN: number | undefined;
+  candidates: number;
+  executionSummary: Pick<
+    ScheduleAnomalyIncidentEscalationExecutionSummary,
+    "requested" | "skippedCooldown" | "failed"
+  >;
+};
+
+type BuildScheduleAnomalyIncidentEscalationResultInput = {
+  requestedAt: string;
+  dryRun: boolean;
+  slaTargetMinutes: number;
+  warningMinutes: number;
+  includeResolved: boolean;
+  includeWarning: boolean;
+  cooldownMinutes: number;
+  escalationChannel: string;
+  candidates: number;
+  executionSummary: ScheduleAnomalyIncidentEscalationExecutionSummary;
+};
+
+type BuildScheduleAnomalyIncidentEscalationRequestPayloadInput = {
+  candidate: ScheduleAnomalyIncidentSlaItem;
+  cooldownMinutes: number;
+  escalationChannel: string;
+  requestedAt: string;
+};
+
+type BuildScheduleAnomalyIncidentEscalationRequestFailedPayloadInput = {
+  candidate: ScheduleAnomalyIncidentSlaItem;
+  cooldownMinutes: number;
+  escalationChannel: string;
+  error: string;
 };
 
 export function buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(
@@ -130,4 +175,78 @@ export async function executeScheduleAnomalyIncidentEscalationRequests(
   }
 
   return { requested, skippedCooldown, failed, items };
+}
+
+export function buildScheduleAnomalyIncidentEscalationSummaryPayload(
+  input: BuildScheduleAnomalyIncidentEscalationSummaryPayloadInput
+) {
+  return {
+    requestedAt: input.requestedAt,
+    dryRun: input.dryRun,
+    includeResolved: input.includeResolved,
+    includeWarning: input.includeWarning,
+    cooldownMinutes: input.cooldownMinutes,
+    escalationChannel: input.escalationChannel,
+    state: input.state ?? null,
+    assigneeId: input.assigneeId?.trim() ?? null,
+    topN: input.topN ?? 50,
+    candidates: input.candidates,
+    requested: input.executionSummary.requested,
+    skippedCooldown: input.executionSummary.skippedCooldown,
+    failed: input.executionSummary.failed
+  };
+}
+
+export function buildScheduleAnomalyIncidentEscalationResult(
+  input: BuildScheduleAnomalyIncidentEscalationResultInput
+): ScheduleAnomalyIncidentEscalationResult {
+  return {
+    requestedAt: input.requestedAt,
+    dryRun: input.dryRun,
+    policy: {
+      slaTargetMinutes: input.slaTargetMinutes,
+      warningMinutes: input.warningMinutes,
+      includeResolved: input.includeResolved,
+      includeWarning: input.includeWarning,
+      cooldownMinutes: input.cooldownMinutes,
+      escalationChannel: input.escalationChannel
+    },
+    counts: {
+      candidates: input.candidates,
+      requested: input.executionSummary.requested,
+      skippedCooldown: input.executionSummary.skippedCooldown,
+      failed: input.executionSummary.failed
+    },
+    items: input.executionSummary.items
+  };
+}
+
+export function buildScheduleAnomalyIncidentEscalationRequestPayload(
+  input: BuildScheduleAnomalyIncidentEscalationRequestPayloadInput
+) {
+  return {
+    incidentId: input.candidate.incidentId,
+    state: input.candidate.state,
+    status: input.candidate.status,
+    elapsedMinutes: input.candidate.elapsedMinutes,
+    assigneeId: input.candidate.assigneeId,
+    slaTargetMinutes: input.candidate.slaTargetMinutes,
+    warningMinutes: input.candidate.warningMinutes,
+    cooldownMinutes: input.cooldownMinutes,
+    escalationChannel: input.escalationChannel,
+    requestedAt: input.requestedAt
+  };
+}
+
+export function buildScheduleAnomalyIncidentEscalationRequestFailedPayload(
+  input: BuildScheduleAnomalyIncidentEscalationRequestFailedPayloadInput
+) {
+  return {
+    incidentId: input.candidate.incidentId,
+    status: input.candidate.status,
+    elapsedMinutes: input.candidate.elapsedMinutes,
+    cooldownMinutes: input.cooldownMinutes,
+    escalationChannel: input.escalationChannel,
+    error: input.error
+  };
 }

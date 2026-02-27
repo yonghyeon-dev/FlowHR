@@ -1,6 +1,10 @@
 import type { ScheduleAnomalyIncidentEntity } from "@/features/shared/data-access";
 import { parseIsoTimestampToMillis } from "@/features/scheduling/incident-normalizers";
-import type { ScheduleAnomalyIncidentArchiveItem } from "@/features/scheduling/service";
+import type {
+  ScheduleAnomalyIncidentArchiveItem,
+  ScheduleAnomalyIncidentArchiveResult,
+  ScheduleAnomalyIncidentLifecycleState
+} from "@/features/scheduling/service";
 
 type BuildScheduleAnomalyIncidentArchiveCandidatesInput = {
   incidents: ScheduleAnomalyIncidentEntity[];
@@ -31,6 +35,55 @@ export type ScheduleAnomalyIncidentArchiveActionSummary = {
   dryRunCount: number;
   failed: number;
   items: ScheduleAnomalyIncidentArchiveItem[];
+};
+
+type BuildScheduleAnomalyIncidentArchiveAuditPayloadInput = {
+  candidate: Pick<
+    ScheduleAnomalyIncidentEntity,
+    "incidentId" | "state" | "assigneeId" | "updatedAt"
+  >;
+  archivedAt: string;
+  asOfIso: string;
+  olderThanMinutes: number;
+  archiveReason: string | null;
+};
+
+type BuildScheduleAnomalyIncidentArchiveGeneratedAuditPayloadInput = {
+  archivedAt: string;
+  dryRun: boolean;
+  asOfIso: string;
+  olderThanMinutes: number;
+  includeNonResolved: boolean;
+  stateFilter: ScheduleAnomalyIncidentLifecycleState | undefined;
+  assigneeFilter: string | undefined;
+  topN: number;
+  archiveReason: string | null;
+  total: number;
+  eligible: number;
+  candidates: number;
+  summary: Pick<
+    ScheduleAnomalyIncidentArchiveActionSummary,
+    "archived" | "dryRunCount" | "failed"
+  >;
+  skippedState: number;
+  skippedRecent: number;
+};
+
+type BuildScheduleAnomalyIncidentArchiveResultInput = {
+  archivedAt: string;
+  dryRun: boolean;
+  olderThanMinutes: number;
+  includeNonResolved: boolean;
+  archiveReason: string | null;
+  stateFilter: ScheduleAnomalyIncidentLifecycleState | undefined;
+  assigneeFilter: string | undefined;
+  topN: number;
+  total: number;
+  eligible: number;
+  candidates: number;
+  summary: ScheduleAnomalyIncidentArchiveActionSummary;
+  skippedState: number;
+  skippedRecent: number;
 };
 
 export function buildScheduleAnomalyIncidentArchiveCandidates(
@@ -130,4 +183,73 @@ export async function executeScheduleAnomalyIncidentArchiveActions(
   }
 
   return { archived, dryRunCount, failed, items };
+}
+
+export function buildScheduleAnomalyIncidentArchiveAuditPayload(
+  input: BuildScheduleAnomalyIncidentArchiveAuditPayloadInput
+) {
+  return {
+    incidentId: input.candidate.incidentId,
+    state: input.candidate.state,
+    assigneeId: input.candidate.assigneeId,
+    updatedAt: input.candidate.updatedAt,
+    archivedAt: input.archivedAt,
+    asOf: input.asOfIso,
+    olderThanMinutes: input.olderThanMinutes,
+    reason: input.archiveReason
+  };
+}
+
+export function buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload(
+  input: BuildScheduleAnomalyIncidentArchiveGeneratedAuditPayloadInput
+) {
+  return {
+    archivedAt: input.archivedAt,
+    dryRun: input.dryRun,
+    asOf: input.asOfIso,
+    olderThanMinutes: input.olderThanMinutes,
+    includeNonResolved: input.includeNonResolved,
+    state: input.stateFilter ?? null,
+    assigneeId: input.assigneeFilter ?? null,
+    topN: input.topN,
+    reason: input.archiveReason,
+    total: input.total,
+    eligible: input.eligible,
+    candidates: input.candidates,
+    archived: input.summary.archived,
+    dryRunCount: input.summary.dryRunCount,
+    skippedState: input.skippedState,
+    skippedRecent: input.skippedRecent,
+    failed: input.summary.failed
+  };
+}
+
+export function buildScheduleAnomalyIncidentArchiveResult(
+  input: BuildScheduleAnomalyIncidentArchiveResultInput
+): ScheduleAnomalyIncidentArchiveResult {
+  return {
+    archivedAt: input.archivedAt,
+    dryRun: input.dryRun,
+    policy: {
+      olderThanMinutes: input.olderThanMinutes,
+      includeNonResolved: input.includeNonResolved,
+      reason: input.archiveReason
+    },
+    filters: {
+      state: input.stateFilter ?? null,
+      assigneeId: input.assigneeFilter ?? null,
+      topN: input.topN
+    },
+    counts: {
+      total: input.total,
+      eligible: input.eligible,
+      candidates: input.candidates,
+      archived: input.summary.archived,
+      dryRun: input.summary.dryRunCount,
+      skippedState: input.skippedState,
+      skippedRecent: input.skippedRecent,
+      failed: input.summary.failed
+    },
+    items: input.summary.items
+  };
 }

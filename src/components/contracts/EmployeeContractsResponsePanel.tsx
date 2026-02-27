@@ -41,6 +41,12 @@ export function EmployeeContractsResponsePanel({
   signatureEvidence,
   onDownloadEvidence
 }: EmployeeContractsResponsePanelProps) {
+  const quickCommentTemplates = [
+    copy.quickCommentTemplateConfirmTerms,
+    copy.quickCommentTemplateNeedClarification,
+    copy.quickCommentTemplateRequestRevision
+  ];
+
   return (
     <article className="panel panel-contract-template-detail">
       <h2>{copy.responseTitle}</h2>
@@ -60,6 +66,19 @@ export function EmployeeContractsResponsePanel({
           <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
           <label>{copy.signatureInputLabel}<input value={signatureInput} onChange={(event) => onSignatureInputChange(event.target.value)} /></label>
           <label>{copy.commentLabel}<textarea rows={3} value={comment} onChange={(event) => onCommentChange(event.target.value)} /></label>
+          <div className="contract-action-row">
+            <span className="small muted">{copy.quickCommentTemplatesLabel}</span>
+            {quickCommentTemplates.map((template) => (
+              <button
+                key={template}
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => onCommentChange(template)}
+              >
+                {template}
+              </button>
+            ))}
+          </div>
           {!canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
           <div className="contract-action-row">
             <button type="button" className="btn" onClick={() => onRespond("SIGN")} disabled={!canRespondSelected}>{copy.signAction}</button>

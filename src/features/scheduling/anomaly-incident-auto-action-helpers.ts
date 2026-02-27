@@ -1,7 +1,9 @@
 import type {
   ScheduleAnomalyIncidentAutoActionItem,
+  ScheduleAnomalyIncidentAutoActionResult,
   ScheduleAnomalyIncidentAutoAssignMode,
   ScheduleAnomalyIncidentEscalationDecision,
+  ScheduleAnomalyIncidentEscalationResult,
   ScheduleAnomalyIncidentEscalationItem,
   ScheduleAnomalyIncidentLifecycleState
 } from "@/features/scheduling/service";
@@ -59,6 +61,43 @@ type NotifyScheduleAnomalyIncidentAutoActionExecutionInput = {
   items: ScheduleAnomalyIncidentAutoActionItem[];
   publishExecuted: (payload: Record<string, unknown>) => Promise<void>;
   appendAudit: (input: ScheduleAnomalyIncidentAutoActionNotificationAuditInput) => Promise<void>;
+};
+
+type BuildScheduleAnomalyIncidentAutoActionSummaryPayloadInput = {
+  executedAt: string;
+  state: ScheduleAnomalyIncidentLifecycleState | undefined;
+  assigneeId: string | undefined;
+  topN: number | undefined;
+  escalation: Pick<ScheduleAnomalyIncidentEscalationResult, "dryRun" | "policy" | "counts">;
+  autoAssigneeId: string;
+  autoAssignMode: ScheduleAnomalyIncidentAutoAssignMode;
+  autoAssignNote: string | null;
+  assignmentSummary: Pick<
+    ScheduleAnomalyIncidentAutoActionAssignmentSummary,
+    "escalated" | "assigned" | "skippedEscalation" | "skippedAssigned" | "failed" | "dryRun"
+  >;
+};
+
+type BuildScheduleAnomalyIncidentAutoActionResultInput = {
+  executedAt: string;
+  escalation: Pick<ScheduleAnomalyIncidentEscalationResult, "dryRun" | "policy" | "counts">;
+  autoAssigneeId: string;
+  autoAssignMode: ScheduleAnomalyIncidentAutoAssignMode;
+  autoAssignNote: string | null;
+  assignmentSummary: Pick<
+    ScheduleAnomalyIncidentAutoActionAssignmentSummary,
+    "escalated" | "assigned" | "skippedEscalation" | "skippedAssigned" | "failed" | "dryRun"
+  >;
+  items: ScheduleAnomalyIncidentAutoActionItem[];
+};
+
+type BuildScheduleAnomalyIncidentAutoActionAssignFailedPayloadInput = {
+  incidentId: string;
+  previousAssigneeId: string | null;
+  autoAssigneeId: string;
+  autoAssignMode: ScheduleAnomalyIncidentAutoAssignMode;
+  escalationDecision: ScheduleAnomalyIncidentEscalationDecision;
+  error: string;
 };
 
 function isEscalatedDecision(decision: ScheduleAnomalyIncidentEscalationDecision) {
@@ -246,4 +285,75 @@ export async function notifyScheduleAnomalyIncidentAutoActionExecution(
       // Non-blocking failure path for auto-action notification telemetry.
     }
   }
+}
+
+export function buildScheduleAnomalyIncidentAutoActionSummaryPayload(
+  input: BuildScheduleAnomalyIncidentAutoActionSummaryPayloadInput
+) {
+  return {
+    executedAt: input.executedAt,
+    dryRun: input.escalation.dryRun,
+    state: input.state ?? null,
+    assigneeId: input.assigneeId?.trim() ?? null,
+    topN: input.topN ?? 50,
+    includeResolved: input.escalation.policy.includeResolved,
+    includeWarning: input.escalation.policy.includeWarning,
+    slaTargetMinutes: input.escalation.policy.slaTargetMinutes,
+    warningMinutes: input.escalation.policy.warningMinutes,
+    cooldownMinutes: input.escalation.policy.cooldownMinutes,
+    escalationChannel: input.escalation.policy.escalationChannel,
+    autoAssigneeId: input.autoAssigneeId,
+    autoAssignMode: input.autoAssignMode,
+    autoAssignNote: input.autoAssignNote,
+    candidates: input.escalation.counts.candidates,
+    escalated: input.assignmentSummary.escalated,
+    assigned: input.assignmentSummary.assigned,
+    skippedEscalation: input.assignmentSummary.skippedEscalation,
+    skippedAssigned: input.assignmentSummary.skippedAssigned,
+    failed: input.assignmentSummary.failed,
+    dryRunCount: input.assignmentSummary.dryRun
+  };
+}
+
+export function buildScheduleAnomalyIncidentAutoActionResult(
+  input: BuildScheduleAnomalyIncidentAutoActionResultInput
+): ScheduleAnomalyIncidentAutoActionResult {
+  return {
+    executedAt: input.executedAt,
+    dryRun: input.escalation.dryRun,
+    policy: {
+      slaTargetMinutes: input.escalation.policy.slaTargetMinutes,
+      warningMinutes: input.escalation.policy.warningMinutes,
+      includeResolved: input.escalation.policy.includeResolved,
+      includeWarning: input.escalation.policy.includeWarning,
+      cooldownMinutes: input.escalation.policy.cooldownMinutes,
+      escalationChannel: input.escalation.policy.escalationChannel,
+      autoAssigneeId: input.autoAssigneeId,
+      autoAssignMode: input.autoAssignMode,
+      autoAssignNote: input.autoAssignNote
+    },
+    counts: {
+      candidates: input.escalation.counts.candidates,
+      escalated: input.assignmentSummary.escalated,
+      assigned: input.assignmentSummary.assigned,
+      skippedEscalation: input.assignmentSummary.skippedEscalation,
+      skippedAssigned: input.assignmentSummary.skippedAssigned,
+      failed: input.assignmentSummary.failed,
+      dryRun: input.assignmentSummary.dryRun
+    },
+    items: input.items
+  };
+}
+
+export function buildScheduleAnomalyIncidentAutoActionAssignFailedPayload(
+  input: BuildScheduleAnomalyIncidentAutoActionAssignFailedPayloadInput
+) {
+  return {
+    incidentId: input.incidentId,
+    previousAssigneeId: input.previousAssigneeId,
+    autoAssigneeId: input.autoAssigneeId,
+    autoAssignMode: input.autoAssignMode,
+    escalationDecision: input.escalationDecision,
+    error: input.error
+  };
 }

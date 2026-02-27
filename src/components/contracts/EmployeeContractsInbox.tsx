@@ -54,7 +54,9 @@ export default function EmployeeContractsInbox() {
   const [error, setError] = useState<string | null>(null);
   const [signatureEvidence, setSignatureEvidence] = useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const statusFilteredDocuments = useMemo(() => applyInboxStatusFilter(documents, inboxStatusFilter), [documents, inboxStatusFilter]);
+  const statusFilteredDocuments = useMemo(() => {
+    return applyInboxStatusFilter(documents, inboxStatusFilter);
+  }, [documents, inboxStatusFilter]);
   const deadlineFilteredDocuments = useMemo(
     () => applyInboxDeadlineFilter(statusFilteredDocuments, inboxDeadlineFilter),
     [statusFilteredDocuments, inboxDeadlineFilter]
