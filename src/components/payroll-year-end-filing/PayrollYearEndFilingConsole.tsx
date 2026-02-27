@@ -1182,11 +1182,14 @@ export default function PayrollYearEndFilingConsole() {
 
         {lastFailure ? (
           <FilingFailureActionPanel
+            locale={locale}
             copy={copy}
             failure={lastFailure}
             disabled={pendingLabel !== null}
             onRetry={() => void retryLastFailureAction()}
             onRefreshSubmissions={() => void runRefreshSubmissions()}
+            onLoadPreflightChecklist={() => void runLoadPreflightChecklist()}
+            onOpenRejectedSubmissions={runOpenRejectedSubmissionsFromPreflight}
             onLoadAckCatalog={() => void runLoadAckCatalog()}
             onClear={clearFailure}
           />
