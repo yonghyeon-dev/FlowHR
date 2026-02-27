@@ -86,6 +86,38 @@ export function isOverduePendingDocument(
   return expiresAtMs < nowMs;
 }
 
+function resolveDayDistance(fromMs: number, toMs: number) {
+  return Math.max(1, Math.ceil(Math.abs(toMs - fromMs) / DAY_MS));
+}
+
+export function resolveDueSoonPendingDays(
+  document: EmployeeContractDocument,
+  nowMs: number = Date.now()
+) {
+  if (!isDueSoonPendingDocument(document, nowMs)) {
+    return null;
+  }
+  const expiresAtMs = parseExpiresAtMillis(document);
+  if (expiresAtMs === null) {
+    return null;
+  }
+  return resolveDayDistance(nowMs, expiresAtMs);
+}
+
+export function resolveOverduePendingDays(
+  document: EmployeeContractDocument,
+  nowMs: number = Date.now()
+) {
+  if (!isOverduePendingDocument(document, nowMs)) {
+    return null;
+  }
+  const expiresAtMs = parseExpiresAtMillis(document);
+  if (expiresAtMs === null) {
+    return null;
+  }
+  return resolveDayDistance(expiresAtMs, nowMs);
+}
+
 export function sortInboxDocumentsByRisk(
   documents: EmployeeContractDocument[],
   nowMs: number = Date.now()
