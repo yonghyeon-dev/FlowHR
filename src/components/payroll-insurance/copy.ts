@@ -15,6 +15,12 @@ export type PayrollInsuranceCopy = {
   nationalPensionCapLabel: string;
   healthInsuranceCapLabel: string;
   employmentInsuranceCapLabel: string;
+  policyModeLabel: string;
+  policyModeManualOption: string;
+  policyModePresetOption: string;
+  policyModeAutoOption: string;
+  policyPresetIdLabel: string;
+  policyAsOfLabel: string;
   roundingModeLabel: string;
   roundOption: string;
   floorOption: string;
@@ -35,6 +41,12 @@ export type PayrollInsuranceCopy = {
   employeeTotalLabel: string;
   employerTotalLabel: string;
   totalDeltaLabel: string;
+  policyPresetSummaryLabel: string;
+  policyRatesSummaryLabel: string;
+  policyCapsSummaryLabel: string;
+  policyManualFallbackLabel: string;
+  policyAutoTagLabel: string;
+  policyNoCapLabel: string;
   roundingLabel: string;
   componentsTitle: string;
   noContributionBreakdownYet: string;
@@ -82,6 +94,12 @@ const defaultCopy: PayrollInsuranceCopy = {
   nationalPensionCapLabel: "National Pension Cap (optional)",
   healthInsuranceCapLabel: "Health Insurance Cap (optional)",
   employmentInsuranceCapLabel: "Employment Insurance Cap (optional)",
+  policyModeLabel: "Insurance Policy Mode",
+  policyModeManualOption: "manual",
+  policyModePresetOption: "preset id",
+  policyModeAutoOption: "preset auto",
+  policyPresetIdLabel: "Insurance Policy Preset ID (optional)",
+  policyAsOfLabel: "Insurance Policy As-Of (optional)",
   roundingModeLabel: "Rounding Mode",
   roundOption: "round",
   floorOption: "floor",
@@ -102,6 +120,12 @@ const defaultCopy: PayrollInsuranceCopy = {
   employeeTotalLabel: "Employee Total",
   employerTotalLabel: "Employer Total",
   totalDeltaLabel: "Total Delta",
+  policyPresetSummaryLabel: "Policy Preset",
+  policyRatesSummaryLabel: "Policy Rates",
+  policyCapsSummaryLabel: "Policy Caps NP/HI/EI",
+  policyManualFallbackLabel: "manual",
+  policyAutoTagLabel: "auto",
+  policyNoCapLabel: "none",
   roundingLabel: "Rounding",
   componentsTitle: "Components",
   noContributionBreakdownYet: "No contribution breakdown yet.",

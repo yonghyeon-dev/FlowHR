@@ -16,6 +16,7 @@ import type { ApiLog, PayrollInsuranceSettlementResponse } from "@/components/pa
 import {
   defaultMonthRange,
   formatKrw,
+  toSeoulDateTimeIso,
   toSeoulEndIso,
   toSeoulStartIso
 } from "@/components/payroll-insurance/types";
@@ -63,6 +64,11 @@ export default function PayrollInsuranceSettlementConsole() {
   const [nationalPensionCapKrw, setNationalPensionCapKrw] = useState("");
   const [healthInsuranceCapKrw, setHealthInsuranceCapKrw] = useState("");
   const [employmentInsuranceCapKrw, setEmploymentInsuranceCapKrw] = useState("");
+  const [insurancePolicyMode, setInsurancePolicyMode] = useState<
+    "manual" | "preset_manual" | "preset_auto"
+  >("manual");
+  const [insurancePolicyPresetId, setInsurancePolicyPresetId] = useState("kr_insurance_policy_v2026_07");
+  const [insurancePolicyAsOf, setInsurancePolicyAsOf] = useState("");
   const [insuranceRoundingMode, setInsuranceRoundingMode] = useState<"round" | "floor" | "ceil">("round");
   const [nationalPensionUnitKrw, setNationalPensionUnitKrw] = useState("1");
   const [healthInsuranceUnitKrw, setHealthInsuranceUnitKrw] = useState("1");
@@ -119,6 +125,13 @@ export default function PayrollInsuranceSettlementConsole() {
             copy.statusNonNegativeInteger
           ),
           requireMonthlyBoundary: true,
+          insurancePolicyPresetAuto: insurancePolicyMode === "preset_auto",
+          insurancePolicyPresetId:
+            insurancePolicyMode === "preset_manual" && insurancePolicyPresetId.trim().length > 0
+              ? insurancePolicyPresetId.trim()
+              : undefined,
+          insurancePolicyAsOf:
+            insurancePolicyMode === "preset_auto" ? toSeoulDateTimeIso(insurancePolicyAsOf) : undefined,
           insuranceRounding: {
             mode: insuranceRoundingMode,
             nationalPensionUnitKrw: parseRequiredPositiveInt(
@@ -253,6 +266,12 @@ export default function PayrollInsuranceSettlementConsole() {
           setHealthInsuranceCapKrw={setHealthInsuranceCapKrw}
           employmentInsuranceCapKrw={employmentInsuranceCapKrw}
           setEmploymentInsuranceCapKrw={setEmploymentInsuranceCapKrw}
+          insurancePolicyMode={insurancePolicyMode}
+          setInsurancePolicyMode={setInsurancePolicyMode}
+          insurancePolicyPresetId={insurancePolicyPresetId}
+          setInsurancePolicyPresetId={setInsurancePolicyPresetId}
+          insurancePolicyAsOf={insurancePolicyAsOf}
+          setInsurancePolicyAsOf={setInsurancePolicyAsOf}
           insuranceRoundingMode={insuranceRoundingMode}
           setInsuranceRoundingMode={setInsuranceRoundingMode}
           nationalPensionUnitKrw={nationalPensionUnitKrw}

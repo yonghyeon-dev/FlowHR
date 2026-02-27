@@ -89,6 +89,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 81. Run statutory baseline preview with dependent-aware lookup tiers (`incomeTaxLookupTable[].dependentTaxKrw`) and verify deterministic tier selection by `dependentCount` while preserving taxable-base row selection.
 82. Admin payroll statutory preview defaults `incomeTaxLookupPresetAuto=true` for KR simple-tax-table precision and preserves deterministic manual override replay.
 83. Run payroll 4-insurance settlement preview with policy preset selection (`insurancePolicyPresetId`) or auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`) and verify deterministic rate/cap resolution with manual-rate override replay.
+84. Admin payroll-insurance console supports insurance policy mode controls (manual/preset-id/preset-auto), wires `insurancePolicyPresetAuto`/`insurancePolicyPresetId`/`insurancePolicyAsOf` payload deterministically, and surfaces resolved policy preset/rates/caps in summary.
 
 ## Accuracy Cases
 
@@ -167,6 +168,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 72. Statutory baseline dependent-aware lookup tier selection (`incomeTaxLookupTable[].dependentTaxKrw`) remains deterministic for same taxable-base and dependent-count replay vectors.
 73. Admin payroll statutory preview default auto-preset mode (`incomeTaxLookupPresetAuto=true`) remains deterministic for same state replay and still allows deterministic manual-mode override.
 74. Insurance settlement policy preset resolution (`insurancePolicyPresetId`/`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`) remains deterministic for same period/as-of replay and preserves deterministic manual-rate override behavior.
+75. Admin payroll-insurance policy-mode UI wiring (manual/preset-id/preset-auto) and summary trace rendering remain deterministic for same UI state replay.
 
 ## Regression Linkage
 
@@ -193,6 +195,7 @@ Payroll gross pay preview and confirmation behavior for WI-0001 plus phase2 dedu
 - Preset Auto-Selection Gate: `incomeTaxLookupPresetAuto` with optional `incomeTaxLookupAsOf` must resolve deterministic preset by effective date reference, reject mixed manual lookup modes, and preserve periodEnd fallback behavior.
 - Preset Auto-Selection Default Gate: `/admin` payroll statutory preview should start with `incomeTaxLookupPresetAuto=true` so KR simple-tax-table precision is default, while manual mode override remains deterministic.
 - Insurance Policy Preset Gate: `POST /payroll/runs/preview-insurance-settlement` must support deterministic policy preset selection (`insurancePolicyPresetId`) and auto-selection (`insurancePolicyPresetAuto` + optional `insurancePolicyAsOf`) with clear mixed-mode guards and manual-rate override trace.
+- Admin Insurance Policy Preset UI Gate: `/admin/payroll-insurance` must expose deterministic policy mode controls (manual/preset-id/preset-auto), payload wiring (`insurancePolicyPresetAuto`/`insurancePolicyPresetId`/`insurancePolicyAsOf`), and summary policy trace visibility.
 - Dependent Lookup-Tier Gate: `incomeTaxLookupTable[].dependentTaxKrw` must enforce ordered/non-increasing tier validation and deterministic `dependentCount` tier selection.
 - Admin Preset Auto-Selection UX Gate: `/admin` payroll preview must expose deterministic manual/auto preset mode controls and wire `incomeTaxLookupPresetId` vs `incomeTaxLookupPresetAuto` + optional `incomeTaxLookupAsOf` without payload ambiguity.
 - Admin Preview Preset UX Gate: `/admin` payroll statutory baseline preset selector/guide and payload wiring must remain deterministic and locale-aware (`ko`/`en`).
