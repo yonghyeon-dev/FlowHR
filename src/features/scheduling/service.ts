@@ -52,7 +52,10 @@ import {
   buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry
 } from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
 import {
+  buildScheduleAnomalyIncidentArchiveAuditPayload,
   buildScheduleAnomalyIncidentArchiveCandidates,
+  buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload,
+  buildScheduleAnomalyIncidentArchiveResult,
   executeScheduleAnomalyIncidentArchiveActions
 } from "@/features/scheduling/anomaly-incident-archive-helpers";
 import {
@@ -3329,16 +3332,13 @@ export async function archiveScheduleAnomalyIncidents(
           organizationId: candidate.organizationId ?? tenantScope ?? undefined,
           actorRole: actor.role,
           actorId: actor.id,
-          payload: {
-            incidentId: candidate.incidentId,
-            state: candidate.state,
-            assigneeId: candidate.assigneeId,
-            updatedAt: candidate.updatedAt,
+          payload: buildScheduleAnomalyIncidentArchiveAuditPayload({
+            candidate,
             archivedAt,
-            asOf: asOfIso,
+            asOfIso,
             olderThanMinutes,
-            reason: archiveReason
-          }
+            archiveReason
+          })
         });
       }
     });
@@ -3350,52 +3350,40 @@ export async function archiveScheduleAnomalyIncidents(
     organizationId: tenantScope,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
+    payload: buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload({
       archivedAt,
       dryRun,
-      asOf: asOfIso,
+      asOfIso,
       olderThanMinutes,
       includeNonResolved,
-      state: stateFilter ?? null,
-      assigneeId: assigneeFilter ?? null,
+      stateFilter,
+      assigneeFilter,
       topN,
-      reason: archiveReason,
+      archiveReason,
       total: incidents.length,
       eligible: eligible.length,
       candidates: candidates.length,
-      archived,
-      dryRunCount,
+      summary: { archived, dryRunCount, failed },
       skippedState,
-      skippedRecent,
-      failed
-    }
+      skippedRecent
+    })
   });
-
-  return {
+  return buildScheduleAnomalyIncidentArchiveResult({
     archivedAt,
     dryRun,
-    policy: {
-      olderThanMinutes,
-      includeNonResolved,
-      reason: archiveReason
-    },
-    filters: {
-      state: stateFilter ?? null,
-      assigneeId: assigneeFilter ?? null,
-      topN
-    },
-    counts: {
-      total: incidents.length,
-      eligible: eligible.length,
-      candidates: candidates.length,
-      archived,
-      dryRun: dryRunCount,
-      skippedState,
-      skippedRecent,
-      failed
-    },
-    items
-  };
+    olderThanMinutes,
+    includeNonResolved,
+    archiveReason,
+    stateFilter,
+    assigneeFilter,
+    topN,
+    total: incidents.length,
+    eligible: eligible.length,
+    candidates: candidates.length,
+    summary: { archived, dryRunCount, failed, items },
+    skippedState,
+    skippedRecent
+  });
 }
 
 export async function replayScheduleAnomalyIncidentStore(
