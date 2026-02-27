@@ -84,6 +84,8 @@ import {
   type RotationOffsetEvaluation as RotationOffsetEvaluationBase
 } from "@/features/scheduling/rotation-optimization-evaluation-helpers";
 import {
+  buildAnomalyIncidentLifecycleAuditPayload,
+  buildAnomalyIncidentLifecycleResponse,
   buildAnomalyIncidentLifecycleUpdateResult,
   buildAnomalyIncidentListAuditPayload,
   buildAnomalyIncidentSlaAuditPayload,
@@ -2850,10 +2852,10 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     lastEscalationRequestedAt: existingStore?.lastEscalationRequestedAt ?? null
   });
 
-  const payload = {
-    ...lifecycleUpdate.payload,
-    incidentId
-  };
+  const payload = buildAnomalyIncidentLifecycleAuditPayload({
+    incidentId,
+    payload: lifecycleUpdate.payload
+  });
 
   await context.dataAccess.audit.append({
     action: ANOMALY_INCIDENT_LIFECYCLE_AUDIT_ACTION_BY_ACTION[input.action],
@@ -2874,19 +2876,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     actorId: actor.id,
     payload
   });
-  return {
-    incidentId,
-    action: lifecycleUpdate.historyEntry.action,
-    state: lifecycleUpdate.historyEntry.state,
-    assigneeId: lifecycleUpdate.historyEntry.assigneeId,
-    resolutionCode: lifecycleUpdate.historyEntry.resolutionCode,
-    note: lifecycleUpdate.historyEntry.note,
-    updatedAt: lifecycleUpdate.historyEntry.updatedAt,
-    updatedBy: {
-      actorId: lifecycleUpdate.historyEntry.updatedBy.actorId,
-      actorRole: lifecycleUpdate.historyEntry.updatedBy.actorRole
-    }
-  };
+  return buildAnomalyIncidentLifecycleResponse(incidentId, lifecycleUpdate.historyEntry);
 }
 
 export async function listScheduleAnomalyIncidents(

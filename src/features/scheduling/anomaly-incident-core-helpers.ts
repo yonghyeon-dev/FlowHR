@@ -71,6 +71,18 @@ type BuildLifecycleUpdateResultInput = {
   maxHistory: number;
 };
 
+type BuildLifecycleAuditPayloadInput = {
+  incidentId: string;
+  payload: {
+    action: AnomalyIncidentLifecycleAction;
+    state: AnomalyIncidentLifecycleState;
+    assigneeId: string | null;
+    resolutionCode: AnomalyIncidentResolutionCode | null;
+    note: string | null;
+    updatedAt: string;
+  };
+};
+
 export function buildAnomalyIncidentLifecycleUpdateResult(
   input: BuildLifecycleUpdateResultInput
 ) {
@@ -111,6 +123,34 @@ export function buildAnomalyIncidentLifecycleUpdateResult(
       resolutionCode,
       note,
       updatedAt: input.updatedAt
+    }
+  };
+}
+
+export function buildAnomalyIncidentLifecycleAuditPayload(
+  input: BuildLifecycleAuditPayloadInput
+) {
+  return {
+    ...input.payload,
+    incidentId: input.incidentId
+  };
+}
+
+export function buildAnomalyIncidentLifecycleResponse(
+  incidentId: string,
+  historyEntry: IncidentHistoryEntryLike
+) {
+  return {
+    incidentId,
+    action: historyEntry.action,
+    state: historyEntry.state,
+    assigneeId: historyEntry.assigneeId,
+    resolutionCode: historyEntry.resolutionCode,
+    note: historyEntry.note,
+    updatedAt: historyEntry.updatedAt,
+    updatedBy: {
+      actorId: historyEntry.updatedBy.actorId,
+      actorRole: historyEntry.updatedBy.actorRole
     }
   };
 }

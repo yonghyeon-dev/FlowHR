@@ -853,3 +853,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0576 scheduling anomaly read audit payload helper extraction (anomaly-incident-read-helpers.ts extraction for incident read audit payload builder + scheduling/service.ts read-audit payload delegation + e2e-wi0576 regression)
 
 - WI-0577 scheduling anomaly report summary/result helper extraction (anomaly-report-helpers.ts extraction for anomaly report generated audit payload and report result builder + scheduling/service.ts anomaly-report payload/result delegation + e2e-wi0577 regression)
+
+- WI-0578 scheduling anomaly lifecycle audit/response helper extraction (anomaly-incident-core-helpers.ts extraction for lifecycle audit payload and lifecycle response builders + scheduling/service.ts lifecycle payload/result delegation + e2e-wi0578 regression)
