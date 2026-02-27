@@ -462,7 +462,7 @@ export const employeeContractsCopyByLocale: Record<FlowLocale, EmployeeContracts
     description: "대기 중인 계약을 검토하고 서명 해시 검증 기반으로 응답하세요.",
     inboxTitle: "받은함",
     inboxAria: "직원 계약 받은함 목록",
-    inboxSearchLabel: "\uBC1B\uC740\uD568 \uAC80\uC0C9",
+    inboxSearchLabel: "받은함 검색",
     inboxSearchPlaceholder: "제목/문서 번호/상태 검색",
     inboxStatusFilterLabel: "상태 필터",
     inboxStatusFilterAllOption: "전체 상태",
