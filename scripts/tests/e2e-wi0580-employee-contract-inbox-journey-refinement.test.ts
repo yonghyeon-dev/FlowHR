@@ -32,7 +32,19 @@ async function run() {
     "contracts",
     "employee-inbox-filter-helpers.ts"
   );
+  const inboxJourneyHelpers = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "employee-inbox-journey-helpers.ts"
+  );
   const employeeInbox = readUtf8("src", "components", "contracts", "EmployeeContractsInbox.tsx");
+  const employeeInboxList = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "EmployeeContractsInboxList.tsx"
+  );
   const responsePanel = readUtf8(
     "src",
     "components",
@@ -61,12 +73,16 @@ async function run() {
   assert.match(inboxHelpers, /export function resolveOverduePendingDays\(/);
   assert.match(inboxHelpers, /function resolveDayDistance\(/);
 
-  assert.match(employeeInbox, /resolveDueSoonPendingDays/);
-  assert.match(employeeInbox, /resolveOverduePendingDays/);
+  assert.match(inboxJourneyHelpers, /export function resolveEmployeeContractsNextActionHint\(/);
+  assert.match(inboxJourneyHelpers, /export function resolveEmployeeContractsUrgencyBadge\(/);
+  assert.match(inboxJourneyHelpers, /\(D\+\$\{overdueDays\}\)/);
+  assert.match(inboxJourneyHelpers, /\(D-\$\{dueSoonDays\}\)/);
+
+  assert.match(employeeInbox, /resolveEmployeeContractsNextActionHint/);
+  assert.match(employeeInbox, /EmployeeContractsInboxList/);
   assert.match(employeeInbox, /const nextActionHint = useMemo/);
-  assert.match(employeeInbox, /\(D\+\{overdueDays\}\)/);
-  assert.match(employeeInbox, /\(D-\{dueSoonDays\}\)/);
   assert.match(employeeInbox, /nextActionHint=\{nextActionHint\}/);
+  assert.match(employeeInboxList, /resolveEmployeeContractsUrgencyBadge/);
 
   assert.match(responsePanel, /nextActionHint: string;/);
   assert.match(responsePanel, /\{copy\.nextActionTitle\}/);
