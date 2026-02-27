@@ -535,7 +535,10 @@ export default function PayrollYearEndFilingConsole() {
     setSubmissionAckStatusFilter("all");
     setSubmissionValidationStatusFilter("all");
     setSubmissionTransportFilter("all");
+    setSubmissionSettlementHashFilter("");
     setSubmissionSearch("");
+    setSubmissionSortBy("submittedAt");
+    setSubmissionSortDirection("desc");
     setTimeout(() => void runRefreshSubmissions(), 0);
   }
 
@@ -544,7 +547,10 @@ export default function PayrollYearEndFilingConsole() {
     setSubmissionAckStatusFilter("rejected");
     setSubmissionValidationStatusFilter("all");
     setSubmissionTransportFilter("all");
+    setSubmissionSettlementHashFilter("");
     setSubmissionSearch("");
+    setSubmissionSortBy("submittedAt");
+    setSubmissionSortDirection("desc");
     setTimeout(() => void runRefreshSubmissions(), 0);
   }
 
