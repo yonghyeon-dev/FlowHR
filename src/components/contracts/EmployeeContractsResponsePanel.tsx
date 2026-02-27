@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { type ContractDocumentStatus, type EmployeeContractsCopy, toDateText } from "@/components/contracts/copy";
 import { normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
@@ -54,10 +55,41 @@ export function EmployeeContractsResponsePanel({
     copy.quickCommentTemplateRequestRevision
   ];
   const isSignatureInputReady = signatureInput.trim().length > 0;
+  const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
+  const [copyStatusError, setCopyStatusError] = useState<string | null>(null);
   const evidenceDisplayFileName =
     selected && signatureEvidence
       ? normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
       : null;
+  const hasSignatureHash = Boolean(selected?.signatureHash);
+  const hasEvidenceHash = Boolean(selected?.signatureEvidenceHash);
+
+  useEffect(() => {
+    setCopyStatusMessage(null);
+    setCopyStatusError(null);
+  }, [selected?.id]);
+
+  async function copyHash(hashType: "signature" | "evidence") {
+    const hashValue = hashType === "signature" ? selected?.signatureHash : selected?.signatureEvidenceHash;
+    if (!hashValue) {
+      return;
+    }
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setCopyStatusMessage(null);
+      setCopyStatusError(copy.copyHashClipboardError);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(hashValue);
+      setCopyStatusError(null);
+      setCopyStatusMessage(
+        hashType === "signature" ? copy.copiedSignatureHashStatus : copy.copiedEvidenceHashStatus
+      );
+    } catch {
+      setCopyStatusMessage(null);
+      setCopyStatusError(copy.copyHashClipboardError);
+    }
+  }
 
   return (
     <article className="panel panel-contract-template-detail">
@@ -77,6 +109,22 @@ export function EmployeeContractsResponsePanel({
             <li><span>{copy.signatureHashLabel}</span><strong>{selected.signatureHash ? `${selected.signatureHash.slice(0, 16)}...` : "-"}</strong></li>
             <li><span>{copy.evidenceHashLabel}</span><strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong></li>
           </ul>
+          {hasSignatureHash || hasEvidenceHash ? (
+            <div className="contract-action-row">
+              {hasSignatureHash ? (
+                <button type="button" className="btn btn-secondary btn-small" onClick={() => void copyHash("signature")}>
+                  {copy.copySignatureHashAction}
+                </button>
+              ) : null}
+              {hasEvidenceHash ? (
+                <button type="button" className="btn btn-secondary btn-small" onClick={() => void copyHash("evidence")}>
+                  {copy.copyEvidenceHashAction}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {copyStatusError ? <p className="inline-error">{copyStatusError}</p> : null}
+          {copyStatusMessage ? <p className="small">{copyStatusMessage}</p> : null}
           <EmployeeContractJourneyPanel selected={selected} isKoLocale={isKoLocale} runtimeLocale={runtimeLocale} />
           <label>
             {copy.signatureInputLabel}
