@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const executions = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
+  const executionSections = readUtf8("src", "app", "admin", "approval-executions", "page-sections.tsx");
   const history = readUtf8("src", "app", "admin", "approval-history", "page.tsx");
   const policy = readUtf8("src", "app", "admin", "approval-policy", "page.tsx");
   const templates = readUtf8("src", "app", "admin", "approval-templates", "page.tsx");
@@ -26,7 +27,7 @@ async function run() {
   assert.match(history, /filters\.organizationId[\s\S]*filters\.adminActorId/);
   assert.match(policy, /context\.organizationId[\s\S]*context\.adminActorId/);
   assert.match(templates, /context\.organizationId[\s\S]*context\.adminActorId/);
-  assert.match(executions, /Work conditions[\s\S]*Session actor/);
+  assert.match(executionSections, /Work conditions[\s\S]*Session actor/);
 
   assert.match(workItem, /WI-0626/i);
   assert.match(roadmap, /WI-0626/i);
