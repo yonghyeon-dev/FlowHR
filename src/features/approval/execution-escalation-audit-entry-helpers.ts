@@ -6,6 +6,18 @@ type EscalationAuditActorContext = {
   actorId: string;
 };
 
+export function buildApprovalExecutionEscalationAuditActorContext(input: {
+  organizationId: string;
+  actorRole: string;
+  actorId: string;
+}): EscalationAuditActorContext {
+  return {
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId
+  };
+}
+
 function buildApprovalExecutionEscalationAuditEntry(input: {
   action: string;
   actor: EscalationAuditActorContext;
