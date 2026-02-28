@@ -26,8 +26,14 @@ import {
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function AdminPeoplePage() {
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -365,6 +371,7 @@ export default function AdminPeoplePage() {
       profileFieldLabel={profileFieldLabel}
       logs={logs}
       pendingLabel={pendingLabel}
+      showDevTools={showDevTools}
     />
   );
 }

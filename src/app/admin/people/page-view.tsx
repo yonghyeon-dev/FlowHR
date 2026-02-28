@@ -4,6 +4,7 @@ import { AdminPeopleDirectoryFiltersPanel } from "@/app/admin/people/page-view-d
 import { AdminPeopleHistoryPanel } from "@/app/admin/people/page-view-history-panel";
 import { AdminPeopleLogsPanel } from "@/app/admin/people/page-view-logs-panel";
 import { AdminPeopleOrgChartPanel } from "@/app/admin/people/page-view-org-chart-panel";
+import { AdminPeopleRelatedWorkspacesPanel } from "@/app/admin/people/page-view-related-workspaces-panel";
 import {
   type ActiveFilter,
   type ApiLog,
@@ -85,6 +86,7 @@ type AdminPeoplePageViewProps = {
   profileFieldLabel: Record<ProfileField, string>;
   logs: ApiLog[];
   pendingLabel: string | null;
+  showDevTools: boolean;
 };
 
 export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
@@ -151,25 +153,26 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
     historyChanges,
     profileFieldLabel,
     logs,
-    pendingLabel
+    pendingLabel,
+    showDevTools
   } = props;
   return (
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">{isKoLocale ? "조직도/인사 이력" : "Organization chart and HR history"}</h1>
+          <h1 className="page-title">{isKoLocale ? "조직???�사 ?�력" : "Organization chart and HR history"}</h1>
           <p className="page-subtitle">
             {isKoLocale
-              ? "조직도, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다."
+              ? "조직?? 직원 비교, ?�사 ?�력 카드�????�면?�서 관리합?�다."
               : "Manage org tree, employee comparison, and HR history cards in one screen."}
           </p>
         </div>
         <div className="page-actions">
           <button className="btn btn-primary" onClick={() => void refreshDirectory()}>
-            {isKoLocale ? "디렉터리 조회" : "Refresh directory"}
+            {isKoLocale ? "?�렉?�리 조회" : "Refresh directory"}
           </button>
           <Link className="btn btn-secondary" href="/admin">
-            {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
+            {isKoLocale ? "Admin dashboard" : "Admin dashboard"}
           </Link>
         </div>
       </header>
@@ -179,7 +182,7 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           <strong>{organizations.length}</strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "부서" : "Departments"}</p>
+          <p>{isKoLocale ? "Departments" : "Departments"}</p>
           <strong>{departments.length}</strong>
         </article>
         <article className="kpi-card">
@@ -193,9 +196,9 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           </strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "API 호출" : "API calls"}</p>
+          <p>{isKoLocale ? "API ?�출" : "API calls"}</p>
           <strong>
-            {stats.total} ({isKoLocale ? "성공" : "OK"} {stats.success} / {isKoLocale ? "실패" : "FAIL"} {stats.fail})
+            {stats.total} ({isKoLocale ? "?�공" : "OK"} {stats.success} / {isKoLocale ? "?�패" : "FAIL"} {stats.fail})
           </strong>
         </article>
       </section>
@@ -280,11 +283,17 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
             profileFieldLabel={profileFieldLabel}
           />
         </section>
-
-        <section aria-label={isKoLocale ? "요청 로그" : "Request logs"}>
-          <AdminPeopleLogsPanel isKoLocale={isKoLocale} stats={stats} pendingLabel={pendingLabel} logs={logs} />
-        </section>
+        {showDevTools ? (
+          <section aria-label={isKoLocale ? "?�청 로그" : "Request logs"}>
+            <AdminPeopleLogsPanel isKoLocale={isKoLocale} stats={stats} pendingLabel={pendingLabel} logs={logs} />
+          </section>
+        ) : (
+          <section aria-label={isKoLocale ? "Related workspaces" : "Related workspaces"}>
+            <AdminPeopleRelatedWorkspacesPanel isKoLocale={isKoLocale} />
+          </section>
+        )}
       </section>
     </main>
   );
 }
+
