@@ -24,6 +24,20 @@ type ScheduleAnomalySideEffectContext = {
   publish: DomainEventPublisher["publish"];
 };
 
+export function buildScheduleAnomalySideEffectContext(input: {
+  actor: Pick<Actor, "id" | "role">;
+  tenantScope?: string;
+  dataAccess: Pick<DataAccess, "audit">;
+  publish: DomainEventPublisher["publish"];
+}): ScheduleAnomalySideEffectContext {
+  return {
+    actor: input.actor,
+    tenantScope: input.tenantScope,
+    dataAccess: input.dataAccess,
+    publish: input.publish
+  };
+}
+
 type ScheduleAnomalySummaryInput = {
   window: AnomalyAlertInputWindow;
   lateThresholdMinutes: number;
