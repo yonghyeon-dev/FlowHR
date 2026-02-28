@@ -228,7 +228,7 @@ export default function AdminApprovalPolicyPage() {
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>{copy.context.title}</h2>
+          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
           <p className="small muted">
             {copy.context.organizationId}: <code>{organizationId || "-"}</code> / {copy.context.adminActorId}:{" "}
             <code>{adminActorId || "-"}</code>
@@ -351,17 +351,22 @@ export default function AdminApprovalPolicyPage() {
             <button className="btn btn-secondary btn-small" onClick={() => void expireDelegations()} disabled={!organizationId.trim()}>
               {copy.delegationList.expireDelegations}
             </button>
-            <label className="small" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-              {copy.delegationList.dryRun}
-              <select
-                value={delegationExpireDryRun ? "true" : "false"}
-                onChange={(event) => setDelegationExpireDryRun(event.target.value === "true")}
-              >
-                <option value="false">{copy.delegationList.execute}</option>
-                <option value="true">{copy.delegationList.preview}</option>
-              </select>
-            </label>
           </div>
+          <details className="details">
+            <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
+            <div className="input-grid" style={{ marginTop: 12 }}>
+              <label className="small" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                {copy.delegationList.dryRun}
+                <select
+                  value={delegationExpireDryRun ? "true" : "false"}
+                  onChange={(event) => setDelegationExpireDryRun(event.target.value === "true")}
+                >
+                  <option value="false">{copy.delegationList.execute}</option>
+                  <option value="true">{copy.delegationList.preview}</option>
+                </select>
+              </label>
+            </div>
+          </details>
           {lastExpireResult ? (
             <p className="small">
               {copy.delegationList.lastResult}: {copy.delegationList.checked} {lastExpireResult.checkedCount},{" "}
@@ -376,8 +381,8 @@ export default function AdminApprovalPolicyPage() {
             <ul className="simple-list">
               {delegations.map((delegation) => (
                 <li key={delegation.id}>
-                  <strong>{copy.domainLabels[delegation.domain]}</strong> 쨌 {delegation.delegatorRole} =&gt;{" "}
-                  {delegation.delegateActorId} 쨌 {delegation.active ? copy.delegationList.active : copy.delegationList.inactive}
+                  <strong>{copy.domainLabels[delegation.domain]}</strong> / {delegation.delegatorRole} =&gt;{" "}
+                  {delegation.delegateActorId} / {delegation.active ? copy.delegationList.active : copy.delegationList.inactive}
                   <br />
                   <span className="small">
                     {formatApprovalPolicyDateTime(delegation.startsAt, runtimeLocale)} ~{" "}
@@ -396,30 +401,48 @@ export default function AdminApprovalPolicyPage() {
           )}
         </article>
 
-        <article className="panel">
-          <h2>{copy.logs.title}</h2>
-          <p className="small">
-            {copy.logs.total} {stats.total} 쨌 {copy.logs.success} {stats.success} 쨌 {copy.logs.fail} {stats.fail}
-            {pendingLabel ? ` 쨌 ${copy.logs.inProgress} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small">{copy.logs.empty}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span>{" "}
-                  {log.label} 쨌 {log.status} 쨌 {log.at}
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/admin" className="btn btn-secondary">
-              {copy.logs.toAdmin}
-            </Link>
-          </div>
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.logs.title}</h2>
+            <p className="small">
+              {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
+              {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small">{copy.logs.empty}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span>{" "}
+                    {log.label} / {log.status} / {log.at}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="panel-actions">
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.logs.toAdmin}
+              </Link>
+            </div>
+          </article>
+        ) : (
+          <article className="panel">
+            <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+            <div className="panel-actions">
+              <Link href="/admin/approval-executions" className="btn btn-secondary">
+                {isKoLocale ? "결재 실행 현황" : "Approval executions"}
+              </Link>
+              <Link href="/admin/approval-history" className="btn btn-secondary">
+                {isKoLocale ? "결재 단계 이력" : "Approval history"}
+              </Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.logs.toAdmin}
+              </Link>
+            </div>
+          </article>
+        )}
+
       </section>
     </main>
   );
