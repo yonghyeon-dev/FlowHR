@@ -12,8 +12,8 @@ import {
   resolvePayrollYearEndReasonCodeLabel,
   resolvePayrollYearEndReconciliationStatusLabel
 } from "@/components/payroll-year-end/runtime-copy-helpers";
+import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import type {
   ApiLog,
@@ -99,9 +99,6 @@ function summarizeTaxCreditReasonCodes(
 }
 
 export default function PayrollYearEndConsole() {
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [year, setYear] = useState(String(currentYear()));
   const [nonTaxableAnnualIncomeKrw, setNonTaxableAnnualIncomeKrw] = useState("0");
@@ -133,16 +130,14 @@ export default function PayrollYearEndConsole() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "PAY-1001").trim() || "PAY-1001";
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollYearEndCopyByLocale[locale];
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(() => {
@@ -483,6 +478,10 @@ export default function PayrollYearEndConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.inputTitle}</h2>
+          <p className="small muted">
+            {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+            {locale === "ko" ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+          </p>
           <div className="input-grid">
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
@@ -506,9 +505,6 @@ export default function PayrollYearEndConsole() {
             <label className="checkbox"><input type="checkbox" checked={donationEligible} onChange={(event) => setDonationEligible(event.target.checked)} />{copy.donationEligibleLabel}</label>
             <label className="checkbox"><input type="checkbox" checked={housingSavingsEligible} onChange={(event) => setHousingSavingsEligible(event.target.checked)} />{copy.housingSavingsEligibleLabel}</label>
           </div>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
-          <label>{copy.actorIdFallbackLabel}<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
-          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runSettlementPreview()} disabled={pendingLabel !== null}>{copy.previewSettlementAction}</button>
             <button className="btn btn-secondary" onClick={() => void runSettlementRecalculation()} disabled={pendingLabel !== null}>{copy.recalculateSettlementAction}</button>
@@ -598,24 +594,26 @@ export default function PayrollYearEndConsole() {
           recalculation={recalculation}
           insuranceReconciliationReport={insuranceReconciliationReport}
         />
-        <article className="panel">
-          <h2>{copy.apiLogsTitle}</h2>
-          <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
-          {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">{copy.openPreflightChecklistAction}</Link>
-            <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
-          </div>
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.apiLogsTitle}</h2>
+            <p className="small">{copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}{pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}</p>
+            {logs.length === 0 ? <p className="small">{copy.noApiCallYet}</p> : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="panel-actions">
+              <Link href="/admin/payroll-year-end/preflight" className="btn btn-secondary">{copy.openPreflightChecklistAction}</Link>
+              <Link href="/admin" className="btn btn-secondary">{copy.backToAdminAction}</Link>
+            </div>
+          </article>
+        ) : null}
       </section>
     </main>
   );
