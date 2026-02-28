@@ -2,6 +2,7 @@ import type { AdminSchedulingCopy } from "@/components/scheduling/copy";
 import type {
   AdminSchedulingIncidentPanelState,
   ScheduleAnomalyIncidentFilterState,
+  ScheduleAnomalyIncidentResolutionCode,
   ScheduleAnomalyIncidentState
 } from "@/components/scheduling/use-admin-scheduling-incident-panel";
 import { formatDateTime } from "@/components/scheduling/helpers";
@@ -35,6 +36,26 @@ function quickFilterSummaryLabel(state: ScheduleAnomalyIncidentFilterState, copy
   return copy.incidentSummaryTotalLabel;
 }
 
+function resolveResolutionCodeLabel(code: ScheduleAnomalyIncidentResolutionCode, copy: AdminSchedulingCopy) {
+  if (code === "FALSE_POSITIVE") {
+    return copy.incidentResolutionFalsePositiveLabel;
+  }
+  if (code === "ATTENDANCE_CORRECTED") {
+    return copy.incidentResolutionAttendanceCorrectedLabel;
+  }
+  if (code === "MANUAL_CONFIRMED") {
+    return copy.incidentResolutionManualConfirmedLabel;
+  }
+  return copy.incidentResolutionOtherLabel;
+}
+
+const resolutionCodes: ScheduleAnomalyIncidentResolutionCode[] = [
+  "FALSE_POSITIVE",
+  "ATTENDANCE_CORRECTED",
+  "MANUAL_CONFIRMED",
+  "OTHER"
+];
+
 export default function AdminSchedulingIncidentPanel({
   copy,
   runtimeLocale,
@@ -47,11 +68,22 @@ export default function AdminSchedulingIncidentPanel({
     incidentTotal,
     incidents,
     incidentSummary,
+    selectedIncidentId,
+    incidentActionAssigneeId,
+    incidentActionNote,
+    incidentResolutionCode,
     onIncidentFilterStateChange,
     onIncidentAssigneeIdChange,
     onIncidentTopNChange,
+    onSelectIncident,
+    onIncidentActionAssigneeIdChange,
+    onIncidentActionNoteChange,
+    onIncidentResolutionCodeChange,
     onLoadIncidents,
-    onRunIncidentQuickFilter
+    onRunIncidentQuickFilter,
+    onAcknowledgeIncident,
+    onAssignIncident,
+    onResolveIncident
   } = incidentPanel;
 
   const quickFilters: Array<{ state: ScheduleAnomalyIncidentFilterState; count: number }> = [
@@ -126,10 +158,58 @@ export default function AdminSchedulingIncidentPanel({
                   {copy.incidentHistoryCountLabel}: {incident.history.length}
                 </span>
               </span>
+              <button
+                className={incident.incidentId === selectedIncidentId ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
+                type="button"
+                onClick={() => onSelectIncident(incident.incidentId)}
+              >
+                {copy.incidentSelectAction}
+              </button>
             </li>
           ))}
         </ul>
       )}
+      <hr />
+      <h3>{copy.incidentActionTitle}</h3>
+      <p className="small">
+        {copy.incidentSelectedLabel}:{" "}
+        <strong>{selectedIncidentId || copy.incidentUnassignedAssigneeLabel}</strong>
+      </p>
+      <label>
+        {copy.incidentActionAssigneeLabel}
+        <input
+          value={incidentActionAssigneeId}
+          onChange={(event) => onIncidentActionAssigneeIdChange(event.target.value)}
+        />
+      </label>
+      <label>
+        {copy.incidentActionNoteLabel}
+        <textarea rows={2} value={incidentActionNote} onChange={(event) => onIncidentActionNoteChange(event.target.value)} />
+      </label>
+      <label>
+        {copy.incidentResolutionCodeLabel}
+        <select
+          value={incidentResolutionCode}
+          onChange={(event) => onIncidentResolutionCodeChange(event.target.value as ScheduleAnomalyIncidentResolutionCode)}
+        >
+          {resolutionCodes.map((code) => (
+            <option key={code} value={code}>
+              {resolveResolutionCodeLabel(code, copy)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="actions">
+        <button className="btn btn-secondary btn-small" type="button" onClick={onAcknowledgeIncident}>
+          {copy.incidentAcknowledgeAction}
+        </button>
+        <button className="btn btn-secondary btn-small" type="button" onClick={onAssignIncident}>
+          {copy.incidentAssignAction}
+        </button>
+        <button className="btn btn-primary btn-small" type="button" onClick={onResolveIncident}>
+          {copy.incidentResolveAction}
+        </button>
+      </div>
     </article>
   );
 }
