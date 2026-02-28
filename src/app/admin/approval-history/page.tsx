@@ -178,7 +178,7 @@ export default function AdminApprovalHistoryPage() {
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>{copy.filters.title}</h2>
+          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
           <p className="small muted">
             {copy.filters.organizationId}: <code>{organizationId || "-"}</code> / {copy.filters.adminActorId}:{" "}
             <code>{adminActorId || "-"}</code>
@@ -194,18 +194,6 @@ export default function AdminApprovalHistoryPage() {
             </select>
           </label>
           <label>
-            {copy.filters.targetEntityType}
-            <input
-              value={targetEntityType}
-              onChange={(event) => setTargetEntityType(event.target.value)}
-              placeholder={copy.filters.targetEntityTypePlaceholder}
-            />
-          </label>
-          <label>
-            {copy.filters.targetEntityId}
-            <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
-          </label>
-          <label>
             {copy.filters.allowed}
             <select value={allowed} onChange={(event) => setAllowed(event.target.value as "" | "true" | "false")}>
               <option value="">{copy.filters.all}</option>
@@ -213,23 +201,46 @@ export default function AdminApprovalHistoryPage() {
               <option value="false">false</option>
             </select>
           </label>
-          <label>
-            {copy.filters.resolution}
-            <select
-              value={resolution}
-              onChange={(event) => setResolution(event.target.value as ApprovalStageResolution | "")}
-            >
-              {resolutionOptions.map((option) => (
-                <option key={option || "all"} value={option}>
-                  {option || copy.filters.all}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {copy.filters.limit}
-            <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(event.target.value)} />
-          </label>
+          <details className="details">
+            <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
+            <div className="input-grid" style={{ marginTop: 12 }}>
+              <label>
+                {copy.filters.targetEntityType}
+                <input
+                  value={targetEntityType}
+                  onChange={(event) => setTargetEntityType(event.target.value)}
+                  placeholder={copy.filters.targetEntityTypePlaceholder}
+                />
+              </label>
+              <label>
+                {copy.filters.targetEntityId}
+                <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
+              </label>
+              <label>
+                {copy.filters.resolution}
+                <select
+                  value={resolution}
+                  onChange={(event) => setResolution(event.target.value as ApprovalStageResolution | "")}
+                >
+                  {resolutionOptions.map((option) => (
+                    <option key={option || "all"} value={option}>
+                      {option || copy.filters.all}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {copy.filters.limit}
+                <input
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={limit}
+                  onChange={(event) => setLimit(event.target.value)}
+                />
+              </label>
+            </div>
+          </details>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadHistory()} disabled={!organizationId.trim()}>
               {copy.filters.loadHistory}
@@ -283,36 +294,53 @@ export default function AdminApprovalHistoryPage() {
           )}
         </article>
 
-        <article className="panel">
-          <h2>{copy.logs.title}</h2>
-          <p className="small">
-            {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
-            {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small">{copy.logs.empty}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span>{" "}
-                  {log.label} / {log.status} / {log.at}
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/admin/approval-executions" className="btn btn-secondary">
-              {copy.logs.goToExecutions}
-            </Link>
-            <Link href="/admin/approval-templates" className="btn btn-secondary">
-              {copy.logs.goToTemplates}
-            </Link>
-            <Link href="/admin" className="btn btn-secondary">
-              {copy.logs.goToAdminHome}
-            </Link>
-          </div>
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.logs.title}</h2>
+            <p className="small">
+              {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
+              {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small">{copy.logs.empty}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span>{" "}
+                    {log.label} / {log.status} / {log.at}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="panel-actions">
+              <Link href="/admin/approval-executions" className="btn btn-secondary">
+                {copy.logs.goToExecutions}
+              </Link>
+              <Link href="/admin/approval-templates" className="btn btn-secondary">
+                {copy.logs.goToTemplates}
+              </Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.logs.goToAdminHome}
+              </Link>
+            </div>
+          </article>
+        ) : (
+          <article className="panel">
+            <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+            <div className="panel-actions">
+              <Link href="/admin/approval-executions" className="btn btn-secondary">
+                {copy.logs.goToExecutions}
+              </Link>
+              <Link href="/admin/approval-templates" className="btn btn-secondary">
+                {copy.logs.goToTemplates}
+              </Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.logs.goToAdminHome}
+              </Link>
+            </div>
+          </article>
+        )}
       </section>
     </main>
   );

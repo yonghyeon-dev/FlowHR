@@ -920,3 +920,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0642 main process realignment (local main 누적 커밋을 feature 브랜치+PR 경로로 정렬, PR 템플릿/게이트 준수 복구, CI 통과 후 표준 머지 플로우 복귀)
 
 - WI-0643 admin approval-executions product UX (quick jump targets switched to dedicated workspaces, filter panel reframed to work conditions + advanced options collapse, and request logs gated to devtools with product-facing related-workspaces fallback + e2e-wi0643 regression guard)
+
+- WI-0644 admin approval-history product UX (filters reframed to work conditions, advanced options collapsed, and request logs gated to devtools with related-workspaces fallback + e2e-wi0644 regression guard)
