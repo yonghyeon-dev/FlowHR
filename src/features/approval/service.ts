@@ -27,6 +27,10 @@ import {
 } from "@/features/approval/execution-escalation-core-helpers";
 import { buildApprovalExecutionEscalationRequestedEventPayload } from "@/features/approval/execution-escalation-event-payload-helpers";
 import {
+  normalizeApprovalExecutionEscalationPolicy,
+  selectApprovalExecutionEscalationCandidates
+} from "@/features/approval/execution-escalation-input-helpers";
+import {
   buildApprovalExecutionEscalationAuditPayloadBase,
   buildApprovalExecutionEscalationFailureAuditPayload,
   buildApprovalExecutionListedAuditPayload,
@@ -1302,14 +1306,13 @@ export async function triggerApprovalExecutionEscalation(
     throw new ServiceError(400, "asOf must be a valid datetime");
   }
 
-  const stalledHoursMin =
-    input.stalledHoursMin !== undefined
-      ? Math.max(1, Math.min(input.stalledHoursMin, 24 * 365))
-      : 24;
-  const limit = input.limit !== undefined ? Math.min(Math.max(input.limit, 1), 500) : 50;
-  const dryRun = input.dryRun ?? false;
-  const notificationChannel =
-    input.notificationChannel?.trim() || "approval-stalled-queue";
+  const { stalledHoursMin, limit, dryRun, notificationChannel } =
+    normalizeApprovalExecutionEscalationPolicy({
+      stalledHoursMin: input.stalledHoursMin,
+      limit: input.limit,
+      dryRun: input.dryRun,
+      notificationChannel: input.notificationChannel
+    });
 
   let executions = await context.dataAccess.approvals.listExecutions({
     organizationId,
@@ -1318,13 +1321,12 @@ export async function triggerApprovalExecutionEscalation(
   });
 
   const totalPending = executions.length;
-  executions = executions.filter(
-    (execution) => calculateExecutionStalledHours(execution, asOf) >= stalledHoursMin
-  );
-  executions.sort((left, right) => compareExecutionsByPriority(left, right, asOf));
-  if (executions.length > limit) {
-    executions = executions.slice(0, limit);
-  }
+  executions = selectApprovalExecutionEscalationCandidates({
+    executions,
+    asOf,
+    stalledHoursMin,
+    limit
+  });
 
   const items: ApprovalExecutionEscalationItem[] = toApprovalExecutionEscalationItems({
     executions,
