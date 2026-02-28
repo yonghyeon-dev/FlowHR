@@ -95,6 +95,11 @@ export type ApprovalExecutionSummary = {
   total: number;
   pendingCount: number;
   stalledCount: number;
+  watchCount: number;
+  criticalCount: number;
+  watchThresholdHours: number;
+  criticalThresholdHours: number;
+  maxStalledHours: number;
   payrollPendingCount: number;
   leavePendingCount: number;
   attendancePendingCount: number;

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 
@@ -73,7 +73,14 @@ export default function AdminApprovalExecutionsPage() {
     const success = logs.filter((log) => log.ok).length;
     return { total, success, fail: total - success };
   }, [logs]);
-  const stalledHoursThreshold = Number(stalledHoursMin || "0");
+
+  const stalledHoursThreshold = useMemo(() => {
+    const parsed = Number(stalledHoursMin || "0");
+    if (!Number.isFinite(parsed)) {
+      return 0;
+    }
+    return Math.max(parsed, 0);
+  }, [stalledHoursMin]);
 
   const selectedExecution = useMemo(() => {
     return executions.find((item) => toTargetKey(item) === selectedTargetKey) ?? null;
@@ -81,11 +88,33 @@ export default function AdminApprovalExecutionsPage() {
 
   const summary = useMemo<ApprovalExecutionSummary>(() => {
     const pending = executions.filter((item) => item.state === "PENDING");
-    const stalled = pending.filter((item) => getStalledHours(item, asOfDate) >= stalledHoursThreshold);
+    const pendingWithStalledHours = pending.map((item) => ({
+      item,
+      stalledHours: getStalledHours(item, asOfDate)
+    }));
+    const stalled = pendingWithStalledHours.filter(
+      ({ stalledHours }) => stalledHours >= stalledHoursThreshold
+    );
+    const watchThresholdHours = Math.max(stalledHoursThreshold, 24);
+    const criticalThresholdHours = Math.max(stalledHoursThreshold, 72);
+    const watch = pendingWithStalledHours.filter(({ stalledHours }) => stalledHours >= watchThresholdHours);
+    const critical = pendingWithStalledHours.filter(
+      ({ stalledHours }) => stalledHours >= criticalThresholdHours
+    );
+    const maxStalledHours = pendingWithStalledHours.reduce(
+      (maxValue, current) => Math.max(maxValue, current.stalledHours),
+      0
+    );
+
     return {
       total: executions.length,
       pendingCount: pending.length,
       stalledCount: stalled.length,
+      watchCount: watch.length,
+      criticalCount: critical.length,
+      watchThresholdHours,
+      criticalThresholdHours,
+      maxStalledHours: Math.round(maxStalledHours * 10) / 10,
       payrollPendingCount: pending.filter((item) => item.domain === "PAYROLL").length,
       leavePendingCount: pending.filter((item) => item.domain === "LEAVE").length,
       attendancePendingCount: pending.filter((item) => item.domain === "ATTENDANCE").length
