@@ -45,6 +45,12 @@ import {
   type ApprovalExecutionEscalationResponse
 } from "@/features/approval/execution-escalation-response-helpers";
 import {
+  buildApprovalExecutionEscalationEventPublishFailedAuditEntry,
+  buildApprovalExecutionEscalationFailedAuditEntry,
+  buildApprovalExecutionEscalationGeneratedAuditEntry,
+  buildApprovalExecutionEscalationRequestedAuditEntry
+} from "@/features/approval/execution-escalation-audit-entry-helpers";
+import {
   buildApprovalExecutionEscalationAuditPayloadBase,
   buildApprovalExecutionEscalationFailureAuditPayload
 } from "@/features/approval/audit-payload-helpers";
@@ -1296,27 +1302,31 @@ export async function triggerApprovalExecutionEscalation(
     webhookSource: webhook?.source ?? null
   });
 
-  await context.dataAccess.audit.append({
-    action: "approval.execution.escalation.generated",
-    entityType: "ApprovalExecution",
-    organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: payloadBase
-  });
+  await context.dataAccess.audit.append(
+    buildApprovalExecutionEscalationGeneratedAuditEntry({
+      actor: {
+        organizationId,
+        actorRole: actor.role,
+        actorId: actor.id
+      },
+      payload: payloadBase
+    })
+  );
 
   if (!dryRun && items.length > 0 && !webhook) {
-    await context.dataAccess.audit.append({
-      action: "approval.execution.escalation.failed",
-      entityType: "ApprovalExecution",
-      organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: buildApprovalExecutionEscalationFailureAuditPayload({
-        base: payloadBase,
-        reason: "webhook_not_configured"
+    await context.dataAccess.audit.append(
+      buildApprovalExecutionEscalationFailedAuditEntry({
+        actor: {
+          organizationId,
+          actorRole: actor.role,
+          actorId: actor.id
+        },
+        payload: buildApprovalExecutionEscalationFailureAuditPayload({
+          base: payloadBase,
+          reason: "webhook_not_configured"
+        })
       })
-    });
+    );
     throw new ServiceError(
       503,
       "approval execution escalation webhook is not configured (set FLOWHR_APPROVAL_EXECUTION_ESCALATION_* or FLOWHR_ALERT_* webhook env)"
@@ -1335,27 +1345,31 @@ export async function triggerApprovalExecutionEscalation(
     });
     try {
       await sendApprovalEscalationWebhook(webhook, message);
-      await context.dataAccess.audit.append({
-        action: "approval.execution.escalation.requested",
-        entityType: "ApprovalExecution",
-        organizationId,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: payloadBase
-      });
-    } catch (error) {
-      await context.dataAccess.audit.append({
-        action: "approval.execution.escalation.failed",
-        entityType: "ApprovalExecution",
-        organizationId,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: buildApprovalExecutionEscalationFailureAuditPayload({
-          base: payloadBase,
-          reason: "webhook_request_failed",
-          error: error instanceof Error ? error.message : "unknown error"
+      await context.dataAccess.audit.append(
+        buildApprovalExecutionEscalationRequestedAuditEntry({
+          actor: {
+            organizationId,
+            actorRole: actor.role,
+            actorId: actor.id
+          },
+          payload: payloadBase
         })
-      });
+      );
+    } catch (error) {
+      await context.dataAccess.audit.append(
+        buildApprovalExecutionEscalationFailedAuditEntry({
+          actor: {
+            organizationId,
+            actorRole: actor.role,
+            actorId: actor.id
+          },
+          payload: buildApprovalExecutionEscalationFailureAuditPayload({
+            base: payloadBase,
+            reason: "webhook_request_failed",
+            error: error instanceof Error ? error.message : "unknown error"
+          })
+        })
+      );
       throw new ServiceError(502, "approval execution escalation webhook request failed");
     }
 
@@ -1378,18 +1392,20 @@ export async function triggerApprovalExecutionEscalation(
       );
     } catch (error) {
       try {
-        await context.dataAccess.audit.append({
-          action: "approval.execution.escalation.event_publish_failed",
-          entityType: "ApprovalExecution",
-          organizationId,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: buildApprovalExecutionEscalationFailureAuditPayload({
-            base: payloadBase,
-            reason: "event_publish_failed",
-            error: error instanceof Error ? error.message : "unknown error"
+        await context.dataAccess.audit.append(
+          buildApprovalExecutionEscalationEventPublishFailedAuditEntry({
+            actor: {
+              organizationId,
+              actorRole: actor.role,
+              actorId: actor.id
+            },
+            payload: buildApprovalExecutionEscalationFailureAuditPayload({
+              base: payloadBase,
+              reason: "event_publish_failed",
+              error: error instanceof Error ? error.message : "unknown error"
+            })
           })
-        });
+        );
       } catch {
         // Non-blocking failure path: webhook dispatch already completed.
       }
