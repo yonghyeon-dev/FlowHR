@@ -127,6 +127,7 @@ import {
   resolveSchedulingTenantScope
 } from "@/features/scheduling/anomaly-service-context-helpers";
 import {
+  buildScheduleAnomalySummarySideEffectInput,
   buildScheduleAnomalySideEffectContext,
   emitAnomalyCockpitTicketRequestsIfEnabled,
   emitAnomalySummarySideEffects
@@ -1979,7 +1980,7 @@ export async function listScheduleAttendanceAnomalies(
     dataAccess: context.dataAccess,
     publish: eventPublisher.publish.bind(eventPublisher)
   });
-  await emitAnomalySummarySideEffects(sideEffectContext, {
+  const summarySideEffectInput = buildScheduleAnomalySummarySideEffectInput({
     window: normalizedWindow,
     lateThresholdMinutes,
     evaluatedSchedules: schedules.length,
@@ -1987,6 +1988,7 @@ export async function listScheduleAttendanceAnomalies(
     lateCount,
     noShowCount
   });
+  await emitAnomalySummarySideEffects(sideEffectContext, summarySideEffectInput);
 
   return buildScheduleAttendanceAnomalyReport({
     periodStart: normalizedWindow.periodStart,
