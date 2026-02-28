@@ -160,19 +160,19 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
     <main className="saas-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">{isKoLocale ? "조직???�사 ?�력" : "Organization chart and HR history"}</h1>
+          <h1 className="page-title">{isKoLocale ? "조직도·인사 이력" : "Organization chart and HR history"}</h1>
           <p className="page-subtitle">
             {isKoLocale
-              ? "조직?? 직원 비교, ?�사 ?�력 카드�????�면?�서 관리합?�다."
+              ? "조직도, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다."
               : "Manage org tree, employee comparison, and HR history cards in one screen."}
           </p>
         </div>
         <div className="page-actions">
           <button className="btn btn-primary" onClick={() => void refreshDirectory()}>
-            {isKoLocale ? "?�렉?�리 조회" : "Refresh directory"}
+            {isKoLocale ? "디렉터리 조회" : "Refresh directory"}
           </button>
           <Link className="btn btn-secondary" href="/admin">
-            {isKoLocale ? "Admin dashboard" : "Admin dashboard"}
+            {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
           </Link>
         </div>
       </header>
@@ -182,7 +182,7 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           <strong>{organizations.length}</strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "Departments" : "Departments"}</p>
+          <p>{isKoLocale ? "부서" : "Departments"}</p>
           <strong>{departments.length}</strong>
         </article>
         <article className="kpi-card">
@@ -196,9 +196,9 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           </strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "API ?�출" : "API calls"}</p>
+          <p>{isKoLocale ? "API 호출" : "API calls"}</p>
           <strong>
-            {stats.total} ({isKoLocale ? "?�공" : "OK"} {stats.success} / {isKoLocale ? "?�패" : "FAIL"} {stats.fail})
+            {stats.total} ({isKoLocale ? "성공" : "OK"} {stats.success} / {isKoLocale ? "실패" : "FAIL"} {stats.fail})
           </strong>
         </article>
       </section>
@@ -284,7 +284,7 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           />
         </section>
         {showDevTools ? (
-          <section aria-label={isKoLocale ? "?�청 로그" : "Request logs"}>
+          <section aria-label={isKoLocale ? "요청 로그" : "Request logs"}>
             <AdminPeopleLogsPanel isKoLocale={isKoLocale} stats={stats} pendingLabel={pendingLabel} logs={logs} />
           </section>
         ) : (
