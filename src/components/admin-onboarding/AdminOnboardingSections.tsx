@@ -16,28 +16,20 @@ export type AdminOnboardingActionLog = {
 
 type ContextPanelProps = {
   copy: AdminOnboardingCopy;
-  organizationId: string;
-  adminActorId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionActorId: string;
   pendingLabel: string | null;
   refreshDisabled: boolean;
-  onSetOrganizationId: (value: string) => void;
-  onSetAdminActorId: (value: string) => void;
-  onSetAccessToken: (value: string) => void;
   onRefresh: () => void;
 };
 
 export function AdminOnboardingContextPanel(props: ContextPanelProps) {
   const {
     copy,
-    organizationId,
-    adminActorId,
-    accessToken,
+    sessionOrganizationId,
+    sessionActorId,
     pendingLabel,
     refreshDisabled,
-    onSetOrganizationId,
-    onSetAdminActorId,
-    onSetAccessToken,
     onRefresh
   } = props;
 
@@ -45,11 +37,10 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
-        <div className="input-grid">
-          <label>{copy.organizationIdLabel}<input value={organizationId} onChange={(event) => onSetOrganizationId(event.target.value)} /></label>
-          <label>{copy.adminActorIdLabel}<input value={adminActorId} onChange={(event) => onSetAdminActorId(event.target.value)} /></label>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => onSetAccessToken(event.target.value)} /></label>
-        </div>
+        <p className="small muted">
+          {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
+          <code>{sessionActorId || "-"}</code>
+        </p>
         <div className="actions">
           <button className="btn btn-primary" onClick={onRefresh} disabled={refreshDisabled}>{copy.loadButton}</button>
         </div>
@@ -72,7 +63,6 @@ type SetupPanelsProps = {
   allowHourly: boolean;
   hourlyIncrementMinutes: string;
   maxHoursPerRequest: string;
-  onSetOrganizationId: (value: string) => void;
   onSetDepartmentSeedInput: (value: string) => void;
   onSetEmployeeSeedInput: (value: string) => void;
   onSetAnnualGrantDays: (value: string) => void;
@@ -101,7 +91,6 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     allowHourly,
     hourlyIncrementMinutes,
     maxHoursPerRequest,
-    onSetOrganizationId,
     onSetDepartmentSeedInput,
     onSetEmployeeSeedInput,
     onSetAnnualGrantDays,
@@ -120,15 +109,20 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.organizationSelectTitle}</h2>
-        <div className="input-grid">
-          <label>
-            {copy.organizationIdLabel}
-            <select value={organizationId} onChange={(event) => onSetOrganizationId(event.target.value)}>
-              <option value="">-</option>
-              {organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name} ({organization.id})</option>)}
-            </select>
-          </label>
-        </div>
+        <p className="small muted">
+          {copy.organizationIdLabel}: <code>{organizationId || "-"}</code>
+        </p>
+        {organizations.length > 0 ? (
+          <ul className="simple-list">
+            {organizations.map((organization) => (
+              <li key={organization.id}>
+                <span>
+                  <strong>{organization.name}</strong> ({organization.id})
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <div className="actions"><button className="btn btn-secondary" onClick={onReloadOrganizations}>{copy.organizationRefreshButton}</button></div>
       </article>
 

@@ -19,7 +19,6 @@ import {
   onboardingProgressPercent
 } from "@/features/admin-onboarding/checklist";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 
 type OrganizationLite = { id: string; name: string };
 type DepartmentLite = { id: string; code: string; name: string };
@@ -49,10 +48,6 @@ type UseAdminOnboardingDataInput = {
 };
 
 export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-
   const [organizations, setOrganizations] = useState<AdminOnboardingOrganizationOption[]>([]);
   const [departments, setDepartments] = useState<AdminOnboardingDepartmentOption[]>([]);
   const [activeEmployeeCount, setActiveEmployeeCount] = useState(0);
@@ -73,27 +68,13 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<AdminOnboardingActionLog[]>([]);
 
+  const { snapshot: supabaseSession } = useSupabaseSession();
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession } = useSupabaseSession();
-
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
-
-  useEffect(() => {
-    if (!isProductionRuntime || organizationId.trim()) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
 
   const requestJson = useCallback(
     async (label: string, path: string, options?: { method?: string; body?: unknown }) => {
@@ -164,9 +145,6 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
 
       const targetOrganizationId =
         organizationId.trim() || (organizationRows.length === 1 ? organizationRows[0].id : "");
-      if (!organizationId.trim() && targetOrganizationId) {
-        setOrganizationId(targetOrganizationId);
-      }
       if (!targetOrganizationId) {
         setDepartments([]);
         setActiveEmployeeCount(0);
@@ -216,7 +194,6 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     input.requestLabels.organizations,
     organizationId,
     requestJson,
-    setOrganizationId,
     usesBearerToken
   ]);
 
@@ -322,7 +299,6 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim() && !showDevTools);
 
   return {
-    accessToken,
     activeEmployeeCount,
     adminActorId,
     allowHalfDay,
@@ -347,8 +323,6 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     pendingLabel,
     progressPercent,
     refreshDisabled,
-    setAccessToken,
-    setAdminActorId,
     setAllowHalfDay,
     setAllowHourly,
     setAnnualGrantDays,
@@ -357,7 +331,6 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     setEmployeeSeedInput,
     setHourlyIncrementMinutes,
     setMaxHoursPerRequest,
-    setOrganizationId,
     usesBearerToken
   };
 }

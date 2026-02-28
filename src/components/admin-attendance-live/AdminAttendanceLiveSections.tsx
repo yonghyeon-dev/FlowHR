@@ -27,9 +27,8 @@ export type AttendanceLiveApiLog = {
 
 type ContextPanelProps = {
   copy: AttendanceLiveCopy;
-  organizationId: string;
-  adminActorId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionActorId: string;
   periodStart: string;
   periodEnd: string;
   lateThresholdMinutes: string;
@@ -40,9 +39,6 @@ type ContextPanelProps = {
   departments: AttendanceLiveDepartmentOption[];
   pendingLabel: string | null;
   refreshDisabled: boolean;
-  onSetOrganizationId: (value: string) => void;
-  onSetAdminActorId: (value: string) => void;
-  onSetAccessToken: (value: string) => void;
   onSetPeriodStart: (value: string) => void;
   onSetPeriodEnd: (value: string) => void;
   onSetLateThresholdMinutes: (value: string) => void;
@@ -57,9 +53,8 @@ type ContextPanelProps = {
 export function AdminAttendanceLiveContextPanel(props: ContextPanelProps) {
   const {
     copy,
-    organizationId,
-    adminActorId,
-    accessToken,
+    sessionOrganizationId,
+    sessionActorId,
     periodStart,
     periodEnd,
     lateThresholdMinutes,
@@ -70,9 +65,6 @@ export function AdminAttendanceLiveContextPanel(props: ContextPanelProps) {
     departments,
     pendingLabel,
     refreshDisabled,
-    onSetOrganizationId,
-    onSetAdminActorId,
-    onSetAccessToken,
     onSetPeriodStart,
     onSetPeriodEnd,
     onSetLateThresholdMinutes,
@@ -88,10 +80,11 @@ export function AdminAttendanceLiveContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
+        <p className="small muted">
+          {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
+          <code>{sessionActorId || "-"}</code>
+        </p>
         <div className="input-grid">
-          <label>{copy.organizationIdLabel}<input value={organizationId} onChange={(event) => onSetOrganizationId(event.target.value)} /></label>
-          <label>{copy.adminActorIdLabel}<input value={adminActorId} onChange={(event) => onSetAdminActorId(event.target.value)} /></label>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => onSetAccessToken(event.target.value)} /></label>
           <label>{copy.periodStartLabel}<input type="datetime-local" value={periodStart} onChange={(event) => onSetPeriodStart(event.target.value)} /></label>
           <label>{copy.periodEndLabel}<input type="datetime-local" value={periodEnd} onChange={(event) => onSetPeriodEnd(event.target.value)} /></label>
           <label>

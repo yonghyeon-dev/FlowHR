@@ -24,8 +24,12 @@ import {
   toIsoDateRangeStart
 } from "@/components/scheduling/helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
+
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
 
 export default function EmployeeScheduleBoard() {
   const { locale } = useI18n();
@@ -33,10 +37,7 @@ export default function EmployeeScheduleBoard() {
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const copy = employeeScheduleCopyByLocale[locale];
   const monthRange = buildCurrentMonthDateRange();
-
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
-  const [accessToken, setAccessToken] = useState("");
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const [fromDate, setFromDate] = useState(monthRange.fromDate);
   const [toDate, setToDate] = useState(monthRange.toDate);
   const [statusFilter, setStatusFilter] = useState<ScheduleStatusFilter>("all");
@@ -47,14 +48,10 @@ export default function EmployeeScheduleBoard() {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const summary = useMemo(() => {
@@ -222,6 +219,7 @@ export default function EmployeeScheduleBoard() {
     <EmployeeScheduleBoardView
       copy={copy}
       runtimeLocale={runtimeLocale}
+      showDevTools={showDevTools}
       statusMessage={statusMessage}
       pendingLabel={pendingLabel}
       logStats={logStats}
@@ -230,18 +228,14 @@ export default function EmployeeScheduleBoard() {
       nextSchedule={nextSchedule}
       summary={summary}
       logs={logs}
-      organizationId={organizationId}
-      employeeId={employeeId}
-      accessToken={accessToken}
+      sessionOrganizationId={organizationId}
+      sessionEmployeeId={employeeId}
       fromDate={fromDate}
       toDate={toDate}
       statusFilter={statusFilter}
       holidayFilter={holidayFilter}
       searchQuery={searchQuery}
       visibleScheduleCount={rows.length}
-      onOrganizationIdChange={setOrganizationId}
-      onEmployeeIdChange={setEmployeeId}
-      onAccessTokenChange={setAccessToken}
       onFromDateChange={setFromDate}
       onToDateChange={setToDate}
       onStatusFilterChange={setStatusFilter}

@@ -44,16 +44,12 @@ type AdminKpiDrilldownMetric = Exclude<AdminKpiFocusMetric, "all">;
 
 type ContextPanelProps = {
   copy: KpiCopy;
-  organizationId: string;
-  adminActorId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionActorId: string;
   periodStart: string;
   periodEnd: string;
   pendingLabel: string | null;
   refreshDisabled: boolean;
-  onSetOrganizationId: (value: string) => void;
-  onSetAdminActorId: (value: string) => void;
-  onSetAccessToken: (value: string) => void;
   onSetPeriodStart: (value: string) => void;
   onSetPeriodEnd: (value: string) => void;
   onSetThisMonth: () => void;
@@ -121,16 +117,12 @@ export function AdminKpiAnalyticsControls({
 export function AdminKpiContextPanel(props: ContextPanelProps) {
   const {
     copy,
-    organizationId,
-    adminActorId,
-    accessToken,
+    sessionOrganizationId,
+    sessionActorId,
     periodStart,
     periodEnd,
     pendingLabel,
     refreshDisabled,
-    onSetOrganizationId,
-    onSetAdminActorId,
-    onSetAccessToken,
     onSetPeriodStart,
     onSetPeriodEnd,
     onSetThisMonth,
@@ -142,19 +134,11 @@ export function AdminKpiContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
+        <p className="small muted">
+          {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
+          <code>{sessionActorId || "-"}</code>
+        </p>
         <div className="input-grid">
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onSetOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {copy.adminActorIdLabel}
-            <input value={adminActorId} onChange={(event) => onSetAdminActorId(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <input value={accessToken} onChange={(event) => onSetAccessToken(event.target.value)} />
-          </label>
           <label>
             {copy.periodStartLabel}
             <input type="datetime-local" value={periodStart} onChange={(event) => onSetPeriodStart(event.target.value)} />

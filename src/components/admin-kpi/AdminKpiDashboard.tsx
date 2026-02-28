@@ -8,7 +8,6 @@ import { buildQuery, getLast30DaysRangeLocal, getThisMonthRangeLocal, isTruthyFl
 import { buildAdminKpiSummary, computePreviousPeriodRange, computeStalledHours } from "@/features/admin-kpi/summary";
 import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 type ApprovalExecutionLite = { updatedAt: string };
 type AttendanceAggregateLite = { counts: { total: number; approved: number } };
@@ -24,9 +23,6 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   const { locale } = useI18n();
   const copy = kpiCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
   const initialRange = useMemo(() => getThisMonthRangeLocal(), []);
   const [periodStart, setPeriodStart] = useState(initialRange.from);
   const [periodEnd, setPeriodEnd] = useState(initialRange.to);
@@ -38,22 +34,10 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  useEffect(() => {
-    if (!isProductionRuntime || organizationId.trim()) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
   const requestJson = useCallback(
     async (label: string, path: string) => {
       const startedAt = Date.now();
@@ -191,7 +175,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     () => (focusMetric === "all" ? trendRows : trendRows.filter((row) => row.key === focusMetric)),
     [focusMetric, trendRows]
   );
-  const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim() && !showDevTools);
+  const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim());
   const exportDisabled = !currentRangeKpi || !previousRangeKpi || Boolean(pendingLabel);
   const exportCsv = useCallback(() => {
     if (!currentRangeKpi || !previousRangeKpi) {
@@ -250,16 +234,12 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       ) : null}
       <AdminKpiContextPanel
         copy={copy}
-        organizationId={organizationId}
-        adminActorId={adminActorId}
-        accessToken={accessToken}
+        sessionOrganizationId={organizationId}
+        sessionActorId={adminActorId}
         periodStart={periodStart}
         periodEnd={periodEnd}
         pendingLabel={pendingLabel}
         refreshDisabled={refreshDisabled}
-        onSetOrganizationId={setOrganizationId}
-        onSetAdminActorId={setAdminActorId}
-        onSetAccessToken={setAccessToken}
         onSetPeriodStart={setPeriodStart}
         onSetPeriodEnd={setPeriodEnd}
         onSetThisMonth={() => {
@@ -279,7 +259,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
       <section className="panel-grid">
         <AdminKpiTrendPanel copy={copy} rows={visibleTrendRows} />
-        <AdminKpiLogsPanel copy={copy} logs={logs} />
+        {showDevTools ? <AdminKpiLogsPanel copy={copy} logs={logs} /> : null}
       </section>
     </main>
   );
