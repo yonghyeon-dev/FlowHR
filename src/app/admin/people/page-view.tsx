@@ -33,9 +33,9 @@ type AdminPeoplePageViewProps = {
   stats: { total: number; success: number; fail: number };
   refreshDirectory: () => Promise<void>;
   organizationId: string;
-  setOrganizationId: (value: string) => void;
   adminActorId: string;
-  setAdminActorId: (value: string) => void;
+  isProductionRuntime: boolean;
+  usesBearerToken: boolean;
   search: string;
   setSearch: (value: string) => void;
   activeFilter: ActiveFilter;
@@ -48,9 +48,6 @@ type AdminPeoplePageViewProps = {
   setRecentlyUpdatedDays: (value: UpdatedWindow) => void;
   historyLimit: string;
   setHistoryLimit: (value: string) => void;
-  showDevTools: boolean;
-  accessToken: string;
-  setAccessToken: (value: string) => void;
   loadOrganizations: () => Promise<void>;
   loadDepartments: () => Promise<void>;
   loadPositions: () => Promise<void>;
@@ -103,9 +100,9 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
     stats,
     refreshDirectory,
     organizationId,
-    setOrganizationId,
     adminActorId,
-    setAdminActorId,
+    isProductionRuntime,
+    usesBearerToken,
     search,
     setSearch,
     activeFilter,
@@ -118,9 +115,6 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
     setRecentlyUpdatedDays,
     historyLimit,
     setHistoryLimit,
-    showDevTools,
-    accessToken,
-    setAccessToken,
     loadOrganizations,
     loadDepartments,
     loadPositions,
@@ -210,9 +204,9 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           <AdminPeopleDirectoryFiltersPanel
             isKoLocale={isKoLocale}
             organizationId={organizationId}
-            setOrganizationId={setOrganizationId}
             adminActorId={adminActorId}
-            setAdminActorId={setAdminActorId}
+            isProductionRuntime={isProductionRuntime}
+            usesBearerToken={usesBearerToken}
             search={search}
             setSearch={setSearch}
             activeFilter={activeFilter}
@@ -225,9 +219,6 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
             setRecentlyUpdatedDays={setRecentlyUpdatedDays}
             historyLimit={historyLimit}
             setHistoryLimit={setHistoryLimit}
-            showDevTools={showDevTools}
-            accessToken={accessToken}
-            setAccessToken={setAccessToken}
             loadOrganizations={loadOrganizations}
             loadDepartments={loadDepartments}
             loadPositions={loadPositions}

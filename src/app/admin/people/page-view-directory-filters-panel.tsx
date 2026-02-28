@@ -3,9 +3,9 @@ import { type ActiveFilter, type Department, type Position, type UpdatedWindow }
 type AdminPeopleDirectoryFiltersPanelProps = {
   isKoLocale: boolean;
   organizationId: string;
-  setOrganizationId: (value: string) => void;
   adminActorId: string;
-  setAdminActorId: (value: string) => void;
+  isProductionRuntime: boolean;
+  usesBearerToken: boolean;
   search: string;
   setSearch: (value: string) => void;
   activeFilter: ActiveFilter;
@@ -18,9 +18,6 @@ type AdminPeopleDirectoryFiltersPanelProps = {
   setRecentlyUpdatedDays: (value: UpdatedWindow) => void;
   historyLimit: string;
   setHistoryLimit: (value: string) => void;
-  showDevTools: boolean;
-  accessToken: string;
-  setAccessToken: (value: string) => void;
   loadOrganizations: () => Promise<void>;
   loadDepartments: () => Promise<void>;
   loadPositions: () => Promise<void>;
@@ -34,9 +31,9 @@ type AdminPeopleDirectoryFiltersPanelProps = {
 export function AdminPeopleDirectoryFiltersPanel({
   isKoLocale,
   organizationId,
-  setOrganizationId,
   adminActorId,
-  setAdminActorId,
+  isProductionRuntime,
+  usesBearerToken,
   search,
   setSearch,
   activeFilter,
@@ -49,9 +46,6 @@ export function AdminPeopleDirectoryFiltersPanel({
   setRecentlyUpdatedDays,
   historyLimit,
   setHistoryLimit,
-  showDevTools,
-  accessToken,
-  setAccessToken,
   loadOrganizations,
   loadDepartments,
   loadPositions,
@@ -64,25 +58,28 @@ export function AdminPeopleDirectoryFiltersPanel({
   return (
     <article className="panel panel-directory-filters">
       <h2>{isKoLocale ? "필터" : "Filters"}</h2>
+      <p className="small muted">
+        {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> / {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+      </p>
+      {isProductionRuntime && !usesBearerToken ? (
+        <p className="small fail">
+          {isKoLocale
+            ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
+            : "Login session is required in production. Please sign in at /login."}
+        </p>
+      ) : null}
+
       <div className="input-grid">
         <label>
-          {isKoLocale ? "조직 식별자" : "Organization ID"}
-          <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-        </label>
-        <label>
-          {isKoLocale ? "관리자 액터 식별자" : "Admin actor ID"}
-          <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-        </label>
-        <label>
-          직원 검색
+          {isKoLocale ? "직원 검색" : "Employee search"}
           <input value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
         <label>
-          활성 필터
+          {isKoLocale ? "재직 상태" : "Active status"}
           <select value={activeFilter} onChange={(event) => setActiveFilter(event.target.value as ActiveFilter)}>
-            <option value="all">전체</option>
-            <option value="active">활성</option>
-            <option value="inactive">비활성</option>
+            <option value="all">{isKoLocale ? "전체" : "All"}</option>
+            <option value="active">{isKoLocale ? "재직" : "Active"}</option>
+            <option value="inactive">{isKoLocale ? "비재직" : "Inactive"}</option>
           </select>
         </label>
         <label>
@@ -108,7 +105,7 @@ export function AdminPeopleDirectoryFiltersPanel({
           </select>
         </label>
         <label>
-          {isKoLocale ? "최근 업데이트 범위" : "Updated window"}
+          {isKoLocale ? "최근 업데이트" : "Updated window"}
           <select
             value={recentlyUpdatedDays}
             onChange={(event) => setRecentlyUpdatedDays(event.target.value as UpdatedWindow)}
@@ -121,14 +118,14 @@ export function AdminPeopleDirectoryFiltersPanel({
         </label>
         <label>
           {isKoLocale ? "이력 조회 개수" : "History limit"}
-          <input type="number" min={1} max={200} value={historyLimit} onChange={(event) => setHistoryLimit(event.target.value)} />
+          <input
+            type="number"
+            min={1}
+            max={200}
+            value={historyLimit}
+            onChange={(event) => setHistoryLimit(event.target.value)}
+          />
         </label>
-        {showDevTools ? (
-          <label className="full">
-            {isKoLocale ? "Bearer 액세스 토큰 (override)" : "Bearer access token (override)"}
-            <textarea rows={3} value={accessToken} onChange={(event) => setAccessToken(event.target.value)} />
-          </label>
-        ) : null}
       </div>
       <div className="actions">
         <button className="btn btn-secondary" onClick={() => void loadOrganizations()}>

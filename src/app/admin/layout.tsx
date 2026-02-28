@@ -27,32 +27,21 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/analytics", label: t("admin.nav.analytics") },
     { href: "/admin/attendance-live", label: t("admin.nav.attendanceLive") },
     { href: "/admin/onboarding", label: t("admin.nav.onboarding") },
-    { href: "/admin#approvals", label: t("admin.nav.approvals") },
-    { href: "/admin#aggregates", label: t("admin.nav.aggregates") },
-    { href: "/admin#leave-policy", label: t("admin.nav.leavePolicy") },
+    { href: "/admin/approval-executions", label: t("admin.nav.approvals") },
+    { href: "/admin/attendance-live", label: t("admin.nav.aggregates") },
+    { href: "/admin/leave-accrual", label: t("admin.nav.leavePolicy") },
     { href: "/admin/leave-accrual", label: t("admin.nav.leaveAccrual") },
     { href: "/admin/leave-calendar", label: t("admin.nav.leaveCalendar") },
     { href: "/admin/scheduling", label: t("admin.nav.scheduling") },
     { href: "/admin/notices", label: t("admin.nav.notices") },
     { href: "/admin/benefits", label: t("admin.nav.benefits") },
     { href: "/admin/recruitment", label: t("admin.nav.recruitment") },
-    { href: "/admin#payroll", label: t("admin.nav.payroll") },
+    { href: "/admin/payroll-year-end", label: t("admin.nav.payroll") },
     { href: "/admin/payroll-insurance", label: t("admin.nav.insurance") },
     { href: "/admin/payroll-close", label: t("admin.nav.payrollClose") },
     { href: "/admin/payroll-payslip-delivery", label: t("admin.nav.payslipDelivery") },
     { href: "/admin/payroll-year-end", label: t("admin.nav.yearEnd") },
     { href: "/admin/payroll-year-end-filing", label: t("admin.nav.yearEndFiling") },
-    { href: "/admin/payroll-year-end-filing/ops", label: t("admin.nav.yearEndFilingOps") },
-    { href: "/admin/payroll-year-end-filing/ops/alert", label: t("admin.nav.yearEndFilingOpsFlatAlert") },
-    {
-      href: "/admin/payroll-year-end-filing/ops/checklist-flow",
-      label: t("admin.nav.yearEndFilingOpsFlatChecklist")
-    },
-    { href: "/admin/payroll-year-end-filing/ops/review", label: t("admin.nav.yearEndFilingOpsFlatReview") },
-    { href: "/admin/payroll-year-end-filing/ops/close-off", label: t("admin.nav.yearEndFilingOpsFlatCloseOff") },
-    { href: "/admin/payroll-year-end-filing/ops/delivery", label: t("admin.nav.yearEndFilingOpsFlatDelivery") },
-    { href: "/admin/payroll-year-end-filing/ops/archive", label: t("admin.nav.yearEndFilingOpsFlatArchive") },
-    { href: "/admin/payroll-year-end-filing/ops/report", label: t("admin.nav.yearEndFilingOpsFlatReport") },
     { href: "/admin/people", label: t("admin.nav.people") },
     { href: "/admin/contracts", label: t("admin.nav.contracts") },
     { href: "/admin/approval-policy", label: t("admin.nav.approvalPolicy") }
@@ -62,7 +51,8 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   if (showDevTools) {
     mobileFooterLinks.push(
       { href: "/ops/mvp-console", label: t("admin.nav.devOpsConsole"), muted: true },
-      { href: "/ops/leave-promotion", label: t("admin.nav.devLeavePromotion"), muted: true }
+      { href: "/ops/leave-promotion", label: t("admin.nav.devLeavePromotion"), muted: true },
+      { href: "/admin/payroll-year-end-filing/ops", label: t("admin.nav.yearEndFilingOps"), muted: true }
     );
   }
 
@@ -100,6 +90,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
                 </Link>
                 <Link className="muted-link" href="/ops/leave-promotion">
                   {t("admin.nav.devLeavePromotion")}
+                </Link>
+                <Link className="muted-link" href="/admin/payroll-year-end-filing/ops">
+                  {t("admin.nav.yearEndFilingOps")}
                 </Link>
               </>
             ) : null}
