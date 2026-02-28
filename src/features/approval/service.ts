@@ -46,10 +46,12 @@ import {
 } from "@/features/approval/execution-escalation-response-helpers";
 import {
   buildApprovalExecutionEscalationAuditPayloadBase,
-  buildApprovalExecutionEscalationFailureAuditPayload,
-  buildApprovalExecutionListedAuditPayload,
-  buildApprovalStageHistoryListedAuditPayload
+  buildApprovalExecutionEscalationFailureAuditPayload
 } from "@/features/approval/audit-payload-helpers";
+import {
+  buildApprovalExecutionListedAuditEntry,
+  buildApprovalStageHistoryListedAuditEntry
+} from "@/features/approval/list-audit-entry-helpers";
 import {
   buildApprovalPolicyGatePreviewAuditPayload,
   resolveApprovalGatePreviewActorContext,
@@ -1157,13 +1159,11 @@ export async function listApprovalStageHistory(
     })
   );
 
-  await context.dataAccess.audit.append({
-    action: "approval.stage_history.listed",
-    entityType: "ApprovalStageHistory",
-    organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildApprovalStageHistoryListedAuditPayload({
+  await context.dataAccess.audit.append(
+    buildApprovalStageHistoryListedAuditEntry({
+      organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
       domain: input.domain,
       targetEntityType: input.targetEntityType,
       targetEntityId: input.targetEntityId,
@@ -1174,7 +1174,7 @@ export async function listApprovalStageHistory(
       limit,
       resultCount: rows.length
     })
-  });
+  );
 
   return rows;
 }
@@ -1215,13 +1215,11 @@ export async function listApprovalExecutions(
     limit
   });
 
-  await context.dataAccess.audit.append({
-    action: "approval.execution.listed",
-    entityType: "ApprovalExecution",
-    organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildApprovalExecutionListedAuditPayload({
+  await context.dataAccess.audit.append(
+    buildApprovalExecutionListedAuditEntry({
+      organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
       domain: input.domain,
       targetEntityType: input.targetEntityType,
       targetEntityId: input.targetEntityId,
@@ -1232,7 +1230,7 @@ export async function listApprovalExecutions(
       limit,
       resultCount: rows.length
     })
-  });
+  );
 
   return rows;
 }
