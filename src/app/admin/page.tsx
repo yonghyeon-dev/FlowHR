@@ -12,9 +12,15 @@ import {
 } from "@/app/admin/page-helpers";
 import {
   buildAdminDashboardFocusCards,
-  summarizeAdminDashboardFocusCards,
-  type AdminDashboardFocusCard
+  summarizeAdminDashboardFocusCards
 } from "@/app/admin/page-focus-cards";
+import {
+  resolveAdminDashboardFocusCardLabel,
+  resolveAdminDashboardFocusSeverityLabel,
+  resolveAdminDashboardPriorityDescription,
+  resolveAdminDashboardPrioritySummary,
+  resolveAdminDashboardPriorityTitle
+} from "@/app/admin/page-focus-copy";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
@@ -34,26 +40,6 @@ const EMPTY_SUMMARY: AdminSummary = {
   employeeCount: 0,
   refreshedAt: null
 };
-
-function resolveFocusCardLabel(card: AdminDashboardFocusCard) {
-  if (card.key === "attendance") {
-    return "Pending attendance approvals";
-  }
-  if (card.key === "leave") {
-    return "Pending leave approvals";
-  }
-  return "Pending payroll previews";
-}
-
-function resolveFocusCardSeverityCopy(card: AdminDashboardFocusCard) {
-  if (card.severity === "critical") {
-    return "Critical";
-  }
-  if (card.severity === "watch") {
-    return "Watch";
-  }
-  return "Stable";
-}
 
 export default function AdminDashboardPage() {
   const { locale } = useI18n();
@@ -204,12 +190,17 @@ export default function AdminDashboardPage() {
       {loadError ? <p className="small fail">{loadError}</p> : null}
 
       <section className="panel">
-        <h2>Priority queues</h2>
+        <h2>{resolveAdminDashboardPriorityTitle(locale)}</h2>
         <p className="small muted">
-          Focus on the highest-risk backlog first and jump directly to the matching workspace.
+          {resolveAdminDashboardPriorityDescription(locale)}
         </p>
         <p className="small muted">
-          {focusPriority.critical} critical | {focusPriority.watch} watch | {focusPriority.stable} stable
+          {resolveAdminDashboardPrioritySummary({
+            locale,
+            critical: focusPriority.critical,
+            watch: focusPriority.watch,
+            stable: focusPriority.stable
+          })}
         </p>
         <div className="actions">
           {focusCards.map((card) => (
@@ -218,7 +209,8 @@ export default function AdminDashboardPage() {
               className={card.severity === "critical" ? "btn btn-primary" : "btn btn-secondary"}
               href={card.href}
             >
-              {resolveFocusCardLabel(card)} ({card.count}) - {resolveFocusCardSeverityCopy(card)}
+              {resolveAdminDashboardFocusCardLabel(card, locale)} ({card.count}) -{" "}
+              {resolveAdminDashboardFocusSeverityLabel(card, locale)}
             </Link>
           ))}
         </div>
