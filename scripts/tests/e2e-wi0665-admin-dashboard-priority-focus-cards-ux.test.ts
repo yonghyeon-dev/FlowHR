@@ -19,8 +19,8 @@ async function run() {
   assert.match(adminPage, /from "@\/app\/admin\/page-focus-cards"/);
   assert.match(adminPage, /buildAdminDashboardFocusCards\(summary\)/);
   assert.match(adminPage, /summarizeAdminDashboardFocusCards\(focusCards\)/);
-  assert.match(adminPage, /Priority queues/);
-  assert.match(adminPage, /resolveFocusCardLabel\(card\)/);
+  assert.match(adminPage, /resolveAdminDashboardPriorityTitle\(locale\)/);
+  assert.match(adminPage, /resolveAdminDashboardFocusCardLabel\(card, locale\)/);
 
   assert.match(focusHelpers, /export type AdminDashboardFocusCard = \{/);
   assert.match(focusHelpers, /export function buildAdminDashboardFocusCards\(/);
