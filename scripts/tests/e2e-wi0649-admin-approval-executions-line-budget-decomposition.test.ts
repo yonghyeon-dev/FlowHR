@@ -13,6 +13,28 @@ function countLines(input: string) {
 async function run() {
   const page = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
   const sections = readUtf8("src", "app", "admin", "approval-executions", "page-sections.tsx");
+  const sectionsWorkConditions = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-work-conditions.tsx"
+  );
+  const sectionsSummaryEscalation = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-summary-escalation.tsx"
+  );
+  const sectionsQueue = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-queue.tsx"
+  );
+  const sectionsSurface = `${sectionsWorkConditions}\n${sectionsSummaryEscalation}\n${sectionsQueue}`;
   const helpers = readUtf8("src", "app", "admin", "approval-executions", "page-helpers.ts");
   const workItem = readUtf8("work-items", "WI-0649-admin-approval-executions-line-budget-decomposition.md");
   const roadmap = readUtf8("ROADMAP.md");
@@ -28,6 +50,9 @@ async function run() {
   assert.match(page, /ApprovalExecutionListPanel/);
   assert.match(page, /ApprovalExecutionHistoryPanel/);
   assert.match(page, /showDevTools \? \([\s\S]*ApprovalExecutionLogsPanel[\s\S]*\) : \([\s\S]*ApprovalExecutionRelatedWorkspacesPanel/);
+  assert.match(sections, /page-sections-work-conditions/);
+  assert.match(sections, /page-sections-summary-escalation/);
+  assert.match(sections, /page-sections-queue/);
 
   assert.match(helpers, /return \"\/admin\/payroll-year-end\";/);
   assert.match(helpers, /return \"\/admin\/leave-accrual\";/);
@@ -35,10 +60,10 @@ async function run() {
   assert.doesNotMatch(helpers, /\/admin#payroll/);
   assert.doesNotMatch(helpers, /\/admin#approvals/);
 
-  assert.match(sections, /Work conditions/);
-  assert.match(sections, /Advanced options/);
-  assert.match(sections, /Request logs/);
-  assert.match(sections, /Related workspaces/);
+  assert.match(sectionsSurface, /Work conditions/);
+  assert.match(sectionsSurface, /Advanced options/);
+  assert.match(sectionsSurface, /Request logs/);
+  assert.match(sectionsSurface, /Related workspaces/);
 
   assert.match(workItem, /WI-0649/i);
   assert.match(workItem, /line budget|decomposition|approval-executions/i);
