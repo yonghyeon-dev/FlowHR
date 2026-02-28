@@ -43,6 +43,19 @@ export type AdminSchedulingCopy = {
   incidentUpdatedAtLabel: string;
   incidentHistoryCountLabel: string;
   incidentUnassignedAssigneeLabel: string;
+  incidentSelectAction: string;
+  incidentSelectedLabel: string;
+  incidentActionTitle: string;
+  incidentActionAssigneeLabel: string;
+  incidentActionNoteLabel: string;
+  incidentResolutionCodeLabel: string;
+  incidentResolutionFalsePositiveLabel: string;
+  incidentResolutionAttendanceCorrectedLabel: string;
+  incidentResolutionManualConfirmedLabel: string;
+  incidentResolutionOtherLabel: string;
+  incidentAcknowledgeAction: string;
+  incidentAssignAction: string;
+  incidentResolveAction: string;
   selectAction: string;
   selectedTitle: string;
   selectedEmpty: string;
@@ -63,11 +76,19 @@ export type AdminSchedulingCopy = {
   statusInvalidDateTime: string;
   statusListLoaded: string;
   statusIncidentListLoaded: string;
+  statusIncidentNeedsSelection: string;
+  statusIncidentNeedsAssignee: string;
+  statusIncidentAcknowledgeDone: string;
+  statusIncidentAssignDone: string;
+  statusIncidentResolveDone: string;
   statusCreateDone: string;
   statusUpdateDone: string;
   statusDeleteDone: string;
   pendingList: string;
   pendingIncidentList: string;
+  pendingIncidentAcknowledge: string;
+  pendingIncidentAssign: string;
+  pendingIncidentResolve: string;
   pendingCreate: string;
   pendingUpdate: string;
   pendingDelete: string;
@@ -198,6 +219,19 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     incidentUpdatedAtLabel: "업데이트",
     incidentHistoryCountLabel: "이력 건수",
     incidentUnassignedAssigneeLabel: "미할당",
+    incidentSelectAction: "조치 선택",
+    incidentSelectedLabel: "선택 인시던트",
+    incidentActionTitle: "인시던트 조치",
+    incidentActionAssigneeLabel: "조치 담당자 식별자",
+    incidentActionNoteLabel: "조치 메모(선택)",
+    incidentResolutionCodeLabel: "해결 코드",
+    incidentResolutionFalsePositiveLabel: "오탐",
+    incidentResolutionAttendanceCorrectedLabel: "근태 정정 완료",
+    incidentResolutionManualConfirmedLabel: "수동 확인 완료",
+    incidentResolutionOtherLabel: "기타",
+    incidentAcknowledgeAction: "확인 처리",
+    incidentAssignAction: "담당자 지정",
+    incidentResolveAction: "해결 처리",
     selectAction: "선택",
     selectedTitle: "선택 일정 수정/삭제",
     selectedEmpty: "목록에서 일정을 선택하세요.",
@@ -218,11 +252,19 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     statusInvalidDateTime: "시작/종료 시간이 올바르지 않습니다.",
     statusListLoaded: "일정 목록을 불러왔습니다.",
     statusIncidentListLoaded: "인시던트 목록을 불러왔습니다.",
+    statusIncidentNeedsSelection: "조치할 인시던트를 먼저 선택하세요.",
+    statusIncidentNeedsAssignee: "담당자 지정에는 담당자 식별자가 필요합니다.",
+    statusIncidentAcknowledgeDone: "인시던트 확인 처리를 완료했습니다.",
+    statusIncidentAssignDone: "인시던트 담당자를 지정했습니다.",
+    statusIncidentResolveDone: "인시던트 해결 처리를 완료했습니다.",
     statusCreateDone: "일정을 생성했습니다.",
     statusUpdateDone: "일정을 수정했습니다.",
     statusDeleteDone: "일정을 삭제했습니다.",
     pendingList: "일정 조회",
     pendingIncidentList: "인시던트 조회",
+    pendingIncidentAcknowledge: "인시던트 확인 처리",
+    pendingIncidentAssign: "인시던트 담당자 지정",
+    pendingIncidentResolve: "인시던트 해결 처리",
     pendingCreate: "일정 생성",
     pendingUpdate: "일정 수정",
     pendingDelete: "일정 삭제",
@@ -277,6 +319,19 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     incidentUpdatedAtLabel: "Updated at",
     incidentHistoryCountLabel: "History count",
     incidentUnassignedAssigneeLabel: "Unassigned",
+    incidentSelectAction: "Select for action",
+    incidentSelectedLabel: "Selected incident",
+    incidentActionTitle: "Incident actions",
+    incidentActionAssigneeLabel: "Action assignee ID",
+    incidentActionNoteLabel: "Action note (optional)",
+    incidentResolutionCodeLabel: "Resolution code",
+    incidentResolutionFalsePositiveLabel: "False positive",
+    incidentResolutionAttendanceCorrectedLabel: "Attendance corrected",
+    incidentResolutionManualConfirmedLabel: "Manual confirmed",
+    incidentResolutionOtherLabel: "Other",
+    incidentAcknowledgeAction: "Acknowledge",
+    incidentAssignAction: "Assign",
+    incidentResolveAction: "Resolve",
     selectAction: "Select",
     selectedTitle: "Update/Delete selected schedule",
     selectedEmpty: "Select a schedule from the list.",
@@ -297,11 +352,19 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     statusInvalidDateTime: "start/end datetime is invalid.",
     statusListLoaded: "schedule list loaded.",
     statusIncidentListLoaded: "incident list loaded.",
+    statusIncidentNeedsSelection: "Select an incident before taking action.",
+    statusIncidentNeedsAssignee: "Assignee ID is required for assign action.",
+    statusIncidentAcknowledgeDone: "incident acknowledged.",
+    statusIncidentAssignDone: "incident assignee updated.",
+    statusIncidentResolveDone: "incident resolved.",
     statusCreateDone: "schedule created.",
     statusUpdateDone: "schedule updated.",
     statusDeleteDone: "schedule deleted.",
     pendingList: "load schedules",
     pendingIncidentList: "load incidents",
+    pendingIncidentAcknowledge: "acknowledge incident",
+    pendingIncidentAssign: "assign incident",
+    pendingIncidentResolve: "resolve incident",
     pendingCreate: "create schedule",
     pendingUpdate: "update schedule",
     pendingDelete: "delete schedule",
