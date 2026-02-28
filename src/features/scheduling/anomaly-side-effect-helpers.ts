@@ -47,6 +47,19 @@ type ScheduleAnomalySummaryInput = {
   noShowCount: number;
 };
 
+export function buildScheduleAnomalySummarySideEffectInput(
+  input: ScheduleAnomalySummaryInput
+): ScheduleAnomalySummaryInput {
+  return {
+    window: input.window,
+    lateThresholdMinutes: input.lateThresholdMinutes,
+    evaluatedSchedules: input.evaluatedSchedules,
+    anomalies: input.anomalies,
+    lateCount: input.lateCount,
+    noShowCount: input.noShowCount
+  };
+}
+
 type ScheduleAnomalyTicketInput = {
   window: { periodStart: Date; periodEnd: Date };
   lateThresholdMinutes: number;
