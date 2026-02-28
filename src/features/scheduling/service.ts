@@ -86,6 +86,7 @@ import {
   evaluateEmployeeRotationOptimization,
   type EmployeeRotationOptimizationEvaluation as EmployeeRotationOptimizationEvaluationBase
 } from "@/features/scheduling/rotation-employee-optimization-helpers";
+import { resolveScheduleListEmployeeFilter } from "@/features/scheduling/schedule-list-query-helpers";
 import {
   buildAnomalyIncidentLifecycleAuditPayload,
   buildAnomalyIncidentLifecycleResponse,
@@ -1840,23 +1841,12 @@ export async function listWorkSchedules(
   }
 
   const actor = context.actor;
-  let employeeId = input.employeeId;
   const permissions = await resolveActorPermissions(context);
-
-  if (permissions.has(Permissions.schedulingScheduleListAny)) {
-    // optional employeeId filter allowed
-  } else if (permissions.has(Permissions.schedulingScheduleListByEmployee)) {
-    if (!employeeId) {
-      throw new ServiceError(400, "employeeId is required for manager schedule list queries");
-    }
-  } else if (permissions.has(Permissions.schedulingScheduleListOwn)) {
-    employeeId = employeeId ?? actor.id;
-    if (employeeId !== actor.id) {
-      throw new ServiceError(403, "employee can only list own schedules");
-    }
-  } else {
-    throw new ServiceError(403, "schedule list requires permission");
-  }
+  const employeeId = resolveScheduleListEmployeeFilter({
+    requestedEmployeeId: input.employeeId,
+    actorId: actor.id,
+    permissions
+  });
 
   return await context.dataAccess.scheduling.listInPeriod({
     periodStart: input.periodStart,
