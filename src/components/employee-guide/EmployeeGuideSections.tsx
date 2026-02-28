@@ -17,12 +17,9 @@ type ContextPanelProps = {
   copy: EmployeeGuideCopy;
   organizationId: string;
   employeeId: string;
-  accessToken: string;
   pendingLabel: string | null;
   refreshDisabled: boolean;
-  onSetOrganizationId: (value: string) => void;
-  onSetEmployeeId: (value: string) => void;
-  onSetAccessToken: (value: string) => void;
+  isKoLocale: boolean;
   onRefresh: () => void;
 };
 
@@ -31,12 +28,9 @@ export function EmployeeGuideContextPanel(props: ContextPanelProps) {
     copy,
     organizationId,
     employeeId,
-    accessToken,
     pendingLabel,
     refreshDisabled,
-    onSetOrganizationId,
-    onSetEmployeeId,
-    onSetAccessToken,
+    isKoLocale,
     onRefresh
   } = props;
 
@@ -44,20 +38,10 @@ export function EmployeeGuideContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
-        <div className="input-grid">
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onSetOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {copy.employeeIdLabel}
-            <input value={employeeId} onChange={(event) => onSetEmployeeId(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <input value={accessToken} onChange={(event) => onSetAccessToken(event.target.value)} />
-          </label>
-        </div>
+        <p className="small">
+          {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+          {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+        </p>
         <div className="actions">
           <button className="btn btn-primary" onClick={onRefresh} disabled={refreshDisabled}>
             {copy.loadButton}
@@ -113,6 +97,7 @@ type ChecklistPanelProps = {
   leaveRequestCount: number;
   confirmedPayslipCount: number;
   logs: EmployeeGuideApiLog[];
+  showDevTools: boolean;
 };
 
 export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
@@ -123,7 +108,8 @@ export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
     attendanceRecordCount,
     leaveRequestCount,
     confirmedPayslipCount,
-    logs
+    logs,
+    showDevTools
   } = props;
 
   return (
@@ -171,24 +157,26 @@ export function EmployeeGuideChecklistPanel(props: ChecklistPanelProps) {
         </ul>
       </article>
 
-      <article className="panel">
-        <h2>{copy.logsTitle}</h2>
-        {logs.length === 0 ? (
-          <p className="small muted">{copy.logsEmpty}</p>
-        ) : (
-          <ul className="log-list">
-            {logs.map((log) => (
-              <li key={log.id}>
-                <span className={log.ok ? "ok" : "fail"}>
-                  {log.ok ? copy.okLabel : copy.failLabel}
-                </span>{" "}
-                {log.label} /{" "}
-                {log.status} / {log.durationMs}ms / {log.at}
-              </li>
-            ))}
-          </ul>
-        )}
-      </article>
+      {showDevTools ? (
+        <article className="panel">
+          <h2>{copy.logsTitle}</h2>
+          {logs.length === 0 ? (
+            <p className="small muted">{copy.logsEmpty}</p>
+          ) : (
+            <ul className="log-list">
+              {logs.map((log) => (
+                <li key={log.id}>
+                  <span className={log.ok ? "ok" : "fail"}>
+                    {log.ok ? copy.okLabel : copy.failLabel}
+                  </span>{" "}
+                  {log.label} /{" "}
+                  {log.status} / {log.durationMs}ms / {log.at}
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      ) : null}
     </section>
   );
 }
