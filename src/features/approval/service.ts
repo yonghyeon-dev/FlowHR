@@ -25,6 +25,11 @@ import {
   type ApprovalEscalationWebhookProvider,
   type ApprovalExecutionEscalationItem
 } from "@/features/approval/execution-escalation-core-helpers";
+import {
+  buildApprovalExecutionEscalationAuditPayloadBase,
+  buildApprovalExecutionEscalationFailureAuditPayload,
+  buildApprovalStageHistoryListedAuditPayload
+} from "@/features/approval/audit-payload-helpers";
 
 const defaultApprovalPolicyRoles: Record<ApprovalDomain, string> = {
   ATTENDANCE: "manager",
@@ -1222,17 +1227,17 @@ export async function listApprovalStageHistory(
     organizationId,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      domain: input.domain ?? null,
-      targetEntityType: input.targetEntityType ?? null,
-      targetEntityId: input.targetEntityId ?? null,
-      allowed: input.allowed ?? null,
-      resolution: input.resolution ?? null,
-      from: input.from?.toISOString() ?? null,
-      to: input.to?.toISOString() ?? null,
+    payload: buildApprovalStageHistoryListedAuditPayload({
+      domain: input.domain,
+      targetEntityType: input.targetEntityType,
+      targetEntityId: input.targetEntityId,
+      allowed: input.allowed,
+      resolution: input.resolution,
+      from: input.from,
+      to: input.to,
       limit,
       resultCount: rows.length
-    }
+    })
   });
 
   return rows;
@@ -1378,9 +1383,9 @@ export async function triggerApprovalExecutionEscalation(
   });
 
   const webhook = resolveApprovalEscalationWebhookConfig();
-  const payloadBase = {
-    asOf: asOf.toISOString(),
-    domain: input.domain ?? null,
+  const payloadBase = buildApprovalExecutionEscalationAuditPayloadBase({
+    asOf,
+    domain: input.domain,
     stalledHoursMin,
     limit,
     notificationChannel,
@@ -1390,7 +1395,7 @@ export async function triggerApprovalExecutionEscalation(
     requestedAt,
     provider: webhook?.provider ?? null,
     webhookSource: webhook?.source ?? null
-  };
+  });
 
   await context.dataAccess.audit.append({
     action: "approval.execution.escalation.generated",
@@ -1408,10 +1413,10 @@ export async function triggerApprovalExecutionEscalation(
       organizationId,
       actorRole: actor.role,
       actorId: actor.id,
-      payload: {
-        ...payloadBase,
+      payload: buildApprovalExecutionEscalationFailureAuditPayload({
+        base: payloadBase,
         reason: "webhook_not_configured"
-      }
+      })
     });
     throw new ServiceError(
       503,
@@ -1446,11 +1451,11 @@ export async function triggerApprovalExecutionEscalation(
         organizationId,
         actorRole: actor.role,
         actorId: actor.id,
-        payload: {
-          ...payloadBase,
+        payload: buildApprovalExecutionEscalationFailureAuditPayload({
+          base: payloadBase,
           reason: "webhook_request_failed",
           error: error instanceof Error ? error.message : "unknown error"
-        }
+        })
       });
       throw new ServiceError(502, "approval execution escalation webhook request failed");
     }
@@ -1483,11 +1488,11 @@ export async function triggerApprovalExecutionEscalation(
           organizationId,
           actorRole: actor.role,
           actorId: actor.id,
-          payload: {
-            ...payloadBase,
+          payload: buildApprovalExecutionEscalationFailureAuditPayload({
+            base: payloadBase,
             reason: "event_publish_failed",
             error: error instanceof Error ? error.message : "unknown error"
-          }
+          })
         });
       } catch {
         // Non-blocking failure path: webhook dispatch already completed.
