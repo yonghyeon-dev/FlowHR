@@ -35,7 +35,7 @@ import {
   buildApprovalStageHistoryListQueryInput,
   normalizeApprovalStageHistoryListLimit
 } from "@/features/approval/stage-history-list-helpers";
-import { buildApprovalExecutionEscalationRequestedEventPayload } from "@/features/approval/execution-escalation-event-payload-helpers";
+import { buildApprovalExecutionEscalationRequestedEvent } from "@/features/approval/execution-escalation-event-helpers";
 import {
   normalizeApprovalExecutionEscalationPolicy,
   selectApprovalExecutionEscalationCandidates
@@ -1362,25 +1362,22 @@ export async function triggerApprovalExecutionEscalation(
     }
 
     try {
-      await getEventPublisher(context).publish({
-        name: "approval.execution.escalation.requested.v1",
-        occurredAt: requestedAt,
-        entityType: "ApprovalExecution",
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: buildApprovalExecutionEscalationRequestedEventPayload({
+      await getEventPublisher(context).publish(
+        buildApprovalExecutionEscalationRequestedEvent({
+          requestedAt,
+          actorRole: actor.role,
+          actorId: actor.id,
           organizationId,
           asOf,
           domain: input.domain,
           stalledHoursMin,
           limit,
           notificationChannel,
-          candidateCount: items.length,
           provider: webhook.provider,
           webhookSource: webhook.source,
           items
         })
-      });
+      );
     } catch (error) {
       try {
         await context.dataAccess.audit.append({

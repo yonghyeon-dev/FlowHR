@@ -12,6 +12,12 @@ function countLines(source: string) {
 
 async function run() {
   const approvalService = readUtf8("src", "features", "approval", "service.ts");
+  const escalationEventHelpers = readUtf8(
+    "src",
+    "features",
+    "approval",
+    "execution-escalation-event-helpers.ts"
+  );
   const eventHelpers = readUtf8(
     "src",
     "features",
@@ -24,11 +30,20 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(
-    approvalService,
-    /from "@\/features\/approval\/execution-escalation-event-payload-helpers"/
+  assert.ok(
+    /from "@\/features\/approval\/execution-escalation-event-payload-helpers"/.test(
+      approvalService
+    ) ||
+      /from "@\/features\/approval\/execution-escalation-event-payload-helpers"/.test(
+        escalationEventHelpers
+      ),
+    "payload helper should be imported by service or escalation event helper"
   );
-  assert.match(approvalService, /buildApprovalExecutionEscalationRequestedEventPayload\(/);
+  assert.ok(
+    /buildApprovalExecutionEscalationRequestedEventPayload\(/.test(approvalService) ||
+      /buildApprovalExecutionEscalationRequestedEventPayload\(/.test(escalationEventHelpers),
+    "payload helper should be used by service or escalation event helper"
+  );
   assert.doesNotMatch(
     approvalService,
     /payload:\s*\{\s*organizationId[\s\S]*candidateCount: items\.length,[\s\S]*items: items\.slice\(0, 100\)/
