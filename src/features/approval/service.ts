@@ -25,6 +25,7 @@ import {
   type ApprovalEscalationWebhookProvider,
   type ApprovalExecutionEscalationItem
 } from "@/features/approval/execution-escalation-core-helpers";
+import { buildApprovalExecutionEscalationRequestedEventPayload } from "@/features/approval/execution-escalation-event-payload-helpers";
 import {
   buildApprovalExecutionEscalationAuditPayloadBase,
   buildApprovalExecutionEscalationFailureAuditPayload,
@@ -1415,18 +1416,18 @@ export async function triggerApprovalExecutionEscalation(
         entityType: "ApprovalExecution",
         actorRole: actor.role,
         actorId: actor.id,
-        payload: {
+        payload: buildApprovalExecutionEscalationRequestedEventPayload({
           organizationId,
-          asOf: asOf.toISOString(),
-          domain: input.domain ?? null,
+          asOf,
+          domain: input.domain,
           stalledHoursMin,
           limit,
           notificationChannel,
           candidateCount: items.length,
           provider: webhook.provider,
           webhookSource: webhook.source,
-          items: items.slice(0, 100)
-        }
+          items
+        })
       });
     } catch (error) {
       try {
