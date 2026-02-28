@@ -28,6 +28,10 @@ import {
 } from "@/features/approval/execution-list-helpers";
 import { buildApprovalExecutionEscalationMessage } from "@/features/approval/execution-escalation-message-helpers";
 import {
+  buildApprovalExecutionListQueryInput,
+  buildPendingApprovalExecutionQueryInput
+} from "@/features/approval/execution-query-helpers";
+import {
   buildApprovalStageHistoryListQueryInput,
   normalizeApprovalStageHistoryListLimit
 } from "@/features/approval/stage-history-list-helpers";
@@ -1193,13 +1197,15 @@ export async function listApprovalExecutions(
     asOf: input.asOf
   });
 
-  let rows = await context.dataAccess.approvals.listExecutions({
-    organizationId,
-    domain: input.domain,
-    targetEntityType: input.targetEntityType?.trim(),
-    targetEntityId: input.targetEntityId?.trim(),
-    state: input.state
-  });
+  let rows = await context.dataAccess.approvals.listExecutions(
+    buildApprovalExecutionListQueryInput({
+      organizationId,
+      domain: input.domain,
+      targetEntityType: input.targetEntityType,
+      targetEntityId: input.targetEntityId,
+      state: input.state
+    })
+  );
 
   rows = selectApprovalExecutionsForList({
     rows,
@@ -1256,11 +1262,12 @@ export async function triggerApprovalExecutionEscalation(
       notificationChannel: input.notificationChannel
     });
 
-  let executions = await context.dataAccess.approvals.listExecutions({
-    organizationId,
-    domain: input.domain,
-    state: "PENDING"
-  });
+  let executions = await context.dataAccess.approvals.listExecutions(
+    buildPendingApprovalExecutionQueryInput({
+      organizationId,
+      domain: input.domain
+    })
+  );
 
   const totalPending = executions.length;
   executions = selectApprovalExecutionEscalationCandidates({
