@@ -22,7 +22,6 @@ import {
   resolveApprovalEscalationWebhookConfig,
   sendApprovalEscalationWebhook,
   toApprovalExecutionEscalationItems,
-  type ApprovalEscalationWebhookProvider,
   type ApprovalExecutionEscalationItem
 } from "@/features/approval/execution-escalation-core-helpers";
 import { buildApprovalExecutionEscalationRequestedEventPayload } from "@/features/approval/execution-escalation-event-payload-helpers";
@@ -30,6 +29,10 @@ import {
   normalizeApprovalExecutionEscalationPolicy,
   selectApprovalExecutionEscalationCandidates
 } from "@/features/approval/execution-escalation-input-helpers";
+import {
+  buildApprovalExecutionEscalationResponse,
+  type ApprovalExecutionEscalationResponse
+} from "@/features/approval/execution-escalation-response-helpers";
 import {
   buildApprovalExecutionEscalationAuditPayloadBase,
   buildApprovalExecutionEscalationFailureAuditPayload,
@@ -1267,32 +1270,7 @@ export async function listApprovalExecutions(
 export async function triggerApprovalExecutionEscalation(
   context: ServiceContext,
   input: TriggerApprovalExecutionEscalationInput
-): Promise<{
-  requestedAt: string;
-  dryRun: boolean;
-  policy: {
-    stalledHoursMin: number;
-    limit: number;
-    notificationChannel: string;
-    webhookConfigured: boolean;
-    provider: ApprovalEscalationWebhookProvider | null;
-    webhookSource: string | null;
-  };
-  filters: {
-    organizationId: string;
-    domain: ApprovalDomain | null;
-    asOf: string;
-  };
-  counts: {
-    totalPending: number;
-    candidates: number;
-    requested: number;
-    dryRun: number;
-    skippedNoCandidate: number;
-    failed: number;
-  };
-  items: ApprovalExecutionEscalationItem[];
-}> {
+): Promise<ApprovalExecutionEscalationResponse> {
   const actor = requireActor(context);
   await requirePermission(
     context,
@@ -1452,32 +1430,20 @@ export async function triggerApprovalExecutionEscalation(
     }
   }
 
-  return {
+  return buildApprovalExecutionEscalationResponse({
     requestedAt,
     dryRun,
-    policy: {
-      stalledHoursMin,
-      limit,
-      notificationChannel,
-      webhookConfigured: webhook !== null,
-      provider: webhook?.provider ?? null,
-      webhookSource: webhook?.source ?? null
-    },
-    filters: {
-      organizationId,
-      domain: input.domain ?? null,
-      asOf: asOf.toISOString()
-    },
-    counts: {
-      totalPending,
-      candidates: items.length,
-      requested: !dryRun && items.length > 0 ? items.length : 0,
-      dryRun: dryRun ? items.length : 0,
-      skippedNoCandidate: items.length === 0 ? 1 : 0,
-      failed: 0
-    },
+    stalledHoursMin,
+    limit,
+    notificationChannel,
+    provider: webhook?.provider ?? null,
+    webhookSource: webhook?.source ?? null,
+    organizationId,
+    domain: input.domain,
+    asOf,
+    totalPending,
     items
-  };
+  });
 }
 
 export async function createApprovalLineTemplate(
