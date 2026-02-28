@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   formatDateTimeByLocale,
   normalizeWithholdingDocumentFileName,
@@ -20,8 +20,8 @@ import type {
 } from "@/components/withholding-receipt/types";
 import { useWithholdingReceiptRequests } from "@/components/withholding-receipt/useWithholdingReceiptRequests";
 import { currentYear } from "@/components/withholding-receipt/types";
+import { isDevToolsEnabled } from "@/app/employee/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import {
   getLocalizedEmployeeIdInputDefault,
   normalizeEmployeeIdForApi,
@@ -35,12 +35,16 @@ export default function WithholdingReceiptConsole() {
   const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
   const formatKrwByLocale = (value: number) =>
     `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "\uC6D0" : " KRW"}`;
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState(
-    "flowhr:ctx:employeeId",
-    localeEmployeeIdDefault
-  );
-  const [accessToken, setAccessToken] = useState("");
+  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isDevToolsEnabled();
+  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId =
+    normalizeEmployeeIdForLocaleInput(
+      (supabaseSession?.actorId ?? supabaseSession?.userId ?? localeEmployeeIdDefault).trim() ||
+        localeEmployeeIdDefault,
+      locale
+    ) || localeEmployeeIdDefault;
   const [year, setYear] = useState(String(currentYear()));
   const [documentFormat, setDocumentFormat] = useState<"json" | "text">("json");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
@@ -50,14 +54,7 @@ export default function WithholdingReceiptConsole() {
   const [finalizedSettlement, setFinalizedSettlement] =
     useState<FinalizedYearEndSettlementResponse | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
-  const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
   const stats = useMemo(() => {
     const total = logs.length;
@@ -74,23 +71,13 @@ export default function WithholdingReceiptConsole() {
       "\uC778\uC99D \uC138\uC158 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4."
     );
   }, [locale, supabaseSessionError]);
-  const normalizedEmployeeIdForApi = useMemo(
-    () => normalizeEmployeeIdForApi(employeeId, locale),
-    [employeeId, locale]
-  );
-
-  useEffect(() => {
-    const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
-    if (!localizedInput) {
-      if (employeeId.trim().length === 0 && employeeId !== localeEmployeeIdDefault) {
-        setEmployeeId(localeEmployeeIdDefault);
-      }
-      return;
+  const normalizedEmployeeIdForApi = useMemo(() => {
+    const normalized = normalizeEmployeeIdForApi(employeeId, locale);
+    if (normalized) {
+      return normalized;
     }
-    if (localizedInput !== employeeId) {
-      setEmployeeId(localizedInput);
-    }
-  }, [employeeId, locale, localeEmployeeIdDefault, setEmployeeId]);
+    return normalizeEmployeeIdForApi(localeEmployeeIdDefault, locale);
+  }, [employeeId, locale, localeEmployeeIdDefault]);
 
   const { previewReceipt, loadIssuedDocument, loadFinalizedSettlement } = useWithholdingReceiptRequests({
     copy,
@@ -126,12 +113,12 @@ export default function WithholdingReceiptConsole() {
   }
   async function copyDocumentMetadata(document: WithholdingReceiptDocumentResponse["document"]) {
     const metadataText = [
-      `receiptNumber=${document.receiptNumber}`,
-      `format=${document.format}`,
-      `contentType=${document.contentType}`,
-      `issuedAt=${document.issuedAt}`,
-      `generatedAt=${document.generatedAt}`,
-      `contentSha256=${document.contentSha256}`
+      `${copy.metadataReceiptNumberLabel}: ${document.receiptNumber}`,
+      `${copy.metadataFormatLabel}: ${resolveDocumentFormatLabel(document.format)}`,
+      `${copy.metadataContentTypeLabel}: ${resolveContentTypeLabel(document.contentType)}`,
+      `${copy.metadataIssuedAtLabel}: ${formatDateTimeByLocale(document.issuedAt, runtimeLocale)}`,
+      `${copy.metadataGeneratedAtLabel}: ${formatDateTimeByLocale(document.generatedAt, runtimeLocale)}`,
+      `${copy.metadataContentSha256Label}: ${document.contentSha256}`
     ].join("\n");
     try {
       await navigator.clipboard.writeText(metadataText);
@@ -206,23 +193,14 @@ export default function WithholdingReceiptConsole() {
         <WithholdingReceiptInputPanel
           copy={copy}
           year={year}
-          employeeId={employeeId}
           documentFormat={documentFormat}
-          accessToken={accessToken}
-          organizationId={organizationId}
+          sessionOrganizationId={organizationId}
+          sessionEmployeeId={employeeId}
           pendingLabel={pendingLabel}
           statusMessage={statusMessage}
           normalizedSupabaseSessionError={normalizedSupabaseSessionError}
           onYearChange={setYear}
-          onEmployeeIdChange={setEmployeeId}
-          onEmployeeIdBlur={() => {
-            if (!employeeId.trim()) {
-              setEmployeeId(localeEmployeeIdDefault);
-            }
-          }}
           onDocumentFormatChange={setDocumentFormat}
-          onAccessTokenChange={setAccessToken}
-          onOrganizationIdChange={setOrganizationId}
           onPreviewReceipt={() => void previewReceipt()}
           onLoadFinalizedSettlement={() => void loadFinalizedSettlement()}
           onLoadIssuedDocument={() => void loadIssuedDocument()}
@@ -248,14 +226,16 @@ export default function WithholdingReceiptConsole() {
           onDownloadDocument={(document) => downloadDocument(document, normalizedDocumentFileName)}
           onCopyDocumentMetadata={(document) => void copyDocumentMetadata(document)}
         />
-        <WithholdingLogsPanel
-          locale={locale}
-          title={copy.apiLogsTitle}
-          copy={copy}
-          logs={logs}
-          stats={stats}
-          pendingLabel={pendingLabel}
-        />
+        {showDevTools ? (
+          <WithholdingLogsPanel
+            locale={locale}
+            title={copy.apiLogsTitle}
+            copy={copy}
+            logs={logs}
+            stats={stats}
+            pendingLabel={pendingLabel}
+          />
+        ) : null}
       </section>
     </main>
   );

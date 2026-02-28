@@ -69,7 +69,8 @@ async function run() {
     /status: "PENDING" \| "APPROVED" \| "REJECTED" \| "CANCELED";/
   );
 
-  assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
   assert.match(
     adminPanels,
     /workTypeLabels/

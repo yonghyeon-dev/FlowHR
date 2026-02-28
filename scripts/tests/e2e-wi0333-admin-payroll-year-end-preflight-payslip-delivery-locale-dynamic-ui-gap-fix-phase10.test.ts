@@ -55,8 +55,9 @@ async function run() {
   assert.match(yearEndCopy, /en: yearEndPreflightCopyEn/);
 
   assert.match(payslipDeliveryCopy, /export const payrollPayslipDeliveryCopyByLocale/);
-  assert.match(payslipDeliveryCopy, /ko:\s*\{/);
-  assert.match(payslipDeliveryCopy, /en: payslipDeliveryCopyEn/);
+  assert.match(payslipDeliveryCopy, /const copyKo: PayrollPayslipDeliveryCopy = \{/);
+  assert.match(payslipDeliveryCopy, /ko: copyKo/);
+  assert.match(payslipDeliveryCopy, /en: copyEn/);
 
   assert.match(yearEndTypes, /export function formatKrw\(value: number, runtimeLocale = "ko-KR"\)/);
 

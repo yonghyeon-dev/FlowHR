@@ -31,9 +31,9 @@ function isPendingAgingRisk(request: BenefitRequestItem) {
 type AdminBenefitsWorkspaceViewProps = {
   copy: AdminBenefitsCopy;
   runtimeLocale: string;
-  organizationId: string;
-  actorId: string;
-  accessToken: string;
+  showDevTools: boolean;
+  sessionOrganizationId: string;
+  sessionActorId: string;
   catalogName: string;
   catalogDescription: string;
   annualLimitKrw: string;
@@ -55,9 +55,6 @@ type AdminBenefitsWorkspaceViewProps = {
   pendingLabel: string | null;
   statusMessage: string;
   logs: string[];
-  onOrganizationIdChange: (value: string) => void;
-  onActorIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onCatalogNameChange: (value: string) => void;
   onCatalogDescriptionChange: (value: string) => void;
   onAnnualLimitChange: (value: string) => void;
@@ -74,9 +71,9 @@ type AdminBenefitsWorkspaceViewProps = {
 export default function AdminBenefitsWorkspaceView({
   copy,
   runtimeLocale,
-  organizationId,
-  actorId,
-  accessToken,
+  showDevTools,
+  sessionOrganizationId,
+  sessionActorId,
   catalogName,
   catalogDescription,
   annualLimitKrw,
@@ -94,9 +91,6 @@ export default function AdminBenefitsWorkspaceView({
   pendingLabel,
   statusMessage,
   logs,
-  onOrganizationIdChange,
-  onActorIdChange,
-  onAccessTokenChange,
   onCatalogNameChange,
   onCatalogDescriptionChange,
   onAnnualLimitChange,
@@ -131,18 +125,10 @@ export default function AdminBenefitsWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.actorIdLabel}
-            <input value={actorId} onChange={(event) => onActorIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <textarea rows={2} value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
-          </label>
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
+            <code>{sessionActorId || "-"}</code>
+          </p>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onLoadWorkspace}>
               {copy.refreshAction}
@@ -338,18 +324,20 @@ export default function AdminBenefitsWorkspaceView({
           )}
         </article>
 
-        <article className="panel">
-          <h2>{copy.logsTitle}</h2>
-          {logs.length === 0 ? (
-            <p className="small muted">-</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log}>{log}</li>
-              ))}
-            </ul>
-          )}
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.logsTitle}</h2>
+            {logs.length === 0 ? (
+              <p className="small muted">-</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log}>{log}</li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ) : null}
       </section>
     </main>
   );

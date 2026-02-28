@@ -6,8 +6,8 @@ import { useMemo, useState } from "react";
 import type { FinalizedYearEndSettlementResponse } from "@/components/withholding-receipt/types";
 import { currentYear, formatKrw } from "@/components/withholding-receipt/types";
 import { useI18n } from "@/lib/i18n/provider";
+import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import {
   buildEmployeeYearEndAccuracyGuidance,
   buildEmployeeYearEndSimulation,
@@ -32,10 +32,12 @@ export default function EmployeeYearEndInputConsole() {
   const { locale } = useI18n();
   const copy = employeeYearEndInputCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
 
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
-  const [accessToken, setAccessToken] = useState("");
   const [year, setYear] = useState(String(currentYear()));
   const [nonTaxableAnnualIncomeKrw, setNonTaxableAnnualIncomeKrw] = useState("0");
   const [earnedIncomeTaxCreditKrw, setEarnedIncomeTaxCreditKrw] = useState("0");
@@ -161,8 +163,6 @@ export default function EmployeeYearEndInputConsole() {
 
   const coreLoadValid = yearValid && employeeIdValid;
 
-  const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
   const normalizedSupabaseSessionError = useMemo(() => {
     if (!supabaseSessionError) {
       return null;
@@ -173,12 +173,7 @@ export default function EmployeeYearEndInputConsole() {
       "인증 세션 상태를 확인하지 못했습니다."
     );
   }, [locale, supabaseSessionError]);
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   function buildHeaders() {
@@ -319,9 +314,12 @@ export default function EmployeeYearEndInputConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.inputTitle}</h2>
+          <p className="small muted">
+            {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+            {locale === "ko" ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+          </p>
           <div className="input-grid">
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
-            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
             <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
             <label>{copy.earnedIncomeTaxCreditLabel}<input value={earnedIncomeTaxCreditKrw} onChange={(event) => setEarnedIncomeTaxCreditKrw(event.target.value)} /></label>
             <label>{copy.childTaxCreditLabel}<input value={childTaxCreditKrw} onChange={(event) => setChildTaxCreditKrw(event.target.value)} /></label>
@@ -335,8 +333,6 @@ export default function EmployeeYearEndInputConsole() {
             <label>{copy.annualIncomeTaxRateLabel}<input value={annualIncomeTaxRate} onChange={(event) => setAnnualIncomeTaxRate(event.target.value)} /></label>
             <label>{copy.localIncomeTaxRateLabel}<input value={localIncomeTaxRate} onChange={(event) => setLocalIncomeTaxRate(event.target.value)} /></label>
           </div>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
-          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button
               className="btn btn-primary"
@@ -409,27 +405,29 @@ export default function EmployeeYearEndInputConsole() {
             )}
           </div>
         </article>
-        <article className="panel">
-          <h2>{copy.apiLogsTitle}</h2>
-          <p className="small">
-            {copy.apiLogsTotalPrefix} {logs.length}
-            {pendingLabel ? ` / ${copy.apiLogsRunningPrefix} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? <p className="small">{copy.apiLogsEmpty}</p> : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/employee/withholding-receipt" className="btn btn-secondary">{copy.openWithholdingReceiptAction}</Link>
-            <Link href="/employee" className="btn btn-secondary">{copy.backToEmployeeAction}</Link>
-          </div>
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.apiLogsTitle}</h2>
+            <p className="small">
+              {copy.apiLogsTotalPrefix} {logs.length}
+              {pendingLabel ? ` / ${copy.apiLogsRunningPrefix} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? <p className="small">{copy.apiLogsEmpty}</p> : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="panel-actions">
+              <Link href="/employee/withholding-receipt" className="btn btn-secondary">{copy.openWithholdingReceiptAction}</Link>
+              <Link href="/employee" className="btn btn-secondary">{copy.backToEmployeeAction}</Link>
+            </div>
+          </article>
+        ) : null}
       </section>
     </main>
   );

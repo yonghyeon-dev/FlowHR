@@ -8,13 +8,16 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const queueHelpers = readUtf8("src", "app", "admin", "page-queue-helpers.ts");
   const adminQueueSources = `${adminPage}\n${queueHelpers}`;
   const workItem = readUtf8("work-items", "WI-0298-admin-page-decomposition-phase1.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminPage, /from "@\/app\/admin\/page-queue-helpers"/);
-  assert.match(adminPage, /buildAdminQueueDerivedState\(\{/);
+  assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-queue-helpers"/);
+  assert.doesNotMatch(adminPage, /buildAdminQueueDerivedState\(\{/);
+  assert.match(adminPanels, /from "@\/app\/admin\/page-queue-helpers"/);
+  assert.match(adminPanels, /queueDerivedState: ReturnType<typeof buildAdminQueueDerivedState>/);
   assert.match(adminQueueSources, /filterPendingAttendanceQueue\(\{/);
   assert.match(adminQueueSources, /filterPendingLeaveQueue\(\{/);
   assert.match(adminQueueSources, /filterPreviewedPayrollQueue\(\{/);

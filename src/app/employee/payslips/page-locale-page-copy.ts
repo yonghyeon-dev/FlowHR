@@ -21,15 +21,15 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
         totalGross: "총지급 합계",
         totalDeductions: "총공제 합계",
         totalNet: "실수령 합계",
-        apiCalls: "요청 호출",
+        apiCalls: "요청 건수",
         ok: "성공",
         fail: "실패"
       },
       filters: {
         title: "조회 조건",
-        organizationIdOptional: "조직 식별자(선택)",
+        organizationIdOptional: "로그인 조직",
         organizationIdPlaceholder: "예: 조직-00001",
-        employeeId: "내 직원 번호",
+        employeeId: "로그인 직원",
         periodStart: "기간 시작",
         periodEnd: "기간 종료",
         actions: {
@@ -37,7 +37,7 @@ export function resolvePayslipPageCopy(isKoLocale: boolean): PayslipPageCopy {
           currentMonth: "이번 달",
           previousMonth: "지난 달",
           lastThreeMonths: "최근 3개월",
-          downloadCsv: "내보내기"
+          downloadCsv: "목록 내보내기"
         }
       },
       devTools: {

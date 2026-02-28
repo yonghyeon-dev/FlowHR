@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import {
   formatEmployeeIdForLocaleDisplay,
   getLocalizedEmployeeIdInputDefault,
@@ -40,12 +39,12 @@ export default function EmployeePayslipsPage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
-
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState(
-    "flowhr:ctx:employeeId",
-    getLocalizedEmployeeIdInputDefault(locale)
+  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId = normalizeEmployeeIdForLocaleInput(
+    (supabaseSession?.actorId ?? supabaseSession?.userId ?? getLocalizedEmployeeIdInputDefault(locale)).trim() ||
+      getLocalizedEmployeeIdInputDefault(locale),
+    locale
   );
 
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
@@ -61,7 +60,6 @@ export default function EmployeePayslipsPage() {
 
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
 
   const searchSortCopy = useMemo(() => resolvePayslipSearchSortCopy(isKoLocale), [isKoLocale]);
   const pageCopy = useMemo(() => resolvePayslipPageCopy(isKoLocale), [isKoLocale]);
@@ -69,19 +67,6 @@ export default function EmployeePayslipsPage() {
     () => normalizeEmployeeIdForApi(employeeId, locale),
     [employeeId, locale]
   );
-  const setEmployeeIdForLocaleInput = useCallback(
-    (value: string) => {
-      setEmployeeId(normalizeEmployeeIdForLocaleInput(value, locale));
-    },
-    [locale, setEmployeeId]
-  );
-
-  useEffect(() => {
-    const localizedEmployeeId = normalizeEmployeeIdForLocaleInput(employeeId, locale);
-    if (localizedEmployeeId !== employeeId) {
-      setEmployeeId(localizedEmployeeId);
-    }
-  }, [employeeId, locale, setEmployeeId]);
 
   useEffect(() => {
     setPayslipRuntimeLocale(runtimeLocale);
@@ -105,12 +90,7 @@ export default function EmployeePayslipsPage() {
     [isKoLocale]
   );
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
 
   const usesBearerToken = bearerToken.trim().length > 0;
   const { logs, pendingLabel, refreshPayslips, appendClientLog, clearLogs } = usePayslipApi({
@@ -179,30 +159,6 @@ export default function EmployeePayslipsPage() {
     }
   }, [compareCandidates, compareRunId]);
 
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0 && !organizationId.trim()) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const actorId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "").trim();
-    if (actorId.length === 0) {
-      return;
-    }
-    const localizedActorId = normalizeEmployeeIdForLocaleInput(actorId, locale);
-    if (employeeId.trim() !== localizedActorId) {
-      setEmployeeId(localizedActorId);
-    }
-  }, [employeeId, isProductionRuntime, locale, setEmployeeId, supabaseSession?.actorId, supabaseSession?.userId]);
 
   function applyCurrentMonthRange() {
     setPeriodStart(firstDayOfMonthLocal());
@@ -299,19 +255,33 @@ export default function EmployeePayslipsPage() {
     if (runs.length === 0) {
       return;
     }
-    const header = [
-      "run_id",
-      "employee_id",
-      "period_start",
-      "period_end",
-      "gross_pay_krw",
-      "withholding_tax_krw",
-      "social_insurance_krw",
-      "other_deductions_krw",
-      "total_deductions_krw",
-      "net_pay_krw",
-      "confirmed_at"
-    ];
+    const header = isKoLocale
+      ? [
+          "명세서_번호",
+          "직원_번호",
+          "기간_시작",
+          "기간_종료",
+          "총지급_원",
+          "원천세_원",
+          "사회보험_원",
+          "기타공제_원",
+          "총공제_원",
+          "실수령_원",
+          "확정_시각"
+        ]
+      : [
+          "run_id",
+          "employee_id",
+          "period_start",
+          "period_end",
+          "gross_pay_krw",
+          "withholding_tax_krw",
+          "social_insurance_krw",
+          "other_deductions_krw",
+          "total_deductions_krw",
+          "net_pay_krw",
+          "confirmed_at"
+        ];
 
     const rows = runs.map((run) => [
       run.id,
@@ -376,9 +346,7 @@ export default function EmployeePayslipsPage() {
       payslipStats={payslipStats}
       stats={stats}
       organizationId={organizationId}
-      setOrganizationId={setOrganizationId}
       employeeId={employeeId}
-      setEmployeeId={setEmployeeIdForLocaleInput}
       periodStart={periodStart}
       setPeriodStart={setPeriodStart}
       periodEnd={periodEnd}
@@ -390,8 +358,6 @@ export default function EmployeePayslipsPage() {
       downloadRunsCsv={downloadRunsCsv}
       runs={runs}
       showDevTools={showDevTools}
-      accessToken={accessToken}
-      setAccessToken={setAccessToken}
       pendingLabel={pendingLabel}
       supabaseSession={supabaseSession}
       supabaseSessionError={localizedSupabaseSessionError}

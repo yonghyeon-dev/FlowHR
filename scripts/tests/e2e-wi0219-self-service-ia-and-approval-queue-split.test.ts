@@ -35,8 +35,10 @@ function run() {
   );
 
   assert.ok(
-    /ApprovalQueuePanel/.test(adminPageSource) || /AdminDashboardPanels/.test(adminPageSource),
-    "admin page should render extracted approval queue component directly or via panel orchestrator"
+    /ApprovalQueuePanel/.test(adminPageSource) ||
+      /AdminDashboardPanels/.test(adminPageSource) ||
+      /href="\/admin\/approval-executions"/.test(adminPageSource),
+    "admin page should expose approval queue directly, via panel orchestrator, or via dedicated approval workspace shortcut"
   );
   assert.match(adminPanelsSource, /ApprovalQueuePanel/, "admin panel orchestrator should render approval queue");
   assert.doesNotMatch(

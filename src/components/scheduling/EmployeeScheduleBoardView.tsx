@@ -11,6 +11,7 @@ import {
 type EmployeeScheduleBoardViewProps = {
   copy: EmployeeScheduleCopy;
   runtimeLocale: string;
+  showDevTools: boolean;
   statusMessage: string;
   pendingLabel: string | null;
   logStats: { total: number; success: number; fail: number };
@@ -27,18 +28,14 @@ type EmployeeScheduleBoardViewProps = {
     completedShifts: number;
   };
   logs: ScheduleApiLog[];
-  organizationId: string;
-  employeeId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionEmployeeId: string;
   fromDate: string;
   toDate: string;
   statusFilter: ScheduleStatusFilter;
   holidayFilter: ScheduleHolidayFilter;
   searchQuery: string;
   visibleScheduleCount: number;
-  onOrganizationIdChange: (value: string) => void;
-  onEmployeeIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onFromDateChange: (value: string) => void;
   onToDateChange: (value: string) => void;
   onStatusFilterChange: (value: ScheduleStatusFilter) => void;
@@ -65,6 +62,7 @@ function resolveStatusTone(status: ScheduleTimeStatus) {
 export default function EmployeeScheduleBoardView({
   copy,
   runtimeLocale,
+  showDevTools,
   statusMessage,
   pendingLabel,
   logStats,
@@ -73,18 +71,14 @@ export default function EmployeeScheduleBoardView({
   nextSchedule,
   summary,
   logs,
-  organizationId,
-  employeeId,
-  accessToken,
+  sessionOrganizationId,
+  sessionEmployeeId,
   fromDate,
   toDate,
   statusFilter,
   holidayFilter,
   searchQuery,
   visibleScheduleCount,
-  onOrganizationIdChange,
-  onEmployeeIdChange,
-  onAccessTokenChange,
   onFromDateChange,
   onToDateChange,
   onStatusFilterChange,
@@ -109,18 +103,10 @@ export default function EmployeeScheduleBoardView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.employeeIdLabel}
-            <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <input value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
-          </label>
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
+            <code>{sessionEmployeeId || "-"}</code>
+          </p>
           <div className="input-grid">
             <label>
               {copy.fromDateLabel}
@@ -262,27 +248,29 @@ export default function EmployeeScheduleBoardView({
             </ul>
           )}
         </article>
-        <article className="panel">
-          <h2>{copy.logsTitle}</h2>
-          <p className="small">
-            {copy.logTotals} {logStats.total} / {copy.logSuccess} {logStats.success} / {copy.logFail}{" "}
-            {logStats.fail}
-            {pendingLabel ? ` / ${copy.logRunning} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small muted">{copy.logsEmpty}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span>{" "}
-                  {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.logsTitle}</h2>
+            <p className="small">
+              {copy.logTotals} {logStats.total} / {copy.logSuccess} {logStats.success} / {copy.logFail}{" "}
+              {logStats.fail}
+              {pendingLabel ? ` / ${copy.logRunning} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small muted">{copy.logsEmpty}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span>{" "}
+                    {log.label} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ) : null}
       </section>
     </main>
   );

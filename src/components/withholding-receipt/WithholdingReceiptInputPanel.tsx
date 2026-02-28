@@ -3,19 +3,14 @@ import { type WithholdingReceiptCopy } from "@/components/withholding-receipt/co
 type WithholdingReceiptInputPanelProps = {
   copy: WithholdingReceiptCopy;
   year: string;
-  employeeId: string;
   documentFormat: "json" | "text";
-  accessToken: string;
-  organizationId: string;
+  sessionOrganizationId: string;
+  sessionEmployeeId: string;
   pendingLabel: string | null;
   statusMessage: string;
   normalizedSupabaseSessionError: string | null;
   onYearChange: (value: string) => void;
-  onEmployeeIdChange: (value: string) => void;
-  onEmployeeIdBlur: () => void;
   onDocumentFormatChange: (value: "json" | "text") => void;
-  onAccessTokenChange: (value: string) => void;
-  onOrganizationIdChange: (value: string) => void;
   onPreviewReceipt: () => void;
   onLoadFinalizedSettlement: () => void;
   onLoadIssuedDocument: () => void;
@@ -24,19 +19,14 @@ type WithholdingReceiptInputPanelProps = {
 export function WithholdingReceiptInputPanel({
   copy,
   year,
-  employeeId,
   documentFormat,
-  accessToken,
-  organizationId,
+  sessionOrganizationId,
+  sessionEmployeeId,
   pendingLabel,
   statusMessage,
   normalizedSupabaseSessionError,
   onYearChange,
-  onEmployeeIdChange,
-  onEmployeeIdBlur,
   onDocumentFormatChange,
-  onAccessTokenChange,
-  onOrganizationIdChange,
   onPreviewReceipt,
   onLoadFinalizedSettlement,
   onLoadIssuedDocument
@@ -46,10 +36,6 @@ export function WithholdingReceiptInputPanel({
       <h2>{copy.inputTitle}</h2>
       <div className="input-grid">
         <label>{copy.yearLabel}<input value={year} onChange={(event) => onYearChange(event.target.value)} /></label>
-        <label>
-          {copy.employeeIdLabel}
-          <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} onBlur={onEmployeeIdBlur} />
-        </label>
         <label>
           {copy.documentFormatLabel}
           <select
@@ -61,14 +47,10 @@ export function WithholdingReceiptInputPanel({
           </select>
         </label>
       </div>
-      <label>
-        {copy.accessTokenLabel}
-        <input value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} placeholder={copy.bearerTokenPlaceholder} />
-      </label>
-      <label>
-        {copy.organizationIdFallbackLabel}
-        <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-      </label>
+      <p className="small muted">
+        {copy.sessionOrganizationLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
+        <code>{sessionEmployeeId || "-"}</code>
+      </p>
       <div className="panel-actions">
         <button className="btn btn-primary" onClick={onPreviewReceipt} disabled={pendingLabel !== null}>{copy.actionPreviewReceipt}</button>
         <button className="btn btn-secondary" onClick={onLoadFinalizedSettlement} disabled={pendingLabel !== null}>{copy.actionLoadFinalizedSettlement}</button>

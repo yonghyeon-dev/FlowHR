@@ -18,11 +18,9 @@ export type WithholdingReceiptCopy = {
   description: string;
   inputTitle: string;
   yearLabel: string;
-  employeeIdLabel: string;
+  sessionOrganizationLabel: string;
+  sessionEmployeeLabel: string;
   documentFormatLabel: string;
-  accessTokenLabel: string;
-  bearerTokenPlaceholder: string;
-  organizationIdFallbackLabel: string;
   formatJsonLabel: string;
   formatTextLabel: string;
   unknownFormatLabel: string;
@@ -80,6 +78,12 @@ export type WithholdingReceiptCopy = {
   contentSha256Label: string;
   actionDownloadLoadedDocument: string;
   actionCopyDocumentMetadata: string;
+  metadataReceiptNumberLabel: string;
+  metadataFormatLabel: string;
+  metadataContentTypeLabel: string;
+  metadataIssuedAtLabel: string;
+  metadataGeneratedAtLabel: string;
+  metadataContentSha256Label: string;
   documentPreviewHiddenNotice: string;
   apiLogsTitle: string;
   apiLogsTotalLabel: string;
@@ -101,11 +105,9 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     description: "연간 원천징수영수증 발급 가능 상태와 정산 요약을 확인합니다.",
     inputTitle: "입력",
     yearLabel: "연도",
-    employeeIdLabel: "직원 번호",
+    sessionOrganizationLabel: "세션 조직",
+    sessionEmployeeLabel: "세션 직원",
     documentFormatLabel: "문서 형식",
-    accessTokenLabel: "액세스 토큰(선택)",
-    bearerTokenPlaceholder: "액세스 토큰",
-    organizationIdFallbackLabel: "조직 식별자(개발 대체값)",
     formatJsonLabel: "구조 데이터",
     formatTextLabel: "텍스트",
     unknownFormatLabel: "알 수 없는 형식",
@@ -163,6 +165,12 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     contentSha256Label: "콘텐츠 해시값",
     actionDownloadLoadedDocument: "불러온 문서 다운로드",
     actionCopyDocumentMetadata: "문서 메타데이터 복사",
+    metadataReceiptNumberLabel: "영수증 번호",
+    metadataFormatLabel: "문서 형식",
+    metadataContentTypeLabel: "콘텐츠 타입",
+    metadataIssuedAtLabel: "발급 시각",
+    metadataGeneratedAtLabel: "생성 시각",
+    metadataContentSha256Label: "콘텐츠 해시값",
     documentPreviewHiddenNotice: "문서 본문 미리보기는 다운로드에서 확인할 수 있습니다.",
     apiLogsTitle: "요청 로그",
     apiLogsTotalLabel: "총",
@@ -182,11 +190,9 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     description: "Preview your yearly withholding receipt readiness and settlement totals.",
     inputTitle: "Input",
     yearLabel: "Year",
-    employeeIdLabel: "Employee ID",
+    sessionOrganizationLabel: "Session organization",
+    sessionEmployeeLabel: "Session employee",
     documentFormatLabel: "Document Format",
-    accessTokenLabel: "Access Token (optional)",
-    bearerTokenPlaceholder: "Bearer token",
-    organizationIdFallbackLabel: "Organization ID (dev fallback)",
     formatJsonLabel: "JSON",
     formatTextLabel: "Text",
     unknownFormatLabel: "Unknown format",
@@ -244,6 +250,12 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     contentSha256Label: "Content SHA256",
     actionDownloadLoadedDocument: "Download Loaded Document",
     actionCopyDocumentMetadata: "Copy Document Metadata",
+    metadataReceiptNumberLabel: "Receipt Number",
+    metadataFormatLabel: "Format",
+    metadataContentTypeLabel: "Content Type",
+    metadataIssuedAtLabel: "Issued At",
+    metadataGeneratedAtLabel: "Generated At",
+    metadataContentSha256Label: "Content SHA256",
     documentPreviewHiddenNotice: "Use download to review full document content.",
     apiLogsTitle: "API Logs",
     apiLogsTotalLabel: "total",

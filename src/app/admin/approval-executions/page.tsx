@@ -1,10 +1,9 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
 type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
@@ -171,10 +170,6 @@ function toTargetKey(input: { domain: ApprovalDomain; targetEntityType: string; 
 }
 
 export default function AdminApprovalExecutionsPage() {
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-
   const [domain, setDomain] = useState<ApprovalDomain | "">("");
   const [state, setState] = useState<ApprovalExecutionState | "">("PENDING");
   const [sort, setSort] = useState<ApprovalExecutionSort>("priority_desc");
@@ -200,13 +195,10 @@ export default function AdminApprovalExecutionsPage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const asOfDate = useMemo(() => {
@@ -261,16 +253,6 @@ export default function AdminApprovalExecutionsPage() {
   function toStateLabel(value: ApprovalExecutionState) {
     return stateLabel[value];
   }
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0 && !organizationId.trim()) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
 
   async function callApi(
     label: string,
@@ -488,22 +470,10 @@ export default function AdminApprovalExecutionsPage() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{isKoLocale ? "컨텍스트/필터" : "Context and filters"}</h2>
-          <label>
-            {isKoLocale ? "조직 식별자" : "Organization ID"}
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {isKoLocale ? "관리자 액터 식별자 (개발 대체값)" : "Admin actor ID (dev fallback)"}
-            <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-          </label>
-          <label>
-            {isKoLocale ? "액세스 토큰 (선택)" : "Access token (optional)"}
-            <input
-              placeholder={isKoLocale ? "Bearer 토큰" : "Bearer token"}
-              value={accessToken}
-              onChange={(event) => setAccessToken(event.target.value)}
-            />
-          </label>
+          <p className="small muted">
+            {isKoLocale ? "조직" : "Organization"}: <code>{organizationId || "-"}</code> /{" "}
+            {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+          </p>
           <div className="input-grid">
             <label>
               정렬

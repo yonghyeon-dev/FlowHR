@@ -26,9 +26,9 @@ type NoticeWorkspaceCopy = ReturnType<typeof resolveNoticeWorkspaceCopy>;
 
 type AdminNoticeWorkspaceViewProps = {
   copy: NoticeWorkspaceCopy;
-  organizationId: string;
-  actorId: string;
-  accessToken: string;
+  showDevTools: boolean;
+  sessionOrganizationId: string;
+  sessionActorId: string;
   statusFilter: NoticeStatus | "all";
   audienceFilter: "all" | "employees" | "admins";
   title: string;
@@ -48,9 +48,6 @@ type AdminNoticeWorkspaceViewProps = {
   };
   pendingLabel: string | null;
   statusMessage: string;
-  onOrganizationIdChange: (value: string) => void;
-  onActorIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onStatusFilterChange: (value: NoticeStatus | "all") => void;
   onAudienceFilterChange: (value: "all" | "employees" | "admins") => void;
   onTitleChange: (value: string) => void;
@@ -70,9 +67,9 @@ function isReadCoverageRisk(notice: NoticeItem, readCountByNoticeId: Map<string,
 
 export default function AdminNoticeWorkspaceView({
   copy,
-  organizationId,
-  actorId,
-  accessToken,
+  showDevTools,
+  sessionOrganizationId,
+  sessionActorId,
   statusFilter,
   audienceFilter,
   title,
@@ -89,9 +86,6 @@ export default function AdminNoticeWorkspaceView({
   stats,
   pendingLabel,
   statusMessage,
-  onOrganizationIdChange,
-  onActorIdChange,
-  onAccessTokenChange,
   onStatusFilterChange,
   onAudienceFilterChange,
   onTitleChange,
@@ -126,18 +120,10 @@ export default function AdminNoticeWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.actorIdLabel}
-            <input value={actorId} onChange={(event) => onActorIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <textarea rows={2} value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
-          </label>
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
+            <code>{sessionActorId || "-"}</code>
+          </p>
           <div className="input-grid">
             <label>
               {copy.statusFilterLabel}
@@ -283,21 +269,23 @@ export default function AdminNoticeWorkspaceView({
           )}
         </article>
 
-        <article className="panel">
-          <h2>{copy.logsTitle}</h2>
-          {logs.length === 0 ? (
-            <p className="small muted">{copy.logsEmpty}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.action} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.logsTitle}</h2>
+            {logs.length === 0 ? (
+              <p className="small muted">{copy.logsEmpty}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.action} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ) : null}
       </section>
     </main>
   );

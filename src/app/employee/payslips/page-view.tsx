@@ -23,9 +23,7 @@ export function EmployeePayslipsPageView({
   payslipStats,
   stats,
   organizationId,
-  setOrganizationId,
   employeeId,
-  setEmployeeId,
   periodStart,
   setPeriodStart,
   periodEnd,
@@ -37,8 +35,6 @@ export function EmployeePayslipsPageView({
   downloadRunsCsv,
   runs,
   showDevTools,
-  accessToken,
-  setAccessToken,
   pendingLabel,
   supabaseSession,
   supabaseSessionError,
@@ -95,9 +91,7 @@ export function EmployeePayslipsPageView({
         payslipStats={payslipStats}
         stats={stats}
         organizationId={organizationId}
-        setOrganizationId={setOrganizationId}
         employeeId={employeeId}
-        setEmployeeId={setEmployeeId}
         periodStart={periodStart}
         setPeriodStart={setPeriodStart}
         periodEnd={periodEnd}
@@ -109,8 +103,6 @@ export function EmployeePayslipsPageView({
         downloadRunsCsv={downloadRunsCsv}
         hasRuns={runs.length > 0}
         showDevTools={showDevTools}
-        accessToken={accessToken}
-        setAccessToken={setAccessToken}
         pendingLabel={pendingLabel}
         supabaseSession={supabaseSession}
         supabaseSessionError={supabaseSessionError}

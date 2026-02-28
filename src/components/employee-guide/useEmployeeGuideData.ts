@@ -13,7 +13,6 @@ import {
   employeeGuideProgressPercent
 } from "@/features/employee-guide/checklist";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 
 type AttendanceRecordLite = { id: string };
 type LeaveRequestLite = { id: string };
@@ -30,10 +29,6 @@ type UseEmployeeGuideDataInput = {
 };
 
 export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
-
   const [attendanceRecordCount, setAttendanceRecordCount] = useState(0);
   const [leaveRequestCount, setLeaveRequestCount] = useState(0);
   const [confirmedPayslipCount, setConfirmedPayslipCount] = useState(0);
@@ -44,36 +39,11 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId?.trim() ?? "";
-    if (!organizationId.trim() && orgId.length > 0) {
-      setOrganizationId(orgId);
-    }
-    const actorId = supabaseSession?.actorId?.trim() ?? "";
-    if (!employeeId.trim() && actorId.length > 0) {
-      setEmployeeId(actorId);
-    }
-  }, [
-    employeeId,
-    isProductionRuntime,
-    organizationId,
-    setEmployeeId,
-    setOrganizationId,
-    supabaseSession?.actorId,
-    supabaseSession?.organizationId
-  ]);
 
   const requestJson = useCallback(
     async (label: string, path: string) => {
@@ -114,7 +84,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
   );
 
   const loadGuide = useCallback(async () => {
-    const targetEmployeeId = employeeId.trim() || supabaseSession?.actorId?.trim() || "";
+    const targetEmployeeId = employeeId.trim();
     if (!usesBearerToken && (!organizationId.trim() || !targetEmployeeId)) {
       return;
     }
@@ -163,7 +133,6 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
     input.requestLabels.leaveRequests,
     organizationId,
     requestJson,
-    supabaseSession?.actorId,
     usesBearerToken
   ]);
 
@@ -195,11 +164,9 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
   );
 
   const refreshDisabled =
-    Boolean(pendingLabel) ||
-    (!usesBearerToken && (!organizationId.trim() || !employeeId.trim()) && !showDevTools);
+    Boolean(pendingLabel) || (!usesBearerToken && (!organizationId.trim() || !employeeId.trim()));
 
   return {
-    accessToken,
     attendanceRecordCount,
     checklistItems,
     confirmedPayslipCount,
@@ -212,9 +179,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
     pendingLabel,
     progressPercent,
     refreshDisabled,
-    setAccessToken,
-    setEmployeeId,
-    setOrganizationId,
+    showDevTools,
     usesBearerToken
   };
 }

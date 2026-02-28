@@ -68,8 +68,7 @@ function run() {
     "/admin/approval-templates",
     "/admin/contracts#contract-template-library",
     "/admin/contracts#contract-signature-readiness",
-    "/admin/approval-history",
-    "/admin/approval-executions"
+    "/admin/approval-history"
   ];
 
   for (const anchor of removedAdminAnchors) {
@@ -82,10 +81,10 @@ function run() {
 
   const requiredAdminAnchors = [
     "/admin",
-    "/admin#approvals",
-    "/admin#aggregates",
-    "/admin#leave-policy",
-    "/admin#payroll",
+    "/admin/approval-executions",
+    "/admin/scheduling",
+    "/admin/leave-accrual",
+    "/admin/payroll-year-end",
     "/admin/people",
     "/admin/contracts",
     "/admin/approval-policy"
@@ -96,6 +95,15 @@ function run() {
       adminLayout.includes(anchor),
       true,
       `admin layout should keep core anchor ${anchor}`
+    );
+  }
+
+  const removedHashBasedCoreAnchors = ["/admin#approvals", "/admin#aggregates", "/admin#leave-policy", "/admin#payroll"];
+  for (const anchor of removedHashBasedCoreAnchors) {
+    assert.equal(
+      adminLayout.includes(anchor),
+      false,
+      `admin layout should replace legacy hash anchor ${anchor} with dedicated route navigation`
     );
   }
 

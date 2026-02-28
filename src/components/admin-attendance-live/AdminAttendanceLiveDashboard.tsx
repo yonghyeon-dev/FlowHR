@@ -26,7 +26,6 @@ import {
   type AttendanceLiveSnapshot
 } from "@/features/admin-attendance-live/summary";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
 type EmployeeLite = { id: string; name: string | null; departmentId: string | null };
@@ -44,10 +43,6 @@ export function AdminAttendanceLiveDashboard() {
   const { locale } = useI18n();
   const copy = attendanceLiveCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
   const initialRange = useMemo(() => getTodayRangeLocal(), []);
   const [periodStart, setPeriodStart] = useState(initialRange.from);
   const [periodEnd, setPeriodEnd] = useState(initialRange.to);
@@ -64,26 +59,12 @@ export function AdminAttendanceLiveDashboard() {
   const [logs, setLogs] = useState<AttendanceLiveApiLog[]>([]);
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
-  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
-
-  useEffect(() => {
-    if (!isProductionRuntime || organizationId.trim()) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
 
   const requestJson = useCallback(
     async (label: string, path: string) => {
@@ -209,7 +190,7 @@ export function AdminAttendanceLiveDashboard() {
 
   const filteredSummary = useMemo(() => summarizeAttendanceLiveRows(filteredRows), [filteredRows]);
 
-  const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim() && !showDevTools);
+  const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim());
 
   return (
     <main className="saas-content">
@@ -227,9 +208,8 @@ export function AdminAttendanceLiveDashboard() {
 
       <AdminAttendanceLiveContextPanel
         copy={copy}
-        organizationId={organizationId}
-        adminActorId={adminActorId}
-        accessToken={accessToken}
+        sessionOrganizationId={organizationId}
+        sessionActorId={adminActorId}
         periodStart={periodStart}
         periodEnd={periodEnd}
         lateThresholdMinutes={lateThresholdMinutes}
@@ -240,9 +220,6 @@ export function AdminAttendanceLiveDashboard() {
         departments={departments}
         pendingLabel={pendingLabel}
         refreshDisabled={refreshDisabled}
-        onSetOrganizationId={setOrganizationId}
-        onSetAdminActorId={setAdminActorId}
-        onSetAccessToken={setAccessToken}
         onSetPeriodStart={setPeriodStart}
         onSetPeriodEnd={setPeriodEnd}
         onSetLateThresholdMinutes={setLateThresholdMinutes}
@@ -264,7 +241,7 @@ export function AdminAttendanceLiveDashboard() {
 
       <section className="panel-grid">
         <AdminAttendanceLiveTablePanel copy={copy} rows={filteredRows} locale={runtimeLocale} />
-        <AdminAttendanceLiveLogsPanel copy={copy} logs={logs} />
+        {showDevTools ? <AdminAttendanceLiveLogsPanel copy={copy} logs={logs} /> : null}
       </section>
     </main>
   );

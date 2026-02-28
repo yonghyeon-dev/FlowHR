@@ -2,7 +2,6 @@
 import { useMemo, useState } from "react";
 import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
 import AdminBenefitsWorkspaceView from "@/components/benefits/AdminBenefitsWorkspaceView";
@@ -56,16 +55,19 @@ function buildQuery(input: Record<string, string>) {
   return text ? `?${text}` : "";
 }
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function AdminBenefitsWorkspace() {
   const { locale } = useI18n();
   const copy = resolveAdminBenefitsCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
-
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [actorId, setActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
   const [catalogName, setCatalogName] = useState("");
   const [catalogDescription, setCatalogDescription] = useState("");
@@ -82,12 +84,7 @@ export default function AdminBenefitsWorkspace() {
   const [statusMessage, setStatusMessage] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const catalogStats = useMemo(() => {
@@ -260,9 +257,9 @@ export default function AdminBenefitsWorkspace() {
     <AdminBenefitsWorkspaceView
       copy={copy}
       runtimeLocale={runtimeLocale}
-      organizationId={organizationId}
-      actorId={actorId}
-      accessToken={accessToken}
+      showDevTools={showDevTools}
+      sessionOrganizationId={organizationId}
+      sessionActorId={actorId}
       catalogName={catalogName}
       catalogDescription={catalogDescription}
       annualLimitKrw={annualLimitKrw}
@@ -280,9 +277,6 @@ export default function AdminBenefitsWorkspace() {
       pendingLabel={pendingLabel}
       statusMessage={statusMessage}
       logs={logs}
-      onOrganizationIdChange={setOrganizationId}
-      onActorIdChange={setActorId}
-      onAccessTokenChange={setAccessToken}
       onCatalogNameChange={setCatalogName}
       onCatalogDescriptionChange={setCatalogDescription}
       onAnnualLimitChange={setAnnualLimitKrw}

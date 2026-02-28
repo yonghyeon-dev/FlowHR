@@ -37,14 +37,10 @@ export function AdminOnboardingDashboard() {
 
       <AdminOnboardingContextPanel
         copy={copy}
-        organizationId={data.organizationId}
-        adminActorId={data.adminActorId}
-        accessToken={data.accessToken}
+        sessionOrganizationId={data.organizationId}
+        sessionActorId={data.adminActorId}
         pendingLabel={data.pendingLabel}
         refreshDisabled={data.refreshDisabled}
-        onSetOrganizationId={data.setOrganizationId}
-        onSetAdminActorId={data.setAdminActorId}
-        onSetAccessToken={data.setAccessToken}
         onRefresh={() => {
           void data.loadSetup();
         }}
@@ -63,7 +59,6 @@ export function AdminOnboardingDashboard() {
         allowHourly={data.allowHourly}
         hourlyIncrementMinutes={data.hourlyIncrementMinutes}
         maxHoursPerRequest={data.maxHoursPerRequest}
-        onSetOrganizationId={data.setOrganizationId}
         onSetDepartmentSeedInput={data.setDepartmentSeedInput}
         onSetEmployeeSeedInput={data.setEmployeeSeedInput}
         onSetAnnualGrantDays={data.setAnnualGrantDays}

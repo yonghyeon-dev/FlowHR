@@ -17,9 +17,8 @@ type EmployeeRecruitmentCopy = ReturnType<typeof resolveEmployeeRecruitmentCopy>
 
 type EmployeeRecruitmentWorkspaceViewProps = {
   copy: EmployeeRecruitmentCopy;
-  organizationId: string;
-  employeeId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionEmployeeId: string;
   openings: RecruitmentOpeningItem[];
   referrals: RecruitmentReferralItem[];
   filteredReferrals: RecruitmentReferralItem[];
@@ -37,9 +36,6 @@ type EmployeeRecruitmentWorkspaceViewProps = {
   openingFilteredReferralCount: number;
   pending: boolean;
   statusMessage: string;
-  onOrganizationIdChange: (value: string) => void;
-  onEmployeeIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onStageFilterChange: (value: RecruitmentReferralStage | "all") => void;
   onRiskFilterChange: (value: EmployeeReferralRiskFilter) => void;
   onOpeningFilterChange: (value: string) => void;
@@ -57,9 +53,8 @@ type EmployeeRecruitmentWorkspaceViewProps = {
 
 export default function EmployeeRecruitmentWorkspaceView({
   copy,
-  organizationId,
-  employeeId,
-  accessToken,
+  sessionOrganizationId,
+  sessionEmployeeId,
   openings,
   referrals,
   filteredReferrals,
@@ -77,9 +72,6 @@ export default function EmployeeRecruitmentWorkspaceView({
   openingFilteredReferralCount,
   pending,
   statusMessage,
-  onOrganizationIdChange,
-  onEmployeeIdChange,
-  onAccessTokenChange,
   onStageFilterChange,
   onRiskFilterChange,
   onOpeningFilterChange,
@@ -114,18 +106,10 @@ export default function EmployeeRecruitmentWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.employeeIdLabel}
-            <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <textarea rows={2} value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
-          </label>
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
+            <code>{sessionEmployeeId || "-"}</code>
+          </p>
           <label>
             {copy.stageFilterLabel}
             <select

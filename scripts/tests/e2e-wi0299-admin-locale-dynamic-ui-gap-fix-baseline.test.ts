@@ -16,22 +16,14 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminPage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
-  assert.match(
-    adminPage,
-    /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
-  );
-  assert.match(adminPage, /const \{ queueLabels, logStatusLabels \} = localeLabelBundle;/);
+  assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.match(adminPanels, /localeLabelBundle: ReturnType<typeof resolveAdminLocaleLabelBundle>/);
   assert.match(adminPanels, /workTypeLabels/);
   assert.match(adminPanels, /logStatusLabels/);
 
   assert.match(adminSchedulingPanel, /\{schedule\.isHoliday \? workTypeLabels\.holiday : workTypeLabels\.work\}/);
   assert.match(adminDebugLogsPanel, /\{log\.ok \? logStatusLabels\.success : logStatusLabels\.fail\}/);
-  assert.match(
-    adminPage,
-    /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL \?\? localeLabelBundle\.notConfiguredLabel;/
-  );
-
   assert.doesNotMatch(adminSchedulingPanel, /schedule\.isHoliday \? "HOLIDAY" : "WORK"/);
   assert.doesNotMatch(adminDebugLogsPanel, /log\.ok \? "OK" : "FAIL"/);
 

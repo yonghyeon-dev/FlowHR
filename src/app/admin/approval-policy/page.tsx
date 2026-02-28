@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   formatApprovalPolicyDateTime,
@@ -20,14 +20,9 @@ import {
 } from "@/app/admin/approval-policy/page-types";
 import { actorRoles } from "@/lib/actor";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminApprovalPolicyPage() {
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-
   const [attendanceRole, setAttendanceRole] = useState("manager");
   const [leaveRole, setLeaveRole] = useState("manager");
   const [payrollRole, setPayrollRole] = useState("payroll_operator");
@@ -59,13 +54,10 @@ export default function AdminApprovalPolicyPage() {
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const copy = useMemo(() => resolveAdminApprovalPolicyLocaleCopy(isKoLocale), [isKoLocale]);
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(() => {
@@ -77,16 +69,6 @@ export default function AdminApprovalPolicyPage() {
       fail: total - success
     };
   }, [logs]);
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim().length > 0 && !organizationId.trim()) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
 
   async function callApi(
     label: string,
@@ -247,22 +229,10 @@ export default function AdminApprovalPolicyPage() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.context.title}</h2>
-          <label>
-            {copy.context.organizationId}
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
-          <label>
-            {copy.context.adminActorId}
-            <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-          </label>
-          <label>
-            {copy.context.accessTokenOptional}
-            <input
-              placeholder={copy.context.bearerPlaceholder}
-              value={accessToken}
-              onChange={(event) => setAccessToken(event.target.value)}
-            />
-          </label>
+          <p className="small muted">
+            {copy.context.organizationId}: <code>{organizationId || "-"}</code> / {copy.context.adminActorId}:{" "}
+            <code>{adminActorId || "-"}</code>
+          </p>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadPolicy()} disabled={!organizationId.trim()}>
               {copy.context.loadPolicy}

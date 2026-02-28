@@ -16,19 +16,16 @@ import EmployeeBenefitsWorkspaceView from "@/components/benefits/EmployeeBenefit
 import { resolveEmployeeBenefitsCopy } from "@/components/benefits/copy";
 import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function EmployeeBenefitsWorkspace() {
   const { locale } = useI18n();
   const copy = resolveEmployeeBenefitsCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
 
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
-  const [accessToken, setAccessToken] = useState("");
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
 
   const [catalog, setCatalog] = useState<BenefitCatalogItem[]>([]);
   const [requests, setRequests] = useState<BenefitRequestItem[]>([]);
@@ -44,12 +41,7 @@ export default function EmployeeBenefitsWorkspace() {
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const catalogById = useMemo(() => {
@@ -220,9 +212,8 @@ export default function EmployeeBenefitsWorkspace() {
     <EmployeeBenefitsWorkspaceView
       copy={copy}
       runtimeLocale={runtimeLocale}
-      organizationId={organizationId}
-      employeeId={employeeId}
-      accessToken={accessToken}
+      sessionOrganizationId={organizationId}
+      sessionEmployeeId={employeeId}
       catalog={catalog}
       requests={requests}
       filteredRequests={filteredRequests}
@@ -239,9 +230,6 @@ export default function EmployeeBenefitsWorkspace() {
       isProjectedOverLimit={isProjectedOverLimit}
       pending={pending}
       statusMessage={statusMessage}
-      onOrganizationIdChange={setOrganizationId}
-      onEmployeeIdChange={setEmployeeId}
-      onAccessTokenChange={setAccessToken}
       onRequestStatusFilterChange={setRequestStatusFilter}
       onRequestRiskFilterChange={setRequestRiskFilter}
       onRequestSearchQueryChange={setRequestSearchQuery}

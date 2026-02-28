@@ -8,13 +8,16 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const queueHelpers = readUtf8("src", "app", "admin", "page-queue-helpers.ts");
-  const adminQueueSources = `${adminPage}\n${queueHelpers}`;
+  const adminQueueSources = `${adminPanels}\n${queueHelpers}`;
   const workItem = readUtf8("work-items", "WI-0344-admin-page-decomposition-phase2.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminPage, /summarizeAdminApiLogs\(logs\)/);
-  assert.match(adminPage, /buildAdminQueueDerivedState\(\{/);
+  assert.doesNotMatch(adminPage, /summarizeAdminApiLogs\(logs\)/);
+  assert.doesNotMatch(adminPage, /buildAdminQueueDerivedState\(\{/);
+  assert.match(adminPanels, /from "@\/app\/admin\/page-queue-helpers"/);
+  assert.match(adminPanels, /queueDerivedState: ReturnType<typeof buildAdminQueueDerivedState>/);
   assert.match(adminQueueSources, /buildQueueBadgeSummaries\(\{/);
   assert.match(adminQueueSources, /summarizeQueueAlertOverview\(queueBadgeSummaries\)/);
   assert.doesNotMatch(adminPage, /const total = logs\.length;\s*const success = logs\.filter/);

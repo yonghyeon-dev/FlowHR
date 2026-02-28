@@ -39,12 +39,9 @@ export function EmployeeGuideDashboard() {
         copy={copy}
         organizationId={data.organizationId}
         employeeId={data.employeeId}
-        accessToken={data.accessToken}
         pendingLabel={data.pendingLabel}
         refreshDisabled={data.refreshDisabled}
-        onSetOrganizationId={data.setOrganizationId}
-        onSetEmployeeId={data.setEmployeeId}
-        onSetAccessToken={data.setAccessToken}
+        isKoLocale={locale === "ko"}
         onRefresh={() => {
           void data.loadGuide();
         }}
@@ -60,6 +57,7 @@ export function EmployeeGuideDashboard() {
         leaveRequestCount={data.leaveRequestCount}
         confirmedPayslipCount={data.confirmedPayslipCount}
         logs={data.logs}
+        showDevTools={data.showDevTools}
       />
     </main>
   );

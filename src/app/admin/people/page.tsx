@@ -6,8 +6,7 @@ import {
   asRecord,
   buildCompareRows,
   buildOrgTree,
-  filterEmployees,
-  isTruthyFlag
+  filterEmployees
 } from "@/app/admin/people/page-helpers";
 import { useAdminPeopleDirectoryActions } from "@/app/admin/people/page-directory-actions";
 import { AdminPeoplePageView } from "@/app/admin/people/page-view";
@@ -25,15 +24,10 @@ import {
   type UpdatedWindow
 } from "@/app/admin/people/page-types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminPeoplePage() {
-  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -62,6 +56,8 @@ export default function AdminPeoplePage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
   const profileFieldLabel = useMemo<Record<ProfileField, string>>(() => {
     return {
@@ -74,26 +70,8 @@ export default function AdminPeoplePage() {
     };
   }, [isKoLocale]);
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
-
-  useEffect(() => {
-    if (!isProductionRuntime) {
-      return;
-    }
-    if (organizationId.trim()) {
-      return;
-    }
-    const orgId = supabaseSession?.organizationId ?? "";
-    if (orgId.trim()) {
-      setOrganizationId(orgId.trim());
-    }
-  }, [isProductionRuntime, organizationId, setOrganizationId, supabaseSession?.organizationId]);
 
   const organizationById = useMemo(() => new Map(organizations.map((row) => [row.id, row])), [organizations]);
   const departmentById = useMemo(() => new Map(departments.map((row) => [row.id, row])), [departments]);
@@ -335,9 +313,9 @@ export default function AdminPeoplePage() {
       stats={stats}
       refreshDirectory={refreshDirectory}
       organizationId={organizationId}
-      setOrganizationId={setOrganizationId}
       adminActorId={adminActorId}
-      setAdminActorId={setAdminActorId}
+      isProductionRuntime={isProductionRuntime}
+      usesBearerToken={usesBearerToken}
       search={search}
       setSearch={setSearch}
       activeFilter={activeFilter}
@@ -350,9 +328,6 @@ export default function AdminPeoplePage() {
       setRecentlyUpdatedDays={setRecentlyUpdatedDays}
       historyLimit={historyLimit}
       setHistoryLimit={setHistoryLimit}
-      showDevTools={showDevTools}
-      accessToken={accessToken}
-      setAccessToken={setAccessToken}
       loadOrganizations={loadOrganizations}
       loadDepartments={loadDepartments}
       loadPositions={loadPositions}

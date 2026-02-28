@@ -41,7 +41,6 @@ import { EmployeeAttendanceLeavePanels } from "@/components/employee-dashboard/E
 import { EmployeeDashboardChrome } from "@/components/employee-dashboard/EmployeeDashboardChrome";
 import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/EmployeeRequestFeedbackPanels";
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { useSearchParams } from "next/navigation";
 export default function EmployeeSelfServicePage() {
@@ -62,9 +61,6 @@ export default function EmployeeSelfServicePage() {
   const appliedAttendanceSchedulePrefillRef = useRef<{ baseKey: string | null; selectedTargetKey: string | null }>(
     { baseKey: null, selectedTargetKey: null }
   );
-  const [accessToken, setAccessToken] = useState("");
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
   const [checkInAt, setCheckInAt] = useState(todayStartLocal());
@@ -100,14 +96,16 @@ export default function EmployeeSelfServicePage() {
   const toRequestStatusLabel = useCallback((status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status], [requestStatusLabels]);
   const toLeaveTypeLabel = useCallback((leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType, [leaveTypeLabels]);
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
-  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, bearerToken, usesBearerToken } = useEmployeeRuntimeSession({
-    accessToken,
+  const {
+    showDevTools,
+    isProductionRuntime,
+    supabaseSession,
+    supabaseSessionError,
     organizationId,
-    setOrganizationId,
     employeeId,
-    setEmployeeId,
-    notConfiguredLabel
-  });
+    bearerToken,
+    usesBearerToken
+  } = useEmployeeRuntimeSession({ notConfiguredLabel });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
@@ -355,15 +353,11 @@ export default function EmployeeSelfServicePage() {
           supabaseSessionError={supabaseSessionError}
           organizationId={organizationId}
           employeeId={employeeId}
-          accessToken={accessToken}
           periodStart={periodStart}
           periodEnd={periodEnd}
           supabaseUrl={supabaseUrl}
           integratedSummaryCards={integratedSummaryCards}
           integratedSubmitChecklistCards={integratedSubmitChecklistCards}
-          onOrganizationIdChange={setOrganizationId}
-          onEmployeeIdChange={setEmployeeId}
-          onAccessTokenChange={setAccessToken}
           onPeriodStartChange={setPeriodStart}
           onPeriodEndChange={setPeriodEnd}
           onRefreshEmployeeSnapshot={() => void mutationActions.refreshEmployeeSnapshot()}
