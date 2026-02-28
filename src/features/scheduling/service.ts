@@ -118,6 +118,7 @@ import {
 import {
   requireSchedulingActor,
   requireSchedulingWriteActor,
+  resolveSchedulingEventPublisher,
   resolveSchedulingTenantScope
 } from "@/features/scheduling/anomaly-service-context-helpers";
 import {
@@ -173,7 +174,6 @@ import {
 } from "@/features/scheduling/schedule-input-normalization-helpers";
 import { listStrictScheduleOverlaps } from "@/features/scheduling/schedule-overlap-helpers";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
-import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
 
@@ -836,10 +836,6 @@ export type ServiceContext = {
   eventPublisher?: DomainEventPublisher;
 };
 
-function getEventPublisher(context: ServiceContext): DomainEventPublisher {
-  return context.eventPublisher ?? getRuntimeDomainEventPublisher();
-}
-
 function requireTemplateTenantScope(context: ServiceContext) {
   const tenantScope = resolveTenantScope(context.actor);
   if (!tenantScope) {
@@ -957,7 +953,7 @@ export async function createWorkSchedule(
       notes: schedule.notes
     }
   });
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.schedule.assigned.v1",
     occurredAt: new Date().toISOString(),
     entityType: "WorkSchedule",
@@ -1058,7 +1054,7 @@ export async function updateWorkSchedule(
       }
     }
   });
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.schedule.updated.v1",
     occurredAt: new Date().toISOString(),
     entityType: "WorkSchedule",
@@ -1102,7 +1098,7 @@ export async function deleteWorkSchedule(
       isHoliday: deleted.isHoliday
     }
   });
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.schedule.deleted.v1",
     occurredAt: new Date().toISOString(),
     entityType: "WorkSchedule",
@@ -1172,7 +1168,7 @@ export async function createWorkScheduleTemplate(
       weekdays: template.weekdays
     }
   });
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.template.created.v1",
     occurredAt: new Date().toISOString(),
     entityType: "WorkScheduleTemplate",
@@ -1260,7 +1256,7 @@ export async function assignWorkScheduleFromTemplate(
       date: input.date
     }
   });
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.template.assigned.v1",
     occurredAt: new Date().toISOString(),
     entityType: "WorkScheduleTemplate",
@@ -1327,7 +1323,7 @@ export async function assignWorkScheduleRangeFromTemplate(
       createdCount: createdScheduleIds.length
     }
   });
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.template.range_assigned.v1",
     occurredAt: new Date().toISOString(),
     entityType: "WorkScheduleTemplate",
@@ -1415,7 +1411,7 @@ export async function assignWorkScheduleRotation(
       createdCount: createdScheduleIds.length
     }
   });
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.rotation.assigned.v1",
     occurredAt: new Date().toISOString(),
     entityType: "WorkSchedule",
@@ -1766,7 +1762,7 @@ export async function applyWorkScheduleRotationFairness(
       }
     });
 
-    await getEventPublisher(context).publish({
+    await resolveSchedulingEventPublisher(context).publish({
       name: "scheduling.rotation.assigned.v1",
       occurredAt: new Date().toISOString(),
       entityType: "WorkSchedule",
@@ -1969,7 +1965,7 @@ export async function listScheduleAttendanceAnomalies(
     })
   });
 
-  const eventPublisher = getEventPublisher(context);
+  const eventPublisher = resolveSchedulingEventPublisher(context);
   const sideEffectContext = {
     actor: { id: actor.id, role: actor.role },
     tenantScope,
@@ -2090,7 +2086,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     payload
   });
 
-  await getEventPublisher(context).publish({
+  await resolveSchedulingEventPublisher(context).publish({
     name: "scheduling.anomaly.incident.updated.v1",
     occurredAt: updatedAt,
     entityType: "WorkSchedule",
@@ -2230,7 +2226,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
         requestedAt
       });
 
-      await getEventPublisher(context).publish({
+      await resolveSchedulingEventPublisher(context).publish({
         name: "scheduling.anomaly.incident.escalation.requested.v1",
         occurredAt: requestedAt,
         entityType: "WorkSchedule",
@@ -2403,7 +2399,7 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     summaryPayload,
     items,
     publishExecuted: async (payload) => {
-      await getEventPublisher(context).publish({
+      await resolveSchedulingEventPublisher(context).publish({
         name: "scheduling.anomaly.incident.auto_action.executed.v1",
         occurredAt: executedAt,
         entityType: "WorkSchedule",
@@ -2775,7 +2771,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
   });
 
   if (!input.suppressAutomation) {
-    const eventPublisher = getEventPublisher(context);
+    const eventPublisher = resolveSchedulingEventPublisher(context);
     await emitAnomalyCockpitTicketRequestsIfEnabled(
       {
         actor: { id: actor.id, role: actor.role },
