@@ -20,18 +20,14 @@ import type {
   RecruitmentReferralStage
 } from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function EmployeeRecruitmentWorkspace() {
   const { locale } = useI18n();
   const copy = resolveEmployeeRecruitmentCopy(locale);
-  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
-  const [accessToken, setAccessToken] = useState("");
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
 
   const [openings, setOpenings] = useState<RecruitmentOpeningItem[]>([]);
   const [referrals, setReferrals] = useState<RecruitmentReferralItem[]>([]);
@@ -49,12 +45,7 @@ export default function EmployeeRecruitmentWorkspace() {
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const openingById = useMemo(() => {
@@ -226,9 +217,8 @@ export default function EmployeeRecruitmentWorkspace() {
   return (
     <EmployeeRecruitmentWorkspaceView
       copy={copy}
-      organizationId={organizationId}
-      employeeId={employeeId}
-      accessToken={accessToken}
+      sessionOrganizationId={organizationId}
+      sessionEmployeeId={employeeId}
       openings={openings}
       referrals={referrals}
       filteredReferrals={filteredReferrals}
@@ -246,9 +236,6 @@ export default function EmployeeRecruitmentWorkspace() {
       openingFilteredReferralCount={openingFilteredReferralCount}
       pending={pending}
       statusMessage={statusMessage}
-      onOrganizationIdChange={setOrganizationId}
-      onEmployeeIdChange={setEmployeeId}
-      onAccessTokenChange={setAccessToken}
       onStageFilterChange={setStageFilter}
       onRiskFilterChange={setRiskFilter}
       onOpeningFilterChange={setOpeningFilter}

@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 
 import type { RecruitmentOpeningItem, RecruitmentReferralItem, RecruitmentReferralStage } from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
 import AdminRecruitmentWorkspaceView from "@/components/recruitment/AdminRecruitmentWorkspaceView";
@@ -38,12 +37,9 @@ function buildQuery(input: Record<string, string>) {
 export default function AdminRecruitmentWorkspace() {
   const { locale } = useI18n();
   const copy = resolveAdminRecruitmentCopy(locale);
-  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [actorId, setActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
   const [openingTitle, setOpeningTitle] = useState("");
   const [department, setDepartment] = useState("");
@@ -58,12 +54,7 @@ export default function AdminRecruitmentWorkspace() {
   const [statusMessage, setStatusMessage] = useState("");
   const [stageSelection, setStageSelection] = useState<Record<string, RecruitmentReferralStage>>({});
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
   const openingTitleById = useMemo(() => {
     const next: Record<string, string> = {};
@@ -251,9 +242,8 @@ export default function AdminRecruitmentWorkspace() {
   return (
     <AdminRecruitmentWorkspaceView
       copy={copy}
-      organizationId={organizationId}
-      actorId={actorId}
-      accessToken={accessToken}
+      sessionOrganizationId={organizationId}
+      sessionActorId={actorId}
       openingTitle={openingTitle}
       department={department}
       employmentType={employmentType}
@@ -269,9 +259,6 @@ export default function AdminRecruitmentWorkspace() {
       stageSelection={stageSelection}
       pending={pending}
       statusMessage={statusMessage}
-      onOrganizationIdChange={setOrganizationId}
-      onActorIdChange={setActorId}
-      onAccessTokenChange={setAccessToken}
       onOpeningTitleChange={setOpeningTitle}
       onDepartmentChange={setDepartment}
       onEmploymentTypeChange={setEmploymentType}

@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 
 import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveNoticeWorkspaceCopy } from "@/components/notices/copy";
 import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceView";
@@ -74,16 +73,19 @@ function buildQuery(input: Record<string, string>) {
   return text ? `?${text}` : "";
 }
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function AdminNoticeWorkspace() {
   const { locale } = useI18n();
   const copy = resolveNoticeWorkspaceCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
-  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
-
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [actorId, setActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
   const [statusFilter, setStatusFilter] = useState<NoticeStatus | "all">("all");
   const [audienceFilter, setAudienceFilter] = useState<"all" | "employees" | "admins">("all");
@@ -101,12 +103,7 @@ export default function AdminNoticeWorkspace() {
   const [statusMessage, setStatusMessage] = useState("");
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(
@@ -255,9 +252,9 @@ export default function AdminNoticeWorkspace() {
   return (
     <AdminNoticeWorkspaceView
       copy={copy}
-      organizationId={organizationId}
-      actorId={actorId}
-      accessToken={accessToken}
+      showDevTools={showDevTools}
+      sessionOrganizationId={organizationId}
+      sessionActorId={actorId}
       statusFilter={statusFilter}
       audienceFilter={audienceFilter}
       title={title}
@@ -274,9 +271,6 @@ export default function AdminNoticeWorkspace() {
       stats={stats}
       pendingLabel={pendingLabel}
       statusMessage={statusMessage}
-      onOrganizationIdChange={setOrganizationId}
-      onActorIdChange={setActorId}
-      onAccessTokenChange={setAccessToken}
       onStatusFilterChange={setStatusFilter}
       onAudienceFilterChange={setAudienceFilter}
       onTitleChange={setTitle}

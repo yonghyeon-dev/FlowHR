@@ -14,9 +14,8 @@ type EmployeeBenefitsCopy = ReturnType<typeof resolveEmployeeBenefitsCopy>;
 type EmployeeBenefitsWorkspaceViewProps = {
   copy: EmployeeBenefitsCopy;
   runtimeLocale: string;
-  organizationId: string;
-  employeeId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionEmployeeId: string;
   catalog: BenefitCatalogItem[];
   requests: BenefitRequestItem[];
   filteredRequests: BenefitRequestItem[];
@@ -33,9 +32,6 @@ type EmployeeBenefitsWorkspaceViewProps = {
   isProjectedOverLimit: boolean;
   pending: boolean;
   statusMessage: string;
-  onOrganizationIdChange: (value: string) => void;
-  onEmployeeIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onRequestStatusFilterChange: (value: BenefitRequestStatus | "all") => void;
   onRequestRiskFilterChange: (value: EmployeeBenefitRequestRiskFilter) => void;
   onRequestSearchQueryChange: (value: string) => void;
@@ -53,9 +49,8 @@ type EmployeeBenefitsWorkspaceViewProps = {
 export default function EmployeeBenefitsWorkspaceView({
   copy,
   runtimeLocale,
-  organizationId,
-  employeeId,
-  accessToken,
+  sessionOrganizationId,
+  sessionEmployeeId,
   catalog,
   requests,
   filteredRequests,
@@ -72,9 +67,6 @@ export default function EmployeeBenefitsWorkspaceView({
   isProjectedOverLimit,
   pending,
   statusMessage,
-  onOrganizationIdChange,
-  onEmployeeIdChange,
-  onAccessTokenChange,
   onRequestStatusFilterChange,
   onRequestRiskFilterChange,
   onRequestSearchQueryChange,
@@ -108,18 +100,10 @@ export default function EmployeeBenefitsWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.employeeIdLabel}
-            <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <textarea rows={2} value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
-          </label>
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
+            <code>{sessionEmployeeId || "-"}</code>
+          </p>
           <label>
             {copy.requestFilterLabel}
             <select

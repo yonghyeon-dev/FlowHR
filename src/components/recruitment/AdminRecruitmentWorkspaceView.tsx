@@ -11,9 +11,8 @@ type AdminRecruitmentCopy = ReturnType<typeof resolveAdminRecruitmentCopy>;
 
 type AdminRecruitmentWorkspaceViewProps = {
   copy: AdminRecruitmentCopy;
-  organizationId: string;
-  actorId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionActorId: string;
   openingTitle: string;
   department: string;
   employmentType: string;
@@ -29,9 +28,6 @@ type AdminRecruitmentWorkspaceViewProps = {
   stageSelection: Record<string, RecruitmentReferralStage>;
   pending: boolean;
   statusMessage: string;
-  onOrganizationIdChange: (value: string) => void;
-  onActorIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onOpeningTitleChange: (value: string) => void;
   onDepartmentChange: (value: string) => void;
   onEmploymentTypeChange: (value: string) => void;
@@ -47,9 +43,8 @@ type AdminRecruitmentWorkspaceViewProps = {
 
 export default function AdminRecruitmentWorkspaceView({
   copy,
-  organizationId,
-  actorId,
-  accessToken,
+  sessionOrganizationId,
+  sessionActorId,
   openingTitle,
   department,
   employmentType,
@@ -65,9 +60,6 @@ export default function AdminRecruitmentWorkspaceView({
   stageSelection,
   pending,
   statusMessage,
-  onOrganizationIdChange,
-  onActorIdChange,
-  onAccessTokenChange,
   onOpeningTitleChange,
   onDepartmentChange,
   onEmploymentTypeChange,
@@ -100,18 +92,10 @@ export default function AdminRecruitmentWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.actorIdLabel}
-            <input value={actorId} onChange={(event) => onActorIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <textarea rows={2} value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
-          </label>
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
+            <code>{sessionActorId || "-"}</code>
+          </p>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onLoadWorkspace} disabled={pending}>
               {copy.refreshAction}
