@@ -8,7 +8,6 @@ import {
   type ScheduleTimeStatus,
   type WorkScheduleDto
 } from "@/components/scheduling/helpers";
-
 type EmployeeScheduleBoardViewProps = {
   copy: EmployeeScheduleCopy;
   runtimeLocale: string;
@@ -99,6 +98,7 @@ export default function EmployeeScheduleBoardView({
   onExportCsv,
   onExportIcs
 }: EmployeeScheduleBoardViewProps) {
+  const attendanceCorrectionHref = `/employee?attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}#attendance`;
   return (
     <main className="saas-content">
       <header className="hero">
@@ -176,6 +176,7 @@ export default function EmployeeScheduleBoardView({
             <button className="btn btn-secondary" type="button" onClick={onExportIcs}>
               {copy.exportIcsAction}
             </button>
+            <a className="btn btn-secondary" href={attendanceCorrectionHref}>{copy.statusQuickCorrectionAction}</a>
           </div>
           <p className="small muted">{copy.visibleCountLabel}: {visibleScheduleCount} / {allScheduleCount}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
