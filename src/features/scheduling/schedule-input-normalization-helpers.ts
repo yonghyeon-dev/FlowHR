@@ -54,6 +54,34 @@ export function normalizeTopN(value: number | undefined) {
   return normalized;
 }
 
+export function normalizeScheduleAnomalyReportWindowInput(input: {
+  periodStart: Date;
+  periodEnd: Date;
+  lateThresholdMinutes: number | undefined;
+}) {
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes: normalizeLateThresholdMinutes(input.lateThresholdMinutes)
+  };
+}
+
+export function normalizeScheduleAnomalyCockpitWindowInput(input: {
+  periodStart: Date;
+  periodEnd: Date;
+  lateThresholdMinutes: number | undefined;
+  topN: number | undefined;
+}) {
+  ensureValidPeriod(input.periodStart, input.periodEnd);
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes: normalizeLateThresholdMinutes(input.lateThresholdMinutes),
+    topN: normalizeTopN(input.topN)
+  };
+}
+
 export function toCreateInput(input: CreateScheduleInput): CreateWorkScheduleInput {
   return {
     employeeId: input.employeeId,

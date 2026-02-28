@@ -166,8 +166,8 @@ import {
 import {
   ensureValidPeriod,
   ensureValidTemplateMinutes,
-  normalizeLateThresholdMinutes,
-  normalizeTopN,
+  normalizeScheduleAnomalyCockpitWindowInput,
+  normalizeScheduleAnomalyReportWindowInput,
   normalizeWeekdays,
   toCreateInput,
   toTemplateCreateInput,
@@ -1922,15 +1922,19 @@ export async function listScheduleAttendanceAnomalies(
   const actor = requireSchedulingActor(context);
   const tenantScope = resolveSchedulingTenantScope(actor);
 
-  ensureValidPeriod(input.periodStart, input.periodEnd);
-  const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
+  const normalizedWindow = normalizeScheduleAnomalyReportWindowInput({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes: input.lateThresholdMinutes
+  });
+  const lateThresholdMinutes = normalizedWindow.lateThresholdMinutes;
 
   // Keep permission model strict by reusing each domain list service:
   // - scheduling list permissions/tenant rules
   // - attendance list permissions/tenant rules
   const schedules = await listWorkSchedules(context, {
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
+    periodStart: normalizedWindow.periodStart,
+    periodEnd: normalizedWindow.periodEnd,
     employeeId: input.employeeId
   });
 
@@ -1974,7 +1978,7 @@ export async function listScheduleAttendanceAnomalies(
     publish: eventPublisher.publish.bind(eventPublisher)
   });
   await emitAnomalyAlertIfEnabled(sideEffectContext, {
-    window: input,
+    window: normalizedWindow,
     lateThresholdMinutes,
     evaluatedSchedules: schedules.length,
     anomalies,
@@ -1982,7 +1986,7 @@ export async function listScheduleAttendanceAnomalies(
     noShowCount
   });
   await emitAnomalyEscalationIfEnabled(sideEffectContext, {
-    window: input,
+    window: normalizedWindow,
     lateThresholdMinutes,
     evaluatedSchedules: schedules.length,
     anomalies,
@@ -1991,8 +1995,8 @@ export async function listScheduleAttendanceAnomalies(
   });
 
   return buildScheduleAttendanceAnomalyReport({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
+    periodStart: normalizedWindow.periodStart,
+    periodEnd: normalizedWindow.periodEnd,
     lateThresholdMinutes,
     evaluatedSchedules: schedules.length,
     anomalies,
@@ -2720,14 +2724,19 @@ export async function listScheduleAttendanceAnomalyCockpit(
     "schedule anomaly cockpit requires permission"
   );
 
-  ensureValidPeriod(input.periodStart, input.periodEnd);
-  const lateThresholdMinutes = normalizeLateThresholdMinutes(input.lateThresholdMinutes);
-  const topN = normalizeTopN(input.topN);
+  const normalizedWindow = normalizeScheduleAnomalyCockpitWindowInput({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    lateThresholdMinutes: input.lateThresholdMinutes,
+    topN: input.topN
+  });
+  const lateThresholdMinutes = normalizedWindow.lateThresholdMinutes;
+  const topN = normalizedWindow.topN;
   const tenantScope = resolveSchedulingTenantScope(actor);
 
   const schedules = await context.dataAccess.scheduling.listInPeriod({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
+    periodStart: normalizedWindow.periodStart,
+    periodEnd: normalizedWindow.periodEnd,
     organizationId: tenantScope
   });
 
@@ -2782,7 +2791,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
     await emitAnomalyCockpitTicketRequestsIfEnabled(
       sideEffectContext,
       {
-        window: input,
+        window: normalizedWindow,
         lateThresholdMinutes,
         topN,
         queue
@@ -2791,8 +2800,8 @@ export async function listScheduleAttendanceAnomalyCockpit(
   }
 
   return buildScheduleAttendanceAnomalyCockpitReport({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
+    periodStart: normalizedWindow.periodStart,
+    periodEnd: normalizedWindow.periodEnd,
     lateThresholdMinutes,
     generatedAt,
     evaluatedSchedules: schedules.length,
