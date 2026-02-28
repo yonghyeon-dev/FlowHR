@@ -1870,10 +1870,7 @@ export async function listWorkScheduleRotationBalance(
   context: ServiceContext,
   input: ListRotationBalanceInput
 ): Promise<RotationBalanceReport> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
+  const actor = requireSchedulingActor(context);
 
   ensureValidPeriod(input.periodStart, input.periodEnd);
   const schedules = await listWorkSchedules(context, {
