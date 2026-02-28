@@ -56,6 +56,22 @@ export function ApprovalExecutionSummaryPanel({
           <strong>{summary.stalledCount}</strong>
         </div>
         <div className="summary-card">
+          <p>
+            {isKoLocale ? "주의 정체" : "Watch queue"} ({">="} {summary.watchThresholdHours}h)
+          </p>
+          <strong>{summary.watchCount}</strong>
+        </div>
+        <div className="summary-card">
+          <p>
+            {isKoLocale ? "긴급 정체" : "Critical queue"} ({">="} {summary.criticalThresholdHours}h)
+          </p>
+          <strong>{summary.criticalCount}</strong>
+        </div>
+        <div className="summary-card">
+          <p>{isKoLocale ? "최대 정체 시간" : "Max stalled hours"}</p>
+          <strong>{summary.maxStalledHours.toFixed(1)}h</strong>
+        </div>
+        <div className="summary-card">
           <p>{isKoLocale ? "급여 진행중" : "Payroll pending"}</p>
           <strong>{summary.payrollPendingCount}</strong>
         </div>
@@ -72,6 +88,11 @@ export function ApprovalExecutionSummaryPanel({
         {isKoLocale ? "기준 시각" : "As of"} {formatDateTime(asOfIso, runtimeLocale)} /{" "}
         {isKoLocale ? "정체 기준" : "Stall threshold"} {stalledHoursMin || "0"}
         {isKoLocale ? "시간" : "h"}
+      </p>
+      <p className="small">
+        {isKoLocale
+          ? `위험 집중: 긴급 ${summary.criticalCount}건 / 주의 ${summary.watchCount}건`
+          : `Risk focus: critical ${summary.criticalCount} / watch ${summary.watchCount}`}
       </p>
     </article>
   );
