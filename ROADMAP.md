@@ -917,3 +917,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 
 - WI-0640 korean surface copy completion for withholding/payslips/contracts (employee payslip ko 용어 정규화 + ko CSV 헤더 현지화 + withholding 문서 메타데이터 복사 라벨 현지화 + contracts 영문 제목 정규화 키워드 확장 + e2e-wi0640 회귀 테스트 추가)
 - WI-0641 employee contracts response deadline status visibility (/employee/contracts 상세 패널에 응답 기한/기한 상태(D-day) 표시 추가 + list와 동일한 due-soon/overdue 계산 helper 재사용 + contracts ko/en copy 키 확장 + e2e-wi0641 회귀 테스트 추가)
+- WI-0642 main process realignment (local main 누적 커밋을 feature 브랜치+PR 경로로 정렬, PR 템플릿/게이트 준수 복구, CI 통과 후 표준 머지 플로우 복귀)
