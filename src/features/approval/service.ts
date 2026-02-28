@@ -29,6 +29,7 @@ import { buildApprovalExecutionEscalationRequestedEventPayload } from "@/feature
 import {
   buildApprovalExecutionEscalationAuditPayloadBase,
   buildApprovalExecutionEscalationFailureAuditPayload,
+  buildApprovalExecutionListedAuditPayload,
   buildApprovalStageHistoryListedAuditPayload
 } from "@/features/approval/audit-payload-helpers";
 import {
@@ -1243,17 +1244,17 @@ export async function listApprovalExecutions(
     organizationId,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      domain: input.domain ?? null,
-      targetEntityType: input.targetEntityType ?? null,
-      targetEntityId: input.targetEntityId ?? null,
-      state: input.state ?? null,
+    payload: buildApprovalExecutionListedAuditPayload({
+      domain: input.domain,
+      targetEntityType: input.targetEntityType,
+      targetEntityId: input.targetEntityId,
+      state: input.state,
       sort,
-      stalledHoursMin: stalledHoursMin ?? null,
-      asOf: asOf.toISOString(),
+      stalledHoursMin,
+      asOf,
       limit,
       resultCount: rows.length
-    }
+    })
   });
 
   return rows;

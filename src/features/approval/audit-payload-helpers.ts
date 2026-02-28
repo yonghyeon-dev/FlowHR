@@ -1,4 +1,8 @@
-import type { ApprovalDomain, ApprovalStageResolution } from "@/features/shared/data-access";
+import type {
+  ApprovalDomain,
+  ApprovalExecutionState,
+  ApprovalStageResolution
+} from "@/features/shared/data-access";
 import type { ApprovalEscalationWebhookProvider } from "@/features/approval/execution-escalation-core-helpers";
 
 export function buildApprovalStageHistoryListedAuditPayload(input: {
@@ -20,6 +24,30 @@ export function buildApprovalStageHistoryListedAuditPayload(input: {
     resolution: input.resolution ?? null,
     from: input.from?.toISOString() ?? null,
     to: input.to?.toISOString() ?? null,
+    limit: input.limit,
+    resultCount: input.resultCount
+  };
+}
+
+export function buildApprovalExecutionListedAuditPayload(input: {
+  domain: ApprovalDomain | undefined;
+  targetEntityType: string | undefined;
+  targetEntityId: string | undefined;
+  state: ApprovalExecutionState | undefined;
+  sort: string;
+  stalledHoursMin: number | undefined;
+  asOf: Date;
+  limit: number;
+  resultCount: number;
+}) {
+  return {
+    domain: input.domain ?? null,
+    targetEntityType: input.targetEntityType ?? null,
+    targetEntityId: input.targetEntityId ?? null,
+    state: input.state ?? null,
+    sort: input.sort,
+    stalledHoursMin: input.stalledHoursMin ?? null,
+    asOf: input.asOf.toISOString(),
     limit: input.limit,
     resultCount: input.resultCount
   };
