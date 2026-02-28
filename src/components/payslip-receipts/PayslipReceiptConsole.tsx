@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { payslipReceiptCopyByLocale } from "@/components/payslip-receipts/copy";
 import {
   buildPayslipReceiptQuery,
@@ -23,8 +23,8 @@ import {
   type PayrollRunsResponse,
   type ReceiptAcknowledgeResponse
 } from "@/components/payslip-receipts/types";
+import { isDevToolsEnabled } from "@/app/employee/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import {
   defaultEmployeeIdForApi,
   getLocalizedEmployeeIdInputDefault,
@@ -38,12 +38,16 @@ export default function PayslipReceiptConsole() {
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const range = defaultMonthRange();
   const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [employeeId, setEmployeeId] = useStickyStringState(
-    "flowhr:ctx:employeeId",
-    localeEmployeeIdDefault
-  );
-  const [accessToken, setAccessToken] = useState("");
+  const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isDevToolsEnabled();
+  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const employeeId =
+    normalizeEmployeeIdForLocaleInput(
+      (supabaseSession?.actorId ?? supabaseSession?.userId ?? localeEmployeeIdDefault).trim() ||
+        localeEmployeeIdDefault,
+      locale
+    ) || localeEmployeeIdDefault;
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
   const [runsSearchQuery, setRunsSearchQuery] = useState("");
@@ -52,14 +56,7 @@ export default function PayslipReceiptConsole() {
   const [statusMessage, setStatusMessage] = useState("");
   const [runs, setRuns] = useState<PayrollRunReceiptDto[]>([]);
   const [logs, setLogs] = useState<ApiLog[]>([]);
-  const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
   const formatKrwByLocale = (value: number | null) =>
     value === null ? "-" : `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "\uC6D0" : " KRW"}`;
@@ -79,22 +76,13 @@ export default function PayslipReceiptConsole() {
         : null,
     [locale, supabaseSessionError]
   );
-  const normalizedEmployeeIdForApi = useMemo(
-    () => normalizeEmployeeIdForApi(employeeId, locale),
-    [employeeId, locale]
-  );
-  useEffect(() => {
-    const localizedInput = normalizeEmployeeIdForLocaleInput(employeeId, locale);
-    if (!localizedInput) {
-      if (employeeId.trim().length === 0 && employeeId !== localeEmployeeIdDefault) {
-        setEmployeeId(localeEmployeeIdDefault);
-      }
-      return;
+  const normalizedEmployeeIdForApi = useMemo(() => {
+    const normalized = normalizeEmployeeIdForApi(employeeId, locale);
+    if (normalized) {
+      return normalized;
     }
-    if (localizedInput !== employeeId) {
-      setEmployeeId(localizedInput);
-    }
-  }, [employeeId, locale, localeEmployeeIdDefault, setEmployeeId]);
+    return normalizeEmployeeIdForApi(localeEmployeeIdDefault, locale);
+  }, [employeeId, locale, localeEmployeeIdDefault]);
   const receiptSummary = useMemo(() => {
     const distributed = runs.filter((run) => run.payslipDistributedAt !== null).length;
     const confirmed = runs.filter((run) => run.payslipReceiptConfirmedAt !== null).length;
@@ -201,13 +189,14 @@ export default function PayslipReceiptConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
+          <p className="small muted">
+            {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
+            <code>{employeeId || "-"}</code>
+          </p>
           <div className="input-grid">
-            <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
             <label>{copy.periodStartLabel}<input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} /></label>
             <label>{copy.periodEndLabel}<input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} /></label>
           </div>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
-          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void loadRuns()} disabled={pendingLabel !== null}>{copy.loadPayslipsAction}</button>
           </div>
@@ -262,26 +251,28 @@ export default function PayslipReceiptConsole() {
             </ul>
           )}
         </article>
-        <article className="panel">
-          <h2>{copy.apiLogsTitle}</h2>
-          <p className="small">
-            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
-            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small">{copy.noApiCallYet}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions"><Link href="/employee" className="btn btn-secondary">{copy.backToEmployeeAction}</Link></div>
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.apiLogsTitle}</h2>
+            <p className="small">
+              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+              {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small">{copy.noApiCallYet}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="panel-actions"><Link href="/employee" className="btn btn-secondary">{copy.backToEmployeeAction}</Link></div>
+          </article>
+        ) : null}
       </section>
     </main>
   );

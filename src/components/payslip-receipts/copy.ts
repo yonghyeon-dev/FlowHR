@@ -5,12 +5,10 @@ export type PayslipReceiptCopy = {
   title: string;
   description: string;
   filtersTitle: string;
-  employeeIdLabel: string;
+  sessionOrganizationLabel: string;
+  sessionEmployeeLabel: string;
   periodStartLabel: string;
   periodEndLabel: string;
-  accessTokenLabel: string;
-  bearerTokenPlaceholder: string;
-  organizationIdFallbackLabel: string;
   loadPayslipsAction: string;
   sessionErrorPrefix: string;
   receiptStatusTitle: string;
@@ -62,12 +60,10 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     title: "급여명세 수신 확인",
     description: "배포된 급여명세서를 확인하고 수신 상태를 처리합니다.",
     filtersTitle: "필터",
-    employeeIdLabel: "직원 번호",
+    sessionOrganizationLabel: "세션 조직",
+    sessionEmployeeLabel: "세션 직원",
     periodStartLabel: "기간 시작",
     periodEndLabel: "기간 종료",
-    accessTokenLabel: "액세스 토큰(선택)",
-    bearerTokenPlaceholder: "액세스 토큰",
-    organizationIdFallbackLabel: "조직 식별자(개발 대체값)",
     loadPayslipsAction: "급여명세서 불러오기",
     sessionErrorPrefix: "세션 오류",
     receiptStatusTitle: "수신 상태",
@@ -117,12 +113,10 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     title: "Payslip Receipt Confirmation",
     description: "Review distributed payslips and confirm receipt for payroll close compliance.",
     filtersTitle: "Filters",
-    employeeIdLabel: "Employee ID",
+    sessionOrganizationLabel: "Session organization",
+    sessionEmployeeLabel: "Session employee",
     periodStartLabel: "Period Start",
     periodEndLabel: "Period End",
-    accessTokenLabel: "Access Token (optional)",
-    bearerTokenPlaceholder: "Bearer token",
-    organizationIdFallbackLabel: "Organization ID (dev fallback)",
     loadPayslipsAction: "Load Payslips",
     sessionErrorPrefix: "Session error",
     receiptStatusTitle: "Receipt Status",

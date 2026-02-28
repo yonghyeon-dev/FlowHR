@@ -18,11 +18,9 @@ export type WithholdingReceiptCopy = {
   description: string;
   inputTitle: string;
   yearLabel: string;
-  employeeIdLabel: string;
+  sessionOrganizationLabel: string;
+  sessionEmployeeLabel: string;
   documentFormatLabel: string;
-  accessTokenLabel: string;
-  bearerTokenPlaceholder: string;
-  organizationIdFallbackLabel: string;
   formatJsonLabel: string;
   formatTextLabel: string;
   unknownFormatLabel: string;
@@ -101,11 +99,9 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     description: "연간 원천징수영수증 발급 가능 상태와 정산 요약을 확인합니다.",
     inputTitle: "입력",
     yearLabel: "연도",
-    employeeIdLabel: "직원 번호",
+    sessionOrganizationLabel: "세션 조직",
+    sessionEmployeeLabel: "세션 직원",
     documentFormatLabel: "문서 형식",
-    accessTokenLabel: "액세스 토큰(선택)",
-    bearerTokenPlaceholder: "액세스 토큰",
-    organizationIdFallbackLabel: "조직 식별자(개발 대체값)",
     formatJsonLabel: "구조 데이터",
     formatTextLabel: "텍스트",
     unknownFormatLabel: "알 수 없는 형식",
@@ -182,11 +178,9 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     description: "Preview your yearly withholding receipt readiness and settlement totals.",
     inputTitle: "Input",
     yearLabel: "Year",
-    employeeIdLabel: "Employee ID",
+    sessionOrganizationLabel: "Session organization",
+    sessionEmployeeLabel: "Session employee",
     documentFormatLabel: "Document Format",
-    accessTokenLabel: "Access Token (optional)",
-    bearerTokenPlaceholder: "Bearer token",
-    organizationIdFallbackLabel: "Organization ID (dev fallback)",
     formatJsonLabel: "JSON",
     formatTextLabel: "Text",
     unknownFormatLabel: "Unknown format",
