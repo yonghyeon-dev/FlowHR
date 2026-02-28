@@ -8,6 +8,14 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminApprovalExecutionsPage = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
+  const adminApprovalExecutionsSections = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections.tsx"
+  );
+  const adminApprovalExecutionsSurface = `${adminApprovalExecutionsPage}\n${adminApprovalExecutionsSections}`;
   const adminPeoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
   const adminPeoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
   const adminPeopleDirectoryFiltersPanel = readUtf8(
@@ -31,13 +39,13 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminApprovalExecutionsPage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminApprovalExecutionsPage, /Escalation channel/);
-  assert.match(adminApprovalExecutionsPage, /requestedAt/);
-  assert.match(adminApprovalExecutionsPage, /toDomainLabel\(execution\.domain\)/);
-  assert.match(adminApprovalExecutionsPage, /toStateLabel\(execution\.state\)/);
-  assert.doesNotMatch(adminApprovalExecutionsPage, /Execution Limit/);
-  assert.doesNotMatch(adminApprovalExecutionsPage, /History Limit/);
-  assert.doesNotMatch(adminApprovalExecutionsPage, /Escalation Channel/);
+  assert.match(adminApprovalExecutionsSurface, /Escalation channel/);
+  assert.match(adminApprovalExecutionsSurface, /requestedAt/);
+  assert.match(adminApprovalExecutionsSurface, /toDomainLabel\(execution\.domain\)/);
+  assert.match(adminApprovalExecutionsSurface, /toStateLabel\(execution\.state\)/);
+  assert.doesNotMatch(adminApprovalExecutionsSurface, /Execution Limit/);
+  assert.doesNotMatch(adminApprovalExecutionsSurface, /History Limit/);
+  assert.doesNotMatch(adminApprovalExecutionsSurface, /Escalation Channel/);
 
   assert.match(adminPeoplePage, /const \{ locale \} = useI18n\(\);/);
   assert.match(adminPeopleSurface, /Session organization/);
