@@ -8,7 +8,13 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const executions = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
-  const executionSections = readUtf8("src", "app", "admin", "approval-executions", "page-sections.tsx");
+  const executionSections = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-work-conditions.tsx"
+  );
   const history = readUtf8("src", "app", "admin", "approval-history", "page.tsx");
   const policy = readUtf8("src", "app", "admin", "approval-policy", "page.tsx");
   const templates = readUtf8("src", "app", "admin", "approval-templates", "page.tsx");

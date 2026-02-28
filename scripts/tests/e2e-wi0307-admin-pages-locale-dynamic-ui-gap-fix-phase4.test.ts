@@ -15,7 +15,28 @@ async function run() {
     "approval-executions",
     "page-sections.tsx"
   );
-  const adminApprovalExecutionsSurface = `${adminApprovalExecutionsPage}\n${adminApprovalExecutionsSections}`;
+  const adminApprovalExecutionsSectionsWorkConditions = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-work-conditions.tsx"
+  );
+  const adminApprovalExecutionsSectionsSummaryEscalation = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-summary-escalation.tsx"
+  );
+  const adminApprovalExecutionsSectionsQueue = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-queue.tsx"
+  );
+  const adminApprovalExecutionsSurface = `${adminApprovalExecutionsPage}\n${adminApprovalExecutionsSections}\n${adminApprovalExecutionsSectionsWorkConditions}\n${adminApprovalExecutionsSectionsSummaryEscalation}\n${adminApprovalExecutionsSectionsQueue}`;
   const adminPeoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
   const adminPeoplePageView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
   const adminPeopleDirectoryFiltersPanel = readUtf8(

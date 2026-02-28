@@ -9,7 +9,14 @@ function readUtf8(...parts: string[]) {
 async function run() {
   const page = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
   const helpers = readUtf8("src", "app", "admin", "approval-executions", "page-helpers.ts");
-  const sections = readUtf8("src", "app", "admin", "approval-executions", "page-sections.tsx");
+  const sectionsWorkConditions = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page-sections-work-conditions.tsx"
+  );
+  const sectionsSurface = `${sectionsWorkConditions}`;
   const workItem = readUtf8("work-items", "WI-0643-admin-approval-executions-product-ux.md");
   const roadmap = readUtf8("ROADMAP.md");
 
@@ -19,8 +26,8 @@ async function run() {
   assert.doesNotMatch(helpers, /\/admin#payroll/);
   assert.doesNotMatch(helpers, /\/admin#approvals/);
 
-  assert.match(sections, /Work conditions/);
-  assert.match(sections, /Advanced options/);
+  assert.match(sectionsSurface, /Work conditions/);
+  assert.match(sectionsSurface, /Advanced options/);
   assert.match(page, /showDevTools \? \([\s\S]*ApprovalExecutionLogsPanel[\s\S]*\) : \([\s\S]*ApprovalExecutionRelatedWorkspacesPanel/);
 
   assert.match(workItem, /WI-0643/i);
