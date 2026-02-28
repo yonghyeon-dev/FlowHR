@@ -255,19 +255,33 @@ export default function EmployeePayslipsPage() {
     if (runs.length === 0) {
       return;
     }
-    const header = [
-      "run_id",
-      "employee_id",
-      "period_start",
-      "period_end",
-      "gross_pay_krw",
-      "withholding_tax_krw",
-      "social_insurance_krw",
-      "other_deductions_krw",
-      "total_deductions_krw",
-      "net_pay_krw",
-      "confirmed_at"
-    ];
+    const header = isKoLocale
+      ? [
+          "명세서_번호",
+          "직원_번호",
+          "기간_시작",
+          "기간_종료",
+          "총지급_원",
+          "원천세_원",
+          "사회보험_원",
+          "기타공제_원",
+          "총공제_원",
+          "실수령_원",
+          "확정_시각"
+        ]
+      : [
+          "run_id",
+          "employee_id",
+          "period_start",
+          "period_end",
+          "gross_pay_krw",
+          "withholding_tax_krw",
+          "social_insurance_krw",
+          "other_deductions_krw",
+          "total_deductions_krw",
+          "net_pay_krw",
+          "confirmed_at"
+        ];
 
     const rows = runs.map((run) => [
       run.id,

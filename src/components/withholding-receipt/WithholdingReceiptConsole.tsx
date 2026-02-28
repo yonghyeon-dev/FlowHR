@@ -113,12 +113,12 @@ export default function WithholdingReceiptConsole() {
   }
   async function copyDocumentMetadata(document: WithholdingReceiptDocumentResponse["document"]) {
     const metadataText = [
-      `receiptNumber=${document.receiptNumber}`,
-      `format=${document.format}`,
-      `contentType=${document.contentType}`,
-      `issuedAt=${document.issuedAt}`,
-      `generatedAt=${document.generatedAt}`,
-      `contentSha256=${document.contentSha256}`
+      `${copy.metadataReceiptNumberLabel}: ${document.receiptNumber}`,
+      `${copy.metadataFormatLabel}: ${resolveDocumentFormatLabel(document.format)}`,
+      `${copy.metadataContentTypeLabel}: ${resolveContentTypeLabel(document.contentType)}`,
+      `${copy.metadataIssuedAtLabel}: ${formatDateTimeByLocale(document.issuedAt, runtimeLocale)}`,
+      `${copy.metadataGeneratedAtLabel}: ${formatDateTimeByLocale(document.generatedAt, runtimeLocale)}`,
+      `${copy.metadataContentSha256Label}: ${document.contentSha256}`
     ].join("\n");
     try {
       await navigator.clipboard.writeText(metadataText);

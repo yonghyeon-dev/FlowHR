@@ -1,11 +1,20 @@
-﻿const contractEnglishKeywordPatterns = [
+const contractEnglishKeywordPatterns = [
   /\bcontract(?:s)?\b/i,
   /\bemployment\b/i,
   /\bamendment\b/i,
+  /\baddendum\b/i,
+  /\bannex\b/i,
+  /\boffer\b/i,
+  /\bletter\b/i,
+  /\bprobation\b/i,
+  /\bsalary\b/i,
+  /\bcompensation\b/i,
   /\btemplate\b/i,
   /\bdraft\b/i,
   /\bpolicy\b/i,
   /\bnda\b/i,
+  /\bconsent\b/i,
+  /\bagreement\b/i,
   /\bsign(?:ature|ed|ing)?\b/i,
   /\brenew(?:ed|al)?\b/i
 ];

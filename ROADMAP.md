@@ -914,3 +914,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0637 employee-guide Korean copy normalization (src/components/employee-guide/copy.ts KO strings normalized to readable UTF-8 while preserving locale key structure + e2e-wi0637 regression guard)
 - WI-0638 session-context regression guard for core surfaces (add e2e guard to block manual organization/token input patterns from reappearing on core admin/employee surfaces while excluding /ops tools)
 - WI-0639 core Korean mojibake regression guard (add e2e guard to block known corrupted Korean tokens on core customer-facing surfaces: /admin dashboard and employee-guide)
+
+- WI-0640 korean surface copy completion for withholding/payslips/contracts (employee payslip ko 용어 정규화 + ko CSV 헤더 현지화 + withholding 문서 메타데이터 복사 라벨 현지화 + contracts 영문 제목 정규화 키워드 확장 + e2e-wi0640 회귀 테스트 추가)
