@@ -67,6 +67,17 @@ type ScheduleAnomalyTicketInput = {
   queue: ScheduleAnomalyCockpitQueueEntry[];
 };
 
+export function buildScheduleAnomalyTicketSideEffectInput(
+  input: ScheduleAnomalyTicketInput
+): ScheduleAnomalyTicketInput {
+  return {
+    window: input.window,
+    lateThresholdMinutes: input.lateThresholdMinutes,
+    topN: input.topN,
+    queue: input.queue
+  };
+}
+
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "unknown error";
 }
