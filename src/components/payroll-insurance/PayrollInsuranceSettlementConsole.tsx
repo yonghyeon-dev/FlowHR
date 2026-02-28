@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { payrollInsuranceCopyByLocale } from "@/components/payroll-insurance/copy";
@@ -10,7 +11,6 @@ import {
 } from "@/components/payroll-insurance/PayrollInsuranceSettlementSections";
 import { PayrollInsuranceInputPanel } from "@/components/payroll-insurance/PayrollInsuranceSettlementInputPanel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import type { ApiLog, PayrollInsuranceSettlementResponse } from "@/components/payroll-insurance/types";
 import {
@@ -49,11 +49,13 @@ function parseOptionalInt(value: string, optionalCapIntegerLabel: string) {
   return parsed;
 }
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function PayrollInsuranceSettlementConsole() {
   const range = defaultMonthRange();
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
@@ -81,17 +83,15 @@ export default function PayrollInsuranceSettlementConsole() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollInsuranceCopyByLocale[locale];
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "PAY-1001").trim() || "PAY-1001";
 
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(() => {
@@ -101,6 +101,10 @@ export default function PayrollInsuranceSettlementConsole() {
   }, [logs]);
 
   async function runPreview() {
+    if (!organizationId.trim()) {
+      setStatusMessage(locale === "ko" ? "세션 조직 정보가 없어 조회할 수 없습니다." : "Missing session organization context; cannot preview.");
+      return;
+    }
     if (!employeeId.trim()) {
       setStatusMessage(copy.statusEmployeeRequired);
       return;
@@ -284,12 +288,10 @@ export default function PayrollInsuranceSettlementConsole() {
           setEmploymentInsuranceUnitKrw={setEmploymentInsuranceUnitKrw}
           industrialAccidentUnitKrw={industrialAccidentUnitKrw}
           setIndustrialAccidentUnitKrw={setIndustrialAccidentUnitKrw}
-          accessToken={accessToken}
-          setAccessToken={setAccessToken}
-          adminActorId={adminActorId}
-          setAdminActorId={setAdminActorId}
-          organizationId={organizationId}
-          setOrganizationId={setOrganizationId}
+          sessionOrganizationId={organizationId}
+          sessionAdminActorId={adminActorId}
+          locale={locale}
+          canRunPreview={organizationId.trim().length > 0}
           pendingLabel={pendingLabel}
           runPreview={() => void runPreview()}
           statusMessage={statusMessage}
@@ -298,7 +300,18 @@ export default function PayrollInsuranceSettlementConsole() {
 
         <PayrollInsuranceSummaryPanel copy={copy} result={result} runtimeLocale={runtimeLocale} />
         <PayrollInsuranceComponentsPanel copy={copy} result={result} runtimeLocale={runtimeLocale} />
-        <PayrollInsuranceLogsPanel copy={copy} stats={stats} pendingLabel={pendingLabel} logs={logs} />
+        {showDevTools ? (
+          <PayrollInsuranceLogsPanel copy={copy} stats={stats} pendingLabel={pendingLabel} logs={logs} />
+        ) : (
+          <article className="panel">
+            <h2>{locale === "ko" ? "워크스페이스 이동" : "Workspace shortcuts"}</h2>
+            <div className="panel-actions">
+              <Link href="/admin" className="btn btn-secondary">
+                {copy.backToAdmin}
+              </Link>
+            </div>
+          </article>
+        )}
       </section>
     </main>
   );

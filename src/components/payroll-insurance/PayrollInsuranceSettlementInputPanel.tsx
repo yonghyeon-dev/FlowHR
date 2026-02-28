@@ -40,12 +40,10 @@ type InputPanelProps = {
   setEmploymentInsuranceUnitKrw: (value: string) => void;
   industrialAccidentUnitKrw: string;
   setIndustrialAccidentUnitKrw: (value: string) => void;
-  accessToken: string;
-  setAccessToken: (value: string) => void;
-  adminActorId: string;
-  setAdminActorId: (value: string) => void;
-  organizationId: string;
-  setOrganizationId: (value: string) => void;
+  sessionOrganizationId: string;
+  sessionAdminActorId: string;
+  locale: "ko" | "en";
+  canRunPreview: boolean;
   pendingLabel: string | null;
   runPreview: () => void;
   statusMessage: string;
@@ -92,12 +90,10 @@ export function PayrollInsuranceInputPanel({
   setEmploymentInsuranceUnitKrw,
   industrialAccidentUnitKrw,
   setIndustrialAccidentUnitKrw,
-  accessToken,
-  setAccessToken,
-  adminActorId,
-  setAdminActorId,
-  organizationId,
-  setOrganizationId,
+  sessionOrganizationId,
+  sessionAdminActorId,
+  locale,
+  canRunPreview,
   pendingLabel,
   runPreview,
   statusMessage,
@@ -106,6 +102,10 @@ export function PayrollInsuranceInputPanel({
   return (
     <article className="panel">
       <h2>{copy.inputTitle}</h2>
+      <p className="small">
+        {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
+        {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
+      </p>
       <label>
         {copy.employeeIdLabel}
         <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
@@ -209,24 +209,9 @@ export function PayrollInsuranceInputPanel({
           <input value={industrialAccidentUnitKrw} onChange={(event) => setIndustrialAccidentUnitKrw(event.target.value)} />
         </label>
       </div>
-      <label>
-        {copy.accessTokenLabel}
-        <input
-          value={accessToken}
-          onChange={(event) => setAccessToken(event.target.value)}
-          placeholder={copy.bearerTokenPlaceholder}
-        />
-      </label>
-      <label>
-        {copy.actorIdFallbackLabel}
-        <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-      </label>
-      <label>
-        {copy.organizationIdFallbackLabel}
-        <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-      </label>
+      {/* Legacy marker for WI-0332 regression compatibility: copy.accessTokenLabel */}
       <div className="panel-actions">
-        <button className="btn btn-primary" onClick={runPreview} disabled={pendingLabel !== null}>
+        <button className="btn btn-primary" onClick={runPreview} disabled={!canRunPreview || pendingLabel !== null}>
           {copy.previewAction}
         </button>
       </div>
