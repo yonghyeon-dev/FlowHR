@@ -45,6 +45,7 @@ import {
   type ApprovalExecutionEscalationResponse
 } from "@/features/approval/execution-escalation-response-helpers";
 import {
+  buildApprovalExecutionEscalationAuditActorContext,
   buildApprovalExecutionEscalationEventPublishFailedAuditEntry,
   buildApprovalExecutionEscalationFailedAuditEntry,
   buildApprovalExecutionEscalationGeneratedAuditEntry,
@@ -1288,6 +1289,11 @@ export async function triggerApprovalExecutionEscalation(
   });
 
   const webhook = resolveApprovalEscalationWebhookConfig();
+  const escalationAuditActor = buildApprovalExecutionEscalationAuditActorContext({
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id
+  });
   const payloadBase = buildApprovalExecutionEscalationAuditPayloadBase({
     asOf,
     domain: input.domain,
@@ -1304,11 +1310,7 @@ export async function triggerApprovalExecutionEscalation(
 
   await context.dataAccess.audit.append(
     buildApprovalExecutionEscalationGeneratedAuditEntry({
-      actor: {
-        organizationId,
-        actorRole: actor.role,
-        actorId: actor.id
-      },
+      actor: escalationAuditActor,
       payload: payloadBase
     })
   );
@@ -1316,11 +1318,7 @@ export async function triggerApprovalExecutionEscalation(
   if (!dryRun && items.length > 0 && !webhook) {
     await context.dataAccess.audit.append(
       buildApprovalExecutionEscalationFailedAuditEntry({
-        actor: {
-          organizationId,
-          actorRole: actor.role,
-          actorId: actor.id
-        },
+        actor: escalationAuditActor,
         payload: buildApprovalExecutionEscalationFailureAuditPayload({
           base: payloadBase,
           reason: "webhook_not_configured"
@@ -1347,22 +1345,14 @@ export async function triggerApprovalExecutionEscalation(
       await sendApprovalEscalationWebhook(webhook, message);
       await context.dataAccess.audit.append(
         buildApprovalExecutionEscalationRequestedAuditEntry({
-          actor: {
-            organizationId,
-            actorRole: actor.role,
-            actorId: actor.id
-          },
+          actor: escalationAuditActor,
           payload: payloadBase
         })
       );
     } catch (error) {
       await context.dataAccess.audit.append(
         buildApprovalExecutionEscalationFailedAuditEntry({
-          actor: {
-            organizationId,
-            actorRole: actor.role,
-            actorId: actor.id
-          },
+          actor: escalationAuditActor,
           payload: buildApprovalExecutionEscalationFailureAuditPayload({
             base: payloadBase,
             reason: "webhook_request_failed",
@@ -1394,11 +1384,7 @@ export async function triggerApprovalExecutionEscalation(
       try {
         await context.dataAccess.audit.append(
           buildApprovalExecutionEscalationEventPublishFailedAuditEntry({
-            actor: {
-              organizationId,
-              actorRole: actor.role,
-              actorId: actor.id
-            },
+            actor: escalationAuditActor,
             payload: buildApprovalExecutionEscalationFailureAuditPayload({
               base: payloadBase,
               reason: "event_publish_failed",
