@@ -57,6 +57,7 @@ import {
   buildApprovalExecutionEscalationFailureAuditPayload
 } from "@/features/approval/audit-payload-helpers";
 import {
+  buildApprovalListAuditActorContext,
   buildApprovalExecutionListedAuditEntry,
   buildApprovalStageHistoryListedAuditEntry
 } from "@/features/approval/list-audit-entry-helpers";
@@ -1151,6 +1152,11 @@ export async function listApprovalStageHistory(
     "approval stage history read requires permission"
   );
   const organizationId = await resolveOrganizationId(context, input.organizationId);
+  const listAuditActor = buildApprovalListAuditActorContext({
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id
+  });
   const limit = normalizeApprovalStageHistoryListLimit(input.limit);
 
   const rows = await context.dataAccess.approvals.listStageHistory(
@@ -1169,9 +1175,7 @@ export async function listApprovalStageHistory(
 
   await context.dataAccess.audit.append(
     buildApprovalStageHistoryListedAuditEntry({
-      organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
+      actor: listAuditActor,
       domain: input.domain,
       targetEntityType: input.targetEntityType,
       targetEntityId: input.targetEntityId,
@@ -1198,6 +1202,11 @@ export async function listApprovalExecutions(
     "approval execution read requires permission"
   );
   const organizationId = await resolveOrganizationId(context, input.organizationId);
+  const listAuditActor = buildApprovalListAuditActorContext({
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id
+  });
   const { limit, sort, stalledHoursMin, asOf } = normalizeApprovalExecutionListOptions({
     limit: input.limit,
     sort: input.sort,
@@ -1225,9 +1234,7 @@ export async function listApprovalExecutions(
 
   await context.dataAccess.audit.append(
     buildApprovalExecutionListedAuditEntry({
-      organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
+      actor: listAuditActor,
       domain: input.domain,
       targetEntityType: input.targetEntityType,
       targetEntityId: input.targetEntityId,

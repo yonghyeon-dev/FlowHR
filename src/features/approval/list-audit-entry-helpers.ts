@@ -8,10 +8,26 @@ import {
   buildApprovalStageHistoryListedAuditPayload
 } from "@/features/approval/audit-payload-helpers";
 
-export function buildApprovalStageHistoryListedAuditEntry(input: {
+type ApprovalListAuditActorContext = {
   organizationId: string;
   actorRole: string;
   actorId: string;
+};
+
+export function buildApprovalListAuditActorContext(input: {
+  organizationId: string;
+  actorRole: string;
+  actorId: string;
+}): ApprovalListAuditActorContext {
+  return {
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId
+  };
+}
+
+export function buildApprovalStageHistoryListedAuditEntry(input: {
+  actor: ApprovalListAuditActorContext;
   domain: ApprovalDomain | undefined;
   targetEntityType: string | undefined;
   targetEntityId: string | undefined;
@@ -25,9 +41,9 @@ export function buildApprovalStageHistoryListedAuditEntry(input: {
   return {
     action: "approval.stage_history.listed",
     entityType: "ApprovalStageHistory",
-    organizationId: input.organizationId,
-    actorRole: input.actorRole,
-    actorId: input.actorId,
+    organizationId: input.actor.organizationId,
+    actorRole: input.actor.actorRole,
+    actorId: input.actor.actorId,
     payload: buildApprovalStageHistoryListedAuditPayload({
       domain: input.domain,
       targetEntityType: input.targetEntityType,
@@ -43,9 +59,7 @@ export function buildApprovalStageHistoryListedAuditEntry(input: {
 }
 
 export function buildApprovalExecutionListedAuditEntry(input: {
-  organizationId: string;
-  actorRole: string;
-  actorId: string;
+  actor: ApprovalListAuditActorContext;
   domain: ApprovalDomain | undefined;
   targetEntityType: string | undefined;
   targetEntityId: string | undefined;
@@ -59,9 +73,9 @@ export function buildApprovalExecutionListedAuditEntry(input: {
   return {
     action: "approval.execution.listed",
     entityType: "ApprovalExecution",
-    organizationId: input.organizationId,
-    actorRole: input.actorRole,
-    actorId: input.actorId,
+    organizationId: input.actor.organizationId,
+    actorRole: input.actor.actorRole,
+    actorId: input.actor.actorId,
     payload: buildApprovalExecutionListedAuditPayload({
       domain: input.domain,
       targetEntityType: input.targetEntityType,
