@@ -80,9 +80,12 @@ import {
 } from "@/features/scheduling/rotation-fairness-core-helpers";
 import {
   buildRotationOffsetEvaluation,
-  sortRotationOffsetEvaluations,
-  type RotationOffsetEvaluation as RotationOffsetEvaluationBase
+  sortRotationOffsetEvaluations
 } from "@/features/scheduling/rotation-optimization-evaluation-helpers";
+import {
+  evaluateEmployeeRotationOptimization,
+  type EmployeeRotationOptimizationEvaluation as EmployeeRotationOptimizationEvaluationBase
+} from "@/features/scheduling/rotation-employee-optimization-helpers";
 import {
   buildAnomalyIncidentLifecycleAuditPayload,
   buildAnomalyIncidentLifecycleResponse,
@@ -93,7 +96,6 @@ import {
 } from "@/features/scheduling/anomaly-incident-core-helpers";
 import {
   enumerateTemplateMatchedDates,
-  parseDateToKstBase,
   weekdayFromKstDate,
   weekdayFromKstDateTime
 } from "@/features/scheduling/template-date-helpers";
@@ -842,13 +844,8 @@ function requireTemplateTenantScope(context: ServiceContext) {
   return tenantScope;
 }
 
-type RotationOffsetEvaluation = RotationOffsetEvaluationBase<RotationFairnessAdvancedScore>;
-
-type EmployeeRotationOptimizationEvaluation = {
-  employee: EmployeeEntity;
-  options: RotationOffsetEvaluation[];
-  best: RotationOffsetEvaluation;
-};
+type EmployeeRotationOptimizationEvaluation =
+  EmployeeRotationOptimizationEvaluationBase<RotationFairnessAdvancedScore>;
 
 async function evaluateBestRotationForEmployee(
   context: ServiceContext,
@@ -861,56 +858,46 @@ async function evaluateBestRotationForEmployee(
     advancedConstraints: RotationFairnessAdvancedConstraints | undefined;
   }
 ): Promise<EmployeeRotationOptimizationEvaluation> {
-  for (const template of input.templates) {
-    if (!input.employee.organizationId || input.employee.organizationId !== template.organizationId) {
-      throw new ServiceError(409, "template organization and employee organization must match", {
-        templateId: template.id,
-        employeeId: input.employee.id
-      });
-    }
-  }
-
-  const periodStart = parseDateToKstBase(input.fromDate);
-  const periodEnd = new Date(parseDateToKstBase(input.toDate).getTime() + 24 * 60 * 60 * 1000);
-  const existingSchedules = await listWorkSchedules(context, {
-    periodStart,
-    periodEnd,
-    employeeId: input.employee.id
-  });
-
-  const evaluations = input.templates.map((_, offset) =>
-    buildRotationOffsetEvaluation({
-      existingSchedules,
-      templates: input.templates,
-      matchedDates: input.matchedDates,
-      offset,
-      employeeId: input.employee.id,
-      advancedConstraints: input.advancedConstraints,
-      rotateTemplatesByOffset,
-      buildRotationWindowsForTemplates,
-      weekdayFromDateTime: weekdayFromKstDateTime,
-      plannedMinutesForSchedule,
-      plannedMinutesForGeneratedWindow,
-      evaluateAdvancedScore: (evaluationInput) =>
-        evaluateRotationFairnessAdvancedScore(
-          evaluationInput.employeeId,
-          {
-            optimizedTemplateIds: evaluationInput.optimizedTemplateIds,
-            generatedWindows: evaluationInput.generatedWindows
-          },
-          evaluationInput.existingSchedules,
-          evaluationInput.advancedConstraints
-        ),
-      deriveRotationBalanceGrade
-    })
-  );
-  const rankedEvaluations = sortRotationOffsetEvaluations(evaluations);
-
-  return {
+  return evaluateEmployeeRotationOptimization({
     employee: input.employee,
-    options: rankedEvaluations,
-    best: rankedEvaluations[0]
-  };
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    templates: input.templates,
+    matchedDates: input.matchedDates,
+    advancedConstraints: input.advancedConstraints,
+    listExistingSchedules: ({ periodStart, periodEnd, employeeId }) =>
+      listWorkSchedules(context, {
+        periodStart,
+        periodEnd,
+        employeeId
+      }),
+    buildRotationOffsetEvaluation: (evaluationInput) =>
+      buildRotationOffsetEvaluation({
+        existingSchedules: evaluationInput.existingSchedules,
+        templates: evaluationInput.templates,
+        matchedDates: evaluationInput.matchedDates,
+        offset: evaluationInput.offset,
+        employeeId: evaluationInput.employeeId,
+        advancedConstraints: evaluationInput.advancedConstraints,
+        rotateTemplatesByOffset,
+        buildRotationWindowsForTemplates,
+        weekdayFromDateTime: weekdayFromKstDateTime,
+        plannedMinutesForSchedule,
+        plannedMinutesForGeneratedWindow,
+        evaluateAdvancedScore: (advancedEvaluationInput) =>
+          evaluateRotationFairnessAdvancedScore(
+            advancedEvaluationInput.employeeId,
+            {
+              optimizedTemplateIds: advancedEvaluationInput.optimizedTemplateIds,
+              generatedWindows: advancedEvaluationInput.generatedWindows
+            },
+            advancedEvaluationInput.existingSchedules,
+            advancedEvaluationInput.advancedConstraints
+          ),
+        deriveRotationBalanceGrade
+      }),
+    sortRotationOffsetEvaluations
+  });
 }
 
 export async function createWorkSchedule(
