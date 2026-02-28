@@ -168,6 +168,7 @@ import {
   toTemplateCreateInput,
   toUpdateInput
 } from "@/features/scheduling/schedule-input-normalization-helpers";
+import { listStrictScheduleOverlaps } from "@/features/scheduling/schedule-overlap-helpers";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
@@ -922,7 +923,11 @@ export async function createWorkSchedule(
     organizationId: employee.organizationId ?? undefined,
     employeeId: input.employeeId
   });
-  const strictOverlaps = overlapping.filter((existing) => existing.startAt < input.endAt && existing.endAt > input.startAt);
+  const strictOverlaps = listStrictScheduleOverlaps({
+    schedules: overlapping,
+    startAt: input.startAt,
+    endAt: input.endAt
+  });
   if (strictOverlaps.length > 0) {
     throw new ServiceError(409, "overlapping schedule exists", {
       employeeId: input.employeeId,
@@ -1009,9 +1014,12 @@ export async function updateWorkSchedule(
     organizationId: employee.organizationId ?? undefined,
     employeeId: existing.employeeId
   });
-  const strictOverlaps = overlapping.filter(
-    (schedule) => schedule.id !== scheduleId && schedule.startAt < endAt && schedule.endAt > startAt
-  );
+  const strictOverlaps = listStrictScheduleOverlaps({
+    schedules: overlapping,
+    startAt,
+    endAt,
+    excludeScheduleId: scheduleId
+  });
   if (strictOverlaps.length > 0) {
     throw new ServiceError(409, "overlapping schedule exists", {
       scheduleId,
