@@ -924,3 +924,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0644 admin approval-history product UX (filters reframed to work conditions, advanced options collapsed, and request logs gated to devtools with related-workspaces fallback + e2e-wi0644 regression guard)
 
 - WI-0645 admin approval-policy product UX (policy workspace reframed to work conditions, delegation expiry dry-run moved into advanced options, and request logs gated to devtools with related-workspaces fallback + e2e-wi0645 regression guard)
+
+- WI-0646 admin approval-templates product UX (template workspace reframed to work conditions, payroll-range controls collapsed into advanced options, and logs gated to devtools with related-workspaces fallback + e2e-wi0646 regression guard)

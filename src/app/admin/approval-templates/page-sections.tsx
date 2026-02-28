@@ -143,7 +143,7 @@ export function ApprovalTemplatePreviewPanel({
               <ul className="simple-list">
                 {gatePreview.activeDelegations.map((delegation) => (
                   <li key={delegation.id}>
-                    {delegation.delegatorRole} → {delegation.delegateActorId} /{" "}
+                    {delegation.delegatorRole} =&gt; {delegation.delegateActorId} /{" "}
                     {formatApprovalTemplateDateTime(delegation.startsAt, runtimeLocale)} ~{" "}
                     {formatApprovalTemplateDateTime(delegation.endsAt, runtimeLocale)}
                   </li>
@@ -209,8 +209,8 @@ export function ApprovalTemplateLogsPanel({ copy, stats, pendingLabel, logs }: L
     <article className="panel">
       <h2>{copy.logs.title}</h2>
       <p className="small">
-        {copy.logs.total} {stats.total} · {copy.logs.success} {stats.success} · {copy.logs.fail} {stats.fail}
-        {pendingLabel ? ` · ${copy.logs.inProgress} ${pendingLabel}` : ""}
+        {copy.logs.total} {stats.total} / {copy.logs.success} {stats.success} / {copy.logs.fail} {stats.fail}
+        {pendingLabel ? ` / ${copy.logs.inProgress} ${pendingLabel}` : ""}
       </p>
       {logs.length === 0 ? (
         <p className="small">{copy.logs.empty}</p>
@@ -218,8 +218,8 @@ export function ApprovalTemplateLogsPanel({ copy, stats, pendingLabel, logs }: L
         <ul className="log-list">
           {logs.map((log) => (
             <li key={log.id}>
-              <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span> {log.label} ·{" "}
-              {log.status} · {log.at}
+              <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.logs.okBadge : copy.logs.failBadge}</span> {log.label} /{" "}
+              {log.status} / {log.at}
             </li>
           ))}
         </ul>
@@ -235,3 +235,5 @@ export function ApprovalTemplateLogsPanel({ copy, stats, pendingLabel, logs }: L
     </article>
   );
 }
+
+
