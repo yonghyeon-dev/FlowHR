@@ -26,6 +26,10 @@ import {
   normalizeApprovalExecutionListOptions,
   selectApprovalExecutionsForList
 } from "@/features/approval/execution-list-helpers";
+import {
+  buildApprovalStageHistoryListQueryInput,
+  normalizeApprovalStageHistoryListLimit
+} from "@/features/approval/stage-history-list-helpers";
 import { buildApprovalExecutionEscalationRequestedEventPayload } from "@/features/approval/execution-escalation-event-payload-helpers";
 import {
   normalizeApprovalExecutionEscalationPolicy,
@@ -1166,19 +1170,21 @@ export async function listApprovalStageHistory(
     "approval stage history read requires permission"
   );
   const organizationId = await resolveOrganizationId(context, input.organizationId);
-  const limit = input.limit !== undefined ? Math.min(Math.max(input.limit, 1), 500) : 100;
+  const limit = normalizeApprovalStageHistoryListLimit(input.limit);
 
-  const rows = await context.dataAccess.approvals.listStageHistory({
-    organizationId,
-    domain: input.domain,
-    targetEntityType: input.targetEntityType?.trim(),
-    targetEntityId: input.targetEntityId?.trim(),
-    allowed: input.allowed,
-    resolution: input.resolution,
-    from: input.from,
-    to: input.to,
-    limit
-  });
+  const rows = await context.dataAccess.approvals.listStageHistory(
+    buildApprovalStageHistoryListQueryInput({
+      organizationId,
+      domain: input.domain,
+      targetEntityType: input.targetEntityType,
+      targetEntityId: input.targetEntityId,
+      allowed: input.allowed,
+      resolution: input.resolution,
+      from: input.from,
+      to: input.to,
+      limit
+    })
+  );
 
   await context.dataAccess.audit.append({
     action: "approval.stage_history.listed",
