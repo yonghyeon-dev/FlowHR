@@ -92,7 +92,10 @@ import {
   evaluateEmployeeRotationOptimization,
   type EmployeeRotationOptimizationEvaluation as EmployeeRotationOptimizationEvaluationBase
 } from "@/features/scheduling/rotation-employee-optimization-helpers";
-import { resolveScheduleListEmployeeFilter } from "@/features/scheduling/schedule-list-query-helpers";
+import {
+  buildScheduleListInPeriodQueryInput,
+  resolveScheduleListEmployeeFilter
+} from "@/features/scheduling/schedule-list-query-helpers";
 import {
   buildAnomalyIncidentLifecycleAuditPayload,
   buildAnomalyIncidentLifecycleResponse,
@@ -1853,12 +1856,14 @@ export async function listWorkSchedules(
     permissions
   });
 
-  return await context.dataAccess.scheduling.listInPeriod({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    organizationId: tenantScope ?? undefined,
-    employeeId
-  });
+  return await context.dataAccess.scheduling.listInPeriod(
+    buildScheduleListInPeriodQueryInput({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      tenantScope,
+      employeeId
+    })
+  );
 }
 
 export async function listWorkScheduleRotationBalance(
