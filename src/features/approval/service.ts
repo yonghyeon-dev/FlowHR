@@ -30,6 +30,14 @@ import {
   buildApprovalExecutionEscalationFailureAuditPayload,
   buildApprovalStageHistoryListedAuditPayload
 } from "@/features/approval/audit-payload-helpers";
+import {
+  buildApprovalPolicyGatePreviewAuditPayload,
+  resolveApprovalGatePreviewActorContext,
+  resolveApprovalPolicyReadResult,
+  toApprovalPolicyGatePreview,
+  type ApprovalPolicyGateAllowedReason,
+  type ApprovalPolicyGatePreview
+} from "@/features/approval/policy-read-helpers";
 
 const defaultApprovalPolicyRoles: Record<ApprovalDomain, string> = {
   ATTENDANCE: "manager",
@@ -944,43 +952,7 @@ export async function applyApprovalExecutionAction(
 export async function previewApprovalPolicyGate(
   context: ServiceContext,
   input: PreviewApprovalPolicyGateInput
-): Promise<{
-  preview: {
-    organizationId: string;
-    domain: ApprovalDomain;
-    fallbackRole: string;
-    expectedRoles: string[];
-    actorRole: string;
-    actorId: string | null;
-    allowed: boolean;
-    allowedReason: "expected_role" | "active_delegation" | "privileged_bypass" | "denied";
-    payrollGrossPayKrw: number | null;
-    effectiveAt: string;
-    matchedTemplates: Array<{
-      id: string;
-      name: string;
-      domain: ApprovalDomain;
-      approverRoles: string[];
-      approvalStages: Array<{
-        stageIndex: number;
-        label: string;
-        approverRoles: string[];
-        minApprovals: number;
-      }>;
-      payrollGrossPayMinKrw: number | null;
-      payrollGrossPayMaxKrw: number | null;
-      active: boolean;
-    }>;
-    activeDelegations: Array<{
-      id: string;
-      delegatorRole: string;
-      delegateActorId: string;
-      startsAt: string;
-      endsAt: string;
-      active: boolean;
-    }>;
-  };
-}> {
+): Promise<{ preview: ApprovalPolicyGatePreview }> {
   const actor = requireActor(context);
   await requirePermission(context, Permissions.approvalPolicyRead, "approval policy read requires permission");
 
@@ -1002,12 +974,16 @@ export async function previewApprovalPolicyGate(
   const fallbackRole = resolvePolicyApproverRole(policy, input.domain);
   const expectedRoles = resolveExpectedApproverRoles(policy, templates, gateContext);
 
-  const previewActorRole = input.actorRole?.trim() || actor.role;
-  const previewActorId = input.actorId?.trim() || actor.id || null;
+  const { previewActorRole, previewActorId } = resolveApprovalGatePreviewActorContext({
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    defaultActorRole: actor.role,
+    defaultActorId: actor.id || null
+  });
   const effectiveAt = input.effectiveAt ?? new Date();
 
   let allowed = isPrivilegedActor(previewActorRole) || expectedRoles.includes(previewActorRole);
-  let allowedReason: "expected_role" | "active_delegation" | "privileged_bypass" | "denied" = allowed
+  let allowedReason: ApprovalPolicyGateAllowedReason = allowed
     ? isPrivilegedActor(previewActorRole)
       ? "privileged_bypass"
       : "expected_role"
@@ -1016,8 +992,8 @@ export async function previewApprovalPolicyGate(
     id: string;
     delegatorRole: string;
     delegateActorId: string;
-    startsAt: string;
-    endsAt: string;
+    startsAt: Date;
+    endsAt: Date;
     active: boolean;
   }> = [];
 
@@ -1038,8 +1014,8 @@ export async function previewApprovalPolicyGate(
         id: delegation.id,
         delegatorRole: delegation.delegatorRole,
         delegateActorId: delegation.delegateActorId,
-        startsAt: delegation.startsAt.toISOString(),
-        endsAt: delegation.endsAt.toISOString(),
+        startsAt: delegation.startsAt,
+        endsAt: delegation.endsAt,
         active: delegation.active
       }));
 
@@ -1049,7 +1025,7 @@ export async function previewApprovalPolicyGate(
     }
   }
 
-  const preview = {
+  const preview = toApprovalPolicyGatePreview({
     organizationId,
     domain: input.domain,
     fallbackRole,
@@ -1058,25 +1034,11 @@ export async function previewApprovalPolicyGate(
     actorId: previewActorId,
     allowed,
     allowedReason,
-    payrollGrossPayKrw: input.payrollGrossPayKrw ?? null,
-    effectiveAt: effectiveAt.toISOString(),
-    matchedTemplates: matchedTemplates.map((template) => ({
-      id: template.id,
-      name: template.name,
-      domain: template.domain,
-      approverRoles: template.approverRoles,
-      approvalStages: template.approvalStages.map((stage) => ({
-        stageIndex: stage.stageIndex,
-        label: stage.label,
-        approverRoles: [...stage.approverRoles],
-        minApprovals: stage.minApprovals
-      })),
-      payrollGrossPayMinKrw: template.payrollGrossPayMinKrw,
-      payrollGrossPayMaxKrw: template.payrollGrossPayMaxKrw,
-      active: template.active
-    })),
+    payrollGrossPayKrw: input.payrollGrossPayKrw,
+    effectiveAt,
+    matchedTemplates,
     activeDelegations
-  };
+  });
 
   await context.dataAccess.audit.append({
     action: "approval.policy_gate.previewed",
@@ -1085,18 +1047,7 @@ export async function previewApprovalPolicyGate(
     organizationId,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      domain: preview.domain,
-      actorRole: preview.actorRole,
-      actorId: preview.actorId,
-      expectedRoles: preview.expectedRoles,
-      fallbackRole: preview.fallbackRole,
-      allowed: preview.allowed,
-      allowedReason: preview.allowedReason,
-      payrollGrossPayKrw: preview.payrollGrossPayKrw,
-      matchedTemplateIds: preview.matchedTemplates.map((template) => template.id),
-      activeDelegationIds: preview.activeDelegations.map((delegation) => delegation.id)
-    }
+    payload: buildApprovalPolicyGatePreviewAuditPayload(preview)
   });
 
   return { preview };
@@ -1109,10 +1060,7 @@ export async function readApprovalPolicy(
   await requirePermission(context, Permissions.approvalPolicyRead, "approval policy read requires permission");
   const organizationId = await resolveOrganizationId(context, input.organizationId);
   const policy = await context.dataAccess.approvals.findPolicyByOrganizationId(organizationId);
-  return {
-    policy: policy ?? toPolicyFallback(organizationId),
-    configured: policy !== null
-  };
+  return resolveApprovalPolicyReadResult(policy, organizationId, toPolicyFallback);
 }
 
 export async function upsertApprovalPolicy(
