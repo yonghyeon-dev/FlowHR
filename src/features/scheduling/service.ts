@@ -26,6 +26,7 @@ import {
   buildScheduleAttendanceAnomalyCockpitProjection,
   buildScheduleAttendanceAnomalyCockpitReport
 } from "@/features/scheduling/anomaly-cockpit-report-helpers";
+import { buildAnomalyAttendancePeriodWindow } from "@/features/scheduling/anomaly-attendance-period-helpers";
 import type {
   ScheduleAttendanceAnomalyCockpitReport,
   ScheduleAttendanceAnomalyReport
@@ -1936,12 +1937,13 @@ export async function listScheduleAttendanceAnomalies(
     employeeId: input.employeeId
   });
 
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  const attendancePeriodStart = new Date(input.periodStart.getTime() - oneDayMs);
-  const attendancePeriodEnd = new Date(input.periodEnd.getTime() + oneDayMs);
+  const attendancePeriod = buildAnomalyAttendancePeriodWindow({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd
+  });
   const attendances = await listAttendanceRecords(context, {
-    periodStart: attendancePeriodStart,
-    periodEnd: attendancePeriodEnd,
+    periodStart: attendancePeriod.periodStart,
+    periodEnd: attendancePeriod.periodEnd,
     employeeId: input.employeeId
   });
   const { anomalies, lateCount, noShowCount } = buildScheduleAttendanceAnomalySet(
@@ -2732,12 +2734,13 @@ export async function listScheduleAttendanceAnomalyCockpit(
     organizationId: tenantScope
   });
 
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  const attendancePeriodStart = new Date(input.periodStart.getTime() - oneDayMs);
-  const attendancePeriodEnd = new Date(input.periodEnd.getTime() + oneDayMs);
+  const attendancePeriod = buildAnomalyAttendancePeriodWindow({
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd
+  });
   const attendances = await context.dataAccess.attendance.listInPeriod({
-    periodStart: attendancePeriodStart,
-    periodEnd: attendancePeriodEnd,
+    periodStart: attendancePeriod.periodStart,
+    periodEnd: attendancePeriod.periodEnd,
     organizationId: tenantScope
   });
 
