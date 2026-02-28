@@ -75,3 +75,27 @@ export function buildRotationBalanceSummary(input: { schedules: WorkScheduleEnti
     recommendations
   };
 }
+
+export function buildRotationBalanceReportGeneratedAuditPayload(input: {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId: string | undefined;
+  schedules: number;
+  activeWeekdaysCount: number;
+  weekdayGap: number;
+  plannedMinutesGap: number;
+  grade: string;
+  recommendations: string[];
+}) {
+  return {
+    periodStart: input.periodStart.toISOString(),
+    periodEnd: input.periodEnd.toISOString(),
+    employeeId: input.employeeId ?? null,
+    schedules: input.schedules,
+    activeWeekdays: input.activeWeekdaysCount,
+    weekdayGap: input.weekdayGap,
+    plannedMinutesGap: input.plannedMinutesGap,
+    grade: input.grade,
+    recommendations: input.recommendations
+  };
+}
