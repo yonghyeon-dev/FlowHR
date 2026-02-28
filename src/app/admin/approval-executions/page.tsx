@@ -147,22 +147,22 @@ function getStalledHours(execution: ApprovalExecutionDto, asOf: Date) {
 
 function resolveQuickJumpPath(execution: ApprovalExecutionDto) {
   if (execution.domain === "PAYROLL") {
-    return "/admin#payroll";
+    return "/admin/payroll-year-end";
   }
   if (execution.domain === "LEAVE") {
-    return "/admin#approvals";
+    return "/admin/leave-accrual";
   }
-  return "/admin#approvals";
+  return "/admin/attendance-live";
 }
 
 function resolveQuickJumpLabel(execution: ApprovalExecutionDto, isKoLocale: boolean) {
   if (execution.domain === "PAYROLL") {
-    return isKoLocale ? "급여 섹션" : "Payroll section";
+    return isKoLocale ? "급여 워크스페이스" : "Payroll workspace";
   }
   if (execution.domain === "LEAVE") {
-    return isKoLocale ? "휴가 승인 큐" : "Leave approval queue";
+    return isKoLocale ? "휴가 워크스페이스" : "Leave workspace";
   }
-  return isKoLocale ? "근태 승인 큐" : "Attendance approval queue";
+  return isKoLocale ? "근태 워크스페이스" : "Attendance workspace";
 }
 
 function toTargetKey(input: { domain: ApprovalDomain; targetEntityType: string; targetEntityId: string }) {
@@ -461,15 +461,15 @@ export default function AdminApprovalExecutionsPage() {
             : "Review stalled approval executions by priority and send over-threshold items through dry-run/live escalation."}
           {showDevTools
             ? isKoLocale
-              ? " 개발 모드에서는 헤더 기반 Actor 컨텍스트를 사용할 수 있습니다."
-              : " Dev mode can use header-based actor context."
+              ? " 개발 옵션이 활성화되어 고급 로그를 확인할 수 있습니다."
+              : " Dev options are enabled so advanced logs are visible."
             : ""}
         </p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>{isKoLocale ? "컨텍스트/필터" : "Context and filters"}</h2>
+          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
           <p className="small muted">
             {isKoLocale ? "조직" : "Organization"}: <code>{organizationId || "-"}</code> /{" "}
             {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
@@ -520,41 +520,46 @@ export default function AdminApprovalExecutionsPage() {
                 ))}
               </select>
             </label>
-            <label>
-              {isKoLocale ? "대상 엔티티 타입" : "Target entity type"}
-              <input
-                value={targetEntityType}
-                onChange={(event) => setTargetEntityType(event.target.value)}
-                placeholder="AttendanceRecord / LeaveRequest / PayrollRun"
-              />
-            </label>
-            <label>
-              {isKoLocale ? "대상 엔티티 ID" : "Target entity ID"}
-              <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
-            </label>
-            <label>
-              {isKoLocale ? "실행 조회 개수" : "Execution limit"}
-              <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(event.target.value)} />
-            </label>
-            <label>
-              {isKoLocale ? "이력 조회 개수" : "History limit"}
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={historyLimit}
-                onChange={(event) => setHistoryLimit(event.target.value)}
-              />
-            </label>
-            <label>
-              {isKoLocale ? "에스컬레이션 채널" : "Escalation channel"}
-              <input
-                value={notificationChannel}
-                onChange={(event) => setNotificationChannel(event.target.value)}
-                placeholder="approval-stalled-queue"
-              />
-            </label>
           </div>
+          <details className="details">
+            <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
+            <div className="input-grid" style={{ marginTop: 12 }}>
+              <label>
+                {isKoLocale ? "대상 엔티티 타입" : "Target entity type"}
+                <input
+                  value={targetEntityType}
+                  onChange={(event) => setTargetEntityType(event.target.value)}
+                  placeholder="AttendanceRecord / LeaveRequest / PayrollRun"
+                />
+              </label>
+              <label>
+                {isKoLocale ? "대상 엔티티 ID" : "Target entity ID"}
+                <input value={targetEntityId} onChange={(event) => setTargetEntityId(event.target.value)} />
+              </label>
+              <label>
+                {isKoLocale ? "실행 조회 개수" : "Execution limit"}
+                <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(event.target.value)} />
+              </label>
+              <label>
+                {isKoLocale ? "이력 조회 개수" : "History limit"}
+                <input
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={historyLimit}
+                  onChange={(event) => setHistoryLimit(event.target.value)}
+                />
+              </label>
+              <label>
+                {isKoLocale ? "에스컬레이션 채널" : "Escalation channel"}
+                <input
+                  value={notificationChannel}
+                  onChange={(event) => setNotificationChannel(event.target.value)}
+                  placeholder="approval-stalled-queue"
+                />
+              </label>
+            </div>
+          </details>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadExecutions()} disabled={!organizationId.trim()}>
               {isKoLocale ? "실행 현황 조회" : "Load executions"}
@@ -776,37 +781,51 @@ export default function AdminApprovalExecutionsPage() {
           )}
         </article>
 
-        <article className="panel">
-          <h2>{isKoLocale ? "요청 로그" : "Request logs"}</h2>
-          <p className="small">
-            {isKoLocale ? "총" : "Total"} {stats.total}
-            {isKoLocale ? "건 / 성공" : " / success"} {stats.success}
-            {isKoLocale ? "건 / 실패" : " / fail"} {stats.fail}
-            {isKoLocale ? "건" : ""}
-            {pendingLabel ? ` / ${isKoLocale ? "진행중" : "running"}: ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small">{isKoLocale ? "아직 API 호출 이력이 없습니다." : "No API call history yet."}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? (isKoLocale ? "성공" : "OK") : isKoLocale ? "실패" : "FAIL"}</span>{" "}
-                  {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/admin/approval-history" className="btn btn-secondary">
-              {isKoLocale ? "결재 단계 이력" : "Approval stage history"}
-            </Link>
-            <Link href="/admin" className="btn btn-secondary">
-              {isKoLocale ? "관리자 홈" : "Admin home"}
-            </Link>
-          </div>
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{isKoLocale ? "요청 로그" : "Request logs"}</h2>
+            <p className="small">
+              {isKoLocale ? "총" : "Total"} {stats.total}
+              {isKoLocale ? "건 / 성공" : " / success"} {stats.success}
+              {isKoLocale ? "건 / 실패" : " / fail"} {stats.fail}
+              {isKoLocale ? "건" : ""}
+              {pendingLabel ? ` / ${isKoLocale ? "진행중" : "running"}: ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small">{isKoLocale ? "아직 API 호출 이력이 없습니다." : "No API call history yet."}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? (isKoLocale ? "성공" : "OK") : isKoLocale ? "실패" : "FAIL"}</span>{" "}
+                    {log.label} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="panel-actions">
+              <Link href="/admin/approval-history" className="btn btn-secondary">
+                {isKoLocale ? "결재 단계 이력" : "Approval stage history"}
+              </Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {isKoLocale ? "관리자 홈" : "Admin home"}
+              </Link>
+            </div>
+          </article>
+        ) : (
+          <article className="panel">
+            <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+            <div className="panel-actions">
+              <Link href="/admin/approval-history" className="btn btn-secondary">
+                {isKoLocale ? "결재 단계 이력" : "Approval stage history"}
+              </Link>
+              <Link href="/admin" className="btn btn-secondary">
+                {isKoLocale ? "관리자 홈" : "Admin home"}
+              </Link>
+            </div>
+          </article>
+        )}
       </section>
     </main>
   );

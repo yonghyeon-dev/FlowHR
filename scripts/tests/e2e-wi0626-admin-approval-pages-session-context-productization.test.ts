@@ -26,7 +26,7 @@ async function run() {
   assert.match(history, /filters\.organizationId[\s\S]*filters\.adminActorId/);
   assert.match(policy, /context\.organizationId[\s\S]*context\.adminActorId/);
   assert.match(templates, /context\.organizationId[\s\S]*context\.adminActorId/);
-  assert.match(executions, /Context and filters[\s\S]*Session actor/);
+  assert.match(executions, /Work conditions[\s\S]*Session actor/);
 
   assert.match(workItem, /WI-0626/i);
   assert.match(roadmap, /WI-0626/i);
