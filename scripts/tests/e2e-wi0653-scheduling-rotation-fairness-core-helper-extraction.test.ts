@@ -25,7 +25,7 @@ async function run() {
   assert.match(service, /evaluateRotationFairnessAdvancedScore\(/);
   assert.match(service, /deriveRotationBalanceGrade\(/);
   assert.match(service, /plannedMinutesForSchedule\(/);
-  assert.match(service, /weekdaySetKey\(/);
+  assert.match(service, /ensureRotationTemplatesShareWeekdaySet\(/);
 
   assert.match(helper, /export function normalizeTemplateIds\(/);
   assert.match(helper, /export function normalizeEmployeeIds\(/);
