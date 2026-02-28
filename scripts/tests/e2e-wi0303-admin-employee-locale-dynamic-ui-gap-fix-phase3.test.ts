@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -10,18 +10,8 @@ async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
   const adminChrome = readUtf8("src", "components", "admin-dashboard", "AdminDashboardChrome.tsx");
-  const adminOnboardingAccountPanels = readUtf8(
-    "src",
-    "components",
-    "admin-dashboard",
-    "AdminOnboardingAccountPanels.tsx"
-  );
-  const adminPeopleInvitePanels = readUtf8(
-    "src",
-    "components",
-    "admin-dashboard",
-    "AdminPeopleInvitePanels.tsx"
-  );
+  const adminOnboardingAccountPanels = readUtf8("src", "components", "admin-dashboard", "AdminOnboardingAccountPanels.tsx");
+  const adminPeopleInvitePanels = readUtf8("src", "components", "admin-dashboard", "AdminPeopleInvitePanels.tsx");
   const adminPayrollPanel = readUtf8("src", "components", "admin-dashboard", "AdminPayrollPanel.tsx");
   const employeeAccountOverviewPanels = readUtf8(
     "src",
@@ -29,12 +19,7 @@ async function run() {
     "employee-dashboard",
     "EmployeeAccountOverviewPanels.tsx"
   );
-  const employeeResubmitPanel = readUtf8(
-    "src",
-    "components",
-    "employee-dashboard",
-    "EmployeeResubmitPanel.tsx"
-  );
+  const employeeResubmitPanel = readUtf8("src", "components", "employee-dashboard", "EmployeeResubmitPanel.tsx");
   const employeeAttendanceLeavePanels = readUtf8(
     "src",
     "components",
@@ -53,10 +38,7 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(
-    adminChrome,
-    /isKoLocale\s*\?\s*"현재 환경은 "\s*:\s*"Current environment is "/
-  );
+  assert.match(adminChrome, /\{isKoLocale \? "현재 환경은 " : "Current environment is "\}/);
   assert.match(adminChrome, /<p>\{isKoLocale \? "API 호출" : "API calls"\}<\/p>/);
   assert.match(adminOnboardingAccountPanels, /\{isKoLocale \? "조직 식별자" : "Organization ID"\}/);
   assert.match(adminPeopleInvitePanels, /\{isKoLocale \? "액터 식별자 \(선택\)" : "Actor ID \(optional\)"\}/);
@@ -66,25 +48,21 @@ async function run() {
   );
   assert.doesNotMatch(adminPage, /Organization ID가 필요합니다\./);
 
+  assert.match(employeeResubmitPanel, /aria-label=\{isKoLocale \? "재제출 후보 목록" : "resubmit candidate list"\}/);
   assert.match(
-    employeeResubmitPanel,
-    /aria-label=\{isKoLocale \? "재제출 후보 목록" : "resubmit candidate list"\}/
+    employeeAccountOverviewPanels,
+    /\{isKoLocale \? "세션 조직" : "Session organization"\}: <code>\{organizationId \|\| "-"\}<\/code>/
   );
   assert.match(
     employeeAccountOverviewPanels,
-    /\{isKoLocale\s*\?\s*"조직 식별자 \(선택\)"\s*:\s*"Organization ID \(optional\)"\}/
+    /\{isKoLocale \? "세션 직원" : "Session employee"\}: <code>\{employeeId \|\| "-"\}<\/code>/
   );
   assert.match(
     employeeAttendanceLeaveFormsPanel,
     /<option value="ANNUAL">\{toLeaveTypeLabel\("ANNUAL"\)\}<\/option>/
   );
-  assert.ok(
-    /<h2>\{sectionTitles\.apiLogs\}<\/h2>/.test(employeeAttendanceLeavePanels) ||
-      /<h2>\{isKoLocale \? "API 실행 로그" : "API execution logs"\}<\/h2>/.test(
-        employeeAttendanceLeavePanels
-      )
-  );
-  assert.doesNotMatch(employeePage, /\?\?\? \?\? \?\?/);
+  assert.match(employeeAttendanceLeavePanels, /<h2>\{sectionTitles\.apiLogs\}<\/h2>/);
+  assert.doesNotMatch(employeePage, /\?\?\? \?\? \?\?\?/);
 
   assert.match(workItem, /WI-0303/i);
   assert.match(workItem, /locale/i);

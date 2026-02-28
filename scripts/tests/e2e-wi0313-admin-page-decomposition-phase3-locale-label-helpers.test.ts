@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const adminPage = readUtf8("src", "app", "admin", "page.tsx");
+  const adminPanels = readUtf8("src", "app", "admin", "page-panels.tsx");
   const adminPageState = readUtf8("src", "app", "admin", "page-state.ts");
   const localeHelpers = readUtf8("src", "app", "admin", "page-locale-helpers.ts");
   const workItem = readUtf8(
@@ -16,8 +17,13 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
-  assert.match(adminPage, /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/);
+  assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.doesNotMatch(
+    adminPage,
+    /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
+  );
+  assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.match(adminPanels, /localeLabelBundle: ReturnType<typeof resolveAdminLocaleLabelBundle>/);
   assert.match(adminPageState, /isDefaultDemoOrganizationName\(previous\)/);
 
   assert.doesNotMatch(adminPage, /const queueLabels = useMemo\(/);

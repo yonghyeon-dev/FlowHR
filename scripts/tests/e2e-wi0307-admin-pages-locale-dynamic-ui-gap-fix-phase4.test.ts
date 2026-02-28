@@ -31,7 +31,6 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(adminApprovalExecutionsPage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminApprovalExecutionsPage, /Organization ID/);
   assert.match(adminApprovalExecutionsPage, /Escalation channel/);
   assert.match(adminApprovalExecutionsPage, /requestedAt/);
   assert.match(adminApprovalExecutionsPage, /toDomainLabel\(execution\.domain\)/);
@@ -41,7 +40,7 @@ async function run() {
   assert.doesNotMatch(adminApprovalExecutionsPage, /Escalation Channel/);
 
   assert.match(adminPeoplePage, /const \{ locale \} = useI18n\(\);/);
-  assert.match(adminPeopleSurface, /Organization ID/);
+  assert.match(adminPeopleSurface, /Session organization/);
   assert.match(adminPeopleSurface, /Department filter/);
   assert.match(adminPeopleSurface, /Position filter/);
   assert.match(adminPeopleSurface, /Reset filters/);

@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -7,12 +7,7 @@ function readUtf8(...parts: string[]) {
 }
 
 async function run() {
-  const payrollCloseConsole = readUtf8(
-    "src",
-    "components",
-    "payroll-close",
-    "PayrollClosePeriodConsole.tsx"
-  );
+  const payrollCloseConsole = readUtf8("src", "components", "payroll-close", "PayrollClosePeriodConsole.tsx");
   const payrollCloseCopy = readUtf8("src", "components", "payroll-close", "copy.ts");
   const payrollCloseTypes = readUtf8("src", "components", "payroll-close", "types.ts");
   const workItem = readUtf8(
@@ -42,7 +37,7 @@ async function run() {
   assert.match(payrollCloseCopy, /export const payrollCloseCopyByLocale/);
   assert.match(payrollCloseCopy, /title: "급여 마감"/);
   assert.match(payrollCloseCopy, /title: "Payroll Close Period"/);
-  assert.match(payrollCloseCopy, /previewAction: "마감 프리뷰"/);
+  assert.match(payrollCloseCopy, /previewAction: "마감 미리보기"/);
   assert.match(payrollCloseCopy, /previewAction: "Preview Close"/);
   assert.match(payrollCloseCopy, /okLabel: "성공"/);
   assert.match(payrollCloseCopy, /okLabel: "OK"/);

@@ -63,15 +63,17 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
-  assert.match(
+  assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.doesNotMatch(
     adminPage,
     /const localeLabelBundle = useMemo\(\(\) => resolveAdminLocaleLabelBundle\(isKoLocale\), \[isKoLocale\]\);/
   );
-  assert.match(
+  assert.doesNotMatch(
     adminPage,
     /const \{ queueLabels, logStatusLabels \} = localeLabelBundle;/
   );
+  assert.match(adminPanels, /from "@\/app\/admin\/page-locale-helpers"/);
+  assert.match(adminPanels, /localeLabelBundle: ReturnType<typeof resolveAdminLocaleLabelBundle>/);
   assert.match(adminPanels, /workTypeLabels/);
   assert.match(adminPageState, /isDefaultDemoOrganizationName\(previous\)/);
   assert.doesNotMatch(adminPage, /const updatedAtLabel = isKoLocale \?/);

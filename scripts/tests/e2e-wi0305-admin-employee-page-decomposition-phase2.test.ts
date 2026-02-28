@@ -57,12 +57,14 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-0305-admin-employee-page-decomposition-phase2.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(adminPage, /from "@\/components\/admin-dashboard\/AdminDashboardChrome"/);
-  assert.match(adminPage, /from "@\/app\/admin\/page-panels"/);
-  assert.match(adminPage, /<AdminDashboardChrome/);
-  assert.match(adminPage, /<AdminDashboardPanels/);
-  assert.doesNotMatch(adminPage, /<article className="panel" id="onboarding">/);
-  assert.doesNotMatch(adminPage, /<article className="panel" id="payroll">/);
+  assert.doesNotMatch(adminPage, /from "@\/components\/admin-dashboard\/AdminDashboardChrome"/);
+  assert.doesNotMatch(adminPage, /from "@\/app\/admin\/page-panels"/);
+  assert.doesNotMatch(adminPage, /<AdminDashboardChrome/);
+  assert.doesNotMatch(adminPage, /<AdminDashboardPanels/);
+  assert.match(adminPage, /href="\/admin\/approval-executions"/);
+  assert.match(adminPage, /href="\/admin\/people"/);
+  assert.match(adminPage, /href="\/admin\/scheduling"/);
+  assert.match(adminPage, /href="\/admin\/payroll-year-end"/);
 
   assert.match(adminChrome, /export function AdminDashboardChrome/);
   assert.match(adminOnboardingAccountPanels, /id="onboarding"/);
@@ -103,7 +105,7 @@ async function run() {
   assert.match(employeeRequestFeedbackPanels, /id="request-feedback"/);
   assert.match(employeeRequestFeedbackPanels, /id="request-search-sort"/);
   assert.match(employeeRequestFeedbackPanels, /id="request-timeline"/);
-  assert.match(employeeRequestFeedbackPanels, /대기 \$\{Math\.round\(row\.pendingHours\)\}시간/);
+  assert.match(employeeRequestFeedbackPanels, /Math\.round\(row\.pendingHours\)/);
   assert.match(employeeResubmitPanel, /id="request-resubmit"/);
 
   assert.match(workItem, /WI-0305/i);

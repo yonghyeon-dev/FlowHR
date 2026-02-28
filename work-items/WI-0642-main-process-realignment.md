@@ -20,6 +20,13 @@
 - aligned legacy regression anchor `e2e-wi0394-korean-copy-terminology-normalization-withholding-payslip-contracts` to current locale copy schema:
   - validates session-context labels (`sessionOrganizationLabel`, `sessionEmployeeLabel`) in withholding/payslip ko copy
   - removes outdated `employeeIdLabel` / `organizationIdFallbackLabel` expectations after productized session-only UX
+- aligned legacy admin decomposition/locale regression anchors to current productized IA contracts:
+  - `e2e-wi0298`, `e2e-wi0299`, `e2e-wi0301`, `e2e-wi0310`, `e2e-wi0313`, `e2e-wi0344`
+  - moved locale/queue helper import expectations from `src/app/admin/page.tsx` to orchestrator layer (`src/app/admin/page-panels.tsx`)
+  - enforced `/admin` dashboard productization contract (direct workspace shortcuts, no legacy monolithic queue/helper wiring in page root)
+- aligned legacy UX/copy anchors with current session-context and Korean copy terminology:
+  - `e2e-wi0303`, `e2e-wi0305`, `e2e-wi0307`, `e2e-wi0331`, `e2e-wi0333`
+  - replaced outdated labels (`Organization ID optional`, `마감 프리뷰`, inline `ko: {}` assumptions) with current copy/schema (`Session organization`, `마감 미리보기`, `copyKo` mapping style)
 
 ## Scope
 - process correction only (no additional product feature scope beyond already committed WIs)
