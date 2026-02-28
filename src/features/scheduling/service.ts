@@ -63,6 +63,12 @@ import {
   selectRotationFairnessRecommendations
 } from "@/features/scheduling/rotation-fairness-selection-helpers";
 import {
+  createSchedulesFromGeneratedWindows,
+  ensureNoOverlapsForGeneratedWindows,
+  ensureRotationTemplatesShareWeekdaySet,
+  requireTemplatesWithinTenant
+} from "@/features/scheduling/rotation-assignment-core-helpers";
+import {
   deriveRotationBalanceGrade,
   evaluateRotationFairnessAdvancedScore,
   normalizeEmployeeIds,
@@ -70,8 +76,7 @@ import {
   normalizeRotationFairnessGlobalConstraints,
   normalizeTemplateIds,
   plannedMinutesForGeneratedWindow,
-  plannedMinutesForSchedule,
-  weekdaySetKey
+  plannedMinutesForSchedule
 } from "@/features/scheduling/rotation-fairness-core-helpers";
 import {
   buildRotationOffsetEvaluation,
@@ -845,29 +850,6 @@ type EmployeeRotationOptimizationEvaluation = {
   best: RotationOffsetEvaluation;
 };
 
-async function requireTemplatesWithinTenant(context: ServiceContext, templateIds: string[]) {
-  const rows: WorkScheduleTemplateEntity[] = [];
-  for (const templateId of templateIds) {
-    const template = await requireTemplateEntityWithinTenant(context, templateId);
-    rows.push(template);
-  }
-  return rows;
-}
-
-function ensureRotationTemplatesShareWeekdaySet(
-  templates: WorkScheduleTemplateEntity[],
-  templateIds: string[]
-) {
-  const baseWeekdayKey = weekdaySetKey(templates[0].weekdays);
-  for (const template of templates) {
-    if (weekdaySetKey(template.weekdays) !== baseWeekdayKey) {
-      throw new ServiceError(409, "all rotation templates must share same weekday set", {
-        templateIds
-      });
-    }
-  }
-}
-
 async function evaluateBestRotationForEmployee(
   context: ServiceContext,
   input: {
@@ -929,81 +911,6 @@ async function evaluateBestRotationForEmployee(
     options: rankedEvaluations,
     best: rankedEvaluations[0]
   };
-}
-
-async function ensureNoOverlapsForGeneratedWindows(
-  context: ServiceContext,
-  organizationId: string | undefined,
-  employeeId: string,
-  windows: GeneratedScheduleWindow[]
-) {
-  if (windows.length === 0) {
-    throw new ServiceError(400, "no schedules generated from requested range");
-  }
-
-  const firstStart = windows.reduce((min, row) =>
-    row.startAt.getTime() < min.getTime() ? row.startAt : min
-  , windows[0].startAt);
-  const lastEnd = windows.reduce((max, row) =>
-    row.endAt.getTime() > max.getTime() ? row.endAt : max
-  , windows[0].endAt);
-  const existing = await context.dataAccess.scheduling.listInPeriod({
-    periodStart: firstStart,
-    periodEnd: lastEnd,
-    organizationId,
-    employeeId
-  });
-
-  for (const candidate of windows) {
-    const overlaps = existing.filter(
-      (current) => current.startAt < candidate.endAt && current.endAt > candidate.startAt
-    );
-    if (overlaps.length > 0) {
-      throw new ServiceError(409, "overlapping schedule exists", {
-        employeeId,
-        templateId: candidate.templateId,
-        date: candidate.date,
-        overlapCount: overlaps.length,
-        overlappingScheduleIds: overlaps.map((schedule) => schedule.id)
-      });
-    }
-  }
-
-  for (let index = 0; index < windows.length; index += 1) {
-    for (let next = index + 1; next < windows.length; next += 1) {
-      const left = windows[index];
-      const right = windows[next];
-      if (left.startAt < right.endAt && left.endAt > right.startAt) {
-        throw new ServiceError(409, "generated schedules overlap within requested range", {
-          employeeId,
-          leftDate: left.date,
-          leftTemplateId: left.templateId,
-          rightDate: right.date,
-          rightTemplateId: right.templateId
-        });
-      }
-    }
-  }
-}
-
-async function createSchedulesFromGeneratedWindows(
-  context: ServiceContext,
-  employeeId: string,
-  windows: GeneratedScheduleWindow[]
-) {
-  const createdScheduleIds: string[] = [];
-  for (const candidate of windows) {
-    const created = await createWorkSchedule(context, {
-      employeeId,
-      startAt: candidate.startAt,
-      endAt: candidate.endAt,
-      breakMinutes: candidate.breakMinutes,
-      isHoliday: candidate.isHoliday,
-      notes: candidate.notes
-    });
-    createdScheduleIds.push(created.id);
-  }
-  return createdScheduleIds;
 }
 
 export async function createWorkSchedule(
@@ -1392,18 +1299,18 @@ export async function assignWorkScheduleRangeFromTemplate(
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, template.weekdays);
   const generatedWindows = buildTemplateRangeWindows(template, matchedDates);
 
-  await ensureNoOverlapsForGeneratedWindows(
-    context,
-    employee.organizationId ?? undefined,
-    input.employeeId,
-    generatedWindows
-  );
+  await ensureNoOverlapsForGeneratedWindows({
+    organizationId: employee.organizationId ?? undefined,
+    employeeId: input.employeeId,
+    windows: generatedWindows,
+    listSchedulesInPeriod: (overlapInput) => context.dataAccess.scheduling.listInPeriod(overlapInput)
+  });
 
-  const createdScheduleIds = await createSchedulesFromGeneratedWindows(
-    context,
-    input.employeeId,
-    generatedWindows
-  );
+  const createdScheduleIds = await createSchedulesFromGeneratedWindows({
+    employeeId: input.employeeId,
+    windows: generatedWindows,
+    createSchedule: (scheduleInput) => createWorkSchedule(context, scheduleInput)
+  });
 
   await context.dataAccess.audit.append({
     action: "scheduling.template.range_assigned",
@@ -1461,7 +1368,10 @@ export async function assignWorkScheduleRotation(
   await requirePermission(context, Permissions.schedulingScheduleWriteAny, "schedule rotation assign requires permission");
 
   const templateIds = normalizeTemplateIds(input.templateIds);
-  const templates = await requireTemplatesWithinTenant(context, templateIds);
+  const templates = await requireTemplatesWithinTenant(
+    templateIds,
+    (templateId) => requireTemplateEntityWithinTenant(context, templateId)
+  );
   const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
 
   for (const template of templates) {
@@ -1473,30 +1383,23 @@ export async function assignWorkScheduleRotation(
     }
   }
 
-  const baseWeekdayKey = weekdaySetKey(templates[0].weekdays);
-  for (const template of templates) {
-    if (weekdaySetKey(template.weekdays) !== baseWeekdayKey) {
-      throw new ServiceError(409, "all rotation templates must share same weekday set", {
-        templateIds
-      });
-    }
-  }
+  ensureRotationTemplatesShareWeekdaySet(templates, templateIds);
 
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
   const generatedWindows = buildRotationWindowsForTemplates(templates, matchedDates);
 
-  await ensureNoOverlapsForGeneratedWindows(
-    context,
-    employee.organizationId ?? undefined,
-    input.employeeId,
-    generatedWindows
-  );
+  await ensureNoOverlapsForGeneratedWindows({
+    organizationId: employee.organizationId ?? undefined,
+    employeeId: input.employeeId,
+    windows: generatedWindows,
+    listSchedulesInPeriod: (overlapInput) => context.dataAccess.scheduling.listInPeriod(overlapInput)
+  });
 
-  const createdScheduleIds = await createSchedulesFromGeneratedWindows(
-    context,
-    input.employeeId,
-    generatedWindows
-  );
+  const createdScheduleIds = await createSchedulesFromGeneratedWindows({
+    employeeId: input.employeeId,
+    windows: generatedWindows,
+    createSchedule: (scheduleInput) => createWorkSchedule(context, scheduleInput)
+  });
 
   await context.dataAccess.audit.append({
     action: "scheduling.rotation.assigned",
@@ -1556,7 +1459,10 @@ export async function optimizeWorkScheduleRotation(
   );
 
   const templateIds = normalizeTemplateIds(input.templateIds);
-  const templates = await requireTemplatesWithinTenant(context, templateIds);
+  const templates = await requireTemplatesWithinTenant(
+    templateIds,
+    (templateId) => requireTemplateEntityWithinTenant(context, templateId)
+  );
   const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, input.employeeId);
   ensureRotationTemplatesShareWeekdaySet(templates, templateIds);
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
@@ -1645,7 +1551,10 @@ export async function listWorkScheduleRotationFairness(
   }
 
   const templateIds = normalizeTemplateIds(input.templateIds);
-  const templates = await requireTemplatesWithinTenant(context, templateIds);
+  const templates = await requireTemplatesWithinTenant(
+    templateIds,
+    (templateId) => requireTemplateEntityWithinTenant(context, templateId)
+  );
   ensureRotationTemplatesShareWeekdaySet(templates, templateIds);
   const matchedDates = enumerateTemplateMatchedDates(input.fromDate, input.toDate, templates[0].weekdays);
 
@@ -1803,7 +1712,10 @@ export async function applyWorkScheduleRotationFairness(
 
   for (const recommendation of report.results) {
     const employee = await requireEmployeeWithinTenant(context.dataAccess, context.actor, recommendation.employeeId);
-    const templates = await requireTemplatesWithinTenant(context, recommendation.optimizedTemplateIds);
+    const templates = await requireTemplatesWithinTenant(
+      recommendation.optimizedTemplateIds,
+      (templateId) => requireTemplateEntityWithinTenant(context, templateId)
+    );
     for (const template of templates) {
       if (!employee.organizationId || employee.organizationId !== template.organizationId) {
         throw new ServiceError(409, "template organization and employee organization must match", {
@@ -1823,16 +1735,21 @@ export async function applyWorkScheduleRotationFairness(
 
   // Preflight all employees before writing any schedule to reduce partial-apply risk.
   for (const plan of assignmentPlans) {
-    await ensureNoOverlapsForGeneratedWindows(context, plan.organizationId, plan.employeeId, plan.windows);
+    await ensureNoOverlapsForGeneratedWindows({
+      organizationId: plan.organizationId,
+      employeeId: plan.employeeId,
+      windows: plan.windows,
+      listSchedulesInPeriod: (overlapInput) => context.dataAccess.scheduling.listInPeriod(overlapInput)
+    });
   }
 
   const assignments: Array<{ employeeId: string; createdScheduleIds: string[] }> = [];
   for (const plan of assignmentPlans) {
-    const createdScheduleIds = await createSchedulesFromGeneratedWindows(
-      context,
-      plan.employeeId,
-      plan.windows
-    );
+    const createdScheduleIds = await createSchedulesFromGeneratedWindows({
+      employeeId: plan.employeeId,
+      windows: plan.windows,
+      createSchedule: (scheduleInput) => createWorkSchedule(context, scheduleInput)
+    });
 
     await context.dataAccess.audit.append({
       action: "scheduling.rotation.assigned",
