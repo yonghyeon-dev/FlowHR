@@ -8,6 +8,13 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const adminPageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const approvalExecutionsPageSource = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "approval-executions",
+    "page.tsx"
+  );
   const adminPanelsSource = readUtf8("src", "app", "admin", "page-panels.tsx");
   const approvalQueuePanelSource = readUtf8(
     "src",
@@ -30,15 +37,19 @@ function run() {
   const globalCssSource = readUtf8("src", "app", "globals.css");
 
   assert.ok(
-    /ApprovalQueuePanel/.test(adminPageSource) || /<AdminDashboardPanels/.test(adminPageSource),
-    "admin page should expose approval queue rendering directly or via extracted panel orchestrator"
+    /ApprovalQueuePanel/.test(adminPageSource) ||
+      /<AdminDashboardPanels/.test(adminPageSource) ||
+      /href="\/admin\/approval-executions"/.test(adminPageSource),
+    "admin page should expose approval queue directly, via orchestrator, or via dedicated approval workspace shortcut"
   );
   assert.match(adminPanelsSource, /ApprovalQueuePanel/, "admin panel orchestrator should render approval queue");
   assert.match(queueUiSource, /승인 큐 필터/, "admin approvals panel should expose queue focus badges");
   assert.match(queueUiSource, /큐 검색/, "admin approvals panel should expose queue search input");
-  assert.match(adminPageSource, /attendanceQueueSort/, "admin approvals panel should support attendance sorting");
-  assert.match(adminPageSource, /leaveQueueSort/, "admin approvals panel should support leave sorting");
-  assert.match(adminPageSource, /payrollQueueSort/, "admin approvals panel should support payroll sorting");
+  assert.match(
+    approvalExecutionsPageSource,
+    /const \[sort, setSort\] = useState<ApprovalExecutionSort>\("priority_desc"\)/,
+    "dedicated approval workspace should support queue sorting"
+  );
 
   assert.match(globalCssSource, /\.approval-queue-header/, "queue header styling should exist");
   assert.match(globalCssSource, /\.queue-badge-strip/, "queue badge strip styling should exist");

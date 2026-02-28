@@ -7,6 +7,9 @@
   - `work-items/` linked
   - test/typecheck evidence attached in PR
   - template checklist and delivery-balance section completed
+- aligned legacy regression anchor `e2e-wi0128-admin-approval-queue-ux-upgrade` to current admin IA:
+  - allows approval queue access via dedicated `/admin/approval-executions` workspace shortcut
+  - validates sorting controls on dedicated approval executions page instead of old monolithic `/admin` page state keys
 
 ## Scope
 - process correction only (no additional product feature scope beyond already committed WIs)
