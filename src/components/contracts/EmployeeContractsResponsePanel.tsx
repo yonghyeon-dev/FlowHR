@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { EmployeeContractJourneyPanel } from "@/components/contracts/EmployeeContractJourneyPanel";
 import { type ContractDocumentStatus, type EmployeeContractsCopy, toDateText } from "@/components/contracts/copy";
+import { resolveDueSoonPendingDays, resolveOverduePendingDays } from "@/components/contracts/employee-inbox-filter-helpers";
 import { normalizeContractsEvidenceFileName } from "@/components/contracts/runtime-copy-helpers";
 import { resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument } from "@/components/contracts/types";
@@ -58,11 +59,30 @@ export function EmployeeContractsResponsePanel({
   const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
   const [copyStatusError, setCopyStatusError] = useState<string | null>(null);
   const [responseHistoryFilter, setResponseHistoryFilter] = useState<ResponseHistoryFilter>("ALL");
-  const evidenceDisplayFileName = selected && signatureEvidence
-    ? normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale)
-    : null;
+  const evidenceDisplayFileName =
+    selected && signatureEvidence ? normalizeContractsEvidenceFileName(signatureEvidence.fileName, selected.id, isKoLocale) : null;
   const hasSignatureHash = Boolean(selected?.signatureHash);
   const hasEvidenceHash = Boolean(selected?.signatureEvidenceHash);
+  const deadlineStatusText = useMemo(() => {
+    if (!selected) {
+      return copy.deadlineStatusNone;
+    }
+    const overdueDays = resolveOverduePendingDays(selected);
+    if (overdueDays !== null) {
+      return `${copy.deadlineStatusOverduePrefix} (D+${overdueDays})`;
+    }
+    const dueSoonDays = resolveDueSoonPendingDays(selected);
+    if (dueSoonDays !== null) {
+      return `${copy.deadlineStatusDueSoonPrefix} (D-${dueSoonDays})`;
+    }
+    return selected.expiresAt ? copy.deadlineStatusNormal : copy.deadlineStatusNone;
+  }, [
+    copy.deadlineStatusDueSoonPrefix,
+    copy.deadlineStatusNone,
+    copy.deadlineStatusNormal,
+    copy.deadlineStatusOverduePrefix,
+    selected
+  ]);
   const responseHistoryEntries = useMemo(() => {
     if (!selected) {
       return [];
@@ -177,6 +197,8 @@ export function EmployeeContractsResponsePanel({
             <li><span>{copy.hashLabel}</span><strong>{selected.documentHash.slice(0, 16)}...</strong></li>
             <li><span>{copy.updatedLabel}</span><strong>{toDateText(selected.updatedAt, runtimeLocale)}</strong></li>
             <li><span>{copy.respondedLabel}</span><strong>{toDateText(selected.respondedAt, runtimeLocale)}</strong></li>
+            <li><span>{copy.expiresAtLabel}</span><strong>{toDateText(selected.expiresAt, runtimeLocale)}</strong></li>
+            <li><span>{copy.deadlineStatusLabel}</span><strong>{deadlineStatusText}</strong></li>
             <li><span>{copy.signatureHashLabel}</span><strong>{selected.signatureHash ? `${selected.signatureHash.slice(0, 16)}...` : "-"}</strong></li>
             <li><span>{copy.evidenceHashLabel}</span><strong>{selected.signatureEvidenceHash ? `${selected.signatureEvidenceHash.slice(0, 16)}...` : "-"}</strong></li>
           </ul>
@@ -202,12 +224,7 @@ export function EmployeeContractsResponsePanel({
             <div className="contract-action-row">
               <span className="small muted">{copy.responseHistoryFilterLabel}</span>
               {responseHistoryFilterOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={responseHistoryFilter === option.value ? "btn btn-small" : "btn btn-secondary btn-small"}
-                  onClick={() => setResponseHistoryFilter(option.value)}
-                >
+                <button key={option.value} type="button" className={responseHistoryFilter === option.value ? "btn btn-small" : "btn btn-secondary btn-small"} onClick={() => setResponseHistoryFilter(option.value)}>
                   {option.label} ({option.count})
                 </button>
               ))}
@@ -232,41 +249,18 @@ export function EmployeeContractsResponsePanel({
               </ul>
             )}
           </section>
-          <label>
-            {copy.signatureInputLabel}
-            <input
-              value={signatureInput}
-              placeholder={copy.signatureInputPlaceholder}
-              onChange={(event) => onSignatureInputChange(event.target.value)}
-            />
-          </label>
+          <label>{copy.signatureInputLabel}<input value={signatureInput} placeholder={copy.signatureInputPlaceholder} onChange={(event) => onSignatureInputChange(event.target.value)} /></label>
           {canRespondSelected && !isSignatureInputReady ? (
             <p className="small muted">{copy.signatureInputRequiredHint}</p>
           ) : null}
           <label>{copy.commentLabel}<textarea rows={3} value={comment} onChange={(event) => onCommentChange(event.target.value)} /></label>
           <div className="contract-action-row">
             <span className="small muted">{copy.quickCommentTemplatesLabel}</span>
-            {quickCommentTemplates.map((template) => (
-              <button
-                key={template}
-                type="button"
-                className="btn btn-secondary btn-small"
-                onClick={() => onCommentChange(template)}
-              >
-                {template}
-              </button>
-            ))}
+            {quickCommentTemplates.map((template) => (<button key={template} type="button" className="btn btn-secondary btn-small" onClick={() => onCommentChange(template)}>{template}</button>))}
           </div>
           {!canRespondSelected ? <p className="small muted">{copy.responseDisabledHint}</p> : null}
           <div className="contract-action-row">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => onRespond("SIGN")}
-              disabled={!canRespondSelected || !isSignatureInputReady}
-            >
-              {copy.signAction}
-            </button>
+            <button type="button" className="btn" onClick={() => onRespond("SIGN")} disabled={!canRespondSelected || !isSignatureInputReady}>{copy.signAction}</button>
             <button type="button" className="btn btn-secondary" onClick={() => onRespond("REJECT")} disabled={!canRespondSelected}>{copy.rejectAction}</button>
             <button type="button" className="btn btn-secondary" onClick={() => onLoadSignatureEvidence("json")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceJsonAction}</button>
             <button type="button" className="btn btn-secondary" onClick={() => onLoadSignatureEvidence("text")} disabled={selected.status !== "SIGNED"}>{copy.loadEvidenceTextAction}</button>
@@ -279,20 +273,8 @@ export function EmployeeContractsResponsePanel({
                 <li><span>{copy.contentShaLabel}</span><strong>{signatureEvidence.contentSha256.slice(0, 16)}...</strong></li>
               </ul>
               <div className="contract-action-row">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => onDownloadEvidence(signatureEvidence, evidenceDisplayFileName)}
-                >
-                  {copy.downloadEvidenceAction}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => onCopyEvidenceMetadata(signatureEvidence, evidenceDisplayFileName)}
-                >
-                  {copy.copyEvidenceMetadataAction}
-                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => onDownloadEvidence(signatureEvidence, evidenceDisplayFileName)}>{copy.downloadEvidenceAction}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => onCopyEvidenceMetadata(signatureEvidence, evidenceDisplayFileName)}>{copy.copyEvidenceMetadataAction}</button>
               </div>
             </>
           ) : null}
@@ -301,5 +283,3 @@ export function EmployeeContractsResponsePanel({
     </article>
   );
 }
-
-

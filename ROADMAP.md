@@ -916,3 +916,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0639 core Korean mojibake regression guard (add e2e guard to block known corrupted Korean tokens on core customer-facing surfaces: /admin dashboard and employee-guide)
 
 - WI-0640 korean surface copy completion for withholding/payslips/contracts (employee payslip ko 용어 정규화 + ko CSV 헤더 현지화 + withholding 문서 메타데이터 복사 라벨 현지화 + contracts 영문 제목 정규화 키워드 확장 + e2e-wi0640 회귀 테스트 추가)
+- WI-0641 employee contracts response deadline status visibility (/employee/contracts 상세 패널에 응답 기한/기한 상태(D-day) 표시 추가 + list와 동일한 due-soon/overdue 계산 helper 재사용 + contracts ko/en copy 키 확장 + e2e-wi0641 회귀 테스트 추가)
