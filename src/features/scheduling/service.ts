@@ -1945,8 +1945,8 @@ export async function listScheduleAttendanceAnomalies(
   });
 
   const attendancePeriod = buildAnomalyAttendancePeriodWindow({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd
+    periodStart: normalizedWindow.periodStart,
+    periodEnd: normalizedWindow.periodEnd
   });
   const attendances = await listAttendanceRecords(context, {
     periodStart: attendancePeriod.periodStart,
@@ -2729,8 +2729,8 @@ export async function listScheduleAttendanceAnomalyCockpit(
   });
 
   const attendancePeriod = buildAnomalyAttendancePeriodWindow({
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd
+    periodStart: normalizedWindow.periodStart,
+    periodEnd: normalizedWindow.periodEnd
   });
   const attendances = await context.dataAccess.attendance.listInPeriod({
     periodStart: attendancePeriod.periodStart,
