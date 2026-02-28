@@ -29,3 +29,17 @@ export function resolveScheduleListEmployeeFilter(input: {
 
   throw new ServiceError(403, "schedule list requires permission");
 }
+
+export function buildScheduleListInPeriodQueryInput(input: {
+  periodStart: Date;
+  periodEnd: Date;
+  tenantScope: string | null;
+  employeeId: string | undefined;
+}) {
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    organizationId: input.tenantScope ?? undefined,
+    employeeId: input.employeeId
+  };
+}
