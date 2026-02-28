@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { payrollCloseCopyByLocale } from "@/components/payroll-close/copy";
+import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import type { ApiLog, PayrollClosePeriodResponse } from "@/components/payroll-close/types";
 import {
@@ -25,9 +25,6 @@ function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerL
 
 export default function PayrollClosePeriodConsole() {
   const range = defaultMonthRange();
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
   const [priorPaidWithholdingTaxKrw, setPriorPaidWithholdingTaxKrw] = useState("0");
@@ -39,16 +36,14 @@ export default function PayrollClosePeriodConsole() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "PAY-1001").trim() || "PAY-1001";
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollCloseCopyByLocale[locale];
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(() => {
@@ -154,6 +149,10 @@ export default function PayrollClosePeriodConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.inputTitle}</h2>
+          <p className="small muted">
+            {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionActorLabel}:{" "}
+            <code>{adminActorId || "-"}</code>
+          </p>
           <div className="input-grid">
             <label>
               {copy.periodStartLabel}
@@ -176,22 +175,6 @@ export default function PayrollClosePeriodConsole() {
               <input value={priorPaidNetPayKrw} onChange={(event) => setPriorPaidNetPayKrw(event.target.value)} />
             </label>
           </div>
-          <label>
-            {copy.accessTokenLabel}
-            <input
-              value={accessToken}
-              onChange={(event) => setAccessToken(event.target.value)}
-              placeholder={copy.bearerTokenPlaceholder}
-            />
-          </label>
-          <label>
-            {copy.actorIdFallbackLabel}
-            <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-          </label>
-          <label>
-            {copy.organizationIdFallbackLabel}
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runClosePeriod(false)} disabled={pendingLabel !== null}>
               {copy.previewAction}
@@ -239,28 +222,30 @@ export default function PayrollClosePeriodConsole() {
           )}
         </article>
 
-        <article className="panel">
-          <h2>{copy.apiLogsTitle}</h2>
-          <p className="small">
-            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
-            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small">{copy.noApiCallYet}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="panel-actions">
-            <Link href="/admin" className="btn btn-secondary">{copy.backToAdmin}</Link>
-          </div>
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.apiLogsTitle}</h2>
+            <p className="small">
+              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+              {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small">{copy.noApiCallYet}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="panel-actions">
+              <Link href="/admin" className="btn btn-secondary">{copy.backToAdmin}</Link>
+            </div>
+          </article>
+        ) : null}
       </section>
     </main>
   );
