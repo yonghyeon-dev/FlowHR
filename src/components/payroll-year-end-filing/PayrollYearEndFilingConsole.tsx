@@ -26,8 +26,8 @@ import {
   replaceSubmissionById,
   upsertSubmissionAtTop
 } from "@/components/payroll-year-end-filing/submission-state-helpers";
+import { isTruthyFlag } from "@/app/admin/page-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import {
   currentYear,
@@ -55,9 +55,6 @@ import type {
 } from "@/components/payroll-year-end-filing/types";
 
 export default function PayrollYearEndFilingConsole() {
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
   const [year, setYear] = useState(String(currentYear()));
   const [employeeId, setEmployeeId] = useState("EMP-1001");
   const [nonTaxableAnnualIncomeKrw, setNonTaxableAnnualIncomeKrw] = useState("0");
@@ -120,7 +117,10 @@ export default function PayrollYearEndFilingConsole() {
   const [lastFailure, setLastFailure] = useState<PayrollYearEndFilingFailureState | null>(null);
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "PAY-1001").trim() || "PAY-1001";
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollYearEndFilingCopyByLocale[locale];
@@ -134,12 +134,7 @@ export default function PayrollYearEndFilingConsole() {
         openedPendingQueue: "Opened pending submissions queue from preflight shortcut.",
         openedRejectedQueue: "Opened rejected submissions queue from preflight shortcut."
       };
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(() => {
@@ -907,10 +902,14 @@ export default function PayrollYearEndFilingConsole() {
         <p>{copy.description}</p>
       </header>
 
-      <section className="panel-grid">
-        <article className="panel">
-          <h2>{copy.inputTitle}</h2>
-          <div className="input-grid">
+        <section className="panel-grid">
+          <article className="panel">
+            <h2>{copy.inputTitle}</h2>
+            <p className="small muted">
+              {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+              {locale === "ko" ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+            </p>
+            <div className="input-grid">
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
             <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
@@ -1151,9 +1150,6 @@ export default function PayrollYearEndFilingConsole() {
           <label>{copy.reopenSubmissionIdLabel}<input value={reopenSubmissionId} onChange={(event) => setReopenSubmissionId(event.target.value)} /></label>
           <label>{copy.timelineSubmissionIdLabel}<input value={timelineSubmissionId} onChange={(event) => setTimelineSubmissionId(event.target.value)} /></label>
           <label>{copy.evidenceNoteLabel}<input value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} /></label>
-          <label>{copy.accessTokenLabel}<input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} /></label>
-          <label>{copy.actorIdFallbackLabel}<input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} /></label>
-          <label>{copy.organizationIdFallbackLabel}<input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} /></label>
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void runFinalization(false)} disabled={pendingLabel !== null}>{copy.previewFinalizationAction}</button>
             <button className="btn btn-primary" onClick={() => void runFinalization(true)} disabled={pendingLabel !== null}>{copy.finalizeSettlementAction}</button>
@@ -1193,12 +1189,14 @@ export default function PayrollYearEndFilingConsole() {
           onClearChecklist={() => setPreflightChecklist(null)}
         />
 
-        <FilingApiLogsPanel
-          copy={copy}
-          stats={stats}
-          pendingLabel={pendingLabel}
-          logs={logs}
-        />
+        {showDevTools ? (
+          <FilingApiLogsPanel
+            copy={copy}
+            stats={stats}
+            pendingLabel={pendingLabel}
+            logs={logs}
+          />
+        ) : null}
 
         {lastFailure ? (
           <FilingFailureActionPanel
