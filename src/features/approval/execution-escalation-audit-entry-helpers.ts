@@ -76,3 +76,7 @@ export function buildApprovalExecutionEscalationEventPublishFailedAuditEntry(inp
     payload: input.payload
   });
 }
+
+export function toApprovalExecutionEscalationErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "unknown error";
+}
