@@ -12,6 +12,8 @@
   - validates sorting controls on dedicated approval executions page instead of old monolithic `/admin` page state keys
 - aligned legacy regression anchor `e2e-wi0217-filing-ops-flat-workflow-route-context-baseline` to current nav policy:
   - accepts root `/admin/payroll-year-end-filing/ops` link as valid nav exposure alongside flat step routes
+- aligned legacy regression anchor `e2e-wi0219-self-service-ia-and-approval-queue-split` to current admin IA:
+  - accepts dedicated `/admin/approval-executions` shortcut exposure on productized admin dashboard
 
 ## Scope
 - process correction only (no additional product feature scope beyond already committed WIs)
