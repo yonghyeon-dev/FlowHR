@@ -81,6 +81,7 @@ import {
 } from "@/features/scheduling/rotation-fairness-core-helpers";
 import {
   buildRotationBalanceReportGeneratedAuditPayload,
+  buildRotationBalanceReportResult,
   buildRotationBalanceSummary
 } from "@/features/scheduling/rotation-balance-report-helpers";
 import {
@@ -1901,20 +1902,18 @@ export async function listWorkScheduleRotationBalance(
     })
   });
 
-  return {
+  return buildRotationBalanceReportResult({
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
-    employeeId: input.employeeId ?? null,
-    counts: {
-      schedules: schedules.length,
-      activeWeekdays: activeWeekdaysCount,
-      weekdayGap,
-      plannedMinutesGap,
-      grade
-    },
+    employeeId: input.employeeId,
+    schedules: schedules.length,
+    activeWeekdaysCount,
+    weekdayGap,
+    plannedMinutesGap,
+    grade,
     weekdays,
     recommendations
-  };
+  });
 }
 
 export async function listScheduleAttendanceAnomalies(
