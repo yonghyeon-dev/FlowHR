@@ -5,8 +5,7 @@ import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runti
 import { buildEmployeeInteractionHandlers } from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import {
-  resolveAttendanceCorrectionSchedulePrefill,
-  resolveAttendanceCorrectionTargetFromScheduleRange
+  resolveAttendanceCorrectionSchedulePrefill
 } from "@/app/employee/page-query-prefill-helpers";
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import { buildEmployeeInteractionSetterBundles } from "@/app/employee/page-interaction-setter-bundles";
@@ -25,6 +24,7 @@ import {
   resolveEmployeeLocaleLabelBundle
 } from "@/app/employee/page-locale-helpers";
 import { useEmployeeRuntimeSession } from "@/app/employee/page-session-helpers";
+import { useApplyAttendanceSchedulePrefillEffect } from "@/app/employee/page-attendance-prefill-effect";
 import type {
   ApiLog,
   AttendanceRecordDto,
@@ -302,34 +302,15 @@ export default function EmployeeSelfServicePage() {
   const { applyAttendanceRecordToCorrectionForm, applyLatestAttendanceToCorrectionForm, applyLatestResubmitCandidate, applyLeaveQuickPreset, applyResubmitCandidateToDraft, applySelectedCorrectionRecord, applySelectedResubmitCandidate, clearResubmitSelection, copyFailureCause, jumpToSection, moveCalendarMonth, openPendingRequestSearch, prefillLeaveFormFromCalendarDate, resetCalendarToCurrentMonth, selectCorrectionTarget } = buildEmployeeInteractionHandlers({
     ...interactionOrchestratorInput
   });
-  useEffect(() => {
-    if (!attendanceSchedulePrefill) {
-      return;
-    }
-
-    if (appliedAttendanceSchedulePrefillRef.current.baseKey !== attendanceSchedulePrefill.key) {
-      setCheckInAt(attendanceSchedulePrefill.checkInAt);
-      setCheckOutAt(attendanceSchedulePrefill.checkOutAt);
-      setAttendanceNotes(attendanceSchedulePrefill.note);
-      appliedAttendanceSchedulePrefillRef.current.baseKey = attendanceSchedulePrefill.key;
-      appliedAttendanceSchedulePrefillRef.current.selectedTargetKey = null;
-    }
-
-    if (appliedAttendanceSchedulePrefillRef.current.selectedTargetKey === attendanceSchedulePrefill.key) {
-      return;
-    }
-    const correctionTarget = resolveAttendanceCorrectionTargetFromScheduleRange(
-      attendance,
-      attendanceSchedulePrefill
-    );
-    if (!correctionTarget) {
-      return;
-    }
-
-    applyAttendanceRecordToCorrectionForm(correctionTarget);
-    setAttendanceNotes(attendanceSchedulePrefill.note);
-    appliedAttendanceSchedulePrefillRef.current.selectedTargetKey = attendanceSchedulePrefill.key;
-  }, [attendanceSchedulePrefill, attendance, applyAttendanceRecordToCorrectionForm]);
+  useApplyAttendanceSchedulePrefillEffect({
+    attendanceSchedulePrefill,
+    attendance,
+    appliedAttendanceSchedulePrefillRef,
+    setCheckInAt,
+    setCheckOutAt,
+    setAttendanceNotes,
+    applyAttendanceRecordToCorrectionForm
+  });
   return (
     <main className="saas-content">
       <EmployeeDashboardChrome

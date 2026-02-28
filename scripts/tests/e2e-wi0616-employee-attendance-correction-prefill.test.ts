@@ -8,6 +8,7 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const employeePage = readUtf8("src", "app", "employee", "page.tsx");
+  const prefillEffect = readUtf8("src", "app", "employee", "page-attendance-prefill-effect.ts");
   const prefillHelpers = readUtf8("src", "app", "employee", "page-query-prefill-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -17,11 +18,12 @@ async function run() {
 
   assert.match(employeePage, /useSearchParams/);
   assert.match(employeePage, /resolveAttendanceCorrectionSchedulePrefill/);
-  assert.match(employeePage, /resolveAttendanceCorrectionTargetFromScheduleRange/);
-  assert.match(employeePage, /setCheckInAt\(attendanceSchedulePrefill\.checkInAt\)/);
-  assert.match(employeePage, /setCheckOutAt\(attendanceSchedulePrefill\.checkOutAt\)/);
-  assert.match(employeePage, /setAttendanceNotes\(attendanceSchedulePrefill\.note\)/);
-  assert.match(employeePage, /applyAttendanceRecordToCorrectionForm\(correctionTarget\)/);
+  assert.match(employeePage, /useApplyAttendanceSchedulePrefillEffect/);
+  assert.match(prefillEffect, /resolveAttendanceCorrectionTargetFromScheduleRange/);
+  assert.match(prefillEffect, /setCheckInAt\(attendanceSchedulePrefill\.checkInAt\)/);
+  assert.match(prefillEffect, /setCheckOutAt\(attendanceSchedulePrefill\.checkOutAt\)/);
+  assert.match(prefillEffect, /setAttendanceNotes\(attendanceSchedulePrefill\.note\)/);
+  assert.match(prefillEffect, /applyAttendanceRecordToCorrectionForm\(correctionTarget\)/);
 
   assert.match(prefillHelpers, /attendanceSource/);
   assert.match(prefillHelpers, /fromDate/);
