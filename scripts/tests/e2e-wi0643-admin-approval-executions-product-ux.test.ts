@@ -8,18 +8,20 @@ function readUtf8(...parts: string[]) {
 
 async function run() {
   const page = readUtf8("src", "app", "admin", "approval-executions", "page.tsx");
+  const helpers = readUtf8("src", "app", "admin", "approval-executions", "page-helpers.ts");
+  const sections = readUtf8("src", "app", "admin", "approval-executions", "page-sections.tsx");
   const workItem = readUtf8("work-items", "WI-0643-admin-approval-executions-product-ux.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(page, /return "\/admin\/payroll-year-end";/);
-  assert.match(page, /return "\/admin\/leave-accrual";/);
-  assert.match(page, /return "\/admin\/attendance-live";/);
-  assert.doesNotMatch(page, /\/admin#payroll/);
-  assert.doesNotMatch(page, /\/admin#approvals/);
+  assert.match(helpers, /return "\/admin\/payroll-year-end";/);
+  assert.match(helpers, /return "\/admin\/leave-accrual";/);
+  assert.match(helpers, /return "\/admin\/attendance-live";/);
+  assert.doesNotMatch(helpers, /\/admin#payroll/);
+  assert.doesNotMatch(helpers, /\/admin#approvals/);
 
-  assert.match(page, /Work conditions/);
-  assert.match(page, /Advanced options/);
-  assert.match(page, /showDevTools \? \([\s\S]*Request logs[\s\S]*\) : \([\s\S]*Related workspaces/);
+  assert.match(sections, /Work conditions/);
+  assert.match(sections, /Advanced options/);
+  assert.match(page, /showDevTools \? \([\s\S]*ApprovalExecutionLogsPanel[\s\S]*\) : \([\s\S]*ApprovalExecutionRelatedWorkspacesPanel/);
 
   assert.match(workItem, /WI-0643/i);
   assert.match(workItem, /approval-executions|product ux|devtools|quick jump/i);

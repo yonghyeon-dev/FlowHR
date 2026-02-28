@@ -930,3 +930,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0647 admin people logs devtools gate (/admin/people now derives showDevTools from NEXT_PUBLIC_FLOWHR_DEV_TOOLS and renders request logs only in devtools mode, with related-workspaces fallback in standard runtime + e2e-wi0647 regression guard)
 
 - WI-0648 admin people related-workspaces locale normalization (localized ko/en labels for non-devtools related-workspaces panel and aria-label alignment on /admin/people + e2e-wi0648 regression guard)
+- WI-0649 admin approval-executions line-budget decomposition (extract work-conditions/summary/escalation/list/history/logs panels into page-sections with helper/type modules and keep devtools-log gate + dedicated workspace quick-jumps + e2e-wi0649 regression guard)
