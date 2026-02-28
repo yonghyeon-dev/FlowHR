@@ -127,6 +127,7 @@ import {
   resolveSchedulingTenantScope
 } from "@/features/scheduling/anomaly-service-context-helpers";
 import {
+  buildScheduleAnomalyTicketSideEffectInput,
   buildScheduleAnomalySummarySideEffectInput,
   buildScheduleAnomalySideEffectContext,
   emitAnomalyCockpitTicketRequestsIfEnabled,
@@ -2773,14 +2774,15 @@ export async function listScheduleAttendanceAnomalyCockpit(
       dataAccess: context.dataAccess,
       publish: eventPublisher.publish.bind(eventPublisher)
     });
+    const ticketSideEffectInput = buildScheduleAnomalyTicketSideEffectInput({
+      window: normalizedWindow,
+      lateThresholdMinutes,
+      topN,
+      queue
+    });
     await emitAnomalyCockpitTicketRequestsIfEnabled(
       sideEffectContext,
-      {
-        window: normalizedWindow,
-        lateThresholdMinutes,
-        topN,
-        queue
-      }
+      ticketSideEffectInput
     );
   }
 
