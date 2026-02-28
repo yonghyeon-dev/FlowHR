@@ -99,3 +99,31 @@ export function buildRotationBalanceReportGeneratedAuditPayload(input: {
     recommendations: input.recommendations
   };
 }
+
+export function buildRotationBalanceReportResult(input: {
+  periodStart: Date;
+  periodEnd: Date;
+  employeeId: string | undefined;
+  schedules: number;
+  activeWeekdaysCount: number;
+  weekdayGap: number;
+  plannedMinutesGap: number;
+  grade: ReturnType<typeof deriveRotationBalanceGrade>;
+  weekdays: Array<{ weekday: number; scheduleCount: number; plannedMinutes: number }>;
+  recommendations: string[];
+}) {
+  return {
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    employeeId: input.employeeId ?? null,
+    counts: {
+      schedules: input.schedules,
+      activeWeekdays: input.activeWeekdaysCount,
+      weekdayGap: input.weekdayGap,
+      plannedMinutesGap: input.plannedMinutesGap,
+      grade: input.grade
+    },
+    weekdays: input.weekdays,
+    recommendations: input.recommendations
+  };
+}
