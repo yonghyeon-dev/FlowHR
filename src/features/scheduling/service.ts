@@ -120,6 +120,7 @@ import {
   selectScheduleAnomalyIncidentReconcileItems
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
 import {
+  normalizeRequiredIncidentId,
   requireSchedulingActor,
   resolveSchedulingEventPublisher,
   resolveSchedulingWriteActorContext,
@@ -2007,10 +2008,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     "schedule anomaly incident lifecycle requires permission"
   );
 
-  const incidentId = input.incidentId.trim();
-  if (!incidentId) {
-    throw new ServiceError(400, "incidentId is required");
-  }
+  const incidentId = normalizeRequiredIncidentId(input.incidentId);
   const normalizedMutationInput = normalizeAnomalyIncidentLifecycleMutationInput({
     action: input.action,
     assigneeId: input.assigneeId,
