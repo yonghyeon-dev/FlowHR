@@ -49,7 +49,8 @@ import {
   buildApprovalExecutionEscalationEventPublishFailedAuditEntry,
   buildApprovalExecutionEscalationFailedAuditEntry,
   buildApprovalExecutionEscalationGeneratedAuditEntry,
-  buildApprovalExecutionEscalationRequestedAuditEntry
+  buildApprovalExecutionEscalationRequestedAuditEntry,
+  toApprovalExecutionEscalationErrorMessage
 } from "@/features/approval/execution-escalation-audit-entry-helpers";
 import {
   buildApprovalExecutionEscalationAuditPayloadBase,
@@ -1356,7 +1357,7 @@ export async function triggerApprovalExecutionEscalation(
           payload: buildApprovalExecutionEscalationFailureAuditPayload({
             base: payloadBase,
             reason: "webhook_request_failed",
-            error: error instanceof Error ? error.message : "unknown error"
+            error: toApprovalExecutionEscalationErrorMessage(error)
           })
         })
       );
@@ -1388,7 +1389,7 @@ export async function triggerApprovalExecutionEscalation(
             payload: buildApprovalExecutionEscalationFailureAuditPayload({
               base: payloadBase,
               reason: "event_publish_failed",
-              error: error instanceof Error ? error.message : "unknown error"
+              error: toApprovalExecutionEscalationErrorMessage(error)
             })
           })
         );
