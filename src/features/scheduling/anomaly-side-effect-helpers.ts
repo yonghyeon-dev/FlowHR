@@ -149,6 +149,14 @@ export async function emitAnomalyEscalationIfEnabled(
   }
 }
 
+export async function emitAnomalySummarySideEffects(
+  context: ScheduleAnomalySideEffectContext,
+  input: ScheduleAnomalySummaryInput
+) {
+  await emitAnomalyAlertIfEnabled(context, input);
+  await emitAnomalyEscalationIfEnabled(context, input);
+}
+
 export async function emitAnomalyCockpitTicketRequestsIfEnabled(
   context: ScheduleAnomalySideEffectContext,
   input: ScheduleAnomalyTicketInput
