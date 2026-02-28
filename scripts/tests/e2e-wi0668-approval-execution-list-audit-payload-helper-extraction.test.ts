@@ -12,6 +12,12 @@ function countLines(source: string) {
 
 async function run() {
   const approvalService = readUtf8("src", "features", "approval", "service.ts");
+  const listAuditEntryHelpers = readUtf8(
+    "src",
+    "features",
+    "approval",
+    "list-audit-entry-helpers.ts"
+  );
   const auditHelpers = readUtf8("src", "features", "approval", "audit-payload-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -19,10 +25,19 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(approvalService, /buildApprovalExecutionListedAuditPayload\(/);
-  assert.match(
-    approvalService,
-    /action: "approval\.execution\.listed"[\s\S]*payload: buildApprovalExecutionListedAuditPayload\(/
+  assert.ok(
+    /buildApprovalExecutionListedAuditPayload\(/.test(approvalService) ||
+      /buildApprovalExecutionListedAuditPayload\(/.test(listAuditEntryHelpers),
+    "execution listed audit payload helper should be used by service or list-audit-entry helper"
+  );
+  assert.ok(
+    /action: "approval\.execution\.listed"[\s\S]*payload: buildApprovalExecutionListedAuditPayload\(/.test(
+      approvalService
+    ) ||
+      /action: "approval\.execution\.listed"[\s\S]*payload: buildApprovalExecutionListedAuditPayload\(/.test(
+        listAuditEntryHelpers
+      ),
+    "execution listed audit action/payload mapping should exist in service or list-audit-entry helper"
   );
   assert.doesNotMatch(
     approvalService,

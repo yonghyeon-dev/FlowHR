@@ -12,6 +12,12 @@ function countLines(source: string) {
 
 async function run() {
   const approvalService = readUtf8("src", "features", "approval", "service.ts");
+  const listAuditEntryHelpers = readUtf8(
+    "src",
+    "features",
+    "approval",
+    "list-audit-entry-helpers.ts"
+  );
   const auditHelpers = readUtf8("src", "features", "approval", "audit-payload-helpers.ts");
   const workItem = readUtf8(
     "work-items",
@@ -20,12 +26,21 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(approvalService, /from "@\/features\/approval\/audit-payload-helpers"/);
-  assert.match(approvalService, /buildApprovalStageHistoryListedAuditPayload\(/);
+  assert.ok(
+    /buildApprovalStageHistoryListedAuditPayload\(/.test(approvalService) ||
+      /buildApprovalStageHistoryListedAuditPayload\(/.test(listAuditEntryHelpers),
+    "stage-history listed audit payload helper should be used by service or list-audit-entry helper"
+  );
   assert.match(approvalService, /buildApprovalExecutionEscalationAuditPayloadBase\(/);
   assert.match(approvalService, /buildApprovalExecutionEscalationFailureAuditPayload\(/);
-  assert.match(
-    approvalService,
-    /action: "approval\.stage_history\.listed"[\s\S]*payload: buildApprovalStageHistoryListedAuditPayload\(/
+  assert.ok(
+    /action: "approval\.stage_history\.listed"[\s\S]*payload: buildApprovalStageHistoryListedAuditPayload\(/.test(
+      approvalService
+    ) ||
+      /action: "approval\.stage_history\.listed"[\s\S]*payload: buildApprovalStageHistoryListedAuditPayload\(/.test(
+        listAuditEntryHelpers
+      ),
+    "stage-history listed audit action/payload mapping should exist in service or list-audit-entry helper"
   );
   assert.doesNotMatch(approvalService, /const payloadBase = \{/);
 
