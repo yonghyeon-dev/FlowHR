@@ -121,8 +121,8 @@ import {
 } from "@/features/scheduling/anomaly-incident-reconcile-helpers";
 import {
   requireSchedulingActor,
-  requireSchedulingWriteActor,
   resolveSchedulingEventPublisher,
+  resolveSchedulingWriteActorContext,
   resolveSchedulingTenantScope
 } from "@/features/scheduling/anomaly-service-context-helpers";
 import {
@@ -2002,7 +2002,7 @@ export async function updateScheduleAnomalyIncidentLifecycle(
   context: ServiceContext,
   input: UpdateScheduleAnomalyIncidentLifecycleInput
 ): Promise<ScheduleAnomalyIncidentLifecycleResult> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly incident lifecycle requires permission"
   );
@@ -2018,7 +2018,6 @@ export async function updateScheduleAnomalyIncidentLifecycle(
     note: input.note
   });
   const updatedAt = new Date().toISOString();
-  const tenantScope = resolveSchedulingTenantScope(actor);
   const existing = await getScheduleAnomalyIncidentReadModel(context.dataAccess, incidentId);
   if (
     existing &&
@@ -2107,13 +2106,12 @@ export async function listScheduleAnomalyIncidentSla(
   context: ServiceContext,
   input: ListScheduleAnomalyIncidentSlaInput
 ): Promise<ScheduleAnomalyIncidentSlaReport> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly incident SLA requires permission"
   );
 
   const topN = normalizeIncidentListTopN(input.topN);
-  const tenantScope = resolveSchedulingTenantScope(actor);
   const assigneeId = input.assigneeId?.trim();
   const includeResolved = input.includeResolved ?? false;
   const slaTargetMinutes = resolveAnomalyIncidentSlaTargetMinutes(input.slaTargetMinutes);
@@ -2177,7 +2175,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   context: ServiceContext,
   input: TriggerScheduleAnomalyIncidentEscalationInput
 ): Promise<ScheduleAnomalyIncidentEscalationResult> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly incident escalation requires permission"
   );
@@ -2188,7 +2186,6 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   const cooldownMinutes = normalizeAnomalyIncidentEscalationCooldownMinutes(input.cooldownMinutes);
   const escalationChannel = normalizeAnomalyIncidentEscalationChannel(input.escalationChannel);
   const asOf = input.asOf ?? new Date();
-  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const slaReport = await listScheduleAnomalyIncidentSla(context, {
     state: input.state,
@@ -2309,7 +2306,7 @@ export async function executeScheduleAnomalyIncidentAutoAction(
   context: ServiceContext,
   input: ExecuteScheduleAnomalyIncidentAutoActionInput
 ): Promise<ScheduleAnomalyIncidentAutoActionResult> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly incident auto action requires permission"
   );
@@ -2317,7 +2314,6 @@ export async function executeScheduleAnomalyIncidentAutoAction(
   const autoAssigneeId = normalizeAnomalyIncidentAutoAssigneeId(input.autoAssigneeId);
   const autoAssignMode = normalizeAnomalyIncidentAutoAssignMode(input.autoAssignMode);
   const autoAssignNote = normalizeAnomalyIncidentAutoAssignNote(input.autoAssignNote);
-  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const escalation = await triggerScheduleAnomalyIncidentEscalation(context, {
     state: input.state,
@@ -2434,7 +2430,7 @@ export async function archiveScheduleAnomalyIncidents(
   context: ServiceContext,
   input: ArchiveScheduleAnomalyIncidentsInput
 ): Promise<ScheduleAnomalyIncidentArchiveResult> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly incident archive requires permission"
   );
@@ -2450,7 +2446,6 @@ export async function archiveScheduleAnomalyIncidents(
 
   const stateFilter = input.state;
   const assigneeFilter = input.assigneeId?.trim() || undefined;
-  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const incidents = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope,
@@ -2541,7 +2536,7 @@ export async function replayScheduleAnomalyIncidentStore(
   context: ServiceContext,
   input: ReplayScheduleAnomalyIncidentStoreInput
 ): Promise<ScheduleAnomalyIncidentReplayResult> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly incident replay requires permission"
   );
@@ -2554,7 +2549,6 @@ export async function replayScheduleAnomalyIncidentStore(
 
   const dryRun = input.dryRun ?? false;
   const includeArchived = input.includeArchived ?? false;
-  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const logs = await context.dataAccess.audit.list({
     actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
@@ -2646,14 +2640,13 @@ export async function reconcileScheduleAnomalyIncidentStore(
   context: ServiceContext,
   input: ReconcileScheduleAnomalyIncidentStoreInput
 ): Promise<ScheduleAnomalyIncidentReconcileResult> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly incident reconciliation requires permission"
   );
 
   const topN = normalizeReconcileTopN(input.topN);
   const includeMatching = input.includeMatching ?? false;
-  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const storeRows = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope
@@ -2712,7 +2705,7 @@ export async function listScheduleAttendanceAnomalyCockpit(
   context: ServiceContext,
   input: ListScheduleAnomalyCockpitInput
 ): Promise<ScheduleAttendanceAnomalyCockpitReport> {
-  const actor = await requireSchedulingWriteActor(
+  const { actor, tenantScope } = await resolveSchedulingWriteActorContext(
     context,
     "schedule anomaly cockpit requires permission"
   );
@@ -2725,7 +2718,6 @@ export async function listScheduleAttendanceAnomalyCockpit(
   });
   const lateThresholdMinutes = normalizedWindow.lateThresholdMinutes;
   const topN = normalizedWindow.topN;
-  const tenantScope = resolveSchedulingTenantScope(actor);
 
   const schedules = await context.dataAccess.scheduling.listInPeriod({
     periodStart: normalizedWindow.periodStart,

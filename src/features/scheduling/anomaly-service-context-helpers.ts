@@ -30,6 +30,17 @@ export async function requireSchedulingWriteActor(
   return actor;
 }
 
+export async function resolveSchedulingWriteActorContext(
+  context: SchedulingServiceContextLike,
+  permissionMessage: string
+) {
+  const actor = await requireSchedulingWriteActor(context, permissionMessage);
+  return {
+    actor,
+    tenantScope: resolveSchedulingTenantScope(actor)
+  };
+}
+
 export function resolveSchedulingTenantScope(actor: Actor) {
   return resolveTenantScope(actor) ?? undefined;
 }
