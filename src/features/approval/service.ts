@@ -17,13 +17,15 @@ import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain
 import { ServiceError } from "@/features/shared/service-error";
 import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
 import {
-  calculateExecutionStalledHours,
-  compareExecutionsByPriority,
   resolveApprovalEscalationWebhookConfig,
   sendApprovalEscalationWebhook,
   toApprovalExecutionEscalationItems,
   type ApprovalExecutionEscalationItem
 } from "@/features/approval/execution-escalation-core-helpers";
+import {
+  normalizeApprovalExecutionListOptions,
+  selectApprovalExecutionsForList
+} from "@/features/approval/execution-list-helpers";
 import { buildApprovalExecutionEscalationRequestedEventPayload } from "@/features/approval/execution-escalation-event-payload-helpers";
 import {
   normalizeApprovalExecutionEscalationPolicy,
@@ -1211,14 +1213,12 @@ export async function listApprovalExecutions(
     "approval execution read requires permission"
   );
   const organizationId = await resolveOrganizationId(context, input.organizationId);
-  const limit = input.limit !== undefined ? Math.min(Math.max(input.limit, 1), 500) : 100;
-  const sort = input.sort ?? "updated_desc";
-  const stalledHoursMin =
-    input.stalledHoursMin !== undefined ? Math.max(input.stalledHoursMin, 0) : undefined;
-  const asOf = input.asOf ?? new Date();
-  if (!Number.isFinite(asOf.getTime())) {
-    throw new ServiceError(400, "asOf must be a valid datetime");
-  }
+  const { limit, sort, stalledHoursMin, asOf } = normalizeApprovalExecutionListOptions({
+    limit: input.limit,
+    sort: input.sort,
+    stalledHoursMin: input.stalledHoursMin,
+    asOf: input.asOf
+  });
 
   let rows = await context.dataAccess.approvals.listExecutions({
     organizationId,
@@ -1228,22 +1228,13 @@ export async function listApprovalExecutions(
     state: input.state
   });
 
-  if (stalledHoursMin !== undefined) {
-    rows = rows.filter((row) => {
-      if (row.state !== "PENDING") {
-        return false;
-      }
-      return calculateExecutionStalledHours(row, asOf) >= stalledHoursMin;
-    });
-  }
-
-  if (sort === "priority_desc") {
-    rows = [...rows].sort((left, right) => compareExecutionsByPriority(left, right, asOf));
-  }
-
-  if (limit > 0 && rows.length > limit) {
-    rows = rows.slice(0, limit);
-  }
+  rows = selectApprovalExecutionsForList({
+    rows,
+    sort,
+    stalledHoursMin,
+    asOf,
+    limit
+  });
 
   await context.dataAccess.audit.append({
     action: "approval.execution.listed",
