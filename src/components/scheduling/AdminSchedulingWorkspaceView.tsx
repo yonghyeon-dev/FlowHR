@@ -7,6 +7,9 @@ import { formatDateTime } from "@/components/scheduling/helpers";
 type AdminSchedulingWorkspaceViewProps = {
   copy: AdminSchedulingCopy;
   runtimeLocale: string;
+  isProductionRuntime: boolean;
+  usesBearerToken: boolean;
+  showDevTools: boolean;
   statusMessage: string;
   pendingLabel: string | null;
   logStats: { total: number; success: number; fail: number };
@@ -14,9 +17,8 @@ type AdminSchedulingWorkspaceViewProps = {
   incidentPanel: AdminSchedulingIncidentPanelState;
   schedules: WorkScheduleDto[];
   selectedSchedule: WorkScheduleDto | null;
-  organizationId: string;
-  adminActorId: string;
-  accessToken: string;
+  sessionOrganizationId: string;
+  sessionActorId: string;
   queryEmployeeId: string;
   fromDate: string;
   toDate: string;
@@ -31,9 +33,6 @@ type AdminSchedulingWorkspaceViewProps = {
   editBreakMinutes: string;
   editIsHoliday: string;
   editNotes: string;
-  onOrganizationIdChange: (value: string) => void;
-  onAdminActorIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onQueryEmployeeIdChange: (value: string) => void;
   onFromDateChange: (value: string) => void;
   onToDateChange: (value: string) => void;
@@ -59,6 +58,9 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
   const {
     copy,
     runtimeLocale,
+    isProductionRuntime,
+    usesBearerToken,
+    showDevTools,
     statusMessage,
     pendingLabel,
     logStats,
@@ -66,9 +68,8 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     incidentPanel,
     schedules,
     selectedSchedule,
-    organizationId,
-    adminActorId,
-    accessToken,
+    sessionOrganizationId,
+    sessionActorId,
     queryEmployeeId,
     fromDate,
     toDate,
@@ -83,9 +84,6 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     editBreakMinutes,
     editIsHoliday,
     editNotes,
-    onOrganizationIdChange,
-    onAdminActorIdChange,
-    onAccessTokenChange,
     onQueryEmployeeIdChange,
     onFromDateChange,
     onToDateChange,
@@ -118,18 +116,15 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => onOrganizationIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.actorIdLabel}
-            <input value={adminActorId} onChange={(event) => onAdminActorIdChange(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <input value={accessToken} onChange={(event) => onAccessTokenChange(event.target.value)} />
-          </label>
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
+            <code>{sessionActorId || "-"}</code>
+          </p>
+          {isProductionRuntime && !usesBearerToken ? (
+            <p className="small fail">
+              {copy.loadErrorPrefix}. <a href="/login">/login</a>
+            </p>
+          ) : null}
           <label>
             {copy.employeeIdLabel}
             <input value={queryEmployeeId} onChange={(event) => onQueryEmployeeIdChange(event.target.value)} />
@@ -273,26 +268,28 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
             </>
           )}
         </article>
-        <article className="panel">
-          <h2>{copy.logsTitle}</h2>
-          <p className="small">
-            {copy.logTotals} {logStats.total} / {copy.logSuccess} {logStats.success} / {copy.logFail} {logStats.fail}
-            {pendingLabel ? ` / ${copy.logRunning} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small muted">{copy.logsEmpty}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} /{" "}
-                  {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.logsTitle}</h2>
+            <p className="small">
+              {copy.logTotals} {logStats.total} / {copy.logSuccess} {logStats.success} / {copy.logFail} {logStats.fail}
+              {pendingLabel ? ` / ${copy.logRunning} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small muted">{copy.logsEmpty}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} /{" "}
+                    {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ) : null}
       </section>
     </main>
   );

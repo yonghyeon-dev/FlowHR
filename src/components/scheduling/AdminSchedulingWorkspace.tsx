@@ -18,8 +18,12 @@ import {
 } from "@/components/scheduling/helpers";
 import { useAdminSchedulingIncidentPanel } from "@/components/scheduling/use-admin-scheduling-incident-panel";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
+
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
 
 export default function AdminSchedulingWorkspace() {
   const { locale } = useI18n();
@@ -28,10 +32,8 @@ export default function AdminSchedulingWorkspace() {
   const copy = adminSchedulingCopyByLocale[locale];
   const monthRange = buildCurrentMonthDateRange();
   const defaultWindow = buildDefaultScheduleWindow();
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
 
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
   const [queryEmployeeId, setQueryEmployeeId] = useState("");
   const [fromDate, setFromDate] = useState(monthRange.fromDate);
   const [toDate, setToDate] = useState(monthRange.toDate);
@@ -56,12 +58,9 @@ export default function AdminSchedulingWorkspace() {
 
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const selectedSchedule = useMemo(
@@ -103,7 +102,9 @@ export default function AdminSchedulingWorkspace() {
       } else {
         headers["x-actor-role"] = "admin";
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-        headers["x-actor-organization-id"] = organizationId.trim();
+        if (organizationId.trim()) {
+          headers["x-actor-organization-id"] = organizationId.trim();
+        }
       }
 
       const response = await fetch(path, {
@@ -140,7 +141,7 @@ export default function AdminSchedulingWorkspace() {
   });
 
   async function loadSchedules() {
-    if (!organizationId.trim()) {
+    if (!usesBearerToken && !organizationId.trim()) {
       setStatusMessage(copy.statusNeedsOrganization);
       return;
     }
@@ -175,7 +176,7 @@ export default function AdminSchedulingWorkspace() {
   }
 
   async function createSchedule() {
-    if (!organizationId.trim()) {
+    if (!usesBearerToken && !organizationId.trim()) {
       setStatusMessage(copy.statusNeedsOrganization);
       return;
     }
@@ -247,6 +248,9 @@ export default function AdminSchedulingWorkspace() {
     <AdminSchedulingWorkspaceView
       copy={copy}
       runtimeLocale={runtimeLocale}
+      isProductionRuntime={isProductionRuntime}
+      usesBearerToken={usesBearerToken}
+      showDevTools={showDevTools}
       statusMessage={statusMessage}
       pendingLabel={pendingLabel}
       logStats={logStats}
@@ -254,9 +258,8 @@ export default function AdminSchedulingWorkspace() {
       incidentPanel={incidentPanel}
       schedules={schedules}
       selectedSchedule={selectedSchedule}
-      organizationId={organizationId}
-      adminActorId={adminActorId}
-      accessToken={accessToken}
+      sessionOrganizationId={organizationId}
+      sessionActorId={adminActorId}
       queryEmployeeId={queryEmployeeId}
       fromDate={fromDate}
       toDate={toDate}
@@ -271,9 +274,6 @@ export default function AdminSchedulingWorkspace() {
       editBreakMinutes={editBreakMinutes}
       editIsHoliday={editIsHoliday}
       editNotes={editNotes}
-      onOrganizationIdChange={setOrganizationId}
-      onAdminActorIdChange={setAdminActorId}
-      onAccessTokenChange={setAccessToken}
       onQueryEmployeeIdChange={setQueryEmployeeId}
       onFromDateChange={setFromDate}
       onToDateChange={setToDate}
