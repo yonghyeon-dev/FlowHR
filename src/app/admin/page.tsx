@@ -215,7 +215,7 @@ export default function AdminDashboardPage() {
           <h2>{isKoLocale ? "인사 관리" : "People management"}</h2>
           <p className="small muted">
             {isKoLocale
-              ? "조직도, 직원 이력, 부서/직급 관리를 전용 화면에서 처리합니다."
+              ? "조직도, 직원 이력, 부서/직급 관리를 전용 페이지에서 처리합니다."
               : "Manage org chart, employee history, departments, and positions in dedicated pages."}
           </p>
           <div className="actions">
@@ -223,7 +223,7 @@ export default function AdminDashboardPage() {
               {isKoLocale ? "인사 관리 열기" : "Open people workspace"}
             </Link>
             <Link className="btn btn-secondary" href="/admin/onboarding">
-              {isKoLocale ? "온보딩/초대" : "Onboarding and invites"}
+              {isKoLocale ? "온보딩 초대" : "Onboarding and invites"}
             </Link>
           </div>
         </article>
@@ -232,7 +232,7 @@ export default function AdminDashboardPage() {
           <h2>{isKoLocale ? "근무/휴가" : "Scheduling and leave"}</h2>
           <p className="small muted">
             {isKoLocale
-              ? "근무 일정과 휴가 정책/발생/캘린더를 분리된 라우트에서 처리합니다."
+              ? "근무 일정과 휴가 정책/발생/캘린더를 분리된 워크스페이스에서 처리합니다."
               : "Manage schedules and leave policy/accrual/calendar in dedicated routes."}
           </p>
           <div className="actions">
@@ -272,7 +272,7 @@ export default function AdminDashboardPage() {
           <h2>{isKoLocale ? "공지/복리후생/채용" : "Notices, benefits, recruitment"}</h2>
           <p className="small muted">
             {isKoLocale
-              ? "직원 커뮤니케이션 및 지원 워크플로를 각각 분리된 화면에서 관리합니다."
+              ? "직원 커뮤니케이션 및 지원 워크플로를 각각 분리된 페이지에서 관리합니다."
               : "Manage communication and support workflows in dedicated workspaces."}
           </p>
           <div className="actions">
