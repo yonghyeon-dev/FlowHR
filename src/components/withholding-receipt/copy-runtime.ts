@@ -283,7 +283,6 @@ const withholdingBlockingReasonKoMap: Record<string, string> = {
   "donationKrw deduction is not eligible for selected employee/year": "기부금 공제는 선택한 직원/연도에 적용 대상이 아닙니다.",
   "housingSavingsKrw deduction is not eligible for selected employee/year": "주택저축 공제는 선택한 직원/연도에 적용 대상이 아닙니다."
 };
-
 function hasHangulText(value: string) { return /[\uac00-\ud7a3]/.test(value); }
 function hasLatinText(value: string) { return /[A-Za-z]/.test(value); }
 
@@ -378,5 +377,3 @@ export function formatDateTimeByLocale(value: string | null | undefined, runtime
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString(runtimeLocale);
 }
-
-
