@@ -14,6 +14,9 @@
   - accepts root `/admin/payroll-year-end-filing/ops` link as valid nav exposure alongside flat step routes
 - aligned legacy regression anchor `e2e-wi0219-self-service-ia-and-approval-queue-split` to current admin IA:
   - accepts dedicated `/admin/approval-executions` shortcut exposure on productized admin dashboard
+- aligned legacy regression anchor `e2e-wi0177-admin-dashboard-bloat-section-removal` to current admin navigation IA:
+  - keeps `/admin/approval-executions` as a core dedicated-route anchor
+  - removes outdated hash-anchor expectations (`/admin#approvals`, `/admin#aggregates`, `/admin#leave-policy`, `/admin#payroll`)
 
 ## Scope
 - process correction only (no additional product feature scope beyond already committed WIs)
