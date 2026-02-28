@@ -17,6 +17,9 @@
 - aligned legacy regression anchor `e2e-wi0177-admin-dashboard-bloat-section-removal` to current admin navigation IA:
   - keeps `/admin/approval-executions` as a core dedicated-route anchor
   - removes outdated hash-anchor expectations (`/admin#approvals`, `/admin#aggregates`, `/admin#leave-policy`, `/admin#payroll`)
+- aligned legacy regression anchor `e2e-wi0394-korean-copy-terminology-normalization-withholding-payslip-contracts` to current locale copy schema:
+  - validates session-context labels (`sessionOrganizationLabel`, `sessionEmployeeLabel`) in withholding/payslip ko copy
+  - removes outdated `employeeIdLabel` / `organizationIdFallbackLabel` expectations after productized session-only UX
 
 ## Scope
 - process correction only (no additional product feature scope beyond already committed WIs)

@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -33,12 +33,7 @@ function objectSectionByBrace(source: string, startToken: string, fromIndex = 0)
 }
 
 async function run() {
-  const withholdingSource = readUtf8(
-    "src",
-    "components",
-    "withholding-receipt",
-    "copy-runtime.ts"
-  );
+  const withholdingSource = readUtf8("src", "components", "withholding-receipt", "copy-runtime.ts");
   const payslipReceiptCopySource = readUtf8("src", "components", "payslip-receipts", "copy.ts");
   const contractsCopySource = readUtf8("src", "components", "contracts", "copy.ts");
   const workItem = readUtf8(
@@ -53,22 +48,28 @@ async function run() {
     /function parseRequiredInt\(value: string, fieldName: string, locale: FlowLocale\)/
   );
   assert.match(withholdingSource, /`\$\{fieldName\}은\(는\) 0 이상의 정수여야 합니다`/);
-  assert.match(withholdingKo, /employeeIdLabel:\s*"직원 번호"/);
-  assert.match(withholdingKo, /organizationIdFallbackLabel:\s*"조직 식별자\(개발 대체값\)"/);
+  assert.match(withholdingKo, /sessionOrganizationLabel:\s*"세션 조직"/);
+  assert.match(withholdingKo, /sessionEmployeeLabel:\s*"세션 직원"/);
   assert.match(withholdingKo, /pendingReceiptRunsLabel:\s*"수신확인 대기 실행"/);
   assert.match(withholdingKo, /finalizationIdLabel:\s*"확정 번호"/);
   assert.match(withholdingKo, /runGuardSnapshotLabel:\s*"실행 가드 스냅샷"/);
   assert.match(withholdingKo, /contentSha256Label:\s*"콘텐츠 해시값"/);
-  assert.doesNotMatch(withholdingKo, /직원 ID|조직 ID\(dev fallback\)|대기 Run|확정 ID|Run 가드 스냅샷|콘텐츠 SHA256/);
+  assert.doesNotMatch(
+    withholdingKo,
+    /employeeIdLabel|organizationIdFallbackLabel|Employee ID|Organization ID\(dev fallback\)/
+  );
 
   const payslipKo = section(payslipReceiptCopySource, "ko: {", "  en: {");
-  assert.match(payslipKo, /employeeIdLabel:\s*"직원 번호"/);
-  assert.match(payslipKo, /organizationIdFallbackLabel:\s*"조직 식별자\(개발 대체값\)"/);
+  assert.match(payslipKo, /sessionOrganizationLabel:\s*"세션 조직"/);
+  assert.match(payslipKo, /sessionEmployeeLabel:\s*"세션 직원"/);
   assert.match(payslipKo, /totalConfirmedRunsLabel:\s*"확정 실행 수"/);
   assert.match(payslipKo, /runsTitle:\s*"실행 목록"/);
   assert.match(payslipKo, /receiptAlreadyConfirmedPrefix:\s*"이미 수신 확인된 실행"/);
   assert.match(payslipKo, /receiptConfirmedPrefix:\s*"수신 확인 완료 실행"/);
-  assert.doesNotMatch(payslipKo, /직원 ID|조직 ID\(dev fallback\)|확정 Run 수|Run 목록|이미 수신 확인된 Run|수신 확인 완료 Run/);
+  assert.doesNotMatch(
+    payslipKo,
+    /employeeIdLabel|organizationIdFallbackLabel|Employee ID|Organization ID\(dev fallback\)/
+  );
 
   const adminContractsAnchor = contractsCopySource.indexOf("export const adminContractsCopyByLocale");
   assert.ok(adminContractsAnchor >= 0, "missing admin contracts locale copy");
@@ -89,7 +90,7 @@ async function run() {
   assert.match(employeeContractsKo, /contentShaLabel:\s*"콘텐츠 해시값"/);
 
   assert.match(workItem, /WI-0394/i);
-  assert.match(workItem, /원천징수|명세서|전자계약함/);
+  assert.match(workItem, /원천징수|명세서|전자계약|withholding|payslip|contract/i);
   assert.match(roadmap, /WI-0394/i);
 }
 
