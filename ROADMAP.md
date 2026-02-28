@@ -928,3 +928,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0646 admin approval-templates product UX (template workspace reframed to work conditions, payroll-range controls collapsed into advanced options, and logs gated to devtools with related-workspaces fallback + e2e-wi0646 regression guard)
 
 - WI-0647 admin people logs devtools gate (/admin/people now derives showDevTools from NEXT_PUBLIC_FLOWHR_DEV_TOOLS and renders request logs only in devtools mode, with related-workspaces fallback in standard runtime + e2e-wi0647 regression guard)
+
+- WI-0648 admin people related-workspaces locale normalization (localized ko/en labels for non-devtools related-workspaces panel and aria-label alignment on /admin/people + e2e-wi0648 regression guard)

@@ -163,7 +163,7 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           <h1 className="page-title">{isKoLocale ? "조직???�사 ?�력" : "Organization chart and HR history"}</h1>
           <p className="page-subtitle">
             {isKoLocale
-              ? "조직?? 직원 비교, ?�사 ?�력 카드�????�면?�서 관리합?�다."
+              ? "조직?? 직원 비교, ?�사 ?�력 카드�????�면?�서 관리합?�다."
               : "Manage org tree, employee comparison, and HR history cards in one screen."}
           </p>
         </div>
@@ -284,11 +284,11 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           />
         </section>
         {showDevTools ? (
-          <section aria-label={isKoLocale ? "?�청 로그" : "Request logs"}>
+          <section aria-label={isKoLocale ? "?�청 로그" : "Request logs"}>
             <AdminPeopleLogsPanel isKoLocale={isKoLocale} stats={stats} pendingLabel={pendingLabel} logs={logs} />
           </section>
         ) : (
-          <section aria-label={isKoLocale ? "Related workspaces" : "Related workspaces"}>
+          <section aria-label={isKoLocale ? "관련 화면 이동" : "Related workspaces"}>
             <AdminPeopleRelatedWorkspacesPanel isKoLocale={isKoLocale} />
           </section>
         )}
