@@ -20,9 +20,7 @@ type EmployeePayslipFilterPanelProps = {
   };
   stats: ApiStats;
   organizationId: string;
-  setOrganizationId: (value: string) => void;
   employeeId: string;
-  setEmployeeId: (value: string) => void;
   periodStart: string;
   setPeriodStart: (value: string) => void;
   periodEnd: string;
@@ -34,8 +32,6 @@ type EmployeePayslipFilterPanelProps = {
   downloadRunsCsv: () => void;
   hasRuns: boolean;
   showDevTools: boolean;
-  accessToken: string;
-  setAccessToken: (value: string) => void;
   pendingLabel: string | null;
   supabaseSession: SupabaseSessionSnapshot | null;
   supabaseSessionError: string | null;
@@ -53,9 +49,7 @@ export function EmployeePayslipFilterPanel({
   payslipStats,
   stats,
   organizationId,
-  setOrganizationId,
   employeeId,
-  setEmployeeId,
   periodStart,
   setPeriodStart,
   periodEnd,
@@ -67,8 +61,6 @@ export function EmployeePayslipFilterPanel({
   downloadRunsCsv,
   hasRuns,
   showDevTools,
-  accessToken,
-  setAccessToken,
   pendingLabel,
   supabaseSession,
   supabaseSessionError,
@@ -134,19 +126,11 @@ export function EmployeePayslipFilterPanel({
 
       <article className="panel">
         <h2>{pageCopy.filters.title}</h2>
+        <p className="small muted">
+          {pageCopy.filters.organizationIdOptional}: <code>{organizationId || "-"}</code> /{" "}
+          {pageCopy.filters.employeeId}: <code>{employeeId || "-"}</code>
+        </p>
         <div className="input-grid">
-          <label>
-            {pageCopy.filters.organizationIdOptional}
-            <input
-              value={organizationId}
-              placeholder={pageCopy.filters.organizationIdPlaceholder}
-              onChange={(event) => setOrganizationId(event.target.value)}
-            />
-          </label>
-          <label>
-            {pageCopy.filters.employeeId}
-            <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
-          </label>
           <label>
             {pageCopy.filters.periodStart}
             <input
@@ -187,17 +171,6 @@ export function EmployeePayslipFilterPanel({
             <summary>
               {pageCopy.devTools.summary} <small>({pageCopy.devTools.hiddenByDefault})</small>
             </summary>
-            <div className="input-grid" style={{ marginTop: 12 }}>
-              <label className="full">
-                {pageCopy.devTools.bearerTokenOptional}
-                <textarea
-                  rows={3}
-                  placeholder={pageCopy.devTools.bearerPlaceholder}
-                  value={accessToken}
-                  onChange={(event) => setAccessToken(event.target.value)}
-                />
-              </label>
-            </div>
             <p className="small">
               {pageCopy.devTools.callCount} {stats.total} ({pageCopy.kpi.ok} {stats.success} / {pageCopy.kpi.fail} {stats.fail}) / {pageCopy.devTools.current} {pendingLabel ?? "-"}
             </p>

@@ -36,9 +36,7 @@ export type EmployeePayslipsPageViewProps = {
   payslipStats: PayslipStats;
   stats: ApiStats;
   organizationId: string;
-  setOrganizationId: (value: string) => void;
   employeeId: string;
-  setEmployeeId: (value: string) => void;
   periodStart: string;
   setPeriodStart: (value: string) => void;
   periodEnd: string;
@@ -50,8 +48,6 @@ export type EmployeePayslipsPageViewProps = {
   downloadRunsCsv: () => void;
   runs: PayrollRunDto[];
   showDevTools: boolean;
-  accessToken: string;
-  setAccessToken: (value: string) => void;
   pendingLabel: string | null;
   supabaseSession: SupabaseSessionSnapshot | null;
   supabaseSessionError: string | null;
