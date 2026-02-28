@@ -11,15 +11,11 @@ type EmployeeAccountOverviewPanelsProps = {
   supabaseSessionError: string | null;
   organizationId: string;
   employeeId: string;
-  accessToken: string;
   periodStart: string;
   periodEnd: string;
   supabaseUrl: string;
   integratedSummaryCards: IntegratedSummaryCard[];
   integratedSubmitChecklistCards: IntegratedSubmitChecklistCard[];
-  onOrganizationIdChange: (value: string) => void;
-  onEmployeeIdChange: (value: string) => void;
-  onAccessTokenChange: (value: string) => void;
   onPeriodStartChange: (value: string) => void;
   onPeriodEndChange: (value: string) => void;
   onRefreshEmployeeSnapshot: () => void;
@@ -35,15 +31,11 @@ export function EmployeeAccountOverviewPanels({
   supabaseSessionError,
   organizationId,
   employeeId,
-  accessToken,
   periodStart,
   periodEnd,
   supabaseUrl,
   integratedSummaryCards,
   integratedSubmitChecklistCards,
-  onOrganizationIdChange,
-  onEmployeeIdChange,
-  onAccessTokenChange,
   onPeriodStartChange,
   onPeriodEndChange,
   onRefreshEmployeeSnapshot,
@@ -82,37 +74,13 @@ export function EmployeeAccountOverviewPanels({
         {showDevTools || !isProductionRuntime ? (
           <details className="details" style={{ marginTop: 12 }}>
             <summary>
-              {isKoLocale ? "개발/검증 설정" : "Dev/Verification Settings"}{" "}
-              <small>{isKoLocale ? "(필요할 때만)" : "(only when needed)"}</small>
+              {isKoLocale ? "세션/조회 설정" : "Session & Query Settings"}
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
-              <label>
-                {isKoLocale ? "조직 식별자 (선택)" : "Organization ID (optional)"}
-                <input
-                  value={organizationId}
-                  placeholder={isKoLocale ? "예: ORG-00001" : "e.g. ORG-00001"}
-                  onChange={(event) => onOrganizationIdChange(event.target.value)}
-                />
-              </label>
-              <label>
-                {isKoLocale ? "내 직원 번호" : "My Employee ID"}
-                <input value={employeeId} onChange={(event) => onEmployeeIdChange(event.target.value)} />
-              </label>
-              {showDevTools ? (
-                <label className="full">
-                  {isKoLocale ? "Bearer 액세스 토큰 (재정의)" : "Bearer access token (override)"}
-                  <textarea
-                    rows={3}
-                    placeholder={
-                      isKoLocale
-                        ? "비어 있으면 Dev Header(로컬) 또는 세션(Bearer)이 사용됩니다."
-                        : "If empty, Dev Header (local) or session (Bearer) will be used."
-                    }
-                    value={accessToken}
-                    onChange={(event) => onAccessTokenChange(event.target.value)}
-                  />
-                </label>
-              ) : null}
+              <p className="small full">
+                {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+                {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+              </p>
               <label>
                 {isKoLocale ? "조회 기간 시작" : "Period Start"}
                 <input type="datetime-local" value={periodStart} onChange={(event) => onPeriodStartChange(event.target.value)} />
@@ -126,7 +94,7 @@ export function EmployeeAccountOverviewPanels({
               <p className="small muted" style={{ marginTop: 10 }}>
                 {isKoLocale ? "(개발) 런타임 Supabase URL" : "(dev) Runtime Supabase URL"}: <code>{supabaseUrl}</code> /{" "}
                 {isKoLocale ? "인증 모드" : "Auth mode"}{" "}
-                {usesBearerToken ? (isKoLocale ? "Bearer 토큰" : "Bearer token") : isKoLocale ? "개발 헤더" : "Dev Header"}
+                {usesBearerToken ? (isKoLocale ? "세션 Bearer" : "Session Bearer") : isKoLocale ? "개발 헤더" : "Dev Header"}
               </p>
             ) : null}
           </details>
