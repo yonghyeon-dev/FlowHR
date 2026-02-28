@@ -48,3 +48,11 @@ export function resolveSchedulingTenantScope(actor: Actor) {
 export function resolveSchedulingEventPublisher(context: SchedulingServiceContextLike): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
 }
+
+export function normalizeRequiredIncidentId(incidentId: string) {
+  const normalized = incidentId.trim();
+  if (!normalized) {
+    throw new ServiceError(400, "incidentId is required");
+  }
+  return normalized;
+}
