@@ -2,11 +2,16 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
-import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
 import { leaveCalendarCopyByLocale } from "@/components/leave-calendar/copy";
 import type { ApiLog, LeaveCalendarResponse } from "@/components/leave-calendar/types";
 import { addDays, defaultCalendarRange, toDateInputValue, toSeoulIsoStart } from "@/components/leave-calendar/types";
+
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function LeaveCalendarConsole() {
   const { locale } = useI18n();
   const copy = leaveCalendarCopyByLocale[locale];
@@ -26,9 +31,6 @@ export default function LeaveCalendarConsole() {
   } as const;
 
   const defaultRange = defaultCalendarRange();
-  const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
-  const [adminActorId, setAdminActorId] = useStickyStringState("flowhr:ctx:adminId", "ADM-1001");
-  const [accessToken, setAccessToken] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [includePending, setIncludePending] = useState(false);
   const [overlapWarningThreshold, setOverlapWarningThreshold] = useState("2");
@@ -39,13 +41,11 @@ export default function LeaveCalendarConsole() {
   const [result, setResult] = useState<LeaveCalendarResponse | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
-  const bearerToken =
-    accessToken.trim().length > 0
-      ? accessToken.trim()
-      : isProductionRuntime
-        ? (supabaseSession?.accessToken ?? "")
-        : "";
+  const organizationId = (supabaseSession?.organizationId ?? "").trim();
+  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
   const stats = useMemo(() => {
     const total = logs.length;
@@ -54,6 +54,7 @@ export default function LeaveCalendarConsole() {
   }, [logs]);
   async function callApi() {
     if (!organizationId.trim()) {
+      setStatusMessage(locale === "ko" ? "세션 조직 정보가 없어 조회할 수 없습니다." : "Missing session organization context; cannot query.");
       return;
     }
     if (!fromDate || !toDate) {
@@ -134,10 +135,10 @@ export default function LeaveCalendarConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.queryTitle}</h2>
-          <label>
-            {copy.organizationIdLabel}
-            <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} />
-          </label>
+          <p className="small">
+            {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+            {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{adminActorId || "-"}</code>
+          </p>
           <label>
             {copy.departmentIdOptionalLabel}
             <input value={departmentId} onChange={(event) => setDepartmentId(event.target.value)} />
@@ -171,14 +172,6 @@ export default function LeaveCalendarConsole() {
               />
             </label>
           </div>
-          <label>
-            {copy.adminActorIdFallbackLabel}
-            <input value={adminActorId} onChange={(event) => setAdminActorId(event.target.value)} />
-          </label>
-          <label>
-            {copy.accessTokenLabel}
-            <input value={accessToken} onChange={(event) => setAccessToken(event.target.value)} placeholder={copy.bearerTokenPlaceholder} />
-          </label>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void callApi()} disabled={!organizationId.trim() || pendingLabel !== null}>
               {copy.loadCalendarAction}
@@ -265,23 +258,7 @@ export default function LeaveCalendarConsole() {
           {result && result.entries.length > 80 ? <p className="small">{copy.showingFirstEntriesSuffix}</p> : null}
         </article>
         <article className="panel">
-          <h2>{copy.apiLogsTitle}</h2>
-          <p className="small">
-            {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
-            {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
-          </p>
-          {logs.length === 0 ? (
-            <p className="small">{copy.noApiCallYet}</p>
-          ) : (
-            <ul className="log-list">
-              {logs.map((log) => (
-                <li key={log.id}>
-                  <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
-                  <time>{log.at}</time>
-                </li>
-              ))}
-            </ul>
-          )}
+          <h2>{locale === "ko" ? "워크스페이스 이동" : "Workspace shortcuts"}</h2>
           <div className="panel-actions">
             <Link href="/admin" className="btn btn-secondary">
               {copy.backToAdminAction}
@@ -291,6 +268,27 @@ export default function LeaveCalendarConsole() {
             </Link>
           </div>
         </article>
+        {showDevTools ? (
+          <article className="panel">
+            <h2>{copy.apiLogsTitle}</h2>
+            <p className="small">
+              {copy.apiLogsTotalLabel} {stats.total} / {copy.apiLogsSuccessLabel} {stats.success} / {copy.apiLogsFailLabel} {stats.fail}
+              {pendingLabel ? ` / ${copy.apiLogsRunningLabel} ${pendingLabel}` : ""}
+            </p>
+            {logs.length === 0 ? (
+              <p className="small">{copy.noApiCallYet}</p>
+            ) : (
+              <ul className="log-list">
+                {logs.map((log) => (
+                  <li key={log.id}>
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? copy.okLabel : copy.failLabel}</span> {log.label} / {log.status}
+                    <time>{log.at}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ) : null}
       </section>
     </main>
   );
