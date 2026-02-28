@@ -10,6 +10,11 @@ import {
   lastDayOfMonthLocal,
   toIso
 } from "@/app/admin/page-helpers";
+import {
+  buildAdminDashboardFocusCards,
+  summarizeAdminDashboardFocusCards,
+  type AdminDashboardFocusCard
+} from "@/app/admin/page-focus-cards";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
@@ -30,6 +35,26 @@ const EMPTY_SUMMARY: AdminSummary = {
   refreshedAt: null
 };
 
+function resolveFocusCardLabel(card: AdminDashboardFocusCard) {
+  if (card.key === "attendance") {
+    return "Pending attendance approvals";
+  }
+  if (card.key === "leave") {
+    return "Pending leave approvals";
+  }
+  return "Pending payroll previews";
+}
+
+function resolveFocusCardSeverityCopy(card: AdminDashboardFocusCard) {
+  if (card.severity === "critical") {
+    return "Critical";
+  }
+  if (card.severity === "watch") {
+    return "Watch";
+  }
+  return "Stable";
+}
+
 export default function AdminDashboardPage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
@@ -44,6 +69,11 @@ export default function AdminDashboardPage() {
   const [summary, setSummary] = useState<AdminSummary>(EMPTY_SUMMARY);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const focusCards = useMemo(() => buildAdminDashboardFocusCards(summary), [summary]);
+  const focusPriority = useMemo(
+    () => summarizeAdminDashboardFocusCards(focusCards),
+    [focusCards]
+  );
 
   const bearerToken = supabaseSession?.accessToken?.trim() ?? "";
   const usesBearerToken = bearerToken.length > 0;
@@ -172,6 +202,27 @@ export default function AdminDashboardPage() {
       ) : null}
 
       {loadError ? <p className="small fail">{loadError}</p> : null}
+
+      <section className="panel">
+        <h2>Priority queues</h2>
+        <p className="small muted">
+          Focus on the highest-risk backlog first and jump directly to the matching workspace.
+        </p>
+        <p className="small muted">
+          {focusPriority.critical} critical | {focusPriority.watch} watch | {focusPriority.stable} stable
+        </p>
+        <div className="actions">
+          {focusCards.map((card) => (
+            <Link
+              key={card.key}
+              className={card.severity === "critical" ? "btn btn-primary" : "btn btn-secondary"}
+              href={card.href}
+            >
+              {resolveFocusCardLabel(card)} ({card.count}) - {resolveFocusCardSeverityCopy(card)}
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <section className="kpi-strip">
         <article className="kpi-card">
