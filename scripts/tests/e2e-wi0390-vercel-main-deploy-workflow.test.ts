@@ -67,13 +67,23 @@ function run() {
   );
   assert.match(
     workflowSource,
+    /scope_candidates=\("__UNSCOPED__"\)/,
+    "workflow should include unscoped context before scoped candidates"
+  );
+  assert.match(
+    workflowSource,
     /scope_candidates\+=\("\$GITHUB_REPOSITORY_OWNER"\)/,
     "workflow should include repository-owner scope as fallback candidate"
   );
   assert.match(
     workflowSource,
-    /All scoped vercel .* attempts failed\. Tried scopes:/,
-    "workflow should fail with explicit scope-candidate diagnostics when all scoped attempts fail"
+    /All vercel .* attempts failed.*Tried contexts:/,
+    "workflow should fail with explicit context diagnostics when all attempts fail"
+  );
+  assert.match(
+    workflowSource,
+    /npx vercel@latest whoami --token "\$VERCEL_TOKEN"/,
+    "workflow should validate Vercel token before deploy flow"
   );
   assert.match(
     workflowSource,

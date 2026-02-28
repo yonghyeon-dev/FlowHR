@@ -46,7 +46,7 @@ jobs:
           VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE || '' }}
           VERCEL_PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME || 'flowhr' }}
         run: |
-          scope_candidates=()
+          scope_candidates=("__UNSCOPED__")
           if [ -n "$VERCEL_SCOPE" ]; then
             scope_candidates+=("$VERCEL_SCOPE")
           fi
@@ -69,25 +69,56 @@ jobs:
           done
 
           if [ ${#unique_scopes[@]} -eq 0 ]; then
-            echo "::error::No Vercel scope candidate is available. Configure VERCEL_SCOPE."
+            echo "::error::No Vercel context candidate is available."
             exit 1
           fi
+
+          echo "Trying Vercel deployment contexts in order: ${unique_scopes[*]}"
 
           run_vercel() {
             local command="$1"
             shift
+            local access_error_only=true
 
             for scope in "${unique_scopes[@]}"; do
-              if npx vercel@latest "$command" "$@" --scope "$scope" --token "$VERCEL_TOKEN"; then
-                echo "vercel $command succeeded with scope '$scope'"
-                return 0
+              local output
+              local context_label="$scope"
+              if [ "$scope" = "__UNSCOPED__" ]; then
+                context_label="unscoped"
+                if output="$(npx vercel@latest "$command" "$@" --token "$VERCEL_TOKEN" 2>&1)"; then
+                  echo "$output"
+                  echo "vercel $command succeeded with context '$context_label'"
+                  return 0
+                fi
+              else
+                if output="$(npx vercel@latest "$command" "$@" --scope "$scope" --token "$VERCEL_TOKEN" 2>&1)"; then
+                  echo "$output"
+                  echo "vercel $command succeeded with context '$context_label'"
+                  return 0
+                fi
               fi
-              echo "::warning::Scoped vercel $command failed for '$scope'."
+
+              echo "$output"
+              if echo "$output" | grep -qiE "scope-not-accessible|do not have access to the specified account"; then
+                echo "::warning::Vercel $command failed with access error for context '$context_label'."
+              else
+                access_error_only=false
+                echo "::warning::Vercel $command failed for context '$context_label'."
+              fi
             done
 
-            echo "::error::All scoped vercel $command attempts failed. Tried scopes: ${unique_scopes[*]}"
+            if [ "$access_error_only" = true ]; then
+              echo "::error::All vercel $command attempts failed with context-access errors. Tried contexts: ${unique_scopes[*]}"
+            else
+              echo "::error::All vercel $command attempts failed. Tried contexts: ${unique_scopes[*]}"
+            fi
             return 1
           }
+
+          if ! npx vercel@latest whoami --token "$VERCEL_TOKEN"; then
+            echo "::error::Failed to authenticate Vercel token. Verify VERCEL_TOKEN in production environment secrets."
+            exit 1
+          fi
 
           run_vercel link --yes --project "$VERCEL_PROJECT_NAME"
           run_vercel pull --yes --environment=production
