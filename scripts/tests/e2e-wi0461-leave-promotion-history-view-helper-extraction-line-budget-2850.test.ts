@@ -29,7 +29,6 @@ async function run() {
   assert.match(leaveService, /toPromotionDeliverySummaryView/);
   assert.match(leaveService, /toPromotionDeliveryRecipientView/);
   assert.match(leaveService, /toRetryCountByEmployeeId/);
-  assert.match(leaveService, /toRecipientStatus/);
 
   assert.doesNotMatch(leaveService, /function toPromotionTargetSnapshots\(/);
   assert.doesNotMatch(leaveService, /function toPromotionDeliverySummaryView\(/);

@@ -1,12 +1,15 @@
-﻿import type { Actor } from "@/lib/actor";
+import type { Actor } from "@/lib/actor";
 import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
 import {
+  normalizeRecipientEmployeeIds,
+  persistPromotionDeliveryHistory,
+  resolvePromotionRecipientStats
+} from "@/features/leave/promotion-delivery-history-core-helpers";
+import {
   buildPromotionNoticeMessage,
   type PromotionDeliveryProvider,
-  type PromotionEmailTemplateConfig,
-  type PromotionWebhookConfig,
   sendPromotionEmailTemplate,
   sendPromotionWebhook,
   resolvePromotionEmailTemplateConfig,
@@ -15,15 +18,12 @@ import {
 import {
   toPromotionDeliveryRecipientView,
   toPromotionDeliverySummaryView,
-  toPromotionDispatchRecipients,
   toPromotionTargetSnapshots,
   toPromotionTargetSnapshotsFromRecipients,
-  toRecipientStatus,
   toRetryCountByEmployeeId,
   type PromotionDeliveryRecipientView,
   type PromotionDeliveryStatus,
-  type PromotionDeliverySummaryView,
-  type PromotionTargetSnapshot
+  type PromotionDeliverySummaryView
 } from "@/features/leave/promotion-history-views";
 import {
   DEFAULT_ALLOW_HALF_DAY,
@@ -171,92 +171,6 @@ type ListLeaveRequestsInput = {
   employeeId?: string;
   state?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 };
-
-async function persistPromotionDeliveryHistory(
-  context: ServiceContext,
-  input: {
-    organizationId: string;
-    asOf: string;
-    includeUpcoming: boolean;
-    dryRun: boolean;
-    channel: "webhook" | "email_template";
-    provider: PromotionDeliveryProvider | null;
-    status: PromotionDeliveryStatus;
-    announcementTitle: string;
-    announcementBody: string;
-    targets: PromotionTargetSnapshot[];
-    sentTargetCount: number;
-    webhookSource: string | null;
-    emailTemplateSource: string | null;
-    emailTemplateId: string | null;
-    dispatchedAt: Date | null;
-    actorRole: string;
-    actorId: string | null;
-    retryOfDeliveryId?: string | null;
-    retryCountByEmployeeId?: Record<string, number>;
-    attempted: boolean;
-    failureMessage?: string | null;
-  }
-) {
-  const asOf = new Date(input.asOf);
-  const recipients = input.targets.filter((target) => (target.email?.trim() || "").length > 0);
-  const missingEmailCount = Math.max(input.targets.length - recipients.length, 0);
-  const delivery = await context.dataAccess.leavePromotionDeliveries.create({
-    organizationId: input.organizationId,
-    asOf,
-    includeUpcoming: input.includeUpcoming,
-    dryRun: input.dryRun,
-    channel: input.channel,
-    provider: input.provider,
-    status: input.status,
-    announcementTitle: input.announcementTitle,
-    announcementBody: input.announcementBody,
-    targetCount: input.targets.length,
-    recipientCount: recipients.length,
-    missingEmailCount,
-    sentTargetCount: input.sentTargetCount,
-    webhookSource: input.webhookSource,
-    emailTemplateSource: input.emailTemplateSource,
-    emailTemplateId: input.emailTemplateId,
-    dispatchedAt: input.dispatchedAt,
-    requestedByActorRole: input.actorRole,
-    requestedByActorId: input.actorId,
-    retryOfDeliveryId: input.retryOfDeliveryId ?? null
-  });
-
-  for (const target of input.targets) {
-    const status = toRecipientStatus(target, {
-      status: input.status,
-      channel: input.channel,
-      dryRun: input.dryRun,
-      attempted: input.attempted,
-      sentAt: input.dispatchedAt
-    });
-    await context.dataAccess.leavePromotionDeliveries.createRecipient({
-      deliveryId: delivery.id,
-      employeeId: target.employeeId,
-      email: target.email,
-      name: target.name,
-      remainingDays: target.remainingDays,
-      grantedDays: target.grantedDays,
-      usedDays: target.usedDays,
-      lastAccrualYear: target.lastAccrualYear,
-      eligibleNow: target.eligibleNow,
-      status,
-      lastError: status === "FAILED" ? input.failureMessage ?? null : null,
-      sentAt: status === "SENT" ? input.dispatchedAt : null,
-      retryCount: input.retryOfDeliveryId
-        ? Math.max(0, (input.retryCountByEmployeeId?.[target.employeeId] ?? 0) + 1)
-        : 0
-    });
-  }
-
-  return {
-    deliveryId: delivery.id,
-    recipientCount: recipients.length,
-    missingEmailCount
-  };
-}
 
 function resolveTargetOrganizationId(actor: Actor | null, inputOrganizationId?: string) {
   const candidate = (inputOrganizationId ?? actor?.organizationId ?? "").trim();
@@ -1650,28 +1564,12 @@ export async function dispatchAnnualLeavePromotionNotice(
   const requestedTemplateId = input.emailTemplateId?.trim() || "";
   const configuredTemplateId = (process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID ?? "").trim();
   const emailTemplateId = requestedTemplateId || configuredTemplateId || null;
-  const targetCount = preview.targets.length;
   const targetSnapshots = toPromotionTargetSnapshots(preview.targets);
-  const recipients = preview.targets.flatMap((target) => {
-    const email = target.email?.trim() || "";
-    if (!email) {
-      return [];
-    }
-    return [
-      {
-        employeeId: target.employeeId,
-        email,
-        name: target.name,
-        remainingDays: target.remainingDays,
-        grantedDays: target.grantedDays,
-        usedDays: target.usedDays,
-        lastAccrualYear: target.lastAccrualYear,
-        eligibleNow: target.eligibleNow
-      }
-    ];
-  });
-  const recipientCount = recipients.length;
-  const missingEmailCount = Math.max(targetCount - recipientCount, 0);
+  const recipientStats = resolvePromotionRecipientStats(targetSnapshots);
+  const targetCount = recipientStats.targetCount;
+  const recipients = recipientStats.recipients;
+  const recipientCount = recipientStats.recipientCount;
+  const missingEmailCount = recipientStats.missingEmailCount;
   const webhook = channel === "webhook" ? resolvePromotionWebhookConfig() : null;
   const emailTemplateConfig =
     channel === "email_template" ? resolvePromotionEmailTemplateConfig() : null;
@@ -1685,7 +1583,7 @@ export async function dispatchAnnualLeavePromotionNotice(
         : null;
 
   if (channel === "email_template" && attempted && !emailTemplateId) {
-    await persistPromotionDeliveryHistory(context, {
+    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
       organizationId: preview.organizationId,
       asOf: preview.asOf,
       includeUpcoming,
@@ -1730,7 +1628,7 @@ export async function dispatchAnnualLeavePromotionNotice(
   }
 
   if (channel === "webhook" && attempted && !webhook) {
-    await persistPromotionDeliveryHistory(context, {
+    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
       organizationId: preview.organizationId,
       asOf: preview.asOf,
       includeUpcoming,
@@ -1775,7 +1673,7 @@ export async function dispatchAnnualLeavePromotionNotice(
   }
 
   if (channel === "email_template" && attempted && !emailTemplateConfig) {
-    await persistPromotionDeliveryHistory(context, {
+    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
       organizationId: preview.organizationId,
       asOf: preview.asOf,
       includeUpcoming,
@@ -1875,7 +1773,7 @@ export async function dispatchAnnualLeavePromotionNotice(
           error: error instanceof Error ? error.message : "unknown error"
         }
       });
-      await persistPromotionDeliveryHistory(context, {
+      await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
         organizationId: preview.organizationId,
         asOf: preview.asOf,
         includeUpcoming,
@@ -1907,7 +1805,7 @@ export async function dispatchAnnualLeavePromotionNotice(
 
   const sentTargetCount =
     status === "dispatched" ? (channel === "webhook" ? targetCount : recipientCount) : 0;
-  const persisted = await persistPromotionDeliveryHistory(context, {
+  const persisted = await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
     organizationId: preview.organizationId,
     asOf: preview.asOf,
     includeUpcoming,
@@ -2046,21 +1944,6 @@ export async function dispatchAnnualLeavePromotionNotice(
       dispatchedAt
     }
   };
-}
-
-function normalizeRecipientEmployeeIds(values?: string[]) {
-  if (!values) {
-    return [];
-  }
-  const deduped = new Set<string>();
-  for (const value of values) {
-    const normalized = value.trim();
-    if (!normalized) {
-      continue;
-    }
-    deduped.add(normalized);
-  }
-  return [...deduped];
 }
 
 export async function listLeavePromotionDeliveries(
@@ -2264,10 +2147,11 @@ export async function retryLeavePromotionDelivery(
         })
       : sourceRecipients.filter((recipient) => recipient.status === "FAILED");
   const selectedTargets = toPromotionTargetSnapshotsFromRecipients(selectedRecipients);
-  const dispatchRecipients = toPromotionDispatchRecipients(selectedTargets);
-  const selectedTargetCount = selectedTargets.length;
-  const recipientCount = dispatchRecipients.length;
-  const missingEmailCount = Math.max(selectedTargetCount - recipientCount, 0);
+  const selectedRecipientStats = resolvePromotionRecipientStats(selectedTargets);
+  const dispatchRecipients = selectedRecipientStats.recipients;
+  const selectedTargetCount = selectedRecipientStats.targetCount;
+  const recipientCount = selectedRecipientStats.recipientCount;
+  const missingEmailCount = selectedRecipientStats.missingEmailCount;
 
   const dryRun = input.dryRun ?? false;
   const attempted = !dryRun && recipientCount > 0;
@@ -2300,7 +2184,7 @@ export async function retryLeavePromotionDelivery(
   };
 
   if (attempted && !emailTemplateId) {
-    await persistPromotionDeliveryHistory(context, {
+    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
       ...persistBase,
       status: "failed",
       sentTargetCount: 0,
@@ -2329,7 +2213,7 @@ export async function retryLeavePromotionDelivery(
   }
 
   if (attempted && !emailTemplateConfig) {
-    await persistPromotionDeliveryHistory(context, {
+    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
       ...persistBase,
       status: "failed",
       sentTargetCount: 0,
@@ -2393,7 +2277,7 @@ export async function retryLeavePromotionDelivery(
           error: error instanceof Error ? error.message : "unknown error"
         }
       });
-      await persistPromotionDeliveryHistory(context, {
+      await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
         ...persistBase,
         status: "failed",
         sentTargetCount: 0,
@@ -2407,7 +2291,7 @@ export async function retryLeavePromotionDelivery(
   }
 
   const sentTargetCount = status === "dispatched" ? recipientCount : 0;
-  const persisted = await persistPromotionDeliveryHistory(context, {
+  const persisted = await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
     ...persistBase,
     status,
     sentTargetCount,
@@ -2520,5 +2404,6 @@ export const leaveServiceInternals = {
   resolveSeoulYearEnd,
   renderPromotionMessageTemplate
 };
+
 
 
