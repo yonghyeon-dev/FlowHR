@@ -79,7 +79,10 @@ import {
   plannedMinutesForGeneratedWindow,
   plannedMinutesForSchedule
 } from "@/features/scheduling/rotation-fairness-core-helpers";
-import { buildRotationBalanceSummary } from "@/features/scheduling/rotation-balance-report-helpers";
+import {
+  buildRotationBalanceReportGeneratedAuditPayload,
+  buildRotationBalanceSummary
+} from "@/features/scheduling/rotation-balance-report-helpers";
 import {
   buildRotationOffsetEvaluation,
   sortRotationOffsetEvaluations
@@ -1886,17 +1889,17 @@ export async function listWorkScheduleRotationBalance(
     organizationId: resolveTenantScope(actor) ?? undefined,
     actorRole: actor.role,
     actorId: actor.id,
-    payload: {
-      periodStart: input.periodStart.toISOString(),
-      periodEnd: input.periodEnd.toISOString(),
-      employeeId: input.employeeId ?? null,
+    payload: buildRotationBalanceReportGeneratedAuditPayload({
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      employeeId: input.employeeId,
       schedules: schedules.length,
-      activeWeekdays: activeWeekdaysCount,
+      activeWeekdaysCount,
       weekdayGap,
       plannedMinutesGap,
       grade,
       recommendations
-    }
+    })
   });
 
   return {
