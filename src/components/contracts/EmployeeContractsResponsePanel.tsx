@@ -93,18 +93,24 @@ export function EmployeeContractsResponsePanel({
       });
     }
     if (signatureEvidence) {
+      const evidenceFormatDetail =
+        signatureEvidence.format === "json"
+          ? copy.responseHistoryEvidenceFormatJsonLabel
+          : copy.responseHistoryEvidenceFormatTextLabel;
       entries.push({
         id: `evidence-${selected.id}-${signatureEvidence.generatedAt}-${signatureEvidence.format}`,
         type: "EVIDENCE",
         label: copy.responseHistoryEvidenceLoadedLabel,
         occurredAt: signatureEvidence.generatedAt,
-        detail: signatureEvidence.format.toUpperCase()
+        detail: evidenceFormatDetail
       });
     }
     return entries.sort(
       (left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime()
     );
   }, [
+    copy.responseHistoryEvidenceFormatJsonLabel,
+    copy.responseHistoryEvidenceFormatTextLabel,
     copy.responseHistoryEvidenceLoadedLabel,
     copy.responseHistoryRejectedLabel,
     copy.responseHistorySignedLabel,
