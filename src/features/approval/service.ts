@@ -16,6 +16,15 @@ import type { DomainEventPublisher } from "@/features/shared/domain-event-publis
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
 import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
+import {
+  calculateExecutionStalledHours,
+  compareExecutionsByPriority,
+  resolveApprovalEscalationWebhookConfig,
+  sendApprovalEscalationWebhook,
+  toApprovalExecutionEscalationItems,
+  type ApprovalEscalationWebhookProvider,
+  type ApprovalExecutionEscalationItem
+} from "@/features/approval/execution-escalation-core-helpers";
 
 const defaultApprovalPolicyRoles: Record<ApprovalDomain, string> = {
   ATTENDANCE: "manager",
@@ -85,27 +94,6 @@ type TriggerApprovalExecutionEscalationInput = {
   asOf?: Date;
   dryRun?: boolean;
   notificationChannel?: string;
-};
-
-type ApprovalExecutionEscalationDecision = "REQUESTED" | "DRY_RUN";
-
-type ApprovalExecutionEscalationItem = {
-  executionId: string;
-  domain: ApprovalDomain;
-  targetEntityType: string;
-  targetEntityId: string;
-  stalledHours: number;
-  currentStageIndex: number;
-  totalStages: number;
-  decision: ApprovalExecutionEscalationDecision;
-};
-
-type ApprovalEscalationWebhookProvider = "discord" | "slack";
-
-type ApprovalEscalationWebhookConfig = {
-  url: string;
-  provider: ApprovalEscalationWebhookProvider;
-  source: string;
 };
 
 type CreateApprovalDelegationInput = {
@@ -617,114 +605,6 @@ function isDelegationActiveAt(delegation: ApprovalDelegationEntity, now: Date) {
   return delegation.startsAt <= now && delegation.endsAt >= now && delegation.active;
 }
 
-function resolveExecutionDomainPriority(domain: ApprovalDomain) {
-  if (domain === "PAYROLL") {
-    return 300;
-  }
-  if (domain === "LEAVE") {
-    return 200;
-  }
-  return 100;
-}
-
-function calculateExecutionStalledHours(execution: ApprovalExecutionEntity, asOf: Date) {
-  return Math.max(0, (asOf.getTime() - execution.updatedAt.getTime()) / (60 * 60 * 1000));
-}
-
-function calculateExecutionPriorityScore(execution: ApprovalExecutionEntity, asOf: Date) {
-  const pendingWeight = execution.state === "PENDING" ? 100_000 : execution.state === "REJECTED" ? 1_000 : 0;
-  const stalledHours = calculateExecutionStalledHours(execution, asOf);
-  const stalledWeight = Math.round(stalledHours * 100);
-  const domainWeight = resolveExecutionDomainPriority(execution.domain);
-  const stageWeight =
-    execution.state === "PENDING"
-      ? Math.max(0, execution.totalStages - execution.currentStageIndex + 1) * 10
-      : 0;
-  return pendingWeight + stalledWeight + domainWeight + stageWeight;
-}
-
-function compareExecutionsByPriority(left: ApprovalExecutionEntity, right: ApprovalExecutionEntity, asOf: Date) {
-  const byPriority =
-    calculateExecutionPriorityScore(right, asOf) - calculateExecutionPriorityScore(left, asOf);
-  if (byPriority !== 0) {
-    return byPriority;
-  }
-
-  const byUpdatedAt = left.updatedAt.getTime() - right.updatedAt.getTime();
-  if (byUpdatedAt !== 0) {
-    return byUpdatedAt;
-  }
-
-  return left.id.localeCompare(right.id);
-}
-
-function normalizeEnvValue(value: string | undefined) {
-  return (value ?? "").trim();
-}
-
-function resolveApprovalEscalationWebhookProvider(
-  webhookUrl: string
-): ApprovalEscalationWebhookProvider {
-  const configured = normalizeEnvValue(
-    process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_PROVIDER ??
-      process.env.FLOWHR_ALERT_WEBHOOK_PROVIDER
-  ).toLowerCase();
-  if (configured === "discord" || configured === "slack") {
-    return configured;
-  }
-
-  if (
-    webhookUrl.includes("discord.com/api/webhooks/") ||
-    webhookUrl.includes("discordapp.com/api/webhooks/")
-  ) {
-    return "discord";
-  }
-  if (webhookUrl.includes("hooks.slack.com/services/")) {
-    return "slack";
-  }
-  return "slack";
-}
-
-function resolveApprovalEscalationWebhookConfig(): ApprovalEscalationWebhookConfig | null {
-  const candidates: Array<{ source: string; value: string }> = [
-    {
-      source: "FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_URL",
-      value: normalizeEnvValue(process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_WEBHOOK_URL)
-    },
-    {
-      source: "FLOWHR_APPROVAL_EXECUTION_ESCALATION_DISCORD_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_DISCORD_WEBHOOK)
-    },
-    {
-      source: "FLOWHR_APPROVAL_EXECUTION_ESCALATION_SLACK_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_APPROVAL_EXECUTION_ESCALATION_SLACK_WEBHOOK)
-    },
-    {
-      source: "FLOWHR_ALERT_WEBHOOK_URL",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_WEBHOOK_URL)
-    },
-    {
-      source: "FLOWHR_ALERT_DISCORD_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_DISCORD_WEBHOOK)
-    },
-    {
-      source: "FLOWHR_ALERT_SLACK_WEBHOOK",
-      value: normalizeEnvValue(process.env.FLOWHR_ALERT_SLACK_WEBHOOK)
-    }
-  ];
-
-  const matched = candidates.find((candidate) => candidate.value.length > 0);
-  if (!matched) {
-    return null;
-  }
-
-  return {
-    url: matched.value,
-    provider: resolveApprovalEscalationWebhookProvider(matched.value),
-    source: matched.source
-  };
-}
-
 function buildApprovalExecutionEscalationMessage(input: {
   organizationId: string;
   requestedAt: string;
@@ -757,26 +637,6 @@ function buildApprovalExecutionEscalationMessage(input: {
     lines.push(`  - ... and ${input.items.length - 50} more`);
   }
   return lines.join("\n");
-}
-
-async function sendApprovalEscalationWebhook(config: ApprovalEscalationWebhookConfig, message: string) {
-  const payload =
-    config.provider === "discord"
-      ? JSON.stringify({ content: message })
-      : JSON.stringify({ text: message });
-
-  const response = await fetch(config.url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: payload
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`${config.provider} webhook request failed: ${response.status} ${body}`);
-  }
 }
 
 export async function assertApprovalPolicyGate(
@@ -1511,16 +1371,11 @@ export async function triggerApprovalExecutionEscalation(
     executions = executions.slice(0, limit);
   }
 
-  const items: ApprovalExecutionEscalationItem[] = executions.map((execution) => ({
-    executionId: execution.id,
-    domain: execution.domain,
-    targetEntityType: execution.targetEntityType,
-    targetEntityId: execution.targetEntityId,
-    stalledHours: Math.round(calculateExecutionStalledHours(execution, asOf) * 10) / 10,
-    currentStageIndex: execution.currentStageIndex,
-    totalStages: execution.totalStages,
-    decision: dryRun ? "DRY_RUN" : "REQUESTED"
-  }));
+  const items: ApprovalExecutionEscalationItem[] = toApprovalExecutionEscalationItems({
+    executions,
+    asOf,
+    dryRun
+  });
 
   const webhook = resolveApprovalEscalationWebhookConfig();
   const payloadBase = {
