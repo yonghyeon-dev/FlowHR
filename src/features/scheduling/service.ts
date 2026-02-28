@@ -126,9 +126,8 @@ import {
 } from "@/features/scheduling/anomaly-service-context-helpers";
 import {
   buildScheduleAnomalySideEffectContext,
-  emitAnomalyAlertIfEnabled,
   emitAnomalyCockpitTicketRequestsIfEnabled,
-  emitAnomalyEscalationIfEnabled
+  emitAnomalySummarySideEffects
 } from "@/features/scheduling/anomaly-side-effect-helpers";
 import {
   buildScheduleAnomalyIncidentEscalationRequestFailedPayload,
@@ -1980,15 +1979,7 @@ export async function listScheduleAttendanceAnomalies(
     dataAccess: context.dataAccess,
     publish: eventPublisher.publish.bind(eventPublisher)
   });
-  await emitAnomalyAlertIfEnabled(sideEffectContext, {
-    window: normalizedWindow,
-    lateThresholdMinutes,
-    evaluatedSchedules: schedules.length,
-    anomalies,
-    lateCount,
-    noShowCount
-  });
-  await emitAnomalyEscalationIfEnabled(sideEffectContext, {
+  await emitAnomalySummarySideEffects(sideEffectContext, {
     window: normalizedWindow,
     lateThresholdMinutes,
     evaluatedSchedules: schedules.length,
