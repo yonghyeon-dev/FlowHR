@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { resolveAdminApprovalTemplatesLocaleCopy } from "@/app/admin/approval-templates/page-locale-helpers";
@@ -230,7 +231,7 @@ export default function AdminApprovalTemplatesPage() {
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>{copy.context.title}</h2>
+          <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
           <p className="small muted">
             {copy.context.organizationId}: <code>{organizationId || "-"}</code> / {copy.context.adminActorId}:{" "}
             <code>{adminActorId || "-"}</code>
@@ -264,28 +265,31 @@ export default function AdminApprovalTemplatesPage() {
             </select>
           </label>
           {domain === "PAYROLL" ? (
-            <>
-              <label>
-                {copy.create.payrollGrossMin}
-                <input
-                  type="number"
-                  min={0}
-                  value={payrollGrossPayMinKrw}
-                  onChange={(event) => setPayrollGrossPayMinKrw(event.target.value)}
-                  placeholder={copy.create.payrollGrossMinPlaceholder}
-                />
-              </label>
-              <label>
-                {copy.create.payrollGrossMax}
-                <input
-                  type="number"
-                  min={0}
-                  value={payrollGrossPayMaxKrw}
-                  onChange={(event) => setPayrollGrossPayMaxKrw(event.target.value)}
-                  placeholder={copy.create.payrollGrossMaxPlaceholder}
-                />
-              </label>
-            </>
+            <details className="details">
+              <summary>{isKoLocale ? "고급 조건" : "Advanced options"}</summary>
+              <div className="input-grid" style={{ marginTop: 12 }}>
+                <label>
+                  {copy.create.payrollGrossMin}
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollGrossPayMinKrw}
+                    onChange={(event) => setPayrollGrossPayMinKrw(event.target.value)}
+                    placeholder={copy.create.payrollGrossMinPlaceholder}
+                  />
+                </label>
+                <label>
+                  {copy.create.payrollGrossMax}
+                  <input
+                    type="number"
+                    min={0}
+                    value={payrollGrossPayMaxKrw}
+                    onChange={(event) => setPayrollGrossPayMaxKrw(event.target.value)}
+                    placeholder={copy.create.payrollGrossMaxPlaceholder}
+                  />
+                </label>
+              </div>
+            </details>
           ) : null}
           <fieldset>
             <legend className="small">{copy.create.rolesLegend}</legend>
@@ -345,7 +349,24 @@ export default function AdminApprovalTemplatesPage() {
           onToggleTemplateActive={(template) => void toggleTemplateActive(template)}
         />
 
-        <ApprovalTemplateLogsPanel copy={copy} stats={stats} pendingLabel={pendingLabel} logs={logs} />
+        {showDevTools ? (
+          <ApprovalTemplateLogsPanel copy={copy} stats={stats} pendingLabel={pendingLabel} logs={logs} />
+        ) : (
+          <article className="panel">
+            <h2>{isKoLocale ? "관련 화면 이동" : "Related workspaces"}</h2>
+            <div className="panel-actions">
+              <Link className="btn btn-secondary" href="/admin/approval-executions">
+                {isKoLocale ? "결재 실행 현황" : "Approval executions"}
+              </Link>
+              <Link className="btn btn-secondary" href="/admin/approval-policy">
+                {isKoLocale ? "결재/위임 정책" : "Approval policy"}
+              </Link>
+              <Link className="btn btn-secondary" href="/admin">
+                {isKoLocale ? "관리자 홈" : "Admin home"}
+              </Link>
+            </div>
+          </article>
+        )}
       </section>
     </main>
   );
