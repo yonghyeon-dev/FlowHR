@@ -1,9 +1,13 @@
 ﻿"use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEmployeeDashboardDerivedState } from "@/app/employee/page-dashboard-derived-state";
 import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runtime";
 import { buildEmployeeInteractionHandlers } from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
+import {
+  resolveAttendanceCorrectionSchedulePrefill,
+  resolveAttendanceCorrectionTargetFromScheduleRange
+} from "@/app/employee/page-query-prefill-helpers";
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import { buildEmployeeInteractionSetterBundles } from "@/app/employee/page-interaction-setter-bundles";
 import {
@@ -39,11 +43,25 @@ import { EmployeeRequestFeedbackPanels } from "@/components/employee-dashboard/E
 import { EmployeeResubmitPanel } from "@/components/employee-dashboard/EmployeeResubmitPanel";
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { useI18n } from "@/lib/i18n/provider";
+import { useSearchParams } from "next/navigation";
 export default function EmployeeSelfServicePage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const localeLabelBundle = useMemo(() => resolveEmployeeLocaleLabelBundle(isKoLocale), [isKoLocale]);
   const { attendanceNotePresets, callApiLabels, correctionRequestNote, defaultCancelReason, leaveCalendarWeekdays, leaveTypeLabels, listBadgeLabels, notConfiguredLabel, preSubmitStatusLabels, requestStatusLabels, runtimeLocale, surfaceCopy, validationCopy, summaryCopy } = localeLabelBundle;
+  const searchParams = useSearchParams();
+  const attendanceSchedulePrefill = useMemo(
+    () =>
+      resolveAttendanceCorrectionSchedulePrefill({
+        searchParams,
+        correctionRequestNote,
+        isKoLocale
+      }),
+    [searchParams, correctionRequestNote, isKoLocale]
+  );
+  const appliedAttendanceSchedulePrefillRef = useRef<{ baseKey: string | null; selectedTargetKey: string | null }>(
+    { baseKey: null, selectedTargetKey: null }
+  );
   const [accessToken, setAccessToken] = useState("");
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeId, setEmployeeId] = useStickyStringState("flowhr:ctx:employeeId", "EMP-1001");
@@ -286,6 +304,34 @@ export default function EmployeeSelfServicePage() {
   const { applyAttendanceRecordToCorrectionForm, applyLatestAttendanceToCorrectionForm, applyLatestResubmitCandidate, applyLeaveQuickPreset, applyResubmitCandidateToDraft, applySelectedCorrectionRecord, applySelectedResubmitCandidate, clearResubmitSelection, copyFailureCause, jumpToSection, moveCalendarMonth, openPendingRequestSearch, prefillLeaveFormFromCalendarDate, resetCalendarToCurrentMonth, selectCorrectionTarget } = buildEmployeeInteractionHandlers({
     ...interactionOrchestratorInput
   });
+  useEffect(() => {
+    if (!attendanceSchedulePrefill) {
+      return;
+    }
+
+    if (appliedAttendanceSchedulePrefillRef.current.baseKey !== attendanceSchedulePrefill.key) {
+      setCheckInAt(attendanceSchedulePrefill.checkInAt);
+      setCheckOutAt(attendanceSchedulePrefill.checkOutAt);
+      setAttendanceNotes(attendanceSchedulePrefill.note);
+      appliedAttendanceSchedulePrefillRef.current.baseKey = attendanceSchedulePrefill.key;
+      appliedAttendanceSchedulePrefillRef.current.selectedTargetKey = null;
+    }
+
+    if (appliedAttendanceSchedulePrefillRef.current.selectedTargetKey === attendanceSchedulePrefill.key) {
+      return;
+    }
+    const correctionTarget = resolveAttendanceCorrectionTargetFromScheduleRange(
+      attendance,
+      attendanceSchedulePrefill
+    );
+    if (!correctionTarget) {
+      return;
+    }
+
+    applyAttendanceRecordToCorrectionForm(correctionTarget);
+    setAttendanceNotes(attendanceSchedulePrefill.note);
+    appliedAttendanceSchedulePrefillRef.current.selectedTargetKey = attendanceSchedulePrefill.key;
+  }, [attendanceSchedulePrefill, attendance, applyAttendanceRecordToCorrectionForm]);
   return (
     <main className="saas-content">
       <EmployeeDashboardChrome
