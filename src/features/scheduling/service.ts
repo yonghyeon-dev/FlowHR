@@ -122,6 +122,7 @@ import {
   resolveSchedulingTenantScope
 } from "@/features/scheduling/anomaly-service-context-helpers";
 import {
+  buildScheduleAnomalySideEffectContext,
   emitAnomalyAlertIfEnabled,
   emitAnomalyCockpitTicketRequestsIfEnabled,
   emitAnomalyEscalationIfEnabled
@@ -1966,12 +1967,12 @@ export async function listScheduleAttendanceAnomalies(
   });
 
   const eventPublisher = resolveSchedulingEventPublisher(context);
-  const sideEffectContext = {
+  const sideEffectContext = buildScheduleAnomalySideEffectContext({
     actor: { id: actor.id, role: actor.role },
     tenantScope,
     dataAccess: context.dataAccess,
     publish: eventPublisher.publish.bind(eventPublisher)
-  };
+  });
   await emitAnomalyAlertIfEnabled(sideEffectContext, {
     window: input,
     lateThresholdMinutes,
@@ -2772,13 +2773,14 @@ export async function listScheduleAttendanceAnomalyCockpit(
 
   if (!input.suppressAutomation) {
     const eventPublisher = resolveSchedulingEventPublisher(context);
+    const sideEffectContext = buildScheduleAnomalySideEffectContext({
+      actor: { id: actor.id, role: actor.role },
+      tenantScope,
+      dataAccess: context.dataAccess,
+      publish: eventPublisher.publish.bind(eventPublisher)
+    });
     await emitAnomalyCockpitTicketRequestsIfEnabled(
-      {
-        actor: { id: actor.id, role: actor.role },
-        tenantScope,
-        dataAccess: context.dataAccess,
-        publish: eventPublisher.publish.bind(eventPublisher)
-      },
+      sideEffectContext,
       {
         window: input,
         lateThresholdMinutes,
