@@ -77,10 +77,12 @@ export function EmployeeAccountOverviewPanels({
               {isKoLocale ? "세션/조회 설정" : "Session & Query Settings"}
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
-              <p className="small full">
-                {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-                {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
-              </p>
+              {showDevTools ? (
+                <p className="small full">
+                  {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+                  {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+                </p>
+              ) : null}
               <label>
                 {isKoLocale ? "조회 기간 시작" : "Period Start"}
                 <input type="datetime-local" value={periodStart} onChange={(event) => onPeriodStartChange(event.target.value)} />

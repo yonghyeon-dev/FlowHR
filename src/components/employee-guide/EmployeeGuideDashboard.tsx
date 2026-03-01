@@ -39,6 +39,7 @@ export function EmployeeGuideDashboard() {
         copy={copy}
         organizationId={data.organizationId}
         employeeId={data.employeeId}
+        showDevTools={data.showDevTools}
         pendingLabel={data.pendingLabel}
         refreshDisabled={data.refreshDisabled}
         isKoLocale={locale === "ko"}

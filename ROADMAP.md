@@ -996,3 +996,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0703 payroll year-end filing/employee session identity devtools gate (hide read-only session organization/actor identifiers on /admin/payroll-year-end-filing and session organization/employee identifiers on /employee/year-end-input by default; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0703 regression guard)
 
 - WI-0704 admin session identity devtools gate expansion (hide read-only session organization/actor identifiers by default in /admin/approval-executions work-conditions panel, /admin/people filters panel, and /admin/leave-calendar query panel; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0704 regression guard)
+
+- WI-0705 employee guide/account session identity devtools gate (hide read-only session organization/employee identifiers by default in employee guide context panel and employee account session/query settings panel; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0705 regression guard)
