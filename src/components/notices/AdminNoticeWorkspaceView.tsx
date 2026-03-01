@@ -120,10 +120,12 @@ export default function AdminNoticeWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
-          <p className="small muted">
-            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
-            <code>{sessionActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
+              <code>{sessionActorId || "-"}</code>
+            </p>
+          ) : null}
           <div className="input-grid">
             <label>
               {copy.statusFilterLabel}

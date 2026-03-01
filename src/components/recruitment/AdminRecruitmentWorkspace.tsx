@@ -34,9 +34,15 @@ function buildQuery(input: Record<string, string>) {
   return text ? `?${text}` : "";
 }
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function AdminRecruitmentWorkspace() {
   const { locale } = useI18n();
   const copy = resolveAdminRecruitmentCopy(locale);
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
@@ -242,6 +248,7 @@ export default function AdminRecruitmentWorkspace() {
   return (
     <AdminRecruitmentWorkspaceView
       copy={copy}
+      showDevTools={showDevTools}
       sessionOrganizationId={organizationId}
       sessionActorId={actorId}
       openingTitle={openingTitle}
