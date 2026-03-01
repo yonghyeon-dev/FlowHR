@@ -1020,3 +1020,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0715 payroll session-context strict devtools gate (hide read-only session organization/actor identifiers in payroll close, payroll payslip delivery, and payroll insurance input panels by default; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0715 guard)
 
 - WI-0716 scheduling anomaly SLA query helper extraction (extract topN/assignee/includeResolved/SLA threshold/asOf normalization into anomaly-incident-sla-query-helpers.ts and rewire listScheduleAnomalyIncidentSla while preserving behavior with e2e-wi0716 guard)
+
+- WI-0717 scheduling anomaly escalation candidate helper extraction (add selectScheduleAnomalyIncidentEscalationCandidates in anomaly-incident-escalation-helpers.ts and rewire triggerScheduleAnomalyIncidentEscalation filtering while preserving behavior with e2e-wi0717 guard)

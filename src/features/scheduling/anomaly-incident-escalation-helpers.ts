@@ -97,6 +97,15 @@ export function buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(
   return latestRequestedAtMillisByIncident;
 }
 
+export function selectScheduleAnomalyIncidentEscalationCandidates(
+  items: ScheduleAnomalyIncidentSlaItem[],
+  includeWarning: boolean
+) {
+  return items.filter(
+    (item) => item.status === "BREACHED" || (includeWarning && item.status === "WARNING")
+  );
+}
+
 export async function executeScheduleAnomalyIncidentEscalationRequests(
   input: ExecuteScheduleAnomalyIncidentEscalationRequestsInput
 ): Promise<ScheduleAnomalyIncidentEscalationExecutionSummary> {
