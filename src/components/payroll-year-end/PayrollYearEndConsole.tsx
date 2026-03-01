@@ -478,10 +478,12 @@ export default function PayrollYearEndConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.inputTitle}</h2>
-          <p className="small muted">
-            {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-            {locale === "ko" ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+              {locale === "ko" ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+            </p>
+          ) : null}
           <div className="input-grid">
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>{copy.employeeIdLabel}<input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} /></label>
