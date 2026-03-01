@@ -1,4 +1,5 @@
 import type { ScheduleAnomalyIncidentEntity } from "@/features/shared/data-access";
+import { ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION } from "@/features/scheduling/incident-audit-projection";
 import { parseIsoTimestampToMillis } from "@/features/scheduling/incident-normalizers";
 import type {
   ScheduleAnomalyIncidentArchiveItem,
@@ -91,6 +92,20 @@ type BuildScheduleAnomalyIncidentArchiveGeneratedAuditEntryInput = {
   actorRole: string;
   actorId: string | undefined;
   payload: ReturnType<typeof buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload>;
+};
+
+type BuildScheduleAnomalyIncidentArchivedAuditEntryInput = {
+  candidate: Pick<
+    ScheduleAnomalyIncidentEntity,
+    "incidentId" | "state" | "assigneeId" | "updatedAt" | "organizationId"
+  >;
+  archivedAt: string;
+  asOfIso: string;
+  olderThanMinutes: number;
+  archiveReason: string | null;
+  fallbackOrganizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
 };
 
 export function buildScheduleAnomalyIncidentArchiveCandidates(
@@ -241,6 +256,26 @@ export function buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry(
     actorRole: input.actorRole,
     actorId: input.actorId,
     payload: input.payload
+  };
+}
+
+export function buildScheduleAnomalyIncidentArchivedAuditEntry(
+  input: BuildScheduleAnomalyIncidentArchivedAuditEntryInput
+) {
+  return {
+    action: ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
+    entityType: "WorkSchedule" as const,
+    entityId: input.candidate.incidentId,
+    organizationId: input.candidate.organizationId ?? input.fallbackOrganizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: buildScheduleAnomalyIncidentArchiveAuditPayload({
+      candidate: input.candidate,
+      archivedAt: input.archivedAt,
+      asOfIso: input.asOfIso,
+      olderThanMinutes: input.olderThanMinutes,
+      archiveReason: input.archiveReason
+    })
   };
 }
 
