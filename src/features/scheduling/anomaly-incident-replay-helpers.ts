@@ -147,6 +147,21 @@ type MergeScheduleAnomalyIncidentReplayLastEscalationRequestedAtInput<TUpsertInp
   lastEscalationRequestedAt: string | null | undefined;
 };
 
+type BuildScheduleAnomalyIncidentReplayPersistenceInput<
+  TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null },
+  TUpsertInput extends Record<string, unknown>
+> = {
+  incidentId: string;
+  replayModel: TReplayModel;
+  includeArchived: boolean;
+  replayedAt: string;
+  lastEscalationRequestedAt: string | null | undefined;
+  fallbackOrganizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  toUpsertInput: (replayModel: TReplayModel) => TUpsertInput;
+};
+
 export function selectScheduleAnomalyIncidentReplayTargets<
   TReplayModel extends ScheduleAnomalyIncidentReplayModelBase
 >(
@@ -355,6 +370,27 @@ export function mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt<
   return {
     ...input.upsertInput,
     lastEscalationRequestedAt: input.lastEscalationRequestedAt ?? null
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayPersistenceInput<
+  TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null },
+  TUpsertInput extends Record<string, unknown>
+>(input: BuildScheduleAnomalyIncidentReplayPersistenceInput<TReplayModel, TUpsertInput>) {
+  return {
+    upsertInput: mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt({
+      upsertInput: input.toUpsertInput(input.replayModel),
+      lastEscalationRequestedAt: input.lastEscalationRequestedAt
+    }),
+    auditEntry: buildScheduleAnomalyIncidentReplayedAuditEntry({
+      incidentId: input.incidentId,
+      replayModel: input.replayModel,
+      includeArchived: input.includeArchived,
+      replayedAt: input.replayedAt,
+      fallbackOrganizationId: input.fallbackOrganizationId,
+      actorRole: input.actorRole,
+      actorId: input.actorId
+    })
   };
 }
 

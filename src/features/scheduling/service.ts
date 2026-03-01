@@ -59,9 +59,8 @@ import {
   filterScheduleAnomalyIncidentReplayLogsByRange,
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
-  buildScheduleAnomalyIncidentReplayedAuditEntry,
+  buildScheduleAnomalyIncidentReplayPersistenceInput,
   buildScheduleAnomalyIncidentReplaySummaryCounts,
-  mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt,
   resolveScheduleAnomalyIncidentReplayMeta,
   buildScheduleAnomalyIncidentReplayResult,
   executeScheduleAnomalyIncidentReplayActions,
@@ -2575,24 +2574,20 @@ export async function replayScheduleAnomalyIncidentStore(
       dryRun,
       onReplay: async ({ incidentId, replayModel }) => {
         const existing = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
-        await context.dataAccess.scheduling.upsertIncident(
-          mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt({
-            upsertInput: toScheduleAnomalyIncidentUpsertInput(replayModel),
-            lastEscalationRequestedAt: existing?.lastEscalationRequestedAt
-          })
-        );
         const replayedAt = new Date().toISOString();
-        await context.dataAccess.audit.append(
-          buildScheduleAnomalyIncidentReplayedAuditEntry({
-            incidentId,
-            replayModel,
-            includeArchived,
-            replayedAt,
-            fallbackOrganizationId: tenantScope,
-            actorRole: actor.role,
-            actorId: actor.id
-          })
-        );
+        const replayPersistence = buildScheduleAnomalyIncidentReplayPersistenceInput({
+          incidentId,
+          replayModel,
+          includeArchived,
+          replayedAt,
+          lastEscalationRequestedAt: existing?.lastEscalationRequestedAt,
+          fallbackOrganizationId: tenantScope,
+          actorRole: actor.role,
+          actorId: actor.id,
+          toUpsertInput: toScheduleAnomalyIncidentUpsertInput
+        });
+        await context.dataAccess.scheduling.upsertIncident(replayPersistence.upsertInput);
+        await context.dataAccess.audit.append(replayPersistence.auditEntry);
       }
     });
 
