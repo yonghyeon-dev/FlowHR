@@ -49,6 +49,7 @@ export function AdminOnboardingDashboard() {
 
       <AdminOnboardingSetupPanels
         copy={copy}
+        showDevTools={data.showDevTools}
         organizationId={data.organizationId}
         organizations={data.organizations}
         departments={data.departments}
