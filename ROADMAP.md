@@ -980,3 +980,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0694 approval list audit-actor context helper extraction (add shared list audit actor-context builder and rewire stage-history/execution list audit entry call-sites with e2e-wi0694 guard)
 - WI-0695 scheduling rotation-balance actor-guard helper adoption (replace inline actor null-check in listWorkScheduleRotationBalance with requireSchedulingActor shared helper while preserving unauthorized semantics with e2e-wi0695 guard)
 - WI-0696 scheduling anomaly attendance-period normalized-window adoption (use normalizedWindow periodStart/periodEnd for attendance-period expansion in report/cockpit flows with e2e-wi0696 guard)
+
+- WI-0710 employee session-context devtools gate for core workspaces (hide session organization/employee identifiers in /employee-guide, /employee/notices, /employee/benefits, /employee/recruitment, and /employee/schedule product mode; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0710 regression guard)

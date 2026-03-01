@@ -17,6 +17,7 @@ type EmployeeRecruitmentCopy = ReturnType<typeof resolveEmployeeRecruitmentCopy>
 
 type EmployeeRecruitmentWorkspaceViewProps = {
   copy: EmployeeRecruitmentCopy;
+  showDevTools: boolean;
   sessionOrganizationId: string;
   sessionEmployeeId: string;
   openings: RecruitmentOpeningItem[];
@@ -53,6 +54,7 @@ type EmployeeRecruitmentWorkspaceViewProps = {
 
 export default function EmployeeRecruitmentWorkspaceView({
   copy,
+  showDevTools,
   sessionOrganizationId,
   sessionEmployeeId,
   openings,
@@ -106,10 +108,12 @@ export default function EmployeeRecruitmentWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          <p className="small muted">
-            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-            <code>{sessionEmployeeId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
+              <code>{sessionEmployeeId || "-"}</code>
+            </p>
+          ) : null}
           <label>
             {copy.stageFilterLabel}
             <select

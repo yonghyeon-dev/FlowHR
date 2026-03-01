@@ -17,6 +17,7 @@ type ContextPanelProps = {
   copy: EmployeeGuideCopy;
   organizationId: string;
   employeeId: string;
+  showDevTools: boolean;
   pendingLabel: string | null;
   refreshDisabled: boolean;
   isKoLocale: boolean;
@@ -28,6 +29,7 @@ export function EmployeeGuideContextPanel(props: ContextPanelProps) {
     copy,
     organizationId,
     employeeId,
+    showDevTools,
     pendingLabel,
     refreshDisabled,
     isKoLocale,
@@ -38,10 +40,12 @@ export function EmployeeGuideContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
-        <p className="small">
-          {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-          {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
-        </p>
+        {showDevTools ? (
+          <p className="small">
+            {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+            {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+          </p>
+        ) : null}
         <div className="actions">
           <button className="btn btn-primary" onClick={onRefresh} disabled={refreshDisabled}>
             {copy.loadButton}

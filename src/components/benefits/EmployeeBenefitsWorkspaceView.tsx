@@ -14,6 +14,7 @@ type EmployeeBenefitsCopy = ReturnType<typeof resolveEmployeeBenefitsCopy>;
 type EmployeeBenefitsWorkspaceViewProps = {
   copy: EmployeeBenefitsCopy;
   runtimeLocale: string;
+  showDevTools: boolean;
   sessionOrganizationId: string;
   sessionEmployeeId: string;
   catalog: BenefitCatalogItem[];
@@ -49,6 +50,7 @@ type EmployeeBenefitsWorkspaceViewProps = {
 export default function EmployeeBenefitsWorkspaceView({
   copy,
   runtimeLocale,
+  showDevTools,
   sessionOrganizationId,
   sessionEmployeeId,
   catalog,
@@ -100,10 +102,12 @@ export default function EmployeeBenefitsWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          <p className="small muted">
-            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-            <code>{sessionEmployeeId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
+              <code>{sessionEmployeeId || "-"}</code>
+            </p>
+          ) : null}
           <label>
             {copy.requestFilterLabel}
             <select
