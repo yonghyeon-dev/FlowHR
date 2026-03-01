@@ -128,6 +128,7 @@ import {
 } from "@/features/scheduling/rotation-window-helpers";
 import {
   buildScheduleAnomalyIncidentReconcileAuditReadInput,
+  buildScheduleAnomalyIncidentReconcileGeneratedAuditPayloadInputFromMetaAndSummary,
   buildScheduleAnomalyIncidentReconcileSnapshotInputFromRows,
   buildScheduleAnomalyIncidentReconcileSummary,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry,
@@ -2676,16 +2677,20 @@ export async function reconcileScheduleAnomalyIncidentStore(
     returned: items.length,
     counts
   });
+  const reconcileGeneratedAuditPayloadInput =
+    buildScheduleAnomalyIncidentReconcileGeneratedAuditPayloadInputFromMetaAndSummary({
+      reconcileMeta,
+      reconcileSummary
+    });
 
   await context.dataAccess.audit.append(
     buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry({
       organizationId: tenantScope,
       actorRole: actor.role,
       actorId: actor.id,
-      payload: buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload({
-        ...reconcileMeta,
-        ...reconcileSummary
-      })
+      payload: buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload(
+        reconcileGeneratedAuditPayloadInput
+      )
     })
   );
   return buildScheduleAnomalyIncidentReconcileResult({
