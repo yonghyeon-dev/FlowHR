@@ -142,6 +142,7 @@ import {
   buildScheduleAnomalyIncidentEscalationResult,
   buildScheduleAnomalyIncidentEscalationSummaryPayload,
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
+  resolveScheduleAnomalyIncidentEscalationOptions,
   selectScheduleAnomalyIncidentEscalationCandidates,
   executeScheduleAnomalyIncidentEscalationRequests
 } from "@/features/scheduling/anomaly-incident-escalation-helpers";
@@ -154,8 +155,6 @@ import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
   normalizeAnomalyIncidentArchiveReason,
-  normalizeAnomalyIncidentEscalationChannel,
-  normalizeAnomalyIncidentEscalationCooldownMinutes,
   normalizeAnomalyIncidentReplayIncidentIds,
   normalizeAnomalyIncidentReplayTopN,
   normalizeIncidentListTopN,
@@ -2175,12 +2174,8 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     "schedule anomaly incident escalation requires permission"
   );
 
-  const includeResolved = input.includeResolved ?? false;
-  const includeWarning = input.includeWarning ?? false;
-  const dryRun = input.dryRun ?? false;
-  const cooldownMinutes = normalizeAnomalyIncidentEscalationCooldownMinutes(input.cooldownMinutes);
-  const escalationChannel = normalizeAnomalyIncidentEscalationChannel(input.escalationChannel);
-  const asOf = input.asOf ?? new Date();
+  const { includeResolved, includeWarning, dryRun, cooldownMinutes, escalationChannel, asOf } =
+    resolveScheduleAnomalyIncidentEscalationOptions(input);
 
   const slaReport = await listScheduleAnomalyIncidentSla(context, {
     state: input.state,
