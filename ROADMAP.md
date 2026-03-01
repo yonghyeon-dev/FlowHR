@@ -986,3 +986,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0698 employee workspace session identity devtools gate (hide read-only session organization/employee identifiers on employee benefits/recruitment workspaces by default and expose them only in NEXT_PUBLIC_FLOWHR_DEV_TOOLS mode; add showDevTools propagation + e2e-wi0698 guard)
 
 - WI-0699 admin core context session identity devtools gate (hide read-only session organization/actor identifiers on admin attendance-live/onboarding/kpi context panels by default and expose them only in NEXT_PUBLIC_FLOWHR_DEV_TOOLS mode; propagate showDevTools through dashboards/hooks + e2e-wi0699 guard)
+
+- WI-0700 admin onboarding organization-id devtools gate (hide onboarding setup organization ID summary and organization-list ID suffix in product mode; expose both only under NEXT_PUBLIC_FLOWHR_DEV_TOOLS + e2e-wi0700 guard)

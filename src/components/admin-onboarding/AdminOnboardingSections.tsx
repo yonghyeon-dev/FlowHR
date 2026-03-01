@@ -56,6 +56,7 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
 
 type SetupPanelsProps = {
   copy: AdminOnboardingCopy;
+  showDevTools: boolean;
   organizationId: string;
   organizations: AdminOnboardingOrganizationOption[];
   departments: AdminOnboardingDepartmentOption[];
@@ -84,6 +85,7 @@ type SetupPanelsProps = {
 export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
   const {
     copy,
+    showDevTools,
     organizationId,
     organizations,
     departments,
@@ -113,15 +115,18 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.organizationSelectTitle}</h2>
-        <p className="small muted">
-          {copy.organizationIdLabel}: <code>{organizationId || "-"}</code>
-        </p>
+        {showDevTools ? (
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{organizationId || "-"}</code>
+          </p>
+        ) : null}
         {organizations.length > 0 ? (
           <ul className="simple-list">
             {organizations.map((organization) => (
               <li key={organization.id}>
                 <span>
-                  <strong>{organization.name}</strong> ({organization.id})
+                  <strong>{organization.name}</strong>
+                  {showDevTools ? ` (${organization.id})` : ""}
                 </span>
               </li>
             ))}
