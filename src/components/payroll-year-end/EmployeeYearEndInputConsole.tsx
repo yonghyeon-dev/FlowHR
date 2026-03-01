@@ -314,10 +314,12 @@ export default function EmployeeYearEndInputConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.inputTitle}</h2>
-          <p className="small muted">
-            {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-            {locale === "ko" ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+              {locale === "ko" ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+            </p>
+          ) : null}
           <div className="input-grid">
             <label>{copy.yearLabel}<input value={year} onChange={(event) => setYear(event.target.value)} /></label>
             <label>{copy.nonTaxableAnnualIncomeLabel}<input value={nonTaxableAnnualIncomeKrw} onChange={(event) => setNonTaxableAnnualIncomeKrw(event.target.value)} /></label>
