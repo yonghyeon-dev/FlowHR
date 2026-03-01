@@ -56,6 +56,7 @@ import {
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReplayedAuditEntry,
+  buildScheduleAnomalyIncidentReplaySummaryCounts,
   resolveScheduleAnomalyIncidentReplayMeta,
   buildScheduleAnomalyIncidentReplayResult,
   executeScheduleAnomalyIncidentReplayActions,
@@ -2598,6 +2599,12 @@ export async function replayScheduleAnomalyIncidentStore(
     incidentIds: normalizedIncidentIds,
     selectedIncidentIds
   });
+  const replaySummary = buildScheduleAnomalyIncidentReplaySummaryCounts({
+    replayed,
+    dryRunCount,
+    notFound,
+    failed
+  });
   await context.dataAccess.audit.append(
     buildScheduleAnomalyIncidentReplayGeneratedAuditEntry({
       organizationId: tenantScope,
@@ -2605,14 +2612,14 @@ export async function replayScheduleAnomalyIncidentStore(
       actorId: actor.id,
       payload: buildScheduleAnomalyIncidentReplayGeneratedAuditPayload({
         ...replayMeta,
-        summary: { replayed, dryRunCount, notFound, failed }
+        summary: replaySummary
       })
     })
   );
 
   return buildScheduleAnomalyIncidentReplayResult({
     ...replayMeta,
-    summary: { replayed, dryRunCount, notFound, failed, items }
+    summary: { ...replaySummary, items }
   });
 }
 
