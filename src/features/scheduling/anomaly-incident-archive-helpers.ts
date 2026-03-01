@@ -92,6 +92,21 @@ type BuildScheduleAnomalyIncidentArchiveResultInput = {
   skippedRecent: number;
 };
 
+type ResolveScheduleAnomalyIncidentArchiveMetaInput = {
+  archivedAt: string;
+  dryRun: boolean;
+  asOfIso: string;
+  olderThanMinutes: number;
+  includeNonResolved: boolean;
+  stateFilter: ScheduleAnomalyIncidentLifecycleState | undefined;
+  assigneeFilter: string | undefined;
+  topN: number;
+  archiveReason: string | null;
+  total: number;
+  eligible: number;
+  candidates: number;
+};
+
 type BuildScheduleAnomalyIncidentArchiveGeneratedAuditEntryInput = {
   organizationId: string | undefined;
   actorRole: string;
@@ -261,6 +276,25 @@ export function buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry(
     actorRole: input.actorRole,
     actorId: input.actorId,
     payload: input.payload
+  };
+}
+
+export function resolveScheduleAnomalyIncidentArchiveMeta(
+  input: ResolveScheduleAnomalyIncidentArchiveMetaInput
+) {
+  return {
+    archivedAt: input.archivedAt,
+    dryRun: input.dryRun,
+    asOfIso: input.asOfIso,
+    olderThanMinutes: input.olderThanMinutes,
+    includeNonResolved: input.includeNonResolved,
+    stateFilter: input.stateFilter,
+    assigneeFilter: input.assigneeFilter,
+    topN: input.topN,
+    archiveReason: input.archiveReason,
+    total: input.total,
+    eligible: input.eligible,
+    candidates: input.candidates
   };
 }
 
