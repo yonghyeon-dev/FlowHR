@@ -139,6 +139,13 @@ export function resolveScheduleAnomalyIncidentEscalationOptions(
   };
 }
 
+export function resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis(
+  asOf: Date,
+  cooldownMinutes: number
+) {
+  return asOf.getTime() - cooldownMinutes * 60_000;
+}
+
 export async function executeScheduleAnomalyIncidentEscalationRequests(
   input: ExecuteScheduleAnomalyIncidentEscalationRequestsInput
 ): Promise<ScheduleAnomalyIncidentEscalationExecutionSummary> {
