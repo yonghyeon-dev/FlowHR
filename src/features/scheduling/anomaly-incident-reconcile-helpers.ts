@@ -37,6 +37,13 @@ type BuildScheduleAnomalyIncidentReconcileGeneratedAuditPayloadInput = {
   counts: ScheduleAnomalyIncidentReconcileCounts;
 };
 
+type BuildScheduleAnomalyIncidentReconcileGeneratedAuditEntryInput = {
+  organizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  payload: ReturnType<typeof buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload>;
+};
+
 type BuildScheduleAnomalyIncidentReconcileResultInput = {
   reconciledAt: string;
   topN: number;
@@ -156,6 +163,19 @@ export function buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload(
     compared: input.compared,
     returned: input.returned,
     counts: input.counts
+  };
+}
+
+export function buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry(
+  input: BuildScheduleAnomalyIncidentReconcileGeneratedAuditEntryInput
+) {
+  return {
+    action: "scheduling.anomaly.incident.reconciliation.generated",
+    entityType: "WorkSchedule" as const,
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: input.payload
   };
 }
 
