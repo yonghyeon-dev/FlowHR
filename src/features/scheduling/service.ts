@@ -54,6 +54,7 @@ import {
   buildScheduleAnomalyIncidentSlaQueue
 } from "@/features/scheduling/anomaly-incident-queue-helpers";
 import {
+  filterScheduleAnomalyIncidentReplayLogsByRange,
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReplayedAuditEntry,
@@ -158,7 +159,6 @@ import {
 } from "@/features/scheduling/anomaly-incident-query-service-helpers";
 import { resolveScheduleAnomalyIncidentSlaQueryInput } from "@/features/scheduling/anomaly-incident-sla-query-helpers";
 import {
-  isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
   normalizeAnomalyIncidentArchiveReason,
   normalizeAnomalyIncidentReplayIncidentIds,
@@ -2553,12 +2553,11 @@ export async function replayScheduleAnomalyIncidentStore(
     organizationId: tenantScope,
     limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
   });
-  const logsInRange = logs.filter((entry) =>
-    isWithinOptionalCreatedAtRange(entry.createdAt, {
-      from: input.from,
-      to: input.to
-    })
-  );
+  const logsInRange = filterScheduleAnomalyIncidentReplayLogsByRange({
+    logs,
+    from: input.from,
+    to: input.to
+  });
   const replayModels = buildScheduleAnomalyIncidentReadModelsFromAuditLogs(logsInRange, {
     applyArchiveActions: !includeArchived
   });

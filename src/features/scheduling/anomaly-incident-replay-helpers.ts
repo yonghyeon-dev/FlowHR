@@ -4,6 +4,7 @@ import type {
   ScheduleAnomalyIncidentReplayResult
 } from "@/features/scheduling/service";
 import { ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION } from "@/features/scheduling/incident-audit-projection";
+import { isWithinOptionalCreatedAtRange } from "@/features/scheduling/incident-normalizers";
 
 type ScheduleAnomalyIncidentReplayModelBase = {
   incidentId: string;
@@ -114,6 +115,12 @@ type ResolveScheduleAnomalyIncidentReplayMetaInput = {
   topN: number;
   incidentIds: string[] | null;
   selectedIncidentIds: string[];
+};
+
+type FilterScheduleAnomalyIncidentReplayLogsByRangeInput<TLog extends { createdAt: Date }> = {
+  logs: TLog[];
+  from: Date | undefined;
+  to: Date | undefined;
 };
 
 type BuildScheduleAnomalyIncidentReplayedAuditEntryInput<
@@ -298,6 +305,17 @@ export function buildScheduleAnomalyIncidentReplayGeneratedAuditEntry(
     actorId: input.actorId,
     payload: input.payload
   };
+}
+
+export function filterScheduleAnomalyIncidentReplayLogsByRange<
+  TLog extends { createdAt: Date }
+>(input: FilterScheduleAnomalyIncidentReplayLogsByRangeInput<TLog>) {
+  return input.logs.filter((entry) =>
+    isWithinOptionalCreatedAtRange(entry.createdAt, {
+      from: input.from,
+      to: input.to
+    })
+  );
 }
 
 export function buildScheduleAnomalyIncidentReplaySummaryCounts(
