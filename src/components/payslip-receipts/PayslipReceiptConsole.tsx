@@ -191,8 +191,8 @@ export default function PayslipReceiptConsole() {
           <h2>{copy.filtersTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
-              <code>{employeeId || "-"}</code>
+              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> /{" "}
+              {copy.sessionEmployeeLabel}: <code>{employeeId || "-"}</code>
             </p>
           ) : null}
           <div className="input-grid">
