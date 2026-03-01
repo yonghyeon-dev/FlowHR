@@ -45,6 +45,7 @@ import {
 } from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
 import {
   buildScheduleAnomalyIncidentArchiveAuditPayload,
+  buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry,
   buildScheduleAnomalyIncidentArchiveCandidates,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload,
   buildScheduleAnomalyIncidentArchiveResult,
@@ -2482,30 +2483,30 @@ export async function archiveScheduleAnomalyIncidents(
     });
 
   const archivedAt = new Date().toISOString();
-  await context.dataAccess.audit.append({
-    action: "scheduling.anomaly.incident.archive.generated",
-    entityType: "WorkSchedule",
-    organizationId: tenantScope,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload({
-      archivedAt,
-      dryRun,
-      asOfIso,
-      olderThanMinutes,
-      includeNonResolved,
-      stateFilter,
-      assigneeFilter,
-      topN,
-      archiveReason,
-      total: incidents.length,
-      eligible: eligible.length,
-      candidates: candidates.length,
-      summary: { archived, dryRunCount, failed },
-      skippedState,
-      skippedRecent
+  await context.dataAccess.audit.append(
+    buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry({
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload({
+        archivedAt,
+        dryRun,
+        asOfIso,
+        olderThanMinutes,
+        includeNonResolved,
+        stateFilter,
+        assigneeFilter,
+        topN,
+        archiveReason,
+        total: incidents.length,
+        eligible: eligible.length,
+        candidates: candidates.length,
+        summary: { archived, dryRunCount, failed },
+        skippedState,
+        skippedRecent
+      })
     })
-  });
+  );
   return buildScheduleAnomalyIncidentArchiveResult({
     archivedAt,
     dryRun,

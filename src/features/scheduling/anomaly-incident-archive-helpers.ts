@@ -86,6 +86,13 @@ type BuildScheduleAnomalyIncidentArchiveResultInput = {
   skippedRecent: number;
 };
 
+type BuildScheduleAnomalyIncidentArchiveGeneratedAuditEntryInput = {
+  organizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  payload: ReturnType<typeof buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload>;
+};
+
 export function buildScheduleAnomalyIncidentArchiveCandidates(
   input: BuildScheduleAnomalyIncidentArchiveCandidatesInput
 ): ScheduleAnomalyIncidentArchiveCandidates {
@@ -221,6 +228,19 @@ export function buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload(
     skippedState: input.skippedState,
     skippedRecent: input.skippedRecent,
     failed: input.summary.failed
+  };
+}
+
+export function buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry(
+  input: BuildScheduleAnomalyIncidentArchiveGeneratedAuditEntryInput
+) {
+  return {
+    action: "scheduling.anomaly.incident.archive.generated",
+    entityType: "WorkSchedule" as const,
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: input.payload
   };
 }
 
