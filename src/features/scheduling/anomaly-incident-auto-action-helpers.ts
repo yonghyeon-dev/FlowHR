@@ -63,6 +63,15 @@ type NotifyScheduleAnomalyIncidentAutoActionExecutionInput = {
   appendAudit: (input: ScheduleAnomalyIncidentAutoActionNotificationAuditInput) => Promise<void>;
 };
 
+type BuildScheduleAnomalyIncidentAutoActionNotificationAuditPayloadInput = {
+  executedAt: string;
+  candidates: number;
+  escalated: number;
+  assigned: number;
+  failed: number;
+  error?: string;
+};
+
 type BuildScheduleAnomalyIncidentAutoActionSummaryPayloadInput = {
   executedAt: string;
   state: ScheduleAnomalyIncidentLifecycleState | undefined;
@@ -245,6 +254,19 @@ function buildScheduleAnomalyIncidentAutoActionEventItems(items: ScheduleAnomaly
   }));
 }
 
+export function buildScheduleAnomalyIncidentAutoActionNotificationAuditPayload(
+  input: BuildScheduleAnomalyIncidentAutoActionNotificationAuditPayloadInput
+) {
+  return {
+    executedAt: input.executedAt,
+    candidates: input.candidates,
+    escalated: input.escalated,
+    assigned: input.assigned,
+    failed: input.failed,
+    ...(input.error ? { error: input.error } : {})
+  };
+}
+
 export async function notifyScheduleAnomalyIncidentAutoActionExecution(
   input: NotifyScheduleAnomalyIncidentAutoActionExecutionInput
 ) {
@@ -260,26 +282,26 @@ export async function notifyScheduleAnomalyIncidentAutoActionExecution(
 
     await input.appendAudit({
       action: "scheduling.anomaly.incident.auto_action.notified",
-      payload: {
+      payload: buildScheduleAnomalyIncidentAutoActionNotificationAuditPayload({
         executedAt: input.executedAt,
         candidates: input.candidates,
         escalated: input.escalated,
         assigned: input.assigned,
         failed: input.failed
-      }
+      })
     });
   } catch (error) {
     try {
       await input.appendAudit({
         action: "scheduling.anomaly.incident.auto_action.notify.failed",
-        payload: {
+        payload: buildScheduleAnomalyIncidentAutoActionNotificationAuditPayload({
           executedAt: input.executedAt,
           candidates: input.candidates,
           escalated: input.escalated,
           assigned: input.assigned,
           failed: input.failed,
           error: error instanceof Error ? error.message : "unknown error"
-        }
+        })
       });
     } catch {
       // Non-blocking failure path for auto-action notification telemetry.
