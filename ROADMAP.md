@@ -1000,3 +1000,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0705 employee guide/account session identity devtools gate (hide read-only session organization/employee identifiers by default in employee guide context panel and employee account session/query settings panel; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0705 regression guard)
 
 - WI-0706 leave accrual KO normalization and session devtools gate (normalize corrupted Korean runtime copy on /admin/leave-accrual and hide read-only session organization/admin identifiers in product mode; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0706 regression guard)
+
+- WI-0707 employee payslip session identity devtools gate completion (hide read-only session organization/employee identifiers on /employee/payslips filter panel and /employee/payslip-receipts filters panel by default; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0707 regression guard)
