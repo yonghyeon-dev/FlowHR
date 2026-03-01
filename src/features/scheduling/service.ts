@@ -43,6 +43,7 @@ import {
   buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry
 } from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
 import {
+  buildScheduleAnomalyIncidentArchiveDeleteIncidentCallback,
   buildScheduleAnomalyIncidentArchivedAuditAppender,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry,
   buildScheduleAnomalyIncidentArchiveCandidates,
@@ -2479,16 +2480,16 @@ export async function archiveScheduleAnomalyIncidents(
     actorId: actor.id,
     appendAuditEntry: (entry) => context.dataAccess.audit.append(entry)
   });
+  const deleteArchivedIncident = buildScheduleAnomalyIncidentArchiveDeleteIncidentCallback({
+    organizationId: tenantScope,
+    deleteIncident: (deleteInput) => context.dataAccess.scheduling.deleteIncident(deleteInput)
+  });
 
   const { archived, dryRunCount, failed, items } =
     await executeScheduleAnomalyIncidentArchiveActions({
       candidates,
       dryRun,
-      deleteIncident: async ({ incidentId }) =>
-        context.dataAccess.scheduling.deleteIncident({
-          incidentId,
-          organizationId: tenantScope
-        }),
+      deleteIncident: deleteArchivedIncident,
       onArchived: appendArchivedAudit
     });
 
