@@ -140,6 +140,11 @@ type BuildScheduleAnomalyIncidentArchivedAuditAppenderInput = {
   ) => Promise<void>;
 };
 
+type BuildScheduleAnomalyIncidentArchiveDeleteIncidentCallbackInput = {
+  organizationId: string | undefined;
+  deleteIncident: (input: { incidentId: string; organizationId: string | undefined }) => Promise<boolean>;
+};
+
 export function buildScheduleAnomalyIncidentArchiveCandidates(
   input: BuildScheduleAnomalyIncidentArchiveCandidatesInput
 ): ScheduleAnomalyIncidentArchiveCandidates {
@@ -363,6 +368,16 @@ export function buildScheduleAnomalyIncidentArchivedAuditAppender(
       })
     );
   };
+}
+
+export function buildScheduleAnomalyIncidentArchiveDeleteIncidentCallback(
+  input: BuildScheduleAnomalyIncidentArchiveDeleteIncidentCallbackInput
+) {
+  return async ({ incidentId }: { incidentId: string }) =>
+    input.deleteIncident({
+      incidentId,
+      organizationId: input.organizationId
+    });
 }
 
 export function buildScheduleAnomalyIncidentArchiveResult(
