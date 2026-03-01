@@ -46,6 +46,7 @@ import {
   buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry,
   buildScheduleAnomalyIncidentArchiveCandidates,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload,
+  buildScheduleAnomalyIncidentArchiveSummaryCounts,
   buildScheduleAnomalyIncidentArchiveResult,
   executeScheduleAnomalyIncidentArchiveActions
 } from "@/features/scheduling/anomaly-incident-archive-helpers";
@@ -2481,6 +2482,11 @@ export async function archiveScheduleAnomalyIncidents(
     });
 
   const archivedAt = new Date().toISOString();
+  const archiveSummary = buildScheduleAnomalyIncidentArchiveSummaryCounts({
+    archived,
+    dryRunCount,
+    failed
+  });
   await context.dataAccess.audit.append(
     buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry({
       organizationId: tenantScope,
@@ -2499,7 +2505,7 @@ export async function archiveScheduleAnomalyIncidents(
         total: incidents.length,
         eligible: eligible.length,
         candidates: candidates.length,
-        summary: { archived, dryRunCount, failed },
+        summary: archiveSummary,
         skippedState,
         skippedRecent
       })
@@ -2517,7 +2523,7 @@ export async function archiveScheduleAnomalyIncidents(
     total: incidents.length,
     eligible: eligible.length,
     candidates: candidates.length,
-    summary: { archived, dryRunCount, failed, items },
+    summary: { ...archiveSummary, items },
     skippedState,
     skippedRecent
   });
