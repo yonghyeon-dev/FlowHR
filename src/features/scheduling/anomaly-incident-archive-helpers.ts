@@ -70,6 +70,11 @@ type BuildScheduleAnomalyIncidentArchiveGeneratedAuditPayloadInput = {
   skippedRecent: number;
 };
 
+type BuildScheduleAnomalyIncidentArchiveSummaryCountsInput = Pick<
+  ScheduleAnomalyIncidentArchiveActionSummary,
+  "archived" | "dryRunCount" | "failed"
+>;
+
 type BuildScheduleAnomalyIncidentArchiveResultInput = {
   archivedAt: string;
   dryRun: boolean;
@@ -256,6 +261,16 @@ export function buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry(
     actorRole: input.actorRole,
     actorId: input.actorId,
     payload: input.payload
+  };
+}
+
+export function buildScheduleAnomalyIncidentArchiveSummaryCounts(
+  input: BuildScheduleAnomalyIncidentArchiveSummaryCountsInput
+) {
+  return {
+    archived: input.archived,
+    dryRunCount: input.dryRunCount,
+    failed: input.failed
   };
 }
 
