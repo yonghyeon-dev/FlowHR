@@ -54,6 +54,14 @@ type BuildScheduleAnomalyIncidentEscalationSummaryPayloadInput = {
   >;
 };
 
+type BuildScheduleAnomalyIncidentEscalationSummaryPayloadInputFromMetaAndExecutionInput = {
+  escalationMeta: Omit<
+    BuildScheduleAnomalyIncidentEscalationSummaryPayloadInput,
+    "executionSummary"
+  >;
+  executionSummary: BuildScheduleAnomalyIncidentEscalationSummaryPayloadInput["executionSummary"];
+};
+
 type BuildScheduleAnomalyIncidentEscalationResultInput = {
   requestedAt: string;
   dryRun: boolean;
@@ -302,6 +310,15 @@ export function buildScheduleAnomalyIncidentEscalationSummaryPayload(
     requested: input.executionSummary.requested,
     skippedCooldown: input.executionSummary.skippedCooldown,
     failed: input.executionSummary.failed
+  };
+}
+
+export function buildScheduleAnomalyIncidentEscalationSummaryPayloadInputFromMetaAndExecution(
+  input: BuildScheduleAnomalyIncidentEscalationSummaryPayloadInputFromMetaAndExecutionInput
+) {
+  return {
+    ...input.escalationMeta,
+    executionSummary: input.executionSummary
   };
 }
 
