@@ -43,7 +43,7 @@ import {
   buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry
 } from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
 import {
-  buildScheduleAnomalyIncidentArchivedAuditEntry,
+  buildScheduleAnomalyIncidentArchivedAuditAppender,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry,
   buildScheduleAnomalyIncidentArchiveCandidates,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload,
@@ -2461,6 +2461,15 @@ export async function archiveScheduleAnomalyIncidents(
       cutoffMillis,
       topN
     });
+  const appendArchivedAudit = buildScheduleAnomalyIncidentArchivedAuditAppender({
+    asOfIso,
+    olderThanMinutes,
+    archiveReason,
+    fallbackOrganizationId: tenantScope,
+    actorRole: actor.role,
+    actorId: actor.id,
+    appendAuditEntry: (entry) => context.dataAccess.audit.append(entry)
+  });
 
   const { archived, dryRunCount, failed, items } =
     await executeScheduleAnomalyIncidentArchiveActions({
@@ -2471,20 +2480,7 @@ export async function archiveScheduleAnomalyIncidents(
           incidentId,
           organizationId: tenantScope
         }),
-      onArchived: async ({ candidate, archivedAt }) => {
-        await context.dataAccess.audit.append(
-          buildScheduleAnomalyIncidentArchivedAuditEntry({
-            candidate,
-            archivedAt,
-            asOfIso,
-            olderThanMinutes,
-            archiveReason,
-            fallbackOrganizationId: tenantScope,
-            actorRole: actor.role,
-            actorId: actor.id
-          })
-        );
-      }
+      onArchived: appendArchivedAudit
     });
 
   const archivedAt = new Date().toISOString();

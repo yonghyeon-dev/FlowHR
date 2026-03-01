@@ -128,6 +128,18 @@ type BuildScheduleAnomalyIncidentArchivedAuditEntryInput = {
   actorId: string | undefined;
 };
 
+type BuildScheduleAnomalyIncidentArchivedAuditAppenderInput = {
+  asOfIso: string;
+  olderThanMinutes: number;
+  archiveReason: string | null;
+  fallbackOrganizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  appendAuditEntry: (
+    entry: ReturnType<typeof buildScheduleAnomalyIncidentArchivedAuditEntry>
+  ) => Promise<void>;
+};
+
 export function buildScheduleAnomalyIncidentArchiveCandidates(
   input: BuildScheduleAnomalyIncidentArchiveCandidatesInput
 ): ScheduleAnomalyIncidentArchiveCandidates {
@@ -325,6 +337,31 @@ export function buildScheduleAnomalyIncidentArchivedAuditEntry(
       olderThanMinutes: input.olderThanMinutes,
       archiveReason: input.archiveReason
     })
+  };
+}
+
+export function buildScheduleAnomalyIncidentArchivedAuditAppender(
+  input: BuildScheduleAnomalyIncidentArchivedAuditAppenderInput
+) {
+  return async ({
+    candidate,
+    archivedAt
+  }: {
+    candidate: BuildScheduleAnomalyIncidentArchivedAuditEntryInput["candidate"];
+    archivedAt: string;
+  }) => {
+    await input.appendAuditEntry(
+      buildScheduleAnomalyIncidentArchivedAuditEntry({
+        candidate,
+        archivedAt,
+        asOfIso: input.asOfIso,
+        olderThanMinutes: input.olderThanMinutes,
+        archiveReason: input.archiveReason,
+        fallbackOrganizationId: input.fallbackOrganizationId,
+        actorRole: input.actorRole,
+        actorId: input.actorId
+      })
+    );
   };
 }
 
