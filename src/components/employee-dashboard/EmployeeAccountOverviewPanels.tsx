@@ -71,7 +71,7 @@ export function EmployeeAccountOverviewPanels({
           </p>
         ) : null}
 
-        {showDevTools || !isProductionRuntime ? (
+        {showDevTools ? (
           <details className="details" style={{ marginTop: 12 }}>
             <summary>
               {isKoLocale ? "세션/조회 설정" : "Session & Query Settings"}

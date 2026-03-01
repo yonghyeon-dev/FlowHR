@@ -1010,3 +1010,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0710 employee session-context devtools gate for core workspaces (hide session organization/employee identifiers in /employee-guide, /employee/notices, /employee/benefits, /employee/recruitment, and /employee/schedule product mode; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0710 regression guard)
 
 - WI-0711 employee payslip-receipt session-context devtools gate (hide read-only session organization/employee identifiers in /employee/payslip-receipts filter panel by default and expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0711 regression guard)
+
+- WI-0712 strict devtools gate for account session/query settings (remove non-production bypass from admin onboarding and employee account overview settings so session/query controls render only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0712 regression guard)
