@@ -1,10 +1,11 @@
-﻿import { createNoticeSchema, listNoticesQuerySchema } from "@/features/notices/schemas";
+import { createNoticeSchema, listNoticesQuerySchema } from "@/features/notices/schemas";
 import {
   createNotice,
   listNoticeReadReceipts,
   listNotices,
   summarizeNotices
 } from "@/features/notices/store";
+import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -31,16 +32,17 @@ export async function GET(request: Request) {
   const isAdminActor = canManageNotices(actor?.role);
   const audience = isAdminActor ? parsed.data.audience : "employees";
   const organizationId = parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID;
-  const notices = listNotices({
+  const context = { dataAccess: getRuntimeDataAccess() };
+  const notices = await listNotices(context, {
     organizationId,
     audience,
     status: parsed.data.status,
     publishedOnly: parsed.data.publishedOnly ?? !isAdminActor
   });
   const readReceipts = isAdminActor
-    ? listNoticeReadReceipts({ organizationId })
+    ? await listNoticeReadReceipts(context, { organizationId })
     : actor?.id && actor.id.trim().length > 0
-      ? listNoticeReadReceipts({ organizationId, actorId: actor.id })
+      ? await listNoticeReadReceipts(context, { organizationId, actorId: actor.id })
       : [];
 
   return ok({
@@ -71,15 +73,18 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const created = createNotice({
-    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
-    title: parsed.data.title,
-    body: parsed.data.body,
-    audience: parsed.data.audience,
-    publishAt: parsed.data.publishAt,
-    createdByActorId: actor?.id ?? "unknown"
-  });
+  const created = await createNotice(
+    { dataAccess: getRuntimeDataAccess() },
+    {
+      organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+      title: parsed.data.title,
+      body: parsed.data.body,
+      audience: parsed.data.audience,
+      publishAt: parsed.data.publishAt,
+      createdByActorId: actor?.id ?? "unknown",
+      actorRole: actor?.role ?? "admin"
+    }
+  );
 
   return ok({ notice: created }, 201);
 }
-

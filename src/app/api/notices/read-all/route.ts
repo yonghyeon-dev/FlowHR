@@ -1,5 +1,6 @@
 import { readAllNoticesSchema } from "@/features/notices/schemas";
 import { markAllNoticesRead } from "@/features/notices/store";
+import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -31,11 +32,15 @@ export async function POST(request: Request) {
 
   const organizationId = parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID;
   const audience = canManageNotices(actor.role) ? "all" : "employees";
-  const receipts = markAllNoticesRead({
-    organizationId,
-    actorId: actor.id,
-    audience
-  });
+  const receipts = await markAllNoticesRead(
+    { dataAccess: getRuntimeDataAccess() },
+    {
+      organizationId,
+      actorId: actor.id,
+      actorRole: actor.role ?? "employee",
+      audience
+    }
+  );
 
   return ok({
     count: receipts.length,

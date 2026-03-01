@@ -21,10 +21,13 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-0407-notices-core-journey-implementation.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(noticesStore, /INITIAL_NOTICE_STORE/);
-  assert.match(noticesStore, /export function listNotices/);
-  assert.match(noticesStore, /export function createNotice/);
-  assert.match(noticesStore, /export function publishNotice/);
+  assert.match(noticesStore, /notice\.created/);
+  assert.match(noticesStore, /notice\.published/);
+  assert.match(noticesStore, /notice\.notification\.enqueued/);
+  assert.match(noticesStore, /context\.dataAccess\.audit\.append/);
+  assert.match(noticesStore, /export async function listNotices/);
+  assert.match(noticesStore, /export async function createNotice/);
+  assert.match(noticesStore, /export async function publishNotice/);
 
   assert.match(noticesApiRoute, /export async function GET/);
   assert.match(noticesApiRoute, /export async function POST/);

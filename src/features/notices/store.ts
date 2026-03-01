@@ -1,4 +1,9 @@
-﻿import type { NoticeAudience, NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
+import type { DataAccess } from "@/features/shared/data-access";
+import type { NoticeAudience, NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
+
+type NoticeStoreContext = {
+  dataAccess: Pick<DataAccess, "audit">;
+};
 
 type ListNoticesInput = {
   organizationId?: string;
@@ -14,6 +19,14 @@ type CreateNoticeInput = {
   audience: NoticeAudience;
   publishAt?: string | null;
   createdByActorId: string;
+  actorRole?: string;
+};
+
+type PublishNoticeInput = {
+  organizationId: string;
+  noticeId: string;
+  actorId?: string;
+  actorRole?: string;
 };
 
 type ListNoticeReadReceiptsInput = {
@@ -25,59 +38,49 @@ type MarkNoticeReadInput = {
   organizationId: string;
   noticeId: string;
   actorId: string;
+  actorRole?: string;
 };
 
 type MarkAllNoticesReadInput = {
   organizationId: string;
   actorId: string;
+  actorRole?: string;
   audience?: NoticeAudience | "all";
 };
 
-const DEFAULT_ORG_ID = "ORG-DEMO";
-const INITIAL_NOTICE_STORE: NoticeItem[] = [
-  {
-    id: "NOTICE-1001",
-    organizationId: DEFAULT_ORG_ID,
-    title: "2월 급여 명세서 확인 안내",
-    body: "2월 급여 명세서가 발행되었습니다. 직원 포털에서 수신 확인을 완료해 주세요.",
-    audience: "employees",
-    status: "PUBLISHED",
-    publishAt: "2026-02-20T00:00:00.000Z",
-    publishedAt: "2026-02-20T00:00:00.000Z",
-    createdByActorId: "ADM-1001",
-    createdAt: "2026-02-19T04:30:00.000Z",
-    updatedAt: "2026-02-20T00:00:00.000Z"
-  },
-  {
-    id: "NOTICE-1002",
-    organizationId: DEFAULT_ORG_ID,
-    title: "근태 정정 요청 제출 가이드",
-    body: "출퇴근 정정 요청은 제출 전 근무일/시각을 다시 확인해 주세요.",
-    audience: "all",
-    status: "PUBLISHED",
-    publishAt: "2026-02-18T00:00:00.000Z",
-    publishedAt: "2026-02-18T00:00:00.000Z",
-    createdByActorId: "ADM-1001",
-    createdAt: "2026-02-17T04:30:00.000Z",
-    updatedAt: "2026-02-18T00:00:00.000Z"
-  },
-  {
-    id: "NOTICE-1003",
-    organizationId: DEFAULT_ORG_ID,
-    title: "복리후생 신청 오픈 예정",
-    body: "복리후생 신청이 다음 주 월요일 오전 9시에 오픈됩니다.",
-    audience: "employees",
-    status: "SCHEDULED",
-    publishAt: "2026-03-02T00:00:00.000Z",
-    publishedAt: null,
-    createdByActorId: "ADM-1001",
-    createdAt: "2026-02-21T01:20:00.000Z",
-    updatedAt: "2026-02-21T01:20:00.000Z"
-  }
-];
+type NoticeCreatedAuditPayload = {
+  version: 1;
+  notice: NoticeItem;
+};
 
-const noticeStore: NoticeItem[] = [...INITIAL_NOTICE_STORE];
-const noticeReadStore: NoticeReadReceipt[] = [];
+type NoticePublishedAuditPayload = {
+  version: 1;
+  noticeId: string;
+  publishedAt: string;
+  publishAt: string;
+};
+
+type NoticeReadAuditPayload = {
+  version: 1;
+  receipt: NoticeReadReceipt;
+};
+
+type NoticeNotificationEnqueuedAuditPayload = {
+  version: 1;
+  noticeId: string;
+  organizationId: string;
+  audience: NoticeAudience;
+  channel: "in_app";
+  enqueuedAt: string;
+};
+
+const NOTICE_ENTITY_TYPE = "Notice";
+const NOTICE_CREATED_ACTION = "notice.created";
+const NOTICE_PUBLISHED_ACTION = "notice.published";
+const NOTICE_READ_ACTION = "notice.read";
+const NOTICE_NOTIFICATION_ENQUEUED_ACTION = "notice.notification.enqueued";
+const NOTICE_AUDIT_ACTIONS = [NOTICE_CREATED_ACTION, NOTICE_PUBLISHED_ACTION, NOTICE_READ_ACTION] as const;
+const DEFAULT_ORG_ID = "ORG-DEMO";
 
 function normalizeAudience(audience: NoticeAudience | "all" | undefined) {
   return audience === "all" || !audience ? null : audience;
@@ -99,13 +102,159 @@ function nextNoticeId() {
   return `NOTICE-${stamp}-${random}`;
 }
 
-export function listNotices(input: ListNoticesInput = {}) {
+function toNoticeCreatedPayload(payload: unknown): NoticeCreatedAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<NoticeCreatedAuditPayload>;
+  if (!candidate.notice || typeof candidate.notice !== "object") {
+    return null;
+  }
+  const notice = candidate.notice as NoticeItem;
+  if (
+    typeof notice.id !== "string" ||
+    typeof notice.organizationId !== "string" ||
+    typeof notice.title !== "string" ||
+    typeof notice.body !== "string" ||
+    typeof notice.createdByActorId !== "string" ||
+    typeof notice.createdAt !== "string" ||
+    typeof notice.updatedAt !== "string"
+  ) {
+    return null;
+  }
+  if (notice.audience !== "all" && notice.audience !== "employees" && notice.audience !== "admins") {
+    return null;
+  }
+  if (notice.status !== "DRAFT" && notice.status !== "SCHEDULED" && notice.status !== "PUBLISHED") {
+    return null;
+  }
+  return {
+    version: 1,
+    notice
+  };
+}
+
+function toNoticePublishedPayload(payload: unknown): NoticePublishedAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<NoticePublishedAuditPayload>;
+  if (
+    typeof candidate.noticeId !== "string" ||
+    typeof candidate.publishedAt !== "string" ||
+    typeof candidate.publishAt !== "string"
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    noticeId: candidate.noticeId,
+    publishedAt: candidate.publishedAt,
+    publishAt: candidate.publishAt
+  };
+}
+
+function toNoticeReadPayload(payload: unknown): NoticeReadAuditPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const candidate = payload as Partial<NoticeReadAuditPayload>;
+  if (!candidate.receipt || typeof candidate.receipt !== "object") {
+    return null;
+  }
+  const receipt = candidate.receipt as NoticeReadReceipt;
+  if (
+    typeof receipt.noticeId !== "string" ||
+    typeof receipt.organizationId !== "string" ||
+    typeof receipt.actorId !== "string" ||
+    typeof receipt.readAt !== "string"
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    receipt
+  };
+}
+
+function applyAutoPublishStatus(notice: NoticeItem, asOfIso: string): NoticeItem {
+  if (notice.status !== "SCHEDULED" || !notice.publishAt) {
+    return notice;
+  }
+  const publishAtMillis = Date.parse(notice.publishAt);
+  if (!Number.isFinite(publishAtMillis)) {
+    return notice;
+  }
+  const asOfMillis = Date.parse(asOfIso);
+  if (!Number.isFinite(asOfMillis) || publishAtMillis > asOfMillis) {
+    return notice;
+  }
+  return {
+    ...notice,
+    status: "PUBLISHED",
+    publishedAt: notice.publishedAt ?? notice.publishAt,
+    updatedAt: notice.updatedAt
+  };
+}
+
+async function listNoticeAuditEntries(context: NoticeStoreContext, organizationId: string) {
+  return context.dataAccess.audit.list({
+    actions: [...NOTICE_AUDIT_ACTIONS],
+    entityType: NOTICE_ENTITY_TYPE,
+    organizationId,
+    limit: 5000
+  });
+}
+
+async function listAllNotices(context: NoticeStoreContext, organizationId: string) {
+  const logs = await listNoticeAuditEntries(context, organizationId);
+  const noticeById = new Map<string, NoticeItem>();
+
+  for (const log of logs) {
+    if (log.action === NOTICE_CREATED_ACTION) {
+      const createdPayload = toNoticeCreatedPayload(log.payload);
+      if (!createdPayload) {
+        continue;
+      }
+      if (createdPayload.notice.organizationId !== organizationId) {
+        continue;
+      }
+      noticeById.set(createdPayload.notice.id, createdPayload.notice);
+      continue;
+    }
+
+    if (log.action === NOTICE_PUBLISHED_ACTION) {
+      const publishedPayload = toNoticePublishedPayload(log.payload);
+      if (!publishedPayload) {
+        continue;
+      }
+      const target = noticeById.get(publishedPayload.noticeId);
+      if (!target) {
+        continue;
+      }
+      noticeById.set(publishedPayload.noticeId, {
+        ...target,
+        status: "PUBLISHED",
+        publishAt: publishedPayload.publishAt,
+        publishedAt: publishedPayload.publishedAt,
+        updatedAt: publishedPayload.publishedAt
+      });
+    }
+  }
+
+  const asOfIso = new Date().toISOString();
+  return Array.from(noticeById.values())
+    .map((notice) => applyAutoPublishStatus(notice, asOfIso))
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+}
+
+export async function listNotices(context: NoticeStoreContext, input: ListNoticesInput = {}) {
   const audience = normalizeAudience(input.audience);
   const status = normalizeStatus(input.status);
   const organizationId = input.organizationId?.trim() || DEFAULT_ORG_ID;
 
-  return noticeStore
-    .filter((notice) => notice.organizationId === organizationId)
+  const notices = await listAllNotices(context, organizationId);
+  return notices
     .filter((notice) => {
       if (!audience) {
         return true;
@@ -126,11 +275,10 @@ export function listNotices(input: ListNoticesInput = {}) {
         return true;
       }
       return notice.status === "PUBLISHED";
-    })
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+    });
 }
 
-export function createNotice(input: CreateNoticeInput) {
+export async function createNotice(context: NoticeStoreContext, input: CreateNoticeInput) {
   const now = new Date().toISOString();
   const publishAt = input.publishAt ? toIso(input.publishAt) : null;
   const next: NoticeItem = {
@@ -147,21 +295,76 @@ export function createNotice(input: CreateNoticeInput) {
     updatedAt: now
   };
 
-  noticeStore.unshift(next);
+  await context.dataAccess.audit.append({
+    action: NOTICE_CREATED_ACTION,
+    entityType: NOTICE_ENTITY_TYPE,
+    entityId: next.id,
+    organizationId: next.organizationId,
+    actorRole: input.actorRole ?? "admin",
+    actorId: input.createdByActorId,
+    payload: {
+      version: 1,
+      notice: next
+    } satisfies NoticeCreatedAuditPayload
+  });
+
   return next;
 }
 
-export function publishNotice(noticeId: string) {
-  const target = noticeStore.find((notice) => notice.id === noticeId);
+export async function publishNotice(context: NoticeStoreContext, input: PublishNoticeInput) {
+  const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
+  const noticeId = input.noticeId.trim();
+  if (!noticeId) {
+    return null;
+  }
+
+  const notices = await listAllNotices(context, organizationId);
+  const target = notices.find((notice) => notice.id === noticeId);
   if (!target) {
     return null;
   }
-  const now = new Date().toISOString();
-  target.status = "PUBLISHED";
-  target.publishAt = target.publishAt ?? now;
-  target.publishedAt = now;
-  target.updatedAt = now;
-  return target;
+
+  const publishedAt = new Date().toISOString();
+  const publishAt = target.publishAt ?? publishedAt;
+  await context.dataAccess.audit.append({
+    action: NOTICE_PUBLISHED_ACTION,
+    entityType: NOTICE_ENTITY_TYPE,
+    entityId: target.id,
+    organizationId,
+    actorRole: input.actorRole ?? "admin",
+    actorId: input.actorId,
+    payload: {
+      version: 1,
+      noticeId: target.id,
+      publishedAt,
+      publishAt
+    } satisfies NoticePublishedAuditPayload
+  });
+
+  await context.dataAccess.audit.append({
+    action: NOTICE_NOTIFICATION_ENQUEUED_ACTION,
+    entityType: NOTICE_ENTITY_TYPE,
+    entityId: target.id,
+    organizationId,
+    actorRole: input.actorRole ?? "admin",
+    actorId: input.actorId,
+    payload: {
+      version: 1,
+      noticeId: target.id,
+      organizationId,
+      audience: target.audience,
+      channel: "in_app",
+      enqueuedAt: publishedAt
+    } satisfies NoticeNotificationEnqueuedAuditPayload
+  });
+
+  return {
+    ...target,
+    status: "PUBLISHED" as const,
+    publishAt,
+    publishedAt,
+    updatedAt: publishedAt
+  };
 }
 
 export function summarizeNotices(items: NoticeItem[]) {
@@ -172,17 +375,41 @@ export function summarizeNotices(items: NoticeItem[]) {
   return { total, draft, scheduled, published };
 }
 
-export function listNoticeReadReceipts(input: ListNoticeReadReceiptsInput = {}) {
+export async function listNoticeReadReceipts(
+  context: NoticeStoreContext,
+  input: ListNoticeReadReceiptsInput = {}
+) {
   const organizationId = input.organizationId?.trim() || DEFAULT_ORG_ID;
   const actorId = input.actorId?.trim();
+  const logs = await context.dataAccess.audit.list({
+    actions: [NOTICE_READ_ACTION],
+    entityType: NOTICE_ENTITY_TYPE,
+    organizationId,
+    limit: 5000
+  });
 
-  return noticeReadStore
-    .filter((receipt) => receipt.organizationId === organizationId)
+  const receiptByNoticeActor = new Map<string, NoticeReadReceipt>();
+  for (const log of logs) {
+    const payload = toNoticeReadPayload(log.payload);
+    if (!payload) {
+      continue;
+    }
+    if (payload.receipt.organizationId !== organizationId) {
+      continue;
+    }
+    const key = `${payload.receipt.noticeId}::${payload.receipt.actorId}`;
+    const existing = receiptByNoticeActor.get(key);
+    if (!existing || Date.parse(existing.readAt) <= Date.parse(payload.receipt.readAt)) {
+      receiptByNoticeActor.set(key, payload.receipt);
+    }
+  }
+
+  return Array.from(receiptByNoticeActor.values())
     .filter((receipt) => (actorId ? receipt.actorId === actorId : true))
     .sort((a, b) => Date.parse(b.readAt) - Date.parse(a.readAt));
 }
 
-export function markNoticeRead(input: MarkNoticeReadInput) {
+export async function markNoticeRead(context: NoticeStoreContext, input: MarkNoticeReadInput) {
   const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
   const actorId = input.actorId.trim();
   const noticeId = input.noticeId.trim();
@@ -190,54 +417,59 @@ export function markNoticeRead(input: MarkNoticeReadInput) {
     return null;
   }
 
-  const target = noticeStore.find((notice) => notice.id === noticeId && notice.organizationId === organizationId);
+  const notices = await listNotices(context, {
+    organizationId,
+    publishedOnly: true
+  });
+  const target = notices.find((notice) => notice.id === noticeId);
   if (!target) {
     return null;
   }
 
-  const now = new Date().toISOString();
-  const existing = noticeReadStore.find(
-    (receipt) =>
-      receipt.organizationId === organizationId &&
-      receipt.noticeId === noticeId &&
-      receipt.actorId === actorId
-  );
-  if (existing) {
-    existing.readAt = now;
-    return existing;
-  }
-
-  const next: NoticeReadReceipt = {
+  const receipt: NoticeReadReceipt = {
     organizationId,
     noticeId,
     actorId,
-    readAt: now
+    readAt: new Date().toISOString()
   };
-  noticeReadStore.unshift(next);
-  return next;
+  await context.dataAccess.audit.append({
+    action: NOTICE_READ_ACTION,
+    entityType: NOTICE_ENTITY_TYPE,
+    entityId: noticeId,
+    organizationId,
+    actorRole: input.actorRole ?? "employee",
+    actorId,
+    payload: {
+      version: 1,
+      receipt
+    } satisfies NoticeReadAuditPayload
+  });
+
+  return receipt;
 }
 
-export function markAllNoticesRead(input: MarkAllNoticesReadInput) {
+export async function markAllNoticesRead(context: NoticeStoreContext, input: MarkAllNoticesReadInput) {
   const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
   const actorId = input.actorId.trim();
   if (!actorId) {
     return [];
   }
 
-  const notices = listNotices({
+  const notices = await listNotices(context, {
     organizationId,
     audience: input.audience ?? "all",
     publishedOnly: true
   });
 
-  return notices
-    .map((notice) =>
-      markNoticeRead({
+  const receipts = await Promise.all(
+    notices.map((notice) =>
+      markNoticeRead(context, {
         organizationId,
         noticeId: notice.id,
-        actorId
+        actorId,
+        actorRole: input.actorRole
       })
     )
-    .filter((receipt): receipt is NoticeReadReceipt => receipt !== null);
+  );
+  return receipts.filter((receipt): receipt is NoticeReadReceipt => receipt !== null);
 }
-
