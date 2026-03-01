@@ -192,6 +192,7 @@ export default function WithholdingReceiptConsole() {
       <section className="panel-grid">
         <WithholdingReceiptInputPanel
           copy={copy}
+          showDevTools={showDevTools}
           year={year}
           documentFormat={documentFormat}
           sessionOrganizationId={organizationId}
