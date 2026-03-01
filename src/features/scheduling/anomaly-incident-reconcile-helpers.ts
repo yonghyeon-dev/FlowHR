@@ -37,6 +37,18 @@ type BuildScheduleAnomalyIncidentReconcileGeneratedAuditPayloadInput = {
   counts: ScheduleAnomalyIncidentReconcileCounts;
 };
 
+type ResolveScheduleAnomalyIncidentReconcileMetaInput = {
+  reconciledAt: string;
+  topN: number;
+  includeMatching: boolean;
+};
+
+type BuildScheduleAnomalyIncidentReconcileSummaryInput = {
+  compared: number;
+  returned: number;
+  counts: ScheduleAnomalyIncidentReconcileCounts;
+};
+
 type BuildScheduleAnomalyIncidentReconcileGeneratedAuditEntryInput = {
   organizationId: string | undefined;
   actorRole: string;
@@ -160,6 +172,26 @@ export function buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload(
     reconciledAt: input.reconciledAt,
     topN: input.topN,
     includeMatching: input.includeMatching,
+    compared: input.compared,
+    returned: input.returned,
+    counts: input.counts
+  };
+}
+
+export function resolveScheduleAnomalyIncidentReconcileMeta(
+  input: ResolveScheduleAnomalyIncidentReconcileMetaInput
+) {
+  return {
+    reconciledAt: input.reconciledAt,
+    topN: input.topN,
+    includeMatching: input.includeMatching
+  };
+}
+
+export function buildScheduleAnomalyIncidentReconcileSummary(
+  input: BuildScheduleAnomalyIncidentReconcileSummaryInput
+) {
+  return {
     compared: input.compared,
     returned: input.returned,
     counts: input.counts
