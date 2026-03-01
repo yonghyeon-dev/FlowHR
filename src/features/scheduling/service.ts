@@ -56,6 +56,7 @@ import {
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReplayedAuditEntry,
+  resolveScheduleAnomalyIncidentReplayMeta,
   buildScheduleAnomalyIncidentReplayResult,
   executeScheduleAnomalyIncidentReplayActions,
   selectScheduleAnomalyIncidentReplayTargets
@@ -2587,37 +2588,30 @@ export async function replayScheduleAnomalyIncidentStore(
       }
     });
 
-  const replayedAt = new Date().toISOString();
-  const fromIso = input.from?.toISOString() ?? null;
-  const toIso = input.to?.toISOString() ?? null;
+  const replayMeta = resolveScheduleAnomalyIncidentReplayMeta({
+    replayedAt: new Date().toISOString(),
+    dryRun,
+    includeArchived,
+    from: input.from,
+    to: input.to,
+    topN,
+    incidentIds: normalizedIncidentIds,
+    selectedIncidentIds
+  });
   await context.dataAccess.audit.append(
     buildScheduleAnomalyIncidentReplayGeneratedAuditEntry({
       organizationId: tenantScope,
       actorRole: actor.role,
       actorId: actor.id,
       payload: buildScheduleAnomalyIncidentReplayGeneratedAuditPayload({
-        replayedAt,
-        dryRun,
-        includeArchived,
-        fromIso,
-        toIso,
-        topN,
-        incidentIds: normalizedIncidentIds,
-        requested: selectedIncidentIds.length,
+        ...replayMeta,
         summary: { replayed, dryRunCount, notFound, failed }
       })
     })
   );
 
   return buildScheduleAnomalyIncidentReplayResult({
-    replayedAt,
-    dryRun,
-    includeArchived,
-    fromIso,
-    toIso,
-    topN,
-    incidentIds: normalizedIncidentIds,
-    requested: selectedIncidentIds.length,
+    ...replayMeta,
     summary: { replayed, dryRunCount, notFound, failed, items }
   });
 }
