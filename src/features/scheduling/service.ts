@@ -148,6 +148,7 @@ import {
   getScheduleAnomalyIncidentFromHelper,
   listScheduleAnomalyIncidentsFromHelper
 } from "@/features/scheduling/anomaly-incident-query-service-helpers";
+import { resolveScheduleAnomalyIncidentSlaQueryInput } from "@/features/scheduling/anomaly-incident-sla-query-helpers";
 import {
   isWithinOptionalCreatedAtRange,
   normalizeAnomalyIncidentArchiveOlderThanMinutes,
@@ -157,9 +158,7 @@ import {
   normalizeAnomalyIncidentReplayIncidentIds,
   normalizeAnomalyIncidentReplayTopN,
   normalizeIncidentListTopN,
-  normalizeReconcileTopN,
-  resolveAnomalyIncidentSlaTargetMinutes,
-  resolveAnomalyIncidentWarningMinutes
+  normalizeReconcileTopN
 } from "@/features/scheduling/incident-normalizers";
 import {
   MAX_ANOMALY_INCIDENT_AUDIT_ROWS,
@@ -2114,16 +2113,8 @@ export async function listScheduleAnomalyIncidentSla(
     "schedule anomaly incident SLA requires permission"
   );
 
-  const topN = normalizeIncidentListTopN(input.topN);
-  const assigneeId = input.assigneeId?.trim();
-  const includeResolved = input.includeResolved ?? false;
-  const slaTargetMinutes = resolveAnomalyIncidentSlaTargetMinutes(input.slaTargetMinutes);
-  const warningMinutes = resolveAnomalyIncidentWarningMinutes(
-    input.warningMinutes,
-    slaTargetMinutes
-  );
-  const asOf = input.asOf ?? new Date();
-  const asOfMillis = asOf.getTime();
+  const { topN, assigneeId, includeResolved, slaTargetMinutes, warningMinutes, asOf, asOfMillis } =
+    resolveScheduleAnomalyIncidentSlaQueryInput(input);
 
   const readModels = await listScheduleAnomalyIncidentReadModels(context.dataAccess, {
     organizationId: tenantScope
