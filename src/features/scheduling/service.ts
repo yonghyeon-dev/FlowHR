@@ -125,6 +125,7 @@ import {
   type GeneratedScheduleWindow
 } from "@/features/scheduling/rotation-window-helpers";
 import {
+  buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReconcileResult,
   buildScheduleAnomalyIncidentReconcileSnapshot,
@@ -2663,21 +2664,21 @@ export async function reconcileScheduleAnomalyIncidentStore(
     topN
   });
 
-  await context.dataAccess.audit.append({
-    action: "scheduling.anomaly.incident.reconciliation.generated",
-    entityType: "WorkSchedule",
-    organizationId: tenantScope,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload({
-      reconciledAt,
-      topN,
-      includeMatching,
-      compared: compared.length,
-      returned: items.length,
-      counts
+  await context.dataAccess.audit.append(
+    buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry({
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload({
+        reconciledAt,
+        topN,
+        includeMatching,
+        compared: compared.length,
+        returned: items.length,
+        counts
+      })
     })
-  });
+  );
   return buildScheduleAnomalyIncidentReconcileResult({
     reconciledAt,
     topN,
