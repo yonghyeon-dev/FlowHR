@@ -122,7 +122,7 @@ export function AdminOnboardingAccountPanels({
           </p>
         ) : null}
 
-        {showDevTools || !isProductionRuntime ? (
+        {showDevTools ? (
           <details className="details" style={{ marginTop: 12 }}>
             <summary>
               {isKoLocale ? "개발/검증 설정" : "Dev/Verification Settings"}{" "}
