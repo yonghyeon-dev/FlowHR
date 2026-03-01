@@ -72,6 +72,11 @@ type BuildScheduleAnomalyIncidentAutoActionNotificationAuditPayloadInput = {
   error?: string;
 };
 
+type BuildScheduleAnomalyIncidentAutoActionExecutedEventPayloadInput = {
+  summaryPayload: Record<string, unknown>;
+  items: ScheduleAnomalyIncidentAutoActionItem[];
+};
+
 type BuildScheduleAnomalyIncidentAutoActionSummaryPayloadInput = {
   executedAt: string;
   state: ScheduleAnomalyIncidentLifecycleState | undefined;
@@ -254,6 +259,15 @@ function buildScheduleAnomalyIncidentAutoActionEventItems(items: ScheduleAnomaly
   }));
 }
 
+export function buildScheduleAnomalyIncidentAutoActionExecutedEventPayload(
+  input: BuildScheduleAnomalyIncidentAutoActionExecutedEventPayloadInput
+) {
+  return {
+    ...input.summaryPayload,
+    items: buildScheduleAnomalyIncidentAutoActionEventItems(input.items)
+  };
+}
+
 export function buildScheduleAnomalyIncidentAutoActionNotificationAuditPayload(
   input: BuildScheduleAnomalyIncidentAutoActionNotificationAuditPayloadInput
 ) {
@@ -275,10 +289,12 @@ export async function notifyScheduleAnomalyIncidentAutoActionExecution(
   }
 
   try {
-    await input.publishExecuted({
-      ...input.summaryPayload,
-      items: buildScheduleAnomalyIncidentAutoActionEventItems(input.items)
-    });
+    await input.publishExecuted(
+      buildScheduleAnomalyIncidentAutoActionExecutedEventPayload({
+        summaryPayload: input.summaryPayload,
+        items: input.items
+      })
+    );
 
     await input.appendAudit({
       action: "scheduling.anomaly.incident.auto_action.notified",
