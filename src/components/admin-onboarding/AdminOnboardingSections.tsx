@@ -16,6 +16,7 @@ export type AdminOnboardingActionLog = {
 
 type ContextPanelProps = {
   copy: AdminOnboardingCopy;
+  showDevTools: boolean;
   sessionOrganizationId: string;
   sessionActorId: string;
   pendingLabel: string | null;
@@ -26,6 +27,7 @@ type ContextPanelProps = {
 export function AdminOnboardingContextPanel(props: ContextPanelProps) {
   const {
     copy,
+    showDevTools,
     sessionOrganizationId,
     sessionActorId,
     pendingLabel,
@@ -37,10 +39,12 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
-        <p className="small muted">
-          {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
-          <code>{sessionActorId || "-"}</code>
-        </p>
+        {showDevTools ? (
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
+            <code>{sessionActorId || "-"}</code>
+          </p>
+        ) : null}
         <div className="actions">
           <button className="btn btn-primary" onClick={onRefresh} disabled={refreshDisabled}>{copy.loadButton}</button>
         </div>

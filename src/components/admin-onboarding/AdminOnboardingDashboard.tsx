@@ -37,6 +37,7 @@ export function AdminOnboardingDashboard() {
 
       <AdminOnboardingContextPanel
         copy={copy}
+        showDevTools={data.showDevTools}
         sessionOrganizationId={data.organizationId}
         sessionActorId={data.adminActorId}
         pendingLabel={data.pendingLabel}

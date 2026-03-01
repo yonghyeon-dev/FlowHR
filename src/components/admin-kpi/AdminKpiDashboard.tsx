@@ -234,6 +234,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       ) : null}
       <AdminKpiContextPanel
         copy={copy}
+        showDevTools={showDevTools}
         sessionOrganizationId={organizationId}
         sessionActorId={adminActorId}
         periodStart={periodStart}
