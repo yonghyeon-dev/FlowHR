@@ -163,6 +163,7 @@ import {
   buildScheduleAnomalyIncidentEscalationRequestedAuditEntry,
   buildScheduleAnomalyIncidentEscalationRequestPayload,
   buildScheduleAnomalyIncidentEscalationResult,
+  buildScheduleAnomalyIncidentEscalationSummaryPayloadInputFromMetaAndExecution,
   resolveScheduleAnomalyIncidentEscalationExecutionPreparation,
   buildScheduleAnomalyIncidentEscalationSummaryPayload,
   resolveScheduleAnomalyIncidentEscalationOptions,
@@ -2282,12 +2283,9 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   const { requested, skippedCooldown, failed, items } = executionSummary;
 
   const requestedAt = new Date().toISOString();
-  await context.dataAccess.audit.append(
-    buildScheduleAnomalyIncidentEscalationGeneratedAuditEntry({
-      organizationId: tenantScope,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: buildScheduleAnomalyIncidentEscalationSummaryPayload({
+  const escalationSummaryPayloadInput =
+    buildScheduleAnomalyIncidentEscalationSummaryPayloadInputFromMetaAndExecution({
+      escalationMeta: {
         requestedAt,
         dryRun,
         includeResolved,
@@ -2297,9 +2295,16 @@ export async function triggerScheduleAnomalyIncidentEscalation(
         state: input.state,
         assigneeId: input.assigneeId,
         topN: input.topN,
-        candidates: candidateCount,
-        executionSummary
-      })
+        candidates: candidateCount
+      },
+      executionSummary
+    });
+  await context.dataAccess.audit.append(
+    buildScheduleAnomalyIncidentEscalationGeneratedAuditEntry({
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: buildScheduleAnomalyIncidentEscalationSummaryPayload(escalationSummaryPayloadInput)
     })
   );
 
