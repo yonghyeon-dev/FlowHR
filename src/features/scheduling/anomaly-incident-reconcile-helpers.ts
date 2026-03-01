@@ -20,6 +20,11 @@ type BuildScheduleAnomalyIncidentReconcileSnapshotInput = {
   auditRows: ScheduleAnomalyIncidentReconcileRow[];
 };
 
+type BuildScheduleAnomalyIncidentReconcileSnapshotInputFromRows = {
+  storeRows: ScheduleAnomalyIncidentReconcileRow[];
+  auditRows: ScheduleAnomalyIncidentReconcileRow[];
+};
+
 type BuildScheduleAnomalyIncidentReconcileAuditReadInput = {
   organizationId: string | undefined;
 };
@@ -155,6 +160,15 @@ export function buildScheduleAnomalyIncidentReconcileSnapshot(
   };
 
   return { compared, counts };
+}
+
+export function buildScheduleAnomalyIncidentReconcileSnapshotInputFromRows(
+  input: BuildScheduleAnomalyIncidentReconcileSnapshotInputFromRows
+) {
+  return {
+    storeRows: input.storeRows,
+    auditRows: input.auditRows
+  };
 }
 
 export function buildScheduleAnomalyIncidentReconcileAuditReadInput(
