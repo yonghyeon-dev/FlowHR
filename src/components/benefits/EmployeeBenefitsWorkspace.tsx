@@ -18,10 +18,16 @@ import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } fro
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function EmployeeBenefitsWorkspace() {
   const { locale } = useI18n();
   const copy = resolveEmployeeBenefitsCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
 
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
@@ -212,6 +218,7 @@ export default function EmployeeBenefitsWorkspace() {
     <EmployeeBenefitsWorkspaceView
       copy={copy}
       runtimeLocale={runtimeLocale}
+      showDevTools={showDevTools}
       sessionOrganizationId={organizationId}
       sessionEmployeeId={employeeId}
       catalog={catalog}
