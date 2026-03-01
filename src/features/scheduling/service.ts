@@ -129,6 +129,7 @@ import {
 import {
   buildScheduleAnomalyIncidentReconcileAuditReadInput,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditPayloadInputFromMetaAndSummary,
+  buildScheduleAnomalyIncidentReconcileResultInputFromMetaAndRows,
   buildScheduleAnomalyIncidentReconcileSnapshotInputFromRows,
   buildScheduleAnomalyIncidentReconcileSummary,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry,
@@ -2693,11 +2694,13 @@ export async function reconcileScheduleAnomalyIncidentStore(
       )
     })
   );
-  return buildScheduleAnomalyIncidentReconcileResult({
-    ...reconcileMeta,
-    counts,
-    items
-  });
+  return buildScheduleAnomalyIncidentReconcileResult(
+    buildScheduleAnomalyIncidentReconcileResultInputFromMetaAndRows({
+      reconcileMeta,
+      counts,
+      items
+    })
+  );
 }
 
 export async function getScheduleAnomalyIncident(

@@ -84,6 +84,12 @@ type BuildScheduleAnomalyIncidentReconcileResultInput = {
   items: ScheduleAnomalyIncidentReconcileItem[];
 };
 
+type BuildScheduleAnomalyIncidentReconcileResultInputFromMetaAndRowsInput = {
+  reconcileMeta: Pick<BuildScheduleAnomalyIncidentReconcileResultInput, "reconciledAt" | "topN" | "includeMatching">;
+  counts: ScheduleAnomalyIncidentReconcileCounts;
+  items: ScheduleAnomalyIncidentReconcileItem[];
+};
+
 export function buildScheduleAnomalyIncidentReconcileSnapshot(
   input: BuildScheduleAnomalyIncidentReconcileSnapshotInput
 ): {
@@ -255,6 +261,16 @@ export function buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry(
     actorRole: input.actorRole,
     actorId: input.actorId,
     payload: input.payload
+  };
+}
+
+export function buildScheduleAnomalyIncidentReconcileResultInputFromMetaAndRows(
+  input: BuildScheduleAnomalyIncidentReconcileResultInputFromMetaAndRowsInput
+) {
+  return {
+    ...input.reconcileMeta,
+    counts: input.counts,
+    items: input.items
   };
 }
 
