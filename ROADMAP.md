@@ -1022,3 +1022,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0716 scheduling anomaly SLA query helper extraction (extract topN/assignee/includeResolved/SLA threshold/asOf normalization into anomaly-incident-sla-query-helpers.ts and rewire listScheduleAnomalyIncidentSla while preserving behavior with e2e-wi0716 guard)
 
 - WI-0717 scheduling anomaly escalation candidate helper extraction (add selectScheduleAnomalyIncidentEscalationCandidates in anomaly-incident-escalation-helpers.ts and rewire triggerScheduleAnomalyIncidentEscalation filtering while preserving behavior with e2e-wi0717 guard)
+
+- WI-0718 scheduling escalation options helper extraction (extract includeResolved/includeWarning/dryRun/cooldown/channel/asOf normalization into resolveScheduleAnomalyIncidentEscalationOptions and rewire triggerScheduleAnomalyIncidentEscalation with e2e-wi0718 guard)

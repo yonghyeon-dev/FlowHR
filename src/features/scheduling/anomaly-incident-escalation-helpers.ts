@@ -1,4 +1,8 @@
-import { parseIsoTimestampToMillis } from "@/features/scheduling/incident-normalizers";
+import {
+  normalizeAnomalyIncidentEscalationChannel,
+  normalizeAnomalyIncidentEscalationCooldownMinutes,
+  parseIsoTimestampToMillis
+} from "@/features/scheduling/incident-normalizers";
 import type {
   ScheduleAnomalyIncidentEscalationResult,
   ScheduleAnomalyIncidentEscalationItem,
@@ -77,6 +81,15 @@ type BuildScheduleAnomalyIncidentEscalationRequestFailedPayloadInput = {
   error: string;
 };
 
+type ScheduleAnomalyIncidentEscalationOptionsInput = {
+  includeResolved?: boolean;
+  includeWarning?: boolean;
+  dryRun?: boolean;
+  cooldownMinutes?: number;
+  escalationChannel?: string;
+  asOf?: Date;
+};
+
 export function buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(
   storedIncidents: StoredScheduleAnomalyIncidentLike[]
 ) {
@@ -104,6 +117,26 @@ export function selectScheduleAnomalyIncidentEscalationCandidates(
   return items.filter(
     (item) => item.status === "BREACHED" || (includeWarning && item.status === "WARNING")
   );
+}
+
+export function resolveScheduleAnomalyIncidentEscalationOptions(
+  input: ScheduleAnomalyIncidentEscalationOptionsInput
+) {
+  const includeResolved = input.includeResolved ?? false;
+  const includeWarning = input.includeWarning ?? false;
+  const dryRun = input.dryRun ?? false;
+  const cooldownMinutes = normalizeAnomalyIncidentEscalationCooldownMinutes(input.cooldownMinutes);
+  const escalationChannel = normalizeAnomalyIncidentEscalationChannel(input.escalationChannel);
+  const asOf = input.asOf ?? new Date();
+
+  return {
+    includeResolved,
+    includeWarning,
+    dryRun,
+    cooldownMinutes,
+    escalationChannel,
+    asOf
+  };
 }
 
 export async function executeScheduleAnomalyIncidentEscalationRequests(
