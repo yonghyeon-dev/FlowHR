@@ -39,7 +39,7 @@ import {
 } from "@/features/scheduling/anomaly-incident-auto-action-helpers";
 import {
   buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry,
-  buildScheduleAnomalyIncidentAutoActionExecutionAuditEntry,
+  buildScheduleAnomalyIncidentAutoActionNotificationAuditAppender,
   buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry
 } from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
 import {
@@ -2398,17 +2398,14 @@ export async function executeScheduleAnomalyIncidentAutoAction(
         payload
       });
     },
-    appendAudit: async ({ action, payload }) => {
-      await context.dataAccess.audit.append(
-        buildScheduleAnomalyIncidentAutoActionExecutionAuditEntry({
-          action,
-          organizationId: tenantScope,
-          actorRole: actor.role,
-          actorId: actor.id ?? undefined,
-          payload
-        })
-      );
-    }
+    appendAudit: buildScheduleAnomalyIncidentAutoActionNotificationAuditAppender({
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id ?? undefined,
+      appendAuditEntry: async (entry) => {
+        await context.dataAccess.audit.append(entry);
+      }
+    })
   });
 
   return buildScheduleAnomalyIncidentAutoActionResult({
