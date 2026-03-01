@@ -35,6 +35,16 @@ type ExecuteScheduleAnomalyIncidentAutoActionAssignmentsInput = {
   }) => Promise<void>;
 };
 
+type BuildScheduleAnomalyIncidentAutoActionAssignIncidentCallbackInput = {
+  autoAssigneeId: string;
+  autoAssignNote: string | null;
+  updateLifecycle: (input: {
+    incidentId: string;
+    assigneeId: string;
+    note: string | undefined;
+  }) => Promise<AssignScheduleAnomalyIncidentResult>;
+};
+
 export type ScheduleAnomalyIncidentAutoActionAssignmentSummary = {
   escalated: number;
   assigned: number;
@@ -125,6 +135,24 @@ type BuildScheduleAnomalyIncidentAutoActionAssignFailedPayloadInput = {
 
 function isEscalatedDecision(decision: ScheduleAnomalyIncidentEscalationDecision) {
   return decision === "REQUESTED" || decision === "DRY_RUN";
+}
+
+export function buildScheduleAnomalyIncidentAutoActionAssignIncidentCallback(
+  input: BuildScheduleAnomalyIncidentAutoActionAssignIncidentCallbackInput
+) {
+  return async ({
+    incidentId
+  }: AssignScheduleAnomalyIncidentInput): Promise<AssignScheduleAnomalyIncidentResult> => {
+    const updated = await input.updateLifecycle({
+      incidentId,
+      assigneeId: input.autoAssigneeId,
+      note: input.autoAssignNote ?? undefined
+    });
+    return {
+      state: updated.state,
+      assigneeId: updated.assigneeId
+    };
+  };
 }
 
 export async function executeScheduleAnomalyIncidentAutoActionAssignments(
