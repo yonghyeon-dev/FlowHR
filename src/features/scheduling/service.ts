@@ -56,6 +56,7 @@ import {
   buildScheduleAnomalyIncidentSlaQueue
 } from "@/features/scheduling/anomaly-incident-queue-helpers";
 import {
+  buildScheduleAnomalyIncidentReplayAuditListInput,
   filterScheduleAnomalyIncidentReplayLogsByRange,
   buildScheduleAnomalyIncidentReplayOnReplayCallback,
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
@@ -2544,12 +2545,13 @@ export async function replayScheduleAnomalyIncidentStore(
   const dryRun = input.dryRun ?? false;
   const includeArchived = input.includeArchived ?? false;
 
-  const logs = await context.dataAccess.audit.list({
-    actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
-    entityType: "WorkSchedule",
-    organizationId: tenantScope,
-    limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
-  });
+  const logs = await context.dataAccess.audit.list(
+    buildScheduleAnomalyIncidentReplayAuditListInput({
+      actions: ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
+      organizationId: tenantScope,
+      limit: MAX_ANOMALY_INCIDENT_AUDIT_ROWS
+    })
+  );
   const logsInRange = filterScheduleAnomalyIncidentReplayLogsByRange({
     logs,
     from: input.from,

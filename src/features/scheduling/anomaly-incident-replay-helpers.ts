@@ -123,6 +123,12 @@ type FilterScheduleAnomalyIncidentReplayLogsByRangeInput<TLog extends { createdA
   to: Date | undefined;
 };
 
+type BuildScheduleAnomalyIncidentReplayAuditListInput = {
+  actions: readonly string[];
+  organizationId: string | undefined;
+  limit: number;
+};
+
 type BuildScheduleAnomalyIncidentReplayedAuditEntryInput<
   TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null }
 > = {
@@ -356,6 +362,17 @@ export function filterScheduleAnomalyIncidentReplayLogsByRange<
       to: input.to
     })
   );
+}
+
+export function buildScheduleAnomalyIncidentReplayAuditListInput(
+  input: BuildScheduleAnomalyIncidentReplayAuditListInput
+) {
+  return {
+    actions: [...input.actions],
+    entityType: "WorkSchedule" as const,
+    organizationId: input.organizationId,
+    limit: input.limit
+  };
 }
 
 export function buildScheduleAnomalyIncidentReplaySummaryCounts(
