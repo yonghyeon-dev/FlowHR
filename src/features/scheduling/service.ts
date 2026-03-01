@@ -140,11 +140,9 @@ import {
   buildScheduleAnomalyIncidentEscalationRequestFailedPayload,
   buildScheduleAnomalyIncidentEscalationRequestPayload,
   buildScheduleAnomalyIncidentEscalationResult,
+  resolveScheduleAnomalyIncidentEscalationExecutionPreparation,
   buildScheduleAnomalyIncidentEscalationSummaryPayload,
-  buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
-  resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis,
   resolveScheduleAnomalyIncidentEscalationOptions,
-  selectScheduleAnomalyIncidentEscalationCandidates,
   executeScheduleAnomalyIncidentEscalationRequests
 } from "@/features/scheduling/anomaly-incident-escalation-helpers";
 import {
@@ -2188,17 +2186,21 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     asOf
   });
 
-  const candidates = selectScheduleAnomalyIncidentEscalationCandidates(
-    slaReport.items,
-    includeWarning
-  );
-  const cooldownWindowStartMillis =
-    resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis(asOf, cooldownMinutes);
   const storedIncidents = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope
   });
-  const latestRequestedAtMillisByIncident =
-    buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(storedIncidents);
+  const {
+    candidates,
+    candidateCount,
+    cooldownWindowStartMillis,
+    latestRequestedAtMillisByIncident
+  } = resolveScheduleAnomalyIncidentEscalationExecutionPreparation({
+    items: slaReport.items,
+    includeWarning,
+    asOf,
+    cooldownMinutes,
+    storedIncidents
+  });
 
   const executionSummary = await executeScheduleAnomalyIncidentEscalationRequests({
     candidates,
@@ -2276,7 +2278,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
       state: input.state,
       assigneeId: input.assigneeId,
       topN: input.topN,
-      candidates: candidates.length,
+      candidates: candidateCount,
       executionSummary
     })
   });
@@ -2290,7 +2292,7 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     includeWarning,
     cooldownMinutes,
     escalationChannel,
-    candidates: candidates.length,
+    candidates: candidateCount,
     executionSummary
   });
 }
