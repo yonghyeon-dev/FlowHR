@@ -142,6 +142,7 @@ import {
   buildScheduleAnomalyIncidentEscalationResult,
   buildScheduleAnomalyIncidentEscalationSummaryPayload,
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
+  resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis,
   resolveScheduleAnomalyIncidentEscalationOptions,
   selectScheduleAnomalyIncidentEscalationCandidates,
   executeScheduleAnomalyIncidentEscalationRequests
@@ -2191,7 +2192,8 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     slaReport.items,
     includeWarning
   );
-  const cooldownWindowStartMillis = asOf.getTime() - cooldownMinutes * 60_000;
+  const cooldownWindowStartMillis =
+    resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis(asOf, cooldownMinutes);
   const storedIncidents = await context.dataAccess.scheduling.listIncidents({
     organizationId: tenantScope
   });

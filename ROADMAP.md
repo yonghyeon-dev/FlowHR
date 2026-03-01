@@ -1024,3 +1024,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0717 scheduling anomaly escalation candidate helper extraction (add selectScheduleAnomalyIncidentEscalationCandidates in anomaly-incident-escalation-helpers.ts and rewire triggerScheduleAnomalyIncidentEscalation filtering while preserving behavior with e2e-wi0717 guard)
 
 - WI-0718 scheduling escalation options helper extraction (extract includeResolved/includeWarning/dryRun/cooldown/channel/asOf normalization into resolveScheduleAnomalyIncidentEscalationOptions and rewire triggerScheduleAnomalyIncidentEscalation with e2e-wi0718 guard)
+
+- WI-0719 scheduling escalation cooldown-window helper extraction (extract cooldown window start millis calculation into resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis and rewire triggerScheduleAnomalyIncidentEscalation with e2e-wi0719 guard)
