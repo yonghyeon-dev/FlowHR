@@ -331,6 +331,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     setEmployeeSeedInput,
     setHourlyIncrementMinutes,
     setMaxHoursPerRequest,
+    showDevTools,
     usesBearerToken
   };
 }

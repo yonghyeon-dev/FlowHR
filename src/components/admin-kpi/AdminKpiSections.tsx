@@ -44,6 +44,7 @@ type AdminKpiDrilldownMetric = Exclude<AdminKpiFocusMetric, "all">;
 
 type ContextPanelProps = {
   copy: KpiCopy;
+  showDevTools: boolean;
   sessionOrganizationId: string;
   sessionActorId: string;
   periodStart: string;
@@ -117,6 +118,7 @@ export function AdminKpiAnalyticsControls({
 export function AdminKpiContextPanel(props: ContextPanelProps) {
   const {
     copy,
+    showDevTools,
     sessionOrganizationId,
     sessionActorId,
     periodStart,
@@ -134,10 +136,12 @@ export function AdminKpiContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
-        <p className="small muted">
-          {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
-          <code>{sessionActorId || "-"}</code>
-        </p>
+        {showDevTools ? (
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
+            <code>{sessionActorId || "-"}</code>
+          </p>
+        ) : null}
         <div className="input-grid">
           <label>
             {copy.periodStartLabel}

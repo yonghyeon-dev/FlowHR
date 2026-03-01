@@ -27,6 +27,7 @@ export type AttendanceLiveApiLog = {
 
 type ContextPanelProps = {
   copy: AttendanceLiveCopy;
+  showDevTools: boolean;
   sessionOrganizationId: string;
   sessionActorId: string;
   periodStart: string;
@@ -53,6 +54,7 @@ type ContextPanelProps = {
 export function AdminAttendanceLiveContextPanel(props: ContextPanelProps) {
   const {
     copy,
+    showDevTools,
     sessionOrganizationId,
     sessionActorId,
     periodStart,
@@ -80,10 +82,12 @@ export function AdminAttendanceLiveContextPanel(props: ContextPanelProps) {
     <section className="panel-grid">
       <article className="panel">
         <h2>{copy.contextTitle}</h2>
-        <p className="small muted">
-          {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
-          <code>{sessionActorId || "-"}</code>
-        </p>
+        {showDevTools ? (
+          <p className="small muted">
+            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.adminActorIdLabel}:{" "}
+            <code>{sessionActorId || "-"}</code>
+          </p>
+        ) : null}
         <div className="input-grid">
           <label>{copy.periodStartLabel}<input type="datetime-local" value={periodStart} onChange={(event) => onSetPeriodStart(event.target.value)} /></label>
           <label>{copy.periodEndLabel}<input type="datetime-local" value={periodEnd} onChange={(event) => onSetPeriodEnd(event.target.value)} /></label>

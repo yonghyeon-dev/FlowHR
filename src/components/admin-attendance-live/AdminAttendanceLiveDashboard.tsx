@@ -208,6 +208,7 @@ export function AdminAttendanceLiveDashboard() {
 
       <AdminAttendanceLiveContextPanel
         copy={copy}
+        showDevTools={showDevTools}
         sessionOrganizationId={organizationId}
         sessionActorId={adminActorId}
         periodStart={periodStart}
