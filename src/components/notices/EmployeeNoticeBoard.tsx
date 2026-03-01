@@ -19,10 +19,17 @@ import {
 } from "@/components/notices/employee-notice-board-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export default function EmployeeNoticeBoard() {
   const { locale } = useI18n();
   const copy = resolveEmployeeNoticeBoardCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
@@ -192,10 +199,12 @@ export default function EmployeeNoticeBoard() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
-          <p className="small muted">
-            {copy.organizationIdLabel}: <code>{organizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-            <code>{employeeId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.organizationIdLabel}: <code>{organizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
+              <code>{employeeId || "-"}</code>
+            </p>
+          ) : null}
           <label>
             {copy.searchLabel}
             <input
