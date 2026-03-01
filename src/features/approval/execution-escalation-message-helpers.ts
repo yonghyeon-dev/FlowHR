@@ -10,8 +10,8 @@ export function buildApprovalExecutionEscalationMessage(input: {
   items: ApprovalExecutionEscalationItem[];
 }) {
   const title = input.dryRun
-    ? "[FlowHR] approval execution escalation dry-run"
-    : "[FlowHR] approval execution escalation";
+    ? "[FlowHR] 결재 실행 정체 에스컬레이션 (드라이런)"
+    : "[FlowHR] 결재 실행 정체 에스컬레이션";
   const lines = [
     title,
     `- organizationId: ${input.organizationId}`,
