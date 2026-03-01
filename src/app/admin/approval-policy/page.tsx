@@ -229,10 +229,12 @@ export default function AdminApprovalPolicyPage() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
-          <p className="small muted">
-            {copy.context.organizationId}: <code>{organizationId || "-"}</code> / {copy.context.adminActorId}:{" "}
-            <code>{adminActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.context.organizationId}: <code>{organizationId || "-"}</code> / {copy.context.adminActorId}:{" "}
+              <code>{adminActorId || "-"}</code>
+            </p>
+          ) : null}
           <div className="panel-actions">
             <button className="btn btn-secondary" onClick={() => void loadPolicy()} disabled={!organizationId.trim()}>
               {copy.context.loadPolicy}

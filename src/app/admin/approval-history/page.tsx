@@ -179,10 +179,12 @@ export default function AdminApprovalHistoryPage() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
-          <p className="small muted">
-            {copy.filters.organizationId}: <code>{organizationId || "-"}</code> / {copy.filters.adminActorId}:{" "}
-            <code>{adminActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.filters.organizationId}: <code>{organizationId || "-"}</code> / {copy.filters.adminActorId}:{" "}
+              <code>{adminActorId || "-"}</code>
+            </p>
+          ) : null}
           <label>
             {copy.filters.domain}
             <select value={domain} onChange={(event) => setDomain(event.target.value as ApprovalDomain | "")}>
