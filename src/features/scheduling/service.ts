@@ -57,9 +57,9 @@ import {
 } from "@/features/scheduling/anomaly-incident-queue-helpers";
 import {
   filterScheduleAnomalyIncidentReplayLogsByRange,
+  buildScheduleAnomalyIncidentReplayOnReplayCallback,
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
-  buildScheduleAnomalyIncidentReplayPersistenceInput,
   buildScheduleAnomalyIncidentReplaySummaryCounts,
   resolveScheduleAnomalyIncidentReplayMeta,
   buildScheduleAnomalyIncidentReplayResult,
@@ -2562,29 +2562,26 @@ export async function replayScheduleAnomalyIncidentStore(
     incidentIds: normalizedIncidentIds,
     topN
   });
+  const replayOnReplay = buildScheduleAnomalyIncidentReplayOnReplayCallback({
+    includeArchived,
+    fallbackOrganizationId: tenantScope,
+    actorRole: actor.role,
+    actorId: actor.id,
+    findIncidentByIncidentId: (incidentId) =>
+      context.dataAccess.scheduling.findIncidentByIncidentId(incidentId),
+    upsertIncident: async (upsertInput) => {
+      await context.dataAccess.scheduling.upsertIncident(upsertInput);
+    },
+    appendAuditEntry: (entry) => context.dataAccess.audit.append(entry),
+    toUpsertInput: toScheduleAnomalyIncidentUpsertInput
+  });
 
   const { replayed, dryRunCount, notFound, failed, items } =
     await executeScheduleAnomalyIncidentReplayActions({
       selectedIncidentIds,
       replayModelById,
       dryRun,
-      onReplay: async ({ incidentId, replayModel }) => {
-        const existing = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
-        const replayedAt = new Date().toISOString();
-        const replayPersistence = buildScheduleAnomalyIncidentReplayPersistenceInput({
-          incidentId,
-          replayModel,
-          includeArchived,
-          replayedAt,
-          lastEscalationRequestedAt: existing?.lastEscalationRequestedAt,
-          fallbackOrganizationId: tenantScope,
-          actorRole: actor.role,
-          actorId: actor.id,
-          toUpsertInput: toScheduleAnomalyIncidentUpsertInput
-        });
-        await context.dataAccess.scheduling.upsertIncident(replayPersistence.upsertInput);
-        await context.dataAccess.audit.append(replayPersistence.auditEntry);
-      }
+      onReplay: replayOnReplay
     });
 
   const replayMeta = resolveScheduleAnomalyIncidentReplayMeta({
