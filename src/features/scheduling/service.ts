@@ -63,6 +63,7 @@ import {
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReplaySummaryCounts,
+  buildScheduleAnomalyIncidentReplayResultSummary,
   resolveScheduleAnomalyIncidentReplayMetaFromServiceInput,
   buildScheduleAnomalyIncidentReplayResult,
   executeScheduleAnomalyIncidentReplayActions,
@@ -2622,7 +2623,10 @@ export async function replayScheduleAnomalyIncidentStore(
 
   return buildScheduleAnomalyIncidentReplayResult({
     ...replayMeta,
-    summary: { ...replaySummary, items }
+    summary: buildScheduleAnomalyIncidentReplayResultSummary({
+      replaySummary,
+      items
+    })
   });
 }
 
