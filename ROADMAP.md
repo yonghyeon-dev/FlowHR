@@ -1026,3 +1026,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0718 scheduling escalation options helper extraction (extract includeResolved/includeWarning/dryRun/cooldown/channel/asOf normalization into resolveScheduleAnomalyIncidentEscalationOptions and rewire triggerScheduleAnomalyIncidentEscalation with e2e-wi0718 guard)
 
 - WI-0719 scheduling escalation cooldown-window helper extraction (extract cooldown window start millis calculation into resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis and rewire triggerScheduleAnomalyIncidentEscalation with e2e-wi0719 guard)
+
+- WI-0754 notices audit persistence and notification link (replace in-memory notice store with audit-backed persistence via runtime data access for create/publish/read/read-all APIs, and add notice.notification.enqueued audit linkage on publish with e2e-wi0754 regression guard)

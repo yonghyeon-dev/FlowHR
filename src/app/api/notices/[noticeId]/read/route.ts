@@ -1,5 +1,6 @@
-﻿import { readNoticeSchema } from "@/features/notices/schemas";
+import { readNoticeSchema } from "@/features/notices/schemas";
 import { markNoticeRead } from "@/features/notices/store";
+import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -32,15 +33,18 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const organizationId = parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID;
-  const receipt = markNoticeRead({
-    organizationId,
-    noticeId: parsed.data.noticeId,
-    actorId: actor.id
-  });
+  const receipt = await markNoticeRead(
+    { dataAccess: getRuntimeDataAccess() },
+    {
+      organizationId,
+      noticeId: parsed.data.noticeId,
+      actorId: actor.id,
+      actorRole: actor.role ?? "employee"
+    }
+  );
   if (!receipt) {
     return fail(404, "notice.not_found");
   }
 
   return ok({ receipt });
 }
-
