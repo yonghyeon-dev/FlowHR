@@ -44,7 +44,7 @@ function shouldNormalizeAsKoFallbackTitle(value: string) {
 }
 
 function toKoFallbackTitle(stableId: string) {
-  return `계약서 ${stableId.slice(0, 8)}`;
+  return `계약 ${stableId.slice(0, 8)}`;
 }
 
 function resolveFileExtension(fileName: string) {
