@@ -59,6 +59,7 @@ import {
   buildScheduleAnomalyIncidentReplayAuditListInput,
   filterScheduleAnomalyIncidentReplayLogsByRange,
   buildScheduleAnomalyIncidentReplayOnReplayCallback,
+  buildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInputFromMetaAndSummary,
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReplaySummaryCounts,
@@ -2603,15 +2604,19 @@ export async function replayScheduleAnomalyIncidentStore(
     notFound,
     failed
   });
+  const replayGeneratedAuditPayloadInput =
+    buildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInputFromMetaAndSummary({
+      replayMeta,
+      replaySummary
+    });
   await context.dataAccess.audit.append(
     buildScheduleAnomalyIncidentReplayGeneratedAuditEntry({
       organizationId: tenantScope,
       actorRole: actor.role,
       actorId: actor.id,
-      payload: buildScheduleAnomalyIncidentReplayGeneratedAuditPayload({
-        ...replayMeta,
-        summary: replaySummary
-      })
+      payload: buildScheduleAnomalyIncidentReplayGeneratedAuditPayload(
+        replayGeneratedAuditPayloadInput
+      )
     })
   );
 
