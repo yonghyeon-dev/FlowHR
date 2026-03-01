@@ -137,7 +137,9 @@ import {
   emitAnomalySummarySideEffects
 } from "@/features/scheduling/anomaly-side-effect-helpers";
 import {
+  buildScheduleAnomalyIncidentEscalationRequestFailedAuditEntry,
   buildScheduleAnomalyIncidentEscalationRequestFailedPayload,
+  buildScheduleAnomalyIncidentEscalationRequestedAuditEntry,
   buildScheduleAnomalyIncidentEscalationRequestPayload,
   buildScheduleAnomalyIncidentEscalationResult,
   resolveScheduleAnomalyIncidentEscalationExecutionPreparation,
@@ -2226,15 +2228,14 @@ export async function triggerScheduleAnomalyIncidentEscalation(
         payload
       });
 
-      await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.incident.escalation.requested",
-        entityType: "WorkSchedule",
-        entityId: candidate.incidentId,
-        organizationId: tenantScope,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload
-      });
+      await context.dataAccess.audit.append(
+        buildScheduleAnomalyIncidentEscalationRequestedAuditEntry({
+          organizationId: tenantScope,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload
+        })
+      );
 
       await context.dataAccess.scheduling.markIncidentEscalationRequested({
         incidentId: candidate.incidentId,
@@ -2243,20 +2244,19 @@ export async function triggerScheduleAnomalyIncidentEscalation(
       });
     },
     onRequestFailed: async ({ candidate, error }) => {
-      await context.dataAccess.audit.append({
-        action: "scheduling.anomaly.incident.escalation.request.failed",
-        entityType: "WorkSchedule",
-        entityId: candidate.incidentId,
-        organizationId: tenantScope,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: buildScheduleAnomalyIncidentEscalationRequestFailedPayload({
-          candidate,
-          cooldownMinutes,
-          escalationChannel,
-          error
+      await context.dataAccess.audit.append(
+        buildScheduleAnomalyIncidentEscalationRequestFailedAuditEntry({
+          organizationId: tenantScope,
+          actorRole: actor.role,
+          actorId: actor.id,
+          payload: buildScheduleAnomalyIncidentEscalationRequestFailedPayload({
+            candidate,
+            cooldownMinutes,
+            escalationChannel,
+            error
+          })
         })
-      });
+      );
     }
   });
   const { requested, skippedCooldown, failed, items } = executionSummary;

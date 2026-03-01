@@ -81,6 +81,20 @@ type BuildScheduleAnomalyIncidentEscalationRequestFailedPayloadInput = {
   error: string;
 };
 
+type BuildScheduleAnomalyIncidentEscalationRequestedAuditEntryInput = {
+  organizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  payload: ReturnType<typeof buildScheduleAnomalyIncidentEscalationRequestPayload>;
+};
+
+type BuildScheduleAnomalyIncidentEscalationRequestFailedAuditEntryInput = {
+  organizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  payload: ReturnType<typeof buildScheduleAnomalyIncidentEscalationRequestFailedPayload>;
+};
+
 type ScheduleAnomalyIncidentEscalationOptionsInput = {
   includeResolved?: boolean;
   includeWarning?: boolean;
@@ -335,5 +349,33 @@ export function buildScheduleAnomalyIncidentEscalationRequestFailedPayload(
     cooldownMinutes: input.cooldownMinutes,
     escalationChannel: input.escalationChannel,
     error: input.error
+  };
+}
+
+export function buildScheduleAnomalyIncidentEscalationRequestedAuditEntry(
+  input: BuildScheduleAnomalyIncidentEscalationRequestedAuditEntryInput
+) {
+  return {
+    action: "scheduling.anomaly.incident.escalation.requested",
+    entityType: "WorkSchedule" as const,
+    entityId: input.payload.incidentId,
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: input.payload
+  };
+}
+
+export function buildScheduleAnomalyIncidentEscalationRequestFailedAuditEntry(
+  input: BuildScheduleAnomalyIncidentEscalationRequestFailedAuditEntryInput
+) {
+  return {
+    action: "scheduling.anomaly.incident.escalation.request.failed",
+    entityType: "WorkSchedule" as const,
+    entityId: input.payload.incidentId,
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: input.payload
   };
 }
