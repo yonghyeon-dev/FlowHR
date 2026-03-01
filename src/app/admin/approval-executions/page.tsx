@@ -361,6 +361,7 @@ export default function AdminApprovalExecutionsPage() {
       <section className="panel-grid">
         <ApprovalExecutionWorkConditionsPanel
           isKoLocale={isKoLocale}
+          showDevTools={showDevTools}
           organizationId={organizationId}
           adminActorId={adminActorId}
           sort={sort}

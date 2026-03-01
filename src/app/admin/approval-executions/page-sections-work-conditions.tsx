@@ -26,6 +26,7 @@ import { domainOptions, stateOptions } from "@/app/admin/approval-executions/pag
 
 type WorkConditionsPanelProps = {
   isKoLocale: boolean;
+  showDevTools: boolean;
   organizationId: string;
   adminActorId: string;
   sort: ApprovalExecutionSort;
@@ -61,6 +62,7 @@ type WorkConditionsPanelProps = {
 export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelProps) {
   const {
     isKoLocale,
+    showDevTools,
     organizationId,
     adminActorId,
     sort,
@@ -96,10 +98,12 @@ export function ApprovalExecutionWorkConditionsPanel(props: WorkConditionsPanelP
   return (
     <article className="panel">
       <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
-      <p className="small muted">
-        {isKoLocale ? "조직" : "Organization"}: <code>{organizationId || "-"}</code> /{" "}
-        {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
-      </p>
+      {showDevTools ? (
+        <p className="small muted">
+          {isKoLocale ? "조직" : "Organization"}: <code>{organizationId || "-"}</code> /{" "}
+          {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+        </p>
+      ) : null}
       <div className="input-grid">
         <label>
           {isKoLocale ? "정렬" : "Sort"}
