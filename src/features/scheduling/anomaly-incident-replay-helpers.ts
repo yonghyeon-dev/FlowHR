@@ -117,6 +117,13 @@ type ResolveScheduleAnomalyIncidentReplayMetaInput = {
   selectedIncidentIds: string[];
 };
 
+type ResolveScheduleAnomalyIncidentReplayMetaFromServiceInput = Omit<
+  ResolveScheduleAnomalyIncidentReplayMetaInput,
+  "replayedAt"
+> & {
+  now?: Date;
+};
+
 type FilterScheduleAnomalyIncidentReplayLogsByRangeInput<TLog extends { createdAt: Date }> = {
   logs: TLog[];
   from: Date | undefined;
@@ -399,6 +406,21 @@ export function resolveScheduleAnomalyIncidentReplayMeta(
     incidentIds: input.incidentIds,
     requested: input.selectedIncidentIds.length
   };
+}
+
+export function resolveScheduleAnomalyIncidentReplayMetaFromServiceInput(
+  input: ResolveScheduleAnomalyIncidentReplayMetaFromServiceInput
+) {
+  return resolveScheduleAnomalyIncidentReplayMeta({
+    replayedAt: (input.now ?? new Date()).toISOString(),
+    dryRun: input.dryRun,
+    includeArchived: input.includeArchived,
+    from: input.from,
+    to: input.to,
+    topN: input.topN,
+    incidentIds: input.incidentIds,
+    selectedIncidentIds: input.selectedIncidentIds
+  });
 }
 
 export function mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt<

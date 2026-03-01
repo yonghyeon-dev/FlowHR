@@ -62,7 +62,7 @@ import {
   buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReplaySummaryCounts,
-  resolveScheduleAnomalyIncidentReplayMeta,
+  resolveScheduleAnomalyIncidentReplayMetaFromServiceInput,
   buildScheduleAnomalyIncidentReplayResult,
   executeScheduleAnomalyIncidentReplayActions,
   selectScheduleAnomalyIncidentReplayTargets
@@ -2588,8 +2588,7 @@ export async function replayScheduleAnomalyIncidentStore(
       onReplay: replayOnReplay
     });
 
-  const replayMeta = resolveScheduleAnomalyIncidentReplayMeta({
-    replayedAt: new Date().toISOString(),
+  const replayMeta = resolveScheduleAnomalyIncidentReplayMetaFromServiceInput({
     dryRun,
     includeArchived,
     from: input.from,
