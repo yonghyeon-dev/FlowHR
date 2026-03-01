@@ -9,7 +9,6 @@ import type {
 } from "@/features/shared/data-access";
 import { listAttendanceRecords } from "@/features/attendance/service";
 import {
-  ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
   ANOMALY_INCIDENT_LIFECYCLE_AUDIT_ACTION_BY_ACTION,
   ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION,
   ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
@@ -44,7 +43,7 @@ import {
   buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry
 } from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
 import {
-  buildScheduleAnomalyIncidentArchiveAuditPayload,
+  buildScheduleAnomalyIncidentArchivedAuditEntry,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry,
   buildScheduleAnomalyIncidentArchiveCandidates,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload,
@@ -2464,21 +2463,18 @@ export async function archiveScheduleAnomalyIncidents(
           organizationId: tenantScope
         }),
       onArchived: async ({ candidate, archivedAt }) => {
-        await context.dataAccess.audit.append({
-          action: ANOMALY_INCIDENT_ARCHIVE_AUDIT_ACTION,
-          entityType: "WorkSchedule",
-          entityId: candidate.incidentId,
-          organizationId: candidate.organizationId ?? tenantScope,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: buildScheduleAnomalyIncidentArchiveAuditPayload({
+        await context.dataAccess.audit.append(
+          buildScheduleAnomalyIncidentArchivedAuditEntry({
             candidate,
             archivedAt,
             asOfIso,
             olderThanMinutes,
-            archiveReason
+            archiveReason,
+            fallbackOrganizationId: tenantScope,
+            actorRole: actor.role,
+            actorId: actor.id
           })
-        });
+        );
       }
     });
 
