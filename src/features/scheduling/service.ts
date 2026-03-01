@@ -128,6 +128,7 @@ import {
 } from "@/features/scheduling/rotation-window-helpers";
 import {
   buildScheduleAnomalyIncidentReconcileAuditReadInput,
+  buildScheduleAnomalyIncidentReconcileSnapshotInputFromRows,
   buildScheduleAnomalyIncidentReconcileSummary,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload,
@@ -2653,10 +2654,12 @@ export async function reconcileScheduleAnomalyIncidentStore(
     })
   );
 
-  const { compared, counts } = buildScheduleAnomalyIncidentReconcileSnapshot({
-    storeRows,
-    auditRows
-  });
+  const { compared, counts } = buildScheduleAnomalyIncidentReconcileSnapshot(
+    buildScheduleAnomalyIncidentReconcileSnapshotInputFromRows({
+      storeRows,
+      auditRows
+    })
+  );
 
   const reconciledAt = new Date().toISOString();
   const reconcileMeta = resolveScheduleAnomalyIncidentReconcileMeta({
