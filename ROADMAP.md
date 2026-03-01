@@ -1004,3 +1004,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0707 employee payslip session identity devtools gate completion (hide read-only session organization/employee identifiers on /employee/payslips filter panel and /employee/payslip-receipts filters panel by default; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0707 regression guard)
 
 - WI-0708 ko runtime fallback normalization for contracts/withholding (normalize corrupted Korean fallback labels in contracts runtime-copy helper and withholding activity runtime-label helper so employee contracts inbox and withholding receipt surfaces render readable KO text + e2e-wi0708 regression guard)
+
+- WI-0709 admin approval session-context devtools gate (hide session organization/admin actor identifiers from /admin/approval-policy, /admin/approval-history, and /admin/approval-templates work-conditions panels in product mode; show only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0709 regression guard)
