@@ -31,6 +31,13 @@ type ExecuteScheduleAnomalyIncidentArchiveActionsInput = {
   }) => Promise<void>;
 };
 
+type BuildScheduleAnomalyIncidentArchiveActionsInput = {
+  candidates: ScheduleAnomalyIncidentEntity[];
+  dryRun: boolean;
+  deleteIncident: ExecuteScheduleAnomalyIncidentArchiveActionsInput["deleteIncident"];
+  onArchived: ExecuteScheduleAnomalyIncidentArchiveActionsInput["onArchived"];
+};
+
 export type ScheduleAnomalyIncidentArchiveActionSummary = {
   archived: number;
   dryRunCount: number;
@@ -242,6 +249,17 @@ export async function executeScheduleAnomalyIncidentArchiveActions(
   }
 
   return { archived, dryRunCount, failed, items };
+}
+
+export function buildScheduleAnomalyIncidentArchiveActionsInput(
+  input: BuildScheduleAnomalyIncidentArchiveActionsInput
+) {
+  return {
+    candidates: input.candidates,
+    dryRun: input.dryRun,
+    deleteIncident: input.deleteIncident,
+    onArchived: input.onArchived
+  };
 }
 
 export function buildScheduleAnomalyIncidentArchiveAuditPayload(
