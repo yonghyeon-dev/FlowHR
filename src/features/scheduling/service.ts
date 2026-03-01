@@ -142,6 +142,7 @@ import {
   buildScheduleAnomalyIncidentEscalationResult,
   buildScheduleAnomalyIncidentEscalationSummaryPayload,
   buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident,
+  selectScheduleAnomalyIncidentEscalationCandidates,
   executeScheduleAnomalyIncidentEscalationRequests
 } from "@/features/scheduling/anomaly-incident-escalation-helpers";
 import {
@@ -2191,8 +2192,9 @@ export async function triggerScheduleAnomalyIncidentEscalation(
     asOf
   });
 
-  const candidates = slaReport.items.filter(
-    (item) => item.status === "BREACHED" || (includeWarning && item.status === "WARNING")
+  const candidates = selectScheduleAnomalyIncidentEscalationCandidates(
+    slaReport.items,
+    includeWarning
   );
   const cooldownWindowStartMillis = asOf.getTime() - cooldownMinutes * 60_000;
   const storedIncidents = await context.dataAccess.scheduling.listIncidents({
