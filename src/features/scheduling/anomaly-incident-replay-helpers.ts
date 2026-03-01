@@ -162,6 +162,26 @@ type BuildScheduleAnomalyIncidentReplayPersistenceInput<
   toUpsertInput: (replayModel: TReplayModel) => TUpsertInput;
 };
 
+type BuildScheduleAnomalyIncidentReplayOnReplayCallbackInput<
+  TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null },
+  TUpsertInput extends Record<string, unknown>
+> = {
+  includeArchived: boolean;
+  fallbackOrganizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  findIncidentByIncidentId: (
+    incidentId: string
+  ) => Promise<{ lastEscalationRequestedAt: string | null } | null>;
+  upsertIncident: (
+    upsertInput: TUpsertInput & { lastEscalationRequestedAt: string | null }
+  ) => Promise<void>;
+  appendAuditEntry: (
+    entry: ReturnType<typeof buildScheduleAnomalyIncidentReplayedAuditEntry<TReplayModel>>
+  ) => Promise<void>;
+  toUpsertInput: (replayModel: TReplayModel) => TUpsertInput;
+};
+
 export function selectScheduleAnomalyIncidentReplayTargets<
   TReplayModel extends ScheduleAnomalyIncidentReplayModelBase
 >(
@@ -391,6 +411,35 @@ export function buildScheduleAnomalyIncidentReplayPersistenceInput<
       actorRole: input.actorRole,
       actorId: input.actorId
     })
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayOnReplayCallback<
+  TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null },
+  TUpsertInput extends Record<string, unknown>
+>(input: BuildScheduleAnomalyIncidentReplayOnReplayCallbackInput<TReplayModel, TUpsertInput>) {
+  return async ({
+    incidentId,
+    replayModel
+  }: {
+    incidentId: string;
+    replayModel: TReplayModel;
+  }) => {
+    const existing = await input.findIncidentByIncidentId(incidentId);
+    const replayedAt = new Date().toISOString();
+    const replayPersistence = buildScheduleAnomalyIncidentReplayPersistenceInput({
+      incidentId,
+      replayModel,
+      includeArchived: input.includeArchived,
+      replayedAt,
+      lastEscalationRequestedAt: existing?.lastEscalationRequestedAt,
+      fallbackOrganizationId: input.fallbackOrganizationId,
+      actorRole: input.actorRole,
+      actorId: input.actorId,
+      toUpsertInput: input.toUpsertInput
+    });
+    await input.upsertIncident(replayPersistence.upsertInput);
+    await input.appendAuditEntry(replayPersistence.auditEntry);
   };
 }
 
