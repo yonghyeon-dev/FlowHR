@@ -103,10 +103,12 @@ export default function EmployeeScheduleBoardView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
-          <p className="small muted">
-            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
-            <code>{sessionEmployeeId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.employeeIdLabel}:{" "}
+              <code>{sessionEmployeeId || "-"}</code>
+            </p>
+          ) : null}
           <div className="input-grid">
             <label>
               {copy.fromDateLabel}
