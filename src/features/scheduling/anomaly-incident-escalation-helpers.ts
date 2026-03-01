@@ -90,6 +90,21 @@ type ScheduleAnomalyIncidentEscalationOptionsInput = {
   asOf?: Date;
 };
 
+type ResolveScheduleAnomalyIncidentEscalationExecutionPreparationInput = {
+  items: ScheduleAnomalyIncidentSlaItem[];
+  includeWarning: boolean;
+  asOf: Date;
+  cooldownMinutes: number;
+  storedIncidents: StoredScheduleAnomalyIncidentLike[];
+};
+
+type ResolveScheduleAnomalyIncidentEscalationExecutionPreparationResult = {
+  candidates: ScheduleAnomalyIncidentSlaItem[];
+  candidateCount: number;
+  cooldownWindowStartMillis: number;
+  latestRequestedAtMillisByIncident: Map<string, number>;
+};
+
 export function buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(
   storedIncidents: StoredScheduleAnomalyIncidentLike[]
 ) {
@@ -144,6 +159,29 @@ export function resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMilli
   cooldownMinutes: number
 ) {
   return asOf.getTime() - cooldownMinutes * 60_000;
+}
+
+export function resolveScheduleAnomalyIncidentEscalationExecutionPreparation(
+  input: ResolveScheduleAnomalyIncidentEscalationExecutionPreparationInput
+): ResolveScheduleAnomalyIncidentEscalationExecutionPreparationResult {
+  const candidates = selectScheduleAnomalyIncidentEscalationCandidates(
+    input.items,
+    input.includeWarning
+  );
+  const cooldownWindowStartMillis =
+    resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis(
+      input.asOf,
+      input.cooldownMinutes
+    );
+  const latestRequestedAtMillisByIncident =
+    buildLatestScheduleAnomalyEscalationRequestedAtMillisByIncident(input.storedIncidents);
+
+  return {
+    candidates,
+    candidateCount: candidates.length,
+    cooldownWindowStartMillis,
+    latestRequestedAtMillisByIncident
+  };
 }
 
 export async function executeScheduleAnomalyIncidentEscalationRequests(
