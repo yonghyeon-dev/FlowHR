@@ -45,6 +45,20 @@ type ScheduleAnomalyIncidentAutoActionNotificationAuditInput = {
   payload: Record<string, unknown>;
 };
 
+type BuildScheduleAnomalyIncidentAutoActionExecutedEventPublisherInput = {
+  occurredAt: string;
+  actorRole: string;
+  actorId: string | undefined;
+  publishEvent: (event: {
+    name: "scheduling.anomaly.incident.auto_action.executed.v1";
+    occurredAt: string;
+    entityType: "WorkSchedule";
+    actorRole: string;
+    actorId: string | undefined;
+    payload: Record<string, unknown>;
+  }) => Promise<void>;
+};
+
 export function buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry(
   input: BuildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntryInput
 ) {
@@ -105,5 +119,20 @@ export function buildScheduleAnomalyIncidentAutoActionNotificationAuditAppender(
         payload: audit.payload
       })
     );
+  };
+}
+
+export function buildScheduleAnomalyIncidentAutoActionExecutedEventPublisher(
+  input: BuildScheduleAnomalyIncidentAutoActionExecutedEventPublisherInput
+) {
+  return async (payload: Record<string, unknown>) => {
+    await input.publishEvent({
+      name: "scheduling.anomaly.incident.auto_action.executed.v1",
+      occurredAt: input.occurredAt,
+      entityType: "WorkSchedule",
+      actorRole: input.actorRole,
+      actorId: input.actorId,
+      payload
+    });
   };
 }

@@ -39,6 +39,7 @@ import {
 } from "@/features/scheduling/anomaly-incident-auto-action-helpers";
 import {
   buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry,
+  buildScheduleAnomalyIncidentAutoActionExecutedEventPublisher,
   buildScheduleAnomalyIncidentAutoActionNotificationAuditAppender,
   buildScheduleAnomalyIncidentAutoActionGeneratedAuditEntry
 } from "@/features/scheduling/anomaly-incident-auto-action-audit-helpers";
@@ -2388,16 +2389,14 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     failed,
     summaryPayload,
     items,
-    publishExecuted: async (payload) => {
-      await resolveSchedulingEventPublisher(context).publish({
-        name: "scheduling.anomaly.incident.auto_action.executed.v1",
-        occurredAt: executedAt,
-        entityType: "WorkSchedule",
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload
-      });
-    },
+    publishExecuted: buildScheduleAnomalyIncidentAutoActionExecutedEventPublisher({
+      occurredAt: executedAt,
+      actorRole: actor.role,
+      actorId: actor.id,
+      publishEvent: async (event) => {
+        await resolveSchedulingEventPublisher(context).publish(event);
+      }
+    }),
     appendAudit: buildScheduleAnomalyIncidentAutoActionNotificationAuditAppender({
       organizationId: tenantScope,
       actorRole: actor.role,
