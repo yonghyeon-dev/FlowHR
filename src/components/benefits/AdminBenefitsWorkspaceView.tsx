@@ -125,10 +125,12 @@ export default function AdminBenefitsWorkspaceView({
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.sessionTitle}</h2>
-          <p className="small muted">
-            {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
-            <code>{sessionActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.organizationIdLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.actorIdLabel}:{" "}
+              <code>{sessionActorId || "-"}</code>
+            </p>
+          ) : null}
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onLoadWorkspace}>
               {copy.refreshAction}
