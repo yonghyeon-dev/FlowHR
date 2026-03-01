@@ -88,6 +88,11 @@ type BuildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInput = {
   >;
 };
 
+type BuildScheduleAnomalyIncidentReplaySummaryCountsInput = Pick<
+  ScheduleAnomalyIncidentReplayActionSummary,
+  "replayed" | "dryRunCount" | "notFound" | "failed"
+>;
+
 type BuildScheduleAnomalyIncidentReplayResultInput = {
   replayedAt: string;
   dryRun: boolean;
@@ -292,6 +297,17 @@ export function buildScheduleAnomalyIncidentReplayGeneratedAuditEntry(
     actorRole: input.actorRole,
     actorId: input.actorId,
     payload: input.payload
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplaySummaryCounts(
+  input: BuildScheduleAnomalyIncidentReplaySummaryCountsInput
+) {
+  return {
+    replayed: input.replayed,
+    dryRunCount: input.dryRunCount,
+    notFound: input.notFound,
+    failed: input.failed
   };
 }
 
