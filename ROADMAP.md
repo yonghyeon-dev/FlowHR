@@ -1014,3 +1014,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0712 strict devtools gate for account session/query settings (remove non-production bypass from admin onboarding and employee account overview settings so session/query controls render only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0712 regression guard)
 
 - WI-0713 ko runtime copy guard for withholding/payslip/contracts (add regression test to lock Korean runtime copy on employee withholding receipt, payslip receipt, contracts inbox, and payslip search-sort labels + e2e-wi0713 guard)
+
+- WI-0714 ops route devtools layout gate (add shared /ops layout guard to return notFound when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is disabled so ops surfaces stay isolated from product mode + e2e-wi0714 guard)
