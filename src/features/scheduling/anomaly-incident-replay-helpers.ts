@@ -94,6 +94,11 @@ type BuildScheduleAnomalyIncidentReplaySummaryCountsInput = Pick<
   "replayed" | "dryRunCount" | "notFound" | "failed"
 >;
 
+type BuildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInputFromMetaAndSummaryInput = {
+  replayMeta: Omit<BuildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInput, "summary">;
+  replaySummary: BuildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInput["summary"];
+};
+
 type BuildScheduleAnomalyIncidentReplayResultInput = {
   replayedAt: string;
   dryRun: boolean;
@@ -325,6 +330,15 @@ export function buildScheduleAnomalyIncidentReplayGeneratedAuditPayload(
     dryRunCount: input.summary.dryRunCount,
     notFound: input.summary.notFound,
     failed: input.summary.failed
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInputFromMetaAndSummary(
+  input: BuildScheduleAnomalyIncidentReplayGeneratedAuditPayloadInputFromMetaAndSummaryInput
+) {
+  return {
+    ...input.replayMeta,
+    summary: input.replaySummary
   };
 }
 
