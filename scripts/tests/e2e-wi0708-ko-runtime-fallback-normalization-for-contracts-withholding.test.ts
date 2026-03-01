@@ -25,7 +25,7 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(contractsRuntimeHelper, /return `\uacc4\uc57d \$\{stableId\.slice\(0, 8\)\}`;/);
+  assert.match(contractsRuntimeHelper, /return `\uacc4\uc57d\uc11c \$\{stableId\.slice\(0, 8\)\}`;/);
   assert.match(
     contractsRuntimeHelper,
     /const fallbackName = `\uacc4\uc57d-\uc99d\ube59-\$\{stableId\.slice\(0, 8\)\}\$\{extension\}`;/
