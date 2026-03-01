@@ -1012,3 +1012,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0711 employee payslip-receipt session-context devtools gate (hide read-only session organization/employee identifiers in /employee/payslip-receipts filter panel by default and expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0711 regression guard)
 
 - WI-0712 strict devtools gate for account session/query settings (remove non-production bypass from admin onboarding and employee account overview settings so session/query controls render only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0712 regression guard)
+
+- WI-0713 ko runtime copy guard for withholding/payslip/contracts (add regression test to lock Korean runtime copy on employee withholding receipt, payslip receipt, contracts inbox, and payslip search-sort labels + e2e-wi0713 guard)
