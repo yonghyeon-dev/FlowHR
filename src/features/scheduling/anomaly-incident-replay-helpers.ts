@@ -142,6 +142,11 @@ type BuildScheduleAnomalyIncidentReplayGeneratedAuditEntryInput = {
   payload: ReturnType<typeof buildScheduleAnomalyIncidentReplayGeneratedAuditPayload>;
 };
 
+type MergeScheduleAnomalyIncidentReplayLastEscalationRequestedAtInput<TUpsertInput> = {
+  upsertInput: TUpsertInput;
+  lastEscalationRequestedAt: string | null | undefined;
+};
+
 export function selectScheduleAnomalyIncidentReplayTargets<
   TReplayModel extends ScheduleAnomalyIncidentReplayModelBase
 >(
@@ -341,6 +346,15 @@ export function resolveScheduleAnomalyIncidentReplayMeta(
     topN: input.topN,
     incidentIds: input.incidentIds,
     requested: input.selectedIncidentIds.length
+  };
+}
+
+export function mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt<
+  TUpsertInput extends Record<string, unknown>
+>(input: MergeScheduleAnomalyIncidentReplayLastEscalationRequestedAtInput<TUpsertInput>) {
+  return {
+    ...input.upsertInput,
+    lastEscalationRequestedAt: input.lastEscalationRequestedAt ?? null
   };
 }
 

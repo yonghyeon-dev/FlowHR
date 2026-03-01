@@ -60,6 +60,7 @@ import {
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
   buildScheduleAnomalyIncidentReplayedAuditEntry,
   buildScheduleAnomalyIncidentReplaySummaryCounts,
+  mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt,
   resolveScheduleAnomalyIncidentReplayMeta,
   buildScheduleAnomalyIncidentReplayResult,
   executeScheduleAnomalyIncidentReplayActions,
@@ -2569,10 +2570,12 @@ export async function replayScheduleAnomalyIncidentStore(
       dryRun,
       onReplay: async ({ incidentId, replayModel }) => {
         const existing = await context.dataAccess.scheduling.findIncidentByIncidentId(incidentId);
-        await context.dataAccess.scheduling.upsertIncident({
-          ...toScheduleAnomalyIncidentUpsertInput(replayModel),
-          lastEscalationRequestedAt: existing?.lastEscalationRequestedAt ?? null
-        });
+        await context.dataAccess.scheduling.upsertIncident(
+          mergeScheduleAnomalyIncidentReplayLastEscalationRequestedAt({
+            upsertInput: toScheduleAnomalyIncidentUpsertInput(replayModel),
+            lastEscalationRequestedAt: existing?.lastEscalationRequestedAt
+          })
+        );
         const replayedAt = new Date().toISOString();
         await context.dataAccess.audit.append(
           buildScheduleAnomalyIncidentReplayedAuditEntry({
