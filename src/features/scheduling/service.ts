@@ -30,6 +30,7 @@ import type {
   ScheduleAttendanceAnomalyReport
 } from "@/features/scheduling/anomaly-report-helpers";
 import {
+  buildScheduleAnomalyIncidentAutoActionAssignIncidentCallback,
   buildScheduleAnomalyIncidentAutoActionResult,
   resolveScheduleAnomalyIncidentAutoActionNotificationMeta,
   buildScheduleAnomalyIncidentAutoActionSummaryPayload,
@@ -2342,21 +2343,27 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     escalationChannel: input.escalationChannel,
     dryRun: input.dryRun
   });
+  const assignAutoActionIncident =
+    buildScheduleAnomalyIncidentAutoActionAssignIncidentCallback({
+      autoAssigneeId,
+      autoAssignNote,
+      updateLifecycle: async ({ incidentId, assigneeId, note }) => {
+        const updated = await updateScheduleAnomalyIncidentLifecycle(context, {
+          incidentId,
+          action: "ASSIGN",
+          assigneeId,
+          note
+        });
+        return { state: updated.state, assigneeId: updated.assigneeId };
+      }
+    });
 
   const assignmentSummary = await executeScheduleAnomalyIncidentAutoActionAssignments({
     escalationItems: escalation.items,
     escalationDryRun: escalation.dryRun,
     autoAssigneeId,
     autoAssignMode,
-    assignIncident: async ({ incidentId }) => {
-      const updated = await updateScheduleAnomalyIncidentLifecycle(context, {
-        incidentId,
-        action: "ASSIGN",
-        assigneeId: autoAssigneeId,
-        note: autoAssignNote ?? undefined
-      });
-      return { state: updated.state, assigneeId: updated.assigneeId };
-    },
+    assignIncident: assignAutoActionIncident,
     onAssignFailed: async ({ incidentId, previousAssigneeId, escalationDecision, error }) => {
       await context.dataAccess.audit.append(
         buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry({
