@@ -2,6 +2,7 @@ import { type WithholdingReceiptCopy } from "@/components/withholding-receipt/co
 
 type WithholdingReceiptInputPanelProps = {
   copy: WithholdingReceiptCopy;
+  showDevTools: boolean;
   year: string;
   documentFormat: "json" | "text";
   sessionOrganizationId: string;
@@ -18,6 +19,7 @@ type WithholdingReceiptInputPanelProps = {
 
 export function WithholdingReceiptInputPanel({
   copy,
+  showDevTools,
   year,
   documentFormat,
   sessionOrganizationId,
@@ -47,10 +49,12 @@ export function WithholdingReceiptInputPanel({
           </select>
         </label>
       </div>
-      <p className="small muted">
-        {copy.sessionOrganizationLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
-        <code>{sessionEmployeeId || "-"}</code>
-      </p>
+      {showDevTools ? (
+        <p className="small muted">
+          {copy.sessionOrganizationLabel}: <code>{sessionOrganizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
+          <code>{sessionEmployeeId || "-"}</code>
+        </p>
+      ) : null}
       <div className="panel-actions">
         <button className="btn btn-primary" onClick={onPreviewReceipt} disabled={pendingLabel !== null}>{copy.actionPreviewReceipt}</button>
         <button className="btn btn-secondary" onClick={onLoadFinalizedSettlement} disabled={pendingLabel !== null}>{copy.actionLoadFinalizedSettlement}</button>

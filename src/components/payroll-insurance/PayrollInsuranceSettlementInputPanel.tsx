@@ -42,6 +42,7 @@ type InputPanelProps = {
   setIndustrialAccidentUnitKrw: (value: string) => void;
   sessionOrganizationId: string;
   sessionAdminActorId: string;
+  showDevTools: boolean;
   locale: "ko" | "en";
   canRunPreview: boolean;
   pendingLabel: string | null;
@@ -92,6 +93,7 @@ export function PayrollInsuranceInputPanel({
   setIndustrialAccidentUnitKrw,
   sessionOrganizationId,
   sessionAdminActorId,
+  showDevTools,
   locale,
   canRunPreview,
   pendingLabel,
@@ -102,10 +104,12 @@ export function PayrollInsuranceInputPanel({
   return (
     <article className="panel">
       <h2>{copy.inputTitle}</h2>
-      <p className="small">
-        {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
-        {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
-      </p>
+      {showDevTools ? (
+        <p className="small">
+          {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
+          {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
+        </p>
+      ) : null}
       <label>
         {copy.employeeIdLabel}
         <input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />

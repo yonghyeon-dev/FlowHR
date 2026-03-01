@@ -290,6 +290,7 @@ export default function PayrollInsuranceSettlementConsole() {
           setIndustrialAccidentUnitKrw={setIndustrialAccidentUnitKrw}
           sessionOrganizationId={organizationId}
           sessionAdminActorId={adminActorId}
+          showDevTools={showDevTools}
           locale={locale}
           canRunPreview={organizationId.trim().length > 0}
           pendingLabel={pendingLabel}
