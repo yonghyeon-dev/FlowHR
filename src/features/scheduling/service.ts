@@ -46,6 +46,7 @@ import {
   buildScheduleAnomalyIncidentArchiveGeneratedAuditEntry,
   buildScheduleAnomalyIncidentArchiveCandidates,
   buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload,
+  resolveScheduleAnomalyIncidentArchiveMeta,
   buildScheduleAnomalyIncidentArchiveSummaryCounts,
   buildScheduleAnomalyIncidentArchiveResult,
   executeScheduleAnomalyIncidentArchiveActions
@@ -2482,6 +2483,20 @@ export async function archiveScheduleAnomalyIncidents(
     });
 
   const archivedAt = new Date().toISOString();
+  const archiveMeta = resolveScheduleAnomalyIncidentArchiveMeta({
+    archivedAt,
+    dryRun,
+    asOfIso,
+    olderThanMinutes,
+    includeNonResolved,
+    stateFilter,
+    assigneeFilter,
+    topN,
+    archiveReason,
+    total: incidents.length,
+    eligible: eligible.length,
+    candidates: candidates.length
+  });
   const archiveSummary = buildScheduleAnomalyIncidentArchiveSummaryCounts({
     archived,
     dryRunCount,
@@ -2493,18 +2508,7 @@ export async function archiveScheduleAnomalyIncidents(
       actorRole: actor.role,
       actorId: actor.id,
       payload: buildScheduleAnomalyIncidentArchiveGeneratedAuditPayload({
-        archivedAt,
-        dryRun,
-        asOfIso,
-        olderThanMinutes,
-        includeNonResolved,
-        stateFilter,
-        assigneeFilter,
-        topN,
-        archiveReason,
-        total: incidents.length,
-        eligible: eligible.length,
-        candidates: candidates.length,
+        ...archiveMeta,
         summary: archiveSummary,
         skippedState,
         skippedRecent
@@ -2512,17 +2516,7 @@ export async function archiveScheduleAnomalyIncidents(
     })
   );
   return buildScheduleAnomalyIncidentArchiveResult({
-    archivedAt,
-    dryRun,
-    olderThanMinutes,
-    includeNonResolved,
-    archiveReason,
-    stateFilter,
-    assigneeFilter,
-    topN,
-    total: incidents.length,
-    eligible: eligible.length,
-    candidates: candidates.length,
+    ...archiveMeta,
     summary: { ...archiveSummary, items },
     skippedState,
     skippedRecent
