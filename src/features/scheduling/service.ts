@@ -137,6 +137,7 @@ import {
   emitAnomalySummarySideEffects
 } from "@/features/scheduling/anomaly-side-effect-helpers";
 import {
+  buildScheduleAnomalyIncidentEscalationGeneratedAuditEntry,
   buildScheduleAnomalyIncidentEscalationRequestFailedAuditEntry,
   buildScheduleAnomalyIncidentEscalationRequestFailedPayload,
   buildScheduleAnomalyIncidentEscalationRequestedAuditEntry,
@@ -2262,26 +2263,26 @@ export async function triggerScheduleAnomalyIncidentEscalation(
   const { requested, skippedCooldown, failed, items } = executionSummary;
 
   const requestedAt = new Date().toISOString();
-  await context.dataAccess.audit.append({
-    action: "scheduling.anomaly.incident.escalation.generated",
-    entityType: "WorkSchedule",
-    organizationId: tenantScope,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildScheduleAnomalyIncidentEscalationSummaryPayload({
-      requestedAt,
-      dryRun,
-      includeResolved,
-      includeWarning,
-      cooldownMinutes,
-      escalationChannel,
-      state: input.state,
-      assigneeId: input.assigneeId,
-      topN: input.topN,
-      candidates: candidateCount,
-      executionSummary
+  await context.dataAccess.audit.append(
+    buildScheduleAnomalyIncidentEscalationGeneratedAuditEntry({
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: buildScheduleAnomalyIncidentEscalationSummaryPayload({
+        requestedAt,
+        dryRun,
+        includeResolved,
+        includeWarning,
+        cooldownMinutes,
+        escalationChannel,
+        state: input.state,
+        assigneeId: input.assigneeId,
+        topN: input.topN,
+        candidates: candidateCount,
+        executionSummary
+      })
     })
-  });
+  );
 
   return buildScheduleAnomalyIncidentEscalationResult({
     requestedAt,
