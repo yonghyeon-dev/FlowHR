@@ -3,6 +3,7 @@ import type {
   ScheduleAnomalyIncidentReplayItem,
   ScheduleAnomalyIncidentReplayResult
 } from "@/features/scheduling/service";
+import { ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION } from "@/features/scheduling/incident-audit-projection";
 
 type ScheduleAnomalyIncidentReplayModelBase = {
   incidentId: string;
@@ -97,6 +98,25 @@ type BuildScheduleAnomalyIncidentReplayResultInput = {
   incidentIds: string[] | null;
   requested: number;
   summary: ScheduleAnomalyIncidentReplayActionSummary;
+};
+
+type BuildScheduleAnomalyIncidentReplayedAuditEntryInput<
+  TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null }
+> = {
+  incidentId: string;
+  replayModel: TReplayModel;
+  includeArchived: boolean;
+  replayedAt: string;
+  fallbackOrganizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+};
+
+type BuildScheduleAnomalyIncidentReplayGeneratedAuditEntryInput = {
+  organizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  payload: ReturnType<typeof buildScheduleAnomalyIncidentReplayGeneratedAuditPayload>;
 };
 
 export function selectScheduleAnomalyIncidentReplayTargets<
@@ -229,6 +249,38 @@ export function buildScheduleAnomalyIncidentReplayGeneratedAuditPayload(
     dryRunCount: input.summary.dryRunCount,
     notFound: input.summary.notFound,
     failed: input.summary.failed
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayedAuditEntry<
+  TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null }
+>(input: BuildScheduleAnomalyIncidentReplayedAuditEntryInput<TReplayModel>) {
+  return {
+    action: ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
+    entityType: "WorkSchedule" as const,
+    entityId: input.incidentId,
+    organizationId: input.replayModel.organizationId ?? input.fallbackOrganizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: buildScheduleAnomalyIncidentReplayAuditPayload({
+      incidentId: input.incidentId,
+      replayModel: input.replayModel,
+      includeArchived: input.includeArchived,
+      replayedAt: input.replayedAt
+    })
+  };
+}
+
+export function buildScheduleAnomalyIncidentReplayGeneratedAuditEntry(
+  input: BuildScheduleAnomalyIncidentReplayGeneratedAuditEntryInput
+) {
+  return {
+    action: "scheduling.anomaly.incident.replay.generated",
+    entityType: "WorkSchedule" as const,
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: input.payload
   };
 }
 
