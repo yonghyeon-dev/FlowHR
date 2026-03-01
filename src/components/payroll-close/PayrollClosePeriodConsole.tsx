@@ -149,10 +149,12 @@ export default function PayrollClosePeriodConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.inputTitle}</h2>
-          <p className="small muted">
-            {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionActorLabel}:{" "}
-            <code>{adminActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> /{" "}
+              {copy.sessionActorLabel}: <code>{adminActorId || "-"}</code>
+            </p>
+          ) : null}
           <div className="input-grid">
             <label>
               {copy.periodStartLabel}

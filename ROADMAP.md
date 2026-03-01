@@ -1016,3 +1016,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0713 ko runtime copy guard for withholding/payslip/contracts (add regression test to lock Korean runtime copy on employee withholding receipt, payslip receipt, contracts inbox, and payslip search-sort labels + e2e-wi0713 guard)
 
 - WI-0714 ops route devtools layout gate (add shared /ops layout guard to return notFound when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is disabled so ops surfaces stay isolated from product mode + e2e-wi0714 guard)
+
+- WI-0715 payroll session-context strict devtools gate (hide read-only session organization/actor identifiers in payroll close, payroll payslip delivery, and payroll insurance input panels by default; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0715 guard)

@@ -1,4 +1,4 @@
-import { type PayrollInsuranceCopy } from "@/components/payroll-insurance/copy";
+﻿import { type PayrollInsuranceCopy } from "@/components/payroll-insurance/copy";
 
 type InputPanelProps = {
   copy: PayrollInsuranceCopy;
@@ -40,9 +40,9 @@ type InputPanelProps = {
   setEmploymentInsuranceUnitKrw: (value: string) => void;
   industrialAccidentUnitKrw: string;
   setIndustrialAccidentUnitKrw: (value: string) => void;
+  showDevTools: boolean;
   sessionOrganizationId: string;
   sessionAdminActorId: string;
-  showDevTools: boolean;
   locale: "ko" | "en";
   canRunPreview: boolean;
   pendingLabel: string | null;
@@ -91,9 +91,9 @@ export function PayrollInsuranceInputPanel({
   setEmploymentInsuranceUnitKrw,
   industrialAccidentUnitKrw,
   setIndustrialAccidentUnitKrw,
+  showDevTools,
   sessionOrganizationId,
   sessionAdminActorId,
-  showDevTools,
   locale,
   canRunPreview,
   pendingLabel,
@@ -106,8 +106,8 @@ export function PayrollInsuranceInputPanel({
       <h2>{copy.inputTitle}</h2>
       {showDevTools ? (
         <p className="small">
-          {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
-          {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
+          {locale === "ko" ? "?몄뀡 議곗쭅" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
+          {locale === "ko" ? "?몄뀡 愿由ъ옄" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
         </p>
       ) : null}
       <label>
@@ -228,3 +228,4 @@ export function PayrollInsuranceInputPanel({
     </article>
   );
 }
+
