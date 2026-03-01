@@ -100,6 +100,17 @@ type BuildScheduleAnomalyIncidentReplayResultInput = {
   summary: ScheduleAnomalyIncidentReplayActionSummary;
 };
 
+type ResolveScheduleAnomalyIncidentReplayMetaInput = {
+  replayedAt: string;
+  dryRun: boolean;
+  includeArchived: boolean;
+  from: Date | undefined;
+  to: Date | undefined;
+  topN: number;
+  incidentIds: string[] | null;
+  selectedIncidentIds: string[];
+};
+
 type BuildScheduleAnomalyIncidentReplayedAuditEntryInput<
   TReplayModel extends ReplayModelWithAuditPayloadShape & { organizationId?: string | null }
 > = {
@@ -281,6 +292,21 @@ export function buildScheduleAnomalyIncidentReplayGeneratedAuditEntry(
     actorRole: input.actorRole,
     actorId: input.actorId,
     payload: input.payload
+  };
+}
+
+export function resolveScheduleAnomalyIncidentReplayMeta(
+  input: ResolveScheduleAnomalyIncidentReplayMetaInput
+) {
+  return {
+    replayedAt: input.replayedAt,
+    dryRun: input.dryRun,
+    includeArchived: input.includeArchived,
+    fromIso: input.from?.toISOString() ?? null,
+    toIso: input.to?.toISOString() ?? null,
+    topN: input.topN,
+    incidentIds: input.incidentIds,
+    requested: input.selectedIncidentIds.length
   };
 }
 
