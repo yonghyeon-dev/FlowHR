@@ -72,6 +72,15 @@ type BuildScheduleAnomalyIncidentAutoActionNotificationAuditPayloadInput = {
   error?: string;
 };
 
+type ResolveScheduleAnomalyIncidentAutoActionNotificationMetaInput = {
+  dryRun: boolean;
+  executedAt: string;
+  candidates: number;
+  escalated: number;
+  assigned: number;
+  failed: number;
+};
+
 type BuildScheduleAnomalyIncidentAutoActionExecutedEventPayloadInput = {
   summaryPayload: Record<string, unknown>;
   items: ScheduleAnomalyIncidentAutoActionItem[];
@@ -265,6 +274,19 @@ export function buildScheduleAnomalyIncidentAutoActionExecutedEventPayload(
   return {
     ...input.summaryPayload,
     items: buildScheduleAnomalyIncidentAutoActionEventItems(input.items)
+  };
+}
+
+export function resolveScheduleAnomalyIncidentAutoActionNotificationMeta(
+  input: ResolveScheduleAnomalyIncidentAutoActionNotificationMetaInput
+) {
+  return {
+    dryRun: input.dryRun,
+    executedAt: input.executedAt,
+    candidates: input.candidates,
+    escalated: input.escalated,
+    assigned: input.assigned,
+    failed: input.failed
   };
 }
 

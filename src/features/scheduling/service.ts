@@ -31,6 +31,7 @@ import type {
 } from "@/features/scheduling/anomaly-report-helpers";
 import {
   buildScheduleAnomalyIncidentAutoActionResult,
+  resolveScheduleAnomalyIncidentAutoActionNotificationMeta,
   buildScheduleAnomalyIncidentAutoActionSummaryPayload,
   executeScheduleAnomalyIncidentAutoActionAssignments,
   notifyScheduleAnomalyIncidentAutoActionExecution
@@ -2365,6 +2366,14 @@ export async function executeScheduleAnomalyIncidentAutoAction(
     assignmentSummary;
 
   const executedAt = new Date().toISOString();
+  const autoActionNotificationMeta = resolveScheduleAnomalyIncidentAutoActionNotificationMeta({
+    dryRun: escalation.dryRun,
+    executedAt,
+    candidates: escalation.counts.candidates,
+    escalated,
+    assigned,
+    failed
+  });
   const summaryPayload = buildScheduleAnomalyIncidentAutoActionSummaryPayload({
     executedAt,
     state: input.state,
@@ -2386,12 +2395,7 @@ export async function executeScheduleAnomalyIncidentAutoAction(
   );
 
   await notifyScheduleAnomalyIncidentAutoActionExecution({
-    dryRun: escalation.dryRun,
-    executedAt,
-    candidates: escalation.counts.candidates,
-    escalated,
-    assigned,
-    failed,
+    ...autoActionNotificationMeta,
     summaryPayload,
     items,
     publishExecuted: buildScheduleAnomalyIncidentAutoActionExecutedEventPublisher({
