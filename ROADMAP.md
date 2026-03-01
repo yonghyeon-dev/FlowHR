@@ -998,3 +998,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0704 admin session identity devtools gate expansion (hide read-only session organization/actor identifiers by default in /admin/approval-executions work-conditions panel, /admin/people filters panel, and /admin/leave-calendar query panel; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0704 regression guard)
 
 - WI-0705 employee guide/account session identity devtools gate (hide read-only session organization/employee identifiers by default in employee guide context panel and employee account session/query settings panel; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0705 regression guard)
+
+- WI-0706 leave accrual KO normalization and session devtools gate (normalize corrupted Korean runtime copy on /admin/leave-accrual and hide read-only session organization/admin identifiers in product mode; expose only when NEXT_PUBLIC_FLOWHR_DEV_TOOLS is enabled + e2e-wi0706 regression guard)

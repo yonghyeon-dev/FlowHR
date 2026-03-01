@@ -55,12 +55,12 @@ const leaveAccrualCopyByLocale: Record<"ko" | "en", LeaveAccrualCopy> = {
   ko: {
     heroEyebrow: "FlowHR 관리자",
     title: "연차 자동 부여 엔진",
-    description: "조직의 연차 정책을 기준으로 대상 연도 자동 부여량을 계산하고 드라이런/실행으로 반영합니다.",
+    description: "조직의 연차 정책을 기준으로 대상 연도의 자동 부여량을 계산하고 드라이런/실행으로 반영합니다.",
     conditionsTitle: "실행 조건",
     sessionOrganizationLabel: "세션 조직",
     sessionAdminLabel: "세션 관리자",
     yearLabel: "정산 연도",
-    includeAlreadySettledLabel: "결과에 이미 정산 포함",
+    includeAlreadySettledLabel: "이미 정산된 대상 포함",
     includeAlreadySettledYes: "예",
     includeAlreadySettledNo: "아니오",
     dryRunAction: "드라이런",
@@ -68,17 +68,17 @@ const leaveAccrualCopyByLocale: Record<"ko" | "en", LeaveAccrualCopy> = {
     sessionErrorPrefix: "세션 오류",
     summaryTitle: "정책/요약",
     noResultYet: "아직 실행 결과가 없습니다.",
-    resultOrganizationLabel: "organizationId",
-    resultYearDryRunLabel: "year / dryRun",
-    resultPolicyLabel: "policy",
-    resultEligibleAppliedFailedLabel: "eligible / applied / failed",
+    resultOrganizationLabel: "조직",
+    resultYearDryRunLabel: "연도 / 드라이런",
+    resultPolicyLabel: "정책",
+    resultEligibleAppliedFailedLabel: "대상 / 반영 / 실패",
     detailsTitle: "대상 상세",
     noRowsYet: "표시할 대상 결과가 없습니다.",
     detailsStatusLabel: "상태",
-    detailsJoinedLabel: "입사",
-    detailsProjectedLabel: "예상",
+    detailsJoinedLabel: "입사일",
+    detailsProjectedLabel: "예상 부여",
     workspaceShortcutsTitle: "워크스페이스 이동",
-    backToAdminAction: "관리자 홈",
+    backToAdminAction: "관리자 대시보드",
     leavePromotionDevAction: "(dev) 연차촉진 공지",
     logsTitle: "요청 로그",
     logsTotalLabel: "총",
@@ -90,7 +90,7 @@ const leaveAccrualCopyByLocale: Record<"ko" | "en", LeaveAccrualCopy> = {
     pendingRun: "연차 자동 부여 실행",
     statusMissingSessionOrganization: "세션 조직 정보가 없어 자동 부여를 실행할 수 없습니다.",
     statusInvalidYear: "정산 연도는 2000~9999 사이 정수여야 합니다.",
-    statusRequestFailed: "요청이 실패했습니다. 로그를 확인하세요.",
+    statusRequestFailed: "요청이 실패했습니다. 로그를 확인해 주세요.",
     statusDryRunDone: "드라이런 완료",
     statusRunDone: "실행 완료"
   },
@@ -254,7 +254,9 @@ export default function LeaveAccrualAutoGrantConsole() {
         `${copy.statusDryRunDone}: eligible ${parsed.summary.eligibleCount}, alreadySettled ${parsed.summary.alreadySettledCount}`
       );
     } else {
-      setStatusMessage(`${copy.statusRunDone}: applied ${parsed.summary.appliedCount}, failed ${parsed.summary.failedCount}`);
+      setStatusMessage(
+        `${copy.statusRunDone}: applied ${parsed.summary.appliedCount}, failed ${parsed.summary.failedCount}`
+      );
     }
     setTimeout(() => setStatusMessage(""), 3000);
   }
@@ -264,20 +266,28 @@ export default function LeaveAccrualAutoGrantConsole() {
       <header className="hero">
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
-        {/* Legacy marker: ?곗감 ?먮룞 遺???붿쭊 */}
         <p>{copy.description}</p>
       </header>
 
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.conditionsTitle}</h2>
-          <p className="small">
-            {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionAdminLabel}: <code>{adminActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small">
+              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionAdminLabel}:{" "}
+              <code>{adminActorId || "-"}</code>
+            </p>
+          ) : null}
           <div className="input-grid">
             <label>
               {copy.yearLabel}
-              <input type="number" min={2000} max={9999} value={year} onChange={(event) => setYear(event.target.value)} />
+              <input
+                type="number"
+                min={2000}
+                max={9999}
+                value={year}
+                onChange={(event) => setYear(event.target.value)}
+              />
             </label>
             <label>
               {copy.includeAlreadySettledLabel}
@@ -291,10 +301,18 @@ export default function LeaveAccrualAutoGrantConsole() {
             </label>
           </div>
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void runAutoGrant(true)} disabled={!organizationId.trim() || pendingLabel !== null}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void runAutoGrant(true)}
+              disabled={!organizationId.trim() || pendingLabel !== null}
+            >
               {copy.dryRunAction}
             </button>
-            <button className="btn btn-primary" onClick={() => void runAutoGrant(false)} disabled={!organizationId.trim() || pendingLabel !== null}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void runAutoGrant(false)}
+              disabled={!organizationId.trim() || pendingLabel !== null}
+            >
               {copy.runAction}
             </button>
           </div>
@@ -307,32 +325,30 @@ export default function LeaveAccrualAutoGrantConsole() {
           {!result ? (
             <p className="small">{copy.noResultYet}</p>
           ) : (
-            <>
-              <ul className="simple-list">
-                <li>
-                  <span>{copy.resultOrganizationLabel}</span>
-                  <strong>{result.organizationId}</strong>
-                </li>
-                <li>
-                  <span>{copy.resultYearDryRunLabel}</span>
-                  <strong>
-                    {result.year} / {result.dryRun ? "yes" : "no"}
-                  </strong>
-                </li>
-                <li>
-                  <span>{copy.resultPolicyLabel}</span>
-                  <strong>
-                    grant {result.policy.annualGrantDays}, carry cap {result.policy.carryOverCapDays} ({result.policy.source})
-                  </strong>
-                </li>
-                <li>
-                  <span>{copy.resultEligibleAppliedFailedLabel}</span>
-                  <strong>
-                    {result.summary.eligibleCount} / {result.summary.appliedCount} / {result.summary.failedCount}
-                  </strong>
-                </li>
-              </ul>
-            </>
+            <ul className="simple-list">
+              <li>
+                <span>{copy.resultOrganizationLabel}</span>
+                <strong>{result.organizationId}</strong>
+              </li>
+              <li>
+                <span>{copy.resultYearDryRunLabel}</span>
+                <strong>
+                  {result.year} / {result.dryRun ? "yes" : "no"}
+                </strong>
+              </li>
+              <li>
+                <span>{copy.resultPolicyLabel}</span>
+                <strong>
+                  grant {result.policy.annualGrantDays}, carry cap {result.policy.carryOverCapDays} ({result.policy.source})
+                </strong>
+              </li>
+              <li>
+                <span>{copy.resultEligibleAppliedFailedLabel}</span>
+                <strong>
+                  {result.summary.eligibleCount} / {result.summary.appliedCount} / {result.summary.failedCount}
+                </strong>
+              </li>
+            </ul>
           )}
         </article>
 
@@ -351,11 +367,13 @@ export default function LeaveAccrualAutoGrantConsole() {
                     <span className="small">
                       {copy.detailsStatusLabel} {row.status}
                       {row.reason ? ` / ${row.reason}` : ""}
-                      {" / "}{copy.detailsJoinedLabel} {formatDateTimeByLocale(row.joinedAt, runtimeLocale)}
+                      {" / "}
+                      {copy.detailsJoinedLabel} {formatDateTimeByLocale(row.joinedAt, runtimeLocale)}
                     </span>
                     <br />
                     <span className="small">
-                      {copy.detailsProjectedLabel} {formatDays(row.suggestedAnnualGrantDays)} + carry {formatDays(row.carryOverAppliedDays)} = {formatDays(row.projectedGrantedDays)}
+                      {copy.detailsProjectedLabel} {formatDays(row.suggestedAnnualGrantDays)} + carry{" "}
+                      {formatDays(row.carryOverAppliedDays)} = {formatDays(row.projectedGrantedDays)}
                     </span>
                   </span>
                 </li>
@@ -382,7 +400,8 @@ export default function LeaveAccrualAutoGrantConsole() {
           <article className="panel">
             <h2>{copy.logsTitle}</h2>
             <p className="small">
-              {copy.logsTotalLabel} {stats.total} / {copy.logsSuccessLabel} {stats.success} / {copy.logsFailLabel} {stats.fail}
+              {copy.logsTotalLabel} {stats.total} / {copy.logsSuccessLabel} {stats.success} / {copy.logsFailLabel}{" "}
+              {stats.fail}
               {pendingLabel ? ` / ${copy.logsRunningLabel} ${pendingLabel}` : ""}
             </p>
             {logs.length === 0 ? (
@@ -391,7 +410,8 @@ export default function LeaveAccrualAutoGrantConsole() {
               <ul className="log-list">
                 {logs.map((log) => (
                   <li key={log.id}>
-                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} / {log.status}
+                    <span className={log.ok ? "ok" : "fail"}>{log.ok ? "OK" : "FAIL"}</span> {log.label} /{" "}
+                    {log.status}
                     <time>{log.at}</time>
                   </li>
                 ))}
