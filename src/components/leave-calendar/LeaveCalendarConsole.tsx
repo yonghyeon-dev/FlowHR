@@ -135,10 +135,12 @@ export default function LeaveCalendarConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.queryTitle}</h2>
-          <p className="small">
-            {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-            {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{adminActorId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small">
+              {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+              {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{adminActorId || "-"}</code>
+            </p>
+          ) : null}
           <label>
             {copy.departmentIdOptionalLabel}
             <input value={departmentId} onChange={(event) => setDepartmentId(event.target.value)} />

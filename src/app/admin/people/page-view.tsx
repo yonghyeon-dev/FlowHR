@@ -206,6 +206,7 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
         <section id="directory-filters">
           <AdminPeopleDirectoryFiltersPanel
             isKoLocale={isKoLocale}
+            showDevTools={showDevTools}
             organizationId={organizationId}
             adminActorId={adminActorId}
             isProductionRuntime={isProductionRuntime}

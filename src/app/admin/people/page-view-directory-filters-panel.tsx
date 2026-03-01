@@ -2,6 +2,7 @@ import { type ActiveFilter, type Department, type Position, type UpdatedWindow }
 
 type AdminPeopleDirectoryFiltersPanelProps = {
   isKoLocale: boolean;
+  showDevTools: boolean;
   organizationId: string;
   adminActorId: string;
   isProductionRuntime: boolean;
@@ -30,6 +31,7 @@ type AdminPeopleDirectoryFiltersPanelProps = {
 
 export function AdminPeopleDirectoryFiltersPanel({
   isKoLocale,
+  showDevTools,
   organizationId,
   adminActorId,
   isProductionRuntime,
@@ -58,9 +60,11 @@ export function AdminPeopleDirectoryFiltersPanel({
   return (
     <article className="panel panel-directory-filters">
       <h2>{isKoLocale ? "필터" : "Filters"}</h2>
-      <p className="small muted">
-        {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> / {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
-      </p>
+      {showDevTools ? (
+        <p className="small muted">
+          {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> / {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
+        </p>
+      ) : null}
       {isProductionRuntime && !usesBearerToken ? (
         <p className="small fail">
           {isKoLocale
