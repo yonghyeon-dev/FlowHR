@@ -126,10 +126,12 @@ export function EmployeePayslipFilterPanel({
 
       <article className="panel">
         <h2>{pageCopy.filters.title}</h2>
-        <p className="small muted">
-          {pageCopy.filters.organizationIdOptional}: <code>{organizationId || "-"}</code> /{" "}
-          {pageCopy.filters.employeeId}: <code>{employeeId || "-"}</code>
-        </p>
+        {showDevTools ? (
+          <p className="small muted">
+            {pageCopy.filters.organizationIdOptional}: <code>{organizationId || "-"}</code> /{" "}
+            {pageCopy.filters.employeeId}: <code>{employeeId || "-"}</code>
+          </p>
+        ) : null}
         <div className="input-grid">
           <label>
             {pageCopy.filters.periodStart}

@@ -189,10 +189,12 @@ export default function PayslipReceiptConsole() {
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
-          <p className="small muted">
-            {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
-            <code>{employeeId || "-"}</code>
-          </p>
+          {showDevTools ? (
+            <p className="small muted">
+              {copy.sessionOrganizationLabel}: <code>{organizationId || "-"}</code> / {copy.sessionEmployeeLabel}:{" "}
+              <code>{employeeId || "-"}</code>
+            </p>
+          ) : null}
           <div className="input-grid">
             <label>{copy.periodStartLabel}<input type="date" value={periodStartDate} onChange={(event) => setPeriodStartDate(event.target.value)} /></label>
             <label>{copy.periodEndLabel}<input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} /></label>
