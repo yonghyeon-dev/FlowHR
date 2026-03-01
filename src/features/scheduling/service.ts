@@ -127,6 +127,7 @@ import {
   type GeneratedScheduleWindow
 } from "@/features/scheduling/rotation-window-helpers";
 import {
+  buildScheduleAnomalyIncidentReconcileAuditReadInput,
   buildScheduleAnomalyIncidentReconcileSummary,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReconcileGeneratedAuditPayload,
@@ -2647,10 +2648,9 @@ export async function reconcileScheduleAnomalyIncidentStore(
   });
   const auditRows = await listScheduleAnomalyIncidentReadModelsFromAudit(
     context.dataAccess.audit,
-    {
-      organizationId: tenantScope,
-      applyArchiveActions: true
-    }
+    buildScheduleAnomalyIncidentReconcileAuditReadInput({
+      organizationId: tenantScope
+    })
   );
 
   const { compared, counts } = buildScheduleAnomalyIncidentReconcileSnapshot({

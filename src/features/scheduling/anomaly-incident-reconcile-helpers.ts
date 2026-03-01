@@ -20,6 +20,10 @@ type BuildScheduleAnomalyIncidentReconcileSnapshotInput = {
   auditRows: ScheduleAnomalyIncidentReconcileRow[];
 };
 
+type BuildScheduleAnomalyIncidentReconcileAuditReadInput = {
+  organizationId: string | undefined;
+};
+
 export type ScheduleAnomalyIncidentReconcileCounts = {
   total: number;
   match: number;
@@ -151,6 +155,15 @@ export function buildScheduleAnomalyIncidentReconcileSnapshot(
   };
 
   return { compared, counts };
+}
+
+export function buildScheduleAnomalyIncidentReconcileAuditReadInput(
+  input: BuildScheduleAnomalyIncidentReconcileAuditReadInput
+) {
+  return {
+    organizationId: input.organizationId,
+    applyArchiveActions: true
+  };
 }
 
 export function selectScheduleAnomalyIncidentReconcileItems(
