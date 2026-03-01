@@ -31,6 +31,20 @@ type BuildScheduleAnomalyIncidentAutoActionExecutionAuditEntryInput = {
   payload: Record<string, unknown>;
 };
 
+type BuildScheduleAnomalyIncidentAutoActionNotificationAuditAppenderInput = {
+  organizationId: string | undefined;
+  actorRole: string;
+  actorId: string | undefined;
+  appendAuditEntry: (
+    entry: ReturnType<typeof buildScheduleAnomalyIncidentAutoActionExecutionAuditEntry>
+  ) => Promise<void>;
+};
+
+type ScheduleAnomalyIncidentAutoActionNotificationAuditInput = {
+  action: string;
+  payload: Record<string, unknown>;
+};
+
 export function buildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntry(
   input: BuildScheduleAnomalyIncidentAutoActionAssignFailedAuditEntryInput
 ) {
@@ -75,5 +89,21 @@ export function buildScheduleAnomalyIncidentAutoActionExecutionAuditEntry(
     actorRole: input.actorRole,
     actorId: input.actorId,
     payload: input.payload
+  };
+}
+
+export function buildScheduleAnomalyIncidentAutoActionNotificationAuditAppender(
+  input: BuildScheduleAnomalyIncidentAutoActionNotificationAuditAppenderInput
+) {
+  return async (audit: ScheduleAnomalyIncidentAutoActionNotificationAuditInput) => {
+    await input.appendAuditEntry(
+      buildScheduleAnomalyIncidentAutoActionExecutionAuditEntry({
+        action: audit.action,
+        organizationId: input.organizationId,
+        actorRole: input.actorRole,
+        actorId: input.actorId,
+        payload: audit.payload
+      })
+    );
   };
 }
