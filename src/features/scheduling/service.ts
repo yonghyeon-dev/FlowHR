@@ -12,7 +12,6 @@ import {
   ANOMALY_INCIDENT_LIFECYCLE_AUDIT_ACTION_BY_ACTION,
   ANOMALY_INCIDENT_LIFECYCLE_STATE_BY_ACTION,
   ANOMALY_INCIDENT_PROJECTION_AUDIT_ACTIONS,
-  ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
   buildScheduleAnomalyIncidentReadModelsFromAuditLogs
 } from "@/features/scheduling/incident-audit-projection";
 import {
@@ -54,8 +53,9 @@ import {
   buildScheduleAnomalyIncidentSlaQueue
 } from "@/features/scheduling/anomaly-incident-queue-helpers";
 import {
-  buildScheduleAnomalyIncidentReplayAuditPayload,
+  buildScheduleAnomalyIncidentReplayGeneratedAuditEntry,
   buildScheduleAnomalyIncidentReplayGeneratedAuditPayload,
+  buildScheduleAnomalyIncidentReplayedAuditEntry,
   buildScheduleAnomalyIncidentReplayResult,
   executeScheduleAnomalyIncidentReplayActions,
   selectScheduleAnomalyIncidentReplayTargets
@@ -2573,44 +2573,41 @@ export async function replayScheduleAnomalyIncidentStore(
           lastEscalationRequestedAt: existing?.lastEscalationRequestedAt ?? null
         });
         const replayedAt = new Date().toISOString();
-        await context.dataAccess.audit.append({
-          action: ANOMALY_INCIDENT_REPLAY_AUDIT_ACTION,
-          entityType: "WorkSchedule",
-          entityId: incidentId,
-          organizationId: replayModel.organizationId ?? tenantScope,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: buildScheduleAnomalyIncidentReplayAuditPayload({
+        await context.dataAccess.audit.append(
+          buildScheduleAnomalyIncidentReplayedAuditEntry({
             incidentId,
             replayModel,
             includeArchived,
-            replayedAt
+            replayedAt,
+            fallbackOrganizationId: tenantScope,
+            actorRole: actor.role,
+            actorId: actor.id
           })
-        });
+        );
       }
     });
 
   const replayedAt = new Date().toISOString();
   const fromIso = input.from?.toISOString() ?? null;
   const toIso = input.to?.toISOString() ?? null;
-  await context.dataAccess.audit.append({
-    action: "scheduling.anomaly.incident.replay.generated",
-    entityType: "WorkSchedule",
-    organizationId: tenantScope,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: buildScheduleAnomalyIncidentReplayGeneratedAuditPayload({
-      replayedAt,
-      dryRun,
-      includeArchived,
-      fromIso,
-      toIso,
-      topN,
-      incidentIds: normalizedIncidentIds,
-      requested: selectedIncidentIds.length,
-      summary: { replayed, dryRunCount, notFound, failed }
+  await context.dataAccess.audit.append(
+    buildScheduleAnomalyIncidentReplayGeneratedAuditEntry({
+      organizationId: tenantScope,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: buildScheduleAnomalyIncidentReplayGeneratedAuditPayload({
+        replayedAt,
+        dryRun,
+        includeArchived,
+        fromIso,
+        toIso,
+        topN,
+        incidentIds: normalizedIncidentIds,
+        requested: selectedIncidentIds.length,
+        summary: { replayed, dryRunCount, notFound, failed }
+      })
     })
-  });
+  );
 
   return buildScheduleAnomalyIncidentReplayResult({
     replayedAt,
