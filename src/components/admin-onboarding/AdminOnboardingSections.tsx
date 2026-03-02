@@ -2,14 +2,7 @@
 import type { AdminOnboardingCopy } from "@/components/admin-onboarding/copy";
 export type AdminOnboardingOrganizationOption = { id: string; name: string };
 export type AdminOnboardingDepartmentOption = { id: string; code: string; name: string };
-export type AdminOnboardingActionLog = {
-  id: number;
-  label: string;
-  ok: boolean;
-  status: number;
-  at: string;
-  durationMs: number;
-};
+export type AdminOnboardingActionLog = { id: number; label: string; ok: boolean; status: number; at: string; durationMs: number };
 type ContextPanelProps = {
   copy: AdminOnboardingCopy;
   showDevTools: boolean;
@@ -68,6 +61,8 @@ type SetupPanelsProps = {
   activeContractTemplateCount: number;
   preparedContractDraftEmployeeCount: number;
   pendingContractDraftCount: number;
+  approvalRequestedContractEmployeeCount: number;
+  pendingContractApprovalRequestCount: number;
   onSetDepartmentSeedInput: (value: string) => void;
   onSetEmployeeSeedInput: (value: string) => void;
   onSetAnnualGrantDays: (value: string) => void;
@@ -83,6 +78,7 @@ type SetupPanelsProps = {
   onIssuePendingEmployeeInvites: () => void;
   onBootstrapEmploymentContractTemplate: () => void;
   onCreatePendingContractDrafts: () => void;
+  onRequestPendingContractApprovals: () => void;
 };
 export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
   const {
@@ -106,6 +102,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     activeContractTemplateCount,
     preparedContractDraftEmployeeCount,
     pendingContractDraftCount,
+    approvalRequestedContractEmployeeCount,
+    pendingContractApprovalRequestCount,
     onSetDepartmentSeedInput,
     onSetEmployeeSeedInput,
     onSetAnnualGrantDays,
@@ -120,7 +118,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     onApplyLeavePolicy,
     onIssuePendingEmployeeInvites,
     onBootstrapEmploymentContractTemplate,
-    onCreatePendingContractDrafts
+    onCreatePendingContractDrafts,
+    onRequestPendingContractApprovals
   } = props;
   return (
     <section className="panel-grid">
@@ -229,12 +228,22 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
             {pendingContractDraftCount === 0 && activeEmployeeCount > 0 ? copy.contractDraftReadyLabel : copy.contractDraftMissingLabel}
           </span>
         </p>
+        <p className="small">
+          {copy.contractApprovalCoverageLabel}: <strong>{approvalRequestedContractEmployeeCount}</strong> /{" "}
+          <strong>{preparedContractDraftEmployeeCount}</strong> · {copy.contractApprovalPendingLabel}:{" "}
+          <strong>{pendingContractApprovalRequestCount}</strong>{" "}
+          <span className={pendingContractApprovalRequestCount === 0 && preparedContractDraftEmployeeCount > 0 ? "ok" : "fail"}>
+            {pendingContractApprovalRequestCount === 0 && preparedContractDraftEmployeeCount > 0 ? copy.contractApprovalReadyLabel : copy.contractApprovalMissingLabel}
+          </span>
+        </p>
         <div className="actions">
           <button className="btn btn-primary" onClick={onBootstrapEmploymentContractTemplate} disabled={activeContractTemplateCount > 0}>{copy.contractTemplateBootstrapButton}</button>
           <button className="btn btn-secondary" onClick={onCreatePendingContractDrafts} disabled={activeContractTemplateCount === 0 || pendingContractDraftCount === 0}>{copy.contractDraftIssueButton}</button>
+          <button className="btn btn-secondary" onClick={onRequestPendingContractApprovals} disabled={preparedContractDraftEmployeeCount === 0 || pendingContractApprovalRequestCount === 0}>{copy.contractApprovalIssueButton}</button>
         </div>
         <p className="small muted">{copy.contractTemplateBootstrapHint}</p>
         <p className="small muted">{copy.contractDraftIssueHint}</p>
+        <p className="small muted">{copy.contractApprovalIssueHint}</p>
       </article>
     </section>
   );

@@ -68,6 +68,8 @@ export function AdminOnboardingDashboard() {
         activeContractTemplateCount={data.activeContractTemplateCount}
         preparedContractDraftEmployeeCount={data.preparedContractDraftEmployeeCount}
         pendingContractDraftCount={data.pendingContractDraftCount}
+        approvalRequestedContractEmployeeCount={data.approvalRequestedContractEmployeeCount}
+        pendingContractApprovalRequestCount={data.pendingContractApprovalRequestCount}
         onSetDepartmentSeedInput={data.setDepartmentSeedInput}
         onSetEmployeeSeedInput={data.setEmployeeSeedInput}
         onSetAnnualGrantDays={data.setAnnualGrantDays}
@@ -96,6 +98,9 @@ export function AdminOnboardingDashboard() {
         }}
         onCreatePendingContractDrafts={() => {
           void data.createPendingContractDrafts();
+        }}
+        onRequestPendingContractApprovals={() => {
+          void data.requestPendingContractApprovals();
         }}
       />
 
