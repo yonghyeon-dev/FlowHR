@@ -1,4 +1,7 @@
-﻿import type { IntegratedSubmitChecklistCard, IntegratedSummaryCard } from "@/app/employee/page-types";
+import Link from "next/link";
+
+import type { IntegratedSubmitChecklistCard, IntegratedSummaryCard } from "@/app/employee/page-types";
+import { buildEmployeeWorkspaceHubs } from "@/components/employee-dashboard/workspace-hubs";
 import { EmployeeJourneyShortcutPanel } from "@/components/employee-self-service/EmployeeJourneyShortcutPanel";
 import type { SupabaseSessionSnapshot } from "@/lib/client/useSupabaseSession";
 
@@ -41,9 +44,39 @@ export function EmployeeAccountOverviewPanels({
   onRefreshEmployeeSnapshot,
   onJumpToSection
 }: EmployeeAccountOverviewPanelsProps) {
+  const workspaceHubs = buildEmployeeWorkspaceHubs(isKoLocale);
+
   return (
     <>
       <EmployeeJourneyShortcutPanel onJumpToSection={onJumpToSection} />
+
+      <article className="panel" id="workspace-hub">
+        <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
+        <p className="small">
+          {isKoLocale
+            ? "요약은 홈에서 확인하고, 상세 작업은 전용 워크스페이스에서 진행하세요."
+            : "Use the home dashboard for summary, then continue in dedicated workspaces."}
+        </p>
+        <div className="panel-grid">
+          {workspaceHubs.map((hub) => (
+            <article className="panel" key={hub.key}>
+              <h3>{hub.title}</h3>
+              <p className="small muted">{hub.description}</p>
+              <div className="actions">
+                {hub.links.map((link, index) => (
+                  <Link
+                    className={index === 0 ? "btn btn-primary" : "btn btn-secondary"}
+                    href={link.href}
+                    key={`${hub.key}-${link.href}`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </article>
 
       <article className="panel" id="account">
         <h2>{isKoLocale ? "내 계정" : "My Account"}</h2>

@@ -42,8 +42,8 @@ export function EmployeeDashboardChrome({
           <Link className="btn btn-secondary" href="/employee/payslips">
             {isKoLocale ? "급여 명세서" : "Payslips"}
           </Link>
-          <Link className="btn btn-secondary" href="/login">
-            {isKoLocale ? "로그인" : "Login"}
+          <Link className="btn btn-secondary" href="/employee/contracts">
+            {isKoLocale ? "전자계약함" : "Contracts"}
           </Link>
           <Link className="btn btn-secondary" href="/admin">
             {isKoLocale ? "관리자" : "Admin"}

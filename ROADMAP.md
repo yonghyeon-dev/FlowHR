@@ -1069,3 +1069,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0783 login korean label normalization (normalize remaining English labels in ko runtime for /login session/sign-in fields: userId/email/role/organization/actorId/password + e2e-wi0783 regression guard)
 
 - WI-0784 admin dashboard hub IA simplification (restructure /admin as summary-first hub with top-priority panel + core workspace hub cards, remove header login shortcut, and keep detailed operations routed to dedicated pages + e2e-wi0784 regression guard)
+
+- WI-0785 employee dashboard hub IA simplification (add /employee core workspace hub panel with dedicated route links for schedule/leave/payroll-documents/contracts, replace header login shortcut with contracts shortcut, and keep detailed actions in dedicated workspaces + e2e-wi0785 regression guard)
