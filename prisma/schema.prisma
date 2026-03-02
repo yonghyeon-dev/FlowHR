@@ -27,6 +27,8 @@ model Organization {
   notices Notice[]
   noticeReadReceipts NoticeReadReceipt[]
   noticeNotifications NoticeNotificationQueue[]
+  recruitmentOpenings RecruitmentOpening[]
+  recruitmentReferrals RecruitmentReferral[]
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
   workScheduleTemplates WorkScheduleTemplate[]
@@ -481,6 +483,40 @@ model NoticeNotificationQueue {
   @@index([noticeId, enqueuedAt])
 }
 
+model RecruitmentOpening {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  title          String
+  department     String
+  employmentType String
+  status         RecruitmentOpeningStatus @default(OPEN)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  referrals      RecruitmentReferral[]
+
+  @@index([organizationId, status, updatedAt])
+}
+
+model RecruitmentReferral {
+  id               String   @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  openingId        String
+  opening          RecruitmentOpening @relation(fields: [openingId], references: [id], onDelete: Restrict)
+  candidateName    String
+  candidateEmail   String
+  referrerEmployeeId String
+  note             String
+  stage            RecruitmentReferralStage @default(SUBMITTED)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organizationId, stage, updatedAt])
+  @@index([organizationId, referrerEmployeeId, updatedAt])
+  @@index([openingId, updatedAt])
+}
+
 model PayrollRun {
   id                     String   @id @default(cuid())
   organizationId         String?
@@ -625,6 +661,21 @@ enum NoticeNotificationState {
   QUEUED
   DELIVERED
   FAILED
+}
+
+enum RecruitmentOpeningStatus {
+  OPEN
+  CLOSED
+}
+
+enum RecruitmentReferralStage {
+  SUBMITTED
+  SCREENING
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+  WITHDRAWN
 }
 
 enum PayrollState {

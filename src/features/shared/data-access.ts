@@ -11,6 +11,15 @@ export type NoticeAudience = "all" | "employees" | "admins";
 export type NoticeStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED";
 export type NoticeNotificationChannel = "in_app";
 export type NoticeNotificationState = "QUEUED" | "DELIVERED" | "FAILED";
+export type RecruitmentOpeningStatus = "OPEN" | "CLOSED";
+export type RecruitmentReferralStage =
+  | "SUBMITTED"
+  | "SCREENING"
+  | "INTERVIEW"
+  | "OFFER"
+  | "HIRED"
+  | "REJECTED"
+  | "WITHDRAWN";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
@@ -419,6 +428,30 @@ export type NoticeNotificationEntity = {
   enqueuedAt: Date;
   deliveredAt: Date | null;
   lastError: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type RecruitmentOpeningEntity = {
+  id: string;
+  organizationId: string;
+  title: string;
+  department: string;
+  employmentType: string;
+  status: RecruitmentOpeningStatus;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type RecruitmentReferralEntity = {
+  id: string;
+  organizationId: string;
+  openingId: string;
+  candidateName: string;
+  candidateEmail: string;
+  referrerEmployeeId: string;
+  note: string;
+  stage: RecruitmentReferralStage;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -848,6 +881,46 @@ export type UpdateNoticeNotificationInput = {
   lastError?: string | null;
 };
 
+export type CreateRecruitmentOpeningInput = {
+  organizationId: string;
+  title: string;
+  department: string;
+  employmentType: string;
+  status?: RecruitmentOpeningStatus;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type UpdateRecruitmentOpeningInput = {
+  title?: string;
+  department?: string;
+  employmentType?: string;
+  status?: RecruitmentOpeningStatus;
+  updatedAt?: Date;
+};
+
+export type CreateRecruitmentReferralInput = {
+  organizationId: string;
+  openingId: string;
+  candidateName: string;
+  candidateEmail: string;
+  referrerEmployeeId: string;
+  note: string;
+  stage?: RecruitmentReferralStage;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type UpdateRecruitmentReferralInput = {
+  openingId?: string;
+  candidateName?: string;
+  candidateEmail?: string;
+  referrerEmployeeId?: string;
+  note?: string;
+  stage?: RecruitmentReferralStage;
+  updatedAt?: Date;
+};
+
 export type RecordLeaveDecisionInput = {
   requestId: string;
   action: LeaveDecisionAction;
@@ -1154,6 +1227,26 @@ export interface NoticeNotificationStore {
   }): Promise<NoticeNotificationEntity[]>;
 }
 
+export interface RecruitmentStore {
+  createOpening(input: CreateRecruitmentOpeningInput): Promise<RecruitmentOpeningEntity>;
+  findOpeningById(id: string): Promise<RecruitmentOpeningEntity | null>;
+  updateOpening(id: string, input: UpdateRecruitmentOpeningInput): Promise<RecruitmentOpeningEntity>;
+  listOpenings(input: {
+    organizationId: string;
+    status?: RecruitmentOpeningStatus;
+    limit?: number;
+  }): Promise<RecruitmentOpeningEntity[]>;
+  createReferral(input: CreateRecruitmentReferralInput): Promise<RecruitmentReferralEntity>;
+  findReferralById(id: string): Promise<RecruitmentReferralEntity | null>;
+  updateReferral(id: string, input: UpdateRecruitmentReferralInput): Promise<RecruitmentReferralEntity>;
+  listReferrals(input: {
+    organizationId: string;
+    referrerEmployeeId?: string;
+    stage?: RecruitmentReferralStage;
+    limit?: number;
+  }): Promise<RecruitmentReferralEntity[]>;
+}
+
 export interface AuditStore {
   append(input: AppendAuditLogInput): Promise<void>;
   list(input: ListAuditLogsInput): Promise<AuditLogEntity[]>;
@@ -1172,6 +1265,7 @@ export type DataAccess = {
   leavePolicy: LeavePolicyStore;
   leaveBalance: LeaveBalanceStore;
   leavePromotionDeliveries: LeavePromotionDeliveryStore;
+  recruitment: RecruitmentStore;
   notices: NoticeStore;
   noticeReadReceipts: NoticeReadReceiptStore;
   noticeNotifications: NoticeNotificationStore;

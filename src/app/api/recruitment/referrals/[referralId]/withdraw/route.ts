@@ -30,7 +30,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const existing = findRecruitmentReferral(parsed.data.referralId);
+  const existing = await findRecruitmentReferral(parsed.data.referralId);
   if (!existing) {
     return fail(404, "recruitment.referral.not_found");
   }
@@ -45,7 +45,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
   }
 
-  const updated = withdrawRecruitmentReferral({
+  const updated = await withdrawRecruitmentReferral({
     referralId: parsed.data.referralId,
     actorId: actor.id
   });

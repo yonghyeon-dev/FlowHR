@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
-  const openings = listRecruitmentOpenings({
+  const openings = await listRecruitmentOpenings({
     organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
     status: parsed.data.status
   });
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const created = createRecruitmentOpening({
+  const created = await createRecruitmentOpening({
     organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
     title: parsed.data.title,
     department: parsed.data.department,
