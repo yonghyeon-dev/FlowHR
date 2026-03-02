@@ -1,34 +1,14 @@
-﻿"use client";
-
+"use client";
 import { useMemo, useState } from "react";
-
 import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveNoticeWorkspaceCopy } from "@/components/notices/copy";
 import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceView";
 
-type NoticeApiSummary = {
-  total: number;
-  draft: number;
-  scheduled: number;
-  published: number;
-};
-
-type NoticeApiLog = {
-  id: number;
-  action: string;
-  status: number;
-  ok: boolean;
-  at: string;
-};
-
-const DEFAULT_SUMMARY: NoticeApiSummary = {
-  total: 0,
-  draft: 0,
-  scheduled: 0,
-  published: 0
-};
+type NoticeApiSummary = { total: number; draft: number; scheduled: number; published: number };
+type NoticeApiLog = { id: number; action: string; status: number; ok: boolean; at: string };
+const DEFAULT_SUMMARY: NoticeApiSummary = { total: 0, draft: 0, scheduled: 0, published: 0 };
 
 function parseSummary(payload: unknown): NoticeApiSummary {
   const summary = (payload as { summary?: Partial<NoticeApiSummary> } | null)?.summary;
@@ -56,18 +36,15 @@ function parseReadReceipts(payload: unknown) {
 function toDateTimeLocalValue() {
   const now = new Date();
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(
-    now.getMinutes()
-  )}`;
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
 function buildQuery(input: Record<string, string>) {
   const query = new URLSearchParams();
   Object.entries(input).forEach(([key, value]) => {
-    if (!value.trim()) {
-      return;
+    if (value.trim()) {
+      query.set(key, value.trim());
     }
-    query.set(key, value.trim());
   });
   const text = query.toString();
   return text ? `?${text}` : "";
@@ -89,12 +66,12 @@ export default function AdminNoticeWorkspace() {
 
   const [statusFilter, setStatusFilter] = useState<NoticeStatus | "all">("all");
   const [audienceFilter, setAudienceFilter] = useState<"all" | "employees" | "admins">("all");
-
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState<"all" | "employees" | "admins">("all");
   const [publishAt, setPublishAt] = useState(toDateTimeLocalValue());
   const [listSearchQuery, setListSearchQuery] = useState("");
+  const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
 
   const [summary, setSummary] = useState<NoticeApiSummary>(DEFAULT_SUMMARY);
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -106,16 +83,10 @@ export default function AdminNoticeWorkspace() {
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
-  const stats = useMemo(
-    () => ({
-      total: logs.length,
-      success: logs.filter((log) => log.ok).length
-    }),
-    [logs]
-  );
+  const stats = useMemo(() => ({ total: logs.length, success: logs.filter((log) => log.ok).length }), [logs]);
   const filteredNotices = useMemo(() => {
     const query = listSearchQuery.trim().toLowerCase();
-    if (query.length === 0) {
+    if (!query) {
       return notices;
     }
     return notices.filter((notice) => {
@@ -123,54 +94,35 @@ export default function AdminNoticeWorkspace() {
       return haystack.includes(query);
     });
   }, [listSearchQuery, notices]);
+
   const readCountByNoticeId = useMemo(() => {
     const map = new Map<string, number>();
-    readReceipts.forEach((receipt) => {
-      map.set(receipt.noticeId, (map.get(receipt.noticeId) ?? 0) + 1);
-    });
+    readReceipts.forEach((receipt) => map.set(receipt.noticeId, (map.get(receipt.noticeId) ?? 0) + 1));
     return map;
   }, [readReceipts]);
+
   const noticeReadCountByNoticeId = useMemo(() => {
     const map = new Map<string, number>();
-    notices.forEach((notice) => {
-      map.set(notice.id, readCountByNoticeId.get(notice.id) ?? 0);
-    });
+    notices.forEach((notice) => map.set(notice.id, readCountByNoticeId.get(notice.id) ?? 0));
     return map;
   }, [notices, readCountByNoticeId]);
 
   function appendLog(action: string, status: number, ok: boolean) {
-    setLogs((previous) => [
-      {
-        id: Date.now(),
-        action,
-        status,
-        ok,
-        at: new Date().toLocaleString(runtimeLocale)
-      },
-      ...previous
-    ]);
+    setLogs((previous) => [{ id: Date.now(), action, status, ok, at: new Date().toLocaleString(runtimeLocale) }, ...previous]);
   }
 
-  async function callApi(action: string, method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
+  async function callApi(action: string, method: "GET" | "POST" | "PATCH", path: string, payload?: Record<string, unknown>) {
     setPendingLabel(action);
     try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
+      const headers: Record<string, string> = payload ? { "content-type": "application/json" } : {};
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
       } else {
         headers["x-actor-role"] = "admin";
-        headers["x-actor-id"] = actorId.trim() || "ADM-1001";
-        headers["x-actor-organization-id"] = organizationId.trim();
+        headers["x-actor-id"] = actorId;
+        headers["x-actor-organization-id"] = organizationId;
       }
-
-      const response = await fetch(path, {
-        method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
-      });
+      const response = await fetch(path, { method, headers, body: payload ? JSON.stringify(payload) : undefined });
       const text = await response.text();
       const parsed = text.trim() ? JSON.parse(text) : {};
       appendLog(action, response.status, response.ok);
@@ -184,30 +136,24 @@ export default function AdminNoticeWorkspace() {
   }
 
   async function loadNotices() {
-    if (!organizationId.trim() && !usesBearerToken) {
+    if (!organizationId && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
     }
-
-    const query = buildQuery({
-      organizationId,
-      status: statusFilter,
-      audience: audienceFilter
-    });
+    const query = buildQuery({ organizationId, status: statusFilter, audience: audienceFilter });
     const { response, parsed } = await callApi(copy.refreshAction, "GET", `/api/notices${query}`);
     if (!response.ok) {
       setStatusMessage(copy.messages.loadFailed);
       return;
     }
-
     setNotices(parseNotices(parsed));
     setSummary(parseSummary(parsed));
     setReadReceipts(parseReadReceipts(parsed));
     setStatusMessage(`${copy.statusMessagePrefix}: ${copy.refreshAction}`);
   }
 
-  async function createNoticeItem() {
-    if (!organizationId.trim() && !usesBearerToken) {
+  async function saveNotice() {
+    if (!organizationId && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
     }
@@ -220,8 +166,13 @@ export default function AdminNoticeWorkspace() {
       return;
     }
 
-    const publishIso = publishAt ? new Date(publishAt).toISOString() : undefined;
-    const { response } = await callApi(copy.createAction, "POST", "/api/notices", {
+    const publishIso = publishAt.trim() ? new Date(publishAt).toISOString() : null;
+    const hasEditingTarget = Boolean(editingNoticeId);
+    const actionLabel = hasEditingTarget ? copy.updateAction ?? copy.createAction : copy.createAction;
+    const method = hasEditingTarget ? "PATCH" : "POST";
+    const path = hasEditingTarget ? `/api/notices/${encodeURIComponent(editingNoticeId ?? "")}` : "/api/notices";
+
+    const { response } = await callApi(actionLabel, method, path, {
       organizationId,
       title,
       body,
@@ -233,10 +184,35 @@ export default function AdminNoticeWorkspace() {
       return;
     }
 
+    setEditingNoticeId(null);
     setTitle("");
     setBody("");
-    setStatusMessage(copy.messages.created);
+    setAudience("all");
+    setPublishAt(toDateTimeLocalValue());
+    setStatusMessage(hasEditingTarget ? copy.messages.updated ?? copy.messages.created : copy.messages.created);
     await loadNotices();
+  }
+
+  function startEditNotice(noticeId: string) {
+    const target = notices.find((notice) => notice.id === noticeId);
+    if (!target || target.status === "PUBLISHED") {
+      return;
+    }
+    setEditingNoticeId(target.id);
+    setTitle(target.title);
+    setBody(target.body);
+    setAudience(target.audience);
+    setPublishAt(target.publishAt ? target.publishAt.slice(0, 16) : "");
+    setStatusMessage(copy.messages.editing ?? "");
+  }
+
+  function cancelEditNotice() {
+    setEditingNoticeId(null);
+    setTitle("");
+    setBody("");
+    setAudience("all");
+    setPublishAt(toDateTimeLocalValue());
+    setStatusMessage("");
   }
 
   async function publishNow(noticeId: string) {
@@ -261,6 +237,7 @@ export default function AdminNoticeWorkspace() {
       body={body}
       audience={audience}
       publishAt={publishAt}
+      editingNoticeId={editingNoticeId}
       summary={summary}
       notices={notices}
       filteredNotices={filteredNotices}
@@ -280,9 +257,10 @@ export default function AdminNoticeWorkspace() {
       onListSearchQueryChange={setListSearchQuery}
       onClearListSearch={() => setListSearchQuery("")}
       onLoadNotices={() => void loadNotices()}
-      onCreateNotice={() => void createNoticeItem()}
+      onCreateNotice={() => void saveNotice()}
+      onStartEditNotice={startEditNotice}
+      onCancelEditNotice={cancelEditNotice}
       onPublishNow={(noticeId) => void publishNow(noticeId)}
     />
   );
 }
-
