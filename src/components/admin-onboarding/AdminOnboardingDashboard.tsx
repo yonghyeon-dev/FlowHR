@@ -8,6 +8,7 @@ import {
   AdminOnboardingContextPanel,
   AdminOnboardingSetupPanels
 } from "@/components/admin-onboarding/AdminOnboardingSections";
+import { AdminOnboardingReadinessPanel } from "@/components/admin-onboarding/AdminOnboardingReadinessPanel";
 import { adminOnboardingCopyByLocale } from "@/components/admin-onboarding/copy";
 import { useAdminOnboardingData } from "@/components/admin-onboarding/useAdminOnboardingData";
 import { useI18n } from "@/lib/i18n/provider";
@@ -36,6 +37,11 @@ export function AdminOnboardingDashboard() {
           {copy.productionWarning} <Link href="/login">{copy.loginCta}</Link>
         </p>
       ) : null}
+
+      <AdminOnboardingReadinessPanel
+        copy={copy}
+        checklistItems={data.checklistItems}
+      />
 
       <AdminOnboardingContextPanel
         copy={copy}

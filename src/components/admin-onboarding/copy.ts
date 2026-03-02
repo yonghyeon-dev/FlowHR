@@ -63,6 +63,12 @@ export type AdminOnboardingCopy = {
   contractResponseMissingLabel: string;
   contractResponseQueueButton: string;
   contractResponseQueueHint: string;
+  readinessTitle: string;
+  readinessReadyLabel: string;
+  readinessPendingLabel: string;
+  readinessReadyHint: string;
+  readinessPendingCountLabel: string;
+  readinessOpenWorkspaceLabel: string;
   checklistTitle: string;
   applyDepartmentsButton: string;
   applyEmployeesButton: string;
@@ -176,6 +182,12 @@ const defaultCopy: AdminOnboardingCopy = {
   contractResponseMissingLabel: "Response follow-up required",
   contractResponseQueueButton: "Open pending response queue",
   contractResponseQueueHint: "Opens the contracts workspace with SENT filter for pending employee response follow-up.",
+  readinessTitle: "Onboarding readiness",
+  readinessReadyLabel: "Ready to operate",
+  readinessPendingLabel: "Setup still required",
+  readinessReadyHint: "All onboarding checklist items are complete.",
+  readinessPendingCountLabel: "Pending checklist items",
+  readinessOpenWorkspaceLabel: "Open workspace",
   checklistTitle: "Setup checklist",
   applyDepartmentsButton: "Apply departments",
   applyEmployeesButton: "Apply employees",
@@ -291,6 +303,12 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
     contractResponseMissingLabel: "응답 팔로업 필요",
     contractResponseQueueButton: "미응답 계약함 열기",
     contractResponseQueueHint: "SENT 필터가 적용된 계약함으로 이동해 미응답 계약을 후속 처리합니다.",
+    readinessTitle: "온보딩 준비 상태",
+    readinessReadyLabel: "운영 시작 가능",
+    readinessPendingLabel: "추가 설정 필요",
+    readinessReadyHint: "온보딩 체크리스트 항목이 모두 완료되었습니다.",
+    readinessPendingCountLabel: "미완료 체크리스트 항목",
+    readinessOpenWorkspaceLabel: "워크스페이스 열기",
     checklistTitle: "설정 체크리스트",
     applyDepartmentsButton: "부서 적용",
     applyEmployeesButton: "직원 적용",
