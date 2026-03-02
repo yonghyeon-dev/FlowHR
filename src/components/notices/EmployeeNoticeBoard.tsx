@@ -1,6 +1,6 @@
 ﻿"use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
 import { EmployeeNoticeBoardList } from "@/components/notices/EmployeeNoticeBoardList";
 import { resolveEmployeeNoticeBoardCopy } from "@/components/notices/copy";
@@ -38,6 +38,7 @@ export default function EmployeeNoticeBoard() {
   const [readReceipts, setReadReceipts] = useState<NoticeReadReceipt[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [readStatusFilter, setReadStatusFilter] = useState<EmployeeNoticeReadStatusFilter>("all");
@@ -119,6 +120,8 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
+  useEffect(() => { if (autoLoadAttempted || (!organizationId.trim() && !usesBearerToken)) return; setAutoLoadAttempted(true); void loadNotices(); }, [autoLoadAttempted, organizationId, usesBearerToken]);
   async function markAsRead(noticeId: string) {
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
