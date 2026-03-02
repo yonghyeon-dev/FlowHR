@@ -1057,3 +1057,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0777 admin onboarding contract checklist coverage (add contracts checklist item to /admin/onboarding progress and mark completion only when draft/request/decision/send/response contract coverage is fully complete + e2e-wi0777 regression guard)
 
 - WI-0778 admin onboarding readiness summary (add readiness panel on /admin/onboarding with ready/not-ready state, pending checklist item list, and workspace quick links for onboarding/contracts follow-up + e2e-wi0778 regression guard)
+
+- WI-0779 admin onboarding readiness priority action (extend /admin/onboarding readiness panel with highest-priority pending checklist action card, one-click CTA to the next workspace, and localized guidance copy for action ordering + e2e-wi0779 regression guard)
