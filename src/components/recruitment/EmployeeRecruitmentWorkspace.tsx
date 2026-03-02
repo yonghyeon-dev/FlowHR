@@ -185,7 +185,7 @@ export default function EmployeeRecruitmentWorkspace() {
       return;
     }
 
-    const { response } = await callApi("POST", "/api/recruitment/referrals", {
+    const { response, parsed } = await callApi("POST", "/api/recruitment/referrals", {
       organizationId,
       openingId: selectedOpeningId,
       candidateName,
@@ -195,6 +195,15 @@ export default function EmployeeRecruitmentWorkspace() {
     });
 
     if (!response.ok) {
+      const errorCode = (parsed as { error?: string } | null)?.error;
+      if (
+        errorCode === "recruitment.referral.create.opening_closed" ||
+        errorCode === "recruitment.opening.not_found"
+      ) {
+        setStatusMessage(copy.messages.needOpening);
+        await loadWorkspace();
+        return;
+      }
       setStatusMessage(copy.messages.loadFailed);
       return;
     }

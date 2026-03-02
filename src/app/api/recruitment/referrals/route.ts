@@ -58,15 +58,24 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  if (!(await findRecruitmentOpening(parsed.data.openingId))) {
+  const organizationId = parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID;
+  const opening = await findRecruitmentOpening(parsed.data.openingId);
+
+  if (!opening || opening.organizationId !== organizationId) {
     return fail(404, "recruitment.opening.not_found", {
       openingId: parsed.data.openingId
+    });
+  }
+  if (opening.status !== "OPEN") {
+    return fail(409, "recruitment.referral.create.opening_closed", {
+      openingId: opening.id,
+      openingStatus: opening.status
     });
   }
 
   const referrerEmployeeId = canReviewReferrals(actor.role) ? parsed.data.referrerEmployeeId : actor.id;
   const created = await createRecruitmentReferral({
-    organizationId: parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID,
+    organizationId,
     openingId: parsed.data.openingId,
     candidateName: parsed.data.candidateName,
     candidateEmail: parsed.data.candidateEmail,
