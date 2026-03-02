@@ -7,6 +7,10 @@ export type LeaveRequestUnit = "FULL_DAY" | "HALF_DAY" | "HOUR";
 export type LeavePromotionDeliveryChannel = "webhook" | "email_template";
 export type LeavePromotionDeliveryStatus = "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
 export type LeavePromotionRecipientStatus = "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
+export type NoticeAudience = "all" | "employees" | "admins";
+export type NoticeStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED";
+export type NoticeNotificationChannel = "in_app";
+export type NoticeNotificationState = "QUEUED" | "DELIVERED" | "FAILED";
 export type PayrollState = "PREVIEWED" | "CONFIRMED";
 export type DeductionProfileMode = "manual" | "profile";
 export type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
@@ -377,6 +381,44 @@ export type LeavePromotionDeliveryRecipientEntity = {
   lastError: string | null;
   sentAt: Date | null;
   retryCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type NoticeEntity = {
+  id: string;
+  organizationId: string;
+  title: string;
+  body: string;
+  audience: NoticeAudience;
+  status: NoticeStatus;
+  publishAt: Date | null;
+  publishedAt: Date | null;
+  createdByActorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type NoticeReadReceiptEntity = {
+  id: string;
+  organizationId: string;
+  noticeId: string;
+  actorId: string;
+  readAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type NoticeNotificationEntity = {
+  id: string;
+  organizationId: string;
+  noticeId: string;
+  audience: NoticeAudience;
+  channel: NoticeNotificationChannel;
+  state: NoticeNotificationState;
+  enqueuedAt: Date;
+  deliveredAt: Date | null;
+  lastError: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -759,6 +801,53 @@ export type UpdateLeavePromotionDeliveryRecipientInput = {
   retryCount?: number;
 };
 
+export type CreateNoticeInput = {
+  organizationId: string;
+  title: string;
+  body: string;
+  audience: NoticeAudience;
+  status?: NoticeStatus;
+  publishAt?: Date | null;
+  publishedAt?: Date | null;
+  createdByActorId: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type UpdateNoticeInput = {
+  title?: string;
+  body?: string;
+  audience?: NoticeAudience;
+  status?: NoticeStatus;
+  publishAt?: Date | null;
+  publishedAt?: Date | null;
+  updatedAt?: Date;
+};
+
+export type UpsertNoticeReadReceiptInput = {
+  organizationId: string;
+  noticeId: string;
+  actorId: string;
+  readAt: Date;
+};
+
+export type CreateNoticeNotificationInput = {
+  organizationId: string;
+  noticeId: string;
+  audience: NoticeAudience;
+  channel: NoticeNotificationChannel;
+  state?: NoticeNotificationState;
+  enqueuedAt: Date;
+  deliveredAt?: Date | null;
+  lastError?: string | null;
+};
+
+export type UpdateNoticeNotificationInput = {
+  state?: NoticeNotificationState;
+  deliveredAt?: Date | null;
+  lastError?: string | null;
+};
+
 export type RecordLeaveDecisionInput = {
   requestId: string;
   action: LeaveDecisionAction;
@@ -1031,6 +1120,40 @@ export interface LeavePromotionDeliveryStore {
   }): Promise<LeavePromotionDeliveryRecipientEntity[]>;
 }
 
+export interface NoticeStore {
+  create(input: CreateNoticeInput): Promise<NoticeEntity>;
+  findById(id: string): Promise<NoticeEntity | null>;
+  update(id: string, input: UpdateNoticeInput): Promise<NoticeEntity>;
+  list(input: {
+    organizationId: string;
+    audience?: NoticeAudience;
+    status?: NoticeStatus;
+    limit?: number;
+  }): Promise<NoticeEntity[]>;
+}
+
+export interface NoticeReadReceiptStore {
+  upsert(input: UpsertNoticeReadReceiptInput): Promise<NoticeReadReceiptEntity>;
+  list(input: {
+    organizationId: string;
+    actorId?: string;
+    noticeId?: string;
+    limit?: number;
+  }): Promise<NoticeReadReceiptEntity[]>;
+}
+
+export interface NoticeNotificationStore {
+  create(input: CreateNoticeNotificationInput): Promise<NoticeNotificationEntity>;
+  findById(id: string): Promise<NoticeNotificationEntity | null>;
+  update(id: string, input: UpdateNoticeNotificationInput): Promise<NoticeNotificationEntity>;
+  list(input: {
+    organizationId: string;
+    noticeId?: string;
+    state?: NoticeNotificationState;
+    limit?: number;
+  }): Promise<NoticeNotificationEntity[]>;
+}
+
 export interface AuditStore {
   append(input: AppendAuditLogInput): Promise<void>;
   list(input: ListAuditLogsInput): Promise<AuditLogEntity[]>;
@@ -1049,6 +1172,9 @@ export type DataAccess = {
   leavePolicy: LeavePolicyStore;
   leaveBalance: LeaveBalanceStore;
   leavePromotionDeliveries: LeavePromotionDeliveryStore;
+  notices: NoticeStore;
+  noticeReadReceipts: NoticeReadReceiptStore;
+  noticeNotifications: NoticeNotificationStore;
   payroll: PayrollStore;
   deductionProfiles: DeductionProfileStore;
   audit: AuditStore;

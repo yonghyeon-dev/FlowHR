@@ -24,6 +24,9 @@ model Organization {
   approvalExecutions ApprovalExecution[]
   leavePolicy LeavePolicy?
   leavePromotionDeliveries LeavePromotionDelivery[]
+  notices Notice[]
+  noticeReadReceipts NoticeReadReceipt[]
+  noticeNotifications NoticeNotificationQueue[]
   payrollRuns PayrollRun[]
   deductionProfiles DeductionProfile[]
   workScheduleTemplates WorkScheduleTemplate[]
@@ -423,6 +426,61 @@ model LeavePromotionDeliveryRecipient {
   @@index([employeeId, createdAt])
 }
 
+model Notice {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  title          String
+  body           String
+  audience       NoticeAudience
+  status         NoticeStatus   @default(DRAFT)
+  publishAt      DateTime?
+  publishedAt    DateTime?
+  createdByActorId String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  readReceipts   NoticeReadReceipt[]
+  notifications  NoticeNotificationQueue[]
+
+  @@index([organizationId, status, updatedAt])
+  @@index([organizationId, audience, updatedAt])
+}
+
+model NoticeReadReceipt {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  noticeId       String
+  notice         Notice       @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  actorId        String
+  readAt         DateTime
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, noticeId, actorId], name: "notice_receipt_org_notice_actor_key")
+  @@index([organizationId, actorId, readAt])
+  @@index([noticeId, readAt])
+}
+
+model NoticeNotificationQueue {
+  id             String                     @id @default(cuid())
+  organizationId String
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  noticeId       String
+  notice         Notice                     @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  audience       NoticeAudience
+  channel        NoticeNotificationChannel
+  state          NoticeNotificationState    @default(QUEUED)
+  enqueuedAt     DateTime
+  deliveredAt    DateTime?
+  lastError      String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  @@index([organizationId, state, enqueuedAt])
+  @@index([noticeId, enqueuedAt])
+}
+
 model PayrollRun {
   id                     String   @id @default(cuid())
   organizationId         String?
@@ -544,6 +602,28 @@ enum LeavePromotionRecipientStatus {
   PENDING
   SENT
   SKIPPED_NO_EMAIL
+  FAILED
+}
+
+enum NoticeAudience {
+  all
+  employees
+  admins
+}
+
+enum NoticeStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+enum NoticeNotificationChannel {
+  in_app
+}
+
+enum NoticeNotificationState {
+  QUEUED
+  DELIVERED
   FAILED
 }
 

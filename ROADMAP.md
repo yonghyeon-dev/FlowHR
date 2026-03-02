@@ -1028,3 +1028,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0719 scheduling escalation cooldown-window helper extraction (extract cooldown window start millis calculation into resolveScheduleAnomalyIncidentEscalationCooldownWindowStartMillis and rewire triggerScheduleAnomalyIncidentEscalation with e2e-wi0719 guard)
 
 - WI-0754 notices audit persistence and notification link (replace in-memory notice store with audit-backed persistence via runtime data access for create/publish/read/read-all APIs, and add notice.notification.enqueued audit linkage on publish with e2e-wi0754 regression guard)
+- WI-0755 notices db persistence and notification read model (add Notice/NoticeReadReceipt/NoticeNotificationQueue prisma models + migration, expose notices/receipts/notification-queue stores in runtime DataAccess, migrate notices store query path from audit replay to DB read-model persistence while keeping audit governance traces + e2e-wi0755 regression guard)

@@ -27,6 +27,8 @@ import type {
   CreateEmployeeInput,
   CreateDepartmentInput,
   CreatePositionInput,
+  CreateNoticeInput,
+  CreateNoticeNotificationInput,
   CreateOrganizationInput,
   DataAccess,
   DepartmentEntity,
@@ -38,6 +40,12 @@ import type {
   LeavePolicyEntity,
   LeavePromotionRecipientStatus,
   LeaveRequestEntity,
+  NoticeAudience,
+  NoticeEntity,
+  NoticeNotificationEntity,
+  NoticeNotificationState,
+  NoticeReadReceiptEntity,
+  NoticeStatus,
   OrganizationEntity,
   PositionEntity,
   RoleEntity,
@@ -53,8 +61,11 @@ import type {
   UpdateLeaveRequestInput,
   UpdateLeavePromotionDeliveryInput,
   UpdateLeavePromotionDeliveryRecipientInput,
+  UpdateNoticeInput,
+  UpdateNoticeNotificationInput,
   UpsertLeavePolicyInput,
   UpsertApprovalPolicyInput,
+  UpsertNoticeReadReceiptInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
   PayrollRunEntity,
@@ -88,6 +99,9 @@ type MemoryState = {
   leaveBalances: Map<string, LeaveBalanceEntity>;
   leavePromotionDeliveries: Map<string, LeavePromotionDeliveryEntity>;
   leavePromotionDeliveryRecipients: Map<string, LeavePromotionDeliveryRecipientEntity>;
+  notices: Map<string, NoticeEntity>;
+  noticeReadReceipts: Map<string, NoticeReadReceiptEntity>;
+  noticeNotifications: Map<string, NoticeNotificationEntity>;
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
   audit: AuditLogEntity[];
@@ -132,6 +146,9 @@ function createState(): MemoryState {
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
     leavePromotionDeliveries: new Map<string, LeavePromotionDeliveryEntity>(),
     leavePromotionDeliveryRecipients: new Map<string, LeavePromotionDeliveryRecipientEntity>(),
+    notices: new Map<string, NoticeEntity>(),
+    noticeReadReceipts: new Map<string, NoticeReadReceiptEntity>(),
+    noticeNotifications: new Map<string, NoticeNotificationEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
     audit: []
@@ -271,6 +288,35 @@ function cloneLeavePromotionDeliveryRecipient(
   return {
     ...entity,
     sentAt: entity.sentAt ? cloneDate(entity.sentAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneNotice(entity: NoticeEntity): NoticeEntity {
+  return {
+    ...entity,
+    publishAt: entity.publishAt ? cloneDate(entity.publishAt) : null,
+    publishedAt: entity.publishedAt ? cloneDate(entity.publishedAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneNoticeReadReceipt(entity: NoticeReadReceiptEntity): NoticeReadReceiptEntity {
+  return {
+    ...entity,
+    readAt: cloneDate(entity.readAt),
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneNoticeNotification(entity: NoticeNotificationEntity): NoticeNotificationEntity {
+  return {
+    ...entity,
+    enqueuedAt: cloneDate(entity.enqueuedAt),
+    deliveredAt: entity.deliveredAt ? cloneDate(entity.deliveredAt) : null,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -463,6 +509,19 @@ function updateLeaveRequestEntity(
     canceledAt: input.canceledAt !== undefined ? input.canceledAt : existing.canceledAt,
     canceledBy: input.canceledBy !== undefined ? input.canceledBy : existing.canceledBy,
     updatedAt: new Date()
+  };
+}
+
+function updateNoticeEntity(existing: NoticeEntity, input: UpdateNoticeInput): NoticeEntity {
+  return {
+    ...existing,
+    title: input.title !== undefined ? input.title : existing.title,
+    body: input.body !== undefined ? input.body : existing.body,
+    audience: input.audience !== undefined ? input.audience : existing.audience,
+    status: input.status !== undefined ? input.status : existing.status,
+    publishAt: input.publishAt !== undefined ? input.publishAt : existing.publishAt,
+    publishedAt: input.publishedAt !== undefined ? input.publishedAt : existing.publishedAt,
+    updatedAt: input.updatedAt !== undefined ? input.updatedAt : new Date()
   };
 }
 
@@ -1930,6 +1989,217 @@ export const memoryDataAccess: DataAccess = {
       }
       rows.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
       return rows;
+    }
+  },
+
+  notices: {
+    async create(input: CreateNoticeInput) {
+      const now = new Date();
+      const notice: NoticeEntity = {
+        id: nextId("NOTICE"),
+        organizationId: input.organizationId,
+        title: input.title,
+        body: input.body,
+        audience: input.audience,
+        status: input.status ?? "DRAFT",
+        publishAt: input.publishAt ?? null,
+        publishedAt: input.publishedAt ?? null,
+        createdByActorId: input.createdByActorId,
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
+      };
+      state.notices.set(notice.id, notice);
+      return cloneNotice(notice);
+    },
+
+    async findById(id: string) {
+      const notice = state.notices.get(id);
+      return notice ? cloneNotice(notice) : null;
+    },
+
+    async update(id: string, input: UpdateNoticeInput) {
+      const existing = state.notices.get(id);
+      if (!existing) {
+        throw new Error(`notice not found: ${id}`);
+      }
+      const updated = updateNoticeEntity(existing, input);
+      state.notices.set(id, updated);
+      return cloneNotice(updated);
+    },
+
+    async list(input: {
+      organizationId: string;
+      audience?: NoticeAudience;
+      status?: NoticeStatus;
+      limit?: number;
+    }) {
+      const rows: NoticeEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const notice of state.notices.values()) {
+        if (notice.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.audience && notice.audience !== input.audience) {
+          continue;
+        }
+        if (input.status && notice.status !== input.status) {
+          continue;
+        }
+        rows.push(cloneNotice(notice));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
+    }
+  },
+
+  noticeReadReceipts: {
+    async upsert(input: UpsertNoticeReadReceiptInput) {
+      let existingId: string | null = null;
+      for (const [id, receipt] of state.noticeReadReceipts.entries()) {
+        if (
+          receipt.organizationId === input.organizationId &&
+          receipt.noticeId === input.noticeId &&
+          receipt.actorId === input.actorId
+        ) {
+          existingId = id;
+          break;
+        }
+      }
+
+      if (existingId) {
+        const existing = state.noticeReadReceipts.get(existingId);
+        if (!existing) {
+          throw new Error(`notice read receipt not found: ${existingId}`);
+        }
+        const updated: NoticeReadReceiptEntity = {
+          ...existing,
+          readAt: cloneDate(input.readAt),
+          updatedAt: new Date()
+        };
+        state.noticeReadReceipts.set(existingId, updated);
+        return cloneNoticeReadReceipt(updated);
+      }
+
+      const now = new Date();
+      const created: NoticeReadReceiptEntity = {
+        id: nextId("NREAD"),
+        organizationId: input.organizationId,
+        noticeId: input.noticeId,
+        actorId: input.actorId,
+        readAt: cloneDate(input.readAt),
+        createdAt: now,
+        updatedAt: now
+      };
+      state.noticeReadReceipts.set(created.id, created);
+      return cloneNoticeReadReceipt(created);
+    },
+
+    async list(input: {
+      organizationId: string;
+      actorId?: string;
+      noticeId?: string;
+      limit?: number;
+    }) {
+      const rows: NoticeReadReceiptEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const receipt of state.noticeReadReceipts.values()) {
+        if (receipt.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.actorId && receipt.actorId !== input.actorId) {
+          continue;
+        }
+        if (input.noticeId && receipt.noticeId !== input.noticeId) {
+          continue;
+        }
+        rows.push(cloneNoticeReadReceipt(receipt));
+      }
+      rows.sort((left, right) => {
+        const byReadAt = right.readAt.getTime() - left.readAt.getTime();
+        if (byReadAt !== 0) {
+          return byReadAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
+    }
+  },
+
+  noticeNotifications: {
+    async create(input: CreateNoticeNotificationInput) {
+      const now = new Date();
+      const notification: NoticeNotificationEntity = {
+        id: nextId("NQ"),
+        organizationId: input.organizationId,
+        noticeId: input.noticeId,
+        audience: input.audience,
+        channel: input.channel,
+        state: input.state ?? "QUEUED",
+        enqueuedAt: cloneDate(input.enqueuedAt),
+        deliveredAt: input.deliveredAt ? cloneDate(input.deliveredAt) : null,
+        lastError: input.lastError ?? null,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.noticeNotifications.set(notification.id, notification);
+      return cloneNoticeNotification(notification);
+    },
+
+    async findById(id: string) {
+      const notification = state.noticeNotifications.get(id);
+      return notification ? cloneNoticeNotification(notification) : null;
+    },
+
+    async update(id: string, input: UpdateNoticeNotificationInput) {
+      const existing = state.noticeNotifications.get(id);
+      if (!existing) {
+        throw new Error(`notice notification not found: ${id}`);
+      }
+      const updated: NoticeNotificationEntity = {
+        ...existing,
+        state: input.state !== undefined ? input.state : existing.state,
+        deliveredAt: input.deliveredAt !== undefined ? input.deliveredAt : existing.deliveredAt,
+        lastError: input.lastError !== undefined ? input.lastError : existing.lastError,
+        updatedAt: new Date()
+      };
+      state.noticeNotifications.set(id, updated);
+      return cloneNoticeNotification(updated);
+    },
+
+    async list(input: {
+      organizationId: string;
+      noticeId?: string;
+      state?: NoticeNotificationState;
+      limit?: number;
+    }) {
+      const rows: NoticeNotificationEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const notification of state.noticeNotifications.values()) {
+        if (notification.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.noticeId && notification.noticeId !== input.noticeId) {
+          continue;
+        }
+        if (input.state && notification.state !== input.state) {
+          continue;
+        }
+        rows.push(cloneNoticeNotification(notification));
+      }
+      rows.sort((left, right) => {
+        const byEnqueuedAt = right.enqueuedAt.getTime() - left.enqueuedAt.getTime();
+        if (byEnqueuedAt !== 0) {
+          return byEnqueuedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
     }
   },
 
