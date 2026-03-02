@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminRecruitmentKpiPanel, buildRecruitmentKpiSnapshot, type RecruitmentKpiSnapshot } from "@/components/admin-kpi/AdminRecruitmentKpiPanel";
 import { AdminKpiAnalyticsControls, AdminKpiCards, AdminKpiContextPanel, AdminKpiLogsPanel, AdminKpiTrendPanel, type AdminKpiFocusMetric, type ApiLog, type RangeKpi } from "@/components/admin-kpi/AdminKpiSections";
 import { kpiCopyByLocale } from "@/components/admin-kpi/copy";
 import { buildAdminKpiCsvPayload, buildAdminKpiTrendRows, safeParseBody, triggerCsvDownload } from "@/components/admin-kpi/dashboard-utils";
@@ -13,6 +14,11 @@ type ApprovalExecutionLite = { updatedAt: string };
 type AttendanceAggregateLite = { counts: { total: number; approved: number } };
 type LeaveRequestLite = { days: number };
 type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
+type RecruitmentOpeningLite = { status: "OPEN" | "CLOSED" };
+type RecruitmentReferralLite = {
+  stage: "SUBMITTED" | "SCREENING" | "INTERVIEW" | "OFFER" | "HIRED" | "REJECTED" | "WITHDRAWN";
+  updatedAt: string;
+};
 type ContractDocumentLite = { status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED"; approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED"; requiresApproval: boolean; expiresAt: string | null };
 const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>(["DRAFT", "APPROVAL_REQUESTED", "SENT"]);
 const contractDecisionQueueSteps = new Set(["REQUEST_APPROVAL", "APPROVE_OR_REJECT", "SEND_DOCUMENT"]);
@@ -29,6 +35,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   const [focusMetric, setFocusMetric] = useState<AdminKpiFocusMetric>("all");
   const [currentRangeKpi, setCurrentRangeKpi] = useState<RangeKpi | null>(null);
   const [previousRangeKpi, setPreviousRangeKpi] = useState<RangeKpi | null>(null);
+  const [recruitmentKpi, setRecruitmentKpi] = useState<RecruitmentKpiSnapshot | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
@@ -149,6 +156,19 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     },
     [organizationId, requestJson]
   );
+  const loadRecruitmentKpi = useCallback(async () => {
+    const recruitmentQuery = buildQuery({
+      organizationId: organizationId.trim() || undefined
+    });
+    const [openingsBody, referralsBody] = await Promise.all([
+      requestJson("recruitment openings", `/api/recruitment/openings${recruitmentQuery}`),
+      requestJson("recruitment referrals", `/api/recruitment/referrals${recruitmentQuery}`)
+    ]);
+    return buildRecruitmentKpiSnapshot({
+      openings: parseArray<RecruitmentOpeningLite>(openingsBody, "openings"),
+      referrals: parseArray<RecruitmentReferralLite>(referralsBody, "referrals")
+    });
+  }, [organizationId, requestJson]);
   const loadKpis = useCallback(async () => {
     if (!usesBearerToken && !organizationId.trim()) {
       return;
@@ -157,13 +177,18 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     try {
       const currentRange = { from: toIso(periodStart), to: toIso(periodEnd) };
       const previousRange = computePreviousPeriodRange(currentRange.from, currentRange.to);
-      const [current, previous] = await Promise.all([loadRangeKpi(currentRange), loadRangeKpi(previousRange)]);
+      const [current, previous, recruitment] = await Promise.all([
+        loadRangeKpi(currentRange),
+        loadRangeKpi(previousRange),
+        loadRecruitmentKpi()
+      ]);
       setCurrentRangeKpi(current);
       setPreviousRangeKpi(previous);
+      setRecruitmentKpi(recruitment);
     } finally {
       setPendingLabel(null);
     }
-  }, [copy.loadingLabel, loadRangeKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
+  }, [copy.loadingLabel, loadRangeKpi, loadRecruitmentKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
   useEffect(() => {
     void loadKpis();
   }, [loadKpis]);
@@ -258,6 +283,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         }}
       />
       {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
+      {analyticsMode && recruitmentKpi ? <AdminRecruitmentKpiPanel copy={copy} snapshot={recruitmentKpi} /> : null}
       <section className="panel-grid">
         <AdminKpiTrendPanel copy={copy} rows={visibleTrendRows} />
         {showDevTools ? <AdminKpiLogsPanel copy={copy} logs={logs} /> : null}
