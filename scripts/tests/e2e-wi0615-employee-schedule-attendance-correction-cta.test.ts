@@ -19,10 +19,9 @@ async function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(boardView, /const attendanceCorrectionHref = `\/employee\?attendanceSource=schedule/);
+  assert.match(boardView, /const attendanceCorrectionHref = `\/employee\?focus=attendance&attendanceSource=schedule/);
   assert.match(boardView, /encodeURIComponent\(fromDate\)/);
   assert.match(boardView, /encodeURIComponent\(toDate\)/);
-  assert.match(boardView, /#attendance`;/);
   assert.match(boardView, /href=\{attendanceCorrectionHref\}/);
   assert.match(boardView, /copy\.statusQuickCorrectionAction/);
 

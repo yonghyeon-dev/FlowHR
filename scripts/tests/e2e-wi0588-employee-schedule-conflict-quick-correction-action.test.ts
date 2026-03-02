@@ -26,8 +26,7 @@ async function run() {
 
   assert.match(boardView, /statusMessage\.includes\(copy\.statusConflictCandidatesLabel\)/);
   assert.match(boardView, /statusMessage\.includes\(`\$\{copy\.statusConflictCandidatesLabel\}: 0`\)/);
-  assert.match(boardView, /const attendanceCorrectionHref = `\/employee\?attendanceSource=schedule/);
-  assert.match(boardView, /#attendance`;/);
+  assert.match(boardView, /const attendanceCorrectionHref = `\/employee\?focus=attendance&attendanceSource=schedule/);
   assert.match(boardView, /href=\{attendanceCorrectionHref\}/);
   assert.match(boardView, /copy\.statusQuickCorrectionAction/);
 

@@ -92,7 +92,7 @@ export default function EmployeeScheduleBoardView({
   onExportCsv,
   onExportIcs
 }: EmployeeScheduleBoardViewProps) {
-  const attendanceCorrectionHref = `/employee?attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}#attendance`;
+  const attendanceCorrectionHref = `/employee?focus=attendance&attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
   return (
     <main className="saas-content">
       <header className="hero">
@@ -168,7 +168,7 @@ export default function EmployeeScheduleBoardView({
           </div>
           <p className="small muted">{copy.visibleCountLabel}: {visibleScheduleCount} / {allScheduleCount}</p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
-          {statusMessage.includes(copy.statusConflictCandidatesLabel) && !statusMessage.includes(`${copy.statusConflictCandidatesLabel}: 0`) ? <a className="btn btn-secondary btn-small" href="/employee#attendance">{copy.statusQuickCorrectionAction}</a> : null}
+          {statusMessage.includes(copy.statusConflictCandidatesLabel) && !statusMessage.includes(`${copy.statusConflictCandidatesLabel}: 0`) ? <a className="btn btn-secondary btn-small" href={attendanceCorrectionHref}>{copy.statusQuickCorrectionAction}</a> : null}
         </article>
         <article className="panel">
           <h2>{copy.summaryTitle}</h2>

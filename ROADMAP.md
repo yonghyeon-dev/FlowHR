@@ -1081,3 +1081,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0789 employee focus-query priority route (add ?focus section resolver + allow-list/alias normalization for /employee page-load jump, and switch priority-action related-workspace links to focus-query routes with e2e-wi0789 regression guard)
 
 - WI-0790 employee layout focus-query navigation (switch /employee in-page nav links from hash anchors to ?focus routes across mobile/sidebar menus, add account focus allow-list support, and lock with e2e-wi0790 regression guard)
+
+- WI-0791 employee deeplink focus-query sweep (migrate remaining employee-facing deep links from /employee# anchors to /employee?focus routes in schedule quick-correction CTA and employee in-app guide quick actions, with WI-0588/WI-0615 regression alignment + e2e-wi0791 guard)
