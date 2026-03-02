@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
@@ -52,6 +52,7 @@ export default function EmployeeNoticeBoard() {
     () => notices.filter((notice) => !readNoticeIds.includes(notice.id)).length,
     [notices, readNoticeIds]
   );
+  const readCount = useMemo(() => Math.max(0, notices.length - unreadCount), [notices.length, unreadCount]);
   const unreadAgingRiskCount = useMemo(
     () =>
       notices.filter((notice) => !readNoticeIds.includes(notice.id) && isNoticeUnreadAgingRisk(notice)).length,
@@ -69,6 +70,9 @@ export default function EmployeeNoticeBoard() {
       }),
     [agingRiskFilter, notices, readNoticeIds, searchQuery, unreadOnly, readStatusFilter]
   );
+  const isAllQuickFilter = !unreadOnly && readStatusFilter === "all" && agingRiskFilter === "all";
+  const isUnreadQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "all";
+  const isAgingRiskQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "aging_3d";
   const readAtByNoticeId = useMemo(() => buildReadAtByNoticeIdMap(readReceipts), [readReceipts]);
   function buildActorHeaders() {
     const headers: Record<string, string> = {};
@@ -180,6 +184,7 @@ export default function EmployeeNoticeBoard() {
     setReadStatusFilter("all");
     setAgingRiskFilter("all");
   }
+  function applyQuickFilter(nextReadStatusFilter: EmployeeNoticeReadStatusFilter, nextAgingRiskFilter: EmployeeNoticeAgingRiskFilter) { setUnreadOnly(false); setReadStatusFilter(nextReadStatusFilter); setAgingRiskFilter(nextAgingRiskFilter); }
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -242,6 +247,33 @@ export default function EmployeeNoticeBoard() {
             />
             <span>{copy.unreadOnlyLabel}</span>
           </label>
+          <p className="small muted">{copy.readStatusFilterLabel}</p>
+          <div className="actions">
+            <button
+              className={isAllQuickFilter ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
+              type="button"
+              onClick={() => applyQuickFilter("all", "all")}
+              disabled={pending}
+            >
+              {copy.readStatusFilterAllOption} ({notices.length})
+            </button>
+            <button
+              className={isUnreadQuickFilter ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
+              type="button"
+              onClick={() => applyQuickFilter("unread", "all")}
+              disabled={pending || unreadCount === 0}
+            >
+              {copy.readStatusFilterUnreadOption} ({unreadCount})
+            </button>
+            <button
+              className={isAgingRiskQuickFilter ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
+              type="button"
+              onClick={() => applyQuickFilter("unread", "aging_3d")}
+              disabled={pending || unreadAgingRiskCount === 0}
+            >
+              {copy.agingRiskFilterOnlyOption} ({unreadAgingRiskCount})
+            </button>
+          </div>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={() => void loadNotices()} disabled={pending}>
               {copy.refreshAction}
@@ -259,7 +291,7 @@ export default function EmployeeNoticeBoard() {
             </button>
           </div>
           <p className="small muted">
-            {copy.summaryLabel}: {publishedCount} · {copy.filteredSummaryLabel}: {filteredNotices.length} · {copy.unreadLabel}: {unreadCount} · {copy.unreadAgingRiskSummaryLabel}: {unreadAgingRiskCount}
+            {copy.summaryLabel}: {publishedCount} / {copy.filteredSummaryLabel}: {filteredNotices.length} / {copy.unreadLabel}: {unreadCount} / {copy.readStatusFilterReadOption}: {readCount} / {copy.unreadAgingRiskSummaryLabel}: {unreadAgingRiskCount}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
         </article>
