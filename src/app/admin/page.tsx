@@ -234,7 +234,7 @@ export default function AdminDashboardPage() {
           <strong>{summary.employeeCount}</strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "최근 갱신" : "Last refreshed"}</p>
+          <p>{isKoLocale ? "최종 갱신" : "Last refreshed"}</p>
           <strong>{summary.refreshedAt ?? "-"}</strong>
         </article>
       </section>
@@ -244,7 +244,7 @@ export default function AdminDashboardPage() {
           <h2>{isKoLocale ? "결재 대기함" : "Approval queue"}</h2>
           <p className="small muted">
             {isKoLocale
-              ? "승인 실행 현황과 대기 건을 확인합니다."
+              ? "결재 실행 현황과 대기 건을 확인합니다."
               : "Review execution status and pending approvals."}
           </p>
           <div className="actions">
@@ -266,7 +266,7 @@ export default function AdminDashboardPage() {
               {isKoLocale ? "인사 관리 열기" : "Open people workspace"}
             </Link>
             <Link className="btn btn-secondary" href="/admin/onboarding">
-              {isKoLocale ? "온보딩 초대" : "Onboarding and invites"}
+              {isKoLocale ? "온보딩/초대" : "Onboarding and invites"}
             </Link>
           </div>
         </article>
