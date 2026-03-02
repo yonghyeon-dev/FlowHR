@@ -1,4 +1,4 @@
-﻿-- WI-0755: Add Notice persistence/read-model tables and notification queue.
+-- WI-0755: Add Notice persistence/read-model tables and notification queue.
 
 DO $$
 BEGIN
