@@ -351,7 +351,7 @@ export function usePayslipDerivedState(input: UsePayslipDerivedStateInput): UseP
       return "";
     }
     const period = new Date(selectedRun.periodStart);
-    const year = Number.isNaN(period.getTime()) ? "unknown" : String(period.getFullYear());
+    const year = Number.isNaN(period.getTime()) ? (isKoLocale ? "미확인" : "unknown") : String(period.getFullYear());
     const month = Number.isNaN(period.getTime()) ? "00" : String(period.getMonth() + 1).padStart(2, "0");
     const locale = isKoLocale ? "ko" : "en";
     const actorFallback = getLocalizedEmployeeIdInputDefault(locale);
