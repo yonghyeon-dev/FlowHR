@@ -25,6 +25,39 @@ type EmployeeAccountOverviewPanelsProps = {
   onJumpToSection: (sectionId: string) => void;
 };
 
+type PriorityWorkspaceTarget = {
+  href: string;
+  label: string;
+};
+
+function resolvePriorityWorkspaceTarget(
+  sectionId: string,
+  isKoLocale: boolean
+): PriorityWorkspaceTarget {
+  switch (sectionId) {
+    case "attendance":
+      return {
+        href: "/employee#attendance",
+        label: isKoLocale ? "출퇴근 섹션 열기" : "Open attendance section"
+      };
+    case "leave":
+      return {
+        href: "/employee#leave",
+        label: isKoLocale ? "휴가 섹션 열기" : "Open leave section"
+      };
+    case "request-resubmit":
+      return {
+        href: "/employee#request-resubmit",
+        label: isKoLocale ? "재제출 섹션 열기" : "Open resubmit section"
+      };
+    default:
+      return {
+        href: `/employee#${sectionId}`,
+        label: isKoLocale ? "관련 섹션 열기" : "Open related section"
+      };
+  }
+}
+
 export function EmployeeAccountOverviewPanels({
   isKoLocale,
   showDevTools,
@@ -52,6 +85,12 @@ export function EmployeeAccountOverviewPanels({
   const hasBlockingChecklist = Boolean(
     priorityChecklistCard && !priorityChecklistCard.ready
   );
+  const priorityWorkspaceTarget = priorityChecklistCard
+    ? resolvePriorityWorkspaceTarget(
+        priorityChecklistCard.targetSectionId,
+        isKoLocale
+      )
+    : null;
 
   return (
     <>
@@ -113,6 +152,14 @@ export function EmployeeAccountOverviewPanels({
                     ? "체크리스트 다시 확인"
                     : "Review checklist"}
               </button>
+              {priorityWorkspaceTarget ? (
+                <Link
+                  className="btn btn-secondary"
+                  href={priorityWorkspaceTarget.href}
+                >
+                  {priorityWorkspaceTarget.label}
+                </Link>
+              ) : null}
             </div>
           </>
         ) : (
