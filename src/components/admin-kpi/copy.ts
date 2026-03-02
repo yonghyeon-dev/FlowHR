@@ -22,6 +22,12 @@ export type KpiCopy = {
   focusMetricAllOption: string;
   quickDrilldownLabel: string;
   quickDrilldownAllAction: string;
+  focusWorkspaceTitle: string;
+  focusWorkspaceDescription: string;
+  focusWorkspaceOpenAction: string;
+  focusWorkspaceCopyLinkAction: string;
+  focusWorkspaceCopyDone: string;
+  focusWorkspaceCopyFailed: string;
   loadingLabel: string;
   currentPeriodLabel: string;
   previousPeriodLabel: string;
@@ -144,6 +150,13 @@ const defaultCopy: KpiCopy = {
   focusMetricAllOption: "All metrics",
   quickDrilldownLabel: "Quick drilldown",
   quickDrilldownAllAction: "All",
+  focusWorkspaceTitle: "Focused workspace",
+  focusWorkspaceDescription:
+    "Move directly to the workspace that can resolve the currently selected KPI focus.",
+  focusWorkspaceOpenAction: "Open workspace",
+  focusWorkspaceCopyLinkAction: "Copy focus link",
+  focusWorkspaceCopyDone: "Focused analytics link copied",
+  focusWorkspaceCopyFailed: "Could not copy focused analytics link",
   loadingLabel: "Loading KPI metrics...",
   currentPeriodLabel: "Current period",
   previousPeriodLabel: "Previous period",
@@ -267,6 +280,12 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
     focusMetricAllOption: "전체 지표",
     quickDrilldownLabel: "빠른 드릴다운",
     quickDrilldownAllAction: "전체",
+    focusWorkspaceTitle: "집중 지표 워크스페이스",
+    focusWorkspaceDescription: "현재 선택한 집중 지표를 해결할 수 있는 워크스페이스로 바로 이동합니다.",
+    focusWorkspaceOpenAction: "워크스페이스 열기",
+    focusWorkspaceCopyLinkAction: "집중 링크 복사",
+    focusWorkspaceCopyDone: "집중 지표 링크를 복사했습니다",
+    focusWorkspaceCopyFailed: "집중 지표 링크를 복사할 수 없습니다",
     loadingLabel: "KPI 지표를 불러오는 중입니다...",
     currentPeriodLabel: "현재 기간",
     previousPeriodLabel: "이전 동일 기간",

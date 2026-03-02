@@ -1099,3 +1099,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0798 admin analytics payroll year-end risk KPI panel (add payroll/year-end readiness risk snapshot panel in /admin/analytics with previewed runs, confirmed-undistributed runs, distributed-unacknowledged runs, and readiness/blocking metrics from payroll runs API, with e2e-wi0798 regression guard)
 
 - WI-0799 admin analytics payroll risk priority action links (extend /admin/analytics payroll-year-end risk panel with blocker-based top-priority CTA routing to payroll-close/payslip-delivery/year-end workspaces plus quick action links and localized guidance copy, with e2e-wi0799 regression guard)
+
+- WI-0800 admin analytics focus metric deeplink (sync /admin/analytics focused KPI with ?focus query, restore selection on page-load, add focused-workspace open action and shareable focused-link copy action, with e2e-wi0800 regression guard)
