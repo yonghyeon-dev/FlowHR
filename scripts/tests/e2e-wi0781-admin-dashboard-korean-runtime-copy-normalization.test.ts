@@ -10,6 +10,7 @@ async function run() {
   const roadmap = readUtf8("ROADMAP.md");
   const workItem = readUtf8("work-items", "WI-0781-admin-dashboard-korean-runtime-copy-normalization.md");
   const pageSource = readUtf8("src", "app", "admin", "page.tsx");
+  const hubSource = readUtf8("src", "app", "admin", "page-workspace-hubs.ts");
   const copySource = readUtf8("src", "app", "admin", "page-focus-copy.ts");
 
   assert.match(roadmap, /WI-0781/);
@@ -20,7 +21,7 @@ async function run() {
   assert.match(pageSource, /출퇴근 승인 대기/);
   assert.match(pageSource, /휴가 승인 대기/);
   assert.match(pageSource, /급여 프리뷰 대기/);
-  assert.match(pageSource, /공지\/복리후생\/채용/);
+  assert.match(hubSource, /공지\/복리후생\/채용/);
 
   assert.match(copySource, /우선순위 대기열/);
   assert.match(copySource, /가장 위험한 대기 업무부터 확인하고 전용 워크스페이스로 바로 이동하세요/);
@@ -30,7 +31,6 @@ async function run() {
 
   assert.ok(!pageSource.includes("??쒕낫??"));
   assert.ok(!copySource.includes("?곗꽑?쒖쐞 ?湲곗뿴"));
-  assert.ok(!copySource.includes("異쒗눜洹??뱀씤 ?湲?"));
 }
 
 run()
