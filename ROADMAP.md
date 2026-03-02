@@ -1083,3 +1083,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0790 employee layout focus-query navigation (switch /employee in-page nav links from hash anchors to ?focus routes across mobile/sidebar menus, add account focus allow-list support, and lock with e2e-wi0790 regression guard)
 
 - WI-0791 employee deeplink focus-query sweep (migrate remaining employee-facing deep links from /employee# anchors to /employee?focus routes in schedule quick-correction CTA and employee in-app guide quick actions, with WI-0588/WI-0615 regression alignment + e2e-wi0791 guard)
+
+- WI-0792 employee admin shortcut devtools gate (restrict /employee dashboard admin shortcut to NEXT_PUBLIC_FLOWHR_DEV_TOOLS mode, keep dev admin/ops shortcuts explicitly labeled, and lock product-mode visibility with e2e-wi0792 regression guard)

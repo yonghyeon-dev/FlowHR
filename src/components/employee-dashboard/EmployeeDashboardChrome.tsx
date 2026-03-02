@@ -45,12 +45,14 @@ export function EmployeeDashboardChrome({
           <Link className="btn btn-secondary" href="/employee/contracts">
             {isKoLocale ? "전자계약함" : "Contracts"}
           </Link>
-          <Link className="btn btn-secondary" href="/admin">
-            {isKoLocale ? "관리자" : "Admin"}
-          </Link>
           <Link className="btn btn-secondary" href="/">
             {isKoLocale ? "홈" : "Home"}
           </Link>
+          {showDevTools ? (
+            <Link className="btn btn-secondary" href="/admin">
+              {isKoLocale ? "(개발) 관리자" : "(dev) Admin"}
+            </Link>
+          ) : null}
           {showDevTools ? (
             <Link className="btn btn-secondary" href="/ops/mvp-console">
               {isKoLocale ? "(개발) ops 콘솔" : "(dev) Ops Console"}
