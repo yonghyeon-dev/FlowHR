@@ -100,7 +100,7 @@ export function EmployeeAccountOverviewPanels({
         <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
         <p className="small">
           {isKoLocale
-            ? "요약은 홈에서 확인하고, 상세 작업은 전용 워크스페이스에서 진행하세요."
+            ? "요약은 이 화면에서 확인하고, 상세 작업은 전용 워크스페이스에서 진행하세요."
             : "Use the home dashboard for summary, then continue in dedicated workspaces."}
         </p>
         <div className="panel-grid">
@@ -203,12 +203,10 @@ export function EmployeeAccountOverviewPanels({
               {isKoLocale ? "세션/조회 설정" : "Session & Query Settings"}
             </summary>
             <div className="input-grid" style={{ marginTop: 12 }}>
-              {showDevTools ? (
-                <p className="small full">
-                  {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-                  {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
-                </p>
-              ) : null}
+              <p className="small full">
+                {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+                {isKoLocale ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+              </p>
               <label>
                 {isKoLocale ? "조회 기간 시작" : "Period Start"}
                 <input type="datetime-local" value={periodStart} onChange={(event) => onPeriodStartChange(event.target.value)} />
@@ -218,13 +216,11 @@ export function EmployeeAccountOverviewPanels({
                 <input type="datetime-local" value={periodEnd} onChange={(event) => onPeriodEndChange(event.target.value)} />
               </label>
             </div>
-            {showDevTools ? (
-              <p className="small muted" style={{ marginTop: 10 }}>
-                {isKoLocale ? "(개발) 런타임 Supabase URL" : "(dev) Runtime Supabase URL"}: <code>{supabaseUrl}</code> /{" "}
-                {isKoLocale ? "인증 모드" : "Auth mode"}{" "}
-                {usesBearerToken ? (isKoLocale ? "세션 Bearer" : "Session Bearer") : isKoLocale ? "개발 헤더" : "Dev Header"}
-              </p>
-            ) : null}
+            <p className="small muted" style={{ marginTop: 10 }}>
+              {isKoLocale ? "(개발) 런타임 Supabase URL" : "(dev) Runtime Supabase URL"}: <code>{supabaseUrl}</code> /{" "}
+              {isKoLocale ? "인증 모드" : "Auth mode"}{" "}
+              {usesBearerToken ? (isKoLocale ? "세션 Bearer" : "Session Bearer") : isKoLocale ? "개발 헤더" : "Dev Header"}
+            </p>
           </details>
         ) : null}
         <div className="actions">
@@ -238,7 +234,7 @@ export function EmployeeAccountOverviewPanels({
         <h2>{isKoLocale ? "근태/휴가 통합 요약 카드" : "Attendance/Leave Summary Cards"}</h2>
         <p className="small">
           {isKoLocale
-            ? "현재 조회 구간의 요청 상태를 한 번에 보고, 재제출 필요 건과 API 실패 신호를 함께 점검합니다."
+            ? "현재 조회 구간의 요청 상태를 한 번에 보고, 재제출 필요 건과 API 실패 신호를 함께 확인합니다."
             : "Review request states, resubmit-needed items, and API failures together for the selected period."}
         </p>
         <div className="integrated-summary-grid" aria-label={isKoLocale ? "요청 통합 요약 카드" : "employee integrated summary cards"}>
@@ -256,7 +252,7 @@ export function EmployeeAccountOverviewPanels({
         <h2>{isKoLocale ? "정정/휴가 제출 체크리스트 통합" : "Correction/Leave Submit Checklist"}</h2>
         <p className="small">
           {isKoLocale
-            ? "출퇴근 정정, 휴가 신청, 재제출 흐름의 제출 가능 상태를 한 화면에서 점검합니다."
+            ? "출퇴근 정정, 휴가 요청, 재제출 흐름의 제출 가능 상태를 한 화면에서 확인합니다."
             : "Check submit readiness for attendance correction, leave requests, and resubmission in one view."}
         </p>
         <div className="submit-checklist-grid" aria-label={isKoLocale ? "통합 제출 체크리스트" : "Integrated submit checklist"}>

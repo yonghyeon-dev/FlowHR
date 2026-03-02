@@ -42,7 +42,7 @@ async function run() {
     employeeAccountOverviewPanels,
     /\{showDevTools \? \([\s\S]*Session organization[\s\S]*Session employee[\s\S]*\) : null\}/
   );
-  assert.match(employeeAccountOverviewPanels, /showDevTools \|\| !isProductionRuntime/);
+  assert.ok(!employeeAccountOverviewPanels.includes("showDevTools || !isProductionRuntime"));
 
   assert.match(workItem, /WI-0705/i);
   assert.match(workItem, /employee|guide|account|session|identity|devtools/i);
