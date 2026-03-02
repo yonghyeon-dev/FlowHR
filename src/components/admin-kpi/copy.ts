@@ -56,6 +56,17 @@ export type KpiCopy = {
     unreadAging3dCount: string;
     agingThreshold: string;
   };
+  onboardingPanel: {
+    title: string;
+    description: string;
+    activeEmployeeCount: string;
+    inviteCoveragePercent: string;
+    pendingInviteCount: string;
+    contractResponseCoveragePercent: string;
+    pendingContractResponseCount: string;
+    readinessPercent: string;
+    readinessHint: string;
+  };
   trendTitle: string;
   trendCurrent: string;
   trendPrevious: string;
@@ -135,6 +146,17 @@ const defaultCopy: KpiCopy = {
     unreadAging3dCount: "No-read notices (3d+)",
     agingThreshold: "published or updated 3+ days ago"
   },
+  onboardingPanel: {
+    title: "Onboarding readiness snapshot",
+    description: "Track invite coverage and contract response completion for active employees.",
+    activeEmployeeCount: "Active employees",
+    inviteCoveragePercent: "Invite coverage",
+    pendingInviteCount: "Pending invites",
+    contractResponseCoveragePercent: "Contract response coverage",
+    pendingContractResponseCount: "Pending contract responses",
+    readinessPercent: "Readiness score",
+    readinessHint: "People + invite + contract response checkpoints"
+  },
   trendTitle: "Period comparison",
   trendCurrent: "Current",
   trendPrevious: "Previous",
@@ -213,6 +235,17 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       noReadNoticeCount: "미열람 공지 수",
       unreadAging3dCount: "3일+ 미열람 공지",
       agingThreshold: "게시/수정 후 3일 이상 경과"
+    },
+    onboardingPanel: {
+      title: "온보딩 준비 스냅샷",
+      description: "활성 직원 기준 초대 커버리지와 계약 응답 완료율을 확인합니다.",
+      activeEmployeeCount: "활성 직원 수",
+      inviteCoveragePercent: "초대 커버리지",
+      pendingInviteCount: "미발급 초대",
+      contractResponseCoveragePercent: "계약 응답 커버리지",
+      pendingContractResponseCount: "미응답 계약",
+      readinessPercent: "준비 점수",
+      readinessHint: "직원/초대/계약응답 체크포인트"
     },
     trendTitle: "기간 비교",
     trendCurrent: "현재",
