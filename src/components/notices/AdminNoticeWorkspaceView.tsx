@@ -69,6 +69,10 @@ function isReadCoverageRisk(notice: NoticeItem, readCountByNoticeId: Map<string,
   return notice.status === "PUBLISHED" && (readCountByNoticeId.get(notice.id) ?? 0) === 0;
 }
 
+function canMutateNotice(notice: NoticeItem) {
+  return notice.status !== "PUBLISHED";
+}
+
 export default function AdminNoticeWorkspaceView({
   copy,
   showDevTools,
@@ -107,6 +111,9 @@ export default function AdminNoticeWorkspaceView({
   onDeleteNotice
 }: AdminNoticeWorkspaceViewProps) {
   const publishedWithoutReadCount = notices.filter((notice) => isReadCoverageRisk(notice, readCountByNoticeId)).length;
+  const draftCount = notices.filter((notice) => notice.status === "DRAFT").length;
+  const scheduledCount = notices.filter((notice) => notice.status === "SCHEDULED").length;
+  const publishedCount = notices.filter((notice) => notice.status === "PUBLISHED").length;
 
   return (
     <main className="saas-content">
@@ -168,6 +175,10 @@ export default function AdminNoticeWorkspaceView({
           </div>
           <p className="small muted">
             {copy.statsLabel}: {summary.total} (D {summary.draft} / S {summary.scheduled} / P {summary.published})
+          </p>
+          <p className="small muted">
+            {copy.statusFilter.DRAFT}: {draftCount} / {copy.statusFilter.SCHEDULED}: {scheduledCount} /{" "}
+            {copy.statusFilter.PUBLISHED}: {publishedCount}
           </p>
           <p className="small muted">
             {copy.readRiskSummaryLabel}: {publishedWithoutReadCount}
@@ -245,6 +256,10 @@ export default function AdminNoticeWorkspaceView({
               {filteredNotices.map((notice) => {
                 const readCount = readCountByNoticeId.get(notice.id) ?? 0;
                 const needsReadCoverage = isReadCoverageRisk(notice, readCountByNoticeId);
+                const actionLocked = !canMutateNotice(notice);
+                const actionLockReason = actionLocked
+                  ? copy.messages.deletePublishedLocked ?? copy.messages.loadFailed
+                  : undefined;
                 return (
                   <li key={notice.id}>
                     <span>
@@ -275,33 +290,33 @@ export default function AdminNoticeWorkspaceView({
                       ) : null}
                     </span>
                     <span className="actions">
-                      {notice.status === "PUBLISHED" ? null : (
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-small"
-                          onClick={() => onStartEditNotice(notice.id)}
-                        >
-                          {copy.editAction ?? "Edit"}
-                        </button>
-                      )}
-                      {notice.status === "PUBLISHED" ? null : (
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-small"
-                          onClick={() => onPublishNow(notice.id)}
-                        >
-                          {copy.publishAction}
-                        </button>
-                      )}
-                      {notice.status === "PUBLISHED" ? null : (
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-small"
-                          onClick={() => onDeleteNotice(notice.id)}
-                        >
-                          {copy.deleteAction ?? "Delete"}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onStartEditNotice(notice.id)}
+                        disabled={actionLocked}
+                        title={actionLockReason}
+                      >
+                        {copy.editAction ?? "Edit"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onPublishNow(notice.id)}
+                        disabled={actionLocked}
+                        title={actionLockReason}
+                      >
+                        {copy.publishAction}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onDeleteNotice(notice.id)}
+                        disabled={actionLocked}
+                        title={actionLockReason}
+                      >
+                        {copy.deleteAction ?? "Delete"}
+                      </button>
                     </span>
                   </li>
                 );
