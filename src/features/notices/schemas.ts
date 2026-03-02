@@ -33,6 +33,10 @@ export const updateNoticeSchema = z.object({
   publishAt: z.string().datetime().nullable().optional()
 });
 
+export const deleteNoticeSchema = z.object({
+  noticeId: z.string().trim().min(1)
+});
+
 export const readNoticeSchema = z.object({
   noticeId: z.string().trim().min(1),
   organizationId: z.string().trim().min(1).optional()

@@ -42,6 +42,18 @@ type UpdateNoticeResult = {
   reason?: "not_found" | "published_locked";
 };
 
+type DeleteNoticeInput = {
+  organizationId: string;
+  noticeId: string;
+  actorId?: string;
+  actorRole?: string;
+};
+
+type DeleteNoticeResult = {
+  notice: NoticeItem | null;
+  reason?: "not_found" | "published_locked";
+};
+
 type PublishNoticeInput = {
   organizationId: string;
   noticeId: string;
@@ -80,6 +92,12 @@ type NoticeUpdatedAuditPayload = {
   nextStatus: NoticeStatus;
 };
 
+type NoticeDeletedAuditPayload = {
+  version: 1;
+  notice: NoticeItem;
+  previousStatus: NoticeStatus;
+};
+
 type NoticePublishedAuditPayload = {
   version: 1;
   noticeId: string;
@@ -104,6 +122,7 @@ type NoticeNotificationEnqueuedAuditPayload = {
 const NOTICE_ENTITY_TYPE = "Notice";
 const NOTICE_CREATED_ACTION = "notice.created";
 const NOTICE_UPDATED_ACTION = "notice.updated";
+const NOTICE_DELETED_ACTION = "notice.deleted";
 const NOTICE_PUBLISHED_ACTION = "notice.published";
 const NOTICE_READ_ACTION = "notice.read";
 const NOTICE_NOTIFICATION_ENQUEUED_ACTION = "notice.notification.enqueued";
@@ -318,6 +337,43 @@ export async function updateNotice(
       previousStatus: existing.status,
       nextStatus: notice.status
     } satisfies NoticeUpdatedAuditPayload
+  });
+
+  return { notice };
+}
+
+export async function deleteNotice(
+  context: NoticeStoreContext,
+  input: DeleteNoticeInput
+): Promise<DeleteNoticeResult> {
+  const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
+  const noticeId = input.noticeId.trim();
+  if (!noticeId) {
+    return { notice: null, reason: "not_found" };
+  }
+
+  const existing = await context.dataAccess.notices.findById(noticeId);
+  if (!existing || existing.organizationId !== organizationId) {
+    return { notice: null, reason: "not_found" };
+  }
+  if (existing.status === "PUBLISHED") {
+    return { notice: null, reason: "published_locked" };
+  }
+
+  const deleted = await context.dataAccess.notices.delete(existing.id);
+  const notice = toNoticeItem(deleted);
+  await context.dataAccess.audit.append({
+    action: NOTICE_DELETED_ACTION,
+    entityType: NOTICE_ENTITY_TYPE,
+    entityId: notice.id,
+    organizationId: notice.organizationId,
+    actorRole: input.actorRole ?? "admin",
+    actorId: input.actorId ?? "unknown",
+    payload: {
+      version: 1,
+      notice,
+      previousStatus: existing.status
+    } satisfies NoticeDeletedAuditPayload
   });
 
   return { notice };

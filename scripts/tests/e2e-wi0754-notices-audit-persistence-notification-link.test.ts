@@ -126,6 +126,14 @@ function createContext() {
           notices.set(id, updated);
           return { ...updated };
         },
+        async delete(id: string) {
+          const existing = notices.get(id);
+          if (!existing) {
+            throw new Error(`notice not found: ${id}`);
+          }
+          notices.delete(id);
+          return { ...existing };
+        },
         async list(input: {
           organizationId: string;
           audience?: "all" | "employees" | "admins";

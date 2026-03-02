@@ -2148,6 +2148,13 @@ const notices: NoticeStore = {
     return toNoticeEntity(record);
   },
 
+  async delete(id: string) {
+    const record = await prisma.notice.delete({
+      where: { id }
+    });
+    return toNoticeEntity(record);
+  },
+
   async list(input: {
     organizationId: string;
     audience?: NoticeAudience;

@@ -111,7 +111,12 @@ export default function AdminNoticeWorkspace() {
     setLogs((previous) => [{ id: Date.now(), action, status, ok, at: new Date().toLocaleString(runtimeLocale) }, ...previous]);
   }
 
-  async function callApi(action: string, method: "GET" | "POST" | "PATCH", path: string, payload?: Record<string, unknown>) {
+  async function callApi(
+    action: string,
+    method: "GET" | "POST" | "PATCH" | "DELETE",
+    path: string,
+    payload?: Record<string, unknown>
+  ) {
     setPendingLabel(action);
     try {
       const headers: Record<string, string> = payload ? { "content-type": "application/json" } : {};
@@ -225,6 +230,29 @@ export default function AdminNoticeWorkspace() {
     await loadNotices();
   }
 
+  async function deleteExistingNotice(noticeId: string) {
+    const actionLabel = copy.deleteAction ?? "Delete";
+    const { response, parsed } = await callApi(actionLabel, "DELETE", `/api/notices/${encodeURIComponent(noticeId)}`);
+    if (!response.ok) {
+      const errorCode =
+        typeof (parsed as { error?: unknown } | null)?.error === "string"
+          ? ((parsed as { error: string }).error ?? "")
+          : "";
+      if (errorCode === "notice.delete.published_locked") {
+        setStatusMessage(copy.messages.deletePublishedLocked ?? copy.messages.deleteFailed ?? copy.messages.loadFailed);
+      } else {
+        setStatusMessage(copy.messages.deleteFailed ?? copy.messages.loadFailed);
+      }
+      return;
+    }
+
+    if (editingNoticeId === noticeId) {
+      cancelEditNotice();
+    }
+    setStatusMessage(copy.messages.deleted ?? actionLabel);
+    await loadNotices();
+  }
+
   return (
     <AdminNoticeWorkspaceView
       copy={copy}
@@ -261,6 +289,7 @@ export default function AdminNoticeWorkspace() {
       onStartEditNotice={startEditNotice}
       onCancelEditNotice={cancelEditNotice}
       onPublishNow={(noticeId) => void publishNow(noticeId)}
+      onDeleteNotice={(noticeId) => void deleteExistingNotice(noticeId)}
     />
   );
 }
