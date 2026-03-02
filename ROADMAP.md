@@ -1040,3 +1040,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0764 notices draft/scheduled edit (add PATCH /api/notices/{noticeId} for admin draft/scheduled edits, lock published notices with 409 notice.update.published_locked, and wire /admin/notices compose/list edit mode + e2e-wi0764 regression guard)
 - WI-0765 recruitment workspace line-budget recovery (fix e2e-wi0476 by reducing AdminRecruitmentWorkspace from 315 to 295 lines without behavior change, preserving admin recruitment opening/referral core journey and existing close-guard confirm flow)
 - WI-0766 admin dashboard korean copy normalization (normalize corrupted Korean runtime copy in /admin dashboard and page-focus-copy helpers, and refresh e2e copy guard to assert readable KO labels while blocking prior mojibake tokens)
+
+- WI-0767 ko runtime fallback sweep for withholding/payslip/contracts (localize payslip filename invalid-year fallback to 미확인 in ko runtime, and add e2e-wi0767 guard that locks ko fallback normalization for payslip diagnostics, withholding activity/runtime diagnostics, and contracts title/evidence filename normalization)
