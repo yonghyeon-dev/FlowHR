@@ -1087,3 +1087,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0792 employee admin shortcut devtools gate (restrict /employee dashboard admin shortcut to NEXT_PUBLIC_FLOWHR_DEV_TOOLS mode, keep dev admin/ops shortcuts explicitly labeled, and lock product-mode visibility with e2e-wi0792 regression guard)
 
 - WI-0793 employee payslips admin shortcut devtools gate (restrict /employee/payslips filter-panel admin shortcut to NEXT_PUBLIC_FLOWHR_DEV_TOOLS mode and keep dev-only labeling with e2e-wi0793 regression guard)
+
+- WI-0794 employee account overview korean copy repair (normalize corrupted Korean runtime copy in /employee account overview workspace-hub/priority/account/summary/checklist panels, preserve existing behavior and devtools gating, and lock with e2e-wi0794 regression guard)
