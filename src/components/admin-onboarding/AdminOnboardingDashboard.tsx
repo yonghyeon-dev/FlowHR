@@ -10,6 +10,7 @@ import {
 } from "@/components/admin-onboarding/AdminOnboardingSections";
 import { AdminOnboardingReadinessPanel } from "@/components/admin-onboarding/AdminOnboardingReadinessPanel";
 import { adminOnboardingCopyByLocale } from "@/components/admin-onboarding/copy";
+import type { OnboardingChecklistItem } from "@/features/admin-onboarding/checklist";
 import { useAdminOnboardingData } from "@/components/admin-onboarding/useAdminOnboardingData";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -23,6 +24,49 @@ export function AdminOnboardingDashboard() {
     runtimeLocale,
     requestLabels: copy.requestLabels
   });
+  const runPriorityAction = async (key: OnboardingChecklistItem["key"]) => {
+    if (key === "departments") {
+      await data.applyDepartments();
+      return;
+    }
+    if (key === "employees") {
+      await data.applyEmployees();
+      return;
+    }
+    if (key === "invites") {
+      await data.issuePendingEmployeeInvites();
+      return;
+    }
+    if (key === "leave_policy") {
+      await data.applyLeavePolicy();
+      return;
+    }
+    if (key === "contracts") {
+      if (data.activeContractTemplateCount === 0) {
+        await data.bootstrapEmploymentContractTemplate();
+        return;
+      }
+      if (data.pendingContractDraftCount > 0) {
+        await data.createPendingContractDrafts();
+        return;
+      }
+      if (data.pendingContractApprovalRequestCount > 0) {
+        await data.requestPendingContractApprovals();
+        return;
+      }
+      if (data.pendingContractApprovalDecisionCount > 0) {
+        await data.approvePendingContractApprovals();
+        return;
+      }
+      if (data.pendingContractSendCount > 0) {
+        await data.sendPendingContracts();
+        return;
+      }
+      if (data.pendingContractResponseCount > 0) {
+        router.push("/admin/contracts?status=SENT&focus=pending-response");
+      }
+    }
+  };
 
   return (
     <main className="saas-content">
@@ -41,6 +85,10 @@ export function AdminOnboardingDashboard() {
       <AdminOnboardingReadinessPanel
         copy={copy}
         checklistItems={data.checklistItems}
+        priorityActionPending={Boolean(data.pendingLabel)}
+        onRunPriorityAction={(key) => {
+          void runPriorityAction(key);
+        }}
       />
 
       <AdminOnboardingContextPanel

@@ -6,6 +6,8 @@ import type { AdminOnboardingCopy } from "@/components/admin-onboarding/copy";
 type AdminOnboardingReadinessPanelProps = {
   copy: AdminOnboardingCopy;
   checklistItems: OnboardingChecklistItem[];
+  priorityActionPending: boolean;
+  onRunPriorityAction: (key: OnboardingChecklistItem["key"]) => void;
 };
 
 const checklistHrefByKey: Record<OnboardingChecklistItem["key"], string> = {
@@ -37,7 +39,7 @@ function resolveChecklistLabel(copy: AdminOnboardingCopy, key: OnboardingCheckli
 }
 
 export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPanelProps) {
-  const { copy, checklistItems } = props;
+  const { copy, checklistItems, priorityActionPending, onRunPriorityAction } = props;
   const pendingItems = checklistItems.filter((item) => !item.done);
   const priorityItem = pendingItems[0] ?? null;
   const ready = pendingItems.length === 0;
@@ -63,9 +65,26 @@ export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPan
                 <p className="small muted">{resolveChecklistLabel(copy, priorityItem.key)}</p>
                 <p className="small muted">{copy.readinessPriorityHint}</p>
                 <div className="actions">
-                  <Link className="btn btn-primary btn-small" href={checklistHrefByKey[priorityItem.key]}>
-                    {copy.readinessPriorityActionLabel}
-                  </Link>
+                  {priorityItem.key === "organization" ? (
+                    <Link className="btn btn-primary btn-small" href={checklistHrefByKey[priorityItem.key]}>
+                      {copy.readinessOpenWorkspaceLabel}
+                    </Link>
+                  ) : (
+                    <>
+                      <button
+                        className="btn btn-primary btn-small"
+                        onClick={() => {
+                          onRunPriorityAction(priorityItem.key);
+                        }}
+                        disabled={priorityActionPending}
+                      >
+                        {copy.readinessPriorityActionLabel}
+                      </button>
+                      <Link className="btn btn-secondary btn-small" href={checklistHrefByKey[priorityItem.key]}>
+                        {copy.readinessOpenWorkspaceLabel}
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             ) : null}
