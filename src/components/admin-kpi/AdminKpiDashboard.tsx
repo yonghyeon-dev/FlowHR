@@ -7,6 +7,11 @@ import {
   type BenefitsKpiSnapshot
 } from "@/components/admin-kpi/AdminBenefitsKpiPanel";
 import {
+  AdminPayrollRiskKpiPanel,
+  buildPayrollRiskKpiSnapshot,
+  type PayrollRiskKpiSnapshot
+} from "@/components/admin-kpi/AdminPayrollRiskKpiPanel";
+import {
   AdminOnboardingKpiPanel,
   buildOnboardingKpiSnapshot,
   type OnboardingKpiSnapshot
@@ -24,7 +29,12 @@ import { useI18n } from "@/lib/i18n/provider";
 type ApprovalExecutionLite = { updatedAt: string };
 type AttendanceAggregateLite = { counts: { total: number; approved: number } };
 type LeaveRequestLite = { days: number };
-type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
+type PayrollRunLite = {
+  state: "PREVIEWED" | "CONFIRMED";
+  confirmedAt: string | null;
+  payslipDistributedAt: string | null;
+  payslipReceiptConfirmedAt: string | null;
+};
 type RecruitmentOpeningLite = { status: "OPEN" | "CLOSED" };
 type RecruitmentReferralLite = { stage: "SUBMITTED" | "SCREENING" | "INTERVIEW" | "OFFER" | "HIRED" | "REJECTED" | "WITHDRAWN"; updatedAt: string };
 type ContractDocumentLite = { status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED"; approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED"; requiresApproval: boolean; expiresAt: string | null };
@@ -52,6 +62,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   const [noticesKpi, setNoticesKpi] = useState<NoticeReadCoverageSnapshot | null>(null);
   const [benefitsKpi, setBenefitsKpi] = useState<BenefitsKpiSnapshot | null>(null);
   const [onboardingKpi, setOnboardingKpi] = useState<OnboardingKpiSnapshot | null>(null);
+  const [payrollRiskKpi, setPayrollRiskKpi] = useState<PayrollRiskKpiSnapshot | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
@@ -232,6 +243,18 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       contractDocuments: parseArray<OnboardingContractDocumentLite>(contractsBody, "documents")
     });
   }, [organizationId, requestJson]);
+  const loadPayrollRiskKpi = useCallback(
+    async (range: { from: string; to: string }) => {
+      const payrollRunsBody = await requestJson(
+        "payroll risk runs",
+        `/api/payroll/runs${buildQuery({ from: range.from, to: range.to })}`
+      );
+      return buildPayrollRiskKpiSnapshot({
+        runs: parseArray<PayrollRunLite>(payrollRunsBody, "runs")
+      });
+    },
+    [requestJson]
+  );
   const loadKpis = useCallback(async () => {
     if (!usesBearerToken && !organizationId.trim()) {
       return;
@@ -240,13 +263,14 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     try {
       const currentRange = { from: toIso(periodStart), to: toIso(periodEnd) };
       const previousRange = computePreviousPeriodRange(currentRange.from, currentRange.to);
-      const [current, previous, recruitment, notices, benefits, onboarding] = await Promise.all([
+      const [current, previous, recruitment, notices, benefits, onboarding, payrollRisk] = await Promise.all([
         loadRangeKpi(currentRange),
         loadRangeKpi(previousRange),
         loadRecruitmentKpi(),
         loadNoticesKpi(),
         loadBenefitsKpi(),
-        loadOnboardingKpi()
+        loadOnboardingKpi(),
+        loadPayrollRiskKpi(currentRange)
       ]);
       setCurrentRangeKpi(current);
       setPreviousRangeKpi(previous);
@@ -254,10 +278,11 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       setNoticesKpi(notices);
       setBenefitsKpi(benefits);
       setOnboardingKpi(onboarding);
+      setPayrollRiskKpi(payrollRisk);
     } finally {
       setPendingLabel(null);
     }
-  }, [copy.loadingLabel, loadBenefitsKpi, loadNoticesKpi, loadOnboardingKpi, loadRangeKpi, loadRecruitmentKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
+  }, [copy.loadingLabel, loadBenefitsKpi, loadNoticesKpi, loadOnboardingKpi, loadPayrollRiskKpi, loadRangeKpi, loadRecruitmentKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
   useEffect(() => {
     void loadKpis();
   }, [loadKpis]);
@@ -352,6 +377,9 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         }}
       />
       {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
+      {analyticsMode && payrollRiskKpi ? (
+        <AdminPayrollRiskKpiPanel copy={copy} snapshot={payrollRiskKpi} />
+      ) : null}
       {analyticsMode && benefitsKpi ? <AdminBenefitsKpiPanel copy={copy} snapshot={benefitsKpi} /> : null}
       {analyticsMode && onboardingKpi ? <AdminOnboardingKpiPanel copy={copy} snapshot={onboardingKpi} /> : null}
       {analyticsMode && recruitmentKpi ? <AdminRecruitmentKpiPanel copy={copy} snapshot={recruitmentKpi} /> : null}

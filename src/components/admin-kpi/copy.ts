@@ -78,6 +78,18 @@ export type KpiCopy = {
     readinessPercent: string;
     readinessHint: string;
   };
+  payrollRiskPanel: {
+    title: string;
+    description: string;
+    totalRunCount: string;
+    previewedRunCount: string;
+    confirmedUndistributedCount: string;
+    distributedUnacknowledgedCount: string;
+    distributionHint: string;
+    receiptHint: string;
+    yearEndReadinessPercent: string;
+    yearEndBlockingRunCount: string;
+  };
   trendTitle: string;
   trendCurrent: string;
   trendPrevious: string;
@@ -179,6 +191,19 @@ const defaultCopy: KpiCopy = {
     readinessPercent: "Readiness score",
     readinessHint: "People + invite + contract response checkpoints"
   },
+  payrollRiskPanel: {
+    title: "Payroll and year-end risk snapshot",
+    description:
+      "Track payroll run blockers before year-end filing and withholding receipt issuance.",
+    totalRunCount: "Runs in period",
+    previewedRunCount: "Previewed runs",
+    confirmedUndistributedCount: "Confirmed not distributed",
+    distributedUnacknowledgedCount: "Distributed not acknowledged",
+    distributionHint: "confirm payout distribution for each run",
+    receiptHint: "request employee payslip acknowledgement",
+    yearEndReadinessPercent: "Year-end readiness",
+    yearEndBlockingRunCount: "Blocking runs"
+  },
   trendTitle: "Period comparison",
   trendCurrent: "Current",
   trendPrevious: "Previous",
@@ -279,6 +304,18 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       pendingContractResponseCount: "미응답 계약",
       readinessPercent: "준비 점수",
       readinessHint: "직원/초대/계약응답 체크포인트"
+    },
+    payrollRiskPanel: {
+      title: "급여/연말정산 리스크 스냅샷",
+      description: "연말정산 제출 및 원천징수영수증 발급 전 선행 리스크를 추적합니다.",
+      totalRunCount: "기간 내 급여 실행",
+      previewedRunCount: "미확정 실행",
+      confirmedUndistributedCount: "확정 후 미배포",
+      distributedUnacknowledgedCount: "배포 후 미수신확인",
+      distributionHint: "각 실행의 명세서 배포가 필요합니다.",
+      receiptHint: "직원 명세서 수신 확인이 필요합니다.",
+      yearEndReadinessPercent: "연말 준비율",
+      yearEndBlockingRunCount: "차단 실행 건"
     },
     trendTitle: "기간 비교",
     trendCurrent: "현재",
