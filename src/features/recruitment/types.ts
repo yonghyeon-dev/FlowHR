@@ -31,3 +31,27 @@ export type RecruitmentReferralItem = {
   createdAt: string;
   updatedAt: string;
 };
+
+const referralStageTransitionMap: Record<RecruitmentReferralStage, readonly RecruitmentReferralStage[]> = {
+  SUBMITTED: ["SCREENING", "WITHDRAWN"],
+  SCREENING: ["INTERVIEW", "OFFER", "REJECTED", "WITHDRAWN"],
+  INTERVIEW: ["OFFER", "REJECTED", "WITHDRAWN"],
+  OFFER: ["HIRED", "REJECTED", "WITHDRAWN"],
+  HIRED: [],
+  REJECTED: [],
+  WITHDRAWN: []
+};
+
+export function listRecruitmentReferralNextStages(stage: RecruitmentReferralStage) {
+  return [stage, ...referralStageTransitionMap[stage]];
+}
+
+export function isRecruitmentReferralStageTransitionAllowed(
+  from: RecruitmentReferralStage,
+  to: RecruitmentReferralStage
+) {
+  if (from === to) {
+    return true;
+  }
+  return referralStageTransitionMap[from].includes(to);
+}

@@ -1,11 +1,12 @@
 ﻿import Link from "next/link";
 
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
-import type {
-  RecruitmentOpeningItem,
-  RecruitmentOpeningStatus,
-  RecruitmentReferralItem,
-  RecruitmentReferralStage
+import {
+  listRecruitmentReferralNextStages,
+  type RecruitmentOpeningItem,
+  type RecruitmentOpeningStatus,
+  type RecruitmentReferralItem,
+  type RecruitmentReferralStage
 } from "@/features/recruitment/types";
 
 type AdminRecruitmentCopy = ReturnType<typeof resolveAdminRecruitmentCopy>;
@@ -231,6 +232,8 @@ export default function AdminRecruitmentWorkspaceView({
                 const updatedAtMs = Date.parse(referral.updatedAt);
                 const isStalled7d = !isTerminalStage && Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs >= 7 * 24 * 60 * 60 * 1000;
                 const isStalled14d = !isTerminalStage && Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs >= 14 * 24 * 60 * 60 * 1000;
+                const selectedStage = stageSelection[referral.id] ?? referral.stage;
+                const stageOptions = listRecruitmentReferralNextStages(referral.stage);
                 return (
                   <li key={referral.id}>
                     <span>
@@ -265,14 +268,14 @@ export default function AdminRecruitmentWorkspaceView({
                     </span>
                     <div className="actions" style={{ marginTop: 0 }}>
                       <select
-                        value={stageSelection[referral.id] ?? referral.stage}
+                        value={selectedStage}
                         onChange={(event) =>
                           onStageSelectionChange(referral.id, event.target.value as RecruitmentReferralStage)
                         }
                       >
-                        {Object.entries(copy.referralStage).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
+                        {stageOptions.map((stage) => (
+                          <option key={stage} value={stage}>
+                            {copy.referralStage[stage]}
                           </option>
                         ))}
                       </select>
@@ -280,7 +283,7 @@ export default function AdminRecruitmentWorkspaceView({
                         type="button"
                         className="btn btn-secondary btn-small"
                         onClick={() => onUpdateStage(referral.id)}
-                        disabled={pending}
+                        disabled={pending || selectedStage === referral.stage}
                       >
                         {copy.updateStageAction}
                       </button>

@@ -1,5 +1,9 @@
-﻿import { updateRecruitmentReferralStageSchema } from "@/features/recruitment/schemas";
-import { updateRecruitmentReferralStage } from "@/features/recruitment/store";
+import { updateRecruitmentReferralStageSchema } from "@/features/recruitment/schemas";
+import { findRecruitmentReferral, updateRecruitmentReferralStage } from "@/features/recruitment/store";
+import {
+  isRecruitmentReferralStageTransitionAllowed,
+  listRecruitmentReferralNextStages
+} from "@/features/recruitment/types";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -34,6 +38,18 @@ export async function POST(request: Request, context: RouteContext) {
   });
   if (!parsed.success) {
     return fail(400, "invalid payload", parsed.error.flatten());
+  }
+
+  const existing = await findRecruitmentReferral(parsed.data.referralId);
+  if (!existing) {
+    return fail(404, "recruitment.referral.not_found");
+  }
+  if (!isRecruitmentReferralStageTransitionAllowed(existing.stage, parsed.data.stage)) {
+    return fail(409, "recruitment.referral.stage.invalid_transition", {
+      from: existing.stage,
+      to: parsed.data.stage,
+      allowed: listRecruitmentReferralNextStages(existing.stage)
+    });
   }
 
   const updated = await updateRecruitmentReferralStage({
