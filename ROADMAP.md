@@ -1075,3 +1075,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0786 employee dashboard KPI product copy normalization (replace developer-centric KPI wording in EmployeeDashboardChrome: API success/call -> request success/activity product copy in ko/en runtime + e2e-wi0786 regression guard)
 
 - WI-0787 employee dashboard priority action panel (add checklist-driven top-priority action panel on /employee account overview, select blocked item first and provide one-click section jump CTA + e2e-wi0787 regression guard)
+
+- WI-0788 employee priority-action next-route mapping (extend /employee priority-action panel with section-to-workspace route resolver and secondary related-workspace CTA for attendance/leave/resubmit flows + e2e-wi0788 regression guard)
