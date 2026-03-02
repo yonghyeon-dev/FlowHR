@@ -1049,3 +1049,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0772 admin onboarding contract draft coverage (add active-template contract document coverage metrics in /admin/onboarding and one-click pending draft generation per employee via /api/contracts/documents + e2e-wi0772 regression guard)
 - WI-0773 admin onboarding contract approval-request coverage (add contract approval-request coverage metrics in /admin/onboarding and one-click pending DRAFT approval request dispatch via /api/contracts/documents/{documentId}/request-approval + e2e-wi0773 regression guard)
 - WI-0774 admin onboarding contract approval-decision coverage (add approval decision coverage metrics in /admin/onboarding and one-click pending APPROVAL_REQUESTED contract approval action via /api/contracts/documents/{documentId}/approval + e2e-wi0774 regression guard)
+
+- WI-0775 admin onboarding contract send-execution coverage (add send coverage metrics in /admin/onboarding and one-click pending DRAFT+APPROVED contract send action via /api/contracts/documents/{documentId}/send + e2e-wi0775 regression guard)
