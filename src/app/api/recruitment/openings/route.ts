@@ -12,6 +12,11 @@ function canManageOpenings(role: string | null | undefined) {
   return role === "admin" || role === "manager";
 }
 
+function normalizeOrganizationId(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listRecruitmentOpeningsQuerySchema.safeParse({
@@ -24,8 +29,16 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
+  const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
+  const requestedOrganizationId = normalizeOrganizationId(parsed.data.organizationId);
+  if (actorOrganizationId && requestedOrganizationId && requestedOrganizationId !== actorOrganizationId) {
+    return fail(403, "recruitment.opening.list.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? DEFAULT_ORG_ID;
   const openings = await listRecruitmentOpenings({
-    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+    organizationId,
     status: parsed.data.status
   });
 
@@ -51,9 +64,17 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
+  const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
+  const requestedOrganizationId = normalizeOrganizationId(parsed.data.organizationId);
+  if (actorOrganizationId && requestedOrganizationId && requestedOrganizationId !== actorOrganizationId) {
+    return fail(403, "recruitment.opening.create.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? DEFAULT_ORG_ID;
 
   const created = await createRecruitmentOpening({
-    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+    organizationId,
     title: parsed.data.title,
     department: parsed.data.department,
     employmentType: parsed.data.employmentType,

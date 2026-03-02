@@ -18,6 +18,11 @@ function canReviewReferrals(role: string | null | undefined) {
   return role === "admin" || role === "manager";
 }
 
+function normalizeOrganizationId(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listRecruitmentReferralsQuerySchema.safeParse({
@@ -31,9 +36,17 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
+  const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
+  const requestedOrganizationId = normalizeOrganizationId(parsed.data.organizationId);
+  if (actorOrganizationId && requestedOrganizationId && requestedOrganizationId !== actorOrganizationId) {
+    return fail(403, "recruitment.referral.list.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? DEFAULT_ORG_ID;
   const isReviewer = canReviewReferrals(actor?.role);
   const referrals = await listRecruitmentReferrals({
-    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+    organizationId,
     referrerEmployeeId: isReviewer ? parsed.data.referrerEmployeeId : parsed.data.referrerEmployeeId ?? actor?.id,
     stage: parsed.data.stage
   });
@@ -58,8 +71,15 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
+  const actorOrganizationId = normalizeOrganizationId(actor.organizationId);
+  const requestedOrganizationId = normalizeOrganizationId(parsed.data.organizationId);
+  if (actorOrganizationId && requestedOrganizationId && requestedOrganizationId !== actorOrganizationId) {
+    return fail(403, "recruitment.referral.create.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
 
-  const organizationId = parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID;
+  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? DEFAULT_ORG_ID;
   const opening = await findRecruitmentOpening(parsed.data.openingId);
 
   if (!opening || opening.organizationId !== organizationId) {
