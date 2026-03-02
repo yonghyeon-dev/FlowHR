@@ -89,6 +89,15 @@ export type KpiCopy = {
     receiptHint: string;
     yearEndReadinessPercent: string;
     yearEndBlockingRunCount: string;
+    priorityActionLabel: string;
+    quickActionsLabel: string;
+    actionOpenPayrollClose: string;
+    actionOpenPayslipDelivery: string;
+    actionOpenYearEnd: string;
+    priorityReasonPreviewed: string;
+    priorityReasonUndistributed: string;
+    priorityReasonUnacknowledged: string;
+    priorityReasonReady: string;
   };
   trendTitle: string;
   trendCurrent: string;
@@ -202,7 +211,16 @@ const defaultCopy: KpiCopy = {
     distributionHint: "confirm payout distribution for each run",
     receiptHint: "request employee payslip acknowledgement",
     yearEndReadinessPercent: "Year-end readiness",
-    yearEndBlockingRunCount: "Blocking runs"
+    yearEndBlockingRunCount: "Blocking runs",
+    priorityActionLabel: "Top-priority action",
+    quickActionsLabel: "Quick actions",
+    actionOpenPayrollClose: "Open payroll close",
+    actionOpenPayslipDelivery: "Open payslip delivery",
+    actionOpenYearEnd: "Open year-end workspace",
+    priorityReasonPreviewed: "Unconfirmed payroll runs exist. Confirm runs first.",
+    priorityReasonUndistributed: "Confirmed runs are waiting for payslip distribution.",
+    priorityReasonUnacknowledged: "Distributed runs still need employee acknowledgement.",
+    priorityReasonReady: "Blocking runs are cleared. Proceed to year-end finalization."
   },
   trendTitle: "Period comparison",
   trendCurrent: "Current",
@@ -315,7 +333,16 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       distributionHint: "각 실행의 명세서 배포가 필요합니다.",
       receiptHint: "직원 명세서 수신 확인이 필요합니다.",
       yearEndReadinessPercent: "연말 준비율",
-      yearEndBlockingRunCount: "차단 실행 건"
+      yearEndBlockingRunCount: "차단 실행 건",
+      priorityActionLabel: "최우선 조치",
+      quickActionsLabel: "빠른 이동",
+      actionOpenPayrollClose: "급여 마감 열기",
+      actionOpenPayslipDelivery: "명세서 배포 열기",
+      actionOpenYearEnd: "연말정산 워크스페이스 열기",
+      priorityReasonPreviewed: "미확정 급여 실행이 있습니다. 먼저 실행 확정이 필요합니다.",
+      priorityReasonUndistributed: "확정된 실행이 명세서 미배포 상태입니다.",
+      priorityReasonUnacknowledged: "배포된 실행에 직원 수신 확인이 남아 있습니다.",
+      priorityReasonReady: "차단 실행이 정리되었습니다. 연말 정산을 진행하세요."
     },
     trendTitle: "기간 비교",
     trendCurrent: "현재",

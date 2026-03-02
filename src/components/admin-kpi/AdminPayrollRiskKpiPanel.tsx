@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { type KpiCopy } from "@/components/admin-kpi/copy";
 
 type PayrollRunRiskLite = {
@@ -73,10 +74,66 @@ type AdminPayrollRiskKpiPanelProps = {
   snapshot: PayrollRiskKpiSnapshot;
 };
 
+type PayrollRiskActionLink = {
+  href: string;
+  label: string;
+};
+
+function resolvePrimaryPayrollRiskAction(
+  snapshot: PayrollRiskKpiSnapshot,
+  copy: KpiCopy
+) {
+  if (snapshot.previewedRunCount > 0) {
+    return {
+      href: "/admin/payroll-close",
+      label: copy.payrollRiskPanel.actionOpenPayrollClose,
+      reason: copy.payrollRiskPanel.priorityReasonPreviewed
+    };
+  }
+  if (snapshot.confirmedUndistributedCount > 0) {
+    return {
+      href: "/admin/payroll-payslip-delivery",
+      label: copy.payrollRiskPanel.actionOpenPayslipDelivery,
+      reason: copy.payrollRiskPanel.priorityReasonUndistributed
+    };
+  }
+  if (snapshot.distributedUnacknowledgedCount > 0) {
+    return {
+      href: "/admin/payroll-payslip-delivery",
+      label: copy.payrollRiskPanel.actionOpenPayslipDelivery,
+      reason: copy.payrollRiskPanel.priorityReasonUnacknowledged
+    };
+  }
+  return {
+    href: "/admin/payroll-year-end",
+    label: copy.payrollRiskPanel.actionOpenYearEnd,
+    reason: copy.payrollRiskPanel.priorityReasonReady
+  };
+}
+
+function buildPayrollRiskQuickActions(copy: KpiCopy): PayrollRiskActionLink[] {
+  return [
+    {
+      href: "/admin/payroll-close",
+      label: copy.payrollRiskPanel.actionOpenPayrollClose
+    },
+    {
+      href: "/admin/payroll-payslip-delivery",
+      label: copy.payrollRiskPanel.actionOpenPayslipDelivery
+    },
+    {
+      href: "/admin/payroll-year-end",
+      label: copy.payrollRiskPanel.actionOpenYearEnd
+    }
+  ];
+}
+
 export function AdminPayrollRiskKpiPanel({
   copy,
   snapshot
 }: AdminPayrollRiskKpiPanelProps) {
+  const primaryAction = resolvePrimaryPayrollRiskAction(snapshot, copy);
+  const quickActions = buildPayrollRiskQuickActions(copy);
   return (
     <article className="panel">
       <h2>{copy.payrollRiskPanel.title}</h2>
@@ -109,6 +166,31 @@ export function AdminPayrollRiskKpiPanel({
           </small>
         </article>
       </div>
+      <section style={{ marginTop: 12 }}>
+        <p className="small muted">{copy.payrollRiskPanel.priorityActionLabel}</p>
+        <p className="small" style={{ marginTop: 4 }}>
+          {primaryAction.reason}
+        </p>
+        <div className="actions" style={{ marginTop: 8 }}>
+          <Link href={primaryAction.href} className="btn btn-primary btn-small">
+            {primaryAction.label}
+          </Link>
+        </div>
+        <p className="small muted" style={{ marginTop: 10 }}>
+          {copy.payrollRiskPanel.quickActionsLabel}
+        </p>
+        <div className="actions" style={{ marginTop: 6 }}>
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="btn btn-secondary btn-small"
+            >
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </section>
     </article>
   );
 }
