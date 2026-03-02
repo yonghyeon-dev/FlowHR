@@ -30,6 +30,60 @@ type PriorityWorkspaceTarget = {
   label: string;
 };
 
+type ActionPriorityBadge = {
+  key: string;
+  label: string;
+  remainingCount: number;
+  totalCount: number;
+  targetSectionId: string;
+  severity: "critical" | "watch" | "stable";
+};
+
+function resolveActionPrioritySeverity(
+  remainingCount: number,
+  totalCount: number
+): ActionPriorityBadge["severity"] {
+  if (remainingCount <= 0) {
+    return "stable";
+  }
+  if (remainingCount >= Math.max(2, Math.ceil(totalCount / 2))) {
+    return "critical";
+  }
+  return "watch";
+}
+
+function buildActionPriorityBadges(
+  cards: IntegratedSubmitChecklistCard[]
+): ActionPriorityBadge[] {
+  const severityRank: Record<ActionPriorityBadge["severity"], number> = {
+    critical: 3,
+    watch: 2,
+    stable: 1
+  };
+  return cards
+    .map((card) => {
+      const remainingCount = Math.max(card.totalCount - card.passCount, 0);
+      return {
+        key: card.key,
+        label: card.label,
+        remainingCount,
+        totalCount: card.totalCount,
+        targetSectionId: card.targetSectionId,
+        severity: resolveActionPrioritySeverity(remainingCount, card.totalCount)
+      } satisfies ActionPriorityBadge;
+    })
+    .sort((left, right) => {
+      const bySeverity = severityRank[right.severity] - severityRank[left.severity];
+      if (bySeverity !== 0) {
+        return bySeverity;
+      }
+      if (left.remainingCount !== right.remainingCount) {
+        return right.remainingCount - left.remainingCount;
+      }
+      return left.label.localeCompare(right.label);
+    });
+}
+
 function resolvePriorityWorkspaceTarget(
   sectionId: string,
   isKoLocale: boolean
@@ -82,6 +136,9 @@ export function EmployeeAccountOverviewPanels({
     integratedSubmitChecklistCards.find((card) => !card.ready) ??
     integratedSubmitChecklistCards[0] ??
     null;
+  const actionPriorityBadges = buildActionPriorityBadges(
+    integratedSubmitChecklistCards
+  );
   const hasBlockingChecklist = Boolean(
     priorityChecklistCard && !priorityChecklistCard.ready
   );
@@ -131,6 +188,31 @@ export function EmployeeAccountOverviewPanels({
             ? "제출 체크리스트를 기준으로 지금 바로 처리할 다음 작업을 제안합니다."
             : "Based on checklist readiness, this suggests the next action to process now."}
         </p>
+        <div className="actions">
+          {actionPriorityBadges.map((badge) => (
+            <button
+              key={badge.key}
+              type="button"
+              className={`btn ${
+                badge.severity === "critical" ? "btn-primary" : "btn-secondary"
+              } btn-small`}
+              onClick={() => onJumpToSection(badge.targetSectionId)}
+            >
+              {badge.label} ({badge.remainingCount}/{badge.totalCount}) ·{" "}
+              {badge.severity === "critical"
+                ? isKoLocale
+                  ? "긴급"
+                  : "Critical"
+                : badge.severity === "watch"
+                  ? isKoLocale
+                    ? "주의"
+                    : "Watch"
+                  : isKoLocale
+                    ? "안정"
+                    : "Stable"}
+            </button>
+          ))}
+        </div>
         {priorityChecklistCard ? (
           <>
             <p className="small">
