@@ -19,7 +19,18 @@ import {
 } from "@/components/admin-kpi/AdminOnboardingKpiPanel";
 import { AdminNoticesKpiPanel, buildNoticeReadCoverageSnapshot, type NoticeReadCoverageSnapshot } from "@/components/admin-kpi/AdminNoticesKpiPanel";
 import { AdminRecruitmentKpiPanel, buildRecruitmentKpiSnapshot, type RecruitmentKpiSnapshot } from "@/components/admin-kpi/AdminRecruitmentKpiPanel";
-import { AdminKpiAnalyticsControls, AdminKpiCards, AdminKpiContextPanel, AdminKpiLogsPanel, AdminKpiTrendPanel, type AdminKpiFocusMetric, type ApiLog, type RangeKpi } from "@/components/admin-kpi/AdminKpiSections";
+import {
+  AdminKpiAnalyticsControls,
+  type AdminKpiCardQuickLinkMap,
+  AdminKpiCards,
+  AdminKpiContextPanel,
+  type AdminKpiDrilldownMetric,
+  AdminKpiLogsPanel,
+  AdminKpiTrendPanel,
+  type AdminKpiFocusMetric,
+  type ApiLog,
+  type RangeKpi
+} from "@/components/admin-kpi/AdminKpiSections";
 import { kpiCopyByLocale } from "@/components/admin-kpi/copy";
 import { buildAdminKpiCsvPayload, buildAdminKpiTrendRows, safeParseBody, triggerCsvDownload } from "@/components/admin-kpi/dashboard-utils";
 import { buildQuery, formatDelta, formatPercent, getLast30DaysRangeLocal, getThisMonthRangeLocal, isTruthyFlag, parseArray, toIso } from "@/components/admin-kpi/helpers";
@@ -58,6 +69,15 @@ const adminKpiFocusMetricSet = new Set<AdminKpiFocusMetric>([
   "contractDecisionQueueCount",
   "contractSlaOverdueCount"
 ]);
+const adminKpiDrilldownMetrics: AdminKpiDrilldownMetric[] = [
+  "pendingApprovals",
+  "stalledApprovals",
+  "attendanceApprovalRate",
+  "leaveApprovedDays",
+  "payrollConfirmedRate",
+  "contractDecisionQueueCount",
+  "contractSlaOverdueCount"
+];
 type FocusWorkspaceLink = { href: string; label: string };
 
 function parseAdminKpiFocusMetric(
@@ -101,6 +121,14 @@ function resolveFocusWorkspaceLink(
     };
   }
   return { href: "/admin", label: copy.focusMetricAllOption };
+}
+
+function appendAnalyticsSourceQuery(
+  href: string,
+  focusMetric: AdminKpiDrilldownMetric
+): string {
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}source=admin-analytics&focusMetric=${focusMetric}`;
 }
 
 type AdminKpiDashboardProps = { analyticsMode?: boolean };
@@ -390,6 +418,19 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     () => resolveFocusWorkspaceLink(focusMetric, copy),
     [copy, focusMetric]
   );
+  const cardQuickLinks = useMemo<AdminKpiCardQuickLinkMap | undefined>(() => {
+    if (!analyticsMode) {
+      return undefined;
+    }
+    return adminKpiDrilldownMetrics.reduce<AdminKpiCardQuickLinkMap>((acc, metric) => {
+      const workspace = resolveFocusWorkspaceLink(metric, copy);
+      acc[metric] = {
+        href: appendAnalyticsSourceQuery(workspace.href, metric),
+        workspaceLabel: workspace.label
+      };
+      return acc;
+    }, {});
+  }, [analyticsMode, copy]);
   const exportCsv = useCallback(() => {
     if (!currentRangeKpi || !previousRangeKpi) {
       return;
@@ -521,7 +562,11 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
           void loadKpis();
         }}
       />
-      {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
+      {currentRangeKpi ? (
+        <AdminKpiCards copy={copy} kpi={currentRangeKpi} quickLinks={cardQuickLinks} />
+      ) : (
+        <p className="small muted">{copy.noData}</p>
+      )}
       {analyticsMode ? (
         <section className="panel">
           <h2>{copy.focusWorkspaceTitle}</h2>

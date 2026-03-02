@@ -1103,3 +1103,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0800 admin analytics focus metric deeplink (sync /admin/analytics focused KPI with ?focus query, restore selection on page-load, add focused-workspace open action and shareable focused-link copy action, with e2e-wi0800 regression guard)
 
 - WI-0801 admin analytics focused workspace risk summary (extend /admin/analytics focused-workspace panel with selected KPI summary: metric/current/previous/delta/trend-direction plus no-focus fallback guidance, with e2e-wi0801 regression guard)
+- WI-0802 admin analytics KPI card quick jumps (`/admin/analytics` KPI cards now expose per-metric workspace quick links with `source=admin-analytics` + `focusMetric` context query and `e2e-wi0802` regression test added)
