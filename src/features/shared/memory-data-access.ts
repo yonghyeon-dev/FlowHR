@@ -25,6 +25,8 @@ import type {
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
+  CreateRecruitmentOpeningInput,
+  CreateRecruitmentReferralInput,
   CreateDepartmentInput,
   CreatePositionInput,
   CreateNoticeInput,
@@ -46,6 +48,9 @@ import type {
   NoticeNotificationState,
   NoticeReadReceiptEntity,
   NoticeStatus,
+  RecruitmentOpeningEntity,
+  RecruitmentReferralEntity,
+  RecruitmentReferralStage,
   OrganizationEntity,
   PositionEntity,
   RoleEntity,
@@ -63,6 +68,8 @@ import type {
   UpdateLeavePromotionDeliveryRecipientInput,
   UpdateNoticeInput,
   UpdateNoticeNotificationInput,
+  UpdateRecruitmentOpeningInput,
+  UpdateRecruitmentReferralInput,
   UpsertLeavePolicyInput,
   UpsertApprovalPolicyInput,
   UpsertNoticeReadReceiptInput,
@@ -102,6 +109,8 @@ type MemoryState = {
   notices: Map<string, NoticeEntity>;
   noticeReadReceipts: Map<string, NoticeReadReceiptEntity>;
   noticeNotifications: Map<string, NoticeNotificationEntity>;
+  recruitmentOpenings: Map<string, RecruitmentOpeningEntity>;
+  recruitmentReferrals: Map<string, RecruitmentReferralEntity>;
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
   audit: AuditLogEntity[];
@@ -149,6 +158,8 @@ function createState(): MemoryState {
     notices: new Map<string, NoticeEntity>(),
     noticeReadReceipts: new Map<string, NoticeReadReceiptEntity>(),
     noticeNotifications: new Map<string, NoticeNotificationEntity>(),
+    recruitmentOpenings: new Map<string, RecruitmentOpeningEntity>(),
+    recruitmentReferrals: new Map<string, RecruitmentReferralEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
     audit: []
@@ -317,6 +328,22 @@ function cloneNoticeNotification(entity: NoticeNotificationEntity): NoticeNotifi
     ...entity,
     enqueuedAt: cloneDate(entity.enqueuedAt),
     deliveredAt: entity.deliveredAt ? cloneDate(entity.deliveredAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneRecruitmentOpening(entity: RecruitmentOpeningEntity): RecruitmentOpeningEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneRecruitmentReferral(entity: RecruitmentReferralEntity): RecruitmentReferralEntity {
+  return {
+    ...entity,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -2196,6 +2223,147 @@ export const memoryDataAccess: DataAccess = {
         const byEnqueuedAt = right.enqueuedAt.getTime() - left.enqueuedAt.getTime();
         if (byEnqueuedAt !== 0) {
           return byEnqueuedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
+    }
+  },
+
+  recruitment: {
+    async createOpening(input: CreateRecruitmentOpeningInput) {
+      const now = new Date();
+      const opening: RecruitmentOpeningEntity = {
+        id: nextId("ROPEN"),
+        organizationId: input.organizationId,
+        title: input.title,
+        department: input.department,
+        employmentType: input.employmentType,
+        status: input.status ?? "OPEN",
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
+      };
+      state.recruitmentOpenings.set(opening.id, opening);
+      return cloneRecruitmentOpening(opening);
+    },
+
+    async findOpeningById(id: string) {
+      const opening = state.recruitmentOpenings.get(id);
+      return opening ? cloneRecruitmentOpening(opening) : null;
+    },
+
+    async updateOpening(id: string, input: UpdateRecruitmentOpeningInput) {
+      const existing = state.recruitmentOpenings.get(id);
+      if (!existing) {
+        throw new Error(`recruitment opening not found: ${id}`);
+      }
+      const updated: RecruitmentOpeningEntity = {
+        ...existing,
+        title: input.title !== undefined ? input.title : existing.title,
+        department: input.department !== undefined ? input.department : existing.department,
+        employmentType:
+          input.employmentType !== undefined ? input.employmentType : existing.employmentType,
+        status: input.status !== undefined ? input.status : existing.status,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
+      };
+      state.recruitmentOpenings.set(id, updated);
+      return cloneRecruitmentOpening(updated);
+    },
+
+    async listOpenings(input: {
+      organizationId: string;
+      status?: "OPEN" | "CLOSED";
+      limit?: number;
+    }) {
+      const rows: RecruitmentOpeningEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const opening of state.recruitmentOpenings.values()) {
+        if (opening.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.status && opening.status !== input.status) {
+          continue;
+        }
+        rows.push(cloneRecruitmentOpening(opening));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
+    },
+
+    async createReferral(input: CreateRecruitmentReferralInput) {
+      const now = new Date();
+      const referral: RecruitmentReferralEntity = {
+        id: nextId("RREF"),
+        organizationId: input.organizationId,
+        openingId: input.openingId,
+        candidateName: input.candidateName,
+        candidateEmail: input.candidateEmail,
+        referrerEmployeeId: input.referrerEmployeeId,
+        note: input.note,
+        stage: input.stage ?? "SUBMITTED",
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
+      };
+      state.recruitmentReferrals.set(referral.id, referral);
+      return cloneRecruitmentReferral(referral);
+    },
+
+    async findReferralById(id: string) {
+      const referral = state.recruitmentReferrals.get(id);
+      return referral ? cloneRecruitmentReferral(referral) : null;
+    },
+
+    async updateReferral(id: string, input: UpdateRecruitmentReferralInput) {
+      const existing = state.recruitmentReferrals.get(id);
+      if (!existing) {
+        throw new Error(`recruitment referral not found: ${id}`);
+      }
+      const updated: RecruitmentReferralEntity = {
+        ...existing,
+        openingId: input.openingId !== undefined ? input.openingId : existing.openingId,
+        candidateName: input.candidateName !== undefined ? input.candidateName : existing.candidateName,
+        candidateEmail:
+          input.candidateEmail !== undefined ? input.candidateEmail : existing.candidateEmail,
+        referrerEmployeeId:
+          input.referrerEmployeeId !== undefined ? input.referrerEmployeeId : existing.referrerEmployeeId,
+        note: input.note !== undefined ? input.note : existing.note,
+        stage: input.stage !== undefined ? input.stage : existing.stage,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
+      };
+      state.recruitmentReferrals.set(id, updated);
+      return cloneRecruitmentReferral(updated);
+    },
+
+    async listReferrals(input: {
+      organizationId: string;
+      referrerEmployeeId?: string;
+      stage?: RecruitmentReferralStage;
+      limit?: number;
+    }) {
+      const rows: RecruitmentReferralEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const referral of state.recruitmentReferrals.values()) {
+        if (referral.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.referrerEmployeeId && referral.referrerEmployeeId !== input.referrerEmployeeId) {
+          continue;
+        }
+        if (input.stage && referral.stage !== input.stage) {
+          continue;
+        }
+        rows.push(cloneRecruitmentReferral(referral));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
         }
         return right.id.localeCompare(left.id);
       });

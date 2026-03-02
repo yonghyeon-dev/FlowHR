@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.1
+version: 0.3.2
 scope:
   in:
     - organization master data (create/read/list)
@@ -9,7 +9,7 @@ scope:
     - employee profile assignment with department/position consistency checks
     - audit logs for all employee/org mutations
     - domain events for employee/org mutations
-    - notice workspace persistence read-model tables for organization-scoped employee communication
+    - notice and recruitment workspace persistence read-model tables for organization-scoped employee communication and ATS journey
   out:
     - multi-tenant enforcement (RLS) across core tables (Phase 1 follow-up)
     - RBAC engine and permission administration UI (Phase 1 follow-up)
@@ -23,6 +23,10 @@ entities:
     description: Organization-level position catalog with unique code per organization.
   - name: Employee
     description: HR master entity. Canonical id should match Supabase auth user.id (UUID string) for production.
+  - name: RecruitmentOpening
+    description: Organization-scoped recruitment opening read model for ATS core journey.
+  - name: RecruitmentReferral
+    description: Organization-scoped referral pipeline read model linked to openings.
 api:
   auth:
     - role: admin
@@ -101,8 +105,10 @@ db_changes:
       description: Add Department/Position tables and employee departmentId/positionId references.
     - id: 202603020001_wi0755_notices_db_read_model
       description: Add Notice, NoticeReadReceipt, and NoticeNotificationQueue models for notices persistence/read-model.
+    - id: 202603020002_wi0757_recruitment_db_persistence
+      description: Add RecruitmentOpening and RecruitmentReferral models for ATS opening/referral persistence.
   backward_compatible: true
-  notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs."
+  notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, and recruitment read models are additive."
 invariants:
   - Employee mutations are admin-only in v0.1.
   - Employee id is treated as canonical identifier and should match Supabase auth user.id in production.
@@ -161,11 +167,12 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.1 adds notice read-model persistence tables as additive DB change. Existing Organization/Employee/Department/Position APIs remain backward compatible."
+consumer_impact: "People contract v0.3.2 adds recruitment read-model persistence tables as additive DB change. Existing Organization/Employee/Department/Position APIs remain backward compatible."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
   - work-items/WI-0755-notices-db-persistence-and-notification-read-model.md
+  - work-items/WI-0757-recruitment-db-persistence-core-journey.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

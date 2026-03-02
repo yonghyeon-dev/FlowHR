@@ -36,7 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const updated = updateRecruitmentReferralStage({
+  const updated = await updateRecruitmentReferralStage({
     referralId: parsed.data.referralId,
     stage: parsed.data.stage
   });

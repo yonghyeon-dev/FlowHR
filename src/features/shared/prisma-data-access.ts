@@ -30,6 +30,8 @@ import type {
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreatePositionInput,
+  CreateRecruitmentOpeningInput,
+  CreateRecruitmentReferralInput,
   CreateWorkScheduleTemplateInput,
   CreateWorkScheduleInput,
   DepartmentEntity,
@@ -71,6 +73,11 @@ import type {
   PayrollStore,
   PositionEntity,
   PositionStore,
+  RecruitmentOpeningEntity,
+  RecruitmentOpeningStatus,
+  RecruitmentReferralEntity,
+  RecruitmentReferralStage,
+  RecruitmentStore,
   RbacStore,
   RecordLeaveDecisionInput,
   RoleEntity,
@@ -93,6 +100,8 @@ import type {
   UpdateNoticeNotificationInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
+  UpdateRecruitmentOpeningInput,
+  UpdateRecruitmentReferralInput,
   UpsertNoticeReadReceiptInput,
   UpsertLeavePolicyInput,
   WorkScheduleTemplateEntity,
@@ -320,6 +329,34 @@ function toNoticeNotificationEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): NoticeNotificationEntity {
+  return record;
+}
+
+function toRecruitmentOpeningEntity(record: {
+  id: string;
+  organizationId: string;
+  title: string;
+  department: string;
+  employmentType: string;
+  status: "OPEN" | "CLOSED";
+  createdAt: Date;
+  updatedAt: Date;
+}): RecruitmentOpeningEntity {
+  return record;
+}
+
+function toRecruitmentReferralEntity(record: {
+  id: string;
+  organizationId: string;
+  openingId: string;
+  candidateName: string;
+  candidateEmail: string;
+  referrerEmployeeId: string;
+  note: string;
+  stage: "SUBMITTED" | "SCREENING" | "INTERVIEW" | "OFFER" | "HIRED" | "REJECTED" | "WITHDRAWN";
+  createdAt: Date;
+  updatedAt: Date;
+}): RecruitmentReferralEntity {
   return record;
 }
 
@@ -2236,6 +2273,126 @@ const noticeNotifications: NoticeNotificationStore = {
   }
 };
 
+const recruitment: RecruitmentStore = {
+  async createOpening(input: CreateRecruitmentOpeningInput) {
+    const record = await prisma.recruitmentOpening.create({
+      data: {
+        organizationId: input.organizationId,
+        title: input.title,
+        department: input.department,
+        employmentType: input.employmentType,
+        status: input.status ?? "OPEN",
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toRecruitmentOpeningEntity(record);
+  },
+
+  async findOpeningById(id: string) {
+    const record = await prisma.recruitmentOpening.findUnique({
+      where: { id }
+    });
+    return record ? toRecruitmentOpeningEntity(record) : null;
+  },
+
+  async updateOpening(id: string, input: UpdateRecruitmentOpeningInput) {
+    const record = await prisma.recruitmentOpening.update({
+      where: { id },
+      data: {
+        title: input.title,
+        department: input.department,
+        employmentType: input.employmentType,
+        status: input.status,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toRecruitmentOpeningEntity(record);
+  },
+
+  async listOpenings(input: {
+    organizationId: string;
+    status?: RecruitmentOpeningStatus;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+    const records = await prisma.recruitmentOpening.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.status ? { status: input.status } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+
+    return records.map(toRecruitmentOpeningEntity);
+  },
+
+  async createReferral(input: CreateRecruitmentReferralInput) {
+    const record = await prisma.recruitmentReferral.create({
+      data: {
+        organizationId: input.organizationId,
+        openingId: input.openingId,
+        candidateName: input.candidateName,
+        candidateEmail: input.candidateEmail,
+        referrerEmployeeId: input.referrerEmployeeId,
+        note: input.note,
+        stage: input.stage ?? "SUBMITTED",
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toRecruitmentReferralEntity(record);
+  },
+
+  async findReferralById(id: string) {
+    const record = await prisma.recruitmentReferral.findUnique({
+      where: { id }
+    });
+    return record ? toRecruitmentReferralEntity(record) : null;
+  },
+
+  async updateReferral(id: string, input: UpdateRecruitmentReferralInput) {
+    const record = await prisma.recruitmentReferral.update({
+      where: { id },
+      data: {
+        openingId: input.openingId,
+        candidateName: input.candidateName,
+        candidateEmail: input.candidateEmail,
+        referrerEmployeeId: input.referrerEmployeeId,
+        note: input.note,
+        stage: input.stage,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toRecruitmentReferralEntity(record);
+  },
+
+  async listReferrals(input: {
+    organizationId: string;
+    referrerEmployeeId?: string;
+    stage?: RecruitmentReferralStage;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+    const records = await prisma.recruitmentReferral.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.referrerEmployeeId ? { referrerEmployeeId: input.referrerEmployeeId } : {}),
+        ...(input.stage ? { stage: input.stage } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+
+    return records.map(toRecruitmentReferralEntity);
+  }
+};
+
 const payroll: PayrollStore = {
   async create(input: CreatePayrollRunInput) {
     const run = await prisma.payrollRun.create({
@@ -2422,6 +2579,7 @@ export const prismaDataAccess: DataAccess = {
   leavePolicy,
   leaveBalance,
   leavePromotionDeliveries,
+  recruitment,
   notices,
   noticeReadReceipts,
   noticeNotifications,

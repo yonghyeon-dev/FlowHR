@@ -1,9 +1,19 @@
-﻿import type {
+import type {
+  DataAccess,
+  RecruitmentOpeningEntity,
+  RecruitmentReferralEntity
+} from "@/features/shared/data-access";
+import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
+import type {
   RecruitmentOpeningItem,
   RecruitmentOpeningStatus,
   RecruitmentReferralItem,
   RecruitmentReferralStage
 } from "@/features/recruitment/types";
+
+type RecruitmentStoreContext = {
+  dataAccess: Pick<DataAccess, "recruitment">;
+};
 
 type ListOpeningsInput = {
   organizationId?: string;
@@ -44,47 +54,8 @@ type WithdrawReferralInput = {
 };
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
-
-const initialOpeningsStore: RecruitmentOpeningItem[] = [
-  {
-    id: "OPENING-1001",
-    organizationId: DEFAULT_ORG_ID,
-    title: "백엔드 엔지니어",
-    department: "플랫폼",
-    employmentType: "정규직",
-    status: "OPEN",
-    createdAt: "2026-02-01T00:00:00.000Z",
-    updatedAt: "2026-02-01T00:00:00.000Z"
-  },
-  {
-    id: "OPENING-1002",
-    organizationId: DEFAULT_ORG_ID,
-    title: "프로덕트 디자이너",
-    department: "제품",
-    employmentType: "정규직",
-    status: "OPEN",
-    createdAt: "2026-02-04T00:00:00.000Z",
-    updatedAt: "2026-02-04T00:00:00.000Z"
-  }
-];
-
-const initialReferralsStore: RecruitmentReferralItem[] = [
-  {
-    id: "REFERRAL-1001",
-    organizationId: DEFAULT_ORG_ID,
-    openingId: "OPENING-1001",
-    candidateName: "김민준",
-    candidateEmail: "minjun@example.com",
-    referrerEmployeeId: "EMP-1001",
-    note: "대규모 트래픽 서비스 운영 경험 보유",
-    stage: "SCREENING",
-    createdAt: "2026-02-21T03:10:00.000Z",
-    updatedAt: "2026-02-22T02:00:00.000Z"
-  }
-];
-
-const openingsStore: RecruitmentOpeningItem[] = [...initialOpeningsStore];
-const referralsStore: RecruitmentReferralItem[] = [...initialReferralsStore];
+const initialOpeningsStore: RecruitmentOpeningItem[] = [];
+const initialReferralsStore: RecruitmentReferralItem[] = [];
 
 function normalizeStatus<T extends string>(status: T | "all" | undefined) {
   return status && status !== "all" ? status : null;
@@ -94,102 +65,157 @@ function resolveOrganizationId(organizationId?: string) {
   return organizationId?.trim() || DEFAULT_ORG_ID;
 }
 
-function nextId(prefix: string) {
-  const stamp = Date.now();
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `${prefix}-${stamp}-${random}`;
+function toOpeningItem(entity: RecruitmentOpeningEntity): RecruitmentOpeningItem {
+  return {
+    id: entity.id,
+    organizationId: entity.organizationId,
+    title: entity.title,
+    department: entity.department,
+    employmentType: entity.employmentType,
+    status: entity.status,
+    createdAt: entity.createdAt.toISOString(),
+    updatedAt: entity.updatedAt.toISOString()
+  };
 }
 
-export function listRecruitmentOpenings(input: ListOpeningsInput = {}) {
+function toReferralItem(entity: RecruitmentReferralEntity): RecruitmentReferralItem {
+  return {
+    id: entity.id,
+    organizationId: entity.organizationId,
+    openingId: entity.openingId,
+    candidateName: entity.candidateName,
+    candidateEmail: entity.candidateEmail,
+    referrerEmployeeId: entity.referrerEmployeeId,
+    note: entity.note,
+    stage: entity.stage,
+    createdAt: entity.createdAt.toISOString(),
+    updatedAt: entity.updatedAt.toISOString()
+  };
+}
+
+function resolveContext(context?: RecruitmentStoreContext): RecruitmentStoreContext {
+  if (context) {
+    return context;
+  }
+  return {
+    dataAccess: getRuntimeDataAccess()
+  };
+}
+
+export function listRecruitmentOpenings(input: ListOpeningsInput = {}, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  void initialOpeningsStore;
   const organizationId = resolveOrganizationId(input.organizationId);
   const status = normalizeStatus(input.status);
-  return openingsStore
-    .filter((opening) => opening.organizationId === organizationId)
-    .filter((opening) => (status ? opening.status === status : true))
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  return dataAccess.recruitment
+    .listOpenings({
+      organizationId,
+      status: status ?? undefined,
+      limit: 5000
+    })
+    .then((rows) => rows.map(toOpeningItem));
 }
 
-export function createRecruitmentOpening(input: CreateOpeningInput) {
-  const now = new Date().toISOString();
-  const next: RecruitmentOpeningItem = {
-    id: nextId("OPENING"),
-    organizationId: resolveOrganizationId(input.organizationId),
-    title: input.title.trim(),
-    department: input.department.trim(),
-    employmentType: input.employmentType.trim(),
-    status: input.status ?? "OPEN",
-    createdAt: now,
-    updatedAt: now
-  };
-  openingsStore.unshift(next);
-  return next;
+export function createRecruitmentOpening(input: CreateOpeningInput, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  const now = new Date();
+  return dataAccess.recruitment
+    .createOpening({
+      organizationId: resolveOrganizationId(input.organizationId),
+      title: input.title.trim(),
+      department: input.department.trim(),
+      employmentType: input.employmentType.trim(),
+      status: input.status ?? "OPEN",
+      createdAt: now,
+      updatedAt: now
+    })
+    .then(toOpeningItem);
 }
 
-export function listRecruitmentReferrals(input: ListReferralsInput = {}) {
+export function listRecruitmentReferrals(input: ListReferralsInput = {}, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  void initialReferralsStore;
   const organizationId = resolveOrganizationId(input.organizationId);
   const stage = normalizeStatus(input.stage);
-  return referralsStore
-    .filter((referral) => referral.organizationId === organizationId)
-    .filter((referral) => (input.referrerEmployeeId ? referral.referrerEmployeeId === input.referrerEmployeeId : true))
-    .filter((referral) => (stage ? referral.stage === stage : true))
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  return dataAccess.recruitment
+    .listReferrals({
+      organizationId,
+      referrerEmployeeId: input.referrerEmployeeId,
+      stage: stage ?? undefined,
+      limit: 5000
+    })
+    .then((rows) => rows.map(toReferralItem));
 }
 
-export function createRecruitmentReferral(input: CreateReferralInput) {
-  const now = new Date().toISOString();
-  const next: RecruitmentReferralItem = {
-    id: nextId("REFERRAL"),
-    organizationId: resolveOrganizationId(input.organizationId),
-    openingId: input.openingId,
-    candidateName: input.candidateName.trim(),
-    candidateEmail: input.candidateEmail.trim(),
-    referrerEmployeeId: input.referrerEmployeeId,
-    note: input.note.trim(),
-    stage: "SUBMITTED",
-    createdAt: now,
-    updatedAt: now
-  };
-  referralsStore.unshift(next);
-  return next;
+export function createRecruitmentReferral(input: CreateReferralInput, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  const now = new Date();
+  return dataAccess.recruitment
+    .createReferral({
+      organizationId: resolveOrganizationId(input.organizationId),
+      openingId: input.openingId,
+      candidateName: input.candidateName.trim(),
+      candidateEmail: input.candidateEmail.trim(),
+      referrerEmployeeId: input.referrerEmployeeId,
+      note: input.note.trim(),
+      stage: "SUBMITTED",
+      createdAt: now,
+      updatedAt: now
+    })
+    .then(toReferralItem);
 }
 
-export function updateRecruitmentReferralStage(input: UpdateReferralStageInput) {
-  const target = referralsStore.find((referral) => referral.id === input.referralId);
-  if (!target) {
-    return null;
-  }
-
-  const now = new Date().toISOString();
-  target.stage = input.stage;
-  target.updatedAt = now;
-  return target;
+export function updateRecruitmentReferralStage(input: UpdateReferralStageInput, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  return dataAccess.recruitment
+    .findReferralById(input.referralId)
+    .then((existing) => {
+      if (!existing) {
+        return null;
+      }
+      return dataAccess.recruitment
+        .updateReferral(existing.id, {
+          stage: input.stage,
+          updatedAt: new Date()
+        })
+        .then(toReferralItem);
+    });
 }
 
-export function withdrawRecruitmentReferral(input: WithdrawReferralInput) {
-  const target = referralsStore.find((referral) => referral.id === input.referralId);
-  if (!target) {
-    return null;
-  }
-  if (target.referrerEmployeeId !== input.actorId) {
-    return null;
-  }
-  if (!(target.stage === "SUBMITTED" || target.stage === "SCREENING")) {
-    return null;
-  }
-
-  target.stage = "WITHDRAWN";
-  target.updatedAt = new Date().toISOString();
-  return target;
+export function withdrawRecruitmentReferral(input: WithdrawReferralInput, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  return dataAccess.recruitment
+    .findReferralById(input.referralId)
+    .then((existing) => {
+      if (!existing) {
+        return null;
+      }
+      if (existing.referrerEmployeeId !== input.actorId) {
+        return null;
+      }
+      if (!(existing.stage === "SUBMITTED" || existing.stage === "SCREENING")) {
+        return null;
+      }
+      // target.stage = "WITHDRAWN"
+      return dataAccess.recruitment
+        .updateReferral(existing.id, {
+          stage: "WITHDRAWN",
+          updatedAt: new Date()
+        })
+        .then(toReferralItem);
+    });
 }
 
-export function findRecruitmentOpening(openingId: string) {
-  return openingsStore.find((opening) => opening.id === openingId) ?? null;
+export function findRecruitmentOpening(openingId: string, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  return dataAccess.recruitment.findOpeningById(openingId).then((entity) => (entity ? toOpeningItem(entity) : null));
 }
 
-export function findRecruitmentReferral(referralId: string) {
-  return referralsStore.find((referral) => referral.id === referralId) ?? null;
+export function findRecruitmentReferral(referralId: string, context?: RecruitmentStoreContext) {
+  const dataAccess = resolveContext(context).dataAccess;
+  return dataAccess.recruitment
+    .findReferralById(referralId)
+    .then((entity) => (entity ? toReferralItem(entity) : null));
 }
 
 export function summarizeRecruitmentReferrals(items: RecruitmentReferralItem[]) {

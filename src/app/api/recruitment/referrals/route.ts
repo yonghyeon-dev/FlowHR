@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
   const actor = await readActor(request);
   const isReviewer = canReviewReferrals(actor?.role);
-  const referrals = listRecruitmentReferrals({
+  const referrals = await listRecruitmentReferrals({
     organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
     referrerEmployeeId: isReviewer ? parsed.data.referrerEmployeeId : parsed.data.referrerEmployeeId ?? actor?.id,
     stage: parsed.data.stage
@@ -58,14 +58,14 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  if (!findRecruitmentOpening(parsed.data.openingId)) {
+  if (!(await findRecruitmentOpening(parsed.data.openingId))) {
     return fail(404, "recruitment.opening.not_found", {
       openingId: parsed.data.openingId
     });
   }
 
   const referrerEmployeeId = canReviewReferrals(actor.role) ? parsed.data.referrerEmployeeId : actor.id;
-  const created = createRecruitmentReferral({
+  const created = await createRecruitmentReferral({
     organizationId: parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID,
     openingId: parsed.data.openingId,
     candidateName: parsed.data.candidateName,
