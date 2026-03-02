@@ -1079,3 +1079,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0788 employee priority-action next-route mapping (extend /employee priority-action panel with section-to-workspace route resolver and secondary related-workspace CTA for attendance/leave/resubmit flows + e2e-wi0788 regression guard)
 
 - WI-0789 employee focus-query priority route (add ?focus section resolver + allow-list/alias normalization for /employee page-load jump, and switch priority-action related-workspace links to focus-query routes with e2e-wi0789 regression guard)
+
+- WI-0790 employee layout focus-query navigation (switch /employee in-page nav links from hash anchors to ?focus routes across mobile/sidebar menus, add account focus allow-list support, and lock with e2e-wi0790 regression guard)
