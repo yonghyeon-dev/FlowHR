@@ -1093,3 +1093,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0795 employee layout dev admin label clarity (change employee nav admin copy to explicit dev-only labels in ko/en locale maps while preserving showDevTools gate in mobile/sidebar layout, and lock with e2e-wi0795 regression guard)
 
 - WI-0796 admin analytics onboarding KPI panel (add onboarding snapshot panel in /admin/analytics with active employee count, invite coverage, contract response coverage, and readiness score from people/invites/contracts APIs, with e2e-wi0796 regression guard)
+
+- WI-0797 admin analytics benefits KPI panel (add benefits snapshot panel in /admin/analytics with submitted/approved/rejected counts, 3-day aging submitted risk, and over-limit submitted count from benefits catalog/requests APIs, with e2e-wi0797 regression guard)
