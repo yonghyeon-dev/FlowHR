@@ -84,11 +84,11 @@ export function EmployeeDashboardChrome({
           <strong>{pendingLeaveCount}</strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "API 성공률" : "API success rate"}</p>
+          <p>{isKoLocale ? "요청 처리 성공률" : "Request success rate"}</p>
           <strong>{stats.successRate}%</strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "최근 실행" : "Latest Call"}</p>
+          <p>{isKoLocale ? "최근 처리 작업" : "Latest activity"}</p>
           <strong>{pendingLabel ?? "-"}</strong>
         </article>
       </section>
