@@ -269,6 +269,17 @@ export default function AdminDashboardPage() {
             ? "관리자 홈에서는 요약만 확인하고, 상세 작업은 각 전용 워크스페이스에서 처리하세요."
             : "Use the dashboard for summary only and continue detailed work in dedicated routes."}
         </p>
+        <div className="actions">
+          <Link className="btn btn-secondary" href="/admin/people">
+            {isKoLocale ? "인사 워크스페이스" : "People workspace"}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/scheduling">
+            {isKoLocale ? "근무 일정" : "Scheduling"}
+          </Link>
+          <Link className="btn btn-secondary" href="/admin/payroll-year-end">
+            {isKoLocale ? "연말정산" : "Year-end payroll"}
+          </Link>
+        </div>
       </section>
 
       <section className="panel-grid">
