@@ -1,5 +1,5 @@
-import { updateNoticeSchema } from "@/features/notices/schemas";
-import { updateNotice } from "@/features/notices/store";
+import { deleteNoticeSchema, updateNoticeSchema } from "@/features/notices/schemas";
+import { deleteNotice, updateNotice } from "@/features/notices/store";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
@@ -65,6 +65,40 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!result.notice) {
     if (result.reason === "published_locked") {
       return fail(409, "notice.update.published_locked");
+    }
+    return fail(404, "notice.not_found");
+  }
+
+  return ok({ notice: result.notice });
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const actor = await readActor(request);
+  if (!canManageNotices(actor?.role)) {
+    return fail(403, "notice.delete.forbidden", {
+      reason: "admin_or_manager_required"
+    });
+  }
+
+  const { noticeId } = await context.params;
+  const parsed = deleteNoticeSchema.safeParse({ noticeId });
+  if (!parsed.success) {
+    return fail(400, "invalid payload", parsed.error.flatten());
+  }
+
+  const result = await deleteNotice(
+    { dataAccess: getRuntimeDataAccess() },
+    {
+      organizationId: actor?.organizationId ?? DEFAULT_ORG_ID,
+      noticeId: parsed.data.noticeId,
+      actorId: actor?.id,
+      actorRole: actor?.role ?? "admin"
+    }
+  );
+
+  if (!result.notice) {
+    if (result.reason === "published_locked") {
+      return fail(409, "notice.delete.published_locked");
     }
     return fail(404, "notice.not_found");
   }

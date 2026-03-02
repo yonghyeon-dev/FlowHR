@@ -23,6 +23,7 @@ export type NoticeWorkspaceCopy = {
   editTitle?: string;
   editingBadge?: string;
   publishAction: string;
+  deleteAction?: string;
   listTitle: string;
   listEmpty: string;
   listSearchLabel: string;
@@ -68,6 +69,9 @@ export type NoticeWorkspaceCopy = {
     created: string;
     updated?: string;
     published: string;
+    deleted?: string;
+    deleteFailed?: string;
+    deletePublishedLocked?: string;
     loadFailed: string;
   };
 };
@@ -161,6 +165,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     editTitle: "공지 수정",
     editingBadge: "수정 중",
     publishAction: "즉시 게시",
+    deleteAction: "삭제",
     listTitle: "공지 목록",
     listEmpty: "조건에 맞는 공지가 없습니다.",
     listSearchLabel: "공지 검색",
@@ -206,6 +211,9 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       created: "공지를 저장했습니다.",
       updated: "공지를 수정했습니다.",
       published: "공지를 게시했습니다.",
+      deleted: "공지를 삭제했습니다.",
+      deleteFailed: "공지 삭제에 실패했습니다.",
+      deletePublishedLocked: "게시된 공지는 삭제할 수 없습니다.",
       loadFailed: "공지 목록 조회에 실패했습니다."
     }
   },
@@ -231,6 +239,7 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     editTitle: "Edit notice",
     editingBadge: "Editing",
     publishAction: "Publish now",
+    deleteAction: "Delete",
     listTitle: "Notice list",
     listEmpty: "No notice found for current filters.",
     listSearchLabel: "Notice search",
@@ -276,6 +285,9 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       created: "Notice saved.",
       updated: "Notice updated.",
       published: "Notice published.",
+      deleted: "Notice deleted.",
+      deleteFailed: "Failed to delete notice.",
+      deletePublishedLocked: "Published notice cannot be deleted.",
       loadFailed: "Failed to load notices."
     }
   }

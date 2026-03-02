@@ -1197,6 +1197,7 @@ export interface NoticeStore {
   create(input: CreateNoticeInput): Promise<NoticeEntity>;
   findById(id: string): Promise<NoticeEntity | null>;
   update(id: string, input: UpdateNoticeInput): Promise<NoticeEntity>;
+  delete(id: string): Promise<NoticeEntity>;
   list(input: {
     organizationId: string;
     audience?: NoticeAudience;

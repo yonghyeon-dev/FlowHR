@@ -2054,6 +2054,15 @@ export const memoryDataAccess: DataAccess = {
       return cloneNotice(updated);
     },
 
+    async delete(id: string) {
+      const existing = state.notices.get(id);
+      if (!existing) {
+        throw new Error(`notice not found: ${id}`);
+      }
+      state.notices.delete(id);
+      return cloneNotice(existing);
+    },
+
     async list(input: {
       organizationId: string;
       audience?: NoticeAudience;

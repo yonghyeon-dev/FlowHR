@@ -1042,3 +1042,4 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0766 admin dashboard korean copy normalization (normalize corrupted Korean runtime copy in /admin dashboard and page-focus-copy helpers, and refresh e2e copy guard to assert readable KO labels while blocking prior mojibake tokens)
 
 - WI-0767 ko runtime fallback sweep for withholding/payslip/contracts (localize payslip filename invalid-year fallback to 미확인 in ko runtime, and add e2e-wi0767 guard that locks ko fallback normalization for payslip diagnostics, withholding activity/runtime diagnostics, and contracts title/evidence filename normalization)
+- WI-0768 notices draft/scheduled delete (add DELETE /api/notices/{noticeId} for admin/manager draft/scheduled deletion, lock published notices with 409 notice.delete.published_locked, persist notice.deleted audit trail, and wire /admin/notices list delete action + e2e-wi0768 regression guard)

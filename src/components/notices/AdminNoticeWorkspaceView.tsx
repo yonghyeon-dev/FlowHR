@@ -62,6 +62,7 @@ type AdminNoticeWorkspaceViewProps = {
   onStartEditNotice: (noticeId: string) => void;
   onCancelEditNotice: () => void;
   onPublishNow: (noticeId: string) => void;
+  onDeleteNotice: (noticeId: string) => void;
 };
 
 function isReadCoverageRisk(notice: NoticeItem, readCountByNoticeId: Map<string, number>) {
@@ -102,7 +103,8 @@ export default function AdminNoticeWorkspaceView({
   onCreateNotice,
   onStartEditNotice,
   onCancelEditNotice,
-  onPublishNow
+  onPublishNow,
+  onDeleteNotice
 }: AdminNoticeWorkspaceViewProps) {
   const publishedWithoutReadCount = notices.filter((notice) => isReadCoverageRisk(notice, readCountByNoticeId)).length;
 
@@ -289,6 +291,15 @@ export default function AdminNoticeWorkspaceView({
                           onClick={() => onPublishNow(notice.id)}
                         >
                           {copy.publishAction}
+                        </button>
+                      )}
+                      {notice.status === "PUBLISHED" ? null : (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => onDeleteNotice(notice.id)}
+                        >
+                          {copy.deleteAction ?? "Delete"}
                         </button>
                       )}
                     </span>
