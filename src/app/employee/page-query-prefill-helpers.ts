@@ -5,6 +5,28 @@ type SearchParamsLike = {
 };
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const EMPLOYEE_FOCUS_SECTIONS = new Set([
+  "self-service-overview",
+  "submit-checklist",
+  "attendance",
+  "leave",
+  "leave-calendar",
+  "schedule",
+  "request-feedback",
+  "request-search-sort",
+  "request-timeline",
+  "request-resubmit"
+]);
+
+const EMPLOYEE_FOCUS_ALIASES: Record<string, string> = {
+  overview: "self-service-overview",
+  checklist: "submit-checklist",
+  correction: "attendance",
+  "attendance-correction": "attendance",
+  vacation: "leave",
+  resubmit: "request-resubmit",
+  timeline: "request-timeline"
+};
 
 export type AttendanceCorrectionSchedulePrefill = {
   key: string;
@@ -41,6 +63,20 @@ function buildScheduleCorrectionNote(
   return isKoLocale
     ? `${correctionRequestNote} (${rangeLabel})`
     : `Schedule ${correctionRequestNote.toLowerCase()} (${rangeLabel})`;
+}
+
+export function resolveEmployeeFocusSectionId(
+  searchParams: SearchParamsLike
+): string | null {
+  const rawFocus = searchParams.get("focus")?.trim().toLowerCase() ?? "";
+  if (!rawFocus) {
+    return null;
+  }
+  const normalizedFocus = EMPLOYEE_FOCUS_ALIASES[rawFocus] ?? rawFocus;
+  if (!EMPLOYEE_FOCUS_SECTIONS.has(normalizedFocus)) {
+    return null;
+  }
+  return normalizedFocus;
 }
 
 export function resolveAttendanceCorrectionSchedulePrefill(input: {

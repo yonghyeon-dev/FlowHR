@@ -2,10 +2,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEmployeeDashboardDerivedState } from "@/app/employee/page-dashboard-derived-state";
 import { buildEmployeeMutationRuntime } from "@/app/employee/page-mutation-runtime";
-import { buildEmployeeInteractionHandlers } from "@/app/employee/page-interaction-actions";
+import { buildEmployeeInteractionHandlers, jumpToSectionAction } from "@/app/employee/page-interaction-actions";
 import { useEmployeeInteractionOrchestratorInput } from "@/app/employee/page-interaction-orchestrator";
 import {
-  resolveAttendanceCorrectionSchedulePrefill
+  resolveAttendanceCorrectionSchedulePrefill,
+  resolveEmployeeFocusSectionId
 } from "@/app/employee/page-query-prefill-helpers";
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import { buildEmployeeInteractionSetterBundles } from "@/app/employee/page-interaction-setter-bundles";
@@ -58,9 +59,14 @@ export default function EmployeeSelfServicePage() {
       }),
     [searchParams, correctionRequestNote, isKoLocale]
   );
+  const focusSectionId = useMemo(
+    () => resolveEmployeeFocusSectionId(searchParams),
+    [searchParams]
+  );
   const appliedAttendanceSchedulePrefillRef = useRef<{ baseKey: string | null; selectedTargetKey: string | null }>(
     { baseKey: null, selectedTargetKey: null }
   );
+  const appliedFocusSectionRef = useRef<string | null>(null);
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
   const [checkInAt, setCheckInAt] = useState(todayStartLocal());
@@ -302,6 +308,20 @@ export default function EmployeeSelfServicePage() {
   const { applyAttendanceRecordToCorrectionForm, applyLatestAttendanceToCorrectionForm, applyLatestResubmitCandidate, applyLeaveQuickPreset, applyResubmitCandidateToDraft, applySelectedCorrectionRecord, applySelectedResubmitCandidate, clearResubmitSelection, copyFailureCause, jumpToSection, moveCalendarMonth, openPendingRequestSearch, prefillLeaveFormFromCalendarDate, resetCalendarToCurrentMonth, selectCorrectionTarget } = buildEmployeeInteractionHandlers({
     ...interactionOrchestratorInput
   });
+  useEffect(() => {
+    if (!focusSectionId) {
+      appliedFocusSectionRef.current = null;
+      return;
+    }
+    if (appliedFocusSectionRef.current === focusSectionId) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      jumpToSectionAction(focusSectionId);
+    }, 0);
+    appliedFocusSectionRef.current = focusSectionId;
+    return () => window.clearTimeout(timeoutId);
+  }, [focusSectionId]);
   useApplyAttendanceSchedulePrefillEffect({
     attendanceSchedulePrefill,
     attendance,
