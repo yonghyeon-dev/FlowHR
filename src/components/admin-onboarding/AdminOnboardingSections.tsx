@@ -63,6 +63,8 @@ type SetupPanelsProps = {
   pendingContractDraftCount: number;
   approvalRequestedContractEmployeeCount: number;
   pendingContractApprovalRequestCount: number;
+  approvedContractEmployeeCount: number;
+  pendingContractApprovalDecisionCount: number;
   onSetDepartmentSeedInput: (value: string) => void;
   onSetEmployeeSeedInput: (value: string) => void;
   onSetAnnualGrantDays: (value: string) => void;
@@ -79,6 +81,7 @@ type SetupPanelsProps = {
   onBootstrapEmploymentContractTemplate: () => void;
   onCreatePendingContractDrafts: () => void;
   onRequestPendingContractApprovals: () => void;
+  onApprovePendingContractApprovals: () => void;
 };
 export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
   const {
@@ -104,6 +107,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     pendingContractDraftCount,
     approvalRequestedContractEmployeeCount,
     pendingContractApprovalRequestCount,
+    approvedContractEmployeeCount,
+    pendingContractApprovalDecisionCount,
     onSetDepartmentSeedInput,
     onSetEmployeeSeedInput,
     onSetAnnualGrantDays,
@@ -119,7 +124,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     onIssuePendingEmployeeInvites,
     onBootstrapEmploymentContractTemplate,
     onCreatePendingContractDrafts,
-    onRequestPendingContractApprovals
+    onRequestPendingContractApprovals,
+    onApprovePendingContractApprovals
   } = props;
   return (
     <section className="panel-grid">
@@ -214,36 +220,20 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
       <article className="panel">
         <h2>{copy.contractTemplateTitle}</h2>
         <p className="small muted">{copy.contractTemplateDescription}</p>
-        <p className="small">
-          {copy.contractTemplateCountLabel}: <strong>{activeContractTemplateCount}</strong>{" "}
-          <span className={activeContractTemplateCount > 0 ? "ok" : "fail"}>
-            {activeContractTemplateCount > 0 ? copy.contractTemplateReadyLabel : copy.contractTemplateMissingLabel}
-          </span>
-        </p>
-        <p className="small">
-          {copy.contractDraftCoverageLabel}: <strong>{preparedContractDraftEmployeeCount}</strong> /{" "}
-          <strong>{activeEmployeeCount}</strong> · {copy.contractDraftPendingLabel}:{" "}
-          <strong>{pendingContractDraftCount}</strong>{" "}
-          <span className={pendingContractDraftCount === 0 && activeEmployeeCount > 0 ? "ok" : "fail"}>
-            {pendingContractDraftCount === 0 && activeEmployeeCount > 0 ? copy.contractDraftReadyLabel : copy.contractDraftMissingLabel}
-          </span>
-        </p>
-        <p className="small">
-          {copy.contractApprovalCoverageLabel}: <strong>{approvalRequestedContractEmployeeCount}</strong> /{" "}
-          <strong>{preparedContractDraftEmployeeCount}</strong> · {copy.contractApprovalPendingLabel}:{" "}
-          <strong>{pendingContractApprovalRequestCount}</strong>{" "}
-          <span className={pendingContractApprovalRequestCount === 0 && preparedContractDraftEmployeeCount > 0 ? "ok" : "fail"}>
-            {pendingContractApprovalRequestCount === 0 && preparedContractDraftEmployeeCount > 0 ? copy.contractApprovalReadyLabel : copy.contractApprovalMissingLabel}
-          </span>
-        </p>
+        <p className="small">{copy.contractTemplateCountLabel}: <strong>{activeContractTemplateCount}</strong>{" "} <span className={activeContractTemplateCount > 0 ? "ok" : "fail"}>{activeContractTemplateCount > 0 ? copy.contractTemplateReadyLabel : copy.contractTemplateMissingLabel}</span></p>
+        <p className="small">{copy.contractDraftCoverageLabel}: <strong>{preparedContractDraftEmployeeCount}</strong> / <strong>{activeEmployeeCount}</strong> · {copy.contractDraftPendingLabel}: <strong>{pendingContractDraftCount}</strong>{" "} <span className={pendingContractDraftCount === 0 && activeEmployeeCount > 0 ? "ok" : "fail"}>{pendingContractDraftCount === 0 && activeEmployeeCount > 0 ? copy.contractDraftReadyLabel : copy.contractDraftMissingLabel}</span></p>
+        <p className="small">{copy.contractApprovalCoverageLabel}: <strong>{approvalRequestedContractEmployeeCount}</strong> / <strong>{preparedContractDraftEmployeeCount}</strong> · {copy.contractApprovalPendingLabel}: <strong>{pendingContractApprovalRequestCount}</strong>{" "} <span className={pendingContractApprovalRequestCount === 0 && preparedContractDraftEmployeeCount > 0 ? "ok" : "fail"}>{pendingContractApprovalRequestCount === 0 && preparedContractDraftEmployeeCount > 0 ? copy.contractApprovalReadyLabel : copy.contractApprovalMissingLabel}</span></p>
+        <p className="small">{copy.contractApprovalDecisionCoverageLabel}: <strong>{approvedContractEmployeeCount}</strong> / <strong>{approvalRequestedContractEmployeeCount}</strong> · {copy.contractApprovalDecisionPendingLabel}: <strong>{pendingContractApprovalDecisionCount}</strong>{" "} <span className={pendingContractApprovalDecisionCount === 0 && approvalRequestedContractEmployeeCount > 0 ? "ok" : "fail"}>{pendingContractApprovalDecisionCount === 0 && approvalRequestedContractEmployeeCount > 0 ? copy.contractApprovalDecisionReadyLabel : copy.contractApprovalDecisionMissingLabel}</span></p>
         <div className="actions">
           <button className="btn btn-primary" onClick={onBootstrapEmploymentContractTemplate} disabled={activeContractTemplateCount > 0}>{copy.contractTemplateBootstrapButton}</button>
           <button className="btn btn-secondary" onClick={onCreatePendingContractDrafts} disabled={activeContractTemplateCount === 0 || pendingContractDraftCount === 0}>{copy.contractDraftIssueButton}</button>
           <button className="btn btn-secondary" onClick={onRequestPendingContractApprovals} disabled={preparedContractDraftEmployeeCount === 0 || pendingContractApprovalRequestCount === 0}>{copy.contractApprovalIssueButton}</button>
+          <button className="btn btn-secondary" onClick={onApprovePendingContractApprovals} disabled={approvalRequestedContractEmployeeCount === 0 || pendingContractApprovalDecisionCount === 0}>{copy.contractApprovalDecisionIssueButton}</button>
         </div>
         <p className="small muted">{copy.contractTemplateBootstrapHint}</p>
         <p className="small muted">{copy.contractDraftIssueHint}</p>
         <p className="small muted">{copy.contractApprovalIssueHint}</p>
+        <p className="small muted">{copy.contractApprovalDecisionIssueHint}</p>
       </article>
     </section>
   );

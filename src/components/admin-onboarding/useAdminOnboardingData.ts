@@ -28,6 +28,7 @@ type ContractDocumentLite = {
   id: string;
   employeeId: string;
   status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED";
+  approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
 };
 type AuthInviteLite = { email: string };
 type LeavePolicyLite = {
@@ -56,6 +57,7 @@ type UseAdminOnboardingDataInput = {
     createContractTemplate: string;
     createContractDocumentPrefix: string;
     requestContractApprovalPrefix: string;
+    approveContractPrefix: string;
     upsertLeavePolicy: string;
   };
 };
@@ -77,7 +79,11 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   const [preparedContractDraftEmployeeIds, setPreparedContractDraftEmployeeIds] = useState<string[]>([]);
   const [preparedContractDraftEmployeeCount, setPreparedContractDraftEmployeeCount] = useState(0);
   const [approvalRequestedContractEmployeeCount, setApprovalRequestedContractEmployeeCount] = useState(0);
+  const [approvedContractEmployeeCount, setApprovedContractEmployeeCount] = useState(0);
   const [pendingContractApprovalRequestDocumentIds, setPendingContractApprovalRequestDocumentIds] = useState<
+    string[]
+  >([]);
+  const [pendingContractApprovalDecisionDocumentIds, setPendingContractApprovalDecisionDocumentIds] = useState<
     string[]
   >([]);
   const [leavePolicyConfigured, setLeavePolicyConfigured] = useState(false);
@@ -186,7 +192,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
         setPreparedContractDraftEmployeeIds([]);
         setPreparedContractDraftEmployeeCount(0);
         setApprovalRequestedContractEmployeeCount(0);
+        setApprovedContractEmployeeCount(0);
         setPendingContractApprovalRequestDocumentIds([]);
+        setPendingContractApprovalDecisionDocumentIds([]);
         setLeavePolicyConfigured(false);
         return;
       }
@@ -247,6 +255,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       ).length;
       const preparedStatusSet = new Set(["DRAFT", "APPROVAL_REQUESTED", "SENT", "SIGNED", "RENEWED"]);
       const approvalRequestedStatusSet = new Set(["APPROVAL_REQUESTED", "SENT", "SIGNED", "RENEWED"]);
+      const approvalDecidedStatusSet = new Set(["SENT", "SIGNED", "RENEWED"]);
       const preparedEmployeeSet = new Set(
         contractDocumentRows
           .filter((row) => preparedStatusSet.has(row.status))
@@ -260,9 +269,29 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       const pendingApprovalEmployeeSet = new Set(
         Array.from(preparedEmployeeSet).filter((employeeId) => !approvalRequestedEmployeeSet.has(employeeId))
       );
+      const approvalDecidedEmployeeSet = new Set(
+        contractDocumentRows
+          .filter(
+            (row) =>
+              approvalDecidedStatusSet.has(row.status) ||
+              (row.status === "DRAFT" && row.approvalStatus === "APPROVED")
+          )
+          .map((row) => row.employeeId)
+      );
+      const pendingApprovalDecisionEmployeeSet = new Set(
+        Array.from(approvalRequestedEmployeeSet).filter(
+          (employeeId) => !approvalDecidedEmployeeSet.has(employeeId)
+        )
+      );
       const pendingApprovalDraftByEmployee = new Map<string, string>();
+      const pendingApprovalDecisionByEmployee = new Map<string, string>();
       for (const row of contractDocumentRows) {
         if (row.status !== "DRAFT") {
+          if (row.status === "APPROVAL_REQUESTED" && pendingApprovalDecisionEmployeeSet.has(row.employeeId)) {
+            if (!pendingApprovalDecisionByEmployee.has(row.employeeId)) {
+              pendingApprovalDecisionByEmployee.set(row.employeeId, row.id);
+            }
+          }
           continue;
         }
         if (!pendingApprovalEmployeeSet.has(row.employeeId)) {
@@ -277,6 +306,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       const approvalRequestedEmployeeCount = employeeRows.filter((employee) =>
         approvalRequestedEmployeeSet.has(employee.id)
       ).length;
+      const approvalDecidedEmployeeCount = employeeRows.filter((employee) =>
+        approvalDecidedEmployeeSet.has(employee.id)
+      ).length;
 
       setDepartments(departmentRows.map((row) => ({ id: row.id, code: row.code, name: row.name })));
       setActiveEmployees(employeeRows);
@@ -289,7 +321,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       setPreparedContractDraftEmployeeIds(Array.from(preparedEmployeeSet));
       setPreparedContractDraftEmployeeCount(preparedEmployeeCount);
       setApprovalRequestedContractEmployeeCount(approvalRequestedEmployeeCount);
+      setApprovedContractEmployeeCount(approvalDecidedEmployeeCount);
       setPendingContractApprovalRequestDocumentIds(Array.from(pendingApprovalDraftByEmployee.values()));
+      setPendingContractApprovalDecisionDocumentIds(Array.from(pendingApprovalDecisionByEmployee.values()));
 
       if (policy) {
         setAnnualGrantDays(String(policy.annualGrantDays));
@@ -326,6 +360,10 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   const pendingContractApprovalRequestCount = Math.max(
     0,
     preparedContractDraftEmployeeCount - approvalRequestedContractEmployeeCount
+  );
+  const pendingContractApprovalDecisionCount = Math.max(
+    0,
+    approvalRequestedContractEmployeeCount - approvedContractEmployeeCount
   );
   const inviteCoverageDone = inviteEligibleEmployeeCount > 0 && pendingInviteCount === 0;
 
@@ -483,6 +521,28 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     requestJson
   ]);
 
+  const approvePendingContractApprovals = useCallback(async () => {
+    if (pendingContractApprovalDecisionDocumentIds.length === 0) {
+      return;
+    }
+    for (const documentId of pendingContractApprovalDecisionDocumentIds) {
+      await requestJson(
+        `${input.requestLabels.approveContractPrefix} ${documentId}`,
+        `/api/contracts/documents/${encodeURIComponent(documentId)}/approval`,
+        {
+          method: "POST",
+          body: { action: "APPROVE" }
+        }
+      );
+    }
+    await loadSetup();
+  }, [
+    input.requestLabels.approveContractPrefix,
+    loadSetup,
+    pendingContractApprovalDecisionDocumentIds,
+    requestJson
+  ]);
+
   const applyLeavePolicy = useCallback(async () => {
     const targetOrganizationId = organizationId.trim();
     if (!targetOrganizationId) {
@@ -542,8 +602,10 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     pendingInviteCount,
     pendingContractDraftCount,
     pendingContractApprovalRequestCount,
+    pendingContractApprovalDecisionCount,
     preparedContractDraftEmployeeCount,
     approvalRequestedContractEmployeeCount,
+    approvedContractEmployeeCount,
     activeContractTemplateId,
     activeContractTemplateCount,
     adminActorId,
@@ -556,6 +618,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     issuePendingEmployeeInvites,
     createPendingContractDrafts,
     requestPendingContractApprovals,
+    approvePendingContractApprovals,
     bootstrapEmploymentContractTemplate,
     carryOverCapDays,
     checklistItems,

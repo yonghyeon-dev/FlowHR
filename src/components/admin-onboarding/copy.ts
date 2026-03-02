@@ -45,6 +45,12 @@ export type AdminOnboardingCopy = {
   contractApprovalMissingLabel: string;
   contractApprovalIssueButton: string;
   contractApprovalIssueHint: string;
+  contractApprovalDecisionCoverageLabel: string;
+  contractApprovalDecisionPendingLabel: string;
+  contractApprovalDecisionReadyLabel: string;
+  contractApprovalDecisionMissingLabel: string;
+  contractApprovalDecisionIssueButton: string;
+  contractApprovalDecisionIssueHint: string;
   checklistTitle: string;
   applyDepartmentsButton: string;
   applyEmployeesButton: string;
@@ -81,6 +87,7 @@ export type AdminOnboardingCopy = {
     createContractTemplate: string;
     createContractDocumentPrefix: string;
     requestContractApprovalPrefix: string;
+    approveContractPrefix: string;
     upsertLeavePolicy: string;
   };
   checklist: {
@@ -137,6 +144,12 @@ const defaultCopy: AdminOnboardingCopy = {
   contractApprovalMissingLabel: "Approval requests required",
   contractApprovalIssueButton: "Request pending approvals",
   contractApprovalIssueHint: "Requests approval for pending DRAFT employment contract documents.",
+  contractApprovalDecisionCoverageLabel: "Employees with approval completed",
+  contractApprovalDecisionPendingLabel: "Pending approval decision",
+  contractApprovalDecisionReadyLabel: "Approval decision coverage complete",
+  contractApprovalDecisionMissingLabel: "Approval decisions required",
+  contractApprovalDecisionIssueButton: "Approve pending requests",
+  contractApprovalDecisionIssueHint: "Approves pending contract approval requests for onboarding documents.",
   checklistTitle: "Setup checklist",
   applyDepartmentsButton: "Apply departments",
   applyEmployeesButton: "Apply employees",
@@ -173,6 +186,7 @@ const defaultCopy: AdminOnboardingCopy = {
     createContractTemplate: "create contract template",
     createContractDocumentPrefix: "create contract document",
     requestContractApprovalPrefix: "request contract approval",
+    approveContractPrefix: "approve contract",
     upsertLeavePolicy: "upsert leave policy"
   },
   checklist: {
@@ -231,6 +245,12 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
     contractApprovalMissingLabel: "승인요청 필요",
     contractApprovalIssueButton: "미요청 승인 일괄 요청",
     contractApprovalIssueHint: "DRAFT 상태 근로계약 문서에 대해 승인요청을 실행합니다.",
+    contractApprovalDecisionCoverageLabel: "승인완료 직원 수",
+    contractApprovalDecisionPendingLabel: "승인결정 필요 직원 수",
+    contractApprovalDecisionReadyLabel: "승인결정 커버리지 완료",
+    contractApprovalDecisionMissingLabel: "승인결정 필요",
+    contractApprovalDecisionIssueButton: "미결 승인 일괄 승인",
+    contractApprovalDecisionIssueHint: "승인요청 상태 계약 문서를 APPROVE로 처리합니다.",
     checklistTitle: "설정 체크리스트",
     applyDepartmentsButton: "부서 적용",
     applyEmployeesButton: "직원 적용",
@@ -267,6 +287,7 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
       createContractTemplate: "계약 템플릿 생성",
       createContractDocumentPrefix: "계약 문서 생성",
       requestContractApprovalPrefix: "계약 승인요청",
+      approveContractPrefix: "계약 승인처리",
       upsertLeavePolicy: "휴가 정책 저장"
     },
     checklist: {
