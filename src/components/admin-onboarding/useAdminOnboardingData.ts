@@ -23,6 +23,7 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 type OrganizationLite = { id: string; name: string };
 type DepartmentLite = { id: string; code: string; name: string };
 type EmployeeLite = { id: string };
+type ContractTemplateLite = { id: string };
 type LeavePolicyLite = {
   annualGrantDays: number;
   carryOverCapDays: number;
@@ -43,6 +44,7 @@ type UseAdminOnboardingDataInput = {
     leavePolicy: string;
     createDepartmentPrefix: string;
     createEmployeePrefix: string;
+    createContractTemplate: string;
     upsertLeavePolicy: string;
   };
 };
@@ -51,6 +53,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   const [organizations, setOrganizations] = useState<AdminOnboardingOrganizationOption[]>([]);
   const [departments, setDepartments] = useState<AdminOnboardingDepartmentOption[]>([]);
   const [activeEmployeeCount, setActiveEmployeeCount] = useState(0);
+  const [activeContractTemplateCount, setActiveContractTemplateCount] = useState(0);
   const [leavePolicyConfigured, setLeavePolicyConfigured] = useState(false);
 
   const [departmentSeedInput, setDepartmentSeedInput] = useState("HR,Human Resources\nDEV,Development");
@@ -148,12 +151,13 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       if (!targetOrganizationId) {
         setDepartments([]);
         setActiveEmployeeCount(0);
+        setActiveContractTemplateCount(0);
         setLeavePolicyConfigured(false);
         return;
       }
 
       const orgQuery = buildQuery({ organizationId: targetOrganizationId });
-      const [departmentsBody, employeesBody, leavePolicyBody] = await Promise.all([
+      const [departmentsBody, employeesBody, leavePolicyBody, contractTemplatesBody] = await Promise.all([
         requestJson(input.requestLabels.departments, `/api/people/departments${orgQuery}`),
         requestJson(
           input.requestLabels.employees,
@@ -162,17 +166,27 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
             active: "true"
           })}`
         ),
-        requestJson(input.requestLabels.leavePolicy, `/api/leave/policy${orgQuery}`)
+        requestJson(input.requestLabels.leavePolicy, `/api/leave/policy${orgQuery}`),
+        requestJson(
+          input.requestLabels.createContractTemplate,
+          `/api/contracts/templates${buildQuery({
+            organizationId: targetOrganizationId,
+            category: "employment",
+            status: "ACTIVE"
+          })}`
+        )
       ]);
 
       const departmentRows = parseArray<DepartmentLite>(departmentsBody, "departments");
       const employeeRows = parseArray<EmployeeLite>(employeesBody, "employees");
+      const contractTemplateRows = parseArray<ContractTemplateLite>(contractTemplatesBody, "templates");
       const policy = ((leavePolicyBody as { policy?: LeavePolicyLite })?.policy ?? null) as
         | LeavePolicyLite
         | null;
 
       setDepartments(departmentRows.map((row) => ({ id: row.id, code: row.code, name: row.name })));
       setActiveEmployeeCount(employeeRows.length);
+      setActiveContractTemplateCount(contractTemplateRows.length);
 
       if (policy) {
         setAnnualGrantDays(String(policy.annualGrantDays));
@@ -187,6 +201,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       setPendingLabel(null);
     }
   }, [
+    input.requestLabels.createContractTemplate,
     input.loadingLabel,
     input.requestLabels.departments,
     input.requestLabels.employees,
@@ -295,11 +310,30 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     input.requestLabels.upsertLeavePolicy
   ]);
 
+  const bootstrapEmploymentContractTemplate = useCallback(async () => {
+    const targetOrganizationId = organizationId.trim();
+    if (!targetOrganizationId) {
+      return;
+    }
+    await requestJson(input.requestLabels.createContractTemplate, "/api/contracts/templates", {
+      method: "POST",
+      body: {
+        organizationId: targetOrganizationId,
+        name: "Employment Contract Template",
+        category: "employment",
+        body: "[Employment Contract]\\n- Employee: {{employee_name}}\\n- Organization: {{organization_name}}\\n- Start Date: {{start_date}}\\n- Compensation: {{compensation}}\\n- Terms: {{terms}}\\n- Signature Date: {{sign_date}}",
+        status: "ACTIVE"
+      }
+    });
+    await loadSetup();
+  }, [input.requestLabels.createContractTemplate, loadSetup, organizationId, requestJson]);
+
   const refreshDisabled =
     Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim() && !showDevTools);
 
   return {
     activeEmployeeCount,
+    activeContractTemplateCount,
     adminActorId,
     allowHalfDay,
     allowHourly,
@@ -307,6 +341,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     applyDepartments,
     applyEmployees,
     applyLeavePolicy,
+    bootstrapEmploymentContractTemplate,
     carryOverCapDays,
     checklistItems,
     departmentSeedInput,

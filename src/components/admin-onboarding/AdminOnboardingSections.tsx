@@ -68,6 +68,7 @@ type SetupPanelsProps = {
   allowHourly: boolean;
   hourlyIncrementMinutes: string;
   maxHoursPerRequest: string;
+  activeContractTemplateCount: number;
   onSetDepartmentSeedInput: (value: string) => void;
   onSetEmployeeSeedInput: (value: string) => void;
   onSetAnnualGrantDays: (value: string) => void;
@@ -80,6 +81,7 @@ type SetupPanelsProps = {
   onApplyDepartments: () => void;
   onApplyEmployees: () => void;
   onApplyLeavePolicy: () => void;
+  onBootstrapEmploymentContractTemplate: () => void;
 };
 
 export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
@@ -97,6 +99,7 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     allowHourly,
     hourlyIncrementMinutes,
     maxHoursPerRequest,
+    activeContractTemplateCount,
     onSetDepartmentSeedInput,
     onSetEmployeeSeedInput,
     onSetAnnualGrantDays,
@@ -108,7 +111,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     onReloadOrganizations,
     onApplyDepartments,
     onApplyEmployees,
-    onApplyLeavePolicy
+    onApplyLeavePolicy,
+    onBootstrapEmploymentContractTemplate
   } = props;
 
   return (
@@ -187,6 +191,27 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
           <label>{copy.leavePolicyFields.maxHoursPerRequest}<input type="number" min={1} max={24} value={maxHoursPerRequest} onChange={(event) => onSetMaxHoursPerRequest(event.target.value)} /></label>
         </div>
         <div className="actions"><button className="btn btn-primary" onClick={onApplyLeavePolicy}>{copy.applyLeavePolicyButton}</button></div>
+      </article>
+
+      <article className="panel">
+        <h2>{copy.contractTemplateTitle}</h2>
+        <p className="small muted">{copy.contractTemplateDescription}</p>
+        <p className="small">
+          {copy.contractTemplateCountLabel}: <strong>{activeContractTemplateCount}</strong>{" "}
+          <span className={activeContractTemplateCount > 0 ? "ok" : "fail"}>
+            {activeContractTemplateCount > 0 ? copy.contractTemplateReadyLabel : copy.contractTemplateMissingLabel}
+          </span>
+        </p>
+        <div className="actions">
+          <button
+            className="btn btn-primary"
+            onClick={onBootstrapEmploymentContractTemplate}
+            disabled={activeContractTemplateCount > 0}
+          >
+            {copy.contractTemplateBootstrapButton}
+          </button>
+        </div>
+        <p className="small muted">{copy.contractTemplateBootstrapHint}</p>
       </article>
     </section>
   );

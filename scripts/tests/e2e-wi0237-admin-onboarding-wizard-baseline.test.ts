@@ -37,7 +37,7 @@ async function run() {
   assert.match(workItem, /Admin Onboarding Wizard Baseline/);
   assert.match(messages, /"admin\.nav\.onboarding": "온보딩 마법사"/);
   assert.match(messages, /"admin\.nav\.onboarding": "Onboarding Wizard"/);
-  assert.match(layout, /href="\/admin\/onboarding"/);
+  assert.match(layout, /href:\s*"\/admin\/onboarding"/);
   assert.match(page, /AdminOnboardingDashboard/);
   assert.match(hookSource, /\/api\/people\/departments/);
   assert.match(hookSource, /\/api\/people\/employees/);

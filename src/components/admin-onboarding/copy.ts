@@ -17,6 +17,13 @@ export type AdminOnboardingCopy = {
   employeeSeedTitle: string;
   employeeSeedPlaceholder: string;
   leavePolicyTitle: string;
+  contractTemplateTitle: string;
+  contractTemplateDescription: string;
+  contractTemplateCountLabel: string;
+  contractTemplateBootstrapButton: string;
+  contractTemplateBootstrapHint: string;
+  contractTemplateReadyLabel: string;
+  contractTemplateMissingLabel: string;
   checklistTitle: string;
   applyDepartmentsButton: string;
   applyEmployeesButton: string;
@@ -47,6 +54,7 @@ export type AdminOnboardingCopy = {
     leavePolicy: string;
     createDepartmentPrefix: string;
     createEmployeePrefix: string;
+    createContractTemplate: string;
     upsertLeavePolicy: string;
   };
   checklist: {
@@ -74,6 +82,13 @@ const defaultCopy: AdminOnboardingCopy = {
   employeeSeedTitle: "3) Employee seed (ID,Name,Email,DepartmentCode)",
   employeeSeedPlaceholder: "EMP-2001,Jane,jane@example.com,DEV",
   leavePolicyTitle: "4) Leave policy defaults",
+  contractTemplateTitle: "5) Employment contract template",
+  contractTemplateDescription: "Prepare one active employment contract template to start onboarding contracts.",
+  contractTemplateCountLabel: "Active employment templates",
+  contractTemplateBootstrapButton: "Create default employment template",
+  contractTemplateBootstrapHint: "Created as ACTIVE and reusable for onboarding document drafts.",
+  contractTemplateReadyLabel: "Template ready",
+  contractTemplateMissingLabel: "Template required",
   checklistTitle: "Setup checklist",
   applyDepartmentsButton: "Apply departments",
   applyEmployeesButton: "Apply employees",
@@ -104,6 +119,7 @@ const defaultCopy: AdminOnboardingCopy = {
     leavePolicy: "leave policy",
     createDepartmentPrefix: "create department",
     createEmployeePrefix: "create employee",
+    createContractTemplate: "create contract template",
     upsertLeavePolicy: "upsert leave policy"
   },
   checklist: {
@@ -133,6 +149,13 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
     employeeSeedTitle: "3) 직원 일괄 등록 (ID, 이름, 이메일, 부서코드)",
     employeeSeedPlaceholder: "EMP-2001,홍길동,hong@example.com,DEV",
     leavePolicyTitle: "4) 휴가 정책 기본값",
+    contractTemplateTitle: "5) 근로계약 템플릿",
+    contractTemplateDescription: "온보딩 계약 생성을 시작할 수 있도록 활성 근로계약 템플릿 1개를 준비합니다.",
+    contractTemplateCountLabel: "활성 근로계약 템플릿 수",
+    contractTemplateBootstrapButton: "기본 근로계약 템플릿 생성",
+    contractTemplateBootstrapHint: "ACTIVE 상태로 생성되어 온보딩 계약 초안에 바로 사용할 수 있습니다.",
+    contractTemplateReadyLabel: "템플릿 준비됨",
+    contractTemplateMissingLabel: "템플릿 필요",
     checklistTitle: "설정 체크리스트",
     applyDepartmentsButton: "부서 적용",
     applyEmployeesButton: "직원 적용",
@@ -163,6 +186,7 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
       leavePolicy: "휴가 정책 조회",
       createDepartmentPrefix: "부서 생성",
       createEmployeePrefix: "직원 생성",
+      createContractTemplate: "계약 템플릿 생성",
       upsertLeavePolicy: "휴가 정책 저장"
     },
     checklist: {
