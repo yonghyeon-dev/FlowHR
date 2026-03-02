@@ -25,21 +25,21 @@ async function run() {
   assert.match(adminPage, /resolveAdminDashboardPrioritySummary\(\{/);
   assert.match(adminPage, /resolveAdminDashboardFocusSeverityLabel\(card, locale\)/);
 
-  assert.match(copyHelper, /우선순위 대기열/);
-  assert.match(copyHelper, /출퇴근 승인 대기/);
-  assert.match(copyHelper, /휴가 승인 대기/);
-  assert.match(copyHelper, /급여 프리뷰 대기/);
-  assert.match(copyHelper, /긴급/);
-  assert.match(copyHelper, /주의/);
-  assert.match(copyHelper, /안정/);
+  assert.ok(copyHelper.includes("우선순위 대기열"));
+  assert.ok(copyHelper.includes("출퇴근 승인 대기"));
+  assert.ok(copyHelper.includes("휴가 승인 대기"));
+  assert.ok(copyHelper.includes("급여 프리뷰 대기"));
+  assert.ok(copyHelper.includes("긴급"));
+  assert.ok(copyHelper.includes("주의"));
+  assert.ok(copyHelper.includes("안정"));
 
-  assert.doesNotMatch(copyHelper, /\?닿\?/);
-  assert.doesNotMatch(copyHelper, /\?곗/);
-  assert.doesNotMatch(copyHelper, /嚥≪뮄/);
+  assert.ok(!copyHelper.includes("?곗꽑?쒖쐞 ?湲곗뿴"));
+  assert.ok(!copyHelper.includes("異쒗눜洹??뱀씤 ?湲?"));
+  assert.ok(!copyHelper.includes("湲됱뿬 ?꾨━酉??湲?"));
 
   assert.ok(
     countLines(copyHelper) <= 180,
-    `page-focus-copy.ts should stay <= 180 lines \(current: ${countLines(copyHelper)}\)`
+    `page-focus-copy.ts should stay <= 180 lines (current: ${countLines(copyHelper)})`
   );
 
   assert.match(workItem, /WI-0666/i);
