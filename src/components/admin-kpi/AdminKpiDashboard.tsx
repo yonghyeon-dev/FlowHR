@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminNoticesKpiPanel, buildNoticeReadCoverageSnapshot, type NoticeReadCoverageSnapshot } from "@/components/admin-kpi/AdminNoticesKpiPanel";
 import { AdminRecruitmentKpiPanel, buildRecruitmentKpiSnapshot, type RecruitmentKpiSnapshot } from "@/components/admin-kpi/AdminRecruitmentKpiPanel";
 import { AdminKpiAnalyticsControls, AdminKpiCards, AdminKpiContextPanel, AdminKpiLogsPanel, AdminKpiTrendPanel, type AdminKpiFocusMetric, type ApiLog, type RangeKpi } from "@/components/admin-kpi/AdminKpiSections";
 import { kpiCopyByLocale } from "@/components/admin-kpi/copy";
@@ -15,16 +16,13 @@ type AttendanceAggregateLite = { counts: { total: number; approved: number } };
 type LeaveRequestLite = { days: number };
 type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
 type RecruitmentOpeningLite = { status: "OPEN" | "CLOSED" };
-type RecruitmentReferralLite = {
-  stage: "SUBMITTED" | "SCREENING" | "INTERVIEW" | "OFFER" | "HIRED" | "REJECTED" | "WITHDRAWN";
-  updatedAt: string;
-};
+type RecruitmentReferralLite = { stage: "SUBMITTED" | "SCREENING" | "INTERVIEW" | "OFFER" | "HIRED" | "REJECTED" | "WITHDRAWN"; updatedAt: string };
 type ContractDocumentLite = { status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED"; approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED"; requiresApproval: boolean; expiresAt: string | null };
+type NoticeLite = { id: string; status: "DRAFT" | "SCHEDULED" | "PUBLISHED"; publishedAt: string | null; updatedAt: string };
+type NoticeReadReceiptLite = { noticeId: string; readAt: string };
 const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>(["DRAFT", "APPROVAL_REQUESTED", "SENT"]);
 const contractDecisionQueueSteps = new Set(["REQUEST_APPROVAL", "APPROVE_OR_REJECT", "SEND_DOCUMENT"]);
-type AdminKpiDashboardProps = {
-  analyticsMode?: boolean;
-};
+type AdminKpiDashboardProps = { analyticsMode?: boolean };
 export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardProps) {
   const { locale } = useI18n();
   const copy = kpiCopyByLocale[locale];
@@ -36,6 +34,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   const [currentRangeKpi, setCurrentRangeKpi] = useState<RangeKpi | null>(null);
   const [previousRangeKpi, setPreviousRangeKpi] = useState<RangeKpi | null>(null);
   const [recruitmentKpi, setRecruitmentKpi] = useState<RecruitmentKpiSnapshot | null>(null);
+  const [noticesKpi, setNoticesKpi] = useState<NoticeReadCoverageSnapshot | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
@@ -169,6 +168,10 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       referrals: parseArray<RecruitmentReferralLite>(referralsBody, "referrals")
     });
   }, [organizationId, requestJson]);
+  const loadNoticesKpi = useCallback(async () => {
+    const noticesBody = await requestJson("notices", `/api/notices${buildQuery({ organizationId: organizationId.trim() || undefined, audience: "all", status: "all" })}`);
+    return buildNoticeReadCoverageSnapshot({ notices: parseArray<NoticeLite>(noticesBody, "notices"), readReceipts: parseArray<NoticeReadReceiptLite>(noticesBody, "readReceipts") });
+  }, [organizationId, requestJson]);
   const loadKpis = useCallback(async () => {
     if (!usesBearerToken && !organizationId.trim()) {
       return;
@@ -177,18 +180,20 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     try {
       const currentRange = { from: toIso(periodStart), to: toIso(periodEnd) };
       const previousRange = computePreviousPeriodRange(currentRange.from, currentRange.to);
-      const [current, previous, recruitment] = await Promise.all([
+      const [current, previous, recruitment, notices] = await Promise.all([
         loadRangeKpi(currentRange),
         loadRangeKpi(previousRange),
-        loadRecruitmentKpi()
+        loadRecruitmentKpi(),
+        loadNoticesKpi()
       ]);
       setCurrentRangeKpi(current);
       setPreviousRangeKpi(previous);
       setRecruitmentKpi(recruitment);
+      setNoticesKpi(notices);
     } finally {
       setPendingLabel(null);
     }
-  }, [copy.loadingLabel, loadRangeKpi, loadRecruitmentKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
+  }, [copy.loadingLabel, loadNoticesKpi, loadRangeKpi, loadRecruitmentKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
   useEffect(() => {
     void loadKpis();
   }, [loadKpis]);
@@ -284,6 +289,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       />
       {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
       {analyticsMode && recruitmentKpi ? <AdminRecruitmentKpiPanel copy={copy} snapshot={recruitmentKpi} /> : null}
+      {analyticsMode && noticesKpi ? <AdminNoticesKpiPanel copy={copy} snapshot={noticesKpi} /> : null}
       <section className="panel-grid">
         <AdminKpiTrendPanel copy={copy} rows={visibleTrendRows} />
         {showDevTools ? <AdminKpiLogsPanel copy={copy} logs={logs} /> : null}
