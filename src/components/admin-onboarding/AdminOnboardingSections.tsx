@@ -1,10 +1,7 @@
 ﻿import type { OnboardingChecklistItem } from "@/features/admin-onboarding/checklist";
-
 import type { AdminOnboardingCopy } from "@/components/admin-onboarding/copy";
-
 export type AdminOnboardingOrganizationOption = { id: string; name: string };
 export type AdminOnboardingDepartmentOption = { id: string; code: string; name: string };
-
 export type AdminOnboardingActionLog = {
   id: number;
   label: string;
@@ -13,7 +10,6 @@ export type AdminOnboardingActionLog = {
   at: string;
   durationMs: number;
 };
-
 type ContextPanelProps = {
   copy: AdminOnboardingCopy;
   showDevTools: boolean;
@@ -23,7 +19,6 @@ type ContextPanelProps = {
   refreshDisabled: boolean;
   onRefresh: () => void;
 };
-
 export function AdminOnboardingContextPanel(props: ContextPanelProps) {
   const {
     copy,
@@ -34,7 +29,6 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
     refreshDisabled,
     onRefresh
   } = props;
-
   return (
     <section className="panel-grid">
       <article className="panel">
@@ -53,7 +47,6 @@ export function AdminOnboardingContextPanel(props: ContextPanelProps) {
     </section>
   );
 }
-
 type SetupPanelsProps = {
   copy: AdminOnboardingCopy;
   showDevTools: boolean;
@@ -68,6 +61,9 @@ type SetupPanelsProps = {
   allowHourly: boolean;
   hourlyIncrementMinutes: string;
   maxHoursPerRequest: string;
+  inviteEligibleEmployeeCount: number;
+  invitedEmployeeCount: number;
+  pendingInviteCount: number;
   activeContractTemplateCount: number;
   onSetDepartmentSeedInput: (value: string) => void;
   onSetEmployeeSeedInput: (value: string) => void;
@@ -81,9 +77,9 @@ type SetupPanelsProps = {
   onApplyDepartments: () => void;
   onApplyEmployees: () => void;
   onApplyLeavePolicy: () => void;
+  onIssuePendingEmployeeInvites: () => void;
   onBootstrapEmploymentContractTemplate: () => void;
 };
-
 export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
   const {
     copy,
@@ -99,6 +95,9 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     allowHourly,
     hourlyIncrementMinutes,
     maxHoursPerRequest,
+    inviteEligibleEmployeeCount,
+    invitedEmployeeCount,
+    pendingInviteCount,
     activeContractTemplateCount,
     onSetDepartmentSeedInput,
     onSetEmployeeSeedInput,
@@ -112,9 +111,9 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     onApplyDepartments,
     onApplyEmployees,
     onApplyLeavePolicy,
+    onIssuePendingEmployeeInvites,
     onBootstrapEmploymentContractTemplate
   } = props;
-
   return (
     <section className="panel-grid">
       <article className="panel">
@@ -138,7 +137,6 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
         ) : null}
         <div className="actions"><button className="btn btn-secondary" onClick={onReloadOrganizations}>{copy.organizationRefreshButton}</button></div>
       </article>
-
       <article className="panel">
         <h2>{copy.departmentSeedTitle}</h2>
         <textarea
@@ -156,7 +154,6 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
           <p className="small muted">-</p>
         )}
       </article>
-
       <article className="panel">
         <h2>{copy.employeeSeedTitle}</h2>
         <textarea
@@ -167,7 +164,30 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
         />
         <div className="actions"><button className="btn btn-primary" onClick={onApplyEmployees}>{copy.applyEmployeesButton}</button></div>
       </article>
-
+      <article className="panel">
+        <h2>{copy.inviteCoverageTitle}</h2>
+        <p className="small muted">{copy.inviteCoverageDescription}</p>
+        <p className="small">
+          {copy.inviteCoverageEligibleLabel}: <strong>{inviteEligibleEmployeeCount}</strong> /{" "}
+          {copy.inviteCoverageSentLabel}: <strong>{invitedEmployeeCount}</strong> /{" "}
+          {copy.inviteCoveragePendingLabel}: <strong>{pendingInviteCount}</strong>{" "}
+          <span className={pendingInviteCount === 0 && inviteEligibleEmployeeCount > 0 ? "ok" : "fail"}>
+            {pendingInviteCount === 0 && inviteEligibleEmployeeCount > 0
+              ? copy.inviteCoverageReadyLabel
+              : copy.inviteCoverageMissingLabel}
+          </span>
+        </p>
+        <div className="actions">
+          <button
+            className="btn btn-primary"
+            onClick={onIssuePendingEmployeeInvites}
+            disabled={pendingInviteCount === 0 || inviteEligibleEmployeeCount === 0}
+          >
+            {copy.inviteCoverageIssueButton}
+          </button>
+        </div>
+        <p className="small muted">{copy.inviteCoverageIssueHint}</p>
+      </article>
       <article className="panel">
         <h2>{copy.leavePolicyTitle}</h2>
         <div className="input-grid">
@@ -192,7 +212,6 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
         </div>
         <div className="actions"><button className="btn btn-primary" onClick={onApplyLeavePolicy}>{copy.applyLeavePolicyButton}</button></div>
       </article>
-
       <article className="panel">
         <h2>{copy.contractTemplateTitle}</h2>
         <p className="small muted">{copy.contractTemplateDescription}</p>
@@ -216,17 +235,14 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     </section>
   );
 }
-
 type ChecklistPanelProps = {
   copy: AdminOnboardingCopy;
   progressPercent: number;
   checklistItems: OnboardingChecklistItem[];
   logs: AdminOnboardingActionLog[];
 };
-
 export function AdminOnboardingChecklistPanel(props: ChecklistPanelProps) {
   const { copy, progressPercent, checklistItems, logs } = props;
-
   return (
     <section className="panel-grid">
       <article className="panel">
@@ -245,13 +261,14 @@ export function AdminOnboardingChecklistPanel(props: ChecklistPanelProps) {
                     ? copy.checklist.departments
                     : item.key === "employees"
                       ? copy.checklist.employees
-                      : copy.checklist.leavePolicy}
+                      : item.key === "invites"
+                        ? copy.checklist.invites
+                        : copy.checklist.leavePolicy}
               </span>
             </li>
           ))}
         </ul>
       </article>
-
       <article className="panel">
         <h2>{copy.logsTitle}</h2>
         {logs.length === 0 ? <p className="small muted">{copy.logsEmpty}</p> : (

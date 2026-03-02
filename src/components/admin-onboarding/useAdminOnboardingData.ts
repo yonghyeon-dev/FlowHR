@@ -22,8 +22,9 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 
 type OrganizationLite = { id: string; name: string };
 type DepartmentLite = { id: string; code: string; name: string };
-type EmployeeLite = { id: string };
+type EmployeeLite = { id: string; email: string | null };
 type ContractTemplateLite = { id: string };
+type AuthInviteLite = { email: string };
 type LeavePolicyLite = {
   annualGrantDays: number;
   carryOverCapDays: number;
@@ -41,18 +42,28 @@ type UseAdminOnboardingDataInput = {
     organizations: string;
     departments: string;
     employees: string;
+    invites: string;
     leavePolicy: string;
     createDepartmentPrefix: string;
     createEmployeePrefix: string;
+    createInvitePrefix: string;
     createContractTemplate: string;
     upsertLeavePolicy: string;
   };
 };
 
+function normalizeEmail(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
 export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   const [organizations, setOrganizations] = useState<AdminOnboardingOrganizationOption[]>([]);
   const [departments, setDepartments] = useState<AdminOnboardingDepartmentOption[]>([]);
+  const [activeEmployees, setActiveEmployees] = useState<EmployeeLite[]>([]);
   const [activeEmployeeCount, setActiveEmployeeCount] = useState(0);
+  const [inviteEligibleEmployeeCount, setInviteEligibleEmployeeCount] = useState(0);
+  const [invitedEmployeeCount, setInvitedEmployeeCount] = useState(0);
+  const [invitedEmployeeEmails, setInvitedEmployeeEmails] = useState<string[]>([]);
   const [activeContractTemplateCount, setActiveContractTemplateCount] = useState(0);
   const [leavePolicyConfigured, setLeavePolicyConfigured] = useState(false);
 
@@ -150,14 +161,18 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
         organizationId.trim() || (organizationRows.length === 1 ? organizationRows[0].id : "");
       if (!targetOrganizationId) {
         setDepartments([]);
+        setActiveEmployees([]);
         setActiveEmployeeCount(0);
+        setInviteEligibleEmployeeCount(0);
+        setInvitedEmployeeCount(0);
+        setInvitedEmployeeEmails([]);
         setActiveContractTemplateCount(0);
         setLeavePolicyConfigured(false);
         return;
       }
 
       const orgQuery = buildQuery({ organizationId: targetOrganizationId });
-      const [departmentsBody, employeesBody, leavePolicyBody, contractTemplatesBody] = await Promise.all([
+      const [departmentsBody, employeesBody, leavePolicyBody, contractTemplatesBody, invitesBody] = await Promise.all([
         requestJson(input.requestLabels.departments, `/api/people/departments${orgQuery}`),
         requestJson(
           input.requestLabels.employees,
@@ -174,18 +189,37 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
             category: "employment",
             status: "ACTIVE"
           })}`
+        ),
+        requestJson(
+          input.requestLabels.invites,
+          `/api/auth/invites${buildQuery({
+            organizationId: targetOrganizationId,
+            role: "employee",
+            limit: "500"
+          })}`
         )
       ]);
 
       const departmentRows = parseArray<DepartmentLite>(departmentsBody, "departments");
       const employeeRows = parseArray<EmployeeLite>(employeesBody, "employees");
       const contractTemplateRows = parseArray<ContractTemplateLite>(contractTemplatesBody, "templates");
+      const inviteRows = parseArray<AuthInviteLite>(invitesBody, "invites");
       const policy = ((leavePolicyBody as { policy?: LeavePolicyLite })?.policy ?? null) as
         | LeavePolicyLite
         | null;
 
+      const inviteEmailSet = new Set(inviteRows.map((row) => normalizeEmail(row.email)).filter((email) => email));
+      const inviteEligibleEmployees = employeeRows.filter((employee) => normalizeEmail(employee.email).length > 0);
+      const inviteCoveredEmployeeCount = inviteEligibleEmployees.filter((employee) =>
+        inviteEmailSet.has(normalizeEmail(employee.email))
+      ).length;
+
       setDepartments(departmentRows.map((row) => ({ id: row.id, code: row.code, name: row.name })));
+      setActiveEmployees(employeeRows);
       setActiveEmployeeCount(employeeRows.length);
+      setInviteEligibleEmployeeCount(inviteEligibleEmployees.length);
+      setInvitedEmployeeCount(inviteCoveredEmployeeCount);
+      setInvitedEmployeeEmails(Array.from(inviteEmailSet));
       setActiveContractTemplateCount(contractTemplateRows.length);
 
       if (policy) {
@@ -202,6 +236,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     }
   }, [
     input.requestLabels.createContractTemplate,
+    input.requestLabels.invites,
     input.loadingLabel,
     input.requestLabels.departments,
     input.requestLabels.employees,
@@ -216,15 +251,19 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     void loadSetup();
   }, [loadSetup]);
 
+  const pendingInviteCount = Math.max(0, inviteEligibleEmployeeCount - invitedEmployeeCount);
+  const inviteCoverageDone = inviteEligibleEmployeeCount > 0 && pendingInviteCount === 0;
+
   const checklistItems = useMemo(
     () =>
       buildOnboardingChecklist({
         organizationId,
         departmentCount: departments.length,
         employeeCount: activeEmployeeCount,
+        inviteCoverageDone,
         leavePolicyConfigured
       }),
-    [activeEmployeeCount, departments.length, leavePolicyConfigured, organizationId]
+    [activeEmployeeCount, departments.length, inviteCoverageDone, leavePolicyConfigured, organizationId]
   );
   const progressPercent = useMemo(() => onboardingProgressPercent(checklistItems), [checklistItems]);
 
@@ -274,6 +313,40 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     departments,
     employeeSeedInput,
     input.requestLabels.createEmployeePrefix,
+    loadSetup,
+    organizationId,
+    requestJson
+  ]);
+
+  const issuePendingEmployeeInvites = useCallback(async () => {
+    const targetOrganizationId = organizationId.trim();
+    if (!targetOrganizationId) {
+      return;
+    }
+
+    const issuedEmailSet = new Set(invitedEmployeeEmails);
+    for (const employee of activeEmployees) {
+      const email = normalizeEmail(employee.email);
+      if (!email || issuedEmailSet.has(email)) {
+        continue;
+      }
+      await requestJson(`${input.requestLabels.createInvitePrefix} ${employee.id}`, "/api/auth/invites", {
+        method: "POST",
+        body: {
+          email,
+          role: "employee",
+          organizationId: targetOrganizationId,
+          actorId: employee.id,
+          deliveryMode: "email"
+        }
+      });
+      issuedEmailSet.add(email);
+    }
+    await loadSetup();
+  }, [
+    activeEmployees,
+    input.requestLabels.createInvitePrefix,
+    invitedEmployeeEmails,
     loadSetup,
     organizationId,
     requestJson
@@ -333,6 +406,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
 
   return {
     activeEmployeeCount,
+    inviteEligibleEmployeeCount,
+    invitedEmployeeCount,
+    pendingInviteCount,
     activeContractTemplateCount,
     adminActorId,
     allowHalfDay,
@@ -341,6 +417,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     applyDepartments,
     applyEmployees,
     applyLeavePolicy,
+    issuePendingEmployeeInvites,
     bootstrapEmploymentContractTemplate,
     carryOverCapDays,
     checklistItems,

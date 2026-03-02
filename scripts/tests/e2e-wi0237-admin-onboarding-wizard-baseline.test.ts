@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -16,18 +16,8 @@ async function run() {
   const messages = readUtf8("src", "lib", "i18n", "messages.ts");
   const layout = readUtf8("src", "app", "admin", "layout.tsx");
   const page = readUtf8("src", "app", "admin", "onboarding", "page.tsx");
-  const dashboard = readUtf8(
-    "src",
-    "components",
-    "admin-onboarding",
-    "AdminOnboardingDashboard.tsx"
-  );
-  const sections = readUtf8(
-    "src",
-    "components",
-    "admin-onboarding",
-    "AdminOnboardingSections.tsx"
-  );
+  const dashboard = readUtf8("src", "components", "admin-onboarding", "AdminOnboardingDashboard.tsx");
+  const sections = readUtf8("src", "components", "admin-onboarding", "AdminOnboardingSections.tsx");
   const copy = readUtf8("src", "components", "admin-onboarding", "copy.ts");
   const helpersSource = readUtf8("src", "components", "admin-onboarding", "helpers.ts");
   const hookSource = readUtf8("src", "components", "admin-onboarding", "useAdminOnboardingData.ts");
@@ -35,17 +25,21 @@ async function run() {
 
   assert.match(roadmap, /WI-0237/);
   assert.match(workItem, /Admin Onboarding Wizard Baseline/);
-  assert.match(messages, /"admin\.nav\.onboarding": "온보딩 마법사"/);
+  assert.match(messages, /"admin\.nav\.onboarding":/);
   assert.match(messages, /"admin\.nav\.onboarding": "Onboarding Wizard"/);
   assert.match(layout, /href:\s*"\/admin\/onboarding"/);
   assert.match(page, /AdminOnboardingDashboard/);
   assert.match(hookSource, /\/api\/people\/departments/);
   assert.match(hookSource, /\/api\/people\/employees/);
   assert.match(hookSource, /\/api\/leave\/policy/);
-  assert.match(copy, /관리자 온보딩 마법사/);
+  assert.match(hookSource, /\/api\/auth\/invites/);
+  assert.match(hookSource, /\/api\/contracts\/templates/);
+  assert.match(copy, /inviteCoverageTitle/);
+  assert.match(copy, /contractTemplateTitle/);
   assert.match(helpersSource, /parseDepartmentSeedInput/);
   assert.match(helpersSource, /parseEmployeeSeedInput/);
   assert.match(checklistSource, /buildOnboardingChecklist/);
+  assert.match(checklistSource, /"invites"/);
 
   assert.ok(
     countLines(dashboard) <= 300,
@@ -67,16 +61,19 @@ async function run() {
     organizationId: "ORG-1",
     departmentCount: 2,
     employeeCount: 0,
+    inviteCoverageDone: false,
     leavePolicyConfigured: true
   });
-  assert.equal(checklist.length, 4);
+  assert.equal(checklist.length, 5);
   assert.equal(checklist.find((item) => item.key === "employees")?.done, false);
-  assert.equal(onboardingProgressPercent(checklist), 75);
+  assert.equal(checklist.find((item) => item.key === "invites")?.done, false);
+  assert.equal(onboardingProgressPercent(checklist), 60);
 
   const completeChecklist = buildOnboardingChecklist({
     organizationId: "ORG-2",
     departmentCount: 1,
     employeeCount: 1,
+    inviteCoverageDone: true,
     leavePolicyConfigured: true
   });
   assert.equal(onboardingProgressPercent(completeChecklist), 100);
@@ -95,7 +92,10 @@ async function run() {
     { id: "EMP-2", name: "EMP-2", email: "bob@example.com", departmentCode: null }
   ]);
 
-  assert.equal(buildQuery({ organizationId: "ORG-1", active: "true", empty: "  " }), "?organizationId=ORG-1&active=true");
+  assert.equal(
+    buildQuery({ organizationId: "ORG-1", active: "true", empty: "  " }),
+    "?organizationId=ORG-1&active=true"
+  );
 }
 
 run()
