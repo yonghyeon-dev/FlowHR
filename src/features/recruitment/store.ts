@@ -28,6 +28,12 @@ type CreateOpeningInput = {
   status?: RecruitmentOpeningStatus;
 };
 
+type UpdateOpeningStatusInput = {
+  openingId: string;
+  status: RecruitmentOpeningStatus;
+  organizationId?: string;
+};
+
 type ListReferralsInput = {
   organizationId?: string;
   referrerEmployeeId?: string;
@@ -130,6 +136,28 @@ export function createRecruitmentOpening(input: CreateOpeningInput, context?: Re
       updatedAt: now
     })
     .then(toOpeningItem);
+}
+
+export function updateRecruitmentOpeningStatus(
+  input: UpdateOpeningStatusInput,
+  context?: RecruitmentStoreContext
+) {
+  const dataAccess = resolveContext(context).dataAccess;
+  const requestedOrgId = input.organizationId?.trim();
+  return dataAccess.recruitment.findOpeningById(input.openingId).then((existing) => {
+    if (!existing) {
+      return null;
+    }
+    if (requestedOrgId && existing.organizationId !== requestedOrgId) {
+      return null;
+    }
+    return dataAccess.recruitment
+      .updateOpening(existing.id, {
+        status: input.status,
+        updatedAt: new Date()
+      })
+      .then(toOpeningItem);
+  });
 }
 
 export function listRecruitmentReferrals(input: ListReferralsInput = {}, context?: RecruitmentStoreContext) {

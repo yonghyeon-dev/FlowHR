@@ -3,6 +3,7 @@
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
 import type {
   RecruitmentOpeningItem,
+  RecruitmentOpeningStatus,
   RecruitmentReferralItem,
   RecruitmentReferralStage
 } from "@/features/recruitment/types";
@@ -38,6 +39,7 @@ type AdminRecruitmentWorkspaceViewProps = {
   onClearReferralSearch: () => void;
   onLoadWorkspace: () => void;
   onCreateOpening: () => void;
+  onUpdateOpeningStatus: (openingId: string, status: RecruitmentOpeningStatus) => void;
   onStageSelectionChange: (referralId: string, stage: RecruitmentReferralStage) => void;
   onUpdateStage: (referralId: string) => void;
 };
@@ -71,6 +73,7 @@ export default function AdminRecruitmentWorkspaceView({
   onClearReferralSearch,
   onLoadWorkspace,
   onCreateOpening,
+  onUpdateOpeningStatus,
   onStageSelectionChange,
   onUpdateStage
 }: AdminRecruitmentWorkspaceViewProps) {
@@ -152,6 +155,18 @@ export default function AdminRecruitmentWorkspaceView({
                       {copy.statusLabel}: {copy.openingStatus[opening.status]}
                     </span>
                   </span>
+                  <div className="actions" style={{ marginTop: 0 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() =>
+                        onUpdateOpeningStatus(opening.id, opening.status === "OPEN" ? "CLOSED" : "OPEN")
+                      }
+                      disabled={pending}
+                    >
+                      {opening.status === "OPEN" ? copy.openingStatus.CLOSED : copy.openingStatus.OPEN}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

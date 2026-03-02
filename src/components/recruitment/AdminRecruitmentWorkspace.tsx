@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { RecruitmentOpeningItem, RecruitmentReferralItem, RecruitmentReferralStage } from "@/features/recruitment/types";
+import type { RecruitmentOpeningItem, RecruitmentOpeningStatus, RecruitmentReferralItem, RecruitmentReferralStage } from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
@@ -160,20 +160,16 @@ export default function AdminRecruitmentWorkspace() {
       setStatusMessage(copy.messages.needOrganization);
       return;
     }
-
     const openingQuery = buildQuery({ organizationId });
     const referralQuery = buildQuery({ organizationId });
-
     const [openingsRes, referralsRes] = await Promise.all([
       callApi("GET", `/api/recruitment/openings${openingQuery}`),
       callApi("GET", `/api/recruitment/referrals${referralQuery}`)
     ]);
-
     if (!openingsRes.response.ok || !referralsRes.response.ok) {
       setStatusMessage(copy.messages.loadFailed);
       return;
     }
-
     const nextReferrals = parseReferrals(referralsRes.parsed);
     setOpenings(parseOpenings(openingsRes.parsed));
     setReferrals(nextReferrals);
@@ -204,7 +200,6 @@ export default function AdminRecruitmentWorkspace() {
       setStatusMessage(copy.messages.needEmploymentType);
       return;
     }
-
     const { response } = await callApi("POST", "/api/recruitment/openings", {
       organizationId,
       title: openingTitle,
@@ -212,15 +207,27 @@ export default function AdminRecruitmentWorkspace() {
       employmentType,
       status: "OPEN"
     });
-
     if (!response.ok) {
       setStatusMessage(copy.messages.loadFailed);
       return;
     }
-
     setOpeningTitle("");
     setDepartment("");
     setStatusMessage(copy.messages.openingCreated);
+    await loadWorkspace();
+  }
+
+  async function updateOpeningStatus(openingId: string, status: RecruitmentOpeningStatus) {
+    const { response } = await callApi(
+      "POST",
+      `/api/recruitment/openings/${encodeURIComponent(openingId)}/status`,
+      { status }
+    );
+    if (!response.ok) {
+      setStatusMessage(copy.messages.loadFailed);
+      return;
+    }
+    setStatusMessage("");
     await loadWorkspace();
   }
 
@@ -229,18 +236,15 @@ export default function AdminRecruitmentWorkspace() {
     if (!stage) {
       return;
     }
-
     const { response } = await callApi(
       "POST",
       `/api/recruitment/referrals/${encodeURIComponent(referralId)}/stage`,
       { stage }
     );
-
     if (!response.ok) {
       setStatusMessage(copy.messages.loadFailed);
       return;
     }
-
     setStatusMessage(copy.messages.referralUpdated);
     await loadWorkspace();
   }
@@ -275,6 +279,7 @@ export default function AdminRecruitmentWorkspace() {
       onClearReferralSearch={() => setReferralSearchQuery("")}
       onLoadWorkspace={() => void loadWorkspace()}
       onCreateOpening={() => void createOpening()}
+      onUpdateOpeningStatus={(openingId, status) => void updateOpeningStatus(openingId, status)}
       onStageSelectionChange={(referralId, stage) =>
         setStageSelection((previous) => ({
           ...previous,
