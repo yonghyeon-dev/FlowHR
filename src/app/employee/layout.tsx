@@ -24,17 +24,17 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
   const navLinks: SaasMobileMenuLink[] = [
     { href: "/employee", label: t("employee.nav.overview") },
     { href: "/employee/guide", label: t("employee.nav.guide") },
-    { href: "/employee#account", label: t("employee.nav.account") },
-    { href: "/employee#self-service-overview", label: t("employee.nav.selfServiceOverview") },
-    { href: "/employee#submit-checklist", label: t("employee.nav.submitChecklist") },
-    { href: "/employee#request-feedback", label: t("employee.nav.requestFeedback") },
-    { href: "/employee#request-search-sort", label: t("employee.nav.requestSearchSort") },
-    { href: "/employee#request-timeline", label: t("employee.nav.requestTimeline") },
-    { href: "/employee#request-resubmit", label: t("employee.nav.requestResubmit") },
-    { href: "/employee#attendance", label: t("employee.nav.attendance") },
-    { href: "/employee#leave", label: t("employee.nav.leave") },
-    { href: "/employee#leave-calendar", label: t("employee.nav.leaveCalendar") },
-    { href: "/employee#schedule", label: t("employee.nav.schedule") },
+    { href: "/employee?focus=account", label: t("employee.nav.account") },
+    { href: "/employee?focus=self-service-overview", label: t("employee.nav.selfServiceOverview") },
+    { href: "/employee?focus=submit-checklist", label: t("employee.nav.submitChecklist") },
+    { href: "/employee?focus=request-feedback", label: t("employee.nav.requestFeedback") },
+    { href: "/employee?focus=request-search-sort", label: t("employee.nav.requestSearchSort") },
+    { href: "/employee?focus=request-timeline", label: t("employee.nav.requestTimeline") },
+    { href: "/employee?focus=request-resubmit", label: t("employee.nav.requestResubmit") },
+    { href: "/employee?focus=attendance", label: t("employee.nav.attendance") },
+    { href: "/employee?focus=leave", label: t("employee.nav.leave") },
+    { href: "/employee?focus=leave-calendar", label: t("employee.nav.leaveCalendar") },
+    { href: "/employee?focus=schedule", label: t("employee.nav.schedule") },
     { href: "/employee/schedule", label: t("employee.nav.scheduleBoard") },
     { href: "/employee/notices", label: t("employee.nav.notices") },
     { href: "/employee/benefits", label: t("employee.nav.benefits") },
@@ -72,17 +72,17 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
           <nav className="saas-nav" aria-label={t("employee.nav.aria")}>
             <Link href="/employee">{t("employee.nav.overview")}</Link>
             <Link href="/employee/guide">{t("employee.nav.guide")}</Link>
-            <Link href="/employee#account">{t("employee.nav.account")}</Link>
-            <Link href="/employee#self-service-overview">{t("employee.nav.selfServiceOverview")}</Link>
-            <Link href="/employee#submit-checklist">{t("employee.nav.submitChecklist")}</Link>
-            <Link href="/employee#request-feedback">{t("employee.nav.requestFeedback")}</Link>
-            <Link href="/employee#request-search-sort">{t("employee.nav.requestSearchSort")}</Link>
-            <Link href="/employee#request-timeline">{t("employee.nav.requestTimeline")}</Link>
-            <Link href="/employee#request-resubmit">{t("employee.nav.requestResubmit")}</Link>
-            <Link href="/employee#attendance">{t("employee.nav.attendance")}</Link>
-            <Link href="/employee#leave">{t("employee.nav.leave")}</Link>
-            <Link href="/employee#leave-calendar">{t("employee.nav.leaveCalendar")}</Link>
-            <Link href="/employee#schedule">{t("employee.nav.schedule")}</Link>
+            <Link href="/employee?focus=account">{t("employee.nav.account")}</Link>
+            <Link href="/employee?focus=self-service-overview">{t("employee.nav.selfServiceOverview")}</Link>
+            <Link href="/employee?focus=submit-checklist">{t("employee.nav.submitChecklist")}</Link>
+            <Link href="/employee?focus=request-feedback">{t("employee.nav.requestFeedback")}</Link>
+            <Link href="/employee?focus=request-search-sort">{t("employee.nav.requestSearchSort")}</Link>
+            <Link href="/employee?focus=request-timeline">{t("employee.nav.requestTimeline")}</Link>
+            <Link href="/employee?focus=request-resubmit">{t("employee.nav.requestResubmit")}</Link>
+            <Link href="/employee?focus=attendance">{t("employee.nav.attendance")}</Link>
+            <Link href="/employee?focus=leave">{t("employee.nav.leave")}</Link>
+            <Link href="/employee?focus=leave-calendar">{t("employee.nav.leaveCalendar")}</Link>
+            <Link href="/employee?focus=schedule">{t("employee.nav.schedule")}</Link>
             <Link href="/employee/schedule">{t("employee.nav.scheduleBoard")}</Link>
             <Link href="/employee/notices">{t("employee.nav.notices")}</Link>
             <Link href="/employee/benefits">{t("employee.nav.benefits")}</Link>

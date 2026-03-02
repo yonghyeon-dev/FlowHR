@@ -6,6 +6,7 @@ type SearchParamsLike = {
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const EMPLOYEE_FOCUS_SECTIONS = new Set([
+  "account",
   "self-service-overview",
   "submit-checklist",
   "attendance",

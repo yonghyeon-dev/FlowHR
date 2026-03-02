@@ -48,8 +48,8 @@ function run() {
   const employeeLayoutSource = readUtf8("src", "app", "employee", "layout.tsx");
   assert.match(
     employeeLayoutSource,
-    /href="\/employee#leave-calendar"/,
-    "employee navigation should include leave calendar anchor"
+    /href="\/employee\?focus=leave-calendar"/,
+    "employee navigation should include leave calendar focus link"
   );
 }
 

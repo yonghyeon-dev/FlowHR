@@ -52,23 +52,28 @@ function run() {
       false,
       `employee layout should remove bloated anchor /employee#${sectionId}`
     );
+    assert.equal(
+      employeeLayout.includes(`/employee?focus=${sectionId}`),
+      false,
+      `employee layout should remove bloated focus route /employee?focus=${sectionId}`
+    );
   }
 
-  const requiredEmployeeAnchors = [
-    "/employee#attendance",
-    "/employee#leave",
-    "/employee#leave-calendar",
-    "/employee#schedule",
-    "/employee#request-feedback",
+  const requiredEmployeeRoutes = [
+    "/employee?focus=attendance",
+    "/employee?focus=leave",
+    "/employee?focus=leave-calendar",
+    "/employee?focus=schedule",
+    "/employee?focus=request-feedback",
     "/employee/payslips#payslip-search-sort",
     "/employee/payslips#compare-view"
   ];
 
-  for (const anchor of requiredEmployeeAnchors) {
+  for (const route of requiredEmployeeRoutes) {
     assert.equal(
-      employeeLayout.includes(anchor),
+      employeeLayout.includes(route),
       true,
-      `employee layout should keep core anchor ${anchor}`
+      `employee layout should keep core route ${route}`
     );
   }
 
