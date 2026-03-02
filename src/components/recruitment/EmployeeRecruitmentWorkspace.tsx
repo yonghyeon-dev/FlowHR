@@ -204,6 +204,15 @@ export default function EmployeeRecruitmentWorkspace() {
         await loadWorkspace();
         return;
       }
+      if (errorCode === "recruitment.referral.create.duplicate_active") {
+        setStatusMessage(
+          locale === "ko"
+            ? "같은 공고에 진행 중인 추천 후보가 이미 있습니다."
+            : "An active referral already exists for this opening and candidate."
+        );
+        await loadWorkspace();
+        return;
+      }
       setStatusMessage(copy.messages.loadFailed);
       return;
     }
