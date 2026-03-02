@@ -1,5 +1,10 @@
 import { updateRecruitmentOpeningStatusSchema } from "@/features/recruitment/schemas";
-import { updateRecruitmentOpeningStatus } from "@/features/recruitment/store";
+import {
+  findRecruitmentOpening,
+  listRecruitmentReferrals,
+  updateRecruitmentOpeningStatus
+} from "@/features/recruitment/store";
+import { isRecruitmentReferralTerminalStage } from "@/features/recruitment/types";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -34,6 +39,26 @@ export async function POST(request: Request, context: RouteContext) {
   });
   if (!parsed.success) {
     return fail(400, "invalid payload", parsed.error.flatten());
+  }
+
+  const opening = await findRecruitmentOpening(parsed.data.openingId);
+  if (!opening || (actor?.organizationId && opening.organizationId !== actor.organizationId)) {
+    return fail(404, "recruitment.opening.not_found");
+  }
+
+  if (parsed.data.status === "CLOSED" && !parsed.data.force) {
+    const referrals = await listRecruitmentReferrals({
+      organizationId: opening.organizationId
+    });
+    const activeReferrals = referrals.filter(
+      (item) => item.openingId === opening.id && !isRecruitmentReferralTerminalStage(item.stage)
+    );
+    if (activeReferrals.length > 0) {
+      return fail(409, "recruitment.opening.status.pending_referrals", {
+        openingId: opening.id,
+        activeReferralCount: activeReferrals.length
+      });
+    }
   }
 
   const updated = await updateRecruitmentOpeningStatus({

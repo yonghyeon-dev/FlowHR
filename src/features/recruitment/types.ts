@@ -42,8 +42,18 @@ const referralStageTransitionMap: Record<RecruitmentReferralStage, readonly Recr
   WITHDRAWN: []
 };
 
+const terminalReferralStageSet = new Set<RecruitmentReferralStage>([
+  "HIRED",
+  "REJECTED",
+  "WITHDRAWN"
+]);
+
 export function listRecruitmentReferralNextStages(stage: RecruitmentReferralStage) {
   return [stage, ...referralStageTransitionMap[stage]];
+}
+
+export function isRecruitmentReferralTerminalStage(stage: RecruitmentReferralStage) {
+  return terminalReferralStageSet.has(stage);
 }
 
 export function isRecruitmentReferralStageTransitionAllowed(

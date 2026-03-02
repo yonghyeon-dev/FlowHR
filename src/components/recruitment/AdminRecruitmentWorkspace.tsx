@@ -218,12 +218,35 @@ export default function AdminRecruitmentWorkspace() {
   }
 
   async function updateOpeningStatus(openingId: string, status: RecruitmentOpeningStatus) {
-    const { response } = await callApi(
+    const { response, parsed } = await callApi(
       "POST",
       `/api/recruitment/openings/${encodeURIComponent(openingId)}/status`,
       { status }
     );
     if (!response.ok) {
+      const errorCode = (parsed as { error?: string } | null)?.error;
+      if (status === "CLOSED" && errorCode === "recruitment.opening.status.pending_referrals") {
+        const forceCloseMessage =
+          locale === "ko"
+            ? "진행 중 추천 후보가 있습니다. 그래도 공고를 마감할까요?"
+            : "There are active referrals in progress. Close this opening anyway?";
+        if (
+          window.confirm(forceCloseMessage)
+        ) {
+          const forced = await callApi(
+            "POST",
+            `/api/recruitment/openings/${encodeURIComponent(openingId)}/status`,
+            { status, force: true }
+          );
+          if (!forced.response.ok) {
+            setStatusMessage(copy.messages.loadFailed);
+            return;
+          }
+          setStatusMessage("");
+          await loadWorkspace();
+          return;
+        }
+      }
       setStatusMessage(copy.messages.loadFailed);
       return;
     }
