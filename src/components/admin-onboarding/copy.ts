@@ -57,6 +57,12 @@ export type AdminOnboardingCopy = {
   contractSendMissingLabel: string;
   contractSendIssueButton: string;
   contractSendIssueHint: string;
+  contractResponseCoverageLabel: string;
+  contractResponsePendingLabel: string;
+  contractResponseReadyLabel: string;
+  contractResponseMissingLabel: string;
+  contractResponseQueueButton: string;
+  contractResponseQueueHint: string;
   checklistTitle: string;
   applyDepartmentsButton: string;
   applyEmployeesButton: string;
@@ -163,6 +169,12 @@ const defaultCopy: AdminOnboardingCopy = {
   contractSendMissingLabel: "Send actions required",
   contractSendIssueButton: "Send approved contracts",
   contractSendIssueHint: "Sends approval-completed onboarding contracts to employees.",
+  contractResponseCoverageLabel: "Employees with contract response",
+  contractResponsePendingLabel: "Pending response",
+  contractResponseReadyLabel: "Response coverage complete",
+  contractResponseMissingLabel: "Response follow-up required",
+  contractResponseQueueButton: "Open pending response queue",
+  contractResponseQueueHint: "Opens the contracts workspace with SENT filter for pending employee response follow-up.",
   checklistTitle: "Setup checklist",
   applyDepartmentsButton: "Apply departments",
   applyEmployeesButton: "Apply employees",
@@ -271,6 +283,12 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
     contractSendMissingLabel: "전송 실행 필요",
     contractSendIssueButton: "승인완료 계약 일괄 전송",
     contractSendIssueHint: "승인결정이 완료된 DRAFT 계약 문서를 직원에게 전송합니다.",
+    contractResponseCoverageLabel: "응답완료 직원 수",
+    contractResponsePendingLabel: "응답 필요 직원 수",
+    contractResponseReadyLabel: "응답 커버리지 완료",
+    contractResponseMissingLabel: "응답 팔로업 필요",
+    contractResponseQueueButton: "미응답 계약함 열기",
+    contractResponseQueueHint: "SENT 필터가 적용된 계약함으로 이동해 미응답 계약을 후속 처리합니다.",
     checklistTitle: "설정 체크리스트",
     applyDepartmentsButton: "부서 적용",
     applyEmployeesButton: "직원 적용",

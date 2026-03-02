@@ -82,6 +82,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   const [approvalRequestedContractEmployeeCount, setApprovalRequestedContractEmployeeCount] = useState(0);
   const [approvedContractEmployeeCount, setApprovedContractEmployeeCount] = useState(0);
   const [sentContractEmployeeCount, setSentContractEmployeeCount] = useState(0);
+  const [respondedContractEmployeeCount, setRespondedContractEmployeeCount] = useState(0);
   const [pendingContractApprovalRequestDocumentIds, setPendingContractApprovalRequestDocumentIds] = useState<
     string[]
   >([]);
@@ -197,6 +198,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
         setApprovalRequestedContractEmployeeCount(0);
         setApprovedContractEmployeeCount(0);
         setSentContractEmployeeCount(0);
+        setRespondedContractEmployeeCount(0);
         setPendingContractApprovalRequestDocumentIds([]);
         setPendingContractApprovalDecisionDocumentIds([]);
         setPendingContractSendDocumentIds([]);
@@ -262,6 +264,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       const approvalRequestedStatusSet = new Set(["APPROVAL_REQUESTED", "SENT", "SIGNED", "RENEWED"]);
       const approvalDecidedStatusSet = new Set(["SENT", "SIGNED", "RENEWED"]);
       const sentStatusSet = new Set(["SENT", "SIGNED", "RENEWED"]);
+      const responseStatusSet = new Set(["SIGNED", "REJECTED", "RENEWED"]);
       const preparedEmployeeSet = new Set(
         contractDocumentRows
           .filter((row) => preparedStatusSet.has(row.status))
@@ -286,6 +289,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       );
       const sentEmployeeSet = new Set(
         contractDocumentRows.filter((row) => sentStatusSet.has(row.status)).map((row) => row.employeeId)
+      );
+      const respondedEmployeeSet = new Set(
+        contractDocumentRows.filter((row) => responseStatusSet.has(row.status)).map((row) => row.employeeId)
       );
       const pendingApprovalDecisionEmployeeSet = new Set(
         Array.from(approvalRequestedEmployeeSet).filter(
@@ -328,6 +334,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
         approvalDecidedEmployeeSet.has(employee.id)
       ).length;
       const sentEmployeeCount = employeeRows.filter((employee) => sentEmployeeSet.has(employee.id)).length;
+      const respondedEmployeeCount = employeeRows.filter((employee) =>
+        respondedEmployeeSet.has(employee.id)
+      ).length;
 
       setDepartments(departmentRows.map((row) => ({ id: row.id, code: row.code, name: row.name })));
       setActiveEmployees(employeeRows);
@@ -342,6 +351,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       setApprovalRequestedContractEmployeeCount(approvalRequestedEmployeeCount);
       setApprovedContractEmployeeCount(approvalDecidedEmployeeCount);
       setSentContractEmployeeCount(sentEmployeeCount);
+      setRespondedContractEmployeeCount(respondedEmployeeCount);
       setPendingContractApprovalRequestDocumentIds(Array.from(pendingApprovalDraftByEmployee.values()));
       setPendingContractApprovalDecisionDocumentIds(Array.from(pendingApprovalDecisionByEmployee.values()));
       setPendingContractSendDocumentIds(Array.from(pendingSendByEmployee.values()));
@@ -387,6 +397,10 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     approvalRequestedContractEmployeeCount - approvedContractEmployeeCount
   );
   const pendingContractSendCount = Math.max(0, approvedContractEmployeeCount - sentContractEmployeeCount);
+  const pendingContractResponseCount = Math.max(
+    0,
+    sentContractEmployeeCount - respondedContractEmployeeCount
+  );
   const inviteCoverageDone = inviteEligibleEmployeeCount > 0 && pendingInviteCount === 0;
 
   const checklistItems = useMemo(
@@ -643,10 +657,12 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     pendingContractApprovalRequestCount,
     pendingContractApprovalDecisionCount,
     pendingContractSendCount,
+    pendingContractResponseCount,
     preparedContractDraftEmployeeCount,
     approvalRequestedContractEmployeeCount,
     approvedContractEmployeeCount,
     sentContractEmployeeCount,
+    respondedContractEmployeeCount,
     activeContractTemplateId,
     activeContractTemplateCount,
     adminActorId,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   AdminOnboardingChecklistPanel,
@@ -12,6 +13,7 @@ import { useAdminOnboardingData } from "@/components/admin-onboarding/useAdminOn
 import { useI18n } from "@/lib/i18n/provider";
 
 export function AdminOnboardingDashboard() {
+  const router = useRouter();
   const { locale } = useI18n();
   const copy = adminOnboardingCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -74,6 +76,8 @@ export function AdminOnboardingDashboard() {
         pendingContractApprovalDecisionCount={data.pendingContractApprovalDecisionCount}
         sentContractEmployeeCount={data.sentContractEmployeeCount}
         pendingContractSendCount={data.pendingContractSendCount}
+        respondedContractEmployeeCount={data.respondedContractEmployeeCount}
+        pendingContractResponseCount={data.pendingContractResponseCount}
         onSetDepartmentSeedInput={data.setDepartmentSeedInput}
         onSetEmployeeSeedInput={data.setEmployeeSeedInput}
         onSetAnnualGrantDays={data.setAnnualGrantDays}
@@ -111,6 +115,9 @@ export function AdminOnboardingDashboard() {
         }}
         onSendPendingContracts={() => {
           void data.sendPendingContracts();
+        }}
+        onOpenPendingContractResponses={() => {
+          router.push("/admin/contracts?status=SENT&focus=pending-response");
         }}
       />
 
