@@ -1073,3 +1073,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0785 employee dashboard hub IA simplification (add /employee core workspace hub panel with dedicated route links for schedule/leave/payroll-documents/contracts, replace header login shortcut with contracts shortcut, and keep detailed actions in dedicated workspaces + e2e-wi0785 regression guard)
 
 - WI-0786 employee dashboard KPI product copy normalization (replace developer-centric KPI wording in EmployeeDashboardChrome: API success/call -> request success/activity product copy in ko/en runtime + e2e-wi0786 regression guard)
+
+- WI-0787 employee dashboard priority action panel (add checklist-driven top-priority action panel on /employee account overview, select blocked item first and provide one-click section jump CTA + e2e-wi0787 regression guard)
