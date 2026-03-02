@@ -8,6 +8,7 @@ import {
   listRecruitmentReferrals,
   summarizeRecruitmentReferrals
 } from "@/features/recruitment/store";
+import { isRecruitmentReferralTerminalStage } from "@/features/recruitment/types";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -70,6 +71,24 @@ export async function POST(request: Request) {
     return fail(409, "recruitment.referral.create.opening_closed", {
       openingId: opening.id,
       openingStatus: opening.status
+    });
+  }
+  const normalizedCandidateEmail = parsed.data.candidateEmail.trim().toLowerCase();
+  const existingReferrals = await listRecruitmentReferrals({
+    organizationId,
+    stage: "all"
+  });
+  const duplicateActiveReferral = existingReferrals.find(
+    (referral) =>
+      referral.openingId === opening.id &&
+      referral.candidateEmail.trim().toLowerCase() === normalizedCandidateEmail &&
+      !isRecruitmentReferralTerminalStage(referral.stage)
+  );
+  if (duplicateActiveReferral) {
+    return fail(409, "recruitment.referral.create.duplicate_active", {
+      openingId: opening.id,
+      referralId: duplicateActiveReferral.id,
+      stage: duplicateActiveReferral.stage
     });
   }
 
