@@ -48,6 +48,14 @@ export type KpiCopy = {
     stalledReferral7dCount: string;
     stalledThreshold: string;
   };
+  noticesPanel: {
+    title: string;
+    description: string;
+    publishedNoticeCount: string;
+    noReadNoticeCount: string;
+    unreadAging3dCount: string;
+    agingThreshold: string;
+  };
   trendTitle: string;
   trendCurrent: string;
   trendPrevious: string;
@@ -119,6 +127,14 @@ const defaultCopy: KpiCopy = {
     stalledReferral7dCount: "Stalled referrals (7d+)",
     stalledThreshold: "no stage update for 7+ days"
   },
+  noticesPanel: {
+    title: "Notice read coverage",
+    description: "Published notices that still need acknowledgement follow-up",
+    publishedNoticeCount: "Published notices",
+    noReadNoticeCount: "No-read notices",
+    unreadAging3dCount: "No-read notices (3d+)",
+    agingThreshold: "published or updated 3+ days ago"
+  },
   trendTitle: "Period comparison",
   trendCurrent: "Current",
   trendPrevious: "Previous",
@@ -189,6 +205,14 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       activeReferralCount: "진행 중 추천 수",
       stalledReferral7dCount: "7일 이상 정체 추천",
       stalledThreshold: "7일 이상 단계 변경 없음"
+    },
+    noticesPanel: {
+      title: "공지 읽음 커버리지",
+      description: "게시 공지 중 아직 읽지 않은 공지를 추적합니다.",
+      publishedNoticeCount: "게시 공지 수",
+      noReadNoticeCount: "미열람 공지 수",
+      unreadAging3dCount: "3일+ 미열람 공지",
+      agingThreshold: "게시/수정 후 3일 이상 경과"
     },
     trendTitle: "기간 비교",
     trendCurrent: "현재",
