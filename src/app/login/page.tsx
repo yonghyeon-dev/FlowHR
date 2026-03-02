@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { useI18n } from "@/lib/i18n/provider";
@@ -54,7 +55,9 @@ function parseSession(session: unknown): SessionSnapshot | null {
 }
 
 export default function LoginPage() {
-  const { t } = useI18n();
+  const router = useRouter();
+  const { t, locale } = useI18n();
+  const isKoLocale = locale === "ko";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -100,6 +103,18 @@ export default function LoginPage() {
       listener.data.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!snapshot) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      router.replace(target);
+    }, 600);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [router, snapshot, target]);
 
   async function signIn() {
     setPending(true);
@@ -156,28 +171,35 @@ export default function LoginPage() {
         <article className="panel">
           <h2>{t("login.sessionTitle")}</h2>
           {snapshot ? (
-            <ul className="simple-list" aria-label={t("login.sessionAria")}>
-              <li>
-                <span className="muted">{t("login.userId")}</span>
-                <strong>{snapshot.userId}</strong>
-              </li>
-              <li>
-                <span className="muted">{t("login.email")}</span>
-                <strong>{snapshot.email ?? "-"}</strong>
-              </li>
-              <li>
-                <span className="muted">{t("login.role")}</span>
-                <strong>{snapshot.role ?? "-"}</strong>
-              </li>
-              <li>
-                <span className="muted">{t("login.organization")}</span>
-                <strong>{snapshot.organizationId ?? "-"}</strong>
-              </li>
-              <li>
-                <span className="muted">{t("login.actorIdOptional")}</span>
-                <strong>{snapshot.actorId ?? "-"}</strong>
-              </li>
-            </ul>
+            <>
+              <p className="small muted">
+                {isKoLocale
+                  ? "세션이 확인되어 권한에 맞는 워크스페이스로 자동 이동합니다."
+                  : "Session detected. Redirecting to your role workspace."}
+              </p>
+              <ul className="simple-list" aria-label={t("login.sessionAria")}>
+                <li>
+                  <span className="muted">{t("login.userId")}</span>
+                  <strong>{snapshot.userId}</strong>
+                </li>
+                <li>
+                  <span className="muted">{t("login.email")}</span>
+                  <strong>{snapshot.email ?? "-"}</strong>
+                </li>
+                <li>
+                  <span className="muted">{t("login.role")}</span>
+                  <strong>{snapshot.role ?? "-"}</strong>
+                </li>
+                <li>
+                  <span className="muted">{t("login.organization")}</span>
+                  <strong>{snapshot.organizationId ?? "-"}</strong>
+                </li>
+                <li>
+                  <span className="muted">{t("login.actorIdOptional")}</span>
+                  <strong>{snapshot.actorId ?? "-"}</strong>
+                </li>
+              </ul>
+            </>
           ) : (
             <p className="small muted">{t("login.notSignedIn")}</p>
           )}

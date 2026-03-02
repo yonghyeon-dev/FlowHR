@@ -1063,3 +1063,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0780 admin onboarding readiness priority action run (upgrade /admin/onboarding readiness panel with one-click execution for highest-priority pending checklist item, route contracts to next unresolved step action, and keep workspace follow-up link while request is pending + e2e-wi0780 regression guard)
 
 - WI-0781 admin dashboard korean runtime copy normalization (normalize corrupted Korean labels/messages in /admin dashboard header, priority queue summary, KPI cards, and workspace action copy while preserving existing English runtime copy + e2e-wi0781 regression guard)
+
+- WI-0782 login role-based auto redirect (add automatic role workspace redirect on /login after session detection: admin/payroll_operator/manager -> /admin, others -> /employee, with runtime redirect guidance copy + e2e-wi0782 regression guard)
