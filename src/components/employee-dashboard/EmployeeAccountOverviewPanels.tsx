@@ -37,22 +37,22 @@ function resolvePriorityWorkspaceTarget(
   switch (sectionId) {
     case "attendance":
       return {
-        href: "/employee#attendance",
+        href: "/employee?focus=attendance",
         label: isKoLocale ? "출퇴근 섹션 열기" : "Open attendance section"
       };
     case "leave":
       return {
-        href: "/employee#leave",
+        href: "/employee?focus=leave",
         label: isKoLocale ? "휴가 섹션 열기" : "Open leave section"
       };
     case "request-resubmit":
       return {
-        href: "/employee#request-resubmit",
+        href: "/employee?focus=request-resubmit",
         label: isKoLocale ? "재제출 섹션 열기" : "Open resubmit section"
       };
     default:
       return {
-        href: `/employee#${sectionId}`,
+        href: `/employee?focus=${encodeURIComponent(sectionId)}`,
         label: isKoLocale ? "관련 섹션 열기" : "Open related section"
       };
   }

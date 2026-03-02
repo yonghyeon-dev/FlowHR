@@ -26,18 +26,18 @@ function run() {
   );
   assert.match(
     employeeAccountOverviewPanels,
-    /case "attendance":[\s\S]*href: "\/employee#attendance"/,
-    "attendance priority should map to attendance anchor route"
+    /case "attendance":[\s\S]*href: "\/employee\?focus=attendance"/,
+    "attendance priority should map to attendance focus route"
   );
   assert.match(
     employeeAccountOverviewPanels,
-    /case "leave":[\s\S]*href: "\/employee#leave"/,
-    "leave priority should map to leave anchor route"
+    /case "leave":[\s\S]*href: "\/employee\?focus=leave"/,
+    "leave priority should map to leave focus route"
   );
   assert.match(
     employeeAccountOverviewPanels,
-    /case "request-resubmit":[\s\S]*href: "\/employee#request-resubmit"/,
-    "resubmit priority should map to resubmit anchor route"
+    /case "request-resubmit":[\s\S]*href: "\/employee\?focus=request-resubmit"/,
+    "resubmit priority should map to resubmit focus route"
   );
   assert.match(
     employeeAccountOverviewPanels,
