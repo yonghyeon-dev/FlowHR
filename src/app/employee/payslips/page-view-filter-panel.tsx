@@ -83,9 +83,11 @@ export function EmployeePayslipFilterPanel({
           <Link className="btn btn-secondary" href="/login">
             {pageCopy.nav.login}
           </Link>
-          <Link className="btn btn-secondary" href="/admin">
-            {pageCopy.nav.admin}
-          </Link>
+          {showDevTools ? (
+            <Link className="btn btn-secondary" href="/admin">
+              {isKoLocale ? "(개발) 관리자" : "(dev) Admin"}
+            </Link>
+          ) : null}
           <Link className="btn btn-secondary" href="/">
             {pageCopy.nav.home}
           </Link>
