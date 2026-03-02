@@ -40,6 +40,14 @@ export type KpiCopy = {
     payrollConfirmedRuns: string;
     stalledThreshold: string;
   };
+  recruitmentPanel: {
+    title: string;
+    description: string;
+    openOpeningCount: string;
+    activeReferralCount: string;
+    stalledReferral7dCount: string;
+    stalledThreshold: string;
+  };
   trendTitle: string;
   trendCurrent: string;
   trendPrevious: string;
@@ -103,6 +111,14 @@ const defaultCopy: KpiCopy = {
     payrollConfirmedRuns: "confirmed runs",
     stalledThreshold: "older than 24h"
   },
+  recruitmentPanel: {
+    title: "Recruitment snapshot",
+    description: "Current organization hiring queue status",
+    openOpeningCount: "Open openings",
+    activeReferralCount: "Active referrals",
+    stalledReferral7dCount: "Stalled referrals (7d+)",
+    stalledThreshold: "no stage update for 7+ days"
+  },
   trendTitle: "Period comparison",
   trendCurrent: "Current",
   trendPrevious: "Previous",
@@ -165,6 +181,14 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       leaveApprovedRequests: "승인된 휴가 요청",
       payrollConfirmedRuns: "확정된 급여 실행 건",
       stalledThreshold: "24시간 이상 정체"
+    },
+    recruitmentPanel: {
+      title: "채용 스냅샷",
+      description: "현재 조직 기준 채용 파이프라인 현황",
+      openOpeningCount: "진행 중 공고 수",
+      activeReferralCount: "진행 중 추천 수",
+      stalledReferral7dCount: "7일 이상 정체 추천",
+      stalledThreshold: "7일 이상 단계 변경 없음"
     },
     trendTitle: "기간 비교",
     trendCurrent: "현재",
