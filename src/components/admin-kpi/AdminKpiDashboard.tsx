@@ -22,7 +22,7 @@ import { AdminRecruitmentKpiPanel, buildRecruitmentKpiSnapshot, type Recruitment
 import { AdminKpiAnalyticsControls, AdminKpiCards, AdminKpiContextPanel, AdminKpiLogsPanel, AdminKpiTrendPanel, type AdminKpiFocusMetric, type ApiLog, type RangeKpi } from "@/components/admin-kpi/AdminKpiSections";
 import { kpiCopyByLocale } from "@/components/admin-kpi/copy";
 import { buildAdminKpiCsvPayload, buildAdminKpiTrendRows, safeParseBody, triggerCsvDownload } from "@/components/admin-kpi/dashboard-utils";
-import { buildQuery, getLast30DaysRangeLocal, getThisMonthRangeLocal, isTruthyFlag, parseArray, toIso } from "@/components/admin-kpi/helpers";
+import { buildQuery, formatDelta, formatPercent, getLast30DaysRangeLocal, getThisMonthRangeLocal, isTruthyFlag, parseArray, toIso } from "@/components/admin-kpi/helpers";
 import { buildAdminKpiSummary, computePreviousPeriodRange, computeStalledHours } from "@/features/admin-kpi/summary";
 import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
@@ -380,6 +380,10 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     () => (focusMetric === "all" ? trendRows : trendRows.filter((row) => row.key === focusMetric)),
     [focusMetric, trendRows]
   );
+  const focusedTrendRow = useMemo(
+    () => trendRows.find((row) => row.key === focusMetric) ?? null,
+    [focusMetric, trendRows]
+  );
   const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim());
   const exportDisabled = !currentRangeKpi || !previousRangeKpi || Boolean(pendingLabel);
   const focusWorkspace = useMemo(
@@ -458,6 +462,18 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       ]);
     }
   }, [analyticsMode, copy.focusWorkspaceCopyDone, copy.focusWorkspaceCopyFailed, focusMetric, runtimeLocale]);
+  const focusTrendDirectionLabel = useMemo(() => {
+    if (!focusedTrendRow) {
+      return copy.focusWorkspaceTrendFlat;
+    }
+    if (focusedTrendRow.delta > 0) {
+      return copy.focusWorkspaceTrendUp;
+    }
+    if (focusedTrendRow.delta < 0) {
+      return copy.focusWorkspaceTrendDown;
+    }
+    return copy.focusWorkspaceTrendFlat;
+  }, [copy.focusWorkspaceTrendDown, copy.focusWorkspaceTrendFlat, copy.focusWorkspaceTrendUp, focusedTrendRow]);
   return (
     <main className="saas-content">
       <header className="hero">
@@ -519,6 +535,22 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
             }}>
               {copy.focusWorkspaceCopyLinkAction}
             </button>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <h3>{copy.focusWorkspaceMetricSummaryTitle}</h3>
+            {focusedTrendRow ? (
+              <ul className="small muted" style={{ marginTop: 6 }}>
+                <li>{copy.metricLabel}: {focusedTrendRow.label}</li>
+                <li>{copy.trendCurrent}: {focusedTrendRow.percent ? formatPercent(focusedTrendRow.current) : focusedTrendRow.current.toFixed(1)}</li>
+                <li>{copy.trendPrevious}: {focusedTrendRow.percent ? formatPercent(focusedTrendRow.previous) : focusedTrendRow.previous.toFixed(1)}</li>
+                <li>{copy.trendDelta}: {formatDelta(focusedTrendRow.delta, focusedTrendRow.percent)}</li>
+                <li>{copy.focusWorkspaceTrendDirectionLabel}: {focusTrendDirectionLabel}</li>
+              </ul>
+            ) : (
+              <p className="small muted" style={{ marginTop: 6 }}>
+                {copy.focusWorkspaceNoMetricSelected}
+              </p>
+            )}
           </div>
         </section>
       ) : null}

@@ -28,6 +28,12 @@ export type KpiCopy = {
   focusWorkspaceCopyLinkAction: string;
   focusWorkspaceCopyDone: string;
   focusWorkspaceCopyFailed: string;
+  focusWorkspaceMetricSummaryTitle: string;
+  focusWorkspaceNoMetricSelected: string;
+  focusWorkspaceTrendDirectionLabel: string;
+  focusWorkspaceTrendUp: string;
+  focusWorkspaceTrendDown: string;
+  focusWorkspaceTrendFlat: string;
   loadingLabel: string;
   currentPeriodLabel: string;
   previousPeriodLabel: string;
@@ -157,6 +163,12 @@ const defaultCopy: KpiCopy = {
   focusWorkspaceCopyLinkAction: "Copy focus link",
   focusWorkspaceCopyDone: "Focused analytics link copied",
   focusWorkspaceCopyFailed: "Could not copy focused analytics link",
+  focusWorkspaceMetricSummaryTitle: "Focused metric summary",
+  focusWorkspaceNoMetricSelected: "Select one focused KPI to see summary details.",
+  focusWorkspaceTrendDirectionLabel: "Trend direction",
+  focusWorkspaceTrendUp: "Increasing",
+  focusWorkspaceTrendDown: "Decreasing",
+  focusWorkspaceTrendFlat: "No change",
   loadingLabel: "Loading KPI metrics...",
   currentPeriodLabel: "Current period",
   previousPeriodLabel: "Previous period",
@@ -286,6 +298,12 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
     focusWorkspaceCopyLinkAction: "집중 링크 복사",
     focusWorkspaceCopyDone: "집중 지표 링크를 복사했습니다",
     focusWorkspaceCopyFailed: "집중 지표 링크를 복사할 수 없습니다",
+    focusWorkspaceMetricSummaryTitle: "집중 지표 요약",
+    focusWorkspaceNoMetricSelected: "요약을 보려면 집중 지표를 선택하세요.",
+    focusWorkspaceTrendDirectionLabel: "추세 방향",
+    focusWorkspaceTrendUp: "상승",
+    focusWorkspaceTrendDown: "하락",
+    focusWorkspaceTrendFlat: "변화 없음",
     loadingLabel: "KPI 지표를 불러오는 중입니다...",
     currentPeriodLabel: "현재 기간",
     previousPeriodLabel: "이전 동일 기간",
