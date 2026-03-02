@@ -45,6 +45,13 @@ export function EmployeeAccountOverviewPanels({
   onJumpToSection
 }: EmployeeAccountOverviewPanelsProps) {
   const workspaceHubs = buildEmployeeWorkspaceHubs(isKoLocale);
+  const priorityChecklistCard =
+    integratedSubmitChecklistCards.find((card) => !card.ready) ??
+    integratedSubmitChecklistCards[0] ??
+    null;
+  const hasBlockingChecklist = Boolean(
+    priorityChecklistCard && !priorityChecklistCard.ready
+  );
 
   return (
     <>
@@ -76,6 +83,45 @@ export function EmployeeAccountOverviewPanels({
             </article>
           ))}
         </div>
+      </article>
+
+      <article className="panel" id="priority-action">
+        <h2>{isKoLocale ? "오늘의 우선 처리" : "Today's priority"}</h2>
+        <p className="small">
+          {isKoLocale
+            ? "제출 체크리스트를 기준으로 지금 바로 처리할 다음 작업을 제안합니다."
+            : "Based on checklist readiness, this suggests the next action to process now."}
+        </p>
+        {priorityChecklistCard ? (
+          <>
+            <p className="small">
+              <strong>{priorityChecklistCard.label}</strong> ·{" "}
+              {priorityChecklistCard.passCount}/{priorityChecklistCard.totalCount}
+            </p>
+            <p className="small muted">{priorityChecklistCard.detail}</p>
+            <div className="actions">
+              <button
+                type="button"
+                className={hasBlockingChecklist ? "btn btn-primary" : "btn btn-secondary"}
+                onClick={() => onJumpToSection(priorityChecklistCard.targetSectionId)}
+              >
+                {hasBlockingChecklist
+                  ? isKoLocale
+                    ? "우선 작업 열기"
+                    : "Open priority task"
+                  : isKoLocale
+                    ? "체크리스트 다시 확인"
+                    : "Review checklist"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="small muted">
+            {isKoLocale
+              ? "표시할 체크리스트가 없습니다. 데이터를 새로고침해 주세요."
+              : "No checklist items to show yet. Refresh data to continue."}
+          </p>
+        )}
       </article>
 
       <article className="panel" id="account">
