@@ -402,6 +402,13 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     sentContractEmployeeCount - respondedContractEmployeeCount
   );
   const inviteCoverageDone = inviteEligibleEmployeeCount > 0 && pendingInviteCount === 0;
+  const contractJourneyDone =
+    activeEmployeeCount > 0 &&
+    pendingContractDraftCount === 0 &&
+    pendingContractApprovalRequestCount === 0 &&
+    pendingContractApprovalDecisionCount === 0 &&
+    pendingContractSendCount === 0 &&
+    pendingContractResponseCount === 0;
 
   const checklistItems = useMemo(
     () =>
@@ -410,9 +417,17 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
         departmentCount: departments.length,
         employeeCount: activeEmployeeCount,
         inviteCoverageDone,
-        leavePolicyConfigured
+        leavePolicyConfigured,
+        contractJourneyDone
       }),
-    [activeEmployeeCount, departments.length, inviteCoverageDone, leavePolicyConfigured, organizationId]
+    [
+      activeEmployeeCount,
+      contractJourneyDone,
+      departments.length,
+      inviteCoverageDone,
+      leavePolicyConfigured,
+      organizationId
+    ]
   );
   const progressPercent = useMemo(() => onboardingProgressPercent(checklistItems), [checklistItems]);
 

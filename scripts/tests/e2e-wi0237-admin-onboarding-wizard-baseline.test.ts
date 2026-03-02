@@ -40,6 +40,7 @@ async function run() {
   assert.match(helpersSource, /parseEmployeeSeedInput/);
   assert.match(checklistSource, /buildOnboardingChecklist/);
   assert.match(checklistSource, /"invites"/);
+  assert.match(checklistSource, /"contracts"/);
 
   assert.ok(
     countLines(dashboard) <= 300,
@@ -62,19 +63,22 @@ async function run() {
     departmentCount: 2,
     employeeCount: 0,
     inviteCoverageDone: false,
-    leavePolicyConfigured: true
+    leavePolicyConfigured: true,
+    contractJourneyDone: false
   });
-  assert.equal(checklist.length, 5);
+  assert.equal(checklist.length, 6);
   assert.equal(checklist.find((item) => item.key === "employees")?.done, false);
   assert.equal(checklist.find((item) => item.key === "invites")?.done, false);
-  assert.equal(onboardingProgressPercent(checklist), 60);
+  assert.equal(checklist.find((item) => item.key === "contracts")?.done, false);
+  assert.equal(onboardingProgressPercent(checklist), 50);
 
   const completeChecklist = buildOnboardingChecklist({
     organizationId: "ORG-2",
     departmentCount: 1,
     employeeCount: 1,
     inviteCoverageDone: true,
-    leavePolicyConfigured: true
+    leavePolicyConfigured: true,
+    contractJourneyDone: true
   });
   assert.equal(onboardingProgressPercent(completeChecklist), 100);
 

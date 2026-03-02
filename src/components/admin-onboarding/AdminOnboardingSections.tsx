@@ -274,7 +274,7 @@ export function AdminOnboardingChecklistPanel(props: ChecklistPanelProps) {
                 <span className={item.done ? "ok" : "fail"}>
                   {item.done ? copy.doneLabel : copy.todoLabel}
                 </span>{" "}
-                {item.key === "organization" ? copy.checklist.organization : item.key === "departments" ? copy.checklist.departments : item.key === "employees" ? copy.checklist.employees : item.key === "invites" ? copy.checklist.invites : copy.checklist.leavePolicy}
+                {item.key === "organization" ? copy.checklist.organization : item.key === "departments" ? copy.checklist.departments : item.key === "employees" ? copy.checklist.employees : item.key === "invites" ? copy.checklist.invites : item.key === "leave_policy" ? copy.checklist.leavePolicy : copy.checklist.contracts}
               </span>
             </li>
           ))}

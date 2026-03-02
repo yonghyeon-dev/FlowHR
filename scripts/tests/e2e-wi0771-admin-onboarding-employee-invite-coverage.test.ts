@@ -52,20 +52,22 @@ async function run() {
     departmentCount: 1,
     employeeCount: 2,
     inviteCoverageDone: true,
-    leavePolicyConfigured: false
+    leavePolicyConfigured: false,
+    contractJourneyDone: false
   });
   assert.equal(inviteDone.find((item) => item.key === "invites")?.done, true);
-  assert.equal(onboardingProgressPercent(inviteDone), 80);
+  assert.equal(onboardingProgressPercent(inviteDone), 67);
 
   const inviteMissing = buildOnboardingChecklist({
     organizationId: "ORG-1",
     departmentCount: 1,
     employeeCount: 2,
     inviteCoverageDone: false,
-    leavePolicyConfigured: false
+    leavePolicyConfigured: false,
+    contractJourneyDone: false
   });
   assert.equal(inviteMissing.find((item) => item.key === "invites")?.done, false);
-  assert.equal(onboardingProgressPercent(inviteMissing), 60);
+  assert.equal(onboardingProgressPercent(inviteMissing), 50);
 }
 
 run()

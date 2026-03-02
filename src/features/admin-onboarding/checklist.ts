@@ -1,13 +1,14 @@
-﻿export type OnboardingChecklistInput = {
+export type OnboardingChecklistInput = {
   organizationId: string;
   departmentCount: number;
   employeeCount: number;
   inviteCoverageDone: boolean;
   leavePolicyConfigured: boolean;
+  contractJourneyDone: boolean;
 };
 
 export type OnboardingChecklistItem = {
-  key: "organization" | "departments" | "employees" | "invites" | "leave_policy";
+  key: "organization" | "departments" | "employees" | "invites" | "leave_policy" | "contracts";
   done: boolean;
 };
 
@@ -32,6 +33,10 @@ export function buildOnboardingChecklist(input: OnboardingChecklistInput): Onboa
     {
       key: "leave_policy",
       done: input.leavePolicyConfigured
+    },
+    {
+      key: "contracts",
+      done: input.contractJourneyDone
     }
   ];
 }
