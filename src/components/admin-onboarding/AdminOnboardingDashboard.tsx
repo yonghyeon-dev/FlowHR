@@ -61,6 +61,7 @@ export function AdminOnboardingDashboard() {
         allowHourly={data.allowHourly}
         hourlyIncrementMinutes={data.hourlyIncrementMinutes}
         maxHoursPerRequest={data.maxHoursPerRequest}
+        activeContractTemplateCount={data.activeContractTemplateCount}
         onSetDepartmentSeedInput={data.setDepartmentSeedInput}
         onSetEmployeeSeedInput={data.setEmployeeSeedInput}
         onSetAnnualGrantDays={data.setAnnualGrantDays}
@@ -80,6 +81,9 @@ export function AdminOnboardingDashboard() {
         }}
         onApplyLeavePolicy={() => {
           void data.applyLeavePolicy();
+        }}
+        onBootstrapEmploymentContractTemplate={() => {
+          void data.bootstrapEmploymentContractTemplate();
         }}
       />
 
