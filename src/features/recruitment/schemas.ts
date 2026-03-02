@@ -26,7 +26,8 @@ export const createRecruitmentOpeningSchema = z.object({
 
 export const updateRecruitmentOpeningStatusSchema = z.object({
   openingId: z.string().trim().min(1),
-  status: openingStatusSchema
+  status: openingStatusSchema,
+  force: z.boolean().optional()
 });
 
 export const listRecruitmentReferralsQuerySchema = z.object({
