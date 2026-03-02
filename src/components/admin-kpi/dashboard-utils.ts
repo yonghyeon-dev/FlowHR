@@ -7,6 +7,9 @@ type BuildCsvPayloadInput = {
   trendRows: TrendRow[];
   summary: RangeKpi["summary"];
   focusMetric: string;
+  focusAnalyticsHref: string;
+  focusWorkspaceLabel: string;
+  focusWorkspaceHref: string;
   generatedAt: Date;
 };
 
@@ -80,13 +83,25 @@ export function buildAdminKpiTrendRows(
 }
 
 export function buildAdminKpiCsvPayload(input: BuildCsvPayloadInput): CsvPayload {
-  const { analyticsMode, trendRows, summary, focusMetric, generatedAt } = input;
+  const {
+    analyticsMode,
+    trendRows,
+    summary,
+    focusMetric,
+    focusAnalyticsHref,
+    focusWorkspaceLabel,
+    focusWorkspaceHref,
+    generatedAt
+  } = input;
   const kpiRows = [
     toCsvRow(["section", "metric", "current", "previous", "delta"]),
     ...trendRows.map((row) => toCsvRow([analyticsMode ? "analytics" : "kpi", row.label, row.current, row.previous, row.delta]))
   ];
   const snapshotRows = [
     toCsvRow(["snapshot", "focusMetric", focusMetric]),
+    toCsvRow(["snapshot", "focusAnalyticsHref", focusAnalyticsHref]),
+    toCsvRow(["snapshot", "focusWorkspaceLabel", focusWorkspaceLabel]),
+    toCsvRow(["snapshot", "focusWorkspaceHref", focusWorkspaceHref]),
     toCsvRow(["snapshot", "approvalPendingCount", summary.approvalPendingCount]),
     toCsvRow(["snapshot", "approvalStalledCount", summary.approvalStalledCount]),
     toCsvRow(["snapshot", "attendanceApprovalRate", summary.attendanceApprovalRate]),

@@ -125,10 +125,25 @@ function resolveFocusWorkspaceLink(
 
 function appendAnalyticsSourceQuery(
   href: string,
-  focusMetric: AdminKpiDrilldownMetric
+  focusMetric: AdminKpiFocusMetric
 ): string {
+  const contextParams = new URLSearchParams({ source: "admin-analytics" });
+  if (focusMetric !== "all") {
+    contextParams.set("focusMetric", focusMetric);
+  }
   const separator = href.includes("?") ? "&" : "?";
-  return `${href}${separator}source=admin-analytics&focusMetric=${focusMetric}`;
+  return `${href}${separator}${contextParams.toString()}`;
+}
+
+function buildAnalyticsFocusHref(
+  pathname: string,
+  focusMetric: AdminKpiFocusMetric
+): string {
+  if (focusMetric === "all") {
+    return pathname;
+  }
+  const separator = pathname.includes("?") ? "&" : "?";
+  return `${pathname}${separator}focus=${focusMetric}`;
 }
 
 type AdminKpiDashboardProps = { analyticsMode?: boolean };
@@ -436,11 +451,16 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       return;
     }
     const generatedAt = new Date();
+    const focusAnalyticsHref = buildAnalyticsFocusHref(pathname, focusMetric);
+    const focusWorkspaceHref = appendAnalyticsSourceQuery(focusWorkspace.href, focusMetric);
     const payload = buildAdminKpiCsvPayload({
       analyticsMode,
       trendRows: visibleTrendRows,
       summary: currentRangeKpi.summary,
       focusMetric,
+      focusAnalyticsHref,
+      focusWorkspaceLabel: focusWorkspace.label,
+      focusWorkspaceHref,
       generatedAt
     });
     triggerCsvDownload(payload.fileName, payload.content);
@@ -460,6 +480,9 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     copy.exportCsvDone,
     currentRangeKpi,
     focusMetric,
+    focusWorkspace.href,
+    focusWorkspace.label,
+    pathname,
     previousRangeKpi,
     runtimeLocale,
     visibleTrendRows

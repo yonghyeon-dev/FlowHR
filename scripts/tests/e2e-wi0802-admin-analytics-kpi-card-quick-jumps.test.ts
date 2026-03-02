@@ -27,7 +27,8 @@ function run() {
 
   assert.match(dashboard, /adminKpiDrilldownMetrics/);
   assert.match(dashboard, /appendAnalyticsSourceQuery/);
-  assert.match(dashboard, /source=admin-analytics&focusMetric=/);
+  assert.match(dashboard, /new URLSearchParams\(\{ source: "admin-analytics" \}\)/);
+  assert.match(dashboard, /contextParams\.set\("focusMetric", focusMetric\)/);
   assert.match(dashboard, /cardQuickLinks/);
   assert.match(dashboard, /<AdminKpiCards copy=\{copy\} kpi=\{currentRangeKpi\} quickLinks=\{cardQuickLinks\} \/>/);
 
