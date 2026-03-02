@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -86,9 +86,7 @@ export default function AdminDashboardPage() {
     if (isProductionRuntime && !usesBearerToken) {
       setSummary(EMPTY_SUMMARY);
       setLoadError(
-        isKoLocale
-          ? "로그인 세션이 필요합니다. /login에서 로그인해 주세요."
-          : "Login session required. Please sign in at /login."
+        isKoLocale ? "로그인 세션이 필요합니다. /login에서 로그인해 주세요." : "Login session required. Please sign in at /login."
       );
       return;
     }
@@ -157,9 +155,7 @@ export default function AdminDashboardPage() {
         <div>
           <h1 className="page-title">{isKoLocale ? "관리자 대시보드" : "Admin Dashboard"}</h1>
           <p className="page-subtitle">
-            {isKoLocale
-              ? "핵심 지표와 대기 업무를 확인하고, 각 전용 워크스페이스로 이동해 작업하세요."
-              : "Review key metrics and work queues, then continue in dedicated workspaces."}
+            {isKoLocale ? "핵심 지표와 대기 업무를 확인하고, 각 전용 워크스페이스로 이동해 작업하세요." : "Review key metrics and work queues, then continue in dedicated workspaces."}
           </p>
         </div>
         <div className="page-actions">
@@ -234,7 +230,7 @@ export default function AdminDashboardPage() {
           <strong>{summary.employeeCount}</strong>
         </article>
         <article className="kpi-card">
-          <p>{isKoLocale ? "최종 갱신" : "Last refreshed"}</p>
+          <p>{isKoLocale ? "최근 갱신" : "Last refreshed"}</p>
           <strong>{summary.refreshedAt ?? "-"}</strong>
         </article>
       </section>
@@ -243,9 +239,7 @@ export default function AdminDashboardPage() {
         <article className="panel">
           <h2>{isKoLocale ? "결재 대기함" : "Approval queue"}</h2>
           <p className="small muted">
-            {isKoLocale
-              ? "결재 실행 현황과 대기 건을 확인합니다."
-              : "Review execution status and pending approvals."}
+            {isKoLocale ? "결재 실행 현황과 대기 건을 확인합니다." : "Review execution status and pending approvals."}
           </p>
           <div className="actions">
             <Link className="btn btn-secondary" href="/admin/approval-executions">
@@ -257,9 +251,7 @@ export default function AdminDashboardPage() {
         <article className="panel">
           <h2>{isKoLocale ? "인사 관리" : "People management"}</h2>
           <p className="small muted">
-            {isKoLocale
-              ? "조직도, 직원 이력, 부서/직급 관리를 전용 페이지에서 처리합니다."
-              : "Manage org chart, employee history, departments, and positions in dedicated pages."}
+            {isKoLocale ? "조직도, 직원 이력, 부서/직급 관리를 전용 페이지에서 처리합니다." : "Manage org chart, employee history, departments, and positions in dedicated pages."}
           </p>
           <div className="actions">
             <Link className="btn btn-secondary" href="/admin/people">
@@ -274,9 +266,7 @@ export default function AdminDashboardPage() {
         <article className="panel">
           <h2>{isKoLocale ? "근무/휴가" : "Scheduling and leave"}</h2>
           <p className="small muted">
-            {isKoLocale
-              ? "근무 일정과 휴가 정책/발생/캘린더를 분리된 워크스페이스에서 처리합니다."
-              : "Manage schedules and leave policy/accrual/calendar in dedicated routes."}
+            {isKoLocale ? "근무 일정과 휴가 정책/발생/캘린더를 분리된 워크스페이스에서 관리합니다." : "Manage schedules and leave policy/accrual/calendar in dedicated routes."}
           </p>
           <div className="actions">
             <Link className="btn btn-secondary" href="/admin/scheduling">
@@ -294,9 +284,7 @@ export default function AdminDashboardPage() {
         <article className="panel">
           <h2>{isKoLocale ? "급여/연말정산" : "Payroll and year-end filing"}</h2>
           <p className="small muted">
-            {isKoLocale
-              ? "급여 정산, 명세서 배포, 연말정산/신고를 전용 콘솔에서 처리합니다."
-              : "Run payroll settlement, payslip delivery, and year-end filing in dedicated consoles."}
+            {isKoLocale ? "급여 정산, 명세서 배포, 연말정산/신고를 전용 콘솔에서 처리합니다." : "Run payroll settlement, payslip delivery, and year-end filing in dedicated consoles."}
           </p>
           <div className="actions">
             <Link className="btn btn-secondary" href="/admin/payroll-year-end">
@@ -314,9 +302,7 @@ export default function AdminDashboardPage() {
         <article className="panel">
           <h2>{isKoLocale ? "공지/복리후생/채용" : "Notices, benefits, recruitment"}</h2>
           <p className="small muted">
-            {isKoLocale
-              ? "직원 커뮤니케이션 및 지원 워크플로를 각각 분리된 페이지에서 관리합니다."
-              : "Manage communication and support workflows in dedicated workspaces."}
+            {isKoLocale ? "직원 커뮤니케이션 및 지원 워크플로를 각각 분리된 페이지에서 관리합니다." : "Manage communication and support workflows in dedicated workspaces."}
           </p>
           <div className="actions">
             <Link className="btn btn-secondary" href="/admin/notices">
