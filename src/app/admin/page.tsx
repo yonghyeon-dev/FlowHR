@@ -200,6 +200,9 @@ export default function AdminDashboardPage() {
           })}
         </p>
         <div className="actions">
+          <Link className="btn btn-secondary" href="/admin/approval-executions">
+            {isKoLocale ? "결재 대기 바로가기" : "Open approval queue"}
+          </Link>
           {focusCards.map((card) => (
             <Link
               key={card.key}
