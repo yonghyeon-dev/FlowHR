@@ -1,27 +1,21 @@
-﻿"use client";
-
+"use client";
 import { useMemo, useState } from "react";
-
 import type { RecruitmentOpeningItem, RecruitmentOpeningStatus, RecruitmentReferralItem, RecruitmentReferralStage } from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
 import AdminRecruitmentWorkspaceView from "@/components/recruitment/AdminRecruitmentWorkspaceView";
-
 const TERMINAL_REFERRAL_STAGES: RecruitmentReferralStage[] = ["HIRED", "REJECTED", "WITHDRAWN"];
 const STALLED_REFERRAL_DAYS = 7;
 const CRITICAL_STALLED_REFERRAL_DAYS = 14;
-
 function parseOpenings(payload: unknown) {
   const openings = (payload as { openings?: RecruitmentOpeningItem[] } | null)?.openings;
   return Array.isArray(openings) ? openings : [];
 }
-
 function parseReferrals(payload: unknown) {
   const referrals = (payload as { referrals?: RecruitmentReferralItem[] } | null)?.referrals;
   return Array.isArray(referrals) ? referrals : [];
 }
-
 function buildQuery(input: Record<string, string>) {
   const query = new URLSearchParams();
   Object.entries(input).forEach(([key, value]) => {
@@ -33,12 +27,10 @@ function buildQuery(input: Record<string, string>) {
   const text = query.toString();
   return text ? `?${text}` : "";
 }
-
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
-
 export default function AdminRecruitmentWorkspace() {
   const { locale } = useI18n();
   const copy = resolveAdminRecruitmentCopy(locale);
@@ -46,20 +38,17 @@ export default function AdminRecruitmentWorkspace() {
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
-
   const [openingTitle, setOpeningTitle] = useState("");
   const [department, setDepartment] = useState("");
   const [employmentType, setEmploymentType] = useState("정규직");
   const [referralFilter, setReferralFilter] = useState<RecruitmentReferralStage | "all">("all");
   const [referralRiskFilter, setReferralRiskFilter] = useState<"all" | "stalled_7d" | "stalled_14d">("all");
   const [referralSearchQuery, setReferralSearchQuery] = useState("");
-
   const [openings, setOpenings] = useState<RecruitmentOpeningItem[]>([]);
   const [referrals, setReferrals] = useState<RecruitmentReferralItem[]>([]);
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [stageSelection, setStageSelection] = useState<Record<string, RecruitmentReferralStage>>({});
-
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
   const openingTitleById = useMemo(() => {
@@ -126,7 +115,6 @@ export default function AdminRecruitmentWorkspace() {
     referrals,
     stalledThresholdMs
   ]);
-
   async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
     setPending(true);
     try {
@@ -141,7 +129,6 @@ export default function AdminRecruitmentWorkspace() {
         headers["x-actor-id"] = actorId.trim() || "ADM-1001";
         headers["x-actor-organization-id"] = organizationId.trim();
       }
-
       const response = await fetch(path, {
         method,
         headers,
@@ -154,7 +141,6 @@ export default function AdminRecruitmentWorkspace() {
       setPending(false);
     }
   }
-
   async function loadWorkspace() {
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
@@ -182,7 +168,6 @@ export default function AdminRecruitmentWorkspace() {
     });
     setStatusMessage("");
   }
-
   async function createOpening() {
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
@@ -216,7 +201,6 @@ export default function AdminRecruitmentWorkspace() {
     setStatusMessage(copy.messages.openingCreated);
     await loadWorkspace();
   }
-
   async function updateOpeningStatus(openingId: string, status: RecruitmentOpeningStatus) {
     const { response, parsed } = await callApi(
       "POST",
@@ -230,9 +214,7 @@ export default function AdminRecruitmentWorkspace() {
           locale === "ko"
             ? "진행 중 추천 후보가 있습니다. 그래도 공고를 마감할까요?"
             : "There are active referrals in progress. Close this opening anyway?";
-        if (
-          window.confirm(forceCloseMessage)
-        ) {
+        if (window.confirm(forceCloseMessage)) {
           const forced = await callApi(
             "POST",
             `/api/recruitment/openings/${encodeURIComponent(openingId)}/status`,
@@ -253,7 +235,6 @@ export default function AdminRecruitmentWorkspace() {
     setStatusMessage("");
     await loadWorkspace();
   }
-
   async function updateStage(referralId: string) {
     const stage = stageSelection[referralId];
     if (!stage) {
@@ -271,7 +252,6 @@ export default function AdminRecruitmentWorkspace() {
     setStatusMessage(copy.messages.referralUpdated);
     await loadWorkspace();
   }
-
   return (
     <AdminRecruitmentWorkspaceView
       copy={copy}
