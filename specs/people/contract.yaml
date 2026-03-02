@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.0
+version: 0.3.1
 scope:
   in:
     - organization master data (create/read/list)
@@ -9,6 +9,7 @@ scope:
     - employee profile assignment with department/position consistency checks
     - audit logs for all employee/org mutations
     - domain events for employee/org mutations
+    - notice workspace persistence read-model tables for organization-scoped employee communication
   out:
     - multi-tenant enforcement (RLS) across core tables (Phase 1 follow-up)
     - RBAC engine and permission administration UI (Phase 1 follow-up)
@@ -98,6 +99,8 @@ db_changes:
       description: Create Organization and Employee base tables.
     - id: 202602180003_people_department_position
       description: Add Department/Position tables and employee departmentId/positionId references.
+    - id: 202603020001_wi0755_notices_db_read_model
+      description: Add Notice, NoticeReadReceipt, and NoticeNotificationQueue models for notices persistence/read-model.
   backward_compatible: true
   notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs."
 invariants:
@@ -158,10 +161,11 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.0 adds employee history read endpoint as additive API. Existing Organization/Employee/Department/Position APIs remain backward compatible."
+consumer_impact: "People contract v0.3.1 adds notice read-model persistence tables as additive DB change. Existing Organization/Employee/Department/Position APIs remain backward compatible."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
+  - work-items/WI-0755-notices-db-persistence-and-notification-read-model.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

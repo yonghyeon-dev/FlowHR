@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.3.0)
+# People Test Cases (Contract v0.3.1)
 
 ## Organization
 

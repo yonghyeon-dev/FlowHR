@@ -1,8 +1,12 @@
-import type { DataAccess } from "@/features/shared/data-access";
+﻿import type {
+  DataAccess,
+  NoticeEntity,
+  NoticeReadReceiptEntity
+} from "@/features/shared/data-access";
 import type { NoticeAudience, NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 
 type NoticeStoreContext = {
-  dataAccess: Pick<DataAccess, "audit">;
+  dataAccess: Pick<DataAccess, "notices" | "noticeReadReceipts" | "noticeNotifications" | "audit">;
 };
 
 type ListNoticesInput = {
@@ -79,7 +83,6 @@ const NOTICE_CREATED_ACTION = "notice.created";
 const NOTICE_PUBLISHED_ACTION = "notice.published";
 const NOTICE_READ_ACTION = "notice.read";
 const NOTICE_NOTIFICATION_ENQUEUED_ACTION = "notice.notification.enqueued";
-const NOTICE_AUDIT_ACTIONS = [NOTICE_CREATED_ACTION, NOTICE_PUBLISHED_ACTION, NOTICE_READ_ACTION] as const;
 const DEFAULT_ORG_ID = "ORG-DEMO";
 
 function normalizeAudience(audience: NoticeAudience | "all" | undefined) {
@@ -94,86 +97,28 @@ function toIso(value: string | Date) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-function nextNoticeId() {
-  const stamp = Date.now();
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `NOTICE-${stamp}-${random}`;
-}
-
-function toNoticeCreatedPayload(payload: unknown): NoticeCreatedAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<NoticeCreatedAuditPayload>;
-  if (!candidate.notice || typeof candidate.notice !== "object") {
-    return null;
-  }
-  const notice = candidate.notice as NoticeItem;
-  if (
-    typeof notice.id !== "string" ||
-    typeof notice.organizationId !== "string" ||
-    typeof notice.title !== "string" ||
-    typeof notice.body !== "string" ||
-    typeof notice.createdByActorId !== "string" ||
-    typeof notice.createdAt !== "string" ||
-    typeof notice.updatedAt !== "string"
-  ) {
-    return null;
-  }
-  if (notice.audience !== "all" && notice.audience !== "employees" && notice.audience !== "admins") {
-    return null;
-  }
-  if (notice.status !== "DRAFT" && notice.status !== "SCHEDULED" && notice.status !== "PUBLISHED") {
-    return null;
-  }
+function toNoticeItem(entity: NoticeEntity): NoticeItem {
   return {
-    version: 1,
-    notice
+    id: entity.id,
+    organizationId: entity.organizationId,
+    title: entity.title,
+    body: entity.body,
+    audience: entity.audience,
+    status: entity.status,
+    publishAt: entity.publishAt ? entity.publishAt.toISOString() : null,
+    publishedAt: entity.publishedAt ? entity.publishedAt.toISOString() : null,
+    createdByActorId: entity.createdByActorId,
+    createdAt: entity.createdAt.toISOString(),
+    updatedAt: entity.updatedAt.toISOString()
   };
 }
 
-function toNoticePublishedPayload(payload: unknown): NoticePublishedAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<NoticePublishedAuditPayload>;
-  if (
-    typeof candidate.noticeId !== "string" ||
-    typeof candidate.publishedAt !== "string" ||
-    typeof candidate.publishAt !== "string"
-  ) {
-    return null;
-  }
+function toNoticeReadReceipt(entity: NoticeReadReceiptEntity): NoticeReadReceipt {
   return {
-    version: 1,
-    noticeId: candidate.noticeId,
-    publishedAt: candidate.publishedAt,
-    publishAt: candidate.publishAt
-  };
-}
-
-function toNoticeReadPayload(payload: unknown): NoticeReadAuditPayload | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const candidate = payload as Partial<NoticeReadAuditPayload>;
-  if (!candidate.receipt || typeof candidate.receipt !== "object") {
-    return null;
-  }
-  const receipt = candidate.receipt as NoticeReadReceipt;
-  if (
-    typeof receipt.noticeId !== "string" ||
-    typeof receipt.organizationId !== "string" ||
-    typeof receipt.actorId !== "string" ||
-    typeof receipt.readAt !== "string"
-  ) {
-    return null;
-  }
-  return {
-    version: 1,
-    receipt
+    organizationId: entity.organizationId,
+    noticeId: entity.noticeId,
+    actorId: entity.actorId,
+    readAt: entity.readAt.toISOString()
   };
 }
 
@@ -197,55 +142,49 @@ function applyAutoPublishStatus(notice: NoticeItem, asOfIso: string): NoticeItem
   };
 }
 
-async function listNoticeAuditEntries(context: NoticeStoreContext, organizationId: string) {
-  return context.dataAccess.audit.list({
-    actions: [...NOTICE_AUDIT_ACTIONS],
-    entityType: NOTICE_ENTITY_TYPE,
+async function listAllNotices(context: NoticeStoreContext, organizationId: string) {
+  const rows = await context.dataAccess.notices.list({
     organizationId,
     limit: 5000
   });
+  const asOfIso = new Date().toISOString();
+  return rows
+    .map((row) => applyAutoPublishStatus(toNoticeItem(row), asOfIso))
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 }
 
-async function listAllNotices(context: NoticeStoreContext, organizationId: string) {
-  const logs = await listNoticeAuditEntries(context, organizationId);
-  const noticeById = new Map<string, NoticeItem>();
-
-  for (const log of logs) {
-    if (log.action === NOTICE_CREATED_ACTION) {
-      const createdPayload = toNoticeCreatedPayload(log.payload);
-      if (!createdPayload) {
-        continue;
-      }
-      if (createdPayload.notice.organizationId !== organizationId) {
-        continue;
-      }
-      noticeById.set(createdPayload.notice.id, createdPayload.notice);
-      continue;
-    }
-
-    if (log.action === NOTICE_PUBLISHED_ACTION) {
-      const publishedPayload = toNoticePublishedPayload(log.payload);
-      if (!publishedPayload) {
-        continue;
-      }
-      const target = noticeById.get(publishedPayload.noticeId);
-      if (!target) {
-        continue;
-      }
-      noticeById.set(publishedPayload.noticeId, {
-        ...target,
-        status: "PUBLISHED",
-        publishAt: publishedPayload.publishAt,
-        publishedAt: publishedPayload.publishedAt,
-        updatedAt: publishedPayload.publishedAt
-      });
-    }
+async function upsertReadReceiptWithAudit(
+  context: NoticeStoreContext,
+  input: {
+    organizationId: string;
+    noticeId: string;
+    actorId: string;
+    actorRole: string;
   }
+): Promise<NoticeReadReceipt> {
+  const receipt = toNoticeReadReceipt(
+    await context.dataAccess.noticeReadReceipts.upsert({
+      organizationId: input.organizationId,
+      noticeId: input.noticeId,
+      actorId: input.actorId,
+      readAt: new Date()
+    })
+  );
 
-  const asOfIso = new Date().toISOString();
-  return Array.from(noticeById.values())
-    .map((notice) => applyAutoPublishStatus(notice, asOfIso))
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  await context.dataAccess.audit.append({
+    action: NOTICE_READ_ACTION,
+    entityType: NOTICE_ENTITY_TYPE,
+    entityId: input.noticeId,
+    organizationId: input.organizationId,
+    actorRole: input.actorRole,
+    actorId: input.actorId,
+    payload: {
+      version: 1,
+      receipt
+    } satisfies NoticeReadAuditPayload
+  });
+
+  return receipt;
 }
 
 export async function listNotices(context: NoticeStoreContext, input: ListNoticesInput = {}) {
@@ -279,36 +218,36 @@ export async function listNotices(context: NoticeStoreContext, input: ListNotice
 }
 
 export async function createNotice(context: NoticeStoreContext, input: CreateNoticeInput) {
-  const now = new Date().toISOString();
-  const publishAt = input.publishAt ? toIso(input.publishAt) : null;
-  const next: NoticeItem = {
-    id: nextNoticeId(),
+  const now = new Date();
+  const publishAtIso = input.publishAt ? toIso(input.publishAt) : null;
+  const created = await context.dataAccess.notices.create({
     organizationId: input.organizationId.trim() || DEFAULT_ORG_ID,
     title: input.title.trim(),
     body: input.body.trim(),
     audience: input.audience,
-    status: publishAt ? "SCHEDULED" : "DRAFT",
-    publishAt,
+    status: publishAtIso ? "SCHEDULED" : "DRAFT",
+    publishAt: publishAtIso ? new Date(publishAtIso) : null,
     publishedAt: null,
     createdByActorId: input.createdByActorId,
     createdAt: now,
     updatedAt: now
-  };
+  });
 
+  const notice = toNoticeItem(created);
   await context.dataAccess.audit.append({
     action: NOTICE_CREATED_ACTION,
     entityType: NOTICE_ENTITY_TYPE,
-    entityId: next.id,
-    organizationId: next.organizationId,
+    entityId: notice.id,
+    organizationId: notice.organizationId,
     actorRole: input.actorRole ?? "admin",
     actorId: input.createdByActorId,
     payload: {
       version: 1,
-      notice: next
+      notice
     } satisfies NoticeCreatedAuditPayload
   });
 
-  return next;
+  return notice;
 }
 
 export async function publishNotice(context: NoticeStoreContext, input: PublishNoticeInput) {
@@ -318,53 +257,62 @@ export async function publishNotice(context: NoticeStoreContext, input: PublishN
     return null;
   }
 
-  const notices = await listAllNotices(context, organizationId);
-  const target = notices.find((notice) => notice.id === noticeId);
-  if (!target) {
+  const existing = await context.dataAccess.notices.findById(noticeId);
+  if (!existing || existing.organizationId !== organizationId) {
     return null;
   }
 
   const publishedAt = new Date().toISOString();
-  const publishAt = target.publishAt ?? publishedAt;
+  const publishAt = existing.publishAt ? existing.publishAt.toISOString() : publishedAt;
+  const updated = await context.dataAccess.notices.update(existing.id, {
+    status: "PUBLISHED",
+    publishAt: new Date(publishAt),
+    publishedAt: new Date(publishedAt),
+    updatedAt: new Date(publishedAt)
+  });
+
   await context.dataAccess.audit.append({
     action: NOTICE_PUBLISHED_ACTION,
     entityType: NOTICE_ENTITY_TYPE,
-    entityId: target.id,
+    entityId: existing.id,
     organizationId,
     actorRole: input.actorRole ?? "admin",
     actorId: input.actorId,
     payload: {
       version: 1,
-      noticeId: target.id,
+      noticeId: existing.id,
       publishedAt,
       publishAt
     } satisfies NoticePublishedAuditPayload
   });
 
+  await context.dataAccess.noticeNotifications.create({
+    organizationId,
+    noticeId: existing.id,
+    audience: existing.audience,
+    channel: "in_app",
+    state: "QUEUED",
+    enqueuedAt: new Date(publishedAt)
+  });
+
   await context.dataAccess.audit.append({
     action: NOTICE_NOTIFICATION_ENQUEUED_ACTION,
     entityType: NOTICE_ENTITY_TYPE,
-    entityId: target.id,
+    entityId: existing.id,
     organizationId,
     actorRole: input.actorRole ?? "admin",
     actorId: input.actorId,
     payload: {
       version: 1,
-      noticeId: target.id,
+      noticeId: existing.id,
       organizationId,
-      audience: target.audience,
+      audience: existing.audience,
       channel: "in_app",
       enqueuedAt: publishedAt
     } satisfies NoticeNotificationEnqueuedAuditPayload
   });
 
-  return {
-    ...target,
-    status: "PUBLISHED" as const,
-    publishAt,
-    publishedAt,
-    updatedAt: publishedAt
-  };
+  return toNoticeItem(updated);
 }
 
 export function summarizeNotices(items: NoticeItem[]) {
@@ -381,31 +329,14 @@ export async function listNoticeReadReceipts(
 ) {
   const organizationId = input.organizationId?.trim() || DEFAULT_ORG_ID;
   const actorId = input.actorId?.trim();
-  const logs = await context.dataAccess.audit.list({
-    actions: [NOTICE_READ_ACTION],
-    entityType: NOTICE_ENTITY_TYPE,
+  const rows = await context.dataAccess.noticeReadReceipts.list({
     organizationId,
+    actorId,
     limit: 5000
   });
 
-  const receiptByNoticeActor = new Map<string, NoticeReadReceipt>();
-  for (const log of logs) {
-    const payload = toNoticeReadPayload(log.payload);
-    if (!payload) {
-      continue;
-    }
-    if (payload.receipt.organizationId !== organizationId) {
-      continue;
-    }
-    const key = `${payload.receipt.noticeId}::${payload.receipt.actorId}`;
-    const existing = receiptByNoticeActor.get(key);
-    if (!existing || Date.parse(existing.readAt) <= Date.parse(payload.receipt.readAt)) {
-      receiptByNoticeActor.set(key, payload.receipt);
-    }
-  }
-
-  return Array.from(receiptByNoticeActor.values())
-    .filter((receipt) => (actorId ? receipt.actorId === actorId : true))
+  return rows
+    .map(toNoticeReadReceipt)
     .sort((a, b) => Date.parse(b.readAt) - Date.parse(a.readAt));
 }
 
@@ -426,26 +357,12 @@ export async function markNoticeRead(context: NoticeStoreContext, input: MarkNot
     return null;
   }
 
-  const receipt: NoticeReadReceipt = {
+  return upsertReadReceiptWithAudit(context, {
     organizationId,
     noticeId,
     actorId,
-    readAt: new Date().toISOString()
-  };
-  await context.dataAccess.audit.append({
-    action: NOTICE_READ_ACTION,
-    entityType: NOTICE_ENTITY_TYPE,
-    entityId: noticeId,
-    organizationId,
-    actorRole: input.actorRole ?? "employee",
-    actorId,
-    payload: {
-      version: 1,
-      receipt
-    } satisfies NoticeReadAuditPayload
+    actorRole: input.actorRole ?? "employee"
   });
-
-  return receipt;
 }
 
 export async function markAllNoticesRead(context: NoticeStoreContext, input: MarkAllNoticesReadInput) {
@@ -463,13 +380,14 @@ export async function markAllNoticesRead(context: NoticeStoreContext, input: Mar
 
   const receipts = await Promise.all(
     notices.map((notice) =>
-      markNoticeRead(context, {
+      upsertReadReceiptWithAudit(context, {
         organizationId,
         noticeId: notice.id,
         actorId,
-        actorRole: input.actorRole
+        actorRole: input.actorRole ?? "employee"
       })
     )
   );
-  return receipts.filter((receipt): receipt is NoticeReadReceipt => receipt !== null);
+
+  return receipts;
 }

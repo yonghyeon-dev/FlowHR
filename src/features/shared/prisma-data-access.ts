@@ -25,6 +25,8 @@ import type {
   CreateDepartmentInput,
   CreateEmployeeInput,
   CreateLeaveRequestInput,
+  CreateNoticeInput,
+  CreateNoticeNotificationInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreatePositionInput,
@@ -54,6 +56,15 @@ import type {
   LeavePolicyStore,
   LeaveRequestEntity,
   LeaveStore,
+  NoticeAudience,
+  NoticeEntity,
+  NoticeNotificationEntity,
+  NoticeNotificationState,
+  NoticeNotificationStore,
+  NoticeReadReceiptEntity,
+  NoticeReadReceiptStore,
+  NoticeStatus,
+  NoticeStore,
   OrganizationEntity,
   OrganizationStore,
   PayrollRunEntity,
@@ -78,8 +89,11 @@ import type {
   UpdateDepartmentInput,
   UpdateEmployeeInput,
   UpdateLeaveRequestInput,
+  UpdateNoticeInput,
+  UpdateNoticeNotificationInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
+  UpsertNoticeReadReceiptInput,
   UpsertLeavePolicyInput,
   WorkScheduleTemplateEntity,
   WorkScheduleEntity
@@ -263,6 +277,50 @@ function toLeavePromotionDeliveryRecipientEntity(record: {
     grantedDays: Number(record.grantedDays),
     usedDays: Number(record.usedDays)
   };
+}
+
+function toNoticeEntity(record: {
+  id: string;
+  organizationId: string;
+  title: string;
+  body: string;
+  audience: "all" | "employees" | "admins";
+  status: "DRAFT" | "SCHEDULED" | "PUBLISHED";
+  publishAt: Date | null;
+  publishedAt: Date | null;
+  createdByActorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): NoticeEntity {
+  return record;
+}
+
+function toNoticeReadReceiptEntity(record: {
+  id: string;
+  organizationId: string;
+  noticeId: string;
+  actorId: string;
+  readAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}): NoticeReadReceiptEntity {
+  return record;
+}
+
+function toNoticeNotificationEntity(record: {
+  id: string;
+  organizationId: string;
+  noticeId: string;
+  audience: "all" | "employees" | "admins";
+  channel: "in_app";
+  state: "QUEUED" | "DELIVERED" | "FAILED";
+  enqueuedAt: Date;
+  deliveredAt: Date | null;
+  lastError: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): NoticeNotificationEntity {
+  return record;
 }
 
 function toPayrollEntity(record: {
@@ -2011,6 +2069,173 @@ const leavePromotionDeliveries: LeavePromotionDeliveryStore = {
   }
 };
 
+const notices: NoticeStore = {
+  async create(input: CreateNoticeInput) {
+    const record = await prisma.notice.create({
+      data: {
+        organizationId: input.organizationId,
+        title: input.title,
+        body: input.body,
+        audience: input.audience,
+        status: input.status ?? "DRAFT",
+        publishAt: input.publishAt ?? null,
+        publishedAt: input.publishedAt ?? null,
+        createdByActorId: input.createdByActorId,
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toNoticeEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.notice.findUnique({
+      where: { id }
+    });
+    return record ? toNoticeEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateNoticeInput) {
+    const record = await prisma.notice.update({
+      where: { id },
+      data: {
+        title: input.title,
+        body: input.body,
+        audience: input.audience,
+        status: input.status,
+        publishAt: input.publishAt,
+        publishedAt: input.publishedAt,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toNoticeEntity(record);
+  },
+
+  async list(input: {
+    organizationId: string;
+    audience?: NoticeAudience;
+    status?: NoticeStatus;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+    const records = await prisma.notice.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.audience ? { audience: input.audience } : {}),
+        ...(input.status ? { status: input.status } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toNoticeEntity);
+  }
+};
+
+const noticeReadReceipts: NoticeReadReceiptStore = {
+  async upsert(input: UpsertNoticeReadReceiptInput) {
+    const record = await prisma.noticeReadReceipt.upsert({
+      where: {
+        notice_receipt_org_notice_actor_key: {
+          organizationId: input.organizationId,
+          noticeId: input.noticeId,
+          actorId: input.actorId
+        }
+      },
+      create: {
+        organizationId: input.organizationId,
+        noticeId: input.noticeId,
+        actorId: input.actorId,
+        readAt: input.readAt
+      },
+      update: {
+        readAt: input.readAt
+      }
+    });
+    return toNoticeReadReceiptEntity(record);
+  },
+
+  async list(input: {
+    organizationId: string;
+    actorId?: string;
+    noticeId?: string;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+    const records = await prisma.noticeReadReceipt.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.actorId ? { actorId: input.actorId } : {}),
+        ...(input.noticeId ? { noticeId: input.noticeId } : {})
+      },
+      orderBy: [{ readAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toNoticeReadReceiptEntity);
+  }
+};
+
+const noticeNotifications: NoticeNotificationStore = {
+  async create(input: CreateNoticeNotificationInput) {
+    const record = await prisma.noticeNotificationQueue.create({
+      data: {
+        organizationId: input.organizationId,
+        noticeId: input.noticeId,
+        audience: input.audience,
+        channel: input.channel,
+        state: input.state ?? "QUEUED",
+        enqueuedAt: input.enqueuedAt,
+        deliveredAt: input.deliveredAt ?? null,
+        lastError: input.lastError ?? null
+      }
+    });
+    return toNoticeNotificationEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.noticeNotificationQueue.findUnique({
+      where: { id }
+    });
+    return record ? toNoticeNotificationEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateNoticeNotificationInput) {
+    const record = await prisma.noticeNotificationQueue.update({
+      where: { id },
+      data: {
+        state: input.state,
+        deliveredAt: input.deliveredAt,
+        lastError: input.lastError
+      }
+    });
+    return toNoticeNotificationEntity(record);
+  },
+
+  async list(input: {
+    organizationId: string;
+    noticeId?: string;
+    state?: NoticeNotificationState;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+    const records = await prisma.noticeNotificationQueue.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.noticeId ? { noticeId: input.noticeId } : {}),
+        ...(input.state ? { state: input.state } : {})
+      },
+      orderBy: [{ enqueuedAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toNoticeNotificationEntity);
+  }
+};
+
 const payroll: PayrollStore = {
   async create(input: CreatePayrollRunInput) {
     const run = await prisma.payrollRun.create({
@@ -2197,6 +2422,9 @@ export const prismaDataAccess: DataAccess = {
   leavePolicy,
   leaveBalance,
   leavePromotionDeliveries,
+  notices,
+  noticeReadReceipts,
+  noticeNotifications,
   payroll,
   deductionProfiles,
   audit
