@@ -92,7 +92,7 @@ const messages = {
     "employee.nav.payslipSearchSort": "명세서 검색/정렬",
     "employee.nav.statusFeedback": "명세서 상태 피드백",
     "employee.nav.compareView": "명세서 비교",
-    "employee.nav.admin": "관리자",
+    "employee.nav.admin": "(개발) 관리자",
 
     "login.title": "로그인",
     "login.copy":
@@ -214,7 +214,7 @@ const messages = {
     "employee.nav.payslipSearchSort": "Payslip Search/Sort",
     "employee.nav.statusFeedback": "Payslip Status Feedback",
     "employee.nav.compareView": "Payslip Compare",
-    "employee.nav.admin": "Admin",
+    "employee.nav.admin": "(dev) Admin",
 
     "login.title": "Log In",
     "login.copy":
