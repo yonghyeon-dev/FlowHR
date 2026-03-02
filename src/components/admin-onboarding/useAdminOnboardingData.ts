@@ -24,6 +24,10 @@ type OrganizationLite = { id: string; name: string };
 type DepartmentLite = { id: string; code: string; name: string };
 type EmployeeLite = { id: string; email: string | null };
 type ContractTemplateLite = { id: string };
+type ContractDocumentLite = {
+  employeeId: string;
+  status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED";
+};
 type AuthInviteLite = { email: string };
 type LeavePolicyLite = {
   annualGrantDays: number;
@@ -47,7 +51,9 @@ type UseAdminOnboardingDataInput = {
     createDepartmentPrefix: string;
     createEmployeePrefix: string;
     createInvitePrefix: string;
+    contractDocuments: string;
     createContractTemplate: string;
+    createContractDocumentPrefix: string;
     upsertLeavePolicy: string;
   };
 };
@@ -64,7 +70,10 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   const [inviteEligibleEmployeeCount, setInviteEligibleEmployeeCount] = useState(0);
   const [invitedEmployeeCount, setInvitedEmployeeCount] = useState(0);
   const [invitedEmployeeEmails, setInvitedEmployeeEmails] = useState<string[]>([]);
+  const [activeContractTemplateId, setActiveContractTemplateId] = useState("");
   const [activeContractTemplateCount, setActiveContractTemplateCount] = useState(0);
+  const [preparedContractDraftEmployeeIds, setPreparedContractDraftEmployeeIds] = useState<string[]>([]);
+  const [preparedContractDraftEmployeeCount, setPreparedContractDraftEmployeeCount] = useState(0);
   const [leavePolicyConfigured, setLeavePolicyConfigured] = useState(false);
 
   const [departmentSeedInput, setDepartmentSeedInput] = useState("HR,Human Resources\nDEV,Development");
@@ -166,7 +175,10 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
         setInviteEligibleEmployeeCount(0);
         setInvitedEmployeeCount(0);
         setInvitedEmployeeEmails([]);
+        setActiveContractTemplateId("");
         setActiveContractTemplateCount(0);
+        setPreparedContractDraftEmployeeIds([]);
+        setPreparedContractDraftEmployeeCount(0);
         setLeavePolicyConfigured(false);
         return;
       }
@@ -207,12 +219,31 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       const policy = ((leavePolicyBody as { policy?: LeavePolicyLite })?.policy ?? null) as
         | LeavePolicyLite
         | null;
+      const activeTemplateId = contractTemplateRows[0]?.id ?? "";
+      let contractDocumentRows: ContractDocumentLite[] = [];
+      if (activeTemplateId) {
+        const contractDocumentsBody = await requestJson(
+          input.requestLabels.contractDocuments,
+          `/api/contracts/documents${buildQuery({
+            organizationId: targetOrganizationId,
+            templateId: activeTemplateId
+          })}`
+        );
+        contractDocumentRows = parseArray<ContractDocumentLite>(contractDocumentsBody, "documents");
+      }
 
       const inviteEmailSet = new Set(inviteRows.map((row) => normalizeEmail(row.email)).filter((email) => email));
       const inviteEligibleEmployees = employeeRows.filter((employee) => normalizeEmail(employee.email).length > 0);
       const inviteCoveredEmployeeCount = inviteEligibleEmployees.filter((employee) =>
         inviteEmailSet.has(normalizeEmail(employee.email))
       ).length;
+      const preparedStatusSet = new Set(["DRAFT", "APPROVAL_REQUESTED", "SENT", "SIGNED", "RENEWED"]);
+      const preparedEmployeeSet = new Set(
+        contractDocumentRows
+          .filter((row) => preparedStatusSet.has(row.status))
+          .map((row) => row.employeeId)
+      );
+      const preparedEmployeeCount = employeeRows.filter((employee) => preparedEmployeeSet.has(employee.id)).length;
 
       setDepartments(departmentRows.map((row) => ({ id: row.id, code: row.code, name: row.name })));
       setActiveEmployees(employeeRows);
@@ -220,7 +251,10 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       setInviteEligibleEmployeeCount(inviteEligibleEmployees.length);
       setInvitedEmployeeCount(inviteCoveredEmployeeCount);
       setInvitedEmployeeEmails(Array.from(inviteEmailSet));
+      setActiveContractTemplateId(activeTemplateId);
       setActiveContractTemplateCount(contractTemplateRows.length);
+      setPreparedContractDraftEmployeeIds(Array.from(preparedEmployeeSet));
+      setPreparedContractDraftEmployeeCount(preparedEmployeeCount);
 
       if (policy) {
         setAnnualGrantDays(String(policy.annualGrantDays));
@@ -235,6 +269,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
       setPendingLabel(null);
     }
   }, [
+    input.requestLabels.contractDocuments,
     input.requestLabels.createContractTemplate,
     input.requestLabels.invites,
     input.loadingLabel,
@@ -252,6 +287,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
   }, [loadSetup]);
 
   const pendingInviteCount = Math.max(0, inviteEligibleEmployeeCount - invitedEmployeeCount);
+  const pendingContractDraftCount = Math.max(0, activeEmployeeCount - preparedContractDraftEmployeeCount);
   const inviteCoverageDone = inviteEligibleEmployeeCount > 0 && pendingInviteCount === 0;
 
   const checklistItems = useMemo(
@@ -352,6 +388,43 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     requestJson
   ]);
 
+  const createPendingContractDrafts = useCallback(async () => {
+    const targetOrganizationId = organizationId.trim();
+    if (!targetOrganizationId || !activeContractTemplateId) {
+      return;
+    }
+
+    const preparedEmployeeIdSet = new Set(preparedContractDraftEmployeeIds);
+    for (const employee of activeEmployees) {
+      if (preparedEmployeeIdSet.has(employee.id)) {
+        continue;
+      }
+      await requestJson(
+        `${input.requestLabels.createContractDocumentPrefix} ${employee.id}`,
+        "/api/contracts/documents",
+        {
+          method: "POST",
+          body: {
+            organizationId: targetOrganizationId,
+            templateId: activeContractTemplateId,
+            employeeId: employee.id,
+            requiresApproval: true
+          }
+        }
+      );
+      preparedEmployeeIdSet.add(employee.id);
+    }
+    await loadSetup();
+  }, [
+    activeContractTemplateId,
+    activeEmployees,
+    input.requestLabels.createContractDocumentPrefix,
+    loadSetup,
+    organizationId,
+    preparedContractDraftEmployeeIds,
+    requestJson
+  ]);
+
   const applyLeavePolicy = useCallback(async () => {
     const targetOrganizationId = organizationId.trim();
     if (!targetOrganizationId) {
@@ -409,6 +482,9 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     inviteEligibleEmployeeCount,
     invitedEmployeeCount,
     pendingInviteCount,
+    pendingContractDraftCount,
+    preparedContractDraftEmployeeCount,
+    activeContractTemplateId,
     activeContractTemplateCount,
     adminActorId,
     allowHalfDay,
@@ -418,6 +494,7 @@ export function useAdminOnboardingData(input: UseAdminOnboardingDataInput) {
     applyEmployees,
     applyLeavePolicy,
     issuePendingEmployeeInvites,
+    createPendingContractDrafts,
     bootstrapEmploymentContractTemplate,
     carryOverCapDays,
     checklistItems,
