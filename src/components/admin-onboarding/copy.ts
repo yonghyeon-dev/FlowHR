@@ -69,6 +69,9 @@ export type AdminOnboardingCopy = {
   readinessReadyHint: string;
   readinessPendingCountLabel: string;
   readinessOpenWorkspaceLabel: string;
+  readinessPriorityTitle: string;
+  readinessPriorityHint: string;
+  readinessPriorityActionLabel: string;
   checklistTitle: string;
   applyDepartmentsButton: string;
   applyEmployeesButton: string;
@@ -188,6 +191,9 @@ const defaultCopy: AdminOnboardingCopy = {
   readinessReadyHint: "All onboarding checklist items are complete.",
   readinessPendingCountLabel: "Pending checklist items",
   readinessOpenWorkspaceLabel: "Open workspace",
+  readinessPriorityTitle: "Highest-priority next action",
+  readinessPriorityHint: "Complete this first to unblock the rest of onboarding setup.",
+  readinessPriorityActionLabel: "Run priority action",
   checklistTitle: "Setup checklist",
   applyDepartmentsButton: "Apply departments",
   applyEmployeesButton: "Apply employees",
@@ -309,6 +315,9 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
     readinessReadyHint: "온보딩 체크리스트 항목이 모두 완료되었습니다.",
     readinessPendingCountLabel: "미완료 체크리스트 항목",
     readinessOpenWorkspaceLabel: "워크스페이스 열기",
+    readinessPriorityTitle: "최우선 다음 액션",
+    readinessPriorityHint: "남은 설정을 빠르게 진행하려면 이 항목부터 처리하세요.",
+    readinessPriorityActionLabel: "우선 액션 실행",
     checklistTitle: "설정 체크리스트",
     applyDepartmentsButton: "부서 적용",
     applyEmployeesButton: "직원 적용",

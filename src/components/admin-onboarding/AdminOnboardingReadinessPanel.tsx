@@ -39,6 +39,7 @@ function resolveChecklistLabel(copy: AdminOnboardingCopy, key: OnboardingCheckli
 export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPanelProps) {
   const { copy, checklistItems } = props;
   const pendingItems = checklistItems.filter((item) => !item.done);
+  const priorityItem = pendingItems[0] ?? null;
   const ready = pendingItems.length === 0;
 
   return (
@@ -54,6 +55,20 @@ export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPan
           <p className="small muted">{copy.readinessReadyHint}</p>
         ) : (
           <>
+            {priorityItem ? (
+              <div>
+                <p className="small">
+                  <strong>{copy.readinessPriorityTitle}</strong>
+                </p>
+                <p className="small muted">{resolveChecklistLabel(copy, priorityItem.key)}</p>
+                <p className="small muted">{copy.readinessPriorityHint}</p>
+                <div className="actions">
+                  <Link className="btn btn-primary btn-small" href={checklistHrefByKey[priorityItem.key]}>
+                    {copy.readinessPriorityActionLabel}
+                  </Link>
+                </div>
+              </div>
+            ) : null}
             <p className="small muted">{copy.readinessPendingCountLabel}: {pendingItems.length}</p>
             <ul className="simple-list">
               {pendingItems.map((item) => (
