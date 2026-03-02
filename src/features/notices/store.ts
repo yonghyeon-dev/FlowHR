@@ -26,6 +26,22 @@ type CreateNoticeInput = {
   actorRole?: string;
 };
 
+type UpdateNoticeInput = {
+  organizationId: string;
+  noticeId: string;
+  title: string;
+  body: string;
+  audience: NoticeAudience;
+  publishAt?: string | null;
+  actorId?: string;
+  actorRole?: string;
+};
+
+type UpdateNoticeResult = {
+  notice: NoticeItem | null;
+  reason?: "not_found" | "published_locked";
+};
+
 type PublishNoticeInput = {
   organizationId: string;
   noticeId: string;
@@ -57,6 +73,13 @@ type NoticeCreatedAuditPayload = {
   notice: NoticeItem;
 };
 
+type NoticeUpdatedAuditPayload = {
+  version: 1;
+  notice: NoticeItem;
+  previousStatus: NoticeStatus;
+  nextStatus: NoticeStatus;
+};
+
 type NoticePublishedAuditPayload = {
   version: 1;
   noticeId: string;
@@ -80,6 +103,7 @@ type NoticeNotificationEnqueuedAuditPayload = {
 
 const NOTICE_ENTITY_TYPE = "Notice";
 const NOTICE_CREATED_ACTION = "notice.created";
+const NOTICE_UPDATED_ACTION = "notice.updated";
 const NOTICE_PUBLISHED_ACTION = "notice.published";
 const NOTICE_READ_ACTION = "notice.read";
 const NOTICE_NOTIFICATION_ENQUEUED_ACTION = "notice.notification.enqueued";
@@ -248,6 +272,55 @@ export async function createNotice(context: NoticeStoreContext, input: CreateNot
   });
 
   return notice;
+}
+
+export async function updateNotice(
+  context: NoticeStoreContext,
+  input: UpdateNoticeInput
+): Promise<UpdateNoticeResult> {
+  const organizationId = input.organizationId.trim() || DEFAULT_ORG_ID;
+  const noticeId = input.noticeId.trim();
+  if (!noticeId) {
+    return { notice: null, reason: "not_found" };
+  }
+
+  const existing = await context.dataAccess.notices.findById(noticeId);
+  if (!existing || existing.organizationId !== organizationId) {
+    return { notice: null, reason: "not_found" };
+  }
+  if (existing.status === "PUBLISHED") {
+    return { notice: null, reason: "published_locked" };
+  }
+
+  const publishAtIso = input.publishAt ? toIso(input.publishAt) : null;
+  const nextStatus: NoticeStatus = publishAtIso ? "SCHEDULED" : "DRAFT";
+  const updated = await context.dataAccess.notices.update(existing.id, {
+    title: input.title.trim(),
+    body: input.body.trim(),
+    audience: input.audience,
+    status: nextStatus,
+    publishAt: publishAtIso ? new Date(publishAtIso) : null,
+    publishedAt: null,
+    updatedAt: new Date()
+  });
+
+  const notice = toNoticeItem(updated);
+  await context.dataAccess.audit.append({
+    action: NOTICE_UPDATED_ACTION,
+    entityType: NOTICE_ENTITY_TYPE,
+    entityId: notice.id,
+    organizationId: notice.organizationId,
+    actorRole: input.actorRole ?? "admin",
+    actorId: input.actorId ?? "unknown",
+    payload: {
+      version: 1,
+      notice,
+      previousStatus: existing.status,
+      nextStatus: notice.status
+    } satisfies NoticeUpdatedAuditPayload
+  });
+
+  return { notice };
 }
 
 export async function publishNotice(context: NoticeStoreContext, input: PublishNoticeInput) {

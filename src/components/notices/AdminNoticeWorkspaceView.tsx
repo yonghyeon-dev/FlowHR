@@ -35,6 +35,7 @@ type AdminNoticeWorkspaceViewProps = {
   body: string;
   audience: "all" | "employees" | "admins";
   publishAt: string;
+  editingNoticeId: string | null;
   summary: NoticeApiSummary;
   notices: NoticeItem[];
   filteredNotices: NoticeItem[];
@@ -58,6 +59,8 @@ type AdminNoticeWorkspaceViewProps = {
   onClearListSearch: () => void;
   onLoadNotices: () => void;
   onCreateNotice: () => void;
+  onStartEditNotice: (noticeId: string) => void;
+  onCancelEditNotice: () => void;
   onPublishNow: (noticeId: string) => void;
 };
 
@@ -76,6 +79,7 @@ export default function AdminNoticeWorkspaceView({
   body,
   audience,
   publishAt,
+  editingNoticeId,
   summary,
   notices,
   filteredNotices,
@@ -96,6 +100,8 @@ export default function AdminNoticeWorkspaceView({
   onClearListSearch,
   onLoadNotices,
   onCreateNotice,
+  onStartEditNotice,
+  onCancelEditNotice,
   onPublishNow
 }: AdminNoticeWorkspaceViewProps) {
   const publishedWithoutReadCount = notices.filter((notice) => isReadCoverageRisk(notice, readCountByNoticeId)).length;
@@ -172,7 +178,7 @@ export default function AdminNoticeWorkspaceView({
         </article>
 
         <article className="panel">
-          <h2>{copy.composeTitle}</h2>
+          <h2>{editingNoticeId ? copy.editTitle ?? copy.composeTitle : copy.composeTitle}</h2>
           <label>
             {copy.titleLabel}
             <input value={title} onChange={(event) => onTitleChange(event.target.value)} maxLength={120} />
@@ -200,8 +206,13 @@ export default function AdminNoticeWorkspaceView({
           </div>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onCreateNotice}>
-              {copy.createAction}
+              {editingNoticeId ? copy.updateAction ?? copy.createAction : copy.createAction}
             </button>
+            {editingNoticeId ? (
+              <button className="btn btn-secondary" type="button" onClick={onCancelEditNotice}>
+                {copy.cancelEditAction ?? copy.clearListSearchAction}
+              </button>
+            ) : null}
           </div>
         </article>
 
@@ -246,6 +257,12 @@ export default function AdminNoticeWorkspaceView({
                       <span className="small muted">
                         {readCountLabel}: {readCount}
                       </span>
+                      {editingNoticeId === notice.id ? (
+                        <>
+                          <br />
+                          <span className="small">{copy.editingBadge ?? "Editing"}</span>
+                        </>
+                      ) : null}
                       {needsReadCoverage ? (
                         <>
                           <br />
@@ -255,15 +272,26 @@ export default function AdminNoticeWorkspaceView({
                         </>
                       ) : null}
                     </span>
-                    {notice.status === "PUBLISHED" ? null : (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        onClick={() => onPublishNow(notice.id)}
-                      >
-                        {copy.publishAction}
-                      </button>
-                    )}
+                    <span className="actions">
+                      {notice.status === "PUBLISHED" ? null : (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => onStartEditNotice(notice.id)}
+                        >
+                          {copy.editAction ?? "Edit"}
+                        </button>
+                      )}
+                      {notice.status === "PUBLISHED" ? null : (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => onPublishNow(notice.id)}
+                        >
+                          {copy.publishAction}
+                        </button>
+                      )}
+                    </span>
                   </li>
                 );
               })}

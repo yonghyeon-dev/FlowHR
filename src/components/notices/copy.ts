@@ -17,6 +17,11 @@ export type NoticeWorkspaceCopy = {
   audienceLabel: string;
   scheduleLabel: string;
   createAction: string;
+  updateAction?: string;
+  editAction?: string;
+  cancelEditAction?: string;
+  editTitle?: string;
+  editingBadge?: string;
   publishAction: string;
   listTitle: string;
   listEmpty: string;
@@ -59,7 +64,9 @@ export type NoticeWorkspaceCopy = {
     needOrganization: string;
     needTitle: string;
     needBody: string;
+    editing?: string;
     created: string;
+    updated?: string;
     published: string;
     loadFailed: string;
   };
@@ -148,6 +155,11 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     audienceLabel: "대상",
     scheduleLabel: "예약 게시 시각(선택)",
     createAction: "공지 저장",
+    updateAction: "공지 수정",
+    editAction: "수정",
+    cancelEditAction: "수정 취소",
+    editTitle: "공지 수정",
+    editingBadge: "수정 중",
     publishAction: "즉시 게시",
     listTitle: "공지 목록",
     listEmpty: "조건에 맞는 공지가 없습니다.",
@@ -190,7 +202,9 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       needOrganization: "조직 식별자를 입력하세요.",
       needTitle: "제목을 입력하세요.",
       needBody: "본문을 입력하세요.",
+      editing: "공지 수정 모드입니다.",
       created: "공지를 저장했습니다.",
+      updated: "공지를 수정했습니다.",
       published: "공지를 게시했습니다.",
       loadFailed: "공지 목록 조회에 실패했습니다."
     }
@@ -211,6 +225,11 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     audienceLabel: "Audience",
     scheduleLabel: "Schedule publish at (optional)",
     createAction: "Save notice",
+    updateAction: "Update notice",
+    editAction: "Edit",
+    cancelEditAction: "Cancel edit",
+    editTitle: "Edit notice",
+    editingBadge: "Editing",
     publishAction: "Publish now",
     listTitle: "Notice list",
     listEmpty: "No notice found for current filters.",
@@ -253,7 +272,9 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
       needOrganization: "Organization ID is required.",
       needTitle: "Title is required.",
       needBody: "Body is required.",
+      editing: "Editing selected notice.",
       created: "Notice saved.",
+      updated: "Notice updated.",
       published: "Notice published.",
       loadFailed: "Failed to load notices."
     }
