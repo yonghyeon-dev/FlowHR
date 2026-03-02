@@ -1,4 +1,5 @@
-﻿import { type KpiCopy } from "@/components/admin-kpi/copy";
+import Link from "next/link";
+import { type KpiCopy } from "@/components/admin-kpi/copy";
 import { formatDelta, formatPercent } from "@/components/admin-kpi/helpers";
 import { type AdminKpiSummary } from "@/features/admin-kpi/summary";
 
@@ -40,7 +41,16 @@ export type AdminKpiFocusMetric =
   | "payrollConfirmedRate"
   | "contractDecisionQueueCount"
   | "contractSlaOverdueCount";
-type AdminKpiDrilldownMetric = Exclude<AdminKpiFocusMetric, "all">;
+export type AdminKpiDrilldownMetric = Exclude<AdminKpiFocusMetric, "all">;
+
+export type AdminKpiCardQuickLink = {
+  href: string;
+  workspaceLabel: string;
+};
+
+export type AdminKpiCardQuickLinkMap = Partial<
+  Record<AdminKpiDrilldownMetric, AdminKpiCardQuickLink>
+>;
 
 type ContextPanelProps = {
   copy: KpiCopy;
@@ -172,19 +182,41 @@ export function AdminKpiContextPanel(props: ContextPanelProps) {
 type CardsProps = {
   copy: KpiCopy;
   kpi: RangeKpi;
+  quickLinks?: AdminKpiCardQuickLinkMap;
 };
 
-export function AdminKpiCards({ copy, kpi }: CardsProps) {
+function KpiCardQuickJump({
+  copy,
+  quickLink
+}: {
+  copy: KpiCopy;
+  quickLink?: AdminKpiCardQuickLink;
+}) {
+  if (!quickLink) {
+    return null;
+  }
+  return (
+    <div className="actions" style={{ marginTop: 8 }}>
+      <Link href={quickLink.href} className="btn btn-secondary btn-small">
+        {copy.focusWorkspaceOpenAction}: {quickLink.workspaceLabel}
+      </Link>
+    </div>
+  );
+}
+
+export function AdminKpiCards({ copy, kpi, quickLinks }: CardsProps) {
   return (
     <section className="kpi-strip">
       <article className="kpi-card">
         <p>{copy.cards.pendingApprovals}</p>
         <strong>{kpi.summary.approvalPendingCount}</strong>
+        <KpiCardQuickJump copy={copy} quickLink={quickLinks?.pendingApprovals} />
       </article>
       <article className="kpi-card">
         <p>{copy.cards.stalledApprovals}</p>
         <strong>{kpi.summary.approvalStalledCount}</strong>
         <small>{copy.details.stalledThreshold}</small>
+        <KpiCardQuickJump copy={copy} quickLink={quickLinks?.stalledApprovals} />
       </article>
       <article className="kpi-card">
         <p>{copy.cards.attendanceApprovalRate}</p>
@@ -192,6 +224,7 @@ export function AdminKpiCards({ copy, kpi }: CardsProps) {
         <small>
           {kpi.detail.attendanceApproved} / {kpi.detail.attendanceTotal} {copy.details.attendanceTotal}
         </small>
+        <KpiCardQuickJump copy={copy} quickLink={quickLinks?.attendanceApprovalRate} />
       </article>
       <article className="kpi-card">
         <p>{copy.cards.leaveApprovedDays}</p>
@@ -199,6 +232,7 @@ export function AdminKpiCards({ copy, kpi }: CardsProps) {
         <small>
           {kpi.detail.leaveApprovedRequestCount} {copy.details.leaveApprovedRequests}
         </small>
+        <KpiCardQuickJump copy={copy} quickLink={quickLinks?.leaveApprovedDays} />
       </article>
       <article className="kpi-card">
         <p>{copy.cards.payrollConfirmedRate}</p>
@@ -206,14 +240,17 @@ export function AdminKpiCards({ copy, kpi }: CardsProps) {
         <small>
           {kpi.detail.payrollConfirmed} / {kpi.detail.payrollTotal} {copy.details.payrollConfirmedRuns}
         </small>
+        <KpiCardQuickJump copy={copy} quickLink={quickLinks?.payrollConfirmedRate} />
       </article>
       <article className="kpi-card">
         <p>{copy.cards.contractDecisionQueueCount}</p>
         <strong>{kpi.summary.contractDecisionQueueCount}</strong>
+        <KpiCardQuickJump copy={copy} quickLink={quickLinks?.contractDecisionQueueCount} />
       </article>
       <article className="kpi-card">
         <p>{copy.cards.contractSlaOverdueCount}</p>
         <strong>{kpi.summary.contractSlaOverdueCount}</strong>
+        <KpiCardQuickJump copy={copy} quickLink={quickLinks?.contractSlaOverdueCount} />
       </article>
     </section>
   );
