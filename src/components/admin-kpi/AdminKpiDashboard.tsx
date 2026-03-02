@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AdminBenefitsKpiPanel,
@@ -47,8 +48,66 @@ type NoticeLite = { id: string; status: "DRAFT" | "SCHEDULED" | "PUBLISHED"; pub
 type NoticeReadReceiptLite = { noticeId: string; readAt: string };
 const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>(["DRAFT", "APPROVAL_REQUESTED", "SENT"]);
 const contractDecisionQueueSteps = new Set(["REQUEST_APPROVAL", "APPROVE_OR_REJECT", "SEND_DOCUMENT"]);
+const adminKpiFocusMetricSet = new Set<AdminKpiFocusMetric>([
+  "all",
+  "pendingApprovals",
+  "stalledApprovals",
+  "attendanceApprovalRate",
+  "leaveApprovedDays",
+  "payrollConfirmedRate",
+  "contractDecisionQueueCount",
+  "contractSlaOverdueCount"
+]);
+type FocusWorkspaceLink = { href: string; label: string };
+
+function parseAdminKpiFocusMetric(
+  value: string | null
+): AdminKpiFocusMetric | null {
+  if (!value) {
+    return null;
+  }
+  if (adminKpiFocusMetricSet.has(value as AdminKpiFocusMetric)) {
+    return value as AdminKpiFocusMetric;
+  }
+  return null;
+}
+
+function resolveFocusWorkspaceLink(
+  focusMetric: AdminKpiFocusMetric,
+  copy: (typeof kpiCopyByLocale)["ko"]
+): FocusWorkspaceLink {
+  if (focusMetric === "pendingApprovals" || focusMetric === "stalledApprovals") {
+    return { href: "/admin/approval-executions", label: copy.metrics.pendingApprovals };
+  }
+  if (focusMetric === "attendanceApprovalRate") {
+    return { href: "/admin/attendance-live", label: copy.metrics.attendanceApprovalRate };
+  }
+  if (focusMetric === "leaveApprovedDays") {
+    return { href: "/admin/leave-calendar", label: copy.metrics.leaveApprovedDays };
+  }
+  if (focusMetric === "payrollConfirmedRate") {
+    return { href: "/admin/payroll-close", label: copy.metrics.payrollConfirmedRate };
+  }
+  if (
+    focusMetric === "contractDecisionQueueCount" ||
+    focusMetric === "contractSlaOverdueCount"
+  ) {
+    return {
+      href: "/admin/contracts",
+      label:
+        focusMetric === "contractSlaOverdueCount"
+          ? copy.metrics.contractSlaOverdueCount
+          : copy.metrics.contractDecisionQueueCount
+    };
+  }
+  return { href: "/admin", label: copy.focusMetricAllOption };
+}
+
 type AdminKpiDashboardProps = { analyticsMode?: boolean };
 export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { locale } = useI18n();
   const copy = kpiCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -286,6 +345,33 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   useEffect(() => {
     void loadKpis();
   }, [loadKpis]);
+  useEffect(() => {
+    if (!analyticsMode) {
+      return;
+    }
+    const parsed = parseAdminKpiFocusMetric(searchParams.get("focus")) ?? "all";
+    if (parsed !== focusMetric) {
+      setFocusMetric(parsed);
+    }
+  }, [analyticsMode, focusMetric, searchParams]);
+  useEffect(() => {
+    if (!analyticsMode) {
+      return;
+    }
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (focusMetric === "all") {
+      nextParams.delete("focus");
+    } else {
+      nextParams.set("focus", focusMetric);
+    }
+    const currentQuery = searchParams.toString();
+    const nextQuery = nextParams.toString();
+    if (currentQuery === nextQuery) {
+      return;
+    }
+    const nextPath = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(nextPath, { scroll: false });
+  }, [analyticsMode, focusMetric, pathname, router, searchParams]);
   const trendRows = useMemo(
     () => buildAdminKpiTrendRows(copy.metrics, currentRangeKpi, previousRangeKpi),
     [copy.metrics, currentRangeKpi, previousRangeKpi]
@@ -296,6 +382,10 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   );
   const refreshDisabled = Boolean(pendingLabel) || (!usesBearerToken && !organizationId.trim());
   const exportDisabled = !currentRangeKpi || !previousRangeKpi || Boolean(pendingLabel);
+  const focusWorkspace = useMemo(
+    () => resolveFocusWorkspaceLink(focusMetric, copy),
+    [copy, focusMetric]
+  );
   const exportCsv = useCallback(() => {
     if (!currentRangeKpi || !previousRangeKpi) {
       return;
@@ -329,6 +419,45 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     runtimeLocale,
     visibleTrendRows
   ]);
+  const copyFocusedLink = useCallback(async () => {
+    if (!analyticsMode) {
+      return;
+    }
+    try {
+      const target = new URL(window.location.href);
+      if (focusMetric === "all") {
+        target.searchParams.delete("focus");
+      } else {
+        target.searchParams.set("focus", focusMetric);
+      }
+      await navigator.clipboard.writeText(target.toString());
+      const timestamp = new Date();
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: copy.focusWorkspaceCopyDone,
+          ok: true,
+          status: 200,
+          at: timestamp.toLocaleString(runtimeLocale),
+          durationMs: 0
+        },
+        ...prev
+      ]);
+    } catch {
+      const timestamp = new Date();
+      setLogs((prev) => [
+        {
+          id: Date.now(),
+          label: copy.focusWorkspaceCopyFailed,
+          ok: false,
+          status: 500,
+          at: timestamp.toLocaleString(runtimeLocale),
+          durationMs: 0
+        },
+        ...prev
+      ]);
+    }
+  }, [analyticsMode, copy.focusWorkspaceCopyDone, copy.focusWorkspaceCopyFailed, focusMetric, runtimeLocale]);
   return (
     <main className="saas-content">
       <header className="hero">
@@ -377,6 +506,22 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         }}
       />
       {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
+      {analyticsMode ? (
+        <section className="panel">
+          <h2>{copy.focusWorkspaceTitle}</h2>
+          <p className="small muted">{copy.focusWorkspaceDescription}</p>
+          <div className="actions" style={{ marginTop: 8 }}>
+            <Link href={focusWorkspace.href} className="btn btn-secondary">
+              {copy.focusWorkspaceOpenAction}: {focusWorkspace.label}
+            </Link>
+            <button type="button" className="btn btn-secondary" onClick={() => {
+              void copyFocusedLink();
+            }}>
+              {copy.focusWorkspaceCopyLinkAction}
+            </button>
+          </div>
+        </section>
+      ) : null}
       {analyticsMode && payrollRiskKpi ? (
         <AdminPayrollRiskKpiPanel copy={copy} snapshot={payrollRiskKpi} />
       ) : null}
