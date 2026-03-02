@@ -33,6 +33,12 @@ export type AdminOnboardingCopy = {
   contractTemplateBootstrapHint: string;
   contractTemplateReadyLabel: string;
   contractTemplateMissingLabel: string;
+  contractDraftCoverageLabel: string;
+  contractDraftPendingLabel: string;
+  contractDraftReadyLabel: string;
+  contractDraftMissingLabel: string;
+  contractDraftIssueButton: string;
+  contractDraftIssueHint: string;
   checklistTitle: string;
   applyDepartmentsButton: string;
   applyEmployeesButton: string;
@@ -65,7 +71,9 @@ export type AdminOnboardingCopy = {
     createDepartmentPrefix: string;
     createEmployeePrefix: string;
     createInvitePrefix: string;
+    contractDocuments: string;
     createContractTemplate: string;
+    createContractDocumentPrefix: string;
     upsertLeavePolicy: string;
   };
   checklist: {
@@ -110,6 +118,12 @@ const defaultCopy: AdminOnboardingCopy = {
   contractTemplateBootstrapHint: "Created as ACTIVE and reusable for onboarding document drafts.",
   contractTemplateReadyLabel: "Template ready",
   contractTemplateMissingLabel: "Template required",
+  contractDraftCoverageLabel: "Employees with contract draft",
+  contractDraftPendingLabel: "Pending draft creation",
+  contractDraftReadyLabel: "Contract draft coverage complete",
+  contractDraftMissingLabel: "Contract drafts required",
+  contractDraftIssueButton: "Create pending contract drafts",
+  contractDraftIssueHint: "Creates one DRAFT employment contract document per pending employee.",
   checklistTitle: "Setup checklist",
   applyDepartmentsButton: "Apply departments",
   applyEmployeesButton: "Apply employees",
@@ -142,7 +156,9 @@ const defaultCopy: AdminOnboardingCopy = {
     createDepartmentPrefix: "create department",
     createEmployeePrefix: "create employee",
     createInvitePrefix: "create invite",
+    contractDocuments: "contract documents",
     createContractTemplate: "create contract template",
+    createContractDocumentPrefix: "create contract document",
     upsertLeavePolicy: "upsert leave policy"
   },
   checklist: {
@@ -189,6 +205,12 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
     contractTemplateBootstrapHint: "ACTIVE 상태로 생성되어 온보딩 계약 초안에 바로 사용할 수 있습니다.",
     contractTemplateReadyLabel: "템플릿 준비됨",
     contractTemplateMissingLabel: "템플릿 필요",
+    contractDraftCoverageLabel: "계약 초안 준비 직원 수",
+    contractDraftPendingLabel: "초안 생성 필요 직원 수",
+    contractDraftReadyLabel: "계약 초안 커버리지 완료",
+    contractDraftMissingLabel: "계약 초안 생성 필요",
+    contractDraftIssueButton: "미생성 계약 초안 일괄 생성",
+    contractDraftIssueHint: "대상 직원별로 근로계약 DRAFT 문서를 1건씩 생성합니다.",
     checklistTitle: "설정 체크리스트",
     applyDepartmentsButton: "부서 적용",
     applyEmployeesButton: "직원 적용",
@@ -221,7 +243,9 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
       createDepartmentPrefix: "부서 생성",
       createEmployeePrefix: "직원 생성",
       createInvitePrefix: "초대장 생성",
+      contractDocuments: "계약 문서 목록 조회",
       createContractTemplate: "계약 템플릿 생성",
+      createContractDocumentPrefix: "계약 문서 생성",
       upsertLeavePolicy: "휴가 정책 저장"
     },
     checklist: {

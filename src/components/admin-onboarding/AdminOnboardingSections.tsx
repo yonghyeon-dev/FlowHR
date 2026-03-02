@@ -61,10 +61,13 @@ type SetupPanelsProps = {
   allowHourly: boolean;
   hourlyIncrementMinutes: string;
   maxHoursPerRequest: string;
+  activeEmployeeCount: number;
   inviteEligibleEmployeeCount: number;
   invitedEmployeeCount: number;
   pendingInviteCount: number;
   activeContractTemplateCount: number;
+  preparedContractDraftEmployeeCount: number;
+  pendingContractDraftCount: number;
   onSetDepartmentSeedInput: (value: string) => void;
   onSetEmployeeSeedInput: (value: string) => void;
   onSetAnnualGrantDays: (value: string) => void;
@@ -79,6 +82,7 @@ type SetupPanelsProps = {
   onApplyLeavePolicy: () => void;
   onIssuePendingEmployeeInvites: () => void;
   onBootstrapEmploymentContractTemplate: () => void;
+  onCreatePendingContractDrafts: () => void;
 };
 export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
   const {
@@ -95,10 +99,13 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     allowHourly,
     hourlyIncrementMinutes,
     maxHoursPerRequest,
+    activeEmployeeCount,
     inviteEligibleEmployeeCount,
     invitedEmployeeCount,
     pendingInviteCount,
     activeContractTemplateCount,
+    preparedContractDraftEmployeeCount,
+    pendingContractDraftCount,
     onSetDepartmentSeedInput,
     onSetEmployeeSeedInput,
     onSetAnnualGrantDays,
@@ -112,7 +119,8 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
     onApplyEmployees,
     onApplyLeavePolicy,
     onIssuePendingEmployeeInvites,
-    onBootstrapEmploymentContractTemplate
+    onBootstrapEmploymentContractTemplate,
+    onCreatePendingContractDrafts
   } = props;
   return (
     <section className="panel-grid">
@@ -172,19 +180,11 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
           {copy.inviteCoverageSentLabel}: <strong>{invitedEmployeeCount}</strong> /{" "}
           {copy.inviteCoveragePendingLabel}: <strong>{pendingInviteCount}</strong>{" "}
           <span className={pendingInviteCount === 0 && inviteEligibleEmployeeCount > 0 ? "ok" : "fail"}>
-            {pendingInviteCount === 0 && inviteEligibleEmployeeCount > 0
-              ? copy.inviteCoverageReadyLabel
-              : copy.inviteCoverageMissingLabel}
+            {pendingInviteCount === 0 && inviteEligibleEmployeeCount > 0 ? copy.inviteCoverageReadyLabel : copy.inviteCoverageMissingLabel}
           </span>
         </p>
         <div className="actions">
-          <button
-            className="btn btn-primary"
-            onClick={onIssuePendingEmployeeInvites}
-            disabled={pendingInviteCount === 0 || inviteEligibleEmployeeCount === 0}
-          >
-            {copy.inviteCoverageIssueButton}
-          </button>
+          <button className="btn btn-primary" onClick={onIssuePendingEmployeeInvites} disabled={pendingInviteCount === 0 || inviteEligibleEmployeeCount === 0}>{copy.inviteCoverageIssueButton}</button>
         </div>
         <p className="small muted">{copy.inviteCoverageIssueHint}</p>
       </article>
@@ -221,16 +221,20 @@ export function AdminOnboardingSetupPanels(props: SetupPanelsProps) {
             {activeContractTemplateCount > 0 ? copy.contractTemplateReadyLabel : copy.contractTemplateMissingLabel}
           </span>
         </p>
+        <p className="small">
+          {copy.contractDraftCoverageLabel}: <strong>{preparedContractDraftEmployeeCount}</strong> /{" "}
+          <strong>{activeEmployeeCount}</strong> · {copy.contractDraftPendingLabel}:{" "}
+          <strong>{pendingContractDraftCount}</strong>{" "}
+          <span className={pendingContractDraftCount === 0 && activeEmployeeCount > 0 ? "ok" : "fail"}>
+            {pendingContractDraftCount === 0 && activeEmployeeCount > 0 ? copy.contractDraftReadyLabel : copy.contractDraftMissingLabel}
+          </span>
+        </p>
         <div className="actions">
-          <button
-            className="btn btn-primary"
-            onClick={onBootstrapEmploymentContractTemplate}
-            disabled={activeContractTemplateCount > 0}
-          >
-            {copy.contractTemplateBootstrapButton}
-          </button>
+          <button className="btn btn-primary" onClick={onBootstrapEmploymentContractTemplate} disabled={activeContractTemplateCount > 0}>{copy.contractTemplateBootstrapButton}</button>
+          <button className="btn btn-secondary" onClick={onCreatePendingContractDrafts} disabled={activeContractTemplateCount === 0 || pendingContractDraftCount === 0}>{copy.contractDraftIssueButton}</button>
         </div>
         <p className="small muted">{copy.contractTemplateBootstrapHint}</p>
+        <p className="small muted">{copy.contractDraftIssueHint}</p>
       </article>
     </section>
   );
@@ -255,15 +259,7 @@ export function AdminOnboardingChecklistPanel(props: ChecklistPanelProps) {
                 <span className={item.done ? "ok" : "fail"}>
                   {item.done ? copy.doneLabel : copy.todoLabel}
                 </span>{" "}
-                {item.key === "organization"
-                  ? copy.checklist.organization
-                  : item.key === "departments"
-                    ? copy.checklist.departments
-                    : item.key === "employees"
-                      ? copy.checklist.employees
-                      : item.key === "invites"
-                        ? copy.checklist.invites
-                        : copy.checklist.leavePolicy}
+                {item.key === "organization" ? copy.checklist.organization : item.key === "departments" ? copy.checklist.departments : item.key === "employees" ? copy.checklist.employees : item.key === "invites" ? copy.checklist.invites : copy.checklist.leavePolicy}
               </span>
             </li>
           ))}
