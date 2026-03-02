@@ -1,6 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  AdminOnboardingKpiPanel,
+  buildOnboardingKpiSnapshot,
+  type OnboardingKpiSnapshot
+} from "@/components/admin-kpi/AdminOnboardingKpiPanel";
 import { AdminNoticesKpiPanel, buildNoticeReadCoverageSnapshot, type NoticeReadCoverageSnapshot } from "@/components/admin-kpi/AdminNoticesKpiPanel";
 import { AdminRecruitmentKpiPanel, buildRecruitmentKpiSnapshot, type RecruitmentKpiSnapshot } from "@/components/admin-kpi/AdminRecruitmentKpiPanel";
 import { AdminKpiAnalyticsControls, AdminKpiCards, AdminKpiContextPanel, AdminKpiLogsPanel, AdminKpiTrendPanel, type AdminKpiFocusMetric, type ApiLog, type RangeKpi } from "@/components/admin-kpi/AdminKpiSections";
@@ -18,6 +23,9 @@ type PayrollRunLite = { state: "PREVIEWED" | "CONFIRMED" };
 type RecruitmentOpeningLite = { status: "OPEN" | "CLOSED" };
 type RecruitmentReferralLite = { stage: "SUBMITTED" | "SCREENING" | "INTERVIEW" | "OFFER" | "HIRED" | "REJECTED" | "WITHDRAWN"; updatedAt: string };
 type ContractDocumentLite = { status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED"; approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED"; requiresApproval: boolean; expiresAt: string | null };
+type OnboardingContractDocumentLite = { employeeId: string; status: "DRAFT" | "APPROVAL_REQUESTED" | "SENT" | "SIGNED" | "REJECTED" | "EXPIRED" | "RENEWED" };
+type EmployeeLite = { id: string; email: string | null };
+type AuthInviteLite = { email: string };
 type NoticeLite = { id: string; status: "DRAFT" | "SCHEDULED" | "PUBLISHED"; publishedAt: string | null; updatedAt: string };
 type NoticeReadReceiptLite = { noticeId: string; readAt: string };
 const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>(["DRAFT", "APPROVAL_REQUESTED", "SENT"]);
@@ -35,6 +43,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
   const [previousRangeKpi, setPreviousRangeKpi] = useState<RangeKpi | null>(null);
   const [recruitmentKpi, setRecruitmentKpi] = useState<RecruitmentKpiSnapshot | null>(null);
   const [noticesKpi, setNoticesKpi] = useState<NoticeReadCoverageSnapshot | null>(null);
+  const [onboardingKpi, setOnboardingKpi] = useState<OnboardingKpiSnapshot | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
@@ -172,6 +181,32 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     const noticesBody = await requestJson("notices", `/api/notices${buildQuery({ organizationId: organizationId.trim() || undefined, audience: "all", status: "all" })}`);
     return buildNoticeReadCoverageSnapshot({ notices: parseArray<NoticeLite>(noticesBody, "notices"), readReceipts: parseArray<NoticeReadReceiptLite>(noticesBody, "readReceipts") });
   }, [organizationId, requestJson]);
+  const loadOnboardingKpi = useCallback(async () => {
+    const targetOrganizationId = organizationId.trim() || undefined;
+    const [employeesBody, invitesBody, contractsBody] = await Promise.all([
+      requestJson(
+        "onboarding employees",
+        `/api/people/employees${buildQuery({ organizationId: targetOrganizationId, active: "true" })}`
+      ),
+      requestJson(
+        "onboarding invites",
+        `/api/auth/invites${buildQuery({
+          organizationId: targetOrganizationId,
+          role: "employee",
+          limit: "500"
+        })}`
+      ),
+      requestJson(
+        "onboarding contracts",
+        `/api/contracts/documents${buildQuery({ organizationId: targetOrganizationId })}`
+      )
+    ]);
+    return buildOnboardingKpiSnapshot({
+      employees: parseArray<EmployeeLite>(employeesBody, "employees"),
+      invites: parseArray<AuthInviteLite>(invitesBody, "invites"),
+      contractDocuments: parseArray<OnboardingContractDocumentLite>(contractsBody, "documents")
+    });
+  }, [organizationId, requestJson]);
   const loadKpis = useCallback(async () => {
     if (!usesBearerToken && !organizationId.trim()) {
       return;
@@ -180,20 +215,22 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     try {
       const currentRange = { from: toIso(periodStart), to: toIso(periodEnd) };
       const previousRange = computePreviousPeriodRange(currentRange.from, currentRange.to);
-      const [current, previous, recruitment, notices] = await Promise.all([
+      const [current, previous, recruitment, notices, onboarding] = await Promise.all([
         loadRangeKpi(currentRange),
         loadRangeKpi(previousRange),
         loadRecruitmentKpi(),
-        loadNoticesKpi()
+        loadNoticesKpi(),
+        loadOnboardingKpi()
       ]);
       setCurrentRangeKpi(current);
       setPreviousRangeKpi(previous);
       setRecruitmentKpi(recruitment);
       setNoticesKpi(notices);
+      setOnboardingKpi(onboarding);
     } finally {
       setPendingLabel(null);
     }
-  }, [copy.loadingLabel, loadNoticesKpi, loadRangeKpi, loadRecruitmentKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
+  }, [copy.loadingLabel, loadNoticesKpi, loadOnboardingKpi, loadRangeKpi, loadRecruitmentKpi, organizationId, periodEnd, periodStart, usesBearerToken]);
   useEffect(() => {
     void loadKpis();
   }, [loadKpis]);
@@ -288,6 +325,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         }}
       />
       {currentRangeKpi ? <AdminKpiCards copy={copy} kpi={currentRangeKpi} /> : <p className="small muted">{copy.noData}</p>}
+      {analyticsMode && onboardingKpi ? <AdminOnboardingKpiPanel copy={copy} snapshot={onboardingKpi} /> : null}
       {analyticsMode && recruitmentKpi ? <AdminRecruitmentKpiPanel copy={copy} snapshot={recruitmentKpi} /> : null}
       {analyticsMode && noticesKpi ? <AdminNoticesKpiPanel copy={copy} snapshot={noticesKpi} /> : null}
       <section className="panel-grid">
