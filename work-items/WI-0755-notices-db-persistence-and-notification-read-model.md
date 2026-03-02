@@ -16,6 +16,10 @@
 - no scheduler/cron/actions expansion
 - no new ops console surface
 
+## Data Changes
+- Prisma models: `Notice`, `NoticeReadReceipt`, `NoticeNotificationQueue`
+- Migration: `202603020001_wi0755_notices_db_read_model`
+
 ## Testing
 - `npm.cmd exec tsx scripts/tests/e2e-wi0407-notices-core-journey-implementation.test.ts`
 - `npm.cmd exec tsx scripts/tests/e2e-wi0754-notices-audit-persistence-notification-link.test.ts`
