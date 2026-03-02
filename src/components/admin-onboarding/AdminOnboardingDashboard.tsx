@@ -61,6 +61,9 @@ export function AdminOnboardingDashboard() {
         allowHourly={data.allowHourly}
         hourlyIncrementMinutes={data.hourlyIncrementMinutes}
         maxHoursPerRequest={data.maxHoursPerRequest}
+        inviteEligibleEmployeeCount={data.inviteEligibleEmployeeCount}
+        invitedEmployeeCount={data.invitedEmployeeCount}
+        pendingInviteCount={data.pendingInviteCount}
         activeContractTemplateCount={data.activeContractTemplateCount}
         onSetDepartmentSeedInput={data.setDepartmentSeedInput}
         onSetEmployeeSeedInput={data.setEmployeeSeedInput}
@@ -81,6 +84,9 @@ export function AdminOnboardingDashboard() {
         }}
         onApplyLeavePolicy={() => {
           void data.applyLeavePolicy();
+        }}
+        onIssuePendingEmployeeInvites={() => {
+          void data.issuePendingEmployeeInvites();
         }}
         onBootstrapEmploymentContractTemplate={() => {
           void data.bootstrapEmploymentContractTemplate();

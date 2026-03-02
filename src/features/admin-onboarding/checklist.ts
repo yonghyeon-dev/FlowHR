@@ -2,11 +2,12 @@
   organizationId: string;
   departmentCount: number;
   employeeCount: number;
+  inviteCoverageDone: boolean;
   leavePolicyConfigured: boolean;
 };
 
 export type OnboardingChecklistItem = {
-  key: "organization" | "departments" | "employees" | "leave_policy";
+  key: "organization" | "departments" | "employees" | "invites" | "leave_policy";
   done: boolean;
 };
 
@@ -23,6 +24,10 @@ export function buildOnboardingChecklist(input: OnboardingChecklistInput): Onboa
     {
       key: "employees",
       done: input.employeeCount > 0
+    },
+    {
+      key: "invites",
+      done: input.inviteCoverageDone
     },
     {
       key: "leave_policy",

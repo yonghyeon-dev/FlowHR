@@ -3,7 +3,8 @@ import { z } from "zod";
 import {
   createAuthInvite,
   inviteDeliveryModes,
-  inviteRoles
+  inviteRoles,
+  listAuthInvites
 } from "@/features/auth/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
@@ -19,6 +20,57 @@ const inviteSchema = z.object({
   redirectTo: z.string().url().optional(),
   deliveryMode: z.enum(inviteDeliveryModes).optional()
 });
+
+const listInviteQuerySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  role: z.enum(inviteRoles).optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional()
+});
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const parsed = listInviteQuerySchema.safeParse({
+    organizationId: url.searchParams.get("organizationId") ?? undefined,
+    role: url.searchParams.get("role") ?? undefined,
+    limit: url.searchParams.get("limit") ?? undefined
+  });
+  if (!parsed.success) {
+    return fail(400, "invalid query", parsed.error.flatten());
+  }
+
+  const actor = await readActor(request);
+  try {
+    const invites = await listAuthInvites(
+      {
+        actor,
+        dataAccess: getRuntimeDataAccess(),
+        supabaseAdmin: getSupabaseAdmin()
+      },
+      {
+        organizationId: parsed.data.organizationId,
+        role: parsed.data.role,
+        limit: parsed.data.limit
+      }
+    );
+
+    const uniqueEmails = new Set(invites.map((invite) => invite.email));
+    return ok({
+      invites: invites.map((invite) => ({
+        ...invite,
+        createdAt: invite.createdAt.toISOString()
+      })),
+      summary: {
+        total: invites.length,
+        uniqueEmailCount: uniqueEmails.size
+      }
+    });
+  } catch (error) {
+    if (isServiceError(error)) {
+      return fail(error.status, error.message, error.details);
+    }
+    throw error;
+  }
+}
 
 export async function POST(request: Request) {
   let payload: unknown;

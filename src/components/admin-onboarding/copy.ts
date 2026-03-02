@@ -17,6 +17,15 @@ export type AdminOnboardingCopy = {
   employeeSeedTitle: string;
   employeeSeedPlaceholder: string;
   leavePolicyTitle: string;
+  inviteCoverageTitle: string;
+  inviteCoverageDescription: string;
+  inviteCoverageEligibleLabel: string;
+  inviteCoverageSentLabel: string;
+  inviteCoveragePendingLabel: string;
+  inviteCoverageReadyLabel: string;
+  inviteCoverageMissingLabel: string;
+  inviteCoverageIssueButton: string;
+  inviteCoverageIssueHint: string;
   contractTemplateTitle: string;
   contractTemplateDescription: string;
   contractTemplateCountLabel: string;
@@ -51,9 +60,11 @@ export type AdminOnboardingCopy = {
     organizations: string;
     departments: string;
     employees: string;
+    invites: string;
     leavePolicy: string;
     createDepartmentPrefix: string;
     createEmployeePrefix: string;
+    createInvitePrefix: string;
     createContractTemplate: string;
     upsertLeavePolicy: string;
   };
@@ -61,6 +72,7 @@ export type AdminOnboardingCopy = {
     organization: string;
     departments: string;
     employees: string;
+    invites: string;
     leavePolicy: string;
   };
 };
@@ -81,8 +93,17 @@ const defaultCopy: AdminOnboardingCopy = {
   departmentSeedPlaceholder: "DEV,Development",
   employeeSeedTitle: "3) Employee seed (ID,Name,Email,DepartmentCode)",
   employeeSeedPlaceholder: "EMP-2001,Jane,jane@example.com,DEV",
-  leavePolicyTitle: "4) Leave policy defaults",
-  contractTemplateTitle: "5) Employment contract template",
+  inviteCoverageTitle: "4) Employee invite coverage",
+  inviteCoverageDescription: "Issue onboarding invites for employees with email addresses.",
+  inviteCoverageEligibleLabel: "Employees with email",
+  inviteCoverageSentLabel: "Invites issued",
+  inviteCoveragePendingLabel: "Pending invites",
+  inviteCoverageReadyLabel: "Invite coverage complete",
+  inviteCoverageMissingLabel: "Invite action required",
+  inviteCoverageIssueButton: "Issue pending invites",
+  inviteCoverageIssueHint: "Creates employee-role invites for pending email targets only.",
+  leavePolicyTitle: "5) Leave policy defaults",
+  contractTemplateTitle: "6) Employment contract template",
   contractTemplateDescription: "Prepare one active employment contract template to start onboarding contracts.",
   contractTemplateCountLabel: "Active employment templates",
   contractTemplateBootstrapButton: "Create default employment template",
@@ -116,9 +137,11 @@ const defaultCopy: AdminOnboardingCopy = {
     organizations: "organizations",
     departments: "departments",
     employees: "employees",
+    invites: "invites",
     leavePolicy: "leave policy",
     createDepartmentPrefix: "create department",
     createEmployeePrefix: "create employee",
+    createInvitePrefix: "create invite",
     createContractTemplate: "create contract template",
     upsertLeavePolicy: "upsert leave policy"
   },
@@ -126,6 +149,7 @@ const defaultCopy: AdminOnboardingCopy = {
     organization: "Organization selected",
     departments: "At least one department",
     employees: "At least one active employee",
+    invites: "Employee invite coverage complete",
     leavePolicy: "Leave policy configured"
   }
 };
@@ -148,8 +172,17 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
     departmentSeedPlaceholder: "DEV,개발팀",
     employeeSeedTitle: "3) 직원 일괄 등록 (ID, 이름, 이메일, 부서코드)",
     employeeSeedPlaceholder: "EMP-2001,홍길동,hong@example.com,DEV",
-    leavePolicyTitle: "4) 휴가 정책 기본값",
-    contractTemplateTitle: "5) 근로계약 템플릿",
+    inviteCoverageTitle: "4) 직원 초대 커버리지",
+    inviteCoverageDescription: "이메일이 있는 직원에게 온보딩 초대장을 발급합니다.",
+    inviteCoverageEligibleLabel: "이메일 보유 직원 수",
+    inviteCoverageSentLabel: "발급 완료 초대장",
+    inviteCoveragePendingLabel: "미발급 초대장",
+    inviteCoverageReadyLabel: "초대 커버리지 완료",
+    inviteCoverageMissingLabel: "초대 발급 필요",
+    inviteCoverageIssueButton: "미발급 직원 초대장 발급",
+    inviteCoverageIssueHint: "대상 직원 이메일 기준으로 아직 발급되지 않은 초대장만 생성합니다.",
+    leavePolicyTitle: "5) 휴가 정책 기본값",
+    contractTemplateTitle: "6) 근로계약 템플릿",
     contractTemplateDescription: "온보딩 계약 생성을 시작할 수 있도록 활성 근로계약 템플릿 1개를 준비합니다.",
     contractTemplateCountLabel: "활성 근로계약 템플릿 수",
     contractTemplateBootstrapButton: "기본 근로계약 템플릿 생성",
@@ -183,9 +216,11 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
       organizations: "조직 목록 조회",
       departments: "부서 목록 조회",
       employees: "직원 목록 조회",
+      invites: "초대장 목록 조회",
       leavePolicy: "휴가 정책 조회",
       createDepartmentPrefix: "부서 생성",
       createEmployeePrefix: "직원 생성",
+      createInvitePrefix: "초대장 생성",
       createContractTemplate: "계약 템플릿 생성",
       upsertLeavePolicy: "휴가 정책 저장"
     },
@@ -193,6 +228,7 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
       organization: "조직 선택 완료",
       departments: "부서 1개 이상 등록",
       employees: "활성 직원 1명 이상 등록",
+      invites: "직원 초대 커버리지 완료",
       leavePolicy: "휴가 정책 설정 완료"
     }
   },

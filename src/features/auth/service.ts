@@ -88,11 +88,29 @@ export type AuthInviteResult = {
   actionLink: string | null;
 };
 
+export type ListAuthInvitesInput = {
+  organizationId?: string;
+  role?: InviteRole;
+  limit?: number;
+};
+
+export type AuthInviteHistoryEntry = {
+  userId: string;
+  email: string;
+  role: InviteRole;
+  organizationId: string;
+  actorId: string | null;
+  deliveryMode: InviteDeliveryMode;
+  createdAt: Date;
+};
+
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
   supabaseAdmin: SupabaseAdminAuthClient;
 };
+
+const AUTH_INVITE_AUDIT_ACTION = "auth.invite.generated";
 
 function requireActor(actor: Actor | null): Actor {
   if (!actor) {
@@ -116,6 +134,29 @@ function toRecord(value: unknown): Record<string, unknown> {
     return {};
   }
   return { ...(value as Record<string, unknown>) };
+}
+
+function normalizeInviteRole(value: unknown): InviteRole | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return inviteRoles.includes(value as InviteRole) ? (value as InviteRole) : null;
+}
+
+function normalizeInviteDeliveryMode(value: unknown): InviteDeliveryMode {
+  if (typeof value !== "string") {
+    return "link";
+  }
+  return inviteDeliveryModes.includes(value as InviteDeliveryMode)
+    ? (value as InviteDeliveryMode)
+    : "link";
+}
+
+function normalizeInviteListLimit(limit: number | undefined) {
+  if (!Number.isInteger(limit) || !limit || limit <= 0) {
+    return 100;
+  }
+  return Math.min(limit, 500);
 }
 
 export async function createAuthInvite(
@@ -238,4 +279,61 @@ export async function createAuthInvite(
     deliveryMode,
     actionLink
   };
+}
+
+export async function listAuthInvites(
+  context: ServiceContext,
+  input: ListAuthInvitesInput
+): Promise<AuthInviteHistoryEntry[]> {
+  const actor = requireActor(context.actor);
+  ensureInvitePermission(actor);
+
+  const actorOrgId = (actor.organizationId ?? "").trim();
+  const requestedOrgId = (input.organizationId ?? "").trim();
+  if (actorOrgId && requestedOrgId && actorOrgId !== requestedOrgId) {
+    throw new ServiceError(403, "organization mismatch");
+  }
+
+  const organizationId = actorOrgId || requestedOrgId;
+  if (!organizationId) {
+    throw new ServiceError(400, "organizationId is required");
+  }
+
+  const limit = normalizeInviteListLimit(input.limit);
+  const rows = await context.dataAccess.audit.list({
+    actions: [AUTH_INVITE_AUDIT_ACTION],
+    entityType: "AuthInvite",
+    organizationId,
+    limit: 5000
+  });
+
+  const invites: AuthInviteHistoryEntry[] = [];
+  for (const row of rows) {
+    const payload = toRecord(row.payload);
+    const role = normalizeInviteRole(payload.role);
+    if (!role) {
+      continue;
+    }
+    if (input.role && role !== input.role) {
+      continue;
+    }
+
+    const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
+    if (!email) {
+      continue;
+    }
+
+    invites.push({
+      userId: row.entityId ?? "",
+      email,
+      role,
+      organizationId,
+      actorId: typeof payload.actorId === "string" ? payload.actorId : null,
+      deliveryMode: normalizeInviteDeliveryMode(payload.deliveryMode),
+      createdAt: row.createdAt
+    });
+  }
+
+  invites.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+  return invites.slice(0, limit);
 }
