@@ -109,6 +109,7 @@ export type AdminOnboardingCopy = {
     employees: string;
     invites: string;
     leavePolicy: string;
+    contracts: string;
   };
 };
 
@@ -220,7 +221,8 @@ const defaultCopy: AdminOnboardingCopy = {
     departments: "At least one department",
     employees: "At least one active employee",
     invites: "Employee invite coverage complete",
-    leavePolicy: "Leave policy configured"
+    leavePolicy: "Leave policy configured",
+    contracts: "Contract onboarding coverage complete"
   }
 };
 
@@ -334,7 +336,8 @@ export const adminOnboardingCopyByLocale: Record<FlowLocale, AdminOnboardingCopy
       departments: "부서 1개 이상 등록",
       employees: "활성 직원 1명 이상 등록",
       invites: "직원 초대 커버리지 완료",
-      leavePolicy: "휴가 정책 설정 완료"
+      leavePolicy: "휴가 정책 설정 완료",
+      contracts: "계약 온보딩 커버리지 완료"
     }
   },
   en: defaultCopy
