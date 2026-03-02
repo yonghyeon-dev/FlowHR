@@ -44,6 +44,9 @@ export async function POST(request: Request, context: RouteContext) {
   if (!existing) {
     return fail(404, "recruitment.referral.not_found");
   }
+  if (actor?.organizationId && existing.organizationId !== actor.organizationId) {
+    return fail(404, "recruitment.referral.not_found");
+  }
   if (!isRecruitmentReferralStageTransitionAllowed(existing.stage, parsed.data.stage)) {
     return fail(409, "recruitment.referral.stage.invalid_transition", {
       from: existing.stage,

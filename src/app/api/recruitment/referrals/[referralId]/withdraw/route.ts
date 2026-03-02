@@ -34,6 +34,9 @@ export async function POST(request: Request, context: RouteContext) {
   if (!existing) {
     return fail(404, "recruitment.referral.not_found");
   }
+  if (actor.organizationId && existing.organizationId !== actor.organizationId) {
+    return fail(404, "recruitment.referral.not_found");
+  }
   if (existing.referrerEmployeeId !== actor.id) {
     return fail(403, "recruitment.referral.withdraw.forbidden", {
       reason: "owner_required"
