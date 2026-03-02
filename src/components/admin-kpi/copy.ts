@@ -56,6 +56,17 @@ export type KpiCopy = {
     unreadAging3dCount: string;
     agingThreshold: string;
   };
+  benefitsPanel: {
+    title: string;
+    description: string;
+    submittedCount: string;
+    approvedCount: string;
+    rejectedCount: string;
+    pendingAging3dCount: string;
+    agingThreshold: string;
+    overLimitSubmittedCount: string;
+    overLimitHint: string;
+  };
   onboardingPanel: {
     title: string;
     description: string;
@@ -146,6 +157,17 @@ const defaultCopy: KpiCopy = {
     unreadAging3dCount: "No-read notices (3d+)",
     agingThreshold: "published or updated 3+ days ago"
   },
+  benefitsPanel: {
+    title: "Benefits request snapshot",
+    description: "Track approval queue and risk signals for employee benefits requests.",
+    submittedCount: "Submitted requests",
+    approvedCount: "Approved requests",
+    rejectedCount: "Rejected requests",
+    pendingAging3dCount: "Submitted aging (3d+)",
+    agingThreshold: "submitted for 3+ days",
+    overLimitSubmittedCount: "Over-limit submitted",
+    overLimitHint: "amount exceeds annual limit"
+  },
   onboardingPanel: {
     title: "Onboarding readiness snapshot",
     description: "Track invite coverage and contract response completion for active employees.",
@@ -235,6 +257,17 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       noReadNoticeCount: "미열람 공지 수",
       unreadAging3dCount: "3일+ 미열람 공지",
       agingThreshold: "게시/수정 후 3일 이상 경과"
+    },
+    benefitsPanel: {
+      title: "복리후생 요청 스냅샷",
+      description: "복리후생 요청 승인 큐와 위험 신호를 추적합니다.",
+      submittedCount: "제출 요청 수",
+      approvedCount: "승인 요청 수",
+      rejectedCount: "반려 요청 수",
+      pendingAging3dCount: "3일+ 제출 대기",
+      agingThreshold: "제출 후 3일 이상 경과",
+      overLimitSubmittedCount: "한도 초과 제출",
+      overLimitHint: "연간 한도 초과 요청"
     },
     onboardingPanel: {
       title: "온보딩 준비 스냅샷",
