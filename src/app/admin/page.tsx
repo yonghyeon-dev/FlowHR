@@ -23,13 +23,48 @@ import {
   resolveAdminDashboardPriorityTitle
 } from "@/app/admin/page-focus-copy";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
+import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+
+type ApprovalExecutionLite = { updatedAt: string };
+type PayrollRunLite = {
+  state: "PREVIEWED" | "CONFIRMED";
+  payslipDistributedAt: string | null;
+};
+type ContractDocumentLite = {
+  status:
+    | "DRAFT"
+    | "APPROVAL_REQUESTED"
+    | "SENT"
+    | "SIGNED"
+    | "REJECTED"
+    | "EXPIRED"
+    | "RENEWED";
+  approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+  requiresApproval: boolean;
+  expiresAt: string | null;
+};
+const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>([
+  "DRAFT",
+  "APPROVAL_REQUESTED",
+  "SENT"
+]);
+const contractDecisionQueueSteps = new Set([
+  "REQUEST_APPROVAL",
+  "APPROVE_OR_REJECT",
+  "SEND_DOCUMENT"
+]);
 
 type AdminSummary = {
   pendingAttendanceCount: number;
   pendingLeaveCount: number;
   previewedPayrollCount: number;
+  undistributedPayrollCount: number;
+  pendingApprovalExecutionCount: number;
+  stalledApprovalExecutionCount: number;
+  contractDecisionQueueCount: number;
+  contractSlaOverdueCount: number;
   employeeCount: number;
   refreshedAt: string | null;
 };
@@ -38,6 +73,11 @@ const EMPTY_SUMMARY: AdminSummary = {
   pendingAttendanceCount: 0,
   pendingLeaveCount: 0,
   previewedPayrollCount: 0,
+  undistributedPayrollCount: 0,
+  pendingApprovalExecutionCount: 0,
+  stalledApprovalExecutionCount: 0,
+  contractDecisionQueueCount: 0,
+  contractSlaOverdueCount: 0,
   employeeCount: 0,
   refreshedAt: null
 };
@@ -62,6 +102,49 @@ export default function AdminDashboardPage() {
     [focusCards]
   );
   const topFocusCard = focusCards[0] ?? null;
+  const queueBadges = useMemo(
+    () => [
+      {
+        key: "approvals",
+        label: isKoLocale ? "결재 대기함" : "Approval queue",
+        total: summary.pendingApprovalExecutionCount,
+        critical: summary.stalledApprovalExecutionCount,
+        watch: Math.max(
+          summary.pendingApprovalExecutionCount - summary.stalledApprovalExecutionCount,
+          0
+        ),
+        href: "/admin/approval-executions"
+      },
+      {
+        key: "payroll",
+        label: isKoLocale ? "급여 대기함" : "Payroll queue",
+        total: summary.previewedPayrollCount + summary.undistributedPayrollCount,
+        critical: summary.undistributedPayrollCount,
+        watch: summary.previewedPayrollCount,
+        href: "/admin/payroll-close"
+      },
+      {
+        key: "contracts",
+        label: isKoLocale ? "계약 대기함" : "Contract queue",
+        total: summary.contractDecisionQueueCount,
+        critical: summary.contractSlaOverdueCount,
+        watch: Math.max(
+          summary.contractDecisionQueueCount - summary.contractSlaOverdueCount,
+          0
+        ),
+        href: "/admin/contracts"
+      }
+    ],
+    [
+      isKoLocale,
+      summary.contractDecisionQueueCount,
+      summary.contractSlaOverdueCount,
+      summary.pendingApprovalExecutionCount,
+      summary.previewedPayrollCount,
+      summary.stalledApprovalExecutionCount,
+      summary.undistributedPayrollCount
+    ]
+  );
 
   const bearerToken = supabaseSession?.accessToken?.trim() ?? "";
   const usesBearerToken = bearerToken.length > 0;
@@ -99,13 +182,27 @@ export default function AdminDashboardPage() {
       const from = toIso(periodStart);
       const to = toIso(periodEnd);
 
-      const [attendanceResult, leaveResult, payrollResult, employeeResult] = await Promise.all([
+      const [attendanceResult, leaveResult, payrollResult, employeeResult, approvalResult, contractsResult] = await Promise.all([
         callApi("refresh pending attendance", `/api/attendance/records${buildQuery({ from, to, state: "PENDING" })}`),
         callApi("refresh pending leave", `/api/leave/requests${buildQuery({ from, to, state: "PENDING" })}`),
-        callApi("refresh previewed payroll", `/api/payroll/runs${buildQuery({ from, to, state: "PREVIEWED" })}`),
+        callApi("refresh payroll runs", `/api/payroll/runs${buildQuery({ from, to })}`),
         callApi(
           "refresh employees",
           `/api/people/employees${buildQuery({ organizationId: organizationId || undefined })}`
+        ),
+        callApi(
+          "refresh approval executions",
+          `/api/approval/executions${buildQuery({
+            organizationId: organizationId || undefined,
+            state: "PENDING",
+            asOf: to,
+            limit: "500",
+            sort: "priority_desc"
+          })}`
+        ),
+        callApi(
+          "refresh contracts",
+          `/api/contracts/documents${buildQuery({ organizationId: organizationId || undefined })}`
         )
       ]);
 
@@ -121,11 +218,52 @@ export default function AdminDashboardPage() {
           : 0
         : 0;
 
-      const previewedPayrollCount = payrollResult.response.ok
-        ? Array.isArray((payrollResult.body as { runs?: unknown[] }).runs)
-          ? ((payrollResult.body as { runs?: unknown[] }).runs ?? []).length
-          : 0
-        : 0;
+      const payrollRuns = payrollResult.response.ok
+        ? Array.isArray((payrollResult.body as { runs?: PayrollRunLite[] }).runs)
+          ? ((payrollResult.body as { runs?: PayrollRunLite[] }).runs ?? [])
+          : []
+        : [];
+      const previewedPayrollCount = payrollRuns.filter((run) => run.state === "PREVIEWED").length;
+      const undistributedPayrollCount = payrollRuns.filter(
+        (run) => run.state === "CONFIRMED" && !run.payslipDistributedAt
+      ).length;
+
+      const approvalExecutions = approvalResult.response.ok
+        ? Array.isArray((approvalResult.body as { executions?: ApprovalExecutionLite[] }).executions)
+          ? ((approvalResult.body as { executions?: ApprovalExecutionLite[] }).executions ?? [])
+          : []
+        : [];
+      const asOfMillis = new Date(to).getTime();
+      const stalledApprovalExecutionCount = approvalExecutions.filter((execution) => {
+        const updatedAtMillis = new Date(execution.updatedAt).getTime();
+        if (!Number.isFinite(updatedAtMillis)) {
+          return false;
+        }
+        const stalledHours = (asOfMillis - updatedAtMillis) / (1000 * 60 * 60);
+        return stalledHours >= 24;
+      }).length;
+
+      const contractDocuments = contractsResult.response.ok
+        ? Array.isArray((contractsResult.body as { documents?: ContractDocumentLite[] }).documents)
+          ? ((contractsResult.body as { documents?: ContractDocumentLite[] }).documents ?? [])
+          : []
+        : [];
+      const contractDecisionQueueCount = contractDocuments.filter((document) =>
+        contractDecisionQueueSteps.has(
+          resolveAdminContractDocumentNextStep({
+            status: document.status,
+            approvalStatus: document.approvalStatus ?? "NONE",
+            requiresApproval: Boolean(document.requiresApproval)
+          })
+        )
+      ).length;
+      const contractSlaOverdueCount = contractDocuments.filter((document) => {
+        if (!contractSlaTrackedStatuses.has(document.status)) {
+          return false;
+        }
+        const expiresAtMillis = document.expiresAt ? new Date(document.expiresAt).getTime() : Number.NaN;
+        return Number.isFinite(expiresAtMillis) && expiresAtMillis < asOfMillis;
+      }).length;
 
       const employeeCount = employeeResult.response.ok
         ? Array.isArray((employeeResult.body as { employees?: unknown[] }).employees)
@@ -137,6 +275,11 @@ export default function AdminDashboardPage() {
         pendingAttendanceCount,
         pendingLeaveCount,
         previewedPayrollCount,
+        undistributedPayrollCount,
+        pendingApprovalExecutionCount: approvalExecutions.length,
+        stalledApprovalExecutionCount,
+        contractDecisionQueueCount,
+        contractSlaOverdueCount,
         employeeCount,
         refreshedAt: new Date().toLocaleString(runtimeLocale)
       });
@@ -238,6 +381,33 @@ export default function AdminDashboardPage() {
           </div>
         </section>
       ) : null}
+
+      <section className="panel">
+        <h2>{isKoLocale ? "핵심 대기함 배지" : "Core queue badges"}</h2>
+        <p className="small muted">
+          {isKoLocale
+            ? "결재·급여·계약 대기함의 총 건수와 위험 수준(긴급/주의)을 한 번에 확인하세요."
+            : "Track approval, payroll, and contract queue load with critical/watch risk badges."}
+        </p>
+        <div className="kpi-strip">
+          {queueBadges.map((badge) => (
+            <article className="kpi-card" key={badge.key}>
+              <p>{badge.label}</p>
+              <strong>{badge.total}</strong>
+              <small>
+                {isKoLocale
+                  ? `긴급 ${badge.critical} · 주의 ${badge.watch}`
+                  : `Critical ${badge.critical} · Watch ${badge.watch}`}
+              </small>
+              <div className="actions" style={{ marginTop: 8 }}>
+                <Link className="btn btn-secondary btn-small" href={badge.href}>
+                  {isKoLocale ? "대기함 열기" : "Open queue"}
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="kpi-strip">
         <article className="kpi-card">
