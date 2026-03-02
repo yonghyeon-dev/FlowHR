@@ -14,6 +14,7 @@ import {
   buildAdminDashboardFocusCards,
   summarizeAdminDashboardFocusCards
 } from "@/app/admin/page-focus-cards";
+import { buildAdminWorkspaceHubs } from "@/app/admin/page-workspace-hubs";
 import {
   resolveAdminDashboardFocusCardLabel,
   resolveAdminDashboardFocusSeverityLabel,
@@ -60,6 +61,7 @@ export default function AdminDashboardPage() {
     () => summarizeAdminDashboardFocusCards(focusCards),
     [focusCards]
   );
+  const topFocusCard = focusCards[0] ?? null;
 
   const bearerToken = supabaseSession?.accessToken?.trim() ?? "";
   const usesBearerToken = bearerToken.length > 0;
@@ -149,6 +151,8 @@ export default function AdminDashboardPage() {
     void refreshSummary();
   }, [refreshSummary]);
 
+  const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -164,9 +168,6 @@ export default function AdminDashboardPage() {
           </button>
           <Link className="btn btn-secondary" href="/employee">
             {isKoLocale ? "직원 포털" : "Employee Portal"}
-          </Link>
-          <Link className="btn btn-secondary" href="/login">
-            {isKoLocale ? "로그인" : "Login"}
           </Link>
           {showDevTools ? (
             <Link className="btn btn-secondary" href="/ops/mvp-console">
@@ -212,6 +213,29 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
+      {topFocusCard ? (
+        <section className="panel">
+          <h2>{isKoLocale ? "오늘의 우선 처리" : "Today's top priority"}</h2>
+          <p className="small muted">
+            {isKoLocale
+              ? "현재 대기량과 위험도를 기준으로 첫 번째 처리 대상을 제안합니다."
+              : "The highest-priority queue is suggested from current backlog volume and risk."}
+          </p>
+          <p className="small">
+            <strong>{resolveAdminDashboardFocusCardLabel(topFocusCard, locale)}</strong>
+            {" · "}
+            {resolveAdminDashboardFocusSeverityLabel(topFocusCard, locale)}
+            {" · "}
+            {topFocusCard.count}
+          </p>
+          <div className="actions">
+            <Link className="btn btn-primary" href={topFocusCard.href}>
+              {isKoLocale ? "우선 작업 열기" : "Open priority workspace"}
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="kpi-strip">
         <article className="kpi-card">
           <p>{isKoLocale ? "출퇴근 승인 대기" : "Pending attendance approvals"}</p>
@@ -235,87 +259,33 @@ export default function AdminDashboardPage() {
         </article>
       </section>
 
+      <section className="panel">
+        <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
+        <p className="small muted">
+          {isKoLocale
+            ? "관리자 홈에서는 요약만 확인하고, 상세 작업은 각 전용 워크스페이스에서 처리하세요."
+            : "Use the dashboard for summary only and continue detailed work in dedicated routes."}
+        </p>
+      </section>
+
       <section className="panel-grid">
-        <article className="panel">
-          <h2>{isKoLocale ? "결재 대기함" : "Approval queue"}</h2>
-          <p className="small muted">
-            {isKoLocale ? "결재 실행 현황과 대기 건을 확인합니다." : "Review execution status and pending approvals."}
-          </p>
-          <div className="actions">
-            <Link className="btn btn-secondary" href="/admin/approval-executions">
-              {isKoLocale ? "결재 실행 보기" : "Open approval executions"}
-            </Link>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>{isKoLocale ? "인사 관리" : "People management"}</h2>
-          <p className="small muted">
-            {isKoLocale ? "조직도, 직원 이력, 부서/직급 관리를 전용 페이지에서 처리합니다." : "Manage org chart, employee history, departments, and positions in dedicated pages."}
-          </p>
-          <div className="actions">
-            <Link className="btn btn-secondary" href="/admin/people">
-              {isKoLocale ? "인사 관리 열기" : "Open people workspace"}
-            </Link>
-            <Link className="btn btn-secondary" href="/admin/onboarding">
-              {isKoLocale ? "온보딩/초대" : "Onboarding and invites"}
-            </Link>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>{isKoLocale ? "근무/휴가" : "Scheduling and leave"}</h2>
-          <p className="small muted">
-            {isKoLocale ? "근무 일정과 휴가 정책/발생/캘린더를 분리된 워크스페이스에서 관리합니다." : "Manage schedules and leave policy/accrual/calendar in dedicated routes."}
-          </p>
-          <div className="actions">
-            <Link className="btn btn-secondary" href="/admin/scheduling">
-              {isKoLocale ? "근무 일정" : "Scheduling workspace"}
-            </Link>
-            <Link className="btn btn-secondary" href="/admin/leave-accrual">
-              {isKoLocale ? "연차 발생" : "Leave accrual"}
-            </Link>
-            <Link className="btn btn-secondary" href="/admin/leave-calendar">
-              {isKoLocale ? "휴가 캘린더" : "Leave calendar"}
-            </Link>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>{isKoLocale ? "급여/연말정산" : "Payroll and year-end filing"}</h2>
-          <p className="small muted">
-            {isKoLocale ? "급여 정산, 명세서 배포, 연말정산/신고를 전용 콘솔에서 처리합니다." : "Run payroll settlement, payslip delivery, and year-end filing in dedicated consoles."}
-          </p>
-          <div className="actions">
-            <Link className="btn btn-secondary" href="/admin/payroll-year-end">
-              {isKoLocale ? "연말정산 콘솔" : "Year-end console"}
-            </Link>
-            <Link className="btn btn-secondary" href="/admin/payroll-year-end-filing">
-              {isKoLocale ? "신고 콘솔" : "Filing console"}
-            </Link>
-            <Link className="btn btn-secondary" href="/admin/payroll-payslip-delivery">
-              {isKoLocale ? "명세서 배포" : "Payslip delivery"}
-            </Link>
-          </div>
-        </article>
-
-        <article className="panel">
-          <h2>{isKoLocale ? "공지/복리후생/채용" : "Notices, benefits, recruitment"}</h2>
-          <p className="small muted">
-            {isKoLocale ? "직원 커뮤니케이션 및 지원 워크플로를 각각 분리된 페이지에서 관리합니다." : "Manage communication and support workflows in dedicated workspaces."}
-          </p>
-          <div className="actions">
-            <Link className="btn btn-secondary" href="/admin/notices">
-              {isKoLocale ? "공지" : "Notices"}
-            </Link>
-            <Link className="btn btn-secondary" href="/admin/benefits">
-              {isKoLocale ? "복리후생" : "Benefits"}
-            </Link>
-            <Link className="btn btn-secondary" href="/admin/recruitment">
-              {isKoLocale ? "채용" : "Recruitment"}
-            </Link>
-          </div>
-        </article>
+        {workspaceHubs.map((hub) => (
+          <article className="panel" key={hub.key}>
+            <h2>{hub.title}</h2>
+            <p className="small muted">{hub.description}</p>
+            <div className="actions">
+              {hub.links.map((link, index) => (
+                <Link
+                  className={index === 0 ? "btn btn-primary" : "btn btn-secondary"}
+                  href={link.href}
+                  key={link.href}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </article>
+        ))}
       </section>
     </main>
   );

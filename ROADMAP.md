@@ -1067,3 +1067,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0782 login role-based auto redirect (add automatic role workspace redirect on /login after session detection: admin/payroll_operator/manager -> /admin, others -> /employee, with runtime redirect guidance copy + e2e-wi0782 regression guard)
 
 - WI-0783 login korean label normalization (normalize remaining English labels in ko runtime for /login session/sign-in fields: userId/email/role/organization/actorId/password + e2e-wi0783 regression guard)
+
+- WI-0784 admin dashboard hub IA simplification (restructure /admin as summary-first hub with top-priority panel + core workspace hub cards, remove header login shortcut, and keep detailed operations routed to dedicated pages + e2e-wi0784 regression guard)
