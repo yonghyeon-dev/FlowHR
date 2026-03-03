@@ -43,7 +43,7 @@ function run() {
   );
   assert.match(
     dashboard,
-    /<AdminPayrollRiskKpiPanel copy=\{copy\} snapshot=\{payrollRiskKpi\} \/>/,
+    /<AdminPayrollRiskKpiPanel[\s\S]*snapshot=\{payrollRiskKpi\}[\s\S]*\/>/,
     "analytics mode should render payroll risk KPI panel"
   );
 

@@ -22,7 +22,15 @@ function run() {
 
   assert.match(dashboard, /buildAnalyticsFocusHref/);
   assert.match(dashboard, /const focusAnalyticsHref = buildAnalyticsFocusHref\(pathname, focusMetric\)/);
-  assert.match(dashboard, /const focusWorkspaceHref = appendAnalyticsSourceQuery\(focusWorkspace\.href, focusMetric\)/);
+  assert.ok(
+    /const focusWorkspaceHref = appendAnalyticsSourceQuery\(focusWorkspace\.href, focusMetric\)/.test(
+      dashboard
+    ) ||
+      /const focusWorkspaceHref = appendAnalyticsSourceQuery\(\s*focusWorkspace\.href,\s*focusMetric,\s*focusMetric\s*\)/.test(
+        dashboard
+      ),
+    "focus workspace href should append admin analytics context from selected focus metric"
+  );
   assert.match(dashboard, /focusWorkspaceLabel: focusWorkspace\.label/);
   assert.match(dashboard, /focusWorkspaceHref,/);
 

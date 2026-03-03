@@ -6,6 +6,10 @@ import { useMemo, useState } from "react";
 
 import { payrollCloseCopyByLocale } from "@/components/payroll-close/copy";
 import { isTruthyFlag } from "@/app/admin/page-helpers";
+import {
+  normalizeAdminAnalyticsFocusMetric,
+  resolveAdminAnalyticsBackHref
+} from "@/components/admin-kpi/admin-analytics-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import type { ApiLog, PayrollClosePeriodResponse } from "@/components/payroll-close/types";
@@ -47,12 +51,22 @@ export default function PayrollClosePeriodConsole() {
   const copy = payrollCloseCopyByLocale[locale];
   const source = searchParams.get("source");
   const focus = searchParams.get("focus");
+  const analyticsFocusMetric = normalizeAdminAnalyticsFocusMetric(
+    searchParams.get("analyticsFocus")
+  );
+  const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
   const focusLabel =
     focus === "previewed"
       ? copy.focusPreviewedLabel
       : focus === "undistributed"
         ? copy.focusUndistributedLabel
         : copy.focusAllLabel;
+  const analyticsFocusLabel =
+    searchParams.get("focusMetric") === "payrollConfirmedRate"
+      ? locale === "ko"
+        ? "급여 확정률"
+        : "Payroll confirmation rate"
+      : focusLabel;
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -158,6 +172,19 @@ export default function PayrollClosePeriodConsole() {
           <p className="small muted">
             {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
           </p>
+        ) : null}
+        {source === "admin-analytics" ? (
+          <p className="small muted">
+            {locale === "ko" ? "관리자 분석에서 이동했습니다" : "Opened from admin analytics"} ·{" "}
+            {locale === "ko" ? "집중 큐" : "Focus queue"}: {analyticsFocusLabel}
+          </p>
+        ) : null}
+        {analyticsBackHref ? (
+          <div className="actions" style={{ marginTop: 8 }}>
+            <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
+              {locale === "ko" ? "분석으로 돌아가기" : "Back to analytics"}
+            </Link>
+          </div>
         ) : null}
       </header>
 

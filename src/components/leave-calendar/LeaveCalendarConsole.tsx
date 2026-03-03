@@ -1,8 +1,13 @@
 "use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import {
+  normalizeAdminAnalyticsFocusMetric,
+  resolveAdminAnalyticsBackHref
+} from "@/components/admin-kpi/admin-analytics-context";
 import { leaveCalendarCopyByLocale } from "@/components/leave-calendar/copy";
 import type { ApiLog, LeaveCalendarResponse } from "@/components/leave-calendar/types";
 import { addDays, defaultCalendarRange, toDateInputValue, toSeoulIsoStart } from "@/components/leave-calendar/types";
@@ -13,8 +18,20 @@ function isTruthyFlag(value: string | undefined) {
 }
 
 export default function LeaveCalendarConsole() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = leaveCalendarCopyByLocale[locale];
+  const source = searchParams.get("source");
+  const analyticsFocusMetric = normalizeAdminAnalyticsFocusMetric(
+    searchParams.get("analyticsFocus")
+  );
+  const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
+  const analyticsFocusLabel =
+    searchParams.get("focusMetric") === "leaveApprovedDays"
+      ? locale === "ko"
+        ? "승인 휴가일"
+        : "Approved leave days"
+      : copy.title;
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const formatDateByLocale = (value: string) => new Date(value).toLocaleDateString(runtimeLocale);
   const formatDateTimeByLocale = (value: string) => new Date(value).toLocaleString(runtimeLocale);
@@ -131,6 +148,26 @@ export default function LeaveCalendarConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {source === "admin-dashboard" ? (
+          <p className="small muted">
+            {locale === "ko"
+              ? "관리자 대시보드에서 이동했습니다"
+              : "Opened from admin dashboard"}
+          </p>
+        ) : null}
+        {source === "admin-analytics" ? (
+          <p className="small muted">
+            {locale === "ko" ? "관리자 분석에서 이동했습니다" : "Opened from admin analytics"} ·{" "}
+            {locale === "ko" ? "집중 큐" : "Focus queue"}: {analyticsFocusLabel}
+          </p>
+        ) : null}
+        {analyticsBackHref ? (
+          <div className="actions" style={{ marginTop: 8 }}>
+            <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
+              {locale === "ko" ? "분석으로 돌아가기" : "Back to analytics"}
+            </Link>
+          </div>
+        ) : null}
       </header>
       <section className="panel-grid">
         <article className="panel">
@@ -262,6 +299,11 @@ export default function LeaveCalendarConsole() {
         <article className="panel">
           <h2>{locale === "ko" ? "워크스페이스 이동" : "Workspace shortcuts"}</h2>
           <div className="panel-actions">
+            {analyticsBackHref ? (
+              <Link href={analyticsBackHref} className="btn btn-secondary">
+                {locale === "ko" ? "분석으로 돌아가기" : "Back to analytics"}
+              </Link>
+            ) : null}
             <Link href="/admin" className="btn btn-secondary">
               {copy.backToAdminAction}
             </Link>
