@@ -16,6 +16,11 @@ export const createBenefitCatalogSchema = z.object({
   status: benefitCatalogStatusSchema.optional()
 });
 
+export const updateBenefitCatalogStatusSchema = z.object({
+  benefitId: z.string().trim().min(1),
+  status: benefitCatalogStatusSchema
+});
+
 export const listBenefitRequestsQuerySchema = z.object({
   organizationId: z.string().trim().optional(),
   employeeId: z.string().trim().optional(),

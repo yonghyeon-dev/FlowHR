@@ -3,6 +3,7 @@
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
 import type {
   BenefitCatalogItem,
+  BenefitCatalogStatus,
   BenefitRequestItem,
   BenefitRequestStatus
 } from "@/features/benefits/types";
@@ -37,6 +38,7 @@ type AdminBenefitsWorkspaceViewProps = {
   catalogName: string;
   catalogDescription: string;
   annualLimitKrw: string;
+  catalogStatus: BenefitCatalogStatus;
   decisionNote: string;
   catalog: BenefitCatalogItem[];
   requests: BenefitRequestItem[];
@@ -58,6 +60,7 @@ type AdminBenefitsWorkspaceViewProps = {
   onCatalogNameChange: (value: string) => void;
   onCatalogDescriptionChange: (value: string) => void;
   onAnnualLimitChange: (value: string) => void;
+  onCatalogStatusChange: (value: BenefitCatalogStatus) => void;
   onDecisionNoteChange: (value: string) => void;
   onRequestFilterChange: (value: BenefitRequestStatus | "all") => void;
   onRequestRiskFilterChange: (value: "all" | "over_limit") => void;
@@ -65,6 +68,7 @@ type AdminBenefitsWorkspaceViewProps = {
   onClearRequestSearch: () => void;
   onLoadWorkspace: () => void;
   onCreateCatalogItem: () => void;
+  onUpdateCatalogStatus: (benefitId: string, status: BenefitCatalogStatus) => void;
   onDecideRequest: (requestId: string, decision: "APPROVED" | "REJECTED") => void;
 };
 
@@ -77,6 +81,7 @@ export default function AdminBenefitsWorkspaceView({
   catalogName,
   catalogDescription,
   annualLimitKrw,
+  catalogStatus,
   decisionNote,
   catalog,
   requests,
@@ -94,6 +99,7 @@ export default function AdminBenefitsWorkspaceView({
   onCatalogNameChange,
   onCatalogDescriptionChange,
   onAnnualLimitChange,
+  onCatalogStatusChange,
   onDecisionNoteChange,
   onRequestFilterChange,
   onRequestRiskFilterChange,
@@ -101,6 +107,7 @@ export default function AdminBenefitsWorkspaceView({
   onClearRequestSearch,
   onLoadWorkspace,
   onCreateCatalogItem,
+  onUpdateCatalogStatus,
   onDecideRequest
 }: AdminBenefitsWorkspaceViewProps) {
   const pendingAgingRiskCount = requests.filter((request) => isPendingAgingRisk(request)).length;
@@ -174,6 +181,16 @@ export default function AdminBenefitsWorkspaceView({
               inputMode="numeric"
             />
           </label>
+          <label>
+            {copy.catalogStatusLabel}
+            <select
+              value={catalogStatus}
+              onChange={(event) => onCatalogStatusChange(event.target.value as BenefitCatalogStatus)}
+            >
+              <option value="ACTIVE">{copy.catalogStatus.ACTIVE}</option>
+              <option value="INACTIVE">{copy.catalogStatus.INACTIVE}</option>
+            </select>
+          </label>
           <div className="actions">
             <button className="btn btn-primary" type="button" onClick={onCreateCatalogItem}>
               {copy.createCatalogAction}
@@ -199,6 +216,25 @@ export default function AdminBenefitsWorkspaceView({
                       {copy.statusLabel}: {copy.catalogStatus[item.status]}
                     </span>
                   </span>
+                  <div className="actions" style={{ marginTop: 0 }}>
+                    {item.status === "ACTIVE" ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onUpdateCatalogStatus(item.id, "INACTIVE")}
+                      >
+                        {copy.deactivateCatalogAction}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-small"
+                        onClick={() => onUpdateCatalogStatus(item.id, "ACTIVE")}
+                      >
+                        {copy.activateCatalogAction}
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

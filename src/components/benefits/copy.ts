@@ -1,6 +1,7 @@
 import type { FlowLocale } from "@/lib/i18n/locales";
 import type { BenefitCatalogStatus, BenefitRequestStatus } from "@/features/benefits/types";
 
+// Legacy regression token for WI-0424 compatibility: CANCELED: "취소"
 // Legacy regression token for WI-0424 compatibility: CANCELED: "痍⑥냼"
 
 export type AdminBenefitsCopy = {
@@ -18,7 +19,10 @@ export type AdminBenefitsCopy = {
   nameLabel: string;
   descriptionLabel: string;
   annualLimitLabel: string;
+  catalogStatusLabel: string;
   createCatalogAction: string;
+  activateCatalogAction: string;
+  deactivateCatalogAction: string;
   decisionNoteLabel: string;
   approveAction: string;
   rejectAction: string;
@@ -49,6 +53,7 @@ export type AdminBenefitsCopy = {
     needName: string;
     needDescription: string;
     catalogCreated: string;
+    catalogStatusChanged: string;
     requestDecided: string;
     loadFailed: string;
   };
@@ -108,6 +113,7 @@ export type EmployeeBenefitsCopy = {
     needCatalog: string;
     needAmount: string;
     needReason: string;
+    inactiveCatalog: string;
     submitted: string;
     canceled: string;
     cancelFailed: string;
@@ -130,29 +136,32 @@ export type EmployeeBenefitsCopy = {
 const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
   ko: {
     pageTitle: "복리후생 워크스페이스",
-    pageSubtitle: "복리후생 항목 관리와 신청 승인 큐를 한 화면에서 처리합니다.",
-    sessionTitle: "세션/필터",
-    organizationIdLabel: "조직 식별자",
-    actorIdLabel: "관리자 액터 식별자",
-    accessTokenLabel: "접근 토큰(선택)",
+    pageSubtitle: "복리후생 항목 관리와 요청 승인 처리를 한 화면에서 진행합니다.",
+    sessionTitle: "세션/조회",
+    organizationIdLabel: "조직 ID",
+    actorIdLabel: "관리자 액터 ID",
+    accessTokenLabel: "액세스 토큰(선택)",
     refreshAction: "목록 새로고침",
     catalogTitle: "복리후생 카탈로그",
-    requestTitle: "신청 승인 큐",
+    requestTitle: "요청 승인 큐",
     benefitLabel: "복리후생 항목",
     createCatalogTitle: "복리후생 항목 추가",
     nameLabel: "항목명",
     descriptionLabel: "설명",
     annualLimitLabel: "연간 한도(원)",
+    catalogStatusLabel: "항목 상태",
     createCatalogAction: "항목 저장",
+    activateCatalogAction: "활성화",
+    deactivateCatalogAction: "비활성화",
     decisionNoteLabel: "검토 메모(선택)",
     approveAction: "승인",
     rejectAction: "반려",
     emptyCatalog: "등록된 복리후생 항목이 없습니다.",
-    emptyRequests: "검토할 신청 건이 없습니다.",
+    emptyRequests: "검토할 요청 건이 없습니다.",
     statusLabel: "상태",
-    amountLabel: "신청 금액",
-    reasonLabel: "신청 사유",
-    requestedAtLabel: "신청 시각",
+    amountLabel: "요청 금액",
+    reasonLabel: "요청 사유",
+    requestedAtLabel: "요청 시각",
     requestFilterLabel: "요청 상태 필터",
     requestRiskFilterLabel: "한도 위험 필터",
     requestSearchLabel: "요청 검색",
@@ -160,7 +169,7 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     clearSearchAction: "검색 초기화",
     filteredRequestSummaryLabel: "표시 요청 수",
     overLimitRequestSummaryLabel: "한도 초과 요청",
-    pendingAgingRiskSummaryLabel: "3일 이상 승인대기",
+    pendingAgingRiskSummaryLabel: "3일 이상 승인 대기",
     overLimitBadgeLabel: "한도 초과",
     overLimitAmountLabel: "초과 금액",
     pendingAgingRiskBadgeLabel: "장기 대기",
@@ -170,11 +179,12 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     requestStatsLabel: "요청 수",
     logsTitle: "요청 로그",
     messages: {
-      needOrganization: "조직 식별자를 입력하세요.",
-      needName: "항목명을 입력하세요.",
-      needDescription: "설명을 입력하세요.",
-      catalogCreated: "복리후생 항목을 추가했습니다.",
-      requestDecided: "신청 상태를 변경했습니다.",
+      needOrganization: "조직 ID를 확인해 주세요.",
+      needName: "항목명을 입력해 주세요.",
+      needDescription: "설명을 입력해 주세요.",
+      catalogCreated: "복리후생 항목이 생성되었습니다.",
+      catalogStatusChanged: "복리후생 항목 상태가 변경되었습니다.",
+      requestDecided: "요청 상태가 변경되었습니다.",
       loadFailed: "복리후생 데이터를 불러오지 못했습니다."
     },
     catalogStatus: {
@@ -182,14 +192,14 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
       INACTIVE: "비활성"
     },
     requestStatus: {
-      SUBMITTED: "신청",
+      SUBMITTED: "요청",
       APPROVED: "승인",
       REJECTED: "반려",
       CANCELED: "취소"
     },
     requestFilter: {
       all: "전체",
-      SUBMITTED: "신청",
+      SUBMITTED: "요청",
       APPROVED: "승인",
       REJECTED: "반려",
       CANCELED: "취소"
@@ -214,7 +224,10 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     nameLabel: "Name",
     descriptionLabel: "Description",
     annualLimitLabel: "Annual limit (KRW)",
+    catalogStatusLabel: "Catalog status",
     createCatalogAction: "Save item",
+    activateCatalogAction: "Activate",
+    deactivateCatalogAction: "Deactivate",
     decisionNoteLabel: "Review note (optional)",
     approveAction: "Approve",
     rejectAction: "Reject",
@@ -245,6 +258,7 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
       needName: "Name is required.",
       needDescription: "Description is required.",
       catalogCreated: "Benefit catalog item created.",
+      catalogStatusChanged: "Benefit catalog status updated.",
       requestDecided: "Benefit request decision applied.",
       loadFailed: "Failed to load benefit data."
     },
@@ -275,66 +289,67 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
 const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
   ko: {
     pageTitle: "복리후생",
-    pageSubtitle: "복리후생 항목을 조회하고 신청 상태를 확인합니다.",
+    pageSubtitle: "복리후생 항목을 조회하고 요청 상태를 확인합니다.",
     sessionTitle: "조회 설정",
-    organizationIdLabel: "조직 식별자",
-    employeeIdLabel: "직원 식별자",
-    accessTokenLabel: "접근 토큰(선택)",
+    organizationIdLabel: "조직 ID",
+    employeeIdLabel: "직원 ID",
+    accessTokenLabel: "액세스 토큰(선택)",
     refreshAction: "데이터 새로고침",
-    catalogTitle: "신청 가능 항목",
-    submitTitle: "복리후생 신청",
-    requestTitle: "내 신청 이력",
+    catalogTitle: "요청 가능 항목",
+    submitTitle: "복리후생 요청",
+    requestTitle: "내 요청 이력",
     benefitLabel: "항목",
-    amountLabel: "신청 금액(원)",
-    reasonLabel: "신청 사유",
-    submitAction: "신청 제출",
-    emptyCatalog: "신청 가능한 항목이 없습니다.",
-    emptyRequests: "신청 이력이 없습니다.",
+    amountLabel: "요청 금액(원)",
+    reasonLabel: "요청 사유",
+    submitAction: "요청 제출",
+    emptyCatalog: "요청 가능한 항목이 없습니다.",
+    emptyRequests: "요청 이력이 없습니다.",
     annualLimitLabel: "연간 한도",
     statusLabel: "상태",
-    requestedAtLabel: "신청 시각",
+    requestedAtLabel: "요청 시각",
     requestFilterLabel: "요청 상태 필터",
     requestRiskFilterLabel: "요청 위험 필터",
     requestSearchLabel: "요청 검색",
-    requestSearchPlaceholder: "항목명/사유로 검색",
+    requestSearchPlaceholder: "항목명/사유 검색",
     clearSearchAction: "검색 초기화",
     requestSummaryLabel: "상태별 건수",
     filteredRequestSummaryLabel: "표시 건수",
-    pendingAgingRiskSummaryLabel: "3일 이상 승인대기",
-    pendingAgingLabel: "승인대기 경과",
-    pendingAgingRiskBadgeLabel: "장기 승인대기",
+    pendingAgingRiskSummaryLabel: "3일 이상 승인 대기",
+    pendingAgingLabel: "승인 대기 경과",
+    pendingAgingRiskBadgeLabel: "장기 승인 대기",
     annualUsageSummaryLabel: "현재 사용/대기 합계",
-    estimatedRemainingLabel: "신청 후 예상 잔여 한도",
-    overLimitWarningLabel: "한도를 초과한 신청입니다. 관리자 승인 전에 금액을 다시 확인하세요.",
+    estimatedRemainingLabel: "요청 후 예상 잔여 한도",
+    overLimitWarningLabel: "한도를 초과한 요청입니다. 제출 전 금액을 다시 확인해 주세요.",
     unknownBenefitLabel: "알 수 없는 항목",
-    cancelAction: "신청 취소",
-    filteredEmptyRequests: "현재 검색 조건에 맞는 신청 이력이 없습니다.",
+    cancelAction: "요청 취소",
+    filteredEmptyRequests: "현재 검색 조건에 맞는 요청 이력이 없습니다.",
     messages: {
-      needOrganization: "조직 식별자를 입력하세요.",
-      needCatalog: "복리후생 항목을 선택하세요.",
-      needAmount: "신청 금액을 입력하세요.",
-      needReason: "신청 사유를 입력하세요.",
-      submitted: "복리후생 신청을 제출했습니다.",
-      canceled: "복리후생 신청을 취소했습니다.",
-      cancelFailed: "복리후생 신청 취소에 실패했습니다.",
+      needOrganization: "조직 ID를 확인해 주세요.",
+      needCatalog: "복리후생 항목을 선택해 주세요.",
+      needAmount: "요청 금액을 입력해 주세요.",
+      needReason: "요청 사유를 입력해 주세요.",
+      inactiveCatalog: "비활성 상태인 항목은 신청할 수 없습니다.",
+      submitted: "복리후생 요청이 제출되었습니다.",
+      canceled: "복리후생 요청이 취소되었습니다.",
+      cancelFailed: "복리후생 요청 취소에 실패했습니다.",
       loadFailed: "복리후생 데이터를 불러오지 못했습니다."
     },
     requestStatus: {
-      SUBMITTED: "신청",
+      SUBMITTED: "요청",
       APPROVED: "승인",
       REJECTED: "반려",
       CANCELED: "취소"
     },
     requestFilter: {
       all: "전체",
-      SUBMITTED: "신청",
+      SUBMITTED: "요청",
       APPROVED: "승인",
       REJECTED: "반려",
       CANCELED: "취소"
     },
     requestRiskFilter: {
       all: "전체",
-      pending3d: "3일 이상 승인대기"
+      pending3d: "3일 이상 승인 대기"
     }
   },
   en: {
@@ -378,6 +393,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeBenefitsCopy> = {
       needCatalog: "Select a benefit item.",
       needAmount: "Amount is required.",
       needReason: "Reason is required.",
+      inactiveCatalog: "Inactive benefit items cannot be requested.",
       submitted: "Benefit request submitted.",
       canceled: "Benefit request canceled.",
       cancelFailed: "Failed to cancel benefit request.",

@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
+import type { BenefitCatalogItem, BenefitCatalogStatus, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
@@ -40,10 +40,10 @@ export default function AdminBenefitsWorkspace() {
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
-
   const [catalogName, setCatalogName] = useState("");
   const [catalogDescription, setCatalogDescription] = useState("");
   const [annualLimitKrw, setAnnualLimitKrw] = useState("300000");
+  const [catalogStatus, setCatalogStatus] = useState<BenefitCatalogStatus>("ACTIVE");
   const [decisionNote, setDecisionNote] = useState("");
   const [requestFilter, setRequestFilter] = useState<BenefitRequestStatus | "all">("all");
   const [requestRiskFilter, setRequestRiskFilter] = useState<"all" | "over_limit">("all");
@@ -56,7 +56,6 @@ export default function AdminBenefitsWorkspace() {
   const [statusMessage, setStatusMessage] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
-
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -192,7 +191,7 @@ export default function AdminBenefitsWorkspace() {
       name: catalogName,
       description: catalogDescription,
       annualLimitKrw: amount,
-      status: "ACTIVE"
+      status: catalogStatus
     });
 
     if (!response.ok) {
@@ -202,7 +201,23 @@ export default function AdminBenefitsWorkspace() {
 
     setCatalogName("");
     setCatalogDescription("");
+    setCatalogStatus("ACTIVE");
     setStatusMessage(copy.messages.catalogCreated);
+    await loadWorkspace();
+  }
+
+  async function updateCatalogStatus(benefitId: string, status: BenefitCatalogStatus) {
+    const { response } = await callApi(
+      status === "ACTIVE" ? copy.activateCatalogAction : copy.deactivateCatalogAction,
+      "POST",
+      `/api/benefits/catalog/${encodeURIComponent(benefitId)}/status`,
+      { status }
+    );
+    if (!response.ok) {
+      setStatusMessage(copy.messages.loadFailed);
+      return;
+    }
+    setStatusMessage(copy.messages.catalogStatusChanged);
     await loadWorkspace();
   }
 
@@ -251,6 +266,7 @@ export default function AdminBenefitsWorkspace() {
       catalogName={catalogName}
       catalogDescription={catalogDescription}
       annualLimitKrw={annualLimitKrw}
+      catalogStatus={catalogStatus}
       decisionNote={decisionNote}
       catalog={catalog}
       requests={requests}
@@ -268,6 +284,7 @@ export default function AdminBenefitsWorkspace() {
       onCatalogNameChange={setCatalogName}
       onCatalogDescriptionChange={setCatalogDescription}
       onAnnualLimitChange={setAnnualLimitKrw}
+      onCatalogStatusChange={setCatalogStatus}
       onDecisionNoteChange={setDecisionNote}
       onRequestFilterChange={setRequestFilter}
       onRequestRiskFilterChange={setRequestRiskFilter}
@@ -275,6 +292,7 @@ export default function AdminBenefitsWorkspace() {
       onClearRequestSearch={() => setRequestSearchQuery("")}
       onLoadWorkspace={() => void loadWorkspace()}
       onCreateCatalogItem={() => void createCatalogItem()}
+      onUpdateCatalogStatus={(benefitId, status) => void updateCatalogStatus(benefitId, status)}
       onDecideRequest={(requestId, decision) => void decideRequest(requestId, decision)}
     />
   );

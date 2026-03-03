@@ -66,9 +66,22 @@ export async function POST(request: Request) {
       benefitId: parsed.data.benefitId
     });
   }
+  const targetOrganizationId = parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID;
+  if (benefit.organizationId !== targetOrganizationId) {
+    return fail(409, "benefits.catalog.organization_mismatch", {
+      benefitOrganizationId: benefit.organizationId,
+      targetOrganizationId
+    });
+  }
+  if (benefit.status !== "ACTIVE") {
+    return fail(409, "benefits.catalog.inactive", {
+      benefitId: benefit.id,
+      currentStatus: benefit.status
+    });
+  }
 
   const created = await createBenefitRequest({
-    organizationId: parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID,
+    organizationId: targetOrganizationId,
     benefitId: parsed.data.benefitId,
     employeeId: targetEmployeeId,
     amountKrw: parsed.data.amountKrw,
