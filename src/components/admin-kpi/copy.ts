@@ -59,6 +59,15 @@ export type KpiCopy = {
     activeReferralCount: string;
     stalledReferral7dCount: string;
     stalledThreshold: string;
+    priorityActionLabel: string;
+    quickActionsLabel: string;
+    actionOpenRecruitmentWorkspace: string;
+    actionOpenStalledQueue: string;
+    actionOpenSubmittedQueue: string;
+    priorityReasonStalled: string;
+    priorityReasonActive: string;
+    priorityReasonOpenings: string;
+    priorityReasonClear: string;
   };
   noticesPanel: {
     title: string;
@@ -200,7 +209,16 @@ const defaultCopy: KpiCopy = {
     openOpeningCount: "Open openings",
     activeReferralCount: "Active referrals",
     stalledReferral7dCount: "Stalled referrals (7d+)",
-    stalledThreshold: "no stage update for 7+ days"
+    stalledThreshold: "no stage update for 7+ days",
+    priorityActionLabel: "Top-priority action",
+    quickActionsLabel: "Quick actions",
+    actionOpenRecruitmentWorkspace: "Open recruitment workspace",
+    actionOpenStalledQueue: "Open stalled referral queue",
+    actionOpenSubmittedQueue: "Open submitted referral queue",
+    priorityReasonStalled: "Stalled referrals exist. Start with stalled-risk queue follow-up.",
+    priorityReasonActive: "Active referrals exist. Continue stage progression in recruitment workspace.",
+    priorityReasonOpenings: "Openings are active but active referrals are clear. Monitor opening coverage.",
+    priorityReasonClear: "Recruitment queue is stable. Continue routine opening and referral operations."
   },
   noticesPanel: {
     title: "Notice read coverage",
@@ -342,7 +360,16 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       openOpeningCount: "진행 중 공고 수",
       activeReferralCount: "진행 중 추천 수",
       stalledReferral7dCount: "7일 이상 정체 추천",
-      stalledThreshold: "7일 이상 단계 변경 없음"
+      stalledThreshold: "7일 이상 단계 변경 없음",
+      priorityActionLabel: "최우선 조치",
+      quickActionsLabel: "빠른 이동",
+      actionOpenRecruitmentWorkspace: "채용 워크스페이스 열기",
+      actionOpenStalledQueue: "정체 추천 큐 열기",
+      actionOpenSubmittedQueue: "신규 추천 큐 열기",
+      priorityReasonStalled: "정체 추천이 있습니다. 정체 위험 큐부터 후속 조치하세요.",
+      priorityReasonActive: "진행 중 추천이 있습니다. 채용 워크스페이스에서 단계 진행을 이어가세요.",
+      priorityReasonOpenings: "공고는 열려 있으나 진행 추천이 없습니다. 공고 유입 상태를 확인하세요.",
+      priorityReasonClear: "채용 큐 리스크가 정리되었습니다. 일반 채용 운영을 진행하세요."
     },
     noticesPanel: {
       title: "공지 읽음 커버리지",
