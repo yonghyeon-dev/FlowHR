@@ -133,6 +133,17 @@ export type KpiCopy = {
     slaOverdueCount: string;
     slaOverdueHint: string;
     renewalCandidateCount: string;
+    priorityActionLabel: string;
+    quickActionsLabel: string;
+    actionOpenContractsWorkspace: string;
+    actionOpenDecisionQueue: string;
+    actionOpenPendingResponseQueue: string;
+    actionOpenSlaOverdueQueue: string;
+    priorityReasonSlaOverdue: string;
+    priorityReasonPendingResponse: string;
+    priorityReasonDecisionQueue: string;
+    priorityReasonRenewal: string;
+    priorityReasonClear: string;
   };
   payrollRiskPanel: {
     title: string;
@@ -312,7 +323,18 @@ const defaultCopy: KpiCopy = {
     pendingResponseHint: "sent documents waiting for employee response",
     slaOverdueCount: "SLA overdue",
     slaOverdueHint: "draft/approval/sent documents past due date",
-    renewalCandidateCount: "Renewal candidates"
+    renewalCandidateCount: "Renewal candidates",
+    priorityActionLabel: "Top-priority action",
+    quickActionsLabel: "Quick actions",
+    actionOpenContractsWorkspace: "Open contracts workspace",
+    actionOpenDecisionQueue: "Open decision queue",
+    actionOpenPendingResponseQueue: "Open pending response queue",
+    actionOpenSlaOverdueQueue: "Open SLA overdue queue",
+    priorityReasonSlaOverdue: "SLA overdue contracts exist. Resolve overdue documents first.",
+    priorityReasonPendingResponse: "Employee responses are pending. Follow up response queue first.",
+    priorityReasonDecisionQueue: "Decision queue is waiting. Continue request/approval/send workflow.",
+    priorityReasonRenewal: "Renewal candidates exist. Review renewal-ready documents next.",
+    priorityReasonClear: "Contract queue is stable. Continue routine contract operations."
   },
   payrollRiskPanel: {
     title: "Payroll and year-end risk snapshot",
@@ -492,7 +514,18 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       pendingResponseHint: "발송 후 직원 응답을 기다리는 계약",
       slaOverdueCount: "SLA 초과",
       slaOverdueHint: "기한이 지난 초안/결재/발송 계약",
-      renewalCandidateCount: "갱신 후보"
+      renewalCandidateCount: "갱신 후보",
+      priorityActionLabel: "최우선 조치",
+      quickActionsLabel: "빠른 이동",
+      actionOpenContractsWorkspace: "전자계약 워크스페이스 열기",
+      actionOpenDecisionQueue: "의사결정 큐 열기",
+      actionOpenPendingResponseQueue: "응답 대기 큐 열기",
+      actionOpenSlaOverdueQueue: "SLA 초과 큐 열기",
+      priorityReasonSlaOverdue: "SLA 초과 계약이 있습니다. 초과 문서부터 우선 처리하세요.",
+      priorityReasonPendingResponse: "직원 응답 대기가 남아 있습니다. 응답 대기 큐를 먼저 확인하세요.",
+      priorityReasonDecisionQueue: "의사결정 대기 계약이 있습니다. 요청/승인/발송 흐름을 이어가세요.",
+      priorityReasonRenewal: "갱신 후보 계약이 있습니다. 갱신 대상 문서를 점검하세요.",
+      priorityReasonClear: "전자계약 큐 리스크가 정리되었습니다. 일반 운영을 진행하세요."
     },
     payrollRiskPanel: {
       title: "급여/연말정산 리스크 스냅샷",

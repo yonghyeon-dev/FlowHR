@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { type KpiCopy } from "@/components/admin-kpi/copy";
 
 export type ContractKpiSnapshot = {
@@ -30,10 +32,84 @@ type AdminContractKpiPanelProps = {
   snapshot: ContractKpiSnapshot;
 };
 
+type ContractPriorityAction = {
+  href: string;
+  label: string;
+  reason: string;
+};
+
+type ContractQuickAction = {
+  href: string;
+  label: string;
+};
+
+function resolveContractPriorityAction(
+  snapshot: ContractKpiSnapshot,
+  copy: KpiCopy
+): ContractPriorityAction {
+  if (snapshot.slaOverdueCount > 0) {
+    return {
+      href: "/admin/contracts?slaRisk=OVERDUE",
+      label: copy.contractPanel.actionOpenSlaOverdueQueue,
+      reason: copy.contractPanel.priorityReasonSlaOverdue
+    };
+  }
+  if (snapshot.pendingResponseCount > 0) {
+    return {
+      href: "/admin/contracts?status=SENT",
+      label: copy.contractPanel.actionOpenPendingResponseQueue,
+      reason: copy.contractPanel.priorityReasonPendingResponse
+    };
+  }
+  if (snapshot.decisionQueueCount > 0) {
+    return {
+      href: "/admin/contracts?decisionQueueOnly=true",
+      label: copy.contractPanel.actionOpenDecisionQueue,
+      reason: copy.contractPanel.priorityReasonDecisionQueue
+    };
+  }
+  if (snapshot.renewalCandidateCount > 0) {
+    return {
+      href: "/admin/contracts?renewalCandidateOnly=true",
+      label: copy.contractPanel.actionOpenContractsWorkspace,
+      reason: copy.contractPanel.priorityReasonRenewal
+    };
+  }
+  return {
+    href: "/admin/contracts",
+    label: copy.contractPanel.actionOpenContractsWorkspace,
+    reason: copy.contractPanel.priorityReasonClear
+  };
+}
+
+function buildContractQuickActions(copy: KpiCopy): ContractQuickAction[] {
+  return [
+    {
+      href: "/admin/contracts",
+      label: copy.contractPanel.actionOpenContractsWorkspace
+    },
+    {
+      href: "/admin/contracts?decisionQueueOnly=true",
+      label: copy.contractPanel.actionOpenDecisionQueue
+    },
+    {
+      href: "/admin/contracts?status=SENT",
+      label: copy.contractPanel.actionOpenPendingResponseQueue
+    },
+    {
+      href: "/admin/contracts?slaRisk=OVERDUE",
+      label: copy.contractPanel.actionOpenSlaOverdueQueue
+    }
+  ];
+}
+
 export function AdminContractKpiPanel({
   copy,
   snapshot
 }: AdminContractKpiPanelProps) {
+  const priorityAction = resolveContractPriorityAction(snapshot, copy);
+  const quickActions = buildContractQuickActions(copy);
+
   return (
     <article className="panel">
       <h2>{copy.contractPanel.title}</h2>
@@ -58,6 +134,27 @@ export function AdminContractKpiPanel({
           <strong>{snapshot.renewalCandidateCount}</strong>
         </article>
       </div>
+      <section style={{ marginTop: 12 }}>
+        <p className="small muted">{copy.contractPanel.priorityActionLabel}</p>
+        <p className="small" style={{ marginTop: 4 }}>
+          {priorityAction.reason}
+        </p>
+        <div className="actions" style={{ marginTop: 8 }}>
+          <Link href={priorityAction.href} className="btn btn-primary btn-small">
+            {priorityAction.label}
+          </Link>
+        </div>
+        <p className="small muted" style={{ marginTop: 10 }}>
+          {copy.contractPanel.quickActionsLabel}
+        </p>
+        <div className="actions" style={{ marginTop: 6 }}>
+          {quickActions.map((action) => (
+            <Link key={action.href} href={action.href} className="btn btn-secondary btn-small">
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </section>
     </article>
   );
 }
