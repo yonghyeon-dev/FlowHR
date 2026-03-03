@@ -79,7 +79,7 @@ const searchSortCopyByLocale = {
     sortRecent: "recent first",
     sortEmployee: "employee asc",
     sortQueue: "queue asc",
-    query: "Search query",
+    query: "Search",
     queryPlaceholder: "employee id, request id, status, memo",
     pendingFirst: "pending first",
     urgentOnly: "urgent only",

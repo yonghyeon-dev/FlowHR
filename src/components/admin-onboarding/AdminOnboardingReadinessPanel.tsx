@@ -12,11 +12,11 @@ type AdminOnboardingReadinessPanelProps = {
 
 const checklistHrefByKey: Record<OnboardingChecklistItem["key"], string> = {
   organization: "/admin/onboarding",
-  departments: "/admin/onboarding",
-  employees: "/admin/onboarding",
-  invites: "/admin/onboarding",
-  leave_policy: "/admin/onboarding",
-  contracts: "/admin/contracts"
+  departments: "/admin/people",
+  employees: "/admin/people",
+  invites: "/admin/people?panel=invites",
+  leave_policy: "/admin/leave-accrual",
+  contracts: "/admin/contracts?status=SENT"
 };
 
 function resolveChecklistLabel(copy: AdminOnboardingCopy, key: OnboardingChecklistItem["key"]) {
@@ -36,6 +36,10 @@ function resolveChecklistLabel(copy: AdminOnboardingCopy, key: OnboardingCheckli
     return copy.checklist.leavePolicy;
   }
   return copy.checklist.contracts;
+}
+
+function canRunChecklistAction(key: OnboardingChecklistItem["key"]) {
+  return key !== "organization";
 }
 
 export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPanelProps) {
@@ -65,7 +69,7 @@ export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPan
                 <p className="small muted">{resolveChecklistLabel(copy, priorityItem.key)}</p>
                 <p className="small muted">{copy.readinessPriorityHint}</p>
                 <div className="actions">
-                  {priorityItem.key === "organization" ? (
+                  {!canRunChecklistAction(priorityItem.key) ? (
                     <Link className="btn btn-primary btn-small" href={checklistHrefByKey[priorityItem.key]}>
                       {copy.readinessOpenWorkspaceLabel}
                     </Link>
@@ -93,8 +97,25 @@ export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPan
               {pendingItems.map((item) => (
                 <li key={item.key}>
                   <span>
-                    {resolveChecklistLabel(copy, item.key)} /{" "}
+                    {resolveChecklistLabel(copy, item.key)}
+                  </span>
+                  <span>
                     <Link href={checklistHrefByKey[item.key]}>{copy.readinessOpenWorkspaceLabel}</Link>
+                    {canRunChecklistAction(item.key) ? (
+                      <>
+                        {" / "}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => {
+                            onRunPriorityAction(item.key);
+                          }}
+                          disabled={priorityActionPending}
+                        >
+                          {copy.readinessPriorityActionLabel}
+                        </button>
+                      </>
+                    ) : null}
                   </span>
                 </li>
               ))}
