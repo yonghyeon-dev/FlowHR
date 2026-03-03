@@ -67,6 +67,8 @@ export default function EmployeeSelfServicePage() {
     { baseKey: null, selectedTargetKey: null }
   );
   const appliedFocusSectionRef = useRef<string | null>(null);
+  const autoSnapshotLoadKeyRef = useRef<string | null>(null);
+  const refreshEmployeeSnapshotRef = useRef<null | (() => Promise<void>)>(null);
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
   const [checkInAt, setCheckInAt] = useState(todayStartLocal());
@@ -158,6 +160,7 @@ export default function EmployeeSelfServicePage() {
     cancelReason,
     lastLeaveRequestId
   });
+  refreshEmployeeSnapshotRef.current = mutationActions.refreshEmployeeSnapshot;
   const {
     latestPayload,
     stats,
@@ -308,6 +311,25 @@ export default function EmployeeSelfServicePage() {
   const { applyAttendanceRecordToCorrectionForm, applyLatestAttendanceToCorrectionForm, applyLatestResubmitCandidate, applyLeaveQuickPreset, applyResubmitCandidateToDraft, applySelectedCorrectionRecord, applySelectedResubmitCandidate, clearResubmitSelection, copyFailureCause, jumpToSection, moveCalendarMonth, openPendingRequestSearch, prefillLeaveFormFromCalendarDate, resetCalendarToCurrentMonth, selectCorrectionTarget } = buildEmployeeInteractionHandlers({
     ...interactionOrchestratorInput
   });
+  useEffect(() => {
+    if (isProductionRuntime && !usesBearerToken) {
+      return;
+    }
+    const normalizedEmployeeId = employeeId.trim();
+    if (!normalizedEmployeeId) {
+      return;
+    }
+    const autoLoadKey = `${normalizedEmployeeId}:${usesBearerToken ? "session" : "header"}`;
+    if (autoSnapshotLoadKeyRef.current === autoLoadKey) {
+      return;
+    }
+    autoSnapshotLoadKeyRef.current = autoLoadKey;
+    const refreshSnapshot = refreshEmployeeSnapshotRef.current;
+    if (refreshSnapshot) {
+      void refreshSnapshot();
+    }
+  }, [employeeId, isProductionRuntime, usesBearerToken]);
+
   useEffect(() => {
     if (!focusSectionId) {
       appliedFocusSectionRef.current = null;
