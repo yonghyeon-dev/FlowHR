@@ -31,18 +31,27 @@ function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(noticesWorkspace, /const analyticsBackHref = source === "admin-analytics" \? "\/admin\/analytics" : "";/);
-  assert.match(noticesWorkspace, /const analyticsBackLabel = locale === "ko" \? "분석으로 돌아가기" : "Back to analytics";/);
+  assert.ok(
+    /const analyticsBackHref = source === "admin-analytics" \? "\/admin\/analytics" : "";/.test(noticesWorkspace) ||
+      /const analyticsBackHref = resolveAnalyticsBackHref\(source, analyticsFocusMetric\);/.test(noticesWorkspace)
+  );
+  assert.match(noticesWorkspace, /Back to analytics/);
   assert.match(noticesWorkspace, /analyticsBackHref=\{analyticsBackHref\}/);
   assert.match(noticesWorkspace, /analyticsBackLabel=\{analyticsBackLabel\}/);
 
-  assert.match(benefitsWorkspace, /const analyticsBackHref = source === "admin-analytics" \? "\/admin\/analytics" : "";/);
-  assert.match(benefitsWorkspace, /const analyticsBackLabel = locale === "ko" \? "분석으로 돌아가기" : "Back to analytics";/);
+  assert.ok(
+    /const analyticsBackHref = source === "admin-analytics" \? "\/admin\/analytics" : "";/.test(benefitsWorkspace) ||
+      /const analyticsBackHref = resolveAnalyticsBackHref\(source, analyticsFocusMetric\);/.test(benefitsWorkspace)
+  );
+  assert.match(benefitsWorkspace, /Back to analytics/);
   assert.match(benefitsWorkspace, /analyticsBackHref=\{analyticsBackHref\}/);
   assert.match(benefitsWorkspace, /analyticsBackLabel=\{analyticsBackLabel\}/);
 
-  assert.match(recruitmentWorkspace, /const analyticsBackHref = source === "admin-analytics" \? "\/admin\/analytics" : "";/);
-  assert.match(recruitmentWorkspace, /const analyticsBackLabel = locale === "ko" \? "분석으로 돌아가기" : "Back to analytics";/);
+  assert.ok(
+    /const analyticsBackHref = source === "admin-analytics" \? "\/admin\/analytics" : "";/.test(recruitmentWorkspace) ||
+      /const analyticsBackHref = resolveAnalyticsBackHref\(source, analyticsFocusMetric\);/.test(recruitmentWorkspace)
+  );
+  assert.match(recruitmentWorkspace, /Back to analytics/);
   assert.match(recruitmentWorkspace, /analyticsBackHref=\{analyticsBackHref\}/);
   assert.match(recruitmentWorkspace, /analyticsBackLabel=\{analyticsBackLabel\}/);
 

@@ -6,6 +6,7 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
 import AdminBenefitsWorkspaceView from "@/components/benefits/AdminBenefitsWorkspaceView";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 import { type AdminBenefitRequestRiskFilter, buildBenefitWorkspaceQuery, isTruthyFlag, normalizeBenefitRequestFilter, normalizeBenefitRiskFilter, parseBenefitCatalog, parseBenefitRequests, parseBenefitRequestSummary, parseBenefitSearchQuery } from "@/components/benefits/admin-benefits-workspace-helpers";
 import { isBenefitRequestPendingAgingRisk } from "@/components/benefits/employee-benefits-helpers";
 
@@ -24,6 +25,36 @@ const EMPTY_REQUEST_SUMMARY: RequestSummary = {
 };
 
 type AdminBenefitsCopy = ReturnType<typeof resolveAdminBenefitsCopy>;
+const adminAnalyticsFocusMetricSet = new Set<AdminKpiFocusMetric>([
+  "all",
+  "pendingApprovals",
+  "stalledApprovals",
+  "attendanceApprovalRate",
+  "leaveApprovedDays",
+  "payrollConfirmedRate",
+  "contractDecisionQueueCount",
+  "contractSlaOverdueCount"
+]);
+
+function normalizeAnalyticsFocusMetric(value: string | null): AdminKpiFocusMetric | null {
+  if (!value) {
+    return null;
+  }
+  if (adminAnalyticsFocusMetricSet.has(value as AdminKpiFocusMetric)) {
+    return value as AdminKpiFocusMetric;
+  }
+  return null;
+}
+
+function resolveAnalyticsBackHref(source: string | null, analyticsFocusMetric: AdminKpiFocusMetric | null) {
+  if (source !== "admin-analytics") {
+    return "";
+  }
+  if (!analyticsFocusMetric || analyticsFocusMetric === "all") {
+    return "/admin/analytics";
+  }
+  return `/admin/analytics?focus=${encodeURIComponent(analyticsFocusMetric)}`;
+}
 
 function resolveBenefitsAnalyticsFocusLabel(
   copy: AdminBenefitsCopy,
@@ -57,6 +88,7 @@ export default function AdminBenefitsWorkspace() {
   const { locale } = useI18n();
   const copy = resolveAdminBenefitsCopy(locale);
   const source = searchParams.get("source");
+  const analyticsFocusMetric = normalizeAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
   const analyticsFocusLabel = resolveBenefitsAnalyticsFocusLabel(
     copy,
     searchParams.get("focusMetric"),
@@ -73,7 +105,7 @@ export default function AdminBenefitsWorkspace() {
           ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
           : `Opened from admin analytics.${analyticsFocusLabel ? ` · Focus queue: ${analyticsFocusLabel}` : ""}`
       : "";
-  const analyticsBackHref = source === "admin-analytics" ? "/admin/analytics" : "";
+  const analyticsBackHref = resolveAnalyticsBackHref(source, analyticsFocusMetric);
   const analyticsBackLabel = locale === "ko" ? "분석으로 돌아가기" : "Back to analytics";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);

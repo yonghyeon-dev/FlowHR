@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { type KpiCopy } from "@/components/admin-kpi/copy";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 import { isRecruitmentReferralTerminalStage, type RecruitmentReferralStage } from "@/features/recruitment/types";
 
 type RecruitmentOpeningLite = {
@@ -48,6 +49,7 @@ export function buildRecruitmentKpiSnapshot(
 type AdminRecruitmentKpiPanelProps = {
   copy: KpiCopy;
   snapshot: RecruitmentKpiSnapshot;
+  analyticsFocusMetric?: AdminKpiFocusMetric;
 };
 
 type RecruitmentPriorityAction = {
@@ -61,21 +63,31 @@ type RecruitmentQuickAction = {
   label: string;
 };
 
-function withAnalyticsSourceContext(href: string, focusMetric?: string): string {
+function withAnalyticsSourceContext(
+  href: string,
+  options?: { focusMetric?: string; analyticsFocusMetric?: AdminKpiFocusMetric }
+): string {
+  const contextParams = new URLSearchParams({ source: "admin-analytics" });
+  if (options?.focusMetric) {
+    contextParams.set("focusMetric", options.focusMetric);
+  }
+  if (options?.analyticsFocusMetric && options.analyticsFocusMetric !== "all") {
+    contextParams.set("analyticsFocus", options.analyticsFocusMetric);
+  }
   const separator = href.includes("?") ? "&" : "?";
-  const focusQuery = focusMetric ? `&focusMetric=${focusMetric}` : "";
-  return `${href}${separator}source=admin-analytics${focusQuery}`;
+  return `${href}${separator}${contextParams.toString()}`;
 }
 
 function resolveRecruitmentPriorityAction(
   snapshot: RecruitmentKpiSnapshot,
-  copy: KpiCopy
+  copy: KpiCopy,
+  analyticsFocusMetric?: AdminKpiFocusMetric
 ): RecruitmentPriorityAction {
   if (snapshot.stalledReferral7dCount > 0) {
     return {
       href: withAnalyticsSourceContext(
         "/admin/recruitment?risk=stalled_7d",
-        "recruitmentStalledReferral7dCount"
+        { focusMetric: "recruitmentStalledReferral7dCount", analyticsFocusMetric }
       ),
       label: copy.recruitmentPanel.actionOpenStalledQueue,
       reason: copy.recruitmentPanel.priorityReasonStalled
@@ -83,51 +95,66 @@ function resolveRecruitmentPriorityAction(
   }
   if (snapshot.activeReferralCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/recruitment", "recruitmentActiveReferralCount"),
+      href: withAnalyticsSourceContext("/admin/recruitment", {
+        focusMetric: "recruitmentActiveReferralCount",
+        analyticsFocusMetric
+      }),
       label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace,
       reason: copy.recruitmentPanel.priorityReasonActive
     };
   }
   if (snapshot.openOpeningCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/recruitment", "recruitmentOpenOpeningCount"),
+      href: withAnalyticsSourceContext("/admin/recruitment", {
+        focusMetric: "recruitmentOpenOpeningCount",
+        analyticsFocusMetric
+      }),
       label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace,
       reason: copy.recruitmentPanel.priorityReasonOpenings
     };
   }
   return {
-    href: withAnalyticsSourceContext("/admin/recruitment", "recruitmentActiveReferralCount"),
+    href: withAnalyticsSourceContext("/admin/recruitment", {
+      focusMetric: "recruitmentActiveReferralCount",
+      analyticsFocusMetric
+    }),
     label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace,
     reason: copy.recruitmentPanel.priorityReasonClear
   };
 }
 
-function buildRecruitmentQuickActions(copy: KpiCopy): RecruitmentQuickAction[] {
+function buildRecruitmentQuickActions(
+  copy: KpiCopy,
+  analyticsFocusMetric?: AdminKpiFocusMetric
+): RecruitmentQuickAction[] {
   return [
     {
-      href: withAnalyticsSourceContext("/admin/recruitment", "recruitmentActiveReferralCount"),
+      href: withAnalyticsSourceContext("/admin/recruitment", {
+        focusMetric: "recruitmentActiveReferralCount",
+        analyticsFocusMetric
+      }),
       label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace
     },
     {
       href: withAnalyticsSourceContext(
         "/admin/recruitment?risk=stalled_7d",
-        "recruitmentStalledReferral7dCount"
+        { focusMetric: "recruitmentStalledReferral7dCount", analyticsFocusMetric }
       ),
       label: copy.recruitmentPanel.actionOpenStalledQueue
     },
     {
       href: withAnalyticsSourceContext(
         "/admin/recruitment?stage=SUBMITTED",
-        "recruitmentSubmittedReferralCount"
+        { focusMetric: "recruitmentSubmittedReferralCount", analyticsFocusMetric }
       ),
       label: copy.recruitmentPanel.actionOpenSubmittedQueue
     }
   ];
 }
 
-export function AdminRecruitmentKpiPanel({ copy, snapshot }: AdminRecruitmentKpiPanelProps) {
-  const priorityAction = resolveRecruitmentPriorityAction(snapshot, copy);
-  const quickActions = buildRecruitmentQuickActions(copy);
+export function AdminRecruitmentKpiPanel({ copy, snapshot, analyticsFocusMetric }: AdminRecruitmentKpiPanelProps) {
+  const priorityAction = resolveRecruitmentPriorityAction(snapshot, copy, analyticsFocusMetric);
+  const quickActions = buildRecruitmentQuickActions(copy, analyticsFocusMetric);
   return (
     <article className="panel">
       <h2>{copy.recruitmentPanel.title}</h2>

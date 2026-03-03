@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { RecruitmentOpeningItem, RecruitmentOpeningStatus, RecruitmentReferralItem, RecruitmentReferralStage } from "@/features/recruitment/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 import { resolveAdminRecruitmentCopy } from "@/components/recruitment/copy";
 import AdminRecruitmentWorkspaceView from "@/components/recruitment/AdminRecruitmentWorkspaceView";
 import {
@@ -22,6 +23,36 @@ function isTruthyFlag(value: string | undefined) {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 type AdminRecruitmentCopy = ReturnType<typeof resolveAdminRecruitmentCopy>;
+const adminAnalyticsFocusMetricSet = new Set<AdminKpiFocusMetric>([
+  "all",
+  "pendingApprovals",
+  "stalledApprovals",
+  "attendanceApprovalRate",
+  "leaveApprovedDays",
+  "payrollConfirmedRate",
+  "contractDecisionQueueCount",
+  "contractSlaOverdueCount"
+]);
+
+function normalizeAnalyticsFocusMetric(value: string | null): AdminKpiFocusMetric | null {
+  if (!value) {
+    return null;
+  }
+  if (adminAnalyticsFocusMetricSet.has(value as AdminKpiFocusMetric)) {
+    return value as AdminKpiFocusMetric;
+  }
+  return null;
+}
+
+function resolveAnalyticsBackHref(source: string | null, analyticsFocusMetric: AdminKpiFocusMetric | null) {
+  if (source !== "admin-analytics") {
+    return "";
+  }
+  if (!analyticsFocusMetric || analyticsFocusMetric === "all") {
+    return "/admin/analytics";
+  }
+  return `/admin/analytics?focus=${encodeURIComponent(analyticsFocusMetric)}`;
+}
 
 function resolveRecruitmentAnalyticsFocusLabel(
   copy: AdminRecruitmentCopy,
@@ -58,6 +89,7 @@ export default function AdminRecruitmentWorkspace() {
   const { locale } = useI18n();
   const copy = resolveAdminRecruitmentCopy(locale);
   const source = searchParams.get("source");
+  const analyticsFocusMetric = normalizeAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
   const analyticsFocusLabel = resolveRecruitmentAnalyticsFocusLabel(
     copy,
     locale === "ko" ? "ko" : "en",
@@ -75,7 +107,7 @@ export default function AdminRecruitmentWorkspace() {
           ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
           : `Opened from admin analytics.${analyticsFocusLabel ? ` · Focus queue: ${analyticsFocusLabel}` : ""}`
       : "";
-  const analyticsBackHref = source === "admin-analytics" ? "/admin/analytics" : "";
+  const analyticsBackHref = resolveAnalyticsBackHref(source, analyticsFocusMetric);
   const analyticsBackLabel = locale === "ko" ? "분석으로 돌아가기" : "Back to analytics";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();

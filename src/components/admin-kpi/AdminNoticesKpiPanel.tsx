@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { type KpiCopy } from "@/components/admin-kpi/copy";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 
 type NoticeLite = {
   id: string;
@@ -51,6 +52,7 @@ export function buildNoticeReadCoverageSnapshot(
 type AdminNoticesKpiPanelProps = {
   copy: KpiCopy;
   snapshot: NoticeReadCoverageSnapshot;
+  analyticsFocusMetric?: AdminKpiFocusMetric;
 };
 
 type NoticePriorityAction = {
@@ -58,39 +60,55 @@ type NoticePriorityAction = {
   reason: string;
 };
 
-function withAnalyticsSourceContext(href: string, focusMetric?: string): string {
+function withAnalyticsSourceContext(
+  href: string,
+  options?: { focusMetric?: string; analyticsFocusMetric?: AdminKpiFocusMetric }
+): string {
+  const contextParams = new URLSearchParams({ source: "admin-analytics" });
+  if (options?.focusMetric) {
+    contextParams.set("focusMetric", options.focusMetric);
+  }
+  if (options?.analyticsFocusMetric && options.analyticsFocusMetric !== "all") {
+    contextParams.set("analyticsFocus", options.analyticsFocusMetric);
+  }
   const separator = href.includes("?") ? "&" : "?";
-  const focusQuery = focusMetric ? `&focusMetric=${focusMetric}` : "";
-  return `${href}${separator}source=admin-analytics${focusQuery}`;
+  return `${href}${separator}${contextParams.toString()}`;
 }
 
 function resolveNoticePriorityAction(
   snapshot: NoticeReadCoverageSnapshot,
-  copy: KpiCopy
+  copy: KpiCopy,
+  analyticsFocusMetric?: AdminKpiFocusMetric
 ): NoticePriorityAction {
   if (snapshot.unreadAging3dCount > 0) {
     return {
       href: withAnalyticsSourceContext(
         "/admin/notices?status=PUBLISHED&risk=no-read",
-        "noticeUnreadAging3dCount"
+        { focusMetric: "noticeUnreadAging3dCount", analyticsFocusMetric }
       ),
       reason: copy.noticesPanel.priorityReasonAging
     };
   }
   if (snapshot.noReadNoticeCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/notices?status=PUBLISHED&risk=no-read", "noticeNoReadCount"),
+      href: withAnalyticsSourceContext("/admin/notices?status=PUBLISHED&risk=no-read", {
+        focusMetric: "noticeNoReadCount",
+        analyticsFocusMetric
+      }),
       reason: copy.noticesPanel.priorityReasonNoRead
     };
   }
   return {
-    href: withAnalyticsSourceContext("/admin/notices?status=PUBLISHED", "noticePublishedCount"),
+    href: withAnalyticsSourceContext("/admin/notices?status=PUBLISHED", {
+      focusMetric: "noticePublishedCount",
+      analyticsFocusMetric
+    }),
     reason: copy.noticesPanel.priorityReasonClear
   };
 }
 
-export function AdminNoticesKpiPanel({ copy, snapshot }: AdminNoticesKpiPanelProps) {
-  const priorityAction = resolveNoticePriorityAction(snapshot, copy);
+export function AdminNoticesKpiPanel({ copy, snapshot, analyticsFocusMetric }: AdminNoticesKpiPanelProps) {
+  const priorityAction = resolveNoticePriorityAction(snapshot, copy, analyticsFocusMetric);
   return (
     <article className="panel">
       <h2>{copy.noticesPanel.title}</h2>
@@ -123,13 +141,19 @@ export function AdminNoticesKpiPanel({ copy, snapshot }: AdminNoticesKpiPanelPro
         <h3>{copy.noticesPanel.quickActionsLabel}</h3>
         <div className="actions">
           <Link
-            href={withAnalyticsSourceContext("/admin/notices", "noticePublishedCount")}
+            href={withAnalyticsSourceContext("/admin/notices", {
+              focusMetric: "noticePublishedCount",
+              analyticsFocusMetric
+            })}
             className="btn btn-secondary btn-small"
           >
             {copy.noticesPanel.actionOpenNoticeWorkspace}
           </Link>
           <Link
-            href={withAnalyticsSourceContext("/admin/notices?status=PUBLISHED&risk=no-read", "noticeNoReadCount")}
+            href={withAnalyticsSourceContext("/admin/notices?status=PUBLISHED&risk=no-read", {
+              focusMetric: "noticeNoReadCount",
+              analyticsFocusMetric
+            })}
             className="btn btn-secondary btn-small"
           >
             {copy.noticesPanel.actionOpenNoReadQueue}
