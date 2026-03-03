@@ -14,7 +14,10 @@ function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(workspaceHubs, /href: "\/employee\/contracts\?status=pending_response"/);
+  assert.match(
+    workspaceHubs,
+    /href: "\/employee\/contracts\?status=pending_response&source=employee-dashboard"/
+  );
   assert.match(workspaceHubs, /label: "계약 응답 필요"/);
   assert.match(workspaceHubs, /label: "Contracts action needed"/);
 
