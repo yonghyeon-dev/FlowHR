@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { type KpiCopy } from "@/components/admin-kpi/copy";
 
 type NoticeLite = {
@@ -52,7 +53,35 @@ type AdminNoticesKpiPanelProps = {
   snapshot: NoticeReadCoverageSnapshot;
 };
 
+type NoticePriorityAction = {
+  href: string;
+  reason: string;
+};
+
+function resolveNoticePriorityAction(
+  snapshot: NoticeReadCoverageSnapshot,
+  copy: KpiCopy
+): NoticePriorityAction {
+  if (snapshot.unreadAging3dCount > 0) {
+    return {
+      href: "/admin/notices?status=PUBLISHED&risk=no-read",
+      reason: copy.noticesPanel.priorityReasonAging
+    };
+  }
+  if (snapshot.noReadNoticeCount > 0) {
+    return {
+      href: "/admin/notices?status=PUBLISHED&risk=no-read",
+      reason: copy.noticesPanel.priorityReasonNoRead
+    };
+  }
+  return {
+    href: "/admin/notices?status=PUBLISHED",
+    reason: copy.noticesPanel.priorityReasonClear
+  };
+}
+
 export function AdminNoticesKpiPanel({ copy, snapshot }: AdminNoticesKpiPanelProps) {
+  const priorityAction = resolveNoticePriorityAction(snapshot, copy);
   return (
     <article className="panel">
       <h2>{copy.noticesPanel.title}</h2>
@@ -71,6 +100,26 @@ export function AdminNoticesKpiPanel({ copy, snapshot }: AdminNoticesKpiPanelPro
           <strong>{snapshot.unreadAging3dCount}</strong>
           <small>{copy.noticesPanel.agingThreshold}</small>
         </article>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <h3>{copy.noticesPanel.priorityActionLabel}</h3>
+        <p className="small muted">{priorityAction.reason}</p>
+        <div className="actions">
+          <Link href={priorityAction.href} className="btn btn-secondary">
+            {copy.noticesPanel.actionOpenNoReadQueue}
+          </Link>
+        </div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <h3>{copy.noticesPanel.quickActionsLabel}</h3>
+        <div className="actions">
+          <Link href="/admin/notices" className="btn btn-secondary btn-small">
+            {copy.noticesPanel.actionOpenNoticeWorkspace}
+          </Link>
+          <Link href="/admin/notices?status=PUBLISHED&risk=no-read" className="btn btn-secondary btn-small">
+            {copy.noticesPanel.actionOpenNoReadQueue}
+          </Link>
+        </div>
       </div>
     </article>
   );
