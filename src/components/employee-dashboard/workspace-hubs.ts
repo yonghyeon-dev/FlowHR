@@ -45,6 +45,10 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         links: [
           { href: "/employee/contracts", label: "전자계약" },
           {
+            href: "/employee/contracts?status=pending_response",
+            label: "계약 응답 필요"
+          },
+          {
             href: "/employee/contracts?status=pending_response&deadline=due_soon",
             label: "계약 기한 임박"
           },
@@ -94,6 +98,10 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       description: "Check contracts, notices, benefits queue, and recruitment queue.",
       links: [
         { href: "/employee/contracts", label: "Contracts" },
+        {
+          href: "/employee/contracts?status=pending_response",
+          label: "Contracts action needed"
+        },
         {
           href: "/employee/contracts?status=pending_response&deadline=due_soon",
           label: "Contracts due soon"
