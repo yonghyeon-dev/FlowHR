@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
@@ -55,6 +55,10 @@ function isTruthyFlag(value: string | undefined) {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
+function isReadCoverageRisk(notice: NoticeItem, readCountByNoticeId: Map<string, number>) {
+  return notice.status === "PUBLISHED" && (readCountByNoticeId.get(notice.id) ?? 0) === 0;
+}
+
 export default function AdminNoticeWorkspace() {
   const { locale } = useI18n();
   const copy = resolveNoticeWorkspaceCopy(locale);
@@ -71,7 +75,9 @@ export default function AdminNoticeWorkspace() {
   const [audience, setAudience] = useState<"all" | "employees" | "admins">("all");
   const [publishAt, setPublishAt] = useState(toDateTimeLocalValue());
   const [listSearchQuery, setListSearchQuery] = useState("");
+  const [readRiskOnly, setReadRiskOnly] = useState(false);
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
+  const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
 
   const [summary, setSummary] = useState<NoticeApiSummary>(DEFAULT_SUMMARY);
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -84,39 +90,45 @@ export default function AdminNoticeWorkspace() {
   const usesBearerToken = bearerToken.trim().length > 0;
 
   const stats = useMemo(() => ({ total: logs.length, success: logs.filter((log) => log.ok).length }), [logs]);
-  const filteredNotices = useMemo(() => {
-    const query = listSearchQuery.trim().toLowerCase();
-    if (!query) {
-      return notices;
-    }
-    return notices.filter((notice) => {
-      const haystack = `${notice.title} ${notice.body}`.toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [listSearchQuery, notices]);
-
   const readCountByNoticeId = useMemo(() => {
     const map = new Map<string, number>();
     readReceipts.forEach((receipt) => map.set(receipt.noticeId, (map.get(receipt.noticeId) ?? 0) + 1));
     return map;
   }, [readReceipts]);
+  const filteredNotices = useMemo(() => {
+    const query = listSearchQuery.trim().toLowerCase();
+    return notices.filter((notice) => {
+      if (readRiskOnly && !isReadCoverageRisk(notice, readCountByNoticeId)) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      const haystack = `${notice.title} ${notice.body}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [listSearchQuery, notices, readCountByNoticeId, readRiskOnly]);
 
   const noticeReadCountByNoticeId = useMemo(() => {
     const map = new Map<string, number>();
     notices.forEach((notice) => map.set(notice.id, readCountByNoticeId.get(notice.id) ?? 0));
     return map;
   }, [notices, readCountByNoticeId]);
+  const readRiskNoticeCount = useMemo(
+    () => notices.filter((notice) => isReadCoverageRisk(notice, readCountByNoticeId)).length,
+    [notices, readCountByNoticeId]
+  );
 
-  function appendLog(action: string, status: number, ok: boolean) {
+  const appendLog = useCallback((action: string, status: number, ok: boolean) => {
     setLogs((previous) => [{ id: Date.now(), action, status, ok, at: new Date().toLocaleString(runtimeLocale) }, ...previous]);
-  }
+  }, [runtimeLocale]);
 
-  async function callApi(
+  const callApi = useCallback(async (
     action: string,
     method: "GET" | "POST" | "PATCH" | "DELETE",
     path: string,
     payload?: Record<string, unknown>
-  ) {
+  ) => {
     setPendingLabel(action);
     try {
       const headers: Record<string, string> = payload ? { "content-type": "application/json" } : {};
@@ -138,9 +150,9 @@ export default function AdminNoticeWorkspace() {
     } finally {
       setPendingLabel(null);
     }
-  }
+  }, [actorId, appendLog, bearerToken, organizationId, usesBearerToken]);
 
-  async function loadNotices() {
+  const loadNotices = useCallback(async () => {
     if (!organizationId && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -155,7 +167,25 @@ export default function AdminNoticeWorkspace() {
     setSummary(parseSummary(parsed));
     setReadReceipts(parseReadReceipts(parsed));
     setStatusMessage(`${copy.statusMessagePrefix}: ${copy.refreshAction}`);
-  }
+  }, [
+    audienceFilter,
+    callApi,
+    copy.messages.loadFailed,
+    copy.messages.needOrganization,
+    copy.refreshAction,
+    copy.statusMessagePrefix,
+    organizationId,
+    statusFilter,
+    usesBearerToken
+  ]);
+
+  useEffect(() => {
+    if (autoLoadAttempted || (!organizationId && !usesBearerToken)) {
+      return;
+    }
+    setAutoLoadAttempted(true);
+    void loadNotices();
+  }, [autoLoadAttempted, loadNotices, organizationId, usesBearerToken]);
 
   async function saveNotice() {
     if (!organizationId && !usesBearerToken) {
@@ -270,6 +300,8 @@ export default function AdminNoticeWorkspace() {
       notices={notices}
       filteredNotices={filteredNotices}
       listSearchQuery={listSearchQuery}
+      readRiskOnly={readRiskOnly}
+      readRiskNoticeCount={readRiskNoticeCount}
       readCountByNoticeId={noticeReadCountByNoticeId}
       readCountLabel={copy.readCountLabel}
       logs={logs}
@@ -283,6 +315,7 @@ export default function AdminNoticeWorkspace() {
       onAudienceChange={setAudience}
       onPublishAtChange={setPublishAt}
       onListSearchQueryChange={setListSearchQuery}
+      onSetReadRiskOnly={setReadRiskOnly}
       onClearListSearch={() => setListSearchQuery("")}
       onLoadNotices={() => void loadNotices()}
       onCreateNotice={() => void saveNotice()}
