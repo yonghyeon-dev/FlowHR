@@ -95,6 +95,9 @@ export function buildAdminSummaryFromApiResults(input: {
     const expiresAtMillis = document.expiresAt ? new Date(document.expiresAt).getTime() : Number.NaN;
     return Number.isFinite(expiresAtMillis) && expiresAtMillis < asOfMillis;
   }).length;
+  const contractPendingResponseCount = contractDocuments.filter(
+    (document) => document.status === "SENT"
+  ).length;
 
   const employeeCount = input.employeeResult.response.ok
     ? readArray<unknown>(input.employeeResult.body, "employees").length
@@ -108,6 +111,7 @@ export function buildAdminSummaryFromApiResults(input: {
     pendingApprovalExecutionCount: approvalExecutions.length,
     stalledApprovalExecutionCount,
     contractDecisionQueueCount,
+    contractPendingResponseCount,
     contractSlaOverdueCount,
     employeeCount,
     refreshedAt: new Date().toLocaleString(input.runtimeLocale)

@@ -27,6 +27,7 @@ export type AdminSummary = {
   pendingApprovalExecutionCount: number;
   stalledApprovalExecutionCount: number;
   contractDecisionQueueCount: number;
+  contractPendingResponseCount: number;
   contractSlaOverdueCount: number;
   employeeCount: number;
   refreshedAt: string | null;
@@ -40,6 +41,7 @@ export const EMPTY_SUMMARY: AdminSummary = {
   pendingApprovalExecutionCount: 0,
   stalledApprovalExecutionCount: 0,
   contractDecisionQueueCount: 0,
+  contractPendingResponseCount: 0,
   contractSlaOverdueCount: 0,
   employeeCount: 0,
   refreshedAt: null
