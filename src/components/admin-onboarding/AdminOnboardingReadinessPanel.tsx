@@ -19,6 +19,17 @@ const checklistHrefByKey: Record<OnboardingChecklistItem["key"], string> = {
   contracts: "/admin/contracts?status=SENT"
 };
 
+function withOnboardingSource(href: string) {
+  if (!href.startsWith("/admin/people")) {
+    return href;
+  }
+  if (href.includes("source=")) {
+    return href;
+  }
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}source=admin-onboarding`;
+}
+
 function resolveChecklistLabel(copy: AdminOnboardingCopy, key: OnboardingChecklistItem["key"]) {
   if (key === "organization") {
     return copy.checklist.organization;
@@ -70,7 +81,10 @@ export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPan
                 <p className="small muted">{copy.readinessPriorityHint}</p>
                 <div className="actions">
                   {!canRunChecklistAction(priorityItem.key) ? (
-                    <Link className="btn btn-primary btn-small" href={checklistHrefByKey[priorityItem.key]}>
+                    <Link
+                      className="btn btn-primary btn-small"
+                      href={withOnboardingSource(checklistHrefByKey[priorityItem.key])}
+                    >
                       {copy.readinessOpenWorkspaceLabel}
                     </Link>
                   ) : (
@@ -84,7 +98,10 @@ export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPan
                       >
                         {copy.readinessPriorityActionLabel}
                       </button>
-                      <Link className="btn btn-secondary btn-small" href={checklistHrefByKey[priorityItem.key]}>
+                      <Link
+                        className="btn btn-secondary btn-small"
+                        href={withOnboardingSource(checklistHrefByKey[priorityItem.key])}
+                      >
                         {copy.readinessOpenWorkspaceLabel}
                       </Link>
                     </>
@@ -100,7 +117,9 @@ export function AdminOnboardingReadinessPanel(props: AdminOnboardingReadinessPan
                     {resolveChecklistLabel(copy, item.key)}
                   </span>
                   <span>
-                    <Link href={checklistHrefByKey[item.key]}>{copy.readinessOpenWorkspaceLabel}</Link>
+                    <Link href={withOnboardingSource(checklistHrefByKey[item.key])}>
+                      {copy.readinessOpenWorkspaceLabel}
+                    </Link>
                     {canRunChecklistAction(item.key) ? (
                       <>
                         {" / "}

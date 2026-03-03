@@ -180,6 +180,22 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           ? "관리자 대시보드에서 이동했습니다."
           : "Opened from admin dashboard."
         : null;
+  const sourceContextReturnHref =
+    sourceContext === "admin-onboarding"
+      ? "/admin/onboarding"
+      : sourceContext === "admin-dashboard"
+        ? "/admin"
+        : null;
+  const sourceContextReturnLabel =
+    sourceContext === "admin-onboarding"
+      ? isKoLocale
+        ? "온보딩으로 돌아가기"
+        : "Back to onboarding"
+      : sourceContext === "admin-dashboard"
+        ? isKoLocale
+          ? "대시보드로 돌아가기"
+          : "Back to dashboard"
+        : null;
 
   function jumpToFocusPanel() {
     if (!focusPanel) {
@@ -214,9 +230,16 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
               {isKoLocale ? "집중 섹션으로 이동" : "Jump to focused section"}
             </button>
           ) : null}
-          <Link className="btn btn-secondary" href="/admin">
-            {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
-          </Link>
+          {sourceContextReturnHref && sourceContextReturnLabel ? (
+            <Link className="btn btn-secondary" href={sourceContextReturnHref}>
+              {sourceContextReturnLabel}
+            </Link>
+          ) : null}
+          {sourceContext !== "admin-dashboard" ? (
+            <Link className="btn btn-secondary" href="/admin">
+              {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
+            </Link>
+          ) : null}
         </div>
       </header>
       <section className="kpi-strip">
@@ -286,7 +309,6 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
             tree={tree}
             selectedEmployeeId={selectedEmployeeId}
             setSelectedEmployeeId={setSelectedEmployeeId}
-            loadSelectedEmployeeHistory={loadSelectedEmployeeHistory}
           />
         </section>
 
