@@ -44,6 +44,8 @@ function isTruthyFlag(value: string | undefined) {
 export default function AdminPeoplePage() {
   const searchParams = useSearchParams();
   const queryHydratedRef = useRef(false);
+  const autoLoadTriggeredRef = useRef(false);
+  const autoHistoryFetchKeyRef = useRef<string | null>(null);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const [search, setSearch] = useState("");
@@ -366,6 +368,33 @@ export default function AdminPeoplePage() {
       setSelectedEmployeeId(employeeId);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (autoLoadTriggeredRef.current) {
+      return;
+    }
+    if (isProductionRuntime && !usesBearerToken) {
+      return;
+    }
+    autoLoadTriggeredRef.current = true;
+    void refreshDirectory();
+  }, [isProductionRuntime, refreshDirectory, usesBearerToken]);
+
+  useEffect(() => {
+    const employeeId = selectedEmployeeId.trim();
+    if (!employeeId) {
+      autoHistoryFetchKeyRef.current = null;
+      setHistory([]);
+      return;
+    }
+
+    const historyKey = `${employeeId}:${historyLimit.trim() || "30"}`;
+    if (autoHistoryFetchKeyRef.current === historyKey) {
+      return;
+    }
+    autoHistoryFetchKeyRef.current = historyKey;
+    void loadSelectedEmployeeHistory(employeeId);
+  }, [historyLimit, loadSelectedEmployeeHistory, selectedEmployeeId]);
 
   function resetDirectoryFilters() {
     setSearch("");

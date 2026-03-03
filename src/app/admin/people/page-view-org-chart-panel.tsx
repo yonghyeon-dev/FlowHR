@@ -7,7 +7,6 @@ type AdminPeopleOrgChartPanelProps = {
   tree: OrgTreeNode[];
   selectedEmployeeId: string;
   setSelectedEmployeeId: (value: string) => void;
-  loadSelectedEmployeeHistory: (employeeId: string) => Promise<void>;
 };
 
 type OrgChartFocusMode = "all" | "inactive" | "unassigned";
@@ -101,9 +100,8 @@ function renderEmployeePill(input: {
   employee: Employee;
   selectedEmployeeId: string;
   setSelectedEmployeeId: (value: string) => void;
-  loadSelectedEmployeeHistory: (employeeId: string) => Promise<void>;
 }) {
-  const { isKoLocale, employee, selectedEmployeeId, setSelectedEmployeeId, loadSelectedEmployeeHistory } = input;
+  const { isKoLocale, employee, selectedEmployeeId, setSelectedEmployeeId } = input;
   return (
     <li key={employee.id}>
       <button
@@ -111,7 +109,6 @@ function renderEmployeePill(input: {
         className={`employee-pill${employee.id === selectedEmployeeId ? " active" : ""}`}
         onClick={() => {
           setSelectedEmployeeId(employee.id);
-          void loadSelectedEmployeeHistory(employee.id);
         }}
       >
         <strong>{employee.name ?? employee.id}</strong>
@@ -127,8 +124,7 @@ export function AdminPeopleOrgChartPanel({
   isKoLocale,
   tree,
   selectedEmployeeId,
-  setSelectedEmployeeId,
-  loadSelectedEmployeeHistory
+  setSelectedEmployeeId
 }: AdminPeopleOrgChartPanelProps) {
   const [focusMode, setFocusMode] = useState<OrgChartFocusMode>("all");
   const summary = buildOrgChartSummary(tree);
@@ -210,8 +206,7 @@ export function AdminPeopleOrgChartPanel({
                             isKoLocale,
                             employee,
                             selectedEmployeeId,
-                            setSelectedEmployeeId,
-                            loadSelectedEmployeeHistory
+                            setSelectedEmployeeId
                           })
                         )}
                       </ul>
