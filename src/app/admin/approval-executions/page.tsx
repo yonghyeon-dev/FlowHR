@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ApprovalExecutionEscalationResultPanel,
@@ -63,14 +63,14 @@ function normalizePositiveIntegerText(value: string | null, fallback: string) {
 export default function AdminApprovalExecutionsPage() {
   const searchParams = useSearchParams();
   const source = searchParams.get("source");
-  const [domain, setDomain] = useState<ApprovalDomain | "">(() => normalizeApprovalDomainFilter(searchParams.get("domain")));
-  const [state, setState] = useState<ApprovalExecutionState | "">(() => normalizeApprovalStateFilter(searchParams.get("state")));
-  const [sort, setSort] = useState<ApprovalExecutionSort>(() => normalizeApprovalSortFilter(searchParams.get("sort")));
-  const [stalledHoursMin, setStalledHoursMin] = useState(() => normalizePositiveIntegerText(searchParams.get("stalledHoursMin"), "24"));
+  const [domain, setDomain] = useState<ApprovalDomain | "">("");
+  const [state, setState] = useState<ApprovalExecutionState | "">("PENDING");
+  const [sort, setSort] = useState<ApprovalExecutionSort>("priority_desc");
+  const [stalledHoursMin, setStalledHoursMin] = useState("24");
   const [asOfInput, setAsOfInput] = useState(() => toLocalInputValue(new Date()));
   const [targetEntityType, setTargetEntityType] = useState("");
   const [targetEntityId, setTargetEntityId] = useState("");
-  const [limit, setLimit] = useState(() => normalizePositiveIntegerText(searchParams.get("limit"), "100"));
+  const [limit, setLimit] = useState("100");
   const [historyLimit, setHistoryLimit] = useState("30");
   const [notificationChannel, setNotificationChannel] = useState("approval-stalled-queue");
 
@@ -93,6 +93,14 @@ export default function AdminApprovalExecutionsPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+
+  useEffect(() => {
+    setDomain(normalizeApprovalDomainFilter(searchParams.get("domain")));
+    setState(normalizeApprovalStateFilter(searchParams.get("state")));
+    setSort(normalizeApprovalSortFilter(searchParams.get("sort")));
+    setStalledHoursMin(normalizePositiveIntegerText(searchParams.get("stalledHoursMin"), "24"));
+    setLimit(normalizePositiveIntegerText(searchParams.get("limit"), "100"));
+  }, [searchParams]);
 
   const asOfDate = useMemo(() => {
     const parsed = new Date(asOfInput);
