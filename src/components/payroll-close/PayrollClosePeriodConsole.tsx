@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { payrollCloseCopyByLocale } from "@/components/payroll-close/copy";
@@ -24,6 +25,7 @@ function parseRequiredInt(value: string, fieldLabel: string, nonNegativeIntegerL
 }
 
 export default function PayrollClosePeriodConsole() {
+  const searchParams = useSearchParams();
   const range = defaultMonthRange();
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
   const [periodEndDate, setPeriodEndDate] = useState(range.periodEndDate);
@@ -43,6 +45,14 @@ export default function PayrollClosePeriodConsole() {
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollCloseCopyByLocale[locale];
+  const source = searchParams.get("source");
+  const focus = searchParams.get("focus");
+  const focusLabel =
+    focus === "previewed"
+      ? copy.focusPreviewedLabel
+      : focus === "undistributed"
+        ? copy.focusUndistributedLabel
+        : copy.focusAllLabel;
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -144,6 +154,11 @@ export default function PayrollClosePeriodConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {source === "admin-dashboard" ? (
+          <p className="small muted">
+            {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
+          </p>
+        ) : null}
       </header>
 
       <section className="panel-grid">

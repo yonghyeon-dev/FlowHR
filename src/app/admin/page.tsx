@@ -87,7 +87,16 @@ export default function AdminDashboardPage() {
           ? `미확정 ${summary.previewedPayrollCount} · 미배포 ${summary.undistributedPayrollCount}`
           : `Previewed ${summary.previewedPayrollCount} · Undistributed ${summary.undistributedPayrollCount}`,
         href: "/admin/payroll-close",
-        actions: []
+        actions: [
+          {
+            label: isKoLocale ? `미확정 ${summary.previewedPayrollCount}` : `Previewed ${summary.previewedPayrollCount}`,
+            href: "/admin/payroll-close?focus=previewed&source=admin-dashboard"
+          },
+          {
+            label: isKoLocale ? `미배포 ${summary.undistributedPayrollCount}` : `Undistributed ${summary.undistributedPayrollCount}`,
+            href: "/admin/payroll-close?focus=undistributed&source=admin-dashboard"
+          }
+        ]
       },
       {
         key: "contracts",
