@@ -1172,3 +1172,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0865 admin analytics return focus parity (propagate analyticsFocus context from /admin/analytics into approval/payroll/attendance/leave workspace links and add focus-aware return-to-analytics actions in destination pages while preserving existing dashboard source banners and queue filters, with e2e-wi0865 regression guard)
 
 - WI-0866 admin navigation/onboarding readiness product-language hardening (dedupe admin layout nav href keys with unique context routes, deepen onboarding readiness links/actions to people/leave/contracts workspaces, and normalize approval+leave calendar user-facing query copy to search/filters, with e2e-wi0866 regression guard)
+
+- WI-0867 admin people deeplink focus hydration (hydrate source/panel/query context on /admin/people, map onboarding/dashboard deep-link aliases to focused sections, and add focused-section banner/jump/highlight UX with e2e-wi0867 regression guard)

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   asRecord,
@@ -31,7 +32,73 @@ function isTruthyFlag(value: string | undefined) {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
+type AdminPeopleFocusPanel =
+  | "directory-filters"
+  | "org-chart"
+  | "employee-compare"
+  | "employee-history";
+
+type AdminPeopleSourceContext = "admin-onboarding" | "admin-dashboard";
+
+function normalizeAdminPeopleFocusPanel(value: string | null): AdminPeopleFocusPanel | null {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized === "directory-filters" || normalized === "filters" || normalized === "invites") {
+    return "directory-filters";
+  }
+  if (normalized === "org-chart" || normalized === "organization" || normalized === "org") {
+    return "org-chart";
+  }
+  if (normalized === "employee-compare" || normalized === "compare") {
+    return "employee-compare";
+  }
+  if (normalized === "employee-history" || normalized === "history") {
+    return "employee-history";
+  }
+  return null;
+}
+
+function normalizeAdminPeopleSourceContext(value: string | null): AdminPeopleSourceContext | null {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized === "admin-onboarding" || normalized === "admin-dashboard") {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeActiveFilter(value: string | null): ActiveFilter | null {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized === "all" || normalized === "active" || normalized === "inactive") {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeUpdatedWindow(value: string | null): UpdatedWindow | null {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized === "all" || normalized === "7" || normalized === "30" || normalized === "90") {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeHistoryLimit(value: string | null): string | null {
+  const normalized = (value ?? "").trim();
+  if (!normalized) {
+    return null;
+  }
+  const parsed = Number.parseInt(normalized, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 500) {
+    return null;
+  }
+  return String(parsed);
+}
+
 export default function AdminPeoplePage() {
+  const searchParams = useSearchParams();
+  const queryHydratedRef = useRef(false);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const [search, setSearch] = useState("");
@@ -42,6 +109,8 @@ export default function AdminPeoplePage() {
   const [historyLimit, setHistoryLimit] = useState("30");
   const [historyActionFilter, setHistoryActionFilter] = useState<HistoryActionFilter>("all");
   const [historyFieldFilter, setHistoryFieldFilter] = useState<HistoryFieldFilter>("all");
+  const [focusPanel, setFocusPanel] = useState<AdminPeopleFocusPanel | null>(null);
+  const [sourceContext, setSourceContext] = useState<AdminPeopleSourceContext | null>(null);
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -298,6 +367,61 @@ export default function AdminPeoplePage() {
     ? positions.filter((position) => position.organizationId === selectedEmployee.organizationId)
     : positions;
 
+  useEffect(() => {
+    if (queryHydratedRef.current) {
+      return;
+    }
+    queryHydratedRef.current = true;
+
+    const source = normalizeAdminPeopleSourceContext(searchParams.get("source"));
+    if (source) {
+      setSourceContext(source);
+    }
+
+    const panel = normalizeAdminPeopleFocusPanel(searchParams.get("panel"));
+    if (panel) {
+      setFocusPanel(panel);
+      setTimeout(() => {
+        document.getElementById(panel)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 0);
+    }
+
+    const search = (searchParams.get("q") ?? "").trim();
+    if (search) {
+      setSearch(search);
+    }
+
+    const active = normalizeActiveFilter(searchParams.get("active"));
+    if (active) {
+      setActiveFilter(active);
+    }
+
+    const updatedWindow = normalizeUpdatedWindow(searchParams.get("updatedDays"));
+    if (updatedWindow) {
+      setRecentlyUpdatedDays(updatedWindow);
+    }
+
+    const limit = normalizeHistoryLimit(searchParams.get("historyLimit"));
+    if (limit) {
+      setHistoryLimit(limit);
+    }
+
+    const departmentId = (searchParams.get("departmentId") ?? "").trim();
+    if (departmentId) {
+      setDepartmentFilter(departmentId);
+    }
+
+    const positionId = (searchParams.get("positionId") ?? "").trim();
+    if (positionId) {
+      setPositionFilter(positionId);
+    }
+
+    const employeeId = (searchParams.get("employeeId") ?? "").trim();
+    if (employeeId) {
+      setSelectedEmployeeId(employeeId);
+    }
+  }, [searchParams]);
+
   function resetDirectoryFilters() {
     setSearch("");
     setActiveFilter("all");
@@ -372,6 +496,8 @@ export default function AdminPeoplePage() {
       logs={logs}
       pendingLabel={pendingLabel}
       showDevTools={showDevTools}
+      sourceContext={sourceContext}
+      focusPanel={focusPanel}
     />
   );
 }
