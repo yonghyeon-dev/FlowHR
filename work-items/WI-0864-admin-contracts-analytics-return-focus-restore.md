@@ -9,6 +9,7 @@
 - `src/components/admin-kpi/AdminKpiDashboard.tsx`
 - `src/components/admin-kpi/AdminContractKpiPanel.tsx`
 - `src/components/contracts/AdminContractsWorkspace.tsx`
+- `src/components/contracts/admin-contracts-analytics-context.ts` (new)
 - `scripts/tests/e2e-wi0841-admin-analytics-contract-kpi-source-context-links.test.ts` (updated)
 - `scripts/tests/e2e-wi0864-admin-contracts-analytics-return-focus-restore.test.ts` (new)
 

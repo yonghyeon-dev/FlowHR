@@ -10,6 +10,12 @@ function run() {
   const dashboard = readUtf8("src", "components", "admin-kpi", "AdminKpiDashboard.tsx");
   const contractPanel = readUtf8("src", "components", "admin-kpi", "AdminContractKpiPanel.tsx");
   const contractsWorkspace = readUtf8("src", "components", "contracts", "AdminContractsWorkspace.tsx");
+  const analyticsContextHelper = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "admin-contracts-analytics-context.ts"
+  );
   const workItem = readUtf8(
     "work-items",
     "WI-0864-admin-contracts-analytics-return-focus-restore.md"
@@ -26,9 +32,11 @@ function run() {
   assert.match(contractPanel, /withAnalyticsSourceContext\(\s*"\/admin\/contracts\?decisionQueueOnly=true"/);
   assert.match(contractPanel, /withAnalyticsSourceContext\(\s*"\/admin\/contracts\?slaRisk=OVERDUE"/);
 
-  assert.match(contractsWorkspace, /normalizeAnalyticsFocusMetric\(searchParams\.get\("analyticsFocus"\)\)/);
-  assert.match(contractsWorkspace, /const analyticsBackHref = resolveAnalyticsBackHref\(analyticsSource, analyticsFocus\);/);
-  assert.match(contractsWorkspace, /\/admin\/analytics\?focus=\$\{encodeURIComponent\(analyticsFocusMetric\)\}/);
+  assert.match(contractsWorkspace, /normalizeContractsAnalyticsFocusMetric\(searchParams\.get\("analyticsFocus"\)\)/);
+  assert.match(contractsWorkspace, /const analyticsBackHref = resolveContractsAnalyticsBackHref\(analyticsSource, analyticsFocus\);/);
+  assert.match(analyticsContextHelper, /export function normalizeContractsAnalyticsFocusMetric/);
+  assert.match(analyticsContextHelper, /export function resolveContractsAnalyticsBackHref/);
+  assert.match(analyticsContextHelper, /\/admin\/analytics\?focus=\$\{encodeURIComponent\(analyticsFocusMetric\)\}/);
   assert.match(contractsWorkspace, /analyticsBackHref \?/);
   assert.match(contractsWorkspace, /href=\{analyticsBackHref\}/);
   assert.match(contractsWorkspace, /Back to analytics/);

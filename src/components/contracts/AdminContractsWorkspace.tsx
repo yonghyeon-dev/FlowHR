@@ -12,8 +12,8 @@ import {
   type ContractCategory
 } from "@/components/contracts/copy";
 import type { ContractDocumentAction } from "@/components/contracts/types";
-import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 import { AdminContractsDocumentFilterControls } from "@/components/contracts/AdminContractsDocumentFilterControls";
+import { normalizeContractsAnalyticsFocusMetric, resolveContractsAnalyticsBackHref } from "@/components/contracts/admin-contracts-analytics-context";
 import { useAdminContractsWorkspaceActions } from "@/components/contracts/useAdminContractsWorkspaceActions";
 import {
   parseContractBooleanFilter,
@@ -30,38 +30,6 @@ import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-co
 import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel } from "@/components/contracts/status-label-helpers";
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
-
-const adminAnalyticsFocusMetricSet = new Set<AdminKpiFocusMetric>([
-  "all",
-  "pendingApprovals",
-  "stalledApprovals",
-  "attendanceApprovalRate",
-  "leaveApprovedDays",
-  "payrollConfirmedRate",
-  "contractDecisionQueueCount",
-  "contractSlaOverdueCount"
-]);
-
-function normalizeAnalyticsFocusMetric(value: string | null): AdminKpiFocusMetric | null {
-  if (!value) {
-    return null;
-  }
-  if (adminAnalyticsFocusMetricSet.has(value as AdminKpiFocusMetric)) {
-    return value as AdminKpiFocusMetric;
-  }
-  return null;
-}
-
-function resolveAnalyticsBackHref(source: string | null, analyticsFocusMetric: AdminKpiFocusMetric | null) {
-  if (source !== "admin-analytics") {
-    return "";
-  }
-  if (!analyticsFocusMetric || analyticsFocusMetric === "all") {
-    return "/admin/analytics";
-  }
-  return `/admin/analytics?focus=${encodeURIComponent(analyticsFocusMetric)}`;
-}
-
 export default function AdminContractsWorkspace() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
@@ -70,24 +38,18 @@ export default function AdminContractsWorkspace() {
   const copy = adminContractsCopyByLocale[locale];
   const analyticsSource = searchParams.get("source");
   const analyticsFocusMetric = searchParams.get("focusMetric");
-  const analyticsFocus = normalizeAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
-  const analyticsBackHref = resolveAnalyticsBackHref(analyticsSource, analyticsFocus);
+  const analyticsFocus = normalizeContractsAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
+  const analyticsBackHref = resolveContractsAnalyticsBackHref(analyticsSource, analyticsFocus);
   const analyticsBackLabel = locale === "ko" ? "분석으로 돌아가기" : "Back to analytics";
   const analyticsFocusLabel = analyticsFocusMetric === "contractSlaOverdueCount" ? copy.overdueSlaCountLabel : analyticsFocusMetric === "contractDecisionQueueCount" ? copy.decisionQueueCountLabel : copy.documentsKpiLabel;
   const categoryLabels = contractCategoryLabelByLocale[locale];
   const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
   const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
   const approvalStatusLabels = contractApprovalStatusLabelByLocale[locale];
-
   const [employeeId, setEmployeeId] = useState("");
   const [templateName, setTemplateName] = useState(locale === "ko" ? "근로계약 기본" : "Employment Standard");
   const [templateCategory, setTemplateCategory] = useState<ContractCategory>("employment");
-  const [templateBody, setTemplateBody] = useState(
-    locale === "ko"
-      ? "직원은 직무, 보상, 기밀 유지 조항에 동의합니다."
-      : "Employee agrees to role, compensation, and confidentiality clauses."
-  );
-
+  const [templateBody, setTemplateBody] = useState(locale === "ko" ? "직원은 직무, 보상, 기밀 유지 조항에 동의합니다." : "Employee agrees to role, compensation, and confidentiality clauses.");
   const normalizedEmployeeIdForApi = normalizeEmployeeIdForApi(employeeId, locale);
   const actionLabelByAction = useMemo<Record<ContractDocumentAction, string>>(
     () => ({
@@ -104,7 +66,6 @@ export default function AdminContractsWorkspace() {
     () => ({ REQUEST_APPROVAL: copy.nextStepRequestApproval, APPROVE_OR_REJECT: copy.nextStepApproveOrReject, SEND_DOCUMENT: copy.nextStepSendDocument, WAIT_EMPLOYEE_RESPONSE: copy.nextStepWaitEmployeeResponse, RENEW_DOCUMENT: copy.nextStepRenewDocument, NO_ACTION: copy.nextStepNoAction }),
     [copy]
   );
-
   const {
     templates,
     selectedTemplateId,
