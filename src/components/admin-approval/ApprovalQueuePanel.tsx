@@ -131,7 +131,7 @@ const queuePanelCopyByLocale = {
     searchScopeEmployee: "Employee ID",
     searchScopeRequestId: "Request ID",
     searchScopeContent: "Memo/reason",
-    query: "Queue query",
+    query: "Queue search",
     queryPlaceholder: "Search employee, request ID, status, memo/reason",
     urgentOnly: "Urgent only",
     selectedOnly: "Selected only",
