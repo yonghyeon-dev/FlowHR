@@ -4,6 +4,10 @@ export type PayrollPayslipDeliveryCopy = {
   heroEyebrow: string;
   title: string;
   description: string;
+  dashboardSourceBanner: string;
+  dashboardSourceFocusLabel: string;
+  focusUndistributedLabel: string;
+  focusAllLabel: string;
   inputTitle: string;
   sessionOrganizationLabel: string;
   sessionActorLabel: string;
@@ -57,6 +61,10 @@ const copyEn: PayrollPayslipDeliveryCopy = {
   title: "Payroll Payslip Delivery",
   description:
     "Distribute confirmed payroll payslips and track delivery baseline before employee receipt confirmation.",
+  dashboardSourceBanner: "Opened from admin dashboard",
+  dashboardSourceFocusLabel: "Focused queue",
+  focusUndistributedLabel: "Undistributed runs",
+  focusAllLabel: "Payslip delivery queue",
   inputTitle: "Distribution Input",
   sessionOrganizationLabel: "Session organization",
   sessionActorLabel: "Session actor",
@@ -109,6 +117,10 @@ const copyKo: PayrollPayslipDeliveryCopy = {
   heroEyebrow: "FlowHR 관리자",
   title: "급여명세 배포",
   description: "확정된 급여명세서를 배포하고 직원 수신확인 전 상태를 점검합니다.",
+  dashboardSourceBanner: "관리자 대시보드에서 이동했습니다",
+  dashboardSourceFocusLabel: "집중 대기함",
+  focusUndistributedLabel: "미배포 실행",
+  focusAllLabel: "명세 배포 대기함",
   inputTitle: "배포 입력",
   sessionOrganizationLabel: "세션 조직",
   sessionActorLabel: "세션 액터",

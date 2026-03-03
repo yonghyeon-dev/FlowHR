@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { payrollPayslipDeliveryCopyByLocale } from "@/components/payroll-payslip-delivery/copy";
@@ -15,6 +16,7 @@ import {
 } from "@/components/payroll-payslip-delivery/types";
 
 export default function PayrollPayslipDeliveryConsole() {
+  const searchParams = useSearchParams();
   const range = defaultMonthRange();
   const [employeeId, setEmployeeId] = useState("");
   const [periodStartDate, setPeriodStartDate] = useState(range.periodStartDate);
@@ -33,6 +35,9 @@ export default function PayrollPayslipDeliveryConsole() {
   const { locale } = useI18n();
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = payrollPayslipDeliveryCopyByLocale[locale];
+  const source = searchParams.get("source");
+  const focus = searchParams.get("focus");
+  const focusLabel = focus === "undistributed" ? copy.focusUndistributedLabel : copy.focusAllLabel;
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
@@ -119,6 +124,11 @@ export default function PayrollPayslipDeliveryConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {source === "admin-dashboard" ? (
+          <p className="small muted">
+            {copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {focusLabel}
+          </p>
+        ) : null}
       </header>
 
       <section className="panel-grid">
