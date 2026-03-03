@@ -113,6 +113,7 @@ export default function AdminContractsWorkspace() {
       )
     }
   });
+  const dashboardFocusLabel = decisionQueueOnly ? copy.decisionQueueCountLabel : documentStatusFilter === "SENT" ? copy.pendingResponseQueueLabel : slaRiskFilter === "OVERDUE" ? copy.overdueSlaCountLabel : copy.documentsKpiLabel;
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
@@ -127,6 +128,7 @@ export default function AdminContractsWorkspace() {
           <h1 className="page-title">{copy.title}</h1>
           <p className="page-subtitle">{copy.description}</p>
           {analyticsSource === "admin-analytics" ? <p className="small muted">{copy.analyticsSourceBanner} · {copy.analyticsSourceFocusLabel}: {analyticsFocusLabel}</p> : null}
+          {analyticsSource === "admin-dashboard" ? <p className="small muted">{copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {dashboardFocusLabel}</p> : null}
           <div className="contract-action-row">
             <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">
               {copy.openTemplateBuilderAction}
