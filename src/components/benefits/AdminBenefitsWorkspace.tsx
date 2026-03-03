@@ -153,7 +153,7 @@ export default function AdminBenefitsWorkspace() {
     }
 
     const catalogQuery = buildBenefitWorkspaceQuery({ organizationId });
-    const requestsQuery = buildBenefitWorkspaceQuery({ organizationId });
+    const requestsQuery = buildBenefitWorkspaceQuery({ organizationId, sort: "pending_priority" });
 
     const [catalogRes, requestsRes] = await Promise.all([
       callApi(copy.refreshAction, "GET", `/api/benefits/catalog${catalogQuery}`),

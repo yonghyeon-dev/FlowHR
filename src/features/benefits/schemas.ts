@@ -2,6 +2,7 @@
 
 const benefitCatalogStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 const benefitRequestStatusSchema = z.enum(["SUBMITTED", "APPROVED", "REJECTED", "CANCELED"]);
+const benefitRequestSortSchema = z.enum(["updated_desc", "pending_priority"]);
 
 export const listBenefitCatalogQuerySchema = z.object({
   organizationId: z.string().trim().optional(),
@@ -24,7 +25,8 @@ export const updateBenefitCatalogStatusSchema = z.object({
 export const listBenefitRequestsQuerySchema = z.object({
   organizationId: z.string().trim().optional(),
   employeeId: z.string().trim().optional(),
-  status: benefitRequestStatusSchema.or(z.literal("all")).optional()
+  status: benefitRequestStatusSchema.or(z.literal("all")).optional(),
+  sort: benefitRequestSortSchema.optional()
 });
 
 export const createBenefitRequestSchema = z.object({

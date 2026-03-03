@@ -44,11 +44,11 @@ async function run() {
   assert.match(adminView, /copy\.requestStatus\.SUBMITTED/);
   assert.match(adminView, /disabled=\{hasPendingSubmitted\}/);
 
-  assert.match(contract, /^version:\s*0\.3\.5/m);
+  assert.match(contract, /^version:\s*0\.3\.6/m);
   assert.match(contract, /deactivate guard for pending submitted requests/);
-  assert.match(api, /version:\s*0\.3\.5/);
+  assert.match(api, /version:\s*0\.3\.6/);
   assert.match(api, /Pending submitted requests block deactivation/);
-  assert.match(testCases, /Contract v0\.3\.5/);
+  assert.match(testCases, /Contract v0\.3\.6/);
   assert.match(testCases, /deactivate an item with submitted pending requests/);
 
   assert.match(workItem, /WI-0819/i);

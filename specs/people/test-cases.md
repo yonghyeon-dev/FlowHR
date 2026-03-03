@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.3.5)
+# People Test Cases (Contract v0.3.6)
 
 ## Organization
 
@@ -55,4 +55,5 @@
 - Benefits request create returns `409` on benefit organization mismatch.
 - Benefits request decision returns `409` when request status is not `SUBMITTED`.
 - Benefits catalog status update returns `409` when trying to deactivate an item with submitted pending requests.
+- Benefits request list supports `sort=pending_priority` and returns submitted requests first (oldest submitted first).
 
