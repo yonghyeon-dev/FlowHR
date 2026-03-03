@@ -27,11 +27,106 @@ export const contractDocumentStatusFilters: ContractDocumentStatus[] = [
 type UseAdminContractsDocumentFiltersInput = {
   documents: AdminContractDocument[];
   locale: FlowLocale;
+  initialFilters?: {
+    searchQuery?: string;
+    statusFilter?: ContractDocumentStatusFilter;
+    expirationWindowDays?: ContractDocumentExpirationWindow;
+    slaRiskFilter?: ContractDocumentSlaRiskFilter;
+    renewalCandidateOnly?: boolean;
+    decisionQueueOnly?: boolean;
+    nextStepFilter?: ContractDocumentNextStepFilter;
+  };
 };
 
 const renewalCandidateStatuses = new Set<ContractDocumentStatus>(["SIGNED", "REJECTED", "EXPIRED"]);
 const slaTrackedStatuses = new Set<ContractDocumentStatus>(["DRAFT", "APPROVAL_REQUESTED", "SENT"]);
 const SLA_DUE_SOON_WINDOW_DAYS = 3;
+const contractDocumentExpirationWindows: ContractDocumentExpirationWindow[] = [
+  "ALL",
+  "7",
+  "14",
+  "30"
+];
+const contractDocumentSlaRiskFilters: ContractDocumentSlaRiskFilter[] = [
+  "ALL",
+  "DUE_SOON",
+  "OVERDUE"
+];
+const contractDocumentNextStepFilters: ContractDocumentNextStepFilter[] = [
+  "ALL",
+  "REQUEST_APPROVAL",
+  "APPROVE_OR_REJECT",
+  "SEND_DOCUMENT",
+  "WAIT_EMPLOYEE_RESPONSE",
+  "RENEW_DOCUMENT",
+  "NO_ACTION"
+];
+
+export function parseContractDocumentSearchQuery(value: string | null) {
+  return (value ?? "").trim();
+}
+
+export function normalizeContractDocumentStatusFilter(
+  value: string | null
+): ContractDocumentStatusFilter {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (normalized === "ALL") {
+    return "ALL";
+  }
+  if (
+    contractDocumentStatusFilters.includes(normalized as ContractDocumentStatus)
+  ) {
+    return normalized as ContractDocumentStatus;
+  }
+  return "ALL";
+}
+
+export function normalizeContractDocumentExpirationWindow(
+  value: string | null
+): ContractDocumentExpirationWindow {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (
+    contractDocumentExpirationWindows.includes(
+      normalized as ContractDocumentExpirationWindow
+    )
+  ) {
+    return normalized as ContractDocumentExpirationWindow;
+  }
+  return "ALL";
+}
+
+export function normalizeContractDocumentSlaRiskFilter(
+  value: string | null
+): ContractDocumentSlaRiskFilter {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (
+    contractDocumentSlaRiskFilters.includes(
+      normalized as ContractDocumentSlaRiskFilter
+    )
+  ) {
+    return normalized as ContractDocumentSlaRiskFilter;
+  }
+  return "ALL";
+}
+
+export function normalizeContractDocumentNextStepFilter(
+  value: string | null
+): ContractDocumentNextStepFilter {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (
+    contractDocumentNextStepFilters.includes(
+      normalized as ContractDocumentNextStepFilter
+    )
+  ) {
+    return normalized as ContractDocumentNextStepFilter;
+  }
+  return "ALL";
+}
+
+export function parseContractBooleanFilter(value: string | null) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
+}
 
 function toExpiryLimitMillis(windowDays: ContractDocumentExpirationWindow, nowMillis: number) {
   if (windowDays === "ALL") {
@@ -94,15 +189,34 @@ function isOverdueSlaRisk(document: AdminContractDocument, nowMillis: number = D
 
 export function useAdminContractsDocumentFilters({
   documents,
-  locale
+  locale,
+  initialFilters
 }: UseAdminContractsDocumentFiltersInput) {
-  const [documentSearchQuery, setDocumentSearchQuery] = useState("");
-  const [documentStatusFilter, setDocumentStatusFilter] = useState<ContractDocumentStatusFilter>("ALL");
-  const [expirationWindowDays, setExpirationWindowDays] = useState<ContractDocumentExpirationWindow>("ALL");
-  const [slaRiskFilter, setSlaRiskFilter] = useState<ContractDocumentSlaRiskFilter>("ALL");
-  const [renewalCandidateOnly, setRenewalCandidateOnly] = useState(false);
-  const [decisionQueueOnly, setDecisionQueueOnly] = useState(false);
-  const [nextStepFilter, setNextStepFilter] = useState<ContractDocumentNextStepFilter>("ALL");
+  const [documentSearchQuery, setDocumentSearchQuery] = useState(
+    initialFilters?.searchQuery ?? ""
+  );
+  const [documentStatusFilter, setDocumentStatusFilter] =
+    useState<ContractDocumentStatusFilter>(
+      initialFilters?.statusFilter ?? "ALL"
+    );
+  const [expirationWindowDays, setExpirationWindowDays] =
+    useState<ContractDocumentExpirationWindow>(
+      initialFilters?.expirationWindowDays ?? "ALL"
+    );
+  const [slaRiskFilter, setSlaRiskFilter] =
+    useState<ContractDocumentSlaRiskFilter>(
+      initialFilters?.slaRiskFilter ?? "ALL"
+    );
+  const [renewalCandidateOnly, setRenewalCandidateOnly] = useState(
+    initialFilters?.renewalCandidateOnly ?? false
+  );
+  const [decisionQueueOnly, setDecisionQueueOnly] = useState(
+    initialFilters?.decisionQueueOnly ?? false
+  );
+  const [nextStepFilter, setNextStepFilter] =
+    useState<ContractDocumentNextStepFilter>(
+      initialFilters?.nextStepFilter ?? "ALL"
+    );
 
   const nowMillis = Date.now();
   const expirationLimitMillis = toExpiryLimitMillis(expirationWindowDays, nowMillis);
