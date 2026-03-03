@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { type KpiCopy } from "@/components/admin-kpi/copy";
 
 type EmployeeLite = {
@@ -118,10 +120,72 @@ type AdminOnboardingKpiPanelProps = {
   snapshot: OnboardingKpiSnapshot;
 };
 
+type OnboardingPriorityAction = {
+  href: string;
+  label: string;
+  reason: string;
+};
+
+type OnboardingQuickAction = {
+  href: string;
+  label: string;
+};
+
+function resolveOnboardingPriorityAction(
+  snapshot: OnboardingKpiSnapshot,
+  copy: KpiCopy
+): OnboardingPriorityAction {
+  if (snapshot.pendingContractResponseCount > 0) {
+    return {
+      href: "/admin/contracts?status=SENT&focus=pending-response",
+      label: copy.onboardingPanel.actionOpenPendingContractResponses,
+      reason: copy.onboardingPanel.priorityReasonContractResponses
+    };
+  }
+  if (snapshot.pendingInviteCount > 0) {
+    return {
+      href: "/admin/onboarding",
+      label: copy.onboardingPanel.actionOpenOnboardingWorkspace,
+      reason: copy.onboardingPanel.priorityReasonInvites
+    };
+  }
+  if (snapshot.readinessPercent < 100) {
+    return {
+      href: "/admin/onboarding",
+      label: copy.onboardingPanel.actionOpenOnboardingWorkspace,
+      reason: copy.onboardingPanel.priorityReasonReadiness
+    };
+  }
+  return {
+    href: "/admin/onboarding",
+    label: copy.onboardingPanel.actionOpenOnboardingWorkspace,
+    reason: copy.onboardingPanel.priorityReasonClear
+  };
+}
+
+function buildOnboardingQuickActions(copy: KpiCopy): OnboardingQuickAction[] {
+  return [
+    {
+      href: "/admin/onboarding",
+      label: copy.onboardingPanel.actionOpenOnboardingWorkspace
+    },
+    {
+      href: "/admin/contracts?status=SENT&focus=pending-response",
+      label: copy.onboardingPanel.actionOpenPendingContractResponses
+    },
+    {
+      href: "/admin/people",
+      label: copy.onboardingPanel.actionOpenPeopleWorkspace
+    }
+  ];
+}
+
 export function AdminOnboardingKpiPanel({
   copy,
   snapshot
 }: AdminOnboardingKpiPanelProps) {
+  const priorityAction = resolveOnboardingPriorityAction(snapshot, copy);
+  const quickActions = buildOnboardingQuickActions(copy);
   return (
     <article className="panel">
       <h2>{copy.onboardingPanel.title}</h2>
@@ -153,6 +217,27 @@ export function AdminOnboardingKpiPanel({
           <small>{copy.onboardingPanel.readinessHint}</small>
         </article>
       </div>
+      <section style={{ marginTop: 12 }}>
+        <p className="small muted">{copy.onboardingPanel.priorityActionLabel}</p>
+        <p className="small" style={{ marginTop: 4 }}>
+          {priorityAction.reason}
+        </p>
+        <div className="actions" style={{ marginTop: 8 }}>
+          <Link href={priorityAction.href} className="btn btn-primary btn-small">
+            {priorityAction.label}
+          </Link>
+        </div>
+        <p className="small muted" style={{ marginTop: 10 }}>
+          {copy.onboardingPanel.quickActionsLabel}
+        </p>
+        <div className="actions" style={{ marginTop: 6 }}>
+          {quickActions.map((action) => (
+            <Link key={action.href} href={action.href} className="btn btn-secondary btn-small">
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </section>
     </article>
   );
 }
