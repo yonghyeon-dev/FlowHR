@@ -139,6 +139,7 @@ export type KpiCopy = {
     actionOpenDecisionQueue: string;
     actionOpenPendingResponseQueue: string;
     actionOpenSlaOverdueQueue: string;
+    actionOpenRenewalCandidateQueue: string;
     priorityReasonSlaOverdue: string;
     priorityReasonPendingResponse: string;
     priorityReasonDecisionQueue: string;
@@ -330,6 +331,7 @@ const defaultCopy: KpiCopy = {
     actionOpenDecisionQueue: "Open decision queue",
     actionOpenPendingResponseQueue: "Open pending response queue",
     actionOpenSlaOverdueQueue: "Open SLA overdue queue",
+    actionOpenRenewalCandidateQueue: "Open renewal candidate queue",
     priorityReasonSlaOverdue: "SLA overdue contracts exist. Resolve overdue documents first.",
     priorityReasonPendingResponse: "Employee responses are pending. Follow up response queue first.",
     priorityReasonDecisionQueue: "Decision queue is waiting. Continue request/approval/send workflow.",
@@ -521,6 +523,7 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       actionOpenDecisionQueue: "의사결정 큐 열기",
       actionOpenPendingResponseQueue: "응답 대기 큐 열기",
       actionOpenSlaOverdueQueue: "SLA 초과 큐 열기",
+      actionOpenRenewalCandidateQueue: "갱신 후보 큐 열기",
       priorityReasonSlaOverdue: "SLA 초과 계약이 있습니다. 초과 문서부터 우선 처리하세요.",
       priorityReasonPendingResponse: "직원 응답 대기가 남아 있습니다. 응답 대기 큐를 먼저 확인하세요.",
       priorityReasonDecisionQueue: "의사결정 대기 계약이 있습니다. 요청/승인/발송 흐름을 이어가세요.",
