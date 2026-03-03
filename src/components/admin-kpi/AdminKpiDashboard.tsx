@@ -663,10 +663,16 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       {analyticsMode && contractKpi ? (
         <AdminContractKpiPanel copy={copy} snapshot={contractKpi} />
       ) : null}
-      {analyticsMode && benefitsKpi ? <AdminBenefitsKpiPanel copy={copy} snapshot={benefitsKpi} /> : null}
+      {analyticsMode && benefitsKpi ? (
+        <AdminBenefitsKpiPanel copy={copy} snapshot={benefitsKpi} analyticsFocusMetric={focusMetric} />
+      ) : null}
       {analyticsMode && onboardingKpi ? <AdminOnboardingKpiPanel copy={copy} snapshot={onboardingKpi} /> : null}
-      {analyticsMode && recruitmentKpi ? <AdminRecruitmentKpiPanel copy={copy} snapshot={recruitmentKpi} /> : null}
-      {analyticsMode && noticesKpi ? <AdminNoticesKpiPanel copy={copy} snapshot={noticesKpi} /> : null}
+      {analyticsMode && recruitmentKpi ? (
+        <AdminRecruitmentKpiPanel copy={copy} snapshot={recruitmentKpi} analyticsFocusMetric={focusMetric} />
+      ) : null}
+      {analyticsMode && noticesKpi ? (
+        <AdminNoticesKpiPanel copy={copy} snapshot={noticesKpi} analyticsFocusMetric={focusMetric} />
+      ) : null}
       <section className="panel-grid">
         <AdminKpiTrendPanel copy={copy} rows={visibleTrendRows} />
         {showDevTools ? <AdminKpiLogsPanel copy={copy} logs={logs} /> : null}

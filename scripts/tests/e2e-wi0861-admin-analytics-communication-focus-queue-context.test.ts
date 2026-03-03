@@ -26,47 +26,49 @@ function run() {
   );
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(noticesPanel, /function withAnalyticsSourceContext\(href: string, focusMetric\?: string\)/);
-  assert.match(noticesPanel, /focusMetric=\$\{focusMetric\}/);
+  assert.match(noticesPanel, /function withAnalyticsSourceContext/);
+  assert.match(noticesPanel, /contextParams\.set\("focusMetric", options\.focusMetric\)/);
   assert.match(
     noticesPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/notices\?status=PUBLISHED&risk=no-read",\s*"noticeUnreadAging3dCount"\s*\)/
+    /focusMetric:\s*"noticeUnreadAging3dCount"/
   );
   assert.match(
     noticesPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/notices\?status=PUBLISHED&risk=no-read",\s*"noticeNoReadCount"\s*\)/
+    /focusMetric:\s*"noticeNoReadCount"/
   );
   assert.match(
     noticesPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/notices",\s*"noticePublishedCount"\s*\)/
+    /focusMetric:\s*"noticePublishedCount"/
   );
 
-  assert.match(benefitsPanel, /function withAnalyticsSourceContext\(href: string, focusMetric\?: string\)/);
+  assert.match(benefitsPanel, /function withAnalyticsSourceContext/);
+  assert.match(benefitsPanel, /contextParams\.set\("focusMetric", options\.focusMetric\)/);
   assert.match(
     benefitsPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/benefits\?status=SUBMITTED&risk=pending_3d",\s*"benefitsPendingAging3dCount"\s*\)/
+    /focusMetric:\s*"benefitsPendingAging3dCount"/
   );
   assert.match(
     benefitsPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/benefits\?status=SUBMITTED&risk=over_limit",\s*"benefitsOverLimitSubmittedCount"\s*\)/
+    /focusMetric:\s*"benefitsOverLimitSubmittedCount"/
   );
   assert.match(
     benefitsPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/benefits",\s*"benefitsSubmittedCount"\s*\)/
+    /focusMetric:\s*"benefitsSubmittedCount"/
   );
 
-  assert.match(recruitmentPanel, /function withAnalyticsSourceContext\(href: string, focusMetric\?: string\)/);
+  assert.match(recruitmentPanel, /function withAnalyticsSourceContext/);
+  assert.match(recruitmentPanel, /contextParams\.set\("focusMetric", options\.focusMetric\)/);
   assert.match(
     recruitmentPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/recruitment\?risk=stalled_7d",\s*"recruitmentStalledReferral7dCount"\s*\)/
+    /focusMetric:\s*"recruitmentStalledReferral7dCount"/
   );
   assert.match(
     recruitmentPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/recruitment\?stage=SUBMITTED",\s*"recruitmentSubmittedReferralCount"\s*\)/
+    /focusMetric:\s*"recruitmentSubmittedReferralCount"/
   );
   assert.match(
     recruitmentPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/recruitment",\s*"recruitmentActiveReferralCount"\s*\)/
+    /focusMetric:\s*"recruitmentActiveReferralCount"/
   );
 
   assert.match(noticesWorkspace, /resolveNoticeAnalyticsFocusLabel/);

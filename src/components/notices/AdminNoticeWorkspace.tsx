@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 import { resolveNoticeWorkspaceCopy } from "@/components/notices/copy";
 import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceView";
 
@@ -11,6 +12,36 @@ type NoticeApiSummary = { total: number; draft: number; scheduled: number; publi
 type NoticeApiLog = { id: number; action: string; status: number; ok: boolean; at: string };
 type NoticeAudienceFilter = "all" | "employees" | "admins";
 const DEFAULT_SUMMARY: NoticeApiSummary = { total: 0, draft: 0, scheduled: 0, published: 0 };
+const adminAnalyticsFocusMetricSet = new Set<AdminKpiFocusMetric>([
+  "all",
+  "pendingApprovals",
+  "stalledApprovals",
+  "attendanceApprovalRate",
+  "leaveApprovedDays",
+  "payrollConfirmedRate",
+  "contractDecisionQueueCount",
+  "contractSlaOverdueCount"
+]);
+
+function normalizeAnalyticsFocusMetric(value: string | null): AdminKpiFocusMetric | null {
+  if (!value) {
+    return null;
+  }
+  if (adminAnalyticsFocusMetricSet.has(value as AdminKpiFocusMetric)) {
+    return value as AdminKpiFocusMetric;
+  }
+  return null;
+}
+
+function resolveAnalyticsBackHref(source: string | null, analyticsFocusMetric: AdminKpiFocusMetric | null) {
+  if (source !== "admin-analytics") {
+    return "";
+  }
+  if (!analyticsFocusMetric || analyticsFocusMetric === "all") {
+    return "/admin/analytics";
+  }
+  return `/admin/analytics?focus=${encodeURIComponent(analyticsFocusMetric)}`;
+}
 
 function parseSummary(payload: unknown): NoticeApiSummary {
   const summary = (payload as { summary?: Partial<NoticeApiSummary> } | null)?.summary;
@@ -113,6 +144,7 @@ export default function AdminNoticeWorkspace() {
   const searchParams = useSearchParams();
   const copy = resolveNoticeWorkspaceCopy(locale);
   const source = searchParams.get("source");
+  const analyticsFocusMetric = normalizeAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
   const analyticsFocusLabel = resolveNoticeAnalyticsFocusLabel(
     locale === "ko" ? "ko" : "en",
     searchParams.get("focusMetric"),
@@ -129,7 +161,7 @@ export default function AdminNoticeWorkspace() {
           ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
           : `Opened from admin analytics.${analyticsFocusLabel ? ` · Focus queue: ${analyticsFocusLabel}` : ""}`
       : "";
-  const analyticsBackHref = source === "admin-analytics" ? "/admin/analytics" : "";
+  const analyticsBackHref = resolveAnalyticsBackHref(source, analyticsFocusMetric);
   const analyticsBackLabel = locale === "ko" ? "분석으로 돌아가기" : "Back to analytics";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);

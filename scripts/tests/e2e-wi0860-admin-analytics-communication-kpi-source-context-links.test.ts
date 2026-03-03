@@ -27,33 +27,42 @@ function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(noticesPanel, /function withAnalyticsSourceContext/);
-  assert.match(noticesPanel, /source=admin-analytics/);
+  assert.ok(
+    /source=admin-analytics/.test(noticesPanel) ||
+      /source:\s*"admin-analytics"/.test(noticesPanel)
+  );
   assert.match(
     noticesPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/notices\?status=PUBLISHED&risk=no-read"\s*(,\s*"[^"]+")?\s*\)/
+    /withAnalyticsSourceContext\(\s*"\/admin\/notices\?status=PUBLISHED&risk=no-read"/
   );
-  assert.match(noticesPanel, /withAnalyticsSourceContext\(\s*"\/admin\/notices"\s*(,\s*"[^"]+")?\s*\)/);
+  assert.match(noticesPanel, /withAnalyticsSourceContext\(\s*"\/admin\/notices"/);
 
   assert.match(benefitsPanel, /function withAnalyticsSourceContext/);
-  assert.match(benefitsPanel, /source=admin-analytics/);
-  assert.match(
-    benefitsPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/benefits\?status=SUBMITTED&risk=pending_3d"\s*(,\s*"[^"]+")?\s*\)/
+  assert.ok(
+    /source=admin-analytics/.test(benefitsPanel) ||
+      /source:\s*"admin-analytics"/.test(benefitsPanel)
   );
   assert.match(
     benefitsPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/benefits\?status=SUBMITTED&risk=over_limit"\s*(,\s*"[^"]+")?\s*\)/
+    /withAnalyticsSourceContext\(\s*"\/admin\/benefits\?status=SUBMITTED&risk=pending_3d"/
+  );
+  assert.match(
+    benefitsPanel,
+    /withAnalyticsSourceContext\(\s*"\/admin\/benefits\?status=SUBMITTED&risk=over_limit"/
   );
 
   assert.match(recruitmentPanel, /function withAnalyticsSourceContext/);
-  assert.match(recruitmentPanel, /source=admin-analytics/);
-  assert.match(
-    recruitmentPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/recruitment\?risk=stalled_7d"\s*(,\s*"[^"]+")?\s*\)/
+  assert.ok(
+    /source=admin-analytics/.test(recruitmentPanel) ||
+      /source:\s*"admin-analytics"/.test(recruitmentPanel)
   );
   assert.match(
     recruitmentPanel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/recruitment\?stage=SUBMITTED"\s*(,\s*"[^"]+")?\s*\)/
+    /withAnalyticsSourceContext\(\s*"\/admin\/recruitment\?risk=stalled_7d"/
+  );
+  assert.match(
+    recruitmentPanel,
+    /withAnalyticsSourceContext\(\s*"\/admin\/recruitment\?stage=SUBMITTED"/
   );
 
   assert.match(noticesWorkspace, /source === "admin-analytics"/);

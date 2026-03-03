@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { type KpiCopy } from "@/components/admin-kpi/copy";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 
 type BenefitCatalogLite = {
   id: string;
@@ -81,6 +82,7 @@ export function buildBenefitsKpiSnapshot(
 type AdminBenefitsKpiPanelProps = {
   copy: KpiCopy;
   snapshot: BenefitsKpiSnapshot;
+  analyticsFocusMetric?: AdminKpiFocusMetric;
 };
 
 type BenefitsPriorityAction = {
@@ -94,21 +96,31 @@ type BenefitsQuickAction = {
   label: string;
 };
 
-function withAnalyticsSourceContext(href: string, focusMetric?: string): string {
+function withAnalyticsSourceContext(
+  href: string,
+  options?: { focusMetric?: string; analyticsFocusMetric?: AdminKpiFocusMetric }
+): string {
+  const contextParams = new URLSearchParams({ source: "admin-analytics" });
+  if (options?.focusMetric) {
+    contextParams.set("focusMetric", options.focusMetric);
+  }
+  if (options?.analyticsFocusMetric && options.analyticsFocusMetric !== "all") {
+    contextParams.set("analyticsFocus", options.analyticsFocusMetric);
+  }
   const separator = href.includes("?") ? "&" : "?";
-  const focusQuery = focusMetric ? `&focusMetric=${focusMetric}` : "";
-  return `${href}${separator}source=admin-analytics${focusQuery}`;
+  return `${href}${separator}${contextParams.toString()}`;
 }
 
 function resolveBenefitsPriorityAction(
   snapshot: BenefitsKpiSnapshot,
-  copy: KpiCopy
+  copy: KpiCopy,
+  analyticsFocusMetric?: AdminKpiFocusMetric
 ): BenefitsPriorityAction {
   if (snapshot.pendingAging3dCount > 0) {
     return {
       href: withAnalyticsSourceContext(
         "/admin/benefits?status=SUBMITTED&risk=pending_3d",
-        "benefitsPendingAging3dCount"
+        { focusMetric: "benefitsPendingAging3dCount", analyticsFocusMetric }
       ),
       label: copy.benefitsPanel.actionOpenPendingQueue,
       reason: copy.benefitsPanel.priorityReasonAging
@@ -118,7 +130,7 @@ function resolveBenefitsPriorityAction(
     return {
       href: withAnalyticsSourceContext(
         "/admin/benefits?status=SUBMITTED&risk=over_limit",
-        "benefitsOverLimitSubmittedCount"
+        { focusMetric: "benefitsOverLimitSubmittedCount", analyticsFocusMetric }
       ),
       label: copy.benefitsPanel.actionOpenOverLimitQueue,
       reason: copy.benefitsPanel.priorityReasonOverLimit
@@ -126,35 +138,47 @@ function resolveBenefitsPriorityAction(
   }
   if (snapshot.submittedCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED", "benefitsSubmittedCount"),
+      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED", {
+        focusMetric: "benefitsSubmittedCount",
+        analyticsFocusMetric
+      }),
       label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
       reason: copy.benefitsPanel.priorityReasonSubmitted
     };
   }
   return {
-    href: withAnalyticsSourceContext("/admin/benefits", "benefitsSubmittedCount"),
+    href: withAnalyticsSourceContext("/admin/benefits", {
+      focusMetric: "benefitsSubmittedCount",
+      analyticsFocusMetric
+    }),
     label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
     reason: copy.benefitsPanel.priorityReasonClear
   };
 }
 
-function buildBenefitsQuickActions(copy: KpiCopy): BenefitsQuickAction[] {
+function buildBenefitsQuickActions(
+  copy: KpiCopy,
+  analyticsFocusMetric?: AdminKpiFocusMetric
+): BenefitsQuickAction[] {
   return [
     {
-      href: withAnalyticsSourceContext("/admin/benefits", "benefitsSubmittedCount"),
+      href: withAnalyticsSourceContext("/admin/benefits", {
+        focusMetric: "benefitsSubmittedCount",
+        analyticsFocusMetric
+      }),
       label: copy.benefitsPanel.actionOpenBenefitsWorkspace
     },
     {
       href: withAnalyticsSourceContext(
         "/admin/benefits?status=SUBMITTED&risk=pending_3d",
-        "benefitsPendingAging3dCount"
+        { focusMetric: "benefitsPendingAging3dCount", analyticsFocusMetric }
       ),
       label: copy.benefitsPanel.actionOpenPendingQueue
     },
     {
       href: withAnalyticsSourceContext(
         "/admin/benefits?status=SUBMITTED&risk=over_limit",
-        "benefitsOverLimitSubmittedCount"
+        { focusMetric: "benefitsOverLimitSubmittedCount", analyticsFocusMetric }
       ),
       label: copy.benefitsPanel.actionOpenOverLimitQueue
     }
@@ -163,10 +187,11 @@ function buildBenefitsQuickActions(copy: KpiCopy): BenefitsQuickAction[] {
 
 export function AdminBenefitsKpiPanel({
   copy,
-  snapshot
+  snapshot,
+  analyticsFocusMetric
 }: AdminBenefitsKpiPanelProps) {
-  const priorityAction = resolveBenefitsPriorityAction(snapshot, copy);
-  const quickActions = buildBenefitsQuickActions(copy);
+  const priorityAction = resolveBenefitsPriorityAction(snapshot, copy, analyticsFocusMetric);
+  const quickActions = buildBenefitsQuickActions(copy, analyticsFocusMetric);
   return (
     <article className="panel">
       <h2>{copy.benefitsPanel.title}</h2>
