@@ -7,6 +7,7 @@ export type RecruitmentReferralStage =
   | "HIRED"
   | "REJECTED"
   | "WITHDRAWN";
+export type RecruitmentReferralSort = "updated_desc" | "stalled_priority";
 
 export type RecruitmentOpeningItem = {
   id: string;

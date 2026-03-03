@@ -147,7 +147,7 @@ export default function AdminRecruitmentWorkspace() {
       return;
     }
     const openingQuery = buildQuery({ organizationId });
-    const referralQuery = buildQuery({ organizationId });
+    const referralQuery = buildQuery({ organizationId, sort: "stalled_priority" });
     const [openingsRes, referralsRes] = await Promise.all([
       callApi("GET", `/api/recruitment/openings${openingQuery}`),
       callApi("GET", `/api/recruitment/referrals${referralQuery}`)

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.6
+  version: 0.3.7
 paths:
   /people/organizations:
     get:
@@ -202,6 +202,28 @@ paths:
           description: History listed
         "404":
           description: Employee not found
+  /recruitment/referrals:
+    get:
+      summary: List recruitment referrals
+      parameters:
+        - in: query
+          name: sort
+          required: false
+          schema:
+            type: string
+            enum:
+              - updated_desc
+              - stalled_priority
+      responses:
+        "200":
+          description: Referrals listed
+    post:
+      summary: Create recruitment referral
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Opening closed or duplicate active referral
   /benefits/catalog:
     get:
       summary: List benefits catalog

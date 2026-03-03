@@ -28,7 +28,8 @@ export async function GET(request: Request) {
   const parsed = listRecruitmentReferralsQuerySchema.safeParse({
     organizationId: url.searchParams.get("organizationId") ?? undefined,
     referrerEmployeeId: url.searchParams.get("referrerEmployeeId") ?? undefined,
-    stage: url.searchParams.get("stage") ?? undefined
+    stage: url.searchParams.get("stage") ?? undefined,
+    sort: url.searchParams.get("sort") ?? undefined
   });
 
   if (!parsed.success) {
@@ -48,7 +49,8 @@ export async function GET(request: Request) {
   const referrals = await listRecruitmentReferrals({
     organizationId,
     referrerEmployeeId: isReviewer ? parsed.data.referrerEmployeeId : parsed.data.referrerEmployeeId ?? actor?.id,
-    stage: parsed.data.stage
+    stage: parsed.data.stage,
+    sort: parsed.data.sort
   });
 
   return ok({ referrals, summary: summarizeRecruitmentReferrals(referrals) });

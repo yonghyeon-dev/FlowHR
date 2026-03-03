@@ -70,11 +70,11 @@ async function run() {
   assert.match(employeeWorkspaceView, /\{" · "\}/);
   assert.match(copy, /catalogStatusLabel/);
 
-  assert.match(contract, /^version:\s*0\.3\.6/m);
+  assert.match(contract, /^version:\s*0\.3\.7/m);
   assert.match(contract, /path:\s*\/benefits\/catalog\/\{benefitId\}\/status/);
-  assert.match(api, /version:\s*0\.3\.6/);
+  assert.match(api, /version:\s*0\.3\.7/);
   assert.match(api, /\/benefits\/catalog\/\{benefitId\}\/status:/);
-  assert.match(testCases, /Contract v0\.3\.6/);
+  assert.match(testCases, /Contract v0\.3\.7/);
 
   assert.match(workItem, /WI-0817/i);
   assert.match(workItem, /inactive|catalog status|benefits/i);

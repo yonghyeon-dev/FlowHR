@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.6
+version: 0.3.7
 scope:
   in:
     - organization master data (create/read/list)
@@ -13,6 +13,7 @@ scope:
     - benefits catalog status lifecycle controls and inactive-catalog request guard
     - benefits catalog deactivate guard for pending submitted requests
     - benefits request queue priority sorting (`sort=pending_priority`) for submitted-first review ordering
+    - recruitment referral queue priority sorting (`sort=stalled_priority`) for active stalled-referral-first review ordering
   out:
     - multi-tenant enforcement (RLS) across core tables (Phase 1 follow-up)
     - RBAC engine and permission administration UI (Phase 1 follow-up)
@@ -99,6 +100,9 @@ api:
     - method: GET
       path: /benefits/requests
       description: List organization/employee-scoped benefits requests (optional `sort=pending_priority` for submitted-first queue ordering).
+    - method: GET
+      path: /recruitment/referrals
+      description: List organization-scoped recruitment referrals (optional `sort=stalled_priority` for active stalled-referral-first queue ordering).
     - method: POST
       path: /benefits/requests
       description: Submit benefits request (inactive catalog items are rejected).
@@ -170,6 +174,7 @@ test_plan:
     - benefits request decision endpoint rejects non-SUBMITTED requests with invalid_state
     - benefits catalog status endpoint rejects INACTIVE transition while submitted requests remain
     - benefits request list supports `sort=pending_priority` for submitted-first queue ordering
+    - recruitment referral list supports `sort=stalled_priority` for stalled active-referral-first queue ordering
   regression:
     - existing attendance/leave/payroll flows remain unchanged
   authorization:
@@ -202,7 +207,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.6 adds optional benefits request queue sorting (`sort=pending_priority`) while preserving backward compatibility for existing People APIs."
+consumer_impact: "People contract v0.3.7 extends list sorting with optional `sort=stalled_priority` on recruitment referrals while preserving backward compatibility for existing People APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -212,6 +217,7 @@ references:
   - work-items/WI-0817-benefits-catalog-status-lifecycle-and-inactive-guard.md
   - work-items/WI-0819-benefits-catalog-deactivate-pending-guard.md
   - work-items/WI-0820-benefits-request-pending-priority-sort.md
+  - work-items/WI-0821-recruitment-referral-stalled-priority-sort.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent
