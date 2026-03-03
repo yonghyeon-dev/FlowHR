@@ -43,17 +43,17 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         title: "전자문서",
         description: "전자계약, 공지, 복리후생, 채용 화면으로 바로 이동합니다.",
         links: [
-          { href: "/employee/contracts", label: "전자계약" },
+          { href: "/employee/contracts?source=employee-dashboard", label: "전자계약" },
           {
-            href: "/employee/contracts?status=pending_response",
+            href: "/employee/contracts?status=pending_response&source=employee-dashboard",
             label: "계약 응답 필요"
           },
           {
-            href: "/employee/contracts?status=pending_response&deadline=due_soon",
+            href: "/employee/contracts?status=pending_response&deadline=due_soon&source=employee-dashboard",
             label: "계약 기한 임박"
           },
           {
-            href: "/employee/contracts?status=pending_response&deadline=overdue",
+            href: "/employee/contracts?status=pending_response&deadline=overdue&source=employee-dashboard",
             label: "계약 만료/지연"
           },
           { href: "/employee/notices", label: "공지사항" },
@@ -97,17 +97,17 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       title: "Documents",
       description: "Check contracts, notices, benefits queue, and recruitment queue.",
       links: [
-        { href: "/employee/contracts", label: "Contracts" },
+        { href: "/employee/contracts?source=employee-dashboard", label: "Contracts" },
         {
-          href: "/employee/contracts?status=pending_response",
+          href: "/employee/contracts?status=pending_response&source=employee-dashboard",
           label: "Contracts action needed"
         },
         {
-          href: "/employee/contracts?status=pending_response&deadline=due_soon",
+          href: "/employee/contracts?status=pending_response&deadline=due_soon&source=employee-dashboard",
           label: "Contracts due soon"
         },
         {
-          href: "/employee/contracts?status=pending_response&deadline=overdue",
+          href: "/employee/contracts?status=pending_response&deadline=overdue&source=employee-dashboard",
           label: "Contracts overdue"
         },
         { href: "/employee/notices", label: "Notices" },
