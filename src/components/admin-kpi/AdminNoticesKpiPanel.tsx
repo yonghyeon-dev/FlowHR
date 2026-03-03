@@ -58,24 +58,29 @@ type NoticePriorityAction = {
   reason: string;
 };
 
+function withAnalyticsSourceContext(href: string): string {
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}source=admin-analytics`;
+}
+
 function resolveNoticePriorityAction(
   snapshot: NoticeReadCoverageSnapshot,
   copy: KpiCopy
 ): NoticePriorityAction {
   if (snapshot.unreadAging3dCount > 0) {
     return {
-      href: "/admin/notices?status=PUBLISHED&risk=no-read",
+      href: withAnalyticsSourceContext("/admin/notices?status=PUBLISHED&risk=no-read"),
       reason: copy.noticesPanel.priorityReasonAging
     };
   }
   if (snapshot.noReadNoticeCount > 0) {
     return {
-      href: "/admin/notices?status=PUBLISHED&risk=no-read",
+      href: withAnalyticsSourceContext("/admin/notices?status=PUBLISHED&risk=no-read"),
       reason: copy.noticesPanel.priorityReasonNoRead
     };
   }
   return {
-    href: "/admin/notices?status=PUBLISHED",
+    href: withAnalyticsSourceContext("/admin/notices?status=PUBLISHED"),
     reason: copy.noticesPanel.priorityReasonClear
   };
 }
@@ -113,10 +118,13 @@ export function AdminNoticesKpiPanel({ copy, snapshot }: AdminNoticesKpiPanelPro
       <div style={{ marginTop: 8 }}>
         <h3>{copy.noticesPanel.quickActionsLabel}</h3>
         <div className="actions">
-          <Link href="/admin/notices" className="btn btn-secondary btn-small">
+          <Link href={withAnalyticsSourceContext("/admin/notices")} className="btn btn-secondary btn-small">
             {copy.noticesPanel.actionOpenNoticeWorkspace}
           </Link>
-          <Link href="/admin/notices?status=PUBLISHED&risk=no-read" className="btn btn-secondary btn-small">
+          <Link
+            href={withAnalyticsSourceContext("/admin/notices?status=PUBLISHED&risk=no-read")}
+            className="btn btn-secondary btn-small"
+          >
             {copy.noticesPanel.actionOpenNoReadQueue}
           </Link>
         </div>

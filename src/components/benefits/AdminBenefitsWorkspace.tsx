@@ -33,6 +33,10 @@ export default function AdminBenefitsWorkspace() {
       ? locale === "ko"
         ? "관리자 대시보드에서 이동했습니다."
         : "Opened from admin dashboard."
+      : source === "admin-analytics"
+        ? locale === "ko"
+          ? "관리자 분석 대시보드에서 이동했습니다."
+          : "Opened from admin analytics."
       : "";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);

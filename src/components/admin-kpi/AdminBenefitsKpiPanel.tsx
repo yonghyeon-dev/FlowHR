@@ -94,33 +94,38 @@ type BenefitsQuickAction = {
   label: string;
 };
 
+function withAnalyticsSourceContext(href: string): string {
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}source=admin-analytics`;
+}
+
 function resolveBenefitsPriorityAction(
   snapshot: BenefitsKpiSnapshot,
   copy: KpiCopy
 ): BenefitsPriorityAction {
   if (snapshot.pendingAging3dCount > 0) {
     return {
-      href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=pending_3d"),
       label: copy.benefitsPanel.actionOpenPendingQueue,
       reason: copy.benefitsPanel.priorityReasonAging
     };
   }
   if (snapshot.overLimitSubmittedCount > 0) {
     return {
-      href: "/admin/benefits?status=SUBMITTED&risk=over_limit",
+      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=over_limit"),
       label: copy.benefitsPanel.actionOpenOverLimitQueue,
       reason: copy.benefitsPanel.priorityReasonOverLimit
     };
   }
   if (snapshot.submittedCount > 0) {
     return {
-      href: "/admin/benefits?status=SUBMITTED",
+      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED"),
       label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
       reason: copy.benefitsPanel.priorityReasonSubmitted
     };
   }
   return {
-    href: "/admin/benefits",
+    href: withAnalyticsSourceContext("/admin/benefits"),
     label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
     reason: copy.benefitsPanel.priorityReasonClear
   };
@@ -129,15 +134,15 @@ function resolveBenefitsPriorityAction(
 function buildBenefitsQuickActions(copy: KpiCopy): BenefitsQuickAction[] {
   return [
     {
-      href: "/admin/benefits",
+      href: withAnalyticsSourceContext("/admin/benefits"),
       label: copy.benefitsPanel.actionOpenBenefitsWorkspace
     },
     {
-      href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=pending_3d"),
       label: copy.benefitsPanel.actionOpenPendingQueue
     },
     {
-      href: "/admin/benefits?status=SUBMITTED&risk=over_limit",
+      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=over_limit"),
       label: copy.benefitsPanel.actionOpenOverLimitQueue
     }
   ];

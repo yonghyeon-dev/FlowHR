@@ -61,33 +61,38 @@ type RecruitmentQuickAction = {
   label: string;
 };
 
+function withAnalyticsSourceContext(href: string): string {
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}source=admin-analytics`;
+}
+
 function resolveRecruitmentPriorityAction(
   snapshot: RecruitmentKpiSnapshot,
   copy: KpiCopy
 ): RecruitmentPriorityAction {
   if (snapshot.stalledReferral7dCount > 0) {
     return {
-      href: "/admin/recruitment?risk=stalled_7d",
+      href: withAnalyticsSourceContext("/admin/recruitment?risk=stalled_7d"),
       label: copy.recruitmentPanel.actionOpenStalledQueue,
       reason: copy.recruitmentPanel.priorityReasonStalled
     };
   }
   if (snapshot.activeReferralCount > 0) {
     return {
-      href: "/admin/recruitment",
+      href: withAnalyticsSourceContext("/admin/recruitment"),
       label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace,
       reason: copy.recruitmentPanel.priorityReasonActive
     };
   }
   if (snapshot.openOpeningCount > 0) {
     return {
-      href: "/admin/recruitment",
+      href: withAnalyticsSourceContext("/admin/recruitment"),
       label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace,
       reason: copy.recruitmentPanel.priorityReasonOpenings
     };
   }
   return {
-    href: "/admin/recruitment",
+    href: withAnalyticsSourceContext("/admin/recruitment"),
     label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace,
     reason: copy.recruitmentPanel.priorityReasonClear
   };
@@ -96,15 +101,15 @@ function resolveRecruitmentPriorityAction(
 function buildRecruitmentQuickActions(copy: KpiCopy): RecruitmentQuickAction[] {
   return [
     {
-      href: "/admin/recruitment",
+      href: withAnalyticsSourceContext("/admin/recruitment"),
       label: copy.recruitmentPanel.actionOpenRecruitmentWorkspace
     },
     {
-      href: "/admin/recruitment?risk=stalled_7d",
+      href: withAnalyticsSourceContext("/admin/recruitment?risk=stalled_7d"),
       label: copy.recruitmentPanel.actionOpenStalledQueue
     },
     {
-      href: "/admin/recruitment?stage=SUBMITTED",
+      href: withAnalyticsSourceContext("/admin/recruitment?stage=SUBMITTED"),
       label: copy.recruitmentPanel.actionOpenSubmittedQueue
     }
   ];
