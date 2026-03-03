@@ -90,7 +90,7 @@ export default function AdminDashboardPage() {
           0
         ),
         breakdown: isKoLocale
-          ? `의사결정 ${summary.contractDecisionQueueCount} · 응답대기 ${summary.contractPendingResponseCount} · SLA초과 ${summary.contractSlaOverdueCount}`
+          ? `의사결정 ${summary.contractDecisionQueueCount} · 응답 대기 ${summary.contractPendingResponseCount} · SLA 초과 ${summary.contractSlaOverdueCount}`
           : `Decision ${summary.contractDecisionQueueCount} · Pending response ${summary.contractPendingResponseCount} · SLA overdue ${summary.contractSlaOverdueCount}`,
         href: "/admin/contracts"
       }
