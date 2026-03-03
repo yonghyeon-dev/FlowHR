@@ -35,6 +35,8 @@ const copyByLocale = {
     benefitsPendingAction: "복리후생 대기 건 열기",
     benefitsApprovedAction: "복리후생 승인 이력 열기",
     recruitmentAction: "채용 열기",
+    recruitmentStalledAction: "채용 정체 추천 열기",
+    recruitmentSubmittedAction: "채용 신규 추천 열기",
     scheduleAction: "스케줄 열기",
     contractsAction: "전자계약함 열기",
     tenantLabel: "tenant",
@@ -71,6 +73,8 @@ const copyByLocale = {
     benefitsPendingAction: "Open Pending Benefits",
     benefitsApprovedAction: "Open Approved Benefits",
     recruitmentAction: "Open Recruitment",
+    recruitmentStalledAction: "Open Stalled Recruitment",
+    recruitmentSubmittedAction: "Open Submitted Referrals",
     scheduleAction: "Open Schedule",
     contractsAction: "Open Contracts",
     tenantLabel: "tenant",
@@ -94,6 +98,8 @@ export default function EmployeeHomeScreen({
   onOpenBenefitsPending,
   onOpenBenefitsApproved,
   onOpenRecruitment,
+  onOpenRecruitmentStalled,
+  onOpenRecruitmentSubmitted,
   onOpenSchedule,
   onOpenContracts,
   onOpenPayslips
@@ -174,6 +180,12 @@ export default function EmployeeHomeScreen({
             </Pressable>
             <Pressable style={styles.btn} onPress={onOpenRecruitment}>
               <Text style={styles.btnText}>{copy.recruitmentAction}</Text>
+            </Pressable>
+            <Pressable style={styles.btn} onPress={onOpenRecruitmentStalled}>
+              <Text style={styles.btnText}>{copy.recruitmentStalledAction}</Text>
+            </Pressable>
+            <Pressable style={styles.btn} onPress={onOpenRecruitmentSubmitted}>
+              <Text style={styles.btnText}>{copy.recruitmentSubmittedAction}</Text>
             </Pressable>
             <Pressable style={styles.btn} onPress={onOpenSchedule}>
               <Text style={styles.btnText}>{copy.scheduleAction}</Text>
