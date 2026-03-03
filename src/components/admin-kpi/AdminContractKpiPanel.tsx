@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { type KpiCopy } from "@/components/admin-kpi/copy";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 
 export type ContractKpiSnapshot = {
   decisionQueueCount: number;
@@ -30,6 +31,7 @@ export function buildContractKpiSnapshot(
 type AdminContractKpiPanelProps = {
   copy: KpiCopy;
   snapshot: ContractKpiSnapshot;
+  analyticsFocusMetric?: AdminKpiFocusMetric;
 };
 
 type ContractPriorityAction = {
@@ -43,21 +45,31 @@ type ContractQuickAction = {
   label: string;
 };
 
-function withAnalyticsSourceContext(href: string, focusMetric?: string): string {
+function withAnalyticsSourceContext(
+  href: string,
+  options?: { focusMetric?: string; analyticsFocusMetric?: AdminKpiFocusMetric }
+): string {
+  const contextParams = new URLSearchParams({ source: "admin-analytics" });
+  if (options?.focusMetric) {
+    contextParams.set("focusMetric", options.focusMetric);
+  }
+  if (options?.analyticsFocusMetric && options.analyticsFocusMetric !== "all") {
+    contextParams.set("analyticsFocus", options.analyticsFocusMetric);
+  }
   const separator = href.includes("?") ? "&" : "?";
-  const focusQuery = focusMetric ? `&focusMetric=${focusMetric}` : "";
-  return `${href}${separator}source=admin-analytics${focusQuery}`;
+  return `${href}${separator}${contextParams.toString()}`;
 }
 
 function resolveContractPriorityAction(
   snapshot: ContractKpiSnapshot,
-  copy: KpiCopy
+  copy: KpiCopy,
+  analyticsFocusMetric?: AdminKpiFocusMetric
 ): ContractPriorityAction {
   if (snapshot.slaOverdueCount > 0) {
     return {
       href: withAnalyticsSourceContext(
         "/admin/contracts?slaRisk=OVERDUE",
-        "contractSlaOverdueCount"
+        { focusMetric: "contractSlaOverdueCount", analyticsFocusMetric }
       ),
       label: copy.contractPanel.actionOpenSlaOverdueQueue,
       reason: copy.contractPanel.priorityReasonSlaOverdue
@@ -65,7 +77,7 @@ function resolveContractPriorityAction(
   }
   if (snapshot.pendingResponseCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/contracts?status=SENT"),
+      href: withAnalyticsSourceContext("/admin/contracts?status=SENT", { analyticsFocusMetric }),
       label: copy.contractPanel.actionOpenPendingResponseQueue,
       reason: copy.contractPanel.priorityReasonPendingResponse
     };
@@ -74,7 +86,7 @@ function resolveContractPriorityAction(
     return {
       href: withAnalyticsSourceContext(
         "/admin/contracts?decisionQueueOnly=true",
-        "contractDecisionQueueCount"
+        { focusMetric: "contractDecisionQueueCount", analyticsFocusMetric }
       ),
       label: copy.contractPanel.actionOpenDecisionQueue,
       reason: copy.contractPanel.priorityReasonDecisionQueue
@@ -82,44 +94,51 @@ function resolveContractPriorityAction(
   }
   if (snapshot.renewalCandidateCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/contracts?renewalCandidateOnly=true"),
+      href: withAnalyticsSourceContext("/admin/contracts?renewalCandidateOnly=true", {
+        analyticsFocusMetric
+      }),
       label: copy.contractPanel.actionOpenRenewalCandidateQueue,
       reason: copy.contractPanel.priorityReasonRenewal
     };
   }
   return {
-    href: withAnalyticsSourceContext("/admin/contracts"),
+    href: withAnalyticsSourceContext("/admin/contracts", { analyticsFocusMetric }),
     label: copy.contractPanel.actionOpenContractsWorkspace,
     reason: copy.contractPanel.priorityReasonClear
   };
 }
 
-function buildContractQuickActions(copy: KpiCopy): ContractQuickAction[] {
+function buildContractQuickActions(
+  copy: KpiCopy,
+  analyticsFocusMetric?: AdminKpiFocusMetric
+): ContractQuickAction[] {
   return [
     {
-      href: withAnalyticsSourceContext("/admin/contracts"),
+      href: withAnalyticsSourceContext("/admin/contracts", { analyticsFocusMetric }),
       label: copy.contractPanel.actionOpenContractsWorkspace
     },
     {
       href: withAnalyticsSourceContext(
         "/admin/contracts?decisionQueueOnly=true",
-        "contractDecisionQueueCount"
+        { focusMetric: "contractDecisionQueueCount", analyticsFocusMetric }
       ),
       label: copy.contractPanel.actionOpenDecisionQueue
     },
     {
-      href: withAnalyticsSourceContext("/admin/contracts?status=SENT"),
+      href: withAnalyticsSourceContext("/admin/contracts?status=SENT", { analyticsFocusMetric }),
       label: copy.contractPanel.actionOpenPendingResponseQueue
     },
     {
       href: withAnalyticsSourceContext(
         "/admin/contracts?slaRisk=OVERDUE",
-        "contractSlaOverdueCount"
+        { focusMetric: "contractSlaOverdueCount", analyticsFocusMetric }
       ),
       label: copy.contractPanel.actionOpenSlaOverdueQueue
     },
     {
-      href: withAnalyticsSourceContext("/admin/contracts?renewalCandidateOnly=true"),
+      href: withAnalyticsSourceContext("/admin/contracts?renewalCandidateOnly=true", {
+        analyticsFocusMetric
+      }),
       label: copy.contractPanel.actionOpenRenewalCandidateQueue
     }
   ];
@@ -127,10 +146,11 @@ function buildContractQuickActions(copy: KpiCopy): ContractQuickAction[] {
 
 export function AdminContractKpiPanel({
   copy,
-  snapshot
+  snapshot,
+  analyticsFocusMetric
 }: AdminContractKpiPanelProps) {
-  const priorityAction = resolveContractPriorityAction(snapshot, copy);
-  const quickActions = buildContractQuickActions(copy);
+  const priorityAction = resolveContractPriorityAction(snapshot, copy, analyticsFocusMetric);
+  const quickActions = buildContractQuickActions(copy, analyticsFocusMetric);
 
   return (
     <article className="panel">

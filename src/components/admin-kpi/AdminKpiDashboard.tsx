@@ -661,7 +661,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         <AdminPayrollRiskKpiPanel copy={copy} snapshot={payrollRiskKpi} />
       ) : null}
       {analyticsMode && contractKpi ? (
-        <AdminContractKpiPanel copy={copy} snapshot={contractKpi} />
+        <AdminContractKpiPanel copy={copy} snapshot={contractKpi} analyticsFocusMetric={focusMetric} />
       ) : null}
       {analyticsMode && benefitsKpi ? (
         <AdminBenefitsKpiPanel copy={copy} snapshot={benefitsKpi} analyticsFocusMetric={focusMetric} />

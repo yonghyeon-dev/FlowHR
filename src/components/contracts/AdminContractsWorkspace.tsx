@@ -12,6 +12,7 @@ import {
   type ContractCategory
 } from "@/components/contracts/copy";
 import type { ContractDocumentAction } from "@/components/contracts/types";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 import { AdminContractsDocumentFilterControls } from "@/components/contracts/AdminContractsDocumentFilterControls";
 import { useAdminContractsWorkspaceActions } from "@/components/contracts/useAdminContractsWorkspaceActions";
 import {
@@ -30,6 +31,37 @@ import { resolveContractApprovalStatusLabel, resolveContractDocumentStatusLabel 
 import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 
+const adminAnalyticsFocusMetricSet = new Set<AdminKpiFocusMetric>([
+  "all",
+  "pendingApprovals",
+  "stalledApprovals",
+  "attendanceApprovalRate",
+  "leaveApprovedDays",
+  "payrollConfirmedRate",
+  "contractDecisionQueueCount",
+  "contractSlaOverdueCount"
+]);
+
+function normalizeAnalyticsFocusMetric(value: string | null): AdminKpiFocusMetric | null {
+  if (!value) {
+    return null;
+  }
+  if (adminAnalyticsFocusMetricSet.has(value as AdminKpiFocusMetric)) {
+    return value as AdminKpiFocusMetric;
+  }
+  return null;
+}
+
+function resolveAnalyticsBackHref(source: string | null, analyticsFocusMetric: AdminKpiFocusMetric | null) {
+  if (source !== "admin-analytics") {
+    return "";
+  }
+  if (!analyticsFocusMetric || analyticsFocusMetric === "all") {
+    return "/admin/analytics";
+  }
+  return `/admin/analytics?focus=${encodeURIComponent(analyticsFocusMetric)}`;
+}
+
 export default function AdminContractsWorkspace() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
@@ -38,6 +70,9 @@ export default function AdminContractsWorkspace() {
   const copy = adminContractsCopyByLocale[locale];
   const analyticsSource = searchParams.get("source");
   const analyticsFocusMetric = searchParams.get("focusMetric");
+  const analyticsFocus = normalizeAnalyticsFocusMetric(searchParams.get("analyticsFocus"));
+  const analyticsBackHref = resolveAnalyticsBackHref(analyticsSource, analyticsFocus);
+  const analyticsBackLabel = locale === "ko" ? "분석으로 돌아가기" : "Back to analytics";
   const analyticsFocusLabel = analyticsFocusMetric === "contractSlaOverdueCount" ? copy.overdueSlaCountLabel : analyticsFocusMetric === "contractDecisionQueueCount" ? copy.decisionQueueCountLabel : copy.documentsKpiLabel;
   const categoryLabels = contractCategoryLabelByLocale[locale];
   const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
@@ -130,6 +165,11 @@ export default function AdminContractsWorkspace() {
           {analyticsSource === "admin-analytics" ? <p className="small muted">{copy.analyticsSourceBanner} · {copy.analyticsSourceFocusLabel}: {analyticsFocusLabel}</p> : null}
           {analyticsSource === "admin-dashboard" ? <p className="small muted">{copy.dashboardSourceBanner} · {copy.dashboardSourceFocusLabel}: {dashboardFocusLabel}</p> : null}
           <div className="contract-action-row">
+            {analyticsBackHref ? (
+              <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
+                {analyticsBackLabel}
+              </Link>
+            ) : null}
             <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">
               {copy.openTemplateBuilderAction}
             </Link>

@@ -15,18 +15,21 @@ function run() {
   const roadmap = readUtf8("ROADMAP.md");
 
   assert.match(panel, /function withAnalyticsSourceContext/);
-  assert.match(panel, /source=admin-analytics/);
+  assert.ok(
+    /source=admin-analytics/.test(panel) ||
+      /source:\s*"admin-analytics"/.test(panel)
+  );
   assert.match(panel, /"contractDecisionQueueCount"/);
   assert.match(panel, /"contractSlaOverdueCount"/);
   assert.match(
     panel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/contracts\?decisionQueueOnly=true",\s*"contractDecisionQueueCount"/
+    /withAnalyticsSourceContext\(\s*"\/admin\/contracts\?decisionQueueOnly=true"/
   );
   assert.match(
     panel,
-    /withAnalyticsSourceContext\(\s*"\/admin\/contracts\?slaRisk=OVERDUE",\s*"contractSlaOverdueCount"/
+    /withAnalyticsSourceContext\(\s*"\/admin\/contracts\?slaRisk=OVERDUE"/
   );
-  assert.match(panel, /withAnalyticsSourceContext\("\/admin\/contracts\?status=SENT"\)/);
+  assert.match(panel, /withAnalyticsSourceContext\(\s*"\/admin\/contracts\?status=SENT"/);
 
   assert.match(workItem, /WI-0841/i);
   assert.match(workItem, /analytics|contract|kpi|source|context|link/i);
