@@ -1,4 +1,4 @@
-﻿-- WI-0816: Add benefits persistence tables for catalog/request read model.
+-- WI-0816: Add benefits persistence tables for catalog/request read model.
 
 DO $$
 BEGIN
