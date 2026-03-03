@@ -87,6 +87,8 @@ type AdminPeoplePageViewProps = {
   logs: ApiLog[];
   pendingLabel: string | null;
   showDevTools: boolean;
+  sourceContext: "admin-onboarding" | "admin-dashboard" | null;
+  focusPanel: "directory-filters" | "org-chart" | "employee-compare" | "employee-history" | null;
 };
 
 export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
@@ -154,8 +156,38 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
     profileFieldLabel,
     logs,
     pendingLabel,
-    showDevTools
+    showDevTools,
+    sourceContext,
+    focusPanel
   } = props;
+
+  const focusPanelLabel = focusPanel
+    ? {
+        "directory-filters": isKoLocale ? "디렉터리 필터" : "Directory filters",
+        "org-chart": isKoLocale ? "조직도" : "Organization chart",
+        "employee-compare": isKoLocale ? "직원 비교" : "Employee compare",
+        "employee-history": isKoLocale ? "인사 이력" : "Employee history"
+      }[focusPanel]
+    : null;
+
+  const sourceContextLabel =
+    sourceContext === "admin-onboarding"
+      ? isKoLocale
+        ? "관리자 온보딩에서 이동했습니다."
+        : "Opened from admin onboarding."
+      : sourceContext === "admin-dashboard"
+        ? isKoLocale
+          ? "관리자 대시보드에서 이동했습니다."
+          : "Opened from admin dashboard."
+        : null;
+
+  function jumpToFocusPanel() {
+    if (!focusPanel) {
+      return;
+    }
+    document.getElementById(focusPanel)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
@@ -166,11 +198,22 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
               ? "조직도, 직원 비교, 인사 이력 카드를 한 화면에서 관리합니다."
               : "Manage org tree, employee comparison, and HR history cards in one screen."}
           </p>
+          {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
+          {focusPanelLabel ? (
+            <p className="small muted">
+              {isKoLocale ? "집중 섹션" : "Focused section"}: {focusPanelLabel}
+            </p>
+          ) : null}
         </div>
         <div className="page-actions">
           <button className="btn btn-primary" onClick={() => void refreshDirectory()}>
             {isKoLocale ? "디렉터리 조회" : "Refresh directory"}
           </button>
+          {focusPanel ? (
+            <button className="btn btn-secondary" onClick={jumpToFocusPanel}>
+              {isKoLocale ? "집중 섹션으로 이동" : "Jump to focused section"}
+            </button>
+          ) : null}
           <Link className="btn btn-secondary" href="/admin">
             {isKoLocale ? "관리자 대시보드" : "Admin dashboard"}
           </Link>
@@ -203,7 +246,10 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
         </article>
       </section>
       <section className="panel-grid">
-        <section id="directory-filters">
+        <section
+          id="directory-filters"
+          className={focusPanel === "directory-filters" ? "panel-focus-target" : undefined}
+        >
           <AdminPeopleDirectoryFiltersPanel
             isKoLocale={isKoLocale}
             showDevTools={showDevTools}
@@ -234,7 +280,7 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           />
         </section>
 
-        <section id="org-chart">
+        <section id="org-chart" className={focusPanel === "org-chart" ? "panel-focus-target" : undefined}>
           <AdminPeopleOrgChartPanel
             isKoLocale={isKoLocale}
             tree={tree}
@@ -244,7 +290,10 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           />
         </section>
 
-        <section id="employee-compare">
+        <section
+          id="employee-compare"
+          className={focusPanel === "employee-compare" ? "panel-focus-target" : undefined}
+        >
           <AdminPeopleComparePanel
             isKoLocale={isKoLocale}
             compareA={compareA}
@@ -258,7 +307,10 @@ export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
           />
         </section>
 
-        <section id="employee-history">
+        <section
+          id="employee-history"
+          className={focusPanel === "employee-history" ? "panel-focus-target" : undefined}
+        >
           <AdminPeopleHistoryPanel
             isKoLocale={isKoLocale}
             runtimeLocale={runtimeLocale}

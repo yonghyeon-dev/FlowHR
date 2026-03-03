@@ -302,6 +302,10 @@ body {
   color: var(--muted);
   font-size: 0.86rem;
 }
+.panel-focus-target .panel {
+  border-color: #98bcfa;
+  box-shadow: 0 0 0 2px rgba(152, 188, 250, 0.28), var(--shadow);
+}
 .input-grid {
   display: grid;
   gap: 10px;

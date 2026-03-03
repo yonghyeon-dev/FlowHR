@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   asRecord,
@@ -8,6 +9,15 @@ import {
   buildOrgTree,
   filterEmployees
 } from "@/app/admin/people/page-helpers";
+import {
+  type AdminPeopleFocusPanel,
+  type AdminPeopleSourceContext,
+  normalizeActiveFilter,
+  normalizeAdminPeopleFocusPanel,
+  normalizeAdminPeopleSourceContext,
+  normalizeHistoryLimit,
+  normalizeUpdatedWindow
+} from "@/app/admin/people/page-deeplink-helpers";
 import { useAdminPeopleDirectoryActions } from "@/app/admin/people/page-directory-actions";
 import { AdminPeoplePageView } from "@/app/admin/people/page-view";
 import {
@@ -32,6 +42,8 @@ function isTruthyFlag(value: string | undefined) {
 }
 
 export default function AdminPeoplePage() {
+  const searchParams = useSearchParams();
+  const queryHydratedRef = useRef(false);
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const [search, setSearch] = useState("");
@@ -42,6 +54,8 @@ export default function AdminPeoplePage() {
   const [historyLimit, setHistoryLimit] = useState("30");
   const [historyActionFilter, setHistoryActionFilter] = useState<HistoryActionFilter>("all");
   const [historyFieldFilter, setHistoryFieldFilter] = useState<HistoryFieldFilter>("all");
+  const [focusPanel, setFocusPanel] = useState<AdminPeopleFocusPanel | null>(null);
+  const [sourceContext, setSourceContext] = useState<AdminPeopleSourceContext | null>(null);
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -298,6 +312,61 @@ export default function AdminPeoplePage() {
     ? positions.filter((position) => position.organizationId === selectedEmployee.organizationId)
     : positions;
 
+  useEffect(() => {
+    if (queryHydratedRef.current) {
+      return;
+    }
+    queryHydratedRef.current = true;
+
+    const source = normalizeAdminPeopleSourceContext(searchParams.get("source"));
+    if (source) {
+      setSourceContext(source);
+    }
+
+    const panel = normalizeAdminPeopleFocusPanel(searchParams.get("panel"));
+    if (panel) {
+      setFocusPanel(panel);
+      setTimeout(() => {
+        document.getElementById(panel)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 0);
+    }
+
+    const search = (searchParams.get("q") ?? "").trim();
+    if (search) {
+      setSearch(search);
+    }
+
+    const active = normalizeActiveFilter(searchParams.get("active"));
+    if (active) {
+      setActiveFilter(active);
+    }
+
+    const updatedWindow = normalizeUpdatedWindow(searchParams.get("updatedDays"));
+    if (updatedWindow) {
+      setRecentlyUpdatedDays(updatedWindow);
+    }
+
+    const limit = normalizeHistoryLimit(searchParams.get("historyLimit"));
+    if (limit) {
+      setHistoryLimit(limit);
+    }
+
+    const departmentId = (searchParams.get("departmentId") ?? "").trim();
+    if (departmentId) {
+      setDepartmentFilter(departmentId);
+    }
+
+    const positionId = (searchParams.get("positionId") ?? "").trim();
+    if (positionId) {
+      setPositionFilter(positionId);
+    }
+
+    const employeeId = (searchParams.get("employeeId") ?? "").trim();
+    if (employeeId) {
+      setSelectedEmployeeId(employeeId);
+    }
+  }, [searchParams]);
+
   function resetDirectoryFilters() {
     setSearch("");
     setActiveFilter("all");
@@ -372,6 +441,8 @@ export default function AdminPeoplePage() {
       logs={logs}
       pendingLabel={pendingLabel}
       showDevTools={showDevTools}
+      sourceContext={sourceContext}
+      focusPanel={focusPanel}
     />
   );
 }
