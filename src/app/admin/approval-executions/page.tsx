@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -29,6 +30,10 @@ import type {
   ApprovalStageHistoryDto,
   EscalationResultDto
 } from "@/app/admin/approval-executions/page-types";
+import {
+  normalizeAdminAnalyticsFocusMetric,
+  resolveAdminAnalyticsBackHref
+} from "@/components/admin-kpi/admin-analytics-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -60,9 +65,26 @@ function normalizePositiveIntegerText(value: string | null, fallback: string) {
   return String(Math.floor(parsed));
 }
 
+function resolveApprovalAnalyticsFocusLabel(
+  isKoLocale: boolean,
+  focusMetric: string | null
+) {
+  if (focusMetric === "stalledApprovals") {
+    return isKoLocale ? "정체 결재 대기함" : "Stalled approval queue";
+  }
+  if (focusMetric === "pendingApprovals") {
+    return isKoLocale ? "결재 대기함" : "Pending approval queue";
+  }
+  return isKoLocale ? "결재 실행 현황" : "Approval execution queue";
+}
+
 export default function AdminApprovalExecutionsPage() {
   const searchParams = useSearchParams();
   const source = searchParams.get("source");
+  const analyticsFocusMetric = normalizeAdminAnalyticsFocusMetric(
+    searchParams.get("analyticsFocus")
+  );
+  const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
   const [domain, setDomain] = useState<ApprovalDomain | "">("");
   const [state, setState] = useState<ApprovalExecutionState | "">("PENDING");
   const [sort, setSort] = useState<ApprovalExecutionSort>("priority_desc");
@@ -145,6 +167,11 @@ export default function AdminApprovalExecutionsPage() {
     }
     return isKoLocale ? "결재 실행 현황" : "Approval execution queue";
   }, [isKoLocale, stalledHoursMin, state]);
+
+  const analyticsFocusLabel = useMemo(
+    () => resolveApprovalAnalyticsFocusLabel(isKoLocale, searchParams.get("focusMetric")),
+    [isKoLocale, searchParams]
+  );
 
   const selectedExecution = useMemo(() => {
     return executions.find((item) => toTargetKey(item) === selectedTargetKey) ?? null;
@@ -425,6 +452,19 @@ export default function AdminApprovalExecutionsPage() {
             {isKoLocale ? "관리자 대시보드에서 이동했습니다" : "Opened from admin dashboard"} ·{" "}
             {isKoLocale ? "집중 대기함" : "Focused queue"}: {dashboardFocusLabel}
           </p>
+        ) : null}
+        {source === "admin-analytics" ? (
+          <p className="small muted">
+            {isKoLocale ? "관리자 분석에서 이동했습니다" : "Opened from admin analytics"} ·{" "}
+            {isKoLocale ? "집중 대기함" : "Focused queue"}: {analyticsFocusLabel}
+          </p>
+        ) : null}
+        {analyticsBackHref ? (
+          <div className="actions" style={{ marginTop: 8 }}>
+            <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
+              {isKoLocale ? "분석으로 돌아가기" : "Back to analytics"}
+            </Link>
+          </div>
         ) : null}
       </header>
 

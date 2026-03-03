@@ -141,11 +141,15 @@ function resolveFocusWorkspaceLink(
 
 function appendAnalyticsSourceQuery(
   href: string,
-  focusMetric: AdminKpiFocusMetric
+  focusMetric: AdminKpiFocusMetric,
+  analyticsFocusMetric: AdminKpiFocusMetric = focusMetric
 ): string {
   const contextParams = new URLSearchParams({ source: "admin-analytics" });
   if (focusMetric !== "all") {
     contextParams.set("focusMetric", focusMetric);
+  }
+  if (analyticsFocusMetric !== "all") {
+    contextParams.set("analyticsFocus", analyticsFocusMetric);
   }
   const separator = href.includes("?") ? "&" : "?";
   return `${href}${separator}${contextParams.toString()}`;
@@ -464,12 +468,12 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     return adminKpiDrilldownMetrics.reduce<AdminKpiCardQuickLinkMap>((acc, metric) => {
       const workspace = resolveFocusWorkspaceLink(metric, copy);
       acc[metric] = {
-        href: appendAnalyticsSourceQuery(workspace.href, metric),
+        href: appendAnalyticsSourceQuery(workspace.href, metric, focusMetric),
         workspaceLabel: workspace.label
       };
       return acc;
     }, {});
-  }, [analyticsMode, copy]);
+  }, [analyticsMode, copy, focusMetric]);
   const contractKpi = useMemo(() => {
     if (!currentRangeKpi) {
       return null;
@@ -487,7 +491,11 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     }
     const generatedAt = new Date();
     const focusAnalyticsHref = buildAnalyticsFocusHref(pathname, focusMetric);
-    const focusWorkspaceHref = appendAnalyticsSourceQuery(focusWorkspace.href, focusMetric);
+    const focusWorkspaceHref = appendAnalyticsSourceQuery(
+      focusWorkspace.href,
+      focusMetric,
+      focusMetric
+    );
     const payload = buildAdminKpiCsvPayload({
       analyticsMode,
       trendRows: visibleTrendRows,
@@ -573,6 +581,10 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
     }
     return copy.focusWorkspaceTrendFlat;
   }, [copy.focusWorkspaceTrendDown, copy.focusWorkspaceTrendFlat, copy.focusWorkspaceTrendUp, focusedTrendRow]);
+  const focusWorkspaceContextHref = useMemo(
+    () => appendAnalyticsSourceQuery(focusWorkspace.href, focusMetric, focusMetric),
+    [focusMetric, focusWorkspace.href]
+  );
   return (
     <main className="saas-content">
       <header className="hero">
@@ -630,7 +642,7 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
           <h2>{copy.focusWorkspaceTitle}</h2>
           <p className="small muted">{copy.focusWorkspaceDescription}</p>
           <div className="actions" style={{ marginTop: 8 }}>
-            <Link href={focusWorkspace.href} className="btn btn-secondary">
+            <Link href={focusWorkspaceContextHref} className="btn btn-secondary">
               {copy.focusWorkspaceOpenAction}: {focusWorkspace.label}
             </Link>
             <button type="button" className="btn btn-secondary" onClick={() => {
@@ -658,7 +670,11 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         </section>
       ) : null}
       {analyticsMode && payrollRiskKpi ? (
-        <AdminPayrollRiskKpiPanel copy={copy} snapshot={payrollRiskKpi} />
+        <AdminPayrollRiskKpiPanel
+          copy={copy}
+          snapshot={payrollRiskKpi}
+          analyticsFocusMetric={focusMetric}
+        />
       ) : null}
       {analyticsMode && contractKpi ? (
         <AdminContractKpiPanel copy={copy} snapshot={contractKpi} analyticsFocusMetric={focusMetric} />

@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 import {
   AdminAttendanceLiveContextPanel,
   AdminAttendanceLiveLogsPanel,
@@ -25,6 +25,10 @@ import {
   summarizeAttendanceLiveRows,
   type AttendanceLiveSnapshot
 } from "@/features/admin-attendance-live/summary";
+import {
+  normalizeAdminAnalyticsFocusMetric,
+  resolveAdminAnalyticsBackHref
+} from "@/components/admin-kpi/admin-analytics-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -38,11 +42,22 @@ type AttendanceRecordLite = {
   checkOutAt: string | null;
   state: "PENDING" | "APPROVED" | "REJECTED";
 };
-
 export function AdminAttendanceLiveDashboard() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = attendanceLiveCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const source = searchParams.get("source");
+  const analyticsFocusMetric = normalizeAdminAnalyticsFocusMetric(
+    searchParams.get("analyticsFocus")
+  );
+  const analyticsBackHref = resolveAdminAnalyticsBackHref(source, analyticsFocusMetric);
+  const analyticsFocusLabel =
+    searchParams.get("focusMetric") === "attendanceApprovalRate"
+      ? locale === "ko"
+        ? "근태 승인율"
+        : "Attendance approval rate"
+      : copy.title;
   const initialRange = useMemo(() => getTodayRangeLocal(), []);
   const [periodStart, setPeriodStart] = useState(initialRange.from);
   const [periodEnd, setPeriodEnd] = useState(initialRange.to);
@@ -198,6 +213,26 @@ export function AdminAttendanceLiveDashboard() {
         <p className="eyebrow">FlowHR Admin</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {source === "admin-dashboard" ? (
+          <p className="small muted">
+            {locale === "ko"
+              ? "관리자 대시보드에서 이동했습니다"
+              : "Opened from admin dashboard"}
+          </p>
+        ) : null}
+        {source === "admin-analytics" ? (
+          <p className="small muted">
+            {locale === "ko" ? "관리자 분석에서 이동했습니다" : "Opened from admin analytics"} ·{" "}
+            {locale === "ko" ? "집중 큐" : "Focus queue"}: {analyticsFocusLabel}
+          </p>
+        ) : null}
+        {analyticsBackHref ? (
+          <div className="actions" style={{ marginTop: 8 }}>
+            <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
+              {locale === "ko" ? "분석으로 돌아가기" : "Back to analytics"}
+            </Link>
+          </div>
+        ) : null}
       </header>
 
       {isProductionRuntime && !usesBearerToken ? (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { type KpiCopy } from "@/components/admin-kpi/copy";
+import { type AdminKpiFocusMetric } from "@/components/admin-kpi/AdminKpiSections";
 
 type PayrollRunRiskLite = {
   state: "PREVIEWED" | "CONFIRMED";
@@ -72,6 +73,7 @@ export function buildPayrollRiskKpiSnapshot(input: {
 type AdminPayrollRiskKpiPanelProps = {
   copy: KpiCopy;
   snapshot: PayrollRiskKpiSnapshot;
+  analyticsFocusMetric?: AdminKpiFocusMetric;
 };
 
 type PayrollRiskActionLink = {
@@ -79,27 +81,50 @@ type PayrollRiskActionLink = {
   label: string;
 };
 
+type AnalyticsContextOptions = {
+  focusMetric?: string;
+  analyticsFocusMetric?: AdminKpiFocusMetric;
+};
+
+function withAnalyticsSourceContext(
+  href: string,
+  options?: AnalyticsContextOptions
+) {
+  if (!options?.analyticsFocusMetric) {
+    return href;
+  }
+  const contextParams = new URLSearchParams({ source: "admin-analytics" });
+  if (options.focusMetric) {
+    contextParams.set("focusMetric", options.focusMetric);
+  }
+  if (options.analyticsFocusMetric !== "all") {
+    contextParams.set("analyticsFocus", options.analyticsFocusMetric);
+  }
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}${contextParams.toString()}`;
+}
+
 function resolvePrimaryPayrollRiskAction(
   snapshot: PayrollRiskKpiSnapshot,
   copy: KpiCopy
 ) {
   if (snapshot.previewedRunCount > 0) {
     return {
-      href: "/admin/payroll-close",
+      href: "/admin/payroll-close?focus=previewed",
       label: copy.payrollRiskPanel.actionOpenPayrollClose,
       reason: copy.payrollRiskPanel.priorityReasonPreviewed
     };
   }
   if (snapshot.confirmedUndistributedCount > 0) {
     return {
-      href: "/admin/payroll-payslip-delivery",
+      href: "/admin/payroll-payslip-delivery?focus=undistributed",
       label: copy.payrollRiskPanel.actionOpenPayslipDelivery,
       reason: copy.payrollRiskPanel.priorityReasonUndistributed
     };
   }
   if (snapshot.distributedUnacknowledgedCount > 0) {
     return {
-      href: "/admin/payroll-payslip-delivery",
+      href: "/admin/payroll-payslip-delivery?focus=undistributed",
       label: copy.payrollRiskPanel.actionOpenPayslipDelivery,
       reason: copy.payrollRiskPanel.priorityReasonUnacknowledged
     };
@@ -130,10 +155,15 @@ function buildPayrollRiskQuickActions(copy: KpiCopy): PayrollRiskActionLink[] {
 
 export function AdminPayrollRiskKpiPanel({
   copy,
-  snapshot
+  snapshot,
+  analyticsFocusMetric
 }: AdminPayrollRiskKpiPanelProps) {
   const primaryAction = resolvePrimaryPayrollRiskAction(snapshot, copy);
   const quickActions = buildPayrollRiskQuickActions(copy);
+  const primaryActionHref = withAnalyticsSourceContext(primaryAction.href, {
+    focusMetric: "payrollConfirmedRate",
+    analyticsFocusMetric
+  });
   return (
     <article className="panel">
       <h2>{copy.payrollRiskPanel.title}</h2>
@@ -172,7 +202,7 @@ export function AdminPayrollRiskKpiPanel({
           {primaryAction.reason}
         </p>
         <div className="actions" style={{ marginTop: 8 }}>
-          <Link href={primaryAction.href} className="btn btn-primary btn-small">
+          <Link href={primaryActionHref} className="btn btn-primary btn-small">
             {primaryAction.label}
           </Link>
         </div>
@@ -183,7 +213,10 @@ export function AdminPayrollRiskKpiPanel({
           {quickActions.map((action) => (
             <Link
               key={action.href}
-              href={action.href}
+              href={withAnalyticsSourceContext(action.href, {
+                focusMetric: "payrollConfirmedRate",
+                analyticsFocusMetric
+              })}
               className="btn btn-secondary btn-small"
             >
               {action.label}
