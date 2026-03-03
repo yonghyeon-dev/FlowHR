@@ -102,6 +102,16 @@ export default function AdminApprovalExecutionsPage() {
     setLimit(normalizePositiveIntegerText(searchParams.get("limit"), "100"));
   }, [searchParams]);
 
+  useEffect(() => {
+    if (
+      source === "admin-dashboard" &&
+      searchParams.get("stalledHoursMin") === null &&
+      normalizeApprovalStateFilter(searchParams.get("state")) === "PENDING"
+    ) {
+      setStalledHoursMin("0");
+    }
+  }, [searchParams, source]);
+
   const asOfDate = useMemo(() => {
     const parsed = new Date(asOfInput);
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
@@ -120,6 +130,10 @@ export default function AdminApprovalExecutionsPage() {
     }
     return Math.max(parsed, 0);
   }, [stalledHoursMin]);
+
+  const stalledHoursRiskThreshold = useMemo(() => {
+    return stalledHoursThreshold > 0 ? stalledHoursThreshold : 24;
+  }, [stalledHoursThreshold]);
 
   const dashboardFocusLabel = useMemo(() => {
     const stalledThreshold = Number(stalledHoursMin || "0");
@@ -143,10 +157,10 @@ export default function AdminApprovalExecutionsPage() {
       stalledHours: getStalledHours(item, asOfDate)
     }));
     const stalled = pendingWithStalledHours.filter(
-      ({ stalledHours }) => stalledHours >= stalledHoursThreshold
+      ({ stalledHours }) => stalledHours >= stalledHoursRiskThreshold
     );
-    const watchThresholdHours = Math.max(stalledHoursThreshold, 24);
-    const criticalThresholdHours = Math.max(stalledHoursThreshold, 72);
+    const watchThresholdHours = Math.max(stalledHoursRiskThreshold, 24);
+    const criticalThresholdHours = Math.max(stalledHoursRiskThreshold, 72);
     const watch = pendingWithStalledHours.filter(({ stalledHours }) => stalledHours >= watchThresholdHours);
     const critical = pendingWithStalledHours.filter(
       ({ stalledHours }) => stalledHours >= criticalThresholdHours
@@ -169,7 +183,7 @@ export default function AdminApprovalExecutionsPage() {
       leavePendingCount: pending.filter((item) => item.domain === "LEAVE").length,
       attendancePendingCount: pending.filter((item) => item.domain === "ATTENDANCE").length
     };
-  }, [asOfDate, executions, stalledHoursThreshold]);
+  }, [asOfDate, executions, stalledHoursRiskThreshold]);
 
   const domainLabel = useMemo(() => {
     return {
@@ -470,7 +484,7 @@ export default function AdminApprovalExecutionsPage() {
           executions={executions}
           selectedTargetKey={selectedTargetKey}
           asOfDate={asOfDate}
-          stalledHoursThreshold={stalledHoursThreshold}
+          stalledHoursThreshold={stalledHoursRiskThreshold}
           toDomainLabel={toDomainLabel}
           toStateLabel={toStateLabel}
           onSelectExecution={(execution) => void loadStageHistory(execution)}
