@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import type { IntegratedSubmitChecklistCard, IntegratedSummaryCard } from "@/app/employee/page-types";
 import { buildEmployeeWorkspaceHubs } from "@/components/employee-dashboard/workspace-hubs";
@@ -157,7 +157,7 @@ export function EmployeeAccountOverviewPanels({
         <h2>{isKoLocale ? "핵심 워크스페이스 허브" : "Core workspace hub"}</h2>
         <p className="small">
           {isKoLocale
-            ? "요약은 이 화면에서 확인하고, 상세 작업은 전용 워크스페이스에서 진행하세요."
+            ? "요약은 홈 화면에서 확인하고, 상세 작업은 전용 워크스페이스에서 진행하세요."
             : "Use the home dashboard for summary, then continue in dedicated workspaces."}
         </p>
         <div className="panel-grid">
@@ -198,7 +198,7 @@ export function EmployeeAccountOverviewPanels({
               } btn-small`}
               onClick={() => onJumpToSection(badge.targetSectionId)}
             >
-              {badge.label} ({badge.remainingCount}/{badge.totalCount}) ·{" "}
+              {badge.label} ({badge.remainingCount}/{badge.totalCount}) / {" "}
               {badge.severity === "critical"
                 ? isKoLocale
                   ? "긴급"
@@ -216,7 +216,7 @@ export function EmployeeAccountOverviewPanels({
         {priorityChecklistCard ? (
           <>
             <p className="small">
-              <strong>{priorityChecklistCard.label}</strong> ·{" "}
+              <strong>{priorityChecklistCard.label}</strong> / {" "}
               {priorityChecklistCard.passCount}/{priorityChecklistCard.totalCount}
             </p>
             <p className="small muted">{priorityChecklistCard.detail}</p>
@@ -258,7 +258,7 @@ export function EmployeeAccountOverviewPanels({
         {isProductionRuntime ? (
           <p className="small">
             {supabaseSession
-              ? `${supabaseSession.email ?? supabaseSession.userId} · role=${supabaseSession.role ?? "-"} · org=${supabaseSession.organizationId ?? "-"}`
+              ? `${supabaseSession.email ?? supabaseSession.userId} / role=${supabaseSession.role ?? "-"} / org=${supabaseSession.organizationId ?? "-"}`
               : isKoLocale
                 ? "현재 로그인되어 있지 않습니다."
                 : "You are not logged in."}{" "}

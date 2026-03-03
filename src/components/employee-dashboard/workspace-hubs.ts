@@ -1,4 +1,4 @@
-export type EmployeeWorkspaceHub = {
+﻿export type EmployeeWorkspaceHub = {
   key: string;
   title: string;
   description: string;
@@ -23,10 +23,10 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       {
         key: "leave",
         title: "휴가",
-        description: "휴가 신청 상태를 확인하고 잔여 연차를 관리합니다.",
+        description: "휴가 요청 상태를 확인하고 잔여 연차를 관리합니다.",
         links: [
-          { href: "/employee", label: "휴가 신청/취소" },
-          { href: "/employee/year-end-input", label: "연말 입력" }
+          { href: "/employee", label: "휴가 요청/취소" },
+          { href: "/employee/year-end-input", label: "연말정산 입력" }
         ]
       },
       {
@@ -41,11 +41,12 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       {
         key: "documents",
         title: "전자문서",
-        description: "전자계약과 공지/복리후생 문서를 확인합니다.",
+        description: "전자계약, 공지, 복리후생, 채용 화면으로 바로 이동합니다.",
         links: [
-          { href: "/employee/contracts", label: "전자계약함" },
+          { href: "/employee/contracts", label: "전자계약" },
           { href: "/employee/notices", label: "공지사항" },
-          { href: "/employee/benefits", label: "복리후생" }
+          { href: "/employee/benefits?status=SUBMITTED&risk=pending_3d", label: "복리후생 대기" },
+          { href: "/employee/recruitment?risk=stalled_7d", label: "채용 정체 추천" }
         ]
       }
     ];
@@ -82,11 +83,18 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
     {
       key: "documents",
       title: "Documents",
-      description: "Check contracts and employee notices/benefits.",
+      description: "Check contracts, notices, benefits queue, and recruitment queue.",
       links: [
         { href: "/employee/contracts", label: "Contracts" },
         { href: "/employee/notices", label: "Notices" },
-        { href: "/employee/benefits", label: "Benefits" }
+        {
+          href: "/employee/benefits?status=SUBMITTED&risk=pending_3d",
+          label: "Pending benefits"
+        },
+        {
+          href: "/employee/recruitment?risk=stalled_7d",
+          label: "Stalled recruitment"
+        }
       ]
     }
   ];
