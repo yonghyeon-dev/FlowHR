@@ -94,6 +94,15 @@ export type KpiCopy = {
     agingThreshold: string;
     overLimitSubmittedCount: string;
     overLimitHint: string;
+    priorityActionLabel: string;
+    quickActionsLabel: string;
+    actionOpenBenefitsWorkspace: string;
+    actionOpenPendingQueue: string;
+    actionOpenOverLimitQueue: string;
+    priorityReasonAging: string;
+    priorityReasonOverLimit: string;
+    priorityReasonSubmitted: string;
+    priorityReasonClear: string;
   };
   onboardingPanel: {
     title: string;
@@ -244,7 +253,16 @@ const defaultCopy: KpiCopy = {
     pendingAging3dCount: "Submitted aging (3d+)",
     agingThreshold: "submitted for 3+ days",
     overLimitSubmittedCount: "Over-limit submitted",
-    overLimitHint: "amount exceeds annual limit"
+    overLimitHint: "amount exceeds annual limit",
+    priorityActionLabel: "Top-priority action",
+    quickActionsLabel: "Quick actions",
+    actionOpenBenefitsWorkspace: "Open benefits workspace",
+    actionOpenPendingQueue: "Open aging pending queue",
+    actionOpenOverLimitQueue: "Open over-limit queue",
+    priorityReasonAging: "Aging submitted requests exist. Start with 3-day pending queue follow-up.",
+    priorityReasonOverLimit: "Over-limit submitted requests exist. Review over-limit queue first.",
+    priorityReasonSubmitted: "Submitted requests exist. Continue benefits decision workflow.",
+    priorityReasonClear: "Benefits queue risk is stable. Continue routine benefits operations."
   },
   onboardingPanel: {
     title: "Onboarding readiness snapshot",
@@ -395,7 +413,16 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       pendingAging3dCount: "3일+ 제출 대기",
       agingThreshold: "제출 후 3일 이상 경과",
       overLimitSubmittedCount: "한도 초과 제출",
-      overLimitHint: "연간 한도 초과 요청"
+      overLimitHint: "연간 한도 초과 요청",
+      priorityActionLabel: "최우선 조치",
+      quickActionsLabel: "빠른 이동",
+      actionOpenBenefitsWorkspace: "복리후생 워크스페이스 열기",
+      actionOpenPendingQueue: "장기 대기 큐 열기",
+      actionOpenOverLimitQueue: "한도 초과 큐 열기",
+      priorityReasonAging: "3일 이상 대기 요청이 있습니다. 장기 대기 큐부터 확인하세요.",
+      priorityReasonOverLimit: "한도 초과 요청이 있습니다. 한도 초과 큐부터 검토하세요.",
+      priorityReasonSubmitted: "제출 요청이 남아 있습니다. 복리후생 승인 흐름을 이어가세요.",
+      priorityReasonClear: "복리후생 큐 리스크가 정리되었습니다. 일반 운영을 진행하세요."
     },
     onboardingPanel: {
       title: "온보딩 준비 스냅샷",

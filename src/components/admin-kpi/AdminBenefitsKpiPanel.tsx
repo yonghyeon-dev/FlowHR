@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { type KpiCopy } from "@/components/admin-kpi/copy";
 
 type BenefitCatalogLite = {
@@ -81,10 +83,72 @@ type AdminBenefitsKpiPanelProps = {
   snapshot: BenefitsKpiSnapshot;
 };
 
+type BenefitsPriorityAction = {
+  href: string;
+  label: string;
+  reason: string;
+};
+
+type BenefitsQuickAction = {
+  href: string;
+  label: string;
+};
+
+function resolveBenefitsPriorityAction(
+  snapshot: BenefitsKpiSnapshot,
+  copy: KpiCopy
+): BenefitsPriorityAction {
+  if (snapshot.pendingAging3dCount > 0) {
+    return {
+      href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+      label: copy.benefitsPanel.actionOpenPendingQueue,
+      reason: copy.benefitsPanel.priorityReasonAging
+    };
+  }
+  if (snapshot.overLimitSubmittedCount > 0) {
+    return {
+      href: "/admin/benefits?status=SUBMITTED&risk=over_limit",
+      label: copy.benefitsPanel.actionOpenOverLimitQueue,
+      reason: copy.benefitsPanel.priorityReasonOverLimit
+    };
+  }
+  if (snapshot.submittedCount > 0) {
+    return {
+      href: "/admin/benefits?status=SUBMITTED",
+      label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
+      reason: copy.benefitsPanel.priorityReasonSubmitted
+    };
+  }
+  return {
+    href: "/admin/benefits",
+    label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
+    reason: copy.benefitsPanel.priorityReasonClear
+  };
+}
+
+function buildBenefitsQuickActions(copy: KpiCopy): BenefitsQuickAction[] {
+  return [
+    {
+      href: "/admin/benefits",
+      label: copy.benefitsPanel.actionOpenBenefitsWorkspace
+    },
+    {
+      href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+      label: copy.benefitsPanel.actionOpenPendingQueue
+    },
+    {
+      href: "/admin/benefits?status=SUBMITTED&risk=over_limit",
+      label: copy.benefitsPanel.actionOpenOverLimitQueue
+    }
+  ];
+}
+
 export function AdminBenefitsKpiPanel({
   copy,
   snapshot
 }: AdminBenefitsKpiPanelProps) {
+  const priorityAction = resolveBenefitsPriorityAction(snapshot, copy);
+  const quickActions = buildBenefitsQuickActions(copy);
   return (
     <article className="panel">
       <h2>{copy.benefitsPanel.title}</h2>
@@ -113,6 +177,27 @@ export function AdminBenefitsKpiPanel({
           <small>{copy.benefitsPanel.overLimitHint}</small>
         </article>
       </div>
+      <section style={{ marginTop: 12 }}>
+        <p className="small muted">{copy.benefitsPanel.priorityActionLabel}</p>
+        <p className="small" style={{ marginTop: 4 }}>
+          {priorityAction.reason}
+        </p>
+        <div className="actions" style={{ marginTop: 8 }}>
+          <Link href={priorityAction.href} className="btn btn-primary btn-small">
+            {priorityAction.label}
+          </Link>
+        </div>
+        <p className="small muted" style={{ marginTop: 10 }}>
+          {copy.benefitsPanel.quickActionsLabel}
+        </p>
+        <div className="actions" style={{ marginTop: 6 }}>
+          {quickActions.map((action) => (
+            <Link key={action.href} href={action.href} className="btn btn-secondary btn-small">
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </section>
     </article>
   );
 }
