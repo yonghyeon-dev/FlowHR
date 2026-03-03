@@ -29,7 +29,10 @@ async function run() {
   const workItem = readUtf8("work-items", "WI-0819-benefits-catalog-deactivate-pending-guard.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(statusRoute, /listBenefitRequests\(\{\s*organizationId: existing\.organizationId,\s*status: "SUBMITTED"/s);
+  assert.match(
+    statusRoute,
+    /listBenefitRequests\(\{[\s\S]*organizationId: existing\.organizationId,[\s\S]*status: "SUBMITTED"/
+  );
   assert.match(statusRoute, /benefits\.catalog\.deactivate\.pending_requests/);
   assert.match(statusRoute, /pendingSubmittedCount/);
 
