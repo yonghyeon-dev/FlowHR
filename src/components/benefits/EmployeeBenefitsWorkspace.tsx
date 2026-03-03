@@ -63,6 +63,10 @@ export default function EmployeeBenefitsWorkspace() {
     });
     return map;
   }, [catalog]);
+  const requestableCatalog = useMemo(
+    () => catalog.filter((item) => item.status === "ACTIVE"),
+    [catalog]
+  );
 
   const statusFilteredRequests = useMemo(
     () =>
@@ -146,7 +150,7 @@ export default function EmployeeBenefitsWorkspace() {
       return;
     }
 
-    const catalogQuery = buildBenefitsQuery({ organizationId, status: "ACTIVE" });
+    const catalogQuery = buildBenefitsQuery({ organizationId });
     const requestsQuery = buildBenefitsQuery({
       organizationId,
       employeeId,
@@ -167,8 +171,14 @@ export default function EmployeeBenefitsWorkspace() {
     setCatalog(nextCatalog);
     setRequests(parseBenefitRequests(requestsRes.parsed));
     setRequestSummary(parseBenefitRequestSummary(requestsRes.parsed));
-    if (nextCatalog.length > 0 && !selectedBenefitId) {
-      setSelectedBenefitId(nextCatalog[0].id);
+    const nextRequestableCatalog = nextCatalog.filter((item) => item.status === "ACTIVE");
+    if (!selectedBenefitId && nextRequestableCatalog.length > 0) {
+      setSelectedBenefitId(nextRequestableCatalog[0].id);
+    } else if (
+      selectedBenefitId &&
+      !nextRequestableCatalog.some((item) => item.id === selectedBenefitId)
+    ) {
+      setSelectedBenefitId(nextRequestableCatalog[0]?.id ?? "");
     }
     setStatusMessage("");
   }
@@ -254,7 +264,7 @@ export default function EmployeeBenefitsWorkspace() {
       showDevTools={showDevTools}
       sessionOrganizationId={organizationId}
       sessionEmployeeId={employeeId}
-      catalog={catalog}
+      requestableCatalog={requestableCatalog}
       requests={requests}
       filteredRequests={filteredRequests}
       requestSummary={requestSummary}

@@ -17,7 +17,7 @@ type EmployeeBenefitsWorkspaceViewProps = {
   showDevTools: boolean;
   sessionOrganizationId: string;
   sessionEmployeeId: string;
-  catalog: BenefitCatalogItem[];
+  requestableCatalog: BenefitCatalogItem[];
   requests: BenefitRequestItem[];
   filteredRequests: BenefitRequestItem[];
   requestSummary: EmployeeBenefitRequestSummary;
@@ -53,7 +53,7 @@ export default function EmployeeBenefitsWorkspaceView({
   showDevTools,
   sessionOrganizationId,
   sessionEmployeeId,
-  catalog,
+  requestableCatalog,
   requests,
   filteredRequests,
   requestSummary,
@@ -163,7 +163,7 @@ export default function EmployeeBenefitsWorkspaceView({
             {copy.benefitLabel}
             <select value={selectedBenefitId} onChange={(event) => onSelectedBenefitChange(event.target.value)}>
               <option value="">-</option>
-              {catalog.map((item) => (
+              {requestableCatalog.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -203,11 +203,11 @@ export default function EmployeeBenefitsWorkspaceView({
 
         <article className="panel">
           <h2>{copy.catalogTitle}</h2>
-          {catalog.length === 0 ? (
+          {requestableCatalog.length === 0 ? (
             <p className="small muted">{copy.emptyCatalog}</p>
           ) : (
             <ul className="simple-list">
-              {catalog.map((item) => (
+              {requestableCatalog.map((item) => (
                 <li key={item.id}>
                   <span>
                     <strong>{item.name}</strong>
