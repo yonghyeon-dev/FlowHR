@@ -84,9 +84,13 @@ export function ApprovalQueueActivitySection({
             <li key={activity.id}>
               <span>
                 <span className={activity.ok ? "ok" : "fail"}>{activity.ok ? copy.ok : copy.fail}</span>{" "}
-                <strong>[{activity.queue}]</strong> {activity.action} 쨌 {activity.itemId}{" "}
+                <strong>[{activity.queue}]</strong> {activity.action}
+                {copy.summaryConnector}
+                {activity.itemId}{" "}
                 <span className="muted">
-                  ({activity.status} 쨌 {activity.at})
+                  ({activity.status}
+                  {copy.summaryConnector}
+                  {activity.at})
                 </span>
               </span>
             </li>
