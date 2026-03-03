@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -25,15 +26,9 @@ import {
   sortInboxDocumentsByRisk
 } from "@/components/contracts/employee-inbox-filter-helpers";
 import { resolveEmployeeContractsNextActionHint } from "@/components/contracts/employee-inbox-journey-helpers";
-import {
-  normalizeContractsErrorMessageForRuntime,
-  readJson,
-  setContractsRuntimeLocale
-} from "@/components/contracts/http";
-import {
-  type ContractSignatureEvidenceResponse,
-  type EmployeeContractDocument as ContractDocument
-} from "@/components/contracts/types";
+import { normalizeContractsErrorMessageForRuntime, readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
+import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument as ContractDocument } from "@/components/contracts/types";
+import { resolveEmployeeContractsSourceEntry } from "@/components/contracts/employee-source-context";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function EmployeeContractsInbox() {
@@ -42,7 +37,7 @@ export default function EmployeeContractsInbox() {
   const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = employeeContractsCopyByLocale[locale];
-  const sourceHint = searchParams.get("source") === "employee-dashboard" ? (isKoLocale ? "직원 대시보드 바로가기에서 이동했습니다." : "Opened from employee dashboard shortcut.") : null;
+  const sourceEntry = resolveEmployeeContractsSourceEntry(searchParams.get("source"), isKoLocale);
   const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
   const approvalStatusLabels = contractApprovalStatusLabelByLocale[locale];
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
@@ -202,7 +197,14 @@ export default function EmployeeContractsInbox() {
         <div>
           <h1 className="page-title">{copy.title}</h1>
           <p className="page-subtitle">{copy.description}</p>
-          {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
+          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
+        </div>
+        <div className="page-actions">
+          {sourceEntry ? (
+            <Link className="btn btn-secondary" href="/employee">
+              {sourceEntry.returnLabel}
+            </Link>
+          ) : null}
         </div>
       </header>
       {error ? <p className="inline-error">{error}</p> : null}

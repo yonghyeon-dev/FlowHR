@@ -8,13 +8,20 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const inbox = readUtf8("src", "components", "contracts", "EmployeeContractsInbox.tsx");
+  const sourceContext = readUtf8(
+    "src",
+    "components",
+    "contracts",
+    "employee-source-context.ts"
+  );
   const workItem = readUtf8("work-items", "WI-0844-employee-contracts-source-entry-banner.md");
   const roadmap = readUtf8("ROADMAP.md");
 
-  assert.match(inbox, /searchParams\.get\("source"\) === "employee-dashboard"/);
-  assert.match(inbox, /직원 대시보드 바로가기에서 이동했습니다/);
-  assert.match(inbox, /Opened from employee dashboard shortcut/);
-  assert.match(inbox, /sourceHint \? <p className="small muted">\{sourceHint\}<\/p> : null/);
+  assert.match(inbox, /resolveEmployeeContractsSourceEntry\(searchParams\.get\("source"\), isKoLocale\)/);
+  assert.match(inbox, /sourceEntry \? <p className="small muted">\{sourceEntry\.hint\}<\/p> : null/);
+  assert.match(sourceContext, /source !== "employee-dashboard"/);
+  assert.match(sourceContext, /직원 대시보드 바로가기에서 이동했습니다\./);
+  assert.match(sourceContext, /Opened from employee dashboard shortcut\./);
 
   assert.match(workItem, /WI-0844/i);
   assert.match(workItem, /employee|contracts|source|banner|dashboard/i);
