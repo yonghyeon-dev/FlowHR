@@ -65,7 +65,8 @@ export default function AdminDashboardPage() {
         breakdown: isKoLocale
           ? `대기 ${summary.pendingApprovalExecutionCount} · 정체 ${summary.stalledApprovalExecutionCount}`
           : `Pending ${summary.pendingApprovalExecutionCount} · Stalled ${summary.stalledApprovalExecutionCount}`,
-        href: "/admin/approval-executions"
+        href: "/admin/approval-executions",
+        actions: []
       },
       {
         key: "payroll",
@@ -76,7 +77,8 @@ export default function AdminDashboardPage() {
         breakdown: isKoLocale
           ? `미확정 ${summary.previewedPayrollCount} · 미배포 ${summary.undistributedPayrollCount}`
           : `Previewed ${summary.previewedPayrollCount} · Undistributed ${summary.undistributedPayrollCount}`,
-        href: "/admin/payroll-close"
+        href: "/admin/payroll-close",
+        actions: []
       },
       {
         key: "contracts",
@@ -92,7 +94,21 @@ export default function AdminDashboardPage() {
         breakdown: isKoLocale
           ? `의사결정 ${summary.contractDecisionQueueCount} · 응답 대기 ${summary.contractPendingResponseCount} · SLA 초과 ${summary.contractSlaOverdueCount}`
           : `Decision ${summary.contractDecisionQueueCount} · Pending response ${summary.contractPendingResponseCount} · SLA overdue ${summary.contractSlaOverdueCount}`,
-        href: "/admin/contracts"
+        href: "/admin/contracts",
+        actions: [
+          {
+            label: isKoLocale ? `의사결정 ${summary.contractDecisionQueueCount}` : `Decision ${summary.contractDecisionQueueCount}`,
+            href: "/admin/contracts?decisionQueueOnly=true&source=admin-dashboard"
+          },
+          {
+            label: isKoLocale ? `응답 대기 ${summary.contractPendingResponseCount}` : `Pending response ${summary.contractPendingResponseCount}`,
+            href: "/admin/contracts?status=SENT&source=admin-dashboard"
+          },
+          {
+            label: isKoLocale ? `SLA 초과 ${summary.contractSlaOverdueCount}` : `SLA overdue ${summary.contractSlaOverdueCount}`,
+            href: "/admin/contracts?slaRisk=OVERDUE&source=admin-dashboard"
+          }
+        ]
       }
     ],
     [
@@ -299,6 +315,11 @@ export default function AdminDashboardPage() {
                 <Link className="btn btn-secondary btn-small" href={badge.href}>
                   {isKoLocale ? "대기함 열기" : "Open queue"}
                 </Link>
+                {badge.actions.map((action) => (
+                  <Link key={action.href} className="btn btn-secondary btn-small" href={action.href}>
+                    {action.label}
+                  </Link>
+                ))}
               </div>
             </article>
           ))}
