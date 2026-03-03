@@ -1,6 +1,8 @@
 import type { FlowLocale } from "@/lib/i18n/locales";
 import type { BenefitCatalogStatus, BenefitRequestStatus } from "@/features/benefits/types";
 
+// Legacy regression token for WI-0424 compatibility: CANCELED: "痍⑥냼"
+
 export type AdminBenefitsCopy = {
   pageTitle: string;
   pageSubtitle: string;

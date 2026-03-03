@@ -39,7 +39,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const existing = findBenefitRequest(parsed.data.requestId);
+  const existing = await findBenefitRequest(parsed.data.requestId);
   if (!existing) {
     return fail(404, "benefits.request.not_found");
   }
@@ -54,7 +54,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
   }
 
-  const updated = cancelBenefitRequest({
+  const updated = await cancelBenefitRequest({
     requestId: parsed.data.requestId,
     actorId: actor.id,
     cancelNote: parsed.data.cancelNote

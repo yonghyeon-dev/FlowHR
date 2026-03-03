@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.3.1)
+# People Test Cases (Contract v0.3.3)
 
 ## Organization
 
@@ -42,4 +42,12 @@
   - `position.updated.v1`
   - `employee.created.v1`
   - `employee.profile.updated.v1`
+
+## Benefits Read Model Persistence
+
+- Benefits catalog item create/list/find/update are persisted through runtime data access.
+- Benefits request create/list/find/update are persisted through runtime data access.
+- `ORG-DEMO` receives one-time seed for legacy benefits catalog/request sample data.
+- Existing benefits API routes preserve behavior while switching to async store calls.
+- Benefits DB migration is additive only and does not break existing people/benefits APIs.
 

@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   const actor = await readActor(request);
   const isReviewer = canReviewRequests(actor?.role);
   const employeeId = isReviewer ? parsed.data.employeeId : (parsed.data.employeeId ?? actor?.id ?? undefined);
-  const requests = listBenefitRequests({
+  const requests = await listBenefitRequests({
     organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
     employeeId,
     status: parsed.data.status
@@ -60,14 +60,14 @@ export async function POST(request: Request) {
   }
 
   const targetEmployeeId = canReviewRequests(actor.role) ? parsed.data.employeeId : actor.id;
-  const benefit = findBenefitCatalogItem(parsed.data.benefitId);
+  const benefit = await findBenefitCatalogItem(parsed.data.benefitId);
   if (!benefit) {
     return fail(404, "benefits.catalog.not_found", {
       benefitId: parsed.data.benefitId
     });
   }
 
-  const created = createBenefitRequest({
+  const created = await createBenefitRequest({
     organizationId: parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID,
     benefitId: parsed.data.benefitId,
     employeeId: targetEmployeeId,
