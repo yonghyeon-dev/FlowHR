@@ -32,6 +32,8 @@ const copyByLocale = {
     extensionsCardDesc: "공지, 복리후생, 채용, 스케줄, 계약함 화면을 웹으로 바로 연결합니다.",
     noticesAction: "공지 열기",
     benefitsAction: "복리후생 열기",
+    benefitsPendingAction: "복리후생 대기 건 열기",
+    benefitsApprovedAction: "복리후생 승인 이력 열기",
     recruitmentAction: "채용 열기",
     scheduleAction: "스케줄 열기",
     contractsAction: "전자계약함 열기",
@@ -66,6 +68,8 @@ const copyByLocale = {
     extensionsCardDesc: "Jump to notices, benefits, recruitment, schedule, and contracts on web.",
     noticesAction: "Open Notices",
     benefitsAction: "Open Benefits",
+    benefitsPendingAction: "Open Pending Benefits",
+    benefitsApprovedAction: "Open Approved Benefits",
     recruitmentAction: "Open Recruitment",
     scheduleAction: "Open Schedule",
     contractsAction: "Open Contracts",
@@ -87,6 +91,8 @@ export default function EmployeeHomeScreen({
   onOpenNotificationHistory,
   onOpenNotices,
   onOpenBenefits,
+  onOpenBenefitsPending,
+  onOpenBenefitsApproved,
   onOpenRecruitment,
   onOpenSchedule,
   onOpenContracts,
@@ -159,6 +165,12 @@ export default function EmployeeHomeScreen({
             </Pressable>
             <Pressable style={styles.btn} onPress={onOpenBenefits}>
               <Text style={styles.btnText}>{copy.benefitsAction}</Text>
+            </Pressable>
+            <Pressable style={styles.btn} onPress={onOpenBenefitsPending}>
+              <Text style={styles.btnText}>{copy.benefitsPendingAction}</Text>
+            </Pressable>
+            <Pressable style={styles.btn} onPress={onOpenBenefitsApproved}>
+              <Text style={styles.btnText}>{copy.benefitsApprovedAction}</Text>
             </Pressable>
             <Pressable style={styles.btn} onPress={onOpenRecruitment}>
               <Text style={styles.btnText}>{copy.recruitmentAction}</Text>

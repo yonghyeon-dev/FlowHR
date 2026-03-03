@@ -155,6 +155,14 @@ export default function RootNavigator() {
                 onOpenNotificationHistory={() => navigation.navigate("NotificationHistory")}
                 onOpenNotices={() => void Linking.openURL(resolveMobileWebUrl("/employee/notices"))}
                 onOpenBenefits={() => void Linking.openURL(resolveMobileWebUrl("/employee/benefits"))}
+                onOpenBenefitsPending={() =>
+                  void Linking.openURL(
+                    resolveMobileWebUrl("/employee/benefits?status=SUBMITTED&risk=pending_3d")
+                  )
+                }
+                onOpenBenefitsApproved={() =>
+                  void Linking.openURL(resolveMobileWebUrl("/employee/benefits?status=APPROVED"))
+                }
                 onOpenRecruitment={() => void Linking.openURL(resolveMobileWebUrl("/employee/recruitment"))}
                 onOpenSchedule={() => void Linking.openURL(resolveMobileWebUrl("/employee/schedule"))}
                 onOpenContracts={() => void Linking.openURL(resolveMobileWebUrl("/employee/contracts"))}
