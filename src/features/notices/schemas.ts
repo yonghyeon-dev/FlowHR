@@ -43,5 +43,6 @@ export const readNoticeSchema = z.object({
 });
 
 export const readAllNoticesSchema = z.object({
-  organizationId: z.string().trim().min(1).optional()
+  organizationId: z.string().trim().min(1).optional(),
+  noticeIds: z.array(z.string().trim().min(1)).max(500).optional()
 });

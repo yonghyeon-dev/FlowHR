@@ -78,6 +78,7 @@ type MarkAllNoticesReadInput = {
   actorId: string;
   actorRole?: string;
   audience?: NoticeAudience | "all";
+  noticeIds?: string[];
 };
 
 type NoticeCreatedAuditPayload = {
@@ -506,9 +507,16 @@ export async function markAllNoticesRead(context: NoticeStoreContext, input: Mar
     audience: input.audience ?? "all",
     publishedOnly: true
   });
+  const targetNoticeIdSet = input.noticeIds
+    ? new Set(input.noticeIds.map((noticeId) => noticeId.trim()).filter((noticeId) => noticeId.length > 0))
+    : null;
+  const targetNotices =
+    targetNoticeIdSet && targetNoticeIdSet.size > 0
+      ? notices.filter((notice) => targetNoticeIdSet.has(notice.id))
+      : notices;
 
   const receipts = await Promise.all(
-    notices.map((notice) =>
+    targetNotices.map((notice) =>
       upsertReadReceiptWithAudit(context, {
         organizationId,
         noticeId: notice.id,
