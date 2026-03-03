@@ -1,4 +1,8 @@
-import type { BenefitCatalogItem, BenefitRequestItem } from "@/features/benefits/types";
+import type {
+  BenefitCatalogItem,
+  BenefitRequestItem,
+  BenefitRequestStatus
+} from "@/features/benefits/types";
 
 export type EmployeeBenefitRequestSummary = {
   total: number;
@@ -42,6 +46,27 @@ export function parseBenefitRequestSummary(payload: unknown) {
     rejected: Number(summary.rejected ?? 0),
     canceled: Number(summary.canceled ?? 0)
   };
+}
+
+export function normalizeEmployeeBenefitRequestStatusFilter(
+  value: string | null
+): BenefitRequestStatus | "all" {
+  return value === "SUBMITTED" ||
+    value === "APPROVED" ||
+    value === "REJECTED" ||
+    value === "CANCELED"
+    ? value
+    : "all";
+}
+
+export function normalizeEmployeeBenefitRiskFilter(
+  value: string | null
+): EmployeeBenefitRequestRiskFilter {
+  return value === "pending_3d" ? "pending_3d" : "all";
+}
+
+export function parseEmployeeBenefitSearchQuery(value: string | null) {
+  return (value ?? "").trim();
 }
 
 export function buildBenefitsQuery(input: Record<string, string>) {

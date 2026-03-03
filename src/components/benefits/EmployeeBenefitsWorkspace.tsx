@@ -1,13 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   EMPTY_EMPLOYEE_BENEFIT_REQUEST_SUMMARY,
   buildBenefitsQuery,
   filterBenefitRequests,
   isBenefitRequestPendingAgingRisk,
+  normalizeEmployeeBenefitRequestStatusFilter,
+  normalizeEmployeeBenefitRiskFilter,
   parseBenefitCatalog,
+  parseEmployeeBenefitSearchQuery,
   parseBenefitRequests,
   parseBenefitRequestSummary,
   type EmployeeBenefitRequestRiskFilter
@@ -24,6 +28,7 @@ function isTruthyFlag(value: string | undefined) {
 }
 
 export default function EmployeeBenefitsWorkspace() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveEmployeeBenefitsCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -46,6 +51,7 @@ export default function EmployeeBenefitsWorkspace() {
 
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
@@ -213,6 +219,25 @@ export default function EmployeeBenefitsWorkspace() {
     setStatusMessage(copy.messages.canceled);
     await loadWorkspace();
   }
+
+  useEffect(() => {
+    setRequestStatusFilter(
+      normalizeEmployeeBenefitRequestStatusFilter(searchParams.get("status"))
+    );
+    setRequestRiskFilter(
+      normalizeEmployeeBenefitRiskFilter(searchParams.get("risk"))
+    );
+    setRequestSearchQuery(parseEmployeeBenefitSearchQuery(searchParams.get("q")));
+  }, [searchParams]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
+  useEffect(() => {
+    if (autoLoadAttempted || (!organizationId.trim() && !usesBearerToken)) {
+      return;
+    }
+    setAutoLoadAttempted(true);
+    void loadWorkspace();
+  }, [autoLoadAttempted, organizationId, usesBearerToken]);
 
   return (
     <EmployeeBenefitsWorkspaceView
