@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.3
+version: 0.3.4
 scope:
   in:
     - organization master data (create/read/list)
@@ -10,6 +10,7 @@ scope:
     - audit logs for all employee/org mutations
     - domain events for employee/org mutations
     - notice/recruitment/benefits workspace persistence read-model tables for organization-scoped employee communication and ATS/self-service journey
+    - benefits catalog status lifecycle controls and inactive-catalog request guard
   out:
     - multi-tenant enforcement (RLS) across core tables (Phase 1 follow-up)
     - RBAC engine and permission administration UI (Phase 1 follow-up)
@@ -84,6 +85,27 @@ api:
     - method: PATCH
       path: /people/employees/{employeeId}
       description: Update employee profile fields (admin only).
+    - method: GET
+      path: /benefits/catalog
+      description: List organization-scoped benefits catalog items.
+    - method: POST
+      path: /benefits/catalog
+      description: Create organization-scoped benefits catalog item.
+    - method: POST
+      path: /benefits/catalog/{benefitId}/status
+      description: Update benefits catalog item ACTIVE/INACTIVE status (admin/manager).
+    - method: GET
+      path: /benefits/requests
+      description: List organization/employee-scoped benefits requests.
+    - method: POST
+      path: /benefits/requests
+      description: Submit benefits request (inactive catalog items are rejected).
+    - method: POST
+      path: /benefits/requests/{requestId}/decision
+      description: Approve/reject SUBMITTED benefits request (admin/manager only).
+    - method: POST
+      path: /benefits/requests/{requestId}/cancel
+      description: Cancel own SUBMITTED benefits request (employee only).
   events:
     published:
       - name: organization.created.v1
@@ -141,6 +163,9 @@ test_plan:
     - employee org mismatch with department/position returns 409
     - duplicate employee create returns 409
     - duplicate department/position code in same organization returns 409
+    - benefits catalog status update endpoint allows ACTIVE/INACTIVE lifecycle updates for admin/manager
+    - benefits request create returns 409 when target catalog item is INACTIVE
+    - benefits request decision endpoint rejects non-SUBMITTED requests with invalid_state
   regression:
     - existing attendance/leave/payroll flows remain unchanged
   authorization:
@@ -173,13 +198,14 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.3 adds benefits read-model persistence tables as additive DB change. Existing Organization/Employee/Department/Position APIs remain backward compatible."
+consumer_impact: "People contract v0.3.4 extends benefits API behavior with catalog status lifecycle controls and inactive-catalog request guards while preserving backward compatibility for existing People APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
   - work-items/WI-0755-notices-db-persistence-and-notification-read-model.md
   - work-items/WI-0757-recruitment-db-persistence-core-journey.md
   - work-items/WI-0816-benefits-db-persistence-read-model.md
+  - work-items/WI-0817-benefits-catalog-status-lifecycle-and-inactive-guard.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

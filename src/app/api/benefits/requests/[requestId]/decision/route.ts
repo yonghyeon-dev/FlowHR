@@ -1,5 +1,5 @@
 ﻿import { decideBenefitRequestSchema } from "@/features/benefits/schemas";
-import { decideBenefitRequest } from "@/features/benefits/store";
+import { decideBenefitRequest, findBenefitRequest } from "@/features/benefits/store";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -37,6 +37,16 @@ export async function POST(request: Request, context: RouteContext) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
+  const existing = await findBenefitRequest(parsed.data.requestId);
+  if (!existing) {
+    return fail(404, "benefits.request.not_found");
+  }
+  if (existing.status !== "SUBMITTED") {
+    return fail(409, "benefits.request.decision.invalid_state", {
+      currentStatus: existing.status
+    });
+  }
+
   const updated = await decideBenefitRequest({
     requestId: parsed.data.requestId,
     decision: parsed.data.decision,
@@ -45,7 +55,7 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (!updated) {
-    return fail(404, "benefits.request.not_found");
+    return fail(409, "benefits.request.decision.invalid_state");
   }
 
   return ok({ request: updated });

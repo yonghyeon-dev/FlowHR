@@ -24,6 +24,11 @@ type CreateCatalogInput = {
   status?: BenefitCatalogStatus;
 };
 
+type UpdateCatalogStatusInput = {
+  benefitId: string;
+  status: BenefitCatalogStatus;
+};
+
 type ListRequestsInput = {
   organizationId?: string;
   employeeId?: string;
@@ -261,6 +266,22 @@ export function createBenefitCatalogItem(input: CreateCatalogInput, context?: Be
     .then(toCatalogItem);
 }
 
+export function updateBenefitCatalogItemStatus(input: UpdateCatalogStatusInput, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
+  return resolved.dataAccess.benefits.findCatalogItemById(input.benefitId).then((existing) => {
+    if (!existing) {
+      return null;
+    }
+
+    return resolved.dataAccess.benefits
+      .updateCatalogItem(input.benefitId, {
+        status: input.status,
+        updatedAt: new Date()
+      })
+      .then(toCatalogItem);
+  });
+}
+
 export function listBenefitRequests(input: ListRequestsInput = {}, context?: BenefitStoreContext) {
   const resolved = resolveContext(context);
   const organizationId = resolveOrganizationId(input.organizationId);
@@ -303,6 +324,9 @@ export function decideBenefitRequest(input: DecideRequestInput, context?: Benefi
   const resolved = resolveContext(context);
   return resolved.dataAccess.benefits.findRequestById(input.requestId).then((existing) => {
     if (!existing) {
+      return null;
+    }
+    if (existing.status !== "SUBMITTED") {
       return null;
     }
 

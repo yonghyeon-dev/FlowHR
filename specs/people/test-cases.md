@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.3.3)
+# People Test Cases (Contract v0.3.4)
 
 ## Organization
 
@@ -50,4 +50,8 @@
 - `ORG-DEMO` receives one-time seed for legacy benefits catalog/request sample data.
 - Existing benefits API routes preserve behavior while switching to async store calls.
 - Benefits DB migration is additive only and does not break existing people/benefits APIs.
+- Admin/manager can toggle benefits catalog item status via `/benefits/catalog/{benefitId}/status`.
+- Benefits request create returns `409` when target catalog status is `INACTIVE`.
+- Benefits request create returns `409` on benefit organization mismatch.
+- Benefits request decision returns `409` when request status is not `SUBMITTED`.
 

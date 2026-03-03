@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.3
+  version: 0.3.4
 paths:
   /people/organizations:
     get:
@@ -202,4 +202,74 @@ paths:
           description: History listed
         "404":
           description: Employee not found
+  /benefits/catalog:
+    get:
+      summary: List benefits catalog
+      responses:
+        "200":
+          description: Catalog listed
+    post:
+      summary: Create benefits catalog item
+      responses:
+        "201":
+          description: Created
+        "403":
+          description: Forbidden
+  /benefits/catalog/{benefitId}/status:
+    post:
+      summary: Update benefits catalog status
+      parameters:
+        - in: path
+          name: benefitId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+  /benefits/requests:
+    get:
+      summary: List benefits requests
+      responses:
+        "200":
+          description: Requests listed
+    post:
+      summary: Create benefits request
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Inactive catalog or organization mismatch
+  /benefits/requests/{requestId}/decision:
+    post:
+      summary: Decide benefits request
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Request updated
+        "409":
+          description: Invalid request state
+  /benefits/requests/{requestId}/cancel:
+    post:
+      summary: Cancel benefits request
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Request canceled
+        "409":
+          description: Invalid request state
 

@@ -191,8 +191,12 @@ export default function EmployeeBenefitsWorkspace() {
       setStatusMessage(copy.messages.needReason);
       return;
     }
+    if (selectedBenefit?.status !== "ACTIVE") {
+      setStatusMessage(copy.messages.inactiveCatalog);
+      return;
+    }
 
-    const { response } = await callApi("POST", "/api/benefits/requests", {
+    const { response, parsed } = await callApi("POST", "/api/benefits/requests", {
       organizationId,
       benefitId: selectedBenefitId,
       employeeId,
@@ -201,6 +205,10 @@ export default function EmployeeBenefitsWorkspace() {
     });
 
     if (!response.ok) {
+      if ((parsed as { error?: string } | null)?.error === "benefits.catalog.inactive") {
+        setStatusMessage(copy.messages.inactiveCatalog);
+        return;
+      }
       setStatusMessage(copy.messages.loadFailed);
       return;
     }
