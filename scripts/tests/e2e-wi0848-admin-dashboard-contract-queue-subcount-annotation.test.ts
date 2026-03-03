@@ -16,8 +16,8 @@ function run() {
 
   assert.match(adminPage, /breakdown: isKoLocale/);
   assert.match(adminPage, /의사결정 \$\{summary\.contractDecisionQueueCount\}/);
-  assert.match(adminPage, /응답대기 \$\{summary\.contractPendingResponseCount\}/);
-  assert.match(adminPage, /SLA초과 \$\{summary\.contractSlaOverdueCount\}/);
+  assert.match(adminPage, /응답 대기 \$\{summary\.contractPendingResponseCount\}/);
+  assert.match(adminPage, /SLA 초과 \$\{summary\.contractSlaOverdueCount\}/);
   assert.match(adminPage, /Pending response \$\{summary\.contractPendingResponseCount\}/);
   assert.match(adminPage, /<small>\{badge\.breakdown\}<\/small>/);
 
