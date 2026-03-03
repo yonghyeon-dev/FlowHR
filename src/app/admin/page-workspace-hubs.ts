@@ -49,15 +49,17 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
       },
       {
         key: "communication",
-        title: "공지/복리후생/채용",
-        description: "직원 커뮤니케이션과 지원 워크플로 운영",
+        title: "공지/복리후생/채용/계약",
+        description: "직원 커뮤니케이션과 지원 워크플로, 계약 위험 큐를 운영",
         links: [
           { href: "/admin/notices?status=PUBLISHED&risk=no-read", label: "공지 미확인 위험" },
           {
             href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
             label: "복리후생 장기 대기"
           },
-          { href: "/admin/recruitment?risk=stalled_7d", label: "채용 정체 위험" }
+          { href: "/admin/recruitment?risk=stalled_7d", label: "채용 정체 위험" },
+          { href: "/admin/contracts?slaRisk=OVERDUE", label: "계약 SLA 초과" },
+          { href: "/admin/contracts?status=SENT", label: "계약 응답 대기" }
         ]
       }
     ];
@@ -102,15 +104,17 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
     },
     {
       key: "communication",
-      title: "Notices, benefits, recruitment",
-      description: "Operate employee communication and support workflows.",
+      title: "Notices, benefits, recruitment, contracts",
+      description: "Operate employee communication, support workflows, and contract risk queues.",
       links: [
         { href: "/admin/notices?status=PUBLISHED&risk=no-read", label: "Unread notice risk" },
         {
           href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
           label: "Aging benefits queue"
         },
-        { href: "/admin/recruitment?risk=stalled_7d", label: "Stalled recruitment queue" }
+        { href: "/admin/recruitment?risk=stalled_7d", label: "Stalled recruitment queue" },
+        { href: "/admin/contracts?slaRisk=OVERDUE", label: "Contract SLA overdue" },
+        { href: "/admin/contracts?status=SENT", label: "Contract pending responses" }
       ]
     }
   ];
