@@ -66,7 +66,16 @@ export default function AdminDashboardPage() {
           ? `대기 ${summary.pendingApprovalExecutionCount} · 정체 ${summary.stalledApprovalExecutionCount}`
           : `Pending ${summary.pendingApprovalExecutionCount} · Stalled ${summary.stalledApprovalExecutionCount}`,
         href: "/admin/approval-executions",
-        actions: []
+        actions: [
+          {
+            label: isKoLocale ? `대기 ${summary.pendingApprovalExecutionCount}` : `Pending ${summary.pendingApprovalExecutionCount}`,
+            href: "/admin/approval-executions?state=PENDING&source=admin-dashboard"
+          },
+          {
+            label: isKoLocale ? `정체 ${summary.stalledApprovalExecutionCount}` : `Stalled ${summary.stalledApprovalExecutionCount}`,
+            href: "/admin/approval-executions?state=PENDING&stalledHoursMin=24&source=admin-dashboard"
+          }
+        ]
       },
       {
         key: "payroll",

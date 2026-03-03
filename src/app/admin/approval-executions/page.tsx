@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ApprovalExecutionEscalationResultPanel,
@@ -31,7 +32,37 @@ import type {
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
+function normalizeApprovalDomainFilter(value: string | null): ApprovalDomain | "" {
+  if (value === "ATTENDANCE" || value === "LEAVE" || value === "PAYROLL") {
+    return value;
+  }
+  return "";
+}
+
+function normalizeApprovalStateFilter(value: string | null): ApprovalExecutionState | "" {
+  if (value === "PENDING" || value === "APPROVED" || value === "REJECTED") {
+    return value;
+  }
+  return "PENDING";
+}
+
+function normalizeApprovalSortFilter(value: string | null): ApprovalExecutionSort {
+  if (value === "updated_desc" || value === "priority_desc") {
+    return value;
+  }
+  return "priority_desc";
+}
+
+function normalizePositiveIntegerText(value: string | null, fallback: string) {
+  if (!value) return fallback;
+  const parsed = Number(value.trim());
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return String(Math.floor(parsed));
+}
+
 export default function AdminApprovalExecutionsPage() {
+  const searchParams = useSearchParams();
+  const source = searchParams.get("source");
   const [domain, setDomain] = useState<ApprovalDomain | "">("");
   const [state, setState] = useState<ApprovalExecutionState | "">("PENDING");
   const [sort, setSort] = useState<ApprovalExecutionSort>("priority_desc");
@@ -63,6 +94,14 @@ export default function AdminApprovalExecutionsPage() {
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
 
+  useEffect(() => {
+    setDomain(normalizeApprovalDomainFilter(searchParams.get("domain")));
+    setState(normalizeApprovalStateFilter(searchParams.get("state")));
+    setSort(normalizeApprovalSortFilter(searchParams.get("sort")));
+    setStalledHoursMin(normalizePositiveIntegerText(searchParams.get("stalledHoursMin"), "24"));
+    setLimit(normalizePositiveIntegerText(searchParams.get("limit"), "100"));
+  }, [searchParams]);
+
   const asOfDate = useMemo(() => {
     const parsed = new Date(asOfInput);
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
@@ -81,6 +120,17 @@ export default function AdminApprovalExecutionsPage() {
     }
     return Math.max(parsed, 0);
   }, [stalledHoursMin]);
+
+  const dashboardFocusLabel = useMemo(() => {
+    const stalledThreshold = Number(stalledHoursMin || "0");
+    if (state === "PENDING" && Number.isFinite(stalledThreshold) && stalledThreshold >= 24) {
+      return isKoLocale ? "정체 결재 대기함" : "Stalled approval queue";
+    }
+    if (state === "PENDING") {
+      return isKoLocale ? "결재 대기함" : "Pending approval queue";
+    }
+    return isKoLocale ? "결재 실행 현황" : "Approval execution queue";
+  }, [isKoLocale, stalledHoursMin, state]);
 
   const selectedExecution = useMemo(() => {
     return executions.find((item) => toTargetKey(item) === selectedTargetKey) ?? null;
@@ -356,6 +406,12 @@ export default function AdminApprovalExecutionsPage() {
               : " Dev options are enabled so advanced logs are visible."
             : ""}
         </p>
+        {source === "admin-dashboard" ? (
+          <p className="small muted">
+            {isKoLocale ? "관리자 대시보드에서 이동했습니다" : "Opened from admin dashboard"} ·{" "}
+            {isKoLocale ? "집중 대기함" : "Focused queue"}: {dashboardFocusLabel}
+          </p>
+        ) : null}
       </header>
 
       <section className="panel-grid">
