@@ -1,5 +1,6 @@
 ﻿"use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   adminContractsCopyByLocale,
@@ -13,7 +14,15 @@ import {
 import type { ContractDocumentAction } from "@/components/contracts/types";
 import { AdminContractsDocumentFilterControls } from "@/components/contracts/AdminContractsDocumentFilterControls";
 import { useAdminContractsWorkspaceActions } from "@/components/contracts/useAdminContractsWorkspaceActions";
-import { useAdminContractsDocumentFilters } from "@/components/contracts/useAdminContractsDocumentFilters";
+import {
+  parseContractBooleanFilter,
+  parseContractDocumentSearchQuery,
+  useAdminContractsDocumentFilters,
+  normalizeContractDocumentExpirationWindow,
+  normalizeContractDocumentNextStepFilter,
+  normalizeContractDocumentSlaRiskFilter,
+  normalizeContractDocumentStatusFilter
+} from "@/components/contracts/useAdminContractsDocumentFilters";
 import { setContractsRuntimeLocale } from "@/components/contracts/http";
 import { resolveAdminContractDocumentNextStep, resolveAllowedContractDocumentActions, type ContractDocumentNextStepKey } from "@/components/contracts/document-action-policy";
 import { normalizeContractsEntityTitle } from "@/components/contracts/runtime-copy-helpers";
@@ -22,6 +31,7 @@ import { formatEmployeeIdForLocaleDisplay, normalizeEmployeeIdForApi } from "@/l
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminContractsWorkspace() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -75,7 +85,31 @@ export default function AdminContractsWorkspace() {
     normalizedEmployeeIdForApi,
     actionLabelByAction
   });
-  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, decisionQueueOnly, setDecisionQueueOnly, nextStepFilter, setNextStepFilter, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, decisionQueueCount, nextStepCounts, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({ documents, locale });
+  const { documentSearchQuery, setDocumentSearchQuery, documentStatusFilter, setDocumentStatusFilter, expirationWindowDays, setExpirationWindowDays, slaRiskFilter, setSlaRiskFilter, renewalCandidateOnly, setRenewalCandidateOnly, decisionQueueOnly, setDecisionQueueOnly, nextStepFilter, setNextStepFilter, expiringSoonCount, dueSoonSlaCount, overdueSlaCount, decisionQueueCount, nextStepCounts, renewalCandidateCount, visibleDocuments, isDueSoonSlaRisk, isOverdueSlaRisk } = useAdminContractsDocumentFilters({
+    documents,
+    locale,
+    initialFilters: {
+      searchQuery: parseContractDocumentSearchQuery(searchParams.get("q")),
+      statusFilter: normalizeContractDocumentStatusFilter(
+        searchParams.get("status")
+      ),
+      expirationWindowDays: normalizeContractDocumentExpirationWindow(
+        searchParams.get("expiresInDays")
+      ),
+      slaRiskFilter: normalizeContractDocumentSlaRiskFilter(
+        searchParams.get("slaRisk")
+      ),
+      renewalCandidateOnly: parseContractBooleanFilter(
+        searchParams.get("renewalCandidateOnly")
+      ),
+      decisionQueueOnly: parseContractBooleanFilter(
+        searchParams.get("decisionQueueOnly")
+      ),
+      nextStepFilter: normalizeContractDocumentNextStepFilter(
+        searchParams.get("nextStep")
+      )
+    }
+  });
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
