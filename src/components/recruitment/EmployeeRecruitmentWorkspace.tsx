@@ -1,15 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   EMPTY_EMPLOYEE_REFERRAL_SUMMARY,
   buildRecruitmentQuery,
   countStalledReferrals,
   filterEmployeeReferrals,
+  normalizeRecruitmentReferralRiskFilter,
+  normalizeRecruitmentReferralStageFilter,
   parseRecruitmentOpenings,
   parseRecruitmentReferrals,
   parseRecruitmentReferralSummary,
+  parseRecruitmentSearchQuery,
   type EmployeeReferralRiskFilter
 } from "@/components/recruitment/employee-recruitment-helpers";
 import EmployeeRecruitmentWorkspaceView from "@/components/recruitment/EmployeeRecruitmentWorkspaceView";
@@ -28,6 +32,7 @@ function isTruthyFlag(value: string | undefined) {
 }
 
 export default function EmployeeRecruitmentWorkspace() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveEmployeeRecruitmentCopy(locale);
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
@@ -43,13 +48,18 @@ export default function EmployeeRecruitmentWorkspace() {
   const [candidateName, setCandidateName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
   const [note, setNote] = useState("");
-  const [stageFilter, setStageFilter] = useState<RecruitmentReferralStage | "all">("all");
-  const [riskFilter, setRiskFilter] = useState<EmployeeReferralRiskFilter>("all");
-  const [openingFilter, setOpeningFilter] = useState("all");
-  const [referralSearchQuery, setReferralSearchQuery] = useState("");
+  const [stageFilter, setStageFilter] = useState<RecruitmentReferralStage | "all">(
+    normalizeRecruitmentReferralStageFilter(searchParams.get("stage"))
+  );
+  const [riskFilter, setRiskFilter] = useState<EmployeeReferralRiskFilter>(
+    normalizeRecruitmentReferralRiskFilter(searchParams.get("risk"))
+  );
+  const [openingFilter, setOpeningFilter] = useState((searchParams.get("opening") ?? "").trim() || "all");
+  const [referralSearchQuery, setReferralSearchQuery] = useState(parseRecruitmentSearchQuery(searchParams.get("q")));
 
   const [pending, setPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
@@ -137,7 +147,8 @@ export default function EmployeeRecruitmentWorkspace() {
     const referralsQuery = buildRecruitmentQuery({
       organizationId,
       referrerEmployeeId: employeeId,
-      stage: stageFilter
+      stage: stageFilter,
+      sort: "stalled_priority"
     });
 
     const [openingsRes, referralsRes] = await Promise.all([
@@ -237,6 +248,14 @@ export default function EmployeeRecruitmentWorkspace() {
     setStatusMessage(copy.messages.withdrawn);
     await loadWorkspace();
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
+  useEffect(() => {
+    if (autoLoadAttempted || (!organizationId.trim() && !usesBearerToken)) {
+      return;
+    }
+    setAutoLoadAttempted(true);
+    void loadWorkspace();
+  }, [autoLoadAttempted, organizationId, usesBearerToken]);
 
   return (
     <EmployeeRecruitmentWorkspaceView
