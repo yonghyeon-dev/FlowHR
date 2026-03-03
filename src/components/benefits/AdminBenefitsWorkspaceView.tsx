@@ -32,6 +32,8 @@ function isPendingAgingRisk(request: BenefitRequestItem) {
 type AdminBenefitsWorkspaceViewProps = {
   copy: AdminBenefitsCopy;
   sourceHint: string;
+  analyticsBackHref: string;
+  analyticsBackLabel: string;
   runtimeLocale: string;
   showDevTools: boolean;
   sessionOrganizationId: string;
@@ -76,6 +78,8 @@ type AdminBenefitsWorkspaceViewProps = {
 export default function AdminBenefitsWorkspaceView({
   copy,
   sourceHint,
+  analyticsBackHref,
+  analyticsBackLabel,
   runtimeLocale,
   showDevTools,
   sessionOrganizationId,
@@ -129,6 +133,11 @@ export default function AdminBenefitsWorkspaceView({
           {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
         </div>
         <div className="page-actions">
+          {analyticsBackHref ? (
+            <Link className="btn btn-secondary" href={analyticsBackHref}>
+              {analyticsBackLabel}
+            </Link>
+          ) : null}
           <Link className="btn btn-secondary" href="/admin">
             /admin
           </Link>

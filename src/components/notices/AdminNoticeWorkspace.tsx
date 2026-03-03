@@ -129,6 +129,8 @@ export default function AdminNoticeWorkspace() {
           ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
           : `Opened from admin analytics.${analyticsFocusLabel ? ` · Focus queue: ${analyticsFocusLabel}` : ""}`
       : "";
+  const analyticsBackHref = source === "admin-analytics" ? "/admin/analytics" : "";
+  const analyticsBackLabel = locale === "ko" ? "분석으로 돌아가기" : "Back to analytics";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
@@ -361,6 +363,8 @@ export default function AdminNoticeWorkspace() {
     <AdminNoticeWorkspaceView
       copy={copy}
       sourceHint={sourceHint}
+      analyticsBackHref={analyticsBackHref}
+      analyticsBackLabel={analyticsBackLabel}
       showDevTools={showDevTools}
       sessionOrganizationId={organizationId}
       sessionActorId={actorId}
