@@ -83,7 +83,7 @@ function resolveContractPriorityAction(
   if (snapshot.renewalCandidateCount > 0) {
     return {
       href: withAnalyticsSourceContext("/admin/contracts?renewalCandidateOnly=true"),
-      label: copy.contractPanel.actionOpenContractsWorkspace,
+      label: copy.contractPanel.actionOpenRenewalCandidateQueue,
       reason: copy.contractPanel.priorityReasonRenewal
     };
   }
@@ -117,6 +117,10 @@ function buildContractQuickActions(copy: KpiCopy): ContractQuickAction[] {
         "contractSlaOverdueCount"
       ),
       label: copy.contractPanel.actionOpenSlaOverdueQueue
+    },
+    {
+      href: withAnalyticsSourceContext("/admin/contracts?renewalCandidateOnly=true"),
+      label: copy.contractPanel.actionOpenRenewalCandidateQueue
     }
   ];
 }
