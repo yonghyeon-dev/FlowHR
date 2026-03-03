@@ -1,10 +1,21 @@
 ﻿"use client";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
 import AdminBenefitsWorkspaceView from "@/components/benefits/AdminBenefitsWorkspaceView";
+import {
+  buildBenefitWorkspaceQuery,
+  isTruthyFlag,
+  normalizeBenefitRequestFilter,
+  normalizeBenefitRiskFilter,
+  parseBenefitCatalog,
+  parseBenefitRequests,
+  parseBenefitRequestSummary,
+  parseBenefitSearchQuery
+} from "@/components/benefits/admin-benefits-workspace-helpers";
 
 type RequestSummary = {
   total: number;
@@ -20,47 +31,8 @@ const EMPTY_REQUEST_SUMMARY: RequestSummary = {
   rejected: 0
 };
 
-function parseCatalog(payload: unknown) {
-  const catalog = (payload as { catalog?: BenefitCatalogItem[] } | null)?.catalog;
-  return Array.isArray(catalog) ? catalog : [];
-}
-
-function parseRequests(payload: unknown) {
-  const requests = (payload as { requests?: BenefitRequestItem[] } | null)?.requests;
-  return Array.isArray(requests) ? requests : [];
-}
-
-function parseSummary(payload: unknown) {
-  const summary = (payload as { summary?: Partial<RequestSummary> } | null)?.summary;
-  if (!summary) {
-    return EMPTY_REQUEST_SUMMARY;
-  }
-  return {
-    total: Number(summary.total ?? 0),
-    submitted: Number(summary.submitted ?? 0),
-    approved: Number(summary.approved ?? 0),
-    rejected: Number(summary.rejected ?? 0)
-  };
-}
-
-function buildQuery(input: Record<string, string>) {
-  const query = new URLSearchParams();
-  Object.entries(input).forEach(([key, value]) => {
-    if (!value.trim()) {
-      return;
-    }
-    query.set(key, value.trim());
-  });
-  const text = query.toString();
-  return text ? `?${text}` : "";
-}
-
-function isTruthyFlag(value: string | undefined) {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
 export default function AdminBenefitsWorkspace() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveAdminBenefitsCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -83,6 +55,7 @@ export default function AdminBenefitsWorkspace() {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
+  const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
@@ -180,8 +153,8 @@ export default function AdminBenefitsWorkspace() {
       return;
     }
 
-    const catalogQuery = buildQuery({ organizationId });
-    const requestsQuery = buildQuery({ organizationId });
+    const catalogQuery = buildBenefitWorkspaceQuery({ organizationId });
+    const requestsQuery = buildBenefitWorkspaceQuery({ organizationId });
 
     const [catalogRes, requestsRes] = await Promise.all([
       callApi(copy.refreshAction, "GET", `/api/benefits/catalog${catalogQuery}`),
@@ -193,9 +166,9 @@ export default function AdminBenefitsWorkspace() {
       return;
     }
 
-    setCatalog(parseCatalog(catalogRes.parsed));
-    setRequests(parseRequests(requestsRes.parsed));
-    setRequestSummary(parseSummary(requestsRes.parsed));
+    setCatalog(parseBenefitCatalog(catalogRes.parsed));
+    setRequests(parseBenefitRequests(requestsRes.parsed));
+    setRequestSummary(parseBenefitRequestSummary(requestsRes.parsed, EMPTY_REQUEST_SUMMARY));
     setStatusMessage("");
   }
 
@@ -252,6 +225,21 @@ export default function AdminBenefitsWorkspace() {
     setStatusMessage(copy.messages.requestDecided);
     await loadWorkspace();
   }
+
+  useEffect(() => {
+    setRequestFilter(normalizeBenefitRequestFilter(searchParams.get("status")));
+    setRequestRiskFilter(normalizeBenefitRiskFilter(searchParams.get("risk")));
+    setRequestSearchQuery(parseBenefitSearchQuery(searchParams.get("q")));
+  }, [searchParams]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
+  useEffect(() => {
+    if (autoLoadAttempted || (!organizationId.trim() && !usesBearerToken)) {
+      return;
+    }
+    setAutoLoadAttempted(true);
+    void loadWorkspace();
+  }, [autoLoadAttempted, organizationId, usesBearerToken]);
 
   return (
     <AdminBenefitsWorkspaceView

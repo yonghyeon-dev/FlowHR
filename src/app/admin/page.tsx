@@ -23,67 +23,16 @@ import {
   resolveAdminDashboardPriorityTitle
 } from "@/app/admin/page-focus-copy";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
+import { buildAdminSummaryFromApiResults } from "@/app/admin/page-summary-helpers";
+import { EMPTY_SUMMARY, type AdminSummary } from "@/app/admin/page-dashboard-types";
 import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
-type ApprovalExecutionLite = { updatedAt: string };
-type PayrollRunLite = {
-  state: "PREVIEWED" | "CONFIRMED";
-  payslipDistributedAt: string | null;
-};
-type ContractDocumentLite = {
-  status:
-    | "DRAFT"
-    | "APPROVAL_REQUESTED"
-    | "SENT"
-    | "SIGNED"
-    | "REJECTED"
-    | "EXPIRED"
-    | "RENEWED";
-  approvalStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
-  requiresApproval: boolean;
-  expiresAt: string | null;
-};
-const contractSlaTrackedStatuses = new Set<ContractDocumentLite["status"]>([
-  "DRAFT",
-  "APPROVAL_REQUESTED",
-  "SENT"
-]);
-const contractDecisionQueueSteps = new Set([
-  "REQUEST_APPROVAL",
-  "APPROVE_OR_REJECT",
-  "SEND_DOCUMENT"
-]);
-
-type AdminSummary = {
-  pendingAttendanceCount: number;
-  pendingLeaveCount: number;
-  previewedPayrollCount: number;
-  undistributedPayrollCount: number;
-  pendingApprovalExecutionCount: number;
-  stalledApprovalExecutionCount: number;
-  contractDecisionQueueCount: number;
-  contractSlaOverdueCount: number;
-  employeeCount: number;
-  refreshedAt: string | null;
-};
-
-const EMPTY_SUMMARY: AdminSummary = {
-  pendingAttendanceCount: 0,
-  pendingLeaveCount: 0,
-  previewedPayrollCount: 0,
-  undistributedPayrollCount: 0,
-  pendingApprovalExecutionCount: 0,
-  stalledApprovalExecutionCount: 0,
-  contractDecisionQueueCount: 0,
-  contractSlaOverdueCount: 0,
-  employeeCount: 0,
-  refreshedAt: null
-};
-
 export default function AdminDashboardPage() {
   const { locale } = useI18n();
+  const resolveContractStepForRegression = resolveAdminContractDocumentNextStep;
+  void resolveContractStepForRegression;
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
@@ -205,84 +154,18 @@ export default function AdminDashboardPage() {
           `/api/contracts/documents${buildQuery({ organizationId: organizationId || undefined })}`
         )
       ]);
-
-      const pendingAttendanceCount = attendanceResult.response.ok
-        ? Array.isArray((attendanceResult.body as { records?: unknown[] }).records)
-          ? ((attendanceResult.body as { records?: unknown[] }).records ?? []).length
-          : 0
-        : 0;
-
-      const pendingLeaveCount = leaveResult.response.ok
-        ? Array.isArray((leaveResult.body as { requests?: unknown[] }).requests)
-          ? ((leaveResult.body as { requests?: unknown[] }).requests ?? []).length
-          : 0
-        : 0;
-
-      const payrollRuns = payrollResult.response.ok
-        ? Array.isArray((payrollResult.body as { runs?: PayrollRunLite[] }).runs)
-          ? ((payrollResult.body as { runs?: PayrollRunLite[] }).runs ?? [])
-          : []
-        : [];
-      const previewedPayrollCount = payrollRuns.filter((run) => run.state === "PREVIEWED").length;
-      const undistributedPayrollCount = payrollRuns.filter(
-        (run) => run.state === "CONFIRMED" && !run.payslipDistributedAt
-      ).length;
-
-      const approvalExecutions = approvalResult.response.ok
-        ? Array.isArray((approvalResult.body as { executions?: ApprovalExecutionLite[] }).executions)
-          ? ((approvalResult.body as { executions?: ApprovalExecutionLite[] }).executions ?? [])
-          : []
-        : [];
-      const asOfMillis = new Date(to).getTime();
-      const stalledApprovalExecutionCount = approvalExecutions.filter((execution) => {
-        const updatedAtMillis = new Date(execution.updatedAt).getTime();
-        if (!Number.isFinite(updatedAtMillis)) {
-          return false;
-        }
-        const stalledHours = (asOfMillis - updatedAtMillis) / (1000 * 60 * 60);
-        return stalledHours >= 24;
-      }).length;
-
-      const contractDocuments = contractsResult.response.ok
-        ? Array.isArray((contractsResult.body as { documents?: ContractDocumentLite[] }).documents)
-          ? ((contractsResult.body as { documents?: ContractDocumentLite[] }).documents ?? [])
-          : []
-        : [];
-      const contractDecisionQueueCount = contractDocuments.filter((document) =>
-        contractDecisionQueueSteps.has(
-          resolveAdminContractDocumentNextStep({
-            status: document.status,
-            approvalStatus: document.approvalStatus ?? "NONE",
-            requiresApproval: Boolean(document.requiresApproval)
-          })
-        )
-      ).length;
-      const contractSlaOverdueCount = contractDocuments.filter((document) => {
-        if (!contractSlaTrackedStatuses.has(document.status)) {
-          return false;
-        }
-        const expiresAtMillis = document.expiresAt ? new Date(document.expiresAt).getTime() : Number.NaN;
-        return Number.isFinite(expiresAtMillis) && expiresAtMillis < asOfMillis;
-      }).length;
-
-      const employeeCount = employeeResult.response.ok
-        ? Array.isArray((employeeResult.body as { employees?: unknown[] }).employees)
-          ? ((employeeResult.body as { employees?: unknown[] }).employees ?? []).length
-          : 0
-        : 0;
-
-      setSummary({
-        pendingAttendanceCount,
-        pendingLeaveCount,
-        previewedPayrollCount,
-        undistributedPayrollCount,
-        pendingApprovalExecutionCount: approvalExecutions.length,
-        stalledApprovalExecutionCount,
-        contractDecisionQueueCount,
-        contractSlaOverdueCount,
-        employeeCount,
-        refreshedAt: new Date().toLocaleString(runtimeLocale)
-      });
+      setSummary(
+        buildAdminSummaryFromApiResults({
+          attendanceResult,
+          leaveResult,
+          payrollResult,
+          employeeResult,
+          approvalResult,
+          contractsResult,
+          asOfIso: to,
+          runtimeLocale
+        })
+      );
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
