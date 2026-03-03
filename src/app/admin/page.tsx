@@ -62,6 +62,9 @@ export default function AdminDashboardPage() {
           summary.pendingApprovalExecutionCount - summary.stalledApprovalExecutionCount,
           0
         ),
+        breakdown: isKoLocale
+          ? `대기 ${summary.pendingApprovalExecutionCount} · 정체 ${summary.stalledApprovalExecutionCount}`
+          : `Pending ${summary.pendingApprovalExecutionCount} · Stalled ${summary.stalledApprovalExecutionCount}`,
         href: "/admin/approval-executions"
       },
       {
@@ -70,6 +73,9 @@ export default function AdminDashboardPage() {
         total: summary.previewedPayrollCount + summary.undistributedPayrollCount,
         critical: summary.undistributedPayrollCount,
         watch: summary.previewedPayrollCount,
+        breakdown: isKoLocale
+          ? `미확정 ${summary.previewedPayrollCount} · 미배포 ${summary.undistributedPayrollCount}`
+          : `Previewed ${summary.previewedPayrollCount} · Undistributed ${summary.undistributedPayrollCount}`,
         href: "/admin/payroll-close"
       },
       {
@@ -83,6 +89,9 @@ export default function AdminDashboardPage() {
             summary.contractSlaOverdueCount,
           0
         ),
+        breakdown: isKoLocale
+          ? `의사결정 ${summary.contractDecisionQueueCount} · 응답대기 ${summary.contractPendingResponseCount} · SLA초과 ${summary.contractSlaOverdueCount}`
+          : `Decision ${summary.contractDecisionQueueCount} · Pending response ${summary.contractPendingResponseCount} · SLA overdue ${summary.contractSlaOverdueCount}`,
         href: "/admin/contracts"
       }
     ],
@@ -285,6 +294,7 @@ export default function AdminDashboardPage() {
                   ? `긴급 ${badge.critical} · 주의 ${badge.watch}`
                   : `Critical ${badge.critical} · Watch ${badge.watch}`}
               </small>
+              <small>{badge.breakdown}</small>
               <div className="actions" style={{ marginTop: 8 }}>
                 <Link className="btn btn-secondary btn-small" href={badge.href}>
                   {isKoLocale ? "대기함 열기" : "Open queue"}
