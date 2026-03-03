@@ -59,6 +59,33 @@ export function parseRecruitmentReferralSummary(payload: unknown) {
   };
 }
 
+export function normalizeRecruitmentReferralStageFilter(value: string | null): RecruitmentReferralStage | "all" {
+  if (!value) {
+    return "all";
+  }
+  return [
+    "SUBMITTED",
+    "SCREENING",
+    "INTERVIEW",
+    "OFFER",
+    "HIRED",
+    "REJECTED",
+    "WITHDRAWN"
+  ].includes(value)
+    ? (value as RecruitmentReferralStage)
+    : "all";
+}
+
+export function normalizeRecruitmentReferralRiskFilter(
+  value: string | null
+): EmployeeReferralRiskFilter {
+  return value === "stalled_7d" || value === "stalled_14d" ? value : "all";
+}
+
+export function parseRecruitmentSearchQuery(value: string | null) {
+  return (value ?? "").trim();
+}
+
 export function buildRecruitmentQuery(input: Record<string, string>) {
   const query = new URLSearchParams();
   Object.entries(input).forEach(([key, value]) => {
