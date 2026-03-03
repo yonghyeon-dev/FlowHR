@@ -25,6 +25,13 @@ export default function AdminRecruitmentWorkspace() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveAdminRecruitmentCopy(locale);
+  const source = searchParams.get("source");
+  const sourceHint =
+    source === "admin-dashboard"
+      ? locale === "ko"
+        ? "관리자 대시보드에서 이동했습니다."
+        : "Opened from admin dashboard."
+      : "";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
@@ -259,6 +266,7 @@ export default function AdminRecruitmentWorkspace() {
   return (
     <AdminRecruitmentWorkspaceView
       copy={copy}
+      sourceHint={sourceHint}
       showDevTools={showDevTools}
       sessionOrganizationId={organizationId}
       sessionActorId={actorId}
