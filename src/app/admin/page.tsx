@@ -75,10 +75,12 @@ export default function AdminDashboardPage() {
       {
         key: "contracts",
         label: isKoLocale ? "계약 대기함" : "Contract queue",
-        total: summary.contractDecisionQueueCount,
+        total: summary.contractDecisionQueueCount + summary.contractPendingResponseCount,
         critical: summary.contractSlaOverdueCount,
         watch: Math.max(
-          summary.contractDecisionQueueCount - summary.contractSlaOverdueCount,
+          summary.contractDecisionQueueCount +
+            summary.contractPendingResponseCount -
+            summary.contractSlaOverdueCount,
           0
         ),
         href: "/admin/contracts"
@@ -87,6 +89,7 @@ export default function AdminDashboardPage() {
     [
       isKoLocale,
       summary.contractDecisionQueueCount,
+      summary.contractPendingResponseCount,
       summary.contractSlaOverdueCount,
       summary.pendingApprovalExecutionCount,
       summary.previewedPayrollCount,
