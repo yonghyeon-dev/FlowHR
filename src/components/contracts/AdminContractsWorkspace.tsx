@@ -36,6 +36,9 @@ export default function AdminContractsWorkspace() {
   const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = adminContractsCopyByLocale[locale];
+  const analyticsSource = searchParams.get("source");
+  const analyticsFocusMetric = searchParams.get("focusMetric");
+  const analyticsFocusLabel = analyticsFocusMetric === "contractSlaOverdueCount" ? copy.overdueSlaCountLabel : analyticsFocusMetric === "contractDecisionQueueCount" ? copy.decisionQueueCountLabel : copy.documentsKpiLabel;
   const categoryLabels = contractCategoryLabelByLocale[locale];
   const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
   const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
@@ -123,6 +126,7 @@ export default function AdminContractsWorkspace() {
           <p className="page-eyebrow">{copy.heroEyebrow}</p>
           <h1 className="page-title">{copy.title}</h1>
           <p className="page-subtitle">{copy.description}</p>
+          {analyticsSource === "admin-analytics" ? <p className="small muted">{copy.analyticsSourceBanner} · {copy.analyticsSourceFocusLabel}: {analyticsFocusLabel}</p> : null}
           <div className="contract-action-row">
             <Link href="/admin/contracts/builder" className="btn btn-secondary btn-small">
               {copy.openTemplateBuilderAction}
