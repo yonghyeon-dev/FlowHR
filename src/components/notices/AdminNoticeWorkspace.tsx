@@ -1,4 +1,5 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NoticeItem, NoticeReadReceipt, NoticeStatus } from "@/features/notices/types";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
@@ -8,6 +9,7 @@ import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceV
 
 type NoticeApiSummary = { total: number; draft: number; scheduled: number; published: number };
 type NoticeApiLog = { id: number; action: string; status: number; ok: boolean; at: string };
+type NoticeAudienceFilter = "all" | "employees" | "admins";
 const DEFAULT_SUMMARY: NoticeApiSummary = { total: 0, draft: 0, scheduled: 0, published: 0 };
 
 function parseSummary(payload: unknown): NoticeApiSummary {
@@ -59,8 +61,32 @@ function isReadCoverageRisk(notice: NoticeItem, readCountByNoticeId: Map<string,
   return notice.status === "PUBLISHED" && (readCountByNoticeId.get(notice.id) ?? 0) === 0;
 }
 
+function normalizeNoticeStatusFilter(value: string | null): NoticeStatus | "all" {
+  if (value === "DRAFT" || value === "SCHEDULED" || value === "PUBLISHED") {
+    return value;
+  }
+  return "all";
+}
+
+function normalizeNoticeAudienceFilter(value: string | null): NoticeAudienceFilter {
+  if (value === "employees" || value === "admins") {
+    return value;
+  }
+  return "all";
+}
+
+function parseNoticeReadRiskFilter(value: string | null) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "no-read" || normalized === "aging-3d";
+}
+
+function parseNoticeSearchKeyword(value: string | null) {
+  return (value ?? "").trim();
+}
+
 export default function AdminNoticeWorkspace() {
   const { locale } = useI18n();
+  const searchParams = useSearchParams();
   const copy = resolveNoticeWorkspaceCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
@@ -69,7 +95,7 @@ export default function AdminNoticeWorkspace() {
   const actorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
   const [statusFilter, setStatusFilter] = useState<NoticeStatus | "all">("all");
-  const [audienceFilter, setAudienceFilter] = useState<"all" | "employees" | "admins">("all");
+  const [audienceFilter, setAudienceFilter] = useState<NoticeAudienceFilter>("all");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState<"all" | "employees" | "admins">("all");
@@ -178,6 +204,13 @@ export default function AdminNoticeWorkspace() {
     statusFilter,
     usesBearerToken
   ]);
+
+  useEffect(() => {
+    setStatusFilter(normalizeNoticeStatusFilter(searchParams.get("status")));
+    setAudienceFilter(normalizeNoticeAudienceFilter(searchParams.get("audience")));
+    setListSearchQuery(parseNoticeSearchKeyword(searchParams.get("q")));
+    setReadRiskOnly(parseNoticeReadRiskFilter(searchParams.get("risk")));
+  }, [searchParams]);
 
   useEffect(() => {
     if (autoLoadAttempted || (!organizationId && !usesBearerToken)) {

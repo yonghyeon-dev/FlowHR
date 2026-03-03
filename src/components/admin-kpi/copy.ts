@@ -67,6 +67,13 @@ export type KpiCopy = {
     noReadNoticeCount: string;
     unreadAging3dCount: string;
     agingThreshold: string;
+    priorityActionLabel: string;
+    quickActionsLabel: string;
+    actionOpenNoticeWorkspace: string;
+    actionOpenNoReadQueue: string;
+    priorityReasonAging: string;
+    priorityReasonNoRead: string;
+    priorityReasonClear: string;
   };
   benefitsPanel: {
     title: string;
@@ -201,7 +208,14 @@ const defaultCopy: KpiCopy = {
     publishedNoticeCount: "Published notices",
     noReadNoticeCount: "No-read notices",
     unreadAging3dCount: "No-read notices (3d+)",
-    agingThreshold: "published or updated 3+ days ago"
+    agingThreshold: "published or updated 3+ days ago",
+    priorityActionLabel: "Top-priority action",
+    quickActionsLabel: "Quick actions",
+    actionOpenNoticeWorkspace: "Open notice workspace",
+    actionOpenNoReadQueue: "Open no-read queue",
+    priorityReasonAging: "Aged unread notices exist. Start with no-read queue follow-up.",
+    priorityReasonNoRead: "No-read notices exist. Follow up acknowledgement first.",
+    priorityReasonClear: "No-read risk is clear. Continue scheduled/published notice operations."
   },
   benefitsPanel: {
     title: "Benefits request snapshot",
@@ -336,7 +350,14 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       publishedNoticeCount: "게시 공지 수",
       noReadNoticeCount: "미열람 공지 수",
       unreadAging3dCount: "3일+ 미열람 공지",
-      agingThreshold: "게시/수정 후 3일 이상 경과"
+      agingThreshold: "게시/수정 후 3일 이상 경과",
+      priorityActionLabel: "최우선 조치",
+      quickActionsLabel: "빠른 이동",
+      actionOpenNoticeWorkspace: "공지 워크스페이스 열기",
+      actionOpenNoReadQueue: "미열람 큐 열기",
+      priorityReasonAging: "3일 이상 미열람 공지가 있습니다. 미열람 큐부터 확인하세요.",
+      priorityReasonNoRead: "미열람 공지가 남아 있습니다. 읽음 확인 후속 조치가 필요합니다.",
+      priorityReasonClear: "미열람 리스크가 정리되었습니다. 일반 공지 운영을 진행하세요."
     },
     benefitsPanel: {
       title: "복리후생 요청 스냅샷",
