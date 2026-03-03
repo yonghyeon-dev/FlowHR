@@ -22,7 +22,8 @@ export async function GET(request: Request) {
   const parsed = listBenefitRequestsQuerySchema.safeParse({
     organizationId: url.searchParams.get("organizationId") ?? undefined,
     employeeId: url.searchParams.get("employeeId") ?? undefined,
-    status: url.searchParams.get("status") ?? undefined
+    status: url.searchParams.get("status") ?? undefined,
+    sort: url.searchParams.get("sort") ?? undefined
   });
 
   if (!parsed.success) {
@@ -35,7 +36,8 @@ export async function GET(request: Request) {
   const requests = await listBenefitRequests({
     organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
     employeeId,
-    status: parsed.data.status
+    status: parsed.data.status,
+    sort: parsed.data.sort
   });
 
   return ok({ requests, summary: summarizeBenefitRequests(requests) });

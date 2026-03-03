@@ -2,6 +2,7 @@
   BenefitCatalogItem,
   BenefitCatalogStatus,
   BenefitRequestItem,
+  BenefitRequestSort,
   BenefitRequestStatus
 } from "@/features/benefits/types";
 import type { DataAccess } from "@/features/shared/data-access";
@@ -33,6 +34,7 @@ type ListRequestsInput = {
   organizationId?: string;
   employeeId?: string;
   status?: BenefitRequestStatus | "all";
+  sort?: BenefitRequestSort;
 };
 
 type CreateRequestInput = {
@@ -100,6 +102,57 @@ const initialRequestStore: BenefitRequestItem[] = [
 
 function normalizeStatus<T extends string>(status: T | "all" | undefined) {
   return status && status !== "all" ? status : null;
+}
+
+const DEFAULT_REQUEST_SORT: BenefitRequestSort = "updated_desc";
+const BENEFIT_REQUEST_STATUS_PRIORITY: Record<BenefitRequestStatus, number> = {
+  SUBMITTED: 0,
+  APPROVED: 1,
+  REJECTED: 2,
+  CANCELED: 3
+};
+
+function normalizeRequestSort(sort: BenefitRequestSort | undefined): BenefitRequestSort {
+  return sort === "pending_priority" ? "pending_priority" : DEFAULT_REQUEST_SORT;
+}
+
+function compareBenefitRequestsByUpdatedAtDesc(left: BenefitRequestItem, right: BenefitRequestItem) {
+  const byUpdatedAt = Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+  if (Number.isFinite(byUpdatedAt) && byUpdatedAt !== 0) {
+    return byUpdatedAt;
+  }
+  return right.id.localeCompare(left.id);
+}
+
+function sortBenefitRequestItems(requests: BenefitRequestItem[], sort: BenefitRequestSort): BenefitRequestItem[] {
+  const next = [...requests];
+  if (sort !== "pending_priority") {
+    next.sort(compareBenefitRequestsByUpdatedAtDesc);
+    return next;
+  }
+
+  next.sort((left, right) => {
+    const statusDelta =
+      BENEFIT_REQUEST_STATUS_PRIORITY[left.status] - BENEFIT_REQUEST_STATUS_PRIORITY[right.status];
+    if (statusDelta !== 0) {
+      return statusDelta;
+    }
+    if (left.status === "SUBMITTED" && right.status === "SUBMITTED") {
+      const leftRequestedAt = Date.parse(left.requestedAt);
+      const rightRequestedAt = Date.parse(right.requestedAt);
+      const byRequestedAt = leftRequestedAt - rightRequestedAt;
+      if (Number.isFinite(byRequestedAt) && byRequestedAt !== 0) {
+        return byRequestedAt;
+      }
+    }
+    return compareBenefitRequestsByUpdatedAtDesc(left, right);
+  });
+
+  return next;
+}
+
+export function sortBenefitRequestQueue(items: BenefitRequestItem[], sort: BenefitRequestSort) {
+  return sortBenefitRequestItems(items, normalizeRequestSort(sort));
 }
 
 function resolveOrganizationId(inputId?: string) {
@@ -286,6 +339,7 @@ export function listBenefitRequests(input: ListRequestsInput = {}, context?: Ben
   const resolved = resolveContext(context);
   const organizationId = resolveOrganizationId(input.organizationId);
   const status = normalizeStatus(input.status);
+  const sort = normalizeRequestSort(input.sort);
 
   return ensureInitialBenefitSeed(resolved, organizationId).then(() =>
     resolved.dataAccess.benefits
@@ -295,7 +349,7 @@ export function listBenefitRequests(input: ListRequestsInput = {}, context?: Ben
         status: status ?? undefined,
         limit: 5000
       })
-      .then((rows) => rows.map(toRequestItem))
+      .then((rows) => sortBenefitRequestItems(rows.map(toRequestItem), sort))
   );
 }
 
