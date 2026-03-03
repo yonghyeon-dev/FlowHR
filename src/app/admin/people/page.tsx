@@ -9,6 +9,15 @@ import {
   buildOrgTree,
   filterEmployees
 } from "@/app/admin/people/page-helpers";
+import {
+  type AdminPeopleFocusPanel,
+  type AdminPeopleSourceContext,
+  normalizeActiveFilter,
+  normalizeAdminPeopleFocusPanel,
+  normalizeAdminPeopleSourceContext,
+  normalizeHistoryLimit,
+  normalizeUpdatedWindow
+} from "@/app/admin/people/page-deeplink-helpers";
 import { useAdminPeopleDirectoryActions } from "@/app/admin/people/page-directory-actions";
 import { AdminPeoplePageView } from "@/app/admin/people/page-view";
 import {
@@ -30,70 +39,6 @@ import { useI18n } from "@/lib/i18n/provider";
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
-type AdminPeopleFocusPanel =
-  | "directory-filters"
-  | "org-chart"
-  | "employee-compare"
-  | "employee-history";
-
-type AdminPeopleSourceContext = "admin-onboarding" | "admin-dashboard";
-
-function normalizeAdminPeopleFocusPanel(value: string | null): AdminPeopleFocusPanel | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  if (!normalized) {
-    return null;
-  }
-  if (normalized === "directory-filters" || normalized === "filters" || normalized === "invites") {
-    return "directory-filters";
-  }
-  if (normalized === "org-chart" || normalized === "organization" || normalized === "org") {
-    return "org-chart";
-  }
-  if (normalized === "employee-compare" || normalized === "compare") {
-    return "employee-compare";
-  }
-  if (normalized === "employee-history" || normalized === "history") {
-    return "employee-history";
-  }
-  return null;
-}
-
-function normalizeAdminPeopleSourceContext(value: string | null): AdminPeopleSourceContext | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  if (normalized === "admin-onboarding" || normalized === "admin-dashboard") {
-    return normalized;
-  }
-  return null;
-}
-
-function normalizeActiveFilter(value: string | null): ActiveFilter | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  if (normalized === "all" || normalized === "active" || normalized === "inactive") {
-    return normalized;
-  }
-  return null;
-}
-
-function normalizeUpdatedWindow(value: string | null): UpdatedWindow | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  if (normalized === "all" || normalized === "7" || normalized === "30" || normalized === "90") {
-    return normalized;
-  }
-  return null;
-}
-
-function normalizeHistoryLimit(value: string | null): string | null {
-  const normalized = (value ?? "").trim();
-  if (!normalized) {
-    return null;
-  }
-  const parsed = Number.parseInt(normalized, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 500) {
-    return null;
-  }
-  return String(parsed);
 }
 
 export default function AdminPeoplePage() {

@@ -8,6 +8,13 @@ function readUtf8(...parts: string[]) {
 
 function run() {
   const peoplePage = readUtf8("src", "app", "admin", "people", "page.tsx");
+  const deeplinkHelpers = readUtf8(
+    "src",
+    "app",
+    "admin",
+    "people",
+    "page-deeplink-helpers.ts"
+  );
   const peopleView = readUtf8("src", "app", "admin", "people", "page-view.tsx");
   const globalsCss = readUtf8("src", "app", "globals.css");
   const readinessPanel = readUtf8(
@@ -24,7 +31,6 @@ function run() {
 
   assert.match(peoplePage, /useSearchParams/);
   assert.match(peoplePage, /normalizeAdminPeopleFocusPanel/);
-  assert.match(peoplePage, /normalized === "invites"/);
   assert.match(peoplePage, /normalizeAdminPeopleSourceContext/);
   assert.match(peoplePage, /normalizeActiveFilter/);
   assert.match(peoplePage, /normalizeUpdatedWindow/);
@@ -37,6 +43,10 @@ function run() {
   assert.match(peoplePage, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
   assert.match(peoplePage, /sourceContext=\{sourceContext\}/);
   assert.match(peoplePage, /focusPanel=\{focusPanel\}/);
+  assert.match(deeplinkHelpers, /normalized === "invites"/);
+  assert.match(deeplinkHelpers, /normalized === "filters"/);
+  assert.match(deeplinkHelpers, /normalized === "compare"/);
+  assert.match(deeplinkHelpers, /normalized === "history"/);
 
   assert.match(peopleView, /sourceContextLabel/);
   assert.match(peopleView, /focusPanelLabel/);

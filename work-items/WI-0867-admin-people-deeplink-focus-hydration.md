@@ -7,6 +7,7 @@
 
 ## Scope
 - `src/app/admin/people/page.tsx`
+- `src/app/admin/people/page-deeplink-helpers.ts` (new)
 - `src/app/admin/people/page-view.tsx`
 - `src/app/globals.css`
 - `scripts/tests/e2e-wi0867-admin-people-deeplink-focus-hydration.test.ts` (new)
