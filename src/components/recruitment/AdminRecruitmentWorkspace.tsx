@@ -21,11 +21,50 @@ function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
+type AdminRecruitmentCopy = ReturnType<typeof resolveAdminRecruitmentCopy>;
+
+function resolveRecruitmentAnalyticsFocusLabel(
+  copy: AdminRecruitmentCopy,
+  locale: "ko" | "en",
+  focusMetric: string | null,
+  stage: string | null,
+  risk: string | null
+) {
+  if (focusMetric === "recruitmentStalledReferral7dCount") {
+    return copy.referralRiskFilter.stalled7d;
+  }
+  if (focusMetric === "recruitmentSubmittedReferralCount") {
+    return copy.referralStageFilter.SUBMITTED;
+  }
+  if (focusMetric === "recruitmentActiveReferralCount") {
+    return locale === "ko" ? "진행 중 추천 후보" : "Active referrals";
+  }
+  if (focusMetric === "recruitmentOpenOpeningCount") {
+    return copy.openingsTitle;
+  }
+  if (risk === "stalled_7d") {
+    return copy.referralRiskFilter.stalled7d;
+  }
+  if (risk === "stalled_14d") {
+    return copy.referralRiskFilter.stalled14d;
+  }
+  if (stage === "SUBMITTED") {
+    return copy.referralStageFilter.SUBMITTED;
+  }
+  return "";
+}
 export default function AdminRecruitmentWorkspace() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveAdminRecruitmentCopy(locale);
   const source = searchParams.get("source");
+  const analyticsFocusLabel = resolveRecruitmentAnalyticsFocusLabel(
+    copy,
+    locale === "ko" ? "ko" : "en",
+    searchParams.get("focusMetric"),
+    searchParams.get("stage"),
+    searchParams.get("risk")
+  );
   const sourceHint =
     source === "admin-dashboard"
       ? locale === "ko"
@@ -33,8 +72,8 @@ export default function AdminRecruitmentWorkspace() {
         : "Opened from admin dashboard."
       : source === "admin-analytics"
         ? locale === "ko"
-          ? "관리자 분석 대시보드에서 이동했습니다."
-          : "Opened from admin analytics."
+          ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
+          : `Opened from admin analytics.${analyticsFocusLabel ? ` · Focus queue: ${analyticsFocusLabel}` : ""}`
       : "";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
@@ -309,3 +348,4 @@ export default function AdminRecruitmentWorkspace() {
     />
   );
 }
+

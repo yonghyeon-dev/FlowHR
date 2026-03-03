@@ -94,9 +94,10 @@ type BenefitsQuickAction = {
   label: string;
 };
 
-function withAnalyticsSourceContext(href: string): string {
+function withAnalyticsSourceContext(href: string, focusMetric?: string): string {
   const separator = href.includes("?") ? "&" : "?";
-  return `${href}${separator}source=admin-analytics`;
+  const focusQuery = focusMetric ? `&focusMetric=${focusMetric}` : "";
+  return `${href}${separator}source=admin-analytics${focusQuery}`;
 }
 
 function resolveBenefitsPriorityAction(
@@ -105,27 +106,33 @@ function resolveBenefitsPriorityAction(
 ): BenefitsPriorityAction {
   if (snapshot.pendingAging3dCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=pending_3d"),
+      href: withAnalyticsSourceContext(
+        "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+        "benefitsPendingAging3dCount"
+      ),
       label: copy.benefitsPanel.actionOpenPendingQueue,
       reason: copy.benefitsPanel.priorityReasonAging
     };
   }
   if (snapshot.overLimitSubmittedCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=over_limit"),
+      href: withAnalyticsSourceContext(
+        "/admin/benefits?status=SUBMITTED&risk=over_limit",
+        "benefitsOverLimitSubmittedCount"
+      ),
       label: copy.benefitsPanel.actionOpenOverLimitQueue,
       reason: copy.benefitsPanel.priorityReasonOverLimit
     };
   }
   if (snapshot.submittedCount > 0) {
     return {
-      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED"),
+      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED", "benefitsSubmittedCount"),
       label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
       reason: copy.benefitsPanel.priorityReasonSubmitted
     };
   }
   return {
-    href: withAnalyticsSourceContext("/admin/benefits"),
+    href: withAnalyticsSourceContext("/admin/benefits", "benefitsSubmittedCount"),
     label: copy.benefitsPanel.actionOpenBenefitsWorkspace,
     reason: copy.benefitsPanel.priorityReasonClear
   };
@@ -134,15 +141,21 @@ function resolveBenefitsPriorityAction(
 function buildBenefitsQuickActions(copy: KpiCopy): BenefitsQuickAction[] {
   return [
     {
-      href: withAnalyticsSourceContext("/admin/benefits"),
+      href: withAnalyticsSourceContext("/admin/benefits", "benefitsSubmittedCount"),
       label: copy.benefitsPanel.actionOpenBenefitsWorkspace
     },
     {
-      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=pending_3d"),
+      href: withAnalyticsSourceContext(
+        "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+        "benefitsPendingAging3dCount"
+      ),
       label: copy.benefitsPanel.actionOpenPendingQueue
     },
     {
-      href: withAnalyticsSourceContext("/admin/benefits?status=SUBMITTED&risk=over_limit"),
+      href: withAnalyticsSourceContext(
+        "/admin/benefits?status=SUBMITTED&risk=over_limit",
+        "benefitsOverLimitSubmittedCount"
+      ),
       label: copy.benefitsPanel.actionOpenOverLimitQueue
     }
   ];

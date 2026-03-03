@@ -23,11 +23,46 @@ const EMPTY_REQUEST_SUMMARY: RequestSummary = {
   rejected: 0
 };
 
+type AdminBenefitsCopy = ReturnType<typeof resolveAdminBenefitsCopy>;
+
+function resolveBenefitsAnalyticsFocusLabel(
+  copy: AdminBenefitsCopy,
+  focusMetric: string | null,
+  status: string | null,
+  risk: string | null
+) {
+  if (focusMetric === "benefitsPendingAging3dCount") {
+    return copy.requestRiskFilter.pending3d;
+  }
+  if (focusMetric === "benefitsOverLimitSubmittedCount") {
+    return copy.requestRiskFilter.overLimit;
+  }
+  if (focusMetric === "benefitsSubmittedCount") {
+    return copy.requestFilter.SUBMITTED;
+  }
+  if (risk === "pending_3d") {
+    return copy.requestRiskFilter.pending3d;
+  }
+  if (risk === "over_limit") {
+    return copy.requestRiskFilter.overLimit;
+  }
+  if (status === "SUBMITTED") {
+    return copy.requestFilter.SUBMITTED;
+  }
+  return "";
+}
+
 export default function AdminBenefitsWorkspace() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveAdminBenefitsCopy(locale);
   const source = searchParams.get("source");
+  const analyticsFocusLabel = resolveBenefitsAnalyticsFocusLabel(
+    copy,
+    searchParams.get("focusMetric"),
+    searchParams.get("status"),
+    searchParams.get("risk")
+  );
   const sourceHint =
     source === "admin-dashboard"
       ? locale === "ko"
@@ -35,8 +70,8 @@ export default function AdminBenefitsWorkspace() {
         : "Opened from admin dashboard."
       : source === "admin-analytics"
         ? locale === "ko"
-          ? "관리자 분석 대시보드에서 이동했습니다."
-          : "Opened from admin analytics."
+          ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
+          : `Opened from admin analytics.${analyticsFocusLabel ? ` · Focus queue: ${analyticsFocusLabel}` : ""}`
       : "";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);

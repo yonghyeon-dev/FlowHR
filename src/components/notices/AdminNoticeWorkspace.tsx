@@ -84,11 +84,41 @@ function parseNoticeSearchKeyword(value: string | null) {
   return (value ?? "").trim();
 }
 
+function resolveNoticeAnalyticsFocusLabel(
+  locale: "ko" | "en",
+  focusMetric: string | null,
+  status: string | null,
+  risk: string | null
+) {
+  if (focusMetric === "noticeUnreadAging3dCount") {
+    return locale === "ko" ? "3일 이상 미열람 공지" : "Unread notices over 3 days";
+  }
+  if (focusMetric === "noticeNoReadCount") {
+    return locale === "ko" ? "미열람 공지" : "No-read notices";
+  }
+  if (focusMetric === "noticePublishedCount") {
+    return locale === "ko" ? "게시 공지" : "Published notices";
+  }
+  if (risk === "no-read") {
+    return locale === "ko" ? "미열람 공지" : "No-read notices";
+  }
+  if (status === "PUBLISHED") {
+    return locale === "ko" ? "게시 공지" : "Published notices";
+  }
+  return "";
+}
+
 export default function AdminNoticeWorkspace() {
   const { locale } = useI18n();
   const searchParams = useSearchParams();
   const copy = resolveNoticeWorkspaceCopy(locale);
   const source = searchParams.get("source");
+  const analyticsFocusLabel = resolveNoticeAnalyticsFocusLabel(
+    locale === "ko" ? "ko" : "en",
+    searchParams.get("focusMetric"),
+    searchParams.get("status"),
+    searchParams.get("risk")
+  );
   const sourceHint =
     source === "admin-dashboard"
       ? locale === "ko"
@@ -96,8 +126,8 @@ export default function AdminNoticeWorkspace() {
         : "Opened from admin dashboard."
       : source === "admin-analytics"
         ? locale === "ko"
-          ? "관리자 분석 대시보드에서 이동했습니다."
-          : "Opened from admin analytics."
+          ? `관리자 분석 대시보드에서 이동했습니다.${analyticsFocusLabel ? ` · 집중 큐: ${analyticsFocusLabel}` : ""}`
+          : `Opened from admin analytics.${analyticsFocusLabel ? ` · Focus queue: ${analyticsFocusLabel}` : ""}`
       : "";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
