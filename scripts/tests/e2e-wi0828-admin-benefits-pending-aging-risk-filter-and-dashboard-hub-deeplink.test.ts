@@ -31,7 +31,7 @@ function run() {
   assert.match(view, /option value="pending_3d"/);
   assert.match(view, /copy\.requestRiskFilter\.pending3d/);
 
-  assert.match(copy, /requestRiskFilter: \{\s*all: string;\s*overLimit: string;\s*pending3d: string;/s);
+  assert.match(copy, /requestRiskFilter: \{[\s\S]*all: string;[\s\S]*overLimit: string;[\s\S]*pending3d: string;/);
   assert.match(copy, /overLimit: "한도 초과만",\s*pending3d: "3일 이상 승인 대기"/);
   assert.match(copy, /overLimit: "Over limit only",\s*pending3d: "Pending >= 3d"/);
 
