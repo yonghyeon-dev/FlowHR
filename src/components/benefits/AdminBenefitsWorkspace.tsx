@@ -6,16 +6,8 @@ import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveAdminBenefitsCopy } from "@/components/benefits/copy";
 import AdminBenefitsWorkspaceView from "@/components/benefits/AdminBenefitsWorkspaceView";
-import {
-  buildBenefitWorkspaceQuery,
-  isTruthyFlag,
-  normalizeBenefitRequestFilter,
-  normalizeBenefitRiskFilter,
-  parseBenefitCatalog,
-  parseBenefitRequests,
-  parseBenefitRequestSummary,
-  parseBenefitSearchQuery
-} from "@/components/benefits/admin-benefits-workspace-helpers";
+import { type AdminBenefitRequestRiskFilter, buildBenefitWorkspaceQuery, isTruthyFlag, normalizeBenefitRequestFilter, normalizeBenefitRiskFilter, parseBenefitCatalog, parseBenefitRequests, parseBenefitRequestSummary, parseBenefitSearchQuery } from "@/components/benefits/admin-benefits-workspace-helpers";
+import { isBenefitRequestPendingAgingRisk } from "@/components/benefits/employee-benefits-helpers";
 
 type RequestSummary = {
   total: number;
@@ -46,7 +38,7 @@ export default function AdminBenefitsWorkspace() {
   const [catalogStatus, setCatalogStatus] = useState<BenefitCatalogStatus>("ACTIVE");
   const [decisionNote, setDecisionNote] = useState("");
   const [requestFilter, setRequestFilter] = useState<BenefitRequestStatus | "all">("all");
-  const [requestRiskFilter, setRequestRiskFilter] = useState<"all" | "over_limit">("all");
+  const [requestRiskFilter, setRequestRiskFilter] = useState<AdminBenefitRequestRiskFilter>("all");
   const [requestSearchQuery, setRequestSearchQuery] = useState("");
 
   const [catalog, setCatalog] = useState<BenefitCatalogItem[]>([]);
@@ -100,6 +92,9 @@ export default function AdminBenefitsWorkspace() {
         if (request.amountKrw <= annualLimitKrw) {
           return false;
         }
+      }
+      if (requestRiskFilter === "pending_3d" && !isBenefitRequestPendingAgingRisk(request)) {
+        return false;
       }
       if (query.length === 0) {
         return true;

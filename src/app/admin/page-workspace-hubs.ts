@@ -52,9 +52,12 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
         title: "공지/복리후생/채용",
         description: "직원 커뮤니케이션과 지원 워크플로 운영",
         links: [
-          { href: "/admin/notices", label: "공지" },
-          { href: "/admin/benefits", label: "복리후생" },
-          { href: "/admin/recruitment", label: "채용" }
+          { href: "/admin/notices?status=PUBLISHED&risk=no-read", label: "공지 미확인 위험" },
+          {
+            href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+            label: "복리후생 장기 대기"
+          },
+          { href: "/admin/recruitment?risk=stalled_7d", label: "채용 정체 위험" }
         ]
       }
     ];
@@ -102,9 +105,12 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
       title: "Notices, benefits, recruitment",
       description: "Operate employee communication and support workflows.",
       links: [
-        { href: "/admin/notices", label: "Notices" },
-        { href: "/admin/benefits", label: "Benefits" },
-        { href: "/admin/recruitment", label: "Recruitment" }
+        { href: "/admin/notices?status=PUBLISHED&risk=no-read", label: "Unread notice risk" },
+        {
+          href: "/admin/benefits?status=SUBMITTED&risk=pending_3d",
+          label: "Aging benefits queue"
+        },
+        { href: "/admin/recruitment?risk=stalled_7d", label: "Stalled recruitment queue" }
       ]
     }
   ];
