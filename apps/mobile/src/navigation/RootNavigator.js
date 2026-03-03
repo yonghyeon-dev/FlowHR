@@ -164,6 +164,12 @@ export default function RootNavigator() {
                   void Linking.openURL(resolveMobileWebUrl("/employee/benefits?status=APPROVED"))
                 }
                 onOpenRecruitment={() => void Linking.openURL(resolveMobileWebUrl("/employee/recruitment"))}
+                onOpenRecruitmentStalled={() =>
+                  void Linking.openURL(resolveMobileWebUrl("/employee/recruitment?risk=stalled_7d"))
+                }
+                onOpenRecruitmentSubmitted={() =>
+                  void Linking.openURL(resolveMobileWebUrl("/employee/recruitment?stage=SUBMITTED"))
+                }
                 onOpenSchedule={() => void Linking.openURL(resolveMobileWebUrl("/employee/schedule"))}
                 onOpenContracts={() => void Linking.openURL(resolveMobileWebUrl("/employee/contracts"))}
                 onOpenPayslips={() => void Linking.openURL(resolveMobileWebUrl("/employee/payslips"))}
