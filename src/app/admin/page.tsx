@@ -95,6 +95,10 @@ export default function AdminDashboardPage() {
           {
             label: isKoLocale ? `미배포 ${summary.undistributedPayrollCount}` : `Undistributed ${summary.undistributedPayrollCount}`,
             href: "/admin/payroll-close?focus=undistributed&source=admin-dashboard"
+          },
+          {
+            label: isKoLocale ? `배포 처리 ${summary.undistributedPayrollCount}` : `Deliver ${summary.undistributedPayrollCount}`,
+            href: "/admin/payroll-payslip-delivery?focus=undistributed&source=admin-dashboard"
           }
         ]
       },
