@@ -20,6 +20,8 @@ export type RangeKpi = {
     leaveApprovedRequestCount: number;
     payrollTotal: number;
     payrollConfirmed: number;
+    contractPendingResponseCount: number;
+    contractRenewalCandidateCount: number;
   };
 };
 

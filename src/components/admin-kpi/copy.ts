@@ -124,6 +124,16 @@ export type KpiCopy = {
     priorityReasonReadiness: string;
     priorityReasonClear: string;
   };
+  contractPanel: {
+    title: string;
+    description: string;
+    decisionQueueCount: string;
+    pendingResponseCount: string;
+    pendingResponseHint: string;
+    slaOverdueCount: string;
+    slaOverdueHint: string;
+    renewalCandidateCount: string;
+  };
   payrollRiskPanel: {
     title: string;
     description: string;
@@ -294,6 +304,16 @@ const defaultCopy: KpiCopy = {
     priorityReasonReadiness: "Onboarding readiness is not complete. Continue onboarding checklist workflow.",
     priorityReasonClear: "Onboarding readiness is stable. Continue routine onboarding operations."
   },
+  contractPanel: {
+    title: "Contract lifecycle snapshot",
+    description: "Track decision queue, response delay, SLA overdue, and renewal candidates.",
+    decisionQueueCount: "Decision queue",
+    pendingResponseCount: "Pending responses",
+    pendingResponseHint: "sent documents waiting for employee response",
+    slaOverdueCount: "SLA overdue",
+    slaOverdueHint: "draft/approval/sent documents past due date",
+    renewalCandidateCount: "Renewal candidates"
+  },
   payrollRiskPanel: {
     title: "Payroll and year-end risk snapshot",
     description:
@@ -463,6 +483,16 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       priorityReasonInvites: "미발급 초대가 남아 있습니다. 온보딩 워크스페이스에서 초대 커버리지를 완료하세요.",
       priorityReasonReadiness: "온보딩 준비가 완료되지 않았습니다. 체크리스트 흐름을 이어가세요.",
       priorityReasonClear: "온보딩 준비 상태가 안정적입니다. 일반 온보딩 운영을 진행하세요."
+    },
+    contractPanel: {
+      title: "전자계약 라이프사이클 스냅샷",
+      description: "결재 대기, 응답 지연, SLA 초과, 갱신 후보를 한 번에 추적합니다.",
+      decisionQueueCount: "의사결정 대기",
+      pendingResponseCount: "응답 대기",
+      pendingResponseHint: "발송 후 직원 응답을 기다리는 계약",
+      slaOverdueCount: "SLA 초과",
+      slaOverdueHint: "기한이 지난 초안/결재/발송 계약",
+      renewalCandidateCount: "갱신 후보"
     },
     payrollRiskPanel: {
       title: "급여/연말정산 리스크 스냅샷",

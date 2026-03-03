@@ -17,6 +17,10 @@ import {
   buildOnboardingKpiSnapshot,
   type OnboardingKpiSnapshot
 } from "@/components/admin-kpi/AdminOnboardingKpiPanel";
+import {
+  AdminContractKpiPanel,
+  buildContractKpiSnapshot
+} from "@/components/admin-kpi/AdminContractKpiPanel";
 import { AdminNoticesKpiPanel, buildNoticeReadCoverageSnapshot, type NoticeReadCoverageSnapshot } from "@/components/admin-kpi/AdminNoticesKpiPanel";
 import { AdminRecruitmentKpiPanel, buildRecruitmentKpiSnapshot, type RecruitmentKpiSnapshot } from "@/components/admin-kpi/AdminRecruitmentKpiPanel";
 import {
@@ -262,6 +266,12 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
         const expiresAtMillis = document.expiresAt ? new Date(document.expiresAt).getTime() : Number.NaN;
         return Number.isFinite(expiresAtMillis) && expiresAtMillis < asOfMillis;
       }).length;
+      const contractPendingResponseCount = contractDocuments.filter(
+        (document) => document.status === "SENT"
+      ).length;
+      const contractRenewalCandidateCount = contractDocuments.filter((document) =>
+        ["SIGNED", "REJECTED", "EXPIRED"].includes(document.status)
+      ).length;
       return {
         summary: buildAdminKpiSummary({
           approvalPendingCount: approvalExecutions.length,
@@ -279,7 +289,9 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
           attendanceApproved,
           leaveApprovedRequestCount: approvedLeaveRequests.length,
           payrollTotal,
-          payrollConfirmed
+          payrollConfirmed,
+          contractPendingResponseCount,
+          contractRenewalCandidateCount
         }
       } satisfies RangeKpi;
     },
@@ -446,6 +458,17 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       return acc;
     }, {});
   }, [analyticsMode, copy]);
+  const contractKpi = useMemo(() => {
+    if (!currentRangeKpi) {
+      return null;
+    }
+    return buildContractKpiSnapshot({
+      decisionQueueCount: currentRangeKpi.summary.contractDecisionQueueCount,
+      pendingResponseCount: currentRangeKpi.detail.contractPendingResponseCount,
+      slaOverdueCount: currentRangeKpi.summary.contractSlaOverdueCount,
+      renewalCandidateCount: currentRangeKpi.detail.contractRenewalCandidateCount
+    });
+  }, [currentRangeKpi]);
   const exportCsv = useCallback(() => {
     if (!currentRangeKpi || !previousRangeKpi) {
       return;
@@ -624,6 +647,9 @@ export function AdminKpiDashboard({ analyticsMode = false }: AdminKpiDashboardPr
       ) : null}
       {analyticsMode && payrollRiskKpi ? (
         <AdminPayrollRiskKpiPanel copy={copy} snapshot={payrollRiskKpi} />
+      ) : null}
+      {analyticsMode && contractKpi ? (
+        <AdminContractKpiPanel copy={copy} snapshot={contractKpi} />
       ) : null}
       {analyticsMode && benefitsKpi ? <AdminBenefitsKpiPanel copy={copy} snapshot={benefitsKpi} /> : null}
       {analyticsMode && onboardingKpi ? <AdminOnboardingKpiPanel copy={copy} snapshot={onboardingKpi} /> : null}
