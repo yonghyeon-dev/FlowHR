@@ -40,6 +40,8 @@ type AdminNoticeWorkspaceViewProps = {
   notices: NoticeItem[];
   filteredNotices: NoticeItem[];
   listSearchQuery: string;
+  readRiskOnly: boolean;
+  readRiskNoticeCount: number;
   readCountByNoticeId: Map<string, number>;
   readCountLabel: string;
   logs: NoticeApiLog[];
@@ -56,6 +58,7 @@ type AdminNoticeWorkspaceViewProps = {
   onAudienceChange: (value: "all" | "employees" | "admins") => void;
   onPublishAtChange: (value: string) => void;
   onListSearchQueryChange: (value: string) => void;
+  onSetReadRiskOnly: (value: boolean) => void;
   onClearListSearch: () => void;
   onLoadNotices: () => void;
   onCreateNotice: () => void;
@@ -89,6 +92,8 @@ export default function AdminNoticeWorkspaceView({
   notices,
   filteredNotices,
   listSearchQuery,
+  readRiskOnly,
+  readRiskNoticeCount,
   readCountByNoticeId,
   readCountLabel,
   logs,
@@ -102,6 +107,7 @@ export default function AdminNoticeWorkspaceView({
   onAudienceChange,
   onPublishAtChange,
   onListSearchQueryChange,
+  onSetReadRiskOnly,
   onClearListSearch,
   onLoadNotices,
   onCreateNotice,
@@ -110,7 +116,6 @@ export default function AdminNoticeWorkspaceView({
   onPublishNow,
   onDeleteNotice
 }: AdminNoticeWorkspaceViewProps) {
-  const publishedWithoutReadCount = notices.filter((notice) => isReadCoverageRisk(notice, readCountByNoticeId)).length;
   const draftCount = notices.filter((notice) => notice.status === "DRAFT").length;
   const scheduledCount = notices.filter((notice) => notice.status === "SCHEDULED").length;
   const publishedCount = notices.filter((notice) => notice.status === "PUBLISHED").length;
@@ -172,6 +177,21 @@ export default function AdminNoticeWorkspaceView({
             <button className="btn btn-primary" type="button" onClick={onLoadNotices}>
               {copy.refreshAction}
             </button>
+            <button
+              className={readRiskOnly ? "btn btn-secondary btn-small" : "btn btn-primary btn-small"}
+              type="button"
+              onClick={() => onSetReadRiskOnly(false)}
+            >
+              {copy.statusFilter.all} ({notices.length})
+            </button>
+            <button
+              className={readRiskOnly ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
+              type="button"
+              onClick={() => onSetReadRiskOnly(true)}
+              disabled={readRiskNoticeCount === 0}
+            >
+              {copy.readRiskSummaryLabel} ({readRiskNoticeCount})
+            </button>
           </div>
           <p className="small muted">
             {copy.statsLabel}: {summary.total} (D {summary.draft} / S {summary.scheduled} / P {summary.published})
@@ -181,7 +201,7 @@ export default function AdminNoticeWorkspaceView({
             {copy.statusFilter.PUBLISHED}: {publishedCount}
           </p>
           <p className="small muted">
-            {copy.readRiskSummaryLabel}: {publishedWithoutReadCount}
+            {copy.readRiskSummaryLabel}: {readRiskNoticeCount}
           </p>
           <p className="small muted">
             {copy.logsTitle}: {stats.total} / OK {stats.success} / FAIL {stats.total - stats.success}
