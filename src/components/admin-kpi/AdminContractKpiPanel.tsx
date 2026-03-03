@@ -43,40 +43,52 @@ type ContractQuickAction = {
   label: string;
 };
 
+function withAnalyticsSourceContext(href: string, focusMetric?: string): string {
+  const separator = href.includes("?") ? "&" : "?";
+  const focusQuery = focusMetric ? `&focusMetric=${focusMetric}` : "";
+  return `${href}${separator}source=admin-analytics${focusQuery}`;
+}
+
 function resolveContractPriorityAction(
   snapshot: ContractKpiSnapshot,
   copy: KpiCopy
 ): ContractPriorityAction {
   if (snapshot.slaOverdueCount > 0) {
     return {
-      href: "/admin/contracts?slaRisk=OVERDUE",
+      href: withAnalyticsSourceContext(
+        "/admin/contracts?slaRisk=OVERDUE",
+        "contractSlaOverdueCount"
+      ),
       label: copy.contractPanel.actionOpenSlaOverdueQueue,
       reason: copy.contractPanel.priorityReasonSlaOverdue
     };
   }
   if (snapshot.pendingResponseCount > 0) {
     return {
-      href: "/admin/contracts?status=SENT",
+      href: withAnalyticsSourceContext("/admin/contracts?status=SENT"),
       label: copy.contractPanel.actionOpenPendingResponseQueue,
       reason: copy.contractPanel.priorityReasonPendingResponse
     };
   }
   if (snapshot.decisionQueueCount > 0) {
     return {
-      href: "/admin/contracts?decisionQueueOnly=true",
+      href: withAnalyticsSourceContext(
+        "/admin/contracts?decisionQueueOnly=true",
+        "contractDecisionQueueCount"
+      ),
       label: copy.contractPanel.actionOpenDecisionQueue,
       reason: copy.contractPanel.priorityReasonDecisionQueue
     };
   }
   if (snapshot.renewalCandidateCount > 0) {
     return {
-      href: "/admin/contracts?renewalCandidateOnly=true",
+      href: withAnalyticsSourceContext("/admin/contracts?renewalCandidateOnly=true"),
       label: copy.contractPanel.actionOpenContractsWorkspace,
       reason: copy.contractPanel.priorityReasonRenewal
     };
   }
   return {
-    href: "/admin/contracts",
+    href: withAnalyticsSourceContext("/admin/contracts"),
     label: copy.contractPanel.actionOpenContractsWorkspace,
     reason: copy.contractPanel.priorityReasonClear
   };
@@ -85,19 +97,25 @@ function resolveContractPriorityAction(
 function buildContractQuickActions(copy: KpiCopy): ContractQuickAction[] {
   return [
     {
-      href: "/admin/contracts",
+      href: withAnalyticsSourceContext("/admin/contracts"),
       label: copy.contractPanel.actionOpenContractsWorkspace
     },
     {
-      href: "/admin/contracts?decisionQueueOnly=true",
+      href: withAnalyticsSourceContext(
+        "/admin/contracts?decisionQueueOnly=true",
+        "contractDecisionQueueCount"
+      ),
       label: copy.contractPanel.actionOpenDecisionQueue
     },
     {
-      href: "/admin/contracts?status=SENT",
+      href: withAnalyticsSourceContext("/admin/contracts?status=SENT"),
       label: copy.contractPanel.actionOpenPendingResponseQueue
     },
     {
-      href: "/admin/contracts?slaRisk=OVERDUE",
+      href: withAnalyticsSourceContext(
+        "/admin/contracts?slaRisk=OVERDUE",
+        "contractSlaOverdueCount"
+      ),
       label: copy.contractPanel.actionOpenSlaOverdueQueue
     }
   ];
