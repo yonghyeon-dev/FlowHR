@@ -16,15 +16,16 @@ export async function POST(request: Request) {
     return fail(401, "notice.read_all.unauthorized");
   }
 
-  let payload: { organizationId?: string } = {};
+  let payload: { organizationId?: string; noticeIds?: string[] } = {};
   try {
-    payload = (await request.json()) as { organizationId?: string };
+    payload = (await request.json()) as { organizationId?: string; noticeIds?: string[] };
   } catch {
     payload = {};
   }
 
   const parsed = readAllNoticesSchema.safeParse({
-    organizationId: payload.organizationId
+    organizationId: payload.organizationId,
+    noticeIds: payload.noticeIds
   });
   if (!parsed.success) {
     return fail(400, "invalid params", parsed.error.flatten());
@@ -38,7 +39,8 @@ export async function POST(request: Request) {
       organizationId,
       actorId: actor.id,
       actorRole: actor.role ?? "employee",
-      audience
+      audience,
+      noticeIds: parsed.data.noticeIds
     }
   );
 

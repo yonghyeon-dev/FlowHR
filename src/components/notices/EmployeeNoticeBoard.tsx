@@ -71,6 +71,8 @@ export default function EmployeeNoticeBoard() {
       }),
     [agingRiskFilter, notices, readNoticeIds, searchQuery, unreadOnly, readStatusFilter]
   );
+  const visibleUnreadNoticeIds = useMemo(() => filteredNotices.filter((notice) => !readNoticeIds.includes(notice.id)).map((notice) => notice.id), [filteredNotices, readNoticeIds]);
+  const shouldScopeMarkAllRead = searchQuery.trim().length > 0 || unreadOnly || readStatusFilter !== "all" || agingRiskFilter !== "all";
   const isAllQuickFilter = !unreadOnly && readStatusFilter === "all" && agingRiskFilter === "all";
   const isUnreadQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "all";
   const isAgingRiskQuickFilter = !unreadOnly && readStatusFilter === "unread" && agingRiskFilter === "aging_3d";
@@ -155,7 +157,7 @@ export default function EmployeeNoticeBoard() {
       setStatusMessage(copy.messages.needOrganization);
       return;
     }
-    if (unreadCount === 0) {
+    if (visibleUnreadNoticeIds.length === 0) {
       return;
     }
     setPending(true);
@@ -164,10 +166,12 @@ export default function EmployeeNoticeBoard() {
         ...buildActorHeaders(),
         "content-type": "application/json"
       };
+      const payload: { organizationId: string; noticeIds?: string[] } = { organizationId };
+      if (shouldScopeMarkAllRead && visibleUnreadNoticeIds.length < unreadCount) payload.noticeIds = visibleUnreadNoticeIds;
       const response = await fetch("/api/notices/read-all", {
         method: "POST",
         headers,
-        body: JSON.stringify({ organizationId })
+        body: JSON.stringify(payload)
       });
       if (!response.ok) {
         setStatusMessage(copy.messages.markAllReadFailed);
@@ -181,12 +185,7 @@ export default function EmployeeNoticeBoard() {
       setPending(false);
     }
   }
-  function clearFilters() {
-    setSearchQuery("");
-    setUnreadOnly(false);
-    setReadStatusFilter("all");
-    setAgingRiskFilter("all");
-  }
+  function clearFilters() { setSearchQuery(""); setUnreadOnly(false); setReadStatusFilter("all"); setAgingRiskFilter("all"); }
   function applyQuickFilter(nextReadStatusFilter: EmployeeNoticeReadStatusFilter, nextAgingRiskFilter: EmployeeNoticeAgingRiskFilter) { setUnreadOnly(false); setReadStatusFilter(nextReadStatusFilter); setAgingRiskFilter(nextAgingRiskFilter); }
   return (
     <main className="saas-content">
@@ -286,7 +285,7 @@ export default function EmployeeNoticeBoard() {
               className="btn btn-secondary"
               type="button"
               onClick={() => void markAllAsRead()}
-              disabled={pending || unreadCount === 0}
+              disabled={pending || visibleUnreadNoticeIds.length === 0}
             >
               {copy.markAllReadAction}
             </button>
