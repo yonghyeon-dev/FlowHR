@@ -1166,3 +1166,5 @@ Phase 8: Extensions (ATS, performance, expenses, analytics)
 - WI-0862 admin communication analytics return action (add return-to-analytics header action in /admin/notices, /admin/benefits, and /admin/recruitment when entered via source=admin-analytics while preserving existing source hints and filter hydration behavior, with e2e-wi0862 regression guard)
 
 - WI-0863 admin communication analytics return focus restore (propagate analyticsFocus from /admin/analytics into notices-benefits-recruitment KPI links and restore return-to-analytics focus query in destination workspaces while preserving existing source/focusMetric queue context behavior, with e2e-wi0863 regression guard)
+
+- WI-0864 admin contracts analytics return focus restore (propagate analyticsFocus from /admin/analytics contract KPI links and restore return-to-analytics focus query in /admin/contracts while preserving existing source/focusMetric banner behavior, with e2e-wi0864 regression guard)
