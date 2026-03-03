@@ -116,6 +116,18 @@ function resolveFocusWorkspaceLink(
     focusMetric === "contractDecisionQueueCount" ||
     focusMetric === "contractSlaOverdueCount"
   ) {
+    if (focusMetric === "contractSlaOverdueCount") {
+      return {
+        href: "/admin/contracts?slaRisk=OVERDUE",
+        label: copy.metrics.contractSlaOverdueCount
+      };
+    }
+    if (focusMetric === "contractDecisionQueueCount") {
+      return {
+        href: "/admin/contracts?decisionQueueOnly=true",
+        label: copy.metrics.contractDecisionQueueCount
+      };
+    }
     return {
       href: "/admin/contracts",
       label:
