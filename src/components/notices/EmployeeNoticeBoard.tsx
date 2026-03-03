@@ -199,9 +199,7 @@ export default function EmployeeNoticeBoard() {
           <Link className="btn btn-secondary" href="/employee">
             /employee
           </Link>
-          <Link className="btn btn-secondary" href="/admin/notices">
-            /admin/notices
-          </Link>
+          {showDevTools ? <Link className="btn btn-secondary" href="/admin/notices">DEV /admin/notices</Link> : null}
         </div>
       </header>
       <section className="panel-grid">
