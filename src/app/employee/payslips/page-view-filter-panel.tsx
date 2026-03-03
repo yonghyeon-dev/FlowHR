@@ -9,6 +9,7 @@ import type { ApiStats } from "@/app/employee/payslips/page-view-types";
 
 type EmployeePayslipFilterPanelProps = {
   pageCopy: PayslipPageCopy;
+  sourceContext: "employee-dashboard" | null;
   isKoLocale: boolean;
   isProductionRuntime: boolean;
   usesBearerToken: boolean;
@@ -43,6 +44,7 @@ type EmployeePayslipFilterPanelProps = {
 
 export function EmployeePayslipFilterPanel({
   pageCopy,
+  sourceContext,
   isKoLocale,
   isProductionRuntime,
   usesBearerToken,
@@ -69,16 +71,30 @@ export function EmployeePayslipFilterPanel({
   aggregate,
   formatKrw
 }: EmployeePayslipFilterPanelProps) {
+  const sourceContextLabel =
+    sourceContext === "employee-dashboard"
+      ? isKoLocale
+        ? "직원 대시보드에서 이동했습니다."
+        : "Opened from employee dashboard."
+      : null;
+  const sourceContextReturnLabel =
+    sourceContext === "employee-dashboard"
+      ? isKoLocale
+        ? "대시보드로 돌아가기"
+        : "Back to dashboard"
+      : pageCopy.nav.employeePortal;
+
   return (
     <>
       <header className="page-header">
         <div>
           <h1 className="page-title">{pageCopy.pageTitle}</h1>
           <p className="page-subtitle">{pageCopy.pageSubtitle}</p>
+          {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
-            {pageCopy.nav.employeePortal}
+            {sourceContextReturnLabel}
           </Link>
           <Link className="btn btn-secondary" href="/login">
             {pageCopy.nav.login}
