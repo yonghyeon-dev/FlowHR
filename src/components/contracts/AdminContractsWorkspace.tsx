@@ -38,11 +38,7 @@ export default function AdminContractsWorkspace() {
   const copy = adminContractsCopyByLocale[locale];
   const analyticsSource = searchParams.get("source");
   const analyticsFocusMetric = searchParams.get("focusMetric");
-  const analyticsFocusLabel = analyticsFocusMetric === "contractSlaOverdueCount"
-    ? copy.overdueSlaCountLabel
-    : analyticsFocusMetric === "contractDecisionQueueCount"
-      ? copy.decisionQueueCountLabel
-      : copy.documentsKpiLabel;
+  const analyticsFocusLabel = analyticsFocusMetric === "contractSlaOverdueCount" ? copy.overdueSlaCountLabel : analyticsFocusMetric === "contractDecisionQueueCount" ? copy.decisionQueueCountLabel : copy.documentsKpiLabel;
   const categoryLabels = contractCategoryLabelByLocale[locale];
   const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
   const documentStatusLabels = contractDocumentStatusLabelByLocale[locale];
@@ -117,13 +113,7 @@ export default function AdminContractsWorkspace() {
       )
     }
   });
-  const dashboardFocusLabel = decisionQueueOnly
-    ? copy.decisionQueueCountLabel
-    : documentStatusFilter === "SENT"
-      ? copy.pendingResponseQueueLabel
-      : slaRiskFilter === "OVERDUE"
-        ? copy.overdueSlaCountLabel
-        : copy.documentsKpiLabel;
+  const dashboardFocusLabel = decisionQueueOnly ? copy.decisionQueueCountLabel : documentStatusFilter === "SENT" ? copy.pendingResponseQueueLabel : slaRiskFilter === "OVERDUE" ? copy.overdueSlaCountLabel : copy.documentsKpiLabel;
   useEffect(() => {
     setContractsRuntimeLocale(locale);
     return () => {
