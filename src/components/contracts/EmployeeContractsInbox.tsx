@@ -46,26 +46,16 @@ export default function EmployeeContractsInbox() {
   const approvalStatusLabels = contractApprovalStatusLabelByLocale[locale];
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
-  const [searchQuery, setSearchQuery] = useState(
-    parseEmployeeContractsSearchQuery(searchParams.get("q"))
-  );
-  const [inboxStatusFilter, setInboxStatusFilter] =
-    useState<EmployeeInboxStatusFilter>(
-      normalizeEmployeeInboxStatusFilter(searchParams.get("status"))
-    );
-  const [inboxDeadlineFilter, setInboxDeadlineFilter] =
-    useState<EmployeeInboxDeadlineFilter>(
-      normalizeEmployeeInboxDeadlineFilter(searchParams.get("deadline"))
-    );
+  const [searchQuery, setSearchQuery] = useState(parseEmployeeContractsSearchQuery(searchParams.get("q")));
+  const [inboxStatusFilter, setInboxStatusFilter] = useState<EmployeeInboxStatusFilter>(normalizeEmployeeInboxStatusFilter(searchParams.get("status")));
+  const [inboxDeadlineFilter, setInboxDeadlineFilter] = useState<EmployeeInboxDeadlineFilter>(normalizeEmployeeInboxDeadlineFilter(searchParams.get("deadline")));
   const [signatureInput, setSignatureInput] = useState("");
   const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [signatureEvidence, setSignatureEvidence] = useState<ContractSignatureEvidenceResponse["evidence"] | null>(null);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const statusFilteredDocuments = useMemo(() => {
-    return applyInboxStatusFilter(documents, inboxStatusFilter);
-  }, [documents, inboxStatusFilter]);
+  const statusFilteredDocuments = useMemo(() => applyInboxStatusFilter(documents, inboxStatusFilter), [documents, inboxStatusFilter]);
   const deadlineFilteredDocuments = useMemo(
     () => applyInboxDeadlineFilter(statusFilteredDocuments, inboxDeadlineFilter),
     [statusFilteredDocuments, inboxDeadlineFilter]
@@ -84,10 +74,7 @@ export default function EmployeeContractsInbox() {
   const actionNeededCount = useMemo(() => countActionNeededPending(filteredDocuments), [filteredDocuments]);
   const dueSoonCount = useMemo(() => filteredDocuments.filter((document) => isDueSoonPendingDocument(document)).length, [filteredDocuments]);
   const overdueCount = useMemo(() => filteredDocuments.filter((document) => isOverduePendingDocument(document)).length, [filteredDocuments]);
-  const canRespondDocument = useCallback(
-    (document: ContractDocument) => canEmployeeRespondToContractDocument(document.status),
-    []
-  );
+  const canRespondDocument = useCallback((document: ContractDocument) => canEmployeeRespondToContractDocument(document.status), []);
   const selected = useMemo(
     () => filteredDocuments.find((document) => document.id === selectedDocumentId) ?? filteredDocuments[0] ?? null,
     [filteredDocuments, selectedDocumentId]
