@@ -32,10 +32,29 @@ import {
   normalizeEmployeeIdForLocaleInput
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
+import { useSearchParams } from "next/navigation";
 export default function PayslipReceiptConsole() {
   const { locale } = useI18n();
+  const searchParams = useSearchParams();
   const copy = payslipReceiptCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const sourceContext =
+    (searchParams.get("source") ?? "").trim().toLowerCase() ===
+    "employee-dashboard"
+      ? "employee-dashboard"
+      : null;
+  const sourceContextLabel =
+    sourceContext === "employee-dashboard"
+      ? locale === "ko"
+        ? "직원 대시보드에서 이동했습니다."
+        : "Opened from employee dashboard."
+      : null;
+  const sourceContextReturnLabel =
+    sourceContext === "employee-dashboard"
+      ? locale === "ko"
+        ? "대시보드로 돌아가기"
+        : "Back to dashboard"
+      : null;
   const range = defaultMonthRange();
   const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -185,6 +204,7 @@ export default function PayslipReceiptConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
       </header>
       <section className="panel-grid">
         <article className="panel">
@@ -201,6 +221,11 @@ export default function PayslipReceiptConsole() {
           </div>
           <div className="panel-actions">
             <button className="btn btn-primary" onClick={() => void loadRuns()} disabled={pendingLabel !== null}>{copy.loadPayslipsAction}</button>
+            {sourceContextReturnLabel ? (
+              <Link className="btn btn-secondary" href="/employee">
+                {sourceContextReturnLabel}
+              </Link>
+            ) : null}
           </div>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
           {normalizedSupabaseSessionError ? <p className="small fail">{copy.sessionErrorPrefix}: {normalizedSupabaseSessionError}</p> : null}

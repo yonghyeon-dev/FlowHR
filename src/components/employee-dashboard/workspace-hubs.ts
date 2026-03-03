@@ -34,8 +34,15 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         title: "급여/원천징수",
         description: "급여 명세서와 원천징수 문서를 조회합니다.",
         links: [
-          { href: "/employee/payslips", label: "급여 명세서" },
-          { href: "/employee/withholding-receipt", label: "원천징수 영수증" }
+          { href: "/employee/payslips?source=employee-dashboard", label: "급여 명세서" },
+          {
+            href: "/employee/payslip-receipts?source=employee-dashboard",
+            label: "명세서 수신 확인"
+          },
+          {
+            href: "/employee/withholding-receipt?source=employee-dashboard",
+            label: "원천징수 영수증"
+          }
         ]
       },
       {
@@ -88,8 +95,15 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       title: "Payroll and withholding",
       description: "Open payslips and withholding receipts.",
       links: [
-        { href: "/employee/payslips", label: "Payslips" },
-        { href: "/employee/withholding-receipt", label: "Withholding receipt" }
+        { href: "/employee/payslips?source=employee-dashboard", label: "Payslips" },
+        {
+          href: "/employee/payslip-receipts?source=employee-dashboard",
+          label: "Payslip receipt"
+        },
+        {
+          href: "/employee/withholding-receipt?source=employee-dashboard",
+          label: "Withholding receipt"
+        }
       ]
     },
     {

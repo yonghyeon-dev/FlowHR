@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   formatDateTimeByLocale,
@@ -28,10 +29,29 @@ import {
   normalizeEmployeeIdForLocaleInput
 } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
+import { useSearchParams } from "next/navigation";
 export default function WithholdingReceiptConsole() {
   const { locale } = useI18n();
+  const searchParams = useSearchParams();
   const copy = withholdingReceiptCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const sourceContext =
+    (searchParams.get("source") ?? "").trim().toLowerCase() ===
+    "employee-dashboard"
+      ? "employee-dashboard"
+      : null;
+  const sourceContextLabel =
+    sourceContext === "employee-dashboard"
+      ? locale === "ko"
+        ? "직원 대시보드에서 이동했습니다."
+        : "Opened from employee dashboard."
+      : null;
+  const sourceContextReturnLabel =
+    sourceContext === "employee-dashboard"
+      ? locale === "ko"
+        ? "대시보드로 돌아가기"
+        : "Back to dashboard"
+      : null;
   const localeEmployeeIdDefault = getLocalizedEmployeeIdInputDefault(locale);
   const formatKrwByLocale = (value: number) =>
     `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "\uC6D0" : " KRW"}`;
@@ -188,6 +208,14 @@ export default function WithholdingReceiptConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
+        {sourceContextReturnLabel ? (
+          <div className="actions" style={{ marginTop: 8 }}>
+            <Link className="btn btn-secondary" href="/employee">
+              {sourceContextReturnLabel}
+            </Link>
+          </div>
+        ) : null}
       </header>
       <section className="panel-grid">
         <WithholdingReceiptInputPanel
