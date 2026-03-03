@@ -1,4 +1,4 @@
-import type { FlowLocale } from "@/lib/i18n/locales";
+﻿import type { FlowLocale } from "@/lib/i18n/locales";
 import type { RecruitmentOpeningStatus, RecruitmentReferralStage } from "@/features/recruitment/types";
 
 export type AdminRecruitmentCopy = {
@@ -133,11 +133,11 @@ export type EmployeeRecruitmentCopy = {
 const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
   ko: {
     pageTitle: "채용 워크스페이스",
-    pageSubtitle: "채용 공고 등록과 추천 후보자 단계 관리를 한 화면에서 처리합니다.",
+    pageSubtitle: "채용 공고 등록과 추천 후보 단계 관리를 한 화면에서 처리합니다.",
     sessionTitle: "세션/조회",
     organizationIdLabel: "조직 식별자",
     actorIdLabel: "관리자 액터 식별자",
-    accessTokenLabel: "접근 토큰(선택)",
+    accessTokenLabel: "액세스 토큰(선택)",
     refreshAction: "데이터 새로고침",
     createOpeningTitle: "채용 공고 추가",
     openingTitleLabel: "공고명",
@@ -145,11 +145,11 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     employmentTypeLabel: "고용 형태",
     createOpeningAction: "공고 저장",
     openingsTitle: "채용 공고",
-    referralsTitle: "추천 후보자",
+    referralsTitle: "추천 후보",
     referralFilterLabel: "추천 단계 필터",
     referralRiskFilterLabel: "정체 위험 필터",
     referralSearchLabel: "추천 검색",
-    referralSearchPlaceholder: "후보자/공고/추천인/메모 검색",
+    referralSearchPlaceholder: "후보/공고/추천자/메모 검색",
     clearSearchAction: "검색 초기화",
     filteredReferralSummaryLabel: "표시 추천 수",
     referralRiskSummaryLabel: "7일 이상 정체",
@@ -158,11 +158,11 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
     stalledCriticalBadgeLabel: "긴급 정체 위험",
     referralOpeningTitleLabel: "공고명",
     unknownOpeningLabel: "알 수 없는 공고",
-    filteredEmptyReferrals: "현재 필터 조건에 맞는 추천 후보자가 없습니다.",
+    filteredEmptyReferrals: "현재 필터 조건에 맞는 추천 후보가 없습니다.",
     stageUpdateLabel: "단계 변경",
     updateStageAction: "단계 업데이트",
     emptyOpenings: "등록된 채용 공고가 없습니다.",
-    emptyReferrals: "추천 후보자 데이터가 없습니다.",
+    emptyReferrals: "추천 후보 데이터가 없습니다.",
     statusLabel: "상태",
     stageLabel: "단계",
     messages: {
@@ -171,7 +171,7 @@ const adminCopyByLocale: Record<FlowLocale, AdminRecruitmentCopy> = {
       needDepartment: "부서를 입력하세요.",
       needEmploymentType: "고용 형태를 입력하세요.",
       openingCreated: "채용 공고를 등록했습니다.",
-      referralUpdated: "후보자 단계를 변경했습니다.",
+      referralUpdated: "추천 후보 단계를 변경했습니다.",
       loadFailed: "채용 데이터를 불러오지 못했습니다."
     },
     openingStatus: {
@@ -284,7 +284,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     sessionTitle: "조회 설정",
     organizationIdLabel: "조직 식별자",
     employeeIdLabel: "직원 식별자",
-    accessTokenLabel: "접근 토큰(선택)",
+    accessTokenLabel: "액세스 토큰(선택)",
     refreshAction: "데이터 새로고침",
     openingsTitle: "진행 중 공고",
     submitTitle: "후보자 추천",
@@ -302,7 +302,7 @@ const employeeCopyByLocale: Record<FlowLocale, EmployeeRecruitmentCopy> = {
     openingFilterLabel: "공고 필터",
     openingFilterAllOption: "전체 공고",
     referralSearchLabel: "추천 검색",
-    referralSearchPlaceholder: "후보자/공고/메모 검색",
+    referralSearchPlaceholder: "후보/공고/메모 검색",
     clearSearchAction: "검색 초기화",
     referralSummaryLabel: "단계별 건수",
     filteredReferralSummaryLabel: "표시 건수",

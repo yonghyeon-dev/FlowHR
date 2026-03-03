@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import {
   isReferralStalledForRiskFilter,
@@ -170,13 +170,13 @@ export default function EmployeeRecruitmentWorkspaceView({
           </div>
           <p className="small muted">
             {copy.referralSummaryLabel}: {referralSummary.total} (S {referralSummary.submitted} / SC {referralSummary.screening} / I {referralSummary.interview} / O {referralSummary.offer} / H {referralSummary.hired} / R {referralSummary.rejected} / W {referralSummary.withdrawn})
-            {" · "}
+            {" / "}
             {copy.filteredReferralSummaryLabel}: {filteredReferrals.length}
-            {" · "}
+            {" / "}
             {copy.referralRiskSummaryLabel}: {stalledReferralCount}
-            {" · "}
+            {" / "}
             {copy.criticalReferralRiskSummaryLabel}: {stalledCriticalReferralCount}
-            {" · "}
+            {" / "}
             {copy.openingFilteredReferralSummaryLabel}: {openingFilteredReferralCount}
           </p>
           {statusMessage ? <p className="small">{statusMessage}</p> : null}
@@ -231,7 +231,7 @@ export default function EmployeeRecruitmentWorkspaceView({
                     <strong>{opening.title}</strong>
                     <br />
                     <span className="small muted">
-                      {opening.department} · {opening.employmentType}
+                      {opening.department} / {opening.employmentType}
                     </span>
                   </span>
                 </li>
@@ -316,3 +316,4 @@ export default function EmployeeRecruitmentWorkspaceView({
     </main>
   );
 }
+
