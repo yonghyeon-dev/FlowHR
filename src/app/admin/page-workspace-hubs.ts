@@ -58,6 +58,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
             label: "복리후생 장기 대기"
           },
           { href: "/admin/recruitment?risk=stalled_7d", label: "채용 정체 위험" },
+          { href: "/admin/contracts?decisionQueueOnly=true", label: "계약 의사결정 큐" },
           { href: "/admin/contracts?slaRisk=OVERDUE", label: "계약 SLA 초과" },
           { href: "/admin/contracts?status=SENT", label: "계약 응답 대기" }
         ]
@@ -113,6 +114,7 @@ export function buildAdminWorkspaceHubs(isKoLocale: boolean): AdminDashboardWork
           label: "Aging benefits queue"
         },
         { href: "/admin/recruitment?risk=stalled_7d", label: "Stalled recruitment queue" },
+        { href: "/admin/contracts?decisionQueueOnly=true", label: "Contract decision queue" },
         { href: "/admin/contracts?slaRisk=OVERDUE", label: "Contract SLA overdue" },
         { href: "/admin/contracts?status=SENT", label: "Contract pending responses" }
       ]
