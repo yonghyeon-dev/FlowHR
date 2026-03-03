@@ -30,6 +30,7 @@ export type StatusFeedbackTone = "idle" | "ok" | "fail";
 export type EmployeePayslipsPageViewProps = {
   pageCopy: PayslipPageCopy;
   searchSortCopy: PayslipSearchSortCopy;
+  sourceContext: "employee-dashboard" | null;
   isKoLocale: boolean;
   isProductionRuntime: boolean;
   usesBearerToken: boolean;

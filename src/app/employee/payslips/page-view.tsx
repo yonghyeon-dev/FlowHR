@@ -17,6 +17,7 @@ import {
 export function EmployeePayslipsPageView({
   pageCopy,
   searchSortCopy,
+  sourceContext,
   isKoLocale,
   isProductionRuntime,
   usesBearerToken,
@@ -85,6 +86,7 @@ export function EmployeePayslipsPageView({
     <main className="saas-content">
       <EmployeePayslipFilterPanel
         pageCopy={pageCopy}
+        sourceContext={sourceContext}
         isKoLocale={isKoLocale}
         isProductionRuntime={isProductionRuntime}
         usesBearerToken={usesBearerToken}

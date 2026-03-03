@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import {
@@ -37,6 +38,7 @@ import { usePayslipDerivedState } from "@/app/employee/payslips/use-payslip-deri
 import { EmployeePayslipsPageView } from "@/app/employee/payslips/page-view";
 export default function EmployeePayslipsPage() {
   const { locale } = useI18n();
+  const searchParams = useSearchParams();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
@@ -60,6 +62,10 @@ export default function EmployeePayslipsPage() {
 
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const sourceContext =
+    (searchParams.get("source") ?? "").trim().toLowerCase() === "employee-dashboard"
+      ? "employee-dashboard"
+      : null;
 
   const searchSortCopy = useMemo(() => resolvePayslipSearchSortCopy(isKoLocale), [isKoLocale]);
   const pageCopy = useMemo(() => resolvePayslipPageCopy(isKoLocale), [isKoLocale]);
@@ -340,6 +346,7 @@ export default function EmployeePayslipsPage() {
     <EmployeePayslipsPageView
       pageCopy={pageCopy}
       searchSortCopy={searchSortCopy}
+      sourceContext={sourceContext}
       isKoLocale={isKoLocale}
       isProductionRuntime={isProductionRuntime}
       usesBearerToken={usesBearerToken}

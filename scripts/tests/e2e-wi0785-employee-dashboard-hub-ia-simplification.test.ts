@@ -54,17 +54,17 @@ function run() {
   );
   assert.match(
     workspaceHubs,
-    /href: "\/employee\/payslips"/,
+    /href: "\/employee\/payslips(\?source=employee-dashboard)?"/,
     "workspace hub should link to payslips"
   );
   assert.match(
     workspaceHubs,
-    /href: "\/employee\/contracts"/,
+    /href: "\/employee\/contracts(\?source=employee-dashboard)?"/,
     "workspace hub should link to contracts"
   );
   assert.match(
     workspaceHubs,
-    /href: "\/employee\/withholding-receipt"/,
+    /href: "\/employee\/withholding-receipt(\?source=employee-dashboard)?"/,
     "workspace hub should link to withholding receipt"
   );
   assert.match(
