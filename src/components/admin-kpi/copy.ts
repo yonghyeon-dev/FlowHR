@@ -114,6 +114,15 @@ export type KpiCopy = {
     pendingContractResponseCount: string;
     readinessPercent: string;
     readinessHint: string;
+    priorityActionLabel: string;
+    quickActionsLabel: string;
+    actionOpenOnboardingWorkspace: string;
+    actionOpenPendingContractResponses: string;
+    actionOpenPeopleWorkspace: string;
+    priorityReasonContractResponses: string;
+    priorityReasonInvites: string;
+    priorityReasonReadiness: string;
+    priorityReasonClear: string;
   };
   payrollRiskPanel: {
     title: string;
@@ -273,7 +282,17 @@ const defaultCopy: KpiCopy = {
     contractResponseCoveragePercent: "Contract response coverage",
     pendingContractResponseCount: "Pending contract responses",
     readinessPercent: "Readiness score",
-    readinessHint: "People + invite + contract response checkpoints"
+    readinessHint: "People + invite + contract response checkpoints",
+    priorityActionLabel: "Top-priority action",
+    quickActionsLabel: "Quick actions",
+    actionOpenOnboardingWorkspace: "Open onboarding workspace",
+    actionOpenPendingContractResponses: "Open pending contract responses",
+    actionOpenPeopleWorkspace: "Open people workspace",
+    priorityReasonContractResponses:
+      "Pending contract responses exist. Follow up SENT contract queue first.",
+    priorityReasonInvites: "Pending invites exist. Complete invite coverage in onboarding workspace.",
+    priorityReasonReadiness: "Onboarding readiness is not complete. Continue onboarding checklist workflow.",
+    priorityReasonClear: "Onboarding readiness is stable. Continue routine onboarding operations."
   },
   payrollRiskPanel: {
     title: "Payroll and year-end risk snapshot",
@@ -433,7 +452,17 @@ export const kpiCopyByLocale: Record<FlowLocale, KpiCopy> = {
       contractResponseCoveragePercent: "계약 응답 커버리지",
       pendingContractResponseCount: "미응답 계약",
       readinessPercent: "준비 점수",
-      readinessHint: "직원/초대/계약응답 체크포인트"
+      readinessHint: "직원/초대/계약응답 체크포인트",
+      priorityActionLabel: "최우선 조치",
+      quickActionsLabel: "빠른 이동",
+      actionOpenOnboardingWorkspace: "온보딩 워크스페이스 열기",
+      actionOpenPendingContractResponses: "미응답 계약함 열기",
+      actionOpenPeopleWorkspace: "인사 워크스페이스 열기",
+      priorityReasonContractResponses:
+        "미응답 계약이 남아 있습니다. 계약 응답 대기 큐부터 후속 처리하세요.",
+      priorityReasonInvites: "미발급 초대가 남아 있습니다. 온보딩 워크스페이스에서 초대 커버리지를 완료하세요.",
+      priorityReasonReadiness: "온보딩 준비가 완료되지 않았습니다. 체크리스트 흐름을 이어가세요.",
+      priorityReasonClear: "온보딩 준비 상태가 안정적입니다. 일반 온보딩 운영을 진행하세요."
     },
     payrollRiskPanel: {
       title: "급여/연말정산 리스크 스냅샷",
