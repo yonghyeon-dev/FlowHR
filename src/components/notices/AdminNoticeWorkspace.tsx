@@ -88,6 +88,13 @@ export default function AdminNoticeWorkspace() {
   const { locale } = useI18n();
   const searchParams = useSearchParams();
   const copy = resolveNoticeWorkspaceCopy(locale);
+  const source = searchParams.get("source");
+  const sourceHint =
+    source === "admin-dashboard"
+      ? locale === "ko"
+        ? "관리자 대시보드에서 이동했습니다."
+        : "Opened from admin dashboard."
+      : "";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
@@ -319,6 +326,7 @@ export default function AdminNoticeWorkspace() {
   return (
     <AdminNoticeWorkspaceView
       copy={copy}
+      sourceHint={sourceHint}
       showDevTools={showDevTools}
       sessionOrganizationId={organizationId}
       sessionActorId={actorId}

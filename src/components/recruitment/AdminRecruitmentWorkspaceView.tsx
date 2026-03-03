@@ -13,6 +13,7 @@ type AdminRecruitmentCopy = ReturnType<typeof resolveAdminRecruitmentCopy>;
 
 type AdminRecruitmentWorkspaceViewProps = {
   copy: AdminRecruitmentCopy;
+  sourceHint: string;
   showDevTools: boolean;
   sessionOrganizationId: string;
   sessionActorId: string;
@@ -47,6 +48,7 @@ type AdminRecruitmentWorkspaceViewProps = {
 
 export default function AdminRecruitmentWorkspaceView({
   copy,
+  sourceHint,
   showDevTools,
   sessionOrganizationId,
   sessionActorId,
@@ -84,6 +86,7 @@ export default function AdminRecruitmentWorkspaceView({
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/admin">

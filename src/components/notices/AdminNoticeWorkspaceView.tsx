@@ -26,6 +26,7 @@ type NoticeWorkspaceCopy = ReturnType<typeof resolveNoticeWorkspaceCopy>;
 
 type AdminNoticeWorkspaceViewProps = {
   copy: NoticeWorkspaceCopy;
+  sourceHint: string;
   showDevTools: boolean;
   sessionOrganizationId: string;
   sessionActorId: string;
@@ -78,6 +79,7 @@ function canMutateNotice(notice: NoticeItem) {
 
 export default function AdminNoticeWorkspaceView({
   copy,
+  sourceHint,
   showDevTools,
   sessionOrganizationId,
   sessionActorId,
@@ -126,6 +128,7 @@ export default function AdminNoticeWorkspaceView({
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          {sourceHint ? <p className="small muted">{sourceHint}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/admin">
