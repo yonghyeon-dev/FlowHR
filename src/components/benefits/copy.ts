@@ -69,6 +69,7 @@ export type AdminBenefitsCopy = {
   requestRiskFilter: {
     all: string;
     overLimit: string;
+    pending3d: string;
   };
 };
 
@@ -206,7 +207,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     },
     requestRiskFilter: {
       all: "전체",
-      overLimit: "한도 초과만"
+      overLimit: "한도 초과만",
+      pending3d: "3일 이상 승인 대기"
     }
   },
   en: {
@@ -281,7 +283,8 @@ const adminCopyByLocale: Record<FlowLocale, AdminBenefitsCopy> = {
     },
     requestRiskFilter: {
       all: "All",
-      overLimit: "Over limit only"
+      overLimit: "Over limit only",
+      pending3d: "Pending >= 3d"
     }
   }
 };

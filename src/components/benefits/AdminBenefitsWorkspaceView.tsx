@@ -45,7 +45,7 @@ type AdminBenefitsWorkspaceViewProps = {
   visibleRequests: BenefitRequestItem[];
   catalogNameById: Record<string, string>;
   requestFilter: BenefitRequestStatus | "all";
-  requestRiskFilter: "all" | "over_limit";
+  requestRiskFilter: "all" | "over_limit" | "pending_3d";
   requestSearchQuery: string;
   requestSummary: RequestSummary;
   overLimitRequestCount: number;
@@ -63,7 +63,7 @@ type AdminBenefitsWorkspaceViewProps = {
   onCatalogStatusChange: (value: BenefitCatalogStatus) => void;
   onDecisionNoteChange: (value: string) => void;
   onRequestFilterChange: (value: BenefitRequestStatus | "all") => void;
-  onRequestRiskFilterChange: (value: "all" | "over_limit") => void;
+  onRequestRiskFilterChange: (value: "all" | "over_limit" | "pending_3d") => void;
   onRequestSearchQueryChange: (value: string) => void;
   onClearRequestSearch: () => void;
   onLoadWorkspace: () => void;
@@ -283,10 +283,13 @@ export default function AdminBenefitsWorkspaceView({
             {copy.requestRiskFilterLabel}
             <select
               value={requestRiskFilter}
-              onChange={(event) => onRequestRiskFilterChange(event.target.value as "all" | "over_limit")}
+              onChange={(event) =>
+                onRequestRiskFilterChange(event.target.value as "all" | "over_limit" | "pending_3d")
+              }
             >
               <option value="all">{copy.requestRiskFilter.all}</option>
               <option value="over_limit">{copy.requestRiskFilter.overLimit}</option>
+              <option value="pending_3d">{copy.requestRiskFilter.pending3d}</option>
             </select>
           </label>
           <label>

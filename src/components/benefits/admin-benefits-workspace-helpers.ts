@@ -56,8 +56,10 @@ export function normalizeBenefitRequestFilter(value: string | null): BenefitRequ
     : "all";
 }
 
-export function normalizeBenefitRiskFilter(value: string | null): "all" | "over_limit" {
-  return value === "over_limit" ? "over_limit" : "all";
+export type AdminBenefitRequestRiskFilter = "all" | "over_limit" | "pending_3d";
+
+export function normalizeBenefitRiskFilter(value: string | null): AdminBenefitRequestRiskFilter {
+  return value === "over_limit" || value === "pending_3d" ? value : "all";
 }
 
 export function parseBenefitSearchQuery(value: string | null) {
