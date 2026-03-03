@@ -8,8 +8,10 @@ import type {
   RecruitmentOpeningItem,
   RecruitmentOpeningStatus,
   RecruitmentReferralItem,
+  RecruitmentReferralSort,
   RecruitmentReferralStage
 } from "@/features/recruitment/types";
+import { isRecruitmentReferralTerminalStage } from "@/features/recruitment/types";
 
 type RecruitmentStoreContext = {
   dataAccess: Pick<DataAccess, "recruitment">;
@@ -38,6 +40,7 @@ type ListReferralsInput = {
   organizationId?: string;
   referrerEmployeeId?: string;
   stage?: RecruitmentReferralStage | "all";
+  sort?: RecruitmentReferralSort;
 };
 
 type CreateReferralInput = {
@@ -65,6 +68,79 @@ const initialReferralsStore: RecruitmentReferralItem[] = [];
 
 function normalizeStatus<T extends string>(status: T | "all" | undefined) {
   return status && status !== "all" ? status : null;
+}
+const DEFAULT_REFERRAL_SORT: RecruitmentReferralSort = "updated_desc";
+const STALLED_THRESHOLD_7D_MS = 7 * 24 * 60 * 60 * 1000;
+const STALLED_THRESHOLD_14D_MS = 14 * 24 * 60 * 60 * 1000;
+const ACTIVE_REFERRAL_STAGE_PRIORITY: Record<RecruitmentReferralStage, number> = {
+  SUBMITTED: 0,
+  SCREENING: 1,
+  INTERVIEW: 2,
+  OFFER: 3,
+  HIRED: 4,
+  REJECTED: 5,
+  WITHDRAWN: 6
+};
+
+function normalizeReferralSort(sort: RecruitmentReferralSort | undefined): RecruitmentReferralSort {
+  return sort === "stalled_priority" ? "stalled_priority" : DEFAULT_REFERRAL_SORT;
+}
+
+function compareReferralsByUpdatedAtDesc(left: RecruitmentReferralItem, right: RecruitmentReferralItem) {
+  const byUpdatedAt = Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+  if (Number.isFinite(byUpdatedAt) && byUpdatedAt !== 0) {
+    return byUpdatedAt;
+  }
+  return right.id.localeCompare(left.id);
+}
+
+function sortRecruitmentReferralItems(
+  items: RecruitmentReferralItem[],
+  sort: RecruitmentReferralSort,
+  nowMs = Date.now()
+) {
+  const next = [...items];
+  if (sort !== "stalled_priority") {
+    next.sort(compareReferralsByUpdatedAtDesc);
+    return next;
+  }
+
+  next.sort((left, right) => {
+    const leftTerminal = isRecruitmentReferralTerminalStage(left.stage);
+    const rightTerminal = isRecruitmentReferralTerminalStage(right.stage);
+    if (leftTerminal !== rightTerminal) {
+      return leftTerminal ? 1 : -1;
+    }
+    if (!leftTerminal && !rightTerminal) {
+      const leftUpdatedAtMs = Date.parse(left.updatedAt);
+      const rightUpdatedAtMs = Date.parse(right.updatedAt);
+      const leftAgeMs = Number.isFinite(leftUpdatedAtMs) ? nowMs - leftUpdatedAtMs : 0;
+      const rightAgeMs = Number.isFinite(rightUpdatedAtMs) ? nowMs - rightUpdatedAtMs : 0;
+      const leftRiskBand = leftAgeMs >= STALLED_THRESHOLD_14D_MS ? 0 : leftAgeMs >= STALLED_THRESHOLD_7D_MS ? 1 : 2;
+      const rightRiskBand =
+        rightAgeMs >= STALLED_THRESHOLD_14D_MS ? 0 : rightAgeMs >= STALLED_THRESHOLD_7D_MS ? 1 : 2;
+      const riskBandDelta = leftRiskBand - rightRiskBand;
+      if (riskBandDelta !== 0) {
+        return riskBandDelta;
+      }
+      const stageDelta = ACTIVE_REFERRAL_STAGE_PRIORITY[left.stage] - ACTIVE_REFERRAL_STAGE_PRIORITY[right.stage];
+      if (stageDelta !== 0) {
+        return stageDelta;
+      }
+      const byUpdatedAtAsc = leftUpdatedAtMs - rightUpdatedAtMs;
+      if (Number.isFinite(byUpdatedAtAsc) && byUpdatedAtAsc !== 0) {
+        return byUpdatedAtAsc;
+      }
+      return left.id.localeCompare(right.id);
+    }
+    return compareReferralsByUpdatedAtDesc(left, right);
+  });
+
+  return next;
+}
+
+export function sortRecruitmentReferralQueue(items: RecruitmentReferralItem[], sort: RecruitmentReferralSort) {
+  return sortRecruitmentReferralItems(items, normalizeReferralSort(sort));
 }
 
 function resolveOrganizationId(organizationId?: string) {
@@ -165,6 +241,7 @@ export function listRecruitmentReferrals(input: ListReferralsInput = {}, context
   void initialReferralsStore;
   const organizationId = resolveOrganizationId(input.organizationId);
   const stage = normalizeStatus(input.stage);
+  const sort = normalizeReferralSort(input.sort);
   return dataAccess.recruitment
     .listReferrals({
       organizationId,
@@ -172,7 +249,7 @@ export function listRecruitmentReferrals(input: ListReferralsInput = {}, context
       stage: stage ?? undefined,
       limit: 5000
     })
-    .then((rows) => rows.map(toReferralItem));
+    .then((rows) => sortRecruitmentReferralItems(rows.map(toReferralItem), sort));
 }
 
 export function createRecruitmentReferral(input: CreateReferralInput, context?: RecruitmentStoreContext) {

@@ -46,12 +46,12 @@ async function run() {
   );
   assert.match(adminWorkspace, /buildBenefitWorkspaceQuery\(\{ organizationId, sort: "pending_priority" \}\)/);
 
-  assert.match(contract, /^version:\s*0\.3\.6/m);
+  assert.match(contract, /^version:\s*0\.3\.7/m);
   assert.match(contract, /sort=pending_priority/);
-  assert.match(api, /version:\s*0\.3\.6/);
+  assert.match(api, /version:\s*0\.3\.7/);
   assert.match(api, /name:\s*sort/);
   assert.match(api, /pending_priority/);
-  assert.match(testCases, /Contract v0\.3\.6/);
+  assert.match(testCases, /Contract v0\.3\.7/);
   assert.match(testCases, /sort=pending_priority/);
 
   assert.match(workItem, /WI-0820/i);

@@ -10,6 +10,7 @@ const referralStageSchema = z.enum([
   "REJECTED",
   "WITHDRAWN"
 ]);
+const referralSortSchema = z.enum(["updated_desc", "stalled_priority"]);
 
 export const listRecruitmentOpeningsQuerySchema = z.object({
   organizationId: z.string().trim().optional(),
@@ -33,7 +34,8 @@ export const updateRecruitmentOpeningStatusSchema = z.object({
 export const listRecruitmentReferralsQuerySchema = z.object({
   organizationId: z.string().trim().optional(),
   referrerEmployeeId: z.string().trim().optional(),
-  stage: referralStageSchema.or(z.literal("all")).optional()
+  stage: referralStageSchema.or(z.literal("all")).optional(),
+  sort: referralSortSchema.optional()
 });
 
 export const createRecruitmentReferralSchema = z.object({
