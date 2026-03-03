@@ -25,6 +25,8 @@ import type {
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
+  CreateBenefitCatalogItemInput,
+  CreateBenefitRequestInput,
   CreateRecruitmentOpeningInput,
   CreateRecruitmentReferralInput,
   CreateDepartmentInput,
@@ -36,6 +38,8 @@ import type {
   DepartmentEntity,
   DeductionProfileEntity,
   EmployeeEntity,
+  BenefitCatalogItemEntity,
+  BenefitRequestEntity,
   LeaveBalanceEntity,
   LeavePromotionDeliveryEntity,
   LeavePromotionDeliveryRecipientEntity,
@@ -63,6 +67,8 @@ import type {
   UpdateAttendanceRecordInput,
   UpdateDepartmentInput,
   UpdateEmployeeInput,
+  UpdateBenefitCatalogItemInput,
+  UpdateBenefitRequestInput,
   UpdateLeaveRequestInput,
   UpdateLeavePromotionDeliveryInput,
   UpdateLeavePromotionDeliveryRecipientInput,
@@ -106,6 +112,8 @@ type MemoryState = {
   leaveBalances: Map<string, LeaveBalanceEntity>;
   leavePromotionDeliveries: Map<string, LeavePromotionDeliveryEntity>;
   leavePromotionDeliveryRecipients: Map<string, LeavePromotionDeliveryRecipientEntity>;
+  benefitCatalogItems: Map<string, BenefitCatalogItemEntity>;
+  benefitRequests: Map<string, BenefitRequestEntity>;
   notices: Map<string, NoticeEntity>;
   noticeReadReceipts: Map<string, NoticeReadReceiptEntity>;
   noticeNotifications: Map<string, NoticeNotificationEntity>;
@@ -155,6 +163,8 @@ function createState(): MemoryState {
     leaveBalances: new Map<string, LeaveBalanceEntity>(),
     leavePromotionDeliveries: new Map<string, LeavePromotionDeliveryEntity>(),
     leavePromotionDeliveryRecipients: new Map<string, LeavePromotionDeliveryRecipientEntity>(),
+    benefitCatalogItems: new Map<string, BenefitCatalogItemEntity>(),
+    benefitRequests: new Map<string, BenefitRequestEntity>(),
     notices: new Map<string, NoticeEntity>(),
     noticeReadReceipts: new Map<string, NoticeReadReceiptEntity>(),
     noticeNotifications: new Map<string, NoticeNotificationEntity>(),
@@ -328,6 +338,24 @@ function cloneNoticeNotification(entity: NoticeNotificationEntity): NoticeNotifi
     ...entity,
     enqueuedAt: cloneDate(entity.enqueuedAt),
     deliveredAt: entity.deliveredAt ? cloneDate(entity.deliveredAt) : null,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneBenefitCatalogItem(entity: BenefitCatalogItemEntity): BenefitCatalogItemEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt),
+    updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneBenefitRequest(entity: BenefitRequestEntity): BenefitRequestEntity {
+  return {
+    ...entity,
+    requestedAt: cloneDate(entity.requestedAt),
+    reviewedAt: entity.reviewedAt ? cloneDate(entity.reviewedAt) : null,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -2232,6 +2260,156 @@ export const memoryDataAccess: DataAccess = {
         const byEnqueuedAt = right.enqueuedAt.getTime() - left.enqueuedAt.getTime();
         if (byEnqueuedAt !== 0) {
           return byEnqueuedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
+    }
+  },
+
+  benefits: {
+    async createCatalogItem(input: CreateBenefitCatalogItemInput) {
+      const now = new Date();
+      const item: BenefitCatalogItemEntity = {
+        id: nextId("BENEFIT"),
+        organizationId: input.organizationId,
+        name: input.name,
+        description: input.description,
+        annualLimitKrw: Math.max(0, Math.trunc(input.annualLimitKrw)),
+        status: input.status ?? "ACTIVE",
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
+      };
+      state.benefitCatalogItems.set(item.id, item);
+      return cloneBenefitCatalogItem(item);
+    },
+
+    async findCatalogItemById(id: string) {
+      const item = state.benefitCatalogItems.get(id);
+      return item ? cloneBenefitCatalogItem(item) : null;
+    },
+
+    async updateCatalogItem(id: string, input: UpdateBenefitCatalogItemInput) {
+      const existing = state.benefitCatalogItems.get(id);
+      if (!existing) {
+        throw new Error(`benefit catalog item not found: ${id}`);
+      }
+      const updated: BenefitCatalogItemEntity = {
+        ...existing,
+        name: input.name !== undefined ? input.name : existing.name,
+        description: input.description !== undefined ? input.description : existing.description,
+        annualLimitKrw:
+          input.annualLimitKrw !== undefined
+            ? Math.max(0, Math.trunc(input.annualLimitKrw))
+            : existing.annualLimitKrw,
+        status: input.status !== undefined ? input.status : existing.status,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
+      };
+      state.benefitCatalogItems.set(id, updated);
+      return cloneBenefitCatalogItem(updated);
+    },
+
+    async listCatalogItems(input: { organizationId: string; status?: "ACTIVE" | "INACTIVE"; limit?: number }) {
+      const rows: BenefitCatalogItemEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const item of state.benefitCatalogItems.values()) {
+        if (item.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.status && item.status !== input.status) {
+          continue;
+        }
+        rows.push(cloneBenefitCatalogItem(item));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
+    },
+
+    async createRequest(input: CreateBenefitRequestInput) {
+      const now = new Date();
+      const request: BenefitRequestEntity = {
+        id: nextId("BENEFIT-REQ"),
+        organizationId: input.organizationId,
+        benefitId: input.benefitId,
+        employeeId: input.employeeId,
+        amountKrw: Math.max(0, Math.trunc(input.amountKrw)),
+        reason: input.reason,
+        status: input.status ?? "SUBMITTED",
+        requestedAt: cloneDate(input.requestedAt),
+        reviewedAt: input.reviewedAt ? cloneDate(input.reviewedAt) : null,
+        reviewedByActorId: input.reviewedByActorId ?? null,
+        reviewNote: input.reviewNote ?? null,
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
+      };
+      state.benefitRequests.set(request.id, request);
+      return cloneBenefitRequest(request);
+    },
+
+    async findRequestById(id: string) {
+      const request = state.benefitRequests.get(id);
+      return request ? cloneBenefitRequest(request) : null;
+    },
+
+    async updateRequest(id: string, input: UpdateBenefitRequestInput) {
+      const existing = state.benefitRequests.get(id);
+      if (!existing) {
+        throw new Error(`benefit request not found: ${id}`);
+      }
+      const updated: BenefitRequestEntity = {
+        ...existing,
+        employeeId: input.employeeId !== undefined ? input.employeeId : existing.employeeId,
+        amountKrw:
+          input.amountKrw !== undefined ? Math.max(0, Math.trunc(input.amountKrw)) : existing.amountKrw,
+        reason: input.reason !== undefined ? input.reason : existing.reason,
+        status: input.status !== undefined ? input.status : existing.status,
+        reviewedAt:
+          input.reviewedAt !== undefined
+            ? input.reviewedAt
+              ? cloneDate(input.reviewedAt)
+              : null
+            : existing.reviewedAt,
+        reviewedByActorId:
+          input.reviewedByActorId !== undefined
+            ? input.reviewedByActorId
+            : existing.reviewedByActorId,
+        reviewNote: input.reviewNote !== undefined ? input.reviewNote : existing.reviewNote,
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
+      };
+      state.benefitRequests.set(id, updated);
+      return cloneBenefitRequest(updated);
+    },
+
+    async listRequests(input: {
+      organizationId: string;
+      employeeId?: string;
+      status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+      limit?: number;
+    }) {
+      const rows: BenefitRequestEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const request of state.benefitRequests.values()) {
+        if (request.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.employeeId && request.employeeId !== input.employeeId) {
+          continue;
+        }
+        if (input.status && request.status !== input.status) {
+          continue;
+        }
+        rows.push(cloneBenefitRequest(request));
+      }
+      rows.sort((left, right) => {
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
         }
         return right.id.localeCompare(left.id);
       });

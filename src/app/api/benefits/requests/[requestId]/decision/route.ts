@@ -37,7 +37,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
-  const updated = decideBenefitRequest({
+  const updated = await decideBenefitRequest({
     requestId: parsed.data.requestId,
     decision: parsed.data.decision,
     actorId: actor?.id ?? "unknown",

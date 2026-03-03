@@ -4,6 +4,12 @@
   BenefitRequestItem,
   BenefitRequestStatus
 } from "@/features/benefits/types";
+import type { DataAccess } from "@/features/shared/data-access";
+import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
+
+type BenefitStoreContext = {
+  dataAccess: Pick<DataAccess, "benefits">;
+};
 
 type ListCatalogInput = {
   organizationId?: string;
@@ -87,116 +93,256 @@ const initialRequestStore: BenefitRequestItem[] = [
   }
 ];
 
-const catalogStore: BenefitCatalogItem[] = [...initialCatalogStore];
-const requestStore: BenefitRequestItem[] = [...initialRequestStore];
-
 function normalizeStatus<T extends string>(status: T | "all" | undefined) {
   return status && status !== "all" ? status : null;
-}
-
-function nextId(prefix: string) {
-  const stamp = Date.now();
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `${prefix}-${stamp}-${random}`;
 }
 
 function resolveOrganizationId(inputId?: string) {
   return inputId?.trim() || DEFAULT_ORG_ID;
 }
 
-export function listBenefitCatalog(input: ListCatalogInput = {}) {
+function toCatalogItem(entity: {
+  id: string;
+  organizationId: string;
+  name: string;
+  description: string;
+  annualLimitKrw: number;
+  status: BenefitCatalogStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}): BenefitCatalogItem {
+  return {
+    id: entity.id,
+    organizationId: entity.organizationId,
+    name: entity.name,
+    description: entity.description,
+    annualLimitKrw: entity.annualLimitKrw,
+    status: entity.status,
+    createdAt: entity.createdAt.toISOString(),
+    updatedAt: entity.updatedAt.toISOString()
+  };
+}
+
+function toRequestItem(entity: {
+  id: string;
+  organizationId: string;
+  benefitId: string;
+  employeeId: string;
+  amountKrw: number;
+  reason: string;
+  status: BenefitRequestStatus;
+  requestedAt: Date;
+  reviewedAt: Date | null;
+  reviewedByActorId: string | null;
+  reviewNote: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): BenefitRequestItem {
+  return {
+    id: entity.id,
+    organizationId: entity.organizationId,
+    benefitId: entity.benefitId,
+    employeeId: entity.employeeId,
+    amountKrw: entity.amountKrw,
+    reason: entity.reason,
+    status: entity.status,
+    requestedAt: entity.requestedAt.toISOString(),
+    reviewedAt: entity.reviewedAt ? entity.reviewedAt.toISOString() : null,
+    reviewedByActorId: entity.reviewedByActorId,
+    reviewNote: entity.reviewNote,
+    createdAt: entity.createdAt.toISOString(),
+    updatedAt: entity.updatedAt.toISOString()
+  };
+}
+
+function resolveContext(context?: BenefitStoreContext): BenefitStoreContext {
+  if (context) {
+    return context;
+  }
+  return {
+    dataAccess: getRuntimeDataAccess()
+  };
+}
+
+async function ensureInitialBenefitSeed(context: BenefitStoreContext, organizationId: string) {
+  if (organizationId !== DEFAULT_ORG_ID) {
+    return;
+  }
+
+  const existingCatalog = await context.dataAccess.benefits.listCatalogItems({
+    organizationId,
+    limit: 1
+  });
+
+  if (existingCatalog.length === 0) {
+    for (const item of initialCatalogStore) {
+      await context.dataAccess.benefits.createCatalogItem({
+        organizationId,
+        name: item.name,
+        description: item.description,
+        annualLimitKrw: item.annualLimitKrw,
+        status: item.status,
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt)
+      });
+    }
+  }
+
+  const existingRequests = await context.dataAccess.benefits.listRequests({
+    organizationId,
+    limit: 1
+  });
+  if (existingRequests.length > 0) {
+    return;
+  }
+
+  const catalog = await context.dataAccess.benefits.listCatalogItems({
+    organizationId,
+    limit: 500
+  });
+  if (catalog.length === 0) {
+    return;
+  }
+
+  const fallbackBenefit =
+    catalog.find((item) => item.name.includes("교육")) ??
+    catalog.find((item) => item.name.includes("Education")) ??
+    catalog[0];
+  const initial = initialRequestStore[0];
+  if (!initial || !fallbackBenefit) {
+    return;
+  }
+
+  await context.dataAccess.benefits.createRequest({
+    organizationId,
+    benefitId: fallbackBenefit.id,
+    employeeId: initial.employeeId,
+    amountKrw: initial.amountKrw,
+    reason: initial.reason,
+    status: initial.status,
+    requestedAt: new Date(initial.requestedAt),
+    reviewedAt: initial.reviewedAt ? new Date(initial.reviewedAt) : null,
+    reviewedByActorId: initial.reviewedByActorId,
+    reviewNote: initial.reviewNote,
+    createdAt: new Date(initial.createdAt),
+    updatedAt: new Date(initial.updatedAt)
+  });
+}
+
+export function listBenefitCatalog(input: ListCatalogInput = {}, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
   const organizationId = resolveOrganizationId(input.organizationId);
   const status = normalizeStatus(input.status);
 
-  return catalogStore
-    .filter((item) => item.organizationId === organizationId)
-    .filter((item) => (status ? item.status === status : true))
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  return ensureInitialBenefitSeed(resolved, organizationId).then(() =>
+    resolved.dataAccess.benefits
+      .listCatalogItems({
+        organizationId,
+        status: status ?? undefined,
+        limit: 5000
+      })
+      .then((rows) => rows.map(toCatalogItem))
+  );
 }
 
-export function createBenefitCatalogItem(input: CreateCatalogInput) {
-  const now = new Date().toISOString();
-  const next: BenefitCatalogItem = {
-    id: nextId("BENEFIT"),
-    organizationId: resolveOrganizationId(input.organizationId),
-    name: input.name.trim(),
-    description: input.description.trim(),
-    annualLimitKrw: Math.max(0, Math.trunc(input.annualLimitKrw)),
-    status: input.status ?? "ACTIVE",
-    createdAt: now,
-    updatedAt: now
-  };
-
-  catalogStore.unshift(next);
-  return next;
+export function createBenefitCatalogItem(input: CreateCatalogInput, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
+  const now = new Date();
+  return resolved.dataAccess.benefits
+    .createCatalogItem({
+      organizationId: resolveOrganizationId(input.organizationId),
+      name: input.name.trim(),
+      description: input.description.trim(),
+      annualLimitKrw: Math.max(0, Math.trunc(input.annualLimitKrw)),
+      status: input.status ?? "ACTIVE",
+      createdAt: now,
+      updatedAt: now
+    })
+    .then(toCatalogItem);
 }
 
-export function listBenefitRequests(input: ListRequestsInput = {}) {
+export function listBenefitRequests(input: ListRequestsInput = {}, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
   const organizationId = resolveOrganizationId(input.organizationId);
   const status = normalizeStatus(input.status);
 
-  return requestStore
-    .filter((item) => item.organizationId === organizationId)
-    .filter((item) => (input.employeeId ? item.employeeId === input.employeeId : true))
-    .filter((item) => (status ? item.status === status : true))
-    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  return ensureInitialBenefitSeed(resolved, organizationId).then(() =>
+    resolved.dataAccess.benefits
+      .listRequests({
+        organizationId,
+        employeeId: input.employeeId,
+        status: status ?? undefined,
+        limit: 5000
+      })
+      .then((rows) => rows.map(toRequestItem))
+  );
 }
 
-export function createBenefitRequest(input: CreateRequestInput) {
-  const now = new Date().toISOString();
-  const next: BenefitRequestItem = {
-    id: nextId("BENEFIT-REQ"),
-    organizationId: resolveOrganizationId(input.organizationId),
-    benefitId: input.benefitId,
-    employeeId: input.employeeId,
-    amountKrw: Math.max(0, Math.trunc(input.amountKrw)),
-    reason: input.reason.trim(),
-    status: "SUBMITTED",
-    requestedAt: now,
-    reviewedAt: null,
-    reviewedByActorId: null,
-    reviewNote: null,
-    createdAt: now,
-    updatedAt: now
-  };
-
-  requestStore.unshift(next);
-  return next;
+export function createBenefitRequest(input: CreateRequestInput, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
+  const now = new Date();
+  return resolved.dataAccess.benefits
+    .createRequest({
+      organizationId: resolveOrganizationId(input.organizationId),
+      benefitId: input.benefitId,
+      employeeId: input.employeeId,
+      amountKrw: Math.max(0, Math.trunc(input.amountKrw)),
+      reason: input.reason.trim(),
+      status: "SUBMITTED",
+      requestedAt: now,
+      reviewedAt: null,
+      reviewedByActorId: null,
+      reviewNote: null,
+      createdAt: now,
+      updatedAt: now
+    })
+    .then(toRequestItem);
 }
 
-export function decideBenefitRequest(input: DecideRequestInput) {
-  const target = requestStore.find((item) => item.id === input.requestId);
-  if (!target) {
-    return null;
-  }
+export function decideBenefitRequest(input: DecideRequestInput, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
+  return resolved.dataAccess.benefits.findRequestById(input.requestId).then((existing) => {
+    if (!existing) {
+      return null;
+    }
 
-  const now = new Date().toISOString();
-  target.status = input.decision;
-  target.reviewedAt = now;
-  target.reviewedByActorId = input.actorId;
-  target.reviewNote = input.reviewNote?.trim() ? input.reviewNote.trim() : null;
-  target.updatedAt = now;
-  return target;
+    const now = new Date();
+    return resolved.dataAccess.benefits
+      .updateRequest(existing.id, {
+        status: input.decision,
+        reviewedAt: now,
+        reviewedByActorId: input.actorId,
+        reviewNote: input.reviewNote?.trim() ? input.reviewNote.trim() : null,
+        updatedAt: now
+      })
+      .then(toRequestItem);
+  });
 }
 
-export function cancelBenefitRequest(input: CancelRequestInput) {
-  const target = requestStore.find((item) => item.id === input.requestId);
-  if (!target) {
-    return null;
-  }
-  if (target.status !== "SUBMITTED" || target.employeeId !== input.actorId) {
-    return null;
-  }
+export function cancelBenefitRequest(input: CancelRequestInput, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
+  return resolved.dataAccess.benefits.findRequestById(input.requestId).then((existing) => {
+    if (!existing) {
+      return null;
+    }
+    if (existing.status !== "SUBMITTED" || existing.employeeId !== input.actorId) {
+      return null;
+    }
 
-  const now = new Date().toISOString();
-  target.status = "CANCELED";
-  target.reviewedAt = now;
-  target.reviewedByActorId = input.actorId;
-  target.reviewNote = input.cancelNote?.trim() ? input.cancelNote.trim() : null;
-  target.updatedAt = now;
-  return target;
+    const target = toRequestItem(existing);
+    target.status = "CANCELED";
+
+    const now = new Date();
+    return resolved.dataAccess.benefits
+      .updateRequest(existing.id, {
+        status: "CANCELED",
+        reviewedAt: now,
+        reviewedByActorId: input.actorId,
+        reviewNote: input.cancelNote?.trim() ? input.cancelNote.trim() : null,
+        updatedAt: now
+      })
+      .then(toRequestItem);
+  });
 }
 
 export function summarizeBenefitRequests(items: BenefitRequestItem[]) {
@@ -208,10 +354,17 @@ export function summarizeBenefitRequests(items: BenefitRequestItem[]) {
   return { total, submitted, approved, rejected, canceled };
 }
 
-export function findBenefitCatalogItem(benefitId: string) {
-  return catalogStore.find((item) => item.id === benefitId) ?? null;
+export function findBenefitCatalogItem(benefitId: string, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
+  return resolved.dataAccess.benefits
+    .findCatalogItemById(benefitId)
+    .then((entity) => (entity ? toCatalogItem(entity) : null));
 }
 
-export function findBenefitRequest(requestId: string) {
-  return requestStore.find((item) => item.id === requestId) ?? null;
+export function findBenefitRequest(requestId: string, context?: BenefitStoreContext) {
+  const resolved = resolveContext(context);
+  return resolved.dataAccess.benefits
+    .findRequestById(requestId)
+    .then((entity) => (entity ? toRequestItem(entity) : null));
 }
+

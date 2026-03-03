@@ -27,6 +27,8 @@ model Organization {
   notices Notice[]
   noticeReadReceipts NoticeReadReceipt[]
   noticeNotifications NoticeNotificationQueue[]
+  benefitCatalogItems BenefitCatalogItem[]
+  benefitRequests BenefitRequest[]
   recruitmentOpenings RecruitmentOpening[]
   recruitmentReferrals RecruitmentReferral[]
   payrollRuns PayrollRun[]
@@ -517,6 +519,44 @@ model RecruitmentReferral {
   @@index([openingId, updatedAt])
 }
 
+model BenefitCatalogItem {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String
+  description    String
+  annualLimitKrw Int
+  status         BenefitCatalogStatus @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  requests       BenefitRequest[]
+
+  @@index([organizationId, status, updatedAt])
+  @@index([organizationId, updatedAt])
+}
+
+model BenefitRequest {
+  id               String   @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  benefitId        String
+  benefit          BenefitCatalogItem @relation(fields: [benefitId], references: [id], onDelete: Restrict)
+  employeeId       String
+  amountKrw        Int
+  reason           String
+  status           BenefitRequestStatus @default(SUBMITTED)
+  requestedAt      DateTime
+  reviewedAt       DateTime?
+  reviewedByActorId String?
+  reviewNote       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organizationId, status, updatedAt])
+  @@index([organizationId, employeeId, updatedAt])
+  @@index([benefitId, updatedAt])
+}
+
 model PayrollRun {
   id                     String   @id @default(cuid())
   organizationId         String?
@@ -676,6 +716,18 @@ enum RecruitmentReferralStage {
   HIRED
   REJECTED
   WITHDRAWN
+}
+
+enum BenefitCatalogStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BenefitRequestStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELED
 }
 
 enum PayrollState {

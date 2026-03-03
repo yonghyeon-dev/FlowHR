@@ -11,6 +11,8 @@ export type NoticeAudience = "all" | "employees" | "admins";
 export type NoticeStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED";
 export type NoticeNotificationChannel = "in_app";
 export type NoticeNotificationState = "QUEUED" | "DELIVERED" | "FAILED";
+export type BenefitCatalogStatus = "ACTIVE" | "INACTIVE";
+export type BenefitRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
 export type RecruitmentOpeningStatus = "OPEN" | "CLOSED";
 export type RecruitmentReferralStage =
   | "SUBMITTED"
@@ -428,6 +430,33 @@ export type NoticeNotificationEntity = {
   enqueuedAt: Date;
   deliveredAt: Date | null;
   lastError: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type BenefitCatalogItemEntity = {
+  id: string;
+  organizationId: string;
+  name: string;
+  description: string;
+  annualLimitKrw: number;
+  status: BenefitCatalogStatus;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type BenefitRequestEntity = {
+  id: string;
+  organizationId: string;
+  benefitId: string;
+  employeeId: string;
+  amountKrw: number;
+  reason: string;
+  status: BenefitRequestStatus;
+  requestedAt: Date;
+  reviewedAt: Date | null;
+  reviewedByActorId: string | null;
+  reviewNote: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -881,6 +910,50 @@ export type UpdateNoticeNotificationInput = {
   lastError?: string | null;
 };
 
+export type CreateBenefitCatalogItemInput = {
+  organizationId: string;
+  name: string;
+  description: string;
+  annualLimitKrw: number;
+  status?: BenefitCatalogStatus;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type UpdateBenefitCatalogItemInput = {
+  name?: string;
+  description?: string;
+  annualLimitKrw?: number;
+  status?: BenefitCatalogStatus;
+  updatedAt?: Date;
+};
+
+export type CreateBenefitRequestInput = {
+  organizationId: string;
+  benefitId: string;
+  employeeId: string;
+  amountKrw: number;
+  reason: string;
+  status?: BenefitRequestStatus;
+  requestedAt: Date;
+  reviewedAt?: Date | null;
+  reviewedByActorId?: string | null;
+  reviewNote?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type UpdateBenefitRequestInput = {
+  employeeId?: string;
+  amountKrw?: number;
+  reason?: string;
+  status?: BenefitRequestStatus;
+  reviewedAt?: Date | null;
+  reviewedByActorId?: string | null;
+  reviewNote?: string | null;
+  updatedAt?: Date;
+};
+
 export type CreateRecruitmentOpeningInput = {
   organizationId: string;
   title: string;
@@ -1228,6 +1301,29 @@ export interface NoticeNotificationStore {
   }): Promise<NoticeNotificationEntity[]>;
 }
 
+export interface BenefitStore {
+  createCatalogItem(input: CreateBenefitCatalogItemInput): Promise<BenefitCatalogItemEntity>;
+  findCatalogItemById(id: string): Promise<BenefitCatalogItemEntity | null>;
+  updateCatalogItem(
+    id: string,
+    input: UpdateBenefitCatalogItemInput
+  ): Promise<BenefitCatalogItemEntity>;
+  listCatalogItems(input: {
+    organizationId: string;
+    status?: BenefitCatalogStatus;
+    limit?: number;
+  }): Promise<BenefitCatalogItemEntity[]>;
+  createRequest(input: CreateBenefitRequestInput): Promise<BenefitRequestEntity>;
+  findRequestById(id: string): Promise<BenefitRequestEntity | null>;
+  updateRequest(id: string, input: UpdateBenefitRequestInput): Promise<BenefitRequestEntity>;
+  listRequests(input: {
+    organizationId: string;
+    employeeId?: string;
+    status?: BenefitRequestStatus;
+    limit?: number;
+  }): Promise<BenefitRequestEntity[]>;
+}
+
 export interface RecruitmentStore {
   createOpening(input: CreateRecruitmentOpeningInput): Promise<RecruitmentOpeningEntity>;
   findOpeningById(id: string): Promise<RecruitmentOpeningEntity | null>;
@@ -1266,6 +1362,7 @@ export type DataAccess = {
   leavePolicy: LeavePolicyStore;
   leaveBalance: LeaveBalanceStore;
   leavePromotionDeliveries: LeavePromotionDeliveryStore;
+  benefits: BenefitStore;
   recruitment: RecruitmentStore;
   notices: NoticeStore;
   noticeReadReceipts: NoticeReadReceiptStore;

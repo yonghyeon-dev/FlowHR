@@ -27,6 +27,8 @@ import type {
   CreateLeaveRequestInput,
   CreateNoticeInput,
   CreateNoticeNotificationInput,
+  CreateBenefitCatalogItemInput,
+  CreateBenefitRequestInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreatePositionInput,
@@ -40,6 +42,9 @@ import type {
   UpdateWorkScheduleInput,
   DataAccess,
   DeductionProfileEntity,
+  BenefitCatalogItemEntity,
+  BenefitRequestEntity,
+  BenefitStore,
   DeductionProfileStore,
   EmployeeEntity,
   EmployeeStore,
@@ -98,6 +103,8 @@ import type {
   UpdateLeaveRequestInput,
   UpdateNoticeInput,
   UpdateNoticeNotificationInput,
+  UpdateBenefitCatalogItemInput,
+  UpdateBenefitRequestInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
   UpdateRecruitmentOpeningInput,
@@ -329,6 +336,37 @@ function toNoticeNotificationEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): NoticeNotificationEntity {
+  return record;
+}
+
+function toBenefitCatalogItemEntity(record: {
+  id: string;
+  organizationId: string;
+  name: string;
+  description: string;
+  annualLimitKrw: number;
+  status: "ACTIVE" | "INACTIVE";
+  createdAt: Date;
+  updatedAt: Date;
+}): BenefitCatalogItemEntity {
+  return record;
+}
+
+function toBenefitRequestEntity(record: {
+  id: string;
+  organizationId: string;
+  benefitId: string;
+  employeeId: string;
+  amountKrw: number;
+  reason: string;
+  status: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+  requestedAt: Date;
+  reviewedAt: Date | null;
+  reviewedByActorId: string | null;
+  reviewNote: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): BenefitRequestEntity {
   return record;
 }
 
@@ -2280,6 +2318,131 @@ const noticeNotifications: NoticeNotificationStore = {
   }
 };
 
+const benefits: BenefitStore = {
+  async createCatalogItem(input: CreateBenefitCatalogItemInput) {
+    const record = await prisma.benefitCatalogItem.create({
+      data: {
+        organizationId: input.organizationId,
+        name: input.name,
+        description: input.description,
+        annualLimitKrw: Math.max(0, Math.trunc(input.annualLimitKrw)),
+        status: input.status ?? "ACTIVE",
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toBenefitCatalogItemEntity(record);
+  },
+
+  async findCatalogItemById(id: string) {
+    const record = await prisma.benefitCatalogItem.findUnique({
+      where: { id }
+    });
+    return record ? toBenefitCatalogItemEntity(record) : null;
+  },
+
+  async updateCatalogItem(id: string, input: UpdateBenefitCatalogItemInput) {
+    const record = await prisma.benefitCatalogItem.update({
+      where: { id },
+      data: {
+        name: input.name,
+        description: input.description,
+        annualLimitKrw:
+          input.annualLimitKrw === undefined
+            ? undefined
+            : Math.max(0, Math.trunc(input.annualLimitKrw)),
+        status: input.status,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toBenefitCatalogItemEntity(record);
+  },
+
+  async listCatalogItems(input: {
+    organizationId: string;
+    status?: "ACTIVE" | "INACTIVE";
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+    const records = await prisma.benefitCatalogItem.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.status ? { status: input.status } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toBenefitCatalogItemEntity);
+  },
+
+  async createRequest(input: CreateBenefitRequestInput) {
+    const record = await prisma.benefitRequest.create({
+      data: {
+        organizationId: input.organizationId,
+        benefitId: input.benefitId,
+        employeeId: input.employeeId,
+        amountKrw: Math.max(0, Math.trunc(input.amountKrw)),
+        reason: input.reason,
+        status: input.status ?? "SUBMITTED",
+        requestedAt: input.requestedAt,
+        reviewedAt: input.reviewedAt ?? null,
+        reviewedByActorId: input.reviewedByActorId ?? null,
+        reviewNote: input.reviewNote ?? null,
+        createdAt: input.createdAt,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toBenefitRequestEntity(record);
+  },
+
+  async findRequestById(id: string) {
+    const record = await prisma.benefitRequest.findUnique({
+      where: { id }
+    });
+    return record ? toBenefitRequestEntity(record) : null;
+  },
+
+  async updateRequest(id: string, input: UpdateBenefitRequestInput) {
+    const record = await prisma.benefitRequest.update({
+      where: { id },
+      data: {
+        employeeId: input.employeeId,
+        amountKrw:
+          input.amountKrw === undefined ? undefined : Math.max(0, Math.trunc(input.amountKrw)),
+        reason: input.reason,
+        status: input.status,
+        reviewedAt: input.reviewedAt,
+        reviewedByActorId: input.reviewedByActorId,
+        reviewNote: input.reviewNote,
+        updatedAt: input.updatedAt
+      }
+    });
+    return toBenefitRequestEntity(record);
+  },
+
+  async listRequests(input: {
+    organizationId: string;
+    employeeId?: string;
+    status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+
+    const records = await prisma.benefitRequest.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.employeeId ? { employeeId: input.employeeId } : {}),
+        ...(input.status ? { status: input.status } : {})
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toBenefitRequestEntity);
+  }
+};
+
 const recruitment: RecruitmentStore = {
   async createOpening(input: CreateRecruitmentOpeningInput) {
     const record = await prisma.recruitmentOpening.create({
@@ -2586,6 +2749,7 @@ export const prismaDataAccess: DataAccess = {
   leavePolicy,
   leaveBalance,
   leavePromotionDeliveries,
+  benefits,
   recruitment,
   notices,
   noticeReadReceipts,
