@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   contractApprovalStatusLabelByLocale,
   contractDocumentStatusLabelByLocale,
@@ -14,6 +15,10 @@ import {
   applyInboxStatusFilter,
   countActionNeededPending,
   countPendingResponse,
+  normalizeEmployeeInboxDeadlineFilter,
+  normalizeEmployeeInboxStatusFilter,
+  parseEmployeeContractsSearchQuery,
+  type EmployeeInboxStatusFilter,
   type EmployeeInboxDeadlineFilter,
   isDueSoonPendingDocument,
   isOverduePendingDocument,
@@ -32,6 +37,7 @@ import {
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function EmployeeContractsInbox() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
@@ -40,9 +46,17 @@ export default function EmployeeContractsInbox() {
   const approvalStatusLabels = contractApprovalStatusLabelByLocale[locale];
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [inboxStatusFilter, setInboxStatusFilter] = useState<"all" | "pending_response" | "responded" | "expired">("pending_response");
-  const [inboxDeadlineFilter, setInboxDeadlineFilter] = useState<EmployeeInboxDeadlineFilter>("all");
+  const [searchQuery, setSearchQuery] = useState(
+    parseEmployeeContractsSearchQuery(searchParams.get("q"))
+  );
+  const [inboxStatusFilter, setInboxStatusFilter] =
+    useState<EmployeeInboxStatusFilter>(
+      normalizeEmployeeInboxStatusFilter(searchParams.get("status"))
+    );
+  const [inboxDeadlineFilter, setInboxDeadlineFilter] =
+    useState<EmployeeInboxDeadlineFilter>(
+      normalizeEmployeeInboxDeadlineFilter(searchParams.get("deadline"))
+    );
   const [signatureInput, setSignatureInput] = useState("");
   const [comment, setComment] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -220,9 +234,7 @@ export default function EmployeeContractsInbox() {
             <select
               value={inboxStatusFilter}
               onChange={(event) =>
-                setInboxStatusFilter(
-                  event.target.value as "all" | "pending_response" | "responded" | "expired"
-                )
+                setInboxStatusFilter(event.target.value as EmployeeInboxStatusFilter)
               }
             >
               <option value="all">{copy.inboxStatusFilterAllOption}</option>
