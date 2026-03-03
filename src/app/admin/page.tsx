@@ -65,7 +65,7 @@ export default function AdminDashboardPage() {
         breakdown: isKoLocale
           ? `대기 ${summary.pendingApprovalExecutionCount} · 정체 ${summary.stalledApprovalExecutionCount}`
           : `Pending ${summary.pendingApprovalExecutionCount} · Stalled ${summary.stalledApprovalExecutionCount}`,
-        href: "/admin/approval-executions",
+        href: "/admin/approval-executions?source=admin-dashboard",
         actions: [
           {
             label: isKoLocale ? `대기 ${summary.pendingApprovalExecutionCount}` : `Pending ${summary.pendingApprovalExecutionCount}`,
@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
         breakdown: isKoLocale
           ? `미확정 ${summary.previewedPayrollCount} · 미배포 ${summary.undistributedPayrollCount}`
           : `Previewed ${summary.previewedPayrollCount} · Undistributed ${summary.undistributedPayrollCount}`,
-        href: "/admin/payroll-close",
+        href: "/admin/payroll-close?source=admin-dashboard",
         actions: [
           {
             label: isKoLocale ? `미확정 ${summary.previewedPayrollCount}` : `Previewed ${summary.previewedPayrollCount}`,
@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
         breakdown: isKoLocale
           ? `의사결정 ${summary.contractDecisionQueueCount} · 응답 대기 ${summary.contractPendingResponseCount} · SLA 초과 ${summary.contractSlaOverdueCount}`
           : `Decision ${summary.contractDecisionQueueCount} · Pending response ${summary.contractPendingResponseCount} · SLA overdue ${summary.contractSlaOverdueCount}`,
-        href: "/admin/contracts",
+        href: "/admin/contracts?source=admin-dashboard",
         actions: [
           {
             label: isKoLocale ? `의사결정 ${summary.contractDecisionQueueCount}` : `Decision ${summary.contractDecisionQueueCount}`,
