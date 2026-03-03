@@ -40,7 +40,7 @@ async function run() {
     countLines(adminWorkspace) <= 300,
     `AdminRecruitmentWorkspace.tsx should stay under 300 lines (current: ${countLines(adminWorkspace)})`
   );
-  assert.match(adminWorkspace, /buildQuery\(\{ organizationId, sort: "stalled_priority" \}\)/);
+  assert.match(adminWorkspace, /buildRecruitmentQuery\(\{ organizationId, sort: "stalled_priority" \}\)/);
 
   assert.match(contract, /^version:\s*0\.3\.7/m);
   assert.match(contract, /recruitment referral queue priority sorting \(`sort=stalled_priority`\)/);
