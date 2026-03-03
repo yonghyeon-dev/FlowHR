@@ -1,4 +1,4 @@
-# People Test Cases (Contract v0.3.4)
+# People Test Cases (Contract v0.3.5)
 
 ## Organization
 
@@ -54,4 +54,5 @@
 - Benefits request create returns `409` when target catalog status is `INACTIVE`.
 - Benefits request create returns `409` on benefit organization mismatch.
 - Benefits request decision returns `409` when request status is not `SUBMITTED`.
+- Benefits catalog status update returns `409` when trying to deactivate an item with submitted pending requests.
 

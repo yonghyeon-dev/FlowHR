@@ -111,6 +111,12 @@ export default function AdminBenefitsWorkspaceView({
   onDecideRequest
 }: AdminBenefitsWorkspaceViewProps) {
   const pendingAgingRiskCount = requests.filter((request) => isPendingAgingRisk(request)).length;
+  const pendingSubmittedCountByBenefitId = requests.reduce<Record<string, number>>((acc, request) => {
+    if (request.status === "SUBMITTED") {
+      acc[request.benefitId] = (acc[request.benefitId] ?? 0) + 1;
+    }
+    return acc;
+  }, {});
 
   return (
     <main className="saas-content">
@@ -204,39 +210,52 @@ export default function AdminBenefitsWorkspaceView({
             <p className="small muted">{copy.emptyCatalog}</p>
           ) : (
             <ul className="simple-list">
-              {catalog.map((item) => (
-                <li key={item.id}>
-                  <span>
-                    <strong>{item.name}</strong>
-                    <br />
-                    <span className="small muted">{item.description}</span>
-                    <br />
-                    <span className="small muted">
-                      {copy.annualLimitLabel}: {item.annualLimitKrw.toLocaleString(runtimeLocale)} ·{" "}
-                      {copy.statusLabel}: {copy.catalogStatus[item.status]}
+              {catalog.map((item) => {
+                const pendingSubmittedCount = pendingSubmittedCountByBenefitId[item.id] ?? 0;
+                const hasPendingSubmitted = pendingSubmittedCount > 0;
+                return (
+                  <li key={item.id}>
+                    <span>
+                      <strong>{item.name}</strong>
+                      <br />
+                      <span className="small muted">{item.description}</span>
+                      <br />
+                      <span className="small muted">
+                        {copy.annualLimitLabel}: {item.annualLimitKrw.toLocaleString(runtimeLocale)} ·{" "}
+                        {copy.statusLabel}: {copy.catalogStatus[item.status]}
+                      </span>
+                      {hasPendingSubmitted ? (
+                        <>
+                          <br />
+                          <span className="small muted">
+                            {copy.requestStatus.SUBMITTED}: {pendingSubmittedCount}
+                          </span>
+                        </>
+                      ) : null}
                     </span>
-                  </span>
-                  <div className="actions" style={{ marginTop: 0 }}>
-                    {item.status === "ACTIVE" ? (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        onClick={() => onUpdateCatalogStatus(item.id, "INACTIVE")}
-                      >
-                        {copy.deactivateCatalogAction}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        onClick={() => onUpdateCatalogStatus(item.id, "ACTIVE")}
-                      >
-                        {copy.activateCatalogAction}
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
+                    <div className="actions" style={{ marginTop: 0 }}>
+                      {item.status === "ACTIVE" ? (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => onUpdateCatalogStatus(item.id, "INACTIVE")}
+                          disabled={hasPendingSubmitted}
+                        >
+                          {copy.deactivateCatalogAction}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small"
+                          onClick={() => onUpdateCatalogStatus(item.id, "ACTIVE")}
+                        >
+                          {copy.activateCatalogAction}
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
