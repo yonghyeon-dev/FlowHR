@@ -228,6 +228,13 @@ export default function AdminDashboardPage() {
   }, [refreshSummary]);
 
   const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
+  const withAdminDashboardSource = (href: string) => {
+    if (!href.startsWith("/admin/contracts") || href.includes("source=")) {
+      return href;
+    }
+    const separator = href.includes("?") ? "&" : "?";
+    return `${href}${separator}source=admin-dashboard`;
+  };
 
   return (
     <main className="saas-content">
@@ -400,7 +407,7 @@ export default function AdminDashboardPage() {
               {hub.links.map((link, index) => (
                 <Link
                   className={index === 0 ? "btn btn-primary" : "btn btn-secondary"}
-                  href={link.href}
+                  href={withAdminDashboardSource(link.href)}
                   key={link.href}
                 >
                   {link.label}
