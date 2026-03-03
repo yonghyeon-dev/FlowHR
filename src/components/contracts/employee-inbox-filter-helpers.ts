@@ -6,6 +6,42 @@ export type EmployeeInboxDeadlineFilter = "all" | "action_needed" | "due_soon" |
 
 const DUE_SOON_WINDOW_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const employeeInboxStatusFilters: EmployeeInboxStatusFilter[] = [
+  "all",
+  "pending_response",
+  "responded",
+  "expired"
+];
+const employeeInboxDeadlineFilters: EmployeeInboxDeadlineFilter[] = [
+  "all",
+  "action_needed",
+  "due_soon",
+  "overdue"
+];
+
+export function parseEmployeeContractsSearchQuery(value: string | null) {
+  return (value ?? "").trim();
+}
+
+export function normalizeEmployeeInboxStatusFilter(
+  value: string | null
+): EmployeeInboxStatusFilter {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (employeeInboxStatusFilters.includes(normalized as EmployeeInboxStatusFilter)) {
+    return normalized as EmployeeInboxStatusFilter;
+  }
+  return "pending_response";
+}
+
+export function normalizeEmployeeInboxDeadlineFilter(
+  value: string | null
+): EmployeeInboxDeadlineFilter {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (employeeInboxDeadlineFilters.includes(normalized as EmployeeInboxDeadlineFilter)) {
+    return normalized as EmployeeInboxDeadlineFilter;
+  }
+  return "all";
+}
 
 function parseExpiresAtMillis(document: EmployeeContractDocument) {
   if (!document.expiresAt) {
