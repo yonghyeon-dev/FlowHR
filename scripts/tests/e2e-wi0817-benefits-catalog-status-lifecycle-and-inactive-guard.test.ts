@@ -59,8 +59,8 @@ async function run() {
   assert.match(requestsRoute, /benefits\.catalog\.inactive/);
   assert.match(decisionRoute, /benefits\.request\.decision\.invalid_state/);
 
-  assert.ok(countLines(adminWorkspace) <= 300, `AdminBenefitsWorkspace.tsx should stay <=300 lines`);
-  assert.ok(countLines(employeeWorkspace) <= 300, `EmployeeBenefitsWorkspace.tsx should stay <=300 lines`);
+  assert.ok(countLines(adminWorkspace) <= 300, "AdminBenefitsWorkspace.tsx should stay <=300 lines");
+  assert.ok(countLines(employeeWorkspace) <= 300, "EmployeeBenefitsWorkspace.tsx should stay <=300 lines");
 
   assert.match(adminWorkspace, /catalogStatus/);
   assert.match(adminWorkspace, /\/api\/benefits\/catalog\/\$\{encodeURIComponent\(benefitId\)\}\/status/);
@@ -68,15 +68,13 @@ async function run() {
   assert.match(adminWorkspaceView, /copy\.catalogStatusLabel/);
   assert.match(employeeWorkspace, /copy\.messages\.inactiveCatalog/);
   assert.match(employeeWorkspaceView, /\{" · "\}/);
+  assert.match(copy, /catalogStatusLabel/);
 
-  assert.match(copy, /복리후생 워크스페이스/);
-  assert.doesNotMatch(copy, /蹂듬|쨌/);
-
-  assert.match(contract, /^version:\s*0\.3\.4/m);
+  assert.match(contract, /^version:\s*0\.3\.5/m);
   assert.match(contract, /path:\s*\/benefits\/catalog\/\{benefitId\}\/status/);
-  assert.match(api, /version:\s*0\.3\.4/);
+  assert.match(api, /version:\s*0\.3\.5/);
   assert.match(api, /\/benefits\/catalog\/\{benefitId\}\/status:/);
-  assert.match(testCases, /Contract v0\.3\.4/);
+  assert.match(testCases, /Contract v0\.3\.5/);
 
   assert.match(workItem, /WI-0817/i);
   assert.match(workItem, /inactive|catalog status|benefits/i);

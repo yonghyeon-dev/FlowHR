@@ -1,5 +1,9 @@
 import { updateBenefitCatalogStatusSchema } from "@/features/benefits/schemas";
-import { findBenefitCatalogItem, updateBenefitCatalogItemStatus } from "@/features/benefits/store";
+import {
+  findBenefitCatalogItem,
+  listBenefitRequests,
+  updateBenefitCatalogItemStatus
+} from "@/features/benefits/store";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -45,6 +49,20 @@ export async function POST(request: Request, context: RouteContext) {
   }
   if (existing.status === parsed.data.status) {
     return ok({ catalogItem: existing });
+  }
+  if (parsed.data.status === "INACTIVE") {
+    const submittedRequests = await listBenefitRequests({
+      organizationId: existing.organizationId,
+      status: "SUBMITTED"
+    });
+    const pendingSubmittedCount = submittedRequests.filter(
+      (request) => request.benefitId === existing.id
+    ).length;
+    if (pendingSubmittedCount > 0) {
+      return fail(409, "benefits.catalog.deactivate.pending_requests", {
+        pendingSubmittedCount
+      });
+    }
   }
 
   const updated = await updateBenefitCatalogItemStatus({
