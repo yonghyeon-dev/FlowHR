@@ -44,6 +44,14 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         description: "전자계약, 공지, 복리후생, 채용 화면으로 바로 이동합니다.",
         links: [
           { href: "/employee/contracts", label: "전자계약" },
+          {
+            href: "/employee/contracts?status=pending_response&deadline=due_soon",
+            label: "계약 기한 임박"
+          },
+          {
+            href: "/employee/contracts?status=pending_response&deadline=overdue",
+            label: "계약 만료/지연"
+          },
           { href: "/employee/notices", label: "공지사항" },
           { href: "/employee/benefits?status=SUBMITTED&risk=pending_3d", label: "복리후생 대기" },
           { href: "/employee/recruitment?risk=stalled_7d", label: "채용 정체 추천" }
@@ -86,6 +94,14 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       description: "Check contracts, notices, benefits queue, and recruitment queue.",
       links: [
         { href: "/employee/contracts", label: "Contracts" },
+        {
+          href: "/employee/contracts?status=pending_response&deadline=due_soon",
+          label: "Contracts due soon"
+        },
+        {
+          href: "/employee/contracts?status=pending_response&deadline=overdue",
+          label: "Contracts overdue"
+        },
         { href: "/employee/notices", label: "Notices" },
         {
           href: "/employee/benefits?status=SUBMITTED&risk=pending_3d",
