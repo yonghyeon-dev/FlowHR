@@ -40,6 +40,7 @@ import {
   resolvePayrollKrPresetShareContext
 } from "@/features/payroll/kr-preset-share-context";
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 
 type UseAdminDashboardStateInput = {
   demoOrganizationName: string;
@@ -71,7 +72,7 @@ export function useAdminDashboardState({
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
 
   const [employees, setEmployees] = useState<EmployeeSummary[]>([]);
-  const [employeeId, setEmployeeId] = useState("EMP-1001");
+  const [employeeId, setEmployeeId] = useState(defaultEmployeeIdForApi);
   const [employeeName, setEmployeeName] = useState("");
   const [employeeEmail, setEmployeeEmail] = useState("");
   const [employeeActive, setEmployeeActive] = useState(true);
@@ -79,10 +80,10 @@ export function useAdminDashboardState({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InviteRole>("employee");
   const [inviteDeliveryMode, setInviteDeliveryMode] = useState<InviteDeliveryMode>("link");
-  const [inviteActorId, setInviteActorId] = useState("EMP-1001");
+  const [inviteActorId, setInviteActorId] = useState(defaultEmployeeIdForApi);
   const [inviteResult, setInviteResult] = useState<InviteResultDto | null>(null);
 
-  const [scheduleEmployeeId, setScheduleEmployeeId] = useState("EMP-1001");
+  const [scheduleEmployeeId, setScheduleEmployeeId] = useState(defaultEmployeeIdForApi);
   const [scheduleIsHoliday, setScheduleIsHoliday] = useState(false);
   const [scheduleStartAt, setScheduleStartAt] = useState(() => {
     const now = new Date();
@@ -120,7 +121,7 @@ export function useAdminDashboardState({
   const [aggregateEmployeeId, setAggregateEmployeeId] = useState("");
   const [aggregates, setAggregates] = useState<AttendanceAggregateDto[]>([]);
 
-  const [accrualEmployeeId, setAccrualEmployeeId] = useState("EMP-1001");
+  const [accrualEmployeeId, setAccrualEmployeeId] = useState(defaultEmployeeIdForApi);
   const [accrualYear, setAccrualYear] = useState(String(new Date().getFullYear()));
   const [accrualGrantDays, setAccrualGrantDays] = useState("15");
   const [accrualCarryCapDays, setAccrualCarryCapDays] = useState("5");

@@ -101,20 +101,14 @@ export default function EmployeePayslipsPage() {
   );
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
-
   const usesBearerToken = bearerToken.trim().length > 0;
-  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
   const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
   const { logs, pendingLabel, refreshPayslips, appendClientLog, clearLogs } = usePayslipApi({
     pageCopy,
     runtimeLocale,
-    usesBearerToken,
-    bearerToken,
-    allowHeaderActorFallback,
     requiresLoginSession,
     productionSessionRequiredNotice,
     employeeIdForApi: normalizedEmployeeIdForApi,
-    organizationId,
     periodStart,
     periodEnd,
     setRuns,

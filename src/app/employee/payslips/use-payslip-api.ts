@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 
 import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
+import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import type { PayslipPageCopy } from "@/app/employee/payslips/page-locale-helpers";
 import {
   buildQuery,
@@ -13,13 +14,9 @@ import {
 type UsePayslipApiParams = {
   pageCopy: PayslipPageCopy;
   runtimeLocale: string;
-  usesBearerToken: boolean;
-  bearerToken: string;
-  allowHeaderActorFallback: boolean;
   requiresLoginSession: boolean;
   productionSessionRequiredNotice: string;
   employeeIdForApi: string;
-  organizationId: string;
   periodStart: string;
   periodEnd: string;
   setRuns: (runs: PayrollRunDto[]) => void;
@@ -50,13 +47,9 @@ function buildApiLogEntry(label: string, runtimeLocale: string, status: number, 
 export function usePayslipApi({
   pageCopy,
   runtimeLocale,
-  usesBearerToken,
-  bearerToken,
-  allowHeaderActorFallback,
   requiresLoginSession,
   productionSessionRequiredNotice,
   employeeIdForApi,
-  organizationId,
   periodStart,
   periodEnd,
   setRuns,
@@ -81,36 +74,12 @@ export function usePayslipApi({
     ) => {
       setPendingLabel(label);
       try {
-        const headers: Record<string, string> = {};
-        if (payload) {
-          headers["content-type"] = "application/json";
-        }
-
-        if (usesBearerToken) {
-          headers.authorization = `Bearer ${bearerToken.trim()}`;
-        } else if (allowHeaderActorFallback) {
-          headers["x-actor-role"] = "employee";
-          headers["x-actor-id"] = employeeIdForApi.trim() || defaultEmployeeIdForApi;
-          if (organizationId.trim().length > 0) {
-            headers["x-actor-organization-id"] = organizationId.trim();
-          }
-        }
-
-        const response = await fetch(path, {
+        const response = await apiClientFetch({
           method,
-          headers,
-          body: payload ? JSON.stringify(payload) : undefined
+          path,
+          payload
         });
-
-        const text = await response.text();
-        let body: unknown = null;
-        if (text.trim().length > 0) {
-          try {
-            body = JSON.parse(text);
-          } catch {
-            body = text;
-          }
-        }
+        const body = await parseApiResponseBody(response);
 
         setLogs((prev) => [
           buildApiLogEntry(label, runtimeLocale, response.status, response.ok, body),
@@ -122,14 +91,7 @@ export function usePayslipApi({
         setPendingLabel(null);
       }
     },
-    [
-      allowHeaderActorFallback,
-      bearerToken,
-      employeeIdForApi,
-      organizationId,
-      runtimeLocale,
-      usesBearerToken
-    ]
+    [runtimeLocale]
   );
 
   const refreshPayslips = useCallback(async () => {

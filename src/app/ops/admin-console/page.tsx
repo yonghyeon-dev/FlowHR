@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-
 import { useStickyStringState } from "@/lib/client/useStickyState";
+import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 
 type ActorRole = "admin" | "manager" | "employee" | "payroll_operator" | "system";
 type AttendanceListState = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
@@ -177,7 +177,7 @@ export default function HomePage() {
   const [organizationId, setOrganizationId] = useStickyStringState("flowhr:ctx:organizationId", "");
   const [employeeActorId, setEmployeeActorId] = useStickyStringState(
     "flowhr:ctx:employeeId",
-    "EMP-1001"
+    defaultEmployeeIdForApi
   );
   const [managerActorId, setManagerActorId] = useStickyStringState(
     "flowhr:ctx:managerId",
@@ -199,7 +199,7 @@ export default function HomePage() {
   const [peopleOrganizationName, setPeopleOrganizationName] = useState("FlowHR Demo Org");
   const [peopleOrganizations, setPeopleOrganizations] = useState<OrganizationSummary[]>([]);
 
-  const [peopleEmployeeId, setPeopleEmployeeId] = useState("EMP-1001");
+  const [peopleEmployeeId, setPeopleEmployeeId] = useState(defaultEmployeeIdForApi);
   const [peopleEmployeeName, setPeopleEmployeeName] = useState("");
   const [peopleEmployeeEmail, setPeopleEmployeeEmail] = useState("");
   const [peopleEmployeeActive, setPeopleEmployeeActive] = useState(true);
@@ -210,7 +210,7 @@ export default function HomePage() {
 
   const [attendanceEmployeeId, setAttendanceEmployeeId] = useStickyStringState(
     "flowhr:cmd:attendanceEmployeeId",
-    "EMP-1001"
+    defaultEmployeeIdForApi
   );
   const [checkInAt, setCheckInAt] = useState(firstDayOfMonthLocal());
   const [checkOutAt, setCheckOutAt] = useState(lastDayOfMonthLocal());
@@ -220,7 +220,7 @@ export default function HomePage() {
 
   const [scheduleEmployeeId, setScheduleEmployeeId] = useStickyStringState(
     "flowhr:cmd:scheduleEmployeeId",
-    "EMP-1001"
+    defaultEmployeeIdForApi
   );
   const [scheduleStartAt, setScheduleStartAt] = useState(defaultWorkScheduleStartLocal());
   const [scheduleEndAt, setScheduleEndAt] = useState(defaultWorkScheduleEndLocal());
@@ -230,7 +230,7 @@ export default function HomePage() {
 
   const [payrollEmployeeId, setPayrollEmployeeId] = useStickyStringState(
     "flowhr:cmd:payrollEmployeeId",
-    "EMP-1001"
+    defaultEmployeeIdForApi
   );
   const [periodStart, setPeriodStart] = useState(firstDayOfMonthLocal());
   const [periodEnd, setPeriodEnd] = useState(lastDayOfMonthLocal());
@@ -239,7 +239,7 @@ export default function HomePage() {
 
   const [leaveEmployeeId, setLeaveEmployeeId] = useStickyStringState(
     "flowhr:cmd:leaveEmployeeId",
-    "EMP-1001"
+    defaultEmployeeIdForApi
   );
   const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
   const [leaveStartDate, setLeaveStartDate] = useState(firstDayOfMonthLocal());

@@ -79,7 +79,7 @@ export default function AdminPeoplePage() {
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
-  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const adminActorId = (supabaseSession?.actorId ?? "").trim();
 
   const profileFieldLabel = useMemo<Record<ProfileField, string>>(() => {
     return {
@@ -239,9 +239,6 @@ export default function AdminPeoplePage() {
   } = useAdminPeopleDirectoryActions({
     isKoLocale,
     runtimeLocale,
-    usesBearerToken,
-    bearerToken,
-    adminActorId,
     organizationId,
     historyLimit,
     selectedEmployeeId,

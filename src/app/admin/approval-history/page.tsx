@@ -7,6 +7,7 @@ import {
   formatApprovalHistoryDateTime,
   resolveAdminApprovalHistoryLocaleCopy
 } from "@/app/admin/approval-history/page-locale-helpers";
+import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -79,11 +80,10 @@ export default function AdminApprovalHistoryPage() {
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const copy = useMemo(() => resolveAdminApprovalHistoryLocaleCopy(isKoLocale), [isKoLocale]);
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
-  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const adminActorId = (supabaseSession?.actorId ?? "").trim();
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
   const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const stats = useMemo(() => {
@@ -95,16 +95,7 @@ export default function AdminApprovalHistoryPage() {
   async function callApi(label: string, path: string) {
     setPendingLabel(label);
     try {
-      const headers: Record<string, string> = {};
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken}`;
-      } else if (allowHeaderActorFallback) {
-        headers["x-actor-role"] = "admin";
-        headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-        if (organizationId.trim()) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      } else {
+      if (requiresLoginSession) {
         throw new Error(
           isKoLocale
             ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
@@ -112,7 +103,10 @@ export default function AdminApprovalHistoryPage() {
         );
       }
 
-      const response = await fetch(path, { method: "GET", headers });
+      const response = await apiClientFetch({
+        method: "GET",
+        path
+      });
       setLogs((prev) => [
         {
           id: Date.now(),
@@ -124,15 +118,7 @@ export default function AdminApprovalHistoryPage() {
         ...prev
       ]);
 
-      const text = await response.text();
-      let body: unknown = null;
-      if (text.trim()) {
-        try {
-          body = JSON.parse(text);
-        } catch {
-          body = text;
-        }
-      }
+      const body = await parseApiResponseBody(response);
       return { response, body };
     } finally {
       setPendingLabel(null);

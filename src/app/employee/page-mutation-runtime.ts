@@ -11,14 +11,10 @@ type MutationActionsInput = Omit<
 >;
 
 type BuildEmployeeMutationRuntimeInput = MutationActionsInput & {
-  allowHeaderActorFallback: boolean;
   requiresLoginSession: boolean;
   requiresEmployeeIdBinding: boolean;
   productionSessionRequiredNotice: string;
   productionEmployeeIdRequiredNotice: string;
-  usesBearerToken: boolean;
-  bearerToken: string;
-  organizationId: string;
   runtimeLocale: string;
   setLogs: Dispatch<SetStateAction<ApiLog[]>>;
   setPendingLabel: Dispatch<SetStateAction<string | null>>;
@@ -26,14 +22,10 @@ type BuildEmployeeMutationRuntimeInput = MutationActionsInput & {
 
 export function buildEmployeeMutationRuntime(input: BuildEmployeeMutationRuntimeInput) {
   const {
-    allowHeaderActorFallback,
     requiresLoginSession,
     requiresEmployeeIdBinding,
     productionSessionRequiredNotice,
     productionEmployeeIdRequiredNotice,
-    usesBearerToken,
-    bearerToken,
-    organizationId,
     runtimeLocale,
     setLogs,
     setPendingLabel,
@@ -105,11 +97,6 @@ export function buildEmployeeMutationRuntime(input: BuildEmployeeMutationRuntime
         method,
         path,
         payload,
-        usesBearerToken,
-        bearerToken,
-        allowHeaderActorFallback,
-        employeeId: mutationInput.employeeId,
-        organizationId,
         runtimeLocale
       });
       setLogs((previousLogs) => [log, ...previousLogs]);
