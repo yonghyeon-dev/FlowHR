@@ -17,6 +17,7 @@
   - `Post-deploy`
   - `Rollback procedure`
 - Added [`scripts/tests/e2e-wi0931-env-docs.test.ts`](scripts/tests/e2e-wi0931-env-docs.test.ts):
+  - Verifies every variable line in `.env.example` has a non-empty description comment.
   - Verifies env variable docs exist with description comments.
   - Verifies deploy checklist exists and includes required sections.
   - Performs a basic hardcoded secret pattern scan in `src/`.
