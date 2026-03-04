@@ -660,6 +660,8 @@ function updateEmployeeEntity(existing: EmployeeEntity, input: UpdateEmployeeInp
     positionId: input.positionId !== undefined ? input.positionId : existing.positionId,
     name: input.name !== undefined ? input.name : existing.name,
     email: input.email !== undefined ? input.email : existing.email,
+    phone: input.phone !== undefined ? input.phone : existing.phone,
+    address: input.address !== undefined ? input.address : existing.address,
     active: input.active !== undefined ? input.active : existing.active,
     updatedAt: new Date()
   };
@@ -1286,6 +1288,8 @@ export const memoryDataAccess: DataAccess = {
           input.positionId === undefined ? null : input.positionId,
         name: input.name === undefined ? null : input.name,
         email: input.email === undefined ? null : input.email,
+        phone: input.phone,
+        address: input.address,
         active: input.active ?? true,
         createdAt: now,
         updatedAt: now

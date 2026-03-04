@@ -471,6 +471,8 @@ export async function createEmployee(
     positionId?: string | null;
     name?: string | null;
     email?: string | null;
+    phone?: string;
+    address?: string;
     active?: boolean;
   }
 ): Promise<EmployeeEntity> {
@@ -528,6 +530,8 @@ export async function createEmployee(
     positionId: input.positionId ?? null,
     name: input.name,
     email: input.email,
+    phone: input.phone,
+    address: input.address,
     active: input.active
   });
 
@@ -544,6 +548,8 @@ export async function createEmployee(
       positionId: employee.positionId,
       name: employee.name,
       email: employee.email,
+      phone: employee.phone,
+      address: employee.address,
       active: employee.active
     }
   });
@@ -561,6 +567,8 @@ export async function createEmployee(
       positionId: employee.positionId,
       name: employee.name,
       email: employee.email,
+      phone: employee.phone,
+      address: employee.address,
       active: employee.active
     }
   });
@@ -642,10 +650,17 @@ export async function updateEmployee(
     positionId?: string | null;
     name?: string | null;
     email?: string | null;
+    phone?: string;
+    address?: string;
     active?: boolean;
   }
 ): Promise<EmployeeEntity> {
-  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "update employee");
+  const isSelfServiceUpdate =
+    context.actor?.role === "employee" && context.actor.id === input.employeeId;
+  if (!isSelfServiceUpdate) {
+    await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "update employee");
+  }
+
   const tenantScope = resolveTenantScope(context.actor);
 
   const existing = await context.dataAccess.employees.findById(input.employeeId);
@@ -653,60 +668,82 @@ export async function updateEmployee(
     throw new ServiceError(404, "employee not found");
   }
   ensureTenantMatch(tenantScope, existing.organizationId, "employee not found");
-  if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
-    throw new ServiceError(403, "cross-tenant employee update is not allowed");
-  }
+  let employee: EmployeeEntity;
 
-  let organizationId =
-    tenantScope ??
-    (input.organizationId !== undefined ? input.organizationId : existing.organizationId);
-  const departmentId =
-    input.departmentId !== undefined ? input.departmentId : existing.departmentId;
-  const positionId =
-    input.positionId !== undefined ? input.positionId : existing.positionId;
-
-  let department: DepartmentEntity | null = null;
-  if (departmentId) {
-    department = await findDepartmentWithinScopeOrThrow(context, tenantScope, departmentId);
-    if (organizationId && department.organizationId !== organizationId) {
-      throw new ServiceError(409, "department organization mismatch");
+  if (isSelfServiceUpdate) {
+    const hasRestrictedField =
+      input.organizationId !== undefined ||
+      input.departmentId !== undefined ||
+      input.positionId !== undefined ||
+      input.active !== undefined;
+    if (hasRestrictedField) {
+      throw new ServiceError(403, "employees can only update name, email, phone, and address");
     }
-    if (!organizationId) {
-      organizationId = department.organizationId;
+
+    employee = await context.dataAccess.employees.update(input.employeeId, {
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      address: input.address
+    });
+  } else {
+    if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
+      throw new ServiceError(403, "cross-tenant employee update is not allowed");
     }
-  }
 
-  let position: PositionEntity | null = null;
-  if (positionId) {
-    position = await findPositionWithinScopeOrThrow(context, tenantScope, positionId);
-    if (organizationId && position.organizationId !== organizationId) {
-      throw new ServiceError(409, "position organization mismatch");
+    let organizationId =
+      tenantScope ??
+      (input.organizationId !== undefined ? input.organizationId : existing.organizationId);
+    const departmentId =
+      input.departmentId !== undefined ? input.departmentId : existing.departmentId;
+    const positionId =
+      input.positionId !== undefined ? input.positionId : existing.positionId;
+
+    let department: DepartmentEntity | null = null;
+    if (departmentId) {
+      department = await findDepartmentWithinScopeOrThrow(context, tenantScope, departmentId);
+      if (organizationId && department.organizationId !== organizationId) {
+        throw new ServiceError(409, "department organization mismatch");
+      }
+      if (!organizationId) {
+        organizationId = department.organizationId;
+      }
     }
-    if (!organizationId) {
-      organizationId = position.organizationId;
+
+    let position: PositionEntity | null = null;
+    if (positionId) {
+      position = await findPositionWithinScopeOrThrow(context, tenantScope, positionId);
+      if (organizationId && position.organizationId !== organizationId) {
+        throw new ServiceError(409, "position organization mismatch");
+      }
+      if (!organizationId) {
+        organizationId = position.organizationId;
+      }
     }
-  }
 
-  if (
-    department &&
-    position &&
-    department.organizationId !== position.organizationId
-  ) {
-    throw new ServiceError(409, "department and position must belong to same organization");
-  }
+    if (
+      department &&
+      position &&
+      department.organizationId !== position.organizationId
+    ) {
+      throw new ServiceError(409, "department and position must belong to same organization");
+    }
 
-  if (organizationId) {
-    await findOrganizationOrThrow(context, organizationId);
-  }
+    if (organizationId) {
+      await findOrganizationOrThrow(context, organizationId);
+    }
 
-  const employee = await context.dataAccess.employees.update(input.employeeId, {
-    organizationId,
-    departmentId,
-    positionId,
-    name: input.name,
-    email: input.email,
-    active: input.active
-  });
+    employee = await context.dataAccess.employees.update(input.employeeId, {
+      organizationId,
+      departmentId,
+      positionId,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      address: input.address,
+      active: input.active
+    });
+  }
 
   await context.dataAccess.audit.append({
     action: "employee.profile.updated",
@@ -722,6 +759,8 @@ export async function updateEmployee(
         positionId: existing.positionId,
         name: existing.name,
         email: existing.email,
+        phone: existing.phone,
+        address: existing.address,
         active: existing.active
       },
       after: {
@@ -730,6 +769,8 @@ export async function updateEmployee(
         positionId: employee.positionId,
         name: employee.name,
         email: employee.email,
+        phone: employee.phone,
+        address: employee.address,
         active: employee.active
       }
     }
@@ -748,6 +789,8 @@ export async function updateEmployee(
       positionId: employee.positionId,
       name: employee.name,
       email: employee.email,
+      phone: employee.phone,
+      address: employee.address,
       active: employee.active
     }
   });

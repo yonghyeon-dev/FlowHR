@@ -43,10 +43,26 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { employeeId } = await context.params;
+  const actor = await readActor(request);
+  const isEmployeeSelf = actor?.role === "employee" && actor.id === employeeId;
+  if (actor?.role === "employee") {
+    if (!isEmployeeSelf) {
+      return fail(403, "employees can only update their own profile");
+    }
+    const hasRestrictedField =
+      parsed.data.organizationId !== undefined ||
+      parsed.data.departmentId !== undefined ||
+      parsed.data.positionId !== undefined ||
+      parsed.data.active !== undefined;
+    if (hasRestrictedField) {
+      return fail(403, "employees can only update name, email, phone, and address");
+    }
+  }
+
   try {
     const employee = await updateEmployee(
       {
-        actor: await readActor(request),
+        actor,
         dataAccess: getRuntimeDataAccess()
       },
       {
@@ -56,6 +72,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         positionId: parsed.data.positionId,
         name: parsed.data.name,
         email: parsed.data.email,
+        phone: parsed.data.phone,
+        address: parsed.data.address,
         active: parsed.data.active
       }
     );

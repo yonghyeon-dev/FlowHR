@@ -62,6 +62,8 @@ export async function POST(request: Request) {
         positionId: parsed.data.positionId ?? null,
         name: parsed.data.name ?? null,
         email: parsed.data.email ?? null,
+        phone: parsed.data.phone,
+        address: parsed.data.address,
         active: parsed.data.active
       }
     );
