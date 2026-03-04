@@ -260,6 +260,7 @@ export default function EmployeeBenefitsWorkspace() {
   return (
     <EmployeeBenefitsWorkspaceView
       copy={copy}
+      isKoLocale={locale === "ko"}
       runtimeLocale={runtimeLocale}
       showDevTools={showDevTools}
       sessionOrganizationId={organizationId}

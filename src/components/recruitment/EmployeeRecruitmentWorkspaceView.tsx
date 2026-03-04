@@ -1,4 +1,7 @@
-﻿import Link from "next/link";
+"use client";
+
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import {
   isReferralStalledForRiskFilter,
@@ -6,6 +9,7 @@ import {
   type EmployeeReferralRiskFilter,
   type EmployeeReferralSummary
 } from "@/components/recruitment/employee-recruitment-helpers";
+import { resolveEmployeeRecruitmentSourceEntry } from "@/components/recruitment/employee-source-context";
 import { resolveEmployeeRecruitmentCopy } from "@/components/recruitment/copy";
 import type {
   RecruitmentOpeningItem,
@@ -17,6 +21,7 @@ type EmployeeRecruitmentCopy = ReturnType<typeof resolveEmployeeRecruitmentCopy>
 
 type EmployeeRecruitmentWorkspaceViewProps = {
   copy: EmployeeRecruitmentCopy;
+  isKoLocale: boolean;
   showDevTools: boolean;
   sessionOrganizationId: string;
   sessionEmployeeId: string;
@@ -54,6 +59,7 @@ type EmployeeRecruitmentWorkspaceViewProps = {
 
 export default function EmployeeRecruitmentWorkspaceView({
   copy,
+  isKoLocale,
   showDevTools,
   sessionOrganizationId,
   sessionEmployeeId,
@@ -88,16 +94,19 @@ export default function EmployeeRecruitmentWorkspaceView({
   onWithdrawReferral,
   resolveOpeningTitle
 }: EmployeeRecruitmentWorkspaceViewProps) {
+  const searchParams = useSearchParams();
+  const sourceEntry = resolveEmployeeRecruitmentSourceEntry(searchParams.get("source"), isKoLocale);
   return (
     <main className="saas-content">
       <header className="page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
-            /employee
+            {sourceEntry ? sourceEntry.returnLabel : "/employee"}
           </Link>
           <Link className="btn btn-secondary" href="/admin/recruitment">
             /admin/recruitment

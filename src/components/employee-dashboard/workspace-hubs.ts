@@ -17,7 +17,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         description: "오늘 출퇴근 기록과 개인 근무 일정을 확인합니다.",
         links: [
           { href: "/employee", label: "출퇴근 기록" },
-          { href: "/employee/schedule", label: "내 근무 일정" }
+          { href: "/employee/schedule?source=employee-dashboard", label: "내 근무 일정" }
         ]
       },
       {
@@ -26,7 +26,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         description: "휴가 요청 상태를 확인하고 잔여 연차를 관리합니다.",
         links: [
           { href: "/employee", label: "휴가 요청/취소" },
-          { href: "/employee/year-end-input", label: "연말정산 입력" }
+          { href: "/employee/year-end-input?source=employee-dashboard", label: "연말정산 입력" }
         ]
       },
       {
@@ -64,8 +64,14 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
             label: "계약 만료/지연"
           },
           { href: "/employee/notices?source=employee-dashboard", label: "공지사항" },
-          { href: "/employee/benefits?status=SUBMITTED&risk=pending_3d", label: "복리후생 대기" },
-          { href: "/employee/recruitment?risk=stalled_7d", label: "채용 정체 추천" }
+          {
+            href: "/employee/benefits?status=SUBMITTED&risk=pending_3d&source=employee-dashboard",
+            label: "복리후생 대기"
+          },
+          {
+            href: "/employee/recruitment?risk=stalled_7d&source=employee-dashboard",
+            label: "채용 정체 추천"
+          }
         ]
       }
     ];
@@ -78,7 +84,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       description: "Review today's attendance logs and personal schedule.",
       links: [
         { href: "/employee", label: "Attendance logs" },
-        { href: "/employee/schedule", label: "My schedule" }
+        { href: "/employee/schedule?source=employee-dashboard", label: "My schedule" }
       ]
     },
     {
@@ -87,7 +93,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
       description: "Track leave requests and remaining balance.",
       links: [
         { href: "/employee", label: "Leave requests" },
-        { href: "/employee/year-end-input", label: "Year-end input" }
+        { href: "/employee/year-end-input?source=employee-dashboard", label: "Year-end input" }
       ]
     },
     {
@@ -126,11 +132,11 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
         },
         { href: "/employee/notices?source=employee-dashboard", label: "Notices" },
         {
-          href: "/employee/benefits?status=SUBMITTED&risk=pending_3d",
+          href: "/employee/benefits?status=SUBMITTED&risk=pending_3d&source=employee-dashboard",
           label: "Pending benefits"
         },
         {
-          href: "/employee/recruitment?risk=stalled_7d",
+          href: "/employee/recruitment?risk=stalled_7d&source=employee-dashboard",
           label: "Stalled recruitment"
         }
       ]

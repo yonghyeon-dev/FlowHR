@@ -49,7 +49,7 @@ function run() {
 
   assert.match(
     workspaceHubs,
-    /href: "\/employee\/schedule"/,
+    /href: "\/employee\/schedule(\?source=employee-dashboard)?"/,
     "workspace hub should link to employee schedule"
   );
   assert.match(
@@ -69,13 +69,13 @@ function run() {
   );
   assert.match(
     workspaceHubs,
-    /href: "\/employee\/year-end-input"/,
+    /href: "\/employee\/year-end-input(\?source=employee-dashboard)?"/,
     "workspace hub should link to year-end input"
   );
 
   assert.match(
     employeeChrome,
-    /href="\/employee\/contracts"/,
+    /href="\/employee\/contracts(\?source=employee-dashboard)?"/,
     "employee chrome should expose contracts shortcut"
   );
   assert.doesNotMatch(

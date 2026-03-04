@@ -1,18 +1,19 @@
+"use client";
 import Link from "next/link";
-
+import { useSearchParams } from "next/navigation";
 import {
   isBenefitRequestPendingAgingRisk,
   resolveBenefitRequestPendingAgingDays,
   type EmployeeBenefitRequestRiskFilter,
   type EmployeeBenefitRequestSummary
 } from "@/components/benefits/employee-benefits-helpers";
+import { resolveEmployeeBenefitsSourceEntry } from "@/components/benefits/employee-source-context";
 import { resolveEmployeeBenefitsCopy } from "@/components/benefits/copy";
 import type { BenefitCatalogItem, BenefitRequestItem, BenefitRequestStatus } from "@/features/benefits/types";
-
 type EmployeeBenefitsCopy = ReturnType<typeof resolveEmployeeBenefitsCopy>;
-
 type EmployeeBenefitsWorkspaceViewProps = {
   copy: EmployeeBenefitsCopy;
+  isKoLocale: boolean;
   runtimeLocale: string;
   showDevTools: boolean;
   sessionOrganizationId: string;
@@ -46,9 +47,9 @@ type EmployeeBenefitsWorkspaceViewProps = {
   resolveBenefitName: (benefitId: string) => string;
   selectedBenefit: BenefitCatalogItem | null;
 };
-
 export default function EmployeeBenefitsWorkspaceView({
   copy,
+  isKoLocale,
   runtimeLocale,
   showDevTools,
   sessionOrganizationId,
@@ -82,16 +83,20 @@ export default function EmployeeBenefitsWorkspaceView({
   resolveBenefitName,
   selectedBenefit
 }: EmployeeBenefitsWorkspaceViewProps) {
+  const searchParams = useSearchParams();
+  const sourceEntry = resolveEmployeeBenefitsSourceEntry(searchParams.get("source"), isKoLocale);
+
   return (
     <main className="saas-content">
       <header className="page-header">
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
-            /employee
+            {sourceEntry ? sourceEntry.returnLabel : "/employee"}
           </Link>
           <Link className="btn btn-secondary" href="/admin/benefits">
             /admin/benefits
