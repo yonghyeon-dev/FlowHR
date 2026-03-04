@@ -50,22 +50,9 @@ export default function EmployeeSelfServicePage() {
   const localeLabelBundle = useMemo(() => resolveEmployeeLocaleLabelBundle(isKoLocale), [isKoLocale]);
   const { attendanceNotePresets, callApiLabels, correctionRequestNote, defaultCancelReason, leaveCalendarWeekdays, leaveTypeLabels, listBadgeLabels, notConfiguredLabel, preSubmitStatusLabels, requestStatusLabels, runtimeLocale, surfaceCopy, validationCopy, summaryCopy } = localeLabelBundle;
   const searchParams = useSearchParams();
-  const attendanceSchedulePrefill = useMemo(
-    () =>
-      resolveAttendanceCorrectionSchedulePrefill({
-        searchParams,
-        correctionRequestNote,
-        isKoLocale
-      }),
-    [searchParams, correctionRequestNote, isKoLocale]
-  );
-  const focusSectionId = useMemo(
-    () => resolveEmployeeFocusSectionId(searchParams),
-    [searchParams]
-  );
-  const appliedAttendanceSchedulePrefillRef = useRef<{ baseKey: string | null; selectedTargetKey: string | null }>(
-    { baseKey: null, selectedTargetKey: null }
-  );
+  const attendanceSchedulePrefill = useMemo(() => resolveAttendanceCorrectionSchedulePrefill({ searchParams, correctionRequestNote, isKoLocale }), [searchParams, correctionRequestNote, isKoLocale]);
+  const focusSectionId = useMemo(() => resolveEmployeeFocusSectionId(searchParams), [searchParams]);
+  const appliedAttendanceSchedulePrefillRef = useRef<{ baseKey: string | null; selectedTargetKey: string | null }>({ baseKey: null, selectedTargetKey: null });
   const appliedFocusSectionRef = useRef<string | null>(null);
   const autoSnapshotLoadKeyRef = useRef<string | null>(null);
   const refreshEmployeeSnapshotRef = useRef<null | (() => Promise<void>)>(null);
@@ -104,16 +91,7 @@ export default function EmployeeSelfServicePage() {
   const toRequestStatusLabel = useCallback((status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status], [requestStatusLabels]);
   const toLeaveTypeLabel = useCallback((leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType, [leaveTypeLabels]);
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
-  const {
-    showDevTools,
-    isProductionRuntime,
-    supabaseSession,
-    supabaseSessionError,
-    organizationId,
-    employeeId,
-    bearerToken,
-    usesBearerToken
-  } = useEmployeeRuntimeSession({ notConfiguredLabel });
+  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, organizationId, employeeId, bearerToken, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
@@ -344,15 +322,7 @@ export default function EmployeeSelfServicePage() {
     appliedFocusSectionRef.current = focusSectionId;
     return () => window.clearTimeout(timeoutId);
   }, [focusSectionId]);
-  useApplyAttendanceSchedulePrefillEffect({
-    attendanceSchedulePrefill,
-    attendance,
-    appliedAttendanceSchedulePrefillRef,
-    setCheckInAt,
-    setCheckOutAt,
-    setAttendanceNotes,
-    applyAttendanceRecordToCorrectionForm
-  });
+  useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
   return (
     <main className="saas-content">
       <EmployeeDashboardChrome
