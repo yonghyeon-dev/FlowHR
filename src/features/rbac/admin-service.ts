@@ -62,6 +62,14 @@ export type RoleAssignmentSummary = {
   currentRole: string | null;
 };
 
+export type EmployeeRoleAssignment = {
+  employeeId: string;
+  name: string;
+  email: string | null;
+  currentRole: string | null;
+  departmentName: string | null;
+};
+
 function requireActor(actor: Actor | null): Actor {
   if (!actor) {
     throw new ServiceError(401, "missing or invalid actor context");
@@ -127,6 +135,39 @@ function normalizeRoleId(name: string) {
 function resolveEmployeeName(employee: EmployeeEntity) {
   const name = employee.name?.trim() ?? "";
   return name.length > 0 ? name : employee.id;
+}
+
+function resolveRoleByEmployeeId(users: SupabaseAdminUser[], organizationId: string) {
+  const roleByEmployeeId = new Map<string, string>();
+  for (const user of users) {
+    if (readUserOrganizationId(user) !== organizationId) {
+      continue;
+    }
+    const employeeId = readUserEmployeeId(user);
+    if (!employeeId) {
+      continue;
+    }
+    const role = readUserRole(user);
+    if (!role || roleByEmployeeId.has(employeeId)) {
+      continue;
+    }
+    roleByEmployeeId.set(employeeId, role);
+  }
+  return roleByEmployeeId;
+}
+
+function toEmployeeRoleAssignment(
+  employee: EmployeeEntity,
+  roleByEmployeeId: Map<string, string>,
+  departmentNameById: Map<string, string>
+): EmployeeRoleAssignment {
+  return {
+    employeeId: employee.id,
+    name: resolveEmployeeName(employee),
+    email: employee.email ?? null,
+    currentRole: roleByEmployeeId.get(employee.id) ?? null,
+    departmentName: employee.departmentId ? (departmentNameById.get(employee.departmentId) ?? null) : null
+  };
 }
 
 async function requireRbacManage(context: ServiceContext) {
@@ -366,21 +407,7 @@ export async function listRoleAssignments(
     listAllSupabaseUsers(context.supabaseAdmin)
   ]);
 
-  const roleByEmployeeId = new Map<string, string>();
-  for (const user of users) {
-    if (readUserOrganizationId(user) !== organizationId) {
-      continue;
-    }
-    const employeeId = readUserEmployeeId(user);
-    if (!employeeId) {
-      continue;
-    }
-    const role = readUserRole(user);
-    if (!role || roleByEmployeeId.has(employeeId)) {
-      continue;
-    }
-    roleByEmployeeId.set(employeeId, role);
-  }
+  const roleByEmployeeId = resolveRoleByEmployeeId(users, organizationId);
 
   const items = employees.map((employee) => ({
     employeeId: employee.id,
@@ -389,4 +416,65 @@ export async function listRoleAssignments(
   }));
   items.sort((left, right) => left.employeeId.localeCompare(right.employeeId));
   return items;
+}
+
+export async function listEmployeeRoleAssignments(
+  context: RoleAssignmentServiceContext
+): Promise<EmployeeRoleAssignment[]> {
+  await requireRbacManage(context);
+
+  const actor = requireActor(context.actor);
+  const organizationId = actor.organizationId?.trim() ?? "";
+  if (!organizationId) {
+    throw new ServiceError(400, "organizationId is required");
+  }
+
+  const [employees, departments, users] = await Promise.all([
+    context.dataAccess.employees.list({ organizationId }),
+    context.dataAccess.departments.list({ organizationId }),
+    listAllSupabaseUsers(context.supabaseAdmin)
+  ]);
+
+  const departmentNameById = new Map<string, string>();
+  for (const department of departments) {
+    departmentNameById.set(department.id, department.name);
+  }
+  const roleByEmployeeId = resolveRoleByEmployeeId(users, organizationId);
+
+  const items = employees.map((employee) =>
+    toEmployeeRoleAssignment(employee, roleByEmployeeId, departmentNameById)
+  );
+  items.sort((left, right) => left.employeeId.localeCompare(right.employeeId));
+  return items;
+}
+
+export async function updateEmployeeRoleAssignment(
+  context: RoleAssignmentServiceContext,
+  input: { employeeId: string; roleName: string }
+): Promise<EmployeeRoleAssignment> {
+  const assignment = await assignRoleToEmployee(context, input);
+
+  const actor = requireActor(context.actor);
+  const organizationId = actor.organizationId?.trim() ?? "";
+  if (!organizationId) {
+    throw new ServiceError(400, "organizationId is required");
+  }
+
+  const employee = await context.dataAccess.employees.findById(assignment.employeeId);
+  if (!employee || employee.organizationId !== organizationId) {
+    throw new ServiceError(404, "employee not found");
+  }
+
+  const department =
+    employee.departmentId === null ? null : await context.dataAccess.departments.findById(employee.departmentId);
+  const departmentName =
+    department && department.organizationId === organizationId ? department.name : null;
+
+  return {
+    employeeId: employee.id,
+    name: resolveEmployeeName(employee),
+    email: employee.email ?? null,
+    currentRole: assignment.currentRole,
+    departmentName
+  };
 }
