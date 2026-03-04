@@ -93,6 +93,9 @@ export function getStalledHours(execution: ApprovalExecutionDto, asOf: Date) {
 }
 
 export function resolveQuickJumpPath(execution: ApprovalExecutionDto) {
+  if (execution.targetEntityType === "BENEFIT_REQUEST") {
+    return "/admin/benefits";
+  }
   if (execution.domain === "PAYROLL") {
     return "/admin/payroll-year-end";
   }
@@ -103,6 +106,9 @@ export function resolveQuickJumpPath(execution: ApprovalExecutionDto) {
 }
 
 export function resolveQuickJumpLabel(execution: ApprovalExecutionDto, isKoLocale: boolean) {
+  if (execution.targetEntityType === "BENEFIT_REQUEST") {
+    return isKoLocale ? "복리후생 워크스페이스" : "Benefits workspace";
+  }
   if (execution.domain === "PAYROLL") {
     return isKoLocale ? "급여 워크스페이스" : "Payroll workspace";
   }
