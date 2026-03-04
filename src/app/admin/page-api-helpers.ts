@@ -9,6 +9,7 @@ type PerformAdminApiCallInput = {
   payload?: Record<string, unknown>;
   usesBearerToken: boolean;
   bearerToken: string;
+  allowHeaderActorFallback: boolean;
   adminActorId: string;
   organizationId: string;
   runtimeLocale: string;
@@ -29,6 +30,10 @@ function buildAdminRequestHeaders(input: PerformAdminApiCallInput): Record<strin
 
   if (input.usesBearerToken) {
     headers.authorization = `Bearer ${input.bearerToken.trim()}`;
+    return headers;
+  }
+
+  if (!input.allowHeaderActorFallback) {
     return headers;
   }
 
