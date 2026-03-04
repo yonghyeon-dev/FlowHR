@@ -186,6 +186,8 @@ export type DepartmentEntity = {
   code: string;
   name: string;
   active: boolean;
+  parentId: string | null;
+  managerId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -713,12 +715,16 @@ export type CreateDepartmentInput = {
   code: string;
   name: string;
   active?: boolean;
+  parentId?: string | null;
+  managerId?: string | null;
 };
 
 export type UpdateDepartmentInput = {
   code?: string;
   name?: string;
   active?: boolean;
+  parentId?: string | null;
+  managerId?: string | null;
 };
 
 export type CreatePositionInput = {
@@ -1274,6 +1280,7 @@ export interface DepartmentStore {
   create(input: CreateDepartmentInput): Promise<DepartmentEntity>;
   findById(id: string): Promise<DepartmentEntity | null>;
   update(id: string, input: UpdateDepartmentInput): Promise<DepartmentEntity>;
+  delete(id: string): Promise<DepartmentEntity>;
   list(input: { active?: boolean; organizationId?: string }): Promise<DepartmentEntity[]>;
 }
 

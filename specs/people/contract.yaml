@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.12
+version: 0.3.13
 scope:
   in:
     - organization master data (create/read/list)
@@ -73,6 +73,9 @@ api:
     - method: PATCH
       path: /people/departments/{departmentId}
       description: Update department metadata.
+    - method: DELETE
+      path: /people/departments/{departmentId}
+      description: Delete department (blocked when employees are assigned).
     - method: GET
       path: /people/positions
       description: List positions (optional active/organization filters).
@@ -169,6 +172,8 @@ db_changes:
       description: Add InAppNotification model for in-app notification center read and bulk-read APIs.
     - id: 202603050006_wi0932_org_settings
       description: Add organization fiscal year start and work-hour policy settings for admin organization settings API.
+    - id: 202603050008_wi0938_department_management
+      description: Add Department parent/manager references and admin CRUD management support.
   backward_compatible: true
   notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, and recruitment/benefits read models are additive."
 invariants:
@@ -235,7 +240,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.12 additively includes admin organization settings API and organization settings columns while preserving backward compatibility for existing People APIs."
+consumer_impact: "People contract v0.3.13 additively includes department management enhancements (optional parent/manager fields and department delete endpoint with assigned-employee guard) while preserving backward compatibility for existing People APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -250,6 +255,7 @@ references:
   - work-items/WI-0920-schema-sync.md
   - work-items/WI-0926-notification-center.md
   - work-items/WI-0932-org-settings.md
+  - work-items/WI-0938-department-management.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

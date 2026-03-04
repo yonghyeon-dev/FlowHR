@@ -59,7 +59,9 @@ export async function POST(request: Request) {
         organizationId: parsed.data.organizationId,
         code: parsed.data.code,
         name: parsed.data.name,
-        active: parsed.data.active
+        active: parsed.data.active,
+        parentId: parsed.data.parentId,
+        managerId: parsed.data.managerId
       }
     );
     return ok({ department }, 201);

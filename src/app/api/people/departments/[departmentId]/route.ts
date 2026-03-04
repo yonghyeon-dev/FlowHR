@@ -1,5 +1,5 @@
 import { updateDepartmentSchema } from "@/features/people/schemas";
-import { getDepartment, updateDepartment } from "@/features/people/service";
+import { deleteDepartment, getDepartment, updateDepartment } from "@/features/people/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
@@ -53,8 +53,30 @@ export async function PATCH(request: Request, context: RouteContext) {
         departmentId,
         code: parsed.data.code,
         name: parsed.data.name,
-        active: parsed.data.active
+        active: parsed.data.active,
+        parentId: parsed.data.parentId,
+        managerId: parsed.data.managerId
       }
+    );
+    return ok({ department });
+  } catch (error) {
+    if (isServiceError(error)) {
+      return fail(error.status, error.message, error.details);
+    }
+    throw error;
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const { departmentId } = await context.params;
+
+  try {
+    const department = await deleteDepartment(
+      {
+        actor: await readActor(request),
+        dataAccess: getRuntimeDataAccess()
+      },
+      { departmentId }
     );
     return ok({ department });
   } catch (error) {

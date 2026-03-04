@@ -725,6 +725,8 @@ function updateDepartmentEntity(
     code: input.code ?? existing.code,
     name: input.name ?? existing.name,
     active: input.active ?? existing.active,
+    parentId: input.parentId !== undefined ? input.parentId : existing.parentId,
+    managerId: input.managerId !== undefined ? input.managerId : existing.managerId,
     updatedAt: new Date()
   };
 }
@@ -868,6 +870,8 @@ export const memoryDataAccess: DataAccess = {
         code: input.code,
         name: input.name,
         active: input.active ?? true,
+        parentId: input.parentId === undefined ? null : input.parentId,
+        managerId: input.managerId === undefined ? null : input.managerId,
         createdAt: now,
         updatedAt: now
       };
@@ -888,6 +892,25 @@ export const memoryDataAccess: DataAccess = {
       const updated = updateDepartmentEntity(existing, input);
       state.departments.set(id, updated);
       return cloneDepartment(updated);
+    },
+
+    async delete(id: string) {
+      const existing = state.departments.get(id);
+      if (!existing) {
+        throw new Error(`department not found: ${id}`);
+      }
+      state.departments.delete(id);
+      for (const [departmentId, department] of state.departments.entries()) {
+        if (department.parentId !== id) {
+          continue;
+        }
+        state.departments.set(departmentId, {
+          ...department,
+          parentId: null,
+          updatedAt: new Date()
+        });
+      }
+      return cloneDepartment(existing);
     },
 
     async list(input: { active?: boolean; organizationId?: string }) {
