@@ -191,6 +191,40 @@ export default function AdminApprovalExecutionsPage() {
     return stateLabel[value];
   }
 
+  function showTransientStatus(message: string) {
+    setStatusMessage(message);
+    setTimeout(() => setStatusMessage(""), 3000);
+  }
+
+  function readApiErrorMessage(body: unknown) {
+    if (!body || typeof body !== "object") {
+      return null;
+    }
+    const parsed = body as { error?: unknown; message?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim().length > 0) {
+      return parsed.error.trim();
+    }
+    if (typeof parsed.message === "string" && parsed.message.trim().length > 0) {
+      return parsed.message.trim();
+    }
+    return null;
+  }
+
+  function resolveExecutionActionPath(
+    execution: ApprovalExecutionDto,
+    action: "approve" | "reject"
+  ): string | null {
+    if (execution.domain === "LEAVE") {
+      return action === "approve"
+        ? `/api/leave/requests/${execution.targetEntityId}/approve`
+        : `/api/leave/requests/${execution.targetEntityId}/reject`;
+    }
+    if (execution.domain === "ATTENDANCE" && action === "approve") {
+      return `/api/attendance/records/${execution.targetEntityId}/approve`;
+    }
+    return null;
+  }
+
   async function callApi(
     label: string,
     method: "GET" | "POST",
@@ -337,6 +371,78 @@ export default function AdminApprovalExecutionsPage() {
     setStageHistory(Array.isArray(parsed.history) ? parsed.history : []);
   }
 
+  async function approveExecution(execution: ApprovalExecutionDto) {
+    if (requiresLoginSession || !organizationId.trim()) {
+      return;
+    }
+
+    const path = resolveExecutionActionPath(execution, "approve");
+    if (!path) {
+      return;
+    }
+
+    const label =
+      execution.domain === "LEAVE"
+        ? isKoLocale
+          ? "휴가 요청 승인"
+          : "Approve leave request"
+        : isKoLocale
+          ? "출퇴근 기록 승인"
+          : "Approve attendance record";
+
+    const { response, body } = await callApi(label, "POST", path);
+    if (!response.ok) {
+      const errorMessage = readApiErrorMessage(body);
+      showTransientStatus(
+        errorMessage ??
+          (isKoLocale ? "승인 요청을 처리하지 못했습니다." : "Failed to process approval request.")
+      );
+      return;
+    }
+
+    showTransientStatus(
+      isKoLocale ? "승인 처리 후 목록을 갱신했습니다." : "Approval completed and queue reloaded."
+    );
+    await loadExecutions();
+  }
+
+  async function rejectExecution(execution: ApprovalExecutionDto, reason: string) {
+    if (requiresLoginSession || !organizationId.trim()) {
+      return;
+    }
+
+    const normalizedReason = reason.trim();
+    if (normalizedReason.length === 0) {
+      showTransientStatus(isKoLocale ? "반려 사유를 입력해 주세요." : "Rejection reason is required.");
+      return;
+    }
+
+    const path = resolveExecutionActionPath(execution, "reject");
+    if (!path) {
+      return;
+    }
+
+    const { response, body } = await callApi(
+      isKoLocale ? "휴가 요청 반려" : "Reject leave request",
+      "POST",
+      path,
+      { reason: normalizedReason }
+    );
+    if (!response.ok) {
+      const errorMessage = readApiErrorMessage(body);
+      showTransientStatus(
+        errorMessage ??
+          (isKoLocale ? "반려 요청을 처리하지 못했습니다." : "Failed to process rejection request.")
+      );
+      return;
+    }
+
+    showTransientStatus(
+      isKoLocale ? "반려 처리 후 목록을 갱신했습니다." : "Rejection completed and queue reloaded."
+    );
+    await loadExecutions();
+  }
+
   async function triggerEscalation(dryRun: boolean) {
     if (requiresLoginSession || !organizationId.trim()) {
       return;
@@ -372,25 +478,24 @@ export default function AdminApprovalExecutionsPage() {
     const parsed = body as EscalationResultDto;
     setEscalationResult(parsed);
     if (parsed.dryRun) {
-      setStatusMessage(
+      showTransientStatus(
         isKoLocale
           ? `드라이런 완료: 후보 ${parsed.counts.candidates}건`
           : `Dry run complete: ${parsed.counts.candidates} candidate(s)`
       );
     } else if (parsed.counts.requested > 0) {
-      setStatusMessage(
+      showTransientStatus(
         isKoLocale
           ? `에스컬레이션 전송 완료: ${parsed.counts.requested}건`
           : `Escalation sent: ${parsed.counts.requested} item(s)`
       );
     } else {
-      setStatusMessage(
+      showTransientStatus(
         isKoLocale
           ? "에스컬레이션 후보가 없어 전송을 건너뛰었습니다."
           : "No escalation candidate found, dispatch skipped."
       );
     }
-    setTimeout(() => setStatusMessage(""), 3000);
   }
 
   return (
@@ -444,6 +549,8 @@ export default function AdminApprovalExecutionsPage() {
       onEscalationDryRun={() => void triggerEscalation(true)}
       onEscalationDispatch={() => void triggerEscalation(false)}
       onSelectExecution={(execution) => void loadStageHistory(execution)}
+      onApproveExecution={(execution) => void approveExecution(execution)}
+      onRejectExecution={(execution, reason) => void rejectExecution(execution, reason)}
     />
   );
 }

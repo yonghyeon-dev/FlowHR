@@ -70,6 +70,8 @@ type AdminApprovalExecutionsPageViewProps = {
   onEscalationDryRun: () => void;
   onEscalationDispatch: () => void;
   onSelectExecution: (execution: ApprovalExecutionDto) => void;
+  onApproveExecution: (execution: ApprovalExecutionDto) => void;
+  onRejectExecution: (execution: ApprovalExecutionDto, reason: string) => void;
 };
 
 export function AdminApprovalExecutionsPageView(props: AdminApprovalExecutionsPageViewProps) {
@@ -122,7 +124,9 @@ export function AdminApprovalExecutionsPageView(props: AdminApprovalExecutionsPa
     onLoadExecutions,
     onEscalationDryRun,
     onEscalationDispatch,
-    onSelectExecution
+    onSelectExecution,
+    onApproveExecution,
+    onRejectExecution
   } = props;
 
   return (
@@ -227,7 +231,10 @@ export function AdminApprovalExecutionsPageView(props: AdminApprovalExecutionsPa
           stalledHoursThreshold={stalledHoursRiskThreshold}
           toDomainLabel={toDomainLabel}
           toStateLabel={toStateLabel}
+          pendingLabel={pendingLabel}
           onSelectExecution={onSelectExecution}
+          onApproveExecution={onApproveExecution}
+          onRejectExecution={onRejectExecution}
         />
 
         <ApprovalExecutionHistoryPanel
