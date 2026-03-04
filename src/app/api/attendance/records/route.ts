@@ -5,6 +5,8 @@ import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
@@ -21,10 +23,15 @@ export async function GET(request: Request) {
     return fail(400, "invalid query", parsed.error.flatten());
   }
 
+  const actor = await readActor(request);
+  if (!actor && IS_PRODUCTION_RUNTIME) {
+    return fail(401, "attendance.list.unauthorized");
+  }
+
   try {
     const records = await listAttendanceRecords(
       {
-        actor: await readActor(request),
+        actor,
         dataAccess: getRuntimeDataAccess()
       },
       {
