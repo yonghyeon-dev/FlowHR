@@ -11,6 +11,7 @@ import AdminNoticeWorkspaceView from "@/components/notices/AdminNoticeWorkspaceV
 type NoticeApiSummary = { total: number; draft: number; scheduled: number; published: number };
 type NoticeApiLog = { id: number; action: string; status: number; ok: boolean; at: string };
 type NoticeAudienceFilter = "all" | "employees" | "admins";
+type DepartmentOption = { id: string; code: string; name: string; active: boolean };
 const DEFAULT_SUMMARY: NoticeApiSummary = { total: 0, draft: 0, scheduled: 0, published: 0 };
 const adminAnalyticsFocusMetricSet = new Set<AdminKpiFocusMetric>([
   "all",
@@ -58,12 +59,23 @@ function parseSummary(payload: unknown): NoticeApiSummary {
 
 function parseNotices(payload: unknown) {
   const notices = (payload as { notices?: NoticeItem[] } | null)?.notices;
-  return Array.isArray(notices) ? notices : [];
+  if (!Array.isArray(notices)) {
+    return [];
+  }
+  return notices.map((notice) => ({
+    ...notice,
+    targetDepartmentIds: Array.isArray(notice.targetDepartmentIds) ? notice.targetDepartmentIds : []
+  }));
 }
 
 function parseReadReceipts(payload: unknown) {
   const readReceipts = (payload as { readReceipts?: NoticeReadReceipt[] } | null)?.readReceipts;
   return Array.isArray(readReceipts) ? readReceipts : [];
+}
+
+function parseDepartments(payload: unknown) {
+  const departments = (payload as { departments?: DepartmentOption[] } | null)?.departments;
+  return Array.isArray(departments) ? departments : [];
 }
 
 function toDateTimeLocalValue() {
@@ -174,6 +186,7 @@ export default function AdminNoticeWorkspace() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState<"all" | "employees" | "admins">("all");
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
   const [publishAt, setPublishAt] = useState(toDateTimeLocalValue());
   const [listSearchQuery, setListSearchQuery] = useState("");
   const [readRiskOnly, setReadRiskOnly] = useState(false);
@@ -182,6 +195,7 @@ export default function AdminNoticeWorkspace() {
 
   const [summary, setSummary] = useState<NoticeApiSummary>(DEFAULT_SUMMARY);
   const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [readReceipts, setReadReceipts] = useState<NoticeReadReceipt[]>([]);
   const [logs, setLogs] = useState<NoticeApiLog[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
@@ -280,6 +294,19 @@ export default function AdminNoticeWorkspace() {
     usesBearerToken
   ]);
 
+  const loadDepartments = useCallback(async () => {
+    if (!organizationId && !usesBearerToken) {
+      return;
+    }
+    const query = buildQuery({ organizationId, active: "true" });
+    const { response, parsed } = await callApi("Load departments", "GET", `/api/people/departments${query}`);
+    if (!response.ok) {
+      setDepartments([]);
+      return;
+    }
+    setDepartments(parseDepartments(parsed));
+  }, [callApi, organizationId, usesBearerToken]);
+
   useEffect(() => {
     setStatusFilter(normalizeNoticeStatusFilter(searchParams.get("status")));
     setAudienceFilter(normalizeNoticeAudienceFilter(searchParams.get("audience")));
@@ -292,8 +319,8 @@ export default function AdminNoticeWorkspace() {
       return;
     }
     setAutoLoadAttempted(true);
-    void loadNotices();
-  }, [autoLoadAttempted, loadNotices, organizationId, usesBearerToken]);
+    void Promise.all([loadNotices(), loadDepartments()]);
+  }, [autoLoadAttempted, loadDepartments, loadNotices, organizationId, usesBearerToken]);
 
   async function saveNotice() {
     if (!organizationId && !usesBearerToken) {
@@ -320,6 +347,7 @@ export default function AdminNoticeWorkspace() {
       title,
       body,
       audience,
+      targetDepartmentIds: selectedDepartmentIds,
       publishAt: publishIso
     });
     if (!response.ok) {
@@ -331,6 +359,7 @@ export default function AdminNoticeWorkspace() {
     setTitle("");
     setBody("");
     setAudience("all");
+    setSelectedDepartmentIds([]);
     setPublishAt(toDateTimeLocalValue());
     setStatusMessage(hasEditingTarget ? copy.messages.updated ?? copy.messages.created : copy.messages.created);
     await loadNotices();
@@ -345,6 +374,7 @@ export default function AdminNoticeWorkspace() {
     setTitle(target.title);
     setBody(target.body);
     setAudience(target.audience);
+    setSelectedDepartmentIds([...target.targetDepartmentIds]);
     setPublishAt(target.publishAt ? target.publishAt.slice(0, 16) : "");
     setStatusMessage(copy.messages.editing ?? "");
   }
@@ -354,6 +384,7 @@ export default function AdminNoticeWorkspace() {
     setTitle("");
     setBody("");
     setAudience("all");
+    setSelectedDepartmentIds([]);
     setPublishAt(toDateTimeLocalValue());
     setStatusMessage("");
   }
@@ -405,6 +436,8 @@ export default function AdminNoticeWorkspace() {
       title={title}
       body={body}
       audience={audience}
+      departments={departments}
+      selectedDepartmentIds={selectedDepartmentIds}
       publishAt={publishAt}
       editingNoticeId={editingNoticeId}
       summary={summary}
@@ -424,11 +457,19 @@ export default function AdminNoticeWorkspace() {
       onTitleChange={setTitle}
       onBodyChange={setBody}
       onAudienceChange={setAudience}
+      onToggleTargetDepartment={(departmentId) =>
+        setSelectedDepartmentIds((previous) =>
+          previous.includes(departmentId)
+            ? previous.filter((item) => item !== departmentId)
+            : [...previous, departmentId]
+        )
+      }
+      onClearTargetDepartments={() => setSelectedDepartmentIds([])}
       onPublishAtChange={setPublishAt}
       onListSearchQueryChange={setListSearchQuery}
       onSetReadRiskOnly={setReadRiskOnly}
       onClearListSearch={() => setListSearchQuery("")}
-      onLoadNotices={() => void loadNotices()}
+      onLoadNotices={() => void Promise.all([loadNotices(), loadDepartments()])}
       onCreateNotice={() => void saveNotice()}
       onStartEditNotice={startEditNotice}
       onCancelEditNotice={cancelEditNotice}

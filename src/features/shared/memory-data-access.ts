@@ -317,6 +317,7 @@ function cloneLeavePromotionDeliveryRecipient(
 function cloneNotice(entity: NoticeEntity): NoticeEntity {
   return {
     ...entity,
+    targetDepartmentIds: [...entity.targetDepartmentIds],
     publishAt: entity.publishAt ? cloneDate(entity.publishAt) : null,
     publishedAt: entity.publishedAt ? cloneDate(entity.publishedAt) : null,
     createdAt: cloneDate(entity.createdAt),
@@ -573,6 +574,10 @@ function updateNoticeEntity(existing: NoticeEntity, input: UpdateNoticeInput): N
     title: input.title !== undefined ? input.title : existing.title,
     body: input.body !== undefined ? input.body : existing.body,
     audience: input.audience !== undefined ? input.audience : existing.audience,
+    targetDepartmentIds:
+      input.targetDepartmentIds !== undefined
+        ? [...input.targetDepartmentIds]
+        : existing.targetDepartmentIds,
     status: input.status !== undefined ? input.status : existing.status,
     publishAt: input.publishAt !== undefined ? input.publishAt : existing.publishAt,
     publishedAt: input.publishedAt !== undefined ? input.publishedAt : existing.publishedAt,
@@ -2056,6 +2061,7 @@ export const memoryDataAccess: DataAccess = {
         title: input.title,
         body: input.body,
         audience: input.audience,
+        targetDepartmentIds: [...(input.targetDepartmentIds ?? [])],
         status: input.status ?? "DRAFT",
         publishAt: input.publishAt ?? null,
         publishedAt: input.publishedAt ?? null,

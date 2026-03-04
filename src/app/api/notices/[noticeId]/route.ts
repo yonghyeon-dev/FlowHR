@@ -27,6 +27,7 @@ type UpdateNoticeRequestBody = {
   title?: string;
   body?: string;
   audience?: "all" | "employees" | "admins";
+  targetDepartmentIds?: string[];
   publishAt?: string | null;
 };
 
@@ -51,6 +52,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     title: payload.title,
     body: payload.body,
     audience: payload.audience,
+    targetDepartmentIds: payload.targetDepartmentIds,
     publishAt: payload.publishAt
   });
   if (!parsed.success) {
@@ -70,6 +72,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       title: parsed.data.title,
       body: parsed.data.body,
       audience: parsed.data.audience,
+      targetDepartmentIds: parsed.data.targetDepartmentIds,
       publishAt: parsed.data.publishAt,
       actorId: actor?.id,
       actorRole: actor?.role ?? "admin"

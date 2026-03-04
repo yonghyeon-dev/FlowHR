@@ -75,26 +75,51 @@ export async function GET(request: Request) {
     return fail(400, "notice.list.organization_id_required");
   }
 
+  const runtimeDataAccess = getRuntimeDataAccess();
   const isAdminActor = canManageNotices(actor?.role);
   const audience = isAdminActor ? parsed.data.audience : "employees";
-  const context = { dataAccess: getRuntimeDataAccess() };
-  const notices = await listNotices(context, {
+  const context = { dataAccess: runtimeDataAccess };
+  const loadedNotices = await listNotices(context, {
     organizationId,
     audience,
     status: parsed.data.status,
     publishedOnly: parsed.data.publishedOnly ?? !isAdminActor
   });
+  let notices = loadedNotices;
+  if (!isAdminActor && actor?.role === "employee") {
+    const employee = actor.id.trim()
+      ? await runtimeDataAccess.employees.findById(actor.id)
+      : null;
+    const actorDepartmentId =
+      employee && employee.organizationId === organizationId
+        ? employee.departmentId
+        : null;
+    notices = loadedNotices.filter((notice) => {
+      if (notice.targetDepartmentIds.length === 0) {
+        return true;
+      }
+      if (!actorDepartmentId) {
+        return false;
+      }
+      return notice.targetDepartmentIds.includes(actorDepartmentId);
+    });
+  }
+
   const readReceipts = isAdminActor
     ? await listNoticeReadReceipts(context, { organizationId })
     : actor?.id && actor.id.trim().length > 0
       ? await listNoticeReadReceipts(context, { organizationId, actorId: actor.id })
       : [];
+  const visibleNoticeIdSet = new Set(notices.map((notice) => notice.id));
+  const scopedReadReceipts = readReceipts.filter((receipt) =>
+    visibleNoticeIdSet.has(receipt.noticeId)
+  );
 
   return ok({
     notices,
     summary: summarizeNotices(notices),
-    readReceipts,
-    readNoticeIds: readReceipts.map((receipt) => receipt.noticeId)
+    readReceipts: scopedReadReceipts,
+    readNoticeIds: scopedReadReceipts.map((receipt) => receipt.noticeId)
   });
 }
 
@@ -138,6 +163,7 @@ export async function POST(request: Request) {
       title: parsed.data.title,
       body: parsed.data.body,
       audience: parsed.data.audience,
+      targetDepartmentIds: parsed.data.targetDepartmentIds,
       publishAt: parsed.data.publishAt,
       createdByActorId: actor?.id ?? "unknown",
       actorRole: actor?.role ?? "admin"

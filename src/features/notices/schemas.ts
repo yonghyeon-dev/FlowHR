@@ -18,6 +18,7 @@ export const createNoticeSchema = z.object({
   title: z.string().trim().min(2).max(120),
   body: z.string().trim().min(4).max(2000),
   audience: noticeAudienceSchema,
+  targetDepartmentIds: z.array(z.string().trim().min(1)).max(200).optional(),
   publishAt: z.string().datetime().optional()
 });
 
@@ -30,6 +31,7 @@ export const updateNoticeSchema = z.object({
   title: z.string().trim().min(2).max(120),
   body: z.string().trim().min(4).max(2000),
   audience: noticeAudienceSchema,
+  targetDepartmentIds: z.array(z.string().trim().min(1)).max(200).optional(),
   publishAt: z.string().datetime().nullable().optional()
 });
 

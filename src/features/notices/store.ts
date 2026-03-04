@@ -21,6 +21,7 @@ type CreateNoticeInput = {
   title: string;
   body: string;
   audience: NoticeAudience;
+  targetDepartmentIds?: string[];
   publishAt?: string | null;
   createdByActorId: string;
   actorRole?: string;
@@ -32,6 +33,7 @@ type UpdateNoticeInput = {
   title: string;
   body: string;
   audience: NoticeAudience;
+  targetDepartmentIds?: string[];
   publishAt?: string | null;
   actorId?: string;
   actorRole?: string;
@@ -141,6 +143,16 @@ function toIso(value: string | Date) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
+function normalizeTargetDepartmentIds(targetDepartmentIds?: string[]) {
+  if (!targetDepartmentIds || targetDepartmentIds.length === 0) {
+    return [];
+  }
+  const normalized = targetDepartmentIds
+    .map((departmentId) => departmentId.trim())
+    .filter((departmentId) => departmentId.length > 0);
+  return Array.from(new Set(normalized));
+}
+
 function toNoticeItem(entity: NoticeEntity): NoticeItem {
   return {
     id: entity.id,
@@ -148,6 +160,7 @@ function toNoticeItem(entity: NoticeEntity): NoticeItem {
     title: entity.title,
     body: entity.body,
     audience: entity.audience,
+    targetDepartmentIds: Array.isArray(entity.targetDepartmentIds) ? [...entity.targetDepartmentIds] : [],
     status: entity.status,
     publishAt: entity.publishAt ? entity.publishAt.toISOString() : null,
     publishedAt: entity.publishedAt ? entity.publishedAt.toISOString() : null,
@@ -264,11 +277,13 @@ export async function listNotices(context: NoticeStoreContext, input: ListNotice
 export async function createNotice(context: NoticeStoreContext, input: CreateNoticeInput) {
   const now = new Date();
   const publishAtIso = input.publishAt ? toIso(input.publishAt) : null;
+  const targetDepartmentIds = normalizeTargetDepartmentIds(input.targetDepartmentIds);
   const created = await context.dataAccess.notices.create({
     organizationId: input.organizationId.trim() || DEFAULT_ORG_ID,
     title: input.title.trim(),
     body: input.body.trim(),
     audience: input.audience,
+    targetDepartmentIds,
     status: publishAtIso ? "SCHEDULED" : "DRAFT",
     publishAt: publishAtIso ? new Date(publishAtIso) : null,
     publishedAt: null,
@@ -318,6 +333,10 @@ export async function updateNotice(
     title: input.title.trim(),
     body: input.body.trim(),
     audience: input.audience,
+    targetDepartmentIds:
+      input.targetDepartmentIds !== undefined
+        ? normalizeTargetDepartmentIds(input.targetDepartmentIds)
+        : existing.targetDepartmentIds,
     status: nextStatus,
     publishAt: publishAtIso ? new Date(publishAtIso) : null,
     publishedAt: null,

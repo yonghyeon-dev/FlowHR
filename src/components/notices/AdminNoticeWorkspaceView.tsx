@@ -23,6 +23,7 @@ type NoticeApiLog = {
 };
 
 type NoticeWorkspaceCopy = ReturnType<typeof resolveNoticeWorkspaceCopy>;
+type DepartmentOption = { id: string; code: string; name: string; active: boolean };
 
 type AdminNoticeWorkspaceViewProps = {
   copy: NoticeWorkspaceCopy;
@@ -37,6 +38,8 @@ type AdminNoticeWorkspaceViewProps = {
   title: string;
   body: string;
   audience: "all" | "employees" | "admins";
+  departments: DepartmentOption[];
+  selectedDepartmentIds: string[];
   publishAt: string;
   editingNoticeId: string | null;
   summary: NoticeApiSummary;
@@ -59,6 +62,8 @@ type AdminNoticeWorkspaceViewProps = {
   onTitleChange: (value: string) => void;
   onBodyChange: (value: string) => void;
   onAudienceChange: (value: "all" | "employees" | "admins") => void;
+  onToggleTargetDepartment: (departmentId: string) => void;
+  onClearTargetDepartments: () => void;
   onPublishAtChange: (value: string) => void;
   onListSearchQueryChange: (value: string) => void;
   onSetReadRiskOnly: (value: boolean) => void;
@@ -92,6 +97,8 @@ export default function AdminNoticeWorkspaceView({
   title,
   body,
   audience,
+  departments,
+  selectedDepartmentIds,
   publishAt,
   editingNoticeId,
   summary,
@@ -111,6 +118,8 @@ export default function AdminNoticeWorkspaceView({
   onTitleChange,
   onBodyChange,
   onAudienceChange,
+  onToggleTargetDepartment,
+  onClearTargetDepartments,
   onPublishAtChange,
   onListSearchQueryChange,
   onSetReadRiskOnly,
@@ -232,6 +241,52 @@ export default function AdminNoticeWorkspaceView({
             {copy.bodyLabel}
             <textarea rows={5} value={body} onChange={(event) => onBodyChange(event.target.value)} maxLength={2000} />
           </label>
+          <fieldset>
+            <legend>{copy.departmentTargetLabel}</legend>
+            <p className="small muted">{copy.departmentTargetHelp}</p>
+            <details>
+              <summary className="small">
+                {selectedDepartmentIds.length === 0
+                  ? copy.departmentTargetAllOption
+                  : `${copy.departmentTargetSelectedLabel}: ${selectedDepartmentIds.length}`}
+              </summary>
+              {departments.length === 0 ? (
+                <p className="small muted">{copy.departmentTargetEmpty}</p>
+              ) : (
+                <ul className="simple-list">
+                  {departments.map((department) => (
+                    <li key={department.id}>
+                      <label style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedDepartmentIds.includes(department.id)}
+                          onChange={() => onToggleTargetDepartment(department.id)}
+                        />
+                        <span>
+                          {department.name} <span className="small muted">({department.code})</span>
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </details>
+            <div className="actions">
+              <button
+                className="btn btn-secondary btn-small"
+                type="button"
+                onClick={onClearTargetDepartments}
+                disabled={selectedDepartmentIds.length === 0}
+              >
+                {copy.clearDepartmentTargetsAction}
+              </button>
+            </div>
+            <p className="small muted">
+              {selectedDepartmentIds.length === 0
+                ? copy.departmentTargetAllOption
+                : `${copy.departmentTargetSelectedLabel}: ${selectedDepartmentIds.length}`}
+            </p>
+          </fieldset>
           <div className="input-grid">
             <label>
               {copy.audienceLabel}

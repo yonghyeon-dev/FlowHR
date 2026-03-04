@@ -7,6 +7,7 @@ export type NoticeItem = {
   title: string;
   body: string;
   audience: NoticeAudience;
+  targetDepartmentIds: string[];
   status: NoticeStatus;
   publishAt: string | null;
   publishedAt: string | null;

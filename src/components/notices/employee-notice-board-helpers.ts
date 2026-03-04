@@ -5,7 +5,13 @@ export type EmployeeNoticeAgingRiskFilter = "all" | "aging_3d";
 
 export function parseNotices(payload: unknown) {
   const notices = (payload as { notices?: NoticeItem[] } | null)?.notices;
-  return Array.isArray(notices) ? notices : [];
+  if (!Array.isArray(notices)) {
+    return [];
+  }
+  return notices.map((notice) => ({
+    ...notice,
+    targetDepartmentIds: Array.isArray(notice.targetDepartmentIds) ? notice.targetDepartmentIds : []
+  }));
 }
 
 export function parseReadNoticeIds(payload: unknown) {

@@ -402,6 +402,7 @@ export type NoticeEntity = {
   title: string;
   body: string;
   audience: NoticeAudience;
+  targetDepartmentIds: string[];
   status: NoticeStatus;
   publishAt: Date | null;
   publishedAt: Date | null;
@@ -868,6 +869,7 @@ export type CreateNoticeInput = {
   title: string;
   body: string;
   audience: NoticeAudience;
+  targetDepartmentIds?: string[];
   status?: NoticeStatus;
   publishAt?: Date | null;
   publishedAt?: Date | null;
@@ -880,6 +882,7 @@ export type UpdateNoticeInput = {
   title?: string;
   body?: string;
   audience?: NoticeAudience;
+  targetDepartmentIds?: string[];
   status?: NoticeStatus;
   publishAt?: Date | null;
   publishedAt?: Date | null;
