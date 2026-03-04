@@ -1,5 +1,5 @@
 owner: attendance-agent
-version: 1.16.0
+version: 1.17.0
 scope:
   in:
     - attendance record create/update
@@ -17,6 +17,7 @@ scope:
     - attendance record list query by period
     - attendance aggregates query by period
     - correction approval/rejection flow
+    - admin-triggered stale attendance auto-close (12h threshold, 9h default close)
     - rejection reason capture in audit/event payload
     - GPS payload validation (coordinate pair requirement)
     - approved/rejected attendance event publication
@@ -42,7 +43,7 @@ api:
     - role: payroll_operator
       permission: list attendance records for payroll verification
     - role: admin
-      permission: list attendance records without org restriction
+      permission: list attendance records without org restriction and run auto-close
   endpoints:
     - method: GET
       path: /attendance/records
@@ -62,6 +63,9 @@ api:
     - method: POST
       path: /attendance/records/{recordId}/reject
       description: Reject attendance record or correction with optional reason payload.
+    - method: POST
+      path: /attendance/auto-close
+      description: Admin-triggered auto-close for stale open attendance records.
   events:
     published:
       - name: attendance.recorded.v1
@@ -85,6 +89,8 @@ db_changes:
       description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
     - id: 202602160002_wi0048_attendance_capture_metadata
       description: Add attendance capture channel/device/ip/location metadata columns.
+    - id: 202603050004_wi0925_attendance_auto_close
+      description: Add AttendanceRecord anomalyType field for auto-closed stale records.
   backward_compatible: true
   notes: Expand-contract pattern for future attendance payload updates.
 invariants:
@@ -94,6 +100,7 @@ invariants:
   - Attendance aggregate totals are derived from approved attendance records only.
   - Attendance timestamps are interpreted in Asia/Seoul.
   - Approved/rejected attendance emits exactly one final state event.
+  - Auto-closed stale attendance sets anomalyType to AUTO_CLOSED and checkOutAt to checkInAt plus default work duration.
   - Employee attendance list queries are restricted to own employeeId.
   - AttendanceRecord.employeeId must reference existing Employee.id (FK enforced).
   - GPS capture channel requires both latitude and longitude.
@@ -187,6 +194,9 @@ test_plan:
     - manager correction path remains allowed when anti-spoofing flag is enabled
     - employee cross-employee list query is blocked with 403
     - manager list query requires employeeId (400)
+    - admin auto-close closes only stale open attendance records
+    - admin auto-close sets checkOutAt to checkInAt plus default work duration and anomalyType AUTO_CLOSED
+    - employee role cannot call attendance auto-close endpoint (403)
   regression:
     - replay GC-001, GC-002, GC-003, GC-005
     - circuit-breaker disabled path preserves WI-0066 provider retry behavior
@@ -201,6 +211,7 @@ observability:
     - attendance.corrected
     - attendance.approved
     - attendance.rejected
+    - attendance.auto_closed
   metrics:
     - attendance_approval_latency_ms
     - attendance_correction_count
@@ -255,7 +266,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.16.0 extends external reputation orchestration with optional adaptive provider routing and open-circuit auto-heal probes (`..._ADAPTIVE_ROUTING_ENABLED`, `..._AUTO_HEAL_ENABLED`, `..._AUTO_HEAL_PROBE_INTERVAL_SECONDS`) while preserving existing behavior when new flags are disabled."
+consumer_impact: "Contract v1.17.0 adds admin-triggered attendance auto-close endpoint (`/attendance/auto-close`) and records AUTO_CLOSED anomalyType metadata on stale open attendance entries while preserving existing create/list/approve/reject behavior."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -276,6 +287,7 @@ references:
   - work-items/WI-0064-attendance-multi-provider-reputation-orchestration.md
   - work-items/WI-0066-attendance-reputation-circuit-breaker-operations.md
   - work-items/WI-0070-attendance-reputation-adaptive-routing-autoheal.md
+  - work-items/WI-0925-auto-close.md
 approval:
   spec_owner: attendance-agent
   qa_owner: qa-agent

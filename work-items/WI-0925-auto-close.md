@@ -57,3 +57,7 @@
 - `npx tsx scripts/tests/e2e-wi0925-auto-close.test.ts`
 - `npm.cmd run typecheck`
 - `npm.cmd run lint`
+
+## Data Changes
+- Prisma model: `AttendanceRecord`
+- Migration: `202603050004_wi0925_attendance_auto_close`

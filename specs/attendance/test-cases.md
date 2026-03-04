@@ -32,6 +32,8 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 24. When strict mode and provider `min_success` are enabled, employee write is rejected if successful provider count is below configured minimum.
 25. When provider circuit-breaker is enabled, failed providers are skipped during cooldown and strict `min_success` continues to gate employee writes.
 26. When adaptive routing and auto-heal are enabled, healthy providers are prioritized, open-circuit providers are probed after interval, and recovered providers rejoin routing before cooldown expiry.
+27. Admin `POST /attendance/auto-close` closes only stale open records, sets `checkOutAt = checkInAt + 9h`, and marks `anomalyType = AUTO_CLOSED`.
+28. Employee role calling `POST /attendance/auto-close` is rejected with `403`.
 
 ## Boundary and Accuracy Cases
 
@@ -52,6 +54,7 @@ Attendance create/update/approval behavior and output consistency for payroll ag
 15. Multi-provider external reputation integration validates URLs/aggregation/majority-threshold/min-success configuration.
 16. External reputation circuit-breaker validates failure-threshold/cooldown configuration and open-circuit skip behavior.
 17. External reputation adaptive routing/auto-heal validates probe interval boundaries and auto-heal requires circuit-breaker enabled.
+18. Auto-close threshold boundary: records under 12h open duration remain unchanged.
 
 ## Regression Linkage
 
