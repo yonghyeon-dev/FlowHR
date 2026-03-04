@@ -63,7 +63,7 @@ export async function refreshEmployeeSnapshotFromHelper(input: {
     input.callApi(
       input.callApiLabels.leaveBalance,
       "GET",
-      `/api/leave/balances/${input.employeeId.trim() || "EMP-1001"}`
+      `/api/leave/balances/${encodeURIComponent(input.employeeId.trim())}`
     )
   ]);
 
@@ -129,7 +129,7 @@ export async function createAttendanceFromHelper(input: {
     "POST",
     "/api/attendance/records",
     {
-      employeeId: input.employeeId.trim() || "EMP-1001",
+      employeeId: input.employeeId.trim(),
       checkInAt: input.toIso(input.checkInAt),
       checkOutAt: input.checkOutAt ? input.toIso(input.checkOutAt) : undefined,
       breakMinutes: Math.max(0, Math.trunc(input.coerceNumber(input.breakMinutes))),
@@ -220,7 +220,7 @@ export async function createLeaveFromHelper(input: {
     "POST",
     "/api/leave/requests",
     {
-      employeeId: input.employeeId.trim() || "EMP-1001",
+      employeeId: input.employeeId.trim(),
       leaveType: input.leaveType,
       startDate: input.toIso(input.leaveStartDate),
       endDate: input.toIso(input.leaveEndDate),

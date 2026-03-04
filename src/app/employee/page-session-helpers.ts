@@ -14,7 +14,13 @@ export function useEmployeeRuntimeSession({
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
-  const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
+  const sessionEmployeeId = (supabaseSession?.actorId ?? "").trim();
+  const employeeId =
+    sessionEmployeeId.length > 0
+      ? sessionEmployeeId
+      : isProductionRuntime
+        ? ""
+        : (supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;

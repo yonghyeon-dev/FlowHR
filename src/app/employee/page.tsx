@@ -97,8 +97,13 @@ export default function EmployeeSelfServicePage() {
     isKoLocale
       ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
       : "A login session is required in production. Please sign in again at /login.";
+  const productionEmployeeIdRequiredNotice =
+    isKoLocale
+      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 JWT app_metadata\uc758 actor_id \ub610\ub294 employee_id\uac00 \ud544\uc694\ud569\ub2c8\ub2e4. \uacc4\uc815 claim \uc124\uc815\uc744 \ud655\uc778\ud574 \uc8fc\uc138\uc694."
+      : "In production, JWT app_metadata actor_id or employee_id is required. Check your account claim configuration.";
   const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
   const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const requiresEmployeeIdBinding = isProductionRuntime;
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
   const { sectionTitles, attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } = surfaceCopy;
@@ -113,7 +118,9 @@ export default function EmployeeSelfServicePage() {
     callApiLabels,
     allowHeaderActorFallback,
     requiresLoginSession,
+    requiresEmployeeIdBinding,
     productionSessionRequiredNotice,
+    productionEmployeeIdRequiredNotice,
     usesBearerToken,
     bearerToken,
     organizationId,
