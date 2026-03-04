@@ -10,9 +10,38 @@ import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
 
 function canManageNotices(role: string | null | undefined) {
   return role === "admin" || role === "manager";
+}
+
+function normalizeOrganizationId(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function resolveOrganizationScope(input: {
+  actorOrganizationId: string | null | undefined;
+  requestedOrganizationId: string | null | undefined;
+}) {
+  const actorOrganizationId = normalizeOrganizationId(input.actorOrganizationId);
+  const requestedOrganizationId = normalizeOrganizationId(input.requestedOrganizationId);
+
+  if (IS_PRODUCTION_RUNTIME) {
+    return {
+      organizationId: actorOrganizationId,
+      mismatch:
+        Boolean(actorOrganizationId) &&
+        Boolean(requestedOrganizationId) &&
+        actorOrganizationId !== requestedOrganizationId
+    };
+  }
+
+  return {
+    organizationId: requestedOrganizationId ?? actorOrganizationId ?? DEFAULT_ORG_ID,
+    mismatch: false
+  };
 }
 
 export async function GET(request: Request) {
@@ -29,9 +58,25 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
+  if (!actor && IS_PRODUCTION_RUNTIME) {
+    return fail(401, "notice.list.unauthorized");
+  }
+
+  const { organizationId, mismatch } = resolveOrganizationScope({
+    actorOrganizationId: actor?.organizationId,
+    requestedOrganizationId: parsed.data.organizationId
+  });
+  if (mismatch) {
+    return fail(403, "notice.list.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  if (!organizationId) {
+    return fail(400, "notice.list.organization_id_required");
+  }
+
   const isAdminActor = canManageNotices(actor?.role);
   const audience = isAdminActor ? parsed.data.audience : "employees";
-  const organizationId = parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID;
   const context = { dataAccess: getRuntimeDataAccess() };
   const notices = await listNotices(context, {
     organizationId,
@@ -73,10 +118,23 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
+  const { organizationId, mismatch } = resolveOrganizationScope({
+    actorOrganizationId: actor?.organizationId,
+    requestedOrganizationId: parsed.data.organizationId
+  });
+  if (mismatch) {
+    return fail(403, "notice.create.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  if (!organizationId) {
+    return fail(400, "notice.create.organization_id_required");
+  }
+
   const created = await createNotice(
     { dataAccess: getRuntimeDataAccess() },
     {
-      organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+      organizationId,
       title: parsed.data.title,
       body: parsed.data.body,
       audience: parsed.data.audience,

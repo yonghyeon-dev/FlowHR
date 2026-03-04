@@ -26,6 +26,7 @@ import {
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { buildAdminSummaryFromApiResults } from "@/app/admin/page-summary-helpers";
 import { EMPTY_SUMMARY, type AdminSummary } from "@/app/admin/page-dashboard-types";
+import type { AttendanceRecordDto, LeaveRequestDto } from "@/app/admin/page-types";
 import { resolveAdminContractDocumentNextStep } from "@/components/contracts/document-action-policy";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
@@ -44,12 +45,27 @@ export default function AdminDashboardPage() {
   const periodEnd = useMemo(() => lastDayOfMonthLocal(), []);
 
   const [summary, setSummary] = useState<AdminSummary>(EMPTY_SUMMARY);
+  const [pendingAttendanceQueue, setPendingAttendanceQueue] = useState<AttendanceRecordDto[]>([]);
+  const [pendingLeaveQueue, setPendingLeaveQueue] = useState<LeaveRequestDto[]>([]);
+  const [approvalQuickActionPending, setApprovalQuickActionPending] = useState<"attendance" | "leave" | null>(null);
+  const [approvalQuickActionNotice, setApprovalQuickActionNotice] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const focusCards = useMemo(() => buildAdminDashboardFocusCards(summary), [summary]);
   const focusPriority = useMemo(() => summarizeAdminDashboardFocusCards(focusCards), [focusCards]);
   const topFocusCard = focusCards[0] ?? null;
   const queueBadges = useMemo(() => buildAdminQueueBadges(summary, isKoLocale), [isKoLocale, summary]);
+  const firstPendingAttendance = useMemo(
+    () => pendingAttendanceQueue.find((record) => record.state === "PENDING") ?? null,
+    [pendingAttendanceQueue]
+  );
+  const firstPendingLeave = useMemo(
+    () => pendingLeaveQueue.find((request) => request.state === "PENDING") ?? null,
+    [pendingLeaveQueue]
+  );
 
   const bearerToken = supabaseSession?.accessToken?.trim() ?? "";
   const usesBearerToken = bearerToken.length > 0;
@@ -79,9 +95,25 @@ export default function AdminDashboardPage() {
     [adminActorId, allowHeaderActorFallback, bearerToken, organizationId, runtimeLocale, usesBearerToken]
   );
 
+  function readApiErrorMessage(body: unknown) {
+    if (!body || typeof body !== "object") {
+      return null;
+    }
+    const parsed = body as { error?: unknown; message?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim().length > 0) {
+      return parsed.error.trim();
+    }
+    if (typeof parsed.message === "string" && parsed.message.trim().length > 0) {
+      return parsed.message.trim();
+    }
+    return null;
+  }
+
   const refreshSummary = useCallback(async () => {
     if (requiresLoginSession) {
       setSummary(EMPTY_SUMMARY);
+      setPendingAttendanceQueue([]);
+      setPendingLeaveQueue([]);
       setLoadError(productionSessionRequiredNotice);
       return;
     }
@@ -115,6 +147,23 @@ export default function AdminDashboardPage() {
           `/api/contracts/documents${buildQuery({ organizationId: organizationId || undefined })}`
         )
       ]);
+      const nextPendingAttendance =
+        attendanceResult.response.ok &&
+        attendanceResult.body &&
+        typeof attendanceResult.body === "object" &&
+        Array.isArray((attendanceResult.body as { records?: AttendanceRecordDto[] }).records)
+          ? (attendanceResult.body as { records: AttendanceRecordDto[] }).records
+          : [];
+      const nextPendingLeave =
+        leaveResult.response.ok &&
+        leaveResult.body &&
+        typeof leaveResult.body === "object" &&
+        Array.isArray((leaveResult.body as { requests?: LeaveRequestDto[] }).requests)
+          ? (leaveResult.body as { requests: LeaveRequestDto[] }).requests
+          : [];
+
+      setPendingAttendanceQueue(nextPendingAttendance);
+      setPendingLeaveQueue(nextPendingLeave);
       setSummary(
         buildAdminSummaryFromApiResults({
           attendanceResult,
@@ -132,7 +181,92 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [callApi, organizationId, periodEnd, periodStart, productionSessionRequiredNotice, requiresLoginSession, runtimeLocale]);
+  }, [
+    callApi,
+    organizationId,
+    periodEnd,
+    periodStart,
+    productionSessionRequiredNotice,
+    requiresLoginSession,
+    runtimeLocale
+  ]);
+
+  async function runApprovalQuickAction(queue: "leave" | "attendance") {
+    if (requiresLoginSession) {
+      setLoadError(productionSessionRequiredNotice);
+      return;
+    }
+
+    const targetId =
+      queue === "leave" ? firstPendingLeave?.id?.trim() ?? "" : firstPendingAttendance?.id?.trim() ?? "";
+    if (!targetId) {
+      return;
+    }
+
+    const label =
+      queue === "leave"
+        ? isKoLocale
+          ? "대시보드 빠른 승인(휴가)"
+          : "Dashboard quick approve (leave)"
+        : isKoLocale
+          ? "대시보드 빠른 승인(출퇴근)"
+          : "Dashboard quick approve (attendance)";
+    const path =
+      queue === "leave"
+        ? `/api/leave/requests/${targetId}/approve`
+        : `/api/attendance/records/${targetId}/approve`;
+
+    setApprovalQuickActionPending(queue);
+    setApprovalQuickActionNotice(null);
+    try {
+      const { response, body } = await performAdminApiCall({
+        label,
+        method: "POST",
+        path,
+        usesBearerToken,
+        bearerToken,
+        allowHeaderActorFallback,
+        adminActorId,
+        organizationId,
+        runtimeLocale
+      });
+
+      if (!response.ok) {
+        const errorMessage = readApiErrorMessage(body);
+        setApprovalQuickActionNotice({
+          ok: false,
+          message:
+            errorMessage ?? (isKoLocale ? "빠른 승인을 처리하지 못했습니다." : "Failed to run quick approval.")
+        });
+        return;
+      }
+
+      setApprovalQuickActionNotice({
+        ok: true,
+        message:
+          queue === "leave"
+            ? isKoLocale
+              ? "휴가 1건을 승인하고 대시보드를 갱신했습니다."
+              : "Approved one leave request and refreshed dashboard."
+            : isKoLocale
+              ? "출퇴근 1건을 승인하고 대시보드를 갱신했습니다."
+              : "Approved one attendance record and refreshed dashboard."
+      });
+      await refreshSummary();
+    } catch (error) {
+      setApprovalQuickActionNotice({
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : isKoLocale
+              ? "빠른 승인을 처리하지 못했습니다."
+              : "Failed to run quick approval."
+      });
+    } finally {
+      setApprovalQuickActionPending(null);
+    }
+  }
 
   useEffect(() => {
     void refreshSummary();
@@ -275,7 +409,40 @@ export default function AdminDashboardPage() {
                     {action.label}
                   </Link>
                 ))}
+                {badge.key === "approvals" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-small"
+                      onClick={() => void runApprovalQuickAction("leave")}
+                      disabled={
+                        requiresLoginSession ||
+                        approvalQuickActionPending !== null ||
+                        firstPendingLeave === null
+                      }
+                    >
+                      {isKoLocale ? "휴가 1건 승인" : "Approve one leave"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-small"
+                      onClick={() => void runApprovalQuickAction("attendance")}
+                      disabled={
+                        requiresLoginSession ||
+                        approvalQuickActionPending !== null ||
+                        firstPendingAttendance === null
+                      }
+                    >
+                      {isKoLocale ? "출퇴근 1건 승인" : "Approve one attendance"}
+                    </button>
+                  </>
+                ) : null}
               </div>
+              {badge.key === "approvals" && approvalQuickActionNotice ? (
+                <small className={approvalQuickActionNotice.ok ? "ok" : "fail"}>
+                  {approvalQuickActionNotice.message}
+                </small>
+              ) : null}
             </article>
           ))}
         </div>
