@@ -48,10 +48,8 @@ import type {
   BenefitStore,
   InsuranceEnrollmentEntity,
   InsuranceEnrollmentStore,
-  InsuranceEnrollmentType,
   OnboardingTaskEntity,
   OnboardingTaskStore,
-  OnboardingTaskStatus,
   DeductionProfileStore,
   EmployeeEntity,
   EmployeeStore,
@@ -359,10 +357,16 @@ function toBenefitCatalogItemEntity(record: {
   description: string;
   annualLimitKrw: number;
   status: "ACTIVE" | "INACTIVE";
+  enrollmentStartDate: string | null;
+  enrollmentEndDate: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): BenefitCatalogItemEntity {
-  return record;
+  return {
+    ...record,
+    enrollmentStartDate: record.enrollmentStartDate ?? undefined,
+    enrollmentEndDate: record.enrollmentEndDate ?? undefined
+  };
 }
 
 function toBenefitRequestEntity(record: {
@@ -389,11 +393,15 @@ function toRecruitmentOpeningEntity(record: {
   title: string;
   department: string;
   employmentType: string;
+  hiringManagerId: string | null;
   status: "OPEN" | "CLOSED";
   createdAt: Date;
   updatedAt: Date;
 }): RecruitmentOpeningEntity {
-  return record;
+  return {
+    ...record,
+    hiringManagerId: record.hiringManagerId ?? undefined
+  };
 }
 
 function toRecruitmentReferralEntity(record: {
@@ -405,10 +413,14 @@ function toRecruitmentReferralEntity(record: {
   referrerEmployeeId: string;
   note: string;
   stage: "SUBMITTED" | "SCREENING" | "INTERVIEW" | "OFFER" | "HIRED" | "REJECTED" | "WITHDRAWN";
+  stageReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): RecruitmentReferralEntity {
-  return record;
+  return {
+    ...record,
+    stageReason: record.stageReason ?? undefined
+  };
 }
 
 function toPayrollEntity(record: {
@@ -721,10 +733,36 @@ function toEmployeeEntity(record: {
   positionId: string | null;
   name: string | null;
   email: string | null;
+  phone: string | null;
+  address: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): EmployeeEntity {
+  return {
+    ...record,
+    phone: record.phone ?? undefined,
+    address: record.address ?? undefined
+  };
+}
+
+function toOnboardingTaskEntity(record: {
+  id: string;
+  employeeId: string;
+  title: string;
+  status: "PENDING" | "COMPLETED";
+  createdAt: Date;
+}): OnboardingTaskEntity {
+  return record;
+}
+
+function toInsuranceEnrollmentEntity(record: {
+  employeeId: string;
+  type: "NPS" | "NHI" | "EI" | "WCI";
+  status: "ENROLLED" | "NOT_ENROLLED" | "PENDING";
+  enrolledAt: Date | null;
+  updatedAt: Date;
+}): InsuranceEnrollmentEntity {
   return record;
 }
 
@@ -877,47 +915,6 @@ function toScheduleAnomalyIncidentEntity(record: {
     history: normalizeIncidentHistory(record.history),
     createdAt: record.createdAt,
     rowUpdatedAt: record.rowUpdatedAt
-  };
-}
-
-const onboardingTaskStoreState = {
-  sequence: 1,
-  tasks: new Map<string, OnboardingTaskEntity>()
-};
-
-const insuranceEnrollmentStoreState = {
-  rows: new Map<string, InsuranceEnrollmentEntity>()
-};
-
-function nextOnboardingTaskId() {
-  const id = `ONB-${String(onboardingTaskStoreState.sequence).padStart(6, "0")}`;
-  onboardingTaskStoreState.sequence += 1;
-  return id;
-}
-
-function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity {
-  return {
-    ...entity,
-    createdAt: new Date(entity.createdAt.getTime())
-  };
-}
-
-const insuranceEnrollmentTypeOrder: Record<InsuranceEnrollmentType, number> = {
-  NPS: 0,
-  NHI: 1,
-  EI: 2,
-  WCI: 3
-};
-
-function insuranceEnrollmentKey(employeeId: string, type: InsuranceEnrollmentType) {
-  return `${employeeId}::${type}`;
-}
-
-function cloneInsuranceEnrollment(entity: InsuranceEnrollmentEntity): InsuranceEnrollmentEntity {
-  return {
-    ...entity,
-    enrolledAt: entity.enrolledAt ? new Date(entity.enrolledAt.getTime()) : null,
-    updatedAt: new Date(entity.updatedAt.getTime())
   };
 }
 
@@ -1370,6 +1367,8 @@ const employees: EmployeeStore = {
           input.positionId === undefined ? null : input.positionId,
         name: input.name === undefined ? null : input.name,
         email: input.email === undefined ? null : input.email,
+        phone: input.phone === undefined ? null : input.phone,
+        address: input.address === undefined ? null : input.address,
         active: input.active ?? true
       }
     });
@@ -1392,6 +1391,8 @@ const employees: EmployeeStore = {
         positionId: input.positionId,
         name: input.name,
         email: input.email,
+        phone: input.phone,
+        address: input.address,
         active: input.active
       }
     });
@@ -2384,6 +2385,9 @@ const benefits: BenefitStore = {
         description: input.description,
         annualLimitKrw: Math.max(0, Math.trunc(input.annualLimitKrw)),
         status: input.status ?? "ACTIVE",
+        enrollmentStartDate:
+          input.enrollmentStartDate === undefined ? null : input.enrollmentStartDate,
+        enrollmentEndDate: input.enrollmentEndDate === undefined ? null : input.enrollmentEndDate,
         createdAt: input.createdAt,
         updatedAt: input.updatedAt
       }
@@ -2409,6 +2413,8 @@ const benefits: BenefitStore = {
             ? undefined
             : Math.max(0, Math.trunc(input.annualLimitKrw)),
         status: input.status,
+        enrollmentStartDate: input.enrollmentStartDate,
+        enrollmentEndDate: input.enrollmentEndDate,
         updatedAt: input.updatedAt
       }
     });
@@ -2502,90 +2508,84 @@ const benefits: BenefitStore = {
 
 const onboardingTasks: OnboardingTaskStore = {
   async create(input: CreateOnboardingTaskInput) {
-    const created: OnboardingTaskEntity = {
-      id: nextOnboardingTaskId(),
-      employeeId: input.employeeId,
-      title: input.title,
-      status: input.status ?? "PENDING",
-      createdAt: input.createdAt ? new Date(input.createdAt.getTime()) : new Date()
-    };
-    onboardingTaskStoreState.tasks.set(created.id, created);
-    return cloneOnboardingTask(created);
+    const record = await prisma.onboardingTask.create({
+      data: {
+        employeeId: input.employeeId,
+        title: input.title,
+        status: input.status ?? "PENDING",
+        ...(input.createdAt ? { createdAt: input.createdAt } : {})
+      }
+    });
+    return toOnboardingTaskEntity(record);
   },
 
   async listByEmployee(employeeId: string) {
-    const rows: OnboardingTaskEntity[] = [];
-    for (const task of onboardingTaskStoreState.tasks.values()) {
-      if (task.employeeId !== employeeId) {
-        continue;
-      }
-      rows.push(cloneOnboardingTask(task));
-    }
-    rows.sort((left, right) => {
-      const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
-      if (byCreatedAt !== 0) {
-        return byCreatedAt;
-      }
-      return left.id.localeCompare(right.id);
+    const records = await prisma.onboardingTask.findMany({
+      where: { employeeId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
     });
-    return rows;
+    return records.map(toOnboardingTaskEntity);
   },
 
   async findById(id: string) {
-    const task = onboardingTaskStoreState.tasks.get(id);
-    return task ? cloneOnboardingTask(task) : null;
+    const record = await prisma.onboardingTask.findUnique({
+      where: { id }
+    });
+    return record ? toOnboardingTaskEntity(record) : null;
   },
 
   async update(id: string, input: UpdateOnboardingTaskInput) {
-    const existing = onboardingTaskStoreState.tasks.get(id);
-    if (!existing) {
-      throw new Error(`onboarding task not found: ${id}`);
-    }
-    const nextStatus: OnboardingTaskStatus = input.status ?? existing.status;
-    const updated: OnboardingTaskEntity = {
-      ...existing,
-      status: nextStatus
-    };
-    onboardingTaskStoreState.tasks.set(id, updated);
-    return cloneOnboardingTask(updated);
+    const record = await prisma.onboardingTask.update({
+      where: { id },
+      data: {
+        status: input.status
+      }
+    });
+    return toOnboardingTaskEntity(record);
   }
 };
 
 const insuranceEnrollments: InsuranceEnrollmentStore = {
   async upsert(input: UpsertInsuranceEnrollmentInput) {
-    const key = insuranceEnrollmentKey(input.employeeId, input.type);
-    const updated: InsuranceEnrollmentEntity = {
-      employeeId: input.employeeId,
-      type: input.type,
-      status: input.status,
-      enrolledAt:
-        input.enrolledAt === undefined
-          ? null
-          : input.enrolledAt === null
+    const record = await prisma.insuranceEnrollment.upsert({
+      where: {
+        employeeId_type: {
+          employeeId: input.employeeId,
+          type: input.type
+        }
+      },
+      create: {
+        employeeId: input.employeeId,
+        type: input.type,
+        status: input.status,
+        enrolledAt:
+          input.enrolledAt === undefined
             ? null
-            : new Date(input.enrolledAt.getTime()),
-      updatedAt: input.updatedAt ? new Date(input.updatedAt.getTime()) : new Date()
-    };
-    insuranceEnrollmentStoreState.rows.set(key, updated);
-    return cloneInsuranceEnrollment(updated);
+            : input.enrolledAt === null
+              ? null
+              : input.enrolledAt,
+        ...(input.updatedAt ? { updatedAt: input.updatedAt } : {})
+      },
+      update: {
+        status: input.status,
+        enrolledAt:
+          input.enrolledAt === undefined
+            ? null
+            : input.enrolledAt === null
+              ? null
+              : input.enrolledAt,
+        ...(input.updatedAt ? { updatedAt: input.updatedAt } : {})
+      }
+    });
+    return toInsuranceEnrollmentEntity(record);
   },
 
   async listByEmployee(employeeId: string) {
-    const rows: InsuranceEnrollmentEntity[] = [];
-    for (const row of insuranceEnrollmentStoreState.rows.values()) {
-      if (row.employeeId !== employeeId) {
-        continue;
-      }
-      rows.push(cloneInsuranceEnrollment(row));
-    }
-    rows.sort((left, right) => {
-      const typeOrderDiff = insuranceEnrollmentTypeOrder[left.type] - insuranceEnrollmentTypeOrder[right.type];
-      if (typeOrderDiff !== 0) {
-        return typeOrderDiff;
-      }
-      return left.updatedAt.getTime() - right.updatedAt.getTime();
+    const records = await prisma.insuranceEnrollment.findMany({
+      where: { employeeId },
+      orderBy: [{ type: "asc" }, { updatedAt: "asc" }]
     });
-    return rows;
+    return records.map(toInsuranceEnrollmentEntity);
   }
 };
 
@@ -2597,6 +2597,7 @@ const recruitment: RecruitmentStore = {
         title: input.title,
         department: input.department,
         employmentType: input.employmentType,
+        hiringManagerId: input.hiringManagerId ?? null,
         status: input.status ?? "OPEN",
         createdAt: input.createdAt,
         updatedAt: input.updatedAt
@@ -2619,6 +2620,8 @@ const recruitment: RecruitmentStore = {
         title: input.title,
         department: input.department,
         employmentType: input.employmentType,
+        hiringManagerId:
+          input.hiringManagerId === undefined ? undefined : input.hiringManagerId,
         status: input.status,
         updatedAt: input.updatedAt
       }
@@ -2656,6 +2659,7 @@ const recruitment: RecruitmentStore = {
         referrerEmployeeId: input.referrerEmployeeId,
         note: input.note,
         stage: input.stage ?? "SUBMITTED",
+        stageReason: input.stageReason ?? null,
         createdAt: input.createdAt,
         updatedAt: input.updatedAt
       }
@@ -2680,6 +2684,7 @@ const recruitment: RecruitmentStore = {
         referrerEmployeeId: input.referrerEmployeeId,
         note: input.note,
         stage: input.stage,
+        stageReason: input.stageReason === undefined ? undefined : input.stageReason,
         updatedAt: input.updatedAt
       }
     });
