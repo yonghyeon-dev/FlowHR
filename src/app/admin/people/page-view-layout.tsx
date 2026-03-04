@@ -7,6 +7,7 @@ import { AdminPeopleLogsPanel } from "@/app/admin/people/page-view-logs-panel";
 import { AdminPeopleOrgChartPanel } from "@/app/admin/people/page-view-org-chart-panel";
 import { AdminPeopleRelatedWorkspacesPanel } from "@/app/admin/people/page-view-related-workspaces-panel";
 import type { AdminPeoplePageViewProps } from "@/app/admin/people/page-view";
+import { BulkImportPanel } from "@/components/people/BulkImportPanel";
 
 type AdminPeoplePageViewLayoutProps = AdminPeoplePageViewProps & {
   focusPanelLabel: string | null;
@@ -32,6 +33,7 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
     adminActorId,
     isProductionRuntime,
     usesBearerToken,
+    bearerToken,
     search,
     setSearch,
     activeFilter,
@@ -112,6 +114,12 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
           <button className="btn btn-primary" onClick={() => void refreshDirectory()}>
             {isKoLocale ? "디렉터리 조회" : "Refresh directory"}
           </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => document.getElementById("bulk-import")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          >
+            {isKoLocale ? "CSV 일괄 가져오기" : "CSV bulk import"}
+          </button>
           {focusPanel ? (
             <button className="btn btn-secondary" onClick={onJumpToFocusPanel}>
               {isKoLocale ? "집중 섹션으로 이동" : "Jump to focused section"}
@@ -156,6 +164,17 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
         </article>
       </section>
       <section className="panel-grid">
+        <section id="bulk-import">
+          <BulkImportPanel
+            isKoLocale={isKoLocale}
+            usesBearerToken={usesBearerToken}
+            bearerToken={bearerToken}
+            adminActorId={adminActorId}
+            organizationId={organizationId}
+            onImported={refreshDirectory}
+          />
+        </section>
+
         <section
           id="directory-filters"
           className={focusPanel === "directory-filters" ? "panel-focus-target" : undefined}
