@@ -324,9 +324,9 @@ export default function AdminApprovalPolicyPage() {
           <label>
             {copy.delegationCreate.domain}
             <select value={delegationDomain} onChange={(event) => setDelegationDomain(event.target.value as ApprovalDomain)}>
-              {domainOptions.map((domainItem) => (
-                <option key={domainItem} value={domainItem}>
-                  {copy.domainLabels[domainItem]}
+              {domainOptions.map((domain) => (
+                <option key={domain} value={domain}>
+                  {copy.domainLabels[domain]}
                 </option>
               ))}
             </select>
@@ -483,4 +483,5 @@ export default function AdminApprovalPolicyPage() {
     </main>
   );
 }
+
 
