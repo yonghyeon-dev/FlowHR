@@ -7,6 +7,7 @@ export function EmployeeAttendanceLeaveFormsPanel({
   callApiLabels,
   listBadgeLabels,
   preSubmitStatusLabels,
+  requiresLoginSession,
   attendance,
   leaveRequests,
   checkInAt,
@@ -133,16 +134,20 @@ export function EmployeeAttendanceLeaveFormsPanel({
           </p>
         ) : null}
         <div className="actions">
-          <button className="btn btn-primary" onClick={onCreateAttendance}>
+          <button className="btn btn-primary" onClick={onCreateAttendance} disabled={requiresLoginSession}>
             {callApiLabels.createAttendance}
           </button>
-          <button className="btn btn-secondary" onClick={onCheckOutNow} disabled={!lastAttendanceId}>
+          <button
+            className="btn btn-secondary"
+            onClick={onCheckOutNow}
+            disabled={!lastAttendanceId || requiresLoginSession}
+          >
             {callApiLabels.checkOutNow}
           </button>
           <button
             className="btn btn-secondary"
             onClick={onRequestAttendanceCorrection}
-            disabled={!correctionValidationIsValid || !attendancePreSubmitValid}
+            disabled={!correctionValidationIsValid || !attendancePreSubmitValid || requiresLoginSession}
           >
             {callApiLabels.requestAttendanceCorrection}
           </button>
@@ -258,10 +263,18 @@ export function EmployeeAttendanceLeaveFormsPanel({
           </button>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={onCreateLeave} disabled={!leavePreSubmitValid}>
+          <button
+            className="btn btn-primary"
+            onClick={onCreateLeave}
+            disabled={!leavePreSubmitValid || requiresLoginSession}
+          >
             {callApiLabels.createLeave}
           </button>
-          <button className="btn btn-secondary" onClick={onCancelLeave} disabled={!lastLeaveRequestId}>
+          <button
+            className="btn btn-secondary"
+            onClick={onCancelLeave}
+            disabled={!lastLeaveRequestId || requiresLoginSession}
+          >
             {callApiLabels.cancelLeave}
           </button>
         </div>
