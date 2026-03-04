@@ -72,6 +72,7 @@ import type {
   UpdateAttendanceRecordInput,
   UpdateDepartmentInput,
   UpdateEmployeeInput,
+  UpdateOrganizationInput,
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
   UpdateOnboardingTaskInput,
@@ -443,6 +444,7 @@ function cloneDeductionProfile(entity: DeductionProfileEntity): DeductionProfile
 function cloneOrganization(entity: OrganizationEntity): OrganizationEntity {
   return {
     ...entity,
+    workDays: [...entity.workDays],
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
@@ -668,6 +670,32 @@ function updateEmployeeEntity(existing: EmployeeEntity, input: UpdateEmployeeInp
   };
 }
 
+function updateOrganizationEntity(
+  existing: OrganizationEntity,
+  input: UpdateOrganizationInput
+): OrganizationEntity {
+  return {
+    ...existing,
+    name: input.name !== undefined ? input.name : existing.name,
+    businessRegistrationNumber:
+      input.businessRegistrationNumber !== undefined
+        ? input.businessRegistrationNumber
+        : existing.businessRegistrationNumber,
+    industry: input.industry !== undefined ? input.industry : existing.industry,
+    representativeName:
+      input.representativeName !== undefined ? input.representativeName : existing.representativeName,
+    workStartTime: input.workStartTime !== undefined ? input.workStartTime : existing.workStartTime,
+    workEndTime: input.workEndTime !== undefined ? input.workEndTime : existing.workEndTime,
+    workDays: input.workDays !== undefined ? [...input.workDays] : [...existing.workDays],
+    timezone: input.timezone !== undefined ? input.timezone : existing.timezone,
+    isOnboardingComplete:
+      input.isOnboardingComplete !== undefined
+        ? input.isOnboardingComplete
+        : existing.isOnboardingComplete,
+    updatedAt: new Date()
+  };
+}
+
 function updateDepartmentEntity(
   existing: DepartmentEntity,
   input: UpdateDepartmentInput
@@ -768,6 +796,14 @@ export const memoryDataAccess: DataAccess = {
       const entity: OrganizationEntity = {
         id: nextId("ORG"),
         name: input.name,
+        businessRegistrationNumber: null,
+        industry: null,
+        representativeName: null,
+        workStartTime: null,
+        workEndTime: null,
+        workDays: [],
+        timezone: null,
+        isOnboardingComplete: false,
         createdAt: now,
         updatedAt: now
       };
@@ -778,6 +814,16 @@ export const memoryDataAccess: DataAccess = {
     async findById(id: string) {
       const entity = state.organizations.get(id);
       return entity ? cloneOrganization(entity) : null;
+    },
+
+    async update(id: string, input: UpdateOrganizationInput) {
+      const existing = state.organizations.get(id);
+      if (!existing) {
+        throw new Error(`organization not found: ${id}`);
+      }
+      const updated = updateOrganizationEntity(existing, input);
+      state.organizations.set(id, updated);
+      return cloneOrganization(updated);
     },
 
     async list() {

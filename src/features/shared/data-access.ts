@@ -163,6 +163,14 @@ export type DeductionProfileEntity = {
 export type OrganizationEntity = {
   id: string;
   name: string;
+  businessRegistrationNumber: string | null;
+  industry: string | null;
+  representativeName: string | null;
+  workStartTime: string | null;
+  workEndTime: string | null;
+  workDays: number[];
+  timezone: string | null;
+  isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -637,6 +645,18 @@ export type UpsertDeductionProfileInput = {
 
 export type CreateOrganizationInput = {
   name: string;
+};
+
+export type UpdateOrganizationInput = {
+  name?: string;
+  businessRegistrationNumber?: string | null;
+  industry?: string | null;
+  representativeName?: string | null;
+  workStartTime?: string | null;
+  workEndTime?: string | null;
+  workDays?: number[];
+  timezone?: string | null;
+  isOnboardingComplete?: boolean;
 };
 
 export type CreateEmployeeInput = {
@@ -1172,6 +1192,7 @@ export interface DeductionProfileStore {
 export interface OrganizationStore {
   create(input: CreateOrganizationInput): Promise<OrganizationEntity>;
   findById(id: string): Promise<OrganizationEntity | null>;
+  update(id: string, input: UpdateOrganizationInput): Promise<OrganizationEntity>;
   list(): Promise<OrganizationEntity[]>;
 }
 

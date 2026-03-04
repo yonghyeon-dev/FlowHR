@@ -105,6 +105,7 @@ import type {
   UpdateAttendanceRecordInput,
   UpdateDepartmentInput,
   UpdateEmployeeInput,
+  UpdateOrganizationInput,
   UpdateLeaveRequestInput,
   UpdateNoticeInput,
   UpdateNoticeNotificationInput,
@@ -499,6 +500,14 @@ function toDeductionProfileEntity(record: {
 function toOrganizationEntity(record: {
   id: string;
   name: string;
+  businessRegistrationNumber: string | null;
+  industry: string | null;
+  representativeName: string | null;
+  workStartTime: string | null;
+  workEndTime: string | null;
+  workDays: number[];
+  timezone: string | null;
+  isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): OrganizationEntity {
@@ -922,7 +931,8 @@ const organizations: OrganizationStore = {
   async create(input: CreateOrganizationInput) {
     const record = await prisma.organization.create({
       data: {
-        name: input.name
+        name: input.name,
+        isOnboardingComplete: false
       }
     });
     return toOrganizationEntity(record);
@@ -933,6 +943,30 @@ const organizations: OrganizationStore = {
       where: { id }
     });
     return record ? toOrganizationEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateOrganizationInput) {
+    const record = await prisma.organization.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.businessRegistrationNumber !== undefined
+          ? { businessRegistrationNumber: input.businessRegistrationNumber }
+          : {}),
+        ...(input.industry !== undefined ? { industry: input.industry } : {}),
+        ...(input.representativeName !== undefined
+          ? { representativeName: input.representativeName }
+          : {}),
+        ...(input.workStartTime !== undefined ? { workStartTime: input.workStartTime } : {}),
+        ...(input.workEndTime !== undefined ? { workEndTime: input.workEndTime } : {}),
+        ...(input.workDays !== undefined ? { workDays: input.workDays } : {}),
+        ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+        ...(input.isOnboardingComplete !== undefined
+          ? { isOnboardingComplete: input.isOnboardingComplete }
+          : {})
+      }
+    });
+    return toOrganizationEntity(record);
   },
 
   async list() {
