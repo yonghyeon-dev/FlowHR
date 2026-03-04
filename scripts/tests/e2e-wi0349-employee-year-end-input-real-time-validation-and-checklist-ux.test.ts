@@ -29,7 +29,10 @@ async function run() {
   assert.match(yearEndInputConsole, /const validationChecks = useMemo/);
   assert.match(yearEndInputCopy, /Real-time Input Validation/);
   assert.match(yearEndInputConsole, /pre-submit-check-list/);
-  assert.match(yearEndInputConsole, /disabled=\{pendingLabel !== null \|\| !coreLoadValid\}/);
+  assert.match(
+    yearEndInputConsole,
+    /disabled=\{pendingLabel !== null \|\| !coreLoadValid(?: \|\| requiresLoginSession)?\}/
+  );
   assert.match(yearEndInputCopy, /Tax rates in 0~1 range/);
 
   assert.match(workItem, /WI-0349/i);
