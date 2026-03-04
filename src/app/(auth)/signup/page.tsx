@@ -5,6 +5,9 @@ import { type FormEvent, useState } from "react";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 
+const metadataRoles = ["admin", "manager", "employee", "payroll_operator"] as const;
+type MetadataRole = (typeof metadataRoles)[number];
+
 function toSignupErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();
@@ -23,6 +26,142 @@ function toSignupErrorMessage(error: unknown) {
   }
 
   return "회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+}
+
+function readAppMetadataString(app: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = app[key];
+    if (typeof value !== "string") {
+      continue;
+    }
+    const normalized = value.trim();
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+  return null;
+}
+
+function normalizeMetadataRole(value: unknown): MetadataRole | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return (metadataRoles as readonly string[]).includes(value) ? (value as MetadataRole) : null;
+}
+
+function createEmployeeId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `EMP-${crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`;
+  }
+  return `EMP-${Date.now()}`;
+}
+
+async function readResponseBody(response: Response) {
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return raw;
+  }
+}
+
+function toApiErrorMessage(body: unknown, fallback: string) {
+  if (!body || typeof body !== "object") {
+    return fallback;
+  }
+  const value = (body as Record<string, unknown>).error;
+  if (typeof value !== "string" || !value.trim()) {
+    return fallback;
+  }
+  return value.trim();
+}
+
+async function createOrganizationRecord(accessToken: string, name: string): Promise<string> {
+  const response = await fetch("/api/people/organizations", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({ name })
+  });
+
+  const body = await readResponseBody(response);
+  if (!response.ok) {
+    throw new Error(toApiErrorMessage(body, "organization create failed"));
+  }
+
+  const organization = (body as { organization?: { id?: unknown } } | null)?.organization;
+  const organizationId = typeof organization?.id === "string" ? organization.id.trim() : "";
+  if (!organizationId) {
+    throw new Error("organization create failed");
+  }
+  return organizationId;
+}
+
+async function createEmployeeRecord(input: {
+  accessToken: string;
+  organizationId: string;
+  email: string;
+  employeeId: string;
+}) {
+  const response = await fetch("/api/people/employees", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${input.accessToken}`
+    },
+    body: JSON.stringify({
+      id: input.employeeId,
+      organizationId: input.organizationId,
+      email: input.email,
+      active: true
+    })
+  });
+
+  const body = await readResponseBody(response);
+  if (!response.ok) {
+    throw new Error(toApiErrorMessage(body, "employee create failed"));
+  }
+
+  const employee = (body as { employee?: { id?: unknown } } | null)?.employee;
+  const employeeId = typeof employee?.id === "string" ? employee.id.trim() : "";
+  if (!employeeId) {
+    throw new Error("employee create failed");
+  }
+  return employeeId;
+}
+
+async function setupMetadata(input: {
+  accessToken: string;
+  role: MetadataRole;
+  organizationId: string;
+  actorId?: string;
+}) {
+  const payload: Record<string, unknown> = {
+    role: input.role,
+    organization_id: input.organizationId
+  };
+  if (input.actorId) {
+    payload.actor_id = input.actorId;
+  }
+
+  const response = await fetch("/api/auth/setup-metadata", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${input.accessToken}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const body = await readResponseBody(response);
+  if (!response.ok) {
+    throw new Error(toApiErrorMessage(body, "metadata setup failed"));
+  }
 }
 
 export default function SignupPage() {
@@ -67,7 +206,7 @@ export default function SignupPage() {
 
     try {
       const supabase = getSupabaseClient();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
         options: {
@@ -80,6 +219,35 @@ export default function SignupPage() {
 
       if (error) {
         throw error;
+      }
+
+      const accessToken = data.session?.access_token?.trim() ?? "";
+      if (accessToken) {
+        const app = (data.user?.app_metadata ?? {}) as Record<string, unknown>;
+        const existingOrganizationId = readAppMetadataString(app, "organization_id", "organizationId");
+        const existingRole = normalizeMetadataRole(app.role) ?? (existingOrganizationId ? "employee" : "admin");
+
+        let organizationId = existingOrganizationId;
+        let actorId: string | undefined;
+        let role: MetadataRole = existingRole;
+
+        if (!organizationId) {
+          organizationId = await createOrganizationRecord(accessToken, trimmedOrganization);
+          actorId = await createEmployeeRecord({
+            accessToken,
+            organizationId,
+            email: trimmedEmail.toLowerCase(),
+            employeeId: createEmployeeId()
+          });
+          role = "admin";
+        }
+
+        await setupMetadata({
+          accessToken,
+          role,
+          organizationId,
+          actorId
+        });
       }
 
       setSuccessMessage("가입이 완료되었습니다. 이메일 인증 링크를 확인한 뒤 로그인해 주세요.");
@@ -168,13 +336,7 @@ export default function SignupPage() {
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={
-                  pending ||
-                  !organizationName.trim() ||
-                  !email.trim() ||
-                  !password ||
-                  !passwordConfirm
-                }
+                disabled={pending || !organizationName.trim() || !email.trim() || !password || !passwordConfirm}
               >
                 회원가입
               </button>
@@ -198,4 +360,3 @@ export default function SignupPage() {
     </main>
   );
 }
-

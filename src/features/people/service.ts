@@ -12,6 +12,7 @@ import type {
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
+import { isTenancyEnabled } from "@/lib/tenancy";
 
 type ServiceContext = {
   actor: Actor | null;
@@ -88,7 +89,18 @@ export async function createOrganization(
   input: { name: string }
 ): Promise<OrganizationEntity> {
   await requirePeoplePermission(context, Permissions.peopleOrganizationsManage, "create organization");
-  const tenantScope = resolveTenantScope(context.actor);
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const tenancyEnabled = isTenancyEnabled();
+  const isBootstrapAdmin = tenancyEnabled && context.actor.role === "admin" && !context.actor.organizationId;
+  if (tenancyEnabled && context.actor.role !== "system" && !context.actor.organizationId && !isBootstrapAdmin) {
+    throw new ServiceError(401, "missing tenant context");
+  }
+
+  const tenantScope =
+    tenancyEnabled && context.actor.role !== "system" ? context.actor.organizationId ?? null : null;
   if (tenantScope) {
     throw new ServiceError(403, "organization create is restricted to system role");
   }
@@ -477,7 +489,18 @@ export async function createEmployee(
   }
 ): Promise<EmployeeEntity> {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "create employee");
-  const tenantScope = resolveTenantScope(context.actor);
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  const tenancyEnabled = isTenancyEnabled();
+  const isBootstrapAdmin = tenancyEnabled && context.actor.role === "admin" && !context.actor.organizationId;
+  if (tenancyEnabled && context.actor.role !== "system" && !context.actor.organizationId && !isBootstrapAdmin) {
+    throw new ServiceError(401, "missing tenant context");
+  }
+
+  const tenantScope =
+    tenancyEnabled && context.actor.role !== "system" ? context.actor.organizationId ?? null : null;
   if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
     throw new ServiceError(403, "cross-tenant employee create is not allowed");
   }
@@ -488,6 +511,9 @@ export async function createEmployee(
   }
 
   let organizationId = tenantScope ?? (input.organizationId ?? null);
+  if (isBootstrapAdmin && !organizationId) {
+    throw new ServiceError(400, "organizationId is required");
+  }
 
   let department: DepartmentEntity | null = null;
   if (input.departmentId) {

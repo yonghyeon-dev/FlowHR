@@ -9,6 +9,9 @@ import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
 import { useI18n } from "@/lib/i18n/provider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
+const metadataRoles = ["admin", "manager", "employee", "payroll_operator"] as const;
+type MetadataRole = (typeof metadataRoles)[number];
+
 type SessionSnapshot = {
   userId: string;
   email: string | null;
@@ -53,6 +56,56 @@ function resolveRedirectPath(value: string | null): string | null {
   return trimmed;
 }
 
+function readAppMetadataString(app: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = app[key];
+    if (typeof value !== "string") {
+      continue;
+    }
+    const normalized = value.trim();
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+  return null;
+}
+
+function normalizeMetadataRole(value: unknown): MetadataRole | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return (metadataRoles as readonly string[]).includes(value) ? (value as MetadataRole) : null;
+}
+
+async function ensureSessionMetadata(session: Session | null) {
+  if (!session?.access_token || !session.user) {
+    return;
+  }
+
+  const app = (session.user.app_metadata ?? {}) as Record<string, unknown>;
+  const role = normalizeMetadataRole(app.role);
+  const organizationId = readAppMetadataString(app, "organization_id", "organizationId");
+  if (!role || !organizationId) {
+    return;
+  }
+
+  try {
+    await fetch("/api/auth/setup-metadata", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        role,
+        organization_id: organizationId
+      })
+    });
+  } catch {
+    // noop
+  }
+}
+
 function parseSession(session: Session | null): SessionSnapshot | null {
   const user = session?.user;
   if (!user?.id) {
@@ -60,19 +113,9 @@ function parseSession(session: Session | null): SessionSnapshot | null {
   }
 
   const app = (user.app_metadata ?? {}) as Record<string, unknown>;
-  const role = typeof app.role === "string" ? app.role : null;
-  const organizationId =
-    typeof app.organization_id === "string"
-      ? app.organization_id
-      : typeof app.organizationId === "string"
-        ? app.organizationId
-        : null;
-  const actorId =
-    typeof app.actor_id === "string"
-      ? app.actor_id
-      : typeof app.actorId === "string"
-        ? app.actorId
-        : null;
+  const role = readAppMetadataString(app, "role");
+  const organizationId = readAppMetadataString(app, "organization_id", "organizationId");
+  const actorId = readAppMetadataString(app, "actor_id", "actorId");
 
   return {
     userId: user.id,
@@ -118,6 +161,7 @@ export default function LoginPage() {
         }
         syncAccessTokenCookie(data.session);
         setSnapshot(parseSession(data.session));
+        void ensureSessionMetadata(data.session);
       } catch (error) {
         if (!active) {
           return;
@@ -130,6 +174,7 @@ export default function LoginPage() {
     const listener = supabase.auth.onAuthStateChange((_event, session) => {
       syncAccessTokenCookie(session);
       setSnapshot(parseSession(session));
+      void ensureSessionMetadata(session);
     });
 
     void load();
