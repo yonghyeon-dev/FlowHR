@@ -1,11 +1,51 @@
 ﻿import type {
   ApprovalDomain,
-  ApprovalExecutionDto
+  ApprovalExecutionDto,
+  ApprovalExecutionSort,
+  ApprovalExecutionState
 } from "@/app/admin/approval-executions/page-types";
 
 export function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+export function normalizeApprovalDomainFilter(value: string | null): ApprovalDomain | "" {
+  if (value === "ATTENDANCE" || value === "LEAVE" || value === "PAYROLL") {
+    return value;
+  }
+  return "";
+}
+
+export function normalizeApprovalStateFilter(value: string | null): ApprovalExecutionState | "" {
+  if (value === "PENDING" || value === "APPROVED" || value === "REJECTED") {
+    return value;
+  }
+  return "PENDING";
+}
+
+export function normalizeApprovalSortFilter(value: string | null): ApprovalExecutionSort {
+  if (value === "updated_desc" || value === "priority_desc") {
+    return value;
+  }
+  return "priority_desc";
+}
+
+export function normalizePositiveIntegerText(value: string | null, fallback: string) {
+  if (!value) return fallback;
+  const parsed = Number(value.trim());
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return String(Math.floor(parsed));
+}
+
+export function resolveApprovalAnalyticsFocusLabel(isKoLocale: boolean, focusMetric: string | null) {
+  if (focusMetric === "stalledApprovals") {
+    return isKoLocale ? "정체 결재 대기함" : "Stalled approval queue";
+  }
+  if (focusMetric === "pendingApprovals") {
+    return isKoLocale ? "결재 대기함" : "Pending approval queue";
+  }
+  return isKoLocale ? "결재 실행 현황" : "Approval execution queue";
 }
 
 export function toLocalInputValue(value: Date) {
