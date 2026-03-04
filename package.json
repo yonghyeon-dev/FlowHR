@@ -9,6 +9,7 @@
     "dev": "next dev",
     "dev:3001": "next dev -p 3001",
     "build": "next build",
+    "check:prod-readiness": "tsx scripts/check-prod-readiness.ts",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
