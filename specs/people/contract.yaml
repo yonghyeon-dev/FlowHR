@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.9
+version: 0.3.10
 scope:
   in:
     - organization master data (create/read/list)
@@ -145,6 +145,8 @@ db_changes:
       description: Add optional Notice targetDepartmentIds column for department-targeted notice delivery.
     - id: 202603050002_sync_wi0910_to_wi0917
       description: Sync onboarding/insurance models and employee/recruitment/benefits profile fields with Prisma persistence schema.
+    - id: 202603050003_wi0922_onboarding_wizard
+      description: Add organization onboarding setup fields and onboarding completion flag for first-admin login wizard.
   backward_compatible: true
   notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, and recruitment/benefits read models are additive."
 invariants:
