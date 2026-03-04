@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import { buildQuery } from "@/app/admin/people/page-helpers";
+import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import type {
   ApiLog,
   Department,
@@ -16,9 +17,6 @@ type ApiMethod = "GET" | "PATCH";
 type UseAdminPeopleDirectoryActionsInput = {
   isKoLocale: boolean;
   runtimeLocale: string;
-  usesBearerToken: boolean;
-  bearerToken: string;
-  adminActorId: string;
   organizationId: string;
   historyLimit: string;
   selectedEmployeeId: string;
@@ -40,9 +38,6 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
   const {
     isKoLocale,
     runtimeLocale,
-    usesBearerToken,
-    bearerToken,
-    adminActorId,
     organizationId,
     historyLimit,
     selectedEmployeeId,
@@ -64,34 +59,12 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
     async (label: string, method: ApiMethod, path: string, payload?: Record<string, unknown>) => {
       setPendingLabel(label);
       try {
-        const headers: Record<string, string> = {};
-        if (payload) {
-          headers["content-type"] = "application/json";
-        }
-        if (usesBearerToken) {
-          headers.authorization = `Bearer ${bearerToken}`;
-        } else {
-          headers["x-actor-role"] = "admin";
-          headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-          if (organizationId.trim()) {
-            headers["x-actor-organization-id"] = organizationId.trim();
-          }
-        }
-
-        const response = await fetch(path, {
+        const response = await apiClientFetch({
           method,
-          headers,
-          body: payload ? JSON.stringify(payload) : undefined
+          path,
+          payload
         });
-        const text = await response.text();
-        let body: unknown = null;
-        if (text.trim()) {
-          try {
-            body = JSON.parse(text);
-          } catch {
-            body = text;
-          }
-        }
+        const body = await parseApiResponseBody(response);
         setLogs((prev) => [
           {
             id: Date.now(),
@@ -107,15 +80,7 @@ export function useAdminPeopleDirectoryActions(input: UseAdminPeopleDirectoryAct
         setPendingLabel(null);
       }
     },
-    [
-      adminActorId,
-      bearerToken,
-      organizationId,
-      runtimeLocale,
-      setLogs,
-      setPendingLabel,
-      usesBearerToken
-    ]
+    [runtimeLocale, setLogs, setPendingLabel]
   );
 
   const loadOrganizations = useCallback(async () => {

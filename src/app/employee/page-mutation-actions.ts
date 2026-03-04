@@ -28,7 +28,6 @@ export type BuildEmployeeMutationActionsInput = {
   periodStart: string;
   periodEnd: string;
   employeeId: string;
-  allowDevEmployeeIdFallback: boolean;
   selectedCorrectionRecordId: string;
   lastAttendanceId: string;
   setAttendance: Dispatch<SetStateAction<AttendanceRecordDto[]>>;
@@ -64,7 +63,6 @@ export function buildEmployeeMutationActions(input: BuildEmployeeMutationActions
       fromIso,
       toIso: toIsoValue,
       employeeId: input.employeeId,
-      allowDevEmployeeIdFallback: input.allowDevEmployeeIdFallback,
       selectedCorrectionRecordId: input.selectedCorrectionRecordId,
       lastAttendanceId: input.lastAttendanceId,
       buildQuery: input.buildQuery
@@ -98,7 +96,6 @@ export function buildEmployeeMutationActions(input: BuildEmployeeMutationActions
       callApi: input.callApi,
       callApiLabels: input.callApiLabels,
       employeeId: input.employeeId,
-      allowDevEmployeeIdFallback: input.allowDevEmployeeIdFallback,
       checkInAt: input.checkInAt,
       checkOutAt: input.checkOutAt,
       breakMinutes: input.breakMinutes,
@@ -152,7 +149,6 @@ export function buildEmployeeMutationActions(input: BuildEmployeeMutationActions
       callApi: input.callApi,
       callApiLabels: input.callApiLabels,
       employeeId: input.employeeId,
-      allowDevEmployeeIdFallback: input.allowDevEmployeeIdFallback,
       leaveType: input.leaveType,
       leaveUnit: input.leaveUnit,
       leaveStartDate: input.leaveStartDate,

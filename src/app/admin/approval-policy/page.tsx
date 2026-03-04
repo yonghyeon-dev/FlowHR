@@ -19,7 +19,9 @@ import {
   toLocalInputValue
 } from "@/app/admin/approval-policy/page-types";
 import { actorRoles } from "@/lib/actor";
+import { apiClientFetch, parseApiResponseBody } from "@/lib/api-client";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
+import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function AdminApprovalPolicyPage() {
@@ -30,7 +32,7 @@ export default function AdminApprovalPolicyPage() {
 
   const [delegationDomain, setDelegationDomain] = useState<ApprovalDomain>("ATTENDANCE");
   const [delegatorRole, setDelegatorRole] = useState("manager");
-  const [delegateActorId, setDelegateActorId] = useState("EMP-1001");
+  const [delegateActorId, setDelegateActorId] = useState(defaultEmployeeIdForApi);
   const [delegationStartsAt, setDelegationStartsAt] = useState(() => {
     const now = new Date();
     return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0));
@@ -55,11 +57,10 @@ export default function AdminApprovalPolicyPage() {
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
   const copy = useMemo(() => resolveAdminApprovalPolicyLocaleCopy(isKoLocale), [isKoLocale]);
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
-  const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
+  const adminActorId = (supabaseSession?.actorId ?? "").trim();
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
   const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const stats = useMemo(() => {
@@ -80,20 +81,7 @@ export default function AdminApprovalPolicyPage() {
   ) {
     setPendingLabel(label);
     try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
-
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken}`;
-      } else if (allowHeaderActorFallback) {
-        headers["x-actor-role"] = "admin";
-        headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-        if (organizationId.trim().length > 0) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      } else {
+      if (requiresLoginSession) {
         throw new Error(
           isKoLocale
             ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
@@ -101,10 +89,10 @@ export default function AdminApprovalPolicyPage() {
         );
       }
 
-      const response = await fetch(path, {
+      const response = await apiClientFetch({
         method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
+        path,
+        payload
       });
 
       setLogs((prev) => [
@@ -118,15 +106,7 @@ export default function AdminApprovalPolicyPage() {
         ...prev
       ]);
 
-      const text = await response.text();
-      let body: unknown = null;
-      if (text.trim().length > 0) {
-        try {
-          body = JSON.parse(text);
-        } catch {
-          body = text;
-        }
-      }
+      const body = await parseApiResponseBody(response);
       return { response, body };
     } finally {
       setPendingLabel(null);
