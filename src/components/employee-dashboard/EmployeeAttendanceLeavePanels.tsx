@@ -31,6 +31,7 @@ export type EmployeeAttendanceLeavePanelsProps = {
   listBadgeLabels: EmployeeLocaleBundle["listBadgeLabels"];
   preSubmitStatusLabels: EmployeeLocaleBundle["preSubmitStatusLabels"];
   showDevTools: boolean;
+  requiresLoginSession: boolean;
   attendance: AttendanceRecordDto[];
   leaveRequests: LeaveRequestDto[];
   schedules: WorkScheduleDto[];

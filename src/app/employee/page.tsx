@@ -93,6 +93,12 @@ export default function EmployeeSelfServicePage() {
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
   const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, organizationId, employeeId, bearerToken, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
+  const productionSessionRequiredNotice =
+    isKoLocale
+      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
+      : "A login session is required in production. Please sign in again at /login.";
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
   const { sectionTitles, attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } = surfaceCopy;
@@ -105,6 +111,9 @@ export default function EmployeeSelfServicePage() {
   }, [defaultCancelReason]);
   const { mutationActions, clearLogs } = buildEmployeeMutationRuntime({
     callApiLabels,
+    allowHeaderActorFallback,
+    requiresLoginSession,
+    productionSessionRequiredNotice,
     usesBearerToken,
     bearerToken,
     organizationId,
@@ -328,8 +337,8 @@ export default function EmployeeSelfServicePage() {
       <EmployeeDashboardChrome
         showDevTools={showDevTools}
         isKoLocale={isKoLocale}
-        isProductionRuntime={isProductionRuntime}
-        usesBearerToken={usesBearerToken}
+        requiresLoginSession={requiresLoginSession}
+        productionSessionRequiredNotice={productionSessionRequiredNotice}
         attendanceSummary={attendanceSummary}
         leaveBalanceLabel={leaveBalance ? leaveBalanceCopy.dayUnit(formatDays(leaveBalance.remainingDays)) : "-"}
         pendingLeaveCount={pendingLeaveCount}
@@ -342,6 +351,7 @@ export default function EmployeeSelfServicePage() {
           showDevTools={showDevTools}
           isProductionRuntime={isProductionRuntime}
           usesBearerToken={usesBearerToken}
+          requiresLoginSession={requiresLoginSession}
           supabaseSession={supabaseSession}
           supabaseSessionError={supabaseSessionError}
           organizationId={organizationId}
@@ -413,6 +423,7 @@ export default function EmployeeSelfServicePage() {
           listBadgeLabels={listBadgeLabels}
           preSubmitStatusLabels={preSubmitStatusLabels}
           showDevTools={showDevTools}
+          requiresLoginSession={requiresLoginSession}
           attendance={attendance}
           leaveRequests={leaveRequests}
           schedules={schedules}

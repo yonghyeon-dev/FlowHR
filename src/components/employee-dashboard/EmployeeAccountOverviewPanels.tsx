@@ -10,6 +10,7 @@ type EmployeeAccountOverviewPanelsProps = {
   showDevTools: boolean;
   isProductionRuntime: boolean;
   usesBearerToken: boolean;
+  requiresLoginSession: boolean;
   supabaseSession: SupabaseSessionSnapshot | null;
   supabaseSessionError: string | null;
   organizationId: string;
@@ -117,6 +118,7 @@ export function EmployeeAccountOverviewPanels({
   showDevTools,
   isProductionRuntime,
   usesBearerToken,
+  requiresLoginSession,
   supabaseSession,
   supabaseSessionError,
   organizationId,
@@ -310,7 +312,11 @@ export function EmployeeAccountOverviewPanels({
           </details>
         ) : null}
         <div className="actions">
-          <button className="btn btn-primary" onClick={onRefreshEmployeeSnapshot}>
+          <button
+            className="btn btn-primary"
+            onClick={onRefreshEmployeeSnapshot}
+            disabled={requiresLoginSession}
+          >
             {isKoLocale ? "내 데이터 새로고침" : "Refresh My Data"}
           </button>
         </div>

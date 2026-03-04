@@ -9,6 +9,7 @@ type PerformEmployeeApiCallInput = {
   payload?: Record<string, unknown>;
   usesBearerToken: boolean;
   bearerToken: string;
+  allowHeaderActorFallback: boolean;
   employeeId: string;
   organizationId: string;
   runtimeLocale: string;
@@ -28,6 +29,10 @@ function buildEmployeeRequestHeaders(input: PerformEmployeeApiCallInput): Record
 
   if (input.usesBearerToken) {
     headers.authorization = `Bearer ${input.bearerToken.trim()}`;
+    return headers;
+  }
+
+  if (!input.allowHeaderActorFallback) {
     return headers;
   }
 

@@ -7,8 +7,8 @@ type EmployeeStats = {
 type EmployeeDashboardChromeProps = {
   showDevTools: boolean;
   isKoLocale: boolean;
-  isProductionRuntime: boolean;
-  usesBearerToken: boolean;
+  requiresLoginSession: boolean;
+  productionSessionRequiredNotice: string;
   attendanceSummary: string;
   leaveBalanceLabel: string;
   pendingLeaveCount: number;
@@ -19,8 +19,8 @@ type EmployeeDashboardChromeProps = {
 export function EmployeeDashboardChrome({
   showDevTools,
   isKoLocale,
-  isProductionRuntime,
-  usesBearerToken,
+  requiresLoginSession,
+  productionSessionRequiredNotice,
   attendanceSummary,
   leaveBalanceLabel,
   pendingLeaveCount,
@@ -61,14 +61,9 @@ export function EmployeeDashboardChrome({
         </div>
       </header>
 
-      {isProductionRuntime && !usesBearerToken ? (
+      {requiresLoginSession ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          {isKoLocale ? "현재 환경은 " : "Current environment is "}
-          <strong>{isKoLocale ? "운영" : "production"}</strong>
-          {isKoLocale
-            ? "입니다. 출퇴근/휴가 API 호출을 위해 로그인 세션(Bearer 토큰)이 필요합니다: "
-            : ". Login session (Bearer token) is required for attendance/leave API calls: "}
-          <Link href="/login">/login</Link>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
 
