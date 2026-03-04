@@ -37,6 +37,10 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
+  const isProduction = process.env.NODE_ENV === "production";
+  if (!actor && isProduction) {
+    return fail(401, "recruitment.referral.list.unauthorized");
+  }
   const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
   const requestedOrganizationId = normalizeOrganizationId(parsed.data.organizationId);
   if (actorOrganizationId && requestedOrganizationId && requestedOrganizationId !== actorOrganizationId) {
@@ -44,7 +48,10 @@ export async function GET(request: Request) {
       reason: "organization_scope_mismatch"
     });
   }
-  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? DEFAULT_ORG_ID;
+  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? (isProduction ? null : DEFAULT_ORG_ID);
+  if (!organizationId) {
+    return fail(401, "recruitment.referral.list.unauthorized");
+  }
   const isReviewer = canReviewReferrals(actor?.role);
   const referrals = await listRecruitmentReferrals({
     organizationId,

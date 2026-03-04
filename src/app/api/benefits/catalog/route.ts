@@ -21,8 +21,16 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
+  const isProduction = process.env.NODE_ENV === "production";
+  if (!actor && isProduction) {
+    return fail(401, "benefits.catalog.list.unauthorized");
+  }
+  const organizationId = parsed.data.organizationId ?? actor?.organizationId ?? (isProduction ? null : DEFAULT_ORG_ID);
+  if (!organizationId) {
+    return fail(401, "benefits.catalog.list.unauthorized");
+  }
   const items = await listBenefitCatalog({
-    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+    organizationId,
     status: parsed.data.status
   });
 

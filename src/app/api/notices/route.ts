@@ -29,9 +29,16 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
+  const isProduction = process.env.NODE_ENV === "production";
+  if (!actor && isProduction) {
+    return fail(401, "notice.list.unauthorized");
+  }
   const isAdminActor = canManageNotices(actor?.role);
   const audience = isAdminActor ? parsed.data.audience : "employees";
-  const organizationId = parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID;
+  const organizationId = parsed.data.organizationId ?? actor?.organizationId ?? (isProduction ? null : DEFAULT_ORG_ID);
+  if (!organizationId) {
+    return fail(401, "notice.list.unauthorized");
+  }
   const context = { dataAccess: getRuntimeDataAccess() };
   const notices = await listNotices(context, {
     organizationId,
