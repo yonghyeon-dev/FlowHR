@@ -533,6 +533,9 @@ function toOrganizationEntity(record: {
   id: string;
   name: string;
   businessRegistrationNumber: string | null;
+  fiscalYearStart: string;
+  workHoursPerDay: number;
+  overtimeThreshold: number;
   industry: string | null;
   representativeName: string | null;
   workStartTime: string | null;
@@ -964,6 +967,9 @@ const organizations: OrganizationStore = {
     const record = await prisma.organization.create({
       data: {
         name: input.name,
+        fiscalYearStart: "01-01",
+        workHoursPerDay: 8,
+        overtimeThreshold: 8,
         isOnboardingComplete: false
       }
     });
@@ -984,6 +990,11 @@ const organizations: OrganizationStore = {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.businessRegistrationNumber !== undefined
           ? { businessRegistrationNumber: input.businessRegistrationNumber }
+          : {}),
+        ...(input.fiscalYearStart !== undefined ? { fiscalYearStart: input.fiscalYearStart } : {}),
+        ...(input.workHoursPerDay !== undefined ? { workHoursPerDay: input.workHoursPerDay } : {}),
+        ...(input.overtimeThreshold !== undefined
+          ? { overtimeThreshold: input.overtimeThreshold }
           : {}),
         ...(input.industry !== undefined ? { industry: input.industry } : {}),
         ...(input.representativeName !== undefined

@@ -165,6 +165,9 @@ export type OrganizationEntity = {
   id: string;
   name: string;
   businessRegistrationNumber: string | null;
+  fiscalYearStart: string;
+  workHoursPerDay: number;
+  overtimeThreshold: number;
   industry: string | null;
   representativeName: string | null;
   workStartTime: string | null;
@@ -665,6 +668,9 @@ export type CreateOrganizationInput = {
 export type UpdateOrganizationInput = {
   name?: string;
   businessRegistrationNumber?: string | null;
+  fiscalYearStart?: string;
+  workHoursPerDay?: number;
+  overtimeThreshold?: number;
   industry?: string | null;
   representativeName?: string | null;
   workStartTime?: string | null;

@@ -12,6 +12,9 @@ model Organization {
   id                         String   @id @default(cuid())
   name                       String
   businessRegistrationNumber String?
+  fiscalYearStart            String   @default("01-01")
+  workHoursPerDay            Float    @default(8)
+  overtimeThreshold          Float    @default(8)
   industry                   String?
   representativeName         String?
   workStartTime              String?
