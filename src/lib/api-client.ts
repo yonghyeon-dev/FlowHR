@@ -34,9 +34,14 @@ function redirectToLogin() {
   if (typeof window === "undefined") {
     return;
   }
-  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  const next = encodeURIComponent(currentPath || "/");
-  window.location.replace(`/login?next=${next}`);
+
+  if (window.location.pathname === "/login") {
+    return;
+  }
+
+  const currentPath = `${window.location.pathname}${window.location.search}`;
+  const redirect = encodeURIComponent(currentPath || "/");
+  window.location.replace(`/login?redirect=${redirect}`);
 }
 
 function buildMissingMetadataErrorMessage() {
@@ -98,11 +103,17 @@ export async function apiClientFetch(input: ApiClientFetchInput): Promise<Respon
     headers["content-type"] = "application/json";
   }
 
-  return fetch(input.path, {
+  const response = await fetch(input.path, {
     method: input.method,
     headers,
     body: input.payload ? JSON.stringify(input.payload) : undefined
   });
+
+  if (response.status === 401) {
+    redirectToLogin();
+  }
+
+  return response;
 }
 
 export async function parseApiResponseBody(response: Response): Promise<unknown> {
