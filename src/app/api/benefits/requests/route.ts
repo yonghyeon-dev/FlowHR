@@ -17,6 +17,11 @@ function canReviewRequests(role: string | null | undefined) {
   return role === "admin" || role === "manager";
 }
 
+function normalizeOrganizationId(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listBenefitRequestsQuerySchema.safeParse({
@@ -31,10 +36,27 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
+  const isProduction = process.env.NODE_ENV === "production";
+  if (!actor && isProduction) {
+    return fail(401, "benefits.request.list.unauthorized");
+  }
+  const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
+  const requestedOrganizationId = normalizeOrganizationId(parsed.data.organizationId);
+  if (isProduction && actorOrganizationId && requestedOrganizationId && requestedOrganizationId !== actorOrganizationId) {
+    return fail(403, "benefits.request.list.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  const organizationId = isProduction
+    ? actorOrganizationId
+    : requestedOrganizationId ?? actorOrganizationId ?? DEFAULT_ORG_ID;
+  if (!organizationId) {
+    return fail(401, "benefits.request.list.unauthorized");
+  }
   const isReviewer = canReviewRequests(actor?.role);
   const employeeId = isReviewer ? parsed.data.employeeId : (parsed.data.employeeId ?? actor?.id ?? undefined);
   const requests = await listBenefitRequests({
-    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+    organizationId,
     employeeId,
     status: parsed.data.status,
     sort: parsed.data.sort

@@ -7,7 +7,7 @@ function isTruthyFlag(value: string | undefined) {
 }
 
 export function isTenancyEnabled() {
-  return isTruthyFlag(process.env.FLOWHR_TENANCY_V1 ?? process.env.TENANCY_V1);
+  return isTruthyFlag(process.env.FLOWHR_TENANCY_V1 ?? process.env.TENANCY_V1 ?? "true");
 }
 
 export function isPlatformActor(actor: Actor) {
