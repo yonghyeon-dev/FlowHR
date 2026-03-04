@@ -23,6 +23,8 @@ type EmployeeRecruitmentWorkspaceViewProps = {
   copy: EmployeeRecruitmentCopy;
   isKoLocale: boolean;
   showDevTools: boolean;
+  requiresLoginSession: boolean;
+  productionSessionRequiredNotice: string;
   sessionOrganizationId: string;
   sessionEmployeeId: string;
   openings: RecruitmentOpeningItem[];
@@ -61,6 +63,8 @@ export default function EmployeeRecruitmentWorkspaceView({
   copy,
   isKoLocale,
   showDevTools,
+  requiresLoginSession,
+  productionSessionRequiredNotice,
   sessionOrganizationId,
   sessionEmployeeId,
   openings,
@@ -108,11 +112,18 @@ export default function EmployeeRecruitmentWorkspaceView({
           <Link className="btn btn-secondary" href="/employee">
             {sourceEntry ? sourceEntry.returnLabel : "/employee"}
           </Link>
-          <Link className="btn btn-secondary" href="/admin/recruitment">
-            /admin/recruitment
-          </Link>
+          {showDevTools ? (
+            <Link className="btn btn-secondary" href="/admin/recruitment">
+              /admin/recruitment
+            </Link>
+          ) : null}
         </div>
       </header>
+      {requiresLoginSession ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        </p>
+      ) : null}
 
       <section className="panel-grid">
         <article className="panel">
@@ -170,10 +181,20 @@ export default function EmployeeRecruitmentWorkspaceView({
             />
           </label>
           <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={onLoadWorkspace} disabled={pending}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={onLoadWorkspace}
+              disabled={pending || requiresLoginSession}
+            >
               {copy.refreshAction}
             </button>
-            <button className="btn btn-secondary" type="button" onClick={onClearReferralSearch} disabled={pending}>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={onClearReferralSearch}
+              disabled={pending || requiresLoginSession}
+            >
               {copy.clearSearchAction}
             </button>
           </div>
@@ -222,7 +243,12 @@ export default function EmployeeRecruitmentWorkspaceView({
             <textarea rows={4} value={note} onChange={(event) => onNoteChange(event.target.value)} maxLength={1000} />
           </label>
           <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={onSubmitReferral} disabled={pending}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={onSubmitReferral}
+              disabled={pending || requiresLoginSession}
+            >
               {copy.submitAction}
             </button>
           </div>
@@ -307,7 +333,7 @@ export default function EmployeeRecruitmentWorkspaceView({
                           <button
                             className="btn btn-secondary btn-small"
                             type="button"
-                            disabled={pending}
+                            disabled={pending || requiresLoginSession}
                             onClick={() => onWithdrawReferral(referral.id)}
                           >
                             {copy.withdrawAction}

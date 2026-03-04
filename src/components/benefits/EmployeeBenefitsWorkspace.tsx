@@ -32,7 +32,12 @@ export default function EmployeeBenefitsWorkspace() {
   const { locale } = useI18n();
   const copy = resolveEmployeeBenefitsCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const productionSessionRequiredNotice =
+    locale === "ko"
+      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
+      : "A login session is required in production. Please sign in again at /login.";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
 
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
@@ -55,6 +60,8 @@ export default function EmployeeBenefitsWorkspace() {
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const catalogById = useMemo(() => {
     const map = new Map<string, BenefitCatalogItem>();
@@ -125,7 +132,7 @@ export default function EmployeeBenefitsWorkspace() {
 
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "employee";
         headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
         headers["x-actor-organization-id"] = organizationId.trim();
@@ -145,6 +152,10 @@ export default function EmployeeBenefitsWorkspace() {
   }
 
   async function loadWorkspace() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -184,6 +195,10 @@ export default function EmployeeBenefitsWorkspace() {
   }
 
   async function submitRequest() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -229,6 +244,10 @@ export default function EmployeeBenefitsWorkspace() {
   }
 
   async function cancelRequest(requestId: string) {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     const { response } = await callApi("POST", `/api/benefits/requests/${encodeURIComponent(requestId)}/cancel`, {});
     if (!response.ok) {
       setStatusMessage(copy.messages.cancelFailed);
@@ -250,12 +269,12 @@ export default function EmployeeBenefitsWorkspace() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
   useEffect(() => {
-    if (autoLoadAttempted || (!organizationId.trim() && !usesBearerToken)) {
+    if (autoLoadAttempted || requiresLoginSession || (!organizationId.trim() && !usesBearerToken)) {
       return;
     }
     setAutoLoadAttempted(true);
     void loadWorkspace();
-  }, [autoLoadAttempted, organizationId, usesBearerToken]);
+  }, [autoLoadAttempted, organizationId, requiresLoginSession, usesBearerToken]);
 
   return (
     <EmployeeBenefitsWorkspaceView
@@ -263,6 +282,8 @@ export default function EmployeeBenefitsWorkspace() {
       isKoLocale={locale === "ko"}
       runtimeLocale={runtimeLocale}
       showDevTools={showDevTools}
+      requiresLoginSession={requiresLoginSession}
+      productionSessionRequiredNotice={productionSessionRequiredNotice}
       sessionOrganizationId={organizationId}
       sessionEmployeeId={employeeId}
       requestableCatalog={requestableCatalog}

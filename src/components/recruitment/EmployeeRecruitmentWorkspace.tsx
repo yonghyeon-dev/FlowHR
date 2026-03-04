@@ -34,7 +34,12 @@ export default function EmployeeRecruitmentWorkspace() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveEmployeeRecruitmentCopy(locale);
+  const productionSessionRequiredNotice =
+    locale === "ko"
+      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
+      : "A login session is required in production. Please sign in again at /login.";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
@@ -62,6 +67,8 @@ export default function EmployeeRecruitmentWorkspace() {
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const openingById = useMemo(() => {
     const map = new Map<string, RecruitmentOpeningItem>();
@@ -117,7 +124,7 @@ export default function EmployeeRecruitmentWorkspace() {
 
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "employee";
         headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
         headers["x-actor-organization-id"] = organizationId.trim();
@@ -137,6 +144,10 @@ export default function EmployeeRecruitmentWorkspace() {
   }
 
   async function loadWorkspace() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -174,6 +185,10 @@ export default function EmployeeRecruitmentWorkspace() {
   }
 
   async function submitReferral() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -235,6 +250,10 @@ export default function EmployeeRecruitmentWorkspace() {
   }
 
   async function withdrawReferral(referralId: string) {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     const { response } = await callApi(
       "POST",
       `/api/recruitment/referrals/${encodeURIComponent(referralId)}/withdraw`,
@@ -249,18 +268,20 @@ export default function EmployeeRecruitmentWorkspace() {
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
   useEffect(() => {
-    if (autoLoadAttempted || (!organizationId.trim() && !usesBearerToken)) {
+    if (autoLoadAttempted || requiresLoginSession || (!organizationId.trim() && !usesBearerToken)) {
       return;
     }
     setAutoLoadAttempted(true);
     void loadWorkspace();
-  }, [autoLoadAttempted, organizationId, usesBearerToken]);
+  }, [autoLoadAttempted, organizationId, requiresLoginSession, usesBearerToken]);
 
   return (
     <EmployeeRecruitmentWorkspaceView
       copy={copy}
       isKoLocale={locale === "ko"}
       showDevTools={showDevTools}
+      requiresLoginSession={requiresLoginSession}
+      productionSessionRequiredNotice={productionSessionRequiredNotice}
       sessionOrganizationId={organizationId}
       sessionEmployeeId={employeeId}
       openings={openings}

@@ -35,9 +35,14 @@ export default function EmployeeScheduleBoard() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const productionSessionRequiredNotice =
+    isKoLocale
+      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
+      : "A login session is required in production. Please sign in again at /login.";
   const copy = employeeScheduleCopyByLocale[locale];
   const monthRange = buildCurrentMonthDateRange();
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const isProductionRuntime = process.env.NODE_ENV === "production";
   const [fromDate, setFromDate] = useState(monthRange.fromDate);
   const [toDate, setToDate] = useState(monthRange.toDate);
   const [statusFilter, setStatusFilter] = useState<ScheduleStatusFilter>("all");
@@ -53,6 +58,8 @@ export default function EmployeeScheduleBoard() {
   const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const summary = useMemo(() => {
     const nowMs = Date.now();
@@ -130,6 +137,10 @@ export default function EmployeeScheduleBoard() {
   }, [logs]);
 
   async function loadSchedules() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!fromDate || !toDate) {
       setStatusMessage(copy.statusNeedsRange);
       return;
@@ -144,7 +155,7 @@ export default function EmployeeScheduleBoard() {
       const headers: Record<string, string> = {};
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "employee";
         headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
         headers["x-actor-organization-id"] = organizationId.trim();
@@ -220,6 +231,8 @@ export default function EmployeeScheduleBoard() {
       copy={copy}
       runtimeLocale={runtimeLocale}
       showDevTools={showDevTools}
+      requiresLoginSession={requiresLoginSession}
+      productionSessionRequiredNotice={productionSessionRequiredNotice}
       statusMessage={statusMessage}
       pendingLabel={pendingLabel}
       logStats={logStats}

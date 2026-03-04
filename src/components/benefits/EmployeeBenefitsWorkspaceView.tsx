@@ -16,6 +16,8 @@ type EmployeeBenefitsWorkspaceViewProps = {
   isKoLocale: boolean;
   runtimeLocale: string;
   showDevTools: boolean;
+  requiresLoginSession: boolean;
+  productionSessionRequiredNotice: string;
   sessionOrganizationId: string;
   sessionEmployeeId: string;
   requestableCatalog: BenefitCatalogItem[];
@@ -52,6 +54,8 @@ export default function EmployeeBenefitsWorkspaceView({
   isKoLocale,
   runtimeLocale,
   showDevTools,
+  requiresLoginSession,
+  productionSessionRequiredNotice,
   sessionOrganizationId,
   sessionEmployeeId,
   requestableCatalog,
@@ -98,11 +102,18 @@ export default function EmployeeBenefitsWorkspaceView({
           <Link className="btn btn-secondary" href="/employee">
             {sourceEntry ? sourceEntry.returnLabel : "/employee"}
           </Link>
-          <Link className="btn btn-secondary" href="/admin/benefits">
-            /admin/benefits
-          </Link>
+          {showDevTools ? (
+            <Link className="btn btn-secondary" href="/admin/benefits">
+              /admin/benefits
+            </Link>
+          ) : null}
         </div>
       </header>
+      {requiresLoginSession ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        </p>
+      ) : null}
 
       <section className="panel-grid">
         <article className="panel">
@@ -145,10 +156,20 @@ export default function EmployeeBenefitsWorkspaceView({
             />
           </label>
           <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={onLoadWorkspace} disabled={pending}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={onLoadWorkspace}
+              disabled={pending || requiresLoginSession}
+            >
               {copy.refreshAction}
             </button>
-            <button className="btn btn-secondary" type="button" onClick={onClearRequestSearch} disabled={pending}>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={onClearRequestSearch}
+              disabled={pending || requiresLoginSession}
+            >
               {copy.clearSearchAction}
             </button>
           </div>
@@ -200,7 +221,12 @@ export default function EmployeeBenefitsWorkspaceView({
             </>
           ) : null}
           <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={onSubmitRequest} disabled={pending}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={onSubmitRequest}
+              disabled={pending || requiresLoginSession}
+            >
               {copy.submitAction}
             </button>
           </div>
@@ -279,7 +305,7 @@ export default function EmployeeBenefitsWorkspaceView({
                           <button
                             className="btn btn-secondary btn-small"
                             type="button"
-                            disabled={pending}
+                            disabled={pending || requiresLoginSession}
                             onClick={() => onCancelRequest(item.id)}
                           >
                             {copy.cancelAction}
