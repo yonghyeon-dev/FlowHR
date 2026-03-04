@@ -34,16 +34,34 @@ type RefreshEmployeeSnapshotResult = {
   leaveBalance?: LeaveBalanceDto | null;
 };
 
+const DEV_FALLBACK_EMPLOYEE_ID = "EMP-1001";
+
+function resolveEmployeeId(
+  employeeId: string,
+  allowDevEmployeeIdFallback: boolean
+) {
+  const normalized = employeeId.trim();
+  if (normalized.length > 0) {
+    return normalized;
+  }
+  return allowDevEmployeeIdFallback ? DEV_FALLBACK_EMPLOYEE_ID : "";
+}
+
 export async function refreshEmployeeSnapshotFromHelper(input: {
   callApi: EmployeeCallApi;
   callApiLabels: EmployeeCallApiLabels;
   fromIso: string;
   toIso: string;
   employeeId: string;
+  allowDevEmployeeIdFallback: boolean;
   selectedCorrectionRecordId: string;
   lastAttendanceId: string;
   buildQuery: (params: Record<string, string | undefined>) => string;
 }): Promise<RefreshEmployeeSnapshotResult> {
+  const resolvedEmployeeId = resolveEmployeeId(
+    input.employeeId,
+    input.allowDevEmployeeIdFallback
+  );
   const [attendanceRes, leaveRes, scheduleRes, balanceRes] = await Promise.all([
     input.callApi(
       input.callApiLabels.attendanceList,
@@ -63,7 +81,7 @@ export async function refreshEmployeeSnapshotFromHelper(input: {
     input.callApi(
       input.callApiLabels.leaveBalance,
       "GET",
-      `/api/leave/balances/${encodeURIComponent(input.employeeId.trim())}`
+      `/api/leave/balances/${encodeURIComponent(resolvedEmployeeId)}`
     )
   ]);
 
@@ -116,6 +134,7 @@ export async function createAttendanceFromHelper(input: {
   callApi: EmployeeCallApi;
   callApiLabels: EmployeeCallApiLabels;
   employeeId: string;
+  allowDevEmployeeIdFallback: boolean;
   checkInAt: string;
   checkOutAt: string;
   breakMinutes: string;
@@ -124,12 +143,16 @@ export async function createAttendanceFromHelper(input: {
   toIso: (value: string) => string;
   coerceNumber: (value: string, fallback?: number) => number;
 }): Promise<{ ok: boolean; createdRecordId: string | null }> {
+  const resolvedEmployeeId = resolveEmployeeId(
+    input.employeeId,
+    input.allowDevEmployeeIdFallback
+  );
   const { response, body } = await input.callApi(
     input.callApiLabels.createAttendance,
     "POST",
     "/api/attendance/records",
     {
-      employeeId: input.employeeId.trim(),
+      employeeId: resolvedEmployeeId,
       checkInAt: input.toIso(input.checkInAt),
       checkOutAt: input.checkOutAt ? input.toIso(input.checkOutAt) : undefined,
       breakMinutes: Math.max(0, Math.trunc(input.coerceNumber(input.breakMinutes))),
@@ -206,6 +229,7 @@ export async function createLeaveFromHelper(input: {
   callApi: EmployeeCallApi;
   callApiLabels: EmployeeCallApiLabels;
   employeeId: string;
+  allowDevEmployeeIdFallback: boolean;
   leaveType: "ANNUAL" | "SICK" | "UNPAID";
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveStartDate: string;
@@ -215,12 +239,16 @@ export async function createLeaveFromHelper(input: {
   toIso: (value: string) => string;
   coerceNumber: (value: string, fallback?: number) => number;
 }): Promise<{ ok: boolean; requestId: string | null }> {
+  const resolvedEmployeeId = resolveEmployeeId(
+    input.employeeId,
+    input.allowDevEmployeeIdFallback
+  );
   const { response, body } = await input.callApi(
     input.callApiLabels.createLeave,
     "POST",
     "/api/leave/requests",
     {
-      employeeId: input.employeeId.trim(),
+      employeeId: resolvedEmployeeId,
       leaveType: input.leaveType,
       startDate: input.toIso(input.leaveStartDate),
       endDate: input.toIso(input.leaveEndDate),

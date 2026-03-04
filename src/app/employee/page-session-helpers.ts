@@ -21,6 +21,7 @@ export function useEmployeeRuntimeSession({
       : isProductionRuntime
         ? ""
         : (supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
+  const hasBoundEmployeeId = sessionEmployeeId.length > 0;
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
@@ -33,6 +34,7 @@ export function useEmployeeRuntimeSession({
     supabaseSessionError,
     organizationId,
     employeeId,
+    hasBoundEmployeeId,
     bearerToken,
     usesBearerToken,
     supabaseUrl

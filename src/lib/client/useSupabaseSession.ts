@@ -19,29 +19,38 @@ type SupabaseSessionState = {
   error: string | null;
 };
 
+function readAppMetadataString(
+  app: Record<string, unknown>,
+  ...keys: string[]
+): string | null {
+  for (const key of keys) {
+    const value = app[key];
+    if (typeof value !== "string") {
+      continue;
+    }
+    const normalized = value.trim();
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+  return null;
+}
+
 function toSnapshot(session: Session | null): SupabaseSessionSnapshot | null {
   if (!session?.access_token || !session.user?.id) {
     return null;
   }
 
   const app = (session.user.app_metadata ?? {}) as Record<string, unknown>;
-  const role = typeof app.role === "string" ? app.role : null;
-  const organizationId =
-    typeof app.organization_id === "string"
-      ? app.organization_id
-      : typeof app.organizationId === "string"
-        ? app.organizationId
-        : null;
-  const actorId =
-    typeof app.actor_id === "string"
-      ? app.actor_id
-      : typeof app.actorId === "string"
-        ? app.actorId
-        : typeof app.employee_id === "string"
-          ? app.employee_id
-          : typeof app.employeeId === "string"
-            ? app.employeeId
-        : null;
+  const role = readAppMetadataString(app, "role");
+  const organizationId = readAppMetadataString(app, "organization_id", "organizationId");
+  const actorId = readAppMetadataString(
+    app,
+    "actor_id",
+    "employee_id",
+    "actorId",
+    "employeeId"
+  );
 
   return {
     accessToken: session.access_token,
