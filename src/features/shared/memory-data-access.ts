@@ -563,6 +563,7 @@ function updateAttendanceEntity(
     breakMinutes: input.breakMinutes ?? existing.breakMinutes,
     isHoliday: input.isHoliday ?? existing.isHoliday,
     notes: input.notes !== undefined ? input.notes : existing.notes,
+    anomalyType: input.anomalyType !== undefined ? input.anomalyType ?? undefined : existing.anomalyType,
     captureChannel: input.captureChannel ?? existing.captureChannel,
     captureDeviceId:
       input.captureDeviceId !== undefined ? input.captureDeviceId : existing.captureDeviceId,
@@ -1439,6 +1440,7 @@ export const memoryDataAccess: DataAccess = {
         breakMinutes: input.breakMinutes,
         isHoliday: input.isHoliday,
         notes: input.notes ?? null,
+        anomalyType: input.anomalyType,
         captureChannel: input.captureChannel ?? "MANUAL",
         captureDeviceId: input.captureDeviceId ?? null,
         captureIpAddress: input.captureIpAddress ?? null,
@@ -1511,6 +1513,27 @@ export const memoryDataAccess: DataAccess = {
         }
         if (input.state && entity.state !== input.state) {
           continue;
+        }
+        rows.push(cloneAttendance(entity));
+      }
+      rows.sort((a, b) => a.checkInAt.getTime() - b.checkInAt.getTime());
+      return rows;
+    },
+
+    async listOpenRecordsNeedingAutoClose(input) {
+      const rows: AttendanceRecordEntity[] = [];
+      for (const entity of state.attendance.values()) {
+        if (entity.checkOutAt !== null) {
+          continue;
+        }
+        if (entity.checkInAt > input.clockInBefore) {
+          continue;
+        }
+        if (input.organizationId) {
+          const employee = state.employees.get(entity.employeeId);
+          if (!employee || employee.organizationId !== input.organizationId) {
+            continue;
+          }
         }
         rows.push(cloneAttendance(entity));
       }

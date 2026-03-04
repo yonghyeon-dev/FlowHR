@@ -272,6 +272,7 @@ model AttendanceRecord {
   breakMinutes          Int                      @default(0)
   isHoliday             Boolean                  @default(false)
   notes                 String?
+  anomalyType           String?
   captureChannel        AttendanceCaptureChannel @default(MANUAL)
   captureDeviceId       String?
   captureIpAddress      String?

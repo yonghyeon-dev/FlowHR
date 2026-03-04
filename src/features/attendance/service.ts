@@ -62,6 +62,12 @@ type ListAttendanceAggregatesInput = {
   employeeId?: string;
 };
 
+type AutoCloseAttendanceInput = {
+  now?: Date;
+  thresholdHours?: number;
+  defaultWorkHours?: number;
+};
+
 export type AttendanceAggregate = {
   employeeId: string;
   periodStart: Date;
@@ -76,11 +82,19 @@ export type AttendanceAggregate = {
   totals: PayableMinutes;
 };
 
+export type AutoCloseAttendanceResult = {
+  closedCount: number;
+  records: AttendanceRecordEntity[];
+};
+
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
   eventPublisher?: DomainEventPublisher;
 };
+
+const AUTO_CLOSE_THRESHOLD_HOURS = 12;
+const AUTO_CLOSE_WORK_HOURS = 9;
 
 function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
@@ -1794,6 +1808,73 @@ export async function rejectAttendanceRecord(
   });
 
   return record;
+}
+
+function assertPositiveHourValue(value: number, label: string) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new ServiceError(400, `${label} must be a positive number`);
+  }
+}
+
+export async function autoCloseAttendanceRecords(
+  context: ServiceContext,
+  input: AutoCloseAttendanceInput = {}
+): Promise<AutoCloseAttendanceResult> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  if (actor.role !== "admin") {
+    throw new ServiceError(403, "auto close requires admin role");
+  }
+
+  const now = input.now ?? new Date();
+  const thresholdHours = input.thresholdHours ?? AUTO_CLOSE_THRESHOLD_HOURS;
+  const defaultWorkHours = input.defaultWorkHours ?? AUTO_CLOSE_WORK_HOURS;
+  assertPositiveHourValue(thresholdHours, "thresholdHours");
+  assertPositiveHourValue(defaultWorkHours, "defaultWorkHours");
+
+  const thresholdMs = thresholdHours * 60 * 60 * 1000;
+  const defaultWorkMs = defaultWorkHours * 60 * 60 * 1000;
+  const clockInBefore = new Date(now.getTime() - thresholdMs);
+  const organizationId = resolveTenantScope(actor) ?? undefined;
+
+  const targets = await context.dataAccess.attendance.listOpenRecordsNeedingAutoClose({
+    clockInBefore,
+    organizationId
+  });
+
+  const records: AttendanceRecordEntity[] = [];
+  for (const target of targets) {
+    const autoClosedClockOutAt = new Date(target.checkInAt.getTime() + defaultWorkMs);
+    const record = await context.dataAccess.attendance.update(target.id, {
+      checkOutAt: autoClosedClockOutAt,
+      anomalyType: "AUTO_CLOSED"
+    });
+
+    const employee = await context.dataAccess.employees.findById(record.employeeId);
+    await context.dataAccess.audit.append({
+      action: "attendance.auto_closed",
+      entityType: "AttendanceRecord",
+      entityId: record.id,
+      organizationId: employee?.organizationId ?? null,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        employeeId: record.employeeId,
+        checkInAt: record.checkInAt.toISOString(),
+        checkOutAt: record.checkOutAt?.toISOString() ?? null,
+        anomalyType: record.anomalyType ?? null
+      }
+    });
+
+    records.push(record);
+  }
+
+  return {
+    closedCount: records.length,
+    records
+  };
 }
 
 function ensureValidPeriod(periodStart: Date, periodEnd: Date) {

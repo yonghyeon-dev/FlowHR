@@ -131,6 +131,7 @@ function toAttendanceEntity(record: {
   breakMinutes: number;
   isHoliday: boolean;
   notes: string | null;
+  anomalyType: string | null;
   captureChannel: "MANUAL" | "GPS" | "QR" | "WIFI" | "DEVICE";
   captureDeviceId: string | null;
   captureIpAddress: string | null;
@@ -143,7 +144,10 @@ function toAttendanceEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): AttendanceRecordEntity {
-  return record;
+  return {
+    ...record,
+    anomalyType: record.anomalyType ?? undefined
+  };
 }
 
 function toWorkScheduleEntity(record: {
@@ -1535,6 +1539,7 @@ const attendance: AttendanceStore = {
         breakMinutes: input.breakMinutes,
         isHoliday: input.isHoliday,
         notes: input.notes ?? null,
+        anomalyType: input.anomalyType ?? null,
         captureChannel: input.captureChannel ?? "MANUAL",
         captureDeviceId: input.captureDeviceId ?? null,
         captureIpAddress: input.captureIpAddress ?? null,
@@ -1562,6 +1567,7 @@ const attendance: AttendanceStore = {
         breakMinutes: input.breakMinutes,
         isHoliday: input.isHoliday,
         notes: input.notes,
+        anomalyType: input.anomalyType === undefined ? undefined : input.anomalyType,
         captureChannel: input.captureChannel,
         captureDeviceId: input.captureDeviceId,
         captureIpAddress: input.captureIpAddress,
@@ -1613,6 +1619,20 @@ const attendance: AttendanceStore = {
         ...(input.organizationId ? { employee: { organizationId: input.organizationId } } : {}),
         ...(input.employeeId ? { employeeId: input.employeeId } : {}),
         ...(input.state ? { state: input.state } : {})
+      },
+      orderBy: { checkInAt: "asc" }
+    });
+    return records.map(toAttendanceEntity);
+  },
+
+  async listOpenRecordsNeedingAutoClose(input: { clockInBefore: Date; organizationId?: string }) {
+    const records = await prisma.attendanceRecord.findMany({
+      where: {
+        checkOutAt: null,
+        checkInAt: {
+          lte: input.clockInBefore
+        },
+        ...(input.organizationId ? { employee: { organizationId: input.organizationId } } : {})
       },
       orderBy: { checkInAt: "asc" }
     });
