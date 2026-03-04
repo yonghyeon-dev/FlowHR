@@ -348,6 +348,7 @@ function cloneNoticeReadReceipt(entity: NoticeReadReceiptEntity): NoticeReadRece
 function cloneNoticeNotification(entity: NoticeNotificationEntity): NoticeNotificationEntity {
   return {
     ...entity,
+    employeeId: entity.employeeId,
     enqueuedAt: cloneDate(entity.enqueuedAt),
     deliveredAt: entity.deliveredAt ? cloneDate(entity.deliveredAt) : null,
     createdAt: cloneDate(entity.createdAt),
@@ -2249,6 +2250,7 @@ export const memoryDataAccess: DataAccess = {
         id: nextId("NQ"),
         organizationId: input.organizationId,
         noticeId: input.noticeId,
+        employeeId: input.employeeId ?? null,
         audience: input.audience,
         channel: input.channel,
         state: input.state ?? "QUEUED",
@@ -2286,6 +2288,7 @@ export const memoryDataAccess: DataAccess = {
     async list(input: {
       organizationId: string;
       noticeId?: string;
+      employeeId?: string;
       state?: NoticeNotificationState;
       limit?: number;
     }) {
@@ -2296,6 +2299,9 @@ export const memoryDataAccess: DataAccess = {
           continue;
         }
         if (input.noticeId && notification.noticeId !== input.noticeId) {
+          continue;
+        }
+        if (input.employeeId && notification.employeeId !== input.employeeId) {
           continue;
         }
         if (input.state && notification.state !== input.state) {

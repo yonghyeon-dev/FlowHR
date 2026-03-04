@@ -42,6 +42,7 @@ type NoticeNotificationEntity = {
   id: string;
   organizationId: string;
   noticeId: string;
+  employeeId: string | null;
   audience: "all" | "employees" | "admins";
   channel: "in_app";
   state: "QUEUED" | "DELIVERED" | "FAILED";
@@ -186,6 +187,7 @@ function createContext() {
         async create(input: {
           organizationId: string;
           noticeId: string;
+          employeeId?: string | null;
           audience: "all" | "employees" | "admins";
           channel: "in_app";
           state?: "QUEUED" | "DELIVERED" | "FAILED";
@@ -198,6 +200,7 @@ function createContext() {
             id: nextId("NQ"),
             organizationId: input.organizationId,
             noticeId: input.noticeId,
+            employeeId: input.employeeId ?? null,
             audience: input.audience,
             channel: input.channel,
             state: input.state ?? "QUEUED",
@@ -233,10 +236,17 @@ function createContext() {
           notifications.set(id, next);
           return { ...next };
         },
-        async list(input: { organizationId: string; noticeId?: string; state?: "QUEUED" | "DELIVERED" | "FAILED"; limit?: number }) {
+        async list(input: {
+          organizationId: string;
+          noticeId?: string;
+          employeeId?: string;
+          state?: "QUEUED" | "DELIVERED" | "FAILED";
+          limit?: number;
+        }) {
           const rows = Array.from(notifications.values())
             .filter((row) => row.organizationId === input.organizationId)
             .filter((row) => (input.noticeId ? row.noticeId === input.noticeId : true))
+            .filter((row) => (input.employeeId ? row.employeeId === input.employeeId : true))
             .filter((row) => (input.state ? row.state === input.state : true))
             .sort((a, b) => b.enqueuedAt.getTime() - a.enqueuedAt.getTime());
           return rows.slice(0, input.limit ?? 500).map((row) => ({ ...row }));

@@ -10,6 +10,7 @@ import {
   ensureValidPeriod,
   isPayrollClosePeriodEnabled,
   isPayrollPayslipDeliveryEnabled,
+  toSeoulDateTimeParts,
   toKrwInteger
 } from "@/features/payroll/service-runtime-helpers";
 import {
@@ -30,6 +31,13 @@ import {
   getEventPublisher,
   requirePayrollPermission
 } from "@/features/payroll/service-context-helpers";
+
+const PAYSLIP_DISTRIBUTION_NOTICE_TITLE = "급여명세서 도착";
+
+function buildPayslipDistributionNoticeBody(periodEnd: Date) {
+  const period = toSeoulDateTimeParts(periodEnd);
+  return `${period.year}년 ${String(period.month).padStart(2, "0")}월 급여명세서가 발행되었습니다.`;
+}
 
 export async function closePayrollPeriodFromHelper(
   context: ServiceContext,
@@ -187,6 +195,15 @@ export async function distributePayrollPayslipsFromHelper(
   const previewedRuns = runs.filter((run) => run.state !== "CONFIRMED");
   const alreadyDistributedRuns = confirmedRuns.filter((run) => run.payslipDistributedAt !== null);
   const newlyDistributableRuns = confirmedRuns.filter((run) => run.payslipDistributedAt === null);
+  const targetEmployeeIds = Array.from(
+    new Set(
+      confirmedRuns
+        .map((run) => run.employeeId)
+        .filter((employeeId): employeeId is string => Boolean(employeeId))
+    )
+  );
+  const payslipDistributionNoticeBody = buildPayslipDistributionNoticeBody(input.periodEnd);
+  const enqueuedEmployeeIds: string[] = [];
 
   if (!input.dryRun) {
     const distributedAt = new Date();
@@ -197,12 +214,49 @@ export async function distributePayrollPayslipsFromHelper(
         payslipDistributedBy: context.actor!.id
       });
     }
+
+    for (const run of newlyDistributableRuns) {
+      if (!run.employeeId || !run.organizationId) {
+        continue;
+      }
+      const employeeId = run.employeeId.trim();
+      if (!employeeId || enqueuedEmployeeIds.includes(employeeId)) {
+        continue;
+      }
+
+      const autoNotice = await context.dataAccess.notices.create({
+        organizationId: run.organizationId,
+        title: PAYSLIP_DISTRIBUTION_NOTICE_TITLE,
+        body: payslipDistributionNoticeBody,
+        audience: "employees",
+        targetDepartmentIds: [],
+        status: "PUBLISHED",
+        publishAt: distributedAt,
+        publishedAt: distributedAt,
+        createdByActorId: context.actor!.id,
+        createdAt: distributedAt,
+        updatedAt: distributedAt
+      });
+
+      await context.dataAccess.noticeNotifications.create({
+        organizationId: run.organizationId,
+        noticeId: autoNotice.id,
+        employeeId,
+        audience: "employees",
+        channel: "in_app",
+        state: "QUEUED",
+        enqueuedAt: distributedAt
+      });
+
+      enqueuedEmployeeIds.push(employeeId);
+    }
   }
 
   const organizationId = tenantScope ?? confirmedRuns[0]?.organizationId ?? null;
   const commonPayload = {
     periodStart: input.periodStart.toISOString(),
     periodEnd: input.periodEnd.toISOString(),
+    employeeIds: targetEmployeeIds,
     employeeId: input.employeeId ?? null,
     dryRun: input.dryRun,
     deliveryChannel: input.deliveryChannel,
@@ -218,6 +272,13 @@ export async function distributePayrollPayslipsFromHelper(
       targetRunIds: confirmedRuns.map((run) => run.id),
       alreadyDistributedRunIds: alreadyDistributedRuns.map((run) => run.id),
       newlyDistributedRunIds: newlyDistributableRuns.map((run) => run.id)
+    },
+    notification: {
+      title: PAYSLIP_DISTRIBUTION_NOTICE_TITLE,
+      body: payslipDistributionNoticeBody,
+      targetEmployeeIds,
+      enqueuedEmployeeIds,
+      enqueuedCount: enqueuedEmployeeIds.length
     }
   };
 
