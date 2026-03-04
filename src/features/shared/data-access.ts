@@ -286,6 +286,8 @@ export type EmployeeEntity = {
   positionId: string | null;
   name: string | null;
   email: string | null;
+  phone?: string;
+  address?: string;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -639,6 +641,8 @@ export type CreateEmployeeInput = {
   positionId?: string | null;
   name?: string | null;
   email?: string | null;
+  phone?: string;
+  address?: string;
   active?: boolean;
 };
 
@@ -648,6 +652,8 @@ export type UpdateEmployeeInput = {
   positionId?: string | null;
   name?: string | null;
   email?: string | null;
+  phone?: string;
+  address?: string;
   active?: boolean;
 };
 

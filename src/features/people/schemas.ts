@@ -11,6 +11,8 @@ export const createEmployeeSchema = z.object({
   positionId: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
+  phone: z.string().min(1).max(50).optional(),
+  address: z.string().min(1).max(300).optional(),
   active: z.boolean().optional()
 });
 
@@ -21,6 +23,8 @@ export const updateEmployeeSchema = z
     positionId: z.string().min(1).nullable().optional(),
     name: z.string().min(1).max(100).nullable().optional(),
     email: z.string().email().nullable().optional(),
+    phone: z.string().min(1).max(50).optional(),
+    address: z.string().min(1).max(300).optional(),
     active: z.boolean().optional()
   })
   .refine(
@@ -30,6 +34,8 @@ export const updateEmployeeSchema = z
       value.positionId !== undefined ||
       value.name !== undefined ||
       value.email !== undefined ||
+      value.phone !== undefined ||
+      value.address !== undefined ||
       value.active !== undefined,
     { message: "at least one field is required" }
   );
