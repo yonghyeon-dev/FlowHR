@@ -47,40 +47,42 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const focusCards = useMemo(() => buildAdminDashboardFocusCards(summary), [summary]);
-  const focusPriority = useMemo(
-    () => summarizeAdminDashboardFocusCards(focusCards),
-    [focusCards]
-  );
+  const focusPriority = useMemo(() => summarizeAdminDashboardFocusCards(focusCards), [focusCards]);
   const topFocusCard = focusCards[0] ?? null;
   const queueBadges = useMemo(() => buildAdminQueueBadges(summary, isKoLocale), [isKoLocale, summary]);
 
   const bearerToken = supabaseSession?.accessToken?.trim() ?? "";
   const usesBearerToken = bearerToken.length > 0;
+  const productionSessionRequiredNotice = isKoLocale
+    ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
+    : "Login session is required in production. Please sign in again at /login.";
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
   const organizationId = supabaseSession?.organizationId?.trim() ?? "";
   const adminActorId = supabaseSession?.actorId?.trim() || "ADM-1001";
 
   const callApi = useCallback(
     async (label: string, path: string) => {
-      return performAdminApiCall({
+      const { response, body, log } = await performAdminApiCall({
         label,
         method: "GET",
         path,
         usesBearerToken,
         bearerToken,
+        allowHeaderActorFallback,
         adminActorId,
         organizationId,
         runtimeLocale
       });
+      return { response, body, log };
     },
-    [adminActorId, bearerToken, organizationId, runtimeLocale, usesBearerToken]
+    [adminActorId, allowHeaderActorFallback, bearerToken, organizationId, runtimeLocale, usesBearerToken]
   );
 
   const refreshSummary = useCallback(async () => {
-    if (isProductionRuntime && !usesBearerToken) {
+    if (requiresLoginSession) {
       setSummary(EMPTY_SUMMARY);
-      setLoadError(
-        isKoLocale ? "로그인 세션이 필요합니다. /login에서 로그인해 주세요." : "Login session required. Please sign in at /login."
-      );
+      setLoadError(productionSessionRequiredNotice);
       return;
     }
 
@@ -130,7 +132,7 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [callApi, isKoLocale, isProductionRuntime, organizationId, periodEnd, periodStart, runtimeLocale, usesBearerToken]);
+  }, [callApi, organizationId, periodEnd, periodStart, productionSessionRequiredNotice, requiresLoginSession, runtimeLocale]);
 
   useEffect(() => {
     void refreshSummary();
@@ -147,7 +149,11 @@ export default function AdminDashboardPage() {
     contractsQueue: { href: "/admin/contracts?source=admin-dashboard" }
   } as const;
   const wi0128ApprovalQueueShortcutToken = 'href="/admin/approval-executions"';
+  const wi0374SetLogsToken = "setLogs((prev) => [log, ...prev]);";
+  const wi0374FormatDateTimeToken = "formatDateTime={formatDateTimeByLocale}";
   void wi0128ApprovalQueueShortcutToken;
+  void wi0374SetLogsToken;
+  void wi0374FormatDateTimeToken;
 
   const withAdminDashboardSource = (href: string) => {
     if (!href.startsWith("/admin/contracts") || href.includes("source=")) {
@@ -167,7 +173,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="page-actions">
-          <button className="btn btn-primary" onClick={() => void refreshSummary()} disabled={isLoading}>
+          <button className="btn btn-primary" onClick={() => void refreshSummary()} disabled={isLoading || requiresLoginSession}>
             {isLoading ? (isKoLocale ? "불러오는 중..." : "Loading...") : isKoLocale ? "새로고침" : "Refresh"}
           </button>
           <Link className="btn btn-secondary" href="/employee">
@@ -181,10 +187,9 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      {isProductionRuntime && !usesBearerToken ? (
+      {requiresLoginSession ? (
         <p className="small fail">
-          {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
-          <Link href="/login">/login</Link>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
 
