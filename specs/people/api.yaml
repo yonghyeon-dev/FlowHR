@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.10
+  version: 0.3.11
 paths:
   /people/organizations:
     get:
