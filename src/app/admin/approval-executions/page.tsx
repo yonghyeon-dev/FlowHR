@@ -219,8 +219,10 @@ export default function AdminApprovalExecutionsPage() {
         ? `/api/leave/requests/${execution.targetEntityId}/approve`
         : `/api/leave/requests/${execution.targetEntityId}/reject`;
     }
-    if (execution.domain === "ATTENDANCE" && action === "approve") {
-      return `/api/attendance/records/${execution.targetEntityId}/approve`;
+    if (execution.domain === "ATTENDANCE") {
+      return action === "approve"
+        ? `/api/attendance/records/${execution.targetEntityId}/approve`
+        : `/api/attendance/records/${execution.targetEntityId}/reject`;
     }
     if (execution.domain === "PAYROLL" && action === "approve") {
       return `/api/payroll/runs/${execution.targetEntityId}/confirm`;
@@ -429,12 +431,18 @@ export default function AdminApprovalExecutionsPage() {
       return;
     }
 
-    const { response, body } = await callApi(
-      isKoLocale ? "휴가 요청 반려" : "Reject leave request",
-      "POST",
-      path,
-      { reason: normalizedReason }
-    );
+    const rejectLabel =
+      execution.domain === "LEAVE"
+        ? isKoLocale
+          ? "휴가 요청 반려"
+          : "Reject leave request"
+        : isKoLocale
+          ? "출퇴근 기록 반려"
+          : "Reject attendance record";
+
+    const { response, body } = await callApi(rejectLabel, "POST", path, {
+      reason: normalizedReason
+    });
     if (!response.ok) {
       const errorMessage = readApiErrorMessage(body);
       showTransientStatus(

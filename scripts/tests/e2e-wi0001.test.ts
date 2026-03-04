@@ -270,7 +270,10 @@ async function run() {
   const duplicateRejectResponse = await attendanceRejectRoute.POST(
     new Request(`http://localhost/api/attendance/records/${rejectedCreateBody.record.id}/reject`, {
       method: "POST",
-      headers: actorHeaders("manager", "MGR-1")
+      headers: actorHeaders("manager", "MGR-1"),
+      body: JSON.stringify({
+        reason: "duplicate reject attempt"
+      })
     }),
     { params: Promise.resolve({ recordId: rejectedCreateBody.record.id }) } as RouteContext<{
       recordId: string;

@@ -56,6 +56,22 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
   const [rejectError, setRejectError] = useState("");
 
   const actionDisabled = pendingLabel !== null;
+  const rejectModalTitle =
+    rejectTarget?.domain === "ATTENDANCE"
+      ? isKoLocale
+        ? "출퇴근 기록 반려"
+        : "Reject attendance record"
+      : isKoLocale
+        ? "휴가 요청 반려"
+        : "Reject leave request";
+  const rejectModalDescription =
+    rejectTarget?.domain === "ATTENDANCE"
+      ? isKoLocale
+        ? "반려 사유를 입력해야 출퇴근 반려 처리가 진행됩니다."
+        : "A reason is required to reject this attendance record."
+      : isKoLocale
+        ? "반려 사유를 입력해야 휴가 반려 처리가 진행됩니다."
+        : "A reason is required to reject this leave request.";
 
   function openRejectDialog(execution: ApprovalExecutionDto) {
     setRejectTarget(execution);
@@ -102,7 +118,9 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
               (execution.domain === "LEAVE" ||
                 execution.domain === "ATTENDANCE" ||
                 execution.domain === "PAYROLL");
-            const canReject = execution.state === "PENDING" && execution.domain === "LEAVE";
+            const canReject =
+              execution.state === "PENDING" &&
+              (execution.domain === "LEAVE" || execution.domain === "ATTENDANCE");
             return (
               <li key={execution.id} className={selected ? "selected-row" : undefined}>
                 <button type="button" className="execution-row-btn" onClick={() => onSelectExecution(execution)}>
@@ -163,9 +181,9 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
       {rejectTarget ? (
         <div className="approval-reject-modal-backdrop" role="dialog" aria-modal="true">
           <div className="approval-reject-modal">
-            <h3>{isKoLocale ? "휴가 요청 반려" : "Reject leave request"}</h3>
+            <h3>{rejectModalTitle}</h3>
             <p className="small muted">
-              {isKoLocale ? "반려 사유를 입력해야 반려 처리가 진행됩니다." : "A reason is required to reject this request."}
+              {rejectModalDescription}
             </p>
             <p className="small">
               {rejectTarget.targetEntityType}:{rejectTarget.targetEntityId}
