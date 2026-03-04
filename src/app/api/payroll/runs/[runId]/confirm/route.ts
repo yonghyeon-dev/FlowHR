@@ -10,13 +10,18 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   const { runId } = await context.params;
+  const acknowledgeMinWageWarning =
+    new URL(request.url).searchParams.get("acknowledgeMinWageWarning") === "true";
   try {
     const run = await confirmPayrollRun(
       {
         actor: await readActor(request),
         dataAccess: getRuntimeDataAccess()
       },
-      runId
+      runId,
+      {
+        acknowledgeMinWageWarning
+      }
     );
     return ok({ run });
   } catch (error) {

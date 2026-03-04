@@ -16,6 +16,7 @@ import {
   isPayrollYearEndEnabled,
   isPayrollYearEndFilingExportEnabled,
   isPayrollYearEndFilingSubmissionEnabled,
+  toSeoulDateTimeParts,
 } from "@/features/payroll/service-runtime-helpers";
 import type {
   AcknowledgePayrollPayslipReceiptInput,
@@ -62,6 +63,7 @@ import type {
   ListPayrollYearEndFilingAckCatalogResult,
   ListPayrollYearEndFilingSubmissionTimelineResult,
   ListPayrollYearEndFilingSubmissionsResult,
+  PayrollMinimumWageWarning,
   PreviewPayrollInsuranceSettlementResult,
   PreviewPayrollResult,
   PreviewPayrollWithDeductionsResult,
@@ -127,11 +129,124 @@ import {
   recalculatePayrollYearEndSettlementFromHelper
 } from "@/features/payroll/service-year-end-settlement-flow-helpers";
 
+export const MINIMUM_WAGE_HOURLY = 10630;
+export const MINIMUM_WAGE_EFFECTIVE_DATE = "2026-01-01";
+export const MINIMUM_WAGE_CURRENCY = "KRW";
+
+const DEFAULT_WORK_HOURS_PER_DAY = 8;
+
+type ConfirmPayrollRunOptions = {
+  acknowledgeMinWageWarning?: boolean;
+};
+
+function normalizeWorkDays(workDays: number[]): number[] {
+  const unique = new Set<number>();
+  for (const day of workDays) {
+    if (Number.isInteger(day) && day >= 1 && day <= 7) {
+      unique.add(day);
+    }
+  }
+  return Array.from(unique).sort((left, right) => left - right);
+}
+
+function daysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function toIsoWeekday(year: number, month: number, day: number) {
+  const dayOfWeek = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return dayOfWeek === 0 ? 7 : dayOfWeek;
+}
+
+function countWorkDaysInMonth(year: number, month: number, workDays: number[]) {
+  if (workDays.length === 0) {
+    return 0;
+  }
+
+  const workDaySet = new Set(workDays);
+  const monthDays = daysInMonth(year, month);
+  let count = 0;
+  for (let day = 1; day <= monthDays; day += 1) {
+    if (workDaySet.has(toIsoWeekday(year, month, day))) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function roundRate(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+async function listMinimumWageWarningsForRun(
+  context: ServiceContext,
+  run: PayrollRunEntity
+): Promise<PayrollMinimumWageWarning[]> {
+  if (!run.employeeId) {
+    return [];
+  }
+
+  let workHoursPerDay = DEFAULT_WORK_HOURS_PER_DAY;
+  let configuredWorkDays: number[] = [];
+
+  if (run.organizationId) {
+    const organization = await context.dataAccess.organizations.findById(run.organizationId);
+    if (organization) {
+      if (
+        Number.isFinite(organization.workHoursPerDay) &&
+        organization.workHoursPerDay > 0
+      ) {
+        workHoursPerDay = organization.workHoursPerDay;
+      }
+      configuredWorkDays = normalizeWorkDays(organization.workDays);
+    }
+  }
+
+  if (configuredWorkDays.length === 0) {
+    return [];
+  }
+  const workDays = configuredWorkDays;
+  const seoulStart = toSeoulDateTimeParts(run.periodStart);
+  const workDaysInMonth = countWorkDaysInMonth(seoulStart.year, seoulStart.month, workDays);
+  const monthlyWorkHours = workDaysInMonth * workHoursPerDay;
+  if (!Number.isFinite(monthlyWorkHours) || monthlyWorkHours <= 0) {
+    return [];
+  }
+
+  const baseSalary = run.grossPayKrw;
+  const effectiveRate = roundRate(baseSalary / monthlyWorkHours);
+  if (effectiveRate >= MINIMUM_WAGE_HOURLY) {
+    return [];
+  }
+
+  return [
+    {
+      employeeId: run.employeeId,
+      type: "BELOW_MINIMUM_WAGE",
+      effectiveRate,
+      minimumRate: MINIMUM_WAGE_HOURLY
+    }
+  ];
+}
+
+export function getPayrollMinimumWagePolicy() {
+  return {
+    hourlyRate: MINIMUM_WAGE_HOURLY,
+    effectiveDate: MINIMUM_WAGE_EFFECTIVE_DATE,
+    currency: MINIMUM_WAGE_CURRENCY
+  };
+}
+
 export async function previewPayroll(
   context: ServiceContext,
   input: PreviewPayrollInput
 ): Promise<PreviewPayrollResult> {
-  return previewPayrollFromHelper(context, input);
+  const preview = await previewPayrollFromHelper(context, input);
+  const warnings = await listMinimumWageWarningsForRun(context, preview.run);
+  return {
+    ...preview,
+    warnings
+  };
 }
 
 export async function previewPayrollWithDeductions(
@@ -150,7 +265,8 @@ export async function previewPayrollInsuranceSettlement(
 
 export async function confirmPayrollRun(
   context: ServiceContext,
-  runId: string
+  runId: string,
+  options: ConfirmPayrollRunOptions = {}
 ): Promise<PayrollRunEntity> {
   await requirePayrollPermission(context, Permissions.payrollRunConfirm, "confirm");
   const tenantScope = resolveTenantScope(context.actor);
@@ -163,6 +279,28 @@ export async function confirmPayrollRun(
   if (run.state !== "PREVIEWED") {
     throw new ServiceError(409, "only previewed payroll run can be confirmed");
   }
+
+  const warnings = await listMinimumWageWarningsForRun(context, run);
+  if (warnings.length > 0 && options.acknowledgeMinWageWarning !== true) {
+    throw new ServiceError(400, "minimum wage warning must be acknowledged", {
+      warnings
+    });
+  }
+  if (warnings.length > 0 && options.acknowledgeMinWageWarning === true) {
+    await context.dataAccess.audit.append({
+      action: "payroll.minimum_wage_warning_acknowledged",
+      entityType: "PayrollRun",
+      entityId: run.id,
+      organizationId: run.organizationId,
+      actorRole: context.actor!.role,
+      actorId: context.actor!.id,
+      payload: {
+        warnings,
+        minimumWage: getPayrollMinimumWagePolicy()
+      }
+    });
+  }
+
   if (run.organizationId) {
     const execution = await applyApprovalExecutionAction(context, {
       domain: "PAYROLL",

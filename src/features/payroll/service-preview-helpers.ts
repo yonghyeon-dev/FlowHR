@@ -84,7 +84,8 @@ export async function previewPayrollFromHelper(
       sourceRecordCount: computed.recordsCount,
       totals: computed.totals,
       grossPayKrw: computed.grossPayKrw
-    }
+    },
+    warnings: []
   };
 }
 
