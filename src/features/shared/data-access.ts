@@ -450,6 +450,18 @@ export type NoticeNotificationEntity = {
   updatedAt: Date;
 };
 
+export type InAppNotificationEntity = {
+  id: string;
+  organizationId: string;
+  recipientId: string;
+  type: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+  readAt?: string;
+};
+
 export type BenefitCatalogItemEntity = {
   id: string;
   organizationId: string;
@@ -967,6 +979,23 @@ export type UpdateNoticeNotificationInput = {
   lastError?: string | null;
 };
 
+export type CreateInAppNotificationInput = {
+  id?: string;
+  organizationId: string;
+  recipientId: string;
+  type: string;
+  title: string;
+  body: string;
+  isRead?: boolean;
+  createdAt?: string;
+  readAt?: string;
+};
+
+export type UpdateInAppNotificationInput = {
+  isRead?: boolean;
+  readAt?: string | null;
+};
+
 export type CreateBenefitCatalogItemInput = {
   organizationId: string;
   name: string;
@@ -1391,6 +1420,23 @@ export interface NoticeNotificationStore {
   }): Promise<NoticeNotificationEntity[]>;
 }
 
+export interface InAppNotificationStore {
+  create(input: CreateInAppNotificationInput): Promise<InAppNotificationEntity>;
+  findById(id: string): Promise<InAppNotificationEntity | null>;
+  update(id: string, input: UpdateInAppNotificationInput): Promise<InAppNotificationEntity>;
+  list(input: {
+    organizationId: string;
+    recipientId?: string;
+    unreadOnly?: boolean;
+    limit?: number;
+  }): Promise<InAppNotificationEntity[]>;
+  markAllRead(input: {
+    organizationId: string;
+    recipientId: string;
+    readAt: string;
+  }): Promise<number>;
+}
+
 export interface BenefitStore {
   createCatalogItem(input: CreateBenefitCatalogItemInput): Promise<BenefitCatalogItemEntity>;
   findCatalogItemById(id: string): Promise<BenefitCatalogItemEntity | null>;
@@ -1468,6 +1514,7 @@ export type DataAccess = {
   onboardingTasks: OnboardingTaskStore;
   insuranceEnrollments: InsuranceEnrollmentStore;
   recruitment: RecruitmentStore;
+  inAppNotifications: InAppNotificationStore;
   notices: NoticeStore;
   noticeReadReceipts: NoticeReadReceiptStore;
   noticeNotifications: NoticeNotificationStore;

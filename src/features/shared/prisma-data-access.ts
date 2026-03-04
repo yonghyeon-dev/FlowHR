@@ -27,6 +27,7 @@ import type {
   CreateLeaveRequestInput,
   CreateNoticeInput,
   CreateNoticeNotificationInput,
+  CreateInAppNotificationInput,
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
@@ -68,6 +69,8 @@ import type {
   LeavePolicyStore,
   LeaveRequestEntity,
   LeaveStore,
+  InAppNotificationEntity,
+  InAppNotificationStore,
   NoticeAudience,
   NoticeEntity,
   NoticeNotificationEntity,
@@ -109,6 +112,7 @@ import type {
   UpdateLeaveRequestInput,
   UpdateNoticeInput,
   UpdateNoticeNotificationInput,
+  UpdateInAppNotificationInput,
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
   UpdateOnboardingTaskInput,
@@ -352,6 +356,30 @@ function toNoticeNotificationEntity(record: {
   return {
     ...record,
     employeeId: null
+  };
+}
+
+function toInAppNotificationEntity(record: {
+  id: string;
+  organizationId: string;
+  recipientId: string;
+  type: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: Date;
+  readAt: Date | null;
+}): InAppNotificationEntity {
+  return {
+    id: record.id,
+    organizationId: record.organizationId,
+    recipientId: record.recipientId,
+    type: record.type,
+    title: record.title,
+    body: record.body,
+    isRead: record.isRead,
+    createdAt: record.createdAt.toISOString(),
+    ...(record.readAt ? { readAt: record.readAt.toISOString() } : {})
   };
 }
 
@@ -2430,6 +2458,84 @@ const noticeNotifications: NoticeNotificationStore = {
   }
 };
 
+const inAppNotifications: InAppNotificationStore = {
+  async create(input: CreateInAppNotificationInput) {
+    const createdAt = input.createdAt ? new Date(input.createdAt) : undefined;
+    const readAt = input.readAt ? new Date(input.readAt) : undefined;
+    const record = await prisma.inAppNotification.create({
+      data: {
+        ...(input.id ? { id: input.id } : {}),
+        organizationId: input.organizationId,
+        recipientId: input.recipientId,
+        type: input.type,
+        title: input.title,
+        body: input.body,
+        isRead: input.isRead ?? false,
+        createdAt,
+        readAt: readAt ?? null
+      }
+    });
+    return toInAppNotificationEntity(record);
+  },
+
+  async findById(id: string) {
+    const record = await prisma.inAppNotification.findUnique({
+      where: { id }
+    });
+    return record ? toInAppNotificationEntity(record) : null;
+  },
+
+  async update(id: string, input: UpdateInAppNotificationInput) {
+    const record = await prisma.inAppNotification.update({
+      where: { id },
+      data: {
+        isRead: input.isRead,
+        ...(input.readAt === undefined
+          ? {}
+          : {
+              readAt: input.readAt === null ? null : new Date(input.readAt)
+            })
+      }
+    });
+    return toInAppNotificationEntity(record);
+  },
+
+  async list(input: {
+    organizationId: string;
+    recipientId?: string;
+    unreadOnly?: boolean;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 500;
+    const normalizedLimit = Number.isInteger(limit) && limit > 0 ? limit : 500;
+    const records = await prisma.inAppNotification.findMany({
+      where: {
+        organizationId: input.organizationId,
+        ...(input.recipientId ? { recipientId: input.recipientId } : {}),
+        ...(input.unreadOnly ? { isRead: false } : {})
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: normalizedLimit
+    });
+    return records.map(toInAppNotificationEntity);
+  },
+
+  async markAllRead(input: { organizationId: string; recipientId: string; readAt: string }) {
+    const result = await prisma.inAppNotification.updateMany({
+      where: {
+        organizationId: input.organizationId,
+        recipientId: input.recipientId,
+        isRead: false
+      },
+      data: {
+        isRead: true,
+        readAt: new Date(input.readAt)
+      }
+    });
+    return result.count;
+  }
+};
+
 const benefits: BenefitStore = {
   async createCatalogItem(input: CreateBenefitCatalogItemInput) {
     const record = await prisma.benefitCatalogItem.create({
@@ -2958,6 +3064,7 @@ export const prismaDataAccess: DataAccess = {
   onboardingTasks,
   insuranceEnrollments,
   recruitment,
+  inAppNotifications,
   notices,
   noticeReadReceipts,
   noticeNotifications,

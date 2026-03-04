@@ -35,6 +35,7 @@ model Organization {
   notices                  Notice[]
   noticeReadReceipts       NoticeReadReceipt[]
   noticeNotifications      NoticeNotificationQueue[]
+  inAppNotifications       InAppNotification[]
   benefitCatalogItems      BenefitCatalogItem[]
   benefitRequests          BenefitRequest[]
   recruitmentOpenings      RecruitmentOpening[]
@@ -520,6 +521,22 @@ model NoticeNotificationQueue {
 
   @@index([organizationId, state, enqueuedAt])
   @@index([noticeId, enqueuedAt])
+}
+
+model InAppNotification {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  recipientId    String
+  type           String
+  title          String
+  body           String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+
+  @@index([organizationId, recipientId, createdAt])
+  @@index([organizationId, recipientId, isRead, createdAt])
 }
 
 model RecruitmentOpening {

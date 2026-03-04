@@ -41,8 +41,10 @@ import type {
   EmployeeEntity,
   BenefitCatalogItemEntity,
   BenefitRequestEntity,
+  CreateInAppNotificationInput,
   InsuranceEnrollmentEntity,
   InsuranceEnrollmentType,
+  InAppNotificationEntity,
   OnboardingTaskEntity,
   OnboardingTaskStatus,
   LeaveBalanceEntity,
@@ -75,6 +77,7 @@ import type {
   UpdateOrganizationInput,
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
+  UpdateInAppNotificationInput,
   UpdateOnboardingTaskInput,
   UpsertInsuranceEnrollmentInput,
   UpdateLeaveRequestInput,
@@ -129,6 +132,7 @@ type MemoryState = {
   noticeNotifications: Map<string, NoticeNotificationEntity>;
   recruitmentOpenings: Map<string, RecruitmentOpeningEntity>;
   recruitmentReferrals: Map<string, RecruitmentReferralEntity>;
+  inAppNotifications: Map<string, InAppNotificationEntity>;
   payroll: Map<string, PayrollRunEntity>;
   deductionProfiles: Map<string, DeductionProfileEntity>;
   audit: AuditLogEntity[];
@@ -182,6 +186,7 @@ function createState(): MemoryState {
     noticeNotifications: new Map<string, NoticeNotificationEntity>(),
     recruitmentOpenings: new Map<string, RecruitmentOpeningEntity>(),
     recruitmentReferrals: new Map<string, RecruitmentReferralEntity>(),
+    inAppNotifications: new Map<string, InAppNotificationEntity>(),
     payroll: new Map<string, PayrollRunEntity>(),
     deductionProfiles: new Map<string, DeductionProfileEntity>(),
     audit: []
@@ -354,6 +359,13 @@ function cloneNoticeNotification(entity: NoticeNotificationEntity): NoticeNotifi
     deliveredAt: entity.deliveredAt ? cloneDate(entity.deliveredAt) : null,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneInAppNotification(entity: InAppNotificationEntity): InAppNotificationEntity {
+  return {
+    ...entity,
+    readAt: entity.readAt
   };
 }
 
@@ -2386,6 +2398,102 @@ export const memoryDataAccess: DataAccess = {
         return right.id.localeCompare(left.id);
       });
       return rows.slice(0, limit);
+    }
+  },
+
+  inAppNotifications: {
+    async create(input: CreateInAppNotificationInput) {
+      const createdAt = input.createdAt ?? new Date().toISOString();
+      const normalizedReadAt = input.readAt ?? (input.isRead ? createdAt : undefined);
+      const notification: InAppNotificationEntity = {
+        id: input.id ?? nextId("IAPN"),
+        organizationId: input.organizationId,
+        recipientId: input.recipientId,
+        type: input.type,
+        title: input.title,
+        body: input.body,
+        isRead: input.isRead ?? false,
+        createdAt,
+        ...(normalizedReadAt ? { readAt: normalizedReadAt } : {})
+      };
+      state.inAppNotifications.set(notification.id, notification);
+      return cloneInAppNotification(notification);
+    },
+
+    async findById(id: string) {
+      const notification = state.inAppNotifications.get(id);
+      return notification ? cloneInAppNotification(notification) : null;
+    },
+
+    async update(id: string, input: UpdateInAppNotificationInput) {
+      const existing = state.inAppNotifications.get(id);
+      if (!existing) {
+        throw new Error(`in-app notification not found: ${id}`);
+      }
+      const nextIsRead = input.isRead ?? existing.isRead;
+      const readAt = input.readAt === null ? undefined : input.readAt ?? existing.readAt;
+      const updated: InAppNotificationEntity = {
+        ...existing,
+        isRead: nextIsRead,
+        ...(readAt ? { readAt } : {})
+      };
+      if (!readAt) {
+        delete updated.readAt;
+      }
+      state.inAppNotifications.set(id, updated);
+      return cloneInAppNotification(updated);
+    },
+
+    async list(input: {
+      organizationId: string;
+      recipientId?: string;
+      unreadOnly?: boolean;
+      limit?: number;
+    }) {
+      const rows: InAppNotificationEntity[] = [];
+      const limit = input.limit && input.limit > 0 ? input.limit : 500;
+      for (const notification of state.inAppNotifications.values()) {
+        if (notification.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.recipientId && notification.recipientId !== input.recipientId) {
+          continue;
+        }
+        if (input.unreadOnly && notification.isRead) {
+          continue;
+        }
+        rows.push(cloneInAppNotification(notification));
+      }
+      rows.sort((left, right) => {
+        const byCreatedAt = right.createdAt.localeCompare(left.createdAt);
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows.slice(0, limit);
+    },
+
+    async markAllRead(input: { organizationId: string; recipientId: string; readAt: string }) {
+      let updatedCount = 0;
+      for (const [id, notification] of state.inAppNotifications.entries()) {
+        if (notification.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (notification.recipientId !== input.recipientId) {
+          continue;
+        }
+        if (notification.isRead) {
+          continue;
+        }
+        state.inAppNotifications.set(id, {
+          ...notification,
+          isRead: true,
+          readAt: input.readAt
+        });
+        updatedCount += 1;
+      }
+      return updatedCount;
     }
   },
 
