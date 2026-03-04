@@ -7,6 +7,7 @@ import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
 
 function canManageOpenings(role: string | null | undefined) {
   return role === "admin" || role === "manager";
@@ -29,8 +30,7 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
-  const isProduction = process.env.NODE_ENV === "production";
-  if (!actor && isProduction) {
+  if (!actor && IS_PRODUCTION_RUNTIME) {
     return fail(401, "recruitment.opening.list.unauthorized");
   }
   const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
@@ -40,11 +40,9 @@ export async function GET(request: Request) {
       reason: "organization_scope_mismatch"
     });
   }
-  const organizationId = isProduction
-    ? actorOrganizationId
-    : actorOrganizationId ?? requestedOrganizationId ?? DEFAULT_ORG_ID;
+  const organizationId = actorOrganizationId ?? (IS_PRODUCTION_RUNTIME ? null : requestedOrganizationId ?? DEFAULT_ORG_ID);
   if (!organizationId) {
-    return fail(401, "recruitment.opening.list.unauthorized");
+    return fail(400, "recruitment.opening.list.organization_id_required");
   }
   const openings = await listRecruitmentOpenings({
     organizationId,
@@ -80,7 +78,10 @@ export async function POST(request: Request) {
       reason: "organization_scope_mismatch"
     });
   }
-  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? DEFAULT_ORG_ID;
+  const organizationId = actorOrganizationId ?? (IS_PRODUCTION_RUNTIME ? null : requestedOrganizationId ?? DEFAULT_ORG_ID);
+  if (!organizationId) {
+    return fail(400, "recruitment.opening.create.organization_id_required");
+  }
 
   const created = await createRecruitmentOpening({
     organizationId,

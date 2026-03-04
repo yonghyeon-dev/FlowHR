@@ -12,6 +12,7 @@ import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
 
 function canReviewRequests(role: string | null | undefined) {
   return role === "admin" || role === "manager";
@@ -20,6 +21,29 @@ function canReviewRequests(role: string | null | undefined) {
 function normalizeOrganizationId(value: string | null | undefined) {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+function resolveOrganizationScope(input: {
+  actorOrganizationId: string | null | undefined;
+  requestedOrganizationId: string | null | undefined;
+}) {
+  const actorOrganizationId = normalizeOrganizationId(input.actorOrganizationId);
+  const requestedOrganizationId = normalizeOrganizationId(input.requestedOrganizationId);
+
+  if (IS_PRODUCTION_RUNTIME) {
+    return {
+      organizationId: actorOrganizationId,
+      mismatch:
+        Boolean(actorOrganizationId) &&
+        Boolean(requestedOrganizationId) &&
+        actorOrganizationId !== requestedOrganizationId
+    };
+  }
+
+  return {
+    organizationId: requestedOrganizationId ?? actorOrganizationId ?? DEFAULT_ORG_ID,
+    mismatch: false
+  };
 }
 
 export async function GET(request: Request) {
@@ -36,22 +60,20 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
-  const isProduction = process.env.NODE_ENV === "production";
-  if (!actor && isProduction) {
+  if (!actor && IS_PRODUCTION_RUNTIME) {
     return fail(401, "benefits.request.list.unauthorized");
   }
-  const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
-  const requestedOrganizationId = normalizeOrganizationId(parsed.data.organizationId);
-  if (isProduction && actorOrganizationId && requestedOrganizationId && requestedOrganizationId !== actorOrganizationId) {
+  const { organizationId, mismatch } = resolveOrganizationScope({
+    actorOrganizationId: actor?.organizationId,
+    requestedOrganizationId: parsed.data.organizationId
+  });
+  if (mismatch) {
     return fail(403, "benefits.request.list.forbidden", {
       reason: "organization_scope_mismatch"
     });
   }
-  const organizationId = isProduction
-    ? actorOrganizationId
-    : requestedOrganizationId ?? actorOrganizationId ?? DEFAULT_ORG_ID;
   if (!organizationId) {
-    return fail(401, "benefits.request.list.unauthorized");
+    return fail(400, "benefits.request.list.organization_id_required");
   }
   const isReviewer = canReviewRequests(actor?.role);
   const employeeId = isReviewer ? parsed.data.employeeId : (parsed.data.employeeId ?? actor?.id ?? undefined);
@@ -83,6 +105,19 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
+  const { organizationId: targetOrganizationId, mismatch } = resolveOrganizationScope({
+    actorOrganizationId: actor.organizationId,
+    requestedOrganizationId: parsed.data.organizationId
+  });
+  if (mismatch) {
+    return fail(403, "benefits.request.create.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  if (!targetOrganizationId) {
+    return fail(400, "benefits.request.create.organization_id_required");
+  }
+
   const targetEmployeeId = canReviewRequests(actor.role) ? parsed.data.employeeId : actor.id;
   const benefit = await findBenefitCatalogItem(parsed.data.benefitId);
   if (!benefit) {
@@ -90,7 +125,6 @@ export async function POST(request: Request) {
       benefitId: parsed.data.benefitId
     });
   }
-  const targetOrganizationId = parsed.data.organizationId ?? actor.organizationId ?? DEFAULT_ORG_ID;
   if (benefit.organizationId !== targetOrganizationId) {
     return fail(409, "benefits.catalog.organization_mismatch", {
       benefitOrganizationId: benefit.organizationId,
