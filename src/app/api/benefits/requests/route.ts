@@ -26,6 +26,24 @@ function normalizeOrganizationId(value: string | null | undefined) {
   return normalized ? normalized : null;
 }
 
+function toIsoDate(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function isEnrollmentPeriodOpen(input: {
+  currentDate: string;
+  enrollmentStartDate?: string;
+  enrollmentEndDate?: string;
+}) {
+  if (input.enrollmentStartDate && input.currentDate < input.enrollmentStartDate) {
+    return false;
+  }
+  if (input.enrollmentEndDate && input.currentDate > input.enrollmentEndDate) {
+    return false;
+  }
+  return true;
+}
+
 function resolveOrganizationScope(input: {
   actorOrganizationId: string | null | undefined;
   requestedOrganizationId: string | null | undefined;
@@ -138,6 +156,21 @@ export async function POST(request: Request) {
     return fail(409, "benefits.catalog.inactive", {
       benefitId: benefit.id,
       currentStatus: benefit.status
+    });
+  }
+  const currentDate = toIsoDate(new Date());
+  if (
+    !isEnrollmentPeriodOpen({
+      currentDate,
+      enrollmentStartDate: benefit.enrollmentStartDate,
+      enrollmentEndDate: benefit.enrollmentEndDate
+    })
+  ) {
+    return fail(400, "enrollment_period_closed", {
+      benefitId: benefit.id,
+      currentDate,
+      enrollmentStartDate: benefit.enrollmentStartDate,
+      enrollmentEndDate: benefit.enrollmentEndDate
     });
   }
 
