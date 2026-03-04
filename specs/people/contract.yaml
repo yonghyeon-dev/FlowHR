@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.10
+version: 0.3.11
 scope:
   in:
     - organization master data (create/read/list)
@@ -35,6 +35,8 @@ entities:
     description: Organization-scoped benefits catalog read model.
   - name: BenefitRequest
     description: Organization-scoped benefits request read model linked to benefit catalog items.
+  - name: InAppNotification
+    description: Organization-scoped in-app notification center read model for employee/admin self-service alerts.
 api:
   auth:
     - role: admin
@@ -112,6 +114,15 @@ api:
     - method: POST
       path: /benefits/requests/{requestId}/cancel
       description: Cancel own SUBMITTED benefits request (employee only).
+    - method: GET
+      path: /notifications
+      description: List current actor in-app notifications (latest 50, optional unread filter).
+    - method: PATCH
+      path: /notifications/{notificationId}/read
+      description: Mark own in-app notification as read.
+    - method: POST
+      path: /notifications/mark-all-read
+      description: Mark all own in-app notifications as read.
   events:
     published:
       - name: organization.created.v1
@@ -147,6 +158,8 @@ db_changes:
       description: Sync onboarding/insurance models and employee/recruitment/benefits profile fields with Prisma persistence schema.
     - id: 202603050003_wi0922_onboarding_wizard
       description: Add organization onboarding setup fields and onboarding completion flag for first-admin login wizard.
+    - id: 202603050005_wi0926_notification_center
+      description: Add InAppNotification model for in-app notification center read and bulk-read APIs.
   backward_compatible: true
   notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, and recruitment/benefits read models are additive."
 invariants:
@@ -213,7 +226,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.9 additively syncs onboarding/insurance persistence models and employee/recruitment/benefits profile fields while preserving backward compatibility for existing People APIs."
+consumer_impact: "People contract v0.3.11 additively includes in-app notification center read model and APIs while preserving backward compatibility for existing People APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -226,6 +239,7 @@ references:
   - work-items/WI-0821-recruitment-referral-stalled-priority-sort.md
   - work-items/WI-0908-notice-department-targeting.md
   - work-items/WI-0920-schema-sync.md
+  - work-items/WI-0926-notification-center.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent
