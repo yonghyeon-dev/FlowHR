@@ -27,6 +27,7 @@ import type {
   CreateEmployeeInput,
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
+  CreateOnboardingTaskInput,
   CreateRecruitmentOpeningInput,
   CreateRecruitmentReferralInput,
   CreateDepartmentInput,
@@ -40,6 +41,8 @@ import type {
   EmployeeEntity,
   BenefitCatalogItemEntity,
   BenefitRequestEntity,
+  OnboardingTaskEntity,
+  OnboardingTaskStatus,
   LeaveBalanceEntity,
   LeavePromotionDeliveryEntity,
   LeavePromotionDeliveryRecipientEntity,
@@ -69,6 +72,7 @@ import type {
   UpdateEmployeeInput,
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
+  UpdateOnboardingTaskInput,
   UpdateLeaveRequestInput,
   UpdateLeavePromotionDeliveryInput,
   UpdateLeavePromotionDeliveryRecipientInput,
@@ -114,6 +118,7 @@ type MemoryState = {
   leavePromotionDeliveryRecipients: Map<string, LeavePromotionDeliveryRecipientEntity>;
   benefitCatalogItems: Map<string, BenefitCatalogItemEntity>;
   benefitRequests: Map<string, BenefitRequestEntity>;
+  onboardingTasks: Map<string, OnboardingTaskEntity>;
   notices: Map<string, NoticeEntity>;
   noticeReadReceipts: Map<string, NoticeReadReceiptEntity>;
   noticeNotifications: Map<string, NoticeNotificationEntity>;
@@ -165,6 +170,7 @@ function createState(): MemoryState {
     leavePromotionDeliveryRecipients: new Map<string, LeavePromotionDeliveryRecipientEntity>(),
     benefitCatalogItems: new Map<string, BenefitCatalogItemEntity>(),
     benefitRequests: new Map<string, BenefitRequestEntity>(),
+    onboardingTasks: new Map<string, OnboardingTaskEntity>(),
     notices: new Map<string, NoticeEntity>(),
     noticeReadReceipts: new Map<string, NoticeReadReceiptEntity>(),
     noticeNotifications: new Map<string, NoticeNotificationEntity>(),
@@ -359,6 +365,13 @@ function cloneBenefitRequest(entity: BenefitRequestEntity): BenefitRequestEntity
     reviewedAt: entity.reviewedAt ? cloneDate(entity.reviewedAt) : null,
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
+  };
+}
+
+function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt)
   };
 }
 
@@ -2420,6 +2433,58 @@ export const memoryDataAccess: DataAccess = {
         return right.id.localeCompare(left.id);
       });
       return rows.slice(0, limit);
+    }
+  },
+
+  onboardingTasks: {
+    async create(input: CreateOnboardingTaskInput) {
+      const task: OnboardingTaskEntity = {
+        id: nextId("ONB"),
+        employeeId: input.employeeId,
+        title: input.title,
+        status: input.status ?? "PENDING",
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : new Date()
+      };
+      state.onboardingTasks.set(task.id, task);
+      return cloneOnboardingTask(task);
+    },
+
+    async listByEmployee(employeeId: string) {
+      const rows: OnboardingTaskEntity[] = [];
+      for (const task of state.onboardingTasks.values()) {
+        if (task.employeeId !== employeeId) {
+          continue;
+        }
+        rows.push(cloneOnboardingTask(task));
+      }
+      rows.sort((left, right) => {
+        const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+        return left.id.localeCompare(right.id);
+      });
+      return rows;
+    },
+
+    async findById(id: string) {
+      const task = state.onboardingTasks.get(id);
+      return task ? cloneOnboardingTask(task) : null;
+    },
+
+    async update(id: string, input: UpdateOnboardingTaskInput) {
+      const existing = state.onboardingTasks.get(id);
+      if (!existing) {
+        throw new Error(`onboarding task not found: ${id}`);
+      }
+
+      const nextStatus: OnboardingTaskStatus = input.status ?? existing.status;
+      const updated: OnboardingTaskEntity = {
+        ...existing,
+        status: nextStatus
+      };
+      state.onboardingTasks.set(id, updated);
+      return cloneOnboardingTask(updated);
     }
   },
 
