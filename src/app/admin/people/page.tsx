@@ -420,6 +420,7 @@ export default function AdminPeoplePage() {
       adminActorId={adminActorId}
       isProductionRuntime={isProductionRuntime}
       usesBearerToken={usesBearerToken}
+      bearerToken={bearerToken}
       search={search}
       setSearch={setSearch}
       activeFilter={activeFilter}

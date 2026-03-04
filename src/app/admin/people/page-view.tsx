@@ -32,6 +32,7 @@ export type AdminPeoplePageViewProps = {
   adminActorId: string;
   isProductionRuntime: boolean;
   usesBearerToken: boolean;
+  bearerToken: string;
   search: string;
   setSearch: (value: string) => void;
   activeFilter: ActiveFilter;
