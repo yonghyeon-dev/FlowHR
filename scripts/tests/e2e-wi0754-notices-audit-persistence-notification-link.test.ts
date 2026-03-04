@@ -19,6 +19,7 @@ type NoticeEntity = {
   title: string;
   body: string;
   audience: "all" | "employees" | "admins";
+  targetDepartmentIds: string[];
   status: "DRAFT" | "SCHEDULED" | "PUBLISHED";
   publishAt: Date | null;
   publishedAt: Date | null;
@@ -72,6 +73,7 @@ function createContext() {
           title: string;
           body: string;
           audience: "all" | "employees" | "admins";
+          targetDepartmentIds?: string[];
           status?: "DRAFT" | "SCHEDULED" | "PUBLISHED";
           publishAt?: Date | null;
           publishedAt?: Date | null;
@@ -86,6 +88,7 @@ function createContext() {
             title: input.title,
             body: input.body,
             audience: input.audience,
+            targetDepartmentIds: input.targetDepartmentIds ?? [],
             status: input.status ?? "DRAFT",
             publishAt: input.publishAt ?? null,
             publishedAt: input.publishedAt ?? null,
@@ -104,6 +107,7 @@ function createContext() {
           title?: string;
           body?: string;
           audience?: "all" | "employees" | "admins";
+          targetDepartmentIds?: string[];
           status?: "DRAFT" | "SCHEDULED" | "PUBLISHED";
           publishAt?: Date | null;
           publishedAt?: Date | null;
@@ -118,6 +122,10 @@ function createContext() {
             title: input.title ?? existing.title,
             body: input.body ?? existing.body,
             audience: input.audience ?? existing.audience,
+            targetDepartmentIds:
+              input.targetDepartmentIds !== undefined
+                ? input.targetDepartmentIds
+                : existing.targetDepartmentIds,
             status: input.status ?? existing.status,
             publishAt: input.publishAt !== undefined ? input.publishAt : existing.publishAt,
             publishedAt: input.publishedAt !== undefined ? input.publishedAt : existing.publishedAt,

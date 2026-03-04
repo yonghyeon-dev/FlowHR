@@ -15,6 +15,12 @@ export type NoticeWorkspaceCopy = {
   titleLabel: string;
   bodyLabel: string;
   audienceLabel: string;
+  departmentTargetLabel: string;
+  departmentTargetHelp: string;
+  departmentTargetAllOption: string;
+  departmentTargetEmpty: string;
+  departmentTargetSelectedLabel: string;
+  clearDepartmentTargetsAction: string;
   scheduleLabel: string;
   createAction: string;
   updateAction?: string;
@@ -157,6 +163,12 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     titleLabel: "제목",
     bodyLabel: "본문",
     audienceLabel: "대상",
+    departmentTargetLabel: "대상 부서",
+    departmentTargetHelp: "공지 대상을 부서로 제한할 수 있습니다. 선택하지 않으면 전체 부서 대상입니다.",
+    departmentTargetAllOption: "전체 부서 대상(기본)",
+    departmentTargetEmpty: "선택 가능한 부서가 없습니다.",
+    departmentTargetSelectedLabel: "선택 부서 수",
+    clearDepartmentTargetsAction: "부서 선택 초기화",
     scheduleLabel: "예약 게시 시각(선택)",
     createAction: "공지 저장",
     updateAction: "공지 수정",
@@ -231,6 +243,12 @@ const workspaceCopyByLocale: Record<FlowLocale, NoticeWorkspaceCopy> = {
     titleLabel: "Title",
     bodyLabel: "Body",
     audienceLabel: "Audience",
+    departmentTargetLabel: "Target departments",
+    departmentTargetHelp: "Limit notice delivery to selected departments. Leave empty for all departments.",
+    departmentTargetAllOption: "All departments (default)",
+    departmentTargetEmpty: "No departments available.",
+    departmentTargetSelectedLabel: "Selected departments",
+    clearDepartmentTargetsAction: "Clear department targets",
     scheduleLabel: "Schedule publish at (optional)",
     createAction: "Save notice",
     updateAction: "Update notice",

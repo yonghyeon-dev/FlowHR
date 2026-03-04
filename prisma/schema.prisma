@@ -437,6 +437,7 @@ model Notice {
   title          String
   body           String
   audience       NoticeAudience
+  targetDepartmentIds String[]      @default([])
   status         NoticeStatus   @default(DRAFT)
   publishAt      DateTime?
   publishedAt    DateTime?

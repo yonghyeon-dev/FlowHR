@@ -301,6 +301,7 @@ function toNoticeEntity(record: {
   title: string;
   body: string;
   audience: "all" | "employees" | "admins";
+  targetDepartmentIds: string[];
   status: "DRAFT" | "SCHEDULED" | "PUBLISHED";
   publishAt: Date | null;
   publishedAt: Date | null;
@@ -2152,6 +2153,7 @@ const notices: NoticeStore = {
         title: input.title,
         body: input.body,
         audience: input.audience,
+        targetDepartmentIds: input.targetDepartmentIds ?? [],
         status: input.status ?? "DRAFT",
         publishAt: input.publishAt ?? null,
         publishedAt: input.publishedAt ?? null,
@@ -2177,6 +2179,7 @@ const notices: NoticeStore = {
         title: input.title,
         body: input.body,
         audience: input.audience,
+        targetDepartmentIds: input.targetDepartmentIds,
         status: input.status,
         publishAt: input.publishAt,
         publishedAt: input.publishedAt,
