@@ -271,6 +271,12 @@ export default function LoginPage() {
               {errorMessage}
             </p>
           ) : null}
+          <p className="small muted">
+            {isKoLocale ? "계정이 없나요?" : "Need an account?"}{" "}
+            <Link href="/signup">{isKoLocale ? "회원가입" : "Sign up"}</Link>
+            {" · "}
+            <Link href="/forgot-password">{isKoLocale ? "비밀번호 찾기" : "Forgot password"}</Link>
+          </p>
           <div className="actions">
             <button className="btn btn-primary" onClick={() => void signIn()} disabled={pending || !email.trim() || !password}>
               {t("login.signIn")}
