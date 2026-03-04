@@ -47,3 +47,7 @@
 - `npx prisma generate`
 - `npm.cmd run typecheck`
 - `npm.cmd run lint`
+
+## Data Changes
+- Prisma models: `Employee`, `OnboardingTask`, `InsuranceEnrollment`, `RecruitmentOpening`, `RecruitmentReferral`, `BenefitCatalogItem`
+- Migration: `202603050002_sync_wi0910_to_wi0917`
