@@ -15,6 +15,11 @@ function canManageNotices(role: string | null | undefined) {
   return role === "admin" || role === "manager";
 }
 
+function normalizeOrganizationId(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listNoticesQuerySchema.safeParse({
@@ -29,16 +34,20 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
-  const isProduction = process.env.NODE_ENV === "production";
-  if (!actor && isProduction) {
+  if (!actor && process.env.NODE_ENV === "production") {
     return fail(401, "notice.list.unauthorized");
   }
+
+  const organizationId =
+    normalizeOrganizationId(parsed.data.organizationId) ??
+    normalizeOrganizationId(actor?.organizationId) ??
+    (process.env.NODE_ENV !== "production" ? DEFAULT_ORG_ID : null);
+  if (!organizationId) {
+    return fail(400, "notice.list.organization_id_required");
+  }
+
   const isAdminActor = canManageNotices(actor?.role);
   const audience = isAdminActor ? parsed.data.audience : "employees";
-  const organizationId = parsed.data.organizationId ?? actor?.organizationId ?? (isProduction ? null : DEFAULT_ORG_ID);
-  if (!organizationId) {
-    return fail(401, "notice.list.unauthorized");
-  }
   const context = { dataAccess: getRuntimeDataAccess() };
   const notices = await listNotices(context, {
     organizationId,

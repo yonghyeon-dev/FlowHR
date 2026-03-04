@@ -9,6 +9,11 @@ function canManageCatalog(role: string | null | undefined) {
   return role === "admin" || role === "manager";
 }
 
+function normalizeOrganizationId(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listBenefitCatalogQuerySchema.safeParse({
@@ -21,13 +26,16 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
-  const isProduction = process.env.NODE_ENV === "production";
-  if (!actor && isProduction) {
+  if (!actor && process.env.NODE_ENV === "production") {
     return fail(401, "benefits.catalog.list.unauthorized");
   }
-  const organizationId = parsed.data.organizationId ?? actor?.organizationId ?? (isProduction ? null : DEFAULT_ORG_ID);
+
+  const organizationId =
+    normalizeOrganizationId(parsed.data.organizationId) ??
+    normalizeOrganizationId(actor?.organizationId) ??
+    (process.env.NODE_ENV !== "production" ? DEFAULT_ORG_ID : null);
   if (!organizationId) {
-    return fail(401, "benefits.catalog.list.unauthorized");
+    return fail(400, "benefits.catalog.list.organization_id_required");
   }
   const items = await listBenefitCatalog({
     organizationId,

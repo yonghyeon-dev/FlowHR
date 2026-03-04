@@ -29,8 +29,7 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
-  const isProduction = process.env.NODE_ENV === "production";
-  if (!actor && isProduction) {
+  if (!actor && process.env.NODE_ENV === "production") {
     return fail(401, "recruitment.opening.list.unauthorized");
   }
   const actorOrganizationId = normalizeOrganizationId(actor?.organizationId);
@@ -40,9 +39,10 @@ export async function GET(request: Request) {
       reason: "organization_scope_mismatch"
     });
   }
-  const organizationId = actorOrganizationId ?? requestedOrganizationId ?? (isProduction ? null : DEFAULT_ORG_ID);
+  const organizationId =
+    actorOrganizationId ?? requestedOrganizationId ?? (process.env.NODE_ENV !== "production" ? DEFAULT_ORG_ID : null);
   if (!organizationId) {
-    return fail(401, "recruitment.opening.list.unauthorized");
+    return fail(400, "recruitment.opening.list.organization_id_required");
   }
   const openings = await listRecruitmentOpenings({
     organizationId,
