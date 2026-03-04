@@ -2330,6 +2330,8 @@ export const memoryDataAccess: DataAccess = {
         description: input.description,
         annualLimitKrw: Math.max(0, Math.trunc(input.annualLimitKrw)),
         status: input.status ?? "ACTIVE",
+        enrollmentStartDate: input.enrollmentStartDate,
+        enrollmentEndDate: input.enrollmentEndDate,
         createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
         updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
       };
@@ -2356,6 +2358,12 @@ export const memoryDataAccess: DataAccess = {
             ? Math.max(0, Math.trunc(input.annualLimitKrw))
             : existing.annualLimitKrw,
         status: input.status !== undefined ? input.status : existing.status,
+        enrollmentStartDate:
+          input.enrollmentStartDate !== undefined
+            ? input.enrollmentStartDate
+            : existing.enrollmentStartDate,
+        enrollmentEndDate:
+          input.enrollmentEndDate !== undefined ? input.enrollmentEndDate : existing.enrollmentEndDate,
         updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
       };
       state.benefitCatalogItems.set(id, updated);

@@ -9,6 +9,8 @@ export type BenefitCatalogItem = {
   description: string;
   annualLimitKrw: number;
   status: BenefitCatalogStatus;
+  enrollmentStartDate?: string;
+  enrollmentEndDate?: string;
   createdAt: string;
   updatedAt: string;
 };

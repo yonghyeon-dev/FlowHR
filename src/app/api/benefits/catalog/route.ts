@@ -112,7 +112,9 @@ export async function POST(request: Request) {
     name: parsed.data.name,
     description: parsed.data.description,
     annualLimitKrw: parsed.data.annualLimitKrw,
-    status: parsed.data.status
+    status: parsed.data.status,
+    enrollmentStartDate: parsed.data.enrollmentStartDate,
+    enrollmentEndDate: parsed.data.enrollmentEndDate
   });
 
   return ok({ catalogItem: created }, 201);

@@ -448,6 +448,8 @@ export type BenefitCatalogItemEntity = {
   description: string;
   annualLimitKrw: number;
   status: BenefitCatalogStatus;
+  enrollmentStartDate?: string;
+  enrollmentEndDate?: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -948,6 +950,8 @@ export type CreateBenefitCatalogItemInput = {
   description: string;
   annualLimitKrw: number;
   status?: BenefitCatalogStatus;
+  enrollmentStartDate?: string;
+  enrollmentEndDate?: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -957,6 +961,8 @@ export type UpdateBenefitCatalogItemInput = {
   description?: string;
   annualLimitKrw?: number;
   status?: BenefitCatalogStatus;
+  enrollmentStartDate?: string;
+  enrollmentEndDate?: string;
   updatedAt?: Date;
 };
 

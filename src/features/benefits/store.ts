@@ -23,6 +23,8 @@ type CreateCatalogInput = {
   description: string;
   annualLimitKrw: number;
   status?: BenefitCatalogStatus;
+  enrollmentStartDate?: string;
+  enrollmentEndDate?: string;
 };
 
 type UpdateCatalogStatusInput = {
@@ -166,6 +168,8 @@ function toCatalogItem(entity: {
   description: string;
   annualLimitKrw: number;
   status: BenefitCatalogStatus;
+  enrollmentStartDate?: string;
+  enrollmentEndDate?: string;
   createdAt: Date;
   updatedAt: Date;
 }): BenefitCatalogItem {
@@ -176,6 +180,8 @@ function toCatalogItem(entity: {
     description: entity.description,
     annualLimitKrw: entity.annualLimitKrw,
     status: entity.status,
+    enrollmentStartDate: entity.enrollmentStartDate,
+    enrollmentEndDate: entity.enrollmentEndDate,
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString()
   };
@@ -313,6 +319,8 @@ export function createBenefitCatalogItem(input: CreateCatalogInput, context?: Be
       description: input.description.trim(),
       annualLimitKrw: Math.max(0, Math.trunc(input.annualLimitKrw)),
       status: input.status ?? "ACTIVE",
+      enrollmentStartDate: input.enrollmentStartDate,
+      enrollmentEndDate: input.enrollmentEndDate,
       createdAt: now,
       updatedAt: now
     })
