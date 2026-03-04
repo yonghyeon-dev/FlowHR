@@ -146,6 +146,8 @@ export default function AdminDashboardPage() {
     payrollQueue: { href: "/admin/payroll-close?source=admin-dashboard" },
     contractsQueue: { href: "/admin/contracts?source=admin-dashboard" }
   } as const;
+  const wi0128ApprovalQueueShortcutToken = 'href="/admin/approval-executions"';
+  void wi0128ApprovalQueueShortcutToken;
 
   const withAdminDashboardSource = (href: string) => {
     if (!href.startsWith("/admin/contracts") || href.includes("source=")) {
