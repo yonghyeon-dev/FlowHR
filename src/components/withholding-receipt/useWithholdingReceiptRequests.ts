@@ -31,6 +31,8 @@ type UseWithholdingReceiptRequestsInput = {
   year: string;
   organizationId: string;
   documentFormat: "json" | "text";
+  allowHeaderActorFallback: boolean;
+  requiresLoginSession: boolean;
   usesBearerToken: boolean;
   bearerToken: string;
   normalizedEmployeeIdForApi: string;
@@ -53,6 +55,8 @@ export function useWithholdingReceiptRequests({
   year,
   organizationId,
   documentFormat,
+  allowHeaderActorFallback,
+  requiresLoginSession,
   usesBearerToken,
   bearerToken,
   normalizedEmployeeIdForApi,
@@ -69,15 +73,24 @@ export function useWithholdingReceiptRequests({
     };
     if (usesBearerToken) {
       headers.authorization = `Bearer ${bearerToken}`;
-    } else {
+    } else if (allowHeaderActorFallback) {
       headers["x-actor-role"] = "employee";
       headers["x-actor-id"] = normalizedEmployeeIdForApi || defaultEmployeeIdForApi;
       if (organizationId.trim()) {
         headers["x-actor-organization-id"] = organizationId.trim();
       }
+    } else {
+      throw new Error(copy.productionSessionRequiredNotice);
     }
     return headers;
-  }, [bearerToken, normalizedEmployeeIdForApi, organizationId, usesBearerToken]);
+  }, [
+    allowHeaderActorFallback,
+    bearerToken,
+    copy.productionSessionRequiredNotice,
+    normalizedEmployeeIdForApi,
+    organizationId,
+    usesBearerToken
+  ]);
 
   const appendLog = useCallback(
     (label: string, response: Response) => {
@@ -97,6 +110,10 @@ export function useWithholdingReceiptRequests({
 
   const runRequest = useCallback(
     async <T,>({ label, pending, url, method, body }: RequestConfig) => {
+      if (requiresLoginSession) {
+        setStatusMessage(copy.productionSessionRequiredNotice);
+        return null;
+      }
       try {
         setPendingLabel(pending);
         const response = await fetch(url, {
@@ -118,7 +135,16 @@ export function useWithholdingReceiptRequests({
         setPendingLabel(null);
       }
     },
-    [appendLog, buildHeaders, copy.invalidInputStatus, copy.requestFailedCheckLogsStatus, setPendingLabel, setStatusMessage]
+    [
+      appendLog,
+      buildHeaders,
+      copy.invalidInputStatus,
+      copy.productionSessionRequiredNotice,
+      copy.requestFailedCheckLogsStatus,
+      requiresLoginSession,
+      setPendingLabel,
+      setStatusMessage
+    ]
   );
 
   const previewReceipt = useCallback(async () => {

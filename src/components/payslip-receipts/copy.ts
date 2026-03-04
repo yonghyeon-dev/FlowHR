@@ -42,6 +42,7 @@ export type PayslipReceiptCopy = {
   noApiCallYet: string;
   backToEmployeeAction: string;
   requestFailedCheckLogsStatus: string;
+  productionSessionRequiredNotice: string;
   employeeIdRequiredStatus: string;
   loadedConfirmedPayslipsPrefix: string;
   pendingLoadPayslipList: string;
@@ -97,6 +98,7 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     noApiCallYet: "아직 요청 이력이 없습니다.",
     backToEmployeeAction: "직원 화면으로",
     requestFailedCheckLogsStatus: "요청이 실패했습니다. 로그를 확인하세요.",
+    productionSessionRequiredNotice: "운영 환경에서는 로그인 세션이 필요합니다.",
     employeeIdRequiredStatus: "직원 번호는 필수입니다.",
     loadedConfirmedPayslipsPrefix: "확정 급여명세서 로드 완료",
     pendingLoadPayslipList: "급여명세서 수신 대상 조회",
@@ -150,6 +152,7 @@ export const payslipReceiptCopyByLocale: Record<FlowLocale, PayslipReceiptCopy> 
     noApiCallYet: "No API call yet.",
     backToEmployeeAction: "Back to Employee",
     requestFailedCheckLogsStatus: "request failed; check logs",
+    productionSessionRequiredNotice: "A login session is required in production.",
     employeeIdRequiredStatus: "employeeId is required",
     loadedConfirmedPayslipsPrefix: "loaded confirmed payslips",
     pendingLoadPayslipList: "load payslip receipt list",

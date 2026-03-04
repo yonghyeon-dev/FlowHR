@@ -258,13 +258,17 @@ export function EmployeeAccountOverviewPanels({
         {isProductionRuntime ? (
           <p className="small">
             {supabaseSession
-              ? `${supabaseSession.email ?? supabaseSession.userId} / role=${supabaseSession.role ?? "-"} / org=${supabaseSession.organizationId ?? "-"}`
+              ? isKoLocale
+                ? `로그인 계정: ${supabaseSession.email ?? supabaseSession.userId}`
+                : `Signed in as ${supabaseSession.email ?? supabaseSession.userId}`
               : isKoLocale
-                ? "현재 로그인되어 있지 않습니다."
-                : "You are not logged in."}{" "}
-            <span className="muted">
-              (Bearer {isKoLocale ? (usesBearerToken ? "사용" : "미사용") : usesBearerToken ? "enabled" : "disabled"})
-            </span>
+                ? "현재 로그인되어 있지 않습니다. "
+                : "You are not signed in. "}
+            {!supabaseSession ? (
+              <Link className="small" href="/login">
+                /login
+              </Link>
+            ) : null}
           </p>
         ) : (
           <p className="small muted">
