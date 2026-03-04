@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -56,6 +56,8 @@ export default function AdminApprovalTemplatesPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -91,12 +93,18 @@ export default function AdminApprovalTemplatesPage() {
 
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "admin";
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
         if (organizationId.trim().length > 0) {
           headers["x-actor-organization-id"] = organizationId.trim();
         }
+      } else {
+        throw new Error(
+          isKoLocale
+            ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
+            : "Login session is required in production. Please sign in at /login."
+        );
       }
 
       const response = await fetch(path, {
@@ -132,7 +140,7 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   async function loadTemplates() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
@@ -145,7 +153,7 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   async function createTemplate() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
     if (selectedRoles.length === 0) {
@@ -156,10 +164,7 @@ export default function AdminApprovalTemplatesPage() {
     const min = minRaw.length > 0 ? Number(minRaw) : null;
     const max = maxRaw.length > 0 ? Number(maxRaw) : null;
     if (domain === "PAYROLL") {
-      if (
-        (minRaw.length > 0 && !Number.isInteger(min)) ||
-        (maxRaw.length > 0 && !Number.isInteger(max))
-      ) {
+      if ((minRaw.length > 0 && !Number.isInteger(min)) || (maxRaw.length > 0 && !Number.isInteger(max))) {
         return;
       }
       if (min !== null && max !== null && min > max) {
@@ -183,13 +188,12 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   async function runGatePreview() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
     const payrollGrossRaw = previewPayrollGrossPayKrw.trim();
-    const payrollGross =
-      previewDomain === "PAYROLL" && payrollGrossRaw.length > 0 ? Number(payrollGrossRaw) : null;
+    const payrollGross = previewDomain === "PAYROLL" && payrollGrossRaw.length > 0 ? Number(payrollGrossRaw) : null;
     if (previewDomain === "PAYROLL" && payrollGrossRaw.length > 0 && !Number.isInteger(payrollGross)) {
       return;
     }
@@ -229,6 +233,13 @@ export default function AdminApprovalTemplatesPage() {
         </p>
       </header>
 
+      {requiresLoginSession ? (
+        <p className="small fail">
+          {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
+          <Link href="/login">/login</Link>
+        </p>
+      ) : null}
+
       <section className="panel-grid">
         <article className="panel">
           <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
@@ -239,7 +250,11 @@ export default function AdminApprovalTemplatesPage() {
             </p>
           ) : null}
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void loadTemplates()} disabled={!organizationId.trim()}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void loadTemplates()}
+              disabled={requiresLoginSession || !organizationId.trim()}
+            >
               {copy.context.loadTemplates}
             </button>
           </div>
@@ -319,7 +334,7 @@ export default function AdminApprovalTemplatesPage() {
             <button
               className="btn btn-primary"
               onClick={() => void createTemplate()}
-              disabled={!organizationId.trim() || !name.trim() || selectedRoles.length === 0}
+              disabled={requiresLoginSession || !organizationId.trim() || !name.trim() || selectedRoles.length === 0}
             >
               {copy.create.createTemplate}
             </button>
@@ -329,7 +344,7 @@ export default function AdminApprovalTemplatesPage() {
         <ApprovalTemplatePreviewPanel
           copy={copy}
           runtimeLocale={runtimeLocale}
-          organizationId={organizationId}
+          organizationId={requiresLoginSession ? "" : organizationId}
           actorRoles={actorRoles}
           domainOptions={domainOptions}
           previewDomain={previewDomain}
@@ -373,3 +388,4 @@ export default function AdminApprovalTemplatesPage() {
     </main>
   );
 }
+
