@@ -134,7 +134,6 @@ export const MINIMUM_WAGE_EFFECTIVE_DATE = "2026-01-01";
 export const MINIMUM_WAGE_CURRENCY = "KRW";
 
 const DEFAULT_WORK_HOURS_PER_DAY = 8;
-const DEFAULT_WORK_DAYS = [1, 2, 3, 4, 5] as const;
 
 type ConfirmPayrollRunOptions = {
   acknowledgeMinWageWarning?: boolean;
@@ -203,8 +202,10 @@ async function listMinimumWageWarningsForRun(
     }
   }
 
-  const workDays =
-    configuredWorkDays.length > 0 ? configuredWorkDays : Array.from(DEFAULT_WORK_DAYS);
+  if (configuredWorkDays.length === 0) {
+    return [];
+  }
+  const workDays = configuredWorkDays;
   const seoulStart = toSeoulDateTimeParts(run.periodStart);
   const workDaysInMonth = countWorkDaysInMonth(seoulStart.year, seoulStart.month, workDays);
   const monthlyWorkHours = workDaysInMonth * workHoursPerDay;
