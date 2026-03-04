@@ -2603,6 +2603,28 @@ button.queue-badge:hover {
   background: linear-gradient(135deg, #c32d4d 0%, #9d1e39 100%);
   box-shadow: 0 10px 18px rgba(181, 40, 72, 0.2);
 }
+.error-page {
+  min-height: 100vh;
+  display: grid;
+  align-items: center;
+}
+.error-panel {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  text-align: center;
+}
+.error-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.error-hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
 .panel-log {
   grid-column: 1 / -1;
 }
