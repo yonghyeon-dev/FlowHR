@@ -694,12 +694,15 @@ export default function HomePage() {
 
   async function rejectQueueAttendance(recordId: string) {
     const reason = attendanceRejectReason.trim();
+    if (reason.length === 0) {
+      return;
+    }
     await callApi(
       "출퇴근 반려",
       "POST",
       `/api/attendance/records/${recordId}/reject`,
       { role: "manager", id: managerActorId },
-      reason.length > 0 ? { reason } : undefined
+      { reason }
     );
     await showPendingAttendanceQueue();
   }

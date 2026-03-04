@@ -105,7 +105,7 @@ export const updateAttendanceSchema = z.object({
 });
 
 export const rejectAttendanceSchema = z.object({
-  reason: z.string().min(1).max(500).optional()
+  reason: z.string().min(1).max(500)
 });
 
 export const listAttendanceQuerySchema = z.object({

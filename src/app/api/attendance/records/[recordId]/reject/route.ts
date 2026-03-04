@@ -10,23 +10,19 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
-  const { recordId } = await context.params;
-  let reason: string | undefined;
-
+  let payload: unknown;
   try {
-    const rawBody = await request.text();
-    if (rawBody.trim().length > 0) {
-      const payload = JSON.parse(rawBody) as unknown;
-      const parsed = rejectAttendanceSchema.safeParse(payload);
-      if (!parsed.success) {
-        return fail(400, "invalid payload", parsed.error.flatten());
-      }
-      reason = parsed.data.reason;
-    }
+    payload = await request.json();
   } catch {
     return fail(400, "invalid JSON body");
   }
 
+  const parsed = rejectAttendanceSchema.safeParse(payload);
+  if (!parsed.success) {
+    return fail(400, "invalid payload", parsed.error.flatten());
+  }
+
+  const { recordId } = await context.params;
   try {
     const record = await rejectAttendanceRecord(
       {
@@ -34,7 +30,7 @@ export async function POST(request: Request, context: RouteContext) {
         dataAccess: getRuntimeDataAccess()
       },
       recordId,
-      reason
+      parsed.data.reason
     );
     return ok({ record });
   } catch (error) {

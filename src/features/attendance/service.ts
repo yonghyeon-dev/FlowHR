@@ -1718,7 +1718,7 @@ export async function approveAttendanceRecord(
 export async function rejectAttendanceRecord(
   context: ServiceContext,
   recordId: string,
-  reason?: string
+  reason: string
 ): Promise<AttendanceRecordEntity> {
   const actor = context.actor;
   if (!actor) {
@@ -1737,6 +1737,10 @@ export async function rejectAttendanceRecord(
   );
   if (existing.state !== "PENDING") {
     throw new ServiceError(409, "only pending attendance can be rejected");
+  }
+  const normalizedReason = reason.trim();
+  if (normalizedReason.length === 0) {
+    throw new ServiceError(400, "rejection reason is required");
   }
 
   if (employee.organizationId) {
@@ -1773,7 +1777,7 @@ export async function rejectAttendanceRecord(
     actorId: actor.id,
     payload: {
       employeeId: record.employeeId,
-      reason: reason ?? null
+      reason: normalizedReason
     }
   });
   await getEventPublisher(context).publish({
@@ -1785,7 +1789,7 @@ export async function rejectAttendanceRecord(
     actorId: actor.id,
     payload: {
       employeeId: record.employeeId,
-      reason: reason ?? null
+      reason: normalizedReason
     }
   });
 
