@@ -14,28 +14,28 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employees Employee[]
-  departments Department[]
-  positions Position[]
-  approvalPolicy ApprovalPolicy?
-  approvalDelegations ApprovalDelegation[]
-  approvalLineTemplates ApprovalLineTemplate[]
-  approvalStageHistories ApprovalStageHistory[]
-  approvalExecutions ApprovalExecution[]
-  leavePolicy LeavePolicy?
+  employees                Employee[]
+  departments              Department[]
+  positions                Position[]
+  approvalPolicy           ApprovalPolicy?
+  approvalDelegations      ApprovalDelegation[]
+  approvalLineTemplates    ApprovalLineTemplate[]
+  approvalStageHistories   ApprovalStageHistory[]
+  approvalExecutions       ApprovalExecution[]
+  leavePolicy              LeavePolicy?
   leavePromotionDeliveries LeavePromotionDelivery[]
-  notices Notice[]
-  noticeReadReceipts NoticeReadReceipt[]
-  noticeNotifications NoticeNotificationQueue[]
-  benefitCatalogItems BenefitCatalogItem[]
-  benefitRequests BenefitRequest[]
-  recruitmentOpenings RecruitmentOpening[]
-  recruitmentReferrals RecruitmentReferral[]
-  payrollRuns PayrollRun[]
-  deductionProfiles DeductionProfile[]
-  workScheduleTemplates WorkScheduleTemplate[]
+  notices                  Notice[]
+  noticeReadReceipts       NoticeReadReceipt[]
+  noticeNotifications      NoticeNotificationQueue[]
+  benefitCatalogItems      BenefitCatalogItem[]
+  benefitRequests          BenefitRequest[]
+  recruitmentOpenings      RecruitmentOpening[]
+  recruitmentReferrals     RecruitmentReferral[]
+  payrollRuns              PayrollRun[]
+  deductionProfiles        DeductionProfile[]
+  workScheduleTemplates    WorkScheduleTemplate[]
   scheduleAnomalyIncidents ScheduleAnomalyIncident[]
-  auditLogs AuditLog[]
+  auditLogs                AuditLog[]
 }
 
 model Employee {
@@ -45,22 +45,49 @@ model Employee {
   positionId     String?
   name           String?
   email          String?
+  phone          String?
+  address        String?
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  position Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
-  attendanceRecords AttendanceRecord[]
-  workSchedules      WorkSchedule[]
-  leaveRequests      LeaveRequest[]
-  leaveBalance       LeaveBalanceProjection?
-  payrollRuns        PayrollRun[]
+  organization         Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  department           Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  position             Position?               @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  attendanceRecords    AttendanceRecord[]
+  workSchedules        WorkSchedule[]
+  leaveRequests        LeaveRequest[]
+  leaveBalance         LeaveBalanceProjection?
+  onboardingTasks      OnboardingTask[]
+  insuranceEnrollments InsuranceEnrollment[]
+  payrollRuns          PayrollRun[]
 
   @@index([organizationId, active])
   @@index([departmentId])
   @@index([positionId])
+}
+
+model OnboardingTask {
+  id         String               @id @default(cuid())
+  employeeId String
+  employee   Employee             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  title      String
+  status     OnboardingTaskStatus @default(PENDING)
+  createdAt  DateTime             @default(now())
+
+  @@index([employeeId, createdAt, id])
+}
+
+model InsuranceEnrollment {
+  employeeId String
+  employee   Employee                  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  type       InsuranceEnrollmentType
+  status     InsuranceEnrollmentStatus
+  enrolledAt DateTime?
+  updatedAt  DateTime                  @updatedAt
+
+  @@id([employeeId, type])
+  @@index([employeeId, updatedAt])
 }
 
 model Department {
@@ -73,7 +100,7 @@ model Department {
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  employees Employee[]
+  employees    Employee[]
 
   @@unique([organizationId, code])
   @@index([organizationId, active])
@@ -89,20 +116,20 @@ model Position {
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  employees Employee[]
+  employees    Employee[]
 
   @@unique([organizationId, code])
   @@index([organizationId, active])
 }
 
 model ApprovalPolicy {
-  id                     String       @id @default(cuid())
-  organizationId         String       @unique
-  attendanceApproverRole String       @default("manager")
-  leaveApproverRole      String       @default("manager")
-  payrollApproverRole    String       @default("payroll_operator")
-  createdAt              DateTime     @default(now())
-  updatedAt              DateTime     @updatedAt
+  id                     String   @id @default(cuid())
+  organizationId         String   @unique
+  attendanceApproverRole String   @default("manager")
+  leaveApproverRole      String   @default("manager")
+  payrollApproverRole    String   @default("payroll_operator")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }
@@ -127,18 +154,18 @@ model ApprovalDelegation {
 }
 
 model ApprovalLineTemplate {
-  id             String         @id @default(cuid())
-  organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  name           String
-  domain         ApprovalDomain
-  approverRoles  String[]
-  approvalStagesJson Json
+  id                    String         @id @default(cuid())
+  organizationId        String
+  organization          Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name                  String
+  domain                ApprovalDomain
+  approverRoles         String[]
+  approvalStagesJson    Json
   payrollGrossPayMinKrw Int?
   payrollGrossPayMaxKrw Int?
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  active                Boolean        @default(true)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   @@unique([organizationId, domain, name])
   @@index([organizationId, domain, active, payrollGrossPayMinKrw, payrollGrossPayMaxKrw])
@@ -169,20 +196,20 @@ model ApprovalStageHistory {
 }
 
 model ApprovalExecution {
-  id               String                 @id @default(cuid())
-  organizationId   String
-  organization     Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  domain           ApprovalDomain
-  targetEntityType String
-  targetEntityId   String
-  templateId       String?
-  state            ApprovalExecutionState @default(PENDING)
-  totalStages      Int
-  currentStageIndex Int                   @default(1)
-  startedAt        DateTime               @default(now())
-  completedAt      DateTime?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
+  id                String                 @id @default(cuid())
+  organizationId    String
+  organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  domain            ApprovalDomain
+  targetEntityType  String
+  targetEntityId    String
+  templateId        String?
+  state             ApprovalExecutionState @default(PENDING)
+  totalStages       Int
+  currentStageIndex Int                    @default(1)
+  startedAt         DateTime               @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
 
   actions ApprovalExecutionActionLog[]
 
@@ -191,15 +218,15 @@ model ApprovalExecution {
 }
 
 model ApprovalExecutionActionLog {
-  id         String                   @id @default(cuid())
+  id          String                  @id @default(cuid())
   executionId String
-  execution  ApprovalExecution        @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  stageIndex Int
-  action     ApprovalExecutionAction
-  actorRole  String
-  actorId    String?
-  resolution ApprovalStageResolution
-  createdAt  DateTime                 @default(now())
+  execution   ApprovalExecution       @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  stageIndex  Int
+  action      ApprovalExecutionAction
+  actorRole   String
+  actorId     String?
+  resolution  ApprovalStageResolution
+  createdAt   DateTime                @default(now())
 
   @@index([executionId, stageIndex, action, createdAt])
   @@index([executionId, actorId, stageIndex, action])
@@ -229,25 +256,25 @@ model RolePermission {
 }
 
 model AttendanceRecord {
-  id           String   @id @default(cuid())
-  employeeId   String
-  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  checkInAt    DateTime
-  checkOutAt   DateTime?
-  breakMinutes Int      @default(0)
-  isHoliday    Boolean  @default(false)
-  notes        String?
-  captureChannel       AttendanceCaptureChannel @default(MANUAL)
-  captureDeviceId      String?
-  captureIpAddress     String?
-  captureLatitude      Float?
-  captureLongitude     Float?
+  id                    String                   @id @default(cuid())
+  employeeId            String
+  employee              Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  checkInAt             DateTime
+  checkOutAt            DateTime?
+  breakMinutes          Int                      @default(0)
+  isHoliday             Boolean                  @default(false)
+  notes                 String?
+  captureChannel        AttendanceCaptureChannel @default(MANUAL)
+  captureDeviceId       String?
+  captureIpAddress      String?
+  captureLatitude       Float?
+  captureLongitude      Float?
   captureAccuracyMeters Int?
-  state        AttendanceState @default(PENDING)
-  approvedAt   DateTime?
-  approvedBy   String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  state                 AttendanceState          @default(PENDING)
+  approvedAt            DateTime?
+  approvedBy            String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
 }
 
 model WorkSchedule {
@@ -266,52 +293,52 @@ model WorkSchedule {
 }
 
 model WorkScheduleTemplate {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   name           String
   startMinute    Int
   endMinute      Int
-  breakMinutes   Int      @default(0)
-  isHoliday      Boolean  @default(false)
+  breakMinutes   Int          @default(0)
+  isHoliday      Boolean      @default(false)
   weekdays       Int[]
   notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([organizationId, name])
 }
 
 model ScheduleAnomalyIncident {
-  incidentId String @id
-  organizationId String?
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  state ScheduleAnomalyIncidentState
-  assigneeId String?
-  resolutionCode ScheduleAnomalyIncidentResolutionCode?
-  note String?
-  updatedAt DateTime
-  updatedByActorId String?
-  updatedByActorRole String
+  incidentId                String                                 @id
+  organizationId            String?
+  organization              Organization?                          @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  state                     ScheduleAnomalyIncidentState
+  assigneeId                String?
+  resolutionCode            ScheduleAnomalyIncidentResolutionCode?
+  note                      String?
+  updatedAt                 DateTime
+  updatedByActorId          String?
+  updatedByActorRole        String
   lastEscalationRequestedAt DateTime?
-  history Json
-  createdAt DateTime @default(now())
-  rowUpdatedAt DateTime @updatedAt
+  history                   Json
+  createdAt                 DateTime                               @default(now())
+  rowUpdatedAt              DateTime                               @updatedAt
 
   @@index([organizationId, state, updatedAt])
   @@index([organizationId, assigneeId, updatedAt])
 }
 
 model LeaveRequest {
-  id             String           @id @default(cuid())
+  id             String            @id @default(cuid())
   employeeId     String
-  employee       Employee         @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  leaveType      LeaveType        @default(ANNUAL)
+  employee       Employee          @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  leaveType      LeaveType         @default(ANNUAL)
   startDate      DateTime
   endDate        DateTime
-  unit           LeaveRequestUnit @default(FULL_DAY)
-  hours          Decimal?         @db.Decimal(6, 2)
-  days           Decimal          @db.Decimal(6, 2)
+  unit           LeaveRequestUnit  @default(FULL_DAY)
+  hours          Decimal?          @db.Decimal(6, 2)
+  days           Decimal           @db.Decimal(6, 2)
   reason         String?
   state          LeaveRequestState @default(PENDING)
   decisionReason String?
@@ -321,22 +348,22 @@ model LeaveRequest {
   rejectedBy     String?
   canceledAt     DateTime?
   canceledBy     String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
   approvals      LeaveApproval[]
 
   @@index([employeeId, state, startDate, endDate])
 }
 
 model LeaveApproval {
-  id        String             @id @default(cuid())
+  id        String              @id @default(cuid())
   requestId String
   action    LeaveDecisionAction
   actorId   String
   actorRole String
   reason    String?
-  createdAt DateTime           @default(now())
-  request   LeaveRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+  request   LeaveRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId, createdAt])
 }
@@ -353,53 +380,53 @@ model LeaveBalanceProjection {
 }
 
 model LeavePolicy {
-  id             String       @id @default(cuid())
-  organizationId String       @unique
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  annualGrantDays Int         @default(15)
-  carryOverCapDays Int        @default(5)
-  allowHalfDay    Boolean     @default(true)
-  allowHourly     Boolean     @default(true)
-  hourlyIncrementMinutes Int  @default(30)
-  maxHoursPerRequest Decimal  @default(8) @db.Decimal(6, 2)
-  minNoticeDays   Int         @default(0)
-  maxConsecutiveDays Decimal? @db.Decimal(6, 2)
-  annualLeavePromotionEnabled Boolean @default(false)
-  annualLeavePromotionThresholdDays Decimal @default(5) @db.Decimal(6, 2)
-  annualLeavePromotionLeadDays Int @default(30)
+  id                                  String       @id @default(cuid())
+  organizationId                      String       @unique
+  organization                        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  annualGrantDays                     Int          @default(15)
+  carryOverCapDays                    Int          @default(5)
+  allowHalfDay                        Boolean      @default(true)
+  allowHourly                         Boolean      @default(true)
+  hourlyIncrementMinutes              Int          @default(30)
+  maxHoursPerRequest                  Decimal      @default(8) @db.Decimal(6, 2)
+  minNoticeDays                       Int          @default(0)
+  maxConsecutiveDays                  Decimal?     @db.Decimal(6, 2)
+  annualLeavePromotionEnabled         Boolean      @default(false)
+  annualLeavePromotionThresholdDays   Decimal      @default(5) @db.Decimal(6, 2)
+  annualLeavePromotionLeadDays        Int          @default(30)
   annualLeavePromotionMessageTemplate String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt                           DateTime     @default(now())
+  updatedAt                           DateTime     @updatedAt
 }
 
 model LeavePromotionDelivery {
-  id                  String   @id @default(cuid())
-  organizationId      String
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  asOf                DateTime
-  includeUpcoming     Boolean
-  dryRun              Boolean
-  channel             LeavePromotionDeliveryChannel
-  provider            String?
-  status              LeavePromotionDeliveryStatus
-  announcementTitle   String
-  announcementBody    String
-  targetCount         Int
-  recipientCount      Int
-  missingEmailCount   Int
-  sentTargetCount     Int
-  webhookSource       String?
-  emailTemplateSource String?
-  emailTemplateId     String?
-  dispatchedAt        DateTime?
+  id                   String                            @id @default(cuid())
+  organizationId       String
+  organization         Organization                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  asOf                 DateTime
+  includeUpcoming      Boolean
+  dryRun               Boolean
+  channel              LeavePromotionDeliveryChannel
+  provider             String?
+  status               LeavePromotionDeliveryStatus
+  announcementTitle    String
+  announcementBody     String
+  targetCount          Int
+  recipientCount       Int
+  missingEmailCount    Int
+  sentTargetCount      Int
+  webhookSource        String?
+  emailTemplateSource  String?
+  emailTemplateId      String?
+  dispatchedAt         DateTime?
   requestedByActorRole String
-  requestedByActorId  String?
-  retryOfDeliveryId   String?
-  retryOfDelivery     LeavePromotionDelivery? @relation("LeavePromotionDeliveryRetry", fields: [retryOfDeliveryId], references: [id], onDelete: SetNull)
-  retryDeliveries     LeavePromotionDelivery[] @relation("LeavePromotionDeliveryRetry")
-  recipients          LeavePromotionDeliveryRecipient[]
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  requestedByActorId   String?
+  retryOfDeliveryId    String?
+  retryOfDelivery      LeavePromotionDelivery?           @relation("LeavePromotionDeliveryRetry", fields: [retryOfDeliveryId], references: [id], onDelete: SetNull)
+  retryDeliveries      LeavePromotionDelivery[]          @relation("LeavePromotionDeliveryRetry")
+  recipients           LeavePromotionDeliveryRecipient[]
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
 
   @@index([organizationId, createdAt])
   @@index([organizationId, status, createdAt])
@@ -408,44 +435,44 @@ model LeavePromotionDelivery {
 }
 
 model LeavePromotionDeliveryRecipient {
-  id             String   @id @default(cuid())
-  deliveryId     String
-  delivery       LeavePromotionDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  employeeId     String
-  email          String?
-  name           String?
-  remainingDays  Decimal  @db.Decimal(6, 2)
-  grantedDays    Decimal  @db.Decimal(6, 2)
-  usedDays       Decimal  @db.Decimal(6, 2)
+  id              String                        @id @default(cuid())
+  deliveryId      String
+  delivery        LeavePromotionDelivery        @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  employeeId      String
+  email           String?
+  name            String?
+  remainingDays   Decimal                       @db.Decimal(6, 2)
+  grantedDays     Decimal                       @db.Decimal(6, 2)
+  usedDays        Decimal                       @db.Decimal(6, 2)
   lastAccrualYear Int?
-  eligibleNow    Boolean
-  status         LeavePromotionRecipientStatus
-  lastError      String?
-  sentAt         DateTime?
-  retryCount     Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  eligibleNow     Boolean
+  status          LeavePromotionRecipientStatus
+  lastError       String?
+  sentAt          DateTime?
+  retryCount      Int                           @default(0)
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
 
   @@index([deliveryId, status, createdAt])
   @@index([employeeId, createdAt])
 }
 
 model Notice {
-  id             String         @id @default(cuid())
-  organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  title          String
-  body           String
-  audience       NoticeAudience
-  targetDepartmentIds String[]      @default([])
-  status         NoticeStatus   @default(DRAFT)
-  publishAt      DateTime?
-  publishedAt    DateTime?
-  createdByActorId String
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  readReceipts   NoticeReadReceipt[]
-  notifications  NoticeNotificationQueue[]
+  id                  String                    @id @default(cuid())
+  organizationId      String
+  organization        Organization              @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  title               String
+  body                String
+  audience            NoticeAudience
+  targetDepartmentIds String[]                  @default([])
+  status              NoticeStatus              @default(DRAFT)
+  publishAt           DateTime?
+  publishedAt         DateTime?
+  createdByActorId    String
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  readReceipts        NoticeReadReceipt[]
+  notifications       NoticeNotificationQueue[]
 
   @@index([organizationId, status, updatedAt])
   @@index([organizationId, audience, updatedAt])
@@ -468,52 +495,54 @@ model NoticeReadReceipt {
 }
 
 model NoticeNotificationQueue {
-  id             String                     @id @default(cuid())
+  id             String                    @id @default(cuid())
   organizationId String
-  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   noticeId       String
-  notice         Notice                     @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  notice         Notice                    @relation(fields: [noticeId], references: [id], onDelete: Cascade)
   audience       NoticeAudience
   channel        NoticeNotificationChannel
-  state          NoticeNotificationState    @default(QUEUED)
+  state          NoticeNotificationState   @default(QUEUED)
   enqueuedAt     DateTime
   deliveredAt    DateTime?
   lastError      String?
-  createdAt      DateTime                   @default(now())
-  updatedAt      DateTime                   @updatedAt
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
 
   @@index([organizationId, state, enqueuedAt])
   @@index([noticeId, enqueuedAt])
 }
 
 model RecruitmentOpening {
-  id             String   @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  title          String
-  department     String
-  employmentType String
-  status         RecruitmentOpeningStatus @default(OPEN)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  referrals      RecruitmentReferral[]
+  id              String                   @id @default(cuid())
+  organizationId  String
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  title           String
+  department      String
+  employmentType  String
+  hiringManagerId String?
+  status          RecruitmentOpeningStatus @default(OPEN)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  referrals       RecruitmentReferral[]
 
   @@index([organizationId, status, updatedAt])
 }
 
 model RecruitmentReferral {
-  id               String   @id @default(cuid())
-  organizationId   String
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  openingId        String
-  opening          RecruitmentOpening @relation(fields: [openingId], references: [id], onDelete: Restrict)
-  candidateName    String
-  candidateEmail   String
+  id                 String                   @id @default(cuid())
+  organizationId     String
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  openingId          String
+  opening            RecruitmentOpening       @relation(fields: [openingId], references: [id], onDelete: Restrict)
+  candidateName      String
+  candidateEmail     String
   referrerEmployeeId String
-  note             String
-  stage            RecruitmentReferralStage @default(SUBMITTED)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  note               String
+  stage              RecruitmentReferralStage @default(SUBMITTED)
+  stageReason        String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
 
   @@index([organizationId, stage, updatedAt])
   @@index([organizationId, referrerEmployeeId, updatedAt])
@@ -521,37 +550,39 @@ model RecruitmentReferral {
 }
 
 model BenefitCatalogItem {
-  id             String   @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  name           String
-  description    String
-  annualLimitKrw Int
-  status         BenefitCatalogStatus @default(ACTIVE)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  requests       BenefitRequest[]
+  id                  String               @id @default(cuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name                String
+  description         String
+  annualLimitKrw      Int
+  status              BenefitCatalogStatus @default(ACTIVE)
+  enrollmentStartDate String?
+  enrollmentEndDate   String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  requests            BenefitRequest[]
 
   @@index([organizationId, status, updatedAt])
   @@index([organizationId, updatedAt])
 }
 
 model BenefitRequest {
-  id               String   @id @default(cuid())
-  organizationId   String
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  benefitId        String
-  benefit          BenefitCatalogItem @relation(fields: [benefitId], references: [id], onDelete: Restrict)
-  employeeId       String
-  amountKrw        Int
-  reason           String
-  status           BenefitRequestStatus @default(SUBMITTED)
-  requestedAt      DateTime
-  reviewedAt       DateTime?
+  id                String               @id @default(cuid())
+  organizationId    String
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  benefitId         String
+  benefit           BenefitCatalogItem   @relation(fields: [benefitId], references: [id], onDelete: Restrict)
+  employeeId        String
+  amountKrw         Int
+  reason            String
+  status            BenefitRequestStatus @default(SUBMITTED)
+  requestedAt       DateTime
+  reviewedAt        DateTime?
   reviewedByActorId String?
-  reviewNote       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  reviewNote        String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   @@index([organizationId, status, updatedAt])
   @@index([organizationId, employeeId, updatedAt])
@@ -559,65 +590,65 @@ model BenefitRequest {
 }
 
 model PayrollRun {
-  id                     String   @id @default(cuid())
-  organizationId         String?
-  organization           Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  employeeId             String?
-  employee               Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  periodStart            DateTime
-  periodEnd              DateTime
-  state                  PayrollState @default(PREVIEWED)
-  grossPayKrw            Int
-  withholdingTaxKrw      Int?
-  socialInsuranceKrw     Int?
-  otherDeductionsKrw     Int?
-  totalDeductionsKrw     Int?
-  netPayKrw              Int?
-  deductionBreakdown     Json?
-  deductionProfileId     String?
-  deductionProfileVersion Int?
-  sourceRecordCount      Int      @default(0)
-  payslipDeliveryChannel String?
-  payslipDistributedAt   DateTime?
-  payslipDistributedBy   String?
+  id                        String        @id @default(cuid())
+  organizationId            String?
+  organization              Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  employeeId                String?
+  employee                  Employee?     @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  periodStart               DateTime
+  periodEnd                 DateTime
+  state                     PayrollState  @default(PREVIEWED)
+  grossPayKrw               Int
+  withholdingTaxKrw         Int?
+  socialInsuranceKrw        Int?
+  otherDeductionsKrw        Int?
+  totalDeductionsKrw        Int?
+  netPayKrw                 Int?
+  deductionBreakdown        Json?
+  deductionProfileId        String?
+  deductionProfileVersion   Int?
+  sourceRecordCount         Int           @default(0)
+  payslipDeliveryChannel    String?
+  payslipDistributedAt      DateTime?
+  payslipDistributedBy      String?
   payslipReceiptConfirmedAt DateTime?
   payslipReceiptConfirmedBy String?
-  confirmedAt            DateTime?
-  confirmedBy            String?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  confirmedAt               DateTime?
+  confirmedBy               String?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
 
   @@index([organizationId, periodStart, periodEnd])
 }
 
 model DeductionProfile {
-  id                     String   @id
+  id                     String        @id
   organizationId         String?
   organization           Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   name                   String
   version                Int
   mode                   String
-  withholdingRate        Decimal? @db.Decimal(5, 4)
-  socialInsuranceRate    Decimal? @db.Decimal(5, 4)
-  fixedOtherDeductionKrw Int      @default(0)
-  active                 Boolean  @default(true)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  withholdingRate        Decimal?      @db.Decimal(5, 4)
+  socialInsuranceRate    Decimal?      @db.Decimal(5, 4)
+  fixedOtherDeductionKrw Int           @default(0)
+  active                 Boolean       @default(true)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 
   @@index([organizationId, active])
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  action     String
-  entityType String
-  entityId   String?
+  id             String        @id @default(cuid())
+  action         String
+  entityType     String
+  entityId       String?
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  actorRole  String
-  actorId    String?
-  payload    Json?
-  createdAt  DateTime @default(now())
+  actorRole      String
+  actorId        String?
+  payload        Json?
+  createdAt      DateTime      @default(now())
 
   @@index([action, createdAt])
   @@index([entityType, entityId])
@@ -729,6 +760,24 @@ enum BenefitRequestStatus {
   APPROVED
   REJECTED
   CANCELED
+}
+
+enum OnboardingTaskStatus {
+  PENDING
+  COMPLETED
+}
+
+enum InsuranceEnrollmentType {
+  NPS
+  NHI
+  EI
+  WCI
+}
+
+enum InsuranceEnrollmentStatus {
+  ENROLLED
+  NOT_ENROLLED
+  PENDING
 }
 
 enum PayrollState {
