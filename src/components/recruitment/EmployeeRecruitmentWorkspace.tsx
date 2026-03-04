@@ -1,5 +1,4 @@
-﻿"use client";
-
+"use client";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -260,6 +259,7 @@ export default function EmployeeRecruitmentWorkspace() {
   return (
     <EmployeeRecruitmentWorkspaceView
       copy={copy}
+      isKoLocale={locale === "ko"}
       showDevTools={showDevTools}
       sessionOrganizationId={organizationId}
       sessionEmployeeId={employeeId}

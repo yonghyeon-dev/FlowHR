@@ -1,4 +1,8 @@
+"use client";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { EmployeeScheduleCopy } from "@/components/scheduling/copy";
+import { resolveEmployeeScheduleSourceEntry } from "@/components/scheduling/employee-source-context";
 import {
   formatDateTime,
   formatHours,
@@ -92,6 +96,8 @@ export default function EmployeeScheduleBoardView({
   onExportCsv,
   onExportIcs
 }: EmployeeScheduleBoardViewProps) {
+  const searchParams = useSearchParams();
+  const sourceEntry = resolveEmployeeScheduleSourceEntry(searchParams.get("source"), runtimeLocale === "ko-KR");
   const attendanceCorrectionHref = `/employee?focus=attendance&attendanceSource=schedule&fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}`;
   return (
     <main className="saas-content">
@@ -99,6 +105,10 @@ export default function EmployeeScheduleBoardView({
         <p className="eyebrow">{copy.eyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
+        <div className="page-actions">
+          <Link className="btn btn-secondary" href="/employee">{sourceEntry ? sourceEntry.returnLabel : "/employee"}</Link>
+        </div>
       </header>
       <section className="panel-grid">
         <article className="panel">

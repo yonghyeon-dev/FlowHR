@@ -39,10 +39,10 @@ export function EmployeeDashboardChrome({
           </p>
         </div>
         <div className="page-actions">
-          <Link className="btn btn-secondary" href="/employee/payslips">
+          <Link className="btn btn-secondary" href="/employee/payslips?source=employee-dashboard">
             {isKoLocale ? "급여 명세서" : "Payslips"}
           </Link>
-          <Link className="btn btn-secondary" href="/employee/contracts">
+          <Link className="btn btn-secondary" href="/employee/contracts?source=employee-dashboard">
             {isKoLocale ? "전자계약함" : "Contracts"}
           </Link>
           <Link className="btn btn-secondary" href="/">

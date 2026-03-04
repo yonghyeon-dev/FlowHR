@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import type { FinalizedYearEndSettlementResponse } from "@/components/withholding-receipt/types";
@@ -19,6 +20,7 @@ import {
   extractPayrollYearEndErrorMessage,
   normalizePayrollYearEndRuntimeMessage
 } from "@/components/payroll-year-end/runtime-copy-helpers";
+import { resolveEmployeeYearEndInputSourceEntry } from "@/components/payroll-year-end/employee-source-context";
 
 type ApiLog = {
   id: number;
@@ -29,7 +31,9 @@ type ApiLog = {
 };
 
 export default function EmployeeYearEndInputConsole() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
+  const sourceEntry = resolveEmployeeYearEndInputSourceEntry(searchParams.get("source"), locale === "ko");
   const copy = employeeYearEndInputCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const isProductionRuntime = process.env.NODE_ENV === "production";
@@ -310,6 +314,7 @@ export default function EmployeeYearEndInputConsole() {
         <p className="eyebrow">{copy.heroEyebrow}</p>
         <h1>{copy.title}</h1>
         <p>{copy.description}</p>
+        {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
       </header>
       <section className="panel-grid">
         <article className="panel">
@@ -426,7 +431,7 @@ export default function EmployeeYearEndInputConsole() {
             )}
             <div className="panel-actions">
               <Link href="/employee/withholding-receipt" className="btn btn-secondary">{copy.openWithholdingReceiptAction}</Link>
-              <Link href="/employee" className="btn btn-secondary">{copy.backToEmployeeAction}</Link>
+              <Link href="/employee" className="btn btn-secondary">{sourceEntry ? sourceEntry.returnLabel : copy.backToEmployeeAction}</Link>
             </div>
           </article>
         ) : null}
