@@ -36,6 +36,10 @@ export default function EmployeeYearEndInputConsole() {
   const sourceEntry = resolveEmployeeYearEndInputSourceEntry(searchParams.get("source"), locale === "ko");
   const copy = employeeYearEndInputCopyByLocale[locale];
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const productionSessionRequiredNotice =
+    locale === "ko"
+      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
+      : "A login session is required in production. Please sign in again at /login.";
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
@@ -174,11 +178,13 @@ export default function EmployeeYearEndInputConsole() {
     return normalizePayrollYearEndRuntimeMessage(
       supabaseSessionError,
       locale,
-      "인증 세션 상태를 확인하지 못했습니다."
+      "\uc778\uc99d \uc138\uc158 \uc0c1\ud0dc\ub97c \ud655\uc778\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4."
     );
   }, [locale, supabaseSessionError]);
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   function buildHeaders() {
     const headers: Record<string, string> = {
@@ -186,7 +192,7 @@ export default function EmployeeYearEndInputConsole() {
     };
     if (usesBearerToken) {
       headers.authorization = `Bearer ${bearerToken}`;
-    } else {
+    } else if (allowHeaderActorFallback) {
       headers["x-actor-role"] = "employee";
       headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
       if (organizationId.trim()) {
@@ -197,6 +203,10 @@ export default function EmployeeYearEndInputConsole() {
   }
 
   async function loadFinalizedSettlement() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     setPendingLabel(copy.pendingFinalizedSettlement);
     try {
       const query = new URLSearchParams({
@@ -316,13 +326,18 @@ export default function EmployeeYearEndInputConsole() {
         <p>{copy.description}</p>
         {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
       </header>
+      {requiresLoginSession ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        </p>
+      ) : null}
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.inputTitle}</h2>
           {showDevTools ? (
             <p className="small muted">
-              {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
-              {locale === "ko" ? "세션 직원" : "Session employee"}: <code>{employeeId || "-"}</code>
+              {locale === "ko" ? "\uc138\uc158 \uc870\uc9c1" : "Session organization"}: <code>{organizationId || "-"}</code> /{" "}
+              {locale === "ko" ? "\uc138\uc158 \uc9c1\uc6d0" : "Session employee"}: <code>{employeeId || "-"}</code>
             </p>
           ) : null}
           <div className="input-grid">
@@ -344,7 +359,7 @@ export default function EmployeeYearEndInputConsole() {
             <button
               className="btn btn-primary"
               onClick={() => void loadFinalizedSettlement()}
-              disabled={pendingLabel !== null || !coreLoadValid}
+              disabled={pendingLabel !== null || !coreLoadValid || requiresLoginSession}
             >
               {copy.loadFinalizedSettlementAction}
             </button>

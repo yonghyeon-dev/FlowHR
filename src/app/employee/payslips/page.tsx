@@ -62,6 +62,10 @@ export default function EmployeePayslipsPage() {
 
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const productionSessionRequiredNotice =
+    locale === "ko"
+      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
+      : "A login session is required in production. Please sign in again at /login.";
   const sourceContext =
     (searchParams.get("source") ?? "").trim().toLowerCase() === "employee-dashboard"
       ? "employee-dashboard"
@@ -99,11 +103,16 @@ export default function EmployeePayslipsPage() {
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
 
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
   const { logs, pendingLabel, refreshPayslips, appendClientLog, clearLogs } = usePayslipApi({
     pageCopy,
     runtimeLocale,
     usesBearerToken,
     bearerToken,
+    allowHeaderActorFallback,
+    requiresLoginSession,
+    productionSessionRequiredNotice,
     employeeIdForApi: normalizedEmployeeIdForApi,
     organizationId,
     periodStart,
@@ -258,6 +267,9 @@ export default function EmployeePayslipsPage() {
   }
 
   function downloadRunsCsv() {
+    if (requiresLoginSession) {
+      return;
+    }
     if (runs.length === 0) {
       return;
     }
@@ -349,6 +361,8 @@ export default function EmployeePayslipsPage() {
       sourceContext={sourceContext}
       isKoLocale={isKoLocale}
       isProductionRuntime={isProductionRuntime}
+      requiresLoginSession={requiresLoginSession}
+      productionSessionRequiredNotice={productionSessionRequiredNotice}
       usesBearerToken={usesBearerToken}
       payslipStats={payslipStats}
       stats={stats}

@@ -20,6 +20,8 @@ export function EmployeePayslipsPageView({
   sourceContext,
   isKoLocale,
   isProductionRuntime,
+  requiresLoginSession,
+  productionSessionRequiredNotice,
   usesBearerToken,
   payslipStats,
   stats,
@@ -89,6 +91,8 @@ export function EmployeePayslipsPageView({
         sourceContext={sourceContext}
         isKoLocale={isKoLocale}
         isProductionRuntime={isProductionRuntime}
+        requiresLoginSession={requiresLoginSession}
+        productionSessionRequiredNotice={productionSessionRequiredNotice}
         usesBearerToken={usesBearerToken}
         payslipStats={payslipStats}
         stats={stats}

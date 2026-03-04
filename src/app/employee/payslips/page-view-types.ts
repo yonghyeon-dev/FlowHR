@@ -33,6 +33,8 @@ export type EmployeePayslipsPageViewProps = {
   sourceContext: "employee-dashboard" | null;
   isKoLocale: boolean;
   isProductionRuntime: boolean;
+  requiresLoginSession: boolean;
+  productionSessionRequiredNotice: string;
   usesBearerToken: boolean;
   payslipStats: PayslipStats;
   stats: ApiStats;
