@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.12
+  version: 0.3.13
 paths:
   /people/organizations:
     get:
@@ -118,6 +118,21 @@ paths:
       responses:
         "200":
           description: Updated
+        "404":
+          description: Not found
+    delete:
+      summary: Delete department
+      parameters:
+        - in: path
+          name: departmentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "400":
+          description: Department has assigned employees
         "404":
           description: Not found
   /people/positions:

@@ -41,8 +41,8 @@ Admin users need a direct page for creating/updating/deleting departments with p
 - Migration IDs:
   - `202603050008_wi0938_department_management`
 - Backward compatibility plan:
-  - additive nullable columns (`parentId`, `managerId`)
-  - existing `code/name/active` model and APIs remain compatible
+  - additive nullable columns (parentId, managerId)
+  - existing code/name/active model and APIs remain compatible
 
 ## API and Event Changes
 
