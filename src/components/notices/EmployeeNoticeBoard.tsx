@@ -1,9 +1,11 @@
 ﻿"use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { NoticeItem, NoticeReadReceipt } from "@/features/notices/types";
 import { EmployeeNoticeBoardList } from "@/components/notices/EmployeeNoticeBoardList";
 import { resolveEmployeeNoticeBoardCopy } from "@/components/notices/copy";
+import { resolveEmployeeNoticeSourceEntry } from "@/components/notices/employee-source-context";
 import {
   buildNoticeQuery,
   buildReadAtByNoticeIdMap,
@@ -19,16 +21,16 @@ import {
 } from "@/components/notices/employee-notice-board-helpers";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
-
 function isTruthyFlag(value: string | undefined) {
   const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  return ["1", "true", "yes", "on"].includes(normalized);
 }
-
 export default function EmployeeNoticeBoard() {
+  const searchParams = useSearchParams();
   const { locale } = useI18n();
   const copy = resolveEmployeeNoticeBoardCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const sourceEntry = resolveEmployeeNoticeSourceEntry(searchParams.get("source"), locale === "ko");
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
@@ -193,10 +195,11 @@ export default function EmployeeNoticeBoard() {
         <div>
           <h1 className="page-title">{copy.pageTitle}</h1>
           <p className="page-subtitle">{copy.pageSubtitle}</p>
+          {sourceEntry ? <p className="small muted">{sourceEntry.hint}</p> : null}
         </div>
         <div className="page-actions">
           <Link className="btn btn-secondary" href="/employee">
-            /employee
+            {sourceEntry ? sourceEntry.returnLabel : "/employee"}
           </Link>
           {showDevTools ? <Link className="btn btn-secondary" href="/admin/notices">DEV /admin/notices</Link> : null}
         </div>

@@ -63,7 +63,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
             href: "/employee/contracts?status=pending_response&deadline=overdue&source=employee-dashboard",
             label: "계약 만료/지연"
           },
-          { href: "/employee/notices", label: "공지사항" },
+          { href: "/employee/notices?source=employee-dashboard", label: "공지사항" },
           { href: "/employee/benefits?status=SUBMITTED&risk=pending_3d", label: "복리후생 대기" },
           { href: "/employee/recruitment?risk=stalled_7d", label: "채용 정체 추천" }
         ]
@@ -124,7 +124,7 @@ export function buildEmployeeWorkspaceHubs(isKoLocale: boolean): EmployeeWorkspa
           href: "/employee/contracts?status=pending_response&deadline=overdue&source=employee-dashboard",
           label: "Contracts overdue"
         },
-        { href: "/employee/notices", label: "Notices" },
+        { href: "/employee/notices?source=employee-dashboard", label: "Notices" },
         {
           href: "/employee/benefits?status=SUBMITTED&risk=pending_3d",
           label: "Pending benefits"
