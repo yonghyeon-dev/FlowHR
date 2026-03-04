@@ -1,9 +1,11 @@
 ﻿"use client";
 
+import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
 import { useI18n } from "@/lib/i18n/provider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -15,22 +17,49 @@ type SessionSnapshot = {
   actorId: string | null;
 };
 
-function parseSession(session: unknown): SessionSnapshot | null {
-  if (!session || typeof session !== "object" || !("user" in session)) {
-    return null;
+function clearAccessTokenCookie() {
+  document.cookie = `${FLOWHR_ACCESS_TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+function syncAccessTokenCookie(session: Session | null) {
+  if (!session?.access_token) {
+    clearAccessTokenCookie();
+    return;
   }
-  const user = (session as { user: unknown }).user;
-  if (!user || typeof user !== "object" || !("id" in user) || typeof (user as { id: unknown }).id !== "string") {
+
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  const maxAge =
+    typeof session.expires_at === "number" ? Math.max(0, session.expires_at - nowEpochSeconds) : 60 * 60;
+
+  if (maxAge <= 0) {
+    clearAccessTokenCookie();
+    return;
+  }
+
+  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${FLOWHR_ACCESS_TOKEN_COOKIE}=${encodeURIComponent(session.access_token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secureFlag}`;
+}
+
+function resolveRedirectPath(value: string | null): string | null {
+  if (!value) {
     return null;
   }
 
-  const typed = user as {
-    id: string;
-    email?: string | null;
-    app_metadata?: Record<string, unknown>;
-  };
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
+    return null;
+  }
 
-  const app = typed.app_metadata ?? {};
+  return trimmed;
+}
+
+function parseSession(session: Session | null): SessionSnapshot | null {
+  const user = session?.user;
+  if (!user?.id) {
+    return null;
+  }
+
+  const app = (user.app_metadata ?? {}) as Record<string, unknown>;
   const role = typeof app.role === "string" ? app.role : null;
   const organizationId =
     typeof app.organization_id === "string"
@@ -46,8 +75,8 @@ function parseSession(session: unknown): SessionSnapshot | null {
         : null;
 
   return {
-    userId: typed.id,
-    email: typeof typed.email === "string" ? typed.email : null,
+    userId: user.id,
+    email: typeof user.email === "string" ? user.email : null,
     role,
     organizationId,
     actorId
@@ -56,6 +85,7 @@ function parseSession(session: unknown): SessionSnapshot | null {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, locale } = useI18n();
   const isKoLocale = locale === "ko";
   const [email, setEmail] = useState("");
@@ -64,13 +94,17 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
 
-  const target = useMemo(() => {
+  const redirectTarget = useMemo(() => resolveRedirectPath(searchParams.get("redirect")), [searchParams]);
+
+  const workspaceTarget = useMemo(() => {
     const role = snapshot?.role ?? "";
     if (role === "admin" || role === "payroll_operator" || role === "manager") {
       return "/admin";
     }
     return "/employee";
   }, [snapshot]);
+
+  const loginSuccessTarget = redirectTarget ?? workspaceTarget;
 
   useEffect(() => {
     let active = true;
@@ -82,6 +116,7 @@ export default function LoginPage() {
         if (!active) {
           return;
         }
+        syncAccessTokenCookie(data.session);
         setSnapshot(parseSession(data.session));
       } catch (error) {
         if (!active) {
@@ -93,6 +128,7 @@ export default function LoginPage() {
 
     const supabase = getSupabaseClient();
     const listener = supabase.auth.onAuthStateChange((_event, session) => {
+      syncAccessTokenCookie(session);
       setSnapshot(parseSession(session));
     });
 
@@ -109,12 +145,12 @@ export default function LoginPage() {
       return;
     }
     const timer = window.setTimeout(() => {
-      router.replace(target);
+      router.replace(loginSuccessTarget);
     }, 600);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [router, snapshot, target]);
+  }, [loginSuccessTarget, router, snapshot]);
 
   async function signIn() {
     setPending(true);
@@ -144,6 +180,7 @@ export default function LoginPage() {
       if (error) {
         throw new Error(error.message);
       }
+      clearAccessTokenCookie();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -161,8 +198,8 @@ export default function LoginPage() {
           <Link className="btn btn-secondary" href="/">
             {t("login.backHome")}
           </Link>
-          <Link className="btn btn-secondary" href={target}>
-            {target === "/admin" ? t("login.goToAdmin") : t("login.goToEmployee")}
+          <Link className="btn btn-secondary" href={workspaceTarget}>
+            {workspaceTarget === "/admin" ? t("login.goToAdmin") : t("login.goToEmployee")}
           </Link>
         </div>
       </section>
