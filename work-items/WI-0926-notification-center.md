@@ -47,6 +47,10 @@
   - Seeds notifications directly through `memoryDataAccess.inAppNotifications`.
   - Validates list, single-read, mark-all-read, and cross-user access denial.
 
+## Data Changes
+- Table/model: `InAppNotification`
+- Migration: `202603050005_wi0926_notification_center`
+
 ## Verification
 - `npx tsx scripts/tests/e2e-wi0926-notification-center.test.ts`
 - `npm.cmd run typecheck`
