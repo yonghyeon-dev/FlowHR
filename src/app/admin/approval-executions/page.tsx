@@ -222,6 +222,9 @@ export default function AdminApprovalExecutionsPage() {
     if (execution.domain === "ATTENDANCE" && action === "approve") {
       return `/api/attendance/records/${execution.targetEntityId}/approve`;
     }
+    if (execution.domain === "PAYROLL" && action === "approve") {
+      return `/api/payroll/runs/${execution.targetEntityId}/confirm`;
+    }
     return null;
   }
 
@@ -386,6 +389,10 @@ export default function AdminApprovalExecutionsPage() {
         ? isKoLocale
           ? "휴가 요청 승인"
           : "Approve leave request"
+        : execution.domain === "PAYROLL"
+          ? isKoLocale
+            ? "급여 실행 확정"
+            : "Confirm payroll run"
         : isKoLocale
           ? "출퇴근 기록 승인"
           : "Approve attendance record";

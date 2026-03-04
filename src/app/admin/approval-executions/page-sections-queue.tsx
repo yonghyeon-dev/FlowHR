@@ -99,7 +99,9 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
             const isStalled = execution.state === "PENDING" && stalledHours >= stalledHoursThreshold;
             const canApprove =
               execution.state === "PENDING" &&
-              (execution.domain === "LEAVE" || execution.domain === "ATTENDANCE");
+              (execution.domain === "LEAVE" ||
+                execution.domain === "ATTENDANCE" ||
+                execution.domain === "PAYROLL");
             const canReject = execution.state === "PENDING" && execution.domain === "LEAVE";
             return (
               <li key={execution.id} className={selected ? "selected-row" : undefined}>
