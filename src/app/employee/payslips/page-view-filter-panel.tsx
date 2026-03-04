@@ -12,6 +12,8 @@ type EmployeePayslipFilterPanelProps = {
   sourceContext: "employee-dashboard" | null;
   isKoLocale: boolean;
   isProductionRuntime: boolean;
+  requiresLoginSession: boolean;
+  productionSessionRequiredNotice: string;
   usesBearerToken: boolean;
   payslipStats: {
     count: number;
@@ -47,6 +49,8 @@ export function EmployeePayslipFilterPanel({
   sourceContext,
   isKoLocale,
   isProductionRuntime,
+  requiresLoginSession,
+  productionSessionRequiredNotice,
   usesBearerToken,
   payslipStats,
   stats,
@@ -110,10 +114,9 @@ export function EmployeePayslipFilterPanel({
         </div>
       </header>
 
-      {isProductionRuntime && !usesBearerToken ? (
+      {requiresLoginSession ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          {pageCopy.productionNotice.prefix} <strong>{pageCopy.productionNotice.runtimeLabel}</strong>
-          {pageCopy.productionNotice.suffix} <Link href="/login">/login</Link>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
 
@@ -169,7 +172,11 @@ export function EmployeePayslipFilterPanel({
           </label>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={() => void refreshPayslips()}>
+          <button
+            className="btn btn-primary"
+            onClick={() => void refreshPayslips()}
+            disabled={requiresLoginSession}
+          >
             {pageCopy.filters.actions.refresh}
           </button>
           <button className="btn btn-secondary" onClick={applyCurrentMonthRange}>
@@ -181,7 +188,11 @@ export function EmployeePayslipFilterPanel({
           <button className="btn btn-secondary" onClick={applyLastThreeMonthsRange}>
             {pageCopy.filters.actions.lastThreeMonths}
           </button>
-          <button className="btn btn-secondary" onClick={downloadRunsCsv} disabled={!hasRuns}>
+          <button
+            className="btn btn-secondary"
+            onClick={downloadRunsCsv}
+            disabled={!hasRuns || requiresLoginSession}
+          >
             {pageCopy.filters.actions.downloadCsv}
           </button>
         </div>

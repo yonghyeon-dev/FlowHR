@@ -15,6 +15,9 @@ type UsePayslipApiParams = {
   runtimeLocale: string;
   usesBearerToken: boolean;
   bearerToken: string;
+  allowHeaderActorFallback: boolean;
+  requiresLoginSession: boolean;
+  productionSessionRequiredNotice: string;
   employeeIdForApi: string;
   organizationId: string;
   periodStart: string;
@@ -49,6 +52,9 @@ export function usePayslipApi({
   runtimeLocale,
   usesBearerToken,
   bearerToken,
+  allowHeaderActorFallback,
+  requiresLoginSession,
+  productionSessionRequiredNotice,
   employeeIdForApi,
   organizationId,
   periodStart,
@@ -82,7 +88,7 @@ export function usePayslipApi({
 
         if (usesBearerToken) {
           headers.authorization = `Bearer ${bearerToken.trim()}`;
-        } else {
+        } else if (allowHeaderActorFallback) {
           headers["x-actor-role"] = "employee";
           headers["x-actor-id"] = employeeIdForApi.trim() || defaultEmployeeIdForApi;
           if (organizationId.trim().length > 0) {
@@ -116,10 +122,24 @@ export function usePayslipApi({
         setPendingLabel(null);
       }
     },
-    [bearerToken, employeeIdForApi, organizationId, runtimeLocale, usesBearerToken]
+    [
+      allowHeaderActorFallback,
+      bearerToken,
+      employeeIdForApi,
+      organizationId,
+      runtimeLocale,
+      usesBearerToken
+    ]
   );
 
   const refreshPayslips = useCallback(async () => {
+    if (requiresLoginSession) {
+      appendClientLog(pageCopy.logs.fetchPayslips, false, 401, {
+        error: productionSessionRequiredNotice,
+        reason: "requires_login_session"
+      });
+      return;
+    }
     const from = toIso(periodStart);
     const to = toIso(periodEnd);
     const targetEmployeeId = employeeIdForApi.trim() || defaultEmployeeIdForApi;
@@ -155,6 +175,9 @@ export function usePayslipApi({
   }, [
     callApi,
     employeeIdForApi,
+    requiresLoginSession,
+    productionSessionRequiredNotice,
+    appendClientLog,
     pageCopy.logs.fetchAttendance,
     pageCopy.logs.fetchPayslips,
     periodEnd,
