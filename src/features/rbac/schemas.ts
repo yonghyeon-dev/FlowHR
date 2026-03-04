@@ -32,3 +32,7 @@ export const assignRoleSchema = z.object({
   roleName: z.string().trim().min(1)
 });
 
+export const assignEmployeeRoleSchema = z.object({
+  role: z.enum(["admin", "manager", "employee"])
+});
+
