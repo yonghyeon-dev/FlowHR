@@ -15,6 +15,14 @@ import type {
   YearEndTaxCreditItemsInput
 } from "@/features/payroll/service-input-types";
 import type { InsuranceRoundingMode } from "@/features/payroll/service-statutory-adapter-helpers";
+
+export type PayrollMinimumWageWarning = {
+  employeeId: string;
+  type: "BELOW_MINIMUM_WAGE";
+  effectiveRate: number;
+  minimumRate: number;
+};
+
 export type PreviewPayrollResult = {
   run: PayrollRunEntity;
   summary: {
@@ -22,6 +30,7 @@ export type PreviewPayrollResult = {
     totals: PayableMinutes;
     grossPayKrw: number;
   };
+  warnings: PayrollMinimumWageWarning[];
 };
 
 export type PreviewPayrollWithDeductionsResult = {
