@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.12.0
+version: 1.13.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -14,6 +14,7 @@ scope:
     - annual leave promotion delivery history list/detail and per-recipient retry
     - organization-level annual leave accrual auto-grant dry-run/apply workflow
     - organization-level leave calendar occupancy read model with department filter and overlap warnings
+    - leave policy list/archive workflow with statutory-protection and usage-protection guards
   out:
     - external calendar synchronization
 entities:
@@ -73,6 +74,12 @@ api:
       path: /leave/policy
       description: Upsert leave policy for an organization including fractional controls and request constraints.
     - method: GET
+      path: /leave/policies
+      description: List leave policies with active-status default filtering and usage counts.
+    - method: DELETE
+      path: /leave/policies/{policyId}
+      description: Archive leave policy when non-statutory and not referenced by leave requests.
+    - method: GET
       path: /leave/policy/promotion-preview
       description: Preview annual leave promotion targets and internal announcement draft based on policy.
     - method: POST
@@ -130,6 +137,8 @@ db_changes:
       description: Add annual leave promotion controls and internal notice template fields to LeavePolicy.
     - id: 202602190008_leave_promotion_delivery_history
       description: Add annual leave promotion delivery/recipient history and retry-chain linkage model.
+    - id: 202603050007_wi0935_leave_policy_validation
+      description: Add leave policy statutory/status fields, request policy reference, and policy delete usage guard support.
   backward_compatible: true
   notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
@@ -157,6 +166,9 @@ invariants:
   - Promotion notify writes delivery history rows for dry-run/skipped/dispatched/failed outcomes.
   - Promotion retry is allowed only for email-template deliveries and persists retry chain linkage.
   - Promotion retry defaults to failed recipients when `recipientEmployeeIds` are omitted.
+  - Statutory leave policies cannot be archived through the delete API.
+  - Leave policies referenced by leave requests cannot be archived.
+  - Leave policy list API defaults to `status=ACTIVE` and excludes archived policies unless explicitly requested.
 risk:
   permissions:
     - Unauthorized approval or accrual settlement can alter payroll and staffing plans.
@@ -182,6 +194,10 @@ test_plan:
     - reject flow with reason and audit
     - accrual settlement with duplicate-year protection
     - leave policy upsert/read returns configured values
+    - leave policy list returns `isStatutory` and `usageCount` with default active-only filter.
+    - delete leave policy rejects statutory policies with `400`.
+    - delete leave policy rejects policies with active request usage with `400`.
+    - delete leave policy archives unused non-statutory policy and excludes it from default list results.
     - accrual settlement uses policy defaults when request does not include grant/cap
     - accrual auto-grant dry-run returns eligible/already-settled/not-eligible summary without mutating balances
     - accrual auto-grant apply settles eligible employees for target year and keeps already-settled employees skipped
@@ -270,7 +286,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "Contract v1.12.0 introduces leave calendar API (`GET /leave/calendar`) with department filter and overlap-warning summary while preserving existing leave request/policy/promotion/accrual APIs."
+consumer_impact: "Contract v1.13.0 adds leave policy list/archive APIs (`GET /leave/policies`, `DELETE /leave/policies/{policyId}`) with statutory/usage deletion guards while preserving existing leave request/policy/promotion/accrual APIs."
 references:
   - specs/common/time-and-payroll-rules.md
   - work-items/WI-0035-employeeid-fk-migration.md
@@ -284,6 +300,7 @@ references:
   - work-items/WI-0125-leave-promotion-delivery-history-retry.md
   - work-items/WI-0182-leave-accrual-auto-grant-engine-baseline.md
   - work-items/WI-0183-leave-calendar-integration-baseline.md
+  - work-items/WI-0935-leave-policy-validation.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent

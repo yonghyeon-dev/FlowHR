@@ -41,6 +41,10 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 33. Leave calendar query returns day summaries and entry list for organization/date range.
 34. Leave calendar query applies `departmentId` filter to entries and day occupancy.
 35. Leave calendar query includes pending requests in occupancy when `includePending=true`.
+36. Leave policy list API returns `isStatutory` and `usageCount` for each policy row.
+37. Leave policy delete rejects statutory policies with `400`.
+38. Leave policy delete rejects policies with active leave-request usage with `400`.
+39. Leave policy delete archives unused non-statutory policy and default list excludes archived rows.
 
 ## Boundary and Accuracy Cases
 

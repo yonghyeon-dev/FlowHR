@@ -24,6 +24,7 @@ import type {
   CreateAttendanceRecordInput,
   CreateDepartmentInput,
   CreateEmployeeInput,
+  CreateLeavePolicyInput,
   CreateLeaveRequestInput,
   CreateNoticeInput,
   CreateNoticeNotificationInput,
@@ -187,6 +188,7 @@ function toWorkScheduleTemplateEntity(record: {
 function toLeaveRequestEntity(record: {
   id: string;
   employeeId: string;
+  policyId: string | null;
   leaveType: "ANNUAL" | "SICK" | "UNPAID";
   startDate: Date;
   endDate: Date;
@@ -233,6 +235,9 @@ function toLeaveBalanceEntity(record: {
 function toLeavePolicyEntity(record: {
   id: string;
   organizationId: string;
+  name: string;
+  isStatutory: boolean;
+  status: "ACTIVE" | "ARCHIVED";
   annualGrantDays: number;
   carryOverCapDays: number;
   allowHalfDay: boolean;
@@ -1916,6 +1921,7 @@ const leave: LeaveStore = {
     const request = await prisma.leaveRequest.create({
       data: {
         employeeId: input.employeeId,
+        policyId: input.policyId === undefined ? null : input.policyId,
         leaveType: input.leaveType,
         startDate: input.startDate,
         endDate: input.endDate,
@@ -2095,58 +2101,144 @@ const leaveBalance: LeaveBalanceStore = {
   }
 };
 
+const DEFAULT_LEAVE_POLICY_NAME = "Default Leave Policy";
+
 const leavePolicy: LeavePolicyStore = {
-  async findByOrganizationId(organizationId: string) {
+  async findById(id: string) {
     const policy = await prisma.leavePolicy.findUnique({
-      where: { organizationId }
+      where: { id }
     });
     return policy ? toLeavePolicyEntity(policy) : null;
   },
 
-  async upsertForOrganization(input: UpsertLeavePolicyInput) {
-    const policy = await prisma.leavePolicy.upsert({
-      where: { organizationId: input.organizationId },
-      update: {
-        annualGrantDays: input.annualGrantDays,
-        carryOverCapDays: input.carryOverCapDays,
-        ...(input.allowHalfDay !== undefined ? { allowHalfDay: input.allowHalfDay } : {}),
-        ...(input.allowHourly !== undefined ? { allowHourly: input.allowHourly } : {}),
-        ...(input.hourlyIncrementMinutes !== undefined
-          ? { hourlyIncrementMinutes: input.hourlyIncrementMinutes }
-          : {}),
-        ...(input.maxHoursPerRequest !== undefined
-          ? { maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest) }
-          : {}),
-        ...(input.minNoticeDays !== undefined ? { minNoticeDays: input.minNoticeDays } : {}),
-        ...(input.maxConsecutiveDays !== undefined
-          ? {
-              maxConsecutiveDays:
-                input.maxConsecutiveDays === null
-                  ? null
-                  : new Prisma.Decimal(input.maxConsecutiveDays)
-            }
-          : {}),
-        ...(input.annualLeavePromotionEnabled !== undefined
-          ? { annualLeavePromotionEnabled: input.annualLeavePromotionEnabled }
-          : {}),
-        ...(input.annualLeavePromotionThresholdDays !== undefined
-          ? {
-              annualLeavePromotionThresholdDays: new Prisma.Decimal(
-                input.annualLeavePromotionThresholdDays
-              )
-            }
-          : {}),
-        ...(input.annualLeavePromotionLeadDays !== undefined
-          ? { annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays }
-          : {}),
-        ...(input.annualLeavePromotionMessageTemplate !== undefined
-          ? { annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate }
-          : {})
-      },
-      create: {
+  async list(input: {
+    organizationId: string;
+    status?: "ACTIVE" | "ARCHIVED";
+    isStatutory?: boolean;
+  }) {
+    const policies = await prisma.leavePolicy.findMany({
+      where: {
         organizationId: input.organizationId,
-        annualGrantDays: input.annualGrantDays,
-        carryOverCapDays: input.carryOverCapDays,
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.isStatutory === undefined ? {} : { isStatutory: input.isStatutory })
+      },
+      orderBy: [{ isStatutory: "desc" }, { updatedAt: "desc" }, { id: "desc" }]
+    });
+    return policies.map(toLeavePolicyEntity);
+  },
+
+  async findByOrganizationId(organizationId: string) {
+    const configured = await prisma.leavePolicy.findFirst({
+      where: {
+        organizationId,
+        status: "ACTIVE",
+        isStatutory: false
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
+    });
+    if (configured) {
+      return toLeavePolicyEntity(configured);
+    }
+
+    const fallback = await prisma.leavePolicy.findFirst({
+      where: {
+        organizationId,
+        status: "ACTIVE"
+      },
+      orderBy: [{ isStatutory: "desc" }, { updatedAt: "desc" }, { id: "desc" }]
+    });
+    return fallback ? toLeavePolicyEntity(fallback) : null;
+  },
+
+  async upsertForOrganization(input: UpsertLeavePolicyInput) {
+    const existing = await prisma.leavePolicy.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        status: "ACTIVE",
+        isStatutory: false
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
+    });
+
+    const data = {
+      annualGrantDays: input.annualGrantDays,
+      carryOverCapDays: input.carryOverCapDays,
+      ...(input.allowHalfDay !== undefined ? { allowHalfDay: input.allowHalfDay } : {}),
+      ...(input.allowHourly !== undefined ? { allowHourly: input.allowHourly } : {}),
+      ...(input.hourlyIncrementMinutes !== undefined
+        ? { hourlyIncrementMinutes: input.hourlyIncrementMinutes }
+        : {}),
+      ...(input.maxHoursPerRequest !== undefined
+        ? { maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest) }
+        : {}),
+      ...(input.minNoticeDays !== undefined ? { minNoticeDays: input.minNoticeDays } : {}),
+      ...(input.maxConsecutiveDays !== undefined
+        ? {
+            maxConsecutiveDays:
+              input.maxConsecutiveDays === null ? null : new Prisma.Decimal(input.maxConsecutiveDays)
+          }
+        : {}),
+      ...(input.annualLeavePromotionEnabled !== undefined
+        ? { annualLeavePromotionEnabled: input.annualLeavePromotionEnabled }
+        : {}),
+      ...(input.annualLeavePromotionThresholdDays !== undefined
+        ? {
+            annualLeavePromotionThresholdDays: new Prisma.Decimal(
+              input.annualLeavePromotionThresholdDays
+            )
+          }
+        : {}),
+      ...(input.annualLeavePromotionLeadDays !== undefined
+        ? { annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays }
+        : {}),
+      ...(input.annualLeavePromotionMessageTemplate !== undefined
+        ? { annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate }
+        : {})
+    };
+
+    const policy = existing
+      ? await prisma.leavePolicy.update({
+          where: { id: existing.id },
+          data
+        })
+      : await prisma.leavePolicy.create({
+          data: {
+            organizationId: input.organizationId,
+            name: DEFAULT_LEAVE_POLICY_NAME,
+            isStatutory: false,
+            status: "ACTIVE",
+            annualGrantDays: input.annualGrantDays,
+            carryOverCapDays: input.carryOverCapDays,
+            allowHalfDay: input.allowHalfDay ?? true,
+            allowHourly: input.allowHourly ?? true,
+            hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
+            maxHoursPerRequest: new Prisma.Decimal(input.maxHoursPerRequest ?? 8),
+            minNoticeDays: input.minNoticeDays ?? 0,
+            maxConsecutiveDays:
+              input.maxConsecutiveDays === undefined || input.maxConsecutiveDays === null
+                ? null
+                : new Prisma.Decimal(input.maxConsecutiveDays),
+            annualLeavePromotionEnabled: input.annualLeavePromotionEnabled ?? false,
+            annualLeavePromotionThresholdDays: new Prisma.Decimal(
+              input.annualLeavePromotionThresholdDays ?? 5
+            ),
+            annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays ?? 30,
+            annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate ?? null
+          }
+        });
+    return toLeavePolicyEntity(policy);
+  },
+
+  async create(input: CreateLeavePolicyInput) {
+    const normalizedName = input.name.trim();
+    const policy = await prisma.leavePolicy.create({
+      data: {
+        organizationId: input.organizationId,
+        name: normalizedName.length > 0 ? normalizedName : DEFAULT_LEAVE_POLICY_NAME,
+        isStatutory: input.isStatutory ?? false,
+        status: input.status ?? "ACTIVE",
+        annualGrantDays: input.annualGrantDays ?? 15,
+        carryOverCapDays: input.carryOverCapDays ?? 5,
         allowHalfDay: input.allowHalfDay ?? true,
         allowHourly: input.allowHourly ?? true,
         hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
@@ -2165,6 +2257,24 @@ const leavePolicy: LeavePolicyStore = {
       }
     });
     return toLeavePolicyEntity(policy);
+  },
+
+  async archive(id: string) {
+    const policy = await prisma.leavePolicy.update({
+      where: { id },
+      data: {
+        status: "ARCHIVED"
+      }
+    });
+    return toLeavePolicyEntity(policy);
+  },
+
+  async countUsage(policyId: string) {
+    return prisma.leaveRequest.count({
+      where: {
+        policyId
+      }
+    });
   }
 };
 
