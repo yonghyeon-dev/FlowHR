@@ -346,7 +346,10 @@ function toNoticeNotificationEntity(record: {
   createdAt: Date;
   updatedAt: Date;
 }): NoticeNotificationEntity {
-  return record;
+  return {
+    ...record,
+    employeeId: null
+  };
 }
 
 function toBenefitCatalogItemEntity(record: {
@@ -2352,6 +2355,7 @@ const noticeNotifications: NoticeNotificationStore = {
   async list(input: {
     organizationId: string;
     noticeId?: string;
+    employeeId?: string;
     state?: NoticeNotificationState;
     limit?: number;
   }) {

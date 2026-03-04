@@ -430,6 +430,7 @@ export type NoticeNotificationEntity = {
   id: string;
   organizationId: string;
   noticeId: string;
+  employeeId: string | null;
   audience: NoticeAudience;
   channel: NoticeNotificationChannel;
   state: NoticeNotificationState;
@@ -926,6 +927,7 @@ export type UpsertNoticeReadReceiptInput = {
 export type CreateNoticeNotificationInput = {
   organizationId: string;
   noticeId: string;
+  employeeId?: string | null;
   audience: NoticeAudience;
   channel: NoticeNotificationChannel;
   state?: NoticeNotificationState;
@@ -1349,6 +1351,7 @@ export interface NoticeNotificationStore {
   list(input: {
     organizationId: string;
     noticeId?: string;
+    employeeId?: string;
     state?: NoticeNotificationState;
     limit?: number;
   }): Promise<NoticeNotificationEntity[]>;
