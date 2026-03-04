@@ -13,7 +13,9 @@ type MutationActionsInput = Omit<
 type BuildEmployeeMutationRuntimeInput = MutationActionsInput & {
   allowHeaderActorFallback: boolean;
   requiresLoginSession: boolean;
+  requiresEmployeeIdBinding: boolean;
   productionSessionRequiredNotice: string;
+  productionEmployeeIdRequiredNotice: string;
   usesBearerToken: boolean;
   bearerToken: string;
   organizationId: string;
@@ -26,7 +28,9 @@ export function buildEmployeeMutationRuntime(input: BuildEmployeeMutationRuntime
   const {
     allowHeaderActorFallback,
     requiresLoginSession,
+    requiresEmployeeIdBinding,
     productionSessionRequiredNotice,
+    productionEmployeeIdRequiredNotice,
     usesBearerToken,
     bearerToken,
     organizationId,
@@ -67,6 +71,33 @@ export function buildEmployeeMutationRuntime(input: BuildEmployeeMutationRuntime
         body
       };
     }
+
+    if (requiresEmployeeIdBinding && mutationInput.employeeId.trim().length === 0) {
+      const body = {
+        error: productionEmployeeIdRequiredNotice,
+        reason: "requires_employee_id_binding"
+      };
+      const log: ApiLog = {
+        id: Date.now(),
+        label,
+        status: 400,
+        ok: false,
+        durationMs: 0,
+        at: new Date().toLocaleString(runtimeLocale),
+        body
+      };
+      setLogs((previousLogs) => [log, ...previousLogs]);
+      return {
+        response: new Response(JSON.stringify(body), {
+          status: 400,
+          headers: {
+            "content-type": "application/json"
+          }
+        }),
+        body
+      };
+    }
+
     setPendingLabel(label);
     try {
       const { response, body, log } = await performEmployeeApiCall({

@@ -37,6 +37,10 @@ function toSnapshot(session: Session | null): SupabaseSessionSnapshot | null {
       ? app.actor_id
       : typeof app.actorId === "string"
         ? app.actorId
+        : typeof app.employee_id === "string"
+          ? app.employee_id
+          : typeof app.employeeId === "string"
+            ? app.employeeId
         : null;
 
   return {
