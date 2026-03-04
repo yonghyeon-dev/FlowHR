@@ -4,6 +4,7 @@ import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
 
 function canManageCatalog(role: string | null | undefined) {
   return role === "admin" || role === "manager";
@@ -12,6 +13,29 @@ function canManageCatalog(role: string | null | undefined) {
 function normalizeOrganizationId(value: string | null | undefined) {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+function resolveOrganizationScope(input: {
+  actorOrganizationId: string | null | undefined;
+  requestedOrganizationId: string | null | undefined;
+}) {
+  const actorOrganizationId = normalizeOrganizationId(input.actorOrganizationId);
+  const requestedOrganizationId = normalizeOrganizationId(input.requestedOrganizationId);
+
+  if (IS_PRODUCTION_RUNTIME) {
+    return {
+      organizationId: actorOrganizationId,
+      mismatch:
+        Boolean(actorOrganizationId) &&
+        Boolean(requestedOrganizationId) &&
+        actorOrganizationId !== requestedOrganizationId
+    };
+  }
+
+  return {
+    organizationId: requestedOrganizationId ?? actorOrganizationId ?? DEFAULT_ORG_ID,
+    mismatch: false
+  };
 }
 
 export async function GET(request: Request) {
@@ -26,14 +50,19 @@ export async function GET(request: Request) {
   }
 
   const actor = await readActor(request);
-  if (!actor && process.env.NODE_ENV === "production") {
+  if (!actor && IS_PRODUCTION_RUNTIME) {
     return fail(401, "benefits.catalog.list.unauthorized");
   }
 
-  const organizationId =
-    normalizeOrganizationId(parsed.data.organizationId) ??
-    normalizeOrganizationId(actor?.organizationId) ??
-    (process.env.NODE_ENV !== "production" ? DEFAULT_ORG_ID : null);
+  const { organizationId, mismatch } = resolveOrganizationScope({
+    actorOrganizationId: actor?.organizationId,
+    requestedOrganizationId: parsed.data.organizationId
+  });
+  if (mismatch) {
+    return fail(403, "benefits.catalog.list.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
   if (!organizationId) {
     return fail(400, "benefits.catalog.list.organization_id_required");
   }
@@ -65,8 +94,21 @@ export async function POST(request: Request) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
+  const { organizationId, mismatch } = resolveOrganizationScope({
+    actorOrganizationId: actor?.organizationId,
+    requestedOrganizationId: parsed.data.organizationId
+  });
+  if (mismatch) {
+    return fail(403, "benefits.catalog.create.forbidden", {
+      reason: "organization_scope_mismatch"
+    });
+  }
+  if (!organizationId) {
+    return fail(400, "benefits.catalog.create.organization_id_required");
+  }
+
   const created = await createBenefitCatalogItem({
-    organizationId: parsed.data.organizationId ?? actor?.organizationId ?? DEFAULT_ORG_ID,
+    organizationId,
     name: parsed.data.name,
     description: parsed.data.description,
     annualLimitKrw: parsed.data.annualLimitKrw,

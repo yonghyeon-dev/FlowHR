@@ -41,8 +41,20 @@ function parseRoleFromUser(user: User): ActorRole {
 }
 
 function parseOrganizationIdFromUser(user: User): string | null {
-  const candidates = [
-    user.app_metadata?.organization_id,
+  const canonicalOrganizationId = user.app_metadata?.organization_id;
+  if (typeof canonicalOrganizationId === "string") {
+    const value = canonicalOrganizationId.trim();
+    if (value.length > 0) {
+      return value;
+    }
+  }
+
+  // Production hardening: trust only canonical app_metadata.organization_id.
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+
+  const compatibilityCandidates = [
     user.app_metadata?.organizationId,
     user.user_metadata?.organization_id,
     user.user_metadata?.organizationId,
@@ -50,7 +62,7 @@ function parseOrganizationIdFromUser(user: User): string | null {
     user.user_metadata?.org_id
   ];
 
-  for (const candidate of candidates) {
+  for (const candidate of compatibilityCandidates) {
     if (typeof candidate !== "string") {
       continue;
     }

@@ -7,7 +7,11 @@ function isTruthyFlag(value: string | undefined) {
 }
 
 export function isTenancyEnabled() {
-  return isTruthyFlag(process.env.FLOWHR_TENANCY_V1 ?? process.env.TENANCY_V1);
+  const configuredFlag = process.env.FLOWHR_TENANCY_V1 ?? process.env.TENANCY_V1;
+  if (configuredFlag !== undefined) {
+    return isTruthyFlag(configuredFlag);
+  }
+  return process.env.NODE_ENV === "production";
 }
 
 export function isPlatformActor(actor: Actor) {

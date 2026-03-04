@@ -5,9 +5,18 @@ import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
 
 function canManageNotices(role: string | null | undefined) {
   return role === "admin" || role === "manager";
+}
+
+function resolveActorOrganizationId(organizationId: string | null | undefined) {
+  const normalized = organizationId?.trim();
+  if (normalized) {
+    return normalized;
+  }
+  return IS_PRODUCTION_RUNTIME ? null : DEFAULT_ORG_ID;
 }
 
 type RouteContext = {
@@ -48,10 +57,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
+  const organizationId = resolveActorOrganizationId(actor?.organizationId);
+  if (!organizationId) {
+    return fail(400, "notice.update.organization_id_required");
+  }
+
   const result = await updateNotice(
     { dataAccess: getRuntimeDataAccess() },
     {
-      organizationId: actor?.organizationId ?? DEFAULT_ORG_ID,
+      organizationId,
       noticeId: parsed.data.noticeId,
       title: parsed.data.title,
       body: parsed.data.body,
@@ -86,10 +100,15 @@ export async function DELETE(request: Request, context: RouteContext) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
 
+  const organizationId = resolveActorOrganizationId(actor?.organizationId);
+  if (!organizationId) {
+    return fail(400, "notice.delete.organization_id_required");
+  }
+
   const result = await deleteNotice(
     { dataAccess: getRuntimeDataAccess() },
     {
-      organizationId: actor?.organizationId ?? DEFAULT_ORG_ID,
+      organizationId,
       noticeId: parsed.data.noticeId,
       actorId: actor?.id,
       actorRole: actor?.role ?? "admin"
