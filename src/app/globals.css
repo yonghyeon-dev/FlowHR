@@ -1126,8 +1126,33 @@ button.queue-badge:hover {
 }
 .row-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   align-items: center;
   justify-content: flex-end;
+}
+.approval-reject-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 80;
+}
+.approval-reject-modal {
+  width: min(480px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.approval-reject-modal h3 {
+  margin: 0;
 }
 .stale-chip {
   display: inline-flex;

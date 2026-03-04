@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import {
   formatDateTime,
@@ -16,13 +17,9 @@ import type {
   ApiLogStats,
   ApprovalDomain,
   ApprovalExecutionDto,
-  ApprovalExecutionSort,
   ApprovalExecutionState,
-  ApprovalExecutionSummary,
-  ApprovalStageHistoryDto,
-  EscalationResultDto
+  ApprovalStageHistoryDto
 } from "@/app/admin/approval-executions/page-types";
-import { domainOptions, stateOptions } from "@/app/admin/approval-executions/page-types";
 
 type ExecutionListPanelProps = {
   isKoLocale: boolean;
@@ -33,7 +30,10 @@ type ExecutionListPanelProps = {
   stalledHoursThreshold: number;
   toDomainLabel: (value: ApprovalDomain) => string;
   toStateLabel: (value: ApprovalExecutionState) => string;
+  pendingLabel: string | null;
   onSelectExecution: (execution: ApprovalExecutionDto) => void;
+  onApproveExecution: (execution: ApprovalExecutionDto) => void;
+  onRejectExecution: (execution: ApprovalExecutionDto, reason: string) => void;
 };
 
 export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
@@ -46,8 +46,41 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
     stalledHoursThreshold,
     toDomainLabel,
     toStateLabel,
-    onSelectExecution
+    pendingLabel,
+    onSelectExecution,
+    onApproveExecution,
+    onRejectExecution
   } = props;
+  const [rejectTarget, setRejectTarget] = useState<ApprovalExecutionDto | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState("");
+
+  const actionDisabled = pendingLabel !== null;
+
+  function openRejectDialog(execution: ApprovalExecutionDto) {
+    setRejectTarget(execution);
+    setRejectReason("");
+    setRejectError("");
+  }
+
+  function closeRejectDialog() {
+    setRejectTarget(null);
+    setRejectReason("");
+    setRejectError("");
+  }
+
+  function submitReject() {
+    if (!rejectTarget) {
+      return;
+    }
+    const normalizedReason = rejectReason.trim();
+    if (normalizedReason.length === 0) {
+      setRejectError(isKoLocale ? "반려 사유를 입력해 주세요." : "Rejection reason is required.");
+      return;
+    }
+    onRejectExecution(rejectTarget, normalizedReason);
+    closeRejectDialog();
+  }
 
   return (
     <article className="panel">
@@ -64,6 +97,10 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
             const progressPercent = getProgressPercent(execution);
             const stalledHours = getStalledHours(execution, asOfDate);
             const isStalled = execution.state === "PENDING" && stalledHours >= stalledHoursThreshold;
+            const canApprove =
+              execution.state === "PENDING" &&
+              (execution.domain === "LEAVE" || execution.domain === "ATTENDANCE");
+            const canReject = execution.state === "PENDING" && execution.domain === "LEAVE";
             return (
               <li key={execution.id} className={selected ? "selected-row" : undefined}>
                 <button type="button" className="execution-row-btn" onClick={() => onSelectExecution(execution)}>
@@ -92,6 +129,26 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
                   {isStalled ? <span className="stale-chip">{isKoLocale ? "정체" : "Stalled"}</span> : null}
                 </button>
                 <div className="row-actions">
+                  {canApprove ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-small"
+                      onClick={() => onApproveExecution(execution)}
+                      disabled={actionDisabled}
+                    >
+                      {isKoLocale ? "승인" : "Approve"}
+                    </button>
+                  ) : null}
+                  {canReject ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => openRejectDialog(execution)}
+                      disabled={actionDisabled}
+                    >
+                      {isKoLocale ? "반려" : "Reject"}
+                    </button>
+                  ) : null}
                   <Link className="btn btn-secondary btn-small" href={resolveQuickJumpPath(execution)}>
                     {resolveQuickJumpLabel(execution, isKoLocale)}
                   </Link>
@@ -101,6 +158,43 @@ export function ApprovalExecutionListPanel(props: ExecutionListPanelProps) {
           })}
         </ul>
       )}
+      {rejectTarget ? (
+        <div className="approval-reject-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="approval-reject-modal">
+            <h3>{isKoLocale ? "휴가 요청 반려" : "Reject leave request"}</h3>
+            <p className="small muted">
+              {isKoLocale ? "반려 사유를 입력해야 반려 처리가 진행됩니다." : "A reason is required to reject this request."}
+            </p>
+            <p className="small">
+              {rejectTarget.targetEntityType}:{rejectTarget.targetEntityId}
+            </p>
+            <label>
+              {isKoLocale ? "반려 사유" : "Rejection reason"}
+              <textarea
+                value={rejectReason}
+                onChange={(event) => {
+                  setRejectReason(event.target.value);
+                  if (rejectError) {
+                    setRejectError("");
+                  }
+                }}
+                rows={3}
+                placeholder={isKoLocale ? "반려 사유를 입력하세요." : "Enter the rejection reason."}
+                disabled={actionDisabled}
+              />
+            </label>
+            {rejectError ? <p className="small fail">{rejectError}</p> : null}
+            <div className="panel-actions">
+              <button type="button" className="btn btn-secondary" onClick={closeRejectDialog} disabled={actionDisabled}>
+                {isKoLocale ? "취소" : "Cancel"}
+              </button>
+              <button type="button" className="btn btn-primary" onClick={submitReject} disabled={actionDisabled}>
+                {isKoLocale ? "반려 실행" : "Submit rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
