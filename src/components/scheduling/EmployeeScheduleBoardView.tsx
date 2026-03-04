@@ -16,6 +16,8 @@ type EmployeeScheduleBoardViewProps = {
   copy: EmployeeScheduleCopy;
   runtimeLocale: string;
   showDevTools: boolean;
+  requiresLoginSession: boolean;
+  productionSessionRequiredNotice: string;
   statusMessage: string;
   pendingLabel: string | null;
   logStats: { total: number; success: number; fail: number };
@@ -67,6 +69,8 @@ export default function EmployeeScheduleBoardView({
   copy,
   runtimeLocale,
   showDevTools,
+  requiresLoginSession,
+  productionSessionRequiredNotice,
   statusMessage,
   pendingLabel,
   logStats,
@@ -110,6 +114,11 @@ export default function EmployeeScheduleBoardView({
           <Link className="btn btn-secondary" href="/employee">{sourceEntry ? sourceEntry.returnLabel : "/employee"}</Link>
         </div>
       </header>
+      {requiresLoginSession ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        </p>
+      ) : null}
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
@@ -153,7 +162,12 @@ export default function EmployeeScheduleBoardView({
             <input value={searchQuery} placeholder={copy.searchPlaceholder} onChange={(event) => onSearchQueryChange(event.target.value)} />
           </label>
           <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={onLoadSchedules}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={onLoadSchedules}
+              disabled={requiresLoginSession}
+            >
               {copy.loadAction}
             </button>
             <button className="btn btn-secondary" type="button" onClick={onApplyCurrentMonthRange}>
@@ -168,10 +182,10 @@ export default function EmployeeScheduleBoardView({
             <button className="btn btn-secondary" type="button" onClick={onClearSearch}>
               {copy.clearSearchAction}
             </button>
-            <button className="btn btn-secondary" type="button" onClick={onExportCsv}>
+            <button className="btn btn-secondary" type="button" onClick={onExportCsv} disabled={requiresLoginSession}>
               {copy.exportCsvAction}
             </button>
-            <button className="btn btn-secondary" type="button" onClick={onExportIcs}>
+            <button className="btn btn-secondary" type="button" onClick={onExportIcs} disabled={requiresLoginSession}>
               {copy.exportIcsAction}
             </button>
             <a className="btn btn-secondary" href={attendanceCorrectionHref}>{copy.statusQuickCorrectionAction}</a>

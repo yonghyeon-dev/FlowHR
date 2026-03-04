@@ -29,9 +29,9 @@ export function EmployeeGuideDashboard() {
         <p>{copy.description}</p>
       </header>
 
-      {data.isProductionRuntime && !data.usesBearerToken ? (
+      {data.requiresLoginSession ? (
         <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
-          {copy.productionWarning} <Link href="/login">{copy.loginCta}</Link>
+          {data.productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
 

@@ -30,8 +30,13 @@ export default function EmployeeNoticeBoard() {
   const { locale } = useI18n();
   const copy = resolveEmployeeNoticeBoardCopy(locale);
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const productionSessionRequiredNotice =
+    locale === "ko"
+      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
+      : "A login session is required in production. Please sign in again at /login.";
   const sourceEntry = resolveEmployeeNoticeSourceEntry(searchParams.get("source"), locale === "ko");
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const isProductionRuntime = process.env.NODE_ENV === "production";
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
@@ -47,6 +52,8 @@ export default function EmployeeNoticeBoard() {
   const [agingRiskFilter, setAgingRiskFilter] = useState<EmployeeNoticeAgingRiskFilter>("all");
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
   const publishedCount = useMemo(
     () => notices.filter((notice) => notice.status === "PUBLISHED").length,
     [notices]
@@ -85,12 +92,19 @@ export default function EmployeeNoticeBoard() {
       headers.authorization = `Bearer ${bearerToken}`;
       return headers;
     }
+    if (!allowHeaderActorFallback) {
+      return headers;
+    }
     headers["x-actor-role"] = "employee";
     headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
     headers["x-actor-organization-id"] = organizationId.trim();
     return headers;
   }
   async function loadNotices() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -125,8 +139,18 @@ export default function EmployeeNoticeBoard() {
     }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto-load intentionally keys off session readiness only
-  useEffect(() => { if (autoLoadAttempted || (!organizationId.trim() && !usesBearerToken)) return; setAutoLoadAttempted(true); void loadNotices(); }, [autoLoadAttempted, organizationId, usesBearerToken]);
+  useEffect(() => {
+    if (autoLoadAttempted || requiresLoginSession || (!organizationId.trim() && !usesBearerToken)) {
+      return;
+    }
+    setAutoLoadAttempted(true);
+    void loadNotices();
+  }, [autoLoadAttempted, organizationId, requiresLoginSession, usesBearerToken]);
   async function markAsRead(noticeId: string) {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -155,6 +179,10 @@ export default function EmployeeNoticeBoard() {
     }
   }
   async function markAllAsRead() {
+    if (requiresLoginSession) {
+      setStatusMessage(productionSessionRequiredNotice);
+      return;
+    }
     if (!organizationId.trim() && !usesBearerToken) {
       setStatusMessage(copy.messages.needOrganization);
       return;
@@ -204,6 +232,11 @@ export default function EmployeeNoticeBoard() {
           {showDevTools ? <Link className="btn btn-secondary" href="/admin/notices">DEV /admin/notices</Link> : null}
         </div>
       </header>
+      {requiresLoginSession ? (
+        <p className="small" style={{ margin: "0 0 14px", color: "var(--danger)" }}>
+          {productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        </p>
+      ) : null}
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
@@ -256,7 +289,7 @@ export default function EmployeeNoticeBoard() {
               className={isAllQuickFilter ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
               type="button"
               onClick={() => applyQuickFilter("all", "all")}
-              disabled={pending}
+              disabled={pending || requiresLoginSession}
             >
               {copy.readStatusFilterAllOption} ({notices.length})
             </button>
@@ -264,7 +297,7 @@ export default function EmployeeNoticeBoard() {
               className={isUnreadQuickFilter ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
               type="button"
               onClick={() => applyQuickFilter("unread", "all")}
-              disabled={pending || unreadCount === 0}
+              disabled={pending || unreadCount === 0 || requiresLoginSession}
             >
               {copy.readStatusFilterUnreadOption} ({unreadCount})
             </button>
@@ -272,23 +305,23 @@ export default function EmployeeNoticeBoard() {
               className={isAgingRiskQuickFilter ? "btn btn-primary btn-small" : "btn btn-secondary btn-small"}
               type="button"
               onClick={() => applyQuickFilter("unread", "aging_3d")}
-              disabled={pending || unreadAgingRiskCount === 0}
+              disabled={pending || unreadAgingRiskCount === 0 || requiresLoginSession}
             >
               {copy.agingRiskFilterOnlyOption} ({unreadAgingRiskCount})
             </button>
           </div>
           <div className="actions">
-            <button className="btn btn-primary" type="button" onClick={() => void loadNotices()} disabled={pending}>
+            <button className="btn btn-primary" type="button" onClick={() => void loadNotices()} disabled={pending || requiresLoginSession}>
               {copy.refreshAction}
             </button>
-            <button className="btn btn-secondary" type="button" onClick={clearFilters} disabled={pending}>
+            <button className="btn btn-secondary" type="button" onClick={clearFilters} disabled={pending || requiresLoginSession}>
               {copy.clearFiltersAction}
             </button>
             <button
               className="btn btn-secondary"
               type="button"
               onClick={() => void markAllAsRead()}
-              disabled={pending || visibleUnreadNoticeIds.length === 0}
+              disabled={pending || visibleUnreadNoticeIds.length === 0 || requiresLoginSession}
             >
               {copy.markAllReadAction}
             </button>
@@ -306,7 +339,7 @@ export default function EmployeeNoticeBoard() {
             filteredNotices={filteredNotices}
             readNoticeIds={readNoticeIds}
             readAtByNoticeId={readAtByNoticeId}
-            pending={pending}
+            pending={pending || requiresLoginSession}
             runtimeLocale={runtimeLocale}
             onMarkAsRead={(noticeId) => void markAsRead(noticeId)}
           />

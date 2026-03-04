@@ -38,12 +38,18 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
+  const productionSessionRequiredNotice =
+    input.runtimeLocale === "ko-KR"
+      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
+      : "A login session is required in production. Please sign in again at /login.";
   const { snapshot: supabaseSession } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const employeeId = (supabaseSession?.actorId ?? supabaseSession?.userId ?? "EMP-1001").trim() || "EMP-1001";
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const requestJson = useCallback(
     async (label: string, path: string) => {
@@ -51,7 +57,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
       const headers: Record<string, string> = {};
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "employee";
         headers["x-actor-id"] = employeeId.trim() || "EMP-1001";
         if (organizationId.trim()) {
@@ -80,10 +86,20 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
       }
       return body;
     },
-    [bearerToken, employeeId, input.runtimeLocale, organizationId, usesBearerToken]
+    [
+      allowHeaderActorFallback,
+      bearerToken,
+      employeeId,
+      input.runtimeLocale,
+      organizationId,
+      usesBearerToken
+    ]
   );
 
   const loadGuide = useCallback(async () => {
+    if (requiresLoginSession) {
+      return;
+    }
     const targetEmployeeId = employeeId.trim();
     if (!usesBearerToken && (!organizationId.trim() || !targetEmployeeId)) {
       return;
@@ -132,6 +148,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
     input.requestLabels.confirmedPayslips,
     input.requestLabels.leaveRequests,
     organizationId,
+    requiresLoginSession,
     requestJson,
     usesBearerToken
   ]);
@@ -143,8 +160,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
   const checklistItems = useMemo(
     () =>
       buildEmployeeGuideChecklist({
-        profileReady:
-          usesBearerToken || (organizationId.trim().length > 0 && employeeId.trim().length > 0),
+        profileReady: usesBearerToken || (allowHeaderActorFallback && organizationId.trim().length > 0 && employeeId.trim().length > 0),
         attendanceRecordCount,
         leaveRequestCount,
         confirmedPayslipCount
@@ -153,6 +169,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
       attendanceRecordCount,
       confirmedPayslipCount,
       employeeId,
+      allowHeaderActorFallback,
       leaveRequestCount,
       organizationId,
       usesBearerToken
@@ -164,7 +181,7 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
   );
 
   const refreshDisabled =
-    Boolean(pendingLabel) || (!usesBearerToken && (!organizationId.trim() || !employeeId.trim()));
+    Boolean(pendingLabel) || requiresLoginSession || (!usesBearerToken && (!organizationId.trim() || !employeeId.trim()));
 
   return {
     attendanceRecordCount,
@@ -172,12 +189,14 @@ export function useEmployeeGuideData(input: UseEmployeeGuideDataInput) {
     confirmedPayslipCount,
     employeeId,
     isProductionRuntime,
+    requiresLoginSession,
     leaveRequestCount,
     loadGuide,
     logs,
     organizationId,
     pendingLabel,
     progressPercent,
+    productionSessionRequiredNotice,
     refreshDisabled,
     showDevTools,
     usesBearerToken
