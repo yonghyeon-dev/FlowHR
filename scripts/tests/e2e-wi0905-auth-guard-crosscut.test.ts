@@ -104,7 +104,6 @@ async function run() {
         }
       )
     ),
-    peopleEmployeesRoute.GET(new Request("http://localhost/api/people/employees", { method: "GET", headers: employeeHeaders })),
     schedulingSchedulesRoute.GET(
       new Request(`http://localhost/api/scheduling/schedules?from=${listFrom}&to=${listTo}`, {
         method: "GET",
@@ -116,8 +115,7 @@ async function run() {
   assert.equal(authenticatedGetResponses[0].status, 200, "employee GET /api/attendance/records should succeed");
   assert.equal(authenticatedGetResponses[1].status, 200, "employee GET /api/leave/requests should succeed");
   assert.equal(authenticatedGetResponses[2].status, 200, "employee GET /api/payroll/runs should succeed");
-  assert.equal(authenticatedGetResponses[3].status, 200, "employee GET /api/people/employees should succeed");
-  assert.equal(authenticatedGetResponses[4].status, 200, "employee GET /api/scheduling/schedules should succeed");
+  assert.equal(authenticatedGetResponses[3].status, 200, "employee GET /api/scheduling/schedules should succeed");
 
   const payrollPreviewDeniedResponse = await payrollPreviewRoute.POST(
     jsonRequest(
@@ -137,6 +135,11 @@ async function run() {
     403,
     "employee POST /api/payroll/runs/preview should be forbidden"
   );
+
+  const peopleListDeniedResponse = await peopleEmployeesRoute.GET(
+    new Request("http://localhost/api/people/employees", { method: "GET", headers: employeeHeaders })
+  );
+  assert.equal(peopleListDeniedResponse.status, 403, "employee GET /api/people/employees should be forbidden");
 
   const peopleCreateDeniedResponse = await peopleEmployeesRoute.POST(
     jsonRequest(
