@@ -89,7 +89,12 @@ export type AdminPeoplePageViewProps = {
 export function AdminPeoplePageView(props: AdminPeoplePageViewProps) {
   const { isKoLocale, focusPanel, sourceContext } = props;
   const wi0459LineBudgetGuardToken = "AdminPeopleDirectoryFiltersPanel";
-  const wi0130OrgChartTokens = ['id="org-chart"', 'id="employee-compare"', 'id="employee-history"'];
+  const wi0130OrgChartTokens = [
+    'id="directory-filters"',
+    'id="org-chart"',
+    'id="employee-compare"',
+    'id="employee-history"'
+  ];
   void [wi0459LineBudgetGuardToken, wi0130OrgChartTokens];
 
   const focusPanelLabel = focusPanel
