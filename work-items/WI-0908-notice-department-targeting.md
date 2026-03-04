@@ -22,6 +22,9 @@
 - Migration:
   - `prisma/migrations/202603050001_wi0908_notice_department_targeting/migration.sql`
 
+## Data Changes
+- Applied migration id: `202603050001_wi0908_notice_department_targeting`
+
 ## Verification
 - `npm.cmd exec tsx scripts/tests/e2e-wi0908-notice-targeting.test.ts`
 - `npm.cmd run typecheck`
