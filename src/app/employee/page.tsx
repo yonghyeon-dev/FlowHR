@@ -91,19 +91,25 @@ export default function EmployeeSelfServicePage() {
   const toRequestStatusLabel = useCallback((status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status], [requestStatusLabels]);
   const toLeaveTypeLabel = useCallback((leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType, [leaveTypeLabels]);
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
-  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, organizationId, employeeId, bearerToken, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
+  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, organizationId, employeeId, hasBoundEmployeeId, bearerToken, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
-  const productionSessionRequiredNotice =
+  const loginSessionRequiredNotice =
     isKoLocale
       ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
       : "A login session is required in production. Please sign in again at /login.";
   const productionEmployeeIdRequiredNotice =
     isKoLocale
-      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 JWT app_metadata\uc758 actor_id \ub610\ub294 employee_id\uac00 \ud544\uc694\ud569\ub2c8\ub2e4. \uacc4\uc815 claim \uc124\uc815\uc744 \ud655\uc778\ud574 \uc8fc\uc138\uc694."
-      : "In production, JWT app_metadata actor_id or employee_id is required. Check your account claim configuration.";
+      ? "\uc6b4\uc601 \ud658\uacbd\uc5d0\uc11c\ub294 \uc138\uc158 app_metadata.actor_id \ub610\ub294 app_metadata.employee_id\uc5d0 \uc9c1\uc6d0 ID\uac00 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
+      : "In production, session app_metadata.actor_id or app_metadata.employee_id is required. Please sign in again at /login.";
   const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
   const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
-  const requiresEmployeeIdBinding = isProductionRuntime;
+  const requiresEmployeeIdBinding = isProductionRuntime && !showDevTools;
+  const missingEmployeeIdBinding = requiresEmployeeIdBinding && !hasBoundEmployeeId;
+  const blocksEmployeeApiActions = requiresLoginSession || missingEmployeeIdBinding;
+  const productionSessionRequiredNotice = missingEmployeeIdBinding
+    ? productionEmployeeIdRequiredNotice
+    : loginSessionRequiredNotice;
+  const allowDevEmployeeIdFallback = !isProductionRuntime;
   const requestNowMs = Date.now();
   const normalizedRequestSearchQuery = requestSearchQuery.trim().toLowerCase();
   const { sectionTitles, attendance: attendanceCopy, leave: leaveCopy, leaveCalendar: leaveCalendarCopy, schedule: scheduleCopy, apiLogs: apiLogsCopy } = surfaceCopy;
@@ -119,7 +125,7 @@ export default function EmployeeSelfServicePage() {
     allowHeaderActorFallback,
     requiresLoginSession,
     requiresEmployeeIdBinding,
-    productionSessionRequiredNotice,
+    productionSessionRequiredNotice: loginSessionRequiredNotice,
     productionEmployeeIdRequiredNotice,
     usesBearerToken,
     bearerToken,
@@ -130,6 +136,7 @@ export default function EmployeeSelfServicePage() {
     periodStart,
     periodEnd,
     employeeId,
+    allowDevEmployeeIdFallback,
     selectedCorrectionRecordId,
     lastAttendanceId,
     setAttendance,
@@ -341,11 +348,11 @@ export default function EmployeeSelfServicePage() {
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
   return (
     <main className="saas-content">
-      <EmployeeDashboardChrome
-        showDevTools={showDevTools}
-        isKoLocale={isKoLocale}
-        requiresLoginSession={requiresLoginSession}
-        productionSessionRequiredNotice={productionSessionRequiredNotice}
+        <EmployeeDashboardChrome
+          showDevTools={showDevTools}
+          isKoLocale={isKoLocale}
+          requiresLoginSession={blocksEmployeeApiActions}
+          productionSessionRequiredNotice={productionSessionRequiredNotice}
         attendanceSummary={attendanceSummary}
         leaveBalanceLabel={leaveBalance ? leaveBalanceCopy.dayUnit(formatDays(leaveBalance.remainingDays)) : "-"}
         pendingLeaveCount={pendingLeaveCount}
@@ -358,7 +365,7 @@ export default function EmployeeSelfServicePage() {
           showDevTools={showDevTools}
           isProductionRuntime={isProductionRuntime}
           usesBearerToken={usesBearerToken}
-          requiresLoginSession={requiresLoginSession}
+          requiresLoginSession={blocksEmployeeApiActions}
           supabaseSession={supabaseSession}
           supabaseSessionError={supabaseSessionError}
           organizationId={organizationId}
@@ -430,7 +437,7 @@ export default function EmployeeSelfServicePage() {
           listBadgeLabels={listBadgeLabels}
           preSubmitStatusLabels={preSubmitStatusLabels}
           showDevTools={showDevTools}
-          requiresLoginSession={requiresLoginSession}
+          requiresLoginSession={blocksEmployeeApiActions}
           attendance={attendance}
           leaveRequests={leaveRequests}
           schedules={schedules}
