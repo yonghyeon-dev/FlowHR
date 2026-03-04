@@ -50,3 +50,7 @@
 - `npm.cmd run typecheck`
 - `npm.cmd run lint`
 - `npx tsx scripts/tests/e2e-wi0922-onboarding-wizard.test.ts`
+
+## Data Changes
+- Prisma model: `Organization`
+- Migration: `202603050003_wi0922_onboarding_wizard`
