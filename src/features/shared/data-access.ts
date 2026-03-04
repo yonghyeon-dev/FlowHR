@@ -14,6 +14,8 @@ export type NoticeNotificationState = "QUEUED" | "DELIVERED" | "FAILED";
 export type BenefitCatalogStatus = "ACTIVE" | "INACTIVE";
 export type BenefitRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
 export type OnboardingTaskStatus = "PENDING" | "COMPLETED";
+export type InsuranceEnrollmentType = "NPS" | "NHI" | "EI" | "WCI";
+export type InsuranceEnrollmentStatus = "ENROLLED" | "NOT_ENROLLED" | "PENDING";
 export type RecruitmentOpeningStatus = "OPEN" | "CLOSED";
 export type RecruitmentReferralStage =
   | "SUBMITTED"
@@ -469,6 +471,14 @@ export type OnboardingTaskEntity = {
   title: string;
   status: OnboardingTaskStatus;
   createdAt: Date;
+};
+
+export type InsuranceEnrollmentEntity = {
+  employeeId: string;
+  type: InsuranceEnrollmentType;
+  status: InsuranceEnrollmentStatus;
+  enrolledAt: Date | null;
+  updatedAt: Date;
 };
 
 export type RecruitmentOpeningEntity = {
@@ -977,6 +987,14 @@ export type UpdateOnboardingTaskInput = {
   status?: OnboardingTaskStatus;
 };
 
+export type UpsertInsuranceEnrollmentInput = {
+  employeeId: string;
+  type: InsuranceEnrollmentType;
+  status: InsuranceEnrollmentStatus;
+  enrolledAt?: Date | null;
+  updatedAt?: Date;
+};
+
 export type CreateRecruitmentOpeningInput = {
   organizationId: string;
   title: string;
@@ -1354,6 +1372,11 @@ export interface OnboardingTaskStore {
   update(id: string, input: UpdateOnboardingTaskInput): Promise<OnboardingTaskEntity>;
 }
 
+export interface InsuranceEnrollmentStore {
+  upsert(input: UpsertInsuranceEnrollmentInput): Promise<InsuranceEnrollmentEntity>;
+  listByEmployee(employeeId: string): Promise<InsuranceEnrollmentEntity[]>;
+}
+
 export interface RecruitmentStore {
   createOpening(input: CreateRecruitmentOpeningInput): Promise<RecruitmentOpeningEntity>;
   findOpeningById(id: string): Promise<RecruitmentOpeningEntity | null>;
@@ -1394,6 +1417,7 @@ export type DataAccess = {
   leavePromotionDeliveries: LeavePromotionDeliveryStore;
   benefits: BenefitStore;
   onboardingTasks: OnboardingTaskStore;
+  insuranceEnrollments: InsuranceEnrollmentStore;
   recruitment: RecruitmentStore;
   notices: NoticeStore;
   noticeReadReceipts: NoticeReadReceiptStore;
