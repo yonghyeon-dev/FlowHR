@@ -22,6 +22,7 @@ export const createRecruitmentOpeningSchema = z.object({
   title: z.string().trim().min(2).max(120),
   department: z.string().trim().min(2).max(120),
   employmentType: z.string().trim().min(2).max(60),
+  hiringManagerId: z.string().trim().min(1).max(120).optional(),
   status: openingStatusSchema.optional()
 });
 
@@ -49,7 +50,8 @@ export const createRecruitmentReferralSchema = z.object({
 
 export const updateRecruitmentReferralStageSchema = z.object({
   referralId: z.string().trim().min(1),
-  stage: referralStageSchema
+  stage: referralStageSchema,
+  reason: z.string().trim().min(1).max(1000).optional()
 });
 
 export const withdrawRecruitmentReferralSchema = z.object({

@@ -2563,6 +2563,7 @@ export const memoryDataAccess: DataAccess = {
         title: input.title,
         department: input.department,
         employmentType: input.employmentType,
+        hiringManagerId: input.hiringManagerId,
         status: input.status ?? "OPEN",
         createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
         updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
@@ -2587,6 +2588,10 @@ export const memoryDataAccess: DataAccess = {
         department: input.department !== undefined ? input.department : existing.department,
         employmentType:
           input.employmentType !== undefined ? input.employmentType : existing.employmentType,
+        hiringManagerId:
+          input.hiringManagerId !== undefined
+            ? (input.hiringManagerId ?? undefined)
+            : existing.hiringManagerId,
         status: input.status !== undefined ? input.status : existing.status,
         updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
       };
@@ -2631,6 +2636,7 @@ export const memoryDataAccess: DataAccess = {
         referrerEmployeeId: input.referrerEmployeeId,
         note: input.note,
         stage: input.stage ?? "SUBMITTED",
+        stageReason: input.stageReason,
         createdAt: input.createdAt ? cloneDate(input.createdAt) : now,
         updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : now
       };
@@ -2658,6 +2664,10 @@ export const memoryDataAccess: DataAccess = {
           input.referrerEmployeeId !== undefined ? input.referrerEmployeeId : existing.referrerEmployeeId,
         note: input.note !== undefined ? input.note : existing.note,
         stage: input.stage !== undefined ? input.stage : existing.stage,
+        stageReason:
+          input.stageReason !== undefined
+            ? (input.stageReason ?? undefined)
+            : existing.stageReason,
         updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
       };
       state.recruitmentReferrals.set(id, updated);

@@ -27,6 +27,7 @@ type CreateOpeningInput = {
   title: string;
   department: string;
   employmentType: string;
+  hiringManagerId?: string;
   status?: RecruitmentOpeningStatus;
 };
 
@@ -55,6 +56,7 @@ type CreateReferralInput = {
 type UpdateReferralStageInput = {
   referralId: string;
   stage: RecruitmentReferralStage;
+  reason?: string;
 };
 
 type WithdrawReferralInput = {
@@ -154,6 +156,7 @@ function toOpeningItem(entity: RecruitmentOpeningEntity): RecruitmentOpeningItem
     title: entity.title,
     department: entity.department,
     employmentType: entity.employmentType,
+    hiringManagerId: entity.hiringManagerId,
     status: entity.status,
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString()
@@ -170,6 +173,7 @@ function toReferralItem(entity: RecruitmentReferralEntity): RecruitmentReferralI
     referrerEmployeeId: entity.referrerEmployeeId,
     note: entity.note,
     stage: entity.stage,
+    stageReason: entity.stageReason,
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString()
   };
@@ -207,6 +211,7 @@ export function createRecruitmentOpening(input: CreateOpeningInput, context?: Re
       title: input.title.trim(),
       department: input.department.trim(),
       employmentType: input.employmentType.trim(),
+      hiringManagerId: input.hiringManagerId?.trim() || undefined,
       status: input.status ?? "OPEN",
       createdAt: now,
       updatedAt: now
@@ -272,6 +277,7 @@ export function createRecruitmentReferral(input: CreateReferralInput, context?: 
 
 export function updateRecruitmentReferralStage(input: UpdateReferralStageInput, context?: RecruitmentStoreContext) {
   const dataAccess = resolveContext(context).dataAccess;
+  const normalizedReason = input.reason?.trim() || undefined;
   return dataAccess.recruitment
     .findReferralById(input.referralId)
     .then((existing) => {
@@ -281,6 +287,7 @@ export function updateRecruitmentReferralStage(input: UpdateReferralStageInput, 
       return dataAccess.recruitment
         .updateReferral(existing.id, {
           stage: input.stage,
+          stageReason: input.stage === "REJECTED" ? normalizedReason : null,
           updatedAt: new Date()
         })
         .then(toReferralItem);
