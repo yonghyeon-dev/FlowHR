@@ -7,6 +7,7 @@ import {
   persistPromotionDeliveryHistory,
   resolvePromotionRecipientStats
 } from "@/features/leave/promotion-delivery-history-core-helpers";
+import { recordPromotionDispatchFailure } from "@/features/leave/promotion-dispatch-failure-helpers";
 import {
   buildPromotionNoticeMessage,
   type PromotionDeliveryProvider,
@@ -1583,43 +1584,24 @@ export async function dispatchAnnualLeavePromotionNotice(
         : null;
 
   if (channel === "email_template" && attempted && !emailTemplateId) {
-    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-      organizationId: preview.organizationId,
-      asOf: preview.asOf,
+    await recordPromotionDispatchFailure({
+      dataAccess: context.dataAccess,
+      actor,
+      preview,
       includeUpcoming,
       dryRun,
       channel,
       provider,
-      status: "failed",
-      announcementTitle: preview.announcementDraft.title,
-      announcementBody: preview.announcementDraft.body,
-      targets: targetSnapshots,
-      sentTargetCount: 0,
+      targetSnapshots,
+      targetCount,
+      recipientCount,
+      missingEmailCount,
+      attempted,
+      emailTemplateId,
       webhookSource: null,
       emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-      emailTemplateId,
-      dispatchedAt: null,
-      actorRole: actor.role,
-      actorId: actor.id,
-      attempted,
+      reason: "email_template_id_missing",
       failureMessage: "email_template_id_missing"
-    });
-    await context.dataAccess.audit.append({
-      action: "leave.promotion_notice.failed",
-      entityType: "LeavePolicy",
-      organizationId: preview.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: {
-        asOf: preview.asOf,
-        includeUpcoming,
-        dryRun,
-        targetCount,
-        recipientCount,
-        missingEmailCount,
-        channel,
-        reason: "email_template_id_missing"
-      }
     });
     throw new ServiceError(
       400,
@@ -1628,43 +1610,24 @@ export async function dispatchAnnualLeavePromotionNotice(
   }
 
   if (channel === "webhook" && attempted && !webhook) {
-    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-      organizationId: preview.organizationId,
-      asOf: preview.asOf,
+    await recordPromotionDispatchFailure({
+      dataAccess: context.dataAccess,
+      actor,
+      preview,
       includeUpcoming,
       dryRun,
       channel,
       provider,
-      status: "failed",
-      announcementTitle: preview.announcementDraft.title,
-      announcementBody: preview.announcementDraft.body,
-      targets: targetSnapshots,
-      sentTargetCount: 0,
+      targetSnapshots,
+      targetCount,
+      recipientCount,
+      missingEmailCount,
+      attempted,
+      emailTemplateId,
       webhookSource: null,
       emailTemplateSource: null,
-      emailTemplateId,
-      dispatchedAt: null,
-      actorRole: actor.role,
-      actorId: actor.id,
-      attempted,
+      reason: "webhook_not_configured",
       failureMessage: "webhook_not_configured"
-    });
-    await context.dataAccess.audit.append({
-      action: "leave.promotion_notice.failed",
-      entityType: "LeavePolicy",
-      organizationId: preview.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: {
-        asOf: preview.asOf,
-        includeUpcoming,
-        dryRun,
-        targetCount,
-        recipientCount,
-        missingEmailCount,
-        channel,
-        reason: "webhook_not_configured"
-      }
     });
     throw new ServiceError(
       503,
@@ -1673,43 +1636,24 @@ export async function dispatchAnnualLeavePromotionNotice(
   }
 
   if (channel === "email_template" && attempted && !emailTemplateConfig) {
-    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-      organizationId: preview.organizationId,
-      asOf: preview.asOf,
+    await recordPromotionDispatchFailure({
+      dataAccess: context.dataAccess,
+      actor,
+      preview,
       includeUpcoming,
       dryRun,
       channel,
       provider,
-      status: "failed",
-      announcementTitle: preview.announcementDraft.title,
-      announcementBody: preview.announcementDraft.body,
-      targets: targetSnapshots,
-      sentTargetCount: 0,
+      targetSnapshots,
+      targetCount,
+      recipientCount,
+      missingEmailCount,
+      attempted,
+      emailTemplateId,
       webhookSource: null,
       emailTemplateSource: null,
-      emailTemplateId,
-      dispatchedAt: null,
-      actorRole: actor.role,
-      actorId: actor.id,
-      attempted,
+      reason: "email_template_not_configured",
       failureMessage: "email_template_not_configured"
-    });
-    await context.dataAccess.audit.append({
-      action: "leave.promotion_notice.failed",
-      entityType: "LeavePolicy",
-      organizationId: preview.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: {
-        asOf: preview.asOf,
-        includeUpcoming,
-        dryRun,
-        targetCount,
-        recipientCount,
-        missingEmailCount,
-        channel,
-        reason: "email_template_not_configured"
-      }
     });
     throw new ServiceError(
       503,
@@ -1752,46 +1696,23 @@ export async function dispatchAnnualLeavePromotionNotice(
       status = "dispatched";
       dispatchedAt = new Date().toISOString();
     } catch (error) {
-      await context.dataAccess.audit.append({
-        action: "leave.promotion_notice.failed",
-        entityType: "LeavePolicy",
-        organizationId: preview.organizationId,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          asOf: preview.asOf,
-          includeUpcoming,
-          dryRun,
-          targetCount,
-          recipientCount,
-          missingEmailCount,
-          channel,
-          provider,
-          webhookSource: webhook?.source ?? null,
-          emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-          emailTemplateId,
-          error: error instanceof Error ? error.message : "unknown error"
-        }
-      });
-      await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-        organizationId: preview.organizationId,
-        asOf: preview.asOf,
+      await recordPromotionDispatchFailure({
+        dataAccess: context.dataAccess,
+        actor,
+        preview,
         includeUpcoming,
         dryRun,
         channel,
         provider,
-        status: "failed",
-        announcementTitle: preview.announcementDraft.title,
-        announcementBody: preview.announcementDraft.body,
-        targets: targetSnapshots,
-        sentTargetCount: 0,
+        targetSnapshots,
+        targetCount,
+        recipientCount,
+        missingEmailCount,
+        attempted,
+        emailTemplateId,
         webhookSource: webhook?.source ?? null,
         emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-        emailTemplateId,
-        dispatchedAt: null,
-        actorRole: actor.role,
-        actorId: actor.id,
-        attempted,
+        reason: "dispatch_request_failed",
         failureMessage: error instanceof Error ? error.message : "unknown error"
       });
       if (channel === "webhook") {

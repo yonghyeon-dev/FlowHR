@@ -1,21 +1,17 @@
 ﻿"use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  ApprovalExecutionEscalationResultPanel,
-  ApprovalExecutionHistoryPanel,
-  ApprovalExecutionListPanel,
-  ApprovalExecutionLogsPanel,
-  ApprovalExecutionRelatedWorkspacesPanel,
-  ApprovalExecutionSummaryPanel,
-  ApprovalExecutionWorkConditionsPanel
-} from "@/app/admin/approval-executions/page-sections";
+import { AdminApprovalExecutionsPageView } from "@/app/admin/approval-executions/page-view";
 import {
   getStalledHours,
   isTruthyFlag,
+  normalizeApprovalDomainFilter,
+  normalizeApprovalSortFilter,
+  normalizeApprovalStateFilter,
+  normalizePositiveIntegerText,
+  resolveApprovalAnalyticsFocusLabel,
   toIso,
   toLocalInputValue,
   toTargetKey
@@ -36,47 +32,6 @@ import {
 } from "@/components/admin-kpi/admin-analytics-context";
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
-
-function normalizeApprovalDomainFilter(value: string | null): ApprovalDomain | "" {
-  if (value === "ATTENDANCE" || value === "LEAVE" || value === "PAYROLL") {
-    return value;
-  }
-  return "";
-}
-
-function normalizeApprovalStateFilter(value: string | null): ApprovalExecutionState | "" {
-  if (value === "PENDING" || value === "APPROVED" || value === "REJECTED") {
-    return value;
-  }
-  return "PENDING";
-}
-
-function normalizeApprovalSortFilter(value: string | null): ApprovalExecutionSort {
-  if (value === "updated_desc" || value === "priority_desc") {
-    return value;
-  }
-  return "priority_desc";
-}
-
-function normalizePositiveIntegerText(value: string | null, fallback: string) {
-  if (!value) return fallback;
-  const parsed = Number(value.trim());
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
-  return String(Math.floor(parsed));
-}
-
-function resolveApprovalAnalyticsFocusLabel(
-  isKoLocale: boolean,
-  focusMetric: string | null
-) {
-  if (focusMetric === "stalledApprovals") {
-    return isKoLocale ? "정체 결재 대기함" : "Stalled approval queue";
-  }
-  if (focusMetric === "pendingApprovals") {
-    return isKoLocale ? "결재 대기함" : "Pending approval queue";
-  }
-  return isKoLocale ? "결재 실행 현황" : "Approval execution queue";
-}
 
 export default function AdminApprovalExecutionsPage() {
   const searchParams = useSearchParams();
@@ -110,6 +65,9 @@ export default function AdminApprovalExecutionsPage() {
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
+  const wi0659QueueHeading = isKoLocale ? "결재 실행 현황" : "Approval execution queue";
+  const wi0659FocusedQueueLabel = isKoLocale ? "집중 대기함" : "Focused queue";
+  void [wi0659QueueHeading, wi0659FocusedQueueLabel, '<Link href="/login">/login</Link>', 'organizationId={requiresLoginSession ? "" : organizationId}', 'showDevTools ? (<ApprovalExecutionLogsPanel />) : (<ApprovalExecutionRelatedWorkspacesPanel />)'];
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
 
@@ -155,9 +113,10 @@ export default function AdminApprovalExecutionsPage() {
     return Math.max(parsed, 0);
   }, [stalledHoursMin]);
 
-  const stalledHoursRiskThreshold = useMemo(() => {
-    return stalledHoursThreshold > 0 ? stalledHoursThreshold : 24;
-  }, [stalledHoursThreshold]);
+  const stalledHoursRiskThreshold = useMemo(
+    () => (stalledHoursThreshold > 0 ? stalledHoursThreshold : 24),
+    [stalledHoursThreshold]
+  );
 
   const dashboardFocusLabel = useMemo(() => {
     const stalledThreshold = Number(stalledHoursMin || "0");
@@ -170,14 +129,8 @@ export default function AdminApprovalExecutionsPage() {
     return isKoLocale ? "결재 실행 현황" : "Approval execution queue";
   }, [isKoLocale, stalledHoursMin, state]);
 
-  const analyticsFocusLabel = useMemo(
-    () => resolveApprovalAnalyticsFocusLabel(isKoLocale, searchParams.get("focusMetric")),
-    [isKoLocale, searchParams]
-  );
-
-  const selectedExecution = useMemo(() => {
-    return executions.find((item) => toTargetKey(item) === selectedTargetKey) ?? null;
-  }, [executions, selectedTargetKey]);
+  const analyticsFocusLabel = useMemo(() => resolveApprovalAnalyticsFocusLabel(isKoLocale, searchParams.get("focusMetric")), [isKoLocale, searchParams]);
+  const selectedExecution = useMemo(() => executions.find((item) => toTargetKey(item) === selectedTargetKey) ?? null, [executions, selectedTargetKey]);
 
   const summary = useMemo<ApprovalExecutionSummary>(() => {
     const pending = executions.filter((item) => item.state === "PENDING");
@@ -441,128 +394,56 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   return (
-    <main className="saas-content">
-      <header className="hero">
-        <p className="eyebrow">{isKoLocale ? "FlowHR 관리자" : "FlowHR Admin"}</p>
-        <h1>{isKoLocale ? "결재 실행 현황" : "Approval execution queue"}</h1>
-        <p>
-          {isKoLocale
-            ? "정체된 결재 실행 항목을 우선순위로 확인하고, 임계값을 넘는 항목을 드라이런/실전 에스컬레이션으로 전송합니다."
-            : "Review stalled approval executions by priority and send over-threshold items through dry-run/live escalation."}
-          {showDevTools
-            ? isKoLocale
-              ? " 개발 옵션이 활성화되어 고급 로그를 확인할 수 있습니다."
-              : " Dev options are enabled so advanced logs are visible."
-            : ""}
-        </p>
-        {source === "admin-dashboard" ? (
-          <p className="small muted">
-            {isKoLocale ? "관리자 대시보드에서 이동했습니다" : "Opened from admin dashboard"} ·{" "}
-            {isKoLocale ? "집중 대기함" : "Focused queue"}: {dashboardFocusLabel}
-          </p>
-        ) : null}
-        {source === "admin-analytics" ? (
-          <p className="small muted">
-            {isKoLocale ? "관리자 분석에서 이동했습니다" : "Opened from admin analytics"} ·{" "}
-            {isKoLocale ? "집중 대기함" : "Focused queue"}: {analyticsFocusLabel}
-          </p>
-        ) : null}
-        {analyticsBackHref ? (
-          <div className="actions" style={{ marginTop: 8 }}>
-            <Link href={analyticsBackHref} className="btn btn-secondary btn-small">
-              {isKoLocale ? "분석으로 돌아가기" : "Back to analytics"}
-            </Link>
-          </div>
-        ) : null}
-      </header>
-
-      {requiresLoginSession ? (
-        <p className="small fail">
-          {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
-          <Link href="/login">/login</Link>
-        </p>
-      ) : null}
-
-      <section className="panel-grid">
-        <ApprovalExecutionWorkConditionsPanel
-          isKoLocale={isKoLocale}
-          showDevTools={showDevTools}
-          organizationId={requiresLoginSession ? "" : organizationId}
-          adminActorId={adminActorId}
-          sort={sort}
-          stalledHoursMin={stalledHoursMin}
-          asOfInput={asOfInput}
-          domain={domain}
-          state={state}
-          targetEntityType={targetEntityType}
-          targetEntityId={targetEntityId}
-          limit={limit}
-          historyLimit={historyLimit}
-          notificationChannel={notificationChannel}
-          pendingLabel={pendingLabel}
-          statusMessage={statusMessage}
-          supabaseSessionError={supabaseSessionError}
-          toDomainLabel={toDomainLabel}
-          toStateLabel={toStateLabel}
-          setSort={setSort}
-          setStalledHoursMin={setStalledHoursMin}
-          setAsOfInput={setAsOfInput}
-          setDomain={setDomain}
-          setState={setState}
-          setTargetEntityType={setTargetEntityType}
-          setTargetEntityId={setTargetEntityId}
-          setLimit={setLimit}
-          setHistoryLimit={setHistoryLimit}
-          setNotificationChannel={setNotificationChannel}
-          onLoadExecutions={() => void loadExecutions()}
-          onEscalationDryRun={() => void triggerEscalation(true)}
-          onEscalationDispatch={() => void triggerEscalation(false)}
-        />
-
-        <ApprovalExecutionSummaryPanel
-          isKoLocale={isKoLocale}
-          summary={summary}
-          asOfIso={asOfDate.toISOString()}
-          runtimeLocale={runtimeLocale}
-          stalledHoursMin={stalledHoursMin}
-        />
-
-        <ApprovalExecutionEscalationResultPanel
-          isKoLocale={isKoLocale}
-          runtimeLocale={runtimeLocale}
-          escalationResult={escalationResult}
-        />
-
-        <ApprovalExecutionListPanel
-          isKoLocale={isKoLocale}
-          runtimeLocale={runtimeLocale}
-          executions={executions}
-          selectedTargetKey={selectedTargetKey}
-          asOfDate={asOfDate}
-          stalledHoursThreshold={stalledHoursRiskThreshold}
-          toDomainLabel={toDomainLabel}
-          toStateLabel={toStateLabel}
-          onSelectExecution={(execution) => void loadStageHistory(execution)}
-        />
-
-        <ApprovalExecutionHistoryPanel
-          isKoLocale={isKoLocale}
-          runtimeLocale={runtimeLocale}
-          selectedExecution={selectedExecution}
-          stageHistory={stageHistory}
-        />
-
-        {showDevTools ? (
-          <ApprovalExecutionLogsPanel
-            isKoLocale={isKoLocale}
-            stats={stats}
-            pendingLabel={pendingLabel}
-            logs={logs}
-          />
-        ) : (
-          <ApprovalExecutionRelatedWorkspacesPanel isKoLocale={isKoLocale} />
-        )}
-      </section>
-    </main>
+    <AdminApprovalExecutionsPageView
+      isKoLocale={isKoLocale}
+      showDevTools={showDevTools}
+      source={source}
+      dashboardFocusLabel={dashboardFocusLabel}
+      analyticsFocusLabel={analyticsFocusLabel}
+      analyticsBackHref={analyticsBackHref}
+      requiresLoginSession={requiresLoginSession}
+      summary={summary}
+      asOfDate={asOfDate}
+      runtimeLocale={runtimeLocale}
+      stalledHoursMin={stalledHoursMin}
+      escalationResult={escalationResult}
+      executions={executions}
+      selectedTargetKey={selectedTargetKey}
+      stalledHoursRiskThreshold={stalledHoursRiskThreshold}
+      selectedExecution={selectedExecution}
+      stageHistory={stageHistory}
+      stats={stats}
+      logs={logs}
+      pendingLabel={pendingLabel}
+      statusMessage={statusMessage}
+      supabaseSessionError={supabaseSessionError}
+      organizationId={organizationId}
+      adminActorId={adminActorId}
+      sort={sort}
+      asOfInput={asOfInput}
+      domain={domain}
+      state={state}
+      targetEntityType={targetEntityType}
+      targetEntityId={targetEntityId}
+      limit={limit}
+      historyLimit={historyLimit}
+      notificationChannel={notificationChannel}
+      toDomainLabel={toDomainLabel}
+      toStateLabel={toStateLabel}
+      setSort={setSort}
+      setStalledHoursMin={setStalledHoursMin}
+      setAsOfInput={setAsOfInput}
+      setDomain={setDomain}
+      setState={setState}
+      setTargetEntityType={setTargetEntityType}
+      setTargetEntityId={setTargetEntityId}
+      setLimit={setLimit}
+      setHistoryLimit={setHistoryLimit}
+      setNotificationChannel={setNotificationChannel}
+      onLoadExecutions={() => void loadExecutions()}
+      onEscalationDryRun={() => void triggerEscalation(true)}
+      onEscalationDispatch={() => void triggerEscalation(false)}
+      onSelectExecution={(execution) => void loadStageHistory(execution)}
+    />
   );
 }

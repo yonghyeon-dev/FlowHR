@@ -207,6 +207,11 @@ import { listStrictScheduleOverlaps } from "@/features/scheduling/schedule-overl
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
+import {
+  requireEditableSchedule,
+  requireTemplateEntityWithinTenant,
+  requireTemplateTenantScope
+} from "@/features/scheduling/service-access-guards";
 
 export type {
   ScheduleAnomalyCockpitQueueEntry,
@@ -867,14 +872,6 @@ export type ServiceContext = {
   eventPublisher?: DomainEventPublisher;
 };
 
-function requireTemplateTenantScope(context: ServiceContext) {
-  const tenantScope = resolveTenantScope(context.actor);
-  if (!tenantScope) {
-    throw new ServiceError(400, "template operations require tenant organization scope");
-  }
-  return tenantScope;
-}
-
 type EmployeeRotationOptimizationEvaluation =
   EmployeeRotationOptimizationEvaluationBase<RotationFairnessAdvancedScore>;
 
@@ -1003,27 +1000,6 @@ export async function createWorkSchedule(
   return schedule;
 }
 
-async function requireEditableSchedule(
-  context: ServiceContext,
-  scheduleId: string,
-  permissionMessage: string
-): Promise<WorkScheduleEntity> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-
-  const existing = await context.dataAccess.scheduling.findById(scheduleId);
-  if (!existing) {
-    throw new ServiceError(404, "schedule not found");
-  }
-
-  await requireEmployeeWithinTenant(context.dataAccess, context.actor, existing.employeeId);
-  await requirePermission(context, Permissions.schedulingScheduleWriteAny, permissionMessage);
-
-  return existing;
-}
-
 export async function updateWorkSchedule(
   context: ServiceContext,
   scheduleId: string,
@@ -1146,23 +1122,6 @@ export async function deleteWorkSchedule(
   });
 
   return deleted;
-}
-
-async function requireTemplateEntityWithinTenant(
-  context: ServiceContext,
-  templateId: string
-): Promise<WorkScheduleTemplateEntity> {
-  const template = await context.dataAccess.scheduling.findTemplateById(templateId);
-  if (!template) {
-    throw new ServiceError(404, "schedule template not found");
-  }
-
-  const tenantScope = resolveTenantScope(context.actor);
-  if (tenantScope && template.organizationId !== tenantScope) {
-    throw new ServiceError(404, "schedule template not found");
-  }
-
-  return template;
 }
 
 export async function createWorkScheduleTemplate(

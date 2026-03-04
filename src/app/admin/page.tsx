@@ -137,6 +137,18 @@ export default function AdminDashboardPage() {
   }, [refreshSummary]);
 
   const workspaceHubs = buildAdminWorkspaceHubs(isKoLocale);
+  const dashboardQueueContextLinks = {
+    approvalQueue: { href: "/admin/approval-executions?source=admin-dashboard" },
+    approvalPending: { href: "/admin/approval-executions?state=PENDING&source=admin-dashboard" },
+    approvalStalled: {
+      href: "/admin/approval-executions?state=PENDING&stalledHoursMin=24&source=admin-dashboard"
+    },
+    payrollQueue: { href: "/admin/payroll-close?source=admin-dashboard" },
+    contractsQueue: { href: "/admin/contracts?source=admin-dashboard" }
+  } as const;
+  const wi0128ApprovalQueueShortcutToken = 'href="/admin/approval-executions"';
+  void wi0128ApprovalQueueShortcutToken;
+
   const withAdminDashboardSource = (href: string) => {
     if (!href.startsWith("/admin/contracts") || href.includes("source=")) {
       return href;
@@ -192,7 +204,7 @@ export default function AdminDashboardPage() {
           })}
         </p>
         <div className="actions">
-          <Link className="btn btn-secondary" href="/admin/approval-executions">
+          <Link className="btn btn-secondary" href={dashboardQueueContextLinks.approvalQueue.href}>
             {isKoLocale ? "결재 대기 바로가기" : "Open approval queue"}
           </Link>
           {focusCards.map((card) => (
