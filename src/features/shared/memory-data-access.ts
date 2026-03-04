@@ -41,6 +41,8 @@ import type {
   EmployeeEntity,
   BenefitCatalogItemEntity,
   BenefitRequestEntity,
+  InsuranceEnrollmentEntity,
+  InsuranceEnrollmentType,
   OnboardingTaskEntity,
   OnboardingTaskStatus,
   LeaveBalanceEntity,
@@ -73,6 +75,7 @@ import type {
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
   UpdateOnboardingTaskInput,
+  UpsertInsuranceEnrollmentInput,
   UpdateLeaveRequestInput,
   UpdateLeavePromotionDeliveryInput,
   UpdateLeavePromotionDeliveryRecipientInput,
@@ -119,6 +122,7 @@ type MemoryState = {
   benefitCatalogItems: Map<string, BenefitCatalogItemEntity>;
   benefitRequests: Map<string, BenefitRequestEntity>;
   onboardingTasks: Map<string, OnboardingTaskEntity>;
+  insuranceEnrollments: Map<string, InsuranceEnrollmentEntity>;
   notices: Map<string, NoticeEntity>;
   noticeReadReceipts: Map<string, NoticeReadReceiptEntity>;
   noticeNotifications: Map<string, NoticeNotificationEntity>;
@@ -171,6 +175,7 @@ function createState(): MemoryState {
     benefitCatalogItems: new Map<string, BenefitCatalogItemEntity>(),
     benefitRequests: new Map<string, BenefitRequestEntity>(),
     onboardingTasks: new Map<string, OnboardingTaskEntity>(),
+    insuranceEnrollments: new Map<string, InsuranceEnrollmentEntity>(),
     notices: new Map<string, NoticeEntity>(),
     noticeReadReceipts: new Map<string, NoticeReadReceiptEntity>(),
     noticeNotifications: new Map<string, NoticeNotificationEntity>(),
@@ -372,6 +377,25 @@ function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity
   return {
     ...entity,
     createdAt: cloneDate(entity.createdAt)
+  };
+}
+
+const insuranceEnrollmentTypeOrder: Record<InsuranceEnrollmentType, number> = {
+  NPS: 0,
+  NHI: 1,
+  EI: 2,
+  WCI: 3
+};
+
+function insuranceEnrollmentKey(employeeId: string, type: InsuranceEnrollmentType) {
+  return `${employeeId}::${type}`;
+}
+
+function cloneInsuranceEnrollment(entity: InsuranceEnrollmentEntity): InsuranceEnrollmentEntity {
+  return {
+    ...entity,
+    enrolledAt: entity.enrolledAt ? cloneDate(entity.enrolledAt) : null,
+    updatedAt: cloneDate(entity.updatedAt)
   };
 }
 
@@ -2485,6 +2509,44 @@ export const memoryDataAccess: DataAccess = {
       };
       state.onboardingTasks.set(id, updated);
       return cloneOnboardingTask(updated);
+    }
+  },
+
+  insuranceEnrollments: {
+    async upsert(input: UpsertInsuranceEnrollmentInput) {
+      const key = insuranceEnrollmentKey(input.employeeId, input.type);
+      const updated: InsuranceEnrollmentEntity = {
+        employeeId: input.employeeId,
+        type: input.type,
+        status: input.status,
+        enrolledAt:
+          input.enrolledAt === undefined
+            ? null
+            : input.enrolledAt === null
+              ? null
+              : cloneDate(input.enrolledAt),
+        updatedAt: input.updatedAt ? cloneDate(input.updatedAt) : new Date()
+      };
+      state.insuranceEnrollments.set(key, updated);
+      return cloneInsuranceEnrollment(updated);
+    },
+
+    async listByEmployee(employeeId: string) {
+      const rows: InsuranceEnrollmentEntity[] = [];
+      for (const enrollment of state.insuranceEnrollments.values()) {
+        if (enrollment.employeeId !== employeeId) {
+          continue;
+        }
+        rows.push(cloneInsuranceEnrollment(enrollment));
+      }
+      rows.sort((left, right) => {
+        const typeOrderDiff = insuranceEnrollmentTypeOrder[left.type] - insuranceEnrollmentTypeOrder[right.type];
+        if (typeOrderDiff !== 0) {
+          return typeOrderDiff;
+        }
+        return left.updatedAt.getTime() - right.updatedAt.getTime();
+      });
+      return rows;
     }
   },
 

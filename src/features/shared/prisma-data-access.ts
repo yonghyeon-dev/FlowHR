@@ -46,6 +46,9 @@ import type {
   BenefitCatalogItemEntity,
   BenefitRequestEntity,
   BenefitStore,
+  InsuranceEnrollmentEntity,
+  InsuranceEnrollmentStore,
+  InsuranceEnrollmentType,
   OnboardingTaskEntity,
   OnboardingTaskStore,
   OnboardingTaskStatus,
@@ -110,6 +113,7 @@ import type {
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
   UpdateOnboardingTaskInput,
+  UpsertInsuranceEnrollmentInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
   UpdateRecruitmentOpeningInput,
@@ -878,6 +882,10 @@ const onboardingTaskStoreState = {
   tasks: new Map<string, OnboardingTaskEntity>()
 };
 
+const insuranceEnrollmentStoreState = {
+  rows: new Map<string, InsuranceEnrollmentEntity>()
+};
+
 function nextOnboardingTaskId() {
   const id = `ONB-${String(onboardingTaskStoreState.sequence).padStart(6, "0")}`;
   onboardingTaskStoreState.sequence += 1;
@@ -888,6 +896,25 @@ function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity
   return {
     ...entity,
     createdAt: new Date(entity.createdAt.getTime())
+  };
+}
+
+const insuranceEnrollmentTypeOrder: Record<InsuranceEnrollmentType, number> = {
+  NPS: 0,
+  NHI: 1,
+  EI: 2,
+  WCI: 3
+};
+
+function insuranceEnrollmentKey(employeeId: string, type: InsuranceEnrollmentType) {
+  return `${employeeId}::${type}`;
+}
+
+function cloneInsuranceEnrollment(entity: InsuranceEnrollmentEntity): InsuranceEnrollmentEntity {
+  return {
+    ...entity,
+    enrolledAt: entity.enrolledAt ? new Date(entity.enrolledAt.getTime()) : null,
+    updatedAt: new Date(entity.updatedAt.getTime())
   };
 }
 
@@ -2520,6 +2547,44 @@ const onboardingTasks: OnboardingTaskStore = {
   }
 };
 
+const insuranceEnrollments: InsuranceEnrollmentStore = {
+  async upsert(input: UpsertInsuranceEnrollmentInput) {
+    const key = insuranceEnrollmentKey(input.employeeId, input.type);
+    const updated: InsuranceEnrollmentEntity = {
+      employeeId: input.employeeId,
+      type: input.type,
+      status: input.status,
+      enrolledAt:
+        input.enrolledAt === undefined
+          ? null
+          : input.enrolledAt === null
+            ? null
+            : new Date(input.enrolledAt.getTime()),
+      updatedAt: input.updatedAt ? new Date(input.updatedAt.getTime()) : new Date()
+    };
+    insuranceEnrollmentStoreState.rows.set(key, updated);
+    return cloneInsuranceEnrollment(updated);
+  },
+
+  async listByEmployee(employeeId: string) {
+    const rows: InsuranceEnrollmentEntity[] = [];
+    for (const row of insuranceEnrollmentStoreState.rows.values()) {
+      if (row.employeeId !== employeeId) {
+        continue;
+      }
+      rows.push(cloneInsuranceEnrollment(row));
+    }
+    rows.sort((left, right) => {
+      const typeOrderDiff = insuranceEnrollmentTypeOrder[left.type] - insuranceEnrollmentTypeOrder[right.type];
+      if (typeOrderDiff !== 0) {
+        return typeOrderDiff;
+      }
+      return left.updatedAt.getTime() - right.updatedAt.getTime();
+    });
+    return rows;
+  }
+};
+
 const recruitment: RecruitmentStore = {
   async createOpening(input: CreateRecruitmentOpeningInput) {
     const record = await prisma.recruitmentOpening.create({
@@ -2828,6 +2893,7 @@ export const prismaDataAccess: DataAccess = {
   leavePromotionDeliveries,
   benefits,
   onboardingTasks,
+  insuranceEnrollments,
   recruitment,
   notices,
   noticeReadReceipts,
