@@ -44,6 +44,7 @@ export type AttendanceRecordEntity = {
   breakMinutes: number;
   isHoliday: boolean;
   notes: string | null;
+  anomalyType?: string;
   captureChannel: AttendanceCaptureChannel;
   captureDeviceId: string | null;
   captureIpAddress: string | null;
@@ -527,6 +528,7 @@ export type CreateAttendanceRecordInput = {
   breakMinutes: number;
   isHoliday: boolean;
   notes?: string;
+  anomalyType?: string;
   captureChannel?: AttendanceCaptureChannel;
   captureDeviceId?: string | null;
   captureIpAddress?: string | null;
@@ -541,6 +543,7 @@ export type UpdateAttendanceRecordInput = {
   breakMinutes?: number;
   isHoliday?: boolean;
   notes?: string | null;
+  anomalyType?: string | null;
   captureChannel?: AttendanceCaptureChannel;
   captureDeviceId?: string | null;
   captureIpAddress?: string | null;
@@ -1128,6 +1131,10 @@ export interface AttendanceStore {
     organizationId?: string;
     employeeId?: string;
     state?: AttendanceState;
+  }): Promise<AttendanceRecordEntity[]>;
+  listOpenRecordsNeedingAutoClose(input: {
+    clockInBefore: Date;
+    organizationId?: string;
   }): Promise<AttendanceRecordEntity[]>;
 }
 
