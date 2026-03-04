@@ -3,6 +3,7 @@ import { type WithholdingReceiptCopy } from "@/components/withholding-receipt/co
 type WithholdingReceiptInputPanelProps = {
   copy: WithholdingReceiptCopy;
   showDevTools: boolean;
+  requiresLoginSession: boolean;
   year: string;
   documentFormat: "json" | "text";
   sessionOrganizationId: string;
@@ -20,6 +21,7 @@ type WithholdingReceiptInputPanelProps = {
 export function WithholdingReceiptInputPanel({
   copy,
   showDevTools,
+  requiresLoginSession,
   year,
   documentFormat,
   sessionOrganizationId,
@@ -56,9 +58,23 @@ export function WithholdingReceiptInputPanel({
         </p>
       ) : null}
       <div className="panel-actions">
-        <button className="btn btn-primary" onClick={onPreviewReceipt} disabled={pendingLabel !== null}>{copy.actionPreviewReceipt}</button>
-        <button className="btn btn-secondary" onClick={onLoadFinalizedSettlement} disabled={pendingLabel !== null}>{copy.actionLoadFinalizedSettlement}</button>
-        <button className="btn btn-secondary" onClick={onLoadIssuedDocument} disabled={pendingLabel !== null}>{copy.actionLoadIssuedDocument}</button>
+        <button className="btn btn-primary" onClick={onPreviewReceipt} disabled={pendingLabel !== null || requiresLoginSession}>
+          {copy.actionPreviewReceipt}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={onLoadFinalizedSettlement}
+          disabled={pendingLabel !== null || requiresLoginSession}
+        >
+          {copy.actionLoadFinalizedSettlement}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={onLoadIssuedDocument}
+          disabled={pendingLabel !== null || requiresLoginSession}
+        >
+          {copy.actionLoadIssuedDocument}
+        </button>
       </div>
       {statusMessage ? <p className="small">{statusMessage}</p> : null}
       {normalizedSupabaseSessionError ? (

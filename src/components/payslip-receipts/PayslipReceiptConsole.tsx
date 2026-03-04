@@ -77,6 +77,8 @@ export default function PayslipReceiptConsole() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
   const formatKrwByLocale = (value: number | null) =>
     value === null ? "-" : `${value.toLocaleString(runtimeLocale)}${locale === "ko" ? "\uC6D0" : " KRW"}`;
   const formatDateTimeByLocale = (value: string | null) => (value ? new Date(value).toLocaleString(runtimeLocale) : "-");
@@ -127,6 +129,9 @@ export default function PayslipReceiptConsole() {
       headers.authorization = `Bearer ${bearerToken}`;
       return headers;
     }
+    if (!allowHeaderActorFallback) {
+      throw new Error(copy.productionSessionRequiredNotice);
+    }
     headers["x-actor-role"] = "employee";
     headers["x-actor-id"] = normalizedEmployeeIdForApi || defaultEmployeeIdForApi;
     if (organizationId.trim()) {
@@ -147,6 +152,10 @@ export default function PayslipReceiptConsole() {
     ]);
   }
   async function loadRuns() {
+    if (requiresLoginSession) {
+      setStatusMessage(copy.productionSessionRequiredNotice);
+      return;
+    }
     if (!normalizedEmployeeIdForApi) {
       setStatusMessage(copy.employeeIdRequiredStatus);
       return;
@@ -175,6 +184,10 @@ export default function PayslipReceiptConsole() {
     }
   }
   async function acknowledgeReceipt(runId: string) {
+    if (requiresLoginSession) {
+      setStatusMessage(copy.productionSessionRequiredNotice);
+      return;
+    }
     try {
       setPendingLabel(`${copy.pendingConfirmReceiptPrefix} ${runId}`);
       const response = await fetch(`/api/payroll/payslips/${runId}/acknowledge`, {
@@ -206,6 +219,11 @@ export default function PayslipReceiptConsole() {
         <p>{copy.description}</p>
         {sourceContextLabel ? <p className="small muted">{sourceContextLabel}</p> : null}
       </header>
+      {requiresLoginSession ? (
+        <p className="small fail">
+          {copy.productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        </p>
+      ) : null}
       <section className="panel-grid">
         <article className="panel">
           <h2>{copy.filtersTitle}</h2>
@@ -220,7 +238,13 @@ export default function PayslipReceiptConsole() {
             <label>{copy.periodEndLabel}<input type="date" value={periodEndDate} onChange={(event) => setPeriodEndDate(event.target.value)} /></label>
           </div>
           <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void loadRuns()} disabled={pendingLabel !== null}>{copy.loadPayslipsAction}</button>
+            <button
+              className="btn btn-primary"
+              onClick={() => void loadRuns()}
+              disabled={pendingLabel !== null || requiresLoginSession}
+            >
+              {copy.loadPayslipsAction}
+            </button>
             {sourceContextReturnLabel ? (
               <Link className="btn btn-secondary" href="/employee">
                 {sourceContextReturnLabel}
@@ -269,7 +293,11 @@ export default function PayslipReceiptConsole() {
                   <br />
                   {copy.netLabel} {formatKrwByLocale(run.netPayKrw)} / {copy.deliveredLabel} {formatDateTimeByLocale(run.payslipDistributedAt)} / {copy.receiptLabel} {formatDateTimeByLocale(run.payslipReceiptConfirmedAt)}
                   <div className="panel-actions">
-                    <button className="btn btn-secondary" onClick={() => void acknowledgeReceipt(run.id)} disabled={pendingLabel !== null || run.payslipDistributedAt === null}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => void acknowledgeReceipt(run.id)}
+                      disabled={pendingLabel !== null || run.payslipDistributedAt === null || requiresLoginSession}
+                    >
                       {copy.confirmReceiptAction}
                     </button>
                   </div>

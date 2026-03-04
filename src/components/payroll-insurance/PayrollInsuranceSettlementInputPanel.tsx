@@ -106,8 +106,8 @@ export function PayrollInsuranceInputPanel({
       <h2>{copy.inputTitle}</h2>
       {showDevTools ? (
         <p className="small">
-          {locale === "ko" ? "?몄뀡 議곗쭅" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
-          {locale === "ko" ? "?몄뀡 愿由ъ옄" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
+          {locale === "ko" ? "세션 조직" : "Session organization"}: <code>{sessionOrganizationId || "-"}</code> /{" "}
+          {locale === "ko" ? "세션 관리자" : "Session admin"}: <code>{sessionAdminActorId || "-"}</code>
         </p>
       ) : null}
       <label>

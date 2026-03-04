@@ -76,6 +76,8 @@ export default function WithholdingReceiptConsole() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
   const stats = useMemo(() => {
     const total = logs.length;
     const success = logs.filter((log) => log.ok).length;
@@ -106,6 +108,8 @@ export default function WithholdingReceiptConsole() {
     year,
     organizationId,
     documentFormat,
+    allowHeaderActorFallback,
+    requiresLoginSession,
     usesBearerToken,
     bearerToken,
     normalizedEmployeeIdForApi,
@@ -217,10 +221,16 @@ export default function WithholdingReceiptConsole() {
           </div>
         ) : null}
       </header>
+      {requiresLoginSession ? (
+        <p className="small fail">
+          {copy.productionSessionRequiredNotice} <Link href="/login">/login</Link>
+        </p>
+      ) : null}
       <section className="panel-grid">
         <WithholdingReceiptInputPanel
           copy={copy}
           showDevTools={showDevTools}
+          requiresLoginSession={requiresLoginSession}
           year={year}
           documentFormat={documentFormat}
           sessionOrganizationId={organizationId}

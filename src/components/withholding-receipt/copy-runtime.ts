@@ -37,6 +37,7 @@ export type WithholdingReceiptCopy = {
   requestFailedStatus: string;
   requestFailedCheckLogsStatus: string;
   invalidInputStatus: string;
+  productionSessionRequiredNotice: string;
   loadedReceiptPrefix: string;
   loadedDocumentPrefix: string;
   loadedFinalizedSettlementPrefix: string;
@@ -124,6 +125,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     requestFailedStatus: "요청이 실패했습니다",
     requestFailedCheckLogsStatus: "요청이 실패했습니다. 로그를 확인하세요.",
     invalidInputStatus: "입력값이 올바르지 않습니다",
+    productionSessionRequiredNotice: "운영 환경에서는 로그인 세션이 필요합니다.",
     loadedReceiptPrefix: "영수증 로드 완료",
     loadedDocumentPrefix: "문서 로드 완료",
     loadedFinalizedSettlementPrefix: "확정 정산 로드 완료",
@@ -209,6 +211,7 @@ export const withholdingReceiptCopyByLocale: Record<FlowLocale, WithholdingRecei
     requestFailedStatus: "request failed",
     requestFailedCheckLogsStatus: "request failed; check logs",
     invalidInputStatus: "invalid input",
+    productionSessionRequiredNotice: "A login session is required in production.",
     loadedReceiptPrefix: "loaded receipt",
     loadedDocumentPrefix: "loaded document",
     loadedFinalizedSettlementPrefix: "loaded finalized settlement",
