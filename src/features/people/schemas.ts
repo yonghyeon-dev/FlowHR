@@ -41,20 +41,29 @@ export const updateEmployeeSchema = z
   );
 
 export const createDepartmentSchema = z.object({
-  organizationId: z.string().min(1),
-  code: z.string().min(1).max(50),
+  organizationId: z.string().min(1).optional(),
+  code: z.string().min(1).max(50).optional(),
   name: z.string().min(1).max(100),
-  active: z.boolean().optional()
+  active: z.boolean().optional(),
+  parentId: z.string().min(1).nullable().optional(),
+  managerId: z.string().min(1).nullable().optional()
 });
 
 export const updateDepartmentSchema = z
   .object({
     code: z.string().min(1).max(50).optional(),
     name: z.string().min(1).max(100).optional(),
-    active: z.boolean().optional()
+    active: z.boolean().optional(),
+    parentId: z.string().min(1).nullable().optional(),
+    managerId: z.string().min(1).nullable().optional()
   })
   .refine(
-    (value) => value.code !== undefined || value.name !== undefined || value.active !== undefined,
+    (value) =>
+      value.code !== undefined ||
+      value.name !== undefined ||
+      value.active !== undefined ||
+      value.parentId !== undefined ||
+      value.managerId !== undefined,
     { message: "at least one field is required" }
   );
 

@@ -50,6 +50,57 @@ function ensureNonEmptyText(value: string | null | undefined, fieldName: string)
   return normalized;
 }
 
+function normalizeNullableId(value: string | null | undefined) {
+  const normalized = (value ?? "").trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function buildDepartmentCodeBase(name: string) {
+  const normalized = name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized.length > 0 ? normalized : "DEPARTMENT";
+}
+
+function ensureUniqueDepartmentCode(
+  existingDepartments: DepartmentEntity[],
+  inputCode: string | undefined,
+  inputName: string
+) {
+  const existingCodes = new Set(existingDepartments.map((row) => normalizeCode(row.code)));
+  if (inputCode !== undefined) {
+    const code = ensureNonEmptyText(inputCode, "code");
+    if (existingCodes.has(normalizeCode(code))) {
+      throw new ServiceError(409, "department code already exists in organization");
+    }
+    return code;
+  }
+
+  const base = buildDepartmentCodeBase(inputName);
+  if (!existingCodes.has(normalizeCode(base))) {
+    return base;
+  }
+  for (let index = 2; index <= 999; index += 1) {
+    const candidate = `${base}-${index}`;
+    if (!existingCodes.has(normalizeCode(candidate))) {
+      return candidate;
+    }
+  }
+  throw new ServiceError(409, "department code already exists in organization");
+}
+
+async function requireDepartmentMutationAccess(context: ServiceContext, action: string) {
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, action);
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  if (context.actor.role !== "admin" && context.actor.role !== "system") {
+    throw new ServiceError(403, "admin role required");
+  }
+}
+
 async function findOrganizationOrThrow(context: ServiceContext, organizationId: string) {
   const organization = await context.dataAccess.organizations.findById(organizationId);
   if (!organization) {
@@ -69,6 +120,81 @@ async function findDepartmentWithinScopeOrThrow(
   }
   ensureTenantMatch(tenantScope, department.organizationId, "department not found");
   return department;
+}
+
+async function findEmployeeWithinScopeOrThrow(
+  context: ServiceContext,
+  tenantScope: string | null,
+  employeeId: string
+) {
+  const employee = await context.dataAccess.employees.findById(employeeId);
+  if (!employee) {
+    throw new ServiceError(404, "employee not found");
+  }
+  ensureTenantMatch(tenantScope, employee.organizationId, "employee not found");
+  return employee;
+}
+
+async function ensureDepartmentParentId(
+  context: ServiceContext,
+  tenantScope: string | null,
+  organizationId: string,
+  parentId: string | null,
+  currentDepartmentId?: string
+) {
+  if (parentId === null) {
+    return null;
+  }
+
+  const parent = await findDepartmentWithinScopeOrThrow(context, tenantScope, parentId);
+  if (parent.organizationId !== organizationId) {
+    throw new ServiceError(409, "parent department organization mismatch");
+  }
+  if (currentDepartmentId && parent.id === currentDepartmentId) {
+    throw new ServiceError(400, "parent department cannot reference itself");
+  }
+
+  if (!currentDepartmentId) {
+    return parent.id;
+  }
+
+  const visited = new Set<string>();
+  let cursorId: string | null = parent.id;
+  while (cursorId) {
+    if (cursorId === currentDepartmentId) {
+      throw new ServiceError(400, "parent department cycle is not allowed");
+    }
+    if (visited.has(cursorId)) {
+      break;
+    }
+    visited.add(cursorId);
+    const cursor = await context.dataAccess.departments.findById(cursorId);
+    if (!cursor) {
+      break;
+    }
+    if (cursor.organizationId !== organizationId) {
+      break;
+    }
+    cursorId = cursor.parentId;
+  }
+
+  return parent.id;
+}
+
+async function ensureDepartmentManagerId(
+  context: ServiceContext,
+  tenantScope: string | null,
+  organizationId: string,
+  managerId: string | null
+) {
+  if (managerId === null) {
+    return null;
+  }
+  const manager = await findEmployeeWithinScopeOrThrow(context, tenantScope, managerId);
+  if (manager.organizationId !== organizationId) {
+    throw new ServiceError(409, "manager organization mismatch");
+  }
+  return manager.id;
 }
 
 async function findPositionWithinScopeOrThrow(
@@ -165,32 +291,47 @@ export async function getOrganization(
 export async function createDepartment(
   context: ServiceContext,
   input: {
-    organizationId: string;
-    code: string;
+    organizationId?: string;
+    code?: string;
     name: string;
     active?: boolean;
+    parentId?: string | null;
+    managerId?: string | null;
   }
 ): Promise<DepartmentEntity> {
-  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "create department");
+  await requireDepartmentMutationAccess(context, "create department");
   const tenantScope = resolveTenantScope(context.actor);
-  if (tenantScope && input.organizationId !== tenantScope) {
+  if (tenantScope && input.organizationId && input.organizationId !== tenantScope) {
     throw new ServiceError(403, "cross-tenant department create is not allowed");
   }
 
-  const organizationId = tenantScope ?? ensureNonEmptyText(input.organizationId, "organizationId");
+  const organizationIdInput = normalizeNullableId(input.organizationId ?? context.actor?.organizationId);
+  const organizationId = tenantScope ?? ensureNonEmptyText(organizationIdInput, "organizationId");
   await findOrganizationOrThrow(context, organizationId);
 
-  const code = ensureNonEmptyText(input.code, "code");
+  const name = ensureNonEmptyText(input.name, "name");
   const existing = await context.dataAccess.departments.list({ organizationId });
-  if (existing.some((row) => normalizeCode(row.code) === normalizeCode(code))) {
-    throw new ServiceError(409, "department code already exists in organization");
-  }
+  const code = ensureUniqueDepartmentCode(existing, input.code, name);
+  const parentId = await ensureDepartmentParentId(
+    context,
+    tenantScope,
+    organizationId,
+    normalizeNullableId(input.parentId)
+  );
+  const managerId = await ensureDepartmentManagerId(
+    context,
+    tenantScope,
+    organizationId,
+    normalizeNullableId(input.managerId)
+  );
 
   const department = await context.dataAccess.departments.create({
     organizationId,
     code,
-    name: ensureNonEmptyText(input.name, "name"),
-    active: input.active
+    name,
+    active: input.active,
+    parentId,
+    managerId
   });
 
   await context.dataAccess.audit.append({
@@ -203,7 +344,9 @@ export async function createDepartment(
     payload: {
       code: department.code,
       name: department.name,
-      active: department.active
+      active: department.active,
+      parentId: department.parentId,
+      managerId: department.managerId
     }
   });
 
@@ -218,7 +361,9 @@ export async function createDepartment(
       organizationId: department.organizationId,
       code: department.code,
       name: department.name,
-      active: department.active
+      active: department.active,
+      parentId: department.parentId,
+      managerId: department.managerId
     }
   });
 
@@ -253,13 +398,15 @@ export async function updateDepartment(
     code?: string;
     name?: string;
     active?: boolean;
+    parentId?: string | null;
+    managerId?: string | null;
   }
 ): Promise<DepartmentEntity> {
-  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "update department");
+  await requireDepartmentMutationAccess(context, "update department");
   const tenantScope = resolveTenantScope(context.actor);
 
   const existing = await findDepartmentWithinScopeOrThrow(context, tenantScope, input.departmentId);
-  const nextCode = input.code ? ensureNonEmptyText(input.code, "code") : existing.code;
+  const nextCode = input.code !== undefined ? ensureNonEmptyText(input.code, "code") : existing.code;
   if (normalizeCode(nextCode) !== normalizeCode(existing.code)) {
     const siblings = await context.dataAccess.departments.list({
       organizationId: existing.organizationId
@@ -273,10 +420,32 @@ export async function updateDepartment(
     }
   }
 
+  const nextParentId =
+    input.parentId === undefined
+      ? undefined
+      : await ensureDepartmentParentId(
+          context,
+          tenantScope,
+          existing.organizationId,
+          normalizeNullableId(input.parentId),
+          existing.id
+        );
+  const nextManagerId =
+    input.managerId === undefined
+      ? undefined
+      : await ensureDepartmentManagerId(
+          context,
+          tenantScope,
+          existing.organizationId,
+          normalizeNullableId(input.managerId)
+        );
+
   const department = await context.dataAccess.departments.update(input.departmentId, {
     code: input.code,
     name: input.name,
-    active: input.active
+    active: input.active,
+    parentId: nextParentId,
+    managerId: nextManagerId
   });
 
   await context.dataAccess.audit.append({
@@ -290,12 +459,16 @@ export async function updateDepartment(
       before: {
         code: existing.code,
         name: existing.name,
-        active: existing.active
+        active: existing.active,
+        parentId: existing.parentId,
+        managerId: existing.managerId
       },
       after: {
         code: department.code,
         name: department.name,
-        active: department.active
+        active: department.active,
+        parentId: department.parentId,
+        managerId: department.managerId
       }
     }
   });
@@ -311,7 +484,44 @@ export async function updateDepartment(
       organizationId: department.organizationId,
       code: department.code,
       name: department.name,
-      active: department.active
+      active: department.active,
+      parentId: department.parentId,
+      managerId: department.managerId
+    }
+  });
+
+  return department;
+}
+
+export async function deleteDepartment(
+  context: ServiceContext,
+  input: { departmentId: string }
+): Promise<DepartmentEntity> {
+  await requireDepartmentMutationAccess(context, "delete department");
+  const tenantScope = resolveTenantScope(context.actor);
+  const existing = await findDepartmentWithinScopeOrThrow(context, tenantScope, input.departmentId);
+
+  const employees = await context.dataAccess.employees.list({
+    organizationId: existing.organizationId
+  });
+  if (employees.some((employee) => employee.departmentId === existing.id)) {
+    throw new ServiceError(400, "Department has assigned employees");
+  }
+
+  const department = await context.dataAccess.departments.delete(existing.id);
+  await context.dataAccess.audit.append({
+    action: "department.deleted",
+    entityType: "Department",
+    entityId: department.id,
+    organizationId: department.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      code: department.code,
+      name: department.name,
+      active: department.active,
+      parentId: department.parentId,
+      managerId: department.managerId
     }
   });
 

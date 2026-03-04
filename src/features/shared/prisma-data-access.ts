@@ -560,6 +560,8 @@ function toDepartmentEntity(record: {
   code: string;
   name: string;
   active: boolean;
+  parentId: string | null;
+  managerId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): DepartmentEntity {
@@ -1032,7 +1034,9 @@ const departments: DepartmentStore = {
         organizationId: input.organizationId,
         code: input.code,
         name: input.name,
-        active: input.active ?? true
+        active: input.active ?? true,
+        parentId: input.parentId === undefined ? null : input.parentId,
+        managerId: input.managerId === undefined ? null : input.managerId
       }
     });
     return toDepartmentEntity(record);
@@ -1051,8 +1055,17 @@ const departments: DepartmentStore = {
       data: {
         ...(input.code !== undefined ? { code: input.code } : {}),
         ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.active !== undefined ? { active: input.active } : {})
+        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
+        ...(input.managerId !== undefined ? { managerId: input.managerId } : {})
       }
+    });
+    return toDepartmentEntity(record);
+  },
+
+  async delete(id: string) {
+    const record = await prisma.department.delete({
+      where: { id }
     });
     return toDepartmentEntity(record);
   },

@@ -65,6 +65,7 @@ model Employee {
 
   organization         Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   department           Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  managedDepartments   Department[]            @relation("DepartmentManager")
   position             Position?               @relation(fields: [positionId], references: [id], onDelete: SetNull)
   attendanceRecords    AttendanceRecord[]
   workSchedules        WorkSchedule[]
@@ -108,14 +109,21 @@ model Department {
   code           String
   name           String
   active         Boolean  @default(true)
+  parentId       String?
+  managerId      String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  parent       Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Department[] @relation("DepartmentHierarchy")
+  manager      Employee?    @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
   employees    Employee[]
 
   @@unique([organizationId, code])
   @@index([organizationId, active])
+  @@index([parentId])
+  @@index([managerId])
 }
 
 model Position {
