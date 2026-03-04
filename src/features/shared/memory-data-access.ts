@@ -694,6 +694,12 @@ function updateOrganizationEntity(
       input.businessRegistrationNumber !== undefined
         ? input.businessRegistrationNumber
         : existing.businessRegistrationNumber,
+    fiscalYearStart:
+      input.fiscalYearStart !== undefined ? input.fiscalYearStart : existing.fiscalYearStart,
+    workHoursPerDay:
+      input.workHoursPerDay !== undefined ? input.workHoursPerDay : existing.workHoursPerDay,
+    overtimeThreshold:
+      input.overtimeThreshold !== undefined ? input.overtimeThreshold : existing.overtimeThreshold,
     industry: input.industry !== undefined ? input.industry : existing.industry,
     representativeName:
       input.representativeName !== undefined ? input.representativeName : existing.representativeName,
@@ -810,6 +816,9 @@ export const memoryDataAccess: DataAccess = {
         id: nextId("ORG"),
         name: input.name,
         businessRegistrationNumber: null,
+        fiscalYearStart: "01-01",
+        workHoursPerDay: 8,
+        overtimeThreshold: 8,
         industry: null,
         representativeName: null,
         workStartTime: null,

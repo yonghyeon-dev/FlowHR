@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.11
+  version: 0.3.12
 paths:
   /people/organizations:
     get:
@@ -28,6 +28,23 @@ paths:
           description: Organization returned
         "404":
           description: Not found
+  /admin/organization/settings:
+    get:
+      summary: Get current admin organization settings
+      responses:
+        "200":
+          description: Organization settings returned
+        "403":
+          description: Admin role required
+    patch:
+      summary: Update current admin organization settings
+      responses:
+        "200":
+          description: Organization settings updated
+        "400":
+          description: Invalid payload
+        "403":
+          description: Admin role required
   /people/employees:
     get:
       summary: List employees
