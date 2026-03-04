@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-
 import { useStickyStringState } from "@/lib/client/useStickyState";
 import { defaultEmployeeIdForApi } from "@/lib/i18n/employee-id-locale";
 
