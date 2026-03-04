@@ -29,6 +29,7 @@ import type {
   CreateNoticeNotificationInput,
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
+  CreateOnboardingTaskInput,
   CreateOrganizationInput,
   CreatePayrollRunInput,
   CreatePositionInput,
@@ -45,6 +46,9 @@ import type {
   BenefitCatalogItemEntity,
   BenefitRequestEntity,
   BenefitStore,
+  OnboardingTaskEntity,
+  OnboardingTaskStore,
+  OnboardingTaskStatus,
   DeductionProfileStore,
   EmployeeEntity,
   EmployeeStore,
@@ -105,6 +109,7 @@ import type {
   UpdateNoticeNotificationInput,
   UpdateBenefitCatalogItemInput,
   UpdateBenefitRequestInput,
+  UpdateOnboardingTaskInput,
   UpdatePositionInput,
   UpdatePayrollRunInput,
   UpdateRecruitmentOpeningInput,
@@ -865,6 +870,24 @@ function toScheduleAnomalyIncidentEntity(record: {
     history: normalizeIncidentHistory(record.history),
     createdAt: record.createdAt,
     rowUpdatedAt: record.rowUpdatedAt
+  };
+}
+
+const onboardingTaskStoreState = {
+  sequence: 1,
+  tasks: new Map<string, OnboardingTaskEntity>()
+};
+
+function nextOnboardingTaskId() {
+  const id = `ONB-${String(onboardingTaskStoreState.sequence).padStart(6, "0")}`;
+  onboardingTaskStoreState.sequence += 1;
+  return id;
+}
+
+function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity {
+  return {
+    ...entity,
+    createdAt: new Date(entity.createdAt.getTime())
   };
 }
 
@@ -2446,6 +2469,57 @@ const benefits: BenefitStore = {
   }
 };
 
+const onboardingTasks: OnboardingTaskStore = {
+  async create(input: CreateOnboardingTaskInput) {
+    const created: OnboardingTaskEntity = {
+      id: nextOnboardingTaskId(),
+      employeeId: input.employeeId,
+      title: input.title,
+      status: input.status ?? "PENDING",
+      createdAt: input.createdAt ? new Date(input.createdAt.getTime()) : new Date()
+    };
+    onboardingTaskStoreState.tasks.set(created.id, created);
+    return cloneOnboardingTask(created);
+  },
+
+  async listByEmployee(employeeId: string) {
+    const rows: OnboardingTaskEntity[] = [];
+    for (const task of onboardingTaskStoreState.tasks.values()) {
+      if (task.employeeId !== employeeId) {
+        continue;
+      }
+      rows.push(cloneOnboardingTask(task));
+    }
+    rows.sort((left, right) => {
+      const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+      if (byCreatedAt !== 0) {
+        return byCreatedAt;
+      }
+      return left.id.localeCompare(right.id);
+    });
+    return rows;
+  },
+
+  async findById(id: string) {
+    const task = onboardingTaskStoreState.tasks.get(id);
+    return task ? cloneOnboardingTask(task) : null;
+  },
+
+  async update(id: string, input: UpdateOnboardingTaskInput) {
+    const existing = onboardingTaskStoreState.tasks.get(id);
+    if (!existing) {
+      throw new Error(`onboarding task not found: ${id}`);
+    }
+    const nextStatus: OnboardingTaskStatus = input.status ?? existing.status;
+    const updated: OnboardingTaskEntity = {
+      ...existing,
+      status: nextStatus
+    };
+    onboardingTaskStoreState.tasks.set(id, updated);
+    return cloneOnboardingTask(updated);
+  }
+};
+
 const recruitment: RecruitmentStore = {
   async createOpening(input: CreateRecruitmentOpeningInput) {
     const record = await prisma.recruitmentOpening.create({
@@ -2753,6 +2827,7 @@ export const prismaDataAccess: DataAccess = {
   leaveBalance,
   leavePromotionDeliveries,
   benefits,
+  onboardingTasks,
   recruitment,
   notices,
   noticeReadReceipts,

@@ -13,6 +13,7 @@ export type NoticeNotificationChannel = "in_app";
 export type NoticeNotificationState = "QUEUED" | "DELIVERED" | "FAILED";
 export type BenefitCatalogStatus = "ACTIVE" | "INACTIVE";
 export type BenefitRequestStatus = "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+export type OnboardingTaskStatus = "PENDING" | "COMPLETED";
 export type RecruitmentOpeningStatus = "OPEN" | "CLOSED";
 export type RecruitmentReferralStage =
   | "SUBMITTED"
@@ -460,6 +461,14 @@ export type BenefitRequestEntity = {
   reviewNote: string | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type OnboardingTaskEntity = {
+  id: string;
+  employeeId: string;
+  title: string;
+  status: OnboardingTaskStatus;
+  createdAt: Date;
 };
 
 export type RecruitmentOpeningEntity = {
@@ -957,6 +966,17 @@ export type UpdateBenefitRequestInput = {
   updatedAt?: Date;
 };
 
+export type CreateOnboardingTaskInput = {
+  employeeId: string;
+  title: string;
+  status?: OnboardingTaskStatus;
+  createdAt?: Date;
+};
+
+export type UpdateOnboardingTaskInput = {
+  status?: OnboardingTaskStatus;
+};
+
 export type CreateRecruitmentOpeningInput = {
   organizationId: string;
   title: string;
@@ -1327,6 +1347,13 @@ export interface BenefitStore {
   }): Promise<BenefitRequestEntity[]>;
 }
 
+export interface OnboardingTaskStore {
+  create(input: CreateOnboardingTaskInput): Promise<OnboardingTaskEntity>;
+  listByEmployee(employeeId: string): Promise<OnboardingTaskEntity[]>;
+  findById(id: string): Promise<OnboardingTaskEntity | null>;
+  update(id: string, input: UpdateOnboardingTaskInput): Promise<OnboardingTaskEntity>;
+}
+
 export interface RecruitmentStore {
   createOpening(input: CreateRecruitmentOpeningInput): Promise<RecruitmentOpeningEntity>;
   findOpeningById(id: string): Promise<RecruitmentOpeningEntity | null>;
@@ -1366,6 +1393,7 @@ export type DataAccess = {
   leaveBalance: LeaveBalanceStore;
   leavePromotionDeliveries: LeavePromotionDeliveryStore;
   benefits: BenefitStore;
+  onboardingTasks: OnboardingTaskStore;
   recruitment: RecruitmentStore;
   notices: NoticeStore;
   noticeReadReceipts: NoticeReadReceiptStore;
