@@ -45,7 +45,7 @@
 
 ## Data Changes
 - Prisma model: `Organization`
-  - Added `fiscalYearStart` (`String`, default `"01-01"`)
-  - Added `workHoursPerDay` (`Float`, default `8`)
-  - Added `overtimeThreshold` (`Float`, default `8`)
-- Migration: `prisma/migrations/202603050006_wi0932_org_settings/migration.sql`
+  - Added fiscalYearStart (String, default "01-01")
+  - Added workHoursPerDay (Float, default 8)
+  - Added overtimeThreshold (Float, default 8)
+- Migration: `202603050006_wi0932_org_settings`
