@@ -243,6 +243,39 @@ export async function seedFlowHrDefaults(store: SeedStore): Promise<SeedResult> 
   };
 }
 
+async function seedStatutoryLeavePolicies(prisma: PrismaClient, organizationId: string) {
+  const activePolicies = await prisma.leavePolicy.findMany({
+    where: {
+      organizationId,
+      status: "ACTIVE",
+      isStatutory: true
+    },
+    select: {
+      name: true
+    }
+  });
+  const names = new Set(activePolicies.map((policy) => policy.name.trim().toLowerCase()));
+
+  const defaults = [
+    { name: "Annual Leave" },
+    { name: "Sick Leave" }
+  ] as const;
+
+  for (const policy of defaults) {
+    if (names.has(policy.name.toLowerCase())) {
+      continue;
+    }
+    await prisma.leavePolicy.create({
+      data: {
+        organizationId,
+        name: policy.name,
+        isStatutory: true,
+        status: "ACTIVE"
+      }
+    });
+  }
+}
+
 /**
  * Default admin user setup instructions (comment only):
  * 1) Create the first auth user in your identity provider (for example: Supabase Auth).
@@ -256,6 +289,7 @@ export async function main() {
   const prisma = new PrismaClient();
   try {
     const result = await seedFlowHrDefaults(createPrismaSeedStore(prisma));
+    await seedStatutoryLeavePolicies(prisma, result.organizationId);
     console.log(
       `[seed] organization=${result.organizationId} roles=${result.roleIds.length} created=${result.rolesCreated.length} updated=${result.rolesUpdated.length}`
     );

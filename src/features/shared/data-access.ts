@@ -7,6 +7,7 @@ export type LeaveRequestUnit = "FULL_DAY" | "HALF_DAY" | "HOUR";
 export type LeavePromotionDeliveryChannel = "webhook" | "email_template";
 export type LeavePromotionDeliveryStatus = "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
 export type LeavePromotionRecipientStatus = "PENDING" | "SENT" | "SKIPPED_NO_EMAIL" | "FAILED";
+export type LeavePolicyStatus = "ACTIVE" | "ARCHIVED";
 export type NoticeAudience = "all" | "employees" | "admins";
 export type NoticeStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED";
 export type NoticeNotificationChannel = "in_app";
@@ -320,6 +321,7 @@ export type RoleWithPermissionsEntity = RoleEntity & {
 export type LeaveRequestEntity = {
   id: string;
   employeeId: string;
+  policyId: string | null;
   leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
@@ -352,6 +354,9 @@ export type LeaveBalanceEntity = {
 export type LeavePolicyEntity = {
   id: string;
   organizationId: string;
+  name: string;
+  isStatutory: boolean;
+  status: LeavePolicyStatus;
   annualGrantDays: number;
   carryOverCapDays: number;
   allowHalfDay: boolean;
@@ -835,6 +840,7 @@ export type UpsertRoleInput = {
 
 export type CreateLeaveRequestInput = {
   employeeId: string;
+  policyId?: string | null;
   leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
@@ -866,6 +872,25 @@ export type UpsertLeavePolicyInput = {
   organizationId: string;
   annualGrantDays: number;
   carryOverCapDays: number;
+  allowHalfDay?: boolean;
+  allowHourly?: boolean;
+  hourlyIncrementMinutes?: number;
+  maxHoursPerRequest?: number;
+  minNoticeDays?: number;
+  maxConsecutiveDays?: number | null;
+  annualLeavePromotionEnabled?: boolean;
+  annualLeavePromotionThresholdDays?: number;
+  annualLeavePromotionLeadDays?: number;
+  annualLeavePromotionMessageTemplate?: string | null;
+};
+
+export type CreateLeavePolicyInput = {
+  organizationId: string;
+  name: string;
+  isStatutory?: boolean;
+  status?: LeavePolicyStatus;
+  annualGrantDays?: number;
+  carryOverCapDays?: number;
   allowHalfDay?: boolean;
   allowHourly?: boolean;
   hourlyIncrementMinutes?: number;
@@ -1346,8 +1371,17 @@ export interface LeaveStore {
 }
 
 export interface LeavePolicyStore {
+  findById(id: string): Promise<LeavePolicyEntity | null>;
   findByOrganizationId(organizationId: string): Promise<LeavePolicyEntity | null>;
   upsertForOrganization(input: UpsertLeavePolicyInput): Promise<LeavePolicyEntity>;
+  create(input: CreateLeavePolicyInput): Promise<LeavePolicyEntity>;
+  list(input: {
+    organizationId: string;
+    status?: LeavePolicyStatus;
+    isStatutory?: boolean;
+  }): Promise<LeavePolicyEntity[]>;
+  archive(id: string): Promise<LeavePolicyEntity>;
+  countUsage(policyId: string): Promise<number>;
 }
 
 export interface LeaveBalanceStore {

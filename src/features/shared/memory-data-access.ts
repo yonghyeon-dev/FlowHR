@@ -25,6 +25,7 @@ import type {
   UpdateWorkScheduleInput,
   UpdateWorkScheduleTemplateInput,
   CreateEmployeeInput,
+  CreateLeavePolicyInput,
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
@@ -1815,6 +1816,7 @@ export const memoryDataAccess: DataAccess = {
       const request: LeaveRequestEntity = {
         id: nextId("LR"),
         employeeId: input.employeeId,
+        policyId: input.policyId === undefined ? null : input.policyId,
         leaveType: input.leaveType,
         startDate: cloneDate(input.startDate),
         endDate: cloneDate(input.endDate),
@@ -1916,14 +1918,60 @@ export const memoryDataAccess: DataAccess = {
   },
 
   leavePolicy: {
-    async findByOrganizationId(organizationId: string) {
-      const existing = state.leavePolicies.get(organizationId);
+    async findById(id: string) {
+      const existing = state.leavePolicies.get(id);
       return existing ? cloneLeavePolicy(existing) : null;
+    },
+
+    async list(input: {
+      organizationId: string;
+      status?: "ACTIVE" | "ARCHIVED";
+      isStatutory?: boolean;
+    }) {
+      const rows: LeavePolicyEntity[] = [];
+      for (const policy of state.leavePolicies.values()) {
+        if (policy.organizationId !== input.organizationId) {
+          continue;
+        }
+        if (input.status && policy.status !== input.status) {
+          continue;
+        }
+        if (input.isStatutory !== undefined && policy.isStatutory !== input.isStatutory) {
+          continue;
+        }
+        rows.push(cloneLeavePolicy(policy));
+      }
+      rows.sort((left, right) => {
+        if (left.isStatutory !== right.isStatutory) {
+          return left.isStatutory ? -1 : 1;
+        }
+        const byUpdatedAt = right.updatedAt.getTime() - left.updatedAt.getTime();
+        if (byUpdatedAt !== 0) {
+          return byUpdatedAt;
+        }
+        return right.id.localeCompare(left.id);
+      });
+      return rows;
+    },
+
+    async findByOrganizationId(organizationId: string) {
+      const active = await this.list({
+        organizationId,
+        status: "ACTIVE"
+      });
+      const configured = active.find((policy) => !policy.isStatutory) ?? null;
+      return configured ?? active[0] ?? null;
     },
 
     async upsertForOrganization(input: UpsertLeavePolicyInput) {
       const now = new Date();
-      const existing = state.leavePolicies.get(input.organizationId);
+      const existing = (
+        await this.list({
+          organizationId: input.organizationId,
+          status: "ACTIVE",
+          isStatutory: false
+        })
+      )[0];
       const next: LeavePolicyEntity = existing
         ? {
             ...existing,
@@ -1955,6 +2003,9 @@ export const memoryDataAccess: DataAccess = {
         : {
             id: nextId("LP"),
             organizationId: input.organizationId,
+            name: "Default Leave Policy",
+            isStatutory: false,
+            status: "ACTIVE",
             annualGrantDays: input.annualGrantDays,
             carryOverCapDays: input.carryOverCapDays,
             allowHalfDay: input.allowHalfDay ?? true,
@@ -1970,8 +2021,61 @@ export const memoryDataAccess: DataAccess = {
             createdAt: now,
             updatedAt: now
           };
-      state.leavePolicies.set(input.organizationId, next);
+      state.leavePolicies.set(next.id, next);
       return cloneLeavePolicy(next);
+    },
+
+    async create(input: CreateLeavePolicyInput) {
+      const now = new Date();
+      const normalizedName = input.name.trim();
+      const policy: LeavePolicyEntity = {
+        id: nextId("LP"),
+        organizationId: input.organizationId,
+        name: normalizedName.length > 0 ? normalizedName : "Default Leave Policy",
+        isStatutory: input.isStatutory ?? false,
+        status: input.status ?? "ACTIVE",
+        annualGrantDays: input.annualGrantDays ?? 15,
+        carryOverCapDays: input.carryOverCapDays ?? 5,
+        allowHalfDay: input.allowHalfDay ?? true,
+        allowHourly: input.allowHourly ?? true,
+        hourlyIncrementMinutes: input.hourlyIncrementMinutes ?? 30,
+        maxHoursPerRequest: input.maxHoursPerRequest ?? 8,
+        minNoticeDays: input.minNoticeDays ?? 0,
+        maxConsecutiveDays:
+          input.maxConsecutiveDays === undefined ? null : input.maxConsecutiveDays,
+        annualLeavePromotionEnabled: input.annualLeavePromotionEnabled ?? false,
+        annualLeavePromotionThresholdDays: input.annualLeavePromotionThresholdDays ?? 5,
+        annualLeavePromotionLeadDays: input.annualLeavePromotionLeadDays ?? 30,
+        annualLeavePromotionMessageTemplate: input.annualLeavePromotionMessageTemplate ?? null,
+        createdAt: now,
+        updatedAt: now
+      };
+      state.leavePolicies.set(policy.id, policy);
+      return cloneLeavePolicy(policy);
+    },
+
+    async archive(id: string) {
+      const existing = state.leavePolicies.get(id);
+      if (!existing) {
+        throw new Error(`leave policy not found: ${id}`);
+      }
+      const updated: LeavePolicyEntity = {
+        ...existing,
+        status: "ARCHIVED",
+        updatedAt: new Date()
+      };
+      state.leavePolicies.set(id, updated);
+      return cloneLeavePolicy(updated);
+    },
+
+    async countUsage(policyId: string) {
+      let count = 0;
+      for (const request of state.leaveRequests.values()) {
+        if (request.policyId === policyId) {
+          count += 1;
+        }
+      }
+      return count;
     }
   },
 

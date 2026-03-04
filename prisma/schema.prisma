@@ -33,7 +33,7 @@ model Organization {
   approvalLineTemplates    ApprovalLineTemplate[]
   approvalStageHistories   ApprovalStageHistory[]
   approvalExecutions       ApprovalExecution[]
-  leavePolicy              LeavePolicy?
+  leavePolicies            LeavePolicy[]
   leavePromotionDeliveries LeavePromotionDelivery[]
   notices                  Notice[]
   noticeReadReceipts       NoticeReadReceipt[]
@@ -346,6 +346,8 @@ model LeaveRequest {
   id             String            @id @default(cuid())
   employeeId     String
   employee       Employee          @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  policyId       String?
+  policy         LeavePolicy?      @relation(fields: [policyId], references: [id], onDelete: SetNull)
   leaveType      LeaveType         @default(ANNUAL)
   startDate      DateTime
   endDate        DateTime
@@ -366,6 +368,7 @@ model LeaveRequest {
   approvals      LeaveApproval[]
 
   @@index([employeeId, state, startDate, endDate])
+  @@index([policyId, state, startDate, endDate])
 }
 
 model LeaveApproval {
@@ -393,23 +396,30 @@ model LeaveBalanceProjection {
 }
 
 model LeavePolicy {
-  id                                  String       @id @default(cuid())
-  organizationId                      String       @unique
-  organization                        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  annualGrantDays                     Int          @default(15)
-  carryOverCapDays                    Int          @default(5)
-  allowHalfDay                        Boolean      @default(true)
-  allowHourly                         Boolean      @default(true)
-  hourlyIncrementMinutes              Int          @default(30)
-  maxHoursPerRequest                  Decimal      @default(8) @db.Decimal(6, 2)
-  minNoticeDays                       Int          @default(0)
-  maxConsecutiveDays                  Decimal?     @db.Decimal(6, 2)
-  annualLeavePromotionEnabled         Boolean      @default(false)
-  annualLeavePromotionThresholdDays   Decimal      @default(5) @db.Decimal(6, 2)
-  annualLeavePromotionLeadDays        Int          @default(30)
+  id                                  String            @id @default(cuid())
+  organizationId                      String
+  organization                        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                                String            @default("Default Leave Policy")
+  isStatutory                         Boolean           @default(false)
+  status                              LeavePolicyStatus @default(ACTIVE)
+  annualGrantDays                     Int               @default(15)
+  carryOverCapDays                    Int               @default(5)
+  allowHalfDay                        Boolean           @default(true)
+  allowHourly                         Boolean           @default(true)
+  hourlyIncrementMinutes              Int               @default(30)
+  maxHoursPerRequest                  Decimal           @default(8) @db.Decimal(6, 2)
+  minNoticeDays                       Int               @default(0)
+  maxConsecutiveDays                  Decimal?          @db.Decimal(6, 2)
+  annualLeavePromotionEnabled         Boolean           @default(false)
+  annualLeavePromotionThresholdDays   Decimal           @default(5) @db.Decimal(6, 2)
+  annualLeavePromotionLeadDays        Int               @default(30)
   annualLeavePromotionMessageTemplate String?
-  createdAt                           DateTime     @default(now())
-  updatedAt                           DateTime     @updatedAt
+  createdAt                           DateTime          @default(now())
+  updatedAt                           DateTime          @updatedAt
+  requests                            LeaveRequest[]
+
+  @@index([organizationId, status, isStatutory, updatedAt])
+  @@index([organizationId, isStatutory, updatedAt])
 }
 
 model LeavePromotionDelivery {
@@ -740,6 +750,11 @@ enum LeavePromotionRecipientStatus {
   SENT
   SKIPPED_NO_EMAIL
   FAILED
+}
+
+enum LeavePolicyStatus {
+  ACTIVE
+  ARCHIVED
 }
 
 enum NoticeAudience {

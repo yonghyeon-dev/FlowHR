@@ -51,12 +51,12 @@ import {
   resolvePolicyRules,
   resolveSeoulYearEnd,
   roundTo2,
-  toSeoulDayIndex,
-  type LeavePolicyRules
+  toSeoulDayIndex
 } from "@/features/leave/policy-time-helpers";
 import type {
   DataAccess,
   LeaveBalanceEntity,
+  LeavePolicyStatus,
   LeavePromotionDeliveryRecipientEntity,
   LeaveRequestEntity,
   LeaveRequestUnit,
@@ -79,6 +79,7 @@ function getEventPublisher(context: ServiceContext): DomainEventPublisher {
 
 type CreateLeaveRequestInput = {
   employeeId: string;
+  policyId?: string;
   leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
@@ -128,6 +129,16 @@ type UpsertLeavePolicyInput = {
   annualLeavePromotionThresholdDays?: number;
   annualLeavePromotionLeadDays?: number;
   annualLeavePromotionMessageTemplate?: string | null;
+};
+
+type ListLeavePoliciesInput = {
+  organizationId?: string;
+  status?: LeavePolicyStatus;
+};
+
+type DeleteLeavePolicyInput = {
+  policyId: string;
+  organizationId?: string;
 };
 
 type PreviewAnnualLeavePromotionInput = {
@@ -186,6 +197,15 @@ function ensureTenantAccess(actor: Actor | null, organizationId: string) {
   ensureTenantMatch(tenantScope, organizationId, "organization not found");
 }
 
+function requireAdminRole(actor: Actor | null): asserts actor is Actor {
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  if (actor.role !== "admin") {
+    throw new ServiceError(403, "admin role required");
+  }
+}
+
 async function ensureNoOverlap(
   context: ServiceContext,
   input: {
@@ -212,6 +232,60 @@ async function requirePendingRequest(context: ServiceContext, requestId: string)
   return request;
 }
 
+async function ensureStatutoryLeavePolicies(context: ServiceContext, organizationId: string) {
+  const activePolicies = await context.dataAccess.leavePolicy.list({
+    organizationId,
+    status: "ACTIVE"
+  });
+  const activeStatutoryNames = new Set(
+    activePolicies
+      .filter((policy) => policy.isStatutory)
+      .map((policy) => policy.name.trim().toLowerCase())
+  );
+
+  if (!activeStatutoryNames.has("annual leave")) {
+    await context.dataAccess.leavePolicy.create({
+      organizationId,
+      name: "Annual Leave",
+      isStatutory: true,
+      status: "ACTIVE",
+      annualGrantDays: DEFAULT_GRANTED_DAYS,
+      carryOverCapDays: DEFAULT_CARRY_OVER_CAP_DAYS,
+      allowHalfDay: DEFAULT_ALLOW_HALF_DAY,
+      allowHourly: DEFAULT_ALLOW_HOURLY,
+      hourlyIncrementMinutes: DEFAULT_HOURLY_INCREMENT_MINUTES,
+      maxHoursPerRequest: DEFAULT_MAX_HOURS_PER_REQUEST,
+      minNoticeDays: DEFAULT_MIN_NOTICE_DAYS,
+      maxConsecutiveDays: DEFAULT_MAX_CONSECUTIVE_DAYS,
+      annualLeavePromotionEnabled: DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED,
+      annualLeavePromotionThresholdDays: DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS,
+      annualLeavePromotionLeadDays: DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS,
+      annualLeavePromotionMessageTemplate: DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE
+    });
+  }
+
+  if (!activeStatutoryNames.has("sick leave")) {
+    await context.dataAccess.leavePolicy.create({
+      organizationId,
+      name: "Sick Leave",
+      isStatutory: true,
+      status: "ACTIVE",
+      annualGrantDays: DEFAULT_GRANTED_DAYS,
+      carryOverCapDays: DEFAULT_CARRY_OVER_CAP_DAYS,
+      allowHalfDay: DEFAULT_ALLOW_HALF_DAY,
+      allowHourly: DEFAULT_ALLOW_HOURLY,
+      hourlyIncrementMinutes: DEFAULT_HOURLY_INCREMENT_MINUTES,
+      maxHoursPerRequest: DEFAULT_MAX_HOURS_PER_REQUEST,
+      minNoticeDays: DEFAULT_MIN_NOTICE_DAYS,
+      maxConsecutiveDays: DEFAULT_MAX_CONSECUTIVE_DAYS,
+      annualLeavePromotionEnabled: DEFAULT_ANNUAL_LEAVE_PROMOTION_ENABLED,
+      annualLeavePromotionThresholdDays: DEFAULT_ANNUAL_LEAVE_PROMOTION_THRESHOLD_DAYS,
+      annualLeavePromotionLeadDays: DEFAULT_ANNUAL_LEAVE_PROMOTION_LEAD_DAYS,
+      annualLeavePromotionMessageTemplate: DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE
+    });
+  }
+}
+
 export async function createLeaveRequest(
   context: ServiceContext,
   input: CreateLeaveRequestInput
@@ -228,10 +302,21 @@ export async function createLeaveRequest(
 
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, input.employeeId);
 
-  const policy =
+  let policy =
     employee.organizationId
       ? await context.dataAccess.leavePolicy.findByOrganizationId(employee.organizationId)
       : null;
+  if (employee.organizationId && input.policyId) {
+    const selectedPolicy = await context.dataAccess.leavePolicy.findById(input.policyId);
+    if (!selectedPolicy || selectedPolicy.organizationId !== employee.organizationId) {
+      throw new ServiceError(404, "leave policy not found");
+    }
+    if (selectedPolicy.status !== "ACTIVE") {
+      throw new ServiceError(409, "leave policy is not active");
+    }
+    policy = selectedPolicy;
+  }
+
   const policyRules = resolvePolicyRules(policy);
   const requested = calculateRequestedLeave({
     unit: input.unit ?? "FULL_DAY",
@@ -253,6 +338,7 @@ export async function createLeaveRequest(
 
   const request = await context.dataAccess.leave.create({
     employeeId: input.employeeId,
+    policyId: policy?.id ?? null,
     leaveType: input.leaveType,
     startDate: input.startDate,
     endDate: input.endDate,
@@ -1298,6 +1384,132 @@ export async function upsertLeavePolicy(
         stored.annualLeavePromotionMessageTemplate?.trim() ||
         DEFAULT_ANNUAL_LEAVE_PROMOTION_MESSAGE_TEMPLATE,
       updatedAt: stored.updatedAt.toISOString()
+    }
+  };
+}
+
+export async function listLeavePolicies(
+  context: ServiceContext,
+  input: ListLeavePoliciesInput
+): Promise<{
+  organizationId: string;
+  policies: Array<{
+    id: string;
+    name: string;
+    isStatutory: boolean;
+    status: LeavePolicyStatus;
+    usageCount: number;
+    updatedAt: string;
+  }>;
+}> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  await requirePermission(context, Permissions.leaveBalanceReadAny, "leave policy list requires permission");
+
+  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
+  ensureTenantAccess(actor, organizationId);
+  await ensureStatutoryLeavePolicies(context, organizationId);
+
+  const status = input.status ?? "ACTIVE";
+  const policies = await context.dataAccess.leavePolicy.list({
+    organizationId,
+    status
+  });
+
+  const rows = await Promise.all(
+    policies.map(async (policy) => ({
+      id: policy.id,
+      name: policy.name,
+      isStatutory: policy.isStatutory,
+      status: policy.status,
+      usageCount: await context.dataAccess.leavePolicy.countUsage(policy.id),
+      updatedAt: policy.updatedAt.toISOString()
+    }))
+  );
+
+  await context.dataAccess.audit.append({
+    action: "leave.policy_list",
+    entityType: "LeavePolicy",
+    organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      status,
+      count: rows.length
+    }
+  });
+
+  return {
+    organizationId,
+    policies: rows
+  };
+}
+
+export async function deleteLeavePolicy(
+  context: ServiceContext,
+  input: DeleteLeavePolicyInput
+): Promise<{
+  policy: {
+    id: string;
+    organizationId: string;
+    name: string;
+    isStatutory: boolean;
+    status: LeavePolicyStatus;
+    usageCount: number;
+    updatedAt: string;
+  };
+}> {
+  const actor = context.actor;
+  requireAdminRole(actor);
+
+  const policyId = input.policyId.trim();
+  if (!policyId) {
+    throw new ServiceError(400, "policyId is required");
+  }
+
+  const existing = await context.dataAccess.leavePolicy.findById(policyId);
+  if (!existing) {
+    throw new ServiceError(404, "leave policy not found");
+  }
+  if (input.organizationId && input.organizationId !== existing.organizationId) {
+    throw new ServiceError(404, "leave policy not found");
+  }
+  ensureTenantAccess(actor, existing.organizationId);
+
+  if (existing.isStatutory) {
+    throw new ServiceError(400, "Cannot delete statutory leave policy");
+  }
+
+  const usageCount = await context.dataAccess.leavePolicy.countUsage(existing.id);
+  if (usageCount > 0) {
+    throw new ServiceError(400, "Policy has active usage, cannot delete");
+  }
+
+  const archived = await context.dataAccess.leavePolicy.archive(existing.id);
+
+  await context.dataAccess.audit.append({
+    action: "leave.policy_archived",
+    entityType: "LeavePolicy",
+    entityId: archived.id,
+    organizationId: archived.organizationId,
+    actorRole: actor.role,
+    actorId: actor.id,
+    payload: {
+      name: archived.name
+    }
+  });
+
+  return {
+    policy: {
+      id: archived.id,
+      organizationId: archived.organizationId,
+      name: archived.name,
+      isStatutory: archived.isStatutory,
+      status: archived.status,
+      usageCount: 0,
+      updatedAt: archived.updatedAt.toISOString()
     }
   };
 }

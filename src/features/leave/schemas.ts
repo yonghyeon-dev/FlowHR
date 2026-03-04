@@ -12,6 +12,7 @@ const leaveRequestStateSchema = z.enum(leaveRequestStateValues);
 
 export const createLeaveRequestSchema = z.object({
   employeeId: z.string().min(1),
+  policyId: z.string().min(1).optional(),
   leaveType: leaveTypeSchema.default("ANNUAL"),
   startDate: isoDateTime,
   endDate: isoDateTime,
@@ -69,6 +70,18 @@ export const upsertLeavePolicySchema = z.object({
   annualLeavePromotionThresholdDays: z.number().positive().max(365).optional(),
   annualLeavePromotionLeadDays: z.number().int().min(0).max(365).optional(),
   annualLeavePromotionMessageTemplate: z.string().max(4000).nullable().optional()
+});
+
+export const leavePolicyStatusValues = ["ACTIVE", "ARCHIVED"] as const;
+export const leavePolicyStatusSchema = z.enum(leavePolicyStatusValues);
+
+export const listLeavePoliciesQuerySchema = z.object({
+  organizationId: z.string().min(1).optional(),
+  status: leavePolicyStatusSchema.default("ACTIVE")
+});
+
+export const leavePolicyPathSchema = z.object({
+  policyId: z.string().min(1)
 });
 
 export const listLeaveRequestQuerySchema = z.object({

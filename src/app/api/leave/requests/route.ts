@@ -63,6 +63,7 @@ export async function POST(request: Request) {
       },
       {
         employeeId: parsed.data.employeeId,
+        policyId: parsed.data.policyId,
         leaveType: parsed.data.leaveType,
         startDate: new Date(parsed.data.startDate),
         endDate: new Date(parsed.data.endDate),
