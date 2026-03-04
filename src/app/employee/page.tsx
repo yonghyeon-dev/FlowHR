@@ -91,7 +91,8 @@ export default function EmployeeSelfServicePage() {
   const toRequestStatusLabel = useCallback((status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status], [requestStatusLabels]);
   const toLeaveTypeLabel = useCallback((leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType, [leaveTypeLabels]);
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
-  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, organizationId, employeeId, bearerToken, usesBearerToken, supabaseUrl } = useEmployeeRuntimeSession({ notConfiguredLabel });
+  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, organizationId, employeeId, bearerToken, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const productionSessionRequiredNotice =
     isKoLocale
       ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
