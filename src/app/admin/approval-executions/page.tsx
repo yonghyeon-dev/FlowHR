@@ -115,6 +115,8 @@ export default function AdminApprovalExecutionsPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   useEffect(() => {
     setDomain(normalizeApprovalDomainFilter(searchParams.get("domain")));
@@ -250,12 +252,18 @@ export default function AdminApprovalExecutionsPage() {
       }
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "admin";
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
         if (organizationId.trim()) {
           headers["x-actor-organization-id"] = organizationId.trim();
         }
+      } else {
+        throw new Error(
+          isKoLocale
+            ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
+            : "Login session is required in production. Please sign in at /login."
+        );
       }
 
       const response = await fetch(path, {
@@ -291,7 +299,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function loadExecutions() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -350,7 +358,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function loadStageHistory(execution: ApprovalExecutionDto) {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -377,7 +385,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function triggerEscalation(dryRun: boolean) {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -468,11 +476,18 @@ export default function AdminApprovalExecutionsPage() {
         ) : null}
       </header>
 
+      {requiresLoginSession ? (
+        <p className="small fail">
+          {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
+          <Link href="/login">/login</Link>
+        </p>
+      ) : null}
+
       <section className="panel-grid">
         <ApprovalExecutionWorkConditionsPanel
           isKoLocale={isKoLocale}
           showDevTools={showDevTools}
-          organizationId={organizationId}
+          organizationId={requiresLoginSession ? "" : organizationId}
           adminActorId={adminActorId}
           sort={sort}
           stalledHoursMin={stalledHoursMin}
