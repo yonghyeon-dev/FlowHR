@@ -15,6 +15,7 @@ export type RecruitmentOpeningItem = {
   title: string;
   department: string;
   employmentType: string;
+  hiringManagerId?: string;
   status: RecruitmentOpeningStatus;
   createdAt: string;
   updatedAt: string;
@@ -29,6 +30,7 @@ export type RecruitmentReferralItem = {
   referrerEmployeeId: string;
   note: string;
   stage: RecruitmentReferralStage;
+  stageReason?: string;
   createdAt: string;
   updatedAt: string;
 };

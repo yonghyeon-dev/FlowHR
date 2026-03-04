@@ -15,7 +15,7 @@ type RouteContext = {
   params: Promise<{ referralId: string }>;
 };
 
-export async function POST(request: Request, context: RouteContext) {
+async function updateStage(request: Request, context: RouteContext) {
   const actor = await readActor(request);
   if (!canReviewReferrals(actor?.role)) {
     return fail(403, "recruitment.referral.stage.forbidden", {
@@ -39,6 +39,11 @@ export async function POST(request: Request, context: RouteContext) {
   if (!parsed.success) {
     return fail(400, "invalid payload", parsed.error.flatten());
   }
+  if (parsed.data.stage === "REJECTED" && !parsed.data.reason) {
+    return fail(400, "recruitment.referral.stage.reason_required", {
+      stage: parsed.data.stage
+    });
+  }
 
   const existing = await findRecruitmentReferral(parsed.data.referralId);
   if (!existing) {
@@ -57,7 +62,8 @@ export async function POST(request: Request, context: RouteContext) {
 
   const updated = await updateRecruitmentReferralStage({
     referralId: parsed.data.referralId,
-    stage: parsed.data.stage
+    stage: parsed.data.stage,
+    reason: parsed.data.reason
   });
 
   if (!updated) {
@@ -65,4 +71,12 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   return ok({ referral: updated });
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  return updateStage(request, context);
+}
+
+export async function POST(request: Request, context: RouteContext) {
+  return updateStage(request, context);
 }

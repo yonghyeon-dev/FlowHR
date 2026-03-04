@@ -88,6 +88,7 @@ export async function POST(request: Request) {
     title: parsed.data.title,
     department: parsed.data.department,
     employmentType: parsed.data.employmentType,
+    hiringManagerId: parsed.data.hiringManagerId,
     status: parsed.data.status
   });
 

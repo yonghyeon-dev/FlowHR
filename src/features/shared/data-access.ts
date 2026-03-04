@@ -489,6 +489,7 @@ export type RecruitmentOpeningEntity = {
   title: string;
   department: string;
   employmentType: string;
+  hiringManagerId?: string;
   status: RecruitmentOpeningStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -503,6 +504,7 @@ export type RecruitmentReferralEntity = {
   referrerEmployeeId: string;
   note: string;
   stage: RecruitmentReferralStage;
+  stageReason?: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -1006,6 +1008,7 @@ export type CreateRecruitmentOpeningInput = {
   title: string;
   department: string;
   employmentType: string;
+  hiringManagerId?: string;
   status?: RecruitmentOpeningStatus;
   createdAt?: Date;
   updatedAt?: Date;
@@ -1015,6 +1018,7 @@ export type UpdateRecruitmentOpeningInput = {
   title?: string;
   department?: string;
   employmentType?: string;
+  hiringManagerId?: string | null;
   status?: RecruitmentOpeningStatus;
   updatedAt?: Date;
 };
@@ -1027,6 +1031,7 @@ export type CreateRecruitmentReferralInput = {
   referrerEmployeeId: string;
   note: string;
   stage?: RecruitmentReferralStage;
+  stageReason?: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -1038,6 +1043,7 @@ export type UpdateRecruitmentReferralInput = {
   referrerEmployeeId?: string;
   note?: string;
   stage?: RecruitmentReferralStage;
+  stageReason?: string | null;
   updatedAt?: Date;
 };
 

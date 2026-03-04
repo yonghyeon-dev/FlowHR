@@ -195,7 +195,7 @@ export default function AdminRecruitmentWorkspace() {
     referrals,
     stalledThresholdMs
   ]);
-  async function callApi(method: "GET" | "POST", path: string, payload?: Record<string, unknown>) {
+  async function callApi(method: "GET" | "POST" | "PATCH", path: string, payload?: Record<string, unknown>) {
     setPending(true);
     try {
       const headers: Record<string, string> = {};
@@ -321,7 +321,7 @@ export default function AdminRecruitmentWorkspace() {
       return;
     }
     const { response } = await callApi(
-      "POST",
+      "PATCH",
       `/api/recruitment/referrals/${encodeURIComponent(referralId)}/stage`,
       { stage }
     );
