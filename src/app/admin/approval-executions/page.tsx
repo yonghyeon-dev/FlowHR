@@ -210,10 +210,17 @@ export default function AdminApprovalExecutionsPage() {
     return null;
   }
 
+  function isBenefitRequestExecution(execution: ApprovalExecutionDto) {
+    return execution.targetEntityType === "BENEFIT_REQUEST";
+  }
+
   function resolveExecutionActionPath(
     execution: ApprovalExecutionDto,
     action: "approve" | "reject"
   ): string | null {
+    if (isBenefitRequestExecution(execution)) {
+      return `/api/benefits/requests/${execution.targetEntityId}/decision`;
+    }
     if (execution.domain === "LEAVE") {
       return action === "approve"
         ? `/api/leave/requests/${execution.targetEntityId}/approve`
@@ -385,9 +392,14 @@ export default function AdminApprovalExecutionsPage() {
     if (!path) {
       return;
     }
+    const isBenefitExecution = isBenefitRequestExecution(execution);
 
     const label =
-      execution.domain === "LEAVE"
+      isBenefitExecution
+        ? isKoLocale
+          ? "복리후생 요청 승인"
+          : "Approve benefit request"
+        : execution.domain === "LEAVE"
         ? isKoLocale
           ? "휴가 요청 승인"
           : "Approve leave request"
@@ -399,7 +411,12 @@ export default function AdminApprovalExecutionsPage() {
           ? "출퇴근 기록 승인"
           : "Approve attendance record";
 
-    const { response, body } = await callApi(label, "POST", path);
+    const { response, body } = await callApi(
+      label,
+      "POST",
+      path,
+      isBenefitExecution ? { decision: "APPROVED" } : undefined
+    );
     if (!response.ok) {
       const errorMessage = readApiErrorMessage(body);
       showTransientStatus(
@@ -430,9 +447,14 @@ export default function AdminApprovalExecutionsPage() {
     if (!path) {
       return;
     }
+    const isBenefitExecution = isBenefitRequestExecution(execution);
 
     const rejectLabel =
-      execution.domain === "LEAVE"
+      isBenefitExecution
+        ? isKoLocale
+          ? "복리후생 요청 반려"
+          : "Reject benefit request"
+        : execution.domain === "LEAVE"
         ? isKoLocale
           ? "휴가 요청 반려"
           : "Reject leave request"
@@ -440,9 +462,19 @@ export default function AdminApprovalExecutionsPage() {
           ? "출퇴근 기록 반려"
           : "Reject attendance record";
 
-    const { response, body } = await callApi(rejectLabel, "POST", path, {
-      reason: normalizedReason
-    });
+    const { response, body } = await callApi(
+      rejectLabel,
+      "POST",
+      path,
+      isBenefitExecution
+        ? {
+            decision: "REJECTED",
+            reviewNote: normalizedReason
+          }
+        : {
+            reason: normalizedReason
+          }
+    );
     if (!response.ok) {
       const errorMessage = readApiErrorMessage(body);
       showTransientStatus(

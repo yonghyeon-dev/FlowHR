@@ -8,11 +8,14 @@ import {
   listBenefitRequests,
   summarizeBenefitRequests
 } from "@/features/benefits/store";
+import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
 const DEFAULT_ORG_ID = "ORG-DEMO";
 const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
+const BENEFIT_APPROVAL_DOMAIN = "LEAVE" as const;
+const BENEFIT_REQUEST_TARGET_ENTITY_TYPE = "BENEFIT_REQUEST" as const;
 
 function canReviewRequests(role: string | null | undefined) {
   return role === "admin" || role === "manager";
@@ -144,6 +147,15 @@ export async function POST(request: Request) {
     employeeId: targetEmployeeId,
     amountKrw: parsed.data.amountKrw,
     reason: parsed.data.reason
+  });
+  await getRuntimeDataAccess().approvals.createExecution({
+    organizationId: targetOrganizationId,
+    domain: BENEFIT_APPROVAL_DOMAIN,
+    targetEntityType: BENEFIT_REQUEST_TARGET_ENTITY_TYPE,
+    targetEntityId: created.id,
+    totalStages: 1,
+    currentStageIndex: 1,
+    state: "PENDING"
   });
 
   return ok({ request: created }, 201);
