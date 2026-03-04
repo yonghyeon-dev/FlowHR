@@ -1,4 +1,4 @@
-import type { ApprovalDomain } from "@/app/admin/approval-templates/page-types";
+﻿import type { ApprovalDomain } from "@/app/admin/approval-templates/page-types";
 
 export type AdminApprovalTemplatesLocaleCopy = {
   hero: {
@@ -89,17 +89,17 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalTemplatesLocaleCopy> = {
   ko: {
     hero: {
       eyebrow: "FlowHR 관리자",
-      title: "결재선 템플릿",
+      title: "결재 라인 템플릿",
       description:
-        "도메인별 결재선 역할 집합을 템플릿으로 관리합니다. 활성 템플릿은 승인 게이트에서 정책 단일 역할보다 우선 적용됩니다.",
-      devNotice: "개발 모드에서는 헤더 기반 액터 컨텍스트를 사용합니다."
+        "도메인별 결재 역할 구성을 템플릿으로 관리합니다. 활성 템플릿은 게이트 평가 시 기본 정책보다 우선 적용됩니다.",
+      devNotice: "개발 도구 모드에서는 헤더 기반 액터 컨텍스트를 사용합니다."
     },
     context: {
-      title: "컨텍스트",
-      organizationId: "조직 식별자",
-      adminActorId: "관리자 액터 식별자 (개발용 대체값)",
+      title: "작업 조건",
+      organizationId: "조직",
+      adminActorId: "세션 액터",
       accessTokenOptional: "액세스 토큰 (선택)",
-      bearerPlaceholder: "베어러 토큰",
+      bearerPlaceholder: "Bearer 토큰",
       loadTemplates: "템플릿 조회",
       sessionError: "세션 오류"
     },
@@ -111,7 +111,7 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalTemplatesLocaleCopy> = {
       payrollGrossMax: "급여 총액 상한 (KRW)",
       payrollGrossMinPlaceholder: "비우면 하한 없음",
       payrollGrossMaxPlaceholder: "비우면 상한 없음",
-      rolesLegend: "승인 가능 역할 (1개 이상)",
+      rolesLegend: "승인 가능 역할 (최소 1개)",
       activateOnCreate: "생성 즉시 활성화",
       active: "활성",
       inactive: "비활성",
@@ -122,29 +122,29 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalTemplatesLocaleCopy> = {
       description: "정책/템플릿/위임 조합 결과를 승인 전에 미리 확인합니다.",
       domain: "도메인",
       actorRole: "검증 액터 역할",
-      actorIdOptional: "검증 액터 식별자 (선택)",
+      actorIdOptional: "검증 액터 ID (선택)",
       payrollGross: "급여 총액 (KRW)",
-      payrollGrossPlaceholder: "비우면 조건 미매치로 계산",
+      payrollGrossPlaceholder: "비우면 급여 조건 미매칭으로 계산",
       runPreview: "게이트 프리뷰 실행",
       result: "결과",
       expected: "예상 역할",
-      fallback: "대체값",
+      fallback: "기본 역할",
       actor: "액터",
-      gross: "총지급액",
+      gross: "총급여",
       matchedTemplates: "매칭 템플릿",
-      delegations: "적용 위임",
+      delegations: "활성 위임",
       allowed: "허용",
       blocked: "차단",
-      noResult: "프리뷰 결과가 아직 없습니다."
+      noResult: "아직 프리뷰 결과가 없습니다."
     },
     templateList: {
       title: "템플릿 목록",
       empty: "등록된 템플릿이 없습니다.",
       roles: "역할",
       stages: "단계",
-      gross: "총지급액",
-      created: "생성 시각",
-      updated: "수정 시각",
+      gross: "총급여",
+      created: "생성",
+      updated: "수정",
       active: "활성",
       inactive: "비활성",
       activate: "활성화",
@@ -155,19 +155,19 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalTemplatesLocaleCopy> = {
       total: "총",
       success: "성공",
       fail: "실패",
-      inProgress: "진행중",
+      inProgress: "진행 중",
       empty: "아직 API 호출 이력이 없습니다.",
       okBadge: "성공",
       failBadge: "실패",
-      toPolicy: "결재선/위임 정책으로",
+      toPolicy: "결재/위임 정책으로",
       toAdmin: "관리자 홈으로"
     },
     apiLabels: {
-      fetchTemplates: "결재선 템플릿 조회",
-      createTemplate: "결재선 템플릿 생성",
-      gatePreview: "결재 게이트 프리뷰",
-      activateTemplate: "결재선 템플릿 활성화",
-      deactivateTemplate: "결재선 템플릿 비활성화"
+      fetchTemplates: "결재 라인 템플릿 조회",
+      createTemplate: "결재 라인 템플릿 생성",
+      gatePreview: "결재 게이트 프리뷰 실행",
+      activateTemplate: "결재 라인 템플릿 활성화",
+      deactivateTemplate: "결재 라인 템플릿 비활성화"
     },
     domainLabels: {
       ATTENDANCE: "근태",
@@ -184,9 +184,9 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalTemplatesLocaleCopy> = {
       devNotice: "In dev mode, header-based actor context is used."
     },
     context: {
-      title: "Context",
-      organizationId: "Organization ID",
-      adminActorId: "Admin Actor ID (dev fallback)",
+      title: "Work conditions",
+      organizationId: "Organization",
+      adminActorId: "Session actor",
       accessTokenOptional: "Access Token (optional)",
       bearerPlaceholder: "Bearer token",
       loadTemplates: "Load templates",

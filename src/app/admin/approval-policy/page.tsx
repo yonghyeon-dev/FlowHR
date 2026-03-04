@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -59,6 +59,8 @@ export default function AdminApprovalPolicyPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -85,12 +87,18 @@ export default function AdminApprovalPolicyPage() {
 
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "admin";
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
         if (organizationId.trim().length > 0) {
           headers["x-actor-organization-id"] = organizationId.trim();
         }
+      } else {
+        throw new Error(
+          isKoLocale
+            ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
+            : "Login session is required in production. Please sign in at /login."
+        );
       }
 
       const response = await fetch(path, {
@@ -126,7 +134,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function loadPolicy() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
@@ -146,7 +154,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function savePolicy() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
     await callApi(copy.apiLabels.savePolicy, "PUT", "/api/approval/policy", {
@@ -159,7 +167,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function loadDelegations() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
@@ -172,7 +180,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function createDelegation() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
     await callApi(copy.apiLabels.createDelegation, "POST", "/api/approval/delegations", {
@@ -196,7 +204,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function expireDelegations() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -226,6 +234,13 @@ export default function AdminApprovalPolicyPage() {
         </p>
       </header>
 
+      {requiresLoginSession ? (
+        <p className="small fail">
+          {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
+          <Link href="/login">/login</Link>
+        </p>
+      ) : null}
+
       <section className="panel-grid">
         <article className="panel">
           <h2>{isKoLocale ? "작업 조건" : "Work conditions"}</h2>
@@ -236,10 +251,18 @@ export default function AdminApprovalPolicyPage() {
             </p>
           ) : null}
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void loadPolicy()} disabled={!organizationId.trim()}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void loadPolicy()}
+              disabled={requiresLoginSession || !organizationId.trim()}
+            >
               {copy.context.loadPolicy}
             </button>
-            <button className="btn btn-secondary" onClick={() => void loadDelegations()} disabled={!organizationId.trim()}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void loadDelegations()}
+              disabled={requiresLoginSession || !organizationId.trim()}
+            >
               {copy.context.loadDelegations}
             </button>
           </div>
@@ -286,7 +309,11 @@ export default function AdminApprovalPolicyPage() {
             </select>
           </label>
           <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void savePolicy()} disabled={!organizationId.trim()}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void savePolicy()}
+              disabled={requiresLoginSession || !organizationId.trim()}
+            >
               {copy.policy.savePolicy}
             </button>
           </div>
@@ -297,9 +324,9 @@ export default function AdminApprovalPolicyPage() {
           <label>
             {copy.delegationCreate.domain}
             <select value={delegationDomain} onChange={(event) => setDelegationDomain(event.target.value as ApprovalDomain)}>
-              {domainOptions.map((domain) => (
-                <option key={domain} value={domain}>
-                  {copy.domainLabels[domain]}
+              {domainOptions.map((domainItem) => (
+                <option key={domainItem} value={domainItem}>
+                  {copy.domainLabels[domainItem]}
                 </option>
               ))}
             </select>
@@ -339,7 +366,11 @@ export default function AdminApprovalPolicyPage() {
             <textarea value={delegationReason} onChange={(event) => setDelegationReason(event.target.value)} />
           </label>
           <div className="panel-actions">
-            <button className="btn btn-primary" onClick={() => void createDelegation()} disabled={!organizationId.trim()}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void createDelegation()}
+              disabled={requiresLoginSession || !organizationId.trim()}
+            >
               {copy.delegationCreate.createDelegation}
             </button>
           </div>
@@ -350,7 +381,11 @@ export default function AdminApprovalPolicyPage() {
             {copy.delegationList.title} ({delegations.length})
           </h2>
           <div className="panel-actions">
-            <button className="btn btn-secondary btn-small" onClick={() => void expireDelegations()} disabled={!organizationId.trim()}>
+            <button
+              className="btn btn-secondary btn-small"
+              onClick={() => void expireDelegations()}
+              disabled={requiresLoginSession || !organizationId.trim()}
+            >
               {copy.delegationList.expireDelegations}
             </button>
           </div>
@@ -444,8 +479,8 @@ export default function AdminApprovalPolicyPage() {
             </div>
           </article>
         )}
-
       </section>
     </main>
   );
 }
+

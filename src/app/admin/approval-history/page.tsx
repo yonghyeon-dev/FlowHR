@@ -83,6 +83,8 @@ export default function AdminApprovalHistoryPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const allowHeaderActorFallback = showDevTools || !isProductionRuntime;
+  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -96,12 +98,18 @@ export default function AdminApprovalHistoryPage() {
       const headers: Record<string, string> = {};
       if (usesBearerToken) {
         headers.authorization = `Bearer ${bearerToken}`;
-      } else {
+      } else if (allowHeaderActorFallback) {
         headers["x-actor-role"] = "admin";
         headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
         if (organizationId.trim()) {
           headers["x-actor-organization-id"] = organizationId.trim();
         }
+      } else {
+        throw new Error(
+          isKoLocale
+            ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
+            : "Login session is required in production. Please sign in at /login."
+        );
       }
 
       const response = await fetch(path, { method: "GET", headers });
@@ -132,7 +140,7 @@ export default function AdminApprovalHistoryPage() {
   }
 
   async function loadHistory() {
-    if (!organizationId.trim()) {
+    if (requiresLoginSession || !organizationId.trim()) {
       return;
     }
     const query = new URLSearchParams({
@@ -175,6 +183,13 @@ export default function AdminApprovalHistoryPage() {
           {showDevTools ? ` ${copy.hero.devActorNotice}` : ""}
         </p>
       </header>
+
+      {requiresLoginSession ? (
+        <p className="small fail">
+          {isKoLocale ? "운영 환경에서는 로그인 세션이 필요합니다. " : "Login session is required in production. "}
+          <Link href="/login">/login</Link>
+        </p>
+      ) : null}
 
       <section className="panel-grid">
         <article className="panel">
@@ -244,7 +259,11 @@ export default function AdminApprovalHistoryPage() {
             </div>
           </details>
           <div className="panel-actions">
-            <button className="btn btn-secondary" onClick={() => void loadHistory()} disabled={!organizationId.trim()}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void loadHistory()}
+              disabled={requiresLoginSession || !organizationId.trim()}
+            >
               {copy.filters.loadHistory}
             </button>
           </div>
@@ -347,4 +366,3 @@ export default function AdminApprovalHistoryPage() {
     </main>
   );
 }
-

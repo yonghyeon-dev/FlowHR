@@ -1,4 +1,4 @@
-type AdminApprovalHistoryLocaleCopy = {
+﻿type AdminApprovalHistoryLocaleCopy = {
   hero: {
     eyebrow: string;
     title: string;
@@ -57,22 +57,22 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalHistoryLocaleCopy> = {
     hero: {
       eyebrow: "FlowHR 관리자",
       title: "결재 단계 이력",
-      description: "승인 게이트 평가 결과(허용/차단, 템플릿 매칭, 위임 적용)를 조회합니다.",
-      devActorNotice: "개발 모드에서는 헤더 기반 액터 컨텍스트를 사용합니다."
+      description: "게이트 평가 결과(허용/차단, 템플릿 매칭, 활성 위임)를 조회합니다.",
+      devActorNotice: "개발 도구 모드에서는 헤더 기반 액터 컨텍스트를 사용합니다."
     },
     filters: {
-      title: "컨텍스트/필터",
-      organizationId: "조직 식별자",
-      adminActorId: "관리자 액터 식별자 (개발용 대체값)",
+      title: "작업 조건",
+      organizationId: "조직",
+      adminActorId: "세션 액터",
       accessTokenOptional: "액세스 토큰 (선택)",
-      bearerPlaceholder: "베어러 토큰",
+      bearerPlaceholder: "Bearer 토큰",
       domain: "도메인",
       targetEntityType: "대상 엔티티 타입",
       targetEntityTypePlaceholder: "AttendanceRecord / LeaveRequest / PayrollRun",
       targetEntityId: "대상 엔티티 ID",
       allowed: "허용 여부",
       resolution: "해결 유형",
-      limit: "조회 개수 제한",
+      limit: "조회 개수",
       all: "전체",
       loadHistory: "이력 조회",
       sessionError: "세션 오류"
@@ -83,10 +83,10 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalHistoryLocaleCopy> = {
       allowed: "허용",
       blocked: "차단",
       required: "필수 역할",
-      fallback: "대체값",
+      fallback: "기본값",
       actor: "액터",
       stage: "단계",
-      gross: "총지급액",
+      gross: "총급여",
       matchedTemplates: "매칭 템플릿",
       delegations: "위임",
       evaluated: "평가 시각"
@@ -98,11 +98,11 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalHistoryLocaleCopy> = {
       fail: "실패",
       okBadge: "성공",
       failBadge: "실패",
-      inProgress: "진행중",
+      inProgress: "진행 중",
       empty: "아직 API 호출 이력이 없습니다.",
       fetchHistory: "결재 단계 이력 조회",
       goToExecutions: "결재 실행 현황",
-      goToTemplates: "결재 템플릿으로",
+      goToTemplates: "결재 템플릿",
       goToAdminHome: "관리자 홈으로"
     }
   },
@@ -114,9 +114,9 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalHistoryLocaleCopy> = {
       devActorNotice: "In dev mode, header-based actor context is used."
     },
     filters: {
-      title: "Context and filters",
-      organizationId: "Organization ID",
-      adminActorId: "Admin Actor ID (dev fallback)",
+      title: "Work conditions",
+      organizationId: "Organization",
+      adminActorId: "Session actor",
       accessTokenOptional: "Access Token (optional)",
       bearerPlaceholder: "Bearer token",
       domain: "Domain",

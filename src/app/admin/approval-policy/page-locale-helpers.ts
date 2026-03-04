@@ -1,4 +1,4 @@
-type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
+﻿type ApprovalDomain = "ATTENDANCE" | "LEAVE" | "PAYROLL";
 
 export type AdminApprovalPolicyLocaleCopy = {
   hero: {
@@ -79,21 +79,21 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
     hero: {
       eyebrow: "FlowHR 관리자",
       title: "결재/위임 정책",
-      description: "도메인별 기본 결재 역할과 임시 위임 정책을 설정합니다.",
+      description: "도메인별 기본 결재 역할과 임시 위임 규칙을 관리합니다.",
       devNotice: "개발 도구 모드에서는 헤더 기반 액터 컨텍스트를 사용합니다."
     },
     context: {
-      title: "컨텍스트",
-      organizationId: "조직 식별자",
-      adminActorId: "관리자 액터 식별자 (개발용 대체값)",
+      title: "작업 조건",
+      organizationId: "조직",
+      adminActorId: "세션 액터",
       accessTokenOptional: "액세스 토큰 (선택)",
-      bearerPlaceholder: "베어러 토큰",
+      bearerPlaceholder: "Bearer 토큰",
       loadPolicy: "정책 조회",
       loadDelegations: "위임 조회",
       sessionError: "세션 오류",
       policyState: "현재 정책 상태",
-      configured: "구성됨",
-      defaultFallback: "기본 대체값"
+      configured: "설정됨",
+      defaultFallback: "기본값 사용"
     },
     policy: {
       title: "도메인별 결재 역할",
@@ -106,7 +106,7 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
       title: "위임 생성",
       domain: "도메인",
       delegatorRole: "위임자 역할",
-      delegateActorId: "수임 액터 식별자",
+      delegateActorId: "수임자 액터 ID",
       startsAt: "시작 시각",
       endsAt: "종료 시각",
       reasonOptional: "사유 (선택)",
@@ -115,13 +115,13 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
     delegationList: {
       title: "위임 목록",
       expireDelegations: "만료 위임 정리",
-      dryRun: "시뮬레이션",
+      dryRun: "드라이런",
       execute: "실행",
       preview: "미리보기",
       lastResult: "최근 정리 결과",
-      checked: "검토 건수",
-      expired: "만료 건수",
-      dryRunValue: "시뮬레이션 여부",
+      checked: "검사",
+      expired: "만료",
+      dryRunValue: "드라이런",
       noDelegations: "등록된 위임이 없습니다.",
       active: "활성",
       inactive: "비활성",
@@ -132,7 +132,7 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
       total: "총",
       success: "성공",
       fail: "실패",
-      inProgress: "진행중",
+      inProgress: "진행 중",
       empty: "아직 API 호출 이력이 없습니다.",
       okBadge: "성공",
       failBadge: "실패",
@@ -141,9 +141,9 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
     apiLabels: {
       loadPolicy: "결재 정책 조회",
       savePolicy: "결재 정책 저장",
-      loadDelegations: "위임 정책 조회",
-      createDelegation: "위임 정책 생성",
-      deactivateDelegation: "위임 정책 비활성화",
+      loadDelegations: "위임 목록 조회",
+      createDelegation: "위임 생성",
+      deactivateDelegation: "위임 비활성화",
       expireDelegations: "만료 위임 정리"
     },
     domainLabels: {
@@ -160,9 +160,9 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
       devNotice: "In dev-tools mode, header-based actor context is used."
     },
     context: {
-      title: "Context",
-      organizationId: "Organization ID",
-      adminActorId: "Admin Actor ID (dev fallback)",
+      title: "Work conditions",
+      organizationId: "Organization",
+      adminActorId: "Session actor",
       accessTokenOptional: "Access Token (optional)",
       bearerPlaceholder: "Bearer token",
       loadPolicy: "Load policy",
@@ -183,7 +183,7 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
       title: "Create delegation",
       domain: "Domain",
       delegatorRole: "Delegator role",
-      delegateActorId: "Delegate Actor ID",
+      delegateActorId: "Delegate actor ID",
       startsAt: "Start time",
       endsAt: "End time",
       reasonOptional: "Reason (optional)",
@@ -218,9 +218,9 @@ const COPY_BY_LOCALE: Record<"ko" | "en", AdminApprovalPolicyLocaleCopy> = {
     apiLabels: {
       loadPolicy: "Load approval policy",
       savePolicy: "Save approval policy",
-      loadDelegations: "Load delegation policy",
-      createDelegation: "Create delegation policy",
-      deactivateDelegation: "Deactivate delegation policy",
+      loadDelegations: "Load delegations",
+      createDelegation: "Create delegation",
+      deactivateDelegation: "Deactivate delegation",
       expireDelegations: "Expire delegations"
     },
     domainLabels: {
