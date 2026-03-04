@@ -21,6 +21,7 @@ type CreateAttendanceInput = {
   breakMinutes: number;
   isHoliday: boolean;
   notes?: string;
+  forceWeeklyHourLimitOverride?: boolean;
   capture?: {
     channel: AttendanceCaptureChannel;
     deviceId?: string;
@@ -87,14 +88,30 @@ export type AutoCloseAttendanceResult = {
   records: AttendanceRecordEntity[];
 };
 
+export type WeeklyHoursSummary = {
+  employeeId: string;
+  weekOf: string;
+  regularHours: number;
+  overtimeHours: number;
+  totalHours: number;
+  limit: number;
+  exceeded: boolean;
+};
+
 type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
   eventPublisher?: DomainEventPublisher;
 };
 
+const MINUTES_PER_HOUR = 60;
+const DAY_MS = 24 * MINUTES_PER_HOUR * MINUTES_PER_HOUR * 1000;
+const KOREA_UTC_OFFSET_MS = 9 * MINUTES_PER_HOUR * MINUTES_PER_HOUR * 1000;
 const AUTO_CLOSE_THRESHOLD_HOURS = 12;
 const AUTO_CLOSE_WORK_HOURS = 9;
+const WEEKLY_REGULAR_HOUR_LIMIT = 40;
+export const WEEKLY_HOUR_LIMIT = 52;
+const WEEKLY_HOUR_LIMIT_MINUTES = WEEKLY_HOUR_LIMIT * MINUTES_PER_HOUR;
 
 function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
@@ -1509,6 +1526,123 @@ function toUpdateCaptureInput(input: UpdateAttendanceInput["capture"]) {
   };
 }
 
+function roundHours(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function minutesToHours(minutes: number) {
+  return roundHours(minutes / MINUTES_PER_HOUR);
+}
+
+function toKoreanWeekStart(inputDate: Date) {
+  const shifted = new Date(inputDate.getTime() + KOREA_UTC_OFFSET_MS);
+  const dayOfWeek = shifted.getUTCDay();
+  const daysSinceMonday = (dayOfWeek + 6) % 7;
+  shifted.setUTCHours(0, 0, 0, 0);
+  shifted.setUTCDate(shifted.getUTCDate() - daysSinceMonday);
+  return new Date(shifted.getTime() - KOREA_UTC_OFFSET_MS);
+}
+
+function toKoreanWeekEndInclusive(weekStartDate: Date) {
+  const weekStart = toKoreanWeekStart(weekStartDate);
+  return new Date(weekStart.getTime() + 7 * DAY_MS - 1);
+}
+
+function toKoreanDateOnly(value: Date) {
+  return new Date(value.getTime() + KOREA_UTC_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+function calculateWorkedMinutes(checkInAt: Date, checkOutAt: Date | null, breakMinutes: number) {
+  if (!checkOutAt) {
+    return 0;
+  }
+  const durationMs = checkOutAt.getTime() - checkInAt.getTime();
+  if (durationMs <= 0) {
+    return 0;
+  }
+
+  const grossMinutes = Math.floor(durationMs / (MINUTES_PER_HOUR * 1000));
+  const normalizedBreakMinutes = Math.max(0, Math.trunc(breakMinutes));
+  return Math.max(0, grossMinutes - normalizedBreakMinutes);
+}
+
+function splitWeeklyMinutes(totalMinutes: number) {
+  const regularMinutes = Math.min(
+    totalMinutes,
+    WEEKLY_REGULAR_HOUR_LIMIT * MINUTES_PER_HOUR
+  );
+  const overtimeMinutes = Math.max(0, totalMinutes - regularMinutes);
+  return {
+    regularMinutes,
+    overtimeMinutes
+  };
+}
+
+type WeeklyHoursComputation = WeeklyHoursSummary & {
+  weekStartDate: Date;
+  totalMinutes: number;
+};
+
+async function calculateWeeklyHoursInternal(
+  context: ServiceContext,
+  employeeId: string,
+  weekStartDate: Date
+): Promise<WeeklyHoursComputation> {
+  const actor = context.actor;
+  if (!actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+
+  await requireEmployeeWithinTenant(context.dataAccess, actor, employeeId);
+
+  const normalizedWeekStart = toKoreanWeekStart(weekStartDate);
+  const weekEnd = toKoreanWeekEndInclusive(normalizedWeekStart);
+  const records = await context.dataAccess.attendance.listInPeriod({
+    periodStart: normalizedWeekStart,
+    periodEnd: weekEnd,
+    organizationId: resolveTenantScope(actor) ?? undefined,
+    employeeId
+  });
+
+  let totalMinutes = 0;
+  for (const record of records) {
+    if (record.state !== "APPROVED" && record.state !== "PENDING") {
+      continue;
+    }
+    totalMinutes += calculateWorkedMinutes(record.checkInAt, record.checkOutAt, record.breakMinutes);
+  }
+
+  const split = splitWeeklyMinutes(totalMinutes);
+  return {
+    employeeId,
+    weekOf: toKoreanDateOnly(normalizedWeekStart),
+    regularHours: minutesToHours(split.regularMinutes),
+    overtimeHours: minutesToHours(split.overtimeMinutes),
+    totalHours: minutesToHours(totalMinutes),
+    limit: WEEKLY_HOUR_LIMIT,
+    exceeded: totalMinutes > WEEKLY_HOUR_LIMIT_MINUTES,
+    weekStartDate: normalizedWeekStart,
+    totalMinutes
+  };
+}
+
+export async function calculateWeeklyHours(
+  context: ServiceContext,
+  employeeId: string,
+  weekStartDate: Date
+): Promise<WeeklyHoursSummary> {
+  const summary = await calculateWeeklyHoursInternal(context, employeeId, weekStartDate);
+  return {
+    employeeId: summary.employeeId,
+    weekOf: summary.weekOf,
+    regularHours: summary.regularHours,
+    overtimeHours: summary.overtimeHours,
+    totalHours: summary.totalHours,
+    limit: summary.limit,
+    exceeded: summary.exceeded
+  };
+}
+
 export async function createAttendanceRecord(
   context: ServiceContext,
   input: CreateAttendanceInput
@@ -1535,6 +1669,27 @@ export async function createAttendanceRecord(
   assertDeviceAttestationForCreate(actor, input);
   await assertAntiSpoofingPolicyForCreate(actor, input);
 
+  const forceOverrideRequested = input.forceWeeklyHourLimitOverride === true;
+  if (forceOverrideRequested && actor.role !== "admin") {
+    throw new ServiceError(403, "force override requires admin role");
+  }
+
+  const weeklyHours = await calculateWeeklyHoursInternal(
+    context,
+    input.employeeId,
+    input.checkInAt
+  );
+  const additionalMinutes = calculateWorkedMinutes(
+    input.checkInAt,
+    input.checkOutAt,
+    input.breakMinutes
+  );
+  const projectedTotalMinutes = weeklyHours.totalMinutes + additionalMinutes;
+  const wouldExceedWeeklyLimit = projectedTotalMinutes > WEEKLY_HOUR_LIMIT_MINUTES;
+  if (wouldExceedWeeklyLimit && !forceOverrideRequested) {
+    throw new ServiceError(400, "Weekly work hour limit (52h) would be exceeded");
+  }
+
   const record = await context.dataAccess.attendance.create({
     employeeId: input.employeeId,
     checkInAt: input.checkInAt,
@@ -1557,6 +1712,25 @@ export async function createAttendanceRecord(
       capture: toCapturePayload(record)
     }
   });
+
+  if (wouldExceedWeeklyLimit && forceOverrideRequested) {
+    await context.dataAccess.audit.append({
+      action: "attendance.weekly_limit_override",
+      entityType: "AttendanceRecord",
+      entityId: record.id,
+      organizationId: employee.organizationId,
+      actorRole: actor.role,
+      actorId: actor.id,
+      payload: {
+        employeeId: record.employeeId,
+        weekOf: weeklyHours.weekOf,
+        limit: WEEKLY_HOUR_LIMIT,
+        existingTotalHours: weeklyHours.totalHours,
+        additionalHours: minutesToHours(additionalMinutes),
+        projectedTotalHours: minutesToHours(projectedTotalMinutes)
+      }
+    });
+  }
   await getEventPublisher(context).publish({
     name: "attendance.recorded.v1",
     occurredAt: new Date().toISOString(),

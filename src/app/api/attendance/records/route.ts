@@ -7,6 +7,11 @@ import { fail, ok } from "@/lib/http";
 
 const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production";
 
+function isTruthyQueryFlag(value: string | null) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
@@ -51,6 +56,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const url = new URL(request.url);
   let payload: unknown;
   try {
     payload = await request.json();
@@ -76,6 +82,7 @@ export async function POST(request: Request) {
         breakMinutes: parsed.data.breakMinutes,
         isHoliday: parsed.data.isHoliday,
         notes: parsed.data.notes,
+        forceWeeklyHourLimitOverride: isTruthyQueryFlag(url.searchParams.get("force")),
         capture: parsed.data.capture
           ? {
               channel: parsed.data.capture.channel,

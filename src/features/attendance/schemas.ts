@@ -120,3 +120,8 @@ export const listAttendanceAggregatesQuerySchema = z.object({
   to: isoDateTime,
   employeeId: z.string().min(1).optional()
 });
+
+export const weeklyAttendanceHoursQuerySchema = z.object({
+  employeeId: z.string().min(1),
+  weekOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+});
