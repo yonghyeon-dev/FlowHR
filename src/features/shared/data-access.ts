@@ -1198,6 +1198,29 @@ export type ListAuditLogsInput = {
   limit?: number;
 };
 
+export type ContractTemplateVersionEntity = {
+  templateId: string;
+  organizationId: string;
+  version: number;
+  content: string;
+  modifiedAt: Date;
+  modifiedBy: string;
+};
+
+export type CreateContractTemplateVersionInput = {
+  templateId: string;
+  organizationId: string;
+  version: number;
+  content: string;
+  modifiedAt: Date;
+  modifiedBy: string;
+};
+
+export type ListContractTemplateVersionsInput = {
+  templateId: string;
+  organizationId?: string;
+};
+
 export interface AttendanceStore {
   create(input: CreateAttendanceRecordInput): Promise<AttendanceRecordEntity>;
   findById(id: string): Promise<AttendanceRecordEntity | null>;
@@ -1562,6 +1585,16 @@ export interface AuditStore {
   list(input: ListAuditLogsInput): Promise<AuditLogEntity[]>;
 }
 
+export interface ContractTemplateVersionStore {
+  create(input: CreateContractTemplateVersionInput): Promise<ContractTemplateVersionEntity>;
+  list(input: ListContractTemplateVersionsInput): Promise<ContractTemplateVersionEntity[]>;
+  find(input: {
+    templateId: string;
+    version: number;
+    organizationId?: string;
+  }): Promise<ContractTemplateVersionEntity | null>;
+}
+
 export type DataAccess = {
   organizations: OrganizationStore;
   employees: EmployeeStore;
@@ -1586,4 +1619,5 @@ export type DataAccess = {
   payroll: PayrollStore;
   deductionProfiles: DeductionProfileStore;
   audit: AuditStore;
+  contractTemplateVersions: ContractTemplateVersionStore;
 };

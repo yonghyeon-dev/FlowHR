@@ -44,6 +44,15 @@ export const updateContractTemplateSchema = z.object({
   status: contractTemplateStatusSchema.optional()
 });
 
+export const contractTemplatePathSchema = z.object({
+  templateId: z.string().trim().min(1)
+});
+
+export const contractTemplateVersionPathSchema = z.object({
+  templateId: z.string().trim().min(1),
+  version: z.coerce.number().int().min(1)
+});
+
 export const listContractDocumentsQuerySchema = z.object({
   organizationId: z.string().min(1).optional(),
   employeeId: z.string().min(1).optional(),
