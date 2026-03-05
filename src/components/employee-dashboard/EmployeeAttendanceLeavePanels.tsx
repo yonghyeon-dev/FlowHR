@@ -16,7 +16,7 @@ import { EmployeeLeaveCalendarPanel } from "@/components/employee-dashboard/Empl
 
 type EmployeeLocaleBundle = ReturnType<typeof resolveEmployeeLocaleLabelBundle>;
 type RequestStatusValue = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
-type LeaveTypeValue = "ANNUAL" | "SICK" | "UNPAID";
+type LeaveTypeValue = "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
 type LeaveUnitValue = "FULL_DAY" | "HALF_DAY" | "HOUR";
 type LeaveQuickPreset = "today-half" | "tomorrow-full" | "next-week-full";
 

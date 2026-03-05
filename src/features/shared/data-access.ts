@@ -1,6 +1,6 @@
 export type AttendanceState = "PENDING" | "APPROVED" | "REJECTED";
 export type AttendanceCaptureChannel = "MANUAL" | "GPS" | "QR" | "WIFI" | "DEVICE";
-export type LeaveType = "ANNUAL" | "SICK" | "UNPAID";
+export type LeaveType = "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
 export type LeaveRequestState = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveDecisionAction = "APPROVED" | "REJECTED" | "CANCELED";
 export type LeaveRequestUnit = "FULL_DAY" | "HALF_DAY" | "HOUR";

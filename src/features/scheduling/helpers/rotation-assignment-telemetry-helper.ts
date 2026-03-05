@@ -1,3 +1,5 @@
+import type { DomainEvent } from "@/features/shared/domain-event-publisher";
+
 type RotationAssignmentPayloadInput = {
   employeeId: string;
   templateIds: string[];

@@ -17,12 +17,16 @@ const LEAVE_TYPE_LABELS_BY_LOCALE = {
   ko: {
     ANNUAL: "연차",
     SICK: "병가",
-    UNPAID: "무급"
+    UNPAID: "무급",
+    MATERNITY: "출산휴가",
+    PATERNITY: "배우자출산휴가"
   },
   en: {
     ANNUAL: "Annual",
     SICK: "Sick",
-    UNPAID: "Unpaid"
+    UNPAID: "Unpaid",
+    MATERNITY: "Maternity",
+    PATERNITY: "Paternity"
   }
 } as const;
 

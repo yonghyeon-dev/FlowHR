@@ -36,11 +36,13 @@ export default function LeaveCalendarConsole() {
   const formatDateByLocale = (value: string) => new Date(value).toLocaleDateString(runtimeLocale);
   const formatDateTimeByLocale = (value: string) => new Date(value).toLocaleString(runtimeLocale);
   const stateLabelByCode = { APPROVED: copy.approvedStateLabel, PENDING: copy.pendingStateLabel } as const;
-  const leaveTypeLabelByCode = {
+  const leaveTypeLabelByCode: Record<string, string> = {
     ANNUAL: copy.annualLeaveTypeLabel,
     SICK: copy.sickLeaveTypeLabel,
-    UNPAID: copy.unpaidLeaveTypeLabel
-  } as const;
+    UNPAID: copy.unpaidLeaveTypeLabel,
+    MATERNITY: "출산휴가",
+    PATERNITY: "배우자출산휴가"
+  };
   const unitLabelByCode = {
     FULL_DAY: copy.fullDayUnitLabel,
     HALF_DAY: copy.halfDayUnitLabel,

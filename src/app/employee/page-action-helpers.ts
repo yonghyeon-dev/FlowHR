@@ -229,7 +229,7 @@ export async function createLeaveFromHelper(input: {
   callApi: EmployeeCallApi;
   callApiLabels: EmployeeCallApiLabels;
   employeeId: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveStartDate: string;
   leaveEndDate: string;

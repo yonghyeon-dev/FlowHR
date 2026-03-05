@@ -70,7 +70,7 @@ export default function EmployeeSelfServicePage() {
   const [attendanceNotes, setAttendanceNotes] = useState("");
   const [lastAttendanceId, setLastAttendanceId] = useState("");
   const [selectedCorrectionRecordId, setSelectedCorrectionRecordId] = useState("");
-  const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID">("ANNUAL");
+  const [leaveType, setLeaveType] = useState<"ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY">("ANNUAL");
   const [leaveUnit, setLeaveUnit] = useState<"FULL_DAY" | "HALF_DAY" | "HOUR">("FULL_DAY");
   const [leaveHours, setLeaveHours] = useState("4");
   const [leaveStartDate, setLeaveStartDate] = useState(todayStartLocal());

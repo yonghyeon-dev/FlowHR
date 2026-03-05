@@ -733,6 +733,8 @@ enum LeaveType {
   ANNUAL
   SICK
   UNPAID
+  MATERNITY
+  PATERNITY
 }
 
 enum LeaveRequestState {

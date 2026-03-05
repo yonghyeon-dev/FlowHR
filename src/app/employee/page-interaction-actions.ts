@@ -37,7 +37,7 @@ export function pushMobileFlowFeedbackAction(
 
 interface ApplyLeaveQuickPresetActionInput {
   preset: "today-half" | "tomorrow-full" | "next-week-full";
-  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID">>;
+  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY">>;
   setLeaveUnit: Dispatch<SetStateAction<"FULL_DAY" | "HALF_DAY" | "HOUR">>;
   setLeaveStartDate: Dispatch<SetStateAction<string>>;
   setLeaveEndDate: Dispatch<SetStateAction<string>>;
@@ -77,7 +77,7 @@ export function applyLeaveQuickPresetAction(input: ApplyLeaveQuickPresetActionIn
 interface PrefillLeaveFormFromCalendarDateActionInput {
   dateKey: string;
   isKoLocale: boolean;
-  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID">>;
+  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY">>;
   setLeaveUnit: Dispatch<SetStateAction<"FULL_DAY" | "HALF_DAY" | "HOUR">>;
   setLeaveStartDate: Dispatch<SetStateAction<string>>;
   setLeaveEndDate: Dispatch<SetStateAction<string>>;
@@ -217,7 +217,7 @@ export function applyRequestSearchPresetAction(input: ApplyRequestSearchPresetAc
 
 interface ApplyLeaveRequestToResubmitDraftActionInput {
   request: LeaveRequestDto;
-  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID">>;
+  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY">>;
   setLeaveUnit: Dispatch<SetStateAction<"FULL_DAY" | "HALF_DAY" | "HOUR">>;
   setLeaveStartDate: Dispatch<SetStateAction<string>>;
   setLeaveEndDate: Dispatch<SetStateAction<string>>;
@@ -516,7 +516,7 @@ export interface BuildEmployeeInteractionHandlersInput {
   setLeaveHours: Dispatch<SetStateAction<string>>;
   setLeaveReason: Dispatch<SetStateAction<string>>;
   setLeaveStartDate: Dispatch<SetStateAction<string>>;
-  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID">>;
+  setLeaveType: Dispatch<SetStateAction<"ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY">>;
   setLeaveUnit: Dispatch<SetStateAction<"FULL_DAY" | "HALF_DAY" | "HOUR">>;
   setMobileFlowFeedback: Dispatch<SetStateAction<string>>;
   setPeriodEnd: Dispatch<SetStateAction<string>>;

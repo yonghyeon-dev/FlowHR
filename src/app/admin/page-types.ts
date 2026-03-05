@@ -59,7 +59,7 @@ export type InviteResultDto = {
 export type LeaveRequestDto = {
   id: string;
   employeeId: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   startDate: string;
   endDate: string;
   unit: "FULL_DAY" | "HALF_DAY" | "HOUR";

@@ -64,7 +64,7 @@ type EmployeeRequestChecklistDerivedStateInput = {
   checkInAt: string;
   checkOutAt: string;
   breakMinutes: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveHours: string;
   leaveStartDate: string;

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const isoDateTime = z.string().datetime({ offset: true });
 
-export const leaveTypeValues = ["ANNUAL", "SICK", "UNPAID"] as const;
+export const leaveTypeValues = ["ANNUAL", "SICK", "UNPAID", "MATERNITY", "PATERNITY"] as const;
 const leaveTypeSchema = z.enum(leaveTypeValues);
 export const leaveRequestUnitValues = ["FULL_DAY", "HALF_DAY", "HOUR"] as const;
 const leaveRequestUnitSchema = z.enum(leaveRequestUnitValues);

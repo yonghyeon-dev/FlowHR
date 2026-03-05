@@ -22,7 +22,7 @@ export type AttendanceRecordDto = {
 export type LeaveRequestDto = {
   id: string;
   employeeId: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   startDate: string;
   endDate: string;
   unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
@@ -43,7 +43,7 @@ export type EmployeeDepartmentLeaveCalendarEntryDto = {
   departmentName: string | null;
   isMine: boolean;
   state: EmployeeLeaveCalendarState;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   hours: number | null;
   days: number;
@@ -81,7 +81,7 @@ export type LeaveCalendarDayCellEvent = {
   employeeName: string | null;
   isMine: boolean;
   state: EmployeeLeaveCalendarState;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
 };
 
 export type LeaveCalendarDayCell = {

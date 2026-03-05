@@ -194,7 +194,7 @@ function toLeaveRequestEntity(record: {
   id: string;
   employeeId: string;
   policyId: string | null;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   startDate: Date;
   endDate: Date;
   unit: "FULL_DAY" | "HALF_DAY" | "HOUR";

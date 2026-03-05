@@ -208,7 +208,7 @@ type BuildLeavePreSubmitChecksArgs = {
   leaveEndDate: string;
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveHours: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   leaveBalance: LeaveBalanceDto | null;
   estimatedLeaveRequestedDays: number;
   leaveCheckCopy: LeaveCheckCopy;

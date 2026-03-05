@@ -45,7 +45,7 @@ export type BuildEmployeeMutationActionsInput = {
   isHoliday: boolean;
   attendanceNotes: string;
   correctionRequestNote: string;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
   leaveUnit: "FULL_DAY" | "HALF_DAY" | "HOUR";
   leaveStartDate: string;
   leaveEndDate: string;

@@ -37,7 +37,7 @@ export type LeaveCalendarResponse = {
     departmentId: string | null;
     departmentName: string | null;
     state: "APPROVED" | "PENDING";
-    leaveType: "ANNUAL" | "SICK" | "UNPAID";
+    leaveType: "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
     unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
     hours: number | null;
     days: number;
