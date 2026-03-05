@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { personalDataConsentTypes, recordPersonalDataConsents } from "@/features/auth/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { fail, ok } from "@/lib/http";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -13,7 +14,9 @@ const setupMetadataSchema = z
     organization_id: z.string().min(1).optional(),
     organizationId: z.string().min(1).optional(),
     actor_id: z.string().min(1).optional(),
-    actorId: z.string().min(1).optional()
+    actorId: z.string().min(1).optional(),
+    consentVersion: z.string().min(1).max(64).optional(),
+    consentTypes: z.array(z.enum(personalDataConsentTypes)).max(2).optional()
   })
   .superRefine((value, context) => {
     if (!value.role) {
@@ -72,6 +75,21 @@ function toRecord(value: unknown): Record<string, unknown> {
     return {};
   }
   return { ...(value as Record<string, unknown>) };
+}
+
+function readClientIpAddress(request: Request): string | null {
+  const keys = ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "x-client-ip"];
+  for (const key of keys) {
+    const raw = request.headers.get(key)?.trim() ?? "";
+    if (!raw) {
+      continue;
+    }
+    const first = raw.split(",")[0]?.trim() ?? "";
+    if (first) {
+      return first.slice(0, 64);
+    }
+  }
+  return null;
 }
 
 function normalizeEmail(value: string | null | undefined): string | null {
@@ -173,10 +191,26 @@ export async function POST(request: Request) {
   const role = parsed.data.role as MetadataRole;
   const organizationId = (parsed.data.organization_id ?? parsed.data.organizationId ?? "").trim();
   const providedActorId = (parsed.data.actor_id ?? parsed.data.actorId ?? "").trim() || null;
+  const consentVersion = parsed.data.consentVersion?.trim() ?? "";
+  const consentTypes = parsed.data.consentTypes ?? [];
 
   const authenticatedUser = await readAuthenticatedUser(request);
   if (!authenticatedUser) {
     return fail(401, "missing or invalid actor context");
+  }
+
+  if (consentVersion && consentTypes.length > 0) {
+    try {
+      await recordPersonalDataConsents({
+        userId: authenticatedUser.id,
+        consentTypes,
+        version: consentVersion,
+        ipAddress: readClientIpAddress(request)
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "failed to record personal data consent";
+      return fail(500, message);
+    }
   }
 
   if (providedActorId) {
