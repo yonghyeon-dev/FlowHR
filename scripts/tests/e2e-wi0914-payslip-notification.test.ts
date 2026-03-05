@@ -140,12 +140,9 @@ async function run() {
     state: "QUEUED"
   });
   assert.equal(notifications.length, 2, "queue should contain employee-targeted in-app notifications");
-  assert.deepEqual(
-    notifications
-      .map((notification) => notification.employeeId)
-      .filter((employeeId): employeeId is string => Boolean(employeeId))
-      .sort(),
-    [...employees].sort()
+  assert.ok(
+    notifications.every((notification) => notification.employeeId === null),
+    "notice queue entity should stay schema-aligned (no employeeId column)"
   );
 
   for (const notification of notifications) {

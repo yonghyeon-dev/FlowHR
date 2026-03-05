@@ -2603,7 +2603,8 @@ export const memoryDataAccess: DataAccess = {
         id: nextId("NQ"),
         organizationId: input.organizationId,
         noticeId: input.noticeId,
-        employeeId: input.employeeId ?? null,
+        // NoticeNotificationQueue schema has no employeeId column; keep parity with Prisma store.
+        employeeId: null,
         audience: input.audience,
         channel: input.channel,
         state: input.state ?? "QUEUED",
@@ -2652,9 +2653,6 @@ export const memoryDataAccess: DataAccess = {
           continue;
         }
         if (input.noticeId && notification.noticeId !== input.noticeId) {
-          continue;
-        }
-        if (input.employeeId && notification.employeeId !== input.employeeId) {
           continue;
         }
         if (input.state && notification.state !== input.state) {
