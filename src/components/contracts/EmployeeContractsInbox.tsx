@@ -90,9 +90,7 @@ export default function EmployeeContractsInbox() {
   }, [accessToken, copy.loadError]);
   useEffect(() => {
     setContractsRuntimeLocale(locale);
-    return () => {
-      setContractsRuntimeLocale(null);
-    };
+    return () => setContractsRuntimeLocale(null);
   }, [locale]);
   useEffect(() => {
     reload().catch((loadError) => {
@@ -103,13 +101,9 @@ export default function EmployeeContractsInbox() {
       );
     });
   }, [copy.loadError, reload]);
-  useEffect(() => {
-    setSignatureEvidence(null);
-  }, [selected?.id]);
+  useEffect(() => setSignatureEvidence(null), [selected?.id]);
   async function respond(action: "SIGN" | "REJECT") {
-    if (!selected) {
-      return;
-    }
+    if (!selected) return;
     const normalizedSignatureInput = signatureInput.trim();
     setError(null);
     setMessage(null);
@@ -144,10 +138,7 @@ export default function EmployeeContractsInbox() {
       );
     }
   }
-  function downloadEvidence(
-    evidence: ContractSignatureEvidenceResponse["evidence"],
-    downloadFileName: string
-  ) {
+  function downloadEvidence(evidence: ContractSignatureEvidenceResponse["evidence"], downloadFileName: string) {
     const blob = new Blob([evidence.content], { type: evidence.contentType });
     const objectUrl = URL.createObjectURL(blob);
     const anchor = window.document.createElement("a");
@@ -158,10 +149,7 @@ export default function EmployeeContractsInbox() {
     window.document.body.removeChild(anchor);
     URL.revokeObjectURL(objectUrl);
   }
-  async function copyEvidenceMetadata(
-    evidence: ContractSignatureEvidenceResponse["evidence"],
-    displayFileName: string
-  ) {
+  async function copyEvidenceMetadata(evidence: ContractSignatureEvidenceResponse["evidence"], displayFileName: string) {
     const metadataText = [
       `${copy.evidenceFileLabel}: ${displayFileName}`,
       `${copy.generatedAtLabel}: ${toDateText(evidence.generatedAt, runtimeLocale)}`,
@@ -177,9 +165,7 @@ export default function EmployeeContractsInbox() {
     }
   }
   async function loadSignatureEvidence(format: "json" | "text") {
-    if (!selected) {
-      return;
-    }
+    if (!selected) return;
     setError(null);
     setMessage(null);
     try {
