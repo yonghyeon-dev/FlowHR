@@ -3,6 +3,10 @@ import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/l
 import { Permissions } from "@/lib/rbac";
 import { derivePayableMinutes, type PayableMinutes } from "@/lib/payroll-rules";
 import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
+import {
+  notifyAttendanceApproved,
+  notifyAttendanceRejected
+} from "@/features/notifications/service";
 import type {
   AttendanceCaptureChannel,
   AttendanceRecordEntity,
@@ -1986,6 +1990,13 @@ export async function approveAttendanceRecord(
     }
   });
 
+  if (employee.organizationId) {
+    notifyAttendanceApproved(context, {
+      organizationId: employee.organizationId,
+      employeeId: record.employeeId
+    }).catch(() => {});
+  }
+
   return record;
 }
 
@@ -2066,6 +2077,14 @@ export async function rejectAttendanceRecord(
       reason: normalizedReason
     }
   });
+
+  if (employee.organizationId) {
+    notifyAttendanceRejected(context, {
+      organizationId: employee.organizationId,
+      employeeId: record.employeeId,
+      reason: normalizedReason
+    }).catch(() => {});
+  }
 
   return record;
 }
