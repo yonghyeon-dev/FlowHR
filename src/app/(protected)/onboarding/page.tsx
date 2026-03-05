@@ -250,7 +250,7 @@ export default function OrganizationOnboardingPage() {
     return () => {
       active = false;
     };
-  }, [accessToken, copy, organizationId, role, router, snapshot, supabaseSessionLoading]);
+  }, [accessToken, organizationId, role, router, snapshot, supabaseSessionLoading]);
 
   function toggleWorkDay(day: number) {
     setWorkDays((prev) => {
