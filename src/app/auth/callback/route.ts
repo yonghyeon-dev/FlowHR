@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import type { EmailOtpType } from "@supabase/supabase-js";
+import { createClient, type EmailOtpType } from "@supabase/supabase-js";
 
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
@@ -40,6 +40,56 @@ function normalizeEmailOtpType(value: string | null): EmailOtpType | null {
     return normalized as EmailOtpType;
   }
   return null;
+}
+
+function createEmployeeId() {
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("").toUpperCase();
+  return `EMP-${hex}`;
+}
+
+async function provisionFirstTimeSignup(input: {
+  supabaseUrl: string;
+  userId: string;
+  email: string;
+  organizationName: string;
+}): Promise<{ organizationId: string; employeeId: string }> {
+  const dataAccess = getRuntimeDataAccess();
+  const organization = await dataAccess.organizations.create({
+    name: input.organizationName
+  });
+
+  const employeeId = createEmployeeId();
+  await dataAccess.employees.create({
+    id: employeeId,
+    organizationId: organization.id,
+    email: input.email,
+    name: input.email.split("@")[0],
+    active: true
+  });
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required");
+  }
+
+  const supabaseAdmin = createClient(input.supabaseUrl, serviceRoleKey);
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(input.userId, {
+    app_metadata: {
+      role: "admin",
+      organization_id: organization.id,
+      actor_id: employeeId
+    }
+  });
+  if (error) {
+    throw error;
+  }
+
+  return {
+    organizationId: organization.id,
+    employeeId
+  };
 }
 
 async function resolveSuccessRedirect(role: MetadataRole | null, organizationId: string | null): Promise<string> {
@@ -134,10 +184,52 @@ export async function GET(request: NextRequest) {
 
     const appMetadata = (session.user.app_metadata ?? {}) as Record<string, unknown>;
     const userMetadata = (session.user.user_metadata ?? {}) as Record<string, unknown>;
-    const role = normalizeMetadataRole(appMetadata.role) ?? normalizeMetadataRole(userMetadata.role);
-    const organizationId =
-      readAppMetadataString(appMetadata, "organization_id", "organizationId") ??
-      readAppMetadataString(userMetadata, "organization_id", "organizationId");
+    const appOrganizationId = readAppMetadataString(appMetadata, "organization_id", "organizationId");
+    const signupOrganizationName = readAppMetadataString(userMetadata, "organization_name", "organizationName");
+
+    let role = normalizeMetadataRole(appMetadata.role) ?? normalizeMetadataRole(userMetadata.role);
+    let organizationId =
+      appOrganizationId ?? readAppMetadataString(userMetadata, "organization_id", "organizationId");
+
+    if (signupOrganizationName && !appOrganizationId) {
+      try {
+        const normalizedEmail = session.user.email?.trim().toLowerCase() ?? "";
+        if (!normalizedEmail) {
+          throw new Error("missing signup email");
+        }
+
+        const provisionResult = await provisionFirstTimeSignup({
+          supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+          userId: session.user.id,
+          email: normalizedEmail,
+          organizationName: signupOrganizationName
+        });
+
+        role = "admin";
+        organizationId = provisionResult.organizationId;
+
+        const refreshToken = session.refresh_token?.trim() ?? "";
+        if (refreshToken) {
+          const refreshResult = await supabase.auth.refreshSession({
+            refresh_token: refreshToken
+          });
+          if (!refreshResult.error && refreshResult.data.session?.access_token) {
+            const refreshedSession = refreshResult.data.session;
+            setFlowHrAccessTokenCookie(
+              response,
+              request,
+              refreshedSession.access_token,
+              typeof refreshedSession.expires_at === "number" ? refreshedSession.expires_at : null
+            );
+          }
+        }
+      } catch {
+        response.cookies.delete(FLOWHR_ACCESS_TOKEN_COOKIE);
+        response.headers.set("Location", new URL("/login?error=auth_callback_setup_failed", requestUrl.origin).toString());
+        return response;
+      }
+    }
+
     const redirectPath = await resolveSuccessRedirect(role, organizationId);
 
     // Supabase Dashboard > Authentication > URL Configuration:
