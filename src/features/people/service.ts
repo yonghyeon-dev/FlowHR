@@ -15,6 +15,10 @@ import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain
 import { ServiceError } from "@/features/shared/service-error";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTenancyEnabled } from "@/lib/tenancy";
+import {
+  resolveDefaultWorkScheduleSeedRange,
+  seedDefaultWorkSchedulesForEmployee
+} from "@/features/scheduling/default-work-schedule-seed";
 
 type ServiceContext = {
   actor: Actor | null;
@@ -201,6 +205,53 @@ async function invalidateEmployeeSessionsIfPossible(employeeId: string) {
     const message = error instanceof Error ? error.message : "unknown_error";
     return { attempted: true as const, success: false as const, reason: message };
   }
+}
+
+async function seedDefaultSchedulesOnActivation(
+  context: ServiceContext,
+  employee: EmployeeEntity,
+  options?: { fromDate?: string; toDate?: string; baseDate?: Date }
+) {
+  if (employee.status !== "ACTIVE") {
+    return null;
+  }
+  if (!employee.organizationId) {
+    return null;
+  }
+
+  const result = await seedDefaultWorkSchedulesForEmployee({
+    dataAccess: context.dataAccess,
+    employee,
+    range:
+      options?.fromDate || options?.toDate
+        ? {
+            fromDate: options?.fromDate,
+            toDate: options?.toDate
+          }
+        : undefined,
+    baseDate: options?.baseDate
+  });
+
+  await context.dataAccess.audit.append({
+    action: "scheduling.schedule.default_seeded",
+    entityType: "Employee",
+    entityId: employee.id,
+    organizationId: employee.organizationId,
+    actorRole: context.actor?.role ?? "system",
+    actorId: context.actor?.id ?? undefined,
+    payload: {
+      employeeId: employee.id,
+      organizationId: employee.organizationId,
+      fromDate: result.fromDate,
+      toDate: result.toDate,
+      candidateCount: result.candidateCount,
+      createdCount: result.createdCount,
+      skippedOverlapCount: result.skippedOverlapCount,
+      createdScheduleIds: result.createdScheduleIds
+    }
+  });
+
+  return result;
 }
 
 async function requireDepartmentMutationAccess(context: ServiceContext, action: string) {
@@ -1004,6 +1055,13 @@ export async function createEmployee(
     status
   });
 
+  if (employee.status === "ACTIVE") {
+    await seedDefaultSchedulesOnActivation(context, employee, {
+      ...resolveDefaultWorkScheduleSeedRange(employee.createdAt),
+      baseDate: employee.createdAt
+    });
+  }
+
   await context.dataAccess.audit.append({
     action: "employee.created",
     entityType: "Employee",
@@ -1224,6 +1282,13 @@ export async function updateEmployee(
     });
   }
 
+  if (existing.status !== "ACTIVE" && employee.status === "ACTIVE") {
+    await seedDefaultSchedulesOnActivation(context, employee, {
+      ...resolveDefaultWorkScheduleSeedRange(employee.updatedAt),
+      baseDate: employee.updatedAt
+    });
+  }
+
   await context.dataAccess.audit.append({
     action: "employee.profile.updated",
     entityType: "Employee",
@@ -1302,6 +1367,17 @@ export async function transitionEmployeeStatus(
   const employee = await context.dataAccess.employees.update(input.employeeId, {
     status: input.status
   });
+
+  if (existing.status !== "ACTIVE" && employee.status === "ACTIVE") {
+    const baseDate =
+      input.effectiveDate && !Number.isNaN(new Date(input.effectiveDate).getTime())
+        ? new Date(input.effectiveDate)
+        : employee.updatedAt;
+    await seedDefaultSchedulesOnActivation(context, employee, {
+      ...resolveDefaultWorkScheduleSeedRange(baseDate),
+      baseDate
+    });
+  }
 
   const sessionInvalidation =
     input.status === "RESIGNED"

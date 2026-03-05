@@ -49,6 +49,7 @@ type AdminSchedulingWorkspaceViewProps = {
   onEditNotesChange: (value: string) => void;
   onLoadSchedules: () => void;
   onCreateSchedule: () => void;
+  onSeedDefaultSchedules: () => void;
   onSelectSchedule: (scheduleId: string) => void;
   onUpdateSelectedSchedule: () => void;
   onDeleteSelectedSchedule: () => void;
@@ -100,6 +101,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     onEditNotesChange,
     onLoadSchedules,
     onCreateSchedule,
+    onSeedDefaultSchedules,
     onSelectSchedule,
     onUpdateSelectedSchedule,
     onDeleteSelectedSchedule
@@ -194,7 +196,16 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
         <article className="panel">
           <h2>{copy.listTitle}</h2>
           {schedules.length === 0 ? (
-            <p className="small muted">{copy.listEmpty}</p>
+            <>
+              <p className="small muted">{copy.listEmpty}</p>
+              {queryEmployeeId.trim() ? (
+                <div className="actions">
+                  <button className="btn btn-secondary" type="button" onClick={onSeedDefaultSchedules}>
+                    {copy.defaultSeedAction}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <ul className="simple-list">
               {schedules.map((schedule) => (

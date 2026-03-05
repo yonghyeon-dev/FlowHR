@@ -20,6 +20,7 @@ export type AdminSchedulingCopy = {
   createHolidayLabel: string;
   createNotesLabel: string;
   createAction: string;
+  defaultSeedAction: string;
   holidayNo: string;
   holidayYes: string;
   listTitle: string;
@@ -90,8 +91,10 @@ export type AdminSchedulingCopy = {
   pendingIncidentAssign: string;
   pendingIncidentResolve: string;
   pendingCreate: string;
+  pendingDefaultSeed: string;
   pendingUpdate: string;
   pendingDelete: string;
+  statusDefaultSeedDone: string;
   loadErrorPrefix: string;
   scheduleIdLabel: string;
   periodLabel: string;
@@ -196,6 +199,7 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     createHolidayLabel: "휴일 근무",
     createNotesLabel: "메모(선택)",
     createAction: "일정 생성",
+    defaultSeedAction: "기본 근무일정 생성",
     holidayNo: "아니오",
     holidayYes: "예",
     listTitle: "일정 목록",
@@ -266,8 +270,10 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     pendingIncidentAssign: "인시던트 담당자 지정",
     pendingIncidentResolve: "인시던트 해결 처리",
     pendingCreate: "일정 생성",
+    pendingDefaultSeed: "기본 근무일정 생성",
     pendingUpdate: "일정 수정",
     pendingDelete: "일정 삭제",
+    statusDefaultSeedDone: "기본 근무일정을 생성했습니다.",
     loadErrorPrefix: "요청 실패",
     scheduleIdLabel: "일정 ID",
     periodLabel: "근무 시간",
@@ -296,6 +302,7 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     createHolidayLabel: "Holiday shift",
     createNotesLabel: "Notes (optional)",
     createAction: "Create schedule",
+    defaultSeedAction: "Create default schedules",
     holidayNo: "No",
     holidayYes: "Yes",
     listTitle: "Schedule list",
@@ -366,8 +373,10 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     pendingIncidentAssign: "assign incident",
     pendingIncidentResolve: "resolve incident",
     pendingCreate: "create schedule",
+    pendingDefaultSeed: "create default schedules",
     pendingUpdate: "update schedule",
     pendingDelete: "delete schedule",
+    statusDefaultSeedDone: "Default work schedules created.",
     loadErrorPrefix: "request failed",
     scheduleIdLabel: "Schedule ID",
     periodLabel: "Work period",

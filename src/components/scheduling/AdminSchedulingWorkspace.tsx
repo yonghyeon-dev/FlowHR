@@ -209,6 +209,30 @@ export default function AdminSchedulingWorkspace() {
     await loadSchedules();
   }
 
+  async function seedDefaultSchedules() {
+    if (!usesBearerToken && !organizationId.trim()) {
+      setStatusMessage(copy.statusNeedsOrganization);
+      return;
+    }
+    if (!queryEmployeeId.trim()) {
+      setStatusMessage(copy.statusNeedsEmployee);
+      return;
+    }
+    if (!fromDate || !toDate) {
+      setStatusMessage(copy.statusNeedsRange);
+      return;
+    }
+
+    const body = (await callApi(copy.pendingDefaultSeed, "POST", "/api/admin/scheduling/default-seed", {
+      employeeId: queryEmployeeId.trim(),
+      fromDate,
+      toDate
+    })) as { result?: { createdCount?: number } } | null;
+    const createdCount = Math.max(0, Math.trunc(Number(body?.result?.createdCount ?? 0)));
+    setStatusMessage(`${copy.statusDefaultSeedDone} (${createdCount})`);
+    await loadSchedules();
+  }
+
   async function updateSelectedSchedule() {
     if (!selectedSchedule) {
       return;
@@ -290,6 +314,7 @@ export default function AdminSchedulingWorkspace() {
       onEditNotesChange={setEditNotes}
       onLoadSchedules={() => void loadSchedules()}
       onCreateSchedule={() => void createSchedule()}
+      onSeedDefaultSchedules={() => void seedDefaultSchedules()}
       onSelectSchedule={setSelectedScheduleId}
       onUpdateSelectedSchedule={() => void updateSelectedSchedule()}
       onDeleteSelectedSchedule={() => void deleteSelectedSchedule()}
