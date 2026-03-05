@@ -78,6 +78,12 @@ export function useSupabaseSession(): SupabaseSessionState {
     async function bind() {
       try {
         const supabase = getSupabaseClient();
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+          syncAccessTokenCookie(session);
+          setSnapshot(toSnapshot(session));
+        });
+        unsubscribe = () => listener.subscription.unsubscribe();
+
         const { data, error } = await supabase.auth.getSession();
         if (!active) {
           return;
@@ -89,12 +95,6 @@ export function useSupabaseSession(): SupabaseSessionState {
         }
         syncAccessTokenCookie(data.session);
         setSnapshot(toSnapshot(data.session));
-
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-          syncAccessTokenCookie(session);
-          setSnapshot(toSnapshot(session));
-        });
-        unsubscribe = () => listener.subscription.unsubscribe();
       } catch (error) {
         if (!active) {
           return;
