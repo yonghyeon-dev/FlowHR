@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.13.0
+  version: 1.14.0
 paths:
   /leave/requests:
     get:
