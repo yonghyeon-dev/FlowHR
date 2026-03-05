@@ -14,6 +14,9 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const inviteSchema = z.object({
   email: z.string().email(),
+  name: z.string().trim().min(1).optional(),
+  departmentId: z.string().trim().min(1).optional(),
+  positionId: z.string().trim().min(1).optional(),
   role: z.enum(inviteRoles).optional(),
   organizationId: z.string().min(1).optional(),
   actorId: z.string().min(1).optional(),
@@ -57,7 +60,8 @@ export async function GET(request: Request) {
     return ok({
       invites: invites.map((invite) => ({
         ...invite,
-        createdAt: invite.createdAt.toISOString()
+        createdAt: invite.createdAt.toISOString(),
+        invitedAt: invite.createdAt.toISOString()
       })),
       summary: {
         total: invites.length,
@@ -86,9 +90,29 @@ export async function POST(request: Request) {
   }
 
   const actor = await readActor(request);
-  const redirectTo = parsed.data.redirectTo?.trim() || `${new URL(request.url).origin}/login`;
+  const requestOrigin = new URL(request.url).origin;
+  const redirectTo = parsed.data.redirectTo?.trim() || `${requestOrigin}/auth/callback`;
+  const normalizedEmail = parsed.data.email.trim().toLowerCase();
 
   try {
+    const existingInvites = await listAuthInvites(
+      {
+        actor,
+        dataAccess: getRuntimeDataAccess(),
+        supabaseAdmin: getSupabaseAdmin()
+      },
+      {
+        organizationId: parsed.data.organizationId,
+        limit: 500
+      }
+    );
+
+    if (existingInvites.some((invite) => invite.email === normalizedEmail)) {
+      return fail(409, "invite already exists", {
+        email: normalizedEmail
+      });
+    }
+
     const invite = await createAuthInvite(
       {
         actor,
@@ -96,15 +120,31 @@ export async function POST(request: Request) {
         supabaseAdmin: getSupabaseAdmin()
       },
       {
-        email: parsed.data.email,
+        email: normalizedEmail,
+        name: parsed.data.name,
+        departmentId: parsed.data.departmentId,
+        positionId: parsed.data.positionId,
         role: parsed.data.role,
         organizationId: parsed.data.organizationId,
         actorId: parsed.data.actorId,
         redirectTo,
-        deliveryMode: parsed.data.deliveryMode
+        deliveryMode: parsed.data.deliveryMode ?? "email"
       }
     );
-    return ok({ invite }, 201);
+
+    const invitedAt = invite.invitedAt.toISOString();
+    return ok(
+      {
+        id: invite.userId,
+        email: invite.email,
+        invitedAt,
+        invite: {
+          ...invite,
+          invitedAt
+        }
+      },
+      201
+    );
   } catch (error) {
     if (isServiceError(error)) {
       return fail(error.status, error.message, error.details);

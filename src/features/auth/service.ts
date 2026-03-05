@@ -50,12 +50,14 @@ export type SupabaseAdminAuthClient = {
         email: string;
         options?: {
           redirectTo?: string;
+          data?: Record<string, unknown>;
         };
       }): Promise<GenerateLinkResponse>;
       inviteUserByEmail(
         email: string,
         options?: {
           redirectTo?: string;
+          data?: Record<string, unknown>;
         }
       ): Promise<InviteByEmailResponse>;
       updateUserById(
@@ -73,6 +75,9 @@ export type CreateAuthInviteInput = {
   role?: InviteRole;
   organizationId?: string;
   actorId?: string;
+  name?: string;
+  departmentId?: string;
+  positionId?: string;
   redirectTo: string;
   deliveryMode?: InviteDeliveryMode;
 };
@@ -86,6 +91,7 @@ export type AuthInviteResult = {
   redirectTo: string;
   deliveryMode: InviteDeliveryMode;
   actionLink: string | null;
+  invitedAt: Date;
 };
 
 export type ListAuthInvitesInput = {
@@ -97,9 +103,12 @@ export type ListAuthInvitesInput = {
 export type AuthInviteHistoryEntry = {
   userId: string;
   email: string;
+  name: string | null;
   role: InviteRole;
   organizationId: string;
   actorId: string | null;
+  departmentId: string | null;
+  positionId: string | null;
   deliveryMode: InviteDeliveryMode;
   createdAt: Date;
 };
@@ -127,6 +136,25 @@ function ensureInvitePermission(actor: Actor) {
 
 function readMessage(error: SupabaseError | null | undefined) {
   return error?.message ?? "unknown error";
+}
+
+function isInviteConflictError(error: SupabaseError | null | undefined) {
+  const message = readMessage(error).toLowerCase();
+  return (
+    message.includes("already") ||
+    message.includes("exists") ||
+    message.includes("registered") ||
+    message.includes("taken") ||
+    message.includes("duplicate")
+  );
+}
+
+function readOptionalTrimmedString(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -179,8 +207,27 @@ export async function createAuthInvite(
   const email = input.email.trim().toLowerCase();
   const role = input.role ?? "employee";
   const actorId = input.actorId?.trim() || null;
+  const name = input.name?.trim() || null;
+  const departmentId = input.departmentId?.trim() || null;
+  const positionId = input.positionId?.trim() || null;
   const redirectTo = input.redirectTo.trim();
   const deliveryMode = input.deliveryMode ?? "link";
+  const invitedAt = new Date();
+
+  const userMetadata: Record<string, unknown> = {
+    organizationId,
+    organization_id: organizationId,
+    role
+  };
+  if (name) {
+    userMetadata.name = name;
+  }
+  if (departmentId) {
+    userMetadata.departmentId = departmentId;
+  }
+  if (positionId) {
+    userMetadata.positionId = positionId;
+  }
 
   let userId = "";
   let existingAppMetadata: Record<string, unknown> = {};
@@ -190,9 +237,17 @@ export async function createAuthInvite(
     const { data, error } = await context.supabaseAdmin.auth.admin.generateLink({
       type: "invite",
       email,
-      options: { redirectTo }
+      options: {
+        redirectTo,
+        data: userMetadata
+      }
     });
     if (error || !data?.user) {
+      if (isInviteConflictError(error)) {
+        throw new ServiceError(409, "invite already exists", {
+          message: readMessage(error)
+        });
+      }
       throw new ServiceError(502, "supabase invite link generation failed", {
         message: readMessage(error)
       });
@@ -207,9 +262,15 @@ export async function createAuthInvite(
     actionLink = data.properties.action_link;
   } else {
     const { data, error } = await context.supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo
+      redirectTo,
+      data: userMetadata
     });
     if (error || !data?.user) {
+      if (isInviteConflictError(error)) {
+        throw new ServiceError(409, "invite already exists", {
+          message: readMessage(error)
+        });
+      }
       throw new ServiceError(502, "supabase invite email dispatch failed", {
         message: readMessage(error)
       });
@@ -246,11 +307,15 @@ export async function createAuthInvite(
     actorId: actor.id,
     payload: {
       email,
+      name,
       role,
       actorId,
+      departmentId,
+      positionId,
       redirectTo,
       deliveryMode,
-      hasActionLink: actionLink !== null
+      hasActionLink: actionLink !== null,
+      invitedAt: invitedAt.toISOString()
     }
   });
 
@@ -277,7 +342,8 @@ export async function createAuthInvite(
     actorId,
     redirectTo,
     deliveryMode,
-    actionLink
+    actionLink,
+    invitedAt
   };
 }
 
@@ -326,9 +392,12 @@ export async function listAuthInvites(
     invites.push({
       userId: row.entityId ?? "",
       email,
+      name: readOptionalTrimmedString(payload.name),
       role,
       organizationId,
       actorId: typeof payload.actorId === "string" ? payload.actorId : null,
+      departmentId: readOptionalTrimmedString(payload.departmentId),
+      positionId: readOptionalTrimmedString(payload.positionId),
       deliveryMode: normalizeInviteDeliveryMode(payload.deliveryMode),
       createdAt: row.createdAt
     });
