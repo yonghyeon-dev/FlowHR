@@ -47,7 +47,11 @@ function isServiceErrorWithStatus(status: number) {
 
 async function testLinkDeliveryModeFlow() {
   const auditEntries: AuditEntry[] = [];
-  const generateLinkCalls: Array<{ type: "invite"; email: string; options?: { redirectTo?: string } }> = [];
+  const generateLinkCalls: Array<{
+    type: "invite";
+    email: string;
+    options?: { redirectTo?: string; data?: Record<string, unknown> };
+  }> = [];
   const updateCalls: Array<{ userId: string; appMetadata: Record<string, unknown> }> = [];
 
   const supabaseAdmin: SupabaseAdminAuthClient = {
@@ -113,7 +117,14 @@ async function testLinkDeliveryModeFlow() {
   assert.deepEqual(generateLinkCalls[0], {
     type: "invite",
     email: "link.user@company.com",
-    options: { redirectTo: "https://flowhr.local/login" }
+    options: {
+      redirectTo: "https://flowhr.local/login",
+      data: {
+        organizationId: "ORG-INVITE-1001",
+        organization_id: "ORG-INVITE-1001",
+        role: "manager"
+      }
+    }
   });
 
   assert.equal(updateCalls.length, 1);
@@ -132,7 +143,10 @@ async function testLinkDeliveryModeFlow() {
 
 async function testEmailDeliveryModeFlow() {
   const auditEntries: AuditEntry[] = [];
-  const inviteByEmailCalls: Array<{ email: string; options?: { redirectTo?: string } }> = [];
+  const inviteByEmailCalls: Array<{
+    email: string;
+    options?: { redirectTo?: string; data?: Record<string, unknown> };
+  }> = [];
   const updateCalls: Array<{ userId: string; appMetadata: Record<string, unknown> }> = [];
 
   const supabaseAdmin: SupabaseAdminAuthClient = {
@@ -194,7 +208,14 @@ async function testEmailDeliveryModeFlow() {
   assert.equal(inviteByEmailCalls.length, 1);
   assert.deepEqual(inviteByEmailCalls[0], {
     email: "email.user@company.com",
-    options: { redirectTo: "https://flowhr.local/login" }
+    options: {
+      redirectTo: "https://flowhr.local/login",
+      data: {
+        organizationId: "ORG-INVITE-1002",
+        organization_id: "ORG-INVITE-1002",
+        role: "employee"
+      }
+    }
   });
 
   assert.equal(updateCalls.length, 1);

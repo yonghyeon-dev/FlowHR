@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
@@ -7,6 +8,7 @@ import { getPublicEnv } from "@/lib/env";
 
 const metadataRoles = ["admin", "manager", "employee", "payroll_operator"] as const;
 type MetadataRole = (typeof metadataRoles)[number];
+const otpTypes = ["signup", "invite", "magiclink", "recovery", "email_change", "email"] as const;
 
 function readAppMetadataString(app: Record<string, unknown>, ...keys: string[]): string | null {
   for (const key of keys) {
@@ -27,6 +29,17 @@ function normalizeMetadataRole(value: unknown): MetadataRole | null {
     return null;
   }
   return (metadataRoles as readonly string[]).includes(value) ? (value as MetadataRole) : null;
+}
+
+function normalizeEmailOtpType(value: string | null): EmailOtpType | null {
+  if (!value) {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase();
+  if ((otpTypes as readonly string[]).includes(normalized)) {
+    return normalized as EmailOtpType;
+  }
+  return null;
 }
 
 async function resolveSuccessRedirect(role: MetadataRole | null, organizationId: string | null): Promise<string> {
@@ -77,7 +90,9 @@ function setFlowHrAccessTokenCookie(
 export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl;
   const code = requestUrl.searchParams.get("code")?.trim() ?? "";
-  if (!code) {
+  const tokenHash = requestUrl.searchParams.get("token_hash")?.trim() ?? "";
+  const otpType = normalizeEmailOtpType(requestUrl.searchParams.get("type"));
+  if (!code && (!tokenHash || !otpType)) {
     return NextResponse.redirect(new URL("/login", requestUrl.origin));
   }
 
@@ -98,21 +113,31 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error || !data.session?.access_token || !data.session.user) {
-      throw error ?? new Error("Auth callback code exchange failed");
+    const authResult = code
+      ? await supabase.auth.exchangeCodeForSession(code)
+      : await supabase.auth.verifyOtp({
+          type: otpType as EmailOtpType,
+          token_hash: tokenHash
+        });
+
+    if (authResult.error || !authResult.data.session?.access_token || !authResult.data.session.user) {
+      throw authResult.error ?? new Error("Auth callback exchange failed");
     }
 
+    const { session } = authResult.data;
     setFlowHrAccessTokenCookie(
       response,
       request,
-      data.session.access_token,
-      typeof data.session.expires_at === "number" ? data.session.expires_at : null
+      session.access_token,
+      typeof session.expires_at === "number" ? session.expires_at : null
     );
 
-    const appMetadata = (data.session.user.app_metadata ?? {}) as Record<string, unknown>;
-    const role = normalizeMetadataRole(appMetadata.role);
-    const organizationId = readAppMetadataString(appMetadata, "organization_id", "organizationId");
+    const appMetadata = (session.user.app_metadata ?? {}) as Record<string, unknown>;
+    const userMetadata = (session.user.user_metadata ?? {}) as Record<string, unknown>;
+    const role = normalizeMetadataRole(appMetadata.role) ?? normalizeMetadataRole(userMetadata.role);
+    const organizationId =
+      readAppMetadataString(appMetadata, "organization_id", "organizationId") ??
+      readAppMetadataString(userMetadata, "organization_id", "organizationId");
     const redirectPath = await resolveSuccessRedirect(role, organizationId);
 
     // Supabase Dashboard > Authentication > URL Configuration:
