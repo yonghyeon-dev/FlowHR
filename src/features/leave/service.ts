@@ -1,4 +1,4 @@
-import type { Actor } from "@/lib/actor";
+﻿import type { Actor } from "@/lib/actor";
 import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/lib/permissions";
 import { Permissions } from "@/lib/rbac";
 import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
@@ -7,29 +7,19 @@ import {
   notifyLeaveRejected
 } from "@/features/notifications/service";
 import {
-  normalizeRecipientEmployeeIds,
-  persistPromotionDeliveryHistory,
-  resolvePromotionRecipientStats
-} from "@/features/leave/promotion-delivery-history-core-helpers";
-import { recordPromotionDispatchFailure } from "@/features/leave/promotion-dispatch-failure-helpers";
+  dispatchAnnualLeavePromotionNoticeImpl,
+  listLeavePromotionDeliveriesImpl,
+  previewAnnualLeavePromotionImpl,
+  readLeavePromotionDeliveryImpl,
+  retryLeavePromotionDeliveryImpl
+} from "@/features/leave/helpers/promotion-service-helpers";
 import {
-  buildPromotionNoticeMessage,
-  type PromotionDeliveryProvider,
-  sendPromotionEmailTemplate,
-  sendPromotionWebhook,
-  resolvePromotionEmailTemplateConfig,
-  resolvePromotionWebhookConfig
-} from "@/features/leave/promotion-delivery-helpers";
-import {
-  toPromotionDeliveryRecipientView,
-  toPromotionDeliverySummaryView,
-  toPromotionTargetSnapshots,
-  toPromotionTargetSnapshotsFromRecipients,
-  toRetryCountByEmployeeId,
-  type PromotionDeliveryRecipientView,
-  type PromotionDeliveryStatus,
-  type PromotionDeliverySummaryView
-} from "@/features/leave/promotion-history-views";
+  assertValidLeaveBalanceYear,
+  assertValidUpsertLeavePolicyInput,
+  buildAvailableLeaveBalanceSummary,
+  resolveSeoulYearFromDate,
+  resolveSeoulYearRange
+} from "@/features/leave/helpers/balance-policy-date-helpers";
 import {
   DEFAULT_ALLOW_HALF_DAY,
   DEFAULT_ALLOW_HOURLY,
@@ -43,25 +33,20 @@ import {
   DEFAULT_MAX_CONSECUTIVE_DAYS,
   DEFAULT_MAX_HOURS_PER_REQUEST,
   DEFAULT_MIN_NOTICE_DAYS,
-  SEOUL_OFFSET_MS,
   assertPolicyRequestConstraints,
   calculateLeaveDays,
   calculateProRatedAnnualGrantDays,
   calculateRequestedLeave,
   ensureValidPeriod,
-  formatSeoulDay,
-  fromSeoulDayIndex,
   renderPromotionMessageTemplate,
   resolvePolicyRules,
   resolveSeoulYearEnd,
   roundTo2,
-  toSeoulDayIndex
 } from "@/features/leave/policy-time-helpers";
 import type {
   DataAccess,
   LeaveBalanceEntity,
   LeavePolicyStatus,
-  LeavePromotionDeliveryRecipientEntity,
   LeaveRequestEntity,
   LeaveRequestUnit,
   LeaveType
@@ -71,7 +56,7 @@ import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain
 import { ensureTenantMatch, requireEmployeeWithinTenant, resolveTenantScope } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
 
-type ServiceContext = {
+export type ServiceContext = {
   actor: Actor | null;
   dataAccess: DataAccess;
   eventPublisher?: DomainEventPublisher;
@@ -145,13 +130,13 @@ type DeleteLeavePolicyInput = {
   organizationId?: string;
 };
 
-type PreviewAnnualLeavePromotionInput = {
+export type PreviewAnnualLeavePromotionInput = {
   organizationId?: string;
   asOf?: Date;
   includeUpcoming?: boolean;
 };
 
-type DispatchAnnualLeavePromotionNoticeInput = {
+export type DispatchAnnualLeavePromotionNoticeInput = {
   organizationId?: string;
   asOf?: Date;
   includeUpcoming?: boolean;
@@ -160,7 +145,7 @@ type DispatchAnnualLeavePromotionNoticeInput = {
   emailTemplateId?: string;
 };
 
-type ListLeavePromotionDeliveriesInput = {
+export type ListLeavePromotionDeliveriesInput = {
   organizationId?: string;
   channel?: "webhook" | "email_template";
   status?: "dry_run" | "skipped_no_targets" | "dispatched" | "failed";
@@ -168,12 +153,12 @@ type ListLeavePromotionDeliveriesInput = {
   limit?: number;
 };
 
-type ReadLeavePromotionDeliveryInput = {
+export type ReadLeavePromotionDeliveryInput = {
   deliveryId: string;
   organizationId?: string;
 };
 
-type RetryLeavePromotionDeliveryInput = {
+export type RetryLeavePromotionDeliveryInput = {
   deliveryId: string;
   organizationId?: string;
   dryRun?: boolean;
@@ -249,23 +234,6 @@ async function requirePendingRequest(context: ServiceContext, requestId: string)
   return request;
 }
 
-function assertValidLeaveBalanceYear(year: number) {
-  if (!Number.isInteger(year) || year < 2000 || year > 9999) {
-    throw new ServiceError(400, "year must be a valid 4-digit year");
-  }
-}
-
-function resolveSeoulYearRange(year: number) {
-  return {
-    periodStart: new Date(`${year}-01-01T00:00:00+09:00`),
-    periodEnd: new Date(`${year}-12-31T23:59:59.999+09:00`)
-  };
-}
-
-function resolveSeoulYear(date: Date) {
-  return new Date(date.getTime() + SEOUL_OFFSET_MS).getUTCFullYear();
-}
-
 async function calculateAvailableLeaveBalance(
   context: ServiceContext,
   input: GetAvailableLeaveBalanceInput
@@ -282,33 +250,7 @@ async function calculateAvailableLeaveBalance(
     periodEnd,
     employeeId: input.employeeId
   });
-
-  let used = 0;
-  let pending = 0;
-  for (const request of requests) {
-    if (request.leaveType !== input.leaveType) {
-      continue;
-    }
-    if (request.state === "APPROVED") {
-      used += request.days;
-      continue;
-    }
-    if (request.state === "PENDING") {
-      pending += request.days;
-    }
-  }
-
-  const total = roundTo2(projection.grantedDays);
-  const roundedUsed = roundTo2(used);
-  const roundedPending = roundTo2(pending);
-  const available = roundTo2(total - roundedUsed - roundedPending);
-
-  return {
-    total,
-    used: roundedUsed,
-    pending: roundedPending,
-    available
-  };
+  return buildAvailableLeaveBalanceSummary(requests, input.leaveType, projection.grantedDays);
 }
 
 async function ensureStatutoryLeavePolicies(context: ServiceContext, organizationId: string) {
@@ -410,7 +352,7 @@ export async function createLeaveRequest(
     policy: policyRules
   });
 
-  const requestYear = resolveSeoulYear(input.startDate);
+  const requestYear = resolveSeoulYearFromDate(input.startDate);
   const availableBalance = await calculateAvailableLeaveBalance(context, {
     employeeId: input.employeeId,
     leaveType: input.leaveType,
@@ -1387,53 +1329,7 @@ export async function upsertLeavePolicy(
   const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
   ensureTenantAccess(actor, organizationId);
 
-  if (!Number.isInteger(input.annualGrantDays) || input.annualGrantDays <= 0) {
-    throw new ServiceError(400, "annualGrantDays must be a positive integer");
-  }
-  if (!Number.isInteger(input.carryOverCapDays) || input.carryOverCapDays < 0) {
-    throw new ServiceError(400, "carryOverCapDays must be a non-negative integer");
-  }
-  if (input.hourlyIncrementMinutes !== undefined) {
-    if (!Number.isInteger(input.hourlyIncrementMinutes) || input.hourlyIncrementMinutes < 15) {
-      throw new ServiceError(400, "hourlyIncrementMinutes must be an integer >= 15");
-    }
-  }
-  if (input.maxHoursPerRequest !== undefined) {
-    if (!Number.isFinite(input.maxHoursPerRequest) || input.maxHoursPerRequest <= 0) {
-      throw new ServiceError(400, "maxHoursPerRequest must be a positive number");
-    }
-  }
-  if (input.minNoticeDays !== undefined) {
-    if (!Number.isInteger(input.minNoticeDays) || input.minNoticeDays < 0) {
-      throw new ServiceError(400, "minNoticeDays must be a non-negative integer");
-    }
-  }
-  if (input.maxConsecutiveDays !== undefined && input.maxConsecutiveDays !== null) {
-    if (!Number.isFinite(input.maxConsecutiveDays) || input.maxConsecutiveDays <= 0) {
-      throw new ServiceError(400, "maxConsecutiveDays must be a positive number or null");
-    }
-  }
-  if (input.annualLeavePromotionThresholdDays !== undefined) {
-    if (
-      !Number.isFinite(input.annualLeavePromotionThresholdDays) ||
-      input.annualLeavePromotionThresholdDays <= 0
-    ) {
-      throw new ServiceError(400, "annualLeavePromotionThresholdDays must be a positive number");
-    }
-  }
-  if (input.annualLeavePromotionLeadDays !== undefined) {
-    if (
-      !Number.isInteger(input.annualLeavePromotionLeadDays) ||
-      input.annualLeavePromotionLeadDays < 0
-    ) {
-      throw new ServiceError(400, "annualLeavePromotionLeadDays must be a non-negative integer");
-    }
-  }
-  if (input.annualLeavePromotionMessageTemplate !== undefined && input.annualLeavePromotionMessageTemplate !== null) {
-    if (input.annualLeavePromotionMessageTemplate.trim().length === 0) {
-      throw new ServiceError(400, "annualLeavePromotionMessageTemplate cannot be blank");
-    }
-  }
+  assertValidUpsertLeavePolicyInput(input);
 
   const stored = await context.dataAccess.leavePolicy.upsertForOrganization({
     organizationId,
@@ -1653,1018 +1549,36 @@ export async function deleteLeavePolicy(
 export async function previewAnnualLeavePromotion(
   context: ServiceContext,
   input: PreviewAnnualLeavePromotionInput
-): Promise<{
-  organizationId: string;
-  asOf: string;
-  policy: {
-    enabled: boolean;
-    thresholdDays: number;
-    leadDays: number;
-    messageTemplate: string;
-    source: "configured" | "default";
-    updatedAt: string | null;
-  };
-  noticeWindow: {
-    startAt: string;
-    endAt: string;
-    isOpen: boolean;
-  };
-  summary: {
-    activeEmployeeCount: number;
-    potentialTargetCount: number;
-    displayTargetCount: number;
-    eligibleNowCount: number;
-  };
-  targets: Array<{
-    employeeId: string;
-    name: string | null;
-    email: string | null;
-    remainingDays: number;
-    grantedDays: number;
-    usedDays: number;
-    lastAccrualYear: number | null;
-    eligibleNow: boolean;
-  }>;
-  announcementDraft: {
-    title: string;
-    body: string;
-  };
-}> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-  await requirePermission(
-    context,
-    Permissions.leaveBalanceReadAny,
-    "leave promotion preview requires permission"
-  );
-
-  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
-  ensureTenantAccess(actor, organizationId);
-
-  const asOf = input.asOf ?? new Date();
-  if (!Number.isFinite(asOf.getTime())) {
-    throw new ServiceError(400, "asOf must be a valid datetime");
-  }
-
-  const stored = await context.dataAccess.leavePolicy.findByOrganizationId(organizationId);
-  const policyRules = resolvePolicyRules(stored);
-
-  const yearEnd = resolveSeoulYearEnd(asOf);
-  const yearEndDayIndex = toSeoulDayIndex(yearEnd);
-  const noticeWindowStartDayIndex = yearEndDayIndex - policyRules.annualLeavePromotionLeadDays;
-  const noticeWindowStart = fromSeoulDayIndex(noticeWindowStartDayIndex);
-  const noticeWindowEnd = new Date(fromSeoulDayIndex(yearEndDayIndex + 1).getTime() - 1);
-  const asOfDayIndex = toSeoulDayIndex(asOf);
-  const noticeWindowOpen =
-    asOfDayIndex >= noticeWindowStartDayIndex && asOfDayIndex <= yearEndDayIndex;
-
-  const employees = await context.dataAccess.employees.list({
-    organizationId,
-    active: true
-  });
-
-  const potentialTargets: Array<{
-    employeeId: string;
-    name: string | null;
-    email: string | null;
-    remainingDays: number;
-    grantedDays: number;
-    usedDays: number;
-    lastAccrualYear: number | null;
-    eligibleNow: boolean;
-  }> = [];
-
-  if (policyRules.annualLeavePromotionEnabled) {
-    for (const employee of employees) {
-      const balance = await context.dataAccess.leaveBalance.ensure(
-        employee.id,
-        policyRules.annualGrantDays
-      );
-      if (balance.remainingDays < policyRules.annualLeavePromotionThresholdDays) {
-        continue;
-      }
-      potentialTargets.push({
-        employeeId: employee.id,
-        name: employee.name,
-        email: employee.email,
-        remainingDays: roundTo2(balance.remainingDays),
-        grantedDays: roundTo2(balance.grantedDays),
-        usedDays: roundTo2(balance.usedDays),
-        lastAccrualYear: balance.lastAccrualYear,
-        eligibleNow: noticeWindowOpen
-      });
-    }
-  }
-
-  potentialTargets.sort((left, right) => {
-    if (right.remainingDays !== left.remainingDays) {
-      return right.remainingDays - left.remainingDays;
-    }
-    return left.employeeId.localeCompare(right.employeeId);
-  });
-
-  const displayTargets = potentialTargets.filter((target) => {
-    if (target.eligibleNow) {
-      return true;
-    }
-    return Boolean(input.includeUpcoming);
-  });
-
-  const eligibleNowCount = potentialTargets.filter((target) => target.eligibleNow).length;
-  const seoulYear = new Date(asOf.getTime() + SEOUL_OFFSET_MS).getUTCFullYear();
-  const announcementBody = renderPromotionMessageTemplate(
-    policyRules.annualLeavePromotionMessageTemplate,
-    {
-      organizationId,
-      year: seoulYear,
-      thresholdDays: policyRules.annualLeavePromotionThresholdDays,
-      targetCount: displayTargets.length,
-      potentialTargetCount: potentialTargets.length,
-      eligibleNowCount,
-      noticeWindowStart: formatSeoulDay(noticeWindowStart),
-      noticeWindowEnd: formatSeoulDay(noticeWindowEnd)
-    }
-  );
-
-  await context.dataAccess.audit.append({
-    action: "leave.promotion_preview_read",
-    entityType: "LeavePolicy",
-    entityId: stored?.id,
-    organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: {
-      asOf: asOf.toISOString(),
-      includeUpcoming: Boolean(input.includeUpcoming),
-      noticeWindowOpen,
-      potentialTargetCount: potentialTargets.length,
-      displayTargetCount: displayTargets.length
-    }
-  });
-
-  return {
-    organizationId,
-    asOf: asOf.toISOString(),
-    policy: {
-      enabled: policyRules.annualLeavePromotionEnabled,
-      thresholdDays: policyRules.annualLeavePromotionThresholdDays,
-      leadDays: policyRules.annualLeavePromotionLeadDays,
-      messageTemplate: policyRules.annualLeavePromotionMessageTemplate,
-      source: stored ? "configured" : "default",
-      updatedAt: stored?.updatedAt.toISOString() ?? null
-    },
-    noticeWindow: {
-      startAt: noticeWindowStart.toISOString(),
-      endAt: noticeWindowEnd.toISOString(),
-      isOpen: noticeWindowOpen
-    },
-    summary: {
-      activeEmployeeCount: employees.length,
-      potentialTargetCount: potentialTargets.length,
-      displayTargetCount: displayTargets.length,
-      eligibleNowCount
-    },
-    targets: displayTargets,
-    announcementDraft: {
-      title: `Annual leave promotion notice (${seoulYear})`,
-      body: announcementBody
-    }
-  };
+) {
+  return previewAnnualLeavePromotionImpl(context, input);
 }
 
 export async function dispatchAnnualLeavePromotionNotice(
   context: ServiceContext,
   input: DispatchAnnualLeavePromotionNoticeInput
-): Promise<{
-  organizationId: string;
-  asOf: string;
-  policy: {
-    enabled: boolean;
-    thresholdDays: number;
-    leadDays: number;
-    messageTemplate: string;
-    source: "configured" | "default";
-    updatedAt: string | null;
-  };
-  noticeWindow: {
-    startAt: string;
-    endAt: string;
-    isOpen: boolean;
-  };
-  summary: {
-    activeEmployeeCount: number;
-    potentialTargetCount: number;
-    displayTargetCount: number;
-    eligibleNowCount: number;
-    sentTargetCount: number;
-  };
-  targets: Array<{
-    employeeId: string;
-    name: string | null;
-    email: string | null;
-    remainingDays: number;
-    grantedDays: number;
-    usedDays: number;
-    lastAccrualYear: number | null;
-    eligibleNow: boolean;
-  }>;
-  announcementDraft: {
-    title: string;
-    body: string;
-  };
-  delivery: {
-    deliveryId: string;
-    status: "dry_run" | "skipped_no_targets" | "dispatched";
-    attempted: boolean;
-    dryRun: boolean;
-    channel: "webhook" | "email_template";
-    provider: PromotionDeliveryProvider | null;
-    webhookSource: string | null;
-    webhookConfigured: boolean;
-    emailTemplateSource: string | null;
-    emailTemplateConfigured: boolean;
-    emailTemplateId: string | null;
-    recipientCount: number;
-    missingEmailCount: number;
-    dispatchedAt: string | null;
-  };
-}> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-  await requirePermission(
-    context,
-    Permissions.leaveAccrualSettle,
-    "leave promotion notice dispatch requires permission"
-  );
-
-  const preview = await previewAnnualLeavePromotion(context, {
-    organizationId: input.organizationId,
-    asOf: input.asOf,
-    includeUpcoming: input.includeUpcoming
-  });
-
-  const dryRun = input.dryRun ?? false;
-  const includeUpcoming = Boolean(input.includeUpcoming);
-  const channel = input.deliveryChannel ?? "webhook";
-  const requestedTemplateId = input.emailTemplateId?.trim() || "";
-  const configuredTemplateId = (process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID ?? "").trim();
-  const emailTemplateId = requestedTemplateId || configuredTemplateId || null;
-  const targetSnapshots = toPromotionTargetSnapshots(preview.targets);
-  const recipientStats = resolvePromotionRecipientStats(targetSnapshots);
-  const targetCount = recipientStats.targetCount;
-  const recipients = recipientStats.recipients;
-  const recipientCount = recipientStats.recipientCount;
-  const missingEmailCount = recipientStats.missingEmailCount;
-  const webhook = channel === "webhook" ? resolvePromotionWebhookConfig() : null;
-  const emailTemplateConfig =
-    channel === "email_template" ? resolvePromotionEmailTemplateConfig() : null;
-  const attempted = !dryRun && (channel === "webhook" ? targetCount > 0 : recipientCount > 0);
-
-  const provider: PromotionDeliveryProvider | null =
-    channel === "webhook"
-      ? webhook?.provider ?? null
-      : emailTemplateConfig
-        ? "email_template"
-        : null;
-
-  if (channel === "email_template" && attempted && !emailTemplateId) {
-    await recordPromotionDispatchFailure({
-      dataAccess: context.dataAccess,
-      actor,
-      preview,
-      includeUpcoming,
-      dryRun,
-      channel,
-      provider,
-      targetSnapshots,
-      targetCount,
-      recipientCount,
-      missingEmailCount,
-      attempted,
-      emailTemplateId,
-      webhookSource: null,
-      emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-      reason: "email_template_id_missing",
-      failureMessage: "email_template_id_missing"
-    });
-    throw new ServiceError(
-      400,
-      "emailTemplateId is required for deliveryChannel=email_template (or set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
-    );
-  }
-
-  if (channel === "webhook" && attempted && !webhook) {
-    await recordPromotionDispatchFailure({
-      dataAccess: context.dataAccess,
-      actor,
-      preview,
-      includeUpcoming,
-      dryRun,
-      channel,
-      provider,
-      targetSnapshots,
-      targetCount,
-      recipientCount,
-      missingEmailCount,
-      attempted,
-      emailTemplateId,
-      webhookSource: null,
-      emailTemplateSource: null,
-      reason: "webhook_not_configured",
-      failureMessage: "webhook_not_configured"
-    });
-    throw new ServiceError(
-      503,
-      "leave promotion webhook is not configured (set FLOWHR_LEAVE_PROMOTION_* or FLOWHR_ALERT_* webhook env)"
-    );
-  }
-
-  if (channel === "email_template" && attempted && !emailTemplateConfig) {
-    await recordPromotionDispatchFailure({
-      dataAccess: context.dataAccess,
-      actor,
-      preview,
-      includeUpcoming,
-      dryRun,
-      channel,
-      provider,
-      targetSnapshots,
-      targetCount,
-      recipientCount,
-      missingEmailCount,
-      attempted,
-      emailTemplateId,
-      webhookSource: null,
-      emailTemplateSource: null,
-      reason: "email_template_not_configured",
-      failureMessage: "email_template_not_configured"
-    });
-    throw new ServiceError(
-      503,
-      "leave promotion email template dispatch is not configured (set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL and FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)"
-    );
-  }
-
-  const message = buildPromotionNoticeMessage({
-    organizationId: preview.organizationId,
-    asOf: preview.asOf,
-    includeUpcoming,
-    dryRun,
-    noticeWindow: preview.noticeWindow,
-    summary: preview.summary,
-    targets: preview.targets,
-    announcementDraft: preview.announcementDraft
-  });
-
-  let status: "dry_run" | "skipped_no_targets" | "dispatched" = "dry_run";
-  let dispatchedAt: string | null = null;
-
-  if (attempted) {
-    try {
-      if (channel === "webhook" && webhook) {
-        await sendPromotionWebhook(webhook, message);
-      } else if (channel === "email_template" && emailTemplateConfig && emailTemplateId) {
-        await sendPromotionEmailTemplate(emailTemplateConfig, {
-          templateId: emailTemplateId,
-          from: emailTemplateConfig.from,
-          subject: preview.announcementDraft.title,
-          body: preview.announcementDraft.body,
-          organizationId: preview.organizationId,
-          asOf: preview.asOf,
-          includeUpcoming,
-          noticeWindow: preview.noticeWindow,
-          summary: preview.summary,
-          recipients
-        });
-      }
-      status = "dispatched";
-      dispatchedAt = new Date().toISOString();
-    } catch (error) {
-      await recordPromotionDispatchFailure({
-        dataAccess: context.dataAccess,
-        actor,
-        preview,
-        includeUpcoming,
-        dryRun,
-        channel,
-        provider,
-        targetSnapshots,
-        targetCount,
-        recipientCount,
-        missingEmailCount,
-        attempted,
-        emailTemplateId,
-        webhookSource: webhook?.source ?? null,
-        emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-        reason: "dispatch_request_failed",
-        failureMessage: error instanceof Error ? error.message : "unknown error"
-      });
-      if (channel === "webhook") {
-        throw new ServiceError(502, "leave promotion webhook request failed");
-      }
-      throw new ServiceError(502, "leave promotion email template request failed");
-    }
-  } else if (!dryRun) {
-    status = "skipped_no_targets";
-  }
-
-  const sentTargetCount =
-    status === "dispatched" ? (channel === "webhook" ? targetCount : recipientCount) : 0;
-  const persisted = await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-    organizationId: preview.organizationId,
-    asOf: preview.asOf,
-    includeUpcoming,
-    dryRun,
-    channel,
-    provider,
-    status,
-    announcementTitle: preview.announcementDraft.title,
-    announcementBody: preview.announcementDraft.body,
-    targets: targetSnapshots,
-    sentTargetCount,
-    webhookSource: webhook?.source ?? null,
-    emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-    emailTemplateId,
-    dispatchedAt: dispatchedAt ? new Date(dispatchedAt) : null,
-    actorRole: actor.role,
-    actorId: actor.id,
-    attempted
-  });
-  const action =
-    status === "dispatched"
-      ? "leave.promotion_notice.dispatched"
-      : status === "skipped_no_targets"
-        ? "leave.promotion_notice.skipped"
-        : "leave.promotion_notice.dry_run";
-
-  await context.dataAccess.audit.append({
-    action,
-    entityType: "LeavePolicy",
-    organizationId: preview.organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: {
-      asOf: preview.asOf,
-      includeUpcoming,
-      dryRun,
-      targetCount,
-      recipientCount,
-      missingEmailCount,
-      sentTargetCount,
-      status,
-      channel,
-      provider,
-      webhookSource: webhook?.source ?? null,
-      emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-      emailTemplateId
-    }
-  });
-
-  if (status === "dispatched" && dispatchedAt) {
-    try {
-      await getEventPublisher(context).publish({
-        name: "leave.promotion.notice.dispatched.v1",
-        occurredAt: dispatchedAt,
-        entityType: "LeavePolicy",
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          organizationId: preview.organizationId,
-          deliveryId: persisted.deliveryId,
-          asOf: preview.asOf,
-          includeUpcoming,
-          targetCount,
-          recipientCount,
-          missingEmailCount,
-          channel,
-          provider,
-          webhookSource: webhook?.source ?? null,
-          emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-          emailTemplateId,
-          announcementTitle: preview.announcementDraft.title,
-          noticeWindow: preview.noticeWindow,
-          targetEmployeeIds:
-            channel === "webhook"
-              ? preview.targets.slice(0, 100).map((target) => target.employeeId)
-              : recipients.slice(0, 100).map((target) => target.employeeId)
-        }
-      });
-    } catch (error) {
-      try {
-        await context.dataAccess.audit.append({
-          action: "leave.promotion_notice.event_publish_failed",
-          entityType: "LeavePolicy",
-          organizationId: preview.organizationId,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: {
-            asOf: preview.asOf,
-            includeUpcoming,
-            dispatchedAt,
-            targetCount,
-            recipientCount,
-            missingEmailCount,
-            channel,
-            provider,
-            webhookSource: webhook?.source ?? null,
-            emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-            emailTemplateId,
-            error: error instanceof Error ? error.message : "unknown error"
-          }
-        });
-      } catch {
-        // Non-blocking failure path: dispatch already completed.
-      }
-    }
-  }
-
-  return {
-    organizationId: preview.organizationId,
-    asOf: preview.asOf,
-    policy: preview.policy,
-    noticeWindow: preview.noticeWindow,
-    summary: {
-      activeEmployeeCount: preview.summary.activeEmployeeCount,
-      potentialTargetCount: preview.summary.potentialTargetCount,
-      displayTargetCount: preview.summary.displayTargetCount,
-      eligibleNowCount: preview.summary.eligibleNowCount,
-      sentTargetCount
-    },
-    targets: preview.targets,
-    announcementDraft: preview.announcementDraft,
-    delivery: {
-      deliveryId: persisted.deliveryId,
-      status,
-      attempted,
-      dryRun,
-      channel,
-      provider,
-      webhookSource: webhook?.source ?? null,
-      webhookConfigured: webhook !== null,
-      emailTemplateSource: emailTemplateConfig?.urlSource ?? null,
-      emailTemplateConfigured: emailTemplateConfig !== null,
-      emailTemplateId,
-      recipientCount,
-      missingEmailCount,
-      dispatchedAt
-    }
-  };
+) {
+  return dispatchAnnualLeavePromotionNoticeImpl(context, input);
 }
 
 export async function listLeavePromotionDeliveries(
   context: ServiceContext,
   input: ListLeavePromotionDeliveriesInput
-): Promise<{
-  organizationId: string;
-  deliveries: PromotionDeliverySummaryView[];
-}> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-  await requirePermission(
-    context,
-    Permissions.leaveAccrualSettle,
-    "leave promotion delivery history list requires permission"
-  );
-
-  const organizationId = resolveTargetOrganizationId(actor, input.organizationId);
-  ensureTenantAccess(actor, organizationId);
-
-  if (input.limit !== undefined) {
-    if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 200) {
-      throw new ServiceError(400, "limit must be an integer between 1 and 200");
-    }
-  }
-
-  const deliveries = await context.dataAccess.leavePromotionDeliveries.list({
-    organizationId,
-    channel: input.channel,
-    status: input.status,
-    retryOfDeliveryId: input.retryOfDeliveryId,
-    limit: input.limit
-  });
-
-  await context.dataAccess.audit.append({
-    action: "leave.promotion_delivery.list_read",
-    entityType: "LeavePromotionDelivery",
-    organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: {
-      channel: input.channel ?? null,
-      status: input.status ?? null,
-      retryOfDeliveryId: input.retryOfDeliveryId ?? null,
-      limit: input.limit ?? null,
-      resultCount: deliveries.length
-    }
-  });
-
-  return {
-    organizationId,
-    deliveries: deliveries.map(toPromotionDeliverySummaryView)
-  };
+) {
+  return listLeavePromotionDeliveriesImpl(context, input);
 }
 
 export async function readLeavePromotionDelivery(
   context: ServiceContext,
   input: ReadLeavePromotionDeliveryInput
-): Promise<{
-  delivery: PromotionDeliverySummaryView & {
-    announcementTitle: string;
-    announcementBody: string;
-  };
-  recipients: PromotionDeliveryRecipientView[];
-  sourceDelivery: PromotionDeliverySummaryView | null;
-  retries: PromotionDeliverySummaryView[];
-}> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-  await requirePermission(
-    context,
-    Permissions.leaveAccrualSettle,
-    "leave promotion delivery history detail requires permission"
-  );
-
-  const deliveryId = input.deliveryId.trim();
-  if (!deliveryId) {
-    throw new ServiceError(400, "deliveryId is required");
-  }
-
-  const delivery = await context.dataAccess.leavePromotionDeliveries.findById(deliveryId);
-  if (!delivery) {
-    throw new ServiceError(404, "leave promotion delivery not found");
-  }
-  if (input.organizationId && input.organizationId !== delivery.organizationId) {
-    throw new ServiceError(404, "leave promotion delivery not found");
-  }
-  ensureTenantAccess(actor, delivery.organizationId);
-
-  const recipients = await context.dataAccess.leavePromotionDeliveries.listRecipients({
-    deliveryId: delivery.id
-  });
-  const retries = await context.dataAccess.leavePromotionDeliveries.list({
-    organizationId: delivery.organizationId,
-    retryOfDeliveryId: delivery.id,
-    limit: 200
-  });
-  const sourceDelivery =
-    delivery.retryOfDeliveryId === null
-      ? null
-      : await context.dataAccess.leavePromotionDeliveries.findById(delivery.retryOfDeliveryId);
-
-  await context.dataAccess.audit.append({
-    action: "leave.promotion_delivery.read",
-    entityType: "LeavePromotionDelivery",
-    entityId: delivery.id,
-    organizationId: delivery.organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: {
-      recipientCount: recipients.length,
-      retryCount: retries.length,
-      sourceDeliveryId: sourceDelivery?.id ?? null
-    }
-  });
-
-  return {
-    delivery: {
-      ...toPromotionDeliverySummaryView(delivery),
-      announcementTitle: delivery.announcementTitle,
-      announcementBody: delivery.announcementBody
-    },
-    recipients: recipients.map(toPromotionDeliveryRecipientView),
-    sourceDelivery: sourceDelivery ? toPromotionDeliverySummaryView(sourceDelivery) : null,
-    retries: retries.map(toPromotionDeliverySummaryView)
-  };
+) {
+  return readLeavePromotionDeliveryImpl(context, input);
 }
 
 export async function retryLeavePromotionDelivery(
   context: ServiceContext,
   input: RetryLeavePromotionDeliveryInput
-): Promise<{
-  sourceDeliveryId: string;
-  delivery: PromotionDeliverySummaryView & {
-    attempted: boolean;
-    emailTemplateConfigured: boolean;
-  };
-  recipients: PromotionDeliveryRecipientView[];
-  retries: PromotionDeliverySummaryView[];
-}> {
-  const actor = context.actor;
-  if (!actor) {
-    throw new ServiceError(401, "missing or invalid actor context");
-  }
-  await requirePermission(
-    context,
-    Permissions.leaveAccrualSettle,
-    "leave promotion delivery retry requires permission"
-  );
-
-  const deliveryId = input.deliveryId.trim();
-  if (!deliveryId) {
-    throw new ServiceError(400, "deliveryId is required");
-  }
-
-  const sourceDelivery = await context.dataAccess.leavePromotionDeliveries.findById(deliveryId);
-  if (!sourceDelivery) {
-    throw new ServiceError(404, "leave promotion delivery not found");
-  }
-  if (input.organizationId && input.organizationId !== sourceDelivery.organizationId) {
-    throw new ServiceError(404, "leave promotion delivery not found");
-  }
-  ensureTenantAccess(actor, sourceDelivery.organizationId);
-
-  if (sourceDelivery.channel !== "email_template") {
-    throw new ServiceError(409, "retry is supported only for email-template promotion deliveries");
-  }
-
-  const sourceRecipients = await context.dataAccess.leavePromotionDeliveries.listRecipients({
-    deliveryId: sourceDelivery.id
-  });
-  if (sourceRecipients.length === 0) {
-    throw new ServiceError(409, "source delivery has no recipient snapshots");
-  }
-
-  const sourceRecipientsByEmployeeId = new Map<string, LeavePromotionDeliveryRecipientEntity>();
-  for (const recipient of sourceRecipients) {
-    sourceRecipientsByEmployeeId.set(recipient.employeeId, recipient);
-  }
-  const requestedEmployeeIds = normalizeRecipientEmployeeIds(input.recipientEmployeeIds);
-  if (requestedEmployeeIds.length > 0) {
-    const unknownEmployeeIds = requestedEmployeeIds.filter(
-      (employeeId) => !sourceRecipientsByEmployeeId.has(employeeId)
-    );
-    if (unknownEmployeeIds.length > 0) {
-      throw new ServiceError(400, "recipientEmployeeIds include unknown employee(s)", {
-        unknownEmployeeIds
-      });
-    }
-  }
-
-  const selectedRecipients =
-    requestedEmployeeIds.length > 0
-      ? requestedEmployeeIds.flatMap((employeeId) => {
-          const recipient = sourceRecipientsByEmployeeId.get(employeeId);
-          return recipient ? [recipient] : [];
-        })
-      : sourceRecipients.filter((recipient) => recipient.status === "FAILED");
-  const selectedTargets = toPromotionTargetSnapshotsFromRecipients(selectedRecipients);
-  const selectedRecipientStats = resolvePromotionRecipientStats(selectedTargets);
-  const dispatchRecipients = selectedRecipientStats.recipients;
-  const selectedTargetCount = selectedRecipientStats.targetCount;
-  const recipientCount = selectedRecipientStats.recipientCount;
-  const missingEmailCount = selectedRecipientStats.missingEmailCount;
-
-  const dryRun = input.dryRun ?? false;
-  const attempted = !dryRun && recipientCount > 0;
-  const requestedTemplateId = input.emailTemplateId?.trim() || "";
-  const sourceTemplateId = sourceDelivery.emailTemplateId?.trim() || "";
-  const configuredTemplateId = (process.env.FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID ?? "").trim();
-  const emailTemplateId = requestedTemplateId || sourceTemplateId || configuredTemplateId || null;
-  const emailTemplateConfig = resolvePromotionEmailTemplateConfig();
-  const provider: PromotionDeliveryProvider | null = emailTemplateConfig ? "email_template" : null;
-  const retryCountByEmployeeId = toRetryCountByEmployeeId(sourceRecipients);
-
-  const persistBase = {
-    organizationId: sourceDelivery.organizationId,
-    asOf: sourceDelivery.asOf.toISOString(),
-    includeUpcoming: sourceDelivery.includeUpcoming,
-    dryRun,
-    channel: "email_template" as const,
-    provider,
-    announcementTitle: sourceDelivery.announcementTitle,
-    announcementBody: sourceDelivery.announcementBody,
-    targets: selectedTargets,
-    webhookSource: null,
-    emailTemplateSource: emailTemplateConfig?.urlSource ?? sourceDelivery.emailTemplateSource,
-    emailTemplateId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    retryOfDeliveryId: sourceDelivery.id,
-    retryCountByEmployeeId,
-    attempted
-  };
-
-  if (attempted && !emailTemplateId) {
-    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-      ...persistBase,
-      status: "failed",
-      sentTargetCount: 0,
-      dispatchedAt: null,
-      failureMessage: "email_template_id_missing"
-    });
-    await context.dataAccess.audit.append({
-      action: "leave.promotion_notice.retry_failed",
-      entityType: "LeavePromotionDelivery",
-      entityId: sourceDelivery.id,
-      organizationId: sourceDelivery.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: {
-        reason: "email_template_id_missing",
-        requestedEmployeeIds,
-        selectedTargetCount,
-        recipientCount,
-        missingEmailCount
-      }
-    });
-    throw new ServiceError(
-      400,
-      "emailTemplateId is required for retry (request body, source delivery, or FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_ID)"
-    );
-  }
-
-  if (attempted && !emailTemplateConfig) {
-    await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-      ...persistBase,
-      status: "failed",
-      sentTargetCount: 0,
-      dispatchedAt: null,
-      failureMessage: "email_template_not_configured"
-    });
-    await context.dataAccess.audit.append({
-      action: "leave.promotion_notice.retry_failed",
-      entityType: "LeavePromotionDelivery",
-      entityId: sourceDelivery.id,
-      organizationId: sourceDelivery.organizationId,
-      actorRole: actor.role,
-      actorId: actor.id,
-      payload: {
-        reason: "email_template_not_configured",
-        requestedEmployeeIds,
-        selectedTargetCount,
-        recipientCount,
-        missingEmailCount
-      }
-    });
-    throw new ServiceError(
-      503,
-      "leave promotion email template retry is not configured (set FLOWHR_LEAVE_PROMOTION_EMAIL_TEMPLATE_URL and FLOWHR_LEAVE_PROMOTION_EMAIL_FROM)"
-    );
-  }
-
-  let status: PromotionDeliveryStatus = "dry_run";
-  let dispatchedAt: string | null = null;
-
-  if (attempted && emailTemplateConfig && emailTemplateId) {
-    try {
-      await sendPromotionEmailTemplate(emailTemplateConfig, {
-        templateId: emailTemplateId,
-        from: emailTemplateConfig.from,
-        subject: sourceDelivery.announcementTitle,
-        body: sourceDelivery.announcementBody,
-        organizationId: sourceDelivery.organizationId,
-        asOf: sourceDelivery.asOf.toISOString(),
-        includeUpcoming: sourceDelivery.includeUpcoming,
-        recipients: dispatchRecipients
-      });
-      status = "dispatched";
-      dispatchedAt = new Date().toISOString();
-    } catch (error) {
-      await context.dataAccess.audit.append({
-        action: "leave.promotion_notice.retry_failed",
-        entityType: "LeavePromotionDelivery",
-        entityId: sourceDelivery.id,
-        organizationId: sourceDelivery.organizationId,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          reason: "email_template_request_failed",
-          requestedEmployeeIds,
-          selectedTargetCount,
-          recipientCount,
-          missingEmailCount,
-          emailTemplateSource: emailTemplateConfig.urlSource,
-          emailTemplateId,
-          error: error instanceof Error ? error.message : "unknown error"
-        }
-      });
-      await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-        ...persistBase,
-        status: "failed",
-        sentTargetCount: 0,
-        dispatchedAt: null,
-        failureMessage: error instanceof Error ? error.message : "unknown error"
-      });
-      throw new ServiceError(502, "leave promotion email template retry request failed");
-    }
-  } else if (!dryRun) {
-    status = "skipped_no_targets";
-  }
-
-  const sentTargetCount = status === "dispatched" ? recipientCount : 0;
-  const persisted = await persistPromotionDeliveryHistory(context.dataAccess.leavePromotionDeliveries, {
-    ...persistBase,
-    status,
-    sentTargetCount,
-    dispatchedAt: dispatchedAt ? new Date(dispatchedAt) : null
-  });
-
-  const action =
-    status === "dispatched"
-      ? "leave.promotion_notice.retry_dispatched"
-      : status === "skipped_no_targets"
-        ? "leave.promotion_notice.retry_skipped"
-        : "leave.promotion_notice.retry_dry_run";
-  await context.dataAccess.audit.append({
-    action,
-    entityType: "LeavePromotionDelivery",
-    entityId: persisted.deliveryId,
-    organizationId: sourceDelivery.organizationId,
-    actorRole: actor.role,
-    actorId: actor.id,
-    payload: {
-      sourceDeliveryId: sourceDelivery.id,
-      requestedEmployeeIds,
-      selectedTargetCount,
-      recipientCount,
-      missingEmailCount,
-      sentTargetCount,
-      status,
-      dryRun,
-      attempted,
-      emailTemplateSource: emailTemplateConfig?.urlSource ?? sourceDelivery.emailTemplateSource,
-      emailTemplateId
-    }
-  });
-
-  if (status === "dispatched" && dispatchedAt) {
-    try {
-      await getEventPublisher(context).publish({
-        name: "leave.promotion.notice.dispatched.v1",
-        occurredAt: dispatchedAt,
-        entityType: "LeavePromotionDelivery",
-        entityId: persisted.deliveryId,
-        actorRole: actor.role,
-        actorId: actor.id,
-        payload: {
-          organizationId: sourceDelivery.organizationId,
-          deliveryId: persisted.deliveryId,
-          retryOfDeliveryId: sourceDelivery.id,
-          asOf: sourceDelivery.asOf.toISOString(),
-          includeUpcoming: sourceDelivery.includeUpcoming,
-          targetCount: selectedTargetCount,
-          recipientCount,
-          missingEmailCount,
-          channel: "email_template",
-          provider,
-          emailTemplateSource: emailTemplateConfig?.urlSource ?? sourceDelivery.emailTemplateSource,
-          emailTemplateId,
-          announcementTitle: sourceDelivery.announcementTitle,
-          targetEmployeeIds: dispatchRecipients.slice(0, 100).map((recipient) => recipient.employeeId)
-        }
-      });
-    } catch (error) {
-      try {
-        await context.dataAccess.audit.append({
-          action: "leave.promotion_notice.retry_event_publish_failed",
-          entityType: "LeavePromotionDelivery",
-          entityId: persisted.deliveryId,
-          organizationId: sourceDelivery.organizationId,
-          actorRole: actor.role,
-          actorId: actor.id,
-          payload: {
-            sourceDeliveryId: sourceDelivery.id,
-            dispatchedAt,
-            error: error instanceof Error ? error.message : "unknown error"
-          }
-        });
-      } catch {
-        // Non-blocking failure path: retry dispatch already completed.
-      }
-    }
-  }
-
-  const persistedDelivery = await context.dataAccess.leavePromotionDeliveries.findById(persisted.deliveryId);
-  if (!persistedDelivery) {
-    throw new ServiceError(500, "retry delivery history persistence failed");
-  }
-  const persistedRecipients = await context.dataAccess.leavePromotionDeliveries.listRecipients({
-    deliveryId: persisted.deliveryId
-  });
-  const retries = await context.dataAccess.leavePromotionDeliveries.list({
-    organizationId: sourceDelivery.organizationId,
-    retryOfDeliveryId: sourceDelivery.id,
-    limit: 200
-  });
-
-  return {
-    sourceDeliveryId: sourceDelivery.id,
-    delivery: {
-      ...toPromotionDeliverySummaryView(persistedDelivery),
-      attempted,
-      emailTemplateConfigured: emailTemplateConfig !== null
-    },
-    recipients: persistedRecipients.map(toPromotionDeliveryRecipientView),
-    retries: retries.map(toPromotionDeliverySummaryView)
-  };
+) {
+  return retryLeavePromotionDeliveryImpl(context, input);
 }
 
 export const leaveServiceInternals = {
@@ -2673,6 +1587,7 @@ export const leaveServiceInternals = {
   resolveSeoulYearEnd,
   renderPromotionMessageTemplate
 };
+
 
 
 
