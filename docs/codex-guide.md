@@ -1058,3 +1058,90 @@ Work Item(work-items/) → Spec(specs/) → 구현 → 테스트 → PR → 머�
 | verbose-naming | 적층으로 인한 함수/타입명 80자+ | `buildCloseReportDistributionSignoffClosurePacketReleaseDigestAckLedgerExceptionLogRouteHref` |
 
 이 패턴들이 WI 제목이나 섹션 ID, 디렉토리 구조에 나타나면 **블로트 신호**로 간주한다.
+
+---
+
+# Part 4: PR 템플릿 CI 준수 규칙
+
+> CI 스크립트 `scripts/ci/check_pr_template.py`가 PR body를 자동 검증한다.
+> 아래 규칙을 어기면 contract-governance job이 반드시 실패한다.
+
+## 규칙 1: 모든 Required Checkbox는 `[x]`로 체크
+
+N/A인 항목도 반드시 `[x]`로 체크하고 괄호 안에 사유를 적는다. `[ ]`로 두면 CI 실패.
+
+```markdown
+# 올바른 예
+- [x] Domain `contract.yaml` is added or updated. (N/A: no contract change)
+- [x] Unit tests
+- [x] Migration smoke
+
+# 잘못된 예 (CI 실패)
+- [ ] Unit tests
+- [x] Domain `contract.yaml` is added or updated. (N/A: no contract change)
+```
+
+대상 체크박스 전체 목록:
+- Work item file is linked and updated.
+- Domain `contract.yaml` is added or updated.
+- `test-cases.md` is added or updated.
+- Contract version was bumped when contract changed.
+- QA Spec Gate and Code Gate checks are completed.
+- QA persona review completed (checklist evidence attached).
+- Unit tests
+- Integration tests
+- Regression checks
+- Lint/typecheck
+- Migration smoke
+- Contract governance checks
+
+## 규칙 2: ADR 섹션은 둘 중 하나 이상 체크
+
+```markdown
+- [x] ADR requirement reviewed:
+  - [ ] ADR added (required for breaking/cross-domain/security-impacting change), or
+  - [x] Not required with reason.
+```
+
+## 규칙 3: UI changed files는 같은 줄에 작성
+
+CI의 `has_non_empty_field` regex가 `필드명: 값`을 **같은 줄**에서만 매칭한다.
+다음 줄에 목록으로 적으면 빈 값으로 판정되어 CI 실패.
+
+```markdown
+# 올바른 예
+- UI changed files: `src/app/admin/page.tsx`, `src/components/SessionMenu.tsx`
+
+# 잘못된 예 (CI 실패)
+- UI changed files:
+  - `src/app/admin/page.tsx`
+  - `src/components/SessionMenu.tsx`
+```
+
+## 규칙 4: Delivery Balance는 UI/Backend 중 하나만 체크
+
+```markdown
+# UI 변경이 있는 경우
+- [x] UI/UX surface changed (at least one page/component/style updated).
+- [ ] Backend-only exception approved (reason and next UI WI required).
+
+# Backend-only인 경우
+- [ ] UI/UX surface changed (at least one page/component/style updated).
+- [x] Backend-only exception approved (reason and next UI WI required).
+```
+
+## 규칙 5: Break-Glass 섹션은 일반 PR에서 체크하지 않는다
+
+Break-glass trigger를 체크하면 모든 하위 필드(Incident ID, 승인자 등)가 필수가 된다.
+일반 PR에서는 전부 `[ ]`로 둔다.
+
+## 규칙 6: `gh run rerun`은 PR body 변경을 반영하지 않는다
+
+PR body를 수정한 후에는 빈 커밋 push로 새 CI를 트리거해야 한다.
+`gh run rerun`은 기존 event payload(이전 body)를 재사용하므로 수정이 반영되지 않는다.
+
+```bash
+# PR body 수정 후 CI 재트리거 방법
+git commit --allow-empty -m "chore: trigger CI with updated PR body"
+git push
+```

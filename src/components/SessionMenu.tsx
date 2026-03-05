@@ -14,7 +14,7 @@ type SessionMenuProps = {
 
 export default function SessionMenu({ className }: SessionMenuProps) {
   const router = useRouter();
-  const { snapshot, error } = useSupabaseSession();
+  const { snapshot, error, loading } = useSupabaseSession();
   const { t } = useI18n();
   const [pending, setPending] = useState(false);
 
@@ -47,6 +47,12 @@ export default function SessionMenu({ className }: SessionMenuProps) {
             {t("sessionMenu.signOut")}
           </button>
         </>
+      ) : loading ? (
+        <div className="session-meta">
+          <div className="session-id">
+            <strong>{t("admin.onboarding.loading")}</strong>
+          </div>
+        </div>
       ) : (
         <>
           <div className="session-meta">
