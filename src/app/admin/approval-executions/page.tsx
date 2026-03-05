@@ -5,6 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AdminApprovalExecutionsPageView } from "@/app/admin/approval-executions/page-view";
 import {
+  runApproveExecutionAction,
+  runEscalationAction,
+  runRejectExecutionAction
+} from "@/app/admin/approval-executions/page-action-helpers";
+import {
   getStalledHours,
   isTruthyFlag,
   normalizeApprovalDomainFilter,
@@ -201,47 +206,6 @@ export default function AdminApprovalExecutionsPage() {
     setTimeout(() => setStatusMessage(""), 3000);
   }
 
-  function readApiErrorMessage(body: unknown) {
-    if (!body || typeof body !== "object") {
-      return null;
-    }
-    const parsed = body as { error?: unknown; message?: unknown };
-    if (typeof parsed.error === "string" && parsed.error.trim().length > 0) {
-      return parsed.error.trim();
-    }
-    if (typeof parsed.message === "string" && parsed.message.trim().length > 0) {
-      return parsed.message.trim();
-    }
-    return null;
-  }
-
-  function isBenefitRequestExecution(execution: ApprovalExecutionDto) {
-    return execution.targetEntityType === "BENEFIT_REQUEST";
-  }
-
-  function resolveExecutionActionPath(
-    execution: ApprovalExecutionDto,
-    action: "approve" | "reject"
-  ): string | null {
-    if (isBenefitRequestExecution(execution)) {
-      return `/api/benefits/requests/${execution.targetEntityId}/decision`;
-    }
-    if (execution.domain === "LEAVE") {
-      return action === "approve"
-        ? `/api/leave/requests/${execution.targetEntityId}/approve`
-        : `/api/leave/requests/${execution.targetEntityId}/reject`;
-    }
-    if (execution.domain === "ATTENDANCE") {
-      return action === "approve"
-        ? `/api/attendance/records/${execution.targetEntityId}/approve`
-        : `/api/attendance/records/${execution.targetEntityId}/reject`;
-    }
-    if (execution.domain === "PAYROLL" && action === "approve") {
-      return `/api/payroll/runs/${execution.targetEntityId}/confirm`;
-    }
-    return null;
-  }
-
   async function callApi(
     label: string,
     method: "GET" | "POST",
@@ -372,162 +336,42 @@ export default function AdminApprovalExecutionsPage() {
     if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
-
-    const path = resolveExecutionActionPath(execution, "approve");
-    if (!path) {
-      return;
-    }
-    const isBenefitExecution = isBenefitRequestExecution(execution);
-
-    const label =
-      isBenefitExecution
-        ? isKoLocale
-          ? "복리후생 요청 승인"
-          : "Approve benefit request"
-        : execution.domain === "LEAVE"
-        ? isKoLocale
-          ? "휴가 요청 승인"
-          : "Approve leave request"
-        : execution.domain === "PAYROLL"
-          ? isKoLocale
-            ? "급여 실행 확정"
-            : "Confirm payroll run"
-        : isKoLocale
-          ? "출퇴근 기록 승인"
-          : "Approve attendance record";
-
-    const { response, body } = await callApi(
-      label,
-      "POST",
-      path,
-      isBenefitExecution ? { decision: "APPROVED" } : undefined
-    );
-    if (!response.ok) {
-      const errorMessage = readApiErrorMessage(body);
-      showTransientStatus(
-        errorMessage ??
-          (isKoLocale ? "승인 요청을 처리하지 못했습니다." : "Failed to process approval request.")
-      );
-      return;
-    }
-
-    showTransientStatus(
-      isKoLocale ? "승인 처리 후 목록을 갱신했습니다." : "Approval completed and queue reloaded."
-    );
-    await loadExecutions();
+    await runApproveExecutionAction(execution, {
+      isKoLocale,
+      callApi,
+      showTransientStatus,
+      reloadExecutions: loadExecutions
+    });
   }
 
   async function rejectExecution(execution: ApprovalExecutionDto, reason: string) {
     if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
-
-    const normalizedReason = reason.trim();
-    if (normalizedReason.length === 0) {
-      showTransientStatus(isKoLocale ? "반려 사유를 입력해 주세요." : "Rejection reason is required.");
-      return;
-    }
-
-    const path = resolveExecutionActionPath(execution, "reject");
-    if (!path) {
-      return;
-    }
-    const isBenefitExecution = isBenefitRequestExecution(execution);
-
-    const rejectLabel =
-      isBenefitExecution
-        ? isKoLocale
-          ? "복리후생 요청 반려"
-          : "Reject benefit request"
-        : execution.domain === "LEAVE"
-        ? isKoLocale
-          ? "휴가 요청 반려"
-          : "Reject leave request"
-        : isKoLocale
-          ? "출퇴근 기록 반려"
-          : "Reject attendance record";
-
-    const { response, body } = await callApi(
-      rejectLabel,
-      "POST",
-      path,
-      isBenefitExecution
-        ? {
-            decision: "REJECTED",
-            reviewNote: normalizedReason
-          }
-        : {
-            reason: normalizedReason
-          }
-    );
-    if (!response.ok) {
-      const errorMessage = readApiErrorMessage(body);
-      showTransientStatus(
-        errorMessage ??
-          (isKoLocale ? "반려 요청을 처리하지 못했습니다." : "Failed to process rejection request.")
-      );
-      return;
-    }
-
-    showTransientStatus(
-      isKoLocale ? "반려 처리 후 목록을 갱신했습니다." : "Rejection completed and queue reloaded."
-    );
-    await loadExecutions();
+    await runRejectExecutionAction(execution, reason, {
+      isKoLocale,
+      callApi,
+      showTransientStatus,
+      reloadExecutions: loadExecutions
+    });
   }
 
   async function triggerEscalation(dryRun: boolean) {
     if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
-
-    const payload = {
-      organizationId: organizationId.trim(),
-      domain: domain || undefined,
-      stalledHoursMin: stalledHoursMin.trim() ? Number(stalledHoursMin.trim()) : undefined,
-      limit: limit.trim() ? Number(limit.trim()) : undefined,
-      asOf: asOfInput.trim() ? toIso(asOfInput) : undefined,
-      dryRun,
-      notificationChannel: notificationChannel.trim() || undefined
-    };
-
-    const { response, body } = await callApi(
-      dryRun
-        ? isKoLocale
-          ? "정체 에스컬레이션 드라이런"
-          : "Escalation dry run"
-        : isKoLocale
-          ? "정체 에스컬레이션 실행"
-          : "Escalation dispatch",
-      "POST",
-      "/api/approval/executions/escalate",
-      payload
-    );
-
-    if (!response.ok || !body || typeof body !== "object") {
-      return;
-    }
-
-    const parsed = body as EscalationResultDto;
-    setEscalationResult(parsed);
-    if (parsed.dryRun) {
-      showTransientStatus(
-        isKoLocale
-          ? `드라이런 완료: 후보 ${parsed.counts.candidates}건`
-          : `Dry run complete: ${parsed.counts.candidates} candidate(s)`
-      );
-    } else if (parsed.counts.requested > 0) {
-      showTransientStatus(
-        isKoLocale
-          ? `에스컬레이션 전송 완료: ${parsed.counts.requested}건`
-          : `Escalation sent: ${parsed.counts.requested} item(s)`
-      );
-    } else {
-      showTransientStatus(
-        isKoLocale
-          ? "에스컬레이션 후보가 없어 전송을 건너뛰었습니다."
-          : "No escalation candidate found, dispatch skipped."
-      );
-    }
+    await runEscalationAction(dryRun, {
+      isKoLocale,
+      organizationId,
+      domain,
+      stalledHoursMin,
+      limit,
+      asOfInput,
+      notificationChannel,
+      callApi,
+      showTransientStatus,
+      setEscalationResult
+    });
   }
 
   return (
