@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 import {
   buildQuery,
   firstDayOfMonthLocal,
@@ -24,6 +23,7 @@ import {
   resolveAdminDashboardPrioritySummary,
   resolveAdminDashboardPriorityTitle
 } from "@/app/admin/page-focus-copy";
+import { useAdminApprovalQuickActions } from "@/app/admin/page-approval-actions";
 import { performAdminApiCall } from "@/app/admin/page-api-helpers";
 import { buildAdminSummaryFromApiResults } from "@/app/admin/page-summary-helpers";
 import { EMPTY_SUMMARY, type AdminSummary } from "@/app/admin/page-dashboard-types";
@@ -58,11 +58,6 @@ export default function AdminDashboardPage() {
   const [monthlyLeaveCount, setMonthlyLeaveCount] = useState(0);
   const [pendingAttendanceQueue, setPendingAttendanceQueue] = useState<AttendanceRecordDto[]>([]);
   const [pendingLeaveQueue, setPendingLeaveQueue] = useState<LeaveRequestDto[]>([]);
-  const [approvalQuickActionPending, setApprovalQuickActionPending] = useState<"attendance" | "leave" | null>(null);
-  const [approvalQuickActionNotice, setApprovalQuickActionNotice] = useState<{
-    ok: boolean;
-    message: string;
-  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const focusCards = useMemo(() => buildAdminDashboardFocusCards(summary), [summary]);
@@ -99,20 +94,6 @@ export default function AdminDashboardPage() {
     },
     [runtimeLocale]
   );
-
-  function readApiErrorMessage(body: unknown) {
-    if (!body || typeof body !== "object") {
-      return null;
-    }
-    const parsed = body as { error?: unknown; message?: unknown };
-    if (typeof parsed.error === "string" && parsed.error.trim().length > 0) {
-      return parsed.error.trim();
-    }
-    if (typeof parsed.message === "string" && parsed.message.trim().length > 0) {
-      return parsed.message.trim();
-    }
-    return null;
-  }
 
   const refreshSummary = useCallback(async () => {
     if (supabaseSessionLoading) {
@@ -234,77 +215,17 @@ export default function AdminDashboardPage() {
     runtimeLocale
   ]);
 
-  async function runApprovalQuickAction(queue: "leave" | "attendance") {
-    if (requiresLoginSession) {
-      setLoadError(productionSessionRequiredNotice);
-      return;
-    }
-
-    const targetId =
-      queue === "leave" ? firstPendingLeave?.id?.trim() ?? "" : firstPendingAttendance?.id?.trim() ?? "";
-    if (!targetId) {
-      return;
-    }
-
-    const label =
-      queue === "leave"
-        ? isKoLocale
-          ? "대시보드 빠른 승인(휴가)"
-          : "Dashboard quick approve (leave)"
-        : isKoLocale
-          ? "대시보드 빠른 승인(출퇴근)"
-          : "Dashboard quick approve (attendance)";
-    const path =
-      queue === "leave"
-        ? `/api/leave/requests/${targetId}/approve`
-        : `/api/attendance/records/${targetId}/approve`;
-
-    setApprovalQuickActionPending(queue);
-    setApprovalQuickActionNotice(null);
-    try {
-      const { response, body } = await performAdminApiCall({
-        label,
-        method: "POST",
-        path,
-        runtimeLocale
-      });
-
-      if (!response.ok) {
-        const errorMessage = readApiErrorMessage(body);
-        setApprovalQuickActionNotice({
-          ok: false,
-          message:
-            errorMessage ?? (isKoLocale ? "빠른 승인을 처리하지 못했습니다." : "Failed to run quick approval.")
-        });
-        return;
-      }
-
-      setApprovalQuickActionNotice({
-        ok: true,
-        message:
-          queue === "leave"
-            ? isKoLocale
-              ? "휴가 1건을 승인하고 대시보드를 갱신했습니다."
-              : "Approved one leave request and refreshed dashboard."
-            : isKoLocale
-              ? "출퇴근 1건을 승인하고 대시보드를 갱신했습니다."
-              : "Approved one attendance record and refreshed dashboard."
-      });
-      await refreshSummary();
-    } catch (error) {
-      setApprovalQuickActionNotice({
-        ok: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : isKoLocale
-              ? "빠른 승인을 처리하지 못했습니다."
-              : "Failed to run quick approval."
-      });
-    } finally {
-      setApprovalQuickActionPending(null);
-    }
-  }
+  const { approvalQuickActionPending, approvalQuickActionNotice, runApprovalQuickAction } =
+    useAdminApprovalQuickActions({
+      isKoLocale,
+      requiresLoginSession,
+      productionSessionRequiredNotice,
+      runtimeLocale,
+      firstPendingLeaveId: firstPendingLeave?.id?.trim() ?? "",
+      firstPendingAttendanceId: firstPendingAttendance?.id?.trim() ?? "",
+      refreshSummary,
+      setLoadError
+    });
 
   useEffect(() => {
     void refreshSummary();
@@ -372,7 +293,6 @@ export default function AdminDashboardPage() {
           {productionSessionRequiredNotice} <Link href="/login">/login</Link>
         </p>
       ) : null}
-
       {loadError ? <p className="small fail">{loadError}</p> : null}
 
       <section className="panel">
