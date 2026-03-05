@@ -1558,6 +1558,15 @@ export const memoryDataAccess: DataAccess = {
       return cloneAttendance(updated);
     },
 
+    async delete(id) {
+      const existing = state.attendance.get(id);
+      if (!existing) {
+        throw new Error(`attendance record not found: ${id}`);
+      }
+      state.attendance.delete(id);
+      return cloneAttendance(existing);
+    },
+
     async listApprovedInPeriod(input) {
       const rows: AttendanceRecordEntity[] = [];
       for (const entity of state.attendance.values()) {

@@ -1,5 +1,5 @@
 import { updateAttendanceSchema } from "@/features/attendance/schemas";
-import { updateAttendanceRecord } from "@/features/attendance/service";
+import { deleteAttendanceRecord, updateAttendanceRecord } from "@/features/attendance/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
@@ -48,6 +48,25 @@ export async function PATCH(request: Request, context: RouteContext) {
             }
           : undefined
       }
+    );
+    return ok({ record });
+  } catch (error) {
+    if (isServiceError(error)) {
+      return fail(error.status, error.message, error.details);
+    }
+    throw error;
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const { recordId } = await context.params;
+  try {
+    const record = await deleteAttendanceRecord(
+      {
+        actor: await readActor(request),
+        dataAccess: getRuntimeDataAccess()
+      },
+      recordId
     );
     return ok({ record });
   } catch (error) {

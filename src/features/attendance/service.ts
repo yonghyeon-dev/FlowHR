@@ -1552,6 +1552,53 @@ function toKoreanDateOnly(value: Date) {
   return new Date(value.getTime() + KOREA_UTC_OFFSET_MS).toISOString().slice(0, 10);
 }
 
+function toKoreanMonthKey(value: Date) {
+  const shifted = new Date(value.getTime() + KOREA_UTC_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function toKoreanMonthWindow(value: Date) {
+  const shifted = new Date(value.getTime() + KOREA_UTC_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth() + 1;
+  const monthToken = String(month).padStart(2, "0");
+  const lastDay = String(new Date(Date.UTC(year, month, 0)).getUTCDate()).padStart(2, "0");
+  return {
+    periodStart: new Date(`${year}-${monthToken}-01T00:00:00+09:00`),
+    periodEnd: new Date(`${year}-${monthToken}-${lastDay}T23:59:59+09:00`)
+  };
+}
+
+export async function isAttendancePeriodFinalized(
+  context: ServiceContext,
+  organizationId: string,
+  attendanceDate: Date
+) {
+  const monthWindow = toKoreanMonthWindow(attendanceDate);
+  const runs = await context.dataAccess.payroll.listInPeriod({
+    periodStart: monthWindow.periodStart,
+    periodEnd: monthWindow.periodEnd,
+    organizationId,
+    state: "CONFIRMED"
+  });
+  return runs.length > 0;
+}
+
+async function ensureAttendancePeriodMutable(
+  context: ServiceContext,
+  organizationId: string,
+  attendanceDate: Date
+) {
+  if (await isAttendancePeriodFinalized(context, organizationId, attendanceDate)) {
+    throw new ServiceError(
+      409,
+      "attendance cannot be modified because payroll is finalized for this period"
+    );
+  }
+}
+
 function calculateWorkedMinutes(checkInAt: Date, checkOutAt: Date | null, breakMinutes: number) {
   if (!checkOutAt) {
     return 0;
@@ -1799,6 +1846,13 @@ export async function updateAttendanceRecord(
     context.actor,
     existing.employeeId
   );
+  if (employee.organizationId) {
+    await ensureAttendancePeriodMutable(context, employee.organizationId, existing.checkInAt);
+    const nextCheckInAt = input.checkInAt ?? existing.checkInAt;
+    if (toKoreanMonthKey(nextCheckInAt) !== toKoreanMonthKey(existing.checkInAt)) {
+      await ensureAttendancePeriodMutable(context, employee.organizationId, nextCheckInAt);
+    }
+  }
 
   const record = await context.dataAccess.attendance.update(recordId, toRecordUpdateInput(input));
   await context.dataAccess.audit.append({
@@ -1819,6 +1873,38 @@ export async function updateAttendanceRecord(
     actorId: context.actor!.id,
     payload: {
       ...input
+    }
+  });
+
+  return record;
+}
+
+export async function deleteAttendanceRecord(
+  context: ServiceContext,
+  recordId: string
+): Promise<AttendanceRecordEntity> {
+  const existing = await requireEditableRecord(context, recordId);
+  const employee = await requireEmployeeWithinTenant(
+    context.dataAccess,
+    context.actor,
+    existing.employeeId
+  );
+  if (employee.organizationId) {
+    await ensureAttendancePeriodMutable(context, employee.organizationId, existing.checkInAt);
+  }
+
+  const record = await context.dataAccess.attendance.delete(recordId);
+  await context.dataAccess.audit.append({
+    action: "attendance.deleted",
+    entityType: "AttendanceRecord",
+    entityId: record.id,
+    organizationId: employee.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload: {
+      employeeId: record.employeeId,
+      checkInAt: record.checkInAt.toISOString(),
+      checkOutAt: record.checkOutAt?.toISOString() ?? null
     }
   });
 
