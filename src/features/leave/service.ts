@@ -184,6 +184,19 @@ type ListLeaveRequestsInput = {
   state?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 };
 
+type GetAvailableLeaveBalanceInput = {
+  employeeId: string;
+  leaveType: LeaveType;
+  year: number;
+};
+
+type AvailableLeaveBalance = {
+  total: number;
+  used: number;
+  pending: number;
+  available: number;
+};
+
 function resolveTargetOrganizationId(actor: Actor | null, inputOrganizationId?: string) {
   const candidate = (inputOrganizationId ?? actor?.organizationId ?? "").trim();
   if (!candidate) {
@@ -230,6 +243,68 @@ async function requirePendingRequest(context: ServiceContext, requestId: string)
     throw new ServiceError(409, "only pending leave request can be changed");
   }
   return request;
+}
+
+function assertValidLeaveBalanceYear(year: number) {
+  if (!Number.isInteger(year) || year < 2000 || year > 9999) {
+    throw new ServiceError(400, "year must be a valid 4-digit year");
+  }
+}
+
+function resolveSeoulYearRange(year: number) {
+  return {
+    periodStart: new Date(`${year}-01-01T00:00:00+09:00`),
+    periodEnd: new Date(`${year}-12-31T23:59:59.999+09:00`)
+  };
+}
+
+function resolveSeoulYear(date: Date) {
+  return new Date(date.getTime() + SEOUL_OFFSET_MS).getUTCFullYear();
+}
+
+async function calculateAvailableLeaveBalance(
+  context: ServiceContext,
+  input: GetAvailableLeaveBalanceInput
+): Promise<AvailableLeaveBalance> {
+  assertValidLeaveBalanceYear(input.year);
+
+  const projection = await context.dataAccess.leaveBalance.ensure(
+    input.employeeId,
+    DEFAULT_GRANTED_DAYS
+  );
+  const { periodStart, periodEnd } = resolveSeoulYearRange(input.year);
+  const requests = await context.dataAccess.leave.listInPeriod({
+    periodStart,
+    periodEnd,
+    employeeId: input.employeeId
+  });
+
+  let used = 0;
+  let pending = 0;
+  for (const request of requests) {
+    if (request.leaveType !== input.leaveType) {
+      continue;
+    }
+    if (request.state === "APPROVED") {
+      used += request.days;
+      continue;
+    }
+    if (request.state === "PENDING") {
+      pending += request.days;
+    }
+  }
+
+  const total = roundTo2(projection.grantedDays);
+  const roundedUsed = roundTo2(used);
+  const roundedPending = roundTo2(pending);
+  const available = roundTo2(total - roundedUsed - roundedPending);
+
+  return {
+    total,
+    used: roundedUsed,
+    pending: roundedPending,
+    available
+  };
 }
 
 async function ensureStatutoryLeavePolicies(context: ServiceContext, organizationId: string) {
@@ -330,6 +405,30 @@ export async function createLeaveRequest(
     requestedDays: requested.days,
     policy: policyRules
   });
+
+  const requestYear = resolveSeoulYear(input.startDate);
+  const availableBalance = await calculateAvailableLeaveBalance(context, {
+    employeeId: input.employeeId,
+    leaveType: input.leaveType,
+    year: requestYear
+  });
+  if (availableBalance.available + 1e-9 < requested.days) {
+    throw new ServiceError(
+      400,
+      `insufficient leave balance: available ${availableBalance.available} day(s), requested ${requested.days} day(s)`,
+      {
+        employeeId: input.employeeId,
+        leaveType: input.leaveType,
+        year: requestYear,
+        currentBalance: availableBalance.available,
+        requestedDays: requested.days,
+        total: availableBalance.total,
+        used: availableBalance.used,
+        pending: availableBalance.pending
+      }
+    );
+  }
+
   await ensureNoOverlap(context, {
     employeeId: input.employeeId,
     startDate: input.startDate,
@@ -775,14 +874,12 @@ export async function listLeaveRequests(
   throw new ServiceError(403, "leave list requires permission");
 }
 
-export async function readLeaveBalance(
-  context: ServiceContext,
-  employeeId: string
-): Promise<LeaveBalanceEntity> {
+async function requireLeaveBalanceAccess(context: ServiceContext, employeeId: string) {
   const actor = context.actor;
   if (!actor) {
     throw new ServiceError(401, "missing or invalid actor context");
   }
+
   const permissions = await resolveActorPermissions(context);
   if (permissions.has(Permissions.leaveBalanceReadAny)) {
     // ok
@@ -795,6 +892,22 @@ export async function readLeaveBalance(
   }
 
   const employee = await requireEmployeeWithinTenant(context.dataAccess, actor, employeeId);
+  return { actor, employee };
+}
+
+export async function getAvailableLeaveBalance(
+  context: ServiceContext,
+  input: GetAvailableLeaveBalanceInput
+): Promise<AvailableLeaveBalance> {
+  await requireLeaveBalanceAccess(context, input.employeeId);
+  return calculateAvailableLeaveBalance(context, input);
+}
+
+export async function readLeaveBalance(
+  context: ServiceContext,
+  employeeId: string
+): Promise<LeaveBalanceEntity> {
+  const { actor, employee } = await requireLeaveBalanceAccess(context, employeeId);
 
   const balance = await context.dataAccess.leaveBalance.ensure(employeeId, DEFAULT_GRANTED_DAYS);
   await context.dataAccess.audit.append({
