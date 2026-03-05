@@ -43,7 +43,7 @@ jobs:
 
       - name: Run phase2 health report
         env:
-          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
           DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
           FLOWHR_PAYROLL_DEDUCTIONS_V1: ${{ vars.FLOWHR_PAYROLL_DEDUCTIONS_V1 || 'false' }}
           FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1: ${{ vars.FLOWHR_PAYROLL_DEDUCTION_PROFILE_V1 || 'false' }}

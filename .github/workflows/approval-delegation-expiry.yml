@@ -61,7 +61,7 @@ jobs:
 
       - name: Run approval delegation expiry sweep
         env:
-          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
           DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
           FLOWHR_DATA_ACCESS: prisma
           FLOWHR_APPROVAL_DELEGATION_EXPIRY_ORGANIZATION_IDS: ${{ inputs.organization_ids }}
