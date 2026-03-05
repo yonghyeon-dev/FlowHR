@@ -30,6 +30,7 @@
 ## Data and Compatibility
 
 - Prisma `Employee.active` column replaced by `Employee.status`.
+- Migration ID: `202603050011_add_employee_status`.
 - Backward compatibility preserved by returning computed `active` (`status === ACTIVE`) in employee entities/responses.
 - Legacy `active` writes map to status:
   - `active: true` -> `ACTIVE`
