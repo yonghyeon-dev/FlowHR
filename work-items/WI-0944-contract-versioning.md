@@ -41,14 +41,10 @@ Without explicit template version history, historical signed contracts can be in
 
 ## Data Changes
 
-- Shared data-access contract:
-  - `ContractTemplateVersionEntity`
-  - `ContractTemplateVersionStore`
-  - `DataAccess.contractTemplateVersions`
-- Memory data access:
-  - add snapshot map keyed by `templateId`
-- Prisma data access:
-  - store/read template-version snapshots via `auditLog`
+- Table updates:
+  - `AuditLog` (snapshot entries for contract template versions)
+- Migration id:
+  - None (no Prisma schema migration required)
 
 ## Test Plan
 
