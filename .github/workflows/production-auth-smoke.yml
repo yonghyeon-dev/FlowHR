@@ -71,7 +71,7 @@ jobs:
       - name: Run pending Prisma migrations
         env:
           DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
         run: npx prisma migrate deploy
 
       - name: Run production auth smoke
