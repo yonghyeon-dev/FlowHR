@@ -13,7 +13,7 @@ Exception:
 
 | Domain | Owned Tables | Published Events | Allowed Reads |
 | --- | --- | --- | --- |
-| People | `Organization`, `Department`, `Position`, `Employee`, `RecruitmentOpening`, `RecruitmentReferral` | `organization.created.v1`, `department.created.v1`, `department.updated.v1`, `position.created.v1`, `position.updated.v1`, `employee.created.v1`, `employee.profile.updated.v1` | Own tables, read-only via API/event projections |
+| People | `Organization`, `Department`, `Position`, `Employee`, `RecruitmentOpening`, `RecruitmentReferral` | `organization.created.v1`, `department.created.v1`, `department.updated.v1`, `position.created.v1`, `position.updated.v1`, `employee.created.v1`, `employee.profile.updated.v1`, `employee.status.transitioned.v1` | Own tables, read-only via API/event projections |
 | Approval | `ApprovalPolicy`, `ApprovalDelegation`, `ApprovalLineTemplate`, `ApprovalStageHistory`, `ApprovalExecution`, `ApprovalExecutionActionLog` | `approval.policy.updated.v1`, `approval.delegation.created.v1`, `approval.delegation.updated.v1`, `approval.template.created.v1`, `approval.template.updated.v1`, `approval.execution.escalation.requested.v1` | Own tables, read-only via API/event projections |
 | RBAC | `Role`, `RolePermission` | none | Read-only by runtime services for authorization resolution; write via RBAC API (admin only) |
 | Attendance | `AttendanceRecord` | `attendance.recorded.v1`, `attendance.corrected.v1`, `attendance.approved.v1`, `attendance.rejected.v1` | Own tables, event projections |

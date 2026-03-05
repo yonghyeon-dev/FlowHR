@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const employeeStatusSchema = z.enum(["ACTIVE", "ON_LEAVE", "RESIGNED"]);
+
 export const createOrganizationSchema = z.object({
   name: z.string().min(1).max(100)
 });
@@ -13,6 +15,7 @@ export const createEmployeeSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().min(1).max(50).optional(),
   address: z.string().min(1).max(300).optional(),
+  status: employeeStatusSchema.optional(),
   active: z.boolean().optional()
 });
 
@@ -25,6 +28,7 @@ export const updateEmployeeSchema = z
     email: z.string().email().nullable().optional(),
     phone: z.string().min(1).max(50).optional(),
     address: z.string().min(1).max(300).optional(),
+    status: employeeStatusSchema.optional(),
     active: z.boolean().optional()
   })
   .refine(
@@ -36,6 +40,7 @@ export const updateEmployeeSchema = z
       value.email !== undefined ||
       value.phone !== undefined ||
       value.address !== undefined ||
+      value.status !== undefined ||
       value.active !== undefined,
     { message: "at least one field is required" }
   );
@@ -105,7 +110,18 @@ const queryBoolean = z
 
 export const listEmployeesQuerySchema = z.object({
   active: queryBoolean.optional(),
+  status: employeeStatusSchema.optional(),
   organizationId: z.string().min(1).optional()
+});
+
+const isoDateStringSchema = z
+  .string()
+  .refine((value) => !Number.isNaN(Date.parse(value)), "effectiveDate must be a valid ISO date");
+
+export const updateEmployeeStatusSchema = z.object({
+  status: employeeStatusSchema,
+  reason: z.string().min(1).max(500).optional(),
+  effectiveDate: isoDateStringSchema.optional()
 });
 
 export const listEmployeeHistoryQuerySchema = z.object({

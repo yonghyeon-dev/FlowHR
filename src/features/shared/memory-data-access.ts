@@ -43,6 +43,7 @@ import type {
   DepartmentEntity,
   DeductionProfileEntity,
   EmployeeEntity,
+  EmployeeStatus,
   BenefitCatalogItemEntity,
   BenefitRequestEntity,
   CreateInAppNotificationInput,
@@ -554,11 +555,31 @@ function cloneApprovalExecutionAction(entity: ApprovalExecutionActionEntity): Ap
 }
 
 function cloneEmployee(entity: EmployeeEntity): EmployeeEntity {
+  const status = entity.status;
   return {
     ...entity,
+    status,
+    active: status === "ACTIVE",
     createdAt: cloneDate(entity.createdAt),
     updatedAt: cloneDate(entity.updatedAt)
   };
+}
+
+function mapLegacyActiveToEmployeeStatus(active: boolean): EmployeeStatus {
+  return active ? "ACTIVE" : "ON_LEAVE";
+}
+
+function resolveEmployeeStatusInput(input: {
+  status?: EmployeeStatus;
+  active?: boolean;
+}): EmployeeStatus | undefined {
+  if (input.status !== undefined) {
+    return input.status;
+  }
+  if (input.active !== undefined) {
+    return mapLegacyActiveToEmployeeStatus(input.active);
+  }
+  return undefined;
 }
 
 function cloneRole(entity: RoleEntity): RoleEntity {
@@ -684,6 +705,7 @@ function updatePayrollEntity(existing: PayrollRunEntity, input: UpdatePayrollRun
 }
 
 function updateEmployeeEntity(existing: EmployeeEntity, input: UpdateEmployeeInput): EmployeeEntity {
+  const status = resolveEmployeeStatusInput(input) ?? existing.status;
   return {
     ...existing,
     organizationId: input.organizationId !== undefined ? input.organizationId : existing.organizationId,
@@ -693,7 +715,8 @@ function updateEmployeeEntity(existing: EmployeeEntity, input: UpdateEmployeeInp
     email: input.email !== undefined ? input.email : existing.email,
     phone: input.phone !== undefined ? input.phone : existing.phone,
     address: input.address !== undefined ? input.address : existing.address,
-    active: input.active !== undefined ? input.active : existing.active,
+    status,
+    active: status === "ACTIVE",
     updatedAt: new Date()
   };
 }
@@ -1412,6 +1435,7 @@ export const memoryDataAccess: DataAccess = {
   employees: {
     async create(input: CreateEmployeeInput) {
       const now = new Date();
+      const status = resolveEmployeeStatusInput(input) ?? "ACTIVE";
       const entity: EmployeeEntity = {
         id: input.id,
         organizationId:
@@ -1424,7 +1448,8 @@ export const memoryDataAccess: DataAccess = {
         email: input.email === undefined ? null : input.email,
         phone: input.phone,
         address: input.address,
-        active: input.active ?? true,
+        status,
+        active: status === "ACTIVE",
         createdAt: now,
         updatedAt: now
       };
@@ -1450,7 +1475,10 @@ export const memoryDataAccess: DataAccess = {
     async list(input) {
       const rows: EmployeeEntity[] = [];
       for (const entity of state.employees.values()) {
-        if (input.active !== undefined && entity.active !== input.active) {
+        if (input.status !== undefined && entity.status !== input.status) {
+          continue;
+        }
+        if (input.active !== undefined && (entity.status === "ACTIVE") !== input.active) {
           continue;
         }
         if (input.organizationId && entity.organizationId !== input.organizationId) {

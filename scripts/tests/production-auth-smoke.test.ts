@@ -54,7 +54,7 @@ async function run() {
         id: employeeId,
         organizationId: organization.id,
         name: "Production Smoke Employee",
-        active: true
+        status: "ACTIVE"
       }
     });
 

@@ -63,7 +63,7 @@ model Employee {
   email          String?
   phone          String?
   address        String?
-  active         Boolean  @default(true)
+  status         EmployeeStatus @default(ACTIVE)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -79,7 +79,7 @@ model Employee {
   insuranceEnrollments InsuranceEnrollment[]
   payrollRuns          PayrollRun[]
 
-  @@index([organizationId, active])
+  @@index([organizationId, status])
   @@index([departmentId])
   @@index([positionId])
 }
@@ -746,6 +746,12 @@ enum LeaveRequestUnit {
   FULL_DAY
   HALF_DAY
   HOUR
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
 }
 
 enum LeavePromotionDeliveryChannel {

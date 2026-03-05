@@ -6,12 +6,14 @@ import type {
   DataAccess,
   DepartmentEntity,
   EmployeeEntity,
+  EmployeeStatus,
   OrganizationEntity,
   PositionEntity
 } from "@/features/shared/data-access";
 import type { DomainEventPublisher } from "@/features/shared/domain-event-publisher";
 import { getRuntimeDomainEventPublisher } from "@/features/shared/runtime-domain-event-publisher";
 import { ServiceError } from "@/features/shared/service-error";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTenancyEnabled } from "@/lib/tenancy";
 
 type ServiceContext = {
@@ -29,6 +31,13 @@ export type EmployeeProfileHistoryEntry = {
 };
 
 const EMPLOYEE_PROFILE_HISTORY_ACTIONS = ["employee.created", "employee.profile.updated"] as const;
+const EMPLOYEE_STATUS_TRANSITION_ACTION = "employee.status.transitioned";
+
+const ALLOWED_EMPLOYEE_STATUS_TRANSITIONS: Record<EmployeeStatus, readonly EmployeeStatus[]> = {
+  ACTIVE: ["ON_LEAVE", "RESIGNED"],
+  ON_LEAVE: ["ACTIVE", "RESIGNED"],
+  RESIGNED: []
+};
 
 function getEventPublisher(context: ServiceContext): DomainEventPublisher {
   return context.eventPublisher ?? getRuntimeDomainEventPublisher();
@@ -135,6 +144,65 @@ function normalizeNullableText(value: string | null | undefined) {
   return normalized.length > 0 ? normalized : null;
 }
 
+function mapLegacyActiveToStatus(active: boolean): EmployeeStatus {
+  return active ? "ACTIVE" : "ON_LEAVE";
+}
+
+function resolveEmployeeStatusValue(input: {
+  status?: EmployeeStatus;
+  active?: boolean;
+  fieldPrefix?: string;
+}): EmployeeStatus | undefined {
+  if (input.status === undefined && input.active === undefined) {
+    return undefined;
+  }
+  if (input.status !== undefined && input.active !== undefined) {
+    const expectedActive = input.status === "ACTIVE";
+    if (input.active !== expectedActive) {
+      const prefix = input.fieldPrefix ? `${input.fieldPrefix}: ` : "";
+      throw new ServiceError(400, `${prefix}active and status conflict`);
+    }
+    return input.status;
+  }
+  if (input.status !== undefined) {
+    return input.status;
+  }
+  return mapLegacyActiveToStatus(input.active!);
+}
+
+function assertValidEmployeeStatusTransition(current: EmployeeStatus, next: EmployeeStatus) {
+  if (current === "RESIGNED") {
+    throw new ServiceError(400, "cannot transition from RESIGNED");
+  }
+  if (current === next) {
+    throw new ServiceError(400, `invalid transition: ${current} -> ${next}`);
+  }
+  if (!ALLOWED_EMPLOYEE_STATUS_TRANSITIONS[current].includes(next)) {
+    throw new ServiceError(400, `invalid transition: ${current} -> ${next}`);
+  }
+}
+
+function isSupabaseUserId(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function invalidateEmployeeSessionsIfPossible(employeeId: string) {
+  if (!isSupabaseUserId(employeeId)) {
+    return { attempted: false as const, success: false as const, reason: "non_supabase_employee_id" };
+  }
+
+  try {
+    const { error } = await getSupabaseAdmin().auth.admin.signOut(employeeId);
+    if (error) {
+      return { attempted: true as const, success: false as const, reason: error.message };
+    }
+    return { attempted: true as const, success: true as const };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_error";
+    return { attempted: true as const, success: false as const, reason: message };
+  }
+}
+
 async function requireDepartmentMutationAccess(context: ServiceContext, action: string) {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, action);
   if (!context.actor) {
@@ -146,6 +214,16 @@ async function requireDepartmentMutationAccess(context: ServiceContext, action: 
 }
 
 async function requirePositionMutationAccess(context: ServiceContext, action: string) {
+  await requirePeoplePermission(context, Permissions.peopleEmployeesManage, action);
+  if (!context.actor) {
+    throw new ServiceError(401, "missing or invalid actor context");
+  }
+  if (context.actor.role !== "admin" && context.actor.role !== "system") {
+    throw new ServiceError(403, "admin role required");
+  }
+}
+
+async function requireEmployeeStatusMutationAccess(context: ServiceContext, action: string) {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, action);
   if (!context.actor) {
     throw new ServiceError(401, "missing or invalid actor context");
@@ -843,6 +921,7 @@ export async function createEmployee(
     email?: string | null;
     phone?: string;
     address?: string;
+    status?: EmployeeStatus;
     active?: boolean;
   }
 ): Promise<EmployeeEntity> {
@@ -907,6 +986,12 @@ export async function createEmployee(
     await findOrganizationOrThrow(context, organizationId);
   }
 
+  const status = resolveEmployeeStatusValue({
+    status: input.status,
+    active: input.active,
+    fieldPrefix: "create employee"
+  }) ?? "ACTIVE";
+
   const employee = await context.dataAccess.employees.create({
     id: input.id,
     organizationId,
@@ -916,7 +1001,7 @@ export async function createEmployee(
     email: input.email,
     phone: input.phone,
     address: input.address,
-    active: input.active
+    status
   });
 
   await context.dataAccess.audit.append({
@@ -934,6 +1019,7 @@ export async function createEmployee(
       email: employee.email,
       phone: employee.phone,
       address: employee.address,
+      status: employee.status,
       active: employee.active
     }
   });
@@ -953,6 +1039,7 @@ export async function createEmployee(
       email: employee.email,
       phone: employee.phone,
       address: employee.address,
+      status: employee.status,
       active: employee.active
     }
   });
@@ -962,12 +1049,13 @@ export async function createEmployee(
 
 export async function listEmployees(
   context: ServiceContext,
-  input: { active?: boolean; organizationId?: string }
+  input: { active?: boolean; status?: EmployeeStatus; organizationId?: string }
 ): Promise<EmployeeEntity[]> {
   await requirePeoplePermission(context, Permissions.peopleEmployeesManage, "list employees");
   const tenantScope = resolveTenantScope(context.actor);
   return context.dataAccess.employees.list({
     active: input.active,
+    status: input.status,
     organizationId: tenantScope ?? input.organizationId
   });
 }
@@ -1036,6 +1124,7 @@ export async function updateEmployee(
     email?: string | null;
     phone?: string;
     address?: string;
+    status?: EmployeeStatus;
     active?: boolean;
   }
 ): Promise<EmployeeEntity> {
@@ -1052,6 +1141,11 @@ export async function updateEmployee(
     throw new ServiceError(404, "employee not found");
   }
   ensureTenantMatch(tenantScope, existing.organizationId, "employee not found");
+  const normalizedStatus = resolveEmployeeStatusValue({
+    status: input.status,
+    active: input.active,
+    fieldPrefix: "update employee"
+  });
   let employee: EmployeeEntity;
 
   if (isSelfServiceUpdate) {
@@ -1059,6 +1153,7 @@ export async function updateEmployee(
       input.organizationId !== undefined ||
       input.departmentId !== undefined ||
       input.positionId !== undefined ||
+      normalizedStatus !== undefined ||
       input.active !== undefined;
     if (hasRestrictedField) {
       throw new ServiceError(403, "employees can only update name, email, phone, and address");
@@ -1125,7 +1220,7 @@ export async function updateEmployee(
       email: input.email,
       phone: input.phone,
       address: input.address,
-      active: input.active
+      status: normalizedStatus
     });
   }
 
@@ -1145,6 +1240,7 @@ export async function updateEmployee(
         email: existing.email,
         phone: existing.phone,
         address: existing.address,
+        status: existing.status,
         active: existing.active
       },
       after: {
@@ -1155,6 +1251,7 @@ export async function updateEmployee(
         email: employee.email,
         phone: employee.phone,
         address: employee.address,
+        status: employee.status,
         active: employee.active
       }
     }
@@ -1175,8 +1272,70 @@ export async function updateEmployee(
       email: employee.email,
       phone: employee.phone,
       address: employee.address,
+      status: employee.status,
       active: employee.active
     }
+  });
+
+  return employee;
+}
+
+export async function transitionEmployeeStatus(
+  context: ServiceContext,
+  input: {
+    employeeId: string;
+    status: EmployeeStatus;
+    reason?: string;
+    effectiveDate?: string;
+  }
+): Promise<EmployeeEntity> {
+  await requireEmployeeStatusMutationAccess(context, "transition employee status");
+
+  const tenantScope = resolveTenantScope(context.actor);
+  const existing = await context.dataAccess.employees.findById(input.employeeId);
+  if (!existing) {
+    throw new ServiceError(404, "employee not found");
+  }
+  ensureTenantMatch(tenantScope, existing.organizationId, "employee not found");
+  assertValidEmployeeStatusTransition(existing.status, input.status);
+
+  const employee = await context.dataAccess.employees.update(input.employeeId, {
+    status: input.status
+  });
+
+  const sessionInvalidation =
+    input.status === "RESIGNED"
+      ? await invalidateEmployeeSessionsIfPossible(employee.id)
+      : { attempted: false as const, success: false as const, reason: "not_required" };
+
+  const payload = {
+    employeeId: employee.id,
+    organizationId: employee.organizationId,
+    fromStatus: existing.status,
+    toStatus: employee.status,
+    reason: input.reason ?? null,
+    effectiveDate: input.effectiveDate ?? null,
+    sessionInvalidation
+  };
+
+  await context.dataAccess.audit.append({
+    action: EMPLOYEE_STATUS_TRANSITION_ACTION,
+    entityType: "Employee",
+    entityId: employee.id,
+    organizationId: employee.organizationId,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
+  });
+
+  await getEventPublisher(context).publish({
+    name: "employee.status.transitioned.v1",
+    occurredAt: new Date().toISOString(),
+    entityType: "Employee",
+    entityId: employee.id,
+    actorRole: context.actor!.role,
+    actorId: context.actor!.id,
+    payload
   });
 
   return employee;

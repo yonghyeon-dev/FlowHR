@@ -57,6 +57,7 @@ import type {
   OnboardingTaskStore,
   DeductionProfileStore,
   EmployeeEntity,
+  EmployeeStatus,
   EmployeeStore,
   ListAuditLogsInput,
   ListContractTemplateVersionsInput,
@@ -797,15 +798,34 @@ function toEmployeeEntity(record: {
   email: string | null;
   phone: string | null;
   address: string | null;
-  active: boolean;
+  status: "ACTIVE" | "ON_LEAVE" | "RESIGNED";
   createdAt: Date;
   updatedAt: Date;
 }): EmployeeEntity {
   return {
     ...record,
+    status: record.status as EmployeeStatus,
+    active: record.status === "ACTIVE",
     phone: record.phone ?? undefined,
     address: record.address ?? undefined
   };
+}
+
+function mapLegacyActiveToEmployeeStatus(active: boolean): EmployeeStatus {
+  return active ? "ACTIVE" : "ON_LEAVE";
+}
+
+function resolveEmployeeStatusInput(input: {
+  status?: EmployeeStatus;
+  active?: boolean;
+}): EmployeeStatus | undefined {
+  if (input.status !== undefined) {
+    return input.status;
+  }
+  if (input.active !== undefined) {
+    return mapLegacyActiveToEmployeeStatus(input.active);
+  }
+  return undefined;
 }
 
 function toOnboardingTaskEntity(record: {
@@ -1544,6 +1564,7 @@ const approvals: ApprovalStore = {
 
 const employees: EmployeeStore = {
   async create(input: CreateEmployeeInput) {
+    const status = resolveEmployeeStatusInput(input) ?? "ACTIVE";
     const record = await prisma.employee.create({
       data: {
         id: input.id,
@@ -1557,7 +1578,7 @@ const employees: EmployeeStore = {
         email: input.email === undefined ? null : input.email,
         phone: input.phone === undefined ? null : input.phone,
         address: input.address === undefined ? null : input.address,
-        active: input.active ?? true
+        status
       }
     });
     return toEmployeeEntity(record);
@@ -1571,6 +1592,7 @@ const employees: EmployeeStore = {
   },
 
   async update(id: string, input: UpdateEmployeeInput) {
+    const status = resolveEmployeeStatusInput(input);
     const record = await prisma.employee.update({
       where: { id },
       data: {
@@ -1581,16 +1603,24 @@ const employees: EmployeeStore = {
         email: input.email,
         phone: input.phone,
         address: input.address,
-        active: input.active
+        status
       }
     });
     return toEmployeeEntity(record);
   },
 
-  async list(input: { active?: boolean; organizationId?: string }) {
+  async list(input: { active?: boolean; status?: EmployeeStatus; organizationId?: string }) {
+    const statusFilter =
+      input.status !== undefined
+        ? input.status
+        : input.active === undefined
+          ? undefined
+          : input.active
+            ? "ACTIVE"
+            : { not: "ACTIVE" as const };
     const records = await prisma.employee.findMany({
       where: {
-        ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(statusFilter !== undefined ? { status: statusFilter } : {}),
         ...(input.organizationId ? { organizationId: input.organizationId } : {})
       },
       orderBy: { id: "asc" }
