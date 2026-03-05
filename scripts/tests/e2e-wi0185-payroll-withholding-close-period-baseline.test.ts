@@ -111,6 +111,26 @@ async function run() {
     otherDeductionsKrw: 1000,
     totalDeductionsKrw: 13000,
     netPayKrw: 87000,
+    deductionBreakdown: {
+      mode: "statutory_kr_baseline",
+      additional: {
+        components: {
+          incomeTaxKrw: 6364,
+          localIncomeTaxKrw: 636,
+          nationalPensionKrw: 2000,
+          healthInsuranceKrw: 1600,
+          longTermCareKrw: 200,
+          employmentInsuranceKrw: 800,
+          workersCompensationKrw: 400
+        },
+        insuranceBreakdown: {
+          nps: 2000,
+          nhi: 1600,
+          ei: 800,
+          wci: 400
+        }
+      }
+    },
     sourceRecordCount: 1
   });
   await memoryDataAccess.payroll.update(confirmedRun.id, {
@@ -130,6 +150,26 @@ async function run() {
     otherDeductionsKrw: 500,
     totalDeductionsKrw: 11000,
     netPayKrw: 79000,
+    deductionBreakdown: {
+      mode: "statutory_kr_baseline",
+      additional: {
+        components: {
+          incomeTaxKrw: 5455,
+          localIncomeTaxKrw: 545,
+          nationalPensionKrw: 1800,
+          healthInsuranceKrw: 1400,
+          longTermCareKrw: 150,
+          employmentInsuranceKrw: 700,
+          workersCompensationKrw: 450
+        },
+        insuranceBreakdown: {
+          nps: 1800,
+          nhi: 1400,
+          ei: 700,
+          wci: 450
+        }
+      }
+    },
     sourceRecordCount: 1
   });
 
@@ -161,7 +201,17 @@ async function run() {
       totalsKrw: {
         grossPayKrw: number;
         withholdingTaxKrw: number;
+        withholdingBreakdownKrw: {
+          incomeTaxKrw: number;
+          residentTaxKrw: number;
+        };
         socialInsuranceKrw: number;
+        socialInsuranceBreakdownKrw: {
+          nationalPensionKrw: number;
+          healthInsuranceKrw: number;
+          employmentInsuranceKrw: number;
+          industrialAccidentKrw: number;
+        };
         otherDeductionsKrw: number;
         totalDeductionsKrw: number;
         netPayKrw: number;
@@ -186,7 +236,17 @@ async function run() {
   assert.deepEqual(previewBody.summary.totalsKrw, {
     grossPayKrw: 100000,
     withholdingTaxKrw: 7000,
+    withholdingBreakdownKrw: {
+      incomeTaxKrw: 6364,
+      residentTaxKrw: 636
+    },
     socialInsuranceKrw: 5000,
+    socialInsuranceBreakdownKrw: {
+      nationalPensionKrw: 2000,
+      healthInsuranceKrw: 1800,
+      employmentInsuranceKrw: 800,
+      industrialAccidentKrw: 400
+    },
     otherDeductionsKrw: 1000,
     totalDeductionsKrw: 13000,
     netPayKrw: 87000
@@ -236,7 +296,22 @@ async function run() {
         blockingRunIds: string[];
         blockingReasons: string[];
       };
-      totalsKrw: { grossPayKrw: number; withholdingTaxKrw: number; socialInsuranceKrw: number; netPayKrw: number };
+      totalsKrw: {
+        grossPayKrw: number;
+        withholdingTaxKrw: number;
+        withholdingBreakdownKrw: {
+          incomeTaxKrw: number;
+          residentTaxKrw: number;
+        };
+        socialInsuranceKrw: number;
+        socialInsuranceBreakdownKrw: {
+          nationalPensionKrw: number;
+          healthInsuranceKrw: number;
+          employmentInsuranceKrw: number;
+          industrialAccidentKrw: number;
+        };
+        netPayKrw: number;
+      };
       settlementKrw: { withholdingTaxDeltaKrw: number; socialInsuranceDeltaKrw: number; remittanceDeltaKrw: number };
     };
   }>(applyResponse);
@@ -250,7 +325,17 @@ async function run() {
   });
   assert.equal(applyBody.summary.totalsKrw.grossPayKrw, 190000);
   assert.equal(applyBody.summary.totalsKrw.withholdingTaxKrw, 13000);
+  assert.deepEqual(applyBody.summary.totalsKrw.withholdingBreakdownKrw, {
+    incomeTaxKrw: 11819,
+    residentTaxKrw: 1181
+  });
   assert.equal(applyBody.summary.totalsKrw.socialInsuranceKrw, 9500);
+  assert.deepEqual(applyBody.summary.totalsKrw.socialInsuranceBreakdownKrw, {
+    nationalPensionKrw: 3800,
+    healthInsuranceKrw: 3350,
+    employmentInsuranceKrw: 1500,
+    industrialAccidentKrw: 850
+  });
   assert.equal(applyBody.summary.totalsKrw.netPayKrw, 166000);
   assert.equal(applyBody.summary.settlementKrw.withholdingTaxDeltaKrw, 7000);
   assert.equal(applyBody.summary.settlementKrw.socialInsuranceDeltaKrw, 5500);
