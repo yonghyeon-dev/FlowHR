@@ -1,0 +1,1400 @@
+import type { Actor } from "@/lib/actor";
+import type { AttendanceCaptureChannel, AttendanceRecordEntity } from "@/features/shared/data-access";
+import { ServiceError } from "@/features/shared/service-error";
+
+type CreateAttendanceInput = {
+  capture?: {
+    channel: AttendanceCaptureChannel;
+    deviceId?: string;
+    attestationToken?: string;
+    ipAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    accuracyMeters?: number;
+  };
+};
+type UpdateAttendanceInput = {
+  capture?: {
+    channel?: AttendanceCaptureChannel;
+    deviceId?: string | null;
+    attestationToken?: string;
+    ipAddress?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracyMeters?: number | null;
+  };
+};
+
+function isTruthyFlag(value: string | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+function isAttendanceGpsPolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_GPS_REQUIRED ?? process.env.ATTENDANCE_GPS_REQUIRED
+  );
+}
+
+function isAttendanceGeofencePolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_GEOFENCE_ENABLED ?? process.env.ATTENDANCE_GEOFENCE_ENABLED
+  );
+}
+
+function isAttendanceMultiSiteGeofencePolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED ??
+      process.env.ATTENDANCE_MULTI_SITE_GEOFENCE_ENABLED
+  );
+}
+
+function isAttendanceTrustedDevicePolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_TRUSTED_DEVICE_ENABLED ??
+      process.env.ATTENDANCE_TRUSTED_DEVICE_ENABLED
+  );
+}
+
+function isAttendanceDeviceAttestationPolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_ENABLED ??
+      process.env.ATTENDANCE_DEVICE_ATTESTATION_ENABLED
+  );
+}
+
+function isAttendanceAntiSpoofingPolicyEnabled() {
+  return isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_ENABLED
+  );
+}
+
+type GeofenceConfig = {
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+};
+
+type GeofenceSiteConfig = {
+  siteId: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+};
+
+type AntiSpoofingPolicyConfig = {
+  allowedChannels: Set<AttendanceCaptureChannel>;
+  maxGpsAccuracyMeters: number;
+  riskThreshold: number;
+  signalFusionEnabled: boolean;
+  minSignals: number;
+  reputationPenalty: number;
+  highRiskDeviceIds: Set<string>;
+  highRiskIpAddresses: Set<string>;
+  externalReputationEnabled: boolean;
+  externalReputationProvider: "static" | "remote";
+  externalReputationUrls: string[];
+  externalReputationAggregation: "union" | "majority";
+  externalReputationMajorityThreshold: number | null;
+  externalReputationMinimumSuccess: number;
+  externalReputationCircuitBreakerEnabled: boolean;
+  externalReputationFailureThreshold: number;
+  externalReputationCooldownSeconds: number;
+  externalReputationAdaptiveRoutingEnabled: boolean;
+  externalReputationAutoHealEnabled: boolean;
+  externalReputationAutoHealProbeIntervalSeconds: number;
+  externalReputationTimeoutMs: number;
+  externalReputationCacheTtlSeconds: number;
+  externalReputationStrictMode: boolean;
+};
+
+type AntiSpoofingReputationSnapshot = {
+  highRiskDeviceIds: Set<string>;
+  highRiskIpAddresses: Set<string>;
+  source: "static" | "remote" | "remote-multi" | "remote-fallback";
+};
+
+type AntiSpoofingReputationCache = {
+  cacheKey: string;
+  expiresAt: number;
+  snapshot: AntiSpoofingReputationSnapshot;
+};
+
+let antiSpoofingReputationCache: AntiSpoofingReputationCache | null = null;
+const antiSpoofingReputationProviderState = new Map<
+  string,
+  {
+    consecutiveFailures: number;
+    openUntil: number | null;
+    lastSuccessAt: number | null;
+    lastFailureAt: number | null;
+    lastProbeAt: number | null;
+  }
+>();
+
+function parseNumberEnv(value: string | undefined): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseIntegerEnv(value: string | undefined): number | null {
+  const parsed = parseNumberEnv(value);
+  if (parsed === null || !Number.isInteger(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseCsvSet(value: string | undefined, normalize?: (token: string) => string) {
+  const tokens = (value ?? "")
+    .split(",")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0)
+    .map((token) => (normalize ? normalize(token) : token));
+  return new Set(tokens);
+}
+
+function parseExternalReputationProvider(value: string | undefined): "static" | "remote" {
+  const normalized = (value ?? "static").trim().toLowerCase();
+  if (normalized === "static" || normalized === "remote") {
+    return normalized;
+  }
+  throw new ServiceError(
+    500,
+    "attendance anti-spoofing policy is enabled but external reputation provider configuration is invalid"
+  );
+}
+
+function parseExternalReputationAggregation(value: string | undefined): "union" | "majority" {
+  const normalized = (value ?? "union").trim().toLowerCase();
+  if (normalized === "union" || normalized === "majority") {
+    return normalized;
+  }
+  throw new ServiceError(
+    500,
+    "attendance anti-spoofing policy is enabled but external reputation aggregation configuration is invalid"
+  );
+}
+
+function parseExternalReputationUrls(
+  urlsValue: string | undefined,
+  urlValueFallback: string | undefined
+): string[] {
+  const explicitUrls = Array.from(
+    new Set(
+      (urlsValue ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+    )
+  );
+  if (explicitUrls.length > 0) {
+    return explicitUrls;
+  }
+
+  const fallback = (urlValueFallback ?? "").trim();
+  if (fallback.length > 0) {
+    return [fallback];
+  }
+
+  return [];
+}
+
+function resolveReputationCacheKey(config: AntiSpoofingPolicyConfig) {
+  const staticDeviceIds = Array.from(config.highRiskDeviceIds).sort().join(",");
+  const staticIpAddresses = Array.from(config.highRiskIpAddresses).sort().join(",");
+  const reputationUrls = [...config.externalReputationUrls].sort().join(",");
+  return [
+    config.externalReputationEnabled ? "1" : "0",
+    config.externalReputationProvider,
+    reputationUrls,
+    config.externalReputationAggregation,
+    config.externalReputationMajorityThreshold ?? "",
+    config.externalReputationMinimumSuccess,
+    config.externalReputationCircuitBreakerEnabled ? "1" : "0",
+    config.externalReputationFailureThreshold,
+    config.externalReputationCooldownSeconds,
+    config.externalReputationAdaptiveRoutingEnabled ? "1" : "0",
+    config.externalReputationAutoHealEnabled ? "1" : "0",
+    config.externalReputationAutoHealProbeIntervalSeconds,
+    config.externalReputationStrictMode ? "1" : "0",
+    staticDeviceIds,
+    staticIpAddresses
+  ].join("|");
+}
+
+function resolveReputationProviderStateKey(config: AntiSpoofingPolicyConfig, url: string) {
+  return `${resolveReputationCacheKey(config)}|${url}`;
+}
+
+function readReputationProviderState(providerStateKey: string) {
+  const state = antiSpoofingReputationProviderState.get(providerStateKey);
+  if (state) {
+    return state;
+  }
+  const initial = {
+    consecutiveFailures: 0,
+    openUntil: null,
+    lastSuccessAt: null,
+    lastFailureAt: null,
+    lastProbeAt: null
+  };
+  antiSpoofingReputationProviderState.set(providerStateKey, initial);
+  return initial;
+}
+
+function isReputationProviderCircuitOpen(
+  config: AntiSpoofingPolicyConfig,
+  providerStateKey: string,
+  now: number
+) {
+  if (!config.externalReputationCircuitBreakerEnabled) {
+    return false;
+  }
+  const state = readReputationProviderState(providerStateKey);
+  if (state.openUntil === null) {
+    return false;
+  }
+  if (state.openUntil <= now) {
+    state.openUntil = null;
+    state.consecutiveFailures = 0;
+    return false;
+  }
+  return true;
+}
+
+function registerReputationProviderSuccess(providerStateKey: string, now: number) {
+  const state = readReputationProviderState(providerStateKey);
+  state.consecutiveFailures = 0;
+  state.openUntil = null;
+  state.lastSuccessAt = now;
+}
+
+function registerReputationProviderFailure(
+  config: AntiSpoofingPolicyConfig,
+  providerStateKey: string,
+  now: number
+) {
+  const state = readReputationProviderState(providerStateKey);
+  state.consecutiveFailures += 1;
+  state.lastFailureAt = now;
+
+  if (!config.externalReputationCircuitBreakerEnabled) {
+    return;
+  }
+
+  if (state.openUntil !== null && state.openUntil > now) {
+    state.openUntil = now + config.externalReputationCooldownSeconds * 1000;
+    state.consecutiveFailures = 0;
+    return;
+  }
+
+  if (state.consecutiveFailures >= config.externalReputationFailureThreshold) {
+    state.openUntil = now + config.externalReputationCooldownSeconds * 1000;
+    state.consecutiveFailures = 0;
+  }
+}
+
+function markReputationProviderProbeAttempt(providerStateKey: string, now: number) {
+  const state = readReputationProviderState(providerStateKey);
+  state.lastProbeAt = now;
+}
+
+function shouldAttemptReputationProviderAutoHealProbe(
+  config: AntiSpoofingPolicyConfig,
+  providerStateKey: string,
+  now: number
+) {
+  if (!config.externalReputationAutoHealEnabled || !config.externalReputationCircuitBreakerEnabled) {
+    return false;
+  }
+  const state = readReputationProviderState(providerStateKey);
+  if (state.openUntil === null || state.openUntil <= now) {
+    return false;
+  }
+  const baseTimestamp = state.lastProbeAt ?? state.lastFailureAt;
+  if (baseTimestamp === null) {
+    return true;
+  }
+  return now - baseTimestamp >= config.externalReputationAutoHealProbeIntervalSeconds * 1000;
+}
+
+function resolveExternalReputationProviderOrder(config: AntiSpoofingPolicyConfig, now: number) {
+  const urls = [...config.externalReputationUrls];
+  if (!config.externalReputationAdaptiveRoutingEnabled || urls.length < 2) {
+    return urls;
+  }
+
+  return urls.sort((left, right) => {
+    const leftKey = resolveReputationProviderStateKey(config, left);
+    const rightKey = resolveReputationProviderStateKey(config, right);
+    const leftOpen = isReputationProviderCircuitOpen(config, leftKey, now);
+    const rightOpen = isReputationProviderCircuitOpen(config, rightKey, now);
+    if (leftOpen !== rightOpen) {
+      return leftOpen ? 1 : -1;
+    }
+
+    const leftState = readReputationProviderState(leftKey);
+    const rightState = readReputationProviderState(rightKey);
+
+    if (leftState.consecutiveFailures !== rightState.consecutiveFailures) {
+      return leftState.consecutiveFailures - rightState.consecutiveFailures;
+    }
+
+    const leftSuccessAt = leftState.lastSuccessAt ?? 0;
+    const rightSuccessAt = rightState.lastSuccessAt ?? 0;
+    if (leftSuccessAt !== rightSuccessAt) {
+      return rightSuccessAt - leftSuccessAt;
+    }
+
+    const leftFailureAt = leftState.lastFailureAt ?? 0;
+    const rightFailureAt = rightState.lastFailureAt ?? 0;
+    if (leftFailureAt !== rightFailureAt) {
+      return leftFailureAt - rightFailureAt;
+    }
+
+    return left.localeCompare(right);
+  });
+}
+
+function parseRemoteReputationPayload(payload: unknown): {
+  highRiskDeviceIds: Set<string>;
+  highRiskIpAddresses: Set<string>;
+} {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("reputation payload must be an object");
+  }
+  const body = payload as Record<string, unknown>;
+  const deviceIdsRaw = body.highRiskDeviceIds ?? body.deviceIds ?? [];
+  const ipAddressesRaw = body.highRiskIpAddresses ?? body.ipAddresses ?? [];
+
+  if (!Array.isArray(deviceIdsRaw) || !Array.isArray(ipAddressesRaw)) {
+    throw new Error("reputation payload arrays are invalid");
+  }
+
+  const highRiskDeviceIds = new Set(
+    deviceIdsRaw
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+  );
+  const highRiskIpAddresses = new Set(
+    ipAddressesRaw
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => value.trim().toLowerCase())
+      .filter((value) => value.length > 0)
+  );
+
+  return {
+    highRiskDeviceIds,
+    highRiskIpAddresses
+  };
+}
+
+async function fetchRemoteReputationSnapshot(url: string, timeoutMs: number) {
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        accept: "application/json"
+      },
+      signal: abortController.signal
+    });
+    if (!response.ok) {
+      throw new Error(`reputation provider responded with status ${response.status}`);
+    }
+    const payload = (await response.json()) as unknown;
+    return parseRemoteReputationPayload(payload);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function mergeRemoteReputationSnapshots(
+  snapshots: Array<{ highRiskDeviceIds: Set<string>; highRiskIpAddresses: Set<string> }>,
+  aggregation: "union" | "majority",
+  majorityThreshold: number | null
+) {
+  if (snapshots.length === 0) {
+    return {
+      highRiskDeviceIds: new Set<string>(),
+      highRiskIpAddresses: new Set<string>()
+    };
+  }
+
+  if (aggregation === "union") {
+    const highRiskDeviceIds = new Set<string>();
+    const highRiskIpAddresses = new Set<string>();
+    for (const snapshot of snapshots) {
+      for (const deviceId of snapshot.highRiskDeviceIds) {
+        highRiskDeviceIds.add(deviceId);
+      }
+      for (const ipAddress of snapshot.highRiskIpAddresses) {
+        highRiskIpAddresses.add(ipAddress);
+      }
+    }
+    return {
+      highRiskDeviceIds,
+      highRiskIpAddresses
+    };
+  }
+
+  const threshold = majorityThreshold ?? Math.floor(snapshots.length / 2) + 1;
+  const deviceCounts = new Map<string, number>();
+  const ipCounts = new Map<string, number>();
+
+  for (const snapshot of snapshots) {
+    for (const deviceId of snapshot.highRiskDeviceIds) {
+      deviceCounts.set(deviceId, (deviceCounts.get(deviceId) ?? 0) + 1);
+    }
+    for (const ipAddress of snapshot.highRiskIpAddresses) {
+      ipCounts.set(ipAddress, (ipCounts.get(ipAddress) ?? 0) + 1);
+    }
+  }
+
+  const highRiskDeviceIds = new Set<string>();
+  const highRiskIpAddresses = new Set<string>();
+  for (const [deviceId, count] of deviceCounts) {
+    if (count >= threshold) {
+      highRiskDeviceIds.add(deviceId);
+    }
+  }
+  for (const [ipAddress, count] of ipCounts) {
+    if (count >= threshold) {
+      highRiskIpAddresses.add(ipAddress);
+    }
+  }
+
+  return {
+    highRiskDeviceIds,
+    highRiskIpAddresses
+  };
+}
+
+async function resolveAntiSpoofingReputationSnapshot(
+  config: AntiSpoofingPolicyConfig
+): Promise<AntiSpoofingReputationSnapshot> {
+  const baseSnapshot: AntiSpoofingReputationSnapshot = {
+    highRiskDeviceIds: new Set(config.highRiskDeviceIds),
+    highRiskIpAddresses: new Set(config.highRiskIpAddresses),
+    source: "static"
+  };
+
+  if (!config.externalReputationEnabled || config.externalReputationProvider !== "remote") {
+    return baseSnapshot;
+  }
+
+  const now = Date.now();
+  const cacheKey = resolveReputationCacheKey(config);
+  if (
+    antiSpoofingReputationCache &&
+    antiSpoofingReputationCache.cacheKey === cacheKey &&
+    antiSpoofingReputationCache.expiresAt > now
+  ) {
+    return antiSpoofingReputationCache.snapshot;
+  }
+
+  try {
+    const providerResults: Array<
+      | {
+          url: string;
+          status: "fulfilled";
+          snapshot: {
+            highRiskDeviceIds: Set<string>;
+            highRiskIpAddresses: Set<string>;
+          };
+        }
+      | {
+          url: string;
+          status: "rejected" | "skipped";
+        }
+    > = [];
+
+    const orderedUrls = resolveExternalReputationProviderOrder(config, now);
+    for (const url of orderedUrls) {
+      const providerStateKey = resolveReputationProviderStateKey(config, url);
+      const isCircuitOpen = isReputationProviderCircuitOpen(config, providerStateKey, now);
+      if (isCircuitOpen) {
+        if (!shouldAttemptReputationProviderAutoHealProbe(config, providerStateKey, now)) {
+          providerResults.push({
+            url,
+            status: "skipped"
+          });
+          continue;
+        }
+
+        markReputationProviderProbeAttempt(providerStateKey, now);
+        try {
+          const snapshot = await fetchRemoteReputationSnapshot(url, config.externalReputationTimeoutMs);
+          registerReputationProviderSuccess(providerStateKey, now);
+          providerResults.push({
+            url,
+            status: "fulfilled",
+            snapshot
+          });
+        } catch {
+          registerReputationProviderFailure(config, providerStateKey, now);
+          providerResults.push({
+            url,
+            status: "rejected"
+          });
+        }
+        continue;
+      }
+
+      try {
+        const snapshot = await fetchRemoteReputationSnapshot(url, config.externalReputationTimeoutMs);
+        registerReputationProviderSuccess(providerStateKey, now);
+        providerResults.push({
+          url,
+          status: "fulfilled",
+          snapshot
+        });
+      } catch {
+        registerReputationProviderFailure(config, providerStateKey, now);
+        providerResults.push({
+          url,
+          status: "rejected"
+        });
+      }
+    }
+
+    const successfulSnapshots = providerResults
+      .filter((result): result is { url: string; status: "fulfilled"; snapshot: { highRiskDeviceIds: Set<string>; highRiskIpAddresses: Set<string> } } => result.status === "fulfilled")
+      .map((result) => result.snapshot);
+    const failedProviderCount = providerResults.filter((result) => result.status === "rejected").length;
+    const skippedProviderCount = providerResults.filter((result) => result.status === "skipped").length;
+
+    if (successfulSnapshots.length < config.externalReputationMinimumSuccess) {
+      if (config.externalReputationStrictMode) {
+        throw new ServiceError(
+          500,
+          "attendance anti-spoofing policy could not satisfy external reputation provider minimum-success requirement",
+          {
+            requiredSuccess: config.externalReputationMinimumSuccess,
+            succeeded: successfulSnapshots.length,
+            configuredProviders: config.externalReputationUrls.length,
+            failedProviders: failedProviderCount,
+            skippedProviders: skippedProviderCount
+          }
+        );
+      }
+      return {
+        ...baseSnapshot,
+        source: "remote-fallback"
+      };
+    }
+
+    const remoteSnapshot = mergeRemoteReputationSnapshots(
+      successfulSnapshots,
+      config.externalReputationAggregation,
+      config.externalReputationMajorityThreshold
+    );
+    const mergedSnapshot: AntiSpoofingReputationSnapshot = {
+      highRiskDeviceIds: new Set([...baseSnapshot.highRiskDeviceIds, ...remoteSnapshot.highRiskDeviceIds]),
+      highRiskIpAddresses: new Set([...baseSnapshot.highRiskIpAddresses, ...remoteSnapshot.highRiskIpAddresses]),
+      source: successfulSnapshots.length > 1 ? "remote-multi" : "remote"
+    };
+    antiSpoofingReputationCache = {
+      cacheKey,
+      expiresAt: now + config.externalReputationCacheTtlSeconds * 1000,
+      snapshot: mergedSnapshot
+    };
+    return mergedSnapshot;
+  } catch (error) {
+    if (error instanceof ServiceError) {
+      throw error;
+    }
+    if (config.externalReputationStrictMode) {
+      throw new ServiceError(
+        500,
+        "attendance anti-spoofing policy could not load external reputation snapshot"
+      );
+    }
+    return {
+      ...baseSnapshot,
+      source: "remote-fallback"
+    };
+  }
+}
+
+function parseTrustedDeviceAllowlist() {
+  const raw = process.env.FLOWHR_ATTENDANCE_TRUSTED_DEVICE_IDS ?? "";
+  const values = raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  if (values.length === 0) {
+    throw new ServiceError(500, "attendance trusted device policy is enabled but allowlist is empty");
+  }
+
+  return new Set(values);
+}
+
+function parseDeviceAttestationMap() {
+  const raw =
+    process.env.FLOWHR_ATTENDANCE_DEVICE_ATTESTATION_TOKENS ??
+    process.env.ATTENDANCE_DEVICE_ATTESTATION_TOKENS ??
+    "";
+  const entries = raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (entries.length === 0) {
+    throw new ServiceError(
+      500,
+      "attendance device attestation policy is enabled but token mapping is empty"
+    );
+  }
+
+  const mapping = new Map<string, string>();
+  for (const entry of entries) {
+    const [deviceIdRaw, tokenRaw, ...extra] = entry.split(":");
+    const deviceId = deviceIdRaw?.trim() ?? "";
+    const token = tokenRaw?.trim() ?? "";
+    if (!deviceId || !token || extra.length > 0) {
+      throw new ServiceError(
+        500,
+        "attendance device attestation policy is enabled but token mapping is invalid"
+      );
+    }
+    mapping.set(deviceId, token);
+  }
+
+  return mapping;
+}
+
+function loadAntiSpoofingPolicyConfig(): AntiSpoofingPolicyConfig {
+  const rawChannels =
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_ALLOWED_CHANNELS ??
+    process.env.ATTENDANCE_ANTI_SPOOFING_ALLOWED_CHANNELS ??
+    "GPS,WIFI,QR";
+  const allowedChannels = rawChannels
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter((value) => value.length > 0);
+
+  const validChannels: AttendanceCaptureChannel[] = ["MANUAL", "GPS", "QR", "WIFI", "DEVICE"];
+  const allowed = new Set<AttendanceCaptureChannel>();
+  for (const channel of allowedChannels) {
+    if (!validChannels.includes(channel as AttendanceCaptureChannel)) {
+      throw new ServiceError(
+        500,
+        "attendance anti-spoofing policy is enabled but allowed channel configuration is invalid"
+      );
+    }
+    allowed.add(channel as AttendanceCaptureChannel);
+  }
+
+  if (allowed.size === 0) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but allowed channel configuration is empty"
+    );
+  }
+
+  const maxGpsAccuracyMeters =
+    parseIntegerEnv(process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_MAX_GPS_ACCURACY_METERS) ?? 150;
+  const riskThreshold =
+    parseIntegerEnv(process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_RISK_THRESHOLD) ?? 2;
+  const signalFusionEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_ENABLED
+  );
+  const minSignals =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_MIN_SIGNALS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_SIGNAL_FUSION_MIN_SIGNALS
+    ) ?? 2;
+  const reputationPenalty =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_REPUTATION_PENALTY ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_REPUTATION_PENALTY
+    ) ?? 2;
+  const highRiskDeviceIds = parseCsvSet(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_DEVICE_IDS ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_DEVICE_IDS
+  );
+  const highRiskIpAddresses = parseCsvSet(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_IPS ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_HIGH_RISK_IPS,
+    (token) => token.toLowerCase()
+  );
+  const externalReputationEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ENABLED
+  );
+  const externalReputationProvider = parseExternalReputationProvider(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_PROVIDER ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_PROVIDER
+  );
+  const externalReputationUrls = parseExternalReputationUrls(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URLS ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URLS,
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URL ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_URL
+  );
+  const externalReputationAggregation = parseExternalReputationAggregation(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AGGREGATION ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AGGREGATION
+  );
+  const externalReputationMajorityThreshold = parseIntegerEnv(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MAJORITY_THRESHOLD ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MAJORITY_THRESHOLD
+  );
+  const externalReputationMinimumSuccess =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MIN_SUCCESS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_MIN_SUCCESS
+    ) ?? 1;
+  const externalReputationCircuitBreakerEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CIRCUIT_BREAKER_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CIRCUIT_BREAKER_ENABLED
+  );
+  const externalReputationFailureThreshold =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_FAILURE_THRESHOLD ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_FAILURE_THRESHOLD
+    ) ?? 3;
+  const externalReputationCooldownSeconds =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_COOLDOWN_SECONDS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_COOLDOWN_SECONDS
+    ) ?? 120;
+  const externalReputationAdaptiveRoutingEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ADAPTIVE_ROUTING_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_ADAPTIVE_ROUTING_ENABLED
+  );
+  const externalReputationAutoHealEnabled = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_ENABLED ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_ENABLED
+  );
+  const externalReputationAutoHealProbeIntervalSeconds =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_PROBE_INTERVAL_SECONDS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_AUTO_HEAL_PROBE_INTERVAL_SECONDS
+    ) ?? 60;
+  const externalReputationTimeoutMs =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_TIMEOUT_MS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_TIMEOUT_MS
+    ) ?? 2000;
+  const externalReputationCacheTtlSeconds =
+    parseIntegerEnv(
+      process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CACHE_TTL_SECONDS ??
+        process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_CACHE_TTL_SECONDS
+    ) ?? 300;
+  const externalReputationStrictMode = isTruthyFlag(
+    process.env.FLOWHR_ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_STRICT_MODE ??
+      process.env.ATTENDANCE_ANTI_SPOOFING_EXTERNAL_REPUTATION_STRICT_MODE
+  );
+
+  if (maxGpsAccuracyMeters <= 0) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but max GPS accuracy configuration is invalid"
+    );
+  }
+  if (riskThreshold < 0 || riskThreshold > 10) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but risk threshold configuration is invalid"
+    );
+  }
+  if (minSignals < 1 || minSignals > 4) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but signal fusion min-signals configuration is invalid"
+    );
+  }
+  if (reputationPenalty < 1 || reputationPenalty > 5) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but reputation penalty configuration is invalid"
+    );
+  }
+  if (
+    externalReputationEnabled &&
+    externalReputationProvider === "remote" &&
+    externalReputationUrls.length === 0
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation URL configuration is empty"
+    );
+  }
+  if (externalReputationUrls.length > 10) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation URL configuration exceeds limit"
+    );
+  }
+  if (
+    externalReputationMajorityThreshold !== null &&
+    (externalReputationMajorityThreshold < 1 || externalReputationMajorityThreshold > 10)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation majority threshold configuration is invalid"
+    );
+  }
+  if (
+    externalReputationEnabled &&
+    externalReputationProvider === "remote" &&
+    (externalReputationMinimumSuccess < 1 ||
+      externalReputationMinimumSuccess > Math.max(1, externalReputationUrls.length))
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation minimum-success configuration is invalid"
+    );
+  }
+  if (
+    externalReputationAggregation === "majority" &&
+    externalReputationMajorityThreshold !== null &&
+    externalReputationMajorityThreshold > Math.max(1, externalReputationUrls.length)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation majority threshold exceeds provider count"
+    );
+  }
+  if (
+    externalReputationCircuitBreakerEnabled &&
+    (externalReputationFailureThreshold < 1 || externalReputationFailureThreshold > 20)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation failure-threshold configuration is invalid"
+    );
+  }
+  if (
+    externalReputationCircuitBreakerEnabled &&
+    (externalReputationCooldownSeconds < 10 || externalReputationCooldownSeconds > 3600)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation cooldown configuration is invalid"
+    );
+  }
+  if (externalReputationAutoHealEnabled && !externalReputationCircuitBreakerEnabled) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation auto-heal requires circuit-breaker enabled"
+    );
+  }
+  if (
+    externalReputationAutoHealEnabled &&
+    (externalReputationAutoHealProbeIntervalSeconds < 10 ||
+      externalReputationAutoHealProbeIntervalSeconds > 600)
+  ) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation auto-heal probe interval configuration is invalid"
+    );
+  }
+  if (externalReputationTimeoutMs < 100 || externalReputationTimeoutMs > 10000) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation timeout configuration is invalid"
+    );
+  }
+  if (externalReputationCacheTtlSeconds < 0 || externalReputationCacheTtlSeconds > 3600) {
+    throw new ServiceError(
+      500,
+      "attendance anti-spoofing policy is enabled but external reputation cache ttl configuration is invalid"
+    );
+  }
+
+  return {
+    allowedChannels: allowed,
+    maxGpsAccuracyMeters,
+    riskThreshold,
+    signalFusionEnabled,
+    minSignals,
+    reputationPenalty,
+    highRiskDeviceIds,
+    highRiskIpAddresses,
+    externalReputationEnabled,
+    externalReputationProvider,
+    externalReputationUrls: externalReputationUrls.map((url) => url.trim()).filter((url) => url.length > 0),
+    externalReputationAggregation,
+    externalReputationMajorityThreshold,
+    externalReputationMinimumSuccess,
+    externalReputationCircuitBreakerEnabled,
+    externalReputationFailureThreshold,
+    externalReputationCooldownSeconds,
+    externalReputationAdaptiveRoutingEnabled,
+    externalReputationAutoHealEnabled,
+    externalReputationAutoHealProbeIntervalSeconds,
+    externalReputationTimeoutMs,
+    externalReputationCacheTtlSeconds,
+    externalReputationStrictMode
+  };
+}
+
+function loadGeofenceConfig(): GeofenceConfig {
+  const latitude = parseNumberEnv(process.env.FLOWHR_ATTENDANCE_GEOFENCE_LAT);
+  const longitude = parseNumberEnv(process.env.FLOWHR_ATTENDANCE_GEOFENCE_LNG);
+  const radiusMeters = parseNumberEnv(process.env.FLOWHR_ATTENDANCE_GEOFENCE_RADIUS_METERS);
+
+  if (latitude === null || longitude === null || radiusMeters === null) {
+    throw new ServiceError(500, "attendance geofence policy is enabled but configuration is invalid");
+  }
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || radiusMeters <= 0) {
+    throw new ServiceError(500, "attendance geofence policy is enabled but configuration is invalid");
+  }
+
+  return {
+    latitude,
+    longitude,
+    radiusMeters
+  };
+}
+
+function parseMultiSiteGeofenceConfig(): GeofenceSiteConfig[] {
+  const raw = process.env.FLOWHR_ATTENDANCE_MULTI_SITE_GEOFENCE_SITES ?? "";
+  const entries = raw
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (entries.length === 0) {
+    throw new ServiceError(
+      500,
+      "attendance multi-site geofence policy is enabled but site configuration is empty"
+    );
+  }
+
+  return entries.map((entry) => {
+    const segments = entry.split(":").map((segment) => segment.trim());
+    if (segments.length !== 4) {
+      throw new ServiceError(
+        500,
+        "attendance multi-site geofence policy is enabled but site configuration is invalid"
+      );
+    }
+
+    const [siteId, latitudeRaw, longitudeRaw, radiusRaw] = segments;
+    const latitude = parseNumberEnv(latitudeRaw);
+    const longitude = parseNumberEnv(longitudeRaw);
+    const radiusMeters = parseNumberEnv(radiusRaw);
+
+    if (
+      !siteId ||
+      latitude === null ||
+      longitude === null ||
+      radiusMeters === null ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180 ||
+      radiusMeters <= 0
+    ) {
+      throw new ServiceError(
+        500,
+        "attendance multi-site geofence policy is enabled but site configuration is invalid"
+      );
+    }
+
+    return {
+      siteId,
+      latitude,
+      longitude,
+      radiusMeters
+    };
+  });
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function haversineDistanceMeters(
+  fromLatitude: number,
+  fromLongitude: number,
+  toLatitude: number,
+  toLongitude: number
+) {
+  const earthRadiusMeters = 6371000;
+  const deltaLat = toRadians(toLatitude - fromLatitude);
+  const deltaLng = toRadians(toLongitude - fromLongitude);
+  const fromLatRad = toRadians(fromLatitude);
+  const toLatRad = toRadians(toLatitude);
+
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(fromLatRad) * Math.cos(toLatRad) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusMeters * c;
+}
+
+export function assertGpsCapturePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceGpsPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  if (
+    !input.capture ||
+    input.capture.channel !== "GPS" ||
+    input.capture.latitude === undefined ||
+    input.capture.longitude === undefined
+  ) {
+    throw new ServiceError(400, "attendance capture policy requires GPS channel with coordinates");
+  }
+}
+
+export function assertGpsCapturePolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceGpsPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const nextChannel = input.capture?.channel ?? existing.captureChannel;
+  const nextLatitude =
+    input.capture?.latitude !== undefined ? input.capture.latitude : existing.captureLatitude;
+  const nextLongitude =
+    input.capture?.longitude !== undefined ? input.capture.longitude : existing.captureLongitude;
+
+  if (nextChannel !== "GPS" || nextLatitude === null || nextLongitude === null) {
+    throw new ServiceError(400, "attendance capture policy requires GPS channel with coordinates");
+  }
+}
+
+function assertGeofenceForCoordinates(latitude: number, longitude: number) {
+  const geofence = loadGeofenceConfig();
+  const distanceMeters = haversineDistanceMeters(
+    latitude,
+    longitude,
+    geofence.latitude,
+    geofence.longitude
+  );
+  if (distanceMeters > geofence.radiusMeters) {
+    throw new ServiceError(400, "attendance capture location is outside allowed geofence");
+  }
+}
+
+function assertMultiSiteGeofenceForCoordinates(latitude: number, longitude: number) {
+  const sites = parseMultiSiteGeofenceConfig();
+  const insideAnySite = sites.some((site) => {
+    const distanceMeters = haversineDistanceMeters(
+      latitude,
+      longitude,
+      site.latitude,
+      site.longitude
+    );
+    return distanceMeters <= site.radiusMeters;
+  });
+
+  if (!insideAnySite) {
+    throw new ServiceError(400, "attendance capture location is outside allowed multi-site geofence");
+  }
+}
+
+export function assertGeofencePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  const geofencePolicyEnabled = isAttendanceGeofencePolicyEnabled();
+  const multiSitePolicyEnabled = isAttendanceMultiSiteGeofencePolicyEnabled();
+
+  if ((!geofencePolicyEnabled && !multiSitePolicyEnabled) || actor.role !== "employee") {
+    return;
+  }
+
+  const latitude = input.capture?.latitude;
+  const longitude = input.capture?.longitude;
+  if (input.capture?.channel !== "GPS" || latitude === undefined || longitude === undefined) {
+    throw new ServiceError(400, "attendance geofence policy requires GPS coordinates");
+  }
+
+  if (multiSitePolicyEnabled) {
+    assertMultiSiteGeofenceForCoordinates(latitude, longitude);
+    return;
+  }
+
+  assertGeofenceForCoordinates(latitude, longitude);
+}
+
+export function assertGeofencePolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  const geofencePolicyEnabled = isAttendanceGeofencePolicyEnabled();
+  const multiSitePolicyEnabled = isAttendanceMultiSiteGeofencePolicyEnabled();
+
+  if ((!geofencePolicyEnabled && !multiSitePolicyEnabled) || actor.role !== "employee") {
+    return;
+  }
+
+  const nextChannel = input.capture?.channel ?? existing.captureChannel;
+  const nextLatitude =
+    input.capture?.latitude !== undefined ? input.capture.latitude : existing.captureLatitude;
+  const nextLongitude =
+    input.capture?.longitude !== undefined ? input.capture.longitude : existing.captureLongitude;
+
+  if (
+    nextChannel !== "GPS" ||
+    nextLatitude === undefined ||
+    nextLongitude === undefined ||
+    nextLatitude === null ||
+    nextLongitude === null
+  ) {
+    throw new ServiceError(400, "attendance geofence policy requires GPS coordinates");
+  }
+
+  if (multiSitePolicyEnabled) {
+    assertMultiSiteGeofenceForCoordinates(nextLatitude, nextLongitude);
+    return;
+  }
+
+  assertGeofenceForCoordinates(nextLatitude, nextLongitude);
+}
+
+export function assertTrustedDevicePolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceTrustedDevicePolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const deviceId = input.capture?.deviceId?.trim();
+  if (!deviceId) {
+    throw new ServiceError(400, "attendance trusted device policy requires capture deviceId");
+  }
+
+  const trustedDevices = parseTrustedDeviceAllowlist();
+  if (!trustedDevices.has(deviceId)) {
+    throw new ServiceError(400, "attendance capture device is not in trusted device allowlist");
+  }
+}
+
+export function assertTrustedDevicePolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceTrustedDevicePolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const nextDeviceId = input.capture?.deviceId !== undefined ? input.capture.deviceId : existing.captureDeviceId;
+  const normalized = nextDeviceId?.trim();
+  if (!normalized) {
+    throw new ServiceError(400, "attendance trusted device policy requires capture deviceId");
+  }
+
+  const trustedDevices = parseTrustedDeviceAllowlist();
+  if (!trustedDevices.has(normalized)) {
+    throw new ServiceError(400, "attendance capture device is not in trusted device allowlist");
+  }
+}
+
+export function assertDeviceAttestationForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceDeviceAttestationPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const deviceId = input.capture?.deviceId?.trim();
+  if (!deviceId) {
+    throw new ServiceError(
+      400,
+      "attendance device attestation policy requires effective capture deviceId"
+    );
+  }
+
+  const attestationToken = input.capture?.attestationToken?.trim();
+  if (!attestationToken) {
+    throw new ServiceError(400, "attendance device attestation policy requires capture attestationToken");
+  }
+
+  const attestationMap = parseDeviceAttestationMap();
+  const expectedToken = attestationMap.get(deviceId);
+  if (!expectedToken || expectedToken !== attestationToken) {
+    throw new ServiceError(400, "attendance capture attestation token is invalid for device");
+  }
+}
+
+export function assertDeviceAttestationForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceDeviceAttestationPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const nextDeviceId = input.capture?.deviceId !== undefined ? input.capture.deviceId : existing.captureDeviceId;
+  const normalizedDeviceId = nextDeviceId?.trim();
+  if (!normalizedDeviceId) {
+    throw new ServiceError(
+      400,
+      "attendance device attestation policy requires effective capture deviceId"
+    );
+  }
+
+  const attestationToken = input.capture?.attestationToken?.trim();
+  if (!attestationToken) {
+    throw new ServiceError(400, "attendance device attestation policy requires capture attestationToken");
+  }
+
+  const attestationMap = parseDeviceAttestationMap();
+  const expectedToken = attestationMap.get(normalizedDeviceId);
+  if (!expectedToken || expectedToken !== attestationToken) {
+    throw new ServiceError(400, "attendance capture attestation token is invalid for device");
+  }
+}
+
+function computeAntiSpoofingRiskScore(
+  config: AntiSpoofingPolicyConfig,
+  reputationSnapshot: AntiSpoofingReputationSnapshot,
+  channel: AttendanceCaptureChannel,
+  deviceId: string | null | undefined,
+  ipAddress: string | null | undefined,
+  accuracyMeters: number | null | undefined,
+  latitude: number | null | undefined,
+  longitude: number | null | undefined
+) {
+  let score = 0;
+  const normalizedDeviceId = deviceId?.trim();
+  const normalizedIpAddress = ipAddress?.trim();
+
+  if (!config.allowedChannels.has(channel)) {
+    score += 2;
+  }
+  if (!normalizedDeviceId) {
+    score += 1;
+  }
+  if (!normalizedIpAddress) {
+    score += 1;
+  }
+  if (
+    channel === "GPS" &&
+    (accuracyMeters === null ||
+      accuracyMeters === undefined ||
+      !Number.isFinite(accuracyMeters) ||
+      accuracyMeters > config.maxGpsAccuracyMeters)
+  ) {
+    score += 1;
+  }
+
+  if (config.signalFusionEnabled) {
+    let signalCount = 0;
+    if (config.allowedChannels.has(channel)) {
+      signalCount += 1;
+    }
+    if (normalizedDeviceId) {
+      signalCount += 1;
+    }
+    if (normalizedIpAddress) {
+      signalCount += 1;
+    }
+    if (
+      channel === "GPS" &&
+      latitude !== null &&
+      latitude !== undefined &&
+      longitude !== null &&
+      longitude !== undefined &&
+      accuracyMeters !== null &&
+      accuracyMeters !== undefined &&
+      Number.isFinite(accuracyMeters) &&
+      accuracyMeters <= config.maxGpsAccuracyMeters
+    ) {
+      signalCount += 1;
+    }
+
+    if (signalCount < config.minSignals) {
+      score += config.reputationPenalty;
+    }
+    if (normalizedDeviceId && reputationSnapshot.highRiskDeviceIds.has(normalizedDeviceId)) {
+      score += config.reputationPenalty;
+    }
+    if (
+      normalizedIpAddress &&
+      reputationSnapshot.highRiskIpAddresses.has(normalizedIpAddress.toLowerCase())
+    ) {
+      score += config.reputationPenalty;
+    }
+  }
+
+  return score;
+}
+
+export async function assertAntiSpoofingPolicyForCreate(actor: Actor, input: CreateAttendanceInput) {
+  if (!isAttendanceAntiSpoofingPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const config = loadAntiSpoofingPolicyConfig();
+  const reputationSnapshot = await resolveAntiSpoofingReputationSnapshot(config);
+  const channel = input.capture?.channel ?? "MANUAL";
+  const riskScore = computeAntiSpoofingRiskScore(
+    config,
+    reputationSnapshot,
+    channel,
+    input.capture?.deviceId,
+    input.capture?.ipAddress,
+    input.capture?.accuracyMeters,
+    input.capture?.latitude,
+    input.capture?.longitude
+  );
+
+  if (riskScore > config.riskThreshold) {
+    throw new ServiceError(
+      400,
+      `attendance anti-spoofing policy rejected capture payload (risk score ${riskScore} > threshold ${config.riskThreshold})`
+    );
+  }
+}
+
+export async function assertAntiSpoofingPolicyForUpdate(
+  actor: Actor,
+  existing: AttendanceRecordEntity,
+  input: UpdateAttendanceInput
+) {
+  if (!isAttendanceAntiSpoofingPolicyEnabled() || actor.role !== "employee") {
+    return;
+  }
+
+  const config = loadAntiSpoofingPolicyConfig();
+  const reputationSnapshot = await resolveAntiSpoofingReputationSnapshot(config);
+  const nextChannel = input.capture?.channel ?? existing.captureChannel;
+  const nextDeviceId = input.capture?.deviceId !== undefined ? input.capture.deviceId : existing.captureDeviceId;
+  const nextIpAddress = input.capture?.ipAddress !== undefined ? input.capture.ipAddress : existing.captureIpAddress;
+  const nextAccuracy =
+    input.capture?.accuracyMeters !== undefined ? input.capture.accuracyMeters : existing.captureAccuracyMeters;
+  const nextLatitude =
+    input.capture?.latitude !== undefined ? input.capture.latitude : existing.captureLatitude;
+  const nextLongitude =
+    input.capture?.longitude !== undefined ? input.capture.longitude : existing.captureLongitude;
+  const riskScore = computeAntiSpoofingRiskScore(
+    config,
+    reputationSnapshot,
+    nextChannel,
+    nextDeviceId,
+    nextIpAddress,
+    nextAccuracy,
+    nextLatitude,
+    nextLongitude
+  );
+
+  if (riskScore > config.riskThreshold) {
+    throw new ServiceError(
+      400,
+      `attendance anti-spoofing policy rejected capture payload (risk score ${riskScore} > threshold ${config.riskThreshold})`
+    );
+  }
+}
+
+
