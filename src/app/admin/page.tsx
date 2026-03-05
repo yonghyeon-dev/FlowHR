@@ -335,6 +335,10 @@ export default function AdminDashboardPage() {
     return `${href}${separator}source=admin-dashboard`;
   };
 
+  if (supabaseSessionLoading) {
+    return null;
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">
