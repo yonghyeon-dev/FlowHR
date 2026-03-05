@@ -3,6 +3,7 @@
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useMemo, useState } from "react";
 
+import { syncAccessTokenCookie } from "@/lib/auth/session-cookie";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 export type SupabaseSessionSnapshot = {
@@ -86,9 +87,11 @@ export function useSupabaseSession(): SupabaseSessionState {
         } else {
           setError(null);
         }
+        syncAccessTokenCookie(data.session);
         setSnapshot(toSnapshot(data.session));
 
         const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+          syncAccessTokenCookie(session);
           setSnapshot(toSnapshot(session));
         });
         unsubscribe = () => listener.subscription.unsubscribe();

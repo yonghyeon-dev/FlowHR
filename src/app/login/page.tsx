@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
+import { clearAccessTokenCookie, syncAccessTokenCookie } from "@/lib/auth/session-cookie";
 import { useI18n } from "@/lib/i18n/provider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -19,29 +19,6 @@ type SessionSnapshot = {
   organizationId: string | null;
   actorId: string | null;
 };
-
-function clearAccessTokenCookie() {
-  document.cookie = `${FLOWHR_ACCESS_TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-}
-
-function syncAccessTokenCookie(session: Session | null) {
-  if (!session?.access_token) {
-    clearAccessTokenCookie();
-    return;
-  }
-
-  const nowEpochSeconds = Math.floor(Date.now() / 1000);
-  const maxAge =
-    typeof session.expires_at === "number" ? Math.max(0, session.expires_at - nowEpochSeconds) : 60 * 60;
-
-  if (maxAge <= 0) {
-    clearAccessTokenCookie();
-    return;
-  }
-
-  const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${FLOWHR_ACCESS_TOKEN_COOKIE}=${encodeURIComponent(session.access_token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secureFlag}`;
-}
 
 function resolveRedirectPath(value: string | null): string | null {
   if (!value) {
