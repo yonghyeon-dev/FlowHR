@@ -70,6 +70,7 @@ type CreateLeaveRequestInput = {
   employeeId: string;
   policyId?: string;
   leaveType: LeaveType;
+  isMultipleBirth?: boolean;
   startDate: Date;
   endDate: Date;
   unit?: LeaveRequestUnit;
@@ -186,6 +187,10 @@ type AvailableLeaveBalance = {
   available: number;
 };
 
+const MATERNITY_SINGLE_BIRTH_MAX_DAYS = 90;
+const MATERNITY_MULTIPLE_BIRTH_MAX_DAYS = 120;
+const PATERNITY_MAX_DAYS = 10;
+
 function resolveTargetOrganizationId(actor: Actor | null, inputOrganizationId?: string) {
   const candidate = (inputOrganizationId ?? actor?.organizationId ?? "").trim();
   if (!candidate) {
@@ -197,6 +202,39 @@ function resolveTargetOrganizationId(actor: Actor | null, inputOrganizationId?: 
 function ensureTenantAccess(actor: Actor | null, organizationId: string) {
   const tenantScope = resolveTenantScope(actor);
   ensureTenantMatch(tenantScope, organizationId, "organization not found");
+}
+
+function resolveStatutoryLeaveRequestMaxDays(input: {
+  leaveType: LeaveType;
+  isMultipleBirth?: boolean;
+}): number | null {
+  if (input.leaveType === "MATERNITY") {
+    return input.isMultipleBirth ? MATERNITY_MULTIPLE_BIRTH_MAX_DAYS : MATERNITY_SINGLE_BIRTH_MAX_DAYS;
+  }
+  if (input.leaveType === "PATERNITY") {
+    return PATERNITY_MAX_DAYS;
+  }
+  return null;
+}
+
+function assertStatutoryLeaveDayLimit(input: {
+  leaveType: LeaveType;
+  requestedDays: number;
+  isMultipleBirth?: boolean;
+}) {
+  const maxDays = resolveStatutoryLeaveRequestMaxDays(input);
+  if (maxDays === null) {
+    return null;
+  }
+  if (input.requestedDays <= maxDays + 1e-9) {
+    return maxDays;
+  }
+  throw new ServiceError(400, `statutory leave day limit exceeded for ${input.leaveType}`, {
+    leaveType: input.leaveType,
+    requestedDays: input.requestedDays,
+    maxDays,
+    isMultipleBirth: input.isMultipleBirth ?? false
+  });
 }
 
 function requireAdminRole(actor: Actor | null): asserts actor is Actor {
@@ -352,27 +390,35 @@ export async function createLeaveRequest(
     policy: policyRules
   });
 
-  const requestYear = resolveSeoulYearFromDate(input.startDate);
-  const availableBalance = await calculateAvailableLeaveBalance(context, {
-    employeeId: input.employeeId,
+  const statutoryLimitDays = assertStatutoryLeaveDayLimit({
     leaveType: input.leaveType,
-    year: requestYear
+    requestedDays: requested.days,
+    isMultipleBirth: input.isMultipleBirth
   });
-  if (availableBalance.available + 1e-9 < requested.days) {
-    throw new ServiceError(
-      400,
-      `insufficient leave balance: available ${availableBalance.available} day(s), requested ${requested.days} day(s)`,
-      {
-        employeeId: input.employeeId,
-        leaveType: input.leaveType,
-        year: requestYear,
-        currentBalance: availableBalance.available,
-        requestedDays: requested.days,
-        total: availableBalance.total,
-        used: availableBalance.used,
-        pending: availableBalance.pending
-      }
-    );
+
+  if (statutoryLimitDays === null) {
+    const requestYear = resolveSeoulYearFromDate(input.startDate);
+    const availableBalance = await calculateAvailableLeaveBalance(context, {
+      employeeId: input.employeeId,
+      leaveType: input.leaveType,
+      year: requestYear
+    });
+    if (availableBalance.available + 1e-9 < requested.days) {
+      throw new ServiceError(
+        400,
+        `insufficient leave balance: available ${availableBalance.available} day(s), requested ${requested.days} day(s)`,
+        {
+          employeeId: input.employeeId,
+          leaveType: input.leaveType,
+          year: requestYear,
+          currentBalance: availableBalance.available,
+          requestedDays: requested.days,
+          total: availableBalance.total,
+          used: availableBalance.used,
+          pending: availableBalance.pending
+        }
+      );
+    }
   }
 
   await ensureNoOverlap(context, {

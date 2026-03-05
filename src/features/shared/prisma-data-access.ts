@@ -73,6 +73,7 @@ import type {
   UpdateLeavePromotionDeliveryRecipientInput,
   LeavePolicyEntity,
   LeavePolicyStore,
+  LeaveType,
   LeaveRequestEntity,
   LeaveStore,
   InAppNotificationEntity,
@@ -194,7 +195,7 @@ function toLeaveRequestEntity(record: {
   id: string;
   employeeId: string;
   policyId: string | null;
-  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  leaveType: LeaveType;
   startDate: Date;
   endDate: Date;
   unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
