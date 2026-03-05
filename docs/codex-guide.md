@@ -962,6 +962,39 @@ SaaS 고객 가치와 무관한 ops 내부 워크플로는 **최소 기능(2~3 W
 2. 직원 셀프서비스 핵심 여정
 3. 관리자 승인 큐 UX 및 성능
 
+### 10. Contract Governance CI 준수 (MUST)
+
+```
+migration 추가 시 반드시:
+1. work-items/WI-XXXX.md에 `## Data Changes` 섹션 추가 (migration ID + 테이블명)
+2. specs/{domain}/contract.yaml의 db_changes.migrations에 ID 등록
+3. contract.yaml version bump (patch 단위)
+4. specs/{domain}/api.yaml version을 contract.yaml과 동일하게 동기화
+```
+
+### 11. PR Template Compliance (MUST)
+
+```
+PR body 작성 시 반드시:
+1. .github/PULL_REQUEST_TEMPLATE.md 양식 정확히 사용
+2. Required Checklist 항목 전부 체크 ([x])
+3. Quality Gate Evidence 항목 전부 체크 ([x])
+4. Delivery Balance: "UI/UX surface changed"와 "Backend-only exception" 중 하나만 체크
+5. Emergency Override (Break-Glass Only) 섹션은 일반 PR에서 절대 체크하지 않음
+```
+
+### 12. Codex 실행 플래그 (MUST)
+
+```
+push/PR이 필요한 작업:
+  codex exec --dangerously-bypass-approvals-and-sandbox (네트워크 접근 필요)
+
+push 불필요한 작업 (구현만):
+  codex exec --full-auto (기본 sandbox, 네트워크 차단)
+
+주의: --full-auto, --sandbox danger-full-access는 Windows에서 네트워크 차단됨
+```
+
 ## 구현 원칙 (SHOULD)
 
 ### 1. WI 1개 = 기능 1개
