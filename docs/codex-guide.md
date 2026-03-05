@@ -13,7 +13,9 @@
 ### 2. 디렉토리 중첩 금지
 - 라우트 경로 6단계 초과 금지, URL 파라미터 5개 초과 금지.
 
-### 3. i18n 연속 금지
+### 3. I18N One-Shot Guard (WI-0522)
+- Korean i18n cleanup must be completed as a single sweep, then locked by CI.
+- If i18n-only WIs are queued three times in a row, stop and switch to feature WIs.
 - i18n WI 3개 연속 시 중단, 기능 WI로 전환.
 
 ### 4. 헬퍼 추출 연속 금지
