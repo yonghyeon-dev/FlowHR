@@ -168,7 +168,7 @@ export default function LoginPage() {
     }
     const timer = window.setTimeout(() => {
       router.replace(loginSuccessTarget);
-    }, 600);
+    }, 200);
     return () => {
       window.clearTimeout(timer);
     };
