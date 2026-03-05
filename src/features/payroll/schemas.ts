@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defaultMultipliers } from "@/lib/payroll-rules";
 import { findPayrollKrIncomeSplitItemCodeDictionaryEntry } from "@/features/payroll/kr-income-split-item-code-dictionary";
+import { DEFAULT_INSURANCE_RATES } from "@/features/payroll/insurance-rates";
 
 const isoDateTime = z.string().datetime({ offset: true });
 const nonNegativeInteger = z.number().int().min(0);
@@ -83,12 +84,12 @@ const statutoryKrBaselineSchema = z.object({
   requireMonthlyBoundary: z.boolean().default(false),
   incomeTaxRate: rate.default(0.03),
   localIncomeTaxRate: rate.default(0.1),
-  nationalPensionRate: rate.default(0.045),
+  nationalPensionRate: rate.default(DEFAULT_INSURANCE_RATES.nps),
   nationalPensionCapKrw: nonNegativeInteger.optional(),
-  healthInsuranceRate: rate.default(0.03545),
+  healthInsuranceRate: rate.default(DEFAULT_INSURANCE_RATES.nhi),
   healthInsuranceCapKrw: nonNegativeInteger.optional(),
   longTermCareRateOnHealth: rate.default(0.1295),
-  employmentInsuranceRate: rate.default(0.009),
+  employmentInsuranceRate: rate.default(DEFAULT_INSURANCE_RATES.ei),
   employmentInsuranceCapKrw: nonNegativeInteger.optional(),
   insuranceRounding: statutoryInsuranceRoundingSchema.optional(),
   otherDeductionsKrw: nonNegativeInteger.default(0)

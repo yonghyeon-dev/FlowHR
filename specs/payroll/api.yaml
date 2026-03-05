@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Payroll API
-  version: 1.60.0
+  version: 1.61.0
 paths:
   /payroll/runs:
     get:

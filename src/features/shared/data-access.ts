@@ -175,6 +175,10 @@ export type OrganizationEntity = {
   workEndTime: string | null;
   workDays: number[];
   timezone: string | null;
+  insuranceRateNps: number | null;
+  insuranceRateNhi: number | null;
+  insuranceRateEi: number | null;
+  insuranceRateWci: number | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -687,6 +691,10 @@ export type UpdateOrganizationInput = {
   workEndTime?: string | null;
   workDays?: number[];
   timezone?: string | null;
+  insuranceRateNps?: number | null;
+  insuranceRateNhi?: number | null;
+  insuranceRateEi?: number | null;
+  insuranceRateWci?: number | null;
   isOnboardingComplete?: boolean;
 };
 

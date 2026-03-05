@@ -708,6 +708,14 @@ function updateOrganizationEntity(
     workEndTime: input.workEndTime !== undefined ? input.workEndTime : existing.workEndTime,
     workDays: input.workDays !== undefined ? [...input.workDays] : [...existing.workDays],
     timezone: input.timezone !== undefined ? input.timezone : existing.timezone,
+    insuranceRateNps:
+      input.insuranceRateNps !== undefined ? input.insuranceRateNps : existing.insuranceRateNps,
+    insuranceRateNhi:
+      input.insuranceRateNhi !== undefined ? input.insuranceRateNhi : existing.insuranceRateNhi,
+    insuranceRateEi:
+      input.insuranceRateEi !== undefined ? input.insuranceRateEi : existing.insuranceRateEi,
+    insuranceRateWci:
+      input.insuranceRateWci !== undefined ? input.insuranceRateWci : existing.insuranceRateWci,
     isOnboardingComplete:
       input.isOnboardingComplete !== undefined
         ? input.isOnboardingComplete
@@ -831,6 +839,10 @@ export const memoryDataAccess: DataAccess = {
         workEndTime: null,
         workDays: [],
         timezone: null,
+        insuranceRateNps: null,
+        insuranceRateNhi: null,
+        insuranceRateEi: null,
+        insuranceRateWci: null,
         isOnboardingComplete: false,
         createdAt: now,
         updatedAt: now

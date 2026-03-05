@@ -1,5 +1,5 @@
 owner: payroll-agent
-version: 1.60.0
+version: 1.61.0
 scope:
   in:
     - gross pay preview from approved attendance aggregates
@@ -238,6 +238,8 @@ db_changes:
       description: Backfill Employee rows and enforce employeeId FK constraints for core tables.
     - id: 202602210001_wi0186_payroll_payslip_delivery_receipt
       description: Add payslip delivery/receipt tracking columns on PayrollRun.
+    - id: 202603050010_wi0943_insurance_rates_defaults
+      description: Add organization-level insurance rate override columns for payroll deductions.
   backward_compatible: true
   notes: Phase2 adds optional profile-based deduction calculation while keeping manual mode.
 invariants:

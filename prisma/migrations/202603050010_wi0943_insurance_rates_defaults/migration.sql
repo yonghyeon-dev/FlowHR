@@ -1,0 +1,5 @@
+ALTER TABLE "Organization"
+ADD COLUMN "insuranceRateNps" DOUBLE PRECISION,
+ADD COLUMN "insuranceRateNhi" DOUBLE PRECISION,
+ADD COLUMN "insuranceRateEi" DOUBLE PRECISION,
+ADD COLUMN "insuranceRateWci" DOUBLE PRECISION;
