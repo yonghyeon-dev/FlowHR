@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { DataAccess } from "@/features/shared/data-access";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import type { Actor } from "@/lib/actor";
 import { readActor } from "@/lib/actor";
@@ -23,6 +24,45 @@ const defaultTaskTitleKeys = [
   "admin.onboarding.defaultTask.attendDepartmentOt"
 ] as const satisfies readonly MessageKey[];
 const defaultTaskTitles = defaultTaskTitleKeys.map((key) => translate(DEFAULT_LOCALE, key));
+
+async function syncEmployeeTasksFromTemplates(
+  dataAccess: DataAccess,
+  employeeId: string,
+  options?: { assignWhenActiveOnly?: boolean }
+) {
+  const templates = await dataAccess.onboardingTaskTemplates.ensureDefaults(defaultTaskTitles);
+  const existingTasks = await dataAccess.onboardingTasks.listByEmployee(employeeId);
+  if (templates.length === 0) {
+    return existingTasks;
+  }
+
+  if (options?.assignWhenActiveOnly) {
+    const employee = await dataAccess.employees.findById(employeeId);
+    if (!employee || employee.status !== "ACTIVE") {
+      return existingTasks;
+    }
+  }
+
+  const existingTitleSet = new Set(existingTasks.map((task) => task.title));
+  let createdCount = 0;
+  for (const template of templates) {
+    if (existingTitleSet.has(template.title)) {
+      continue;
+    }
+    await dataAccess.onboardingTasks.create({
+      employeeId,
+      title: template.title,
+      status: "PENDING"
+    });
+    existingTitleSet.add(template.title);
+    createdCount += 1;
+  }
+
+  if (createdCount === 0) {
+    return existingTasks;
+  }
+  return dataAccess.onboardingTasks.listByEmployee(employeeId);
+}
 
 async function requireAdmin(request: Request) {
   const actor = await readActor(request);
@@ -62,7 +102,9 @@ export async function GET(request: Request) {
     return fail(403, "admin.onboarding.tasks.forbidden", { reason: "admin_or_self_required" });
   }
 
-  const tasks = await getRuntimeDataAccess().onboardingTasks.listByEmployee(parsed.data.employeeId);
+  const tasks = await syncEmployeeTasksFromTemplates(getRuntimeDataAccess(), parsed.data.employeeId, {
+    assignWhenActiveOnly: true
+  });
   return ok({ tasks });
 }
 
@@ -85,15 +127,7 @@ export async function POST(request: Request) {
   }
 
   const dataAccess = getRuntimeDataAccess();
-  const tasks = await Promise.all(
-    defaultTaskTitles.map((title) =>
-      dataAccess.onboardingTasks.create({
-        employeeId: parsed.data.employeeId,
-        title,
-        status: "PENDING"
-      })
-    )
-  );
+  const tasks = await syncEmployeeTasksFromTemplates(dataAccess, parsed.data.employeeId);
 
   return ok({ tasks }, 201);
 }

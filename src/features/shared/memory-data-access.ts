@@ -32,6 +32,7 @@ import type {
   CreateBenefitCatalogItemInput,
   CreateBenefitRequestInput,
   CreateOnboardingTaskInput,
+  CreateOnboardingTaskTemplateInput,
   CreateRecruitmentOpeningInput,
   CreateRecruitmentReferralInput,
   CreateDepartmentInput,
@@ -52,6 +53,7 @@ import type {
   InAppNotificationEntity,
   OnboardingTaskEntity,
   OnboardingTaskStatus,
+  OnboardingTaskTemplateEntity,
   LeaveBalanceEntity,
   LeavePromotionDeliveryEntity,
   LeavePromotionDeliveryRecipientEntity,
@@ -130,6 +132,7 @@ type MemoryState = {
   leavePromotionDeliveryRecipients: Map<string, LeavePromotionDeliveryRecipientEntity>;
   benefitCatalogItems: Map<string, BenefitCatalogItemEntity>;
   benefitRequests: Map<string, BenefitRequestEntity>;
+  onboardingTaskTemplates: Map<string, OnboardingTaskTemplateEntity>;
   onboardingTasks: Map<string, OnboardingTaskEntity>;
   insuranceEnrollments: Map<string, InsuranceEnrollmentEntity>;
   notices: Map<string, NoticeEntity>;
@@ -185,6 +188,7 @@ function createState(): MemoryState {
     leavePromotionDeliveryRecipients: new Map<string, LeavePromotionDeliveryRecipientEntity>(),
     benefitCatalogItems: new Map<string, BenefitCatalogItemEntity>(),
     benefitRequests: new Map<string, BenefitRequestEntity>(),
+    onboardingTaskTemplates: new Map<string, OnboardingTaskTemplateEntity>(),
     onboardingTasks: new Map<string, OnboardingTaskEntity>(),
     insuranceEnrollments: new Map<string, InsuranceEnrollmentEntity>(),
     notices: new Map<string, NoticeEntity>(),
@@ -399,6 +403,31 @@ function cloneOnboardingTask(entity: OnboardingTaskEntity): OnboardingTaskEntity
     ...entity,
     createdAt: cloneDate(entity.createdAt)
   };
+}
+
+function cloneOnboardingTaskTemplate(
+  entity: OnboardingTaskTemplateEntity
+): OnboardingTaskTemplateEntity {
+  return {
+    ...entity,
+    createdAt: cloneDate(entity.createdAt)
+  };
+}
+
+function listOnboardingTaskTemplatesFromState() {
+  const rows = Array.from(state.onboardingTaskTemplates.values()).map(cloneOnboardingTaskTemplate);
+  rows.sort((left, right) => {
+    const byOrder = left.sortOrder - right.sortOrder;
+    if (byOrder !== 0) {
+      return byOrder;
+    }
+    const byCreatedAt = left.createdAt.getTime() - right.createdAt.getTime();
+    if (byCreatedAt !== 0) {
+      return byCreatedAt;
+    }
+    return left.id.localeCompare(right.id);
+  });
+  return rows;
 }
 
 const insuranceEnrollmentTypeOrder: Record<InsuranceEnrollmentType, number> = {
@@ -2922,6 +2951,65 @@ export const memoryDataAccess: DataAccess = {
         return right.id.localeCompare(left.id);
       });
       return rows.slice(0, limit);
+    }
+  },
+
+  onboardingTaskTemplates: {
+    async list() {
+      return listOnboardingTaskTemplatesFromState();
+    },
+
+    async create(input: CreateOnboardingTaskTemplateInput) {
+      const normalizedTitle = input.title.trim();
+      if (!normalizedTitle) {
+        throw new Error("onboarding task template title is required");
+      }
+      if (
+        Array.from(state.onboardingTaskTemplates.values()).some(
+          (template) => template.title === normalizedTitle
+        )
+      ) {
+        throw new Error(`onboarding task template already exists: ${normalizedTitle}`);
+      }
+      const template: OnboardingTaskTemplateEntity = {
+        id: nextId("ONBT"),
+        title: normalizedTitle,
+        sortOrder: input.sortOrder ?? 0,
+        createdAt: input.createdAt ? cloneDate(input.createdAt) : new Date()
+      };
+      state.onboardingTaskTemplates.set(template.id, template);
+      return cloneOnboardingTaskTemplate(template);
+    },
+
+    async ensureDefaults(titles: string[]) {
+      const normalizedTitles = titles
+        .map((title) => title.trim())
+        .filter((title) => title.length > 0);
+      if (normalizedTitles.length === 0) {
+        return listOnboardingTaskTemplatesFromState();
+      }
+
+      const existing = Array.from(state.onboardingTaskTemplates.values());
+      const existingTitleSet = new Set(existing.map((template) => template.title));
+      let nextSortOrder =
+        existing.length === 0 ? 0 : Math.max(...existing.map((template) => template.sortOrder)) + 1;
+
+      for (const title of normalizedTitles) {
+        if (existingTitleSet.has(title)) {
+          continue;
+        }
+        const template: OnboardingTaskTemplateEntity = {
+          id: nextId("ONBT"),
+          title,
+          sortOrder: nextSortOrder,
+          createdAt: new Date()
+        };
+        nextSortOrder += 1;
+        existingTitleSet.add(title);
+        state.onboardingTaskTemplates.set(template.id, template);
+      }
+
+      return listOnboardingTaskTemplatesFromState();
     }
   },
 

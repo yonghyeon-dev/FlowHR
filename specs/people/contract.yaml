@@ -1,5 +1,5 @@
 owner: people-agent
-version: 0.3.16
+version: 0.3.17
 scope:
   in:
     - organization master data (create/read/list)
@@ -16,6 +16,7 @@ scope:
     - recruitment referral queue priority sorting (`sort=stalled_priority`) for active stalled-referral-first review ordering
     - admin organization settings read/update API for post-onboarding organization configuration changes
     - employee lifecycle status model (`ACTIVE`/`ON_LEAVE`/`RESIGNED`) with controlled transitions and resigned-session invalidation
+    - onboarding default task template persistence and ACTIVE-state auto-assignment
   out:
     - multi-tenant enforcement (RLS) across core tables (Phase 1 follow-up)
     - RBAC engine and permission administration UI (Phase 1 follow-up)
@@ -39,6 +40,10 @@ entities:
     description: Organization-scoped benefits request read model linked to benefit catalog items.
   - name: InAppNotification
     description: Organization-scoped in-app notification center read model for employee/admin self-service alerts.
+  - name: OnboardingTask
+    description: Employee onboarding checklist task projection copied from onboarding task templates.
+  - name: OnboardingTaskTemplate
+    description: Default onboarding checklist template catalog used to seed employee onboarding tasks.
 api:
   auth:
     - role: admin
@@ -192,8 +197,10 @@ db_changes:
       description: Replace Employee.active with Employee.status enum and add employee status transition support.
     - id: 202603050012_wi0955_org_settings_api
       description: Add organization fiscal year, work hours, overtime, pay period, and currency settings columns.
+    - id: 202603060001_wi0998_onboarding_default_tasks_seed
+      description: Rename onboarding task projection table and add onboarding task template persistence for default seeding.
   backward_compatible: true
-  notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, and recruitment/benefits read models are additive."
+  notes: "Additive foundation tables only. Department/Position are organization-scoped catalogs, recruitment/benefits read models remain additive, and onboarding template persistence is added for default task seeding."
 invariants:
   - Employee mutations are admin-only in v0.1.
   - Employee id is treated as canonical identifier and should match Supabase auth user.id in production.
@@ -267,7 +274,7 @@ rollback:
   max_recovery_time: 30m
 deprecations: []
 breaking_changes: false
-consumer_impact: "People contract v0.3.15 additively introduces employee status lifecycle transitions and resigned session invalidation while preserving backward compatibility with computed employee.active behavior."
+consumer_impact: "People contract v0.3.17 additively introduces onboarding default task template persistence and ACTIVE-state auto-assignment while preserving backward compatibility for existing people APIs."
 references:
   - work-items/WI-0034-employee-organization-master-model.md
   - work-items/WI-0102-people-department-position-model.md
@@ -285,6 +292,7 @@ references:
   - work-items/WI-0938-department-management.md
   - work-items/WI-0940-position-management.md
   - work-items/WI-0952-employee-status-transitions.md
+  - work-items/WI-0998-onboarding-default-tasks-seed.md
   - docs/data-ownership.md
 approval:
   spec_owner: people-agent

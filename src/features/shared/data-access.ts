@@ -525,6 +525,13 @@ export type OnboardingTaskEntity = {
   createdAt: Date;
 };
 
+export type OnboardingTaskTemplateEntity = {
+  id: string;
+  title: string;
+  sortOrder: number;
+  createdAt: Date;
+};
+
 export type InsuranceEnrollmentEntity = {
   employeeId: string;
   type: InsuranceEnrollmentType;
@@ -1122,6 +1129,12 @@ export type CreateOnboardingTaskInput = {
   createdAt?: Date;
 };
 
+export type CreateOnboardingTaskTemplateInput = {
+  title: string;
+  sortOrder?: number;
+  createdAt?: Date;
+};
+
 export type UpdateOnboardingTaskInput = {
   status?: OnboardingTaskStatus;
 };
@@ -1573,6 +1586,12 @@ export interface OnboardingTaskStore {
   update(id: string, input: UpdateOnboardingTaskInput): Promise<OnboardingTaskEntity>;
 }
 
+export interface OnboardingTaskTemplateStore {
+  list(): Promise<OnboardingTaskTemplateEntity[]>;
+  create(input: CreateOnboardingTaskTemplateInput): Promise<OnboardingTaskTemplateEntity>;
+  ensureDefaults(titles: string[]): Promise<OnboardingTaskTemplateEntity[]>;
+}
+
 export interface InsuranceEnrollmentStore {
   upsert(input: UpsertInsuranceEnrollmentInput): Promise<InsuranceEnrollmentEntity>;
   listByEmployee(employeeId: string): Promise<InsuranceEnrollmentEntity[]>;
@@ -1627,6 +1646,7 @@ export type DataAccess = {
   leaveBalance: LeaveBalanceStore;
   leavePromotionDeliveries: LeavePromotionDeliveryStore;
   benefits: BenefitStore;
+  onboardingTaskTemplates: OnboardingTaskTemplateStore;
   onboardingTasks: OnboardingTaskStore;
   insuranceEnrollments: InsuranceEnrollmentStore;
   recruitment: RecruitmentStore;
