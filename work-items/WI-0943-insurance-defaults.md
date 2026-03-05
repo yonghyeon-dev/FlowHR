@@ -51,6 +51,10 @@ This introduces repetitive setup work and raises the risk of rate-entry mistakes
   - `POST /api/payroll/preview` returns insurance breakdown using overridden rates
   - employee role receives `403` on admin insurance rates API
 
+## Migration
+
+- `prisma/migrations/202603050010_wi0943_insurance_rates_defaults/migration.sql`
+
 ## Rollback Plan
 
 - Remove `/api/admin/insurance/rates` and `/api/payroll/preview` route additions.
