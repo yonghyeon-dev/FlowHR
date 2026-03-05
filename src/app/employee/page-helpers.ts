@@ -15,6 +15,17 @@ export function toLocalInputValue(value: Date) {
   return adjusted.toISOString().slice(0, 16);
 }
 
+export function resolveEmployeeProductionSessionNotices(isKoLocale: boolean) {
+  return {
+    loginSessionRequiredNotice: isKoLocale
+      ? "프로덕션에서는 로그인 세션이 필요합니다. /login에서 다시 로그인해 주세요."
+      : "A login session is required in production. Please sign in again at /login.",
+    productionEmployeeIdRequiredNotice: isKoLocale
+      ? "운영 환경에서는 세션 app_metadata.actor_id 또는 app_metadata.employee_id에 직원 ID가 필요합니다. /login에서 다시 로그인해 주세요."
+      : "In production, session app_metadata.actor_id or app_metadata.employee_id is required. Please sign in again at /login."
+  };
+}
+
 export function todayStartLocal() {
   const now = new Date();
   return toLocalInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0));
@@ -84,6 +95,69 @@ export function formatDateTime(value: string | null, runtimeLocale: string) {
     return value;
   }
   return parsed.toLocaleString(runtimeLocale);
+}
+
+type EmployeeRequestChecklistDefaultsInput = {
+  defaultsCopy: {
+    noNote: string;
+    noReason: string;
+    attendanceRequestTitle: string;
+    leaveRequestTitle: string;
+    attendanceRejectedSource: string;
+    leaveRejectedSource: string;
+    leaveCanceledSource: string;
+    rejectionReasonMissing: string;
+    reasonMissing: string;
+  };
+};
+
+export function buildEmployeeRequestChecklistDefaults(input: EmployeeRequestChecklistDefaultsInput) {
+  const { defaultsCopy } = input;
+  return {
+    requestSearchDefaultsCopy: { noNote: defaultsCopy.noNote, noReason: defaultsCopy.noReason },
+    mobileRequestDefaultsCopy: {
+      attendanceRequestTitle: defaultsCopy.attendanceRequestTitle,
+      leaveRequestTitle: defaultsCopy.leaveRequestTitle
+    },
+    requestFailureDefaultsCopy: {
+      attendanceRejectedSource: defaultsCopy.attendanceRejectedSource,
+      leaveRejectedSource: defaultsCopy.leaveRejectedSource,
+      leaveCanceledSource: defaultsCopy.leaveCanceledSource,
+      rejectionReasonMissing: defaultsCopy.rejectionReasonMissing,
+      reasonMissing: defaultsCopy.reasonMissing
+    }
+  };
+}
+
+type ResolveEmployeeAutoSnapshotLoadKeyInput = {
+  employeeId: string;
+  isProductionRuntime: boolean;
+  usesBearerToken: boolean;
+};
+
+export function resolveEmployeeAutoSnapshotLoadKey(input: ResolveEmployeeAutoSnapshotLoadKeyInput) {
+  const { employeeId, isProductionRuntime, usesBearerToken } = input;
+  if (isProductionRuntime && !usesBearerToken) {
+    return null;
+  }
+  const normalizedEmployeeId = employeeId.trim();
+  if (!normalizedEmployeeId) {
+    return null;
+  }
+  return `${normalizedEmployeeId}:${usesBearerToken ? "session" : "header"}`;
+}
+
+type ResetEmployeeRequestSearchFiltersInput = {
+  setRequestSearchScope: (scope: RequestSearchScope) => void;
+  setRequestSearchQuery: (query: string) => void;
+  setRequestSortOption: (sortOption: RequestSortOption) => void;
+};
+
+export function resetEmployeeRequestSearchFilters(input: ResetEmployeeRequestSearchFiltersInput) {
+  const { setRequestSearchScope, setRequestSearchQuery, setRequestSortOption } = input;
+  setRequestSearchScope("all");
+  setRequestSearchQuery("");
+  setRequestSortOption("pending_first");
 }
 
 export function formatDays(value: number) {

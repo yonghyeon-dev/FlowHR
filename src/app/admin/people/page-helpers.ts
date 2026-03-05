@@ -2,6 +2,9 @@
   type ActiveFilter,
   type CompareRow,
   type Employee,
+  type EmployeeHistory,
+  type HistoryChangeSummaryItem,
+  type HistoryEntryChange,
   type OrgTreeNode,
   type ProfileField,
   type UpdatedWindow
@@ -72,6 +75,132 @@ export function changeHighlightClass(field: ProfileField) {
     return "highlight-identity";
   }
   return "highlight-status";
+}
+
+const PROFILE_FIELDS: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
+
+export function resolveAdminPeopleProfileFieldLabel(isKoLocale: boolean): Record<ProfileField, string> {
+  return {
+    organizationId: isKoLocale ? "조직" : "Organization",
+    departmentId: isKoLocale ? "부서" : "Department",
+    positionId: isKoLocale ? "직급" : "Position",
+    name: isKoLocale ? "이름" : "Name",
+    email: isKoLocale ? "이메일" : "Email",
+    active: isKoLocale ? "활성" : "Active"
+  };
+}
+
+type FormatAdminPeopleProfileValueInput = {
+  field: ProfileField;
+  value: unknown;
+  isKoLocale: boolean;
+  organizationById: Map<string, { name: string }>;
+  departmentById: Map<string, { name: string }>;
+  positionById: Map<string, { name: string }>;
+};
+
+export function formatAdminPeopleProfileValue(input: FormatAdminPeopleProfileValueInput) {
+  const { field, value, isKoLocale, organizationById, departmentById, positionById } = input;
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  if (field === "active") {
+    if (typeof value === "boolean") {
+      return value ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive";
+    }
+    return String(value);
+  }
+  if (field === "organizationId") {
+    const key = String(value);
+    return organizationById.get(key)?.name ?? key;
+  }
+  if (field === "departmentId") {
+    const key = String(value);
+    return departmentById.get(key)?.name ?? key;
+  }
+  if (field === "positionId") {
+    const key = String(value);
+    return positionById.get(key)?.name ?? key;
+  }
+  return String(value);
+}
+
+export function extractEmployeeHistoryChanges(
+  entry: EmployeeHistory,
+  formatProfileValue: (field: ProfileField, value: unknown) => string
+): HistoryEntryChange[] {
+  const payload = asRecord(entry.payload);
+  if (!payload) {
+    return [];
+  }
+  if (entry.action === "employee.created") {
+    return PROFILE_FIELDS
+      .filter((field) => field in payload)
+      .map((field) => ({ field, before: "-", after: formatProfileValue(field, payload[field]) }));
+  }
+  const before = asRecord(payload.before);
+  const after = asRecord(payload.after);
+  if (!before || !after) {
+    return [];
+  }
+  return PROFILE_FIELDS
+    .filter((field) => before[field] !== after[field])
+    .map((field) => ({
+      field,
+      before: formatProfileValue(field, before[field]),
+      after: formatProfileValue(field, after[field])
+    }));
+}
+
+type BuildEmployeeHistoryChangeSummaryInput = {
+  history: EmployeeHistory[];
+  profileFieldLabel: Record<ProfileField, string>;
+};
+
+export function buildEmployeeHistoryChangeSummary(
+  input: BuildEmployeeHistoryChangeSummaryInput
+): HistoryChangeSummaryItem[] {
+  const { history, profileFieldLabel } = input;
+  const counters: Record<ProfileField, number> = {
+    organizationId: 0,
+    departmentId: 0,
+    positionId: 0,
+    name: 0,
+    email: 0,
+    active: 0
+  };
+
+  for (const entry of history) {
+    const payload = asRecord(entry.payload);
+    if (!payload) {
+      continue;
+    }
+
+    if (entry.action === "employee.created") {
+      for (const field of PROFILE_FIELDS) {
+        if (field in payload) {
+          counters[field] += 1;
+        }
+      }
+      continue;
+    }
+
+    const before = asRecord(payload.before);
+    const after = asRecord(payload.after);
+    if (!before || !after) {
+      continue;
+    }
+    for (const field of PROFILE_FIELDS) {
+      if (before[field] !== after[field]) {
+        counters[field] += 1;
+      }
+    }
+  }
+
+  return PROFILE_FIELDS
+    .filter((field) => counters[field] > 0)
+    .map((field) => ({ field, label: profileFieldLabel[field], count: counters[field] }))
+    .sort((left, right) => right.count - left.count);
 }
 
 type FilterEmployeesInput = {

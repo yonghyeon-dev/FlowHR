@@ -4,10 +4,13 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  asRecord,
   buildCompareRows,
+  buildEmployeeHistoryChangeSummary,
   buildOrgTree,
-  filterEmployees
+  extractEmployeeHistoryChanges,
+  filterEmployees,
+  formatAdminPeopleProfileValue,
+  resolveAdminPeopleProfileFieldLabel
 } from "@/app/admin/people/page-helpers";
 import {
   type AdminPeopleFocusPanel,
@@ -81,16 +84,10 @@ export default function AdminPeoplePage() {
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const adminActorId = (supabaseSession?.actorId ?? "").trim();
 
-  const profileFieldLabel = useMemo<Record<ProfileField, string>>(() => {
-    return {
-      organizationId: isKoLocale ? "조직" : "Organization",
-      departmentId: isKoLocale ? "부서" : "Department",
-      positionId: isKoLocale ? "직급" : "Position",
-      name: isKoLocale ? "이름" : "Name",
-      email: isKoLocale ? "이메일" : "Email",
-      active: isKoLocale ? "활성" : "Active"
-    };
-  }, [isKoLocale]);
+  const profileFieldLabel = useMemo<Record<ProfileField, string>>(
+    () => resolveAdminPeopleProfileFieldLabel(isKoLocale),
+    [isKoLocale]
+  );
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
@@ -162,58 +159,20 @@ export default function AdminPeoplePage() {
 
   const formatProfileValue = useCallback(
     (field: ProfileField, value: unknown) => {
-      if (value === null || value === undefined) {
-        return "-";
-      }
-      if (field === "active") {
-        if (typeof value === "boolean") {
-          return value ? (isKoLocale ? "활성" : "Active") : isKoLocale ? "비활성" : "Inactive";
-        }
-        return String(value);
-      }
-      if (field === "organizationId") {
-        const key = String(value);
-        return organizationById.get(key)?.name ?? key;
-      }
-      if (field === "departmentId") {
-        const key = String(value);
-        return departmentById.get(key)?.name ?? key;
-      }
-      if (field === "positionId") {
-        const key = String(value);
-        return positionById.get(key)?.name ?? key;
-      }
-      return String(value);
+      return formatAdminPeopleProfileValue({
+        field,
+        value,
+        isKoLocale,
+        organizationById,
+        departmentById,
+        positionById
+      });
     },
     [departmentById, isKoLocale, organizationById, positionById]
   );
 
   const historyChanges = useCallback(
-    (entry: EmployeeHistory) => {
-      const payload = asRecord(entry.payload);
-      if (!payload) {
-        return [] as Array<{ field: ProfileField; before: string; after: string }>;
-      }
-      if (entry.action === "employee.created") {
-        const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
-        return fields
-          .filter((field) => field in payload)
-          .map((field) => ({ field, before: "-", after: formatProfileValue(field, payload[field]) }));
-      }
-      const before = asRecord(payload.before);
-      const after = asRecord(payload.after);
-      if (!before || !after) {
-        return [];
-      }
-      const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
-      return fields
-        .filter((field) => before[field] !== after[field])
-        .map((field) => ({
-          field,
-          before: formatProfileValue(field, before[field]),
-          after: formatProfileValue(field, after[field])
-        }));
-    },
+    (entry: EmployeeHistory) => extractEmployeeHistoryChanges(entry, formatProfileValue),
     [formatProfileValue]
   );
 
@@ -260,53 +219,10 @@ export default function AdminPeoplePage() {
     setSelectedEmployeeId
   });
 
-  const historyChangeSummary = useMemo(() => {
-    const counters: Record<ProfileField, number> = {
-      organizationId: 0,
-      departmentId: 0,
-      positionId: 0,
-      name: 0,
-      email: 0,
-      active: 0
-    };
-    const fields: ProfileField[] = ["organizationId", "departmentId", "positionId", "name", "email", "active"];
-
-    for (const entry of filteredHistory) {
-      const payload = asRecord(entry.payload);
-      if (!payload) {
-        continue;
-      }
-
-      if (entry.action === "employee.created") {
-        for (const field of fields) {
-          if (field in payload) {
-            counters[field] += 1;
-          }
-        }
-        continue;
-      }
-
-      const before = asRecord(payload.before);
-      const after = asRecord(payload.after);
-      if (!before || !after) {
-        continue;
-      }
-      for (const field of fields) {
-        if (before[field] !== after[field]) {
-          counters[field] += 1;
-        }
-      }
-    }
-
-    return (Object.keys(counters) as ProfileField[])
-      .filter((field) => counters[field] > 0)
-      .map((field) => ({
-        field,
-        label: profileFieldLabel[field],
-        count: counters[field]
-      }))
-      .sort((left, right) => right.count - left.count);
-  }, [filteredHistory, profileFieldLabel]);
+  const historyChangeSummary = useMemo(
+    () => buildEmployeeHistoryChangeSummary({ history: filteredHistory, profileFieldLabel }),
+    [filteredHistory, profileFieldLabel]
+  );
 
   const selectedDepartments = selectedEmployee?.organizationId
     ? departments.filter((department) => department.organizationId === selectedEmployee.organizationId)

@@ -11,10 +11,14 @@ import {
 import { useEmployeeRequestChecklistDerivedState } from "@/app/employee/page-request-checklist-derived-state";
 import { buildEmployeeInteractionSetterBundles } from "@/app/employee/page-interaction-setter-bundles";
 import {
+  buildEmployeeRequestChecklistDefaults,
   firstDayOfMonthLocal,
   formatDateTime,
   formatDays,
   lastDayOfMonthLocal,
+  resetEmployeeRequestSearchFilters,
+  resolveEmployeeAutoSnapshotLoadKey,
+  resolveEmployeeProductionSessionNotices,
   statusToTone,
   todayEndLocal,
   todayStartLocal
@@ -95,14 +99,7 @@ export default function EmployeeSelfServicePage() {
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
   const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, supabaseSessionLoading, organizationId, employeeId, hasBoundEmployeeId, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
-  const loginSessionRequiredNotice =
-    isKoLocale
-      ? "\ud504\ub85c\ub355\uc158\uc5d0\uc11c\ub294 \ub85c\uadf8\uc778 \uc138\uc158\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
-      : "A login session is required in production. Please sign in again at /login.";
-  const productionEmployeeIdRequiredNotice =
-    isKoLocale
-      ? "\uc6b4\uc601 \ud658\uacbd\uc5d0\uc11c\ub294 \uc138\uc158 app_metadata.actor_id \ub610\ub294 app_metadata.employee_id\uc5d0 \uc9c1\uc6d0 ID\uac00 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
-      : "In production, session app_metadata.actor_id or app_metadata.employee_id is required. Please sign in again at /login.";
+  const { loginSessionRequiredNotice, productionEmployeeIdRequiredNotice } = useMemo(() => resolveEmployeeProductionSessionNotices(isKoLocale), [isKoLocale]);
   const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
   const requiresEmployeeIdBinding = isProductionRuntime && !showDevTools;
   const missingEmployeeIdBinding = requiresEmployeeIdBinding && !hasBoundEmployeeId;
@@ -116,9 +113,7 @@ export default function EmployeeSelfServicePage() {
   const { leaveBalance: leaveBalanceCopy, leaveUnits: leaveUnitCopy } = summaryCopy;
   const { feedback: feedbackCopy, defaults: defaultsCopy, summaryCards: summaryCardCopy, requestFeedback: requestFeedbackCopy, correctionValidation: correctionValidationCopy, attendanceChecks: attendanceCheckCopy, leaveChecks: leaveCheckCopy, resubmitFlowChecks: resubmitFlowCheckCopy, submitChecklistCards: submitChecklistCardCopy } = validationCopy;
   useEffect(() => {
-    setCancelReason((previous) =>
-      isDefaultEmployeeCancelReason(previous) ? defaultCancelReason : previous
-    );
+    setCancelReason((previous) => (isDefaultEmployeeCancelReason(previous) ? defaultCancelReason : previous));
   }, [defaultCancelReason]);
   const { mutationActions, clearLogs } = buildEmployeeMutationRuntime({
     callApiLabels,
@@ -202,9 +197,7 @@ export default function EmployeeSelfServicePage() {
     formatDateTimeByLocale,
     toLeaveTypeLabel
   });
-  const requestSearchDefaultsCopy = { noNote: defaultsCopy.noNote, noReason: defaultsCopy.noReason };
-  const mobileRequestDefaultsCopy = { attendanceRequestTitle: defaultsCopy.attendanceRequestTitle, leaveRequestTitle: defaultsCopy.leaveRequestTitle };
-  const requestFailureDefaultsCopy = { attendanceRejectedSource: defaultsCopy.attendanceRejectedSource, leaveRejectedSource: defaultsCopy.leaveRejectedSource, leaveCanceledSource: defaultsCopy.leaveCanceledSource, rejectionReasonMissing: defaultsCopy.rejectionReasonMissing, reasonMissing: defaultsCopy.reasonMissing };
+  const { requestSearchDefaultsCopy, mobileRequestDefaultsCopy, requestFailureDefaultsCopy } = buildEmployeeRequestChecklistDefaults({ defaultsCopy });
   const {
     filteredRequestFeedbackRows,
     filteredRequestSearchRows,
@@ -310,43 +303,32 @@ export default function EmployeeSelfServicePage() {
     ...interactionOrchestratorInput
   });
   useEffect(() => {
-    if (isProductionRuntime && !usesBearerToken) {
-      return;
-    }
-    const normalizedEmployeeId = employeeId.trim();
-    if (!normalizedEmployeeId) {
-      return;
-    }
-    const autoLoadKey = `${normalizedEmployeeId}:${usesBearerToken ? "session" : "header"}`;
-    if (autoSnapshotLoadKeyRef.current === autoLoadKey) {
+    const autoLoadKey = resolveEmployeeAutoSnapshotLoadKey({
+      employeeId,
+      isProductionRuntime,
+      usesBearerToken
+    });
+    if (!autoLoadKey || autoSnapshotLoadKeyRef.current === autoLoadKey) {
       return;
     }
     autoSnapshotLoadKeyRef.current = autoLoadKey;
-    const refreshSnapshot = refreshEmployeeSnapshotRef.current;
-    if (refreshSnapshot) {
-      void refreshSnapshot();
-    }
+    void refreshEmployeeSnapshotRef.current?.();
   }, [employeeId, isProductionRuntime, usesBearerToken]);
 
   useEffect(() => {
-    if (!focusSectionId) {
-      appliedFocusSectionRef.current = null;
+    if (!focusSectionId || appliedFocusSectionRef.current === focusSectionId) {
+      if (!focusSectionId) {
+        appliedFocusSectionRef.current = null;
+      }
       return;
     }
-    if (appliedFocusSectionRef.current === focusSectionId) {
-      return;
-    }
-    const timeoutId = window.setTimeout(() => {
-      jumpToSectionAction(focusSectionId);
-    }, 0);
+    const timeoutId = window.setTimeout(() => jumpToSectionAction(focusSectionId), 0);
     appliedFocusSectionRef.current = focusSectionId;
     return () => window.clearTimeout(timeoutId);
   }, [focusSectionId]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
 
-  if (supabaseSessionLoading) {
-    return null;
-  }
+  if (supabaseSessionLoading) return null;
 
   return (
     <main className="saas-content">
@@ -403,11 +385,7 @@ export default function EmployeeSelfServicePage() {
           onRequestSearchScopeChange={setRequestSearchScope}
           onRequestSearchQueryChange={setRequestSearchQuery}
           onRequestSortOptionChange={setRequestSortOption}
-          onResetRequestSearchFilters={() => {
-            setRequestSearchScope("all");
-            setRequestSearchQuery("");
-            setRequestSortOption("pending_first");
-          }}
+          onResetRequestSearchFilters={() => resetEmployeeRequestSearchFilters({ setRequestSearchScope, setRequestSearchQuery, setRequestSortOption })}
           onOpenPendingRequestSearch={openPendingRequestSearch}
           onTimelineChannelFilterChange={setTimelineChannelFilter}
           onTimelineStatusFilterChange={setTimelineStatusFilter}
