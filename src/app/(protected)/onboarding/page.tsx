@@ -48,7 +48,7 @@ function normalizeWorkDays(value: number[] | null | undefined): number[] {
 
 export default function OrganizationOnboardingPage() {
   const router = useRouter();
-  const { snapshot, error: sessionError } = useSupabaseSession();
+  const { snapshot, error: sessionError, loading: supabaseSessionLoading } = useSupabaseSession();
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(true);
@@ -80,6 +80,10 @@ export default function OrganizationOnboardingPage() {
   }, [step]);
 
   useEffect(() => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+
     let active = true;
 
     async function loadOrganization() {
@@ -150,7 +154,7 @@ export default function OrganizationOnboardingPage() {
     return () => {
       active = false;
     };
-  }, [accessToken, organizationId, role, router, snapshot]);
+  }, [accessToken, organizationId, role, router, snapshot, supabaseSessionLoading]);
 
   function toggleWorkDay(day: number) {
     setWorkDays((prev) => {

@@ -41,7 +41,7 @@ export default function EmployeePayslipsPage() {
   const searchParams = useSearchParams();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const { snapshot: supabaseSession, error: supabaseSessionError, loading } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const employeeId = normalizeEmployeeIdForLocaleInput(
     (supabaseSession?.actorId ?? supabaseSession?.userId ?? getLocalizedEmployeeIdInputDefault(locale)).trim() ||
@@ -102,7 +102,7 @@ export default function EmployeePayslipsPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const requiresLoginSession = !loading && isProductionRuntime && !usesBearerToken && !showDevTools;
   const { logs, pendingLabel, refreshPayslips, appendClientLog, clearLogs } = usePayslipApi({
     pageCopy,
     runtimeLocale,

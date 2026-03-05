@@ -33,11 +33,11 @@ function buildAuthHeaders(accessToken: string, employeeId: string): Record<strin
 }
 
 export default function EmployeeOnboardingChecklistPage() {
-  const { snapshot, error: sessionError } = useSupabaseSession();
+  const { snapshot, error: sessionError, loading: supabaseSessionLoading } = useSupabaseSession();
   const isProductionRuntime = process.env.NODE_ENV === "production";
   const employeeId = (snapshot?.actorId ?? snapshot?.userId ?? "").trim();
   const accessToken = (snapshot?.accessToken ?? "").trim();
-  const requiresLoginSession = isProductionRuntime && accessToken.length === 0;
+  const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && accessToken.length === 0;
 
   const [tasks, setTasks] = useState<OnboardingTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,8 +95,11 @@ export default function EmployeeOnboardingChecklistPage() {
   }, [accessToken, employeeId, requiresLoginSession]);
 
   useEffect(() => {
+    if (supabaseSessionLoading) {
+      return;
+    }
     void loadTasks();
-  }, [loadTasks]);
+  }, [loadTasks, supabaseSessionLoading]);
 
   async function completeTask(taskId: string) {
     if (!employeeId) {

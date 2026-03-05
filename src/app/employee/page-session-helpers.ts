@@ -12,7 +12,11 @@ export function useEmployeeRuntimeSession({
 }: UseEmployeeRuntimeSessionInput) {
   const showDevTools = isDevToolsEnabled();
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const {
+    snapshot: supabaseSession,
+    error: supabaseSessionError,
+    loading: supabaseSessionLoading
+  } = useSupabaseSession();
   const organizationId = (supabaseSession?.organizationId ?? "").trim();
   const sessionEmployeeId = (supabaseSession?.actorId ?? "").trim();
   const employeeId = sessionEmployeeId;
@@ -27,6 +31,7 @@ export function useEmployeeRuntimeSession({
     isProductionRuntime,
     supabaseSession,
     supabaseSessionError,
+    supabaseSessionLoading,
     organizationId,
     employeeId,
     hasBoundEmployeeId,

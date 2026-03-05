@@ -93,7 +93,7 @@ export default function EmployeeSelfServicePage() {
   const toRequestStatusLabel = useCallback((status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED") => requestStatusLabels[status], [requestStatusLabels]);
   const toLeaveTypeLabel = useCallback((leaveType: string) => leaveTypeLabels[leaveType as keyof typeof leaveTypeLabels] ?? leaveType, [leaveTypeLabels]);
   const formatDateTimeByLocale = useCallback((value: string | null) => formatDateTime(value, runtimeLocale), [runtimeLocale]);
-  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, organizationId, employeeId, hasBoundEmployeeId, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
+  const { showDevTools, isProductionRuntime, supabaseSession, supabaseSessionError, supabaseSessionLoading, organizationId, employeeId, hasBoundEmployeeId, usesBearerToken } = useEmployeeRuntimeSession({ notConfiguredLabel });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? notConfiguredLabel;
   const loginSessionRequiredNotice =
     isKoLocale
@@ -103,7 +103,7 @@ export default function EmployeeSelfServicePage() {
     isKoLocale
       ? "\uc6b4\uc601 \ud658\uacbd\uc5d0\uc11c\ub294 \uc138\uc158 app_metadata.actor_id \ub610\ub294 app_metadata.employee_id\uc5d0 \uc9c1\uc6d0 ID\uac00 \ud544\uc694\ud569\ub2c8\ub2e4. /login\uc5d0\uc11c \ub2e4\uc2dc \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694."
       : "In production, session app_metadata.actor_id or app_metadata.employee_id is required. Please sign in again at /login.";
-  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
   const requiresEmployeeIdBinding = isProductionRuntime && !showDevTools;
   const missingEmployeeIdBinding = requiresEmployeeIdBinding && !hasBoundEmployeeId;
   const blocksEmployeeApiActions = requiresLoginSession || missingEmployeeIdBinding;
