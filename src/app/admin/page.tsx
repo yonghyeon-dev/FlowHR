@@ -54,8 +54,9 @@ export default function AdminDashboardPage() {
   }, []);
 
   const [summary, setSummary] = useState<AdminSummary>(EMPTY_SUMMARY);
-  const [todayAttendanceCount, setTodayAttendanceCount] = useState(0);
-  const [monthlyLeaveCount, setMonthlyLeaveCount] = useState(0);
+  const [todayClockInCount, setTodayClockInCount] = useState(0);
+  const [todayOpenAttendanceCount, setTodayOpenAttendanceCount] = useState(0);
+  const [monthlyApprovedLeaveDays, setMonthlyApprovedLeaveDays] = useState(0);
   const [pendingAttendanceQueue, setPendingAttendanceQueue] = useState<AttendanceRecordDto[]>([]);
   const [pendingLeaveQueue, setPendingLeaveQueue] = useState<LeaveRequestDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -102,8 +103,9 @@ export default function AdminDashboardPage() {
 
     if (requiresLoginSession) {
       setSummary(EMPTY_SUMMARY);
-      setTodayAttendanceCount(0);
-      setMonthlyLeaveCount(0);
+      setTodayClockInCount(0);
+      setTodayOpenAttendanceCount(0);
+      setMonthlyApprovedLeaveDays(0);
       setPendingAttendanceQueue([]);
       setPendingLeaveQueue([]);
       setLoadError(productionSessionRequiredNotice);
@@ -150,7 +152,7 @@ export default function AdminDashboardPage() {
           `/api/contracts/documents${buildQuery({ organizationId: organizationId || undefined })}`
         ),
         callApi("refresh today's attendance", `/api/attendance/records${buildQuery({ from: todayFrom, to: todayTo })}`),
-        callApi("refresh monthly leave requests", `/api/leave/requests${buildQuery({ from, to })}`)
+        callApi("refresh monthly approved leave requests", `/api/leave/requests${buildQuery({ from, to, state: "APPROVED" })}`)
       ]);
       const nextPendingAttendance =
         attendanceResult.response.ok &&
@@ -183,8 +185,12 @@ export default function AdminDashboardPage() {
 
       setPendingAttendanceQueue(nextPendingAttendance);
       setPendingLeaveQueue(nextPendingLeave);
-      setTodayAttendanceCount(new Set(todayAttendanceRecords.map((record) => record.employeeId)).size);
-      setMonthlyLeaveCount(monthlyLeaveRequests.length);
+      setTodayClockInCount(todayAttendanceRecords.length);
+      setTodayOpenAttendanceCount(
+        new Set(todayAttendanceRecords.filter((record) => record.checkOutAt === null).map((record) => record.employeeId))
+          .size
+      );
+      setMonthlyApprovedLeaveDays(monthlyLeaveRequests.reduce((total, request) => total + (request.days ?? 0), 0));
       setSummary(
         buildAdminSummaryFromApiResults({
           attendanceResult,
@@ -415,19 +421,19 @@ export default function AdminDashboardPage() {
       </section>
 
       <section className="panel">
-        <h2>핵심 위젯</h2>
+        <h2>핵심 현황</h2>
         <div className="kpi-strip">
           <article className="kpi-card">
-            <p>오늘 출근 인원수</p>
-            <strong>{todayAttendanceCount}</strong>
+            <p>오늘 출근</p>
+            <strong>{todayClockInCount}</strong>
           </article>
           <article className="kpi-card">
-            <p>대기 승인 건수</p>
-            <strong>{summary.pendingApprovalExecutionCount}</strong>
+            <p>미퇴근 근로자</p>
+            <strong>{todayOpenAttendanceCount}</strong>
           </article>
           <article className="kpi-card">
-            <p>이번 달 휴가 건수</p>
-            <strong>{monthlyLeaveCount}</strong>
+            <p>휴가 사용 일수</p>
+            <strong>{monthlyApprovedLeaveDays}</strong>
           </article>
         </div>
       </section>
