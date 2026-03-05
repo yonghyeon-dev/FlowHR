@@ -43,9 +43,9 @@ Admins need a focused workspace to manage job titles and safely prevent deletion
 - Migration IDs:
   - `202603050009_wi0940_position_management`
 - Backward compatibility plan:
-  - retain existing `code/name/active` fields and API compatibility
-  - add `title/grade/description` as additive fields
-  - keep `name` aligned with `title` for legacy readers
+  - retain existing code/name/active fields and API compatibility
+  - add title/grade/description as additive fields
+  - keep name aligned with title for legacy readers
 
 ## API and Event Changes
 
