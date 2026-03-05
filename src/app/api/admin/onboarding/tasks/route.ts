@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
+import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
+import { translate, type MessageKey } from "@/lib/i18n/messages";
 
 const createOnboardingTasksSchema = z.object({
   employeeId: z.string().trim().min(1)
@@ -12,13 +14,14 @@ const listOnboardingTasksQuerySchema = z.object({
   employeeId: z.string().trim().min(1)
 });
 
-const defaultTaskTitles = [
-  "근로계약서 서명",
-  "급여계좌 등록",
-  "4대보험 가입 확인",
-  "사내 시스템 계정 발급",
-  "부서 OT 참석"
-] as const;
+const defaultTaskTitleKeys = [
+  "admin.onboarding.defaultTask.signContract",
+  "admin.onboarding.defaultTask.registerPayrollAccount",
+  "admin.onboarding.defaultTask.confirmInsuranceEnrollment",
+  "admin.onboarding.defaultTask.issueInternalAccount",
+  "admin.onboarding.defaultTask.attendDepartmentOt"
+] as const satisfies readonly MessageKey[];
+const defaultTaskTitles = defaultTaskTitleKeys.map((key) => translate(DEFAULT_LOCALE, key));
 
 async function requireAdmin(request: Request) {
   const actor = await readActor(request);

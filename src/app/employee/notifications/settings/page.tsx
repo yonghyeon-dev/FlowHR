@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/lib/i18n/provider";
+
 type NotificationSettings = {
   channels: {
     email: boolean;
@@ -81,17 +83,19 @@ function readFromStorage(): StoredNotificationSettings {
   }
 }
 
-function formatKoreanDateTime(value: string | null) {
+function formatLocalizedDateTime(value: string | null, runtimeLocale: string, emptyLabel: string) {
   if (!value) {
-    return "저장 이력 없음";
+    return emptyLabel;
   }
-  return new Intl.DateTimeFormat("ko-KR", {
+  return new Intl.DateTimeFormat(runtimeLocale, {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
 }
 
 export default function EmployeeNotificationSettingsPage() {
+  const { locale, t } = useI18n();
+  const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -123,9 +127,9 @@ export default function EmployeeNotificationSettingsPage() {
       setLastSavedAt(savedAt);
       setSaveError(null);
     } catch {
-      setSaveError("브라우저 저장소에 설정을 저장하지 못했습니다.");
+      setSaveError(t("employee.notifications.settings.saveError"));
     }
-  }, [isHydrated, settings]);
+  }, [isHydrated, settings, t]);
 
   const enabledCategoryCount = useMemo(() => {
     return Object.values(settings.categories).filter(Boolean).length;
@@ -155,30 +159,43 @@ export default function EmployeeNotificationSettingsPage() {
     setSettings(DEFAULT_SETTINGS);
   };
 
-  const emailLabel = settings.channels.email ? "켜짐" : "꺼짐";
-  const inAppLabel = settings.channels.inApp ? "켜짐" : "꺼짐";
+  const toggleOnLabel = t("employee.notifications.settings.toggle.on");
+  const toggleOffLabel = t("employee.notifications.settings.toggle.off");
+  const emailLabel = settings.channels.email ? toggleOnLabel : toggleOffLabel;
+  const inAppLabel = settings.channels.inApp ? toggleOnLabel : toggleOffLabel;
+  const enabledCategoryCountLabel =
+    locale === "ko"
+      ? `${enabledCategoryCount}${t("employee.notifications.settings.countUnit")}`
+      : `${enabledCategoryCount} ${t("employee.notifications.settings.countUnit")}`;
+  const lastSavedLabel = formatLocalizedDateTime(
+    lastSavedAt,
+    runtimeLocale,
+    t("employee.notifications.settings.noSaveHistory")
+  );
 
   return (
     <main className="saas-content">
       <section className="hero-panel">
-        <p className="eyebrow">알림 설정</p>
-        <h1>알림 수신 환경 설정</h1>
-        <p className="hero-copy">
-          이메일/인앱 채널과 알림 유형별 수신 여부를 설정합니다. 현재 MVP 단계에서는 브라우저 로컬스토리지에 저장됩니다.
-        </p>
+        <p className="eyebrow">{t("employee.notifications.settings.eyebrow")}</p>
+        <h1>{t("employee.notifications.settings.title")}</h1>
+        <p className="hero-copy">{t("employee.notifications.settings.description")}</p>
         <div className="hero-meta">
-          <span>활성화된 알림 유형: {enabledCategoryCount}개</span>
-          <span>마지막 저장: {formatKoreanDateTime(lastSavedAt)}</span>
+          <span>
+            {t("employee.notifications.settings.enabledTypeLabel")}: {enabledCategoryCountLabel}
+          </span>
+          <span>
+            {t("employee.notifications.settings.lastSavedLabel")}: {lastSavedLabel}
+          </span>
           <Link href="/employee" className="btn btn-secondary">
-            직원 홈으로
+            {t("employee.notifications.settings.backToHome")}
           </Link>
         </div>
       </section>
 
       <section className="panel-grid">
         <article className="panel">
-          <h2>수신 채널</h2>
-          <p className="small">채널 단위로 알림 수신을 켜거나 끌 수 있습니다.</p>
+          <h2>{t("employee.notifications.settings.channelSectionTitle")}</h2>
+          <p className="small">{t("employee.notifications.settings.channelSectionDescription")}</p>
           <div className="actions">
             <button
               type="button"
@@ -186,7 +203,7 @@ export default function EmployeeNotificationSettingsPage() {
               onClick={() => toggleChannel("email")}
               aria-pressed={settings.channels.email}
             >
-              이메일 알림: {emailLabel}
+              {t("employee.notifications.settings.channel.email")}: {emailLabel}
             </button>
             <button
               type="button"
@@ -194,14 +211,14 @@ export default function EmployeeNotificationSettingsPage() {
               onClick={() => toggleChannel("inApp")}
               aria-pressed={settings.channels.inApp}
             >
-              인앱 알림: {inAppLabel}
+              {t("employee.notifications.settings.channel.inApp")}: {inAppLabel}
             </button>
           </div>
         </article>
 
         <article className="panel">
-          <h2>알림 유형</h2>
-          <p className="small">업무 주제별로 수신 여부를 조정합니다.</p>
+          <h2>{t("employee.notifications.settings.categorySectionTitle")}</h2>
+          <p className="small">{t("employee.notifications.settings.categorySectionDescription")}</p>
           <div className="actions">
             <button
               type="button"
@@ -209,7 +226,8 @@ export default function EmployeeNotificationSettingsPage() {
               onClick={() => toggleCategory("leave")}
               aria-pressed={settings.categories.leave}
             >
-              휴가 알림: {settings.categories.leave ? "켜짐" : "꺼짐"}
+              {t("employee.notifications.settings.category.leave")}:{" "}
+              {settings.categories.leave ? toggleOnLabel : toggleOffLabel}
             </button>
             <button
               type="button"
@@ -217,7 +235,8 @@ export default function EmployeeNotificationSettingsPage() {
               onClick={() => toggleCategory("attendance")}
               aria-pressed={settings.categories.attendance}
             >
-              근태 알림: {settings.categories.attendance ? "켜짐" : "꺼짐"}
+              {t("employee.notifications.settings.category.attendance")}:{" "}
+              {settings.categories.attendance ? toggleOnLabel : toggleOffLabel}
             </button>
             <button
               type="button"
@@ -225,12 +244,13 @@ export default function EmployeeNotificationSettingsPage() {
               onClick={() => toggleCategory("payroll")}
               aria-pressed={settings.categories.payroll}
             >
-              급여 알림: {settings.categories.payroll ? "켜짐" : "꺼짐"}
+              {t("employee.notifications.settings.category.payroll")}:{" "}
+              {settings.categories.payroll ? toggleOnLabel : toggleOffLabel}
             </button>
           </div>
           <div className="actions">
             <button type="button" className="btn btn-secondary" onClick={resetDefaults}>
-              기본값으로 복원
+              {t("employee.notifications.settings.restoreDefaults")}
             </button>
           </div>
           {saveError ? (
@@ -239,7 +259,7 @@ export default function EmployeeNotificationSettingsPage() {
             </p>
           ) : (
             <p className="small" style={{ marginTop: 10 }}>
-              설정 변경 시 자동 저장됩니다.
+              {t("employee.notifications.settings.autoSaveHint")}
             </p>
           )}
         </article>
