@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { seedDefaultWorkSchedulesForEmployee } from "@/features/scheduling/default-work-schedule-seed";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      await dataAccess.employees.create({
+      const created = await dataAccess.employees.create({
         id: createBulkEmployeeId(batchId, index),
         organizationId: actor.organizationId,
         departmentId: normalizeNullableText(employee.departmentId),
@@ -81,6 +82,10 @@ export async function POST(request: Request) {
         name: employee.name.trim(),
         email: employee.email.trim().toLowerCase(),
         active: true
+      });
+      await seedDefaultWorkSchedulesForEmployee({
+        dataAccess,
+        employee: created
       });
       imported += 1;
     } catch (error) {

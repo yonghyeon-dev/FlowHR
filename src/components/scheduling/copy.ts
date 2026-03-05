@@ -20,6 +20,7 @@ export type AdminSchedulingCopy = {
   createHolidayLabel: string;
   createNotesLabel: string;
   createAction: string;
+  seedDefaultsAction: string;
   holidayNo: string;
   holidayYes: string;
   listTitle: string;
@@ -84,6 +85,8 @@ export type AdminSchedulingCopy = {
   statusCreateDone: string;
   statusUpdateDone: string;
   statusDeleteDone: string;
+  statusSeedDefaultsCreated: string;
+  statusSeedDefaultsSkipped: string;
   pendingList: string;
   pendingIncidentList: string;
   pendingIncidentAcknowledge: string;
@@ -92,6 +95,7 @@ export type AdminSchedulingCopy = {
   pendingCreate: string;
   pendingUpdate: string;
   pendingDelete: string;
+  pendingSeedDefaults: string;
   loadErrorPrefix: string;
   scheduleIdLabel: string;
   periodLabel: string;
@@ -196,6 +200,7 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     createHolidayLabel: "휴일 근무",
     createNotesLabel: "메모(선택)",
     createAction: "일정 생성",
+    seedDefaultsAction: "기본 스케줄 생성",
     holidayNo: "아니오",
     holidayYes: "예",
     listTitle: "일정 목록",
@@ -260,6 +265,8 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     statusCreateDone: "일정을 생성했습니다.",
     statusUpdateDone: "일정을 수정했습니다.",
     statusDeleteDone: "일정을 삭제했습니다.",
+    statusSeedDefaultsCreated: "기본 스케줄을 생성했습니다.",
+    statusSeedDefaultsSkipped: "생성할 기본 스케줄이 없습니다.",
     pendingList: "일정 조회",
     pendingIncidentList: "인시던트 조회",
     pendingIncidentAcknowledge: "인시던트 확인 처리",
@@ -268,6 +275,7 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     pendingCreate: "일정 생성",
     pendingUpdate: "일정 수정",
     pendingDelete: "일정 삭제",
+    pendingSeedDefaults: "기본 스케줄 생성",
     loadErrorPrefix: "요청 실패",
     scheduleIdLabel: "일정 ID",
     periodLabel: "근무 시간",
@@ -296,6 +304,7 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     createHolidayLabel: "Holiday shift",
     createNotesLabel: "Notes (optional)",
     createAction: "Create schedule",
+    seedDefaultsAction: "Create default schedules",
     holidayNo: "No",
     holidayYes: "Yes",
     listTitle: "Schedule list",
@@ -360,6 +369,8 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     statusCreateDone: "schedule created.",
     statusUpdateDone: "schedule updated.",
     statusDeleteDone: "schedule deleted.",
+    statusSeedDefaultsCreated: "default schedules created.",
+    statusSeedDefaultsSkipped: "no default schedules to create.",
     pendingList: "load schedules",
     pendingIncidentList: "load incidents",
     pendingIncidentAcknowledge: "acknowledge incident",
@@ -368,6 +379,7 @@ export const adminSchedulingCopyByLocale: Record<FlowLocale, AdminSchedulingCopy
     pendingCreate: "create schedule",
     pendingUpdate: "update schedule",
     pendingDelete: "delete schedule",
+    pendingSeedDefaults: "seed default schedules",
     loadErrorPrefix: "request failed",
     scheduleIdLabel: "Schedule ID",
     periodLabel: "Work period",

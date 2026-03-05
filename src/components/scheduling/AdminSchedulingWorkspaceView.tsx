@@ -16,6 +16,7 @@ type AdminSchedulingWorkspaceViewProps = {
   logs: ScheduleApiLog[];
   incidentPanel: AdminSchedulingIncidentPanelState;
   schedules: WorkScheduleDto[];
+  showSeedDefaultsAction: boolean;
   selectedSchedule: WorkScheduleDto | null;
   sessionOrganizationId: string;
   sessionActorId: string;
@@ -49,6 +50,7 @@ type AdminSchedulingWorkspaceViewProps = {
   onEditNotesChange: (value: string) => void;
   onLoadSchedules: () => void;
   onCreateSchedule: () => void;
+  onSeedDefaultSchedules: () => void;
   onSelectSchedule: (scheduleId: string) => void;
   onUpdateSelectedSchedule: () => void;
   onDeleteSelectedSchedule: () => void;
@@ -67,6 +69,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     logs,
     incidentPanel,
     schedules,
+    showSeedDefaultsAction,
     selectedSchedule,
     sessionOrganizationId,
     sessionActorId,
@@ -100,6 +103,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     onEditNotesChange,
     onLoadSchedules,
     onCreateSchedule,
+    onSeedDefaultSchedules,
     onSelectSchedule,
     onUpdateSelectedSchedule,
     onDeleteSelectedSchedule
@@ -194,7 +198,21 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
         <article className="panel">
           <h2>{copy.listTitle}</h2>
           {schedules.length === 0 ? (
-            <p className="small muted">{copy.listEmpty}</p>
+            <>
+              <p className="small muted">{copy.listEmpty}</p>
+              {showSeedDefaultsAction ? (
+                <div className="actions">
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    disabled={pendingLabel === copy.pendingSeedDefaults}
+                    onClick={onSeedDefaultSchedules}
+                  >
+                    {copy.seedDefaultsAction}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <ul className="simple-list">
               {schedules.map((schedule) => (
