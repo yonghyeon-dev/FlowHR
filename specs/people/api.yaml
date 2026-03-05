@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR People API
-  version: 0.3.13
+  version: 0.3.14
 paths:
   /people/organizations:
     get:
@@ -153,7 +153,7 @@ paths:
         "200":
           description: Positions listed
     post:
-      summary: Create position
+      summary: Create position with title/grade/description support
       responses:
         "201":
           description: Created
@@ -184,6 +184,21 @@ paths:
       responses:
         "200":
           description: Updated
+        "404":
+          description: Not found
+    delete:
+      summary: Delete position
+      parameters:
+        - in: path
+          name: positionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+        "400":
+          description: Position has assigned employees
         "404":
           description: Not found
   /people/employees/{employeeId}:
