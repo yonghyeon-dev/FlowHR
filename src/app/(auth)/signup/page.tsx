@@ -210,6 +210,7 @@ export default function SignupPage() {
         email: trimmedEmail,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             organization_name: trimmedOrganization,
             role: "admin"
