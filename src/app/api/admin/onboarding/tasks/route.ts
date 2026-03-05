@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
+import type { Actor } from "@/lib/actor";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
@@ -37,18 +38,28 @@ async function requireAdmin(request: Request) {
   return { ok: true as const };
 }
 
-export async function GET(request: Request) {
-  const auth = await requireAdmin(request);
-  if (!auth.ok) {
-    return auth.response;
+function canReadEmployeeTasks(actor: Actor, employeeId: string) {
+  if (actor.role === "admin") {
+    return true;
   }
+  return actor.role === "employee" && actor.id === employeeId;
+}
 
+export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = listOnboardingTasksQuerySchema.safeParse({
     employeeId: url.searchParams.get("employeeId") ?? undefined
   });
   if (!parsed.success) {
     return fail(400, "invalid query", parsed.error.flatten());
+  }
+
+  const actor = await readActor(request);
+  if (!actor) {
+    return fail(401, "admin.onboarding.tasks.unauthorized");
+  }
+  if (!canReadEmployeeTasks(actor, parsed.data.employeeId)) {
+    return fail(403, "admin.onboarding.tasks.forbidden", { reason: "admin_or_self_required" });
   }
 
   const tasks = await getRuntimeDataAccess().onboardingTasks.listByEmployee(parsed.data.employeeId);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
+import type { Actor } from "@/lib/actor";
 import { readActor } from "@/lib/actor";
 import { fail, ok } from "@/lib/http";
 
@@ -12,22 +13,23 @@ type RouteContext = {
   params: Promise<{ taskId: string }>;
 };
 
-async function requireAdmin(request: Request) {
+async function requireAuthenticatedActor(request: Request) {
   const actor = await readActor(request);
   if (!actor) {
     return { ok: false as const, response: fail(401, "admin.onboarding.tasks.unauthorized") };
   }
-  if (actor.role !== "admin") {
-    return {
-      ok: false as const,
-      response: fail(403, "admin.onboarding.tasks.forbidden", { reason: "admin_required" })
-    };
+  return { ok: true as const, actor };
+}
+
+function canUpdateTask(actor: Actor, employeeId: string) {
+  if (actor.role === "admin") {
+    return true;
   }
-  return { ok: true as const };
+  return actor.role === "employee" && actor.id === employeeId;
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const auth = await requireAdmin(request);
+  const auth = await requireAuthenticatedActor(request);
   if (!auth.ok) {
     return auth.response;
   }
@@ -54,6 +56,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   const existing = await dataAccess.onboardingTasks.findById(normalizedTaskId);
   if (!existing) {
     return fail(404, "admin.onboarding.tasks.not_found");
+  }
+  if (!canUpdateTask(auth.actor, existing.employeeId)) {
+    return fail(403, "admin.onboarding.tasks.forbidden", { reason: "admin_or_self_required" });
   }
 
   const task = await dataAccess.onboardingTasks.update(normalizedTaskId, {
