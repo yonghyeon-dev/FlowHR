@@ -6,6 +6,7 @@ import {
   resolveTenantScope
 } from "@/features/shared/tenant-scope";
 import { ServiceError } from "@/features/shared/service-error";
+import { notifyPayslipReady } from "@/features/notifications/service";
 import {
   ensureValidPeriod,
   isPayrollClosePeriodEnabled,
@@ -247,6 +248,14 @@ export async function distributePayrollPayslipsFromHelper(
         state: "QUEUED",
         enqueuedAt: distributedAt
       });
+
+      const period = toSeoulDateTimeParts(input.periodEnd);
+      const periodLabel = `${period.year}년 ${String(period.month).padStart(2, "0")}월`;
+      notifyPayslipReady(context, {
+        organizationId: run.organizationId,
+        employeeId,
+        periodLabel
+      }).catch(() => {});
 
       enqueuedEmployeeIds.push(employeeId);
     }

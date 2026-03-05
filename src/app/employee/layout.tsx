@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import SaasMobileMenu, { type SaasMobileMenuLink } from "@/components/layout/SaasMobileMenu";
+import NotificationBell from "@/components/NotificationBell";
 import SessionMenu from "@/components/SessionMenu";
 import { createTranslator } from "@/lib/i18n/messages";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -98,6 +99,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
           </nav>
 
           <div className="saas-sidebar-footer">
+            <NotificationBell href="/employee/notifications" />
             <SessionMenu />
             {showDevTools ? <Link href="/admin">{t("employee.nav.admin")}</Link> : null}
           </div>

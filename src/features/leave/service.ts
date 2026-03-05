@@ -3,6 +3,10 @@ import { requireOwnOrAny, requirePermission, resolveActorPermissions } from "@/l
 import { Permissions } from "@/lib/rbac";
 import { applyApprovalExecutionAction, assertApprovalPolicyGate } from "@/features/approval/service";
 import {
+  notifyLeaveApproved,
+  notifyLeaveRejected
+} from "@/features/notifications/service";
+import {
   normalizeRecipientEmployeeIds,
   persistPromotionDeliveryHistory,
   resolvePromotionRecipientStats
@@ -668,6 +672,16 @@ export async function approveLeaveRequest(
     }
   });
 
+  if (employee.organizationId) {
+    notifyLeaveApproved(context, {
+      organizationId: employee.organizationId,
+      employeeId: request.employeeId,
+      leaveType: request.leaveType,
+      startDate: request.startDate.toISOString().slice(0, 10),
+      endDate: request.endDate.toISOString().slice(0, 10)
+    }).catch(() => {});
+  }
+
   return { request, balance };
 }
 
@@ -747,6 +761,15 @@ export async function rejectLeaveRequest(
       reason
     }
   });
+
+  if (employee.organizationId) {
+    notifyLeaveRejected(context, {
+      organizationId: employee.organizationId,
+      employeeId: request.employeeId,
+      leaveType: pending.leaveType,
+      reason
+    }).catch(() => {});
+  }
 
   return request;
 }
