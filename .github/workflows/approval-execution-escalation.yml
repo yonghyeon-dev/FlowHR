@@ -69,7 +69,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run pending Prisma migrations
+      - name: Run pending migrations
         env:
           DATABASE_URL: ${{ secrets.FLOWHR_PRODUCTION_DATABASE_URL }}
           DIRECT_URL: ${{ secrets.FLOWHR_PRODUCTION_DIRECT_URL }}
