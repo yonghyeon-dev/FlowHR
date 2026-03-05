@@ -547,6 +547,10 @@ function toOrganizationEntity(record: {
   workEndTime: string | null;
   workDays: number[];
   timezone: string | null;
+  insuranceRateNps: number | null;
+  insuranceRateNhi: number | null;
+  insuranceRateEi: number | null;
+  insuranceRateWci: number | null;
   isOnboardingComplete: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -980,6 +984,10 @@ const organizations: OrganizationStore = {
         fiscalYearStart: "01-01",
         workHoursPerDay: 8,
         overtimeThreshold: 8,
+        insuranceRateNps: null,
+        insuranceRateNhi: null,
+        insuranceRateEi: null,
+        insuranceRateWci: null,
         isOnboardingComplete: false
       }
     });
@@ -1014,6 +1022,18 @@ const organizations: OrganizationStore = {
         ...(input.workEndTime !== undefined ? { workEndTime: input.workEndTime } : {}),
         ...(input.workDays !== undefined ? { workDays: input.workDays } : {}),
         ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+        ...(input.insuranceRateNps !== undefined
+          ? { insuranceRateNps: input.insuranceRateNps }
+          : {}),
+        ...(input.insuranceRateNhi !== undefined
+          ? { insuranceRateNhi: input.insuranceRateNhi }
+          : {}),
+        ...(input.insuranceRateEi !== undefined
+          ? { insuranceRateEi: input.insuranceRateEi }
+          : {}),
+        ...(input.insuranceRateWci !== undefined
+          ? { insuranceRateWci: input.insuranceRateWci }
+          : {}),
         ...(input.isOnboardingComplete !== undefined
           ? { isOnboardingComplete: input.isOnboardingComplete }
           : {})

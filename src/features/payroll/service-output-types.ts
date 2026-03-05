@@ -44,6 +44,12 @@ export type PreviewPayrollWithDeductionsResult = {
     grossPayKrw: number;
     withholdingTaxKrw: number;
     socialInsuranceKrw: number;
+    insuranceBreakdown: {
+      nps: number;
+      nhi: number;
+      ei: number;
+      wci: number;
+    } | null;
     otherDeductionsKrw: number;
     totalDeductionsKrw: number;
     netPayKrw: number;

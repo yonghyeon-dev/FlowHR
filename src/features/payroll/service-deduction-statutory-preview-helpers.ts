@@ -5,6 +5,7 @@ import {
   getPayrollKrIncomeTaxLookupPreset,
   resolvePayrollKrIncomeTaxLookupPresetByAsOf
 } from "@/features/payroll/kr-income-tax-lookup-presets";
+import { DEFAULT_INSURANCE_RATES, type InsuranceRates } from "@/features/payroll/insurance-rates";
 import type { PreviewPayrollWithDeductionsInput } from "@/features/payroll/service-input-types";
 import {
   ensureMonthlyBoundaryInSeoul,
@@ -29,12 +30,19 @@ type StatutoryDeductionPreviewResult = {
   withholdingTaxKrw: number;
   socialInsuranceKrw: number;
   otherDeductionsKrw: number;
+  insuranceBreakdown: {
+    nps: number;
+    nhi: number;
+    ei: number;
+    wci: number;
+  };
   additionalBreakdown: Record<string, unknown>;
 };
 
 export function calculateStatutoryKrBaselineDeductionPreview(
   input: PreviewPayrollWithDeductionsInput,
-  grossPayKrw: number
+  grossPayKrw: number,
+  resolvedInsuranceRates: InsuranceRates = DEFAULT_INSURANCE_RATES
 ): StatutoryDeductionPreviewResult {
   if (input.deductionMode !== "statutory_kr_baseline") {
     throw new ServiceError(400, "deductionMode must be statutory_kr_baseline");
@@ -118,10 +126,16 @@ export function calculateStatutoryKrBaselineDeductionPreview(
   const localIncomeTaxRate =
     toRateNumber(input.statutory?.localIncomeTaxRate ?? 0.1, "statutory.localIncomeTaxRate") ?? 0;
   const nationalPensionRate =
-    toRateNumber(input.statutory?.nationalPensionRate ?? 0.045, "statutory.nationalPensionRate") ??
+    toRateNumber(
+      input.statutory?.nationalPensionRate ?? resolvedInsuranceRates.nps,
+      "statutory.nationalPensionRate"
+    ) ??
     0;
   const healthInsuranceRate =
-    toRateNumber(input.statutory?.healthInsuranceRate ?? 0.03545, "statutory.healthInsuranceRate") ??
+    toRateNumber(
+      input.statutory?.healthInsuranceRate ?? resolvedInsuranceRates.nhi,
+      "statutory.healthInsuranceRate"
+    ) ??
     0;
   const longTermCareRateOnHealth =
     toRateNumber(
@@ -129,7 +143,13 @@ export function calculateStatutoryKrBaselineDeductionPreview(
       "statutory.longTermCareRateOnHealth"
     ) ?? 0;
   const employmentInsuranceRate =
-    toRateNumber(input.statutory?.employmentInsuranceRate ?? 0.009, "statutory.employmentInsuranceRate") ??
+    toRateNumber(
+      input.statutory?.employmentInsuranceRate ?? resolvedInsuranceRates.ei,
+      "statutory.employmentInsuranceRate"
+    ) ??
+    0;
+  const workersCompensationRate =
+    toRateNumber(resolvedInsuranceRates.wci ?? 0, "statutory.workersCompensationRate") ??
     0;
   const otherDeductionsKrw = toKrwInteger(
     input.statutory?.otherDeductionsKrw ?? 0,
@@ -322,10 +342,27 @@ export function calculateStatutoryKrBaselineDeductionPreview(
     insuranceRoundingRules.mode,
     insuranceRoundingRules.employmentInsuranceUnitKrw
   );
+  const workersCompensationRawKrw = taxableBaseKrw * workersCompensationRate;
+  const workersCompensationKrw = roundKrwByRule(
+    workersCompensationRawKrw,
+    "statutory.workersCompensationKrw",
+    insuranceRoundingRules.mode,
+    insuranceRoundingRules.employmentInsuranceUnitKrw
+  );
 
   const withholdingTaxKrw = toKrwInteger(incomeTaxKrw + localIncomeTaxKrw, "withholdingTaxKrw");
+  const insuranceBreakdown = {
+    nps: nationalPensionKrw,
+    nhi: healthInsuranceKrw,
+    ei: employmentInsuranceKrw,
+    wci: workersCompensationKrw
+  };
   const socialInsuranceKrw = toKrwInteger(
-    nationalPensionKrw + healthInsuranceKrw + longTermCareKrw + employmentInsuranceKrw,
+    nationalPensionKrw +
+      healthInsuranceKrw +
+      longTermCareKrw +
+      employmentInsuranceKrw +
+      workersCompensationKrw,
     "socialInsuranceKrw"
   );
 
@@ -395,7 +432,8 @@ export function calculateStatutoryKrBaselineDeductionPreview(
       nationalPensionRate,
       healthInsuranceRate,
       longTermCareRateOnHealth,
-      employmentInsuranceRate
+      employmentInsuranceRate,
+      workersCompensationRate
     },
     insuranceRounding: {
       mode: insuranceRoundingRules.mode,
@@ -410,7 +448,8 @@ export function calculateStatutoryKrBaselineDeductionPreview(
       nationalPensionKrw: nationalPensionRawKrw,
       healthInsuranceKrw: healthInsuranceRawKrw,
       longTermCareKrw: longTermCareRawKrw,
-      employmentInsuranceKrw: employmentInsuranceRawKrw
+      employmentInsuranceKrw: employmentInsuranceRawKrw,
+      workersCompensationKrw: workersCompensationRawKrw
     },
     components: {
       incomeTaxKrw,
@@ -420,6 +459,7 @@ export function calculateStatutoryKrBaselineDeductionPreview(
       longTermCareKrw,
       employmentInsuranceKrw
     },
+    insuranceBreakdown,
     taxCreditsKrw: {
       preCreditIncomeTaxKrw,
       additionalTaxCreditKrw,
@@ -440,6 +480,7 @@ export function calculateStatutoryKrBaselineDeductionPreview(
     withholdingTaxKrw,
     socialInsuranceKrw,
     otherDeductionsKrw,
+    insuranceBreakdown,
     additionalBreakdown
   };
 }

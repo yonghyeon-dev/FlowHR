@@ -17,6 +17,7 @@ import type {
   PreviewPayrollWithDeductionsResult
 } from "@/features/payroll/service-output-types";
 import { calculateStatutoryKrBaselineDeductionPreview } from "@/features/payroll/service-deduction-statutory-preview-helpers";
+import { resolveInsuranceRates } from "@/features/payroll/insurance-rates";
 import {
   type ServiceContext,
   getEventPublisher,
@@ -105,11 +106,18 @@ export async function previewPayrollWithDeductionsFromHelper(
 
   const computed = await calculatePayrollComputation(context.dataAccess, input, tenantScope);
   const deductionMode = input.deductionMode;
+  const organizationId = employee?.organizationId ?? tenantScope ?? null;
   let withholdingTaxKrw = 0;
   let socialInsuranceKrw = 0;
   let otherDeductionsKrw = 0;
   let profileId: string | null = null;
   let profileVersion: number | null = null;
+  let insuranceBreakdown: {
+    nps: number;
+    nhi: number;
+    ei: number;
+    wci: number;
+  } | null = null;
   const additionalBreakdown: Record<string, unknown> = {};
 
   if (deductionMode === "manual") {
@@ -172,13 +180,19 @@ export async function previewPayrollWithDeductionsFromHelper(
     if (!isPayrollKrBaselineEnabled()) {
       throw new ServiceError(409, "payroll_kr_baseline_v1 feature flag is disabled");
     }
+    const organization = organizationId
+      ? await context.dataAccess.organizations.findById(organizationId)
+      : null;
+    const resolvedInsuranceRates = resolveInsuranceRates(organization);
     const statutoryDeductions = calculateStatutoryKrBaselineDeductionPreview(
       input,
-      computed.grossPayKrw
+      computed.grossPayKrw,
+      resolvedInsuranceRates
     );
     withholdingTaxKrw = statutoryDeductions.withholdingTaxKrw;
     socialInsuranceKrw = statutoryDeductions.socialInsuranceKrw;
     otherDeductionsKrw = statutoryDeductions.otherDeductionsKrw;
+    insuranceBreakdown = statutoryDeductions.insuranceBreakdown;
     Object.assign(additionalBreakdown, statutoryDeductions.additionalBreakdown);
   }
 
@@ -205,7 +219,7 @@ export async function previewPayrollWithDeductionsFromHelper(
   };
 
   const run = await context.dataAccess.payroll.create({
-    organizationId: employee?.organizationId ?? tenantScope ?? null,
+    organizationId,
     employeeId: input.employeeId,
     periodStart: input.periodStart,
     periodEnd: input.periodEnd,
@@ -240,6 +254,7 @@ export async function previewPayrollWithDeductionsFromHelper(
       profileVersion,
       withholdingTaxKrw,
       socialInsuranceKrw,
+      insuranceBreakdown,
       otherDeductionsKrw,
       totalDeductionsKrw,
       netPayKrw,
@@ -266,6 +281,7 @@ export async function previewPayrollWithDeductionsFromHelper(
       profileVersion,
       withholdingTaxKrw,
       socialInsuranceKrw,
+      insuranceBreakdown,
       otherDeductionsKrw,
       totalDeductionsKrw,
       netPayKrw,
@@ -284,6 +300,7 @@ export async function previewPayrollWithDeductionsFromHelper(
       grossPayKrw: computed.grossPayKrw,
       withholdingTaxKrw,
       socialInsuranceKrw,
+      insuranceBreakdown,
       otherDeductionsKrw,
       totalDeductionsKrw,
       netPayKrw,
