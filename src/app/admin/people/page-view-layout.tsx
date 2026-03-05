@@ -31,7 +31,8 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
     refreshDirectory,
     organizationId,
     adminActorId,
-    isProductionRuntime,
+    supabaseSessionLoading,
+    requiresLoginSession,
     usesBearerToken,
     bearerToken,
     search,
@@ -111,7 +112,11 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
           ) : null}
         </div>
         <div className="page-actions">
-          <button className="btn btn-primary" onClick={() => void refreshDirectory()}>
+          <button
+            className="btn btn-primary"
+            onClick={() => void refreshDirectory()}
+            disabled={supabaseSessionLoading || requiresLoginSession}
+          >
             {isKoLocale ? "디렉터리 조회" : "Refresh directory"}
           </button>
           <button
@@ -171,6 +176,7 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
             bearerToken={bearerToken}
             adminActorId={adminActorId}
             organizationId={organizationId}
+            disabled={supabaseSessionLoading || requiresLoginSession}
             onImported={refreshDirectory}
           />
         </section>
@@ -184,8 +190,8 @@ export function AdminPeoplePageViewLayout(props: AdminPeoplePageViewLayoutProps)
             showDevTools={showDevTools}
             organizationId={organizationId}
             adminActorId={adminActorId}
-            isProductionRuntime={isProductionRuntime}
-            usesBearerToken={usesBearerToken}
+            supabaseSessionLoading={supabaseSessionLoading}
+            requiresLoginSession={requiresLoginSession}
             search={search}
             setSearch={setSearch}
             activeFilter={activeFilter}

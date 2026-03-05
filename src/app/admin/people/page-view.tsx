@@ -31,6 +31,8 @@ export type AdminPeoplePageViewProps = {
   organizationId: string;
   adminActorId: string;
   isProductionRuntime: boolean;
+  supabaseSessionLoading: boolean;
+  requiresLoginSession: boolean;
   usesBearerToken: boolean;
   bearerToken: string;
   search: string;
