@@ -1,5 +1,5 @@
 owner: leave-agent
-version: 1.14.0
+version: 1.15.0
 scope:
   in:
     - leave request create/update/cancel flow
@@ -143,6 +143,8 @@ db_changes:
       description: Add annual leave promotion delivery/recipient history and retry-chain linkage model.
     - id: 202603050007_wi0935_leave_policy_validation
       description: Add leave policy statutory/status fields, request policy reference, and policy delete usage guard support.
+    - id: 202603050014_wi0991_maternity_leave_validation
+      description: Extend LeaveType enum with MATERNITY/PATERNITY for statutory day-limit validation.
   backward_compatible: true
   notes: Additive schema changes with numeric widening (`Int -> Decimal(6,2)`) for leave day precision.
 invariants:
@@ -310,6 +312,7 @@ references:
   - work-items/WI-0183-leave-calendar-integration-baseline.md
   - work-items/WI-0935-leave-policy-validation.md
   - work-items/WI-0967-leave-calendar-employee.md
+  - work-items/WI-0991-maternity-leave-validation.md
 approval:
   spec_owner: leave-agent
   qa_owner: qa-agent
