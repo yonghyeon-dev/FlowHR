@@ -36,18 +36,14 @@ import {
 import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
-function isTruthyFlag(value: string | undefined) {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
 export default function AdminPeoplePage() {
   const searchParams = useSearchParams();
   const queryHydratedRef = useRef(false);
   const autoLoadTriggeredRef = useRef(false);
   const autoHistoryFetchKeyRef = useRef<string | null>(null);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
+  const devFlag = (process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS ?? "").trim().toLowerCase();
+  const showDevTools = devFlag === "1" || devFlag === "true" || devFlag === "yes" || devFlag === "on";
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -74,7 +70,11 @@ export default function AdminPeoplePage() {
 
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const {
+    snapshot: supabaseSession,
+    error: supabaseSessionError,
+    loading: supabaseSessionLoading
+  } = useSupabaseSession();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
@@ -94,6 +94,8 @@ export default function AdminPeoplePage() {
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const requiresLoginSession =
+    !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const organizationById = useMemo(() => new Map(organizations.map((row) => [row.id, row])), [organizations]);
   const departmentById = useMemo(() => new Map(departments.map((row) => [row.id, row])), [departments]);
@@ -245,6 +247,8 @@ export default function AdminPeoplePage() {
     editDepartmentId,
     editPositionId,
     editActive,
+    supabaseSessionLoading,
+    requiresLoginSession,
     logs,
     setPendingLabel,
     setLogs,
@@ -370,12 +374,15 @@ export default function AdminPeoplePage() {
     if (autoLoadTriggeredRef.current) {
       return;
     }
-    if (isProductionRuntime && !usesBearerToken) {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    if (requiresLoginSession) {
       return;
     }
     autoLoadTriggeredRef.current = true;
     void refreshDirectory();
-  }, [isProductionRuntime, refreshDirectory, usesBearerToken]);
+  }, [refreshDirectory, requiresLoginSession, supabaseSessionLoading]);
 
   useEffect(() => {
     const employeeId = selectedEmployeeId.trim();
@@ -389,9 +396,21 @@ export default function AdminPeoplePage() {
     if (autoHistoryFetchKeyRef.current === historyKey) {
       return;
     }
+    if (supabaseSessionLoading) {
+      return;
+    }
+    if (requiresLoginSession) {
+      return;
+    }
     autoHistoryFetchKeyRef.current = historyKey;
     void loadSelectedEmployeeHistory(employeeId);
-  }, [historyLimit, loadSelectedEmployeeHistory, selectedEmployeeId]);
+  }, [
+    historyLimit,
+    loadSelectedEmployeeHistory,
+    requiresLoginSession,
+    selectedEmployeeId,
+    supabaseSessionLoading
+  ]);
 
   function resetDirectoryFilters() {
     setSearch("");
@@ -416,6 +435,8 @@ export default function AdminPeoplePage() {
       organizationId={organizationId}
       adminActorId={adminActorId}
       isProductionRuntime={isProductionRuntime}
+      supabaseSessionLoading={supabaseSessionLoading}
+      requiresLoginSession={requiresLoginSession}
       usesBearerToken={usesBearerToken}
       bearerToken={bearerToken}
       search={search}
@@ -473,5 +494,3 @@ export default function AdminPeoplePage() {
     />
   );
 }
-
-

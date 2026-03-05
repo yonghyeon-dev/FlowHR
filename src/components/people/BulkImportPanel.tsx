@@ -22,6 +22,7 @@ type BulkImportPanelProps = {
   bearerToken: string;
   adminActorId: string;
   organizationId: string;
+  disabled?: boolean;
   onImported?: () => Promise<void>;
 };
 
@@ -101,6 +102,7 @@ export function BulkImportPanel({
   bearerToken,
   adminActorId,
   organizationId,
+  disabled = false,
   onImported
 }: BulkImportPanelProps) {
   const [csvInput, setCsvInput] = useState("");
@@ -122,6 +124,9 @@ export function BulkImportPanel({
   const importLabel = "\uAC00\uC838\uC624\uAE30";
 
   const handleImport = async () => {
+    if (disabled) {
+      return;
+    }
     setErrorMessage(null);
     setResult(null);
 
@@ -195,7 +200,7 @@ export function BulkImportPanel({
         />
       </label>
       <div className="actions">
-        <button className="btn btn-primary" onClick={() => void handleImport()} disabled={isSubmitting}>
+        <button className="btn btn-primary" onClick={() => void handleImport()} disabled={disabled || isSubmitting}>
           {isSubmitting ? "Importing..." : importLabel}
         </button>
       </div>

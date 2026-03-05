@@ -5,8 +5,8 @@ type AdminPeopleDirectoryFiltersPanelProps = {
   showDevTools: boolean;
   organizationId: string;
   adminActorId: string;
-  isProductionRuntime: boolean;
-  usesBearerToken: boolean;
+  supabaseSessionLoading: boolean;
+  requiresLoginSession: boolean;
   search: string;
   setSearch: (value: string) => void;
   activeFilter: ActiveFilter;
@@ -34,8 +34,8 @@ export function AdminPeopleDirectoryFiltersPanel({
   showDevTools,
   organizationId,
   adminActorId,
-  isProductionRuntime,
-  usesBearerToken,
+  supabaseSessionLoading,
+  requiresLoginSession,
   search,
   setSearch,
   activeFilter,
@@ -65,7 +65,7 @@ export function AdminPeopleDirectoryFiltersPanel({
           {isKoLocale ? "세션 조직" : "Session organization"}: <code>{organizationId || "-"}</code> / {isKoLocale ? "세션 액터" : "Session actor"}: <code>{adminActorId || "-"}</code>
         </p>
       ) : null}
-      {isProductionRuntime && !usesBearerToken ? (
+      {requiresLoginSession ? (
         <p className="small fail">
           {isKoLocale
             ? "운영 환경에서는 로그인 세션이 필요합니다. /login에서 로그인해 주세요."
@@ -132,16 +132,32 @@ export function AdminPeopleDirectoryFiltersPanel({
         </label>
       </div>
       <div className="actions">
-        <button className="btn btn-secondary" onClick={() => void loadOrganizations()}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => void loadOrganizations()}
+          disabled={supabaseSessionLoading || requiresLoginSession}
+        >
           {isKoLocale ? "조직 조회" : "Load organizations"}
         </button>
-        <button className="btn btn-secondary" onClick={() => void loadDepartments()}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => void loadDepartments()}
+          disabled={supabaseSessionLoading || requiresLoginSession}
+        >
           {isKoLocale ? "부서 조회" : "Load departments"}
         </button>
-        <button className="btn btn-secondary" onClick={() => void loadPositions()}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => void loadPositions()}
+          disabled={supabaseSessionLoading || requiresLoginSession}
+        >
           {isKoLocale ? "직급 조회" : "Load positions"}
         </button>
-        <button className="btn btn-secondary" onClick={() => void loadEmployees()}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => void loadEmployees()}
+          disabled={supabaseSessionLoading || requiresLoginSession}
+        >
           {isKoLocale ? "직원 조회" : "Load employees"}
         </button>
         <button className="btn btn-secondary" onClick={resetDirectoryFilters}>
