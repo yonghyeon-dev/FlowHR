@@ -59,6 +59,9 @@ export async function POST(request: Request) {
         organizationId: parsed.data.organizationId,
         code: parsed.data.code,
         name: parsed.data.name,
+        title: parsed.data.title,
+        grade: parsed.data.grade,
+        description: parsed.data.description,
         active: parsed.data.active
       }
     );

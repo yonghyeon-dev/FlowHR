@@ -197,6 +197,9 @@ export type PositionEntity = {
   organizationId: string;
   code: string;
   name: string;
+  title: string;
+  grade: number | null;
+  description: string | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -731,12 +734,18 @@ export type CreatePositionInput = {
   organizationId: string;
   code: string;
   name: string;
+  title?: string;
+  grade?: number | null;
+  description?: string | null;
   active?: boolean;
 };
 
 export type UpdatePositionInput = {
   code?: string;
   name?: string;
+  title?: string;
+  grade?: number | null;
+  description?: string | null;
   active?: boolean;
 };
 
@@ -1288,6 +1297,7 @@ export interface PositionStore {
   create(input: CreatePositionInput): Promise<PositionEntity>;
   findById(id: string): Promise<PositionEntity | null>;
   update(id: string, input: UpdatePositionInput): Promise<PositionEntity>;
+  delete(id: string): Promise<PositionEntity>;
   list(input: { active?: boolean; organizationId?: string }): Promise<PositionEntity[]>;
 }
 

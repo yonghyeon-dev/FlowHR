@@ -1,5 +1,5 @@
 import { updatePositionSchema } from "@/features/people/schemas";
-import { getPosition, updatePosition } from "@/features/people/service";
+import { deletePosition, getPosition, updatePosition } from "@/features/people/service";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { isServiceError } from "@/features/shared/service-error";
 import { readActor } from "@/lib/actor";
@@ -53,8 +53,31 @@ export async function PATCH(request: Request, context: RouteContext) {
         positionId,
         code: parsed.data.code,
         name: parsed.data.name,
+        title: parsed.data.title,
+        grade: parsed.data.grade,
+        description: parsed.data.description,
         active: parsed.data.active
       }
+    );
+    return ok({ position });
+  } catch (error) {
+    if (isServiceError(error)) {
+      return fail(error.status, error.message, error.details);
+    }
+    throw error;
+  }
+}
+
+export async function DELETE(request: Request, context: RouteContext) {
+  const { positionId } = await context.params;
+
+  try {
+    const position = await deletePosition(
+      {
+        actor: await readActor(request),
+        dataAccess: getRuntimeDataAccess()
+      },
+      { positionId }
     );
     return ok({ position });
   } catch (error) {

@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/onboarding", label: t("admin.nav.onboarding") },
     { href: "/admin/people", label: t("admin.nav.people") },
     { href: "/admin/departments", label: t("admin.nav.departments") },
+    { href: "/admin/positions", label: t("admin.nav.positions") },
     { href: "/admin/approval-executions", label: t("admin.nav.approvals") },
     { href: "/admin/kpi", label: t("admin.nav.kpi") },
     { href: "/admin/analytics", label: t("admin.nav.analytics") },

@@ -131,6 +131,9 @@ model Position {
   organizationId String
   code           String
   name           String
+  title          String
+  grade          Int?
+  description    String?
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
