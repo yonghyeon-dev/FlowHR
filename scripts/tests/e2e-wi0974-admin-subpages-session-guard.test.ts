@@ -46,7 +46,7 @@ function run() {
   }
 
   const leavePromotionSource = readUtf8("src", "app", "admin", "leave-promotion", "page.tsx");
-  assert.match(leavePromotionSource, /router\.replace\("\/ops\/leave-promotion"\);/);
+  assert.match(leavePromotionSource, /redirect\("\/ops\/leave-promotion"\);/);
 }
 
 run();
