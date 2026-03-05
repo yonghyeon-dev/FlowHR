@@ -347,6 +347,9 @@ export default function EmployeePayslipsPage() {
     setPayslipSortOption("net_desc");
   }
 
+  if (loading) {
+    return null;
+  }
 
   return (
     <EmployeePayslipsPageView

@@ -343,6 +343,11 @@ export default function EmployeeSelfServicePage() {
     return () => window.clearTimeout(timeoutId);
   }, [focusSectionId]);
   useApplyAttendanceSchedulePrefillEffect({ attendanceSchedulePrefill, attendance, appliedAttendanceSchedulePrefillRef, setCheckInAt, setCheckOutAt, setAttendanceNotes, applyAttendanceRecordToCorrectionForm });
+
+  if (supabaseSessionLoading) {
+    return null;
+  }
+
   return (
     <main className="saas-content">
         <EmployeeDashboardChrome

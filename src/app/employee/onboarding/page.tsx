@@ -132,6 +132,10 @@ export default function EmployeeOnboardingChecklistPage() {
     }
   }
 
+  if (supabaseSessionLoading) {
+    return null;
+  }
+
   return (
     <main className="saas-content">
       <header className="page-header">

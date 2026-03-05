@@ -220,6 +220,10 @@ export default function OrganizationOnboardingPage() {
     }
   }
 
+  if (supabaseSessionLoading) {
+    return null;
+  }
+
   if (loading) {
     return (
       <main className="saas-content">
