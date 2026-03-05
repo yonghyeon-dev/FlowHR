@@ -33,6 +33,25 @@ export type LeaveRequestDto = {
   state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
 };
 
+export type EmployeeLeaveCalendarState = "PENDING" | "APPROVED" | "REJECTED";
+
+export type EmployeeDepartmentLeaveCalendarEntryDto = {
+  requestId: string;
+  employeeId: string;
+  employeeName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  isMine: boolean;
+  state: EmployeeLeaveCalendarState;
+  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+  unit: "FULL_DAY" | "HALF_DAY" | "HOUR";
+  hours: number | null;
+  days: number;
+  startDate: string;
+  endDate: string;
+  coveredDates: string[];
+};
+
 export type WorkScheduleDto = {
   id: string;
   employeeId: string;
@@ -56,6 +75,15 @@ export type LeaveBalanceDto = {
 export type LeaveCalendarDensity = "none" | "low" | "mid" | "high";
 export type LeaveCalendarStatusTone = "none" | "approved" | "pending" | "rejected" | "mixed";
 
+export type LeaveCalendarDayCellEvent = {
+  requestId: string;
+  employeeId: string;
+  employeeName: string | null;
+  isMine: boolean;
+  state: EmployeeLeaveCalendarState;
+  leaveType: "ANNUAL" | "SICK" | "UNPAID";
+};
+
 export type LeaveCalendarDayCell = {
   dateKey: string;
   dayOfMonth: number;
@@ -65,6 +93,7 @@ export type LeaveCalendarDayCell = {
   approvedCount: number;
   pendingCount: number;
   rejectedCount: number;
+  events: LeaveCalendarDayCellEvent[];
   density: LeaveCalendarDensity;
   tone: LeaveCalendarStatusTone;
 };

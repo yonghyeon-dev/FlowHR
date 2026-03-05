@@ -25,6 +25,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
   const navLinks: SaasMobileMenuLink[] = [
     { href: "/employee", label: t("employee.nav.overview") },
     { href: "/employee/guide", label: t("employee.nav.guide") },
+    { href: "/employee/onboarding", label: t("employee.nav.onboardingChecklist") },
     { href: "/employee?focus=account", label: t("employee.nav.account") },
     { href: "/employee?focus=self-service-overview", label: t("employee.nav.selfServiceOverview") },
     { href: "/employee?focus=submit-checklist", label: t("employee.nav.submitChecklist") },
@@ -73,6 +74,7 @@ export default async function EmployeeLayout({ children }: EmployeeLayoutProps) 
           <nav className="saas-nav" aria-label={t("employee.nav.aria")}>
             <Link href="/employee">{t("employee.nav.overview")}</Link>
             <Link href="/employee/guide">{t("employee.nav.guide")}</Link>
+            <Link href="/employee/onboarding">{t("employee.nav.onboardingChecklist")}</Link>
             <Link href="/employee?focus=account">{t("employee.nav.account")}</Link>
             <Link href="/employee?focus=self-service-overview">{t("employee.nav.selfServiceOverview")}</Link>
             <Link href="/employee?focus=submit-checklist">{t("employee.nav.submitChecklist")}</Link>

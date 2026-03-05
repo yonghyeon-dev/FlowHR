@@ -144,6 +144,10 @@ const EMPLOYEE_SURFACE_COPY_BY_LOCALE = {
       pendingLabel: "대기",
       rejectedLabel: "반려",
       rejectedOrCanceledLabel: "반려/취소",
+      teamScopeHint: "본인 + 같은 부서 동료 휴가를 월간 캘린더로 표시합니다.",
+      legendLabel: "상태 색상",
+      mineShort: "나",
+      coworkerFallback: "동료",
       noScheduleInRange: "현재 조회 구간에 휴가 일정이 없습니다.",
       clickToPrefill: "날짜를 클릭하면 휴가 신청 폼이 자동 입력됩니다."
     },
@@ -234,6 +238,10 @@ const EMPLOYEE_SURFACE_COPY_BY_LOCALE = {
       pendingLabel: "pending",
       rejectedLabel: "rejected",
       rejectedOrCanceledLabel: "rejected/canceled",
+      teamScopeHint: "Monthly calendar for your leave and same-department coworkers.",
+      legendLabel: "Status colors",
+      mineShort: "Me",
+      coworkerFallback: "Coworker",
       noScheduleInRange: "No leave schedule in the current range.",
       clickToPrefill: "Click a date to prefill the leave request form."
     },
@@ -570,6 +578,7 @@ export function resolveEmployeeLocaleLabelBundle(isKoLocale: boolean) {
     callApiLabels: {
       attendanceList: isKoLocale ? "내 출퇴근 조회" : "Load my attendance",
       leaveList: isKoLocale ? "내 휴가 요청 조회" : "Load my leave requests",
+      leaveDepartmentCalendar: isKoLocale ? "내 부서 휴가 캘린더 조회" : "Load leave calendar for my department",
       scheduleList: isKoLocale ? "내 근무 일정 조회" : "Load my schedules",
       leaveBalance: isKoLocale ? "내 휴가 잔여 조회" : "Load my leave balance",
       createAttendance: isKoLocale ? "출퇴근 기록 생성" : "Create attendance record",

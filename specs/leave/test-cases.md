@@ -45,6 +45,7 @@ Leave request lifecycle, role authorization, fractional leave policy, and approv
 37. Leave policy delete rejects statutory policies with `400`.
 38. Leave policy delete rejects policies with active leave-request usage with `400`.
 39. Leave policy delete archives unused non-statutory policy and default list excludes archived rows.
+40. Employee leave calendar query (`/leave/calendar/employee`) returns own + same-department entries with `PENDING/APPROVED/REJECTED` states and excludes other departments.
 
 ## Boundary and Accuracy Cases
 

@@ -103,15 +103,15 @@ async function run() {
   );
   assert.equal(employeeCreateDenied.status, 403, "employee role should be forbidden for onboarding task create");
 
-  const employeeListDenied = await onboardingTasksRoute.GET(
+  const employeeListAllowed = await onboardingTasksRoute.GET(
     new Request(`http://localhost/api/admin/onboarding/tasks?employeeId=${encodeURIComponent(employeeId)}`, {
       method: "GET",
       headers: employeeHeaders
     })
   );
-  assert.equal(employeeListDenied.status, 403, "employee role should be forbidden for onboarding task list");
+  assert.equal(employeeListAllowed.status, 200, "employee role should be allowed for own onboarding task list");
 
-  const employeePatchDenied = await onboardingTaskPatchRoute.PATCH(
+  const employeePatchAllowed = await onboardingTaskPatchRoute.PATCH(
     jsonRequest(
       "PATCH",
       `/api/admin/onboarding/tasks/${firstTask.id}`,
@@ -120,7 +120,11 @@ async function run() {
     ),
     { params: Promise.resolve({ taskId: firstTask.id }) } as RouteContext<{ taskId: string }>
   );
-  assert.equal(employeePatchDenied.status, 403, "employee role should be forbidden for onboarding task patch");
+  assert.equal(
+    employeePatchAllowed.status,
+    200,
+    "employee role should be allowed for own onboarding task patch"
+  );
 }
 
 run()

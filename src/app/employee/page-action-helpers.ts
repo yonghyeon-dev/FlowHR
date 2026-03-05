@@ -1,5 +1,6 @@
 import type {
   AttendanceRecordDto,
+  EmployeeDepartmentLeaveCalendarEntryDto,
   LeaveBalanceDto,
   LeaveRequestDto,
   WorkScheduleDto
@@ -15,6 +16,7 @@ export type EmployeeCallApi = (
 export type EmployeeCallApiLabels = {
   attendanceList: string;
   leaveList: string;
+  leaveDepartmentCalendar: string;
   scheduleList: string;
   leaveBalance: string;
   createAttendance: string;
@@ -29,6 +31,7 @@ type RefreshEmployeeSnapshotResult = {
   nextLastAttendanceId?: string;
   nextSelectedCorrectionRecordId?: string;
   leaveRequests?: LeaveRequestDto[];
+  departmentLeaveCalendarEntries?: EmployeeDepartmentLeaveCalendarEntryDto[];
   nextLastLeaveRequestId?: string;
   schedules?: WorkScheduleDto[];
   leaveBalance?: LeaveBalanceDto | null;
@@ -45,7 +48,7 @@ export async function refreshEmployeeSnapshotFromHelper(input: {
   buildQuery: (params: Record<string, string | undefined>) => string;
 }): Promise<RefreshEmployeeSnapshotResult> {
   const resolvedEmployeeId = input.employeeId.trim();
-  const [attendanceRes, leaveRes, scheduleRes, balanceRes] = await Promise.all([
+  const [attendanceRes, leaveRes, departmentCalendarRes, scheduleRes, balanceRes] = await Promise.all([
     input.callApi(
       input.callApiLabels.attendanceList,
       "GET",
@@ -55,6 +58,11 @@ export async function refreshEmployeeSnapshotFromHelper(input: {
       input.callApiLabels.leaveList,
       "GET",
       `/api/leave/requests${input.buildQuery({ from: input.fromIso, to: input.toIso })}`
+    ),
+    input.callApi(
+      input.callApiLabels.leaveDepartmentCalendar,
+      "GET",
+      `/api/leave/calendar/employee${input.buildQuery({ from: input.fromIso, to: input.toIso })}`
     ),
     input.callApi(
       input.callApiLabels.scheduleList,
@@ -102,6 +110,11 @@ export async function refreshEmployeeSnapshotFromHelper(input: {
     if (pending) {
       result.nextLastLeaveRequestId = pending.id;
     }
+  }
+
+  if (departmentCalendarRes.response.ok) {
+    const parsed = departmentCalendarRes.body as { entries?: EmployeeDepartmentLeaveCalendarEntryDto[] };
+    result.departmentLeaveCalendarEntries = parsed.entries ?? [];
   }
 
   if (scheduleRes.response.ok) {

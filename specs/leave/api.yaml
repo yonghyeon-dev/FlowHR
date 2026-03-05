@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FlowHR Leave API
-  version: 1.13.0
+  version: 1.14.0
 paths:
   /leave/requests:
     get:
@@ -139,6 +139,25 @@ paths:
       responses:
         "200":
           description: Leave calendar summary by day and request entries
+  /leave/calendar/employee:
+    get:
+      summary: List employee self-service leave calendar entries for own and same department
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Employee scoped monthly leave calendar with pending/approved/rejected states
   /leave/policy:
     get:
       summary: Read leave policy for organization (defaults when not configured)
