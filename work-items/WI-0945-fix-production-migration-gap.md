@@ -14,11 +14,11 @@ This impacts:
 ### In Scope
 
 - Update `.github/workflows/approval-delegation-expiry.yml`:
-  - add `Run pending migrations` step before `Run approval delegation expiry sweep`
+  - add `Run pending Prisma migrations` step before `Run approval delegation expiry sweep`
   - run `npx prisma migrate deploy`
   - provide production `DATABASE_URL` and `DIRECT_URL` env vars from secrets
 - Update `.github/workflows/approval-execution-escalation.yml`:
-  - add `Run pending migrations` step before `Run approval execution escalation sweep`
+  - add `Run pending Prisma migrations` step before `Run approval execution escalation sweep`
   - run `npx prisma migrate deploy`
   - provide production `DATABASE_URL` and `DIRECT_URL` env vars from secrets
 - Ensure each scheduled run self-heals missing production migrations before operational scripts execute.
@@ -55,5 +55,5 @@ This impacts:
 
 ## Rollback Plan
 
-- Remove `Run pending migrations` step from both workflows.
+- Remove `Run pending Prisma migrations` step from both workflows.
 - Revert WI-0945 changes in a follow-up PR if migration deploy in scheduler is not desired.
