@@ -62,7 +62,11 @@ export default function AdminApprovalExecutionsPage() {
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const {
+    snapshot: supabaseSession,
+    error: supabaseSessionError,
+    loading: supabaseSessionLoading
+  } = useSupabaseSession();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
@@ -74,7 +78,8 @@ export default function AdminApprovalExecutionsPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const requiresLoginSession =
+    !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
 
   useEffect(() => {
     setDomain(normalizeApprovalDomainFilter(searchParams.get("domain")));
@@ -278,7 +283,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function loadExecutions() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -337,7 +342,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function loadStageHistory(execution: ApprovalExecutionDto) {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -364,7 +369,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function approveExecution(execution: ApprovalExecutionDto) {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -413,7 +418,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function rejectExecution(execution: ApprovalExecutionDto, reason: string) {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -471,7 +476,7 @@ export default function AdminApprovalExecutionsPage() {
   }
 
   async function triggerEscalation(dryRun: boolean) {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
 

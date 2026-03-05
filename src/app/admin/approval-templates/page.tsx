@@ -47,7 +47,11 @@ export default function AdminApprovalTemplatesPage() {
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const {
+    snapshot: supabaseSession,
+    error: supabaseSessionError,
+    loading: supabaseSessionLoading
+  } = useSupabaseSession();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
@@ -57,7 +61,8 @@ export default function AdminApprovalTemplatesPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const requiresLoginSession =
+    !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -119,7 +124,7 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   async function loadTemplates() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
@@ -132,7 +137,7 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   async function createTemplate() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
     if (selectedRoles.length === 0) {
@@ -167,7 +172,7 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   async function runGatePreview() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -192,6 +197,9 @@ export default function AdminApprovalTemplatesPage() {
   }
 
   async function toggleTemplateActive(template: ApprovalLineTemplateDto) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
+      return;
+    }
     await callApi(
       template.active ? copy.apiLabels.deactivateTemplate : copy.apiLabels.activateTemplate,
       "PATCH",
@@ -232,7 +240,7 @@ export default function AdminApprovalTemplatesPage() {
             <button
               className="btn btn-secondary"
               onClick={() => void loadTemplates()}
-              disabled={requiresLoginSession || !organizationId.trim()}
+              disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
             >
               {copy.context.loadTemplates}
             </button>
@@ -313,7 +321,13 @@ export default function AdminApprovalTemplatesPage() {
             <button
               className="btn btn-primary"
               onClick={() => void createTemplate()}
-              disabled={requiresLoginSession || !organizationId.trim() || !name.trim() || selectedRoles.length === 0}
+              disabled={
+                supabaseSessionLoading ||
+                requiresLoginSession ||
+                !organizationId.trim() ||
+                !name.trim() ||
+                selectedRoles.length === 0
+              }
             >
               {copy.create.createTemplate}
             </button>
@@ -323,7 +337,7 @@ export default function AdminApprovalTemplatesPage() {
         <ApprovalTemplatePreviewPanel
           copy={copy}
           runtimeLocale={runtimeLocale}
-          organizationId={requiresLoginSession ? "" : organizationId}
+          organizationId={supabaseSessionLoading || requiresLoginSession ? "" : organizationId}
           actorRoles={actorRoles}
           domainOptions={domainOptions}
           previewDomain={previewDomain}

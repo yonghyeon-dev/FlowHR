@@ -74,7 +74,11 @@ export default function AdminPeoplePage() {
 
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [logs, setLogs] = useState<ApiLog[]>([]);
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const {
+    snapshot: supabaseSession,
+    error: supabaseSessionError,
+    loading: supabaseSessionLoading
+  } = useSupabaseSession();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
@@ -94,6 +98,7 @@ export default function AdminPeoplePage() {
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && !usesBearerToken;
 
   const organizationById = useMemo(() => new Map(organizations.map((row) => [row.id, row])), [organizations]);
   const departmentById = useMemo(() => new Map(departments.map((row) => [row.id, row])), [departments]);
@@ -256,6 +261,58 @@ export default function AdminPeoplePage() {
     setSelectedEmployeeId
   });
 
+  const loadOrganizationsWithSessionGuard = useCallback(async () => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    await loadOrganizations();
+  }, [loadOrganizations, supabaseSessionLoading]);
+
+  const loadDepartmentsWithSessionGuard = useCallback(async () => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    await loadDepartments();
+  }, [loadDepartments, supabaseSessionLoading]);
+
+  const loadPositionsWithSessionGuard = useCallback(async () => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    await loadPositions();
+  }, [loadPositions, supabaseSessionLoading]);
+
+  const loadEmployeesWithSessionGuard = useCallback(async () => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    await loadEmployees();
+  }, [loadEmployees, supabaseSessionLoading]);
+
+  const refreshDirectoryWithSessionGuard = useCallback(async () => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    await refreshDirectory();
+  }, [refreshDirectory, supabaseSessionLoading]);
+
+  const loadSelectedEmployeeHistoryWithSessionGuard = useCallback(
+    async (employeeId: string) => {
+      if (supabaseSessionLoading) {
+        return;
+      }
+      await loadSelectedEmployeeHistory(employeeId);
+    },
+    [loadSelectedEmployeeHistory, supabaseSessionLoading]
+  );
+
+  const applySelectedProfileUpdateWithSessionGuard = useCallback(async () => {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    await applySelectedProfileUpdate();
+  }, [applySelectedProfileUpdate, supabaseSessionLoading]);
+
   const historyChangeSummary = useMemo(() => {
     const counters: Record<ProfileField, number> = {
       organizationId: 0,
@@ -370,12 +427,15 @@ export default function AdminPeoplePage() {
     if (autoLoadTriggeredRef.current) {
       return;
     }
-    if (isProductionRuntime && !usesBearerToken) {
+    if (supabaseSessionLoading) {
+      return;
+    }
+    if (requiresLoginSession) {
       return;
     }
     autoLoadTriggeredRef.current = true;
-    void refreshDirectory();
-  }, [isProductionRuntime, refreshDirectory, usesBearerToken]);
+    void refreshDirectoryWithSessionGuard();
+  }, [refreshDirectoryWithSessionGuard, requiresLoginSession, supabaseSessionLoading]);
 
   useEffect(() => {
     const employeeId = selectedEmployeeId.trim();
@@ -389,9 +449,12 @@ export default function AdminPeoplePage() {
     if (autoHistoryFetchKeyRef.current === historyKey) {
       return;
     }
+    if (supabaseSessionLoading) {
+      return;
+    }
     autoHistoryFetchKeyRef.current = historyKey;
-    void loadSelectedEmployeeHistory(employeeId);
-  }, [historyLimit, loadSelectedEmployeeHistory, selectedEmployeeId]);
+    void loadSelectedEmployeeHistoryWithSessionGuard(employeeId);
+  }, [historyLimit, loadSelectedEmployeeHistoryWithSessionGuard, selectedEmployeeId, supabaseSessionLoading]);
 
   function resetDirectoryFilters() {
     setSearch("");
@@ -412,10 +475,10 @@ export default function AdminPeoplePage() {
       filteredEmployees={filteredEmployees}
       tree={tree}
       stats={stats}
-      refreshDirectory={refreshDirectory}
+      refreshDirectory={refreshDirectoryWithSessionGuard}
       organizationId={organizationId}
       adminActorId={adminActorId}
-      isProductionRuntime={isProductionRuntime}
+      isProductionRuntime={isProductionRuntime && !supabaseSessionLoading}
       usesBearerToken={usesBearerToken}
       bearerToken={bearerToken}
       search={search}
@@ -430,15 +493,15 @@ export default function AdminPeoplePage() {
       setRecentlyUpdatedDays={setRecentlyUpdatedDays}
       historyLimit={historyLimit}
       setHistoryLimit={setHistoryLimit}
-      loadOrganizations={loadOrganizations}
-      loadDepartments={loadDepartments}
-      loadPositions={loadPositions}
-      loadEmployees={loadEmployees}
+      loadOrganizations={loadOrganizationsWithSessionGuard}
+      loadDepartments={loadDepartmentsWithSessionGuard}
+      loadPositions={loadPositionsWithSessionGuard}
+      loadEmployees={loadEmployeesWithSessionGuard}
       resetDirectoryFilters={resetDirectoryFilters}
       supabaseSessionError={supabaseSessionError}
       selectedEmployeeId={selectedEmployeeId}
       setSelectedEmployeeId={setSelectedEmployeeId}
-      loadSelectedEmployeeHistory={loadSelectedEmployeeHistory}
+      loadSelectedEmployeeHistory={loadSelectedEmployeeHistoryWithSessionGuard}
       compareA={compareA}
       setCompareA={setCompareA}
       compareB={compareB}
@@ -455,7 +518,7 @@ export default function AdminPeoplePage() {
       setEditActive={setEditActive}
       selectedDepartments={selectedDepartments}
       selectedPositions={selectedPositions}
-      applySelectedProfileUpdate={applySelectedProfileUpdate}
+      applySelectedProfileUpdate={applySelectedProfileUpdateWithSessionGuard}
       history={history}
       filteredHistory={filteredHistory}
       historyActionFilter={historyActionFilter}

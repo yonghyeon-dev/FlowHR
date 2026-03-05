@@ -51,7 +51,11 @@ export default function AdminApprovalPolicyPage() {
 
   const showDevTools = isTruthyFlag(process.env.NEXT_PUBLIC_FLOWHR_DEV_TOOLS);
   const isProductionRuntime = process.env.NODE_ENV === "production";
-  const { snapshot: supabaseSession, error: supabaseSessionError } = useSupabaseSession();
+  const {
+    snapshot: supabaseSession,
+    error: supabaseSessionError,
+    loading: supabaseSessionLoading
+  } = useSupabaseSession();
   const { locale } = useI18n();
   const isKoLocale = locale === "ko";
   const runtimeLocale = isKoLocale ? "ko-KR" : "en-US";
@@ -61,7 +65,8 @@ export default function AdminApprovalPolicyPage() {
 
   const bearerToken = isProductionRuntime ? (supabaseSession?.accessToken ?? "") : "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  const requiresLoginSession = isProductionRuntime && !usesBearerToken && !showDevTools;
+  const requiresLoginSession =
+    !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const stats = useMemo(() => {
     const total = logs.length;
@@ -114,7 +119,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function loadPolicy() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
@@ -134,7 +139,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function savePolicy() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
     await callApi(copy.apiLabels.savePolicy, "PUT", "/api/approval/policy", {
@@ -147,7 +152,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function loadDelegations() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
     const query = new URLSearchParams({ organizationId: organizationId.trim() }).toString();
@@ -160,7 +165,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function createDelegation() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
     await callApi(copy.apiLabels.createDelegation, "POST", "/api/approval/delegations", {
@@ -177,6 +182,9 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function deactivateDelegation(id: string) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
+      return;
+    }
     await callApi(copy.apiLabels.deactivateDelegation, "PATCH", `/api/approval/delegations/${id}`, {
       active: false
     });
@@ -184,7 +192,7 @@ export default function AdminApprovalPolicyPage() {
   }
 
   async function expireDelegations() {
-    if (requiresLoginSession || !organizationId.trim()) {
+    if (supabaseSessionLoading || requiresLoginSession || !organizationId.trim()) {
       return;
     }
 
@@ -234,14 +242,14 @@ export default function AdminApprovalPolicyPage() {
             <button
               className="btn btn-secondary"
               onClick={() => void loadPolicy()}
-              disabled={requiresLoginSession || !organizationId.trim()}
+              disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
             >
               {copy.context.loadPolicy}
             </button>
             <button
               className="btn btn-secondary"
               onClick={() => void loadDelegations()}
-              disabled={requiresLoginSession || !organizationId.trim()}
+              disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
             >
               {copy.context.loadDelegations}
             </button>
@@ -292,7 +300,7 @@ export default function AdminApprovalPolicyPage() {
             <button
               className="btn btn-primary"
               onClick={() => void savePolicy()}
-              disabled={requiresLoginSession || !organizationId.trim()}
+              disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
             >
               {copy.policy.savePolicy}
             </button>
@@ -349,7 +357,7 @@ export default function AdminApprovalPolicyPage() {
             <button
               className="btn btn-primary"
               onClick={() => void createDelegation()}
-              disabled={requiresLoginSession || !organizationId.trim()}
+              disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
             >
               {copy.delegationCreate.createDelegation}
             </button>
@@ -364,7 +372,7 @@ export default function AdminApprovalPolicyPage() {
             <button
               className="btn btn-secondary btn-small"
               onClick={() => void expireDelegations()}
-              disabled={requiresLoginSession || !organizationId.trim()}
+              disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
             >
               {copy.delegationList.expireDelegations}
             </button>
@@ -407,7 +415,11 @@ export default function AdminApprovalPolicyPage() {
                   </span>
                   {delegation.active ? (
                     <div className="panel-actions">
-                      <button className="btn btn-danger btn-small" onClick={() => void deactivateDelegation(delegation.id)}>
+                      <button
+                        className="btn btn-danger btn-small"
+                        onClick={() => void deactivateDelegation(delegation.id)}
+                        disabled={supabaseSessionLoading || requiresLoginSession || !organizationId.trim()}
+                      >
                         {copy.delegationList.deactivate}
                       </button>
                     </div>
