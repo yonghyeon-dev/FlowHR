@@ -98,7 +98,8 @@ export default function AdminPeoplePage() {
 
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
-  const requiresLoginSession = !supabaseSessionLoading && isProductionRuntime && !usesBearerToken;
+  const requiresLoginSession =
+    !supabaseSessionLoading && isProductionRuntime && !usesBearerToken && !showDevTools;
 
   const organizationById = useMemo(() => new Map(organizations.map((row) => [row.id, row])), [organizations]);
   const departmentById = useMemo(() => new Map(departments.map((row) => [row.id, row])), [departments]);
@@ -262,56 +263,56 @@ export default function AdminPeoplePage() {
   });
 
   const loadOrganizationsWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading) {
+    if (supabaseSessionLoading || requiresLoginSession) {
       return;
     }
     await loadOrganizations();
-  }, [loadOrganizations, supabaseSessionLoading]);
+  }, [loadOrganizations, requiresLoginSession, supabaseSessionLoading]);
 
   const loadDepartmentsWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading) {
+    if (supabaseSessionLoading || requiresLoginSession) {
       return;
     }
     await loadDepartments();
-  }, [loadDepartments, supabaseSessionLoading]);
+  }, [loadDepartments, requiresLoginSession, supabaseSessionLoading]);
 
   const loadPositionsWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading) {
+    if (supabaseSessionLoading || requiresLoginSession) {
       return;
     }
     await loadPositions();
-  }, [loadPositions, supabaseSessionLoading]);
+  }, [loadPositions, requiresLoginSession, supabaseSessionLoading]);
 
   const loadEmployeesWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading) {
+    if (supabaseSessionLoading || requiresLoginSession) {
       return;
     }
     await loadEmployees();
-  }, [loadEmployees, supabaseSessionLoading]);
+  }, [loadEmployees, requiresLoginSession, supabaseSessionLoading]);
 
   const refreshDirectoryWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading) {
+    if (supabaseSessionLoading || requiresLoginSession) {
       return;
     }
     await refreshDirectory();
-  }, [refreshDirectory, supabaseSessionLoading]);
+  }, [refreshDirectory, requiresLoginSession, supabaseSessionLoading]);
 
   const loadSelectedEmployeeHistoryWithSessionGuard = useCallback(
     async (employeeId: string) => {
-      if (supabaseSessionLoading) {
+      if (supabaseSessionLoading || requiresLoginSession) {
         return;
       }
       await loadSelectedEmployeeHistory(employeeId);
     },
-    [loadSelectedEmployeeHistory, supabaseSessionLoading]
+    [loadSelectedEmployeeHistory, requiresLoginSession, supabaseSessionLoading]
   );
 
   const applySelectedProfileUpdateWithSessionGuard = useCallback(async () => {
-    if (supabaseSessionLoading) {
+    if (supabaseSessionLoading || requiresLoginSession) {
       return;
     }
     await applySelectedProfileUpdate();
-  }, [applySelectedProfileUpdate, supabaseSessionLoading]);
+  }, [applySelectedProfileUpdate, requiresLoginSession, supabaseSessionLoading]);
 
   const historyChangeSummary = useMemo(() => {
     const counters: Record<ProfileField, number> = {
@@ -452,9 +453,18 @@ export default function AdminPeoplePage() {
     if (supabaseSessionLoading) {
       return;
     }
+    if (requiresLoginSession) {
+      return;
+    }
     autoHistoryFetchKeyRef.current = historyKey;
     void loadSelectedEmployeeHistoryWithSessionGuard(employeeId);
-  }, [historyLimit, loadSelectedEmployeeHistoryWithSessionGuard, selectedEmployeeId, supabaseSessionLoading]);
+  }, [
+    historyLimit,
+    loadSelectedEmployeeHistoryWithSessionGuard,
+    requiresLoginSession,
+    selectedEmployeeId,
+    supabaseSessionLoading
+  ]);
 
   function resetDirectoryFilters() {
     setSearch("");
@@ -478,7 +488,9 @@ export default function AdminPeoplePage() {
       refreshDirectory={refreshDirectoryWithSessionGuard}
       organizationId={organizationId}
       adminActorId={adminActorId}
-      isProductionRuntime={isProductionRuntime && !supabaseSessionLoading}
+      isProductionRuntime={isProductionRuntime}
+      supabaseSessionLoading={supabaseSessionLoading}
+      requiresLoginSession={requiresLoginSession}
       usesBearerToken={usesBearerToken}
       bearerToken={bearerToken}
       search={search}
