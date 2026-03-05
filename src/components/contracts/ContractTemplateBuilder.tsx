@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -20,6 +20,7 @@ import {
   ContractTemplateValidationChecklist,
   type TemplateClauseDraft
 } from "@/components/contracts/template-builder-checklist";
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
 type ClauseDraft = TemplateClauseDraft;
@@ -34,6 +35,8 @@ type CreatedTemplate = {
 
 export default function ContractTemplateBuilder() {
   const { locale } = useI18n();
+  const { snapshot } = useSupabaseSession();
+  const accessToken = snapshot?.accessToken?.trim() ?? "";
   const copy = contractTemplateBuilderCopyByLocale[locale];
   const categoryLabels = contractCategoryLabelByLocale[locale];
   const templateStatusLabels = contractTemplateStatusLabelByLocale[locale];
@@ -123,7 +126,10 @@ export default function ContractTemplateBuilder() {
       };
       const response = await fetch("/api/contracts/templates", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+        },
         body: JSON.stringify(payload)
       });
       const body = (await readJson(response, copy.templateCreateError)) as {

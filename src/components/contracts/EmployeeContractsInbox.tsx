@@ -29,11 +29,14 @@ import { resolveEmployeeContractsNextActionHint } from "@/components/contracts/e
 import { normalizeContractsErrorMessageForRuntime, readJson, setContractsRuntimeLocale } from "@/components/contracts/http";
 import { type ContractSignatureEvidenceResponse, type EmployeeContractDocument as ContractDocument } from "@/components/contracts/types";
 import { resolveEmployeeContractsSourceEntry } from "@/components/contracts/employee-source-context";
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { useI18n } from "@/lib/i18n/provider";
 
 export default function EmployeeContractsInbox() {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
+  const { snapshot } = useSupabaseSession();
+  const accessToken = snapshot?.accessToken?.trim() ?? "";
   const isKoLocale = locale === "ko";
   const runtimeLocale = locale === "ko" ? "ko-KR" : "en-US";
   const copy = employeeContractsCopyByLocale[locale];
@@ -79,16 +82,15 @@ export default function EmployeeContractsInbox() {
   const nextActionHint = useMemo(() => resolveEmployeeContractsNextActionHint(selected, copy), [copy, selected]);
   const reload = useCallback(async () => {
     setError(null);
-    const data = (await fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
-      readJson(response, copy.loadError)
-    )) as { documents?: ContractDocument[] };
+    const data = (await fetch("/api/contracts/documents", {
+      cache: "no-store",
+      headers: accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {}
+    }).then((response) => readJson(response, copy.loadError))) as { documents?: ContractDocument[] };
     setDocuments(data.documents ?? []);
-  }, [copy.loadError]);
+  }, [accessToken, copy.loadError]);
   useEffect(() => {
     setContractsRuntimeLocale(locale);
-    return () => {
-      setContractsRuntimeLocale(null);
-    };
+    return () => setContractsRuntimeLocale(null);
   }, [locale]);
   useEffect(() => {
     reload().catch((loadError) => {
@@ -99,13 +101,9 @@ export default function EmployeeContractsInbox() {
       );
     });
   }, [copy.loadError, reload]);
-  useEffect(() => {
-    setSignatureEvidence(null);
-  }, [selected?.id]);
+  useEffect(() => setSignatureEvidence(null), [selected?.id]);
   async function respond(action: "SIGN" | "REJECT") {
-    if (!selected) {
-      return;
-    }
+    if (!selected) return;
     const normalizedSignatureInput = signatureInput.trim();
     setError(null);
     setMessage(null);
@@ -116,7 +114,10 @@ export default function EmployeeContractsInbox() {
     try {
       await fetch(`/api/contracts/documents/${selected.id}/respond`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+        },
         body: JSON.stringify({
           action,
           comment: comment.trim() || undefined,
@@ -137,10 +138,7 @@ export default function EmployeeContractsInbox() {
       );
     }
   }
-  function downloadEvidence(
-    evidence: ContractSignatureEvidenceResponse["evidence"],
-    downloadFileName: string
-  ) {
+  function downloadEvidence(evidence: ContractSignatureEvidenceResponse["evidence"], downloadFileName: string) {
     const blob = new Blob([evidence.content], { type: evidence.contentType });
     const objectUrl = URL.createObjectURL(blob);
     const anchor = window.document.createElement("a");
@@ -151,10 +149,7 @@ export default function EmployeeContractsInbox() {
     window.document.body.removeChild(anchor);
     URL.revokeObjectURL(objectUrl);
   }
-  async function copyEvidenceMetadata(
-    evidence: ContractSignatureEvidenceResponse["evidence"],
-    displayFileName: string
-  ) {
+  async function copyEvidenceMetadata(evidence: ContractSignatureEvidenceResponse["evidence"], displayFileName: string) {
     const metadataText = [
       `${copy.evidenceFileLabel}: ${displayFileName}`,
       `${copy.generatedAtLabel}: ${toDateText(evidence.generatedAt, runtimeLocale)}`,
@@ -170,15 +165,16 @@ export default function EmployeeContractsInbox() {
     }
   }
   async function loadSignatureEvidence(format: "json" | "text") {
-    if (!selected) {
-      return;
-    }
+    if (!selected) return;
     setError(null);
     setMessage(null);
     try {
       const response = await fetch(
         `/api/contracts/documents/${selected.id}/signature-evidence?format=${format}`,
-        { method: "GET" }
+        {
+          method: "GET",
+          headers: accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {}
+        }
       );
       const body = (await readJson(response, copy.evidenceLoadError)) as ContractSignatureEvidenceResponse;
       setSignatureEvidence(body.evidence);
