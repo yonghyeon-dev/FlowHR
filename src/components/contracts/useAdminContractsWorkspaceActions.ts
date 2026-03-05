@@ -11,6 +11,7 @@ import type {
   ContractDocumentAction,
   ContractTemplate
 } from "@/components/contracts/types";
+import { useSupabaseSession } from "@/lib/client/useSupabaseSession";
 import { formatEmployeeIdForLocaleDisplay } from "@/lib/i18n/employee-id-locale";
 import { type FlowLocale } from "@/lib/i18n/locales";
 
@@ -33,6 +34,8 @@ export function useAdminContractsWorkspaceActions({
   normalizedEmployeeIdForApi,
   actionLabelByAction
 }: UseAdminContractsWorkspaceActionsInput) {
+  const { snapshot } = useSupabaseSession();
+  const accessToken = snapshot?.accessToken?.trim() ?? "";
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [message, setMessage] = useState<string | null>(null);
@@ -41,17 +44,23 @@ export function useAdminContractsWorkspaceActions({
 
   const reload = useCallback(async () => {
     setError(null);
+    const authorizationHeader: Record<string, string> = {};
+    if (accessToken.length > 0) {
+      authorizationHeader.authorization = `Bearer ${accessToken}`;
+    }
     const [templateBodyRaw, documentBodyRaw] = await Promise.all([
-      fetch("/api/contracts/templates", { cache: "no-store" }).then((response) =>
-        readJson(response, copy.loadError)
-      ),
-      fetch("/api/contracts/documents", { cache: "no-store" }).then((response) =>
-        readJson(response, copy.loadError)
-      )
+      fetch("/api/contracts/templates", {
+        cache: "no-store",
+        headers: authorizationHeader
+      }).then((response) => readJson(response, copy.loadError)),
+      fetch("/api/contracts/documents", {
+        cache: "no-store",
+        headers: authorizationHeader
+      }).then((response) => readJson(response, copy.loadError))
     ]);
     setTemplates((templateBodyRaw as { templates?: ContractTemplate[] }).templates ?? []);
     setDocuments((documentBodyRaw as { documents?: ContractDocument[] }).documents ?? []);
-  }, [copy.loadError]);
+  }, [accessToken, copy.loadError]);
 
   useEffect(() => {
     reload().catch((loadError) => {
@@ -69,7 +78,10 @@ export function useAdminContractsWorkspaceActions({
     try {
       await fetch("/api/contracts/templates", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+        },
         body: JSON.stringify({
           name: templateName,
           category: templateCategory,
@@ -87,6 +99,7 @@ export function useAdminContractsWorkspaceActions({
       );
     }
   }, [
+    accessToken,
     copy.templateCreateError,
     copy.templateCreatedMessage,
     reload,
@@ -105,7 +118,10 @@ export function useAdminContractsWorkspaceActions({
     try {
       await fetch("/api/contracts/documents", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+        },
         body: JSON.stringify({
           templateId: selectedTemplateId,
           employeeId: normalizedEmployeeIdForApi,
@@ -123,6 +139,7 @@ export function useAdminContractsWorkspaceActions({
       );
     }
   }, [
+    accessToken,
     copy.draftCreateError,
     copy.draftCreatedMessage,
     copy.draftTitlePrefix,
@@ -145,7 +162,10 @@ export function useAdminContractsWorkspaceActions({
       try {
         await fetch(request.endpoint, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            ...(accessToken.length > 0 ? { authorization: `Bearer ${accessToken}` } : {})
+          },
           body: JSON.stringify(request.payload)
         }).then((response) =>
           readJson(response, `${copy.actionFailedPrefix}: ${actionLabelByAction[action]}`)
@@ -164,6 +184,7 @@ export function useAdminContractsWorkspaceActions({
       }
     },
     [
+      accessToken,
       actionLabelByAction,
       copy.actionCompletedPrefix,
       copy.actionFailedPrefix,
