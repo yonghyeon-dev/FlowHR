@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { adminSchedulingCopyByLocale } from "@/components/scheduling/copy";
+import {
+  requestSeedDefaultsAvailability
+} from "@/components/scheduling/admin-scheduling-api";
+import { useAdminSchedulingApi } from "@/components/scheduling/use-admin-scheduling-api";
 import AdminSchedulingWorkspaceView from "@/components/scheduling/AdminSchedulingWorkspaceView";
 import {
-  type ScheduleApiLog,
   type WorkScheduleDto,
   buildCurrentMonthDateRange,
   buildDefaultScheduleWindow,
   buildQuery,
-  extractErrorMessage,
-  parseResponseBody,
   toIsoDateRangeEndExclusive,
   toIsoDateRangeStart,
   toIsoDateTime
@@ -38,10 +39,9 @@ export default function AdminSchedulingWorkspace() {
   const [fromDate, setFromDate] = useState(monthRange.fromDate);
   const [toDate, setToDate] = useState(monthRange.toDate);
   const [schedules, setSchedules] = useState<WorkScheduleDto[]>([]);
+  const [showSeedDefaultsAction, setShowSeedDefaultsAction] = useState(false);
   const [selectedScheduleId, setSelectedScheduleId] = useState("");
-  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
-  const [logs, setLogs] = useState<ScheduleApiLog[]>([]);
 
   const [createEmployeeId, setCreateEmployeeId] = useState("");
   const [createStartAt, setCreateStartAt] = useState(defaultWindow.startAt);
@@ -62,17 +62,20 @@ export default function AdminSchedulingWorkspace() {
   const adminActorId = (supabaseSession?.actorId ?? "ADM-1001").trim() || "ADM-1001";
   const bearerToken = supabaseSession?.accessToken ?? "";
   const usesBearerToken = bearerToken.trim().length > 0;
+  const { pendingLabel, logs, logStats, callApi } = useAdminSchedulingApi({
+    usesBearerToken,
+    bearerToken,
+    adminActorId,
+    organizationId,
+    runtimeLocale,
+    isKoLocale,
+    loadErrorPrefix: copy.loadErrorPrefix
+  });
 
   const selectedSchedule = useMemo(
     () => schedules.find((schedule) => schedule.id === selectedScheduleId) ?? null,
     [schedules, selectedScheduleId]
   );
-
-  const logStats = useMemo(() => {
-    const total = logs.length;
-    const success = logs.filter((log) => log.ok).length;
-    return { total, success, fail: total - success };
-  }, [logs]);
 
   useEffect(() => {
     if (!selectedSchedule) {
@@ -85,68 +88,40 @@ export default function AdminSchedulingWorkspace() {
     setEditNotes(selectedSchedule.notes ?? "");
   }, [selectedSchedule]);
 
-  async function callApi(
-    label: string,
-    method: "GET" | "POST" | "PATCH" | "DELETE",
-    path: string,
-    payload?: Record<string, unknown>
-  ) {
-    setPendingLabel(label);
-    try {
-      const headers: Record<string, string> = {};
-      if (payload) {
-        headers["content-type"] = "application/json";
-      }
-      if (usesBearerToken) {
-        headers.authorization = `Bearer ${bearerToken}`;
-      } else {
-        headers["x-actor-role"] = "admin";
-        headers["x-actor-id"] = adminActorId.trim() || "ADM-1001";
-        if (organizationId.trim()) {
-          headers["x-actor-organization-id"] = organizationId.trim();
-        }
-      }
-
-      const response = await fetch(path, {
-        method,
-        headers,
-        body: payload ? JSON.stringify(payload) : undefined
-      });
-      const body = await parseResponseBody(response);
-      setLogs((previous) => [
-        {
-          id: Date.now(),
-          label,
-          status: response.status,
-          ok: response.ok,
-          at: new Date().toLocaleString(runtimeLocale),
-          body
-        },
-        ...previous
-      ]);
-
-      if (!response.ok) {
-        throw new Error(`${copy.loadErrorPrefix}: ${extractErrorMessage(body, isKoLocale)}`);
-      }
-      return body;
-    } finally {
-      setPendingLabel(null);
-    }
-  }
-
   const incidentPanel = useAdminSchedulingIncidentPanel({
     copy,
     callApi,
     setStatusMessage
   });
 
+  const loadSeedDefaultsAvailability = useCallback(async () => {
+    if (!usesBearerToken && !organizationId.trim()) {
+      setShowSeedDefaultsAction(false);
+      return;
+    }
+
+    try {
+      const showSeedAction = await requestSeedDefaultsAvailability({
+        usesBearerToken,
+        bearerToken,
+        adminActorId,
+        organizationId,
+        isKoLocale
+      });
+      setShowSeedDefaultsAction(showSeedAction);
+    } catch {
+      setShowSeedDefaultsAction(false);
+    }
+  }, [adminActorId, bearerToken, isKoLocale, organizationId, usesBearerToken]);
+
+  useEffect(() => {
+    void loadSeedDefaultsAvailability();
+    // role/session changes require seed availability refresh.
+  }, [loadSeedDefaultsAvailability]);
+
   async function loadSchedules() {
     if (!usesBearerToken && !organizationId.trim()) {
       setStatusMessage(copy.statusNeedsOrganization);
-      return;
-    }
-    if (!queryEmployeeId.trim()) {
-      setStatusMessage(copy.statusNeedsEmployee);
       return;
     }
     if (!fromDate || !toDate) {
@@ -160,7 +135,7 @@ export default function AdminSchedulingWorkspace() {
       `/api/scheduling/schedules${buildQuery({
         from: toIsoDateRangeStart(fromDate),
         to: toIsoDateRangeEndExclusive(toDate),
-        employeeId: queryEmployeeId.trim()
+        employeeId: queryEmployeeId.trim() || undefined
       })}`
     )) as { schedules?: WorkScheduleDto[] } | null;
 
@@ -173,6 +148,7 @@ export default function AdminSchedulingWorkspace() {
       setSelectedScheduleId("");
     }
     setStatusMessage(copy.statusListLoaded);
+    await loadSeedDefaultsAvailability();
   }
 
   async function createSchedule() {
@@ -244,6 +220,26 @@ export default function AdminSchedulingWorkspace() {
     await loadSchedules();
   }
 
+  async function seedDefaultSchedules() {
+    if (!usesBearerToken && !organizationId.trim()) {
+      setStatusMessage(copy.statusNeedsOrganization);
+      return;
+    }
+
+    const body = (await callApi(
+      copy.pendingSeedDefaults,
+      "POST",
+      "/api/scheduling/schedules/seed-defaults"
+    )) as { createdSchedules?: number } | null;
+    const createdSchedules = Math.max(0, Math.trunc(Number(body?.createdSchedules ?? 0)));
+    if (createdSchedules > 0) {
+      setStatusMessage(`${copy.statusSeedDefaultsCreated} (${createdSchedules})`);
+    } else {
+      setStatusMessage(copy.statusSeedDefaultsSkipped);
+    }
+    await loadSchedules();
+  }
+
   return (
     <AdminSchedulingWorkspaceView
       copy={copy}
@@ -257,6 +253,7 @@ export default function AdminSchedulingWorkspace() {
       logs={logs}
       incidentPanel={incidentPanel}
       schedules={schedules}
+      showSeedDefaultsAction={showSeedDefaultsAction}
       selectedSchedule={selectedSchedule}
       sessionOrganizationId={organizationId}
       sessionActorId={adminActorId}
@@ -290,6 +287,7 @@ export default function AdminSchedulingWorkspace() {
       onEditNotesChange={setEditNotes}
       onLoadSchedules={() => void loadSchedules()}
       onCreateSchedule={() => void createSchedule()}
+      onSeedDefaultSchedules={() => void seedDefaultSchedules()}
       onSelectSchedule={setSelectedScheduleId}
       onUpdateSelectedSchedule={() => void updateSelectedSchedule()}
       onDeleteSelectedSchedule={() => void deleteSelectedSchedule()}

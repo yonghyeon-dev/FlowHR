@@ -7,6 +7,7 @@ import {
   personalDataConsentTypes,
   recordPersonalDataConsents
 } from "@/features/auth/service";
+import { seedDefaultWorkSchedulesForEmployee } from "@/features/scheduling/default-work-schedule-seed";
 import { getRuntimeDataAccess } from "@/features/shared/runtime-data-access";
 import { FLOWHR_ACCESS_TOKEN_COOKIE } from "@/lib/auth/session-cookie";
 import { getPublicEnv } from "@/lib/env";
@@ -101,12 +102,16 @@ async function provisionFirstTimeSignup(input: {
   });
 
   const employeeId = createEmployeeId();
-  await dataAccess.employees.create({
+  const employee = await dataAccess.employees.create({
     id: employeeId,
     organizationId: organization.id,
     email: input.email,
     name: input.email.split("@")[0],
     active: true
+  });
+  await seedDefaultWorkSchedulesForEmployee({
+    dataAccess,
+    employee
   });
 
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();

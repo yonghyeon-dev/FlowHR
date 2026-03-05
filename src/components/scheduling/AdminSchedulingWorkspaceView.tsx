@@ -1,58 +1,6 @@
-import type { AdminSchedulingCopy } from "@/components/scheduling/copy";
-import type { ScheduleApiLog, WorkScheduleDto } from "@/components/scheduling/helpers";
-import type { AdminSchedulingIncidentPanelState } from "@/components/scheduling/use-admin-scheduling-incident-panel";
+import type { AdminSchedulingWorkspaceViewProps } from "@/components/scheduling/AdminSchedulingWorkspaceView.types";
 import AdminSchedulingIncidentPanel from "@/components/scheduling/AdminSchedulingIncidentPanel";
 import { formatDateTime } from "@/components/scheduling/helpers";
-
-type AdminSchedulingWorkspaceViewProps = {
-  copy: AdminSchedulingCopy;
-  runtimeLocale: string;
-  isProductionRuntime: boolean;
-  usesBearerToken: boolean;
-  showDevTools: boolean;
-  statusMessage: string;
-  pendingLabel: string | null;
-  logStats: { total: number; success: number; fail: number };
-  logs: ScheduleApiLog[];
-  incidentPanel: AdminSchedulingIncidentPanelState;
-  schedules: WorkScheduleDto[];
-  selectedSchedule: WorkScheduleDto | null;
-  sessionOrganizationId: string;
-  sessionActorId: string;
-  queryEmployeeId: string;
-  fromDate: string;
-  toDate: string;
-  createEmployeeId: string;
-  createStartAt: string;
-  createEndAt: string;
-  createBreakMinutes: string;
-  createIsHoliday: string;
-  createNotes: string;
-  editStartAt: string;
-  editEndAt: string;
-  editBreakMinutes: string;
-  editIsHoliday: string;
-  editNotes: string;
-  onQueryEmployeeIdChange: (value: string) => void;
-  onFromDateChange: (value: string) => void;
-  onToDateChange: (value: string) => void;
-  onCreateEmployeeIdChange: (value: string) => void;
-  onCreateStartAtChange: (value: string) => void;
-  onCreateEndAtChange: (value: string) => void;
-  onCreateBreakMinutesChange: (value: string) => void;
-  onCreateIsHolidayChange: (value: string) => void;
-  onCreateNotesChange: (value: string) => void;
-  onEditStartAtChange: (value: string) => void;
-  onEditEndAtChange: (value: string) => void;
-  onEditBreakMinutesChange: (value: string) => void;
-  onEditIsHolidayChange: (value: string) => void;
-  onEditNotesChange: (value: string) => void;
-  onLoadSchedules: () => void;
-  onCreateSchedule: () => void;
-  onSelectSchedule: (scheduleId: string) => void;
-  onUpdateSelectedSchedule: () => void;
-  onDeleteSelectedSchedule: () => void;
-};
 
 export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorkspaceViewProps) {
   const {
@@ -67,6 +15,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     logs,
     incidentPanel,
     schedules,
+    showSeedDefaultsAction,
     selectedSchedule,
     sessionOrganizationId,
     sessionActorId,
@@ -100,6 +49,7 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
     onEditNotesChange,
     onLoadSchedules,
     onCreateSchedule,
+    onSeedDefaultSchedules,
     onSelectSchedule,
     onUpdateSelectedSchedule,
     onDeleteSelectedSchedule
@@ -194,7 +144,21 @@ export default function AdminSchedulingWorkspaceView(props: AdminSchedulingWorks
         <article className="panel">
           <h2>{copy.listTitle}</h2>
           {schedules.length === 0 ? (
-            <p className="small muted">{copy.listEmpty}</p>
+            <>
+              <p className="small muted">{copy.listEmpty}</p>
+              {showSeedDefaultsAction ? (
+                <div className="actions">
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    disabled={pendingLabel === copy.pendingSeedDefaults}
+                    onClick={onSeedDefaultSchedules}
+                  >
+                    {copy.seedDefaultsAction}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <ul className="simple-list">
               {schedules.map((schedule) => (

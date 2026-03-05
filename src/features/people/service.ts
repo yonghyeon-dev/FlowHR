@@ -2,6 +2,7 @@ import type { Actor } from "@/lib/actor";
 import { requirePermission } from "@/lib/permissions";
 import { Permissions, type Permission } from "@/lib/rbac";
 import { ensureTenantMatch, resolveTenantScope } from "@/features/shared/tenant-scope";
+import { seedDefaultWorkSchedulesForEmployee } from "@/features/scheduling/default-work-schedule-seed";
 import type {
   DataAccess,
   DepartmentEntity,
@@ -1046,6 +1047,10 @@ export async function createEmployee(
     status
   });
   await ensureEmployeeOnboardingTasksFromTemplates(context, employee);
+  await seedDefaultWorkSchedulesForEmployee({
+    dataAccess: context.dataAccess,
+    employee
+  });
 
   await context.dataAccess.audit.append({
     action: "employee.created",
@@ -1347,6 +1352,11 @@ export async function transitionEmployeeStatus(
   });
   if (input.status === "ACTIVE") {
     await ensureEmployeeOnboardingTasksFromTemplates(context, employee);
+    await seedDefaultWorkSchedulesForEmployee({
+      dataAccess: context.dataAccess,
+      employee,
+      anchorDate: input.effectiveDate ? new Date(input.effectiveDate) : null
+    });
   }
 
   const sessionInvalidation =
